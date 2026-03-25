@@ -144,6 +144,16 @@
         "mpt": {
           "type": "object",
           "properties": {
+            "use_acados": {
+              "type": "boolean",
+              "description": "Enable/disable acados solver for MPT optimization",
+              "default": false
+            },
+            "use_acados_circle_constraints": {
+              "type": "boolean",
+              "description": "Enable/disable the new MPT-style circle road-bound constraints in acados",
+              "default": true
+            },
             "option": {
               "type": "object",
               "properties": {
@@ -477,6 +487,8 @@
             }
           },
           "required": [
+            "use_acados",
+            "use_acados_circle_constraints",
             "option",
             "common",
             "clearance",

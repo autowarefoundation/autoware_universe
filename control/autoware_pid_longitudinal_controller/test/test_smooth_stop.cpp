@@ -16,6 +16,8 @@
 #include "gtest/gtest.h"
 #include "rclcpp/rclcpp.hpp"
 
+#include <chrono>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -79,20 +81,18 @@ TEST(TestSmoothStop, calculate_stopping_acceleration)
   EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 2);
 
   // if not running, weak accel for 0.5 seconds after the previous init or previous weak_acc
-  rclcpp::Rate rate_quart(1.0 / 0.25);
-  rclcpp::Rate rate_half(1.0 / 0.5);
   stop_dist = 0.0;
   current_vel = 0.0;
   accel =
     ss.calculate(stop_dist, current_vel, current_acc, velocity_history, delay_time, debug_values);
   EXPECT_EQ(accel, weak_acc);
   EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 1);
-  rate_quart.sleep();
+  std::this_thread::sleep_for(std::chrono::milliseconds(250));
   accel =
     ss.calculate(stop_dist, current_vel, current_acc, velocity_history, delay_time, debug_values);
   EXPECT_EQ(accel, weak_acc);
   EXPECT_EQ(debug_values.getValue(DebugValues::TYPE::SMOOTH_STOP_MODE), 1);
-  rate_half.sleep();
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
   accel =
     ss.calculate(stop_dist, current_vel, current_acc, velocity_history, delay_time, debug_values);
   EXPECT_NE(accel, weak_acc);

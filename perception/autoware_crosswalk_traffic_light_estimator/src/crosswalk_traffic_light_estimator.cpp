@@ -526,6 +526,11 @@ lanelet::ConstLanelets CrosswalkTrafficLightEstimator::get_non_red_lanelets(
     const auto last_detected_signal =
       get_highest_confidence_traffic_signal(tl_reg_elem->id(), last_detect_color_);
 
+    const auto has_no_signal_info = !current_detected_signal && !last_detected_signal;
+    if (has_no_signal_info) {
+      continue;
+    }
+
     const auto was_not_red = current_is_unknown_or_none && last_detected_signal &&
                              (last_detected_signal.get() == TrafficSignalElement::GREEN ||
                               last_detected_signal.get() == TrafficSignalElement::AMBER) &&

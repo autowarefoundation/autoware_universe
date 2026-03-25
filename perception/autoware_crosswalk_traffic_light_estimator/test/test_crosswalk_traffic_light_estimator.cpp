@@ -37,6 +37,7 @@ namespace
 
 constexpr lanelet::Id VEHICLE_TL_REG_ELEM_ID = 100;
 constexpr lanelet::Id CROSSWALK_TL_REG_ELEM_ID = 200;
+constexpr lanelet::Id VEHICLE_TL_RIGHT_ID = 300;
 
 CrosswalkTrafficLightEstimatorConfig make_default_config()
 {
@@ -55,10 +56,10 @@ rclcpp::Time make_time(double seconds)
   return rclcpp::Time(static_cast<int64_t>(seconds * 1e9));
 }
 
-TrafficSignal make_vehicle_signal(uint8_t color, float confidence = 1.0)
+TrafficSignal make_signal(lanelet::Id tl_id, uint8_t color, float confidence = 1.0)
 {
   TrafficSignal signal;
-  signal.traffic_light_group_id = VEHICLE_TL_REG_ELEM_ID;
+  signal.traffic_light_group_id = tl_id;
   TrafficSignalElement element;
   element.color = color;
   element.shape = TrafficSignalElement::CIRCLE;
@@ -75,26 +76,25 @@ TrafficSignalArray make_signal_array(const std::vector<TrafficSignal> & signals)
   return array;
 }
 
-/// @brief Create a minimal lanelet map with one straight vehicle lanelet and one crosswalk
-/// that physically overlaps the vehicle lanelet.
+/// @brief Create a lanelet map with a straight vehicle lanelet (TL=100),
+/// a right-turn vehicle lanelet (TL=300), and a crosswalk (TL=200) that overlaps both.
 ///
 ///           y
 ///           ^
 ///       6   |    +------------+
 ///           |    |  Crosswalk |
 ///       4   +----+--+---------+--+---------------------+
-///           |    |  | overlap |  |    Vehicle Lanelet   |
-///           |    |  | [8,12]  |  |    (straight, ->)    |
-///           |    |  | x[0,4]  |  |    TL ID=100         |
-///       0   +----+--+---------+--+---------------------+---> x
+///           |    |  | overlap |  |  Straight (TL=100)  |
+///       0   +----+--+---------+--+---------------------+
+///           |    |  | overlap |  |  Right-turn (TL=300)|
+///      -4   +----+--+---------+--+---------------------+---> x
 ///           0    |  8        12  |                     20
-///      -2        +------------+
+///      -6        +------------+
 ///                  TL ID=200
-///                  Crosswalk
-///                  (ID=2000)
+///                  Crosswalk (ID=2000)
 lanelet::LaneletMapPtr create_test_map(const lanelet::AttributeMap & vehicle_tl_extra_attrs = {})
 {
-  // Vehicle lanelet bounds (going east)
+  // Straight vehicle lanelet bounds (y=0..4)
   lanelet::Point3d vehicle_right_start(1, 0.0, 0.0, 0.0);
   lanelet::Point3d vehicle_right_end(2, 20.0, 0.0, 0.0);
   lanelet::Point3d vehicle_left_start(3, 0.0, 4.0, 0.0);
@@ -103,10 +103,16 @@ lanelet::LaneletMapPtr create_test_map(const lanelet::AttributeMap & vehicle_tl_
   lanelet::LineString3d vehicle_right(10, {vehicle_right_start, vehicle_right_end});
   lanelet::LineString3d vehicle_left(11, {vehicle_left_start, vehicle_left_end});
 
-  // Crosswalk lanelet bounds (going north, overlaps vehicle lanelet at [8,12] x [0,4])
-  lanelet::Point3d crosswalk_left_start(5, 8.0, -2.0, 0.0);
+  // Right-turn vehicle lanelet bounds (y=-4..0)
+  lanelet::LineString3d rt_right(
+    610, {lanelet::Point3d(601, 0.0, -4.0, 0.0), lanelet::Point3d(602, 20.0, -4.0, 0.0)});
+  lanelet::LineString3d rt_left(
+    611, {lanelet::Point3d(603, 0.0, 0.0, 0.0), lanelet::Point3d(604, 20.0, 0.0, 0.0)});
+
+  // Crosswalk lanelet bounds (overlaps both vehicle lanelets)
+  lanelet::Point3d crosswalk_left_start(5, 8.0, -6.0, 0.0);
   lanelet::Point3d crosswalk_left_end(6, 8.0, 6.0, 0.0);
-  lanelet::Point3d crosswalk_right_start(7, 12.0, -2.0, 0.0);
+  lanelet::Point3d crosswalk_right_start(7, 12.0, -6.0, 0.0);
   lanelet::Point3d crosswalk_right_end(8, 12.0, 6.0, 0.0);
 
   lanelet::LineString3d crosswalk_left(12, {crosswalk_left_start, crosswalk_left_end});
@@ -114,20 +120,30 @@ lanelet::LaneletMapPtr create_test_map(const lanelet::AttributeMap & vehicle_tl_
 
   // Traffic light physical locations
   lanelet::LineString3d vehicle_tl_linestring(15, {lanelet::Point3d(14, 10.0, 5.0, 3.0)});
+  lanelet::LineString3d rt_tl_linestring(612, {lanelet::Point3d(605, 10.0, -4.0, 3.0)});
   lanelet::LineString3d crosswalk_tl_linestring(17, {lanelet::Point3d(16, 13.0, 2.0, 3.0)});
 
   // Create traffic light regulatory elements
   auto vehicle_traffic_light = lanelet::TrafficLight::make(
     VEHICLE_TL_REG_ELEM_ID, vehicle_tl_extra_attrs, {vehicle_tl_linestring});
+  auto rt_traffic_light =
+    lanelet::TrafficLight::make(VEHICLE_TL_RIGHT_ID, lanelet::AttributeMap{}, {rt_tl_linestring});
   auto crosswalk_traffic_light = lanelet::TrafficLight::make(
     CROSSWALK_TL_REG_ELEM_ID, lanelet::AttributeMap{}, {crosswalk_tl_linestring});
 
-  // Create vehicle lanelet
+  // Create straight vehicle lanelet
   lanelet::Lanelet vehicle_lanelet(1000, vehicle_left, vehicle_right);
   vehicle_lanelet.attributes()["type"] = "lanelet";
   vehicle_lanelet.attributes()["subtype"] = "road";
   vehicle_lanelet.attributes()["turn_direction"] = "straight";
   vehicle_lanelet.addRegulatoryElement(vehicle_traffic_light);
+
+  // Create right-turn vehicle lanelet
+  lanelet::Lanelet rt_lanelet(3000, rt_left, rt_right);
+  rt_lanelet.attributes()["type"] = "lanelet";
+  rt_lanelet.attributes()["subtype"] = "road";
+  rt_lanelet.attributes()["turn_direction"] = "right";
+  rt_lanelet.addRegulatoryElement(rt_traffic_light);
 
   // Create crosswalk lanelet
   lanelet::Lanelet crosswalk_lanelet(2000, crosswalk_left, crosswalk_right);
@@ -138,6 +154,7 @@ lanelet::LaneletMapPtr create_test_map(const lanelet::AttributeMap & vehicle_tl_
   // Build map
   auto map = std::make_shared<lanelet::LaneletMap>();
   map->add(vehicle_lanelet);
+  map->add(rt_lanelet);
   map->add(crosswalk_lanelet);
 
   return map;
@@ -224,7 +241,8 @@ TEST(CrosswalkTrafficLightEstimatorTest, FindUnregistered_AllRegistered_ReturnsE
 {
   // Arrange
   auto estimator = make_estimator_with_map();
-  TrafficSignalArray msg = make_signal_array({make_vehicle_signal(TrafficSignalElement::GREEN)});
+  TrafficSignalArray msg =
+    make_signal_array({make_signal(VEHICLE_TL_REG_ELEM_ID, TrafficSignalElement::GREEN)});
 
   // Act
   const auto unregistered = estimator.find_unregistered_traffic_light_group_ids(msg);
@@ -254,7 +272,7 @@ TEST(CrosswalkTrafficLightEstimatorTest, Estimate_FirstCallWithGreenVehicle_Cros
   // Arrange
   auto estimator = make_estimator_with_map();
   TrafficSignalArray green_msg =
-    make_signal_array({make_vehicle_signal(TrafficSignalElement::GREEN)});
+    make_signal_array({make_signal(VEHICLE_TL_REG_ELEM_ID, TrafficSignalElement::GREEN)});
 
   // Act: GREEN vehicle signal is sufficient to estimate crosswalk as RED, even on first call
   const auto result = estimator.estimate(green_msg, make_time(0.0));
@@ -268,7 +286,7 @@ TEST(CrosswalkTrafficLightEstimatorTest, Estimate_UnknownVehicleNoHistory_Crossw
   // Arrange
   auto estimator = make_estimator_with_map();
   TrafficSignalArray unknown_msg =
-    make_signal_array({make_vehicle_signal(TrafficSignalElement::UNKNOWN)});
+    make_signal_array({make_signal(VEHICLE_TL_REG_ELEM_ID, TrafficSignalElement::UNKNOWN)});
 
   // Act: UNKNOWN vehicle signal with no prior history → crosswalk cannot be estimated
   const auto result = estimator.estimate(unknown_msg, make_time(0.0));
@@ -282,7 +300,7 @@ TEST(CrosswalkTrafficLightEstimatorTest, Estimate_StraightGreenVehicle_Crosswalk
   // Arrange
   auto estimator = make_estimator_with_map();
   TrafficSignalArray green_msg =
-    make_signal_array({make_vehicle_signal(TrafficSignalElement::GREEN)});
+    make_signal_array({make_signal(VEHICLE_TL_REG_ELEM_ID, TrafficSignalElement::GREEN)});
 
   // Act
   const auto result = estimator.estimate(green_msg, make_time(0.0));
@@ -295,7 +313,8 @@ TEST(CrosswalkTrafficLightEstimatorTest, Estimate_RedVehicle_CrosswalkUnknown)
 {
   // Arrange
   auto estimator = make_estimator_with_map();
-  TrafficSignalArray red_msg = make_signal_array({make_vehicle_signal(TrafficSignalElement::RED)});
+  TrafficSignalArray red_msg =
+    make_signal_array({make_signal(VEHICLE_TL_REG_ELEM_ID, TrafficSignalElement::RED)});
 
   // Act
   const auto result = estimator.estimate(red_msg, make_time(0.0));
@@ -325,13 +344,35 @@ TEST(
   // Normal estimation: GREEN vehicle + straight lane → crosswalk RED
   // With override:     green matches, crosswalk becomes GREEN
   auto estimator = make_estimator_with_rule("signal_color_relation:green:green");
-  TrafficSignalArray input = make_signal_array({make_vehicle_signal(TrafficSignalElement::GREEN)});
+  TrafficSignalArray input =
+    make_signal_array({make_signal(VEHICLE_TL_REG_ELEM_ID, TrafficSignalElement::GREEN)});
 
   // Act
   const auto result = estimator.estimate(input, make_time(0.0));
 
   // Assert: override (GREEN) wins over normal estimation (RED)
   assert_crosswalk_color(result, TrafficSignalElement::GREEN);
+}
+
+/// @brief Right-turn arrow scenario: only the right-turn TL (ID=300) reports GREEN,
+/// while the straight TL (ID=100) has no detection at all.
+/// The crosswalk must be UNKNOWN because the straight lane's signal state is unknown.
+TEST(
+  CrosswalkTrafficLightEstimatorTest, Estimate_RightArrowGreen_StraightUndetected_CrosswalkUnknown)
+{
+  // Arrange: existing map (straight lane TL=100 + crosswalk) with an added right-turn lane TL=300
+  CrosswalkTrafficLightEstimator estimator(make_default_config());
+  estimator.update_map(create_test_map());
+
+  // Only the right-turn TL reports GREEN; straight TL (100) is absent from the message
+  TrafficSignalArray input =
+    make_signal_array({make_signal(VEHICLE_TL_RIGHT_ID, TrafficSignalElement::GREEN)});
+
+  // Act
+  const auto result = estimator.estimate(input, make_time(0.0));
+
+  // Assert: crosswalk must be UNKNOWN, not RED
+  assert_crosswalk_color(result, TrafficSignalElement::UNKNOWN);
 }
 
 int main(int argc, char ** argv)
