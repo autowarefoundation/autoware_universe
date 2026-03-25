@@ -1,0 +1,79 @@
+<launch>
+  <arg name="use_sim_time" default="true" />
+  
+  <arg name="data_path" default="$(env HOME)/autoware_data"/>
+  <arg name="model_path" default="$(var data_path)/lidar_centerpoint"/>
+
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="map_to_livox" output="screen"
+    args="-9578.06835938 -78932.5390625 143.943191528 -0.0770616020608 0.143937772279 0.33439859278 0.928181560012 map livox_frame">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+  <node pkg="polygon_manager" exec="polygon_manager_node" name="polygon_manager" output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+  
+  <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">
+    <arg name="input/pointcloud" value="/adenu/sensing/lidar/points"/>
+    <arg name="output/objects" value="/objects_rsu1"/>
+    <arg name="node_name" value="lidar_centerpoint_rsu1"/>
+    <arg name="model_name" value="centerpoint"/>
+    <arg name="model_path" value="$(var model_path)"/>
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+  </include>
+
+  <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">
+    <arg name="input/pointcloud" value="/livox/lidar"/>
+    <arg name="output/objects" value="/objects_rsu2"/>
+    <arg name="node_name" value="lidar_centerpoint_rsu2"/>
+    <arg name="model_name" value="centerpoint"/>
+    <arg name="model_path" value="$(var model_path)"/>
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+  </include>
+
+  <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">
+    <arg name="input/pointcloud" value="/points_raw"/>
+    <arg name="output/objects" value="/objects_vehicle"/>
+    <arg name="node_name" value="lidar_centerpoint_vehicle"/>
+    <arg name="model_name" value="centerpoint"/>
+    <arg name="model_path" value="$(var model_path)"/>
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+  </include>
+
+  <node pkg="object_transformer_cpp" exec="object_transformer_node" name="transformer_rsu1" output="screen">
+    <param name="target_frame_id" value="map"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <remap from="input/objects" to="/objects_rsu1"/>
+    <remap from="output/objects" to="/transformed_objects_rsu1"/>
+  </node>
+
+  <node pkg="object_transformer_cpp" exec="object_transformer_node" name="transformer_rsu2" output="screen">
+    <param name="target_frame_id" value="map"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <remap from="input/objects" to="/objects_rsu2"/>
+    <remap from="output/objects" to="/transformed_objects_rsu2"/>
+  </node>
+
+  <node pkg="object_transformer_cpp" exec="object_transformer_node" name="transformer_vehicle" output="screen">
+    <param name="target_frame_id" value="map"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <remap from="input/objects" to="/objects_vehicle"/>
+    <remap from="output/objects" to="/transformed_objects_vehicle"/>
+  </node>
+
+  <node pkg="distance_selective_rsu" exec="distance_selective_rsu_node" name="distance_selective_rsu" output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param name="rsu1_pos_x" value="-9568.953125"/>
+    <param name="rsu1_pos_y" value="-78886.9296875"/>
+    <param name="rsu1_pos_z" value="139.8029763990088"/>
+    <param name="rsu2_pos_x" value="-9578.06835938"/>
+    <param name="rsu2_pos_y" value="-78932.5390625"/>
+    <param name="rsu2_pos_z" value="143.943191528"/>
+  </node>
+
+  <node pkg="base_fusion" exec="base_fusion_node" name="base_fusion" output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+  <executable cmd="ros2 bag play $(env HOME)/autoware_data/20250130/merged_bag_2 --start-offset 150 -d 2 --clock" output="screen"/>
+</launch>
