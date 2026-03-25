@@ -60,11 +60,9 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   visible_range_ = this->declare_parameter("visible_range", 100.0);
   detection_successful_rate_ = this->declare_parameter("detection_successful_rate", 0.8);
   enable_ray_tracing_ = this->declare_parameter("enable_ray_tracing", true);
-  use_object_recognition_ = this->declare_parameter("use_object_recognition", true);
   use_base_link_z_ = this->declare_parameter("use_base_link_z", true);
   const bool object_centric_pointcloud =
     this->declare_parameter("object_centric_pointcloud", false);
-  publish_ground_truth_objects_ = this->declare_parameter("publish_ground_truth", false);
   const unsigned int random_seed =
     static_cast<unsigned int>(this->declare_parameter("random_seed", 0));
   const bool use_fixed_random_seed = this->declare_parameter("use_fixed_random_seed", false);
@@ -97,12 +95,8 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
     "input/object", 100,
     std::bind(&DummyPerceptionPublisherNode::objectCallback, this, std::placeholders::_1));
 
-  // optional ground truth publisher
-  if (publish_ground_truth_objects_) {
-    ground_truth_objects_pub_ =
-      this->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
-        "~/output/debug/ground_truth_objects", qos);
-  }
+  ground_truth_objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
+    "~/output/debug/ground_truth_objects", qos);
 
   using std::chrono_literals::operator""ms;
   timer_ = rclcpp::create_timer(
@@ -188,9 +182,13 @@ void DummyPerceptionPublisherNode::timerCallback()
     }
   }
 
-  // publish ground truth
+  const bool has_ground_truth_subscribers =
+    ground_truth_objects_pub_->get_subscription_count() > 0U ||
+    ground_truth_objects_pub_->get_intra_process_subscription_count() > 0U;
+
+  // publish ground truth when subscribers exist
   // add Tracked Object
-  if (publish_ground_truth_objects_) {
+  if (has_ground_truth_subscribers) {
     for (size_t i = 0; i < all_objects.size(); ++i) {
       const auto & object = all_objects[i];
       // Use the same ObjectInfo as calculated above for consistency
@@ -290,10 +288,8 @@ void DummyPerceptionPublisherNode::timerCallback()
 
   // publish
   pointcloud_pub_->publish(output_pointcloud_msg);
-  if (use_object_recognition_) {
-    detected_object_pub_->publish(output_dynamic_object_msg);
-  }
-  if (publish_ground_truth_objects_) {
+  detected_object_pub_->publish(output_dynamic_object_msg);
+  if (has_ground_truth_subscribers) {
     ground_truth_objects_pub_->publish(output_ground_truth_objects_msg);
   }
 }
