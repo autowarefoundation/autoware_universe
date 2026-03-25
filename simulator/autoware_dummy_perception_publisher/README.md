@@ -43,11 +43,11 @@ All movement plugins inherit from `DummyObjectMovementBasePlugin` which provides
 
 ### Output
 
-| Name                                | Type                                                     | Description             |
-| ----------------------------------- | -------------------------------------------------------- | ----------------------- |
-| `output/dynamic_object`             | `tier4_perception_msgs::msg::DetectedObjectsWithFeature` | dummy detection objects |
-| `output/points_raw`                 | `sensor_msgs::msg::PointCloud2`                          | point cloud of objects  |
-| `output/debug/ground_truth_objects` | `autoware_perception_msgs::msg::TrackedObjects`          | ground truth objects    |
+| Name                                | Type                                             | Description             |
+| ----------------------------------- | ------------------------------------------------ | ----------------------- |
+| `output/dynamic_object`             | `autoware_perception_msgs::msg::DetectedObjects` | dummy detection objects |
+| `output/points_raw`                 | `sensor_msgs::msg::PointCloud2`                  | point cloud of objects  |
+| `output/debug/ground_truth_objects` | `autoware_perception_msgs::msg::TrackedObjects`  | ground truth objects    |
 
 ## Parameters
 
