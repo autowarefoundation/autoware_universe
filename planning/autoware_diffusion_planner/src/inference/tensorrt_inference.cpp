@@ -69,6 +69,7 @@ TensorrtInference::TensorrtInference(
   const size_t goal_pose_size = batch_size_ * num_elements(GOAL_POSE_SHAPE);
   const size_t ego_shape_size = batch_size_ * num_elements(EGO_SHAPE_SHAPE);
   const size_t turn_indicators_size = batch_size_ * num_elements(TURN_INDICATORS_SHAPE);
+  const size_t delay_size = batch_size_ * num_elements(DELAY_SHAPE);
   const size_t output_size = batch_size_ * num_elements(OUTPUT_SHAPE);
   const size_t turn_indicator_logit_size = batch_size_ * num_elements(TURN_INDICATOR_LOGIT_SHAPE);
 
@@ -90,6 +91,7 @@ TensorrtInference::TensorrtInference(
   goal_pose_d_ = autoware::cuda_utils::make_unique<float[]>(goal_pose_size);
   ego_shape_d_ = autoware::cuda_utils::make_unique<float[]>(ego_shape_size);
   turn_indicators_d_ = autoware::cuda_utils::make_unique<float[]>(turn_indicators_size);
+  delay_d_ = autoware::cuda_utils::make_unique<float[]>(delay_size);
 
   output_d_ = autoware::cuda_utils::make_unique<float[]>(output_size);
   turn_indicator_logit_d_ = autoware::cuda_utils::make_unique<float[]>(turn_indicator_logit_size);
@@ -173,6 +175,7 @@ void TensorrtInference::load_engine(const std::string & model_path)
   profile_dims.emplace_back(make_dynamic_dims("ego_shape", to_dynamic_dims(EGO_SHAPE_SHAPE)));
   profile_dims.emplace_back(
     make_dynamic_dims("turn_indicators", to_dynamic_dims(TURN_INDICATORS_SHAPE)));
+  profile_dims.emplace_back(make_dynamic_dims("delay", to_dynamic_dims(DELAY_SHAPE)));
 
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
   network_io.emplace_back("sampled_trajectories", to_dynamic_dims(SAMPLED_TRAJECTORIES_SHAPE));
@@ -193,6 +196,7 @@ void TensorrtInference::load_engine(const std::string & model_path)
   network_io.emplace_back("goal_pose", to_dynamic_dims(GOAL_POSE_SHAPE));
   network_io.emplace_back("ego_shape", to_dynamic_dims(EGO_SHAPE_SHAPE));
   network_io.emplace_back("turn_indicators", to_dynamic_dims(TURN_INDICATORS_SHAPE));
+  network_io.emplace_back("delay", to_dynamic_dims(DELAY_SHAPE));
   network_io.emplace_back("prediction", to_dynamic_dims(OUTPUT_SHAPE));
   network_io.emplace_back("turn_indicator_logit", to_dynamic_dims(TURN_INDICATOR_LOGIT_SHAPE));
 
@@ -249,6 +253,7 @@ void TensorrtInference::bindBuffers()
   network_trt_ptr_->setInputShape("goal_pose", to_dims_with_batch(GOAL_POSE_SHAPE));
   network_trt_ptr_->setInputShape("ego_shape", to_dims_with_batch(EGO_SHAPE_SHAPE));
   network_trt_ptr_->setInputShape("turn_indicators", to_dims_with_batch(TURN_INDICATORS_SHAPE));
+  network_trt_ptr_->setInputShape("delay", to_dims_with_batch(DELAY_SHAPE));
 
   // Bind tensor addresses once (GPU buffers are pre-allocated and stable)
   network_trt_ptr_->setTensorAddress("sampled_trajectories", sampled_trajectories_d_.get());
@@ -268,6 +273,7 @@ void TensorrtInference::bindBuffers()
   network_trt_ptr_->setTensorAddress("goal_pose", goal_pose_d_.get());
   network_trt_ptr_->setTensorAddress("ego_shape", ego_shape_d_.get());
   network_trt_ptr_->setTensorAddress("turn_indicators", turn_indicators_d_.get());
+  network_trt_ptr_->setTensorAddress("delay", delay_d_.get());
   network_trt_ptr_->setTensorAddress("prediction", output_d_.get());
   network_trt_ptr_->setTensorAddress("turn_indicator_logit", turn_indicator_logit_d_.get());
 }
@@ -295,6 +301,7 @@ void TensorrtInference::transferInputsToDevice(const preprocess::InputDataMap & 
   h2d(input_data_map.at("goal_pose"), goal_pose_d_);
   h2d(input_data_map.at("ego_shape"), ego_shape_d_);
   h2d(input_data_map.at("turn_indicators"), turn_indicators_d_);
+  h2d(input_data_map.at("delay"), delay_d_);
 
   // CPU-side float→bool conversion for speed limit masks
   const auto convert_speed_mask =

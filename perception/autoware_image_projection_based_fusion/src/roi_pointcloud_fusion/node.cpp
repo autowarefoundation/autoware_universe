@@ -27,6 +27,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::image_projection_based_fusion
@@ -59,7 +60,9 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
   max_object_size_ = declare_parameter<double>("max_object_size");
 
   // publisher
-  pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
+  // pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
+  // TODO(Koichi98): replace pub_ptr_ in FusionNode with agnocast_wrapper
+  agnocast_pub_ptr_ = AUTOWARE_CREATE_PUBLISHER2(ClusterMsgType, "output", rclcpp::QoS{1});
   cluster_debug_pub_ = this->create_publisher<PointCloudMsgType>("debug/clusters", 1);
 }
 
@@ -208,12 +211,15 @@ void RoiPointCloudFusionNode::postprocess(
 
 void RoiPointCloudFusionNode::publish(const ClusterMsgType & output_msg)
 {
-  const auto objects_sub_count =
-    pub_ptr_->get_subscription_count() + pub_ptr_->get_intra_process_subscription_count();
+  const auto objects_sub_count = agnocast_pub_ptr_->get_subscription_count() +
+                                 agnocast_pub_ptr_->get_intra_process_subscription_count();
   if (objects_sub_count < 1) {
     return;
   }
-  pub_ptr_->publish(output_msg);
+  // TODO(Koichi98): replace publish function in FusionNode with agnocast_wrapper
+  auto agnocast_output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(agnocast_pub_ptr_);
+  *agnocast_output_msg = output_msg;
+  agnocast_pub_ptr_->publish(std::move(agnocast_output_msg));
 }
 }  // namespace autoware::image_projection_based_fusion
 
