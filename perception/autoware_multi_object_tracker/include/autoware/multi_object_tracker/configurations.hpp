@@ -56,6 +56,28 @@ struct AssociatorConfig
   double unknown_association_giou_threshold;
 };
 
+struct TrackedLabelThresholds
+{
+  double unknown;
+  double car;
+  double truck;
+  double bus;
+  double trailer;
+  double motorcycle;
+  double bicycle;
+  double pedestrian;
+
+  [[nodiscard]] std::unordered_map<object_model::Label, double> to_label_map() const
+  {
+    using Label = object_model::Label;
+    return {
+      {Label::UNKNOWN, unknown}, {Label::CAR, car},       {Label::TRUCK, truck},
+      {Label::BUS, bus},         {Label::TRAILER, trailer},
+      {Label::MOTORCYCLE, motorcycle}, {Label::BICYCLE, bicycle},
+      {Label::PEDESTRIAN, pedestrian}};
+  }
+};
+
 template <typename Map, typename Key>
 auto get_map_value_if_exists(const Map & map, const Key & key)
   -> std::optional<std::reference_wrapper<const typename Map::mapped_type>>

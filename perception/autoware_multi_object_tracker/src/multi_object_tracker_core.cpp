@@ -98,9 +98,9 @@ void process_parameters(MultiObjectTrackerParameters & params)
     {Label::MOTORCYCLE, getTrackerType("motorcycle")},
     {Label::UNKNOWN, TrackerType::POLYGON}};
   // Set the pruning thresholds for processor config
-  params.processor_config.pruning_giou_thresholds = params.pruning_giou_thresholds.toLabelMap();
+  params.processor_config.pruning_giou_thresholds = params.pruning_giou_thresholds.to_label_map();
   params.processor_config.pruning_distance_thresholds =
-    params.pruning_distance_thresholds.toLabelMap();
+    params.pruning_distance_thresholds.to_label_map();
 
   for (const auto measurement_label : object_model::trackedLabels()) {
     const auto label_params_it = params.association_params_map.find(measurement_label);

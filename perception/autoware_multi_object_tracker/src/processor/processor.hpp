@@ -35,27 +35,6 @@
 
 namespace autoware::multi_object_tracker
 {
-struct TrackedLabelThresholds
-{
-  double unknown;
-  double car;
-  double truck;
-  double bus;
-  double trailer;
-  double motorcycle;
-  double bicycle;
-  double pedestrian;
-
-  std::unordered_map<object_model::Label, double> toLabelMap() const
-  {
-    using Label = object_model::Label;
-    return {{Label::UNKNOWN, unknown}, {Label::CAR, car},
-            {Label::TRUCK, truck},     {Label::BUS, bus},
-            {Label::TRAILER, trailer}, {Label::MOTORCYCLE, motorcycle},
-            {Label::BICYCLE, bicycle}, {Label::PEDESTRIAN, pedestrian}};
-  }
-};
-
 struct TrackerProcessorConfig
 {
   std::unordered_map<object_model::Label, types::TrackerType> tracker_map;
