@@ -283,8 +283,7 @@ void DataAssociation::processMeasurement(
     bool has_significant_shape_change = false;
     double score = calculateScore(
       tracked_object, tracker_label, tracker_type, association_params_opt->get(),
-      measurement_object,
-      measurement_label, prep_data.tracker_inverse_covariances[tracker_idx],
+      measurement_object, measurement_label, prep_data.tracker_inverse_covariances[tracker_idx],
       has_significant_shape_change);
 
     if (score > INVALID_SCORE) {
