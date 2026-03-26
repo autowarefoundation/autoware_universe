@@ -162,7 +162,7 @@ void TrackerProcessor::spawn(const types::AssociatedObjects & associated_objects
 std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   const types::DynamicObject & object, const rclcpp::Time & time) const
 {
-  const Label label = classes::getHighestProbLabel(object.classification);
+  const classes::Label label = classes::getHighestProbLabel(object.classification);
   const auto tracker_type_opt = get_map_value_if_exists(config_.tracker_map, label);
   if (tracker_type_opt) {
     const auto tracker_type = tracker_type_opt->get();
@@ -265,7 +265,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   {
     std::shared_ptr<Tracker> tracker;
     types::DynamicObject object;
-    Label label;
+    classes::Label label;
     bool is_unknown;
     int tracker_priority;
     int measurement_count;
