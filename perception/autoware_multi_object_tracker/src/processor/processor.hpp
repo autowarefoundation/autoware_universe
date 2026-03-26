@@ -30,26 +30,10 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace autoware::multi_object_tracker
 {
-struct TrackerProcessorConfig
-{
-  std::unordered_map<object_model::Label, types::TrackerType> tracker_map;
-  float tracker_lifetime;                // [s]
-  float min_known_object_removal_iou;    // ratio [0, 1]
-  float min_unknown_object_removal_iou;  // ratio [0, 1]
-  bool enable_unknown_object_velocity_estimation;
-  bool enable_unknown_object_motion_output;
-  std::unordered_map<object_model::Label, double> pruning_giou_thresholds;
-  std::unordered_map<object_model::Label, double> pruning_distance_thresholds;  // [m]
-  double pruning_static_object_speed;                                           // [m/s]
-  double pruning_moving_object_speed;                                           // [m/s]
-  double pruning_static_iou_threshold;                                          // [ratio]
-};
-
 class TrackerProcessor
 {
 public:

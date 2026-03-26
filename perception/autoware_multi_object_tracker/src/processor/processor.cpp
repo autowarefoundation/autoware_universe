@@ -34,7 +34,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -166,8 +165,9 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   const types::DynamicObject & object, const rclcpp::Time & time) const
 {
   const LabelType label = object_model::getHighestProbLabel(object.classification);
-  if (config_.tracker_map.count(label) != 0) {
-    const auto tracker_type = config_.tracker_map.at(label);
+  const auto tracker_type_opt = get_map_value_if_exists(config_.tracker_map, label);
+  if (tracker_type_opt) {
+    const auto tracker_type = tracker_type_opt->get();
     switch (tracker_type) {
       case types::TrackerType::MULTIPLE_VEHICLE:
         return std::make_shared<MultipleVehicleTracker>(time, object);
@@ -295,7 +295,12 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 
     constexpr double precision_threshold = 0.;
     constexpr double recall_threshold = 0.5;
-    const double generalized_iou_threshold = config_.pruning_giou_thresholds.at(source_data.label);
+    const auto generalized_iou_threshold_opt =
+      get_map_value_if_exists(config_.pruning_giou_thresholds, source_data.label);
+    if (!generalized_iou_threshold_opt) {
+      return false;
+    }
+    const double generalized_iou_threshold = generalized_iou_threshold_opt->get();
 
     const bool is_pedestrian =
       (source_data.label == Label::PEDESTRIAN && target_data.label == Label::PEDESTRIAN);
@@ -377,13 +382,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
       return a.elapsed_time < b.elapsed_time;
     });
 
-  // Create a map for search distance squared per label
-  std::unordered_map<Label, double> search_distance_sq_per_label;
-  search_distance_sq_per_label.reserve(config_.pruning_distance_thresholds.size());
-  for (const auto & [label, threshold] : config_.pruning_distance_thresholds) {
-    search_distance_sq_per_label[label] = threshold * threshold;
-  }
-
   // Build spatial index for quick neighbor lookup
   using Point = boost::geometry::model::point<double, 2, boost::geometry::cs::cartesian>;
   using Value = std::pair<Point, size_t>;  // Point and index into valid_trackers
@@ -415,8 +413,12 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     std::vector<Value> nearby;
     nearby.reserve(16);  // Reasonable initial capacity
 
-    Point p1(data1.object.pose.position.x, data1.object.pose.position.y);
-    const double max_search_dist_sq = search_distance_sq_per_label.at(data1.label);
+    const auto max_search_dist_sq_opt =
+      get_map_value_if_exists(config_.pruning_distance_thresholds_sq, data1.label);
+    if (!max_search_dist_sq_opt) {
+      continue;
+    }
+    const double max_search_dist_sq = max_search_dist_sq_opt->get();
 
     // Query R-tree with circle
     rtree.query(

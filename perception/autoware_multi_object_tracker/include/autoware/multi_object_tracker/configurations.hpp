@@ -67,7 +67,7 @@ struct TrackedLabelThresholds
   double bicycle;
   double pedestrian;
 
-  [[nodiscard]] std::unordered_map<object_model::Label, double> to_label_map() const
+  [[nodiscard]] AssociatorConfig::LabelDoubleMap to_label_map() const
   {
     using Label = object_model::Label;
     return {{Label::UNKNOWN, unknown}, {Label::CAR, car},
@@ -75,6 +75,25 @@ struct TrackedLabelThresholds
             {Label::TRAILER, trailer}, {Label::MOTORCYCLE, motorcycle},
             {Label::BICYCLE, bicycle}, {Label::PEDESTRIAN, pedestrian}};
   }
+};
+
+struct TrackerProcessorConfig
+{
+  using LabelToTrackerTypeMap =
+    std::unordered_map<object_model::Label, types::TrackerType, AssociatorConfig::EnumClassHash>;
+
+  LabelToTrackerTypeMap tracker_map;
+  float tracker_lifetime;                // [s]
+  float min_known_object_removal_iou;    // ratio [0, 1]
+  float min_unknown_object_removal_iou;  // ratio [0, 1]
+  bool enable_unknown_object_velocity_estimation;
+  bool enable_unknown_object_motion_output;
+  AssociatorConfig::LabelDoubleMap pruning_giou_thresholds;
+  AssociatorConfig::LabelDoubleMap pruning_distance_thresholds;  // [m]
+  AssociatorConfig::LabelDoubleMap pruning_distance_thresholds_sq;  // [m^2]
+  double pruning_static_object_speed;                           // [m/s]
+  double pruning_moving_object_speed;                           // [m/s]
+  double pruning_static_iou_threshold;                          // [ratio]
 };
 
 template <typename Map, typename Key>

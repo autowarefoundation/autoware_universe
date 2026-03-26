@@ -101,6 +101,12 @@ void process_parameters(MultiObjectTrackerParameters & params)
   params.processor_config.pruning_giou_thresholds = params.pruning_giou_thresholds.to_label_map();
   params.processor_config.pruning_distance_thresholds =
     params.pruning_distance_thresholds.to_label_map();
+  params.processor_config.pruning_distance_thresholds_sq.clear();
+  params.processor_config.pruning_distance_thresholds_sq.reserve(
+    params.processor_config.pruning_distance_thresholds.size());
+  for (const auto & [label, threshold] : params.processor_config.pruning_distance_thresholds) {
+    params.processor_config.pruning_distance_thresholds_sq.emplace(label, threshold * threshold);
+  }
 
   for (const auto measurement_label : object_model::trackedLabels()) {
     const auto label_params_opt =
