@@ -178,7 +178,7 @@ struct DynamicObject
   std::vector<ExistenceProbability> existence_probabilities;
 
   // object classification
-  std::vector<object_model::Classification> classification;
+  std::vector<classes::Classification> classification;
 
   // object kinematics (pose and twist)
   ObjectKinematics kinematics;

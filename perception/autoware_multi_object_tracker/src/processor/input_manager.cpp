@@ -96,8 +96,8 @@ std::optional<types::DynamicObjectList> InputStream::processMessage(
 
   // object shape processing
   for (auto & object : dynamic_objects.objects) {
-    const auto label = object_model::getHighestProbLabel(object.classification);
-    if (label == object_model::Label::UNKNOWN) {
+    const auto label = classes::getHighestProbLabel(object.classification);
+    if (label == classes::Label::UNKNOWN) {
       continue;
     }
 

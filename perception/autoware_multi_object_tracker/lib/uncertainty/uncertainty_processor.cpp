@@ -33,27 +33,27 @@ namespace uncertainty
 using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 object_model::StateCovariance covarianceFromObjectClass(
-  const object_model::Classification & object_class)
+  const classes::Classification & object_class)
 {
   const auto & label = object_class.label;
   ObjectModel obj_class_model(object_model::ObjectModelType::Unknown);
   switch (label) {
-    case object_model::Label::CAR:
+    case classes::Label::CAR:
       obj_class_model = object_model::normal_vehicle;
       break;
-    case object_model::Label::BUS:
-    case object_model::Label::TRUCK:
-    case object_model::Label::TRAILER:
+    case classes::Label::BUS:
+    case classes::Label::TRUCK:
+    case classes::Label::TRAILER:
       obj_class_model = object_model::big_vehicle;
       break;
-    case object_model::Label::BICYCLE:
-    case object_model::Label::MOTORCYCLE:
+    case classes::Label::BICYCLE:
+    case classes::Label::MOTORCYCLE:
       obj_class_model = object_model::bicycle;
       break;
-    case object_model::Label::PEDESTRIAN:
+    case classes::Label::PEDESTRIAN:
       obj_class_model = object_model::pedestrian;
       break;
-    case object_model::Label::UNKNOWN:
+    case classes::Label::UNKNOWN:
       obj_class_model = object_model::unknown;
       break;
     default:
@@ -64,7 +64,7 @@ object_model::StateCovariance covarianceFromObjectClass(
 }
 
 types::DynamicObject modelUncertaintyByClass(
-  const types::DynamicObject & object, const object_model::Classification & object_class)
+  const types::DynamicObject & object, const classes::Classification & object_class)
 {
   types::DynamicObject updating_object = object;
 
@@ -120,8 +120,8 @@ types::DynamicObjectList modelUncertainty(const types::DynamicObjectList & detec
       updating_objects.objects.push_back(object);
       continue;
     }
-    const object_model::Classification & object_class =
-      object_model::getHighestProbClassification(object.classification);
+    const classes::Classification & object_class =
+      classes::getHighestProbClassification(object.classification);
     updating_objects.objects.push_back(modelUncertaintyByClass(object, object_class));
   }
   updating_objects.buildUuidIndex();

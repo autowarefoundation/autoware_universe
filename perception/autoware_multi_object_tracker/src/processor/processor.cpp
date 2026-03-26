@@ -41,8 +41,6 @@
 namespace autoware::multi_object_tracker
 {
 using autoware_utils_debug::ScopedTimeTrack;
-using Label = object_model::Label;
-using LabelType = object_model::Label;
 
 TrackerProcessor::TrackerProcessor(
   const TrackerProcessorConfig & config, const AssociatorConfig & associator_config,
@@ -164,7 +162,7 @@ void TrackerProcessor::spawn(const types::AssociatedObjects & associated_objects
 std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   const types::DynamicObject & object, const rclcpp::Time & time) const
 {
-  const LabelType label = object_model::getHighestProbLabel(object.classification);
+  const Label label = classes::getHighestProbLabel(object.classification);
   const auto tracker_type_opt = get_map_value_if_exists(config_.tracker_map, label);
   if (tracker_type_opt) {
     const auto tracker_type = tracker_type_opt->get();
@@ -277,7 +275,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     explicit TrackerData(const std::shared_ptr<Tracker> & t)
     : tracker(t),
       object(),
-      label(Label::UNKNOWN),
+      label(classes::Label::UNKNOWN),
       is_unknown(false),
       tracker_priority(0),
       measurement_count(0),
@@ -303,7 +301,8 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     const double generalized_iou_threshold = generalized_iou_threshold_opt->get();
 
     const bool is_pedestrian =
-      (source_data.label == Label::PEDESTRIAN && target_data.label == Label::PEDESTRIAN);
+      (source_data.label == classes::Label::PEDESTRIAN &&
+       target_data.label == classes::Label::PEDESTRIAN);
     const bool is_target_known = target_data.tracker->getKnownObjectProbability() >= min_known_prob;
     const bool is_source_known = source_data.tracker->getKnownObjectProbability() >= min_known_prob;
 
@@ -358,7 +357,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     }
 
     data.label = tracker->getHighestProbLabel();
-    data.is_unknown = (data.label == Label::UNKNOWN);
+    data.is_unknown = (data.label == classes::Label::UNKNOWN);
     data.tracker_priority = tracker->getTrackerPriority();
     data.measurement_count = tracker->getTotalMeasurementCount();
     data.elapsed_time = tracker->getElapsedTimeFromLastUpdate(time);

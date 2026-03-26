@@ -46,7 +46,6 @@ struct MeasurementWithIndex
   MeasurementWithIndex(const types::DynamicObject & obj, size_t idx) : object(obj), index(idx) {}
 };
 using autoware_utils_debug::ScopedTimeTrack;
-using Label = object_model::Label;
 
 DataAssociation::DataAssociation(const AssociatorConfig & config)
 : config_(config), score_threshold_(0.01)
@@ -65,7 +64,7 @@ void DataAssociation::setTimeKeeper(
 void DataAssociation::updateMaxSearchDistances()
 {
   max_squared_dist_per_class_.clear();
-  for (const auto measurement_label : object_model::trackedLabels()) {
+  for (const auto measurement_label : classes::trackedLabels()) {
     double max_squared_dist = 0.0;
     const auto tracker_params_map_opt =
       get_map_value_if_exists(config_.association_params_map, measurement_label);
@@ -224,7 +223,7 @@ PreparationData DataAssociation::prepareAssociationData(
 
 void DataAssociation::processMeasurement(
   const types::DynamicObject & measurement_object, size_t measurement_idx,
-  const object_model::Label measurement_label, const PreparationData & prep_data,
+  const classes::Label measurement_label, const PreparationData & prep_data,
   types::AssociationData & association_data)
 {
   const auto tracker_params_map_opt =
@@ -313,7 +312,7 @@ types::AssociationData DataAssociation::calcAssociationData(
     const MeasurementWithIndex measurement_with_idx(*it, measurement_idx);
 
     const auto measurement_label =
-      object_model::getHighestProbLabel(measurement_with_idx.object.classification);
+      classes::getHighestProbLabel(measurement_with_idx.object.classification);
 
     processMeasurement(
       measurement_with_idx.object, measurement_with_idx.index, measurement_label, prep_data,
@@ -335,14 +334,14 @@ std::vector<std::vector<double>> DataAssociation::formatScoreMatrix(
 }
 
 double DataAssociation::calculateScore(
-  const types::DynamicObject & tracked_object, const object_model::Label tracker_label,
+  const types::DynamicObject & tracked_object, const classes::Label tracker_label,
   const types::TrackerType tracker_type,
   const AssociatorConfig::TrackerAssociationParameters & association_params,
-  const types::DynamicObject & measurement_object, const object_model::Label measurement_label,
+  const types::DynamicObject & measurement_object, const classes::Label measurement_label,
   const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const
 {
   // when the tracker and measurements are unknown, use generalized IoU
-  if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
+  if (tracker_label == classes::Label::UNKNOWN && measurement_label == classes::Label::UNKNOWN) {
     const double & generalized_iou_threshold = config_.unknown_association_giou_threshold;
     const double generalized_iou = shapes::get2dGeneralizedIoU(tracked_object, measurement_object);
     if (generalized_iou < generalized_iou_threshold) {
@@ -383,7 +382,7 @@ double DataAssociation::calculateScore(
 
   // use 1d iou for pedestrian, 3d giou for other objects if both extensions are trustable
   // otherwise use 2d giou
-  const bool use_1d_iou = (tracker_label == Label::PEDESTRIAN);
+  const bool use_1d_iou = (tracker_label == classes::Label::PEDESTRIAN);
   const bool use_3d_iou = (tracked_object.trust_extension) && (measurement_object.trust_extension);
 
   double iou_score;

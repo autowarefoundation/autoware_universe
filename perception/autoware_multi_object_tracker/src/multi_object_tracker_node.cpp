@@ -145,21 +145,21 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     [this](const std::string & parameter_namespace) -> TrackedLabelThresholds {
     TrackedLabelThresholds thresholds;
     thresholds.unknown = declare_parameter<double>(
-      parameter_namespace + "." + object_model::toString(object_model::Label::UNKNOWN));
-    thresholds.car = declare_parameter<double>(
-      parameter_namespace + "." + object_model::toString(object_model::Label::CAR));
+      parameter_namespace + "." + classes::toString(classes::Label::UNKNOWN));
+    thresholds.car =
+      declare_parameter<double>(parameter_namespace + "." + classes::toString(classes::Label::CAR));
     thresholds.truck = declare_parameter<double>(
-      parameter_namespace + "." + object_model::toString(object_model::Label::TRUCK));
-    thresholds.bus = declare_parameter<double>(
-      parameter_namespace + "." + object_model::toString(object_model::Label::BUS));
+      parameter_namespace + "." + classes::toString(classes::Label::TRUCK));
+    thresholds.bus =
+      declare_parameter<double>(parameter_namespace + "." + classes::toString(classes::Label::BUS));
     thresholds.trailer = declare_parameter<double>(
-      parameter_namespace + "." + object_model::toString(object_model::Label::TRAILER));
+      parameter_namespace + "." + classes::toString(classes::Label::TRAILER));
     thresholds.motorcycle = declare_parameter<double>(
-      parameter_namespace + "." + object_model::toString(object_model::Label::MOTORCYCLE));
+      parameter_namespace + "." + classes::toString(classes::Label::MOTORCYCLE));
     thresholds.bicycle = declare_parameter<double>(
-      parameter_namespace + "." + object_model::toString(object_model::Label::BICYCLE));
+      parameter_namespace + "." + classes::toString(classes::Label::BICYCLE));
     thresholds.pedestrian = declare_parameter<double>(
-      parameter_namespace + "." + object_model::toString(object_model::Label::PEDESTRIAN));
+      parameter_namespace + "." + classes::toString(classes::Label::PEDESTRIAN));
     return thresholds;
   };
 
@@ -183,8 +183,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // Parameters for associator (explicit layered configuration)
   params_.association_params_map.clear();
-  for (const auto measurement_label : object_model::trackedLabels()) {
-    const auto measurement_label_name = object_model::toString(measurement_label);
+  for (const auto measurement_label : classes::trackedLabels()) {
+    const auto measurement_label_name = classes::toString(measurement_label);
     const auto can_assign_parameter_name = "association.can_assign." + measurement_label_name;
     const auto tracker_type_names =
       declare_parameter<std::vector<std::string>>(can_assign_parameter_name);

@@ -25,7 +25,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace autoware::multi_object_tracker::object_model
+namespace autoware::multi_object_tracker::classes
 {
 
 using ClassificationMsg = autoware_perception_msgs::msg::ObjectClassification;
@@ -198,6 +198,6 @@ inline Label getHighestProbLabel(const std::vector<Classification> & classificat
   return getHighestProbClassification(classifications).label;
 }
 
-}  // namespace autoware::multi_object_tracker::object_model
+}  // namespace autoware::multi_object_tracker::classes
 
 #endif  // AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__CLASSES_HPP_

@@ -68,11 +68,11 @@ bool MultipleVehicleTracker::getTrackedObject(
 {
   const auto label = getHighestProbLabel();
 
-  if (label == object_model::Label::CAR) {
+  if (label == classes::Label::CAR) {
     normal_vehicle_tracker_.getTrackedObject(time, object, to_publish);
   } else if (
-    label == object_model::Label::BUS || label == object_model::Label::TRUCK ||
-    label == object_model::Label::TRAILER) {
+    label == classes::Label::BUS || label == classes::Label::TRUCK ||
+    label == classes::Label::TRAILER) {
     big_vehicle_tracker_.getTrackedObject(time, object, to_publish);
   } else {
     // If the label is others, use the normal vehicle tracker as a fallback

@@ -47,9 +47,9 @@ bool PedestrianAndBicycleTracker::getTrackedObject(
 {
   const auto label = getHighestProbLabel();
 
-  if (label == object_model::Label::BICYCLE || label == object_model::Label::MOTORCYCLE) {
+  if (label == classes::Label::BICYCLE || label == classes::Label::MOTORCYCLE) {
     bicycle_tracker_.getTrackedObject(time, object, to_publish);
-  } else if (label == object_model::Label::PEDESTRIAN) {
+  } else if (label == classes::Label::PEDESTRIAN) {
     pedestrian_tracker_.getTrackedObject(time, object, to_publish);
   } else {
     // If the label is others, use the bicycle tracker as a fallback

@@ -46,9 +46,9 @@ struct AssociatorConfig
 
   using TrackerAssociationParametersMap =
     std::unordered_map<types::TrackerType, TrackerAssociationParameters, EnumClassHash>;
-  using LabelDoubleMap = std::unordered_map<object_model::Label, double, EnumClassHash>;
+  using LabelDoubleMap = std::unordered_map<classes::Label, double, EnumClassHash>;
   using LabelToTrackerAssociationParametersMap =
-    std::unordered_map<object_model::Label, TrackerAssociationParametersMap, EnumClassHash>;
+    std::unordered_map<classes::Label, TrackerAssociationParametersMap, EnumClassHash>;
 
   // Effective association parameters (per measurement label -> tracker type).
   LabelToTrackerAssociationParametersMap association_params_map;
@@ -69,7 +69,7 @@ struct TrackedLabelThresholds
 
   [[nodiscard]] AssociatorConfig::LabelDoubleMap to_label_map() const
   {
-    using Label = object_model::Label;
+    using Label = classes::Label;
     return {{Label::UNKNOWN, unknown}, {Label::CAR, car},
             {Label::TRUCK, truck},     {Label::BUS, bus},
             {Label::TRAILER, trailer}, {Label::MOTORCYCLE, motorcycle},
@@ -80,7 +80,7 @@ struct TrackedLabelThresholds
 struct TrackerProcessorConfig
 {
   using LabelToTrackerTypeMap =
-    std::unordered_map<object_model::Label, types::TrackerType, AssociatorConfig::EnumClassHash>;
+    std::unordered_map<classes::Label, types::TrackerType, AssociatorConfig::EnumClassHash>;
 
   LabelToTrackerTypeMap tracker_map;
   float tracker_lifetime;                // [s]

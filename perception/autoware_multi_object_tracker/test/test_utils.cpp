@@ -73,7 +73,7 @@ autoware_perception_msgs::msg::DetectedObject toDetectedObject(
 
   // classification
   det_object.classification =
-    autoware::multi_object_tracker::object_model::toClassificationMsgs(dyn_object.classification);
+    autoware::multi_object_tracker::classes::toClassificationMsgs(dyn_object.classification);
 
   // pose and covariance
   det_object.kinematics.pose_with_covariance.pose = dyn_object.pose;

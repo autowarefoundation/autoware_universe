@@ -30,12 +30,12 @@ namespace uncertainty
 using nav_msgs::msg::Odometry;
 using object_model::ObjectModel;
 
-ObjectModel decodeObjectModel(const object_model::Classification & object_class);
+ObjectModel decodeObjectModel(const classes::Classification & object_class);
 
 types::DynamicObjectList modelUncertainty(const types::DynamicObjectList & detected_objects);
 
 object_model::StateCovariance covarianceFromObjectClass(
-  const types::DynamicObject & detected_object, const object_model::Classification & object_class);
+  const types::DynamicObject & detected_object, const classes::Classification & object_class);
 
 void normalizeUncertainty(types::DynamicObjectList & detected_objects);
 

@@ -31,7 +31,7 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
 {
   autoware::multi_object_tracker::TrackerProcessorConfig config;
   using autoware::multi_object_tracker::TrackerType;
-  using Label = autoware::multi_object_tracker::object_model::Label;
+  using Label = autoware::multi_object_tracker::classes::Label;
 
   // Set tracker types for different object classes
   config.tracker_map = {
@@ -75,7 +75,7 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
 {
   autoware::multi_object_tracker::AssociatorConfig config;
   using autoware::multi_object_tracker::TrackerType;
-  using Label = autoware::multi_object_tracker::object_model::Label;
+  using Label = autoware::multi_object_tracker::classes::Label;
 
   std::map<Label, TrackerType> tracker_map = {
     {Label::UNKNOWN, TrackerType::POLYGON},
@@ -87,8 +87,7 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
     {Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE},
     {Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE}};
 
-  for (const auto measurement_label :
-       autoware::multi_object_tracker::object_model::trackedLabels()) {
+  for (const auto measurement_label : autoware::multi_object_tracker::classes::trackedLabels()) {
     const auto effective_tracker_type = tracker_map.at(measurement_label);
     config.association_params_map[measurement_label][effective_tracker_type] =
       autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters{
@@ -251,7 +250,7 @@ void TestBench::initializeCarObject(
 {
   obj.uuid.uuid = stringToUUID(id);
   obj.time = stamp;
-  obj.classification = {{autoware::multi_object_tracker::object_model::Label::CAR, 1.0F}};
+  obj.classification = {{autoware::multi_object_tracker::classes::Label::CAR, 1.0F}};
   obj.shape.dimensions.x = state.shape.x;
   obj.shape.dimensions.y = state.shape.y;
   obj.shape.dimensions.z = 1.5;
@@ -271,7 +270,7 @@ void TestBench::initializePedestrianObject(
 {
   obj.uuid.uuid = stringToUUID(id);
   obj.time = stamp;
-  obj.classification = {{autoware::multi_object_tracker::object_model::Label::PEDESTRIAN, 1.0F}};
+  obj.classification = {{autoware::multi_object_tracker::classes::Label::PEDESTRIAN, 1.0F}};
   obj.shape.type = autoware_perception_msgs::msg::Shape::CYLINDER;
   obj.shape.dimensions.x = 0.4;
   obj.shape.dimensions.y = 0.4;
@@ -291,7 +290,7 @@ void TestBench::initializeUnknownObject(
 {
   obj.uuid.uuid = stringToUUID(id);
   obj.time = stamp;
-  obj.classification = {{autoware::multi_object_tracker::object_model::Label::UNKNOWN, 1.0F}};
+  obj.classification = {{autoware::multi_object_tracker::classes::Label::UNKNOWN, 1.0F}};
 
   // Shape configuration
   obj.shape.type = state.shape_type;
