@@ -479,7 +479,7 @@ geometry_msgs::msg::Pose DefaultPlanner::refine_goal_height(
 {
   const auto & pref = route_sections.back().preferred_primitive;
   const auto goal_pt = experimental::lanelet2_utils::from_ros(goal.position);
-  double goal_height = goal.position.z;
+  double goal_height;
 
   if (pref.primitive_type == "area") {
     const auto area = route_handler_.getAreaFromId(pref.id);
