@@ -22,9 +22,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <iterator>
 #include <list>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -33,16 +35,15 @@ namespace
 {
 constexpr double INVALID_SCORE = 0.0;
 
-double getLabelValue(
-  const autoware::multi_object_tracker::AssociatorConfig::LabelDoubleMap & values,
-  const autoware::multi_object_tracker::object_model::Label measurement_label,
-  const double fallback)
+template <typename Map, typename Key>
+auto getMapValueIfExists(const Map & map, const Key & key)
+  -> std::optional<std::reference_wrapper<const typename Map::mapped_type>>
 {
-  const auto measurement_it = values.find(measurement_label);
-  if (measurement_it == values.end()) {
-    return fallback;
+  const auto it = map.find(key);
+  if (it == map.end()) {
+    return std::nullopt;
   }
-  return measurement_it->second;
+  return std::cref(it->second);
 }
 
 }  // namespace
@@ -79,12 +80,14 @@ void DataAssociation::updateMaxSearchDistances()
   max_squared_dist_per_class_.clear();
   for (const auto measurement_label : object_model::trackedLabels()) {
     double max_squared_dist = 0.0;
-    const auto label_it = config_.association_params_map.find(measurement_label);
-    if (label_it == config_.association_params_map.end()) {
+    const auto tracker_params_map_opt =
+      getMapValueIfExists(config_.association_params_map, measurement_label);
+    if (!tracker_params_map_opt) {
       max_squared_dist_per_class_[measurement_label] = max_squared_dist;
       continue;
     }
-    for (const auto & [tracker_type, association_params] : label_it->second) {
+    const auto & tracker_params_map = tracker_params_map_opt->get();
+    for (const auto & [tracker_type, association_params] : tracker_params_map) {
       static_cast<void>(tracker_type);
       max_squared_dist = std::max(max_squared_dist, association_params.max_dist_sq);
     }
@@ -238,14 +241,17 @@ void DataAssociation::processMeasurement(
   const object_model::Label measurement_label, const PreparationData & prep_data,
   types::AssociationData & association_data)
 {
-  const auto label_it = config_.association_params_map.find(measurement_label);
-  if (label_it == config_.association_params_map.end()) {
+  const auto tracker_params_map_opt =
+    getMapValueIfExists(config_.association_params_map, measurement_label);
+  if (!tracker_params_map_opt) {
     return;
   }
+  const auto & tracker_params_map = tracker_params_map_opt->get();
 
   // Get pre-computed maximum squared distance for this measurement class
-  const double max_squared_dist =
-    getLabelValue(max_squared_dist_per_class_, measurement_label, 0.0);
+  const auto max_squared_dist_opt =
+    getMapValueIfExists(max_squared_dist_per_class_, measurement_label);
+  const double max_squared_dist = max_squared_dist_opt ? max_squared_dist_opt->get() : 0.0;
 
   // Use circle query instead of box for more precise filtering
   Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);
@@ -267,8 +273,8 @@ void DataAssociation::processMeasurement(
     const size_t tracker_idx = tracker_value.second;
     const auto tracker_type = prep_data.tracker_types[tracker_idx];
 
-    const auto assoc_it = label_it->second.find(tracker_type);
-    if (assoc_it == label_it->second.end()) continue;
+    const auto association_params_opt = getMapValueIfExists(tracker_params_map, tracker_type);
+    if (!association_params_opt) continue;
 
     // Calculate score for this tracker-measurement pair
     const auto & tracked_object = prep_data.tracked_objects[tracker_idx];
@@ -276,7 +282,8 @@ void DataAssociation::processMeasurement(
 
     bool has_significant_shape_change = false;
     double score = calculateScore(
-      tracked_object, tracker_label, tracker_type, assoc_it->second, measurement_object,
+      tracked_object, tracker_label, tracker_type, association_params_opt->get(),
+      measurement_object,
       measurement_label, prep_data.tracker_inverse_covariances[tracker_idx],
       has_significant_shape_change);
 
