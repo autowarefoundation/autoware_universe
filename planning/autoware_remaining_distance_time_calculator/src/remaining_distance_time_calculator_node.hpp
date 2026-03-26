@@ -84,6 +84,7 @@ private:
 
   bool has_received_route_;
   bool has_received_scenario_;
+  LaneletRoute::ConstSharedPtr cached_route_msg_;
   double velocity_limit_;
 
   double remaining_distance_;
@@ -100,6 +101,8 @@ private:
   void on_velocity_limit(const VelocityLimit::ConstSharedPtr & msg);
   void on_scenario(const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr & msg);
   void compute_route();
+  /** @brief Fill lanelets from cached mission route (lane segments only; skips area connectors). */
+  bool build_lane_sequence_from_route(lanelet::ConstLanelets * out_lanelets) const;
 
   /**
    * @brief calculate mission remaining distance
