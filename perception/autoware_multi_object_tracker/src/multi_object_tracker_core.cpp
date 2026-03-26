@@ -103,17 +103,26 @@ void process_parameters(MultiObjectTrackerParameters & params)
     params.pruning_distance_thresholds.to_label_map();
 
   for (const auto measurement_label : object_model::trackedLabels()) {
-    const auto label_params_it = params.association_params_map.find(measurement_label);
-    if (label_params_it == params.association_params_map.end() || label_params_it->second.empty()) {
+    const auto label_params_opt =
+      get_map_value_if_exists(params.association_params_map, measurement_label);
+    if (!label_params_opt || label_params_opt->get().empty()) {
       throw std::runtime_error(
         "Missing association configuration for measurement label: " +
         object_model::toString(measurement_label));
     }
 
-    const auto & label_params = label_params_it->second;
+    const auto & label_params = label_params_opt->get();
 
-    const auto default_tracker_type = params.processor_config.tracker_map.at(measurement_label);
-    if (label_params.find(default_tracker_type) == label_params.end()) {
+    const auto default_tracker_type_opt =
+      get_map_value_if_exists(params.processor_config.tracker_map, measurement_label);
+    if (!default_tracker_type_opt) {
+      throw std::runtime_error(
+        "Missing default tracker mapping for measurement label: " +
+        object_model::toString(measurement_label));
+    }
+
+    const auto default_tracker_type = default_tracker_type_opt->get();
+    if (!get_map_value_if_exists(label_params, default_tracker_type)) {
       throw std::runtime_error(
         "Inconsistent configuration: default tracker '" + toString(default_tracker_type) +
         "' for measurement label '" + object_model::toString(measurement_label) +

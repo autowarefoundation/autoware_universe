@@ -70,7 +70,7 @@ void DataAssociation::updateMaxSearchDistances()
     const auto tracker_params_map_opt =
       get_map_value_if_exists(config_.association_params_map, measurement_label);
     if (!tracker_params_map_opt) {
-      max_squared_dist_per_class_[measurement_label] = max_squared_dist;
+      max_squared_dist_per_class_.insert_or_assign(measurement_label, max_squared_dist);
       continue;
     }
     const auto & tracker_params_map = tracker_params_map_opt->get();
@@ -78,7 +78,7 @@ void DataAssociation::updateMaxSearchDistances()
       static_cast<void>(tracker_type);
       max_squared_dist = std::max(max_squared_dist, association_params.max_dist_sq);
     }
-    max_squared_dist_per_class_[measurement_label] = max_squared_dist;
+    max_squared_dist_per_class_.insert_or_assign(measurement_label, max_squared_dist);
   }
 }
 
