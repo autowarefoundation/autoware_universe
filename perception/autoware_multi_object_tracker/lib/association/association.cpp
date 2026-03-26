@@ -22,11 +22,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include <functional>
 #include <iterator>
 #include <list>
 #include <memory>
-#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -34,17 +32,6 @@
 namespace
 {
 constexpr double INVALID_SCORE = 0.0;
-
-template <typename Map, typename Key>
-auto getMapValueIfExists(const Map & map, const Key & key)
-  -> std::optional<std::reference_wrapper<const typename Map::mapped_type>>
-{
-  const auto it = map.find(key);
-  if (it == map.end()) {
-    return std::nullopt;
-  }
-  return std::cref(it->second);
-}
 
 }  // namespace
 
@@ -81,7 +68,7 @@ void DataAssociation::updateMaxSearchDistances()
   for (const auto measurement_label : object_model::trackedLabels()) {
     double max_squared_dist = 0.0;
     const auto tracker_params_map_opt =
-      getMapValueIfExists(config_.association_params_map, measurement_label);
+      get_map_value_if_exists(config_.association_params_map, measurement_label);
     if (!tracker_params_map_opt) {
       max_squared_dist_per_class_[measurement_label] = max_squared_dist;
       continue;
@@ -242,7 +229,7 @@ void DataAssociation::processMeasurement(
   types::AssociationData & association_data)
 {
   const auto tracker_params_map_opt =
-    getMapValueIfExists(config_.association_params_map, measurement_label);
+    get_map_value_if_exists(config_.association_params_map, measurement_label);
   if (!tracker_params_map_opt) {
     return;
   }
@@ -250,7 +237,7 @@ void DataAssociation::processMeasurement(
 
   // Get pre-computed maximum squared distance for this measurement class
   const auto max_squared_dist_opt =
-    getMapValueIfExists(max_squared_dist_per_class_, measurement_label);
+    get_map_value_if_exists(max_squared_dist_per_class_, measurement_label);
   const double max_squared_dist = max_squared_dist_opt ? max_squared_dist_opt->get() : 0.0;
 
   // Use circle query instead of box for more precise filtering
@@ -273,7 +260,7 @@ void DataAssociation::processMeasurement(
     const size_t tracker_idx = tracker_value.second;
     const auto tracker_type = prep_data.tracker_types[tracker_idx];
 
-    const auto association_params_opt = getMapValueIfExists(tracker_params_map, tracker_type);
+    const auto association_params_opt = get_map_value_if_exists(tracker_params_map, tracker_type);
     if (!association_params_opt) continue;
 
     // Calculate score for this tracker-measurement pair

@@ -18,6 +18,7 @@
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
+#include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
 
 #include <Eigen/Core>
@@ -33,7 +34,6 @@
 
 #include <list>
 #include <memory>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -47,37 +47,6 @@ namespace bgi = boost::geometry::index;
 typedef bg::model::point<double, 2, bg::cs::cartesian> Point;
 typedef bg::model::box<Point> Box;
 typedef std::pair<Point, size_t> ValueType;  // Point and tracker index
-
-struct AssociatorConfig
-{
-  struct EnumClassHash
-  {
-    template <typename T>
-    std::size_t operator()(const T value) const
-    {
-      return static_cast<std::size_t>(value);
-    }
-  };
-
-  struct TrackerAssociationParameters
-  {
-    double max_dist_sq;
-    double max_area;
-    double min_area;
-    double min_iou;
-  };
-
-  using TrackerAssociationParametersMap =
-    std::unordered_map<types::TrackerType, TrackerAssociationParameters, EnumClassHash>;
-  using LabelDoubleMap = std::unordered_map<object_model::Label, double, EnumClassHash>;
-  using LabelToTrackerAssociationParametersMap =
-    std::unordered_map<object_model::Label, TrackerAssociationParametersMap, EnumClassHash>;
-
-  // Effective association parameters (per measurement label -> tracker type).
-  LabelToTrackerAssociationParametersMap association_params_map;
-
-  double unknown_association_giou_threshold;
-};
 
 struct InverseCovariance2D
 {
