@@ -70,7 +70,6 @@ void DataAssociation::updateMaxSearchDistances()
     const auto tracker_params_map_opt =
       get_map_value_if_exists(config_.association_params_map, measurement_label);
     if (!tracker_params_map_opt) {
-      max_squared_dist_per_class_.insert_or_assign(measurement_label, max_squared_dist);
       continue;
     }
     const auto & tracker_params_map = tracker_params_map_opt->get();
