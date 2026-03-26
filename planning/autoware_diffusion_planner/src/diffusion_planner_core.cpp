@@ -49,6 +49,7 @@ DiffusionPlannerCore::DiffusionPlannerCore(
 void DiffusionPlannerCore::load_model()
 {
   tensorrt_inference_.reset();
+  last_agent_poses_map_.clear();
   utils::check_weight_version(params_.args_path);
   normalization_map_ = utils::load_normalization_stats(params_.args_path);
   tensorrt_inference_ = std::make_unique<TensorrtInference>(
@@ -66,7 +67,8 @@ void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
 void DiffusionPlannerCore::set_map(
   const std::shared_ptr<const lanelet::LaneletMap> & lanelet_map_ptr)
 {
-  lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(lanelet_map_ptr);
+  lane_segment_context_ = std::make_unique<preprocess::LaneSegmentContext>(
+    lanelet_map_ptr, params_.line_string_max_step_m);
 }
 
 std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
@@ -141,17 +143,6 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
 {
   InputDataMap input_data_map;
 
-  // random sample trajectories
-  {
-    for (int64_t b = 0; b < params_.batch_size; b++) {
-      const std::vector<float> sampled_trajectories =
-        preprocess::create_sampled_trajectories(params_.temperature_list[b]);
-      input_data_map["sampled_trajectories"].insert(
-        input_data_map["sampled_trajectories"].end(), sampled_trajectories.begin(),
-        sampled_trajectories.end());
-    }
-  }
-
   const geometry_msgs::msg::Pose & pose_center =
     params_.shift_x
       ? utils::shift_x(
@@ -162,6 +153,41 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   const auto & center_x = static_cast<float>(pose_center.position.x);
   const auto & center_y = static_cast<float>(pose_center.position.y);
   const auto & center_z = static_cast<float>(pose_center.position.z);
+
+  // random sample trajectories
+  int64_t delay_step = 0;
+  {
+    const int64_t copy_steps = std::clamp<int64_t>(params_.delay_step, 0, OUTPUT_T / 2);
+    const bool has_previous_output = !last_agent_poses_map_.empty();
+
+    for (int64_t b = 0; b < params_.batch_size; b++) {
+      std::vector<float> sampled_trajectories =
+        preprocess::create_sampled_trajectories(params_.temperature_list[b]);
+
+      if (has_previous_output) {
+        constexpr int64_t agent_idx = 0;
+        delay_step = copy_steps;
+        for (int64_t t = 0; t <= copy_steps; ++t) {
+          const size_t dst_base = agent_idx * (OUTPUT_T + 1) * POSE_DIM + (t)*POSE_DIM;
+          const Eigen::Matrix4d pose_ego =
+            map_to_ego_transform * last_agent_poses_map_[b][agent_idx][t];
+          const float shifted_x = static_cast<float>(pose_ego(0, 3));
+          const float shifted_y = static_cast<float>(pose_ego(1, 3));
+          const auto [shifted_cos, shifted_sin] =
+            utils::rotation_matrix_to_cos_sin(pose_ego.block<3, 3>(0, 0));
+
+          sampled_trajectories[dst_base + 0] = (shifted_x - 10.0f) / 20.0f;
+          sampled_trajectories[dst_base + 1] = shifted_y / 20.0f;
+          sampled_trajectories[dst_base + 2] = shifted_cos;
+          sampled_trajectories[dst_base + 3] = shifted_sin;
+        }
+      }
+
+      input_data_map["sampled_trajectories"].insert(
+        input_data_map["sampled_trajectories"].end(), sampled_trajectories.begin(),
+        sampled_trajectories.end());
+    }
+  }
 
   // Ego history
   {
@@ -279,6 +305,12 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
       utils::replicate_for_batch(single_turn_indicators, params_.batch_size);
   }
 
+  // control delay
+  {
+    const std::vector<float> single_delay = {static_cast<float>(delay_step)};
+    input_data_map["delay"] = utils::replicate_for_batch(single_delay, params_.batch_size);
+  }
+
   return input_data_map;
 }
 
@@ -299,6 +331,7 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
 {
   const auto agent_poses =
     postprocess::parse_predictions(predictions, frame_context.ego_to_map_transform);
+  last_agent_poses_map_ = agent_poses;
 
   const bool enable_force_stop =
     frame_context.ego_kinematic_state.twist.twist.linear.x > std::numeric_limits<double>::epsilon();

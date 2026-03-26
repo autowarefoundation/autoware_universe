@@ -96,7 +96,8 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       test/preprocessing_utils_edge_case_test.cpp
       test/agent_edge_case_test.cpp
       test/lanelet_edge_case_test.cpp
-      test/diffusion_planner_integration_test.cpp)
+      test/diffusion_planner_integration_test.cpp
+      test/rtc_prefix_test.cpp)
 
     target_link_libraries(test_diffusion_planner autoware_diffusion_planner_component)
     ament_target_dependencies(test_diffusion_planner

@@ -40,11 +40,10 @@ public:
 
   void publishSegmentedPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
 
-  void publishGroundSegmentedPointcloud(
+  void publishVisualizationPointcloud(
     std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
 
-  // cSpell:ignore Probs
-  void publishProbsPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
+  void publishFilteredPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
 
 private:
   void cloudCallback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
@@ -56,11 +55,10 @@ private:
     segmented_pointcloud_pub_;
 
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
-    ground_segmented_pointcloud_pub_;
+    visualization_pointcloud_pub_;
 
-  // cSpell:ignore probs
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
-    probs_pointcloud_pub_;
+    filtered_pointcloud_pub_;
 
   std::unique_ptr<PTv3TRT> model_ptr_{nullptr};
 
