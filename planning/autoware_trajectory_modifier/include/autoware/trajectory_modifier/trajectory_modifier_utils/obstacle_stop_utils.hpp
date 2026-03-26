@@ -23,6 +23,10 @@
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_hash.hpp>
+
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/crop_hull.h>
 #include <pcl/filters/extract_indices.h>
@@ -35,6 +39,7 @@
 #include <pcl/surface/convex_hull.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -164,6 +169,73 @@ private:
   pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
   pcl::CropBox<pcl::PointXYZ> crop_box_;
   pcl::ConvexHull<pcl::PointXYZ> convex_hull_;
+};
+
+struct ObstacleTracker
+{
+  ObstacleTracker(const double on_time_buffer, const double off_time_buffer)
+  : on_time_buffer_(on_time_buffer), off_time_buffer_(off_time_buffer)
+  {
+  }
+
+  /**
+   * @brief Update tracked objects
+   * @details Use input objects to update the tracked objects history and remove obsolete objects,
+   * based on the on_time_buffer and off_time_buffer.
+   * @param objects Input predicted objects after filtering
+   * @param persistent_objects Output persistent objects
+   */
+  void update_objects(const PredictedObjects & objects, PredictedObjects & persistent_objects);
+
+  /**
+   * @brief Update tracked points
+   * @details Use input pointcloud to update the tracked points history and remove obsolete points,
+   * based on the on_time_buffer and off_time_buffer.
+   * @param points Input pointcloud
+   * @param persistent_points Output persistent points
+   */
+  void update_points(const PointCloud::Ptr & points, PointCloud::Ptr & persistent_points);
+
+private:
+  double on_time_buffer_;
+  double off_time_buffer_;
+
+  struct PersistentObstacle
+  {
+    using TimePoint = std::chrono::system_clock::time_point;
+    TimePoint first_seen_time;
+    TimePoint last_seen_time;
+    bool is_active{false};
+
+    explicit PersistentObstacle(const TimePoint & now) : first_seen_time(now), last_seen_time(now)
+    {
+    }
+  };
+
+  struct PersistentObject : public PersistentObstacle
+  {
+    PredictedObject object;
+
+    explicit PersistentObject(const PredictedObject & object, const TimePoint & now)
+    : PersistentObstacle(now), object(object)
+    {
+    }
+  };
+  std::unordered_map<boost::uuids::uuid, PersistentObject, boost::hash<boost::uuids::uuid>>
+    persistent_objects_map_;
+
+  struct PersistentPoint : public PersistentObstacle
+  {
+    geometry_msgs::msg::Point position;
+    explicit PersistentPoint(const geometry_msgs::msg::Point & position, const TimePoint & now)
+    : PersistentObstacle(now), position(position)
+    {
+    }
+  };
+  std::unordered_map<boost::uuids::uuid, PersistentPoint, boost::hash<boost::uuids::uuid>>
+    persistent_point_map_;
+
+  boost::uuids::random_generator id_generator_;
 };
 
 }  // namespace autoware::trajectory_modifier::utils::obstacle_stop

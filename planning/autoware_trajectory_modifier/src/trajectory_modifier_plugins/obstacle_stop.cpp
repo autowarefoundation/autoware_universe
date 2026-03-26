@@ -73,6 +73,9 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
     params_.pointcloud.voxel_grid_filter.z, params_.pointcloud.voxel_grid_filter.min_size,
     params_.pointcloud.clustering.tolerance, params_.pointcloud.clustering.min_size,
     params_.pointcloud.clustering.max_size);
+
+  obstacle_tracker_ = std::make_unique<utils::obstacle_stop::ObstacleTracker>(
+    params_.on_time_buffer, params_.off_time_buffer);
 }
 
 bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & traj_points)
@@ -324,10 +327,13 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
   filter_objects_by_type(predicted_objects, params_.objects.object_types);
   filter_objects_by_velocity(predicted_objects, params_.objects.max_velocity_th);
 
+  PredictedObjects active_objects;
+  obstacle_tracker_->update_objects(predicted_objects, active_objects);
+
   autoware_perception_msgs::msg::PredictedObject colliding_object;
   auto collision_point = get_nearest_object_collision(
-    traj_points, debug_data_.trajectory_shape.polygon, predicted_objects,
-    debug_data_.target_polygons, colliding_object);
+    traj_points, debug_data_.trajectory_shape.polygon, active_objects, debug_data_.target_polygons,
+    colliding_object);
   if (collision_point) debug_data_.colliding_object = colliding_object;
 
   return collision_point;
@@ -367,7 +373,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
       filtered_pointcloud, clustered_points, params_.pointcloud.clustering.min_height);
   }
 
-  {
+  if (!clustered_points->empty()) {
     geometry_msgs::msg::TransformStamped transform_stamped;
     try {
       transform_stamped = data_->tf_buffer.lookupTransform(
@@ -395,12 +401,15 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
     pointcloud_filter_->filter_pointcloud_by_object(clustered_points, *data_->predicted_objects);
   }
 
+  PointCloud::Ptr active_points(new PointCloud);
+  obstacle_tracker_->update_points(clustered_points, active_points);
+
   std::optional<CollisionPoint> collision_point;
   {
     autoware_utils_debug::ScopedTimeTrack st(
       "ObstacleStop::get_nearest_pcd_collision", *get_time_keeper());
     collision_point = get_nearest_pcd_collision(
-      traj_points, debug_data_.trajectory_shape.polygon, clustered_points,
+      traj_points, debug_data_.trajectory_shape.polygon, active_points,
       debug_data_.target_pcd_points);
   }
 
