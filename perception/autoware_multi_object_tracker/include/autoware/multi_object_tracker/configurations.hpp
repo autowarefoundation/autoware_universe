@@ -70,11 +70,10 @@ struct TrackedLabelThresholds
   [[nodiscard]] std::unordered_map<object_model::Label, double> to_label_map() const
   {
     using Label = object_model::Label;
-    return {
-      {Label::UNKNOWN, unknown}, {Label::CAR, car},       {Label::TRUCK, truck},
-      {Label::BUS, bus},         {Label::TRAILER, trailer},
-      {Label::MOTORCYCLE, motorcycle}, {Label::BICYCLE, bicycle},
-      {Label::PEDESTRIAN, pedestrian}};
+    return {{Label::UNKNOWN, unknown}, {Label::CAR, car},
+            {Label::TRUCK, truck},     {Label::BUS, bus},
+            {Label::TRAILER, trailer}, {Label::MOTORCYCLE, motorcycle},
+            {Label::BICYCLE, bicycle}, {Label::PEDESTRIAN, pedestrian}};
   }
 };
 
