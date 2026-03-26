@@ -193,7 +193,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         can_assign_parameter_name + " must contain at least one tracker type");
     }
 
-    std::unordered_set<TrackerType, AssociatorConfig::EnumClassHash> dedup;
+    std::unordered_set<TrackerType, AssociatorConfig::EnumClassHash> unique_tracker_types;
     for (const auto & tracker_type_name : tracker_type_names) {
       const auto tracker_type = toTrackerType(tracker_type_name);
       if (!tracker_type.has_value()) {
@@ -201,15 +201,17 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
           "Invalid tracker type: '" + tracker_type_name + "' in parameter '" +
           can_assign_parameter_name + "'. Strict string match is required.");
       }
-      dedup.insert(*tracker_type);
+      unique_tracker_types.insert(*tracker_type);
     }
 
-    for (const auto tracker_type : dedup) {
+    using TrackerAssociationParameters = AssociatorConfig::TrackerAssociationParameters;
+    for (const auto tracker_type : unique_tracker_types) {
       const auto tracker_type_name = toString(tracker_type);
+      const auto max_dist = declare_parameter<double>(
+        "association.max_dist." + measurement_label_name + "." + tracker_type_name);
       params_.association_params_map[measurement_label][tracker_type] =
-        MultiObjectTrackerParameters::RawAssociationParameters{
-          declare_parameter<double>(
-            "association.max_dist." + measurement_label_name + "." + tracker_type_name),
+        TrackerAssociationParameters{
+          max_dist * max_dist,
           declare_parameter<double>(
             "association.max_area." + measurement_label_name + "." + tracker_type_name),
           declare_parameter<double>(

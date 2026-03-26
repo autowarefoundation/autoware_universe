@@ -102,8 +102,6 @@ void process_parameters(MultiObjectTrackerParameters & params)
   params.processor_config.pruning_distance_thresholds =
     params.pruning_distance_thresholds.toLabelMap();
 
-  params.associator_config.association_params_map.clear();
-
   for (const auto measurement_label : object_model::trackedLabels()) {
     const auto label_params_it = params.association_params_map.find(measurement_label);
     if (label_params_it == params.association_params_map.end() || label_params_it->second.empty()) {
@@ -121,15 +119,9 @@ void process_parameters(MultiObjectTrackerParameters & params)
         "' for measurement label '" + object_model::toString(measurement_label) +
         "' is not included in association.can_assign." + object_model::toString(measurement_label));
     }
-
-    auto & runtime_label_params =
-      params.associator_config.association_params_map[measurement_label];
-    for (const auto & [tracker_type, raw_params] : label_params) {
-      runtime_label_params[tracker_type] = AssociatorConfig::TrackerAssociationParameters{
-        raw_params.max_dist * raw_params.max_dist, raw_params.max_area, raw_params.min_area,
-        raw_params.min_iou};
-    }
   }
+
+  params.associator_config.association_params_map = params.association_params_map;
 }
 
 // Utility functions

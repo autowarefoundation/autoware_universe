@@ -43,19 +43,6 @@ namespace autoware::multi_object_tracker
 {
 struct MultiObjectTrackerParameters
 {
-  struct RawAssociationParameters
-  {
-    double max_dist;
-    double max_area;
-    double min_area;
-    double min_iou;
-  };
-
-  using RawTrackerAssociationParametersMap = std::unordered_map<
-    types::TrackerType, RawAssociationParameters, AssociatorConfig::EnumClassHash>;
-  using RawLabelToTrackerAssociationParametersMap = std::unordered_map<
-    object_model::Label, RawTrackerAssociationParametersMap, AssociatorConfig::EnumClassHash>;
-
   // Given parameters
   double publish_rate;
   std::string world_frame_id;
@@ -67,7 +54,7 @@ struct MultiObjectTrackerParameters
 
   std::vector<types::InputChannel> input_channels_config;
 
-  RawLabelToTrackerAssociationParametersMap association_params_map;
+  AssociatorConfig::LabelToTrackerAssociationParametersMap association_params_map;
   std::map<std::string, std::string> tracker_type_map;
   TrackedLabelThresholds pruning_giou_thresholds;
   TrackedLabelThresholds pruning_distance_thresholds;
