@@ -89,11 +89,11 @@ struct TrackerProcessorConfig
   bool enable_unknown_object_velocity_estimation;
   bool enable_unknown_object_motion_output;
   AssociatorConfig::LabelDoubleMap pruning_giou_thresholds;
-  AssociatorConfig::LabelDoubleMap pruning_distance_thresholds;  // [m]
+  AssociatorConfig::LabelDoubleMap pruning_distance_thresholds;     // [m]
   AssociatorConfig::LabelDoubleMap pruning_distance_thresholds_sq;  // [m^2]
-  double pruning_static_object_speed;                           // [m/s]
-  double pruning_moving_object_speed;                           // [m/s]
-  double pruning_static_iou_threshold;                          // [ratio]
+  double pruning_static_object_speed;                               // [m/s]
+  double pruning_moving_object_speed;                               // [m/s]
+  double pruning_static_iou_threshold;                              // [ratio]
 };
 
 template <typename Map, typename Key>

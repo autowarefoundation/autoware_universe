@@ -63,10 +63,10 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
                                         {Label::TRUCK, 9.0},   {Label::BUS, 9.0},
                                         {Label::TRAILER, 9.0}, {Label::MOTORCYCLE, 4.0},
                                         {Label::BICYCLE, 3.0}, {Label::PEDESTRIAN, 2.0}};
-  config.pruning_distance_thresholds_sq = {{Label::UNKNOWN, 9.0 * 9.0}, {Label::CAR, 5.0 * 5.0},
-                                           {Label::TRUCK, 9.0 * 9.0},   {Label::BUS, 9.0 * 9.0},
-                                           {Label::TRAILER, 9.0 * 9.0}, {Label::MOTORCYCLE, 4.0 * 4.0},
-                                           {Label::BICYCLE, 3.0 * 3.0}, {Label::PEDESTRIAN, 2.0 * 2.0}};
+  config.pruning_distance_thresholds_sq = {
+    {Label::UNKNOWN, 9.0 * 9.0}, {Label::CAR, 5.0 * 5.0},       {Label::TRUCK, 9.0 * 9.0},
+    {Label::BUS, 9.0 * 9.0},     {Label::TRAILER, 9.0 * 9.0},   {Label::MOTORCYCLE, 4.0 * 4.0},
+    {Label::BICYCLE, 3.0 * 3.0}, {Label::PEDESTRIAN, 2.0 * 2.0}};
 
   return config;
 }
