@@ -529,6 +529,7 @@ bool BEVFusionTRT::processImages(
   for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
     CHECK_CUDA_ERROR(camera_data_ptrs[camera_id]->sync_cuda_stream());
   }
+  return true;
 }
 
 std::int64_t BEVFusionTRT::processPointCloudVoxelization(
