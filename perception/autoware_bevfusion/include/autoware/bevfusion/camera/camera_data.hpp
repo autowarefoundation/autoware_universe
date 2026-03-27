@@ -74,7 +74,7 @@ public:
   bool is_camera_info_available() const;
   std::size_t output_img_offset() const;
 
-  void preprocess_image(std::uint8_t * output_img);
+  bool preprocess_image(std::uint8_t * output_img);
   bool is_camera_matrices_ready() const;
   cudaError_t sync_cuda_stream();
 

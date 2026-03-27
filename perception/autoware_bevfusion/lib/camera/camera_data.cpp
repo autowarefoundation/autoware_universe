@@ -156,7 +156,7 @@ std::size_t CameraData::output_img_offset() const
   return output_img_offset_;
 }
 
-void CameraData::preprocess_image(std::uint8_t * output_img)
+bool CameraData::preprocess_image(std::uint8_t * output_img)
 {
   // 1. Copy image from CPU to GPU
   cudaMemcpyAsync(
@@ -166,13 +166,23 @@ void CameraData::preprocess_image(std::uint8_t * output_img)
     cudaMemcpyHostToDevice, stream_);
 
   if (image_pre_processing_params_.run_image_undistortion) {
+    // 1. Check if original image shape is the same as the undistorted image shape
+    if (
+      image_msg_->height != camera_matrices_ptr_->undistorted_image_height ||
+      image_msg_->width != camera_matrices_ptr_->undistorted_image_width) {
+      RCLCPP_ERROR(logger_, "Original image shape is not the same as the original image shape");
+      return false;
+    }
+
     // 2. Launch remap kernel for undistortion
     camera_preprocess_ptr_->remap_launch(
       image_buffer_d_.get(), undistorted_image_buffer_d_.get(),
+      // Output dimensions (full resolution)
       image_pre_processing_params_.original_image_height,
       image_pre_processing_params_.original_image_width,
-      image_pre_processing_params_.original_image_height,
-      image_pre_processing_params_.original_image_width,
+      // Input dimensions (full resolution)
+      image_msg_->height, image_msg_->width,
+      // Undistorted map x and y
       camera_matrices_ptr_->undistorted_map_x_d_.get(),
       camera_matrices_ptr_->undistorted_map_y_d_.get());
 
@@ -194,6 +204,8 @@ void CameraData::preprocess_image(std::uint8_t * output_img)
       image_pre_processing_params_.roi_height, image_pre_processing_params_.roi_width,
       image_pre_processing_params_.roi_start_y, image_pre_processing_params_.roi_start_x);
   }
+
+  return true;
 }
 
 bool CameraData::is_camera_matrices_ready() const

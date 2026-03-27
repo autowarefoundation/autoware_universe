@@ -513,7 +513,9 @@ void BEVFusionTRT::processImages(
       return;
     }
     auto roi_tensor_offset = camera_data_ptrs[camera_id]->output_img_offset();
-    camera_data_ptrs[camera_id]->preprocess_image(&roi_tensor_d_[roi_tensor_offset]);
+    if (!camera_data_ptrs[camera_id]->preprocess_image(&roi_tensor_d_[roi_tensor_offset])) {
+      return;
+    }
   }
 
   cudaMemcpyAsync(
