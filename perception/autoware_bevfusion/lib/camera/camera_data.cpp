@@ -170,7 +170,7 @@ bool CameraData::preprocess_image(std::uint8_t * output_img)
     if (
       image_msg_->height != image_pre_processing_params_.original_image_height ||
       image_msg_->width != image_pre_processing_params_.original_image_width) {
-      RCLCPP_ERROR(logger_, "Original image shape is not the same as the original image shape");
+      RCLCPP_ERROR(logger_, "Input image shape is not the same as the original image shape");
       return false;
     }
 
