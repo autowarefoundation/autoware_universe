@@ -69,7 +69,6 @@ struct CalibrationStatusClassifierConfig
     if (width[0] > width[1] || width[1] > width[2]) {
       throw std::invalid_argument("Width values must be in ascending order: min <= opt <= max");
     }
-
     this->max_depth = max_depth;
     this->dilation_size = static_cast<uint32_t>(dilation_size);
     this->height = {

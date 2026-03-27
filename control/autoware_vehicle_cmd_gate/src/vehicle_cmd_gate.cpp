@@ -167,6 +167,7 @@ VehicleCmdGate::VehicleCmdGate(const rclcpp::NodeOptions & node_options)
     p.lat_jerk_lim_for_steer_rate =
       declare_parameter<double>("nominal.lat_jerk_lim_for_steer_rate");
     filter_.setParam(p);
+    filter_.setLogger(get_logger(), get_clock());
   }
 
   {
@@ -191,6 +192,7 @@ VehicleCmdGate::VehicleCmdGate(const rclcpp::NodeOptions & node_options)
     p.lat_jerk_lim_for_steer_rate =
       declare_parameter<double>("on_transition.lat_jerk_lim_for_steer_rate");
     filter_on_transition_.setParam(p);
+    filter_on_transition_.setLogger(get_logger(), get_clock());
   }
 
   // Set default value

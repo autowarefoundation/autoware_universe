@@ -94,6 +94,18 @@
           "default": false,
           "description": "Whether to shift the ego center position by half the wheel base"
         },
+        "delay_step": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "description": "Input delay step for inference"
+        },
+        "line_string_max_step_m": {
+          "type": "number",
+          "default": 5.0,
+          "exclusiveMinimum": 0,
+          "description": "Maximum arc-length step per model point when resampling line strings [m]. Smaller values produce more fixed-size sub-segments per line string."
+        },
         "use_time_interpolation": {
           "type": "boolean",
           "default": false,
@@ -111,9 +123,14 @@
               "type": "boolean",
               "default": true,
               "description": "Publish debug route markers"
+            },
+            "publish_debug_linestrings": {
+              "type": "boolean",
+              "default": true,
+              "description": "Publish debug linestring markers"
             }
           },
-          "required": ["publish_debug_map", "publish_debug_route"]
+          "required": ["publish_debug_map", "publish_debug_route", "publish_debug_linestrings"]
         }
       },
       "required": [

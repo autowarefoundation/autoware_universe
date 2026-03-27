@@ -12,7 +12,6 @@ find_package(PCL REQUIRED COMPONENTS common filters)
 set(${PROJECT_NAME}_DEPENDENCIES
   autoware_perception_msgs
   autoware_point_types
-  tier4_perception_msgs
   pcl_conversions
   rclcpp
   sensor_msgs

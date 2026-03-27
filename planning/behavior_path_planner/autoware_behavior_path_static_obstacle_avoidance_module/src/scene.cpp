@@ -25,13 +25,15 @@
 #include "autoware/behavior_path_static_obstacle_avoidance_module/utils.hpp"
 
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -824,32 +826,75 @@ void StaticObstacleAvoidanceModule::updateEgoBehavior(
 
   const auto insert_velocity = [this, &data, &path]() {
     if (data.yield_required) {
-      insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
-      return;
+      return insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
     }
 
     if (!data.avoid_required) {
-      return;
+      return false;
     }
 
     if (!data.found_avoidance_path) {
-      insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
-      return;
+      return insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
     }
 
     if (isWaitingApproval() && path_shifter_.getShiftLines().empty()) {
-      insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
-      return;
+      return insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
     }
 
-    insertStopPoint(isBestEffort(parameters_->policy_deceleration), path);
+    return insertStopPoint(isBestEffort(parameters_->policy_deceleration), path);
   };
 
-  insert_velocity();
+  bool is_stop_inserted = insert_velocity();
 
   insertReturnDeadLine(isBestEffort(parameters_->policy_deceleration), path);
 
+  if (
+    parameters_->policy_candidate_path_turn_signal == "stop_on_approval"  //
+    && !is_stop_inserted                                                  //
+    && was_stop_inserted_                                                 //
+    && (stopped_on_avoidance_stop_point_ || approval_start_time_.has_value())) {
+    stillStopAndOutputTurnSignal(data, path);
+    is_stop_inserted = true;
+  }
+
   set_longitudinal_planning_factor(path.path);
+
+  was_stop_inserted_ = is_stop_inserted;
+
+  constexpr double TH_STOP_POSITION = 0.5;
+
+  stopped_on_avoidance_stop_point_ =
+    stop_pose_.has_value() && helper_->isVehicleStopped() &&
+    calc_distance2d(getEgoPose(), stop_pose_.value().pose) < TH_STOP_POSITION;
+}
+
+void StaticObstacleAvoidanceModule::stillStopAndOutputTurnSignal(
+  const AvoidancePlanningData &, ShiftedPath & path)
+{
+  // Start the hold timer on the first call (when ego first stops at the avoidance stop point).
+  if (!approval_start_time_) {
+    RCLCPP_DEBUG(
+      getLogger(), "[stop_on_approval] ego stopped at avoidance stop point. start hold timer.");
+    approval_start_time_ = clock_->now();
+  }
+
+  const double elapsed = (clock_->now() - approval_start_time_.value()).seconds();
+  RCLCPP_DEBUG_THROTTLE(
+    getLogger(), *clock_, 500, "[stop_on_approval] hold elapsed=%.2f / %.2f [s]", elapsed,
+    parameters_->turn_signal_on_approval_hold_duration);
+
+  if (elapsed >= parameters_->turn_signal_on_approval_hold_duration) {
+    // Hold duration has elapsed: reset timer and allow vehicle to start avoidance.
+    RCLCPP_DEBUG(getLogger(), "[stop_on_approval] hold duration elapsed. start avoidance.");
+    approval_start_time_ = std::nullopt;
+    return;
+  }
+
+  utils::static_obstacle_avoidance::insertDecelPoint(
+    getEgoPosition(), 0.0, 0.0, path.path, stop_pose_);
+
+  const double remaining = parameters_->turn_signal_on_approval_hold_duration - elapsed;
+  stop_pose_->detail = fmt::format("stop_on_approval: {:.1f}s remaining", remaining);
 }
 
 bool StaticObstacleAvoidanceModule::isSafePath(
@@ -1969,7 +2014,7 @@ void StaticObstacleAvoidanceModule::insertReturnDeadLine(
   }
 }
 
-void StaticObstacleAvoidanceModule::insertWaitPoint(
+bool StaticObstacleAvoidanceModule::insertWaitPoint(
   const bool use_constraints_for_decel, ShiftedPath & shifted_path) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -1977,35 +2022,33 @@ void StaticObstacleAvoidanceModule::insertWaitPoint(
 
   // If avoidance path is NOT valid, don't insert any stop points.
   if (!data.valid) {
-    return;
+    return false;
   }
 
   if (!data.stop_target_object) {
-    return;
+    return false;
   }
 
   if (helper_->isShifted()) {
-    return;
+    return false;
   }
 
   if (data.stop_target_object.value().info == ObjectInfo::CLOSE_DISTANCE_AVOIDANCE) {
-    utils::static_obstacle_avoidance::insertDecelPoint(
+    return utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), 0.0, 0.0, shifted_path.path, stop_pose_);
-    return;
   }
 
   if (data.to_stop_line < -1.0 * parameters_->stop_buffer) {
     RCLCPP_WARN_THROTTLE(
       getLogger(), *clock_, 3000, "ego overran avoidance dead line. do nothing.");
-    return;
+    return false;
   }
 
   // If we don't need to consider deceleration constraints, insert a deceleration point
   // and return immediately
   if (!use_constraints_for_decel) {
-    utils::static_obstacle_avoidance::insertDecelPoint(
+    return utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), data.to_stop_line, 0.0, shifted_path.path, stop_pose_);
-    return;
   }
 
   // If the stop distance is not enough for comfortable stop, don't insert wait point.
@@ -2013,35 +2056,34 @@ void StaticObstacleAvoidanceModule::insertWaitPoint(
   const auto is_slow_speed = getEgoSpeed() < parameters_->min_slow_down_speed;
   if (!is_comfortable_stop && !is_slow_speed) {
     RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 3000, "not execute uncomfortable deceleration.");
-    return;
+    return false;
   }
 
   // If target object can be stopped for, insert a deceleration point and return
   if (data.stop_target_object.value().is_stoppable) {
-    utils::static_obstacle_avoidance::insertDecelPoint(
+    return utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), data.to_stop_line, 0.0, shifted_path.path, stop_pose_);
-    return;
   }
 
   // If the object cannot be stopped for, calculate a "mild" deceleration distance
   // and insert a deceleration point at that distance
   const auto stop_distance = helper_->getFeasibleDecelDistance(0.0, false);
-  utils::static_obstacle_avoidance::insertDecelPoint(
+  return utils::static_obstacle_avoidance::insertDecelPoint(
     getEgoPosition(), stop_distance, 0.0, shifted_path.path, stop_pose_);
 }
 
-void StaticObstacleAvoidanceModule::insertStopPoint(
+bool StaticObstacleAvoidanceModule::insertStopPoint(
   const bool use_constraints_for_decel, ShiftedPath & shifted_path) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto & data = avoid_data_;
 
   if (data.safe) {
-    return;
+    return false;
   }
 
   if (!parameters_->enable_yield_maneuver_during_shifting) {
-    return;
+    return false;
   }
 
   const auto stop_idx = [&]() {
@@ -2063,19 +2105,18 @@ void StaticObstacleAvoidanceModule::insertStopPoint(
   // If we don't need to consider deceleration constraints, insert a deceleration point
   // and return immediately
   if (!use_constraints_for_decel) {
-    utils::static_obstacle_avoidance::insertDecelPoint(
+    return utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), stop_distance, 0.0, shifted_path.path, stop_pose_);
-    return;
   }
 
   // Otherwise, consider deceleration constraints before inserting deceleration point
   const auto decel_distance = helper_->getFeasibleDecelDistance(0.0, false);
   if (stop_distance < decel_distance) {
-    return;
+    return false;
   }
 
   constexpr double MARGIN = 1.0;
-  utils::static_obstacle_avoidance::insertDecelPoint(
+  return utils::static_obstacle_avoidance::insertDecelPoint(
     getEgoPosition(), stop_distance - MARGIN, 0.0, shifted_path.path, stop_pose_);
 }
 

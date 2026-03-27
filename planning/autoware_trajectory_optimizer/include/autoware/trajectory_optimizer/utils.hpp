@@ -84,6 +84,14 @@ void copy_trajectory_orientation(
 rclcpp::Logger get_logger();
 
 /**
+ * @brief generates a 3 point trajectory to prevent downstream issues
+ * @param trajectory with less than 3 points.
+ * @param odom ego odometry. To check if the ego vehicle is properly stopped.
+ */
+TrajectoryPoints generate_three_point_stopped_trajectory(
+  const TrajectoryPoints & input_traj, const Odometry & odom);
+
+/**
  * @brief Compute time difference between consecutive trajectory points
  *
  * @param current Current trajectory point
