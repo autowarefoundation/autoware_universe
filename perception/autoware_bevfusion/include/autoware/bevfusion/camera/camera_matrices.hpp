@@ -16,15 +16,9 @@
 #define AUTOWARE__BEVFUSION__CAMERA__CAMERA_MATRICES_HPP_
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
-
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
-#include <opencv2/opencv.hpp>
 
 namespace autoware::bevfusion
 {

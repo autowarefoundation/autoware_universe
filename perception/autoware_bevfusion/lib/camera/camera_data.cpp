@@ -17,14 +17,6 @@
 #include "autoware/bevfusion/bevfusion_config.hpp"
 #include "autoware/bevfusion/camera/camera_preprocess.hpp"
 
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
-
-#include <opencv2/opencv.hpp>
-
 #include <algorithm>
 #include <memory>
 

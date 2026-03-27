@@ -14,12 +14,6 @@
 
 #include "autoware/bevfusion/camera/camera_matrices.hpp"
 
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
-
 #include <opencv2/opencv.hpp>
 
 namespace autoware::bevfusion
