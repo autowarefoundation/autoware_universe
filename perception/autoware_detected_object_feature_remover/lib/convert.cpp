@@ -1,0 +1,112 @@
+// Copyright 2026 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware/detected_object_feature_remover/convert.hpp"
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
+#include <geometry_msgs/msg/point32.hpp>
+
+#include <pcl_conversions/pcl_conversions.h>
+
+#include <algorithm>
+#include <vector>
+
+namespace autoware::detected_object_feature_remover::convert
+{
+
+void pclToConvexHull(
+  const pcl::PointCloud<pcl::PointXYZ> & cluster, autoware_perception_msgs::msg::Shape & shape,
+  geometry_msgs::msg::Pose & pose)
+{
+  // calc min and max z for convex hull height(z)
+  float min_z = cluster.empty() ? 0.0 : cluster.at(0).z;
+  float max_z = cluster.empty() ? 0.0 : cluster.at(0).z;
+  for (const auto & point : cluster) {
+    min_z = std::min(point.z, min_z);
+    max_z = std::max(point.z, max_z);
+  }
+
+  std::vector<cv::Point> v_pointcloud;
+  std::vector<cv::Point> v_polygon_points;
+  constexpr double scale = 1000.0;  // for cv::Point which takes int
+  constexpr double inv_scale = 1.0 / scale;
+  for (size_t i = 0; i < cluster.size(); ++i) {
+    v_pointcloud.push_back(cv::Point(cluster.at(i).x * scale, cluster.at(i).y * scale));
+  }
+  cv::convexHull(v_pointcloud, v_polygon_points);
+
+  pcl::PointXYZ polygon_centroid;
+  polygon_centroid.x = 0;
+  polygon_centroid.y = 0;
+  for (size_t i = 0; i < v_polygon_points.size(); ++i) {
+    polygon_centroid.x += static_cast<double>(v_polygon_points.at(i).x) * inv_scale;
+    polygon_centroid.y += static_cast<double>(v_polygon_points.at(i).y) * inv_scale;
+  }
+  const double point_size = static_cast<double>(v_polygon_points.size());
+  polygon_centroid.x = polygon_centroid.x / point_size;
+  polygon_centroid.y = polygon_centroid.y / point_size;
+
+  for (size_t i = 0; i < v_polygon_points.size(); ++i) {
+    geometry_msgs::msg::Point32 point;
+    point.x = static_cast<double>(v_polygon_points.at(i).x) * inv_scale - polygon_centroid.x;
+    point.y = static_cast<double>(v_polygon_points.at(i).y) * inv_scale - polygon_centroid.y;
+    point.z = 0.0;
+    shape.footprint.points.push_back(point);
+  }
+
+  constexpr float ep = 0.001;
+  shape.type = autoware_perception_msgs::msg::Shape::POLYGON;
+  shape.dimensions.x = 0.0;
+  shape.dimensions.y = 0.0;
+  shape.dimensions.z = std::max((max_z - min_z), ep);
+  pose.position.x = polygon_centroid.x;
+  pose.position.y = polygon_centroid.y;
+  pose.position.z = min_z + shape.dimensions.z * 0.5;
+  pose.orientation.x = 0;
+  pose.orientation.y = 0;
+  pose.orientation.z = 0;
+  pose.orientation.w = 1;
+}
+
+void convertToDetectedObjects(
+  const tier4_perception_msgs::msg::DetectedObjectsWithFeature & input,
+  autoware_perception_msgs::msg::DetectedObjects & output, const ConvertParams & params)
+{
+  output.header = input.header;
+  for (const auto & obj_with_feature : input.feature_objects) {
+    // Create a copy of the object to modify
+    auto modified_object = obj_with_feature.object;
+
+    // convert cluster to convex hull
+    if (params.run_convex_hull_conversion) {
+      // get cluster pointcloud
+      const auto & cluster_msg = obj_with_feature.feature.cluster;
+      // convert ros to pcl
+      pcl::PointCloud<pcl::PointXYZ> cluster;
+      pcl::fromROSMsg(cluster_msg, cluster);
+
+      // output
+      autoware_perception_msgs::msg::Shape & shape_output = modified_object.shape;
+      geometry_msgs::msg::Pose & pose_output = modified_object.kinematics.pose_with_covariance.pose;
+
+      pclToConvexHull(cluster, shape_output, pose_output);
+    }
+
+    output.objects.emplace_back(modified_object);
+  }
+}
+
+}  // namespace autoware::detected_object_feature_remover::convert

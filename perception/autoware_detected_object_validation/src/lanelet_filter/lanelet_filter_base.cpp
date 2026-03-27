@@ -15,8 +15,6 @@
 #include "lanelet_filter_base.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
-#include "autoware_lanelet2_extension/utility/message_conversion.hpp"
-#include "autoware_lanelet2_extension/utility/query.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <Eigen/Core>
@@ -323,8 +321,8 @@ void ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::mapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr map_msg)
 {
   lanelet_frame_id_ = map_msg->header.frame_id;
-  lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-  lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr_);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg));
 }
 
 template <typename ObjsMsgType, typename ObjMsgType>
@@ -421,7 +419,11 @@ bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::filterObject(
     bg::envelope(object_polygon, bbox_of_convex_hull);
     std::vector<BoxAndLanelet> candidates;
     // only use the lanelets that intersect with the object's bounding box
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    // on NVIDIA DRIVE AGX Thor, boost::geometry triggers a false positive warning
     local_rtree.query(bgi::intersects(bbox_of_convex_hull), std::back_inserter(candidates));
+#pragma GCC diagnostic pop
 
     bool filter_pass = true;
     // 1. is polygon overlap with road lanelets or shoulder lanelets

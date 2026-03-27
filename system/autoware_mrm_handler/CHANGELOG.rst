@@ -2,6 +2,15 @@
 Changelog for package autoware_mrm_handler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat: system related packages support jazzy (`#11626 <https://github.com/autowarefoundation/autoware_universe/issues/11626>`_)
+* Contributors: Ryohsuke Mitsudome, 心刚
+
+0.49.0 (2025-12-30)
+-------------------
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

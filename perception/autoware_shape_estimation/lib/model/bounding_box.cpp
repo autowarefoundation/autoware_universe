@@ -16,26 +16,20 @@
 
 #include "autoware/shape_estimation/model/bounding_box.hpp"
 
+#include <Eigen/Core>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
 
 #include "autoware_perception_msgs/msg/shape.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/math/tools/minima.hpp>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
-#include <Eigen/Core>
 
 #include <algorithm>
 #include <cmath>
@@ -217,7 +211,7 @@ float BoundingBoxShapeModel::optimize(
       C_2.push_back(point.x * e_2.x() + point.y * e_2.y());
     }
     float q = calcClosenessCriterion(C_1, C_2);  // col.7, Algo.2
-    Q.push_back(std::make_pair(theta, q));       // col.8, Algo.2
+    Q.emplace_back(theta, q);                    // col.8, Algo.2
   }
 
   float theta_star{0.0};  // col.10, Algo.2

@@ -64,4 +64,11 @@ bool PedestrianAndBicycleTracker::getTrackedObject(
   return true;
 }
 
+void PedestrianAndBicycleTracker::setOrientationAvailability(
+  const types::OrientationAvailability & orientation_availability)
+{
+  pedestrian_tracker_.setOrientationAvailability(orientation_availability);
+  bicycle_tracker_.setOrientationAvailability(orientation_availability);
+}
+
 }  // namespace autoware::multi_object_tracker

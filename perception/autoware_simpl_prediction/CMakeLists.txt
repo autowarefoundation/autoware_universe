@@ -9,14 +9,13 @@ endif()
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
-# --- find CUDA/CUDNN/TensorRT dependencies ---
+# --- find CUDA/TensorRT dependencies ---
 find_package(CUDA)
 find_package(CUDAToolkit)
-find_package(CUDNN)
 find_package(TENSORRT)
 
 # --- check CUDA tools and TensorRT version ---
-if(CUDAToolkit_FOUND AND CUDNN_FOUND AND TENSORRT_FOUND)
+if(CUDAToolkit_FOUND AND TENSORRT_FOUND)
     set(CUDA_AVAILABLE TRUE)
     if(TENSORRT_VERSION VERSION_LESS 8.5)
         set(TENSORRT_AVAILABLE FALSE)
@@ -29,7 +28,7 @@ if(CUDAToolkit_FOUND AND CUDNN_FOUND AND TENSORRT_FOUND)
 else()
     set(CUDA_AVAILABLE FALSE)
     set(TENSORRT_AVAILABLE FALSE)
-    message(WARNING "CUDA, CUDNN and TensorRT libraries are not found.")
+    message(WARNING "CUDA and TensorRT libraries are not found.")
 endif()
 
 # --- link targets ---

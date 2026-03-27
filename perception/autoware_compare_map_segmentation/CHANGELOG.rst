@@ -2,6 +2,45 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* fix(compare_map_segmentation): ignore -Warray-bounds (`#11929 <https://github.com/autowarefoundation/autoware_universe/issues/11929>`_)
+* fix: qos compatibility (`#11878 <https://github.com/autowarefoundation/autoware_universe/issues/11878>`_)
+* feat(pointcloud_preprocessor): improve cloud validation (`#11853 <https://github.com/autowarefoundation/autoware_universe/issues/11853>`_)
+* feat(pointcloud_preprocessor): validate indices (`#11852 <https://github.com/autowarefoundation/autoware_universe/issues/11852>`_)
+* feat(pointcloud_preprocessor): simplify is_valid (`#11851 <https://github.com/autowarefoundation/autoware_universe/issues/11851>`_)
+* fix(autoware_compare_map_segmentation): use async service call in VoxelGridDynamicMapLoader to prevent deadlock (`#11814 <https://github.com/autowarefoundation/autoware_universe/issues/11814>`_)
+  * refactor(voxel_grid_map_loader): simplify async request handling
+  Replaced blocking wait with a callback mechanism for handling map update requests. This improves responsiveness and error handling when retrieving differential pointcloud maps.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_compare_map_segmentation): add missing launch param (`#11825 <https://github.com/autowarefoundation/autoware_universe/issues/11825>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome, Taekjin LEE, badai nguyen
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* feat(autoware_lanelet2_utils): replace from/toBinMsg (Sensing, Visualization and Perception Component) (`#11785 <https://github.com/autowarefoundation/autoware_universe/issues/11785>`_)
+  * perception component toBinMsg replacement
+  * visualization component fromBinMsg replacement
+  * sensing component fromBinMsg replacement
+  * perception component fromBinMsg replacement
+  ---------
+* fix(autoware_compare_map_segmentation): add empty point cloud guards (`#11748 <https://github.com/autowarefoundation/autoware_universe/issues/11748>`_)
+  * fix(autoware_compare_map_segmentation): add empty point cloud guards
+  Add validation to check for empty point clouds before processing to prevent
+  undefined behavior in PCL functions and potential crashes.
+  - Add guard in compare_elevation_map_filter
+  - Add guard in distance_based_compare_map_filter
+  - Add guard in voxel_distance_based_compare_map_filter
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Sarun MUKDAPITAK, Yutaka Kondo
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

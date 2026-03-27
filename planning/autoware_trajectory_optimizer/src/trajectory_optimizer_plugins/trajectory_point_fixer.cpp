@@ -14,11 +14,11 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer.hpp"
 
-#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_point_fixer_utils.hpp"
-#include "autoware/trajectory_optimizer/utils.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <vector>
 
@@ -26,15 +26,33 @@ namespace autoware::trajectory_optimizer::plugin
 {
 void TrajectoryPointFixer::optimize_trajectory(
   TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-  const TrajectoryOptimizerData & data)
+  TrajectoryOptimizerData & data)
 {
-  if (!params.fix_invalid_points) {
+  if (!params.use_trajectory_point_fixer) {
     return;
   }
-  utils::remove_invalid_points(traj_points, fixer_params_.min_dist_to_remove_m);
+  auto & semantic_speed_tracker = data.semantic_speed_tracker;
+  trajectory_point_fixer_utils::remove_invalid_points(traj_points);
+
+  if (fixer_params_.remove_close_points) {
+    trajectory_point_fixer_utils::remove_close_proximity_points(
+      traj_points, semantic_speed_tracker, fixer_params_.min_dist_to_remove_m);
+  }
+
   if (fixer_params_.resample_close_points) {
     trajectory_point_fixer_utils::resample_close_proximity_points(
-      traj_points, data.current_odometry, fixer_params_.min_dist_to_merge_m);
+      traj_points, semantic_speed_tracker, data.current_odometry,
+      fixer_params_.min_dist_to_resample_m, fixer_params_.stop_detection_velocity_threshold_mps);
+  }
+
+  trajectory_point_fixer_utils::build_stop_approach_ranges(traj_points, semantic_speed_tracker);
+
+  // Velocity-based fallback: if geometric detection produced candidates but none passed the
+  // direction check in build_stop_approach_ranges, try a direct velocity profile scan instead.
+  if (semantic_speed_tracker.get_slow_down_ranges().empty()) {
+    trajectory_point_fixer_utils::detect_velocity_based_stop(
+      traj_points, semantic_speed_tracker, fixer_params_.stop_detection_velocity_threshold_mps);
+    trajectory_point_fixer_utils::build_stop_approach_ranges(traj_points, semantic_speed_tracker);
   }
 }
 
@@ -43,12 +61,16 @@ void TrajectoryPointFixer::set_up_params()
   auto node_ptr = get_node_ptr();
   using autoware_utils_rclcpp::get_or_declare_parameter;
 
+  fixer_params_.remove_close_points =
+    get_or_declare_parameter<bool>(*node_ptr, "trajectory_point_fixer.remove_close_points");
   fixer_params_.resample_close_points =
     get_or_declare_parameter<bool>(*node_ptr, "trajectory_point_fixer.resample_close_points");
   fixer_params_.min_dist_to_remove_m =
     get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.min_dist_to_remove_m");
-  fixer_params_.min_dist_to_merge_m =
-    get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.min_dist_to_merge_m");
+  fixer_params_.min_dist_to_resample_m =
+    get_or_declare_parameter<double>(*node_ptr, "trajectory_point_fixer.min_dist_to_resample_m");
+  fixer_params_.stop_detection_velocity_threshold_mps = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_point_fixer.stop_detection_velocity_threshold_mps");
 }
 
 rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
@@ -57,12 +79,18 @@ rcl_interfaces::msg::SetParametersResult TrajectoryPointFixer::on_parameter(
   using autoware_utils_rclcpp::update_param;
 
   update_param<bool>(
+    parameters, "trajectory_point_fixer.remove_close_points", fixer_params_.remove_close_points);
+  update_param<bool>(
     parameters, "trajectory_point_fixer.resample_close_points",
     fixer_params_.resample_close_points);
   update_param<double>(
     parameters, "trajectory_point_fixer.min_dist_to_remove_m", fixer_params_.min_dist_to_remove_m);
   update_param<double>(
-    parameters, "trajectory_point_fixer.min_dist_to_merge_m", fixer_params_.min_dist_to_merge_m);
+    parameters, "trajectory_point_fixer.min_dist_to_resample_m",
+    fixer_params_.min_dist_to_resample_m);
+  update_param<double>(
+    parameters, "trajectory_point_fixer.stop_detection_velocity_threshold_mps",
+    fixer_params_.stop_detection_velocity_threshold_mps);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

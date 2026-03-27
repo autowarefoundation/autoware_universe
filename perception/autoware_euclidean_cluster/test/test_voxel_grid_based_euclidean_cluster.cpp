@@ -206,6 +206,37 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase3)
   EXPECT_EQ(output.feature_objects.size(), 0);
 }
 
+// Test case 4: Test case when the input pointcloud is empty
+TEST(VoxelGridBasedEuclideanClusterTest, EmptyPointCloud)
+{
+  sensor_msgs::msg::PointCloud2 pointcloud;
+  setPointCloud2Fields(pointcloud);
+  pointcloud.width = 0;
+  pointcloud.row_step = 0;
+
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_msg =
+    std::make_shared<sensor_msgs::msg::PointCloud2>(pointcloud);
+  tier4_perception_msgs::msg::DetectedObjectsWithFeature output;
+  std::shared_ptr<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster> cluster_;
+  float tolerance = 0.7;
+  float voxel_leaf_size = 0.3;
+  int min_points_number_per_voxel = 1;
+  int min_cluster_size = 1;
+  int max_cluster_size = 100;
+  int min_voxel_cluster_size_for_filtering = 150;
+  int max_points_per_voxel_in_large_cluster = 10;
+  int max_voxel_cluster_for_output = 500;
+  bool use_height = false;
+  cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
+    use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
+    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
+
+  // Should not crash and should return empty output
+  EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
+  EXPECT_EQ(output.feature_objects.size(), 0);
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);

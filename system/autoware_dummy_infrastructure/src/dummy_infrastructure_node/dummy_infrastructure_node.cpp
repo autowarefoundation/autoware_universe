@@ -14,8 +14,6 @@
 
 #include "autoware/dummy_infrastructure/dummy_infrastructure_node.hpp"
 
-#include <boost/optional.hpp>
-
 #include <algorithm>
 #include <cmath>
 #include <limits>

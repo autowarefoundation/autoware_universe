@@ -16,9 +16,9 @@
 
 #include "utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
@@ -460,8 +460,8 @@ auto RearCollisionChecker::get_pointcloud_objects_on_adjacent_lane(
     return objects;
   }
 
-  const auto ego_coordinate_on_arc =
-    lanelet::utils::getArcCoordinates(current_lanes, context_->data->current_kinematics->pose.pose);
+  const auto ego_coordinate_on_arc = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+    current_lanes, context_->data->current_kinematics->pose.pose);
 
   lanelet::ConstLanelets connected_adjacent_lanes{};
 
@@ -616,8 +616,8 @@ auto RearCollisionChecker::get_pointcloud_objects_at_blind_spot(
     return objects;
   }
 
-  const auto ego_coordinate_on_arc =
-    lanelet::utils::getArcCoordinates(current_lanes, context_->data->current_kinematics->pose.pose);
+  const auto ego_coordinate_on_arc = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+    current_lanes, context_->data->current_kinematics->pose.pose);
 
   const auto ego_to_furthest_point =
     lanelet::geometry::length2d(lanelet::LaneletSequence(half_lanes)) -
@@ -689,7 +689,6 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
   constexpr double forward = 100.0;
   constexpr double backward = 100.0;
   const auto current_lanes = utils::get_current_lanes(context_, forward, backward);
-  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(current_lanes);
 
   if (current_lanes.empty()) {
     debug.text = "failed to identify the current driving lane.";

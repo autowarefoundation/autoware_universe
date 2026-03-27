@@ -93,12 +93,14 @@ public:
    * @param height Image height in pixels
    * @param output_array 5-channel array with depth and intensity channels filled
    * @param num_points_projected Output counter for successfully projected points
+   * @param ego_mask Optional binary mask (H*W) where 0=occluded by ego chassis, nullptr to disable
    * @return cudaError_t CUDA error status
    */
   cudaError_t project_points_launch(
     const InputPointType * input_points, InputImageBGR8Type * undistorted_image,
     const double * tf_matrix, const double * projection_matrix, const size_t num_points,
-    const size_t width, const size_t height, float * output_array, uint32_t * num_points_projected);
+    const size_t width, const size_t height, float * output_array, uint32_t * num_points_projected,
+    const uint8_t * ego_mask);
 
 private:
   double max_depth_;

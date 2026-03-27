@@ -94,7 +94,8 @@ private:
   std::unique_ptr<autoware_utils::DiagnosticsInterface>
     diagnostics_interface_ptr_;  //!< Diagnostic handler.
 
-  double backlight_threshold_;
+  double over_exposure_threshold_;
+  double under_exposure_threshold_;
 };
 
 }  // namespace autoware::traffic_light

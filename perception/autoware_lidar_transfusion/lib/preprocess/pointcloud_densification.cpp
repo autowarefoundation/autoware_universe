@@ -15,15 +15,11 @@
 #include "autoware/lidar_transfusion/preprocess/pointcloud_densification.hpp"
 
 #include <pcl_ros/transforms.hpp>
-
-#include <pcl_conversions/pcl_conversions.h>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
 #include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <boost/optional.hpp>
+
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <memory>
 #include <string>

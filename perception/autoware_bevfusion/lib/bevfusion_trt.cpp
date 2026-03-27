@@ -43,6 +43,12 @@ BEVFusionTRT::BEVFusionTRT(
   const BEVFusionConfig & config)
 : config_(config)
 {
+  // Create and init cuda streams
+  CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
+  camera_streams_.resize(config_.num_cameras_);
+  for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
+    CHECK_CUDA_ERROR(cudaStreamCreate(&camera_streams_[i]));
+  }
   vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
 
   stop_watch_ptr_ =
@@ -51,13 +57,6 @@ BEVFusionTRT::BEVFusionTRT(
 
   initPtr();
   initTrt(trt_config);
-
-  CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-
-  camera_streams_.resize(config_.num_cameras_);
-  for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-    CHECK_CUDA_ERROR(cudaStreamCreate(&camera_streams_[i]));
-  }
 }
 
 BEVFusionTRT::~BEVFusionTRT()
@@ -407,27 +406,15 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
   img_aug_matrices_.clear();
 
   for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-    float fx = camera_info_vector[i].p[0];
-    float fy = camera_info_vector[i].p[5];
-    float cx = camera_info_vector[i].p[2];
-    float cy = camera_info_vector[i].p[6];
-
-    Matrix4fRowM camera2lidar_matrix = lidar2camera_vector[i].inverse();
-    float r31 = camera2lidar_matrix(2, 0);
-    float r32 = camera2lidar_matrix(2, 1);
-    float r33 = camera2lidar_matrix(2, 2);
-
-    float yl = cy + cx * (fy / fx) * (r31 / r32) - fy * (r33 / r32);
-    float yr =
-      cy + (cx - config_.raw_image_width_ + 1) * (fy / fx) * (r31 / r32) - fy * (r33 / r32);
-    float yh = std::max(0.0f, std::min(yr, yl));
-    float yh_resized = yh * config_.img_aug_scale_y_;
-    int crop_h = static_cast<int>(
-      std::min(yh_resized, static_cast<float>(config_.resized_height_ - config_.roi_height_)));
+    int crop_h = static_cast<int>(config_.resized_height_ - config_.roi_height_);
+    int crop_w =
+      std::max(0, static_cast<int>(config_.resized_width_) - static_cast<int>(config_.roi_width_)) /
+      2;
 
     Matrix4fRowM img_aug_matrix = Matrix4fRowM::Identity();
     img_aug_matrix(0, 0) = config_.img_aug_scale_x_;
     img_aug_matrix(1, 1) = config_.img_aug_scale_y_;
+    img_aug_matrix(0, 3) = -static_cast<float>(crop_w);
     img_aug_matrix(1, 3) = -static_cast<float>(crop_h);
 
     img_aug_matrices_.push_back(img_aug_matrix);

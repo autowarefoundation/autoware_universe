@@ -36,9 +36,11 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
  */
 struct TrajectoryPointFixerParams
 {
-  bool resample_close_points{true};   // Whether to resample close proximity points
-  double min_dist_to_remove_m{0.01};  // Minimum distance to remove close proximity points [m]
-  double min_dist_to_merge_m{0.05};   // Minimum distance to merge close proximity points [m]
+  bool remove_close_points{true};       // Whether to remove close proximity points
+  bool resample_close_points{true};     // Whether to resample close proximity points
+  double min_dist_to_remove_m{0.01};    // Minimum distance to remove close proximity points [m]
+  double min_dist_to_resample_m{0.05};  // Minimum distance to merge close proximity points [m]
+  double stop_detection_velocity_threshold_mps{0.3};  // Velocity threshold for stop detection [m/s]
 };
 
 class TrajectoryPointFixer : public TrajectoryOptimizerPluginBase
@@ -48,7 +50,7 @@ public:
   ~TrajectoryPointFixer() = default;
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    const TrajectoryOptimizerData & data) override;
+    TrajectoryOptimizerData & data) override;
   void set_up_params() override;
   rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters) override;

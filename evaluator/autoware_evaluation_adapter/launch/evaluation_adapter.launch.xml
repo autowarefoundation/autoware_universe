@@ -1,0 +1,12 @@
+<launch>
+  <group>
+    <push-ros-namespace namespace="evaluation_adapter"/>
+    <include file="$(find-pkg-share autoware_evaluation_adapter)/launch/namespace.launch.py"/>
+
+    <node_container pkg="rclcpp_components" exec="component_container_mt" name="container" namespace=""/>
+    <load_composable_node target="$(var current_ros_namespace)/container">
+      <composable_node pkg="autoware_evaluation_adapter" plugin="autoware::evaluation_adapter::AutowareEngage" name="autoware_engage"/>
+      <composable_node pkg="autoware_evaluation_adapter" plugin="autoware::evaluation_adapter::VelocityLimit" name="velocity_limit"/>
+    </load_composable_node>
+  </group>
+</launch>

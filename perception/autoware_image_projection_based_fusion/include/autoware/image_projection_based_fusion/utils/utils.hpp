@@ -17,33 +17,28 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <rclcpp/rclcpp.hpp>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-#endif
-
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include "autoware_perception_msgs/msg/shape.hpp"
 #include "tier4_perception_msgs/msg/detected_object_with_feature.hpp"
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
-#include <image_geometry/pinhole_camera_model.h>
+#if __has_include(<image_geometry/pinhole_camera_model.hpp>)
+#include <image_geometry/pinhole_camera_model.hpp>  // for ROS 2 Jazzy or newer
+#else
+#include <image_geometry/pinhole_camera_model.h>  // for ROS 2 Humble or older
+#endif
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -62,6 +57,19 @@ struct PointData
   float distance;
   size_t orig_index;
   pcl::PointXYZ orig_point;
+};
+
+struct ObjClassIoUThresh
+{
+  float UNKNOWN;
+  float CAR;
+  float TRUCK;
+  float BUS;
+  float TRAILER;
+  float MOTORCYCLE;
+  float BICYCLE;
+  float PEDESTRIAN;
+  float get_class_iou_thresh(const uint8_t label);
 };
 
 bool check_camera_info(const sensor_msgs::msg::CameraInfo & camera_info);

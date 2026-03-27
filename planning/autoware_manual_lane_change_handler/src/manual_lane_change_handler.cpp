@@ -148,6 +148,13 @@ void ManualLaneChangeHandler::set_preferred_lane(
     return;
   }
 
+  const auto reroute_availability = sub_reroute_availability_.take_data();
+  if (!reroute_availability || !reroute_availability->availability) {
+    res->status.success = false;
+    res->status.message = "Not in lane driving state. Wait for the current scenario to end.";
+    return;
+  }
+
   lanelet::ConstLanelet closest_lanelet =
     get_lanelet_by_id(current_route_->segments.front().preferred_primitive.id);
   const bool found_closest_lane = planner_->getRouteHandler().getClosestLaneletWithinRoute(
@@ -206,7 +213,6 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     : req->lane_change_direction == SetPreferredLane::Request::RIGHT ? DIRECTION::MANUAL_RIGHT
                                                                      : DIRECTION::AUTO;
   if (override_direction == DIRECTION::AUTO) {
-    std::vector<autoware_planning_msgs::msg::LaneletPrimitive> preferred_primitives;
     shift_number_ = 0;
 
     autoware_internal_debug_msgs::msg::Int32Stamped shift_msg;
@@ -286,9 +292,6 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     }
 
     std::size_t current_index = std::distance(current_segment.primitives.begin(), current_it);
-
-    const auto current_lanelet = get_lanelet_by_id(current_it->id);
-    std::string current_turning_dir = current_lanelet.attributeOr("turn_direction", "none");
 
     const auto next_lanelet = get_lanelet_by_id(next_it->id);
     std::string next_turning_dir = next_lanelet.attributeOr("turn_direction", "none");

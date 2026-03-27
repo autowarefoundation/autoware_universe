@@ -37,14 +37,14 @@ TrajectoryRanker::TrajectoryRanker(const rclcpp::NodeOptions & options)
   route_handler_{std::make_shared<RouteHandler>()},
   previous_points_{nullptr}
 {
+  max_history_size_ = static_cast<size_t>(listener_->get_params().trajectory_history_size);
+
   // Vehicle info for evaluator
   const auto vehicle_info = std::make_shared<vehicle_info_utils::VehicleInfo>(
     vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo());
 
-  // Initialize evaluator with logger
-  evaluator_ = std::make_shared<Evaluator>(route_handler_, vehicle_info, get_logger());
+  evaluator_ = std::make_shared<Evaluator>(route_handler_, vehicle_info, get_logger(), this);
 
-  // Load metrics dynamically through evaluator
   const auto metrics = listener_->get_params().metrics;
   for (size_t i = 0; i < metrics.name.size(); i++) {
     evaluator_->load_metric(metrics.name.at(i), i, listener_->get_params().resolution);
@@ -125,15 +125,33 @@ ScoredCandidateTrajectories::ConstSharedPtr TrajectoryRanker::score(
     auto sampled_points = std::make_shared<TrajectoryPoints>(std::move(sampled));
     auto original_points = std::make_shared<TrajectoryPoints>(candidate.points);
 
+    // Create shared pointer to trajectory history for passing to CoreData
+    auto trajectory_history_ptr = std::make_shared<std::deque<Trajectory>>(trajectory_history_);
+
     auto core_data = std::make_shared<CoreData>(
       original_points, sampled_points, previous_points_, objects_ptr, preferred_lanes,
-      candidate.header, candidate.generator_id);
+      candidate.header, candidate.generator_id, trajectory_history_ptr);
 
     evaluator_->add(core_data);
   }
 
   const auto best_data = evaluator_->best(params);
   previous_points_ = best_data == nullptr ? nullptr : best_data->points();
+
+  // Update trajectory history buffer with the best trajectory
+  if (best_data != nullptr && best_data->points() != nullptr) {
+    // Create Trajectory from best trajectory
+    Trajectory best_trajectory;
+    best_trajectory.header = best_data->header();
+    best_trajectory.points = *best_data->original();
+
+    trajectory_history_.push_back(best_trajectory);
+
+    // Limit buffer size
+    if (trajectory_history_.size() > max_history_size_) {
+      trajectory_history_.pop_front();
+    }
+  }
 
   for (const auto & result : evaluator_->results()) {
     const auto candidate = autoware_internal_planning_msgs::build<

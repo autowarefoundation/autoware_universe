@@ -316,6 +316,7 @@ void RawVehicleCommandConverterNode::onActuationStatus(
       current_steer_ptr_ = std::make_unique<double>(vgr_.calculateSteeringTireState(
         current_odometry_->twist.twist.linear.x, actuation_status_ptr_->status.steer_status));
       Steering steering_msg{};
+      steering_msg.stamp = this->now();
       steering_msg.steering_tire_angle = *current_steer_ptr_;
       pub_steering_status_->publish(steering_msg);
     } else if (convert_steer_cmd_method_.value() == "steer_map") {

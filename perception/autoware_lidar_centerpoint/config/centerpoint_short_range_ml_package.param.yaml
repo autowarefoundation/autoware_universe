@@ -10,3 +10,14 @@
       encoder_in_feature_size: 10
       has_variance: false
       has_twist: false
+      detection_score_thresholds:
+        # Upper bound of radial distance of 3d center_x and center_y in bounding boxes, and starting from 0
+        # [0-50m), [50.0-90m), [90.0-121.0m), [121.0-200.0m), set a very high number for the last one to be safe
+        distance_bin_upper_limits: [50.0, 90.0, 121.0, 200.0]
+        # Each list of thresholds must match with the number of upper_bounds, and each threshold corresponds to a distance bucket in the order of the upper bounds
+        min_confidence_scores:
+          CAR: [0.35, 0.35, 0.35, 0.35]
+          TRUCK: [0.35, 0.35, 0.35, 0.35]
+          BUS: [0.35, 0.35, 0.35, 0.35]
+          BICYCLE: [0.35, 0.35, 0.35, 0.35]
+          PEDESTRIAN: [0.35, 0.35, 0.35, 0.35]

@@ -173,7 +173,10 @@ void CommandModeDeciderBase::on_control_mode(const ControlModeReport & msg)
 {
   const auto is_changed = prev_control_mode_ != msg.mode;
   prev_control_mode_ = msg.mode;
-  curr_autoware_control_ = (msg.mode == ControlModeReport::AUTONOMOUS);
+  curr_autoware_control_ =
+    (msg.mode == ControlModeReport::AUTONOMOUS ||
+     msg.mode == ControlModeReport::AUTONOMOUS_VELOCITY_ONLY ||
+     msg.mode == ControlModeReport::AUTONOMOUS_STEER_ONLY);
   curr_manual_control_ = (msg.mode == ControlModeReport::MANUAL);
 
   // Check override.

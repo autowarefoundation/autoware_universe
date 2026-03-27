@@ -2,6 +2,26 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_probabilistic_occupancy_grid_map): update nvcc flags (`#12052 <https://github.com/autowarefoundation/autoware_universe/issues/12052>`_)
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* fix(probabilistic_occupancy_grid_map): add missing `#include <cstdint>` (`#11919 <https://github.com/autowarefoundation/autoware_universe/issues/11919>`_)
+* Contributors: Amadeusz Szymko, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* docs: fix broken links (`#11815 <https://github.com/autowarefoundation/autoware_universe/issues/11815>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): prevent local_map leak in occupancy grid map updateOrigin (`#11765 <https://github.com/autowarefoundation/autoware_universe/issues/11765>`_)
+  * fix(occupancy_grid_map): avoid local_map leak in updateOrigin
+  * style(pre-commit): autofix
+  * Fix local map resize type and format copyMapRegion
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Hongliang Liu, Mete Fatih Cırıt, Ryohsuke Mitsudome
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

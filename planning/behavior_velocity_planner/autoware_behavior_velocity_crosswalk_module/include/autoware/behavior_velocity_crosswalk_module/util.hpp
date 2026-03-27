@@ -122,6 +122,12 @@ getPathEndPointsOnCrosswalk(
   const PathWithLaneId & ego_path, const lanelet::BasicPolygon2d & polygon,
   const geometry_msgs::msg::Point & ego_pos);
 
+std::optional<std::pair<geometry_msgs::msg::Point, geometry_msgs::msg::Point>>
+getPathEndPointsOnCrosswalk(
+  const autoware::experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & ego_path,
+  const lanelet::BasicPolygon2d & polygon, const geometry_msgs::msg::Point & ego_pos);
+
 std::vector<geometry_msgs::msg::Point> getLinestringIntersects(
   const PathWithLaneId & ego_path, const lanelet::BasicLineString2d & linestring,
   const geometry_msgs::msg::Point & ego_pos);

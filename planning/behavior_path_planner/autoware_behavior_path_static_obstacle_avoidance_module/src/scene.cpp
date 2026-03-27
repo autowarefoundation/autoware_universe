@@ -24,20 +24,24 @@
 #include "autoware/behavior_path_static_obstacle_avoidance_module/debug.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 
+#include <boost/geometry/algorithms/correct.hpp>
+
+#include <fmt/format.h>
+
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
-
 namespace autoware::behavior_path_planner
 {
 namespace
@@ -133,16 +137,30 @@ AvoidanceState StaticObstacleAvoidanceModule::getCurrentModuleState(
     return AvoidanceState::RUNNING;
   }
 
+  const size_t ego_idx = planner_data_->findEgoIndex(path_shifter_.getReferencePath().points);
+
   // If the ego is on the shift line, keep RUNNING.
   {
-    const size_t idx = planner_data_->findEgoIndex(path_shifter_.getReferencePath().points);
     const auto within = [](const auto & line, const size_t idx) {
       return line.start_idx < idx && idx < line.end_idx;
     };
     for (const auto & shift_line : path_shifter_.getShiftLines()) {
-      if (within(shift_line, idx)) {
+      if (within(shift_line, ego_idx)) {
         return AvoidanceState::RUNNING;
       }
+    }
+  }
+
+  // If the ego finished the shift line, SUCCEED.
+  {
+    size_t last_shift_line_idx = ego_idx;
+    for (const auto & shift_line : path_shifter_.getShiftLines()) {
+      if (shift_line.end_idx > last_shift_line_idx) {
+        last_shift_line_idx = shift_line.end_idx;
+      }
+    }
+    if (last_shift_line_idx <= ego_idx) {
+      return AvoidanceState::SUCCEEDED;
     }
   }
 
@@ -226,10 +244,9 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
   data.extend_lanelets = utils::static_obstacle_avoidance::getExtendLanes(
     data.current_lanelets, getEgoPose(), planner_data_);
 
-  lanelet::ConstLanelet closest_lanelet{};
-  if (lanelet::utils::query::getClosestLanelet(
-        data.current_lanelets, getEgoPose(), &closest_lanelet))
-    data.closest_lanelet = closest_lanelet;
+  const auto closest_lanelet_opt = autoware::experimental::lanelet2_utils::get_closest_lanelet(
+    data.current_lanelets, getEgoPose());
+  if (closest_lanelet_opt) data.closest_lanelet = closest_lanelet_opt.value();
 
   // expand drivable lanes
   const auto is_within_current_lane =
@@ -809,32 +826,75 @@ void StaticObstacleAvoidanceModule::updateEgoBehavior(
 
   const auto insert_velocity = [this, &data, &path]() {
     if (data.yield_required) {
-      insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
-      return;
+      return insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
     }
 
     if (!data.avoid_required) {
-      return;
+      return false;
     }
 
     if (!data.found_avoidance_path) {
-      insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
-      return;
+      return insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
     }
 
     if (isWaitingApproval() && path_shifter_.getShiftLines().empty()) {
-      insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
-      return;
+      return insertWaitPoint(isBestEffort(parameters_->policy_deceleration), path);
     }
 
-    insertStopPoint(isBestEffort(parameters_->policy_deceleration), path);
+    return insertStopPoint(isBestEffort(parameters_->policy_deceleration), path);
   };
 
-  insert_velocity();
+  bool is_stop_inserted = insert_velocity();
 
   insertReturnDeadLine(isBestEffort(parameters_->policy_deceleration), path);
 
+  if (
+    parameters_->policy_candidate_path_turn_signal == "stop_on_approval"  //
+    && !is_stop_inserted                                                  //
+    && was_stop_inserted_                                                 //
+    && (stopped_on_avoidance_stop_point_ || approval_start_time_.has_value())) {
+    stillStopAndOutputTurnSignal(data, path);
+    is_stop_inserted = true;
+  }
+
   set_longitudinal_planning_factor(path.path);
+
+  was_stop_inserted_ = is_stop_inserted;
+
+  constexpr double TH_STOP_POSITION = 0.5;
+
+  stopped_on_avoidance_stop_point_ =
+    stop_pose_.has_value() && helper_->isVehicleStopped() &&
+    calc_distance2d(getEgoPose(), stop_pose_.value().pose) < TH_STOP_POSITION;
+}
+
+void StaticObstacleAvoidanceModule::stillStopAndOutputTurnSignal(
+  const AvoidancePlanningData &, ShiftedPath & path)
+{
+  // Start the hold timer on the first call (when ego first stops at the avoidance stop point).
+  if (!approval_start_time_) {
+    RCLCPP_DEBUG(
+      getLogger(), "[stop_on_approval] ego stopped at avoidance stop point. start hold timer.");
+    approval_start_time_ = clock_->now();
+  }
+
+  const double elapsed = (clock_->now() - approval_start_time_.value()).seconds();
+  RCLCPP_DEBUG_THROTTLE(
+    getLogger(), *clock_, 500, "[stop_on_approval] hold elapsed=%.2f / %.2f [s]", elapsed,
+    parameters_->turn_signal_on_approval_hold_duration);
+
+  if (elapsed >= parameters_->turn_signal_on_approval_hold_duration) {
+    // Hold duration has elapsed: reset timer and allow vehicle to start avoidance.
+    RCLCPP_DEBUG(getLogger(), "[stop_on_approval] hold duration elapsed. start avoidance.");
+    approval_start_time_ = std::nullopt;
+    return;
+  }
+
+  utils::static_obstacle_avoidance::insertDecelPoint(
+    getEgoPosition(), 0.0, 0.0, path.path, stop_pose_);
+
+  const double remaining = parameters_->turn_signal_on_approval_hold_duration - elapsed;
+  stop_pose_->detail = fmt::format("stop_on_approval: {:.1f}s remaining", remaining);
 }
 
 bool StaticObstacleAvoidanceModule::isSafePath(
@@ -1015,18 +1075,13 @@ PathWithLaneId StaticObstacleAvoidanceModule::extendBackwardLength(
 }
 
 auto StaticObstacleAvoidanceModule::getTurnSignal(
-  const ShiftedPath & spline_shift_path, const ShiftedPath & linear_shift_path) -> TurnSignalInfo
+  const ShiftedPath & spline_shift_path, const ShiftedPath & linear_shift_path,
+  const ShiftLineArray & shift_lines) const -> std::pair<TurnSignalInfo, std::optional<std::string>>
 {
   using autoware::motion_utils::calcSignedArcLength;
 
   const auto is_ignore_signal = [this](const UUID & uuid) {
     return ignore_signal_ids_.find(to_hex_string(uuid)) != ignore_signal_ids_.end();
-  };
-
-  const auto update_ignore_signal = [this](const UUID & uuid, const bool is_ignore) {
-    if (is_ignore) {
-      ignore_signal_ids_.insert(to_hex_string(uuid));
-    }
   };
 
   const auto is_large_deviation = [this](const auto & path) {
@@ -1037,8 +1092,6 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
     return std::abs(lateral_deviation) > threshold;
   };
 
-  auto shift_lines = path_shifter_.getShiftLines();
-
   std::vector<ShiftLine> shift_lines_after_ego;
   for (const auto & s : shift_lines) {
     if (s.end_idx >= planner_data_->findEgoIndex(spline_shift_path.path.points)) {
@@ -1047,11 +1100,11 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   }
 
   if (shift_lines_after_ego.empty()) {
-    return getPreviousModuleOutput().turn_signal_info;
+    return {getPreviousModuleOutput().turn_signal_info, std::nullopt};
   }
 
   if (is_large_deviation(spline_shift_path.path)) {
-    return getPreviousModuleOutput().turn_signal_info;
+    return {getPreviousModuleOutput().turn_signal_info, std::nullopt};
   }
 
   const auto target_shift_line = [&]() {
@@ -1097,7 +1150,7 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   }();
 
   if (is_ignore_signal(target_shift_line.id)) {
-    return getPreviousModuleOutput().turn_signal_info;
+    return {getPreviousModuleOutput().turn_signal_info, std::nullopt};
   }
 
   const auto original_signal = getPreviousModuleOutput().turn_signal_info;
@@ -1109,13 +1162,27 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
     linear_shift_path, target_shift_line, avoid_data_.current_lanelets, helper_->getEgoShift(),
     is_driving_forward, egos_lane_is_shifted);
 
-  update_ignore_signal(target_shift_line.id, is_ignore);
+  const std::optional<std::string> new_ignore_id =
+    is_ignore ? std::optional<std::string>{to_hex_string(target_shift_line.id)} : std::nullopt;
 
   const auto current_seg_idx = planner_data_->findEgoSegmentIndex(spline_shift_path.path.points);
-  return planner_data_->turn_signal_decider.overwrite_turn_signal(
-    spline_shift_path.path, getEgoPose(), current_seg_idx, original_signal, new_signal,
-    planner_data_->parameters.ego_nearest_dist_threshold,
-    planner_data_->parameters.ego_nearest_yaw_threshold);
+  return {
+    planner_data_->turn_signal_decider.overwrite_turn_signal(
+      spline_shift_path.path, getEgoPose(), current_seg_idx, original_signal, new_signal,
+      planner_data_->parameters.ego_nearest_dist_threshold,
+      planner_data_->parameters.ego_nearest_yaw_threshold),
+    new_ignore_id};
+}
+
+auto StaticObstacleAvoidanceModule::computeTurnSignalFromShifter(
+  PathShifter & shifter, const PathWithLaneId & reference_path) const
+  -> std::pair<TurnSignalInfo, std::optional<std::string>>
+{
+  ShiftedPath spline_path = utils::static_obstacle_avoidance::toShiftedPath(reference_path);
+  ShiftedPath linear_path = utils::static_obstacle_avoidance::toShiftedPath(reference_path);
+  shifter.generate(&spline_path, true, SHIFT_TYPE::SPLINE);
+  shifter.generate(&linear_path, true, SHIFT_TYPE::LINEAR);
+  return getTurnSignal(spline_path, linear_path, shifter.getShiftLines());
 }
 
 BehaviorModuleOutput StaticObstacleAvoidanceModule::plan()
@@ -1165,7 +1232,12 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::plan()
 
   // turn signal
   {
-    output.turn_signal_info = getTurnSignal(spline_shift_path, linear_shift_path);
+    auto [turn_signal, new_ignore_id] =
+      getTurnSignal(spline_shift_path, linear_shift_path, path_shifter_.getShiftLines());
+    if (new_ignore_id) {
+      ignore_signal_ids_.insert(*new_ignore_id);
+    }
+    output.turn_signal_info = turn_signal;
   }
 
   // sparse resampling for computational cost
@@ -1296,7 +1368,34 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::planWaitingApproval()
   BehaviorModuleOutput out = plan();
 
   if (path_shifter_.getShiftLines().empty()) {
-    out.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
+    const auto & candidate_shift_lines = avoid_data_.safe_shift_line;
+    const auto & turn_signal_policy = parameters_->policy_candidate_path_turn_signal;
+
+    // Determine whether to compute turn signal from candidate shift lines.
+    // "none"             : never output turn signal for candidate paths.
+    // "stopped_candidate": output turn signal only when vehicle is stopped (current default).
+    // "all_candidate"    : always output turn signal when candidate path exists.
+    const bool should_output_candidate_turn_signal = [&]() {
+      const bool has_candidates = !candidate_shift_lines.empty();
+      const bool always_signal = turn_signal_policy == "all_candidate";
+      const bool signal_when_stopped =
+        turn_signal_policy == "stopped_candidate" && helper_->isVehicleStopped();
+      return has_candidates && (always_signal || signal_when_stopped);
+    }();
+
+    if (should_output_candidate_turn_signal) {
+      // Compute turn signal from candidate shift lines before approval.
+      auto candidate_shifter = path_shifter_;
+      addNewShiftLines(candidate_shifter, candidate_shift_lines);
+      auto [turn_signal, new_ignore_id] =
+        computeTurnSignalFromShifter(candidate_shifter, avoid_data_.reference_path);
+      if (new_ignore_id) {
+        ignore_signal_ids_.insert(*new_ignore_id);
+      }
+      out.turn_signal_info = turn_signal;
+    } else {
+      out.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
+    }
   }
 
   path_candidate_ = std::make_shared<PathWithLaneId>(planCandidate().path_candidate);
@@ -1543,6 +1642,10 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
   }
 
   const auto shift_line = avoid_data_.new_shift_line.back();
+  bool is_close_distance_avoidance = shift_line.object.info == ObjectInfo::CLOSE_DISTANCE_AVOIDANCE;
+  if (is_close_distance_avoidance) {
+    return parameters_->policy_close_distance_avoidance == "manual";
+  }
   if (is_return_shift(
         shift_line.start_shift_length, shift_line.end_shift_length,
         parameters_->lateral_small_shift_threshold)) {
@@ -1557,12 +1660,17 @@ bool StaticObstacleAvoidanceModule::is_operator_approval_required(
       linestring.emplace_back(p.x, p.y);
     });
 
+    const auto footprint_ring = planner_data_->parameters.vehicle_info.createFootprint();
+
     for (size_t i = shift_line.start_idx; i < shift_line.end_idx; ++i) {
       const auto transform =
         autoware_utils::pose2transform(autoware_utils::get_pose(shifted_path.path.points.at(i)));
-      const auto footprint = autoware_utils::transform_vector(
-        planner_data_->parameters.vehicle_info.createFootprint(), transform);
-      if (boost::geometry::intersects(footprint, linestring)) {
+
+      autoware_utils_geometry::Polygon2d footprint_polygon;
+      footprint_polygon.outer() = autoware_utils::transform_vector(footprint_ring, transform);
+      boost::geometry::correct(footprint_polygon);
+
+      if (boost::geometry::intersects(footprint_polygon, linestring)) {
         return true;
       }
     }
@@ -1906,7 +2014,7 @@ void StaticObstacleAvoidanceModule::insertReturnDeadLine(
   }
 }
 
-void StaticObstacleAvoidanceModule::insertWaitPoint(
+bool StaticObstacleAvoidanceModule::insertWaitPoint(
   const bool use_constraints_for_decel, ShiftedPath & shifted_path) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -1914,29 +2022,33 @@ void StaticObstacleAvoidanceModule::insertWaitPoint(
 
   // If avoidance path is NOT valid, don't insert any stop points.
   if (!data.valid) {
-    return;
+    return false;
   }
 
   if (!data.stop_target_object) {
-    return;
+    return false;
   }
 
   if (helper_->isShifted()) {
-    return;
+    return false;
+  }
+
+  if (data.stop_target_object.value().info == ObjectInfo::CLOSE_DISTANCE_AVOIDANCE) {
+    return utils::static_obstacle_avoidance::insertDecelPoint(
+      getEgoPosition(), 0.0, 0.0, shifted_path.path, stop_pose_);
   }
 
   if (data.to_stop_line < -1.0 * parameters_->stop_buffer) {
     RCLCPP_WARN_THROTTLE(
       getLogger(), *clock_, 3000, "ego overran avoidance dead line. do nothing.");
-    return;
+    return false;
   }
 
   // If we don't need to consider deceleration constraints, insert a deceleration point
   // and return immediately
   if (!use_constraints_for_decel) {
-    utils::static_obstacle_avoidance::insertDecelPoint(
+    return utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), data.to_stop_line, 0.0, shifted_path.path, stop_pose_);
-    return;
   }
 
   // If the stop distance is not enough for comfortable stop, don't insert wait point.
@@ -1944,35 +2056,34 @@ void StaticObstacleAvoidanceModule::insertWaitPoint(
   const auto is_slow_speed = getEgoSpeed() < parameters_->min_slow_down_speed;
   if (!is_comfortable_stop && !is_slow_speed) {
     RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 3000, "not execute uncomfortable deceleration.");
-    return;
+    return false;
   }
 
   // If target object can be stopped for, insert a deceleration point and return
   if (data.stop_target_object.value().is_stoppable) {
-    utils::static_obstacle_avoidance::insertDecelPoint(
+    return utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), data.to_stop_line, 0.0, shifted_path.path, stop_pose_);
-    return;
   }
 
   // If the object cannot be stopped for, calculate a "mild" deceleration distance
   // and insert a deceleration point at that distance
   const auto stop_distance = helper_->getFeasibleDecelDistance(0.0, false);
-  utils::static_obstacle_avoidance::insertDecelPoint(
+  return utils::static_obstacle_avoidance::insertDecelPoint(
     getEgoPosition(), stop_distance, 0.0, shifted_path.path, stop_pose_);
 }
 
-void StaticObstacleAvoidanceModule::insertStopPoint(
+bool StaticObstacleAvoidanceModule::insertStopPoint(
   const bool use_constraints_for_decel, ShiftedPath & shifted_path) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto & data = avoid_data_;
 
   if (data.safe) {
-    return;
+    return false;
   }
 
   if (!parameters_->enable_yield_maneuver_during_shifting) {
-    return;
+    return false;
   }
 
   const auto stop_idx = [&]() {
@@ -1994,19 +2105,18 @@ void StaticObstacleAvoidanceModule::insertStopPoint(
   // If we don't need to consider deceleration constraints, insert a deceleration point
   // and return immediately
   if (!use_constraints_for_decel) {
-    utils::static_obstacle_avoidance::insertDecelPoint(
+    return utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), stop_distance, 0.0, shifted_path.path, stop_pose_);
-    return;
   }
 
   // Otherwise, consider deceleration constraints before inserting deceleration point
   const auto decel_distance = helper_->getFeasibleDecelDistance(0.0, false);
   if (stop_distance < decel_distance) {
-    return;
+    return false;
   }
 
   constexpr double MARGIN = 1.0;
-  utils::static_obstacle_avoidance::insertDecelPoint(
+  return utils::static_obstacle_avoidance::insertDecelPoint(
     getEgoPosition(), stop_distance - MARGIN, 0.0, shifted_path.path, stop_pose_);
 }
 

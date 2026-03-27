@@ -11,18 +11,19 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
 
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/object_model/uuid.hpp"
 
 #include <autoware_utils_geometry/geometry.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <algorithm>
+#include <cmath>
 #include <limits>
-#include <random>
 #include <vector>
 
 namespace
@@ -61,15 +62,10 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   last_update_with_measurement_time_(time),
   object_(detected_object)
 {
-  // Generate random number
-  std::mt19937 gen(std::random_device{}());
-  std::independent_bits_engine<std::mt19937, 8, uint8_t> bit_eng(gen);
-  unique_identifier_msgs::msg::UUID uuid_msg;
-  std::generate(uuid_msg.uuid.begin(), uuid_msg.uuid.end(), bit_eng);
-  object_.uuid = uuid_msg;
+  // Assign a persistent tracker UUID (separate from measurement UUIDs).
+  object_.uuid = object_model::generate_uuid();
 
   // Initialize existence probabilities
-  existence_probabilities_.resize(types::max_channel_size, 0.001);
   total_existence_probability_ = 0.001;
   classification_ = detected_object.classification;
 }
@@ -85,11 +81,28 @@ void Tracker::initializeExistenceProbabilities(
   const float clamped_existence_probability =
     std::clamp(existence_probability, min_probability, max_probability);
 
-  // existence probability on each channel
-  existence_probabilities_[channel_index] = clamped_existence_probability;
-
   // total existence probability
   total_existence_probability_ = clamped_existence_probability;
+
+  // existence probability on each channel
+  // if the existence probabilities are not initialized, initialize with the given channel index and
+  // existence probability
+  if (existence_probabilities_.empty()) {
+    existence_probabilities_.push_back({channel_index, clamped_existence_probability});
+    return;
+  }
+
+  bool found = false;
+  for (auto & prob : existence_probabilities_) {
+    if (prob.channel_index == channel_index) {
+      prob.existence_probability = clamped_existence_probability;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    existence_probabilities_.push_back({channel_index, clamped_existence_probability});
+  }
 }
 
 void Tracker::updateTotalExistenceProbability(const float & existence_probability)
@@ -98,18 +111,30 @@ void Tracker::updateTotalExistenceProbability(const float & existence_probabilit
     updateProbability(total_existence_probability_, existence_probability, 0.2);
 }
 
-void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabilities)
+void Tracker::mergeExistenceProbabilities(
+  std::vector<types::ExistenceProbability> existence_probabilities)
 {
   // existence probability on each channel
-  for (size_t i = 0; i < existence_probabilities.size(); ++i) {
-    // take larger value
-    existence_probabilities_[i] = std::max(existence_probabilities_[i], existence_probabilities[i]);
+  for (const auto & new_prob : existence_probabilities) {
+    bool found = false;
+    for (auto & prob : existence_probabilities_) {
+      if (prob.channel_index == new_prob.channel_index) {
+        // take larger value
+        prob.existence_probability =
+          std::max(prob.existence_probability, new_prob.existence_probability);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      existence_probabilities_.push_back(new_prob);
+    }
   }
 }
 
 bool Tracker::updateWithMeasurement(
   const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const types::InputChannel & channel_info, bool has_significant_shape_change)
 {
   // Update existence probability
   {
@@ -124,14 +149,26 @@ bool Tracker::updateWithMeasurement(
 
     // update measured channel probability without decay
     const uint & channel_index = channel_info.index;
-    existence_probabilities_[channel_index] = updateProbability(
-      existence_probabilities_[channel_index], probability_true_detection,
-      probability_false_detection);
+    bool found = false;
+    for (auto & prob : existence_probabilities_) {
+      if (prob.channel_index == channel_index) {
+        prob.existence_probability = updateProbability(
+          prob.existence_probability, probability_true_detection, probability_false_detection);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      // If the channel is not found, add it with initial probability 0.001
+      float new_prob =
+        updateProbability(0.001f, probability_true_detection, probability_false_detection);
+      existence_probabilities_.push_back({channel_index, new_prob});
+    }
 
     // decay other channel probabilities
-    for (size_t i = 0; i < existence_probabilities_.size(); ++i) {
-      if (i != channel_index) {
-        existence_probabilities_[i] = decayProbability(existence_probabilities_[i], delta_time);
+    for (auto & prob : existence_probabilities_) {
+      if (prob.channel_index != channel_index) {
+        prob.existence_probability = decayProbability(prob.existence_probability, delta_time);
       }
     }
 
@@ -162,12 +199,54 @@ bool Tracker::updateWithMeasurement(
     // availability to SIGN_UNKNOWN
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
+  setOrientationAvailability(object_.kinematics.orientation_availability);
 
-  // Update object
-  measure(object, measurement_time, channel_info);
+  // Update strategies:
+  // 1. Normal update: Update position and shape by Kalman filter
+  // 2. Extension update: Apply the new stable shape and update position
+  // 3. Conditioned update: Ignore the noisy shape info and partially update position with below 3
+  // conditions
+  //    - FRONT_WHEEL_UPDATE: Update anchor point of front wheel
+  //    - REAR_WHEEL_UPDATE: Update anchor point of rear wheel
+  //    - WEAK_UPDATE: Update tending to predicted position
+
+  if (!has_significant_shape_change) {
+    unstable_shape_filter_.processNormalMeasurement(object);
+    // 1. Normal update
+    measure(object, measurement_time, channel_info);
+    object_.trust_extension = object.trust_extension;
+
+  } else {
+    unstable_shape_filter_.processNoisyMeasurement(object);
+    if (unstable_shape_filter_.isStable()) {
+      // 2. Extension update
+      autoware_perception_msgs::msg::Shape smoothed_shape = unstable_shape_filter_.getShape();
+
+      setObjectShape(smoothed_shape);
+
+      auto smoothed_object = object;
+      smoothed_object.shape = smoothed_shape;
+      measure(smoothed_object, measurement_time, channel_info);
+      object_.trust_extension = smoothed_object.trust_extension;
+
+      unstable_shape_filter_.clear();
+
+    } else {
+      // 3. Conditioned update
+      const auto tracker_shape = object_.shape;
+
+      types::DynamicObject predicted_object;
+      getTrackedObject(measurement_time, predicted_object);
+
+      conditionedUpdate(object, predicted_object, tracker_shape, measurement_time, channel_info);
+    }
+  }
 
   // Update object status
   getTrackedObject(measurement_time, object_);
+
+  // update time
+  object_.time = measurement_time;
 
   return true;
 }
@@ -180,14 +259,77 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
   {
     // decay existence probability
     float const delta_time = (timestamp - last_update_with_measurement_time_).seconds();
-    for (float & existence_probability : existence_probabilities_) {
-      existence_probability = decayProbability(existence_probability, delta_time);
+    for (auto & prob : existence_probabilities_) {
+      prob.existence_probability = decayProbability(prob.existence_probability, delta_time);
     }
     total_existence_probability_ = decayProbability(total_existence_probability_, delta_time);
   }
 
   // Update object status
   getTrackedObject(timestamp, object_);
+
+  return true;
+}
+
+bool Tracker::createPseudoMeasurement(
+  const types::DynamicObject & meas, types::DynamicObject & pred,
+  const autoware_perception_msgs::msg::Shape & tracker_shape, const bool enlarge_covariance)
+{
+  // Apply linear fall‑off weight on dist square
+  const double dx = meas.pose.position.x - pred.pose.position.x;
+  const double dy = meas.pose.position.y - pred.pose.position.y;
+  const double dist2 = dx * dx + dy * dy;
+  constexpr double d_max_square_inv = 1 / 2.0;  // saturate when distance overs 1.414 m
+  constexpr double min_w = 0.0;
+  const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
+
+  // Blend position
+  pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + meas.pose.position.x * w_pose;
+  pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
+
+  // Use smoothed shape and its area
+  pred.shape = tracker_shape;
+  pred.area = types::getArea(tracker_shape);
+
+  // Blend orientation
+  if (meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE) {
+    double yaw_pred = tf2::getYaw(pred.pose.orientation);
+    double yaw_meas = tf2::getYaw(meas.pose.orientation);
+
+    double yaw_diff = yaw_meas - yaw_pred;
+    // Normalize yaw_diff to [-π, π] using fmod
+    yaw_diff = std::fmod(yaw_diff + M_PI, 2 * M_PI) - M_PI;
+    // Handle SIGN_UNKNOWN: limit yaw difference to [-90°, 90°]
+    if (meas.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN) {
+      if (yaw_diff > M_PI_2) {
+        yaw_diff -= M_PI;
+      } else if (yaw_diff < -M_PI_2) {
+        yaw_diff += M_PI;
+      }
+    }
+    double yaw_fused = yaw_pred + yaw_diff * w_pose;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw_fused);
+    pred.pose.orientation = tf2::toMsg(q);
+  }
+
+  // Enlarge covariance if requested (for weak updates)
+  if (enlarge_covariance) {
+    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    constexpr double additional_position_cov = 9.0;     // [m^2] additional variance
+    constexpr double additional_orientation_cov = 0.5;  // [rad^2] additional variance
+    constexpr double additional_velocity_cov = 25.0;    // [m^2/s^2] additional variance
+
+    pred.pose_covariance[XYZRPY_COV_IDX::X_X] += additional_position_cov;
+    pred.pose_covariance[XYZRPY_COV_IDX::Y_Y] += additional_position_cov;
+    pred.pose_covariance[XYZRPY_COV_IDX::YAW_YAW] += additional_orientation_cov;
+
+    // Enlarge velocity covariance if available
+    if (pred.kinematics.has_twist_covariance) {
+      pred.twist_covariance[XYZRPY_COV_IDX::X_X] += additional_velocity_cov;
+      pred.twist_covariance[XYZRPY_COV_IDX::Y_Y] += additional_velocity_cov;
+    }
+  }
 
   return true;
 }
@@ -265,17 +407,25 @@ uint Tracker::getChannelIndex() const
   // Return the index of the channel that has highest priority
   // lower the index, higher the priority
 
-  uint index = types::max_channel_size - 1;  // Default to lowest priority index
+  uint index = 0;
   float max_probability = 0.0f;
   constexpr float threshold = 0.5;
-  for (uint i = 0; i < existence_probabilities_.size(); ++i) {
-    if (existence_probabilities_[i] > threshold) {
-      return i;
+  uint min_index_above_threshold = std::numeric_limits<uint>::max();
+
+  for (const auto & prob : existence_probabilities_) {
+    if (prob.existence_probability > threshold) {
+      if (prob.channel_index < min_index_above_threshold) {
+        min_index_above_threshold = prob.channel_index;
+      }
     }
-    if (existence_probabilities_[i] > max_probability) {
-      max_probability = existence_probabilities_[i];
-      index = i;
+    if (prob.existence_probability > max_probability) {
+      max_probability = prob.existence_probability;
+      index = prob.channel_index;
     }
+  }
+
+  if (min_index_above_threshold != std::numeric_limits<uint>::max()) {
+    return min_index_above_threshold;
   }
   // If no channel has a probability above the threshold, return the highest probability index
   return index;
@@ -305,9 +455,12 @@ void Tracker::getPositionCovarianceEigenSq(
   auto & pose_cov = object.pose_covariance;
 
   // principal component of the position covariance matrix
+  const double a = pose_cov[XYZRPY_COV_IDX::X_X];
+  const double c = pose_cov[XYZRPY_COV_IDX::Y_Y];
+  const double b = 0.5 * (pose_cov[XYZRPY_COV_IDX::X_Y] + pose_cov[XYZRPY_COV_IDX::Y_X]);
+
   Eigen::Matrix2d covariance;
-  covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
-    pose_cov[XYZRPY_COV_IDX::Y_X], pose_cov[XYZRPY_COV_IDX::Y_Y];
+  covariance << a, b, b, c;
   // check if the covariance is valid
   if (covariance(0, 0) <= 0.0 || covariance(1, 1) <= 0.0) {
     RCLCPP_WARN(
@@ -318,15 +471,36 @@ void Tracker::getPositionCovarianceEigenSq(
     return;
   }
   // Direct eigenvalue calculation for 2x2 symmetric matrix
-  const double a = covariance(0, 0);
-  const double b = covariance(0, 1);
-  const double c = covariance(1, 1);
   const double trace = a + c;
   const double det = a * c - b * b;
-  const double sqrt_term = std::sqrt(trace * trace / 4.0 - det);
 
-  major_axis_sq = trace / 2.0 + sqrt_term;
-  minor_axis_sq = trace / 2.0 - sqrt_term;
+  double sqrt_arg = trace * trace / 4.0 - det;
+  if (!std::isfinite(sqrt_arg)) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("Tracker"),
+      "Covariance eigen calc became invalid. trace: %f, det: %f, sqrt_arg: %f", trace, det,
+      sqrt_arg);
+    major_axis_sq = 0.0;
+    minor_axis_sq = 0.0;
+    return;
+  }
+
+  // Allow small negative values caused by floating-point round-off.
+  constexpr double sqrt_arg_eps = 1e-12;
+  if (sqrt_arg < -sqrt_arg_eps) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("Tracker"),
+      "Covariance eigen calc became invalid. trace: %f, det: %f, sqrt_arg: %f", trace, det,
+      sqrt_arg);
+    major_axis_sq = 0.0;
+    minor_axis_sq = 0.0;
+    return;
+  }
+  sqrt_arg = std::max(0.0, sqrt_arg);
+
+  const double sqrt_term = std::sqrt(sqrt_arg);
+  major_axis_sq = std::max(0.0, trace / 2.0 + sqrt_term);
+  minor_axis_sq = std::max(0.0, trace / 2.0 - sqrt_term);
 }
 
 double Tracker::getBEVArea() const
@@ -481,6 +655,33 @@ double Tracker::getPositionCovarianceDeterminant() const
     return std::numeric_limits<double>::max();
   }
   return determinant;
+}
+
+bool Tracker::conditionedUpdate(
+  const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+  const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
+  const types::InputChannel & channel_info)
+{
+  (void)measurement;
+  (void)prediction;
+  (void)tracker_shape;
+  (void)measurement_time;
+  (void)channel_info;
+  RCLCPP_ERROR(
+    rclcpp::get_logger("Tracker"),
+    "Tracker::conditionedUpdate: Base class method is NOT expected to be called.");
+  return false;
+
+  // NOTE: The following default implementation is commented out as it not well-tested yet.
+  //
+  // // For non-vehicle trackers, create pseudo measurement
+  // types::DynamicObject pseudo_measurement = prediction;
+  // createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape);
+  //
+  // // Apply the measurement update directly
+  // measure(pseudo_measurement, measurement_time, channel_info);
+  //
+  // return true;
 }
 
 }  // namespace autoware::multi_object_tracker

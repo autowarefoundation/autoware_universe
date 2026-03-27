@@ -452,6 +452,10 @@ std::vector<float> CameraDataStore::get_image_shape() const
 
 std::shared_ptr<cuda::Tensor> CameraDataStore::get_image_input() const
 {
+  // Sync all streams to ensure processing is complete before returning
+  for (const auto & stream : streams_) {
+    cudaStreamSynchronize(stream);
+  }
   return image_input_;
 }
 

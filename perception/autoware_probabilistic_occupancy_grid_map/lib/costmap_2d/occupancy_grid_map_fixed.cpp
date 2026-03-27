@@ -23,17 +23,10 @@
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <grid_map_costmap_2d/grid_map_costmap_2d.hpp>
 #include <pcl_ros/transforms.hpp>
-
-#include <sensor_msgs/point_cloud2_iterator.hpp>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#else
 #include <tf2_eigen/tf2_eigen.hpp>
 
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-#endif
 
 #include <algorithm>
 

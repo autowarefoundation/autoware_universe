@@ -3,4 +3,4 @@ project(autoware_cuda_dependency_meta NONE)
 
 find_package(ament_cmake REQUIRED)
 
-ament_package()
+ament_package(CONFIG_EXTRAS autoware_cuda_dependency_meta-extras.cmake)

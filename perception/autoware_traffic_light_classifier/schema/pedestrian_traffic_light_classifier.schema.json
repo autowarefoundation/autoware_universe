@@ -32,10 +32,15 @@
           },
           "default": [58.395, 57.12, 57.375]
         },
-        "backlight_threshold": {
+        "over_exposure_threshold": {
           "type": "number",
-          "description": "If the intensity get grater than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much higher, the node only overwrites in the harsher backlight situations. Therefore, If you wouldn't like to use this feature set this value to `1.0`. The value can be `[0.0, 1.0]`. The confidence of overwritten signal is set to `0.0`.",
+          "description": "If the intensity get grater than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much higher, the node only overwrites in the over exposure situations. Therefore, If you wouldn't like to use this feature set this value to `1.0`. The value can be `[0.0, 1.0]`. The confidence of overwritten signal is set to `0.0`.",
           "default": 0.85
+        },
+        "under_exposure_threshold": {
+          "type": "number",
+          "description": "If the intensity get lesser than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much lesser, the node only overwrites in the under exposure situations. Therefore, If you wouldn't like to use this feature set this value to `-1.0`. The confidence of overwritten signal is set to `0.0`.",
+          "default": -0.83
         },
         "classifier_type": {
           "type": "integer",
@@ -53,7 +58,8 @@
         "precision",
         "mean",
         "std",
-        "backlight_threshold",
+        "over_exposure_threshold",
+        "under_exposure_threshold",
         "classifier_type",
         "traffic_light_type"
       ],

@@ -17,28 +17,23 @@
 #include "autoware/freespace_planning_algorithms/abstract_algorithm.hpp"
 #include "autoware/freespace_planning_algorithms/kinematic_bicycle_model.hpp"
 
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2/utils.hpp>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <queue>
 #include <utility>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
-#include <algorithm>
 #include <vector>
 
 namespace autoware::freespace_planning_algorithms
 {
-using autoware_utils::calc_distance2d;
+using autoware_utils_geometry::calc_distance2d;
 
 double calcReedsSheppDistance(const Pose & p1, const Pose & p2, double radius)
 {
@@ -449,7 +444,7 @@ void AstarSearch::setPath(const AstarNode & goal_node)
     const auto parent_pose = node2pose(*node.parent);
     const double distance_2d = calc_distance2d(node2pose(node), parent_pose);
     const int n = static_cast<int>(distance_2d / min_expansion_dist_);
-    for (int i = 1; i < n; ++i) {
+    for (int i = n - 1; i >= 1; --i) {
       const double dist =
         ((distance_2d * i) / n) * (node.is_back == is_backward_search_ ? 1.0 : -1.0);
       const double steering = node.steering_index * steering_resolution_;
@@ -498,7 +493,8 @@ bool AstarSearch::isGoal(const AstarNode & node) const
 {
   const double lateral_goal_range = planner_common_param_.lateral_goal_range / 2.0;
   const double longitudinal_goal_range = planner_common_param_.longitudinal_goal_range / 2.0;
-  const double goal_angle = autoware_utils::deg2rad(planner_common_param_.angle_goal_range / 2.0);
+  const double goal_angle =
+    autoware_utils_math::deg2rad(planner_common_param_.angle_goal_range / 2.0);
 
   const auto node_pose = node2pose(node);
 
@@ -524,7 +520,7 @@ bool AstarSearch::isGoal(const AstarNode & node) const
     }
 
     const auto angle_diff =
-      autoware_utils::normalize_radian(tf2::getYaw(relative_pose.orientation));
+      autoware_utils_math::normalize_radian(tf2::getYaw(relative_pose.orientation));
     if (std::abs(angle_diff) > goal_angle) {
       return false;
     }
@@ -568,7 +564,7 @@ Pose AstarSearch::node2pose(const AstarNode & node) const
   pose_local.position.x = node.x;
   pose_local.position.y = node.y;
   pose_local.position.z = goal_pose_.position.z;
-  pose_local.orientation = autoware_utils::create_quaternion_from_yaw(node.theta);
+  pose_local.orientation = autoware_utils_geometry::create_quaternion_from_yaw(node.theta);
 
   return pose_local;
 }

@@ -25,6 +25,7 @@
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
+#include <geometry_msgs/msg/point.hpp>
 
 #include <cassert>
 #include <string>
@@ -41,35 +42,35 @@ using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using unique_identifier_msgs::msg::UUID;
 
 /**
- * @brief Parses raw prediction data into structured pose matrices.
+ * @brief Parses raw prediction data into structured pose matrices in map coordinates.
  *
  * @param prediction The raw tensor prediction output (x, y, cos(yaw), sin(yaw) for each timestep).
+ * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @return A 3D vector structure: [batch][agent][timestep] -> Eigen::Matrix4d (4x4 pose matrix).
  */
 std::vector<std::vector<std::vector<Eigen::Matrix4d>>> parse_predictions(
-  const std::vector<float> & prediction);
+  const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map);
 
 /**
  * @brief Creates PredictedObjects message from parsed agent poses.
  *
  * @param agent_poses The parsed agent poses [batch][agent][timestep] -> pose matrix.
- * @param ego_centric_agent_data The agent data in ego-centric coordinates.
+ * @param ego_centric_histories The agent histories in ego-centric coordinates.
  * @param stamp The ROS time stamp for the message.
- * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
  * @param batch_index The batch index to use.
  * @return A PredictedObjects message containing predicted paths for each agent.
  */
 PredictedObjects create_predicted_objects(
   const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
-  const AgentData & ego_centric_agent_data, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index);
+  const std::vector<AgentHistory> & ego_centric_histories, const rclcpp::Time & stamp,
+  const int64_t batch_index);
 
 /**
  * @brief Creates a Trajectory message from parsed agent poses for a specific batch and ego agent.
  *
  * @param agent_poses The parsed agent poses [batch][agent][timestep] -> pose matrix.
  * @param stamp The ROS time stamp for the message.
- * @param transform_ego_to_map The transformation matrix from ego to map coordinates.
+ * @param base_position The current ego position in map coordinates.
  * @param batch_index The batch index to extract.
  * @param velocity_smoothing_window The window size for velocity smoothing.
  * @param enable_force_stop Whether to enable force stop logic.
@@ -78,19 +79,9 @@ PredictedObjects create_predicted_objects(
  */
 Trajectory create_ego_trajectory(
   const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
-  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map,
+  const rclcpp::Time & stamp, const geometry_msgs::msg::Point & base_position,
   const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
   const double stopping_threshold);
-
-/**
- * @brief Converts turn indicator logit to TurnIndicatorsCommand message.
- *
- * @param turn_indicator_logit The turn indicator logit from the model output.
- * @param stamp The ROS time stamp for the message.
- * @return A TurnIndicatorsCommand message with the predicted turn indicators.
- */
-TurnIndicatorsCommand create_turn_indicators_command(
-  const std::vector<float> & turn_indicator_logit, const rclcpp::Time & stamp);
 
 /**
  * @brief Counts valid elements in a tensor with shape (B, len, dim2, dim3).

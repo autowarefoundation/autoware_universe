@@ -16,7 +16,7 @@
 
 #include "autoware/predicted_path_postprocessor/processor/composable.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 
@@ -109,10 +109,16 @@ void PredictedPathPostprocessorNode::callback(
 
 void PredictedPathPostprocessorNode::on_map(const LaneletMapBin::ConstSharedPtr & msg)
 {
-  auto lanelet_map = std::make_shared<lanelet::LaneletMap>();
-  lanelet::traffic_rules::TrafficRulesPtr traffic_rules;
-  lanelet::routing::RoutingGraphPtr routing_graph;
-  lanelet::utils::conversion::fromBinMsg(*msg, lanelet_map, &traffic_rules, &routing_graph);
+  auto lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
+
+  auto routing_graph_and_traffic_rules =
+    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
+      lanelet_map);
+
+  lanelet::routing::RoutingGraphPtr routing_graph =
+    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
+  lanelet::traffic_rules::TrafficRulesPtr traffic_rules = routing_graph_and_traffic_rules.second;
 
   // update the context with the extracted lanelet data
   context_->update(lanelet_map, traffic_rules, routing_graph);

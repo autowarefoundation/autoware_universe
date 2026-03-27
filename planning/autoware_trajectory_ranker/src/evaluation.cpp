@@ -30,7 +30,7 @@ void Evaluator::load_metric(
 {
   try {
     auto plugin = plugin_loader_.createSharedInstance(name);
-    plugin->init(vehicle_info_, time_resolution);
+    plugin->init(vehicle_info_, time_resolution, node_ptr_);
     plugin->set_index(index);
 
     for (const auto & p : plugins_) {

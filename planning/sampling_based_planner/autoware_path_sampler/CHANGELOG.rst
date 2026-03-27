@@ -2,6 +2,15 @@
 Changelog for package autoware_path_sampler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(path_sampler): avoid redundant matrix transpose (`#11922 <https://github.com/autowarefoundation/autoware_universe/issues/11922>`_)
+* Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

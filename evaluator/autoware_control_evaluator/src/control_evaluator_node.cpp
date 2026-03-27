@@ -18,8 +18,8 @@
 
 #include <autoware/boundary_departure_checker/conversion.hpp>
 #include <autoware/boundary_departure_checker/utils.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
@@ -223,9 +223,14 @@ void ControlEvaluatorNode::AddMetricMsg(
 void ControlEvaluatorNode::AddLaneletInfoMsg(const Pose & ego_pose)
 {
   const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
-  const auto arc_coordinates = lanelet::utils::getArcCoordinates(current_lanelets, ego_pose);
-  lanelet::ConstLanelet current_lane;
-  lanelet::utils::query::getClosestLanelet(current_lanelets, ego_pose, &current_lane);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, ego_pose);
+  const auto current_lane_opt =
+    autoware::experimental::lanelet2_utils::get_closest_lanelet(current_lanelets, ego_pose);
+  if (!current_lane_opt) {
+    return;
+  }
+  const auto & current_lane = current_lane_opt.value();
 
   const std::string base_name = "ego_lane_info/";
   MetricMsg metric_msg;
@@ -253,8 +258,6 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
   const PathWithLaneId & behavior_path, const Pose & ego_pose)
 {
   const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
-  lanelet::ConstLanelet current_lane;
-  lanelet::utils::query::getClosestLanelet(current_lanelets, ego_pose, &current_lane);
   const auto local_vehicle_footprint = vehicle_info_.createFootprint();
   const auto current_vehicle_footprint = autoware_utils::transform_vector(
     local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));

@@ -97,7 +97,8 @@ public:
 
       std::stringstream ss;
       ss << *(bindings[name]);
-      RCLCPP_INFO(logger, "%s", ss.str().c_str());
+      const std::string & str = ss.str();
+      RCLCPP_INFO(logger, "%s", str.c_str());
 
       setTensorAddress(name.c_str(), bindings[name]->ptr);
     }
@@ -154,7 +155,7 @@ struct NetworkConfig
   double search_distance_2d = 0.0;
   double circle_nms_dist_threshold = 0.0;
   double iou_threshold = 0.0;
-  double confidence_threshold = 0.0;
+  std::vector<double> confidence_thresholds;
   std::vector<std::string> class_names;
   int32_t num_proposals = 0;
   std::vector<double> yaw_norm_thresholds;

@@ -4,6 +4,9 @@ project(autoware_multi_object_tracker)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+
 # Ignore -Wnonportable-include-path in Clang for mussp
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wno-nonportable-include-path)
@@ -21,8 +24,6 @@ endif()
 ### Find Eigen Dependencies
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(glog REQUIRED)
-
 include_directories(
   SYSTEM
     ${EIGEN3_INCLUDE_DIR}
@@ -31,6 +32,7 @@ include_directories(
 # Generate exe file
 set(${PROJECT_NAME}_src
   src/multi_object_tracker_node.cpp
+  src/multi_object_tracker_core.cpp
   src/debugger/debugger.cpp
   src/debugger/debug_object.cpp
   src/processor/processor.cpp
@@ -41,6 +43,7 @@ set(${PROJECT_NAME}_lib
   lib/association/association.cpp
   lib/association/mu_successive_shortest_path/mu_ssp.cpp
   lib/object_model/types.cpp
+  lib/object_model/uuid.cpp
   lib/object_model/shapes.cpp
   lib/tracker/motion_model/bicycle_motion_model.cpp
   # cspell: ignore ctrv
@@ -52,10 +55,11 @@ set(${PROJECT_NAME}_lib
   lib/tracker/model/multiple_vehicle_tracker.cpp
   lib/tracker/model/pedestrian_tracker.cpp
   lib/tracker/model/pedestrian_and_bicycle_tracker.cpp
-  lib/tracker/model/unknown_tracker.cpp
+  lib/tracker/model/polygon_tracker.cpp
   lib/tracker/model/pass_through_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
-  lib/tracker/util/adaptive_threshold_cache.cpp
+  lib/association/adaptive_threshold_cache.cpp
+  lib/tracker/shape_model/unstable_shape_filter.cpp
 )
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${${PROJECT_NAME}_src}
@@ -64,12 +68,15 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 
 target_link_libraries(${PROJECT_NAME}
   Eigen3::Eigen
-  glog::glog
+  tf2::tf2
+  tf2_geometry_msgs::tf2_geometry_msgs
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::multi_object_tracker::MultiObjectTracker"
   EXECUTABLE multi_object_tracker_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 ## Tests
@@ -85,6 +92,8 @@ if(BUILD_TESTING)
     test/test_bench.cpp
     test/test_utils.cpp
     test/test_bench_association.cpp
+    test/test_vehicle_tracker.cpp
+    test/test_uuid_generator.cpp
   )
   add_definitions(-D_SRC_RESOURCES_DIR_PATH="${PROJECT_SOURCE_DIR}/test/data/")
   ament_add_ros_isolated_gtest(test_multi_object_tracker ${test_files})
@@ -95,7 +104,7 @@ if(BUILD_TESTING)
   )
 endif()
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )

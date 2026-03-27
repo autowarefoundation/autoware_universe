@@ -40,8 +40,6 @@ protected:
   {
     // Create a simple lanelet map for testing
     lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
-    traffic_rules_ptr_ = lanelet::traffic_rules::TrafficRulesFactory::create(
-      lanelet::Locations::Germany, lanelet::Participants::Vehicle);
   }
 
   lanelet::LineString3d createLineString(
@@ -67,7 +65,6 @@ protected:
   }
 
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
-  std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr_;
 };
 
 // Test edge case: Lanelet with invalid speed limit string

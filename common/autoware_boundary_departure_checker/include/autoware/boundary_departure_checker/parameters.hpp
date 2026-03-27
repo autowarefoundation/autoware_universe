@@ -18,13 +18,12 @@
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 #include "data_structs.hpp"
 
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/geometry/pose_deviation.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/uuid_helper.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_geometry/pose_deviation.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <magic_enum.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>
@@ -94,7 +93,7 @@ struct SteeringConfig
 
 using AbnormalityConfig =
   std::variant<NormalConfig, LocalizationConfig, LongitudinalConfig, SteeringConfig>;
-using AbnormalitiesConfigs = std::unordered_map<AbnormalityType, AbnormalityConfig>;
+using AbnormalitiesConfigs = std::unordered_map<FootprintType, AbnormalityConfig>;
 
 struct TriggerThreshold
 {
@@ -143,13 +142,17 @@ struct Param
   double th_cutoff_time_predicted_path_s{4.0};
   double th_cutoff_time_departure_s{2.0};
   double th_cutoff_time_near_boundary_s{3.5};
+  double th_pt_shift_dist_m{1.0};
+  double th_pt_shift_angle_rad{autoware_utils_math::deg2rad(2.0)};
+  double critical_departure_on_time_buffer_s{0.15};
+  double critical_departure_off_time_buffer_s{0.15};
   AbnormalitiesConfigs abnormality_configs;
   std::vector<std::string> boundary_types_to_detect;
-  std::vector<AbnormalityType> abnormality_types_to_compensate;
+  std::vector<FootprintType> footprint_types_to_check;
 
   template <typename ConfigType>
   tl::expected<std::reference_wrapper<const ConfigType>, std::string> get_abnormality_config(
-    const AbnormalityType type) const
+    const FootprintType type) const
   {
     auto it = abnormality_configs.find(type);
     if (it == abnormality_configs.end()) {

@@ -34,7 +34,7 @@ autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
 
   // Set tracker types for different object classes
   config.tracker_map = {
-    {ObjectClassification::UNKNOWN, TrackerType::UNKNOWN},
+    {ObjectClassification::UNKNOWN, TrackerType::POLYGON},
     {ObjectClassification::CAR, TrackerType::MULTIPLE_VEHICLE},
     {ObjectClassification::TRUCK, TrackerType::MULTIPLE_VEHICLE},
     {ObjectClassification::BUS, TrackerType::MULTIPLE_VEHICLE},
@@ -88,7 +88,7 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
   // For a 8x8 matrix (8 object classes: UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE,
   // PEDESTRIAN)
   std::map<ObjectClassification::_label_type, TrackerType> tracker_map = {
-    {ObjectClassification::UNKNOWN, TrackerType::UNKNOWN},
+    {ObjectClassification::UNKNOWN, TrackerType::POLYGON},
     {ObjectClassification::CAR, TrackerType::MULTIPLE_VEHICLE},
     {ObjectClassification::TRUCK, TrackerType::MULTIPLE_VEHICLE},
     {ObjectClassification::BUS, TrackerType::MULTIPLE_VEHICLE},
@@ -157,16 +157,6 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
     0.100;
   config.min_area_matrix = min_area_matrix;
 
-  // Initialize max_rad_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXd max_rad_matrix(label_num, label_num);
-  max_rad_matrix << 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 1.047, 1.047,
-    1.047, 1.047, 3.150, 3.150, 3.150, 3.150, 1.047, 1.047, 1.047, 1.047, 3.150, 3.150, 3.150,
-    3.150, 1.047, 1.047, 1.047, 1.047, 3.150, 3.150, 3.150, 3.150, 1.047, 1.047, 1.047, 1.047,
-    3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150,
-    3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150, 3.150,
-    3.150;
-  config.max_rad_matrix = max_rad_matrix;
-
   // Initialize min_iou_matrix (8x8) from data_association_matrix.param.yaml
   Eigen::MatrixXd min_iou_matrix(label_num, label_num);
   min_iou_matrix << 0.0001, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.1, 0.1,
@@ -176,7 +166,6 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
   config.min_iou_matrix = min_iou_matrix;
 
   // Pre-process matrices
-  config.max_rad_matrix = config.max_rad_matrix.cwiseAbs();
   config.max_dist_matrix = config.max_dist_matrix.array().square();
 
   config.unknown_association_giou_threshold =
@@ -191,7 +180,6 @@ std::vector<autoware::multi_object_tracker::types::InputChannel> createInputChan
   // Using lidar_centerpoint as the primary input channel
   autoware::multi_object_tracker::types::InputChannel input_channel_config;
   input_channel_config.index = 0;
-  input_channel_config.input_topic = "/perception/object_recognition/detection/centerpoint/objects";
   input_channel_config.long_name = "centerpoint";
   input_channel_config.short_name = "Lcp";
   input_channel_config.is_spawn_enabled = true;

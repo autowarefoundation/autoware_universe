@@ -85,53 +85,8 @@ private:
    * @param offset_from_ego Minimum distance from ego to keep a point; points closer than this are
    * removed.
    */
-  void update_critical_departure_points(
-    const std::vector<TrajectoryPoint> & raw_ref_traj, const double offset_from_ego);
-
-  /**
-   * @brief Evaluate boundary departure diagnostic status.
-   *
-   * Checks for each side whether the ego is near a boundary, approaching departure,
-   * or in a critical departure state. Returns a map of each departure type to its active status.
-   *
-   * - `NEAR_BOUNDARY` and `APPROACHING_DEPARTURE` are flagged based on type presence.
-   * - `CRITICAL_DEPARTURE` is flagged if any critical point lies within braking distance,
-   *   calculated using velocity, acceleration, jerk, and brake delay thresholds.
-   *
-   * @param ego_dist_on_traj Ego vehicle’s distance along the reference trajectory.
-   * @param curr_vel Current velocity of the ego vehicle.
-   * @return Map of `DepartureType` to boolean indicating active status.
-   */
   std::pair<int8_t, std::string> get_diagnostic_status(
     const double ego_dist_on_traj, const double curr_vel);
-
-  /**
-   * @brief Check if critical departure has been continuously observed.
-   *
-   * Determines whether critical departure points have been continuously present
-   * for longer than the configured buffer time (`on_time_buffer_s.critical_departure`).
-   *
-   * This prevents re-adding critical departure points too frequently due to transient noise.
-   * The last time *found* critical departure is stored to measure the continuous duration.
-   *
-   * @return True if critical departure has been continuously observed long enough, false otherwise.
-   */
-  bool is_continuous_critical_departure();
-
-  /**
-   * @brief Determine if critical departure condition is still active.
-   *
-   * This function checks whether a `CRITICAL_DEPARTURE` is currently observed
-   * in the closest projections and whether the system has recorded critical departure points.
-   *
-   * - If a critical departure is detected, the internal timestamp is updated, and `true` is
-   * returned.
-   * - If not, the function checks whether the absence of critical departure has persisted
-   *   beyond a configured time threshold (`off_time_buffer_s.critical_departure`).
-   *
-   * @return `true` if critical departure is still considered active, otherwise `false`.
-   */
-  bool is_critical_departure_persist();
 
   /**
    * @brief Generates and publishes visualization markers for virtual walls and debugging.
@@ -149,6 +104,7 @@ private:
   void publish_debug_markers(const rclcpp::Time & current_time);
 
   rclcpp::Clock::SharedPtr clock_ptr_;
+  rclcpp::Node * node_ptr_{nullptr};
 
   std::string module_name_;
   Output output_;
@@ -169,8 +125,6 @@ private:
 
   double last_abnormality_fp_overlap_bound_time_{0.0};
   double last_abnormality_fp_no_overlap_bound_time_{0.0};
-  double last_no_critical_dpt_time_{0.0};
-  double last_found_critical_dpt_time_{0.0};
 
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr ego_pred_traj_polling_sub_;
   autoware_utils::InterProcessPollingSubscriber<Control>::SharedPtr control_cmd_polling_sub_;
@@ -183,7 +137,7 @@ private:
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
 
-  std::unique_ptr<BoundaryDepartureChecker> boundary_departure_checker_ptr_;
+  std::unique_ptr<UncrossableBoundaryDepartureChecker> boundary_departure_checker_ptr_;
   std::unique_ptr<diagnostic_updater::Updater> updater_ptr_;
 
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;

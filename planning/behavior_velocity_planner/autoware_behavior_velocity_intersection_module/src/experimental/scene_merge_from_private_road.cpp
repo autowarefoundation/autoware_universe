@@ -167,7 +167,7 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(
   }
   const auto first_conflicting_lanelet = first_conflicting_lanelet_.value();
 
-  const auto first_conflicting_idx_opt = util::getFirstPointInsidePolygonByFootprint(
+  const auto first_conflicting_idx_opt = util::getLastPointOutsidePolygonByFootprint(
     first_conflicting_lanelet.polygon3d(), interpolated_path_info, local_footprint, baselink2front);
   if (!first_conflicting_idx_opt) {
     return false;

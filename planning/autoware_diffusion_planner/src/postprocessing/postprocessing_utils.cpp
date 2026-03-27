@@ -48,6 +48,7 @@ namespace
  * @param poses The vector of 4x4 transformation matrices representing poses.
  * @param base_x The base x position to calculate relative velocities.
  * @param base_y The base y position to calculate relative velocities.
+ * @param base_z The base z position to calculate relative velocities.
  * @param stamp The ROS time stamp for the message.
  * @param velocity_smoothing_window The window size for velocity smoothing.
  * @param enable_force_stop Whether to enable force stop logic.
@@ -56,12 +57,12 @@ namespace
  */
 Trajectory get_trajectory_from_poses(
   const std::vector<Eigen::Matrix4d> & poses, const double base_x, const double base_y,
-  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window, const bool enable_force_stop,
-  const double stopping_threshold);
+  const double base_z, const rclcpp::Time & stamp, const int64_t velocity_smoothing_window,
+  const bool enable_force_stop, const double stopping_threshold);
 };  // namespace
 
 std::vector<std::vector<std::vector<Eigen::Matrix4d>>> parse_predictions(
-  const std::vector<float> & prediction)
+  const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map)
 {
   const int64_t batch_size = prediction.size() / (MAX_NUM_AGENTS * OUTPUT_T * POSE_DIM);
 
@@ -99,7 +100,7 @@ std::vector<std::vector<std::vector<Eigen::Matrix4d>>> parse_predictions(
         pose(0, 3) = x;
         pose(1, 3) = y;
 
-        parsed_predictions[batch_idx][agent_idx][time_idx] = pose;
+        parsed_predictions[batch_idx][agent_idx][time_idx] = transform_ego_to_map * pose;
       }
     }
   }
@@ -109,8 +110,8 @@ std::vector<std::vector<std::vector<Eigen::Matrix4d>>> parse_predictions(
 
 PredictedObjects create_predicted_objects(
   const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
-  const AgentData & ego_centric_agent_data, const rclcpp::Time & stamp,
-  const Eigen::Matrix4d & transform_ego_to_map, const int64_t batch_index)
+  const std::vector<AgentHistory> & ego_centric_histories, const rclcpp::Time & stamp,
+  const int64_t batch_index)
 {
   auto trajectory_path_to_pose_path = [](const Trajectory & trajectory, const double object_z)
     -> std::vector<geometry_msgs::msg::Pose> {
@@ -124,9 +125,6 @@ PredictedObjects create_predicted_objects(
     return pose_path;
   };
 
-  const std::vector<autoware::diffusion_planner::AgentHistory> objects_history =
-    ego_centric_agent_data.get_histories();
-
   PredictedObjects predicted_objects;
   predicted_objects.header.stamp = stamp;
   predicted_objects.header.frame_id = "map";
@@ -135,31 +133,27 @@ PredictedObjects create_predicted_objects(
 
   // ego_centric_agent_data contains neighbor history information ordered by distance.
   for (int64_t neighbor_id = 0; neighbor_id < MAX_NUM_NEIGHBORS; ++neighbor_id) {
-    if (static_cast<size_t>(neighbor_id) >= objects_history.size()) {
+    if (static_cast<size_t>(neighbor_id) >= ego_centric_histories.size()) {
       break;
     }
 
     // Extract poses for this neighbor (neighbor_id + 1 because 0 is ego)
-    std::vector<Eigen::Matrix4d> neighbor_poses;
-    for (int64_t time_idx = 0; time_idx < OUTPUT_T; ++time_idx) {
-      // Transform to map frame
-      Eigen::Matrix4d pose_in_map =
-        transform_ego_to_map * agent_poses[batch_index][neighbor_id + 1][time_idx];
-      neighbor_poses.push_back(pose_in_map);
-    }
+    const auto & neighbor_poses = agent_poses[batch_index][neighbor_id + 1];
 
-    const double base_x = objects_history.at(neighbor_id).get_latest_state_position().x;
-    const double base_y = objects_history.at(neighbor_id).get_latest_state_position().y;
+    const auto & latest_pose = ego_centric_histories.at(neighbor_id).get_latest_state().pose;
+    const double base_x = latest_pose(0, 3);
+    const double base_y = latest_pose(1, 3);
+    const double base_z = latest_pose(2, 3);
     constexpr int64_t velocity_smoothing_window = 1;
     constexpr bool enable_force_stop = false;  // Don't force stop for neighbors
     constexpr double stopping_threshold = 0.0;
     const Trajectory trajectory_points_in_map_reference = get_trajectory_from_poses(
-      neighbor_poses, base_x, base_y, stamp, velocity_smoothing_window, enable_force_stop,
+      neighbor_poses, base_x, base_y, base_z, stamp, velocity_smoothing_window, enable_force_stop,
       stopping_threshold);
 
     PredictedObject object;
     const TrackedObject & object_info =
-      objects_history.at(neighbor_id).get_latest_state().tracked_object();
+      ego_centric_histories.at(neighbor_id).get_latest_state().original_info;
     {  // Extract path from prediction
       PredictedPath predicted_path;
       const double object_pose_z = object_info.kinematics.pose_with_covariance.pose.position.z;
@@ -190,7 +184,7 @@ PredictedObjects create_predicted_objects(
 
 Trajectory create_ego_trajectory(
   const std::vector<std::vector<std::vector<Eigen::Matrix4d>>> & agent_poses,
-  const rclcpp::Time & stamp, const Eigen::Matrix4d & transform_ego_to_map,
+  const rclcpp::Time & stamp, const geometry_msgs::msg::Point & base_position,
   const int64_t batch_index, const int64_t velocity_smoothing_window, const bool enable_force_stop,
   const double stopping_threshold)
 {
@@ -204,55 +198,15 @@ Trajectory create_ego_trajectory(
   }
 
   // Extract ego poses (ego_index = 0)
-  std::vector<Eigen::Matrix4d> ego_poses;
-  ego_poses.reserve(OUTPUT_T);
-  for (int64_t time_idx = 0; time_idx < OUTPUT_T; ++time_idx) {
-    // Transform to map frame
-    Eigen::Matrix4d pose_in_map =
-      transform_ego_to_map * agent_poses[batch_index][ego_index][time_idx];
-    ego_poses.push_back(pose_in_map);
-  }
+  const auto & ego_poses = agent_poses[batch_index][ego_index];
 
-  const double base_x = transform_ego_to_map(0, 3);
-  const double base_y = transform_ego_to_map(1, 3);
+  const double base_x = base_position.x;
+  const double base_y = base_position.y;
+  const double base_z = base_position.z;
 
   return get_trajectory_from_poses(
-    ego_poses, base_x, base_y, stamp, velocity_smoothing_window, enable_force_stop,
+    ego_poses, base_x, base_y, base_z, stamp, velocity_smoothing_window, enable_force_stop,
     stopping_threshold);
-}
-
-TurnIndicatorsCommand create_turn_indicators_command(
-  const std::vector<float> & turn_indicator_logit, const rclcpp::Time & stamp)
-{
-  TurnIndicatorsCommand turn_indicators_cmd;
-  turn_indicators_cmd.stamp = stamp;
-
-  // Apply softmax to convert logit to probabilities
-
-  // Find the max value for numerical stability
-  const float max_logit =
-    *std::max_element(turn_indicator_logit.begin(), turn_indicator_logit.end());
-
-  std::vector<float> probabilities(turn_indicator_logit.size());
-  float sum = 0.0001f;  // Small value to avoid division by zero
-
-  // Compute exp(logit - max_logit) for numerical stability
-  for (size_t i = 0; i < turn_indicator_logit.size(); ++i) {
-    probabilities[i] = std::exp(turn_indicator_logit[i] - max_logit);
-    sum += probabilities[i];
-  }
-
-  // Normalize to get probabilities
-  for (float & prob : probabilities) {
-    prob /= sum;
-  }
-
-  // Find the class with highest probability
-  const size_t max_idx = std::distance(
-    probabilities.begin(), std::max_element(probabilities.begin(), probabilities.end()));
-  turn_indicators_cmd.command = max_idx;
-
-  return turn_indicators_cmd;
 }
 
 int64_t count_valid_elements(
@@ -294,8 +248,8 @@ namespace
 {
 Trajectory get_trajectory_from_poses(
   const std::vector<Eigen::Matrix4d> & poses, const double base_x, const double base_y,
-  const rclcpp::Time & stamp, const int64_t velocity_smoothing_window, const bool enable_force_stop,
-  const double stopping_threshold)
+  const double base_z, const rclcpp::Time & stamp, const int64_t velocity_smoothing_window,
+  const bool enable_force_stop, const double stopping_threshold)
 {
   Trajectory trajectory;
   trajectory.header.stamp = stamp;
@@ -304,12 +258,13 @@ Trajectory get_trajectory_from_poses(
 
   double prev_x = base_x;
   double prev_y = base_y;
+  double prev_z = base_z;
 
   for (size_t i = 0; i < poses.size(); ++i) {
+    const double curr_time = dt * static_cast<double>(i + 1);
     TrajectoryPoint p;
-    p.time_from_start.sec = static_cast<int>(dt * static_cast<double>(i));
-    p.time_from_start.nanosec =
-      static_cast<uint32_t>((dt * static_cast<double>(i) - p.time_from_start.sec) * 1e9);
+    p.time_from_start.sec = static_cast<int>(curr_time);
+    p.time_from_start.nanosec = static_cast<uint32_t>((curr_time - p.time_from_start.sec) * 1e9);
 
     // Extract position from transformation matrix
     p.pose.position.x = poses[i](0, 3);
@@ -324,11 +279,13 @@ Trajectory get_trajectory_from_poses(
     p.pose.orientation.z = quaternion.z();
     p.pose.orientation.w = quaternion.w();
 
-    auto distance = std::hypot(p.pose.position.x - prev_x, p.pose.position.y - prev_y);
+    const double distance = std::hypot(
+      p.pose.position.x - prev_x, p.pose.position.y - prev_y, p.pose.position.z - prev_z);
     p.longitudinal_velocity_mps = static_cast<float>(distance / dt);
 
     prev_x = p.pose.position.x;
     prev_y = p.pose.position.y;
+    prev_z = p.pose.position.z;
     trajectory.points.push_back(p);
   }
 
@@ -351,7 +308,8 @@ Trajectory get_trajectory_from_poses(
 
     // stopping logic
     if (
-      enable_force_stop &&
+      enable_force_stop && i > 0 &&
+      std::abs(trajectory.points[i - 1].longitudinal_velocity_mps) > threshold_velocity &&
       std::abs(trajectory.points[i].longitudinal_velocity_mps) < threshold_velocity) {
       force_stop = true;
     }

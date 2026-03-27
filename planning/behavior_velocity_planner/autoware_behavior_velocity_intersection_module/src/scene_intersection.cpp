@@ -20,7 +20,6 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
@@ -469,6 +468,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
       has_collision_with_margin,
       temporal_stop_before_creep_required,
       closest_idx,
+      collision_stopline_idx,
       occlusion_stopline_idx,
       first_attention_stopline_idx,
       occlusion_diag,
@@ -1089,7 +1089,7 @@ void reactRTCApprovalByDecisionResult(
     "OccludedAbsenceTrafficLight, approval = (default: %d, occlusion: %d)", rtc_default_approved,
     rtc_occlusion_approved);
   if (!rtc_default_approved && decision_result.collision_stop_tolerable) {
-    const auto stopline_idx = decision_result.closest_idx;
+    const auto stopline_idx = decision_result.collision_stopline_idx;
     planning_utils::setVelocityFromIndex(stopline_idx, 0.0, path);
 
     const auto stop_pose = path->points.at(stopline_idx).point.pose;

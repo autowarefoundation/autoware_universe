@@ -15,10 +15,10 @@
 #ifndef PROCESSOR__PROCESSOR_HPP_
 #define PROCESSOR__PROCESSOR_HPP_
 
+#include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/association/association.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
-#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -62,16 +62,9 @@ public:
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
   // tracker processes
   void predict(const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose);
-  void associate(
-    const types::DynamicObjectList & detected_objects,
-    std::unordered_map<int, int> & direct_assignment,
-    std::unordered_map<int, int> & reverse_assignment) const;
-  void update(
-    const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & direct_assignment);
-  void spawn(
-    const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & reverse_assignment);
+  types::AssociationResult associate(const types::DynamicObjectList & detected_objects) const;
+  void update(const types::AssociatedObjects & associated_objects);
+  void spawn(const types::AssociatedObjects & associated_objects);
   void prune(const rclcpp::Time & time);
 
   // output processes

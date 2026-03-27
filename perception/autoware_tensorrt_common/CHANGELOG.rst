@@ -2,6 +2,15 @@
 Changelog for package autoware_tensorrt_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(autoware_tensorrt_common): remove cudnn dependency (`#11896 <https://github.com/autowarefoundation/autoware_universe/issues/11896>`_)
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome
+
+0.49.0 (2025-12-30)
+-------------------
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

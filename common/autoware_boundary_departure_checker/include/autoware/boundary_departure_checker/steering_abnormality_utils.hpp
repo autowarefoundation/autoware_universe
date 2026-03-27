@@ -51,11 +51,6 @@ geometry_msgs::msg::Pose update_pose_with_bicycle_model(
  * @param current_steering  Latest steering angle from the vehicle.
  * @return Footprints that adapt laterally to simulate steering influence over time.
  */
-std::vector<autoware_utils_geometry::LinearRing2d> create_vehicle_footprints(
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const vehicle_info_utils::VehicleInfo & vehicle_info,
-  [[maybe_unused]] const autoware_vehicle_msgs::msg::SteeringReport & current_steering,
-  const SteeringConfig & config);
 
 }  // namespace autoware::boundary_departure_checker::utils::steering
 

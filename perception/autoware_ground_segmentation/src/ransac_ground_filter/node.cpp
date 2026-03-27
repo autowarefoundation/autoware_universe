@@ -224,6 +224,14 @@ void RANSACGroundFilterComponent::filter(
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   std::scoped_lock lock(mutex_);
+
+  // check for empty point cloud
+  if (input->data.empty() || input->width == 0 || input->height == 0) {
+    RCLCPP_DEBUG(get_logger(), "Empty point cloud received, skipping processing");
+    output = *input;
+    return;
+  }
+
   sensor_msgs::msg::PointCloud2::SharedPtr input_transformed_ptr(new sensor_msgs::msg::PointCloud2);
   if (!managed_tf_buffer_->transformPointcloud(
         base_frame_, *input, *input_transformed_ptr, input->header.stamp,

@@ -26,12 +26,15 @@ target_link_libraries(autoware_raw_vehicle_cmd_converter_node_component
   vehicle_adaptor
 )
 
-rclcpp_components_register_node(autoware_raw_vehicle_cmd_converter_node_component
+autoware_agnocast_wrapper_register_node(autoware_raw_vehicle_cmd_converter_node_component
   PLUGIN "autoware::raw_vehicle_cmd_converter::RawVehicleCommandConverterNode"
   EXECUTABLE autoware_raw_vehicle_cmd_converter_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
+  find_package(ament_index_cpp REQUIRED)
   set(TEST_SOURCES
     test/test_autoware_raw_vehicle_cmd_converter.cpp
   )
@@ -42,6 +45,7 @@ if(BUILD_TESTING)
     vehicle_adaptor
     autoware_raw_vehicle_cmd_converter_node_component
   )
+  ament_target_dependencies(${TEST_RAW_VEHICLE_CMD_CONVERTER_EXE} ament_index_cpp)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE

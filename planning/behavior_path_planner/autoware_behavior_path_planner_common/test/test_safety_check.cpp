@@ -175,6 +175,11 @@ TEST(BehaviorPathPlanningSafetyUtilsTest, createExtendedEgoPolygon)
   vehicle_info.max_longitudinal_offset_m = 4.0;
   vehicle_info.vehicle_width_m = 2.0;
   vehicle_info.rear_overhang_m = 1.0;
+  vehicle_info.front_overhang_m = 4.0;
+  vehicle_info.wheel_base_m = 0.0;
+  vehicle_info.left_overhang_m = 1.0;
+  vehicle_info.right_overhang_m = 1.0;
+  vehicle_info.wheel_tread_m = 0.0;
 
   {
     Pose ego_pose;

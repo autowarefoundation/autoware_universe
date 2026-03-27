@@ -194,7 +194,7 @@ void StreamPetrNetwork::initializeMemoryAndProfiling()
 
   postprocess_cuda_ = std::make_unique<PostprocessCuda>(
     PostProcessingConfig(
-      config_.class_names.size(), config_.circle_nms_dist_threshold, config_.confidence_threshold,
+      config_.class_names.size(), config_.circle_nms_dist_threshold, config_.confidence_thresholds,
       config_.yaw_norm_thresholds, config_.num_proposals, config_.detection_range),
     stream_);
 }
@@ -309,6 +309,7 @@ void StreamPetrNetwork::executePostprocessing(
   postprocess_cuda_->generateDetectedBoxes3D_launch(
     static_cast<const float *>(pts_head_->bindings["all_cls_scores"]->ptr),
     static_cast<const float *>(pts_head_->bindings["all_bbox_preds"]->ptr), det_boxes3d, stream_);
+  cudaStreamSynchronize(stream_);
 
   std::vector<autoware_perception_msgs::msg::DetectedObject> raw_objects;
   for (size_t i = 0; i < det_boxes3d.size(); ++i) {

@@ -180,7 +180,7 @@ void AutowareStatePanel::onInitialize()
 
   pub_velocity_limit_ =
     raw_node_->create_publisher<autoware_internal_planning_msgs::msg::VelocityLimit>(
-      "/planning/scenario_planning/max_velocity_default", rclcpp::QoS{1}.transient_local());
+      "/planning/scenario_planning/max_velocity_candidates", rclcpp::QoS{1}.transient_local());
 
   QObject::connect(segmented_button, &CustomSegmentedButton::buttonClicked, this, [this](int id) {
     const QList<QAbstractButton *> buttons = segmented_button->getButtonGroup()->buttons();
@@ -814,6 +814,7 @@ void AutowareStatePanel::onClickVelocityLimit()
 {
   auto velocity_limit = std::make_shared<autoware_internal_planning_msgs::msg::VelocityLimit>();
   velocity_limit->stamp = raw_node_->now();
+  velocity_limit->sender = std::string(raw_node_->get_name()) + "(autoware_state_panel)";
   velocity_limit->max_velocity = velocity_limit_value_label_->text().toDouble() / 3.6;
   pub_velocity_limit_->publish(*velocity_limit);
 }

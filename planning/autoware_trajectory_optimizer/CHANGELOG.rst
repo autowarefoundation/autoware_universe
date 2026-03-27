@@ -2,6 +2,99 @@
 Changelog for package autoware_trajectory_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_trajectory_optimizer): velocity optimizer refactor (`#12021 <https://github.com/autowarefoundation/autoware_universe/issues/12021>`_)
+  * feat: diffusion planner optimizer refactor
+  * feat: fix bugs in optimization formulation
+  * fix: clean un-used function
+  * fix: package.xml sort package
+  * feat: merge max velocity settings; clean up merge; clean limit_accel_acceleration
+  * fix: restore pull out acc
+  * feat: add publish debugging trajectories
+  * feat: do not add the final point to the trajectory after spline smoother
+  * fix: no lint next line
+  * tune the parameter into a smoother one, tested in bus Psim
+  * feat: clean include
+  * feat: use internal tool for better angle handling
+  * fix: clean up debugging publishers
+  * feat: update max lateral accel value
+  * feat: avoid delta time error
+  * revert: restore plugin loops
+  * feat: clean up jerk filter
+  * further clean parameters
+  * feat: expliticly choose if max speed update in place
+  * fix: clean up inclid in utils.cpp and  trajectory_optimizer.cpp
+  * clean up debug publishers
+  * feat: documentation for the continuous jerk filter
+  * fix doc
+  * fix pre-commit in readme
+  * update documentation list
+  ---------
+* fix(autoware_trajectory_optimizer): prevent yaw spikes when creating splines  (`#12043 <https://github.com/autowarefoundation/autoware_universe/issues/12043>`_)
+  * use spline util for first and last point instead of direct insertion of original traj points
+  * use last_s to actually get the last value in the loop
+  ---------
+* feat(autoware_trajectory_optimizer): add external velocity limit subscription (`#12023 <https://github.com/autowarefoundation/autoware_universe/issues/12023>`_)
+  * add external velocity limit subscription
+  * change topic name in code
+  * subscribe to the external velocity limiter selector topic and not directly the API's
+  * make the default velocity limit the same as the common_param velocity
+  * Add /output/current_velocity_limit_mps publisher
+  * output right topic name
+  * change velocity limit input to API only, add common param to sync default velocity limit to that of Autoware common.param.yaml
+  * change launch to use var name for the input external velocity for consistency
+  * add mps to var name for consistency
+  * update dependencies in package.xml
+  ---------
+* Contributors: Ryohsuke Mitsudome, Yuxuan Liu, danielsanchezaran
+
+0.49.0 (2025-12-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog
+* refactor(autoware_trajectory_optimizer): move functions and change parameter names to accommodate standard (`#11760 <https://github.com/autowarefoundation/autoware_universe/issues/11760>`_)
+  * wip refactor point fixer
+  * move point fixer functions to fixer utils
+  * move extender functions to extender utils
+  * move velocity optimizer functions to its utils function
+  * move spline to utils code
+  * use assignment by reference to prevent a copy
+  * remove unnecessary ref
+  * review recommendations
+  * change ERROR logs to WARN logs
+  * refactor remove close proximity points function
+  ---------
+* feat(trajectory_optimizer): change max velocity (`#11735 <https://github.com/autowarefoundation/autoware_universe/issues/11735>`_)
+  change max velocity
+* feat(trajectory_optimizer): change error throttle to warn throttle (`#11726 <https://github.com/autowarefoundation/autoware_universe/issues/11726>`_)
+  change error to warning
+* feat(autoware_trajectory_optimizer): mpt plugin  (`#11691 <https://github.com/autowarefoundation/autoware_universe/issues/11691>`_)
+  * WIP add MPT optimizer with corridor width
+  * WIP acceleration recalculation
+  * simplify code, remove unused variable
+  * refactor, move functions to utils
+  * docs for mpt plugin
+  * add tests. move plugin utils to separate folders
+  * readme update
+  * update time calc
+  * update docs
+  * copilot suggestions
+  * remove unsmoothed word
+  * change test values so cpp check does not complain for no reason
+  * remove unnecessary comments
+  * check for negative speed and remove extra smoothing window check
+  * add comment about reverse velocity
+  ---------
+* feat(autoware_trajectory_optimizer): fix acceleration recalculation after speed cropping (`#11686 <https://github.com/autowarefoundation/autoware_universe/issues/11686>`_)
+  * WIP recalc acceleration
+  * add tests
+  * add constexpr to replace magic number
+  ---------
+* feat(autoware_trajectory_optimizer): update optimizer config params (`#11684 <https://github.com/autowarefoundation/autoware_universe/issues/11684>`_)
+  feat(autoware_trajectory_optimizer): Update optimizer config params
+* Contributors: Go Sakayori, Ryohsuke Mitsudome, danielsanchezaran
+
 0.48.0 (2025-11-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -14,7 +14,7 @@
 
 #include "traffic_light_multi_camera_fusion_node.hpp"
 
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
 #include <algorithm>
@@ -23,6 +23,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace
@@ -126,9 +127,8 @@ void MultiCameraFusion::trafficSignalRoiCallback(
 void MultiCameraFusion::mapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg)
 {
-  lanelet::LaneletMapPtr lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
-
-  lanelet::utils::conversion::fromBinMsg(*input_msg, lanelet_map_ptr);
+  lanelet::LaneletMapPtr lanelet_map_ptr = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_msg));
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr);
   std::vector<lanelet::AutowareTrafficLightConstPtr> all_lanelet_traffic_lights =
     lanelet::utils::query::autowareTrafficLights(all_lanelets);
@@ -259,13 +259,10 @@ void MultiCameraFusion::processFusedRecord(
 
   const auto & reg_ele_id_vec = it->second;  // Use the iterator
 
-  // Loop over all elements in this record
-  for (const auto & element : record.signal.elements) {
-    // Loop over all regulatory IDs associated with this traffic light
-    for (const auto & reg_ele_id : reg_ele_id_vec) {
-      // Delegate the innermost logic to another helper
-      updateGroupInfoForElement(group_fusion_info_map, reg_ele_id, element, record);
-    }
+  // Loop over all regulatory IDs associated with this traffic light
+  for (const auto & reg_ele_id : reg_ele_id_vec) {
+    // Delegate the innermost logic to another helper
+    updateGroupInfoForElement(group_fusion_info_map, reg_ele_id, record);
   }
 }
 
@@ -274,11 +271,13 @@ void MultiCameraFusion::processFusedRecord(
  */
 void MultiCameraFusion::updateGroupInfoForElement(
   GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
-  const tier4_perception_msgs::msg::TrafficLightElement & element,
   const utils::FusionRecord & record)
 {
-  const StateKey state_key = {element.color, element.shape};
-  const double confidence = element.confidence;
+  StateKey state_key;
+  for (const auto & element : record.signal.elements) {
+    state_key.emplace_back(std::make_pair(element.color, element.shape));
+  }
+  const double confidence = record.signal.elements[0].confidence;  // Same value for all elements
   auto & group_info = group_fusion_info_map[reg_ele_id];
 
   // Update Log-Odds
@@ -343,7 +342,7 @@ void MultiCameraFusion::determineBestGroupState(
     // The color with the highest logarithmic odds is the most probable one.
     auto best_element = std::max_element(
       group_info.accumulated_log_odds.begin(), group_info.accumulated_log_odds.end(),
-      [](const auto & a, const auto & b) { return a.second < b.second; });
+      compareStateKeyLogOdds);
 
     const StateKey best_state_key = best_element->first;
     grouped_record_map[reg_ele_id] = group_info.best_record_for_state.at(best_state_key);

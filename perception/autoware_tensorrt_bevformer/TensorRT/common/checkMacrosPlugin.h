@@ -29,7 +29,7 @@
  * limitations under the License.
  */
 
-// cspell:ignore BEVFORMER, CHECKMACROSPLUGIN, CUBLASASSERT, CUDNNASSERT, CUASSERT, CUERROR
+// cspell:ignore BEVFORMER, CHECKMACROSPLUGIN, CUBLASASSERT, CUASSERT, CUERROR
 
 #ifndef PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__CHECKMACROSPLUGIN_H_  // NOLINT
 #define PERCEPTION__AUTOWARE_TENSORRT_BEVFORMER__TENSORRT__COMMON__CHECKMACROSPLUGIN_H_  // NOLINT
@@ -114,8 +114,6 @@ void logError(const char * msg, const char * file, const char * fn, int line);
 
 [[noreturn]] void throwCudaError(
   const char * file, const char * function, int line, int status, const char * msg = nullptr);
-[[noreturn]] void throwCudnnError(
-  const char * file, const char * function, int line, int status, const char * msg = nullptr);
 [[noreturn]] void throwCublasError(
   const char * file, const char * function, int line, int status, const char * msg = nullptr);
 [[noreturn]] void throwPluginError(
@@ -145,15 +143,6 @@ class CudaError : public TRTException
 public:
   CudaError(const char * fl, const char * fn, int ln, int stat, const char * msg = nullptr)
   : TRTException(fl, fn, ln, stat, msg, "Cuda")
-  {
-  }
-};
-
-class CudnnError : public TRTException
-{
-public:
-  CudnnError(const char * fl, const char * fn, int ln, int stat, const char * msg = nullptr)
-  : TRTException(fl, fn, ln, stat, msg, "Cudnn")
   {
   }
 };
@@ -217,29 +206,12 @@ inline void caughtError(const std::exception & e)
     }                            \
   } while (0)
 
-#define PLUGIN_CHECK_CUDNN(call)          \
-  do {                                    \
-    cudnnStatus_t status = call;          \
-    if (status != CUDNN_STATUS_SUCCESS) { \
-      return status;                      \
-    }                                     \
-  } while (0)
-
 #define PLUGIN_CUBLASASSERT(status_)                                       \
   {                                                                        \
     auto s_ = status_;                                                     \
     if (s_ != CUBLAS_STATUS_SUCCESS) {                                     \
       nvinfer1::plugin::throwCublasError(__FILE__, FN_NAME, __LINE__, s_); \
     }                                                                      \
-  }
-
-#define PLUGIN_CUDNNASSERT(status_)                                            \
-  {                                                                            \
-    auto s_ = status_;                                                         \
-    if (s_ != CUDNN_STATUS_SUCCESS) {                                          \
-      const char * msg = cudnnGetErrorString(s_);                              \
-      nvinfer1::plugin::throwCudnnError(__FILE__, FN_NAME, __LINE__, s_, msg); \
-    }                                                                          \
   }
 
 #define PLUGIN_CUASSERT(status_)                                              \

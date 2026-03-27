@@ -18,12 +18,8 @@
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware/trajectory/utils/find_nearest.hpp>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
+#include <autoware_utils_geometry/geometry.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <algorithm>
 #include <limits>
@@ -38,20 +34,26 @@ TrafficLightModule::TrafficLightModule(
   const lanelet::TrafficLight & traffic_light_reg_elem,  //
   lanelet::ConstLanelet lane,                            //
   const lanelet::ConstLineString3d & initial_stop_line,  //
-  const PlannerParam & planner_param, const rclcpp::Logger logger,
-  const rclcpp::Clock::SharedPtr clock,
+  const bool is_turn_lane, const bool has_static_arrow, const PlannerParam & planner_param,
+  const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterfaceWithRTC(module_id, logger, clock, time_keeper, planning_factor_interface),
+  yellow_transition_state_(YellowState::kNotYellow),
+  looking_tl_state_{},
+  traffic_signal_stamp_(std::nullopt),
   traffic_light_reg_elem_(traffic_light_reg_elem),
   lane_(lane),
   stop_line_(initial_stop_line),
+  is_turn_lane_(is_turn_lane),
+  has_static_arrow_(has_static_arrow),
   state_(State::APPROACH),
   debug_data_(),
   is_prev_state_stop_(false)
 {
   planner_param_ = planner_param;
+  prev_looking_tl_state_.traffic_light_group_id = 0;
 }
 
 bool TrafficLightModule::modifyPathVelocity(
@@ -170,6 +172,9 @@ bool TrafficLightModule::modifyPathVelocity(
 
 bool TrafficLightModule::isStopSignal(const PlannerData & planner_data)
 {
+  // Store previous state before updating
+  prev_looking_tl_state_ = looking_tl_state_;
+
   updateTrafficSignal(planner_data);
 
   // If there is no upcoming traffic signal information,
@@ -186,8 +191,82 @@ bool TrafficLightModule::isStopSignal(const PlannerData & planner_data)
     return true;
   }
 
+  // Check if current state is yellow
+  const bool is_yellow_now = isTrafficSignalYellow();
+
+  // Override for yellow light on turn lanes with static arrows
+  if (planner_param_.enable_arrow_aware_yellow_passing) {
+    updateYellowState(is_yellow_now);
+
+    // Check if conditions are met (Green->Yellow, turn lane, static arrow)
+    if (
+      is_yellow_now && is_turn_lane_ && has_static_arrow_ &&
+      yellow_transition_state_ == YellowState::kFromGreen) {
+      // This is a "Green -> Yellow" sequence. This is the state we *do* want to override (pass).
+      return false;
+    }
+  }
+
   // Check if the current traffic signal state requires stopping
   return autoware::traffic_light_utils::isTrafficSignalStop(lane_, looking_tl_state_);
+}
+
+bool TrafficLightModule::isTrafficSignalYellow() const
+{
+  for (const auto & element : looking_tl_state_.elements) {
+    if (
+      element.color == TrafficSignalElement::AMBER &&
+      (element.status == TrafficSignalElement::SOLID_ON ||
+       element.status == TrafficSignalElement::UNKNOWN)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void TrafficLightModule::updateYellowState(const bool is_yellow_now)
+{
+  if (is_yellow_now) {
+    // This is a yellow light. Check if this is the *start* of the yellow sequence.
+    if (yellow_transition_state_ == YellowState::kNotYellow) {
+      // This is the first frame of yellow. Determine how it started.
+      if (!prev_looking_tl_state_.elements.empty()) {
+        const bool prev_had_green_circle = std::any_of(
+          prev_looking_tl_state_.elements.begin(), prev_looking_tl_state_.elements.end(),
+          [](const auto & element) {
+            return element.shape == TrafficSignalElement::CIRCLE &&
+                   element.color == TrafficSignalElement::GREEN;
+          });
+
+        if (prev_had_green_circle) {
+          RCLCPP_DEBUG_THROTTLE(
+            logger_, *clock_, 1000, "[TrafficLight Debug]   -> Detected Green->Yellow transition.");
+          yellow_transition_state_ = YellowState::kFromGreen;
+        } else {
+          RCLCPP_DEBUG_THROTTLE(
+            logger_, *clock_, 1000,
+            "[TrafficLight Debug]   -> NO Green Circle found in prev state.");
+          yellow_transition_state_ = YellowState::kFromNonGreen;
+        }
+      } else {
+        // No previous traffic light state available; cannot determine transition origin.
+        RCLCPP_DEBUG_THROTTLE(
+          logger_, *clock_, 1000,
+          "[TrafficLight Debug]   -> Previous TL state unavailable; "
+          "treating Yellow transition as unsafe; defaulting to stop behavior.");
+        // Leave yellow_transition_state_ as kNotYellow so that no special passing logic is
+        // applied.
+      }
+    }
+  } else {
+    // Not yellow. Reset the state.
+    if (yellow_transition_state_ != YellowState::kNotYellow) {
+      RCLCPP_DEBUG_THROTTLE(
+        logger_, *clock_, 1000, "[TrafficLight Debug] Module %ld: Yellow ended. Resetting state.",
+        module_id_);
+    }
+    yellow_transition_state_ = YellowState::kNotYellow;
+  }
 }
 
 bool TrafficLightModule::willTrafficLightTurnRedBeforeReachingStopLine(
@@ -324,7 +403,7 @@ Trajectory TrafficLightModule::insertStopVelocity(
   const auto stop_pose = modified_path.compute(stop_point_s).point.pose;
   debug_data_.stop_poses.push_back(stop_pose);
 
-  modified_path.longitudinal_velocity_mps().range(stop_point_s, modified_path.length()).set(0.0);
+  modified_path.set_stopline(stop_point_s);
 
   planning_factor_interface_->add(
     modified_path.restore(), planner_data.current_odometry->pose, stop_pose,
@@ -359,13 +438,13 @@ autoware::motion_utils::VirtualWalls TrafficLightModule::createVirtualWalls()
 
   wall.style = autoware::motion_utils::VirtualWallType::deadline;
   for (const auto & p : debug_data_.dead_line_poses) {
-    wall.pose = autoware_utils::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
+    wall.pose = autoware_utils_geometry::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
 
   wall.style = autoware::motion_utils::VirtualWallType::stop;
   for (const auto & p : debug_data_.stop_poses) {
-    wall.pose = autoware_utils::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
+    wall.pose = autoware_utils_geometry::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
 

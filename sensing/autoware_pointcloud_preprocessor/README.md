@@ -66,7 +66,7 @@ of [this issue](https://github.com/ros-perception/perception_pcl/issues/9).
 In Autoware, point cloud data from each LiDAR sensor undergoes preprocessing in the sensing pipeline before being input
 into the perception pipeline. The preprocessing stages are illustrated in the diagram below:
 
-![pointcloud_preprocess_pipeline.drawio.png](docs%2Fimage%2Fpointcloud_preprocess_pipeline.drawio.png)
+![pointcloud_preprocess_pipeline.drawio.png](docs/image/pointcloud_preprocess_pipeline.drawio.png)
 
 Each stage in the pipeline incurs a processing delay. Mostly, we've used `ros2 topic delay /topic_name` to measure
 the time between the message header and the current time. This approach works well for small-sized messages. However,
