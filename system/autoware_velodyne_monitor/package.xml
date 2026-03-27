@@ -14,7 +14,6 @@
   <depend>crypto++</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
-  <depend>fmt</depend>
   <depend>libcpprest-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
