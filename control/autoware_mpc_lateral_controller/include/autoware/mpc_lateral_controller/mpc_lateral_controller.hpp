@@ -72,6 +72,7 @@ private:
 
   std::shared_ptr<Butterworth2dFilter> lpf_steer_offset_;
   double m_steering_offset_{0.0};
+  double m_steering_offset_target_{0.0};
   double m_steering_offset_filtered_{0.0};
 
   std::shared_ptr<diagnostic_updater::Updater>
