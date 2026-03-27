@@ -166,10 +166,10 @@ bool CameraData::preprocess_image(std::uint8_t * output_img)
     cudaMemcpyHostToDevice, stream_);
 
   if (image_pre_processing_params_.run_image_undistortion) {
-    // 1. Check if original image shape is the same as the undistorted image shape
+    // 1. Check if original image shape is the same as the original image shape
     if (
-      image_msg_->height != camera_matrices_ptr_->undistorted_image_height ||
-      image_msg_->width != camera_matrices_ptr_->undistorted_image_width) {
+      image_msg_->height != image_pre_processing_params_.original_image_height ||
+      image_msg_->width != image_pre_processing_params_.original_image_width) {
       RCLCPP_ERROR(logger_, "Original image shape is not the same as the original image shape");
       return false;
     }
