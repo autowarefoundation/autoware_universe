@@ -88,6 +88,31 @@ bool isValidTrajectory(const TrajectoryExperimental & trajectory)
   return true;
 }
 
+double findFirstNearestIndexWithSoftConstraints(
+  const TrajectoryExperimental & traj, const Pose & pose, const double max_dist,
+  const double max_yaw)
+{
+  if (
+    const auto nearest_s =
+      autoware::experimental::trajectory::find_first_nearest_index(traj, pose, max_dist, max_yaw)) {
+    return *nearest_s;
+  }
+
+  if (
+    const auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
+      traj, pose, max_dist, std::numeric_limits<double>::max())) {
+    return *nearest_s;
+  }
+
+  if (
+    const auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
+      traj, pose, std::numeric_limits<double>::max(), max_yaw)) {
+    return *nearest_s;
+  }
+
+  return autoware::experimental::trajectory::find_nearest_index(traj, pose.position);
+}
+
 double calcStopDistance(
   const Pose & current_pose, const Trajectory & traj, const double max_dist, const double max_yaw)
 {
@@ -110,18 +135,15 @@ double calcStopDistance(
   const Pose & current_pose, const TrajectoryExperimental & traj, const double max_dist,
   const double max_yaw)
 {
-  const auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
-    traj, current_pose, max_dist, max_yaw);
-  if (!nearest_s) {
-    return 0.0;
-  }
+  const double nearest_s =
+    findFirstNearestIndexWithSoftConstraints(traj, current_pose, max_dist, max_yaw);
 
   const auto stop_s = autoware::experimental::trajectory::search_zero_velocity_position(traj);
   if (!stop_s) {
-    return traj.length() - *nearest_s;
+    return traj.length() - nearest_s;
   }
 
-  return *stop_s - *nearest_s;
+  return *stop_s - nearest_s;
 }
 
 double getPitchByPose(const Quaternion & quaternion_msg)

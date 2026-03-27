@@ -53,6 +53,13 @@ bool isValidTrajectory(const Trajectory & traj);
 bool isValidTrajectory(const TrajectoryExperimental & traj);
 
 /**
+ * @brief find nearest arc-length position on continuous trajectory with soft constraints
+ */
+double findFirstNearestIndexWithSoftConstraints(
+  const TrajectoryExperimental & traj, const Pose & pose, const double max_dist,
+  const double max_yaw);
+
+/**
  * @brief calculate distance to stopline from current vehicle position where velocity is 0
  */
 double calcStopDistance(
