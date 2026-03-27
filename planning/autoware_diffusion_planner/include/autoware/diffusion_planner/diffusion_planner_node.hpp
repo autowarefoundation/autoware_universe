@@ -66,8 +66,8 @@ struct DiffusionPlannerDebugParams
 
 struct DiffusionPlannerPlanningFactorParams
 {
-  double stop_velocity_threshold{1.0};
-  double stop_keep_duration_threshold{0.1};
+  double stop_velocity_threshold{0.1};
+  double stop_keep_duration_threshold{1.0};
   double slowdown_accel_threshold{-0.3};
   bool enable_stop{false};
   bool enable_slowdown{false};

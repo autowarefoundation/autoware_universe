@@ -129,11 +129,11 @@ void DiffusionPlanner::set_up_params()
   planning_factor_params_.enable_slowdown =
     this->declare_parameter<bool>("planning_factor.enable_slowdown", false);
   planning_factor_params_.stop_velocity_threshold =
-    this->declare_parameter<double>("planning_factor.stop_velocity_threshold", 1.0);
+    this->declare_parameter<double>("planning_factor.stop_velocity_threshold", 0.1);
   planning_factor_params_.stop_keep_duration_threshold =
     this->declare_parameter<double>("planning_factor.stop_keep_duration_threshold", 1.0);
   planning_factor_params_.slowdown_accel_threshold =
-    this->declare_parameter<double>("planning_factor.slowdown_accel_threshold", -0.5);
+    this->declare_parameter<double>("planning_factor.slowdown_accel_threshold", -0.3);
 
   // debug params
   debug_params_.publish_debug_map =
