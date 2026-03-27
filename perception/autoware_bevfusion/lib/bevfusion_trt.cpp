@@ -439,19 +439,20 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
   assert(num_geom_feats_ == BEVFusionConfig::kTransformMatrixDim * num_ranks_);
   assert(num_ranks_ == num_indices_);
 
-  cudaMemcpy(
+  CHECK_CUDA_ERROR(cudaMemcpy(
     lidar2image_d_.get(), lidar2images_flattened.data(),
     config_.num_cameras_ * BEVFusionConfig::kTransformMatrixDim *
       BEVFusionConfig::kTransformMatrixDim * sizeof(float),
-    cudaMemcpyHostToDevice);
-  cudaMemcpy(
+    cudaMemcpyHostToDevice));
+  CHECK_CUDA_ERROR(cudaMemcpy(
     geom_feats_d_.get(), geom_feats.data(), num_geom_feats_ * sizeof(std::int32_t),
-    cudaMemcpyHostToDevice);
-  cudaMemcpy(kept_d_.get(), kept.data(), num_kept_ * sizeof(std::uint8_t), cudaMemcpyHostToDevice);
-  cudaMemcpy(
-    ranks_d_.get(), ranks.data(), num_ranks_ * sizeof(std::int64_t), cudaMemcpyHostToDevice);
-  cudaMemcpy(
-    indices_d_.get(), indices.data(), num_indices_ * sizeof(std::int64_t), cudaMemcpyHostToDevice);
+    cudaMemcpyHostToDevice));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    kept_d_.get(), kept.data(), num_kept_ * sizeof(std::uint8_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    ranks_d_.get(), ranks.data(), num_ranks_ * sizeof(std::int64_t), cudaMemcpyHostToDevice));
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    indices_d_.get(), indices.data(), num_indices_ * sizeof(std::int64_t), cudaMemcpyHostToDevice));
 
   // Copy img_aug_matrix data for fusion model (fusion model always uses separate image backbone)
   // Each Matrix4fRowM is contiguous, copy each matrix directly to its position in device memory
@@ -460,9 +461,9 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
       BEVFusionConfig::kTransformMatrixDim * BEVFusionConfig::kTransformMatrixDim;
 
     for (std::int64_t i = 0; i < config_.num_cameras_; i++) {
-      cudaMemcpy(
+      CHECK_CUDA_ERROR(cudaMemcpy(
         img_aug_matrix_d_.get() + i * matrix_size, img_aug_matrices_[i].data(),
-        matrix_size * sizeof(float), cudaMemcpyHostToDevice);
+        matrix_size * sizeof(float), cudaMemcpyHostToDevice));
     }
   }
 }
@@ -518,9 +519,9 @@ void BEVFusionTRT::processImages(
     }
   }
 
-  cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     camera_masks_d_.get(), camera_masks.data(), config_.num_cameras_ * sizeof(float),
-    cudaMemcpyHostToDevice, stream_);
+    cudaMemcpyHostToDevice, stream_));
 
   for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
     CHECK_CUDA_ERROR(camera_data_ptrs[camera_id]->sync_cuda_stream());
@@ -643,12 +644,12 @@ bool BEVFusionTRT::preProcess(
     std::vector<uint8_t> roi_host_data(
       config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels);
     for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
-      cudaMemcpy(
+      CHECK_CUDA_ERROR(cudaMemcpy(
         roi_host_data.data(),
         &roi_tensor_d_
           [camera_id * config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels],
         config_.roi_height_ * config_.roi_width_ * BEVFusionConfig::kNumRGBChannels,
-        cudaMemcpyDeviceToHost);
+        cudaMemcpyDeviceToHost));
     }
   }
 

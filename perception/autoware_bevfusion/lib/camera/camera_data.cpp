@@ -159,11 +159,11 @@ std::size_t CameraData::output_img_offset() const
 bool CameraData::preprocess_image(std::uint8_t * output_img)
 {
   // 1. Copy image from CPU to GPU
-  cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     image_buffer_d_.get(), image_msg_->data.data(),
     image_pre_processing_params_.original_image_height *
       image_pre_processing_params_.original_image_width * BEVFusionConfig::kNumRGBChannels,
-    cudaMemcpyHostToDevice, stream_);
+    cudaMemcpyHostToDevice, stream_));
 
   if (image_pre_processing_params_.run_image_undistortion) {
     // 1. Check if original image shape is the same as the original image shape

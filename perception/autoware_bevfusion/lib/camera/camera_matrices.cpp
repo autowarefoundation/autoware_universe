@@ -74,12 +74,12 @@ void CameraMatrices::compute_undistorted_map_x_y()
     undistort_map_y);
 
   // Always sync the data to the GPU since it only runs once for every camera
-  cudaMemcpy(
+  CHECK_CUDA_ERROR(cudaMemcpy(
     undistorted_map_x_d_.get(), undistort_map_x.data, map_width * map_height * sizeof(float),
-    cudaMemcpyHostToDevice);
-  cudaMemcpy(
+    cudaMemcpyHostToDevice));
+  CHECK_CUDA_ERROR(cudaMemcpy(
     undistorted_map_y_d_.get(), undistort_map_y.data, map_width * map_height * sizeof(float),
-    cudaMemcpyHostToDevice);
+    cudaMemcpyHostToDevice));
 
   matrices_ready = true;
 }
