@@ -500,22 +500,25 @@ void BEVFusionTRT::clearDeviceMemory()
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-void BEVFusionTRT::processImages(
+bool BEVFusionTRT::checkImageCameraMatricesReady(
+  const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs)
+{
+  for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
+    if (!camera_data_ptrs[camera_id]->is_camera_matrices_ready()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool BEVFusionTRT::processImages(
   const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs,
   const std::vector<float> & camera_masks)
 {
-  // TODO(KokSeang): Move this to each camera_data_ptrs preprocess_image
-  if (!config_.sensor_fusion_) {
-    return;
-  }
-
   for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
-    if (!camera_data_ptrs[camera_id]->is_camera_matrices_ready()) {
-      return;
-    }
     auto roi_tensor_offset = camera_data_ptrs[camera_id]->output_img_offset();
     if (!camera_data_ptrs[camera_id]->preprocess_image(&roi_tensor_d_[roi_tensor_offset])) {
-      return;
+      return false;
     }
   }
 
@@ -619,7 +622,24 @@ bool BEVFusionTRT::preProcess(
   }
 
   clearDeviceMemory();
-  processImages(camera_data_ptrs, camera_masks);
+
+  // Process images if sensor fusion is enabled
+  if (config_.sensor_fusion_) {
+    // Check if image camera matrices are ready
+    if (!checkImageCameraMatricesReady(camera_data_ptrs)) {
+      RCLCPP_ERROR(
+        rclcpp::get_logger("bevfusion"),
+        "Image camera matrices are not ready. Skipping pre-processing.");
+      return false;
+    }
+
+    // Process Images
+    if (!processImages(camera_data_ptrs, camera_masks)) {
+      RCLCPP_ERROR(
+        rclcpp::get_logger("bevfusion"), "Failed to process images. Skipping detection.");
+      return false;
+    }
+  }
 
   const auto num_points = vg_ptr_->generateSweepPoints(points_d_);
   if (num_points == 0) {
