@@ -37,61 +37,11 @@
 
 namespace autoware::tensorrt_yolox
 {
-namespace
-{
-std::vector<autoware::tensorrt_yolox::Colormap> get_seg_colormap(const std::string & filename)
-{
-  std::vector<autoware::tensorrt_yolox::Colormap> seg_cmap;
-  if (filename != "not-specified") {
-    std::vector<std::string> color_list = loadListFromTextFile(filename);
-    for (int i = 0; i < static_cast<int>(color_list.size()); i++) {
-      if (i == 0) {
-        // Skip header
-        continue;
-      }
-      std::string colormapString = color_list[i];
-      autoware::tensorrt_yolox::Colormap cmap;
-      size_t npos = colormapString.find_first_of(',');
-      assert(npos != std::string::npos);
-      std::string substr = colormapString.substr(0, npos);
-      int id = static_cast<int>(std::stoi(trim(substr)));
-      colormapString.erase(0, npos + 1);
-
-      npos = colormapString.find_first_of(',');
-      assert(npos != std::string::npos);
-      substr = colormapString.substr(0, npos);
-      std::string name = (trim(substr));
-      cmap.id = id;
-      cmap.name = name;
-      colormapString.erase(0, npos + 1);
-      while (!colormapString.empty()) {
-        size_t inner_npos = colormapString.find_first_of(',');
-        if (inner_npos != std::string::npos) {
-          substr = colormapString.substr(0, inner_npos);
-          unsigned char c = (unsigned char)std::stoi(trim(substr));
-          cmap.color.push_back(c);
-          colormapString.erase(0, inner_npos + 1);
-        } else {
-          unsigned char c = (unsigned char)std::stoi(trim(colormapString));
-          cmap.color.push_back(c);
-          break;
-        }
-      }
-
-      seg_cmap.push_back(cmap);
-    }
-  }
-  return seg_cmap;
-}
-
-}  // anonymous namespace
-
 TrtYoloX::TrtYoloX(
   TrtCommonConfig & trt_config, const int num_class, const float score_threshold,
   const float nms_threshold, const bool use_gpu_preprocess, const uint8_t gpu_id,
   std::string calibration_image_list_path, const double norm_factor,
-  [[maybe_unused]] const std::string & cache_dir, const std::string & color_map_path,
-  const CalibrationConfig & calib_config)
+  [[maybe_unused]] const std::string & cache_dir, const CalibrationConfig & calib_config)
 : gpu_id_(gpu_id), is_gpu_initialized_(false)
 {
   if (!setCudaDeviceId(gpu_id_)) {
@@ -103,7 +53,6 @@ TrtYoloX::TrtYoloX(
   src_height_ = -1;
   norm_factor_ = norm_factor;
   multitask_ = 0;
-  sematic_color_map_ = get_seg_colormap(color_map_path);
   stream_ = makeCudaStream();
 
   trt_common_ = std::make_unique<TrtConvCalib>(trt_config);
@@ -137,7 +86,7 @@ TrtYoloX::TrtYoloX(
 
     std::vector<std::string> calibration_images;
     if (calibration_image_list_path != "") {
-      calibration_images = loadImageList(calibration_image_list_path, "");
+      calibration_images = load_image_list(calibration_image_list_path, "");
     }
     tensorrt_yolox::ImageStream stream(batch_size_, network_input_dims, calibration_images);
     fs::path calibration_table{trt_config.onnx_path};
@@ -1234,25 +1183,6 @@ cv::Mat TrtYoloX::getMaskImage(float * prob, nvinfer1::Dims dims, int out_w, int
 int TrtYoloX::getMultitaskNum(void)
 {
   return multitask_;
-}
-
-void TrtYoloX::getColorizedMask(
-  const std::vector<autoware::tensorrt_yolox::Colormap> & colormap, const cv::Mat & mask,
-  cv::Mat & cmask)
-{
-  int width = mask.cols;
-  int height = mask.rows;
-  if ((cmask.cols != mask.cols) || (cmask.rows != mask.rows)) {
-    throw std::runtime_error("input and output image have difference size.");
-  }
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
-      unsigned char id = mask.at<unsigned char>(y, x);
-      cmask.at<cv::Vec3b>(y, x)[0] = colormap[id].color[2];
-      cmask.at<cv::Vec3b>(y, x)[1] = colormap[id].color[1];
-      cmask.at<cv::Vec3b>(y, x)[2] = colormap[id].color[0];
-    }
-  }
 }
 
 int TrtYoloX::getBatchSize() const
