@@ -506,7 +506,6 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
 
   // 1. calculate reference points
   auto [ref_points, ref_points_spline] = calcReferencePoints(planner_data, traj_points);
-  ref_points_spline.updateCurvatureSpline();
   if (ref_points.size() < 2) {
     RCLCPP_INFO_EXPRESSION(
       logger_, enable_debug_info_, "return std::nullopt since ref_points size is less than 2.");
@@ -533,18 +532,6 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
     return std::nullopt;
   }
 
-  const size_t D_x = state_equation_generator_.getDimX();
-  const size_t D_u = state_equation_generator_.getDimU();
-
-  const size_t N_ref = ref_points.size();
-  const size_t N_x = N_ref * D_x;
-  const size_t N_u = (N_ref - 1) * D_u;
-
-  const auto & optimized_states = optimized_variables->segment(0, N_x);
-  const auto & optimized_steering = optimized_variables->segment(N_x, N_u);
-  publishOptimizedSteering(optimized_steering);
-  publishOptimizedStates(optimized_states, N_ref);
-
   // 7. convert to points with validation
   auto mpt_traj_points = calcMPTPoints(ref_points, *optimized_variables, mpt_mat);
   if (!mpt_traj_points) {
@@ -552,44 +539,59 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
     return std::nullopt;
   }
 
-  if (!mpt_param_.use_acados) {
-    return mpt_traj_points;
+  std::optional<std::vector<TrajectoryPoint>> output_trajectory = mpt_traj_points;
+
+  if (mpt_param_.use_acados) {
+    ref_points_spline.updateCurvatureSpline();
+
+    const size_t D_x = state_equation_generator_.getDimX();
+    const size_t D_u = state_equation_generator_.getDimU();
+    const size_t N_ref = ref_points.size();
+    const size_t N_x = N_ref * D_x;
+    const size_t N_u = (N_ref - 1) * D_u;
+    const auto & optimized_states = optimized_variables->segment(0, N_x);
+    const auto & optimized_steering = optimized_variables->segment(N_x, N_u);
+    publishOptimizedSteering(optimized_steering);
+    publishOptimizedStates(optimized_states, N_ref);
+
+    // 8. run acados mpt (optional)
+    std::optional<std::vector<TrajectoryPoint>> acados_traj_points;
+    AcadosSolution acados_result;
+
+    time_keeper_->start_track("runAcadosMPT");
+    acados_result = runAcadosMPT(ref_points, ref_points_spline, p.ego_pose);
+    time_keeper_->end_track("runAcadosMPT");
+
+    acados_traj_points = convertAcadosSolutionToTrajectory(ref_points, acados_result);
+
+    if (!acados_traj_points) {
+      RCLCPP_WARN(logger_, "Failed to convert Acados solution to trajectory");
+      return std::nullopt;
+    }
+
+    updateDebugDataAndPublishAcadosSteering(acados_result, ref_points, *acados_traj_points);
+
+    // 9.b. publish acados trajectory for debug
+    publishAcadosTrajectory(*acados_traj_points, p.header);
+
+    publishAcadosStates(acados_result);
+
+    publishReferenceTrajectory(ref_points, p.header);
+
+    publishReferenceSteeringAngles(ref_points_spline);
+
+    output_trajectory = std::move(acados_traj_points);
   }
 
-  // 8. run acados mpt (optional)
-  std::optional<std::vector<TrajectoryPoint>> acados_traj_points;
-  AcadosSolution acados_result;
-
-  time_keeper_->start_track("runAcadosMPT");
-  acados_result = runAcadosMPT(ref_points, ref_points_spline, p.ego_pose);
-  time_keeper_->end_track("runAcadosMPT");
-
-  // Convert Acados solution to trajectory points
-  acados_traj_points = convertAcadosSolutionToTrajectory(ref_points, acados_result);
-
-  if (!acados_traj_points) {
-    RCLCPP_WARN(logger_, "Failed to convert Acados solution to trajectory");
-    return std::nullopt;
-  }
-
-  updateDebugDataAndPublishAcadosSteering(acados_result, ref_points, *acados_traj_points);
-
-  publishAcadosTrajectory(*acados_traj_points, p.header);
-
-  publishAcadosStates(acados_result);
-
-  publishReferenceTrajectory(ref_points, p.header);
-
-  publishReferenceSteeringAngles(ref_points_spline);
-
-  // 9. publish trajectories for debug
+  // 9.a. publish trajectories for debug
   publishDebugTrajectories(p.header, ref_points, *mpt_traj_points);
 
   debug_data_ptr_->ref_points = ref_points;
   prev_ref_points_ptr_ = std::make_shared<std::vector<ReferencePoint>>(ref_points);
   prev_optimized_traj_points_ptr_ =
     std::make_shared<std::vector<TrajectoryPoint>>(*mpt_traj_points);
-  return acados_traj_points;
+
+  return output_trajectory;
 }
 
 std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajectoryPoints() const
@@ -1063,14 +1065,23 @@ MPTOptimizer::calcReferencePoints(
   // NOTE: This must be after calculation of bounds and delta arc length
   updateExtraPoints(ref_points);
 
-  // 9. crop forward
-  ref_points = autoware::motion_utils::cropForwardPoints(
-    ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length);
+  // 9. crop forward — pre-acados used resize(); acados path uses cropForwardPoints
+  if (mpt_param_.use_acados) {
+    ref_points = autoware::motion_utils::cropForwardPoints(
+      ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length);
 
-  if (ref_points_spline.getSize() == 0) {
+    if (ref_points_spline.getSize() == 0) {
+      return std::make_pair(ref_points, ref_points_spline);
+    }
+
     return std::make_pair(ref_points, ref_points_spline);
   }
 
+  if (static_cast<size_t>(mpt_param_.num_points) < ref_points.size()) {
+    ref_points.resize(mpt_param_.num_points);
+  }
+
+  ref_points_spline = autoware::interpolation::SplineInterpolationPoints2d(ref_points);
   return std::make_pair(ref_points, ref_points_spline);
 }
 
