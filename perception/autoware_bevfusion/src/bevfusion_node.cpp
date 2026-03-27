@@ -132,7 +132,6 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     this->declare_parameter<bool>("use_compressed_images", false, descriptor);
   const auto run_image_undistortion =
     this->declare_parameter<bool>("run_image_undistortion", descriptor);
-  const auto flip_image_channels = this->declare_parameter<bool>("flip_image_channels", descriptor);
 
   DensificationParam densification_param(
     densification_world_frame_id, densification_num_past_frames);
@@ -158,8 +157,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
         roi_width,
         img_aug_scale_y,
         img_aug_scale_x,
-        run_image_undistortion,
-        flip_image_channels
+        run_image_undistortion
     );
 
   // clang-format on

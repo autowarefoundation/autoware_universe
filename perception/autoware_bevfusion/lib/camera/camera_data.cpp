@@ -34,7 +34,7 @@ namespace autoware::bevfusion
 ImagePreProcessingParams::ImagePreProcessingParams(
   const std::int64_t image_height, const std::int64_t image_width, const std::int64_t roi_height,
   const std::int64_t roi_width, const float image_aug_scale_y, const float image_aug_scale_x,
-  const bool run_image_undistortion, const bool flip_image_channels)
+  const bool run_image_undistortion)
 : original_image_height(image_height),
   original_image_width(image_width),
   roi_height(roi_height),
@@ -42,7 +42,6 @@ ImagePreProcessingParams::ImagePreProcessingParams(
   image_aug_scale_y(image_aug_scale_y),
   image_aug_scale_x(image_aug_scale_x),
   run_image_undistortion(run_image_undistortion),
-  flip_image_channels(flip_image_channels)
 {
   resized_height = original_image_height * image_aug_scale_y;
   resized_width = original_image_width * image_aug_scale_x;
@@ -185,8 +184,7 @@ void CameraData::preprocess_image(std::uint8_t * output_img)
       image_pre_processing_params_.original_image_width,
       image_pre_processing_params_.resized_height, image_pre_processing_params_.resized_width,
       image_pre_processing_params_.roi_height, image_pre_processing_params_.roi_width,
-      image_pre_processing_params_.roi_start_y, image_pre_processing_params_.roi_start_x,
-      image_pre_processing_params_.flip_image_channels);
+      image_pre_processing_params_.roi_start_y, image_pre_processing_params_.roi_start_x);
   } else {
     // Skip the undistortion step and directly resize and extract ROI
     camera_preprocess_ptr_->resizeAndExtractRoi_launch(
@@ -194,8 +192,7 @@ void CameraData::preprocess_image(std::uint8_t * output_img)
       image_pre_processing_params_.original_image_width,
       image_pre_processing_params_.resized_height, image_pre_processing_params_.resized_width,
       image_pre_processing_params_.roi_height, image_pre_processing_params_.roi_width,
-      image_pre_processing_params_.roi_start_y, image_pre_processing_params_.roi_start_x,
-      image_pre_processing_params_.flip_image_channels);
+      image_pre_processing_params_.roi_start_y, image_pre_processing_params_.roi_start_x);
   }
 }
 

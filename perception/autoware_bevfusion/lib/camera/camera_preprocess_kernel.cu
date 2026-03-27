@@ -118,9 +118,6 @@ __global__ void remap_kernel(
 // This kernel mimics PIL's resize (Bilinear/Triangle filter with adaptive support).
 // For downscaling, it expands the kernel window to cover all contributing pixels
 // (Anti-aliasing). For upscaling, it acts as standard bilinear interpolation.
-template <
-  std::size_t FIRST_CHANNEL_OFFSET, std::size_t SECOND_CHANNEL_OFFSET,
-  std::size_t LAST_CHANNEL_OFFSET>
 __global__ void resizeAndExtractRoi_kernel(
   const std::uint8_t * __restrict__ input_img, std::uint8_t * __restrict__ output_img, int in_h,
   int in_w,                         // Input dimensions
@@ -201,16 +198,9 @@ __global__ void resizeAndExtractRoi_kernel(
       if (w > 0.0f) {
         // To save the image in CHW format, the index is calculated as (row_offset + x) * 3.
         int idx = (row_offset + x) * 3;
-        // Change the channel accordingly, if flip_image_channels is set to True,
-        // FIRST_CHANNEL_OFFSET will be 2 and LAST_CHANNEL_OFFSET will be 1 to swap them. Otherwise,
-        // it will be 0, 1, 2 respectively.
-        sum_first_channel += input_img[idx + FIRST_CHANNEL_OFFSET] * w;
-        sum_second_channel += input_img[idx + SECOND_CHANNEL_OFFSET] * w;
-        sum_third_channel += input_img[idx + LAST_CHANNEL_OFFSET] * w;
-        // Input is BGR (from ROS bgr8), read as RGB for the model
-        //  sum_r += input_img[idx + 2] * w;  // R is at BGR offset 2
-        //  sum_g += input_img[idx + 1] * w;  // G is at BGR offset 1
-        //  sum_b += input_img[idx] * w;      // B is at BGR offset 0
+        sum_first_channel += input_img[idx] * w;
+        sum_second_channel += input_img[idx + 1] * w;
+        sum_third_channel += input_img[idx + 2] * w;
         sum_weight += w;
       }
     }
@@ -243,8 +233,6 @@ cudaError_t CameraPreprocess::resizeAndExtractRoi_launch(
   int H2, int W2,            // Resized image dimensions
   int H3, int W3,            // ROI dimensions
   int y_start, int x_start,  // ROI top-left coordinates in resized image
-  bool flip_image_channels  // Set to True if the image channels are to be flipped, for example, BGR
-                            // to RGB
 )
 {
   // Define the block and grid dimensions
@@ -252,13 +240,8 @@ cudaError_t CameraPreprocess::resizeAndExtractRoi_launch(
   dim3 blocks(divup(W3, threads.x), divup(H3, threads.y));
 
   // Launch the kernel
-  if (flip_image_channels) {
-    resizeAndExtractRoi_kernel<2, 1, 0><<<blocks, threads, 0, stream_>>>(
-      input_img, output_img, H, W, H2, W2, H3, W3, y_start, x_start);
-  } else {
-    resizeAndExtractRoi_kernel<0, 1, 2><<<blocks, threads, 0, stream_>>>(
-      input_img, output_img, H, W, H2, W2, H3, W3, y_start, x_start);
-  }
+  resizeAndExtractRoi_kernel<<<blocks, threads, 0, stream_>>>(
+    input_img, output_img, H, W, H2, W2, H3, W3, y_start, x_start);
 
   // Check for errors
   return cudaGetLastError();

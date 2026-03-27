@@ -35,8 +35,6 @@ public:
     int H2, int W2,            // Resized image dimensions
     int H3, int W3,            // ROI dimensions
     int y_start, int x_start,  // ROI top-left coordinates in resized image
-    bool flip_image_channels   // Set to True if the image channels are to be flipped, for example,
-                               // BGR to RGB
   );
   cudaError_t remap_launch(
     const std::uint8_t * input_img, std::uint8_t * output_img, int output_height,

@@ -42,7 +42,6 @@ struct ImagePreProcessingParams
   float image_aug_scale_y;
   float image_aug_scale_x;
   bool run_image_undistortion;
-  bool flip_image_channels;
   std::int64_t crop_height;
   std::int64_t crop_width;
   std::int64_t resized_height;
@@ -53,8 +52,7 @@ struct ImagePreProcessingParams
   ImagePreProcessingParams(
     const std::int64_t original_image_height, const std::int64_t original_image_width,
     const std::int64_t roi_height, const std::int64_t roi_width, const float image_aug_scale_y,
-    const float image_aug_scale_x, const bool run_image_undistortion,
-    const bool flip_image_channels);
+    const float image_aug_scale_x, const bool run_image_undistortion);
 };
 
 class CameraData

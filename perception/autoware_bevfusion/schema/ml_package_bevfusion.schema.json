@@ -169,11 +169,6 @@
           "default": 256,
           "minimum": 0
         },
-        "flip_image_channels": {
-          "type": "boolean",
-          "description": "A flag to flip image channels. For example, BGR to RGB.",
-          "default": true
-        },
         "use_intensity": {
           "type": "boolean",
           "description": "Whether to use intensity feature in point cloud processing.",
