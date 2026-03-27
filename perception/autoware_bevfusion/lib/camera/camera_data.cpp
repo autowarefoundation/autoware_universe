@@ -41,7 +41,7 @@ ImagePreProcessingParams::ImagePreProcessingParams(
   roi_width(roi_width),
   image_aug_scale_y(image_aug_scale_y),
   image_aug_scale_x(image_aug_scale_x),
-  run_image_undistortion(run_image_undistortion),
+  run_image_undistortion(run_image_undistortion)
 {
   resized_height = original_image_height * image_aug_scale_y;
   resized_width = original_image_width * image_aug_scale_x;

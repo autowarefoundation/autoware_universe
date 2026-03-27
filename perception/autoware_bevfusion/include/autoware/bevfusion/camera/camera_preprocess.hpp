@@ -31,10 +31,10 @@ public:
 
   cudaError_t resizeAndExtractRoi_launch(
     const std::uint8_t * input_img, std::uint8_t * output_img, int H,
-    int W,                     // Original image dimensions
-    int H2, int W2,            // Resized image dimensions
-    int H3, int W3,            // ROI dimensions
-    int y_start, int x_start,  // ROI top-left coordinates in resized image
+    int W,                    // Original image dimensions
+    int H2, int W2,           // Resized image dimensions
+    int H3, int W3,           // ROI dimensions
+    int y_start, int x_start  // ROI top-left coordinates in resized image
   );
   cudaError_t remap_launch(
     const std::uint8_t * input_img, std::uint8_t * output_img, int output_height,
