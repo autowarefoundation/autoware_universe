@@ -45,6 +45,7 @@ AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggr
     std::ostringstream id;
     id << std::hex << stamp.nanoseconds();
     graph_ = std::make_unique<Graph>(graph_file, id.str(), nullptr, variables);
+    graph_->set_initializing(declare_parameter<bool>("initial_latch_suppression"));
   }
 
   // Init plugins.
