@@ -58,6 +58,10 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
   // Create core instance
   core_ = std::make_unique<DiffusionPlannerCore>(params_, vehicle_info_);
 
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      this, "diffusion_planner");
+
   diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
   try {
     load_model();
@@ -118,6 +122,18 @@ void DiffusionPlanner::set_up_params()
   params_.delay_step = this->declare_parameter<int64_t>("delay_step", 0);
   params_.line_string_max_step_m = this->declare_parameter<double>("line_string_max_step_m", 5.0);
   params_.use_time_interpolation = this->declare_parameter<bool>("use_time_interpolation", false);
+
+  // planning factor params
+  planning_factor_params_.enable_stop =
+    this->declare_parameter<bool>("planning_factor.enable_stop", false);
+  planning_factor_params_.enable_slowdown =
+    this->declare_parameter<bool>("planning_factor.enable_slowdown", false);
+  planning_factor_params_.stop_velocity_threshold =
+    this->declare_parameter<double>("planning_factor.stop_velocity_threshold", 1.0);
+  planning_factor_params_.stop_keep_duration_threshold =
+    this->declare_parameter<double>("planning_factor.stop_keep_duration_threshold", 1.0);
+  planning_factor_params_.slowdown_accel_threshold =
+    this->declare_parameter<double>("planning_factor.slowdown_accel_threshold", -0.5);
 
   // debug params
   debug_params_.publish_debug_map =
@@ -371,8 +387,70 @@ void DiffusionPlanner::on_timer()
   pub_objects_->publish(planner_output.predicted_objects);
   pub_turn_indicators_->publish(planner_output.turn_indicator_command);
 
+  publish_planning_factor(planner_output.trajectory);
+
   // Publish diagnostics
   diagnostics_inference_->publish(frame_time);
+}
+
+void DiffusionPlanner::publish_planning_factor(const Trajectory & trajectory)
+{
+  const auto & points = trajectory.points;
+  if (points.empty()) {
+    planning_factor_interface_->publish();
+    return;
+  }
+
+  std::optional<size_t> slowdown_start_idx;
+  std::optional<size_t> slowdown_end_idx;
+  std::optional<size_t> stop_idx;
+  rclcpp::Duration stop_start_time(0, 0);
+  bool is_valid_stop = true;
+
+  for (size_t i = 0; i < points.size(); ++i) {
+    // for stop
+    if (
+      !stop_idx &&
+      points[i].longitudinal_velocity_mps <= planning_factor_params_.stop_velocity_threshold) {
+      stop_idx = i;
+      stop_start_time = rclcpp::Duration(points[i].time_from_start);
+    }
+    if (stop_idx) {
+      if (
+        (rclcpp::Duration(points[i].time_from_start) - stop_start_time).seconds() <
+        planning_factor_params_.stop_keep_duration_threshold) {
+        if (points[i].longitudinal_velocity_mps > planning_factor_params_.stop_velocity_threshold)
+          is_valid_stop = false;
+      }
+    }
+
+    // for slowdown
+    if (points[i].acceleration_mps2 < planning_factor_params_.slowdown_accel_threshold) {
+      if (!slowdown_start_idx) slowdown_start_idx = i;
+    } else if (slowdown_start_idx && !slowdown_end_idx) {
+      slowdown_end_idx = i;
+    }
+  }
+
+  const auto start_pos = points[0].pose;
+
+  // stop planning factor
+  if (planning_factor_params_.enable_stop && stop_idx && is_valid_stop) {
+    planning_factor_interface_->add(
+      points, start_pos, points[*stop_idx].pose, PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{});
+  }
+
+  // slowdown planning factor
+  if (planning_factor_params_.enable_slowdown && slowdown_start_idx && slowdown_end_idx) {
+    planning_factor_interface_->add(
+      points, start_pos, points[*slowdown_start_idx].pose, points[*slowdown_end_idx].pose,
+      PlanningFactor::SLOW_DOWN, autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true,
+      static_cast<double>(points[*slowdown_start_idx].longitudinal_velocity_mps),
+      static_cast<double>(points[*slowdown_end_idx].longitudinal_velocity_mps));
+  }
+
+  planning_factor_interface_->publish();
 }
 
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
