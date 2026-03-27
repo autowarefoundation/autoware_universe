@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,10 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Yukihiro Saito
-//
 
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__MULTIPLE_VEHICLE_TRACKER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__MULTIPLE_VEHICLE_TRACKER_HPP_
@@ -37,7 +33,10 @@ private:
 public:
   MultipleVehicleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
-  TrackerType getTrackerType() const override { return TrackerType::MULTIPLE_VEHICLE; }
+  types::TrackerType getTrackerType() const override
+  {
+    return types::TrackerType::MULTIPLE_VEHICLE;
+  }
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(

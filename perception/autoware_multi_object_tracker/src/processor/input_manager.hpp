@@ -25,8 +25,6 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::multi_object_tracker
