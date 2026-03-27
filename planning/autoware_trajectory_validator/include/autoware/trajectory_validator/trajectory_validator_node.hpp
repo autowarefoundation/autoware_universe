@@ -30,6 +30,7 @@
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
@@ -85,6 +86,9 @@ private:
     this, "~/input/objects"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
     sub_acceleration_{this, "~/input/acceleration"};
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<
+    autoware_perception_msgs::msg::TrafficLightGroupArray>
+    sub_traffic_lights_{this, "~/input/traffic_signals"};
 
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
 

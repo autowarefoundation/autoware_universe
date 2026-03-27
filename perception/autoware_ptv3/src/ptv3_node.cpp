@@ -52,12 +52,13 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
 
   // Head parameters
   auto class_names = this->declare_parameter<std::vector<std::string>>("class_names", descriptor);
-
-  const auto colors_red = this->declare_parameter<std::vector<int>>("colors_red", descriptor);
-  const auto colors_green = this->declare_parameter<std::vector<int>>("colors_green", descriptor);
-  const auto colors_blue = this->declare_parameter<std::vector<int>>("colors_blue", descriptor);
-  const auto ground_prob_threshold =
-    this->declare_parameter<float>("ground_prob_threshold", descriptor);
+  const auto palette = this->declare_parameter<std::vector<std::int64_t>>("palette", descriptor);
+  const auto filter_class_probability_threshold =
+    this->declare_parameter<float>("filter.class_probability_threshold", descriptor);
+  const auto filter_classes =
+    this->declare_parameter<std::vector<std::string>>("filter.classes", descriptor);
+  const auto filter_output_format =
+    this->declare_parameter<std::string>("filter.output_format", descriptor);
 
   if (point_cloud_range.size() != 6) {
     throw std::runtime_error("The size of point_cloud_range != 6");
@@ -67,8 +68,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   }
 
   PTv3Config config(
-    plugins_path, cloud_capacity, voxels_num, point_cloud_range, voxel_size, colors_red,
-    colors_green, colors_blue, class_names, ground_prob_threshold);
+    plugins_path, cloud_capacity, voxels_num, point_cloud_range, voxel_size, class_names, palette,
+    filter_class_probability_threshold, filter_classes, filter_output_format);
 
   auto trt_config =
     tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 33U);
@@ -81,25 +82,23 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
 
   segmented_pointcloud_pub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
-      *this, "~/output/segmented/pointcloud");
+      *this, "~/output/pointcloud/segmentation");
 
-  ground_segmented_pointcloud_pub_ =
+  visualization_pointcloud_pub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
-      *this, "~/output/ground_segmented/pointcloud");
-
-  // cSpell:ignore Probs probs
-  probs_pointcloud_pub_ =
+      *this, "~/output/pointcloud/visualization");
+  filtered_pointcloud_pub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
-      *this, "~/output/probs/pointcloud");
+      *this, "~/output/pointcloud/filtered");
 
   published_time_pub_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 
   model_ptr_->setPublishSegmentedPointcloud(
     std::bind(&PTv3Node::publishSegmentedPointcloud, this, std::placeholders::_1));
-  model_ptr_->setPublishGroundSegmentedPointcloud(
-    std::bind(&PTv3Node::publishGroundSegmentedPointcloud, this, std::placeholders::_1));
-  model_ptr_->setPublishProbsPointcloud(
-    std::bind(&PTv3Node::publishProbsPointcloud, this, std::placeholders::_1));
+  model_ptr_->setPublishVisualizationPointcloud(
+    std::bind(&PTv3Node::publishVisualizationPointcloud, this, std::placeholders::_1));
+  model_ptr_->setPublishFilteredPointcloud(
+    std::bind(&PTv3Node::publishFilteredPointcloud, this, std::placeholders::_1));
 
   // initialize debug tool
   {
@@ -123,16 +122,16 @@ void PTv3Node::publishSegmentedPointcloud(
   segmented_pointcloud_pub_->publish(std::move(msg_ptr));
 }
 
-void PTv3Node::publishGroundSegmentedPointcloud(
+void PTv3Node::publishVisualizationPointcloud(
   std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr)
 {
-  ground_segmented_pointcloud_pub_->publish(std::move(msg_ptr));
+  visualization_pointcloud_pub_->publish(std::move(msg_ptr));
 }
 
-void PTv3Node::publishProbsPointcloud(
+void PTv3Node::publishFilteredPointcloud(
   std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr)
 {
-  probs_pointcloud_pub_->publish(std::move(msg_ptr));
+  filtered_pointcloud_pub_->publish(std::move(msg_ptr));
 }
 
 void PTv3Node::cloudCallback(
@@ -142,14 +141,13 @@ void PTv3Node::cloudCallback(
     segmented_pointcloud_pub_->get_subscription_count() +
     segmented_pointcloud_pub_->get_intra_process_subscription_count();
 
-  const auto ground_segmented_sub_count =
-    ground_segmented_pointcloud_pub_->get_subscription_count() +
-    ground_segmented_pointcloud_pub_->get_intra_process_subscription_count();
+  const auto visualization_sub_count =
+    visualization_pointcloud_pub_->get_subscription_count() +
+    visualization_pointcloud_pub_->get_intra_process_subscription_count();
+  const auto filtered_sub_count = filtered_pointcloud_pub_->get_subscription_count() +
+                                  filtered_pointcloud_pub_->get_intra_process_subscription_count();
 
-  const auto probs_sub_count = probs_pointcloud_pub_->get_subscription_count() +
-                               probs_pointcloud_pub_->get_intra_process_subscription_count();
-
-  if (segmented_sub_count + ground_segmented_sub_count + probs_sub_count == 0) {
+  if (segmented_sub_count + visualization_sub_count + filtered_sub_count == 0) {
     return;
   }
 
@@ -159,7 +157,7 @@ void PTv3Node::cloudCallback(
 
   std::unordered_map<std::string, double> proc_timing;
   bool is_success = model_ptr_->segment(
-    msg_ptr, segmented_sub_count, ground_segmented_sub_count, probs_sub_count, proc_timing);
+    msg_ptr, segmented_sub_count, visualization_sub_count, filtered_sub_count, proc_timing);
   if (!is_success) {
     return;
   }
