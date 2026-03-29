@@ -119,13 +119,14 @@ void BEVFusionNode::precomputeIntrinsicsExtrinsics()
 
   std::vector<sensor_msgs::msg::CameraInfo> camera_info_msgs;
   std::vector<Matrix4f> lidar2camera_extrinsics;
-  
+
   try {
     std::transform(
       camera_data_ptrs_.begin(), camera_data_ptrs_.end(), std::back_inserter(camera_info_msgs),
       [](const auto & camera_data) { return camera_data->camera_info_value(); });
   } catch (const std::runtime_error & e) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "Camera info is not available for some cameras: %s", e.what());
+    RCLCPP_WARN_STREAM(
+      this->get_logger(), "Camera info is not available for some cameras: %s", e.what());
     return;
   }
 
@@ -208,8 +209,8 @@ diagnostic_msgs::msg::DiagnosticStatus::_level_type BEVFusionNode::checkProcessi
 
     message.clear();
     message << "Processing time exceeds the acceptable limit of " << max_allowed_processing_time_ms_
-            << " ms by " << (last_processing_time_ms_.value_or(0.0) - max_allowed_processing_time_ms_)
-            << " ms.";
+            << " ms by "
+            << (last_processing_time_ms_.value_or(0.0) - max_allowed_processing_time_ms_) << " ms.";
 
     if (!last_in_time_processing_timestamp_) {
       last_in_time_processing_timestamp_ = timestamp_now;
