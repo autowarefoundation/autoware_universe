@@ -11,16 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Yutaka Shimizu
-//
+
 #define EIGEN_MPL2_ONLY
 #include "autoware/multi_object_tracker/tracker/model/pass_through_tracker.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils_geometry/msg/covariance.hpp>
 #include <tf2/utils.hpp>
 

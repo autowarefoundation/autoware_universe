@@ -1,4 +1,4 @@
-// Copyright 2024 Tier IV, Inc.
+// Copyright 2024 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/uuid.hpp"
 
 #include <cmath>
 #include <vector>
@@ -60,6 +61,9 @@ DynamicObject toDynamicObject(
 {
   DynamicObject dynamic_object;
 
+  // Always generate UUID for consistency (shared generator across the package).
+  dynamic_object.uuid = object_model::generate_uuid();
+
   // initialize existence_probabilities, using channel information
   dynamic_object.channel_index = channel_index;
   if (det_object.existence_probability < 1e-6) {
@@ -71,8 +75,10 @@ DynamicObject toDynamicObject(
   } else {
     dynamic_object.existence_probability = det_object.existence_probability;
   }
+  dynamic_object.existence_probabilities.push_back(
+    {channel_index, dynamic_object.existence_probability});
 
-  dynamic_object.classification = det_object.classification;
+  dynamic_object.classification = classes::toClassifications(det_object.classification);
 
   dynamic_object.pose = det_object.kinematics.pose_with_covariance.pose;
   dynamic_object.pose_covariance = det_object.kinematics.pose_with_covariance.covariance;
@@ -102,7 +108,30 @@ DynamicObjectList toDynamicObjectList(
   for (const auto & det_object : det_objects.objects) {
     dynamic_objects.objects.emplace_back(toDynamicObject(det_object, channel_index));
   }
+  dynamic_objects.buildUuidIndex();
   return dynamic_objects;
+}
+
+void DynamicObjectList::buildUuidIndex() const
+{
+  uuid_to_index_.clear();
+  uuid_to_index_.reserve(objects.size());
+  for (size_t i = 0; i < objects.size(); ++i) {
+    uuid_to_index_.emplace(objects[i].uuid, i);
+  }
+}
+
+std::optional<size_t> DynamicObjectList::getObjectIndexByUuid(
+  const unique_identifier_msgs::msg::UUID & uuid) const
+{
+  if (uuid_to_index_.size() != objects.size()) {
+    buildUuidIndex();
+  }
+  const auto it = uuid_to_index_.find(uuid);
+  if (it != uuid_to_index_.end()) {
+    return it->second;
+  }
+  return std::nullopt;
 }
 
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object)
@@ -110,7 +139,7 @@ autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObj
   autoware_perception_msgs::msg::TrackedObject tracked_object;
   tracked_object.object_id = dyn_object.uuid;
   tracked_object.existence_probability = dyn_object.existence_probability;
-  tracked_object.classification = dyn_object.classification;
+  tracked_object.classification = classes::toClassificationMsgs(dyn_object.classification);
 
   tracked_object.kinematics.pose_with_covariance.pose = dyn_object.pose;
   tracked_object.kinematics.pose_with_covariance.covariance = dyn_object.pose_covariance;
@@ -131,7 +160,7 @@ autoware_perception_msgs::msg::DetectedObject toDetectedObjectMsg(const DynamicO
 {
   autoware_perception_msgs::msg::DetectedObject detected_object;
   detected_object.existence_probability = dyn_object.existence_probability;
-  detected_object.classification = dyn_object.classification;
+  detected_object.classification = classes::toClassificationMsgs(dyn_object.classification);
 
   detected_object.kinematics.pose_with_covariance.pose = dyn_object.pose;
   detected_object.kinematics.pose_with_covariance.covariance = dyn_object.pose_covariance;

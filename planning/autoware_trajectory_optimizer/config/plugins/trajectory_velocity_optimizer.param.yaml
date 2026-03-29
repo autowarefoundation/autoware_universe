@@ -14,7 +14,7 @@
       limit_speed: true               # Enable speed limiting
 
       # Lateral acceleration limiting
-      max_lateral_accel_mps2: 1.5     # [m/s²] Maximum lateral acceleration
+      max_lateral_accel_mps2: 2.0     # [m/s²] Maximum lateral acceleration
       limit_lateral_acceleration: false  # Enable lateral acceleration limiting, should be launched with velocity smoother
       min_limited_speed_mps: 3.0        # [m/s] Minimum speed when applying lateral acceleration limit
 
@@ -27,8 +27,8 @@
       # Note: max_velocity uses max_speed_mps from parent namespace
       continuous_jerk_smoother:
         # QP optimization weights
-        jerk_weight: 100.0                     # Weight for jerk minimization (smoothness)
-        over_v_weight: 1000.0               # Weight for velocity limit violation (slack)
+        jerk_weight: 30.0                     # Weight for jerk minimization (smoothness)
+        over_v_weight: 3000.0               # Weight for velocity limit violation (slack)
         over_a_weight: 30.0                 # Weight for acceleration limit violation (slack)
         over_j_weight: 10.0                  # Weight for jerk limit violation (slack)
         velocity_tracking_weight: 1.0        # Weight for tracking reference velocity from input trajectory

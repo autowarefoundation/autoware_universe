@@ -20,16 +20,16 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 
 #include <limits>
 #include <memory>
 #include <utility>
 
+using autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline;
 using autoware::motion_utils::findNearestIndex;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
-using lanelet::utils::getArcCoordinatesOnEgoCenterline;
 namespace autoware::behavior_path_planner
 {
 using start_planner_utils::getPullOutLanes;
@@ -65,7 +65,7 @@ std::optional<PullOutPath> GeometricPullOut::plan(
 
   // check if the ego is at left or right side of road lane center
   const bool left_side_start =
-    0 < getArcCoordinatesOnEgoCenterline(
+    0 < get_arc_coordinates_on_ego_centerline(
           road_lanes, start_pose, planner_data->route_handler->getLaneletMapPtr())
           .distance;
   const double max_steer_angle =

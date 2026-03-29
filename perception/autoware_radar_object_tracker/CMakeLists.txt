@@ -63,7 +63,7 @@ if(BUILD_TESTING)
 endif()
 
 # Package
-ament_auto_package(
+autoware_ament_auto_package(
   INSTALL_TO_SHARE
   launch
   config

@@ -1419,9 +1419,15 @@
             },
             "candidate_path_turn_signal": {
               "type": "string",
-              "enum": ["none", "stopped_candidate", "all_candidate"],
-              "description": "policy for turn signal output during planWaitingApproval (candidate path). 'none': never output turn signal for candidate paths. 'stopped_candidate': output turn signal only when the vehicle is stopped and a candidate path exists (default behavior). 'all_candidate': always output turn signal whenever a candidate path exists.",
+              "enum": ["none", "stopped_candidate", "all_candidate", "stop_on_approval"],
+              "description": "policy for turn signal output during planWaitingApproval (candidate path). 'none': never output turn signal for candidate paths. 'stopped_candidate': output turn signal only when the vehicle is stopped and a candidate path exists (default behavior). 'all_candidate': always output turn signal whenever a candidate path exists. 'stop_on_approval': no turn signal during candidate phase; after approval, hold a stop point and turn signal for turn_signal_on_approval_hold_duration seconds before proceeding with avoidance.",
               "default": "none"
+            },
+            "turn_signal_on_approval_hold_duration": {
+              "type": "number",
+              "description": "duration [s] to hold stop and turn signal after approval (used by 'stop_on_approval' policy)",
+              "default": 3.0,
+              "minimum": 0.0
             }
           },
           "required": ["make_approval_request"],

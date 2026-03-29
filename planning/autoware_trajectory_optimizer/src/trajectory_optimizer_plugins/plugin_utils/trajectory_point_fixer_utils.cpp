@@ -14,6 +14,7 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.hpp"
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 #include "autoware/trajectory_optimizer/utils.hpp"
 
 #include <Eigen/Core>
@@ -188,7 +189,9 @@ void resample_single_cluster(
 }
 
 void resample_close_proximity_points(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry, const double min_dist_m)
+  TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+  const Odometry & current_odometry, const double min_dist_m,
+  const double stop_velocity_threshold_mps)
 {
   if (traj_points.size() < 2) {
     return;
@@ -203,6 +206,65 @@ void resample_close_proximity_points(
 
   for (const auto & cluster_of_indices : clusters_of_indices) {
     resample_single_cluster(cluster_of_indices, traj_points, ego_point);
+
+    // Mark potential stop points from decelerating clusters for later classification.
+    const float v_front =
+      std::abs(traj_points[cluster_of_indices.front()].longitudinal_velocity_mps);
+    const float v_back = std::abs(traj_points[cluster_of_indices.back()].longitudinal_velocity_mps);
+    if (v_back < v_front && v_back < static_cast<float>(stop_velocity_threshold_mps)) {
+      semantic_speed_tracker.add_stop_candidate(cluster_of_indices.back());
+    }
+  }
+}
+
+void detect_velocity_based_stop(
+  const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+  const double stop_velocity_threshold_mps)
+{
+  const float threshold = static_cast<float>(stop_velocity_threshold_mps);
+
+  for (size_t i = 1; i < traj_points.size(); ++i) {
+    const float speed = std::abs(traj_points[i].longitudinal_velocity_mps);
+    const float prev_speed = std::abs(traj_points[i - 1].longitudinal_velocity_mps);
+    if (speed < threshold && speed < prev_speed) {
+      semantic_speed_tracker.add_stop_candidate(i);
+      break;
+    }
+  }
+}
+
+void build_stop_approach_ranges(
+  const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker)
+{
+  const std::vector<size_t> stop_pts = semantic_speed_tracker.take_stop_point_candidates();
+  semantic_speed_tracker.clear_stop_approaches();
+
+  std::vector<double> cumulative_s(traj_points.size(), 0.0);
+  for (size_t i = 1; i < traj_points.size(); ++i) {
+    cumulative_s[i] = cumulative_s[i - 1] +
+                      autoware_utils_geometry::calc_distance2d(traj_points[i - 1], traj_points[i]);
+  }
+
+  for (const size_t stop_idx : stop_pts) {
+    if (stop_idx == 0 || stop_idx >= traj_points.size()) {
+      continue;
+    }
+    // Speed is decreasing toward this point → stop approach.
+    // Speed is increasing toward this point → take-off, skip.
+    if (
+      std::abs(traj_points[stop_idx].longitudinal_velocity_mps) >=
+      std::abs(traj_points[stop_idx - 1].longitudinal_velocity_mps)) {
+      continue;
+    }
+
+    size_t decel_start = stop_idx;
+    while (decel_start > 0 && std::abs(traj_points[decel_start - 1].longitudinal_velocity_mps) >
+                                std::abs(traj_points[decel_start].longitudinal_velocity_mps)) {
+      --decel_start;
+    }
+
+    semantic_speed_tracker.add_stop_approach(
+      {decel_start, stop_idx, cumulative_s[decel_start], cumulative_s[stop_idx]});
   }
 }
 
@@ -226,7 +288,9 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory)
   }
 }
 
-void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, const double min_dist)
+void remove_close_proximity_points(
+  TrajectoryPoints & input_trajectory_array, SemanticSpeedTracker & semantic_speed_tracker,
+  const double min_dist)
 {
   if (input_trajectory_array.size() < 2) {
     return;
@@ -234,6 +298,7 @@ void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, co
 
   // Keep the first point
   size_t last_valid_idx = 0;
+  size_t last_stop_point_idx = 0;
 
   for (size_t i = 1; i < input_trajectory_array.size(); ++i) {
     const double dist = autoware_utils_geometry::calc_distance2d(
@@ -245,7 +310,15 @@ void remove_close_proximity_points(TrajectoryPoints & input_trajectory_array, co
       ++last_valid_idx;
       // Overwrite the next slot in the same vector
       input_trajectory_array[last_valid_idx] = input_trajectory_array[i];
+      continue;
     }
+
+    if (last_valid_idx == last_stop_point_idx) {
+      continue;
+    }  // Avoid marking multiple close points as stop points
+    // Mark semantic speed stop point
+    semantic_speed_tracker.add_stop_candidate(last_valid_idx);
+    last_stop_point_idx = last_valid_idx;
   }
 
   // Shrink vector to the new size

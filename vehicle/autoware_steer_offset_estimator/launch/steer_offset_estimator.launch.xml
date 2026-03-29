@@ -1,21 +1,26 @@
 <launch>
   <!-- Parameter -->
   <arg name="config_file" default="$(find-pkg-share autoware_steer_offset_estimator)/config/steer_offset_estimator.param.yaml"/>
-  <arg name="initial_steer_offset_param_path" default="$(find-pkg-share autoware_steer_offset_estimator)/config/steer_offset.param.yaml"/>
-  <arg name="initial_steer_offset_param_name" default="steer_offset"/>
+  <arg name="steer_offset_log_file_path" default="$(find-pkg-share autoware_steer_offset_estimator)/config/steer_offset.param.yaml"/>
+  <arg name="steer_offset_log_param_name" default="steer_offset"/>
+  <arg name="steer_offset_calibration_file_path" default="$(find-pkg-share autoware_steer_offset_estimator)/config/steer_offset.param.yaml"/>
+  <arg name="steer_offset_calibration_param_name" default="residual_steering_offset"/>
   <!-- get wheel base from vehicle info -->
   <include file="$(find-pkg-share autoware_global_parameter_loader)/launch/global_params.launch.py"/>
 
   <!-- steer offset estimator -->
   <node pkg="autoware_steer_offset_estimator" exec="steer_offset_estimator_node" name="steer_offset_estimator" output="screen">
     <param from="$(var config_file)"/>
-    <param from="$(var initial_steer_offset_param_path)"/>
-    <param name="initial_steer_offset_param_name" value="$(var initial_steer_offset_param_name)"/>
+    <param from="$(var steer_offset_log_file_path)"/>
+    <param name="steer_offset_param_path" value="$(var steer_offset_log_file_path)"/>
+    <param name="steer_offset_param_name" value="$(var steer_offset_log_param_name)"/>
+    <param name="calibration_file_path" value="$(var steer_offset_calibration_file_path)"/>
+    <param name="calibration_param_name" value="$(var steer_offset_calibration_param_name)"/>
     <remap from="~/input/pose" to="/localization/pose_estimator/pose"/>
     <remap from="~/input/steer" to="/vehicle/status/steering_status"/>
     <remap from="~/output/steering_offset" to="~/steering_offset"/>
     <remap from="~/output/steering_offset_covariance" to="~/steering_offset_covariance"/>
-    <remap from="~/output/steering_offset_error" to="~/steering_offset_error"/>
     <remap from="~/output/debug_info" to="~/debug_info"/>
+    <remap from="~/output/steering_offset_update" to="~/steering_offset_update"/>
   </node>
 </launch>

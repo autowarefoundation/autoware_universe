@@ -373,6 +373,7 @@ PullOutPath --o PullOutPlannerBase
 | object_types_to_check_for_path_generation.check_unknown    | -     | bool   | flag to check unknown for path generation                                                                                                                                             | true                 |
 | center_line_path_interval                                  | [m]   | double | reference center line path point interval                                                                                                                                             | 1.0                  |
 | minimum_shift_length                                       | [m]   | double | the minimum required shift length for a clothoid path to be considered valid.                                                                                                         | 0.5                  |
+| turn_signal_on_centerline_start                            | -     | string | default turn signal direction when pulling out from centerline                                                                                                                        | RIGHT                |
 
 | clothoid_initial_velocity | [m/s] | double | initial velocity for clothoid path | 1.0 |
 | clothoid_acceleration | [m/s²] | double | acceleration for clothoid path | 1.0 |

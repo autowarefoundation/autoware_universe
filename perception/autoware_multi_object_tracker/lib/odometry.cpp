@@ -18,8 +18,6 @@
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <tf2_ros/create_timer_ros.h>
-
 #include <memory>
 #include <string>
 
@@ -27,19 +25,17 @@ namespace autoware::multi_object_tracker
 {
 
 Odometry::Odometry(
-  rclcpp::Node & node, const std::string & world_frame_id, const std::string & ego_frame_id,
+  rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock, std::shared_ptr<tf2_ros::Buffer> tf_buffer,
+  const std::string & world_frame_id, const std::string & ego_frame_id,
   bool enable_odometry_uncertainty)
-: node_(node),
+: logger_(logger),
+  clock_(clock),
   ego_frame_id_(ego_frame_id),
   world_frame_id_(world_frame_id),
-  tf_buffer_(node_.get_clock()),
-  tf_listener_(tf_buffer_),
+  tf_buffer_(tf_buffer),
+  tf_listener_(*tf_buffer_),
   enable_odometry_uncertainty_(enable_odometry_uncertainty)
 {
-  // Create tf timer
-  auto cti = std::make_shared<tf2_ros::CreateTimerROS>(
-    node_.get_node_base_interface(), node_.get_node_timers_interface());
-  tf_buffer_.setCreateTimerInterface(cti);
 }
 
 void Odometry::updateTfCache(
@@ -77,14 +73,14 @@ std::optional<geometry_msgs::msg::Transform> Odometry::getTransform(
   try {
     // Check if the frames are ready
     std::string errstr;  // This argument prevents error msg from being displayed in the terminal.
-    if (!tf_buffer_.canTransform(
+    if (!tf_buffer_->canTransform(
           world_frame_id_, source_frame_id, tf2::TimePointZero, tf2::Duration::zero(), &errstr)) {
       return std::nullopt;
     }
 
     // Lookup the transform
     geometry_msgs::msg::TransformStamped self_transform_stamped;
-    self_transform_stamped = tf_buffer_.lookupTransform(
+    self_transform_stamped = tf_buffer_->lookupTransform(
       world_frame_id_, source_frame_id, time, rclcpp::Duration::from_seconds(0.5));
 
     // update the cache
@@ -94,7 +90,7 @@ std::optional<geometry_msgs::msg::Transform> Odometry::getTransform(
 
     return std::optional<geometry_msgs::msg::Transform>(self_transform_stamped.transform);
   } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("multi_object_tracker"), ex.what());
+    RCLCPP_WARN_STREAM(logger_, ex.what());
     return std::nullopt;
   }
 }
