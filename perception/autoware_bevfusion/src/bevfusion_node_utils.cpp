@@ -125,8 +125,7 @@ void BEVFusionNode::precomputeIntrinsicsExtrinsics()
       camera_data_ptrs_.begin(), camera_data_ptrs_.end(), std::back_inserter(camera_info_msgs),
       [](const auto & camera_data) { return camera_data->camera_info_value(); });
   } catch (const std::runtime_error & e) {
-    RCLCPP_WARN_STREAM(
-      this->get_logger(), "Camera info is not available for some cameras: %s", e.what());
+    RCLCPP_WARN_STREAM(rclcpp::get_logger("bevfusion"), "Camera info is not available for some cameras!");
     return;
   }
 

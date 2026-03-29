@@ -296,7 +296,7 @@ void BEVFusionNode::cameraInfoCallback(
     Matrix4f lidar2camera_rowmajor_transform = lidar2camera_transform.eval();
     lidar2camera_extrinsics_[camera_id] = lidar2camera_rowmajor_transform;
   } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "%s", ex.what());
+    RCLCPP_WARN_STREAM(rclcpp::get_logger("bevfusion"), ex.what());
     return;
   }
 
