@@ -119,11 +119,16 @@ void BEVFusionNode::precomputeIntrinsicsExtrinsics()
 
   std::vector<sensor_msgs::msg::CameraInfo> camera_info_msgs;
   std::vector<Matrix4f> lidar2camera_extrinsics;
-
-  std::transform(
-    camera_data_ptrs_.begin(), camera_data_ptrs_.end(), std::back_inserter(camera_info_msgs),
-    [](const auto & camera_data) { return camera_data->camera_info_value(); });
-
+  
+  try {
+    std::transform(
+      camera_data_ptrs_.begin(), camera_data_ptrs_.end(), std::back_inserter(camera_info_msgs),
+      [](const auto & camera_data) { return camera_data->camera_info_value(); });
+  } catch (const std::runtime_error & e) {
+    RCLCPP_WARN(this->get_logger(), "Camera info is not available for some cameras: %s", e.what());
+    return;
+  }
+  
   std::transform(
     lidar2camera_extrinsics_.begin(), lidar2camera_extrinsics_.end(),
     std::back_inserter(lidar2camera_extrinsics), [](const auto & opt) { return *opt; });
@@ -203,7 +208,7 @@ diagnostic_msgs::msg::DiagnosticStatus::_level_type BEVFusionNode::checkProcessi
 
     message.clear();
     message << "Processing time exceeds the acceptable limit of " << max_allowed_processing_time_ms_
-            << " ms by " << (last_processing_time_ms_.value() - max_allowed_processing_time_ms_)
+            << " ms by " << (last_processing_time_ms_.value_or(0.0) - max_allowed_processing_time_ms_)
             << " ms.";
 
     if (!last_in_time_processing_timestamp_) {
@@ -223,6 +228,10 @@ diagnostic_msgs::msg::DiagnosticStatus::_level_type BEVFusionNode::checkConsecut
   const rclcpp::Time & timestamp_now,
   diagnostic_msgs::msg::DiagnosticStatus::_level_type current_level)
 {
+  // if the last in time processing timestamp is not set, return the current level
+  if (!last_in_time_processing_timestamp_) {
+    return current_level;
+  }
   const double delayed_state_duration =
     std::chrono::duration<double, std::milli>(
       std::chrono::nanoseconds(
@@ -254,7 +263,7 @@ void BEVFusionNode::diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusW
     addNoInferenceDiagnostics(stat, message);
   } else {
     diag_level = checkProcessingTimeStatus(stat, message, timestamp_now);
-    stat.add("processing_time_ms", last_processing_time_ms_.value());
+    stat.add("processing_time_ms", last_processing_time_ms_.value_or(0.0));
     diag_level = checkConsecutiveDelays(stat, message, timestamp_now, diag_level);
   }
 

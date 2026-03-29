@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <stdexcept>
 
 namespace autoware::bevfusion
 {
@@ -135,6 +136,9 @@ std::optional<sensor_msgs::msg::CameraInfo> CameraData::camera_info() const
 
 sensor_msgs::msg::CameraInfo CameraData::camera_info_value() const
 {
+  if (!camera_info_) {
+    throw std::runtime_error("Camera info is not available");
+  }
   return *(camera_info_);
 }
 
