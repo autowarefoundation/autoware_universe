@@ -1,16 +1,18 @@
 /**:
   ros__parameters:
-    # Plugin execution order - plugins will run in this order
+    # Plugin execution order — this list is the ONLY control for which plugins load and run.
+    # To disable temporal MPC entirely, omit TrajectoryTemporalMPTOptimizer from this list.
+    #
+    # use_temporal_mpt_optimizer only skips optimize_trajectory() when that plugin IS loaded; it
+    # does not unload the plugin or stop acados init. For a full off, remove from plugin_names.
     plugin_names:
+      # - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      # - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
+      # - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      # - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+      # - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryEBSmootherOptimizer"
-      - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
 
     # Plugin activation flags - control runtime enable/disable
     use_akima_spline_interpolation: true
@@ -21,3 +23,4 @@
     use_trajectory_extender: false
     use_kinematic_feasibility_enforcer: true
     use_mpt_optimizer: false
+    use_temporal_mpt_optimizer: true

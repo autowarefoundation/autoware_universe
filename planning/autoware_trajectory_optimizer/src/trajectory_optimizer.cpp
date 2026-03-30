@@ -28,6 +28,8 @@
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
+#include <chrono>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -122,6 +124,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(
     parameters, "use_kinematic_feasibility_enforcer", params.use_kinematic_feasibility_enforcer);
   update_param<bool>(parameters, "use_mpt_optimizer", params.use_mpt_optimizer);
+  update_param<bool>(parameters, "use_temporal_mpt_optimizer", params.use_temporal_mpt_optimizer);
 
   params_ = params;
 
@@ -165,6 +168,8 @@ void TrajectoryOptimizer::set_up_params()
   params_.use_kinematic_feasibility_enforcer =
     get_or_declare_parameter<bool>(*this, "use_kinematic_feasibility_enforcer");
   params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");
+  params_.use_temporal_mpt_optimizer =
+    get_or_declare_parameter<bool>(*this, "use_temporal_mpt_optimizer");
 }
 
 void TrajectoryOptimizer::publish_processing_time_ms(const double processing_time_ms)
@@ -191,6 +196,8 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     return;
   }
 
+  const auto t_opt_start = std::chrono::steady_clock::now();
+
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     // Create a fresh data instance per trajectory so semantic_speed_tracker is reset each time
@@ -199,6 +206,7 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     data.current_acceleration = *current_acceleration_ptr_;
     // Apply optimizations - plugins execute in order from plugin_names parameter
     for (auto & plugin : plugins_) {
+      std::cout << "Optimizing trajectory with plugin: " << plugin->get_name() << std::endl;
       plugin->optimize_trajectory(trajectory.points, params_, data);
     }
 
@@ -209,6 +217,14 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
         utils::generate_three_point_stopped_trajectory(trajectory.points, data.current_odometry);
     }
   }
+
+  const double elapsed_ms =
+    std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_opt_start)
+      .count();
+  RCLCPP_INFO(
+    get_logger(),
+    "Trajectory optimizer: total execution time %.3f ms (%zu candidate trajectories, %zu plugins)",
+    elapsed_ms, output_trajectories.candidate_trajectories.size(), plugins_.size());
 
   trajectories_pub_->publish(output_trajectories);
 
