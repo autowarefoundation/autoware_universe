@@ -124,8 +124,8 @@ struct DebugData
 
 TrajectoryShape get_trajectory_shape(
   const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & ego_pose,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double lateral_margin = 0.0,
-  const double longitudinal_margin = 0.0);
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, double trim_length,
+  const double lateral_margin = 0.0, const double longitudinal_margin = 0.0);
 
 void filter_objects_by_type(
   PredictedObjects & objects, const std::vector<std::string> & object_type_strings);
@@ -156,6 +156,17 @@ struct PointCloudFilter
     convex_hull_.setDimension(2);
   };
 
+  void set_params(
+    double voxel_size_x, double voxel_size_y, double voxel_size_z, int voxel_min_size,
+    double cluster_tolerance, int cluster_min_size, int cluster_max_size)
+  {
+    voxel_grid_.setLeafSize(voxel_size_x, voxel_size_y, voxel_size_z);
+    voxel_grid_.setMinimumPointsNumberPerVoxel(voxel_min_size);
+    ec_.setClusterTolerance(cluster_tolerance);
+    ec_.setMinClusterSize(cluster_min_size);
+    ec_.setMaxClusterSize(cluster_max_size);
+  }
+
   void filter_pointcloud(
     PointCloud::Ptr & pointcloud, const double min_x, const double max_x, const double min_y,
     const double max_y, const double min_z, const double max_z);
@@ -173,9 +184,28 @@ private:
 
 struct ObstacleTracker
 {
-  ObstacleTracker(const double on_time_buffer, const double off_time_buffer)
-  : on_time_buffer_(on_time_buffer), off_time_buffer_(off_time_buffer)
+  ObstacleTracker(
+    const double on_time_buffer, const double off_time_buffer, const double object_distance_th,
+    const double object_yaw_th, const double pcd_distance_th, const double grace_period)
+  : on_time_buffer_(on_time_buffer),
+    off_time_buffer_(off_time_buffer),
+    object_distance_th_(object_distance_th),
+    object_yaw_th_(object_yaw_th),
+    pcd_distance_th_(pcd_distance_th),
+    grace_period_(grace_period)
   {
+  }
+
+  void set_params(
+    const double on_time_buffer, const double off_time_buffer, const double object_distance_th,
+    const double object_yaw_th, const double pcd_distance_th, const double grace_period)
+  {
+    on_time_buffer_ = on_time_buffer;
+    off_time_buffer_ = off_time_buffer;
+    object_distance_th_ = object_distance_th;
+    object_yaw_th_ = object_yaw_th;
+    pcd_distance_th_ = pcd_distance_th;
+    grace_period_ = grace_period;
   }
 
   /**
@@ -185,7 +215,9 @@ struct ObstacleTracker
    * @param objects Input predicted objects after filtering
    * @param persistent_objects Output persistent objects
    */
-  void update_objects(const PredictedObjects & objects, PredictedObjects & persistent_objects);
+  void update_objects(
+    const PredictedObjects & objects, PredictedObjects & persistent_objects,
+    const rclcpp::Time & now);
 
   /**
    * @brief Update tracked points
@@ -194,20 +226,25 @@ struct ObstacleTracker
    * @param points Input pointcloud
    * @param persistent_points Output persistent points
    */
-  void update_points(const PointCloud::Ptr & points, PointCloud::Ptr & persistent_points);
+  void update_points(
+    const PointCloud::Ptr & points, PointCloud::Ptr & persistent_points, const rclcpp::Time & now);
 
 private:
   double on_time_buffer_;
   double off_time_buffer_;
+  double object_distance_th_;
+  double object_yaw_th_;
+  double pcd_distance_th_;
+  double grace_period_;
 
   struct PersistentObstacle
   {
-    using TimePoint = std::chrono::system_clock::time_point;
-    TimePoint first_seen_time;
-    TimePoint last_seen_time;
+    rclcpp::Time first_seen_time;
+    rclcpp::Time last_seen_time;
     bool is_active{false};
 
-    explicit PersistentObstacle(const TimePoint & now) : first_seen_time(now), last_seen_time(now)
+    explicit PersistentObstacle(const rclcpp::Time & now)
+    : first_seen_time(now), last_seen_time(now)
     {
     }
   };
@@ -216,7 +253,7 @@ private:
   {
     PredictedObject object;
 
-    explicit PersistentObject(const PredictedObject & object, const TimePoint & now)
+    explicit PersistentObject(const PredictedObject & object, const rclcpp::Time & now)
     : PersistentObstacle(now), object(object)
     {
     }
@@ -227,7 +264,7 @@ private:
   struct PersistentPoint : public PersistentObstacle
   {
     geometry_msgs::msg::Point position;
-    explicit PersistentPoint(const geometry_msgs::msg::Point & position, const TimePoint & now)
+    explicit PersistentPoint(const geometry_msgs::msg::Point & position, const rclcpp::Time & now)
     : PersistentObstacle(now), position(position)
     {
     }

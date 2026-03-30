@@ -32,14 +32,14 @@ namespace autoware::trajectory_modifier::utils::obstacle_stop
 
 TrajectoryShape get_trajectory_shape(
   const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & ego_pose,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double lateral_margin,
-  const double longitudinal_margin)
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, double trim_length,
+  const double lateral_margin, const double longitudinal_margin)
 {
   const auto offset_pose =
     autoware_utils::calc_offset_pose(ego_pose, vehicle_info.max_longitudinal_offset_m, 0, 0);
   auto start_idx = motion_utils::findNearestSegmentIndex(trajectory_points, offset_pose.position);
   const auto forward_traj_points =
-    TrajectoryPoints(trajectory_points.begin() + start_idx, trajectory_points.end());
+    motion_utils::cropForwardPoints(trajectory_points, ego_pose.position, start_idx, trim_length);
 
   autoware_utils_geometry::LineString2d ls_front_right;
   autoware_utils_geometry::LineString2d ls_front_left;
@@ -290,18 +290,24 @@ void PointCloudFilter::filter_pointcloud_by_object(
 }
 
 void ObstacleTracker::update_objects(
-  const PredictedObjects & objects, PredictedObjects & persistent_objects)
+  const PredictedObjects & objects, PredictedObjects & persistent_objects, const rclcpp::Time & now)
 {
-  auto now = std::chrono::system_clock::now();
-  using Seconds = std::chrono::duration<double>;
+  for (auto it = persistent_objects_map_.begin(); it != persistent_objects_map_.end();) {
+    const auto idle_time = (now - it->second.last_seen_time).seconds();
+    const bool is_erase =
+      !it->second.is_active ? idle_time > grace_period_ : idle_time > off_time_buffer_;
+    if (is_erase)
+      it = persistent_objects_map_.erase(it);
+    else
+      it++;
+  }
 
-  constexpr double distance_threshold = 1.0;
-  constexpr double grace_period = 0.2;  // allow grace period for flickering objects
   auto closest_object_uuid =
     [&](const PredictedObject & object) -> std::optional<boost::uuids::uuid> {
     std::optional<boost::uuids::uuid> closest_uuid = std::nullopt;
     if (persistent_objects_map_.empty()) return std::nullopt;
     double min_distance = std::numeric_limits<double>::max();
+    double yaw_diff = std::numeric_limits<double>::max();
     for (const auto & [uuid, existing_object] : persistent_objects_map_) {
       if (
         existing_object.object.classification.front().label != object.classification.front().label)
@@ -312,9 +318,12 @@ void ObstacleTracker::update_objects(
       if (distance < min_distance) {
         min_distance = distance;
         closest_uuid = uuid;
+        yaw_diff = std::abs(autoware_utils_geometry::calc_yaw_deviation(
+          object.kinematics.initial_pose_with_covariance.pose,
+          existing_object.object.kinematics.initial_pose_with_covariance.pose));
       }
     }
-    if (closest_uuid && min_distance > distance_threshold) {
+    if (closest_uuid && (min_distance > object_distance_th_ || yaw_diff > object_yaw_th_)) {
       closest_uuid = std::nullopt;
     }
     return closest_uuid;
@@ -329,34 +338,30 @@ void ObstacleTracker::update_objects(
     auto & closest_object = persistent_objects_map_.at(closest_uuid.value());
     closest_object.last_seen_time = now;
     closest_object.object = object;
-    const auto duration = std::chrono::duration_cast<Seconds>(now - closest_object.first_seen_time);
-    closest_object.is_active = duration.count() >= on_time_buffer_;
+    const auto duration = (now - closest_object.first_seen_time).seconds();
+    closest_object.is_active = duration >= on_time_buffer_;
   }
 
-  for (auto it = persistent_objects_map_.begin(); it != persistent_objects_map_.end();) {
-    const auto idle_time =
-      std::chrono::duration_cast<Seconds>(now - it->second.last_seen_time).count();
-    const bool is_erase =
-      !it->second.is_active ? idle_time > grace_period : idle_time > off_time_buffer_;
-    if (is_erase) {
-      it = persistent_objects_map_.erase(it);
-    } else {
-      if (it->second.is_active) {
-        persistent_objects.objects.push_back(it->second.object);
-      }
-      it++;
+  for (const auto & [uuid, entry] : persistent_objects_map_) {
+    if (entry.is_active) {
+      persistent_objects.objects.push_back(entry.object);
     }
   }
 }
 
 void ObstacleTracker::update_points(
-  const PointCloud::Ptr & points, PointCloud::Ptr & persistent_points)
+  const PointCloud::Ptr & points, PointCloud::Ptr & persistent_points, const rclcpp::Time & now)
 {
-  auto now = std::chrono::system_clock::now();
-  using Seconds = std::chrono::duration<double>;
+  for (auto it = persistent_point_map_.begin(); it != persistent_point_map_.end();) {
+    const auto idle_time = (now - it->second.last_seen_time).seconds();
+    const bool is_erase =
+      !it->second.is_active ? idle_time > grace_period_ : idle_time > off_time_buffer_;
+    if (is_erase)
+      it = persistent_point_map_.erase(it);
+    else
+      it++;
+  }
 
-  constexpr double distance_threshold = 0.5;
-  constexpr double grace_period = 0.2;  // allow grace period for flickering points
   auto closest_point_uuid =
     [&](const geometry_msgs::msg::Point & point) -> std::optional<boost::uuids::uuid> {
     std::optional<boost::uuids::uuid> closest_uuid = std::nullopt;
@@ -369,7 +374,7 @@ void ObstacleTracker::update_points(
         closest_uuid = uuid;
       }
     }
-    if (closest_uuid && min_distance > distance_threshold) {
+    if (closest_uuid && min_distance > pcd_distance_th_) {
       closest_uuid = std::nullopt;
     }
     return closest_uuid;
@@ -385,23 +390,13 @@ void ObstacleTracker::update_points(
     auto & closest_point = persistent_point_map_.at(closest_uuid.value());
     closest_point.last_seen_time = now;
     closest_point.position = point_msg;
-    const auto duration = std::chrono::duration_cast<Seconds>(now - closest_point.first_seen_time);
-    closest_point.is_active = duration.count() >= on_time_buffer_;
+    const auto duration = (now - closest_point.first_seen_time).seconds();
+    closest_point.is_active = duration >= on_time_buffer_;
   }
 
-  for (auto it = persistent_point_map_.begin(); it != persistent_point_map_.end();) {
-    const auto idle_time =
-      std::chrono::duration_cast<Seconds>(now - it->second.last_seen_time).count();
-    const bool is_erase =
-      !it->second.is_active ? idle_time > grace_period : idle_time > off_time_buffer_;
-    if (is_erase) {
-      it = persistent_point_map_.erase(it);
-    } else {
-      if (it->second.is_active) {
-        persistent_points->points.emplace_back(
-          it->second.position.x, it->second.position.y, it->second.position.z);
-      }
-      it++;
+  for (const auto & [uuid, entry] : persistent_point_map_) {
+    if (entry.is_active) {
+      persistent_points->points.emplace_back(entry.position.x, entry.position.y, entry.position.z);
     }
   }
 }

@@ -120,20 +120,50 @@ trajectory_modifier_params:
       validation:
         gt_eq<>: [0.0]
       read_only: false
-    on_time_buffer:
-      type: double
-      default_value: 0.5
-      description: Continuous detection duration to consider object/pointcloud to be persistent [s]
-      validation:
-        gt_eq<>: [0.0]
-      read_only: false
-    off_time_buffer:
-      type: double
-      default_value: 1.0
-      description: Continuous non-detection duration to consider object/pointcloud as not persistent [s]
-      validation:
-        gt_eq<>: [0.0]
-      read_only: false
+
+    obstacle_tracking:
+      on_time_buffer:
+        type: double
+        default_value: 0.5
+        description: Continuous detection duration to consider object/pointcloud to be persistent [s]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      off_time_buffer:
+        type: double
+        default_value: 1.0
+        description: Continuous non-detection duration to consider object/pointcloud as not persistent [s]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      object_distance_th:
+        type: double
+        default_value: 1.0
+        description: Distance threshold for object tracking [m]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      object_yaw_th:
+        type: double
+        default_value: 0.1745
+        description: Yaw threshold for object tracking [rad]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      pcd_distance_th:
+        type: double
+        default_value: 0.5
+        description: Distance threshold for pointcloud tracking [m]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      grace_period:
+        type: double
+        default_value: 0.2
+        description: Grace period for object tracking [s]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
 
     objects:
       object_types:

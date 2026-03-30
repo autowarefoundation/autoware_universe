@@ -49,12 +49,8 @@ public:
   [[nodiscard]] bool is_trajectory_modification_required(
     const TrajectoryPoints & traj_points) override;
 
-  void update_params(const TrajectoryModifierParams & params) override
-  {
-    params_ = params.obstacle_stop;
-    enabled_ = params.use_obstacle_stop;
-    trajectory_time_step_ = params.trajectory_time_step;
-  }
+  void update_params(const TrajectoryModifierParams & params) override;
+
   const TrajectoryModifierParams::ObstacleStop & get_params() const { return params_; }
 
   void publish_debug_data([[maybe_unused]] const std::string & ns) const override;
@@ -79,6 +75,7 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
 
+  void check_obstacles(const TrajectoryPoints & traj_points);
   std::optional<CollisionPoint> check_predicted_objects(const TrajectoryPoints & traj_points);
   std::optional<CollisionPoint> check_pointcloud(const TrajectoryPoints & traj_points);
 

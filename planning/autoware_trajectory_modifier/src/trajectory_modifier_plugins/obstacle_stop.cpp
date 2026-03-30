@@ -68,14 +68,42 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
   enabled_ = params.use_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
 
-  pointcloud_filter_ = std::make_unique<utils::obstacle_stop::PointCloudFilter>(
-    params_.pointcloud.voxel_grid_filter.x, params_.pointcloud.voxel_grid_filter.y,
-    params_.pointcloud.voxel_grid_filter.z, params_.pointcloud.voxel_grid_filter.min_size,
-    params_.pointcloud.clustering.tolerance, params_.pointcloud.clustering.min_size,
-    params_.pointcloud.clustering.max_size);
+  {
+    const auto & p = params_.pointcloud;
+    pointcloud_filter_ = std::make_unique<utils::obstacle_stop::PointCloudFilter>(
+      p.voxel_grid_filter.x, p.voxel_grid_filter.y, p.voxel_grid_filter.z,
+      p.voxel_grid_filter.min_size, p.clustering.tolerance, p.clustering.min_size,
+      p.clustering.max_size);
+  }
 
-  obstacle_tracker_ = std::make_unique<utils::obstacle_stop::ObstacleTracker>(
-    params_.on_time_buffer, params_.off_time_buffer);
+  {
+    const auto & p = params_.obstacle_tracking;
+    obstacle_tracker_ = std::make_unique<utils::obstacle_stop::ObstacleTracker>(
+      p.on_time_buffer, p.off_time_buffer, p.object_distance_th, p.object_yaw_th, p.pcd_distance_th,
+      p.grace_period);
+  }
+}
+
+void ObstacleStop::update_params(const TrajectoryModifierParams & params)
+{
+  params_ = params.obstacle_stop;
+  enabled_ = params.use_obstacle_stop;
+  trajectory_time_step_ = params.trajectory_time_step;
+
+  {
+    const auto & p = params_.pointcloud;
+    pointcloud_filter_->set_params(
+      p.voxel_grid_filter.x, p.voxel_grid_filter.y, p.voxel_grid_filter.z,
+      p.voxel_grid_filter.min_size, p.clustering.tolerance, p.clustering.min_size,
+      p.clustering.max_size);
+  }
+
+  {
+    const auto & p = params_.obstacle_tracking;
+    obstacle_tracker_->set_params(
+      p.on_time_buffer, p.off_time_buffer, p.object_distance_th, p.object_yaw_th, p.pcd_distance_th,
+      p.grace_period);
+  }
 }
 
 bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & traj_points)
@@ -85,51 +113,26 @@ bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & 
   {
     autoware_utils_debug::ScopedTimeTrack st(
       "ObstacleStop::get_trajectory_shape", *get_time_keeper());
+
+    auto nominal_stop_dist = std::invoke([&]() -> double {
+      auto nominal_stopping_distance = motion_utils::calculate_stop_distance(
+        data_->current_odometry->twist.twist.linear.x,
+        data_->current_acceleration->accel.accel.linear.x, params_.nominal_stopping_decel,
+        params_.stopping_jerk, 0.0);
+      if (nominal_stopping_distance) {
+        constexpr double buffer_length = 1.0;
+        const auto margin = params_.stop_margin + buffer_length;
+        return nominal_stopping_distance.value() + margin;
+      }
+      return std::numeric_limits<double>::max();
+    });
+
     debug_data_.trajectory_shape = get_trajectory_shape(
-      traj_points, data_->current_odometry->pose.pose, data_->vehicle_info, params_.lateral_margin);
-  }
-  const auto collision_point_objects = check_predicted_objects(traj_points);
-  const auto collision_point_pcd = check_pointcloud(traj_points);
-
-  if (collision_point_objects) {
-    RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
-      "[TM ObstacleStop] Detected collision with object at arc length %f m",
-      collision_point_objects->arc_length);
-    if (debug_data_.colliding_object) {
-      SafetyFactor safety_factor;
-      safety_factor.object_id = debug_data_.colliding_object->object_id;
-      safety_factor.type = SafetyFactor::OBJECT;
-      safety_factor.points.emplace_back(
-        debug_data_.colliding_object->kinematics.initial_pose_with_covariance.pose.position);
-      safety_factor.is_safe = false;
-      safety_factors_.factors.push_back(safety_factor);
-    }
+      traj_points, data_->current_odometry->pose.pose, data_->vehicle_info, nominal_stop_dist,
+      params_.lateral_margin);
   }
 
-  if (collision_point_pcd) {
-    RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
-      "[TM ObstacleStop] Detected collision with pointcloud at arc length %f m",
-      collision_point_pcd->arc_length);
-    SafetyFactor safety_factor;
-    safety_factor.type = SafetyFactor::POINTCLOUD;
-    safety_factor.points.emplace_back(collision_point_pcd->point);
-    safety_factor.is_safe = false;
-    safety_factors_.factors.emplace_back(safety_factor);
-  }
-
-  nearest_collision_point_ = std::invoke([&]() -> std::optional<CollisionPoint> {
-    const auto is_collision_point_pcd = params_.enable_stop_for_pointcloud && collision_point_pcd;
-    const auto is_collision_point_objects =
-      params_.enable_stop_for_objects && collision_point_objects;
-    if (!is_collision_point_pcd && !is_collision_point_objects) return std::nullopt;
-    if (!is_collision_point_pcd) return collision_point_objects.value();
-    if (!is_collision_point_objects) return collision_point_pcd.value();
-    return collision_point_pcd->arc_length < collision_point_objects->arc_length
-             ? collision_point_pcd.value()
-             : collision_point_objects.value();
-  });
+  check_obstacles(traj_points);
 
   debug_data_.active_collision_point =
     nearest_collision_point_ ? nearest_collision_point_->point : geometry_msgs::msg::Point();
@@ -151,9 +154,16 @@ bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points)
 bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::set_stop_point", *get_time_keeper());
-  const auto stop_margin = params_.stop_margin + data_->vehicle_info.max_longitudinal_offset_m;
-  const auto target_stop_point_arc_length =
-    std::max(nearest_collision_point_->arc_length - stop_margin, 0.0);
+  const auto target_stop_point_arc_length = std::invoke([&]() -> double {
+    const auto stop_margin = params_.stop_margin + data_->vehicle_info.max_longitudinal_offset_m;
+    auto min_stopping_distance = motion_utils::calculate_stop_distance(
+      data_->current_odometry->twist.twist.linear.x,
+      data_->current_acceleration->accel.accel.linear.x, params_.maximum_stopping_decel,
+      params_.stopping_jerk, 0.0);
+    if (!min_stopping_distance) min_stopping_distance = 0.0;
+    return std::max<double>(
+      nearest_collision_point_->arc_length - stop_margin, min_stopping_distance.value());
+  });
 
   auto skip = [&](const std::string & msg) {
     RCLCPP_WARN_THROTTLE(
@@ -314,6 +324,58 @@ bool ObstacleStop::apply_stopping(
   return true;
 }
 
+void ObstacleStop::check_obstacles(const TrajectoryPoints & traj_points)
+{
+  autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::check_obstacles", *get_time_keeper());
+  const auto collision_point_objects = check_predicted_objects(traj_points);
+  const auto collision_point_pcd = check_pointcloud(traj_points);
+
+  auto get_safety_factor = [&](
+                             const geometry_msgs::msg::Point & point,
+                             const SafetyFactor::_type_type type) -> SafetyFactor {
+    SafetyFactor safety_factor;
+    safety_factor.type = type;
+    safety_factor.points.emplace_back(point);
+    safety_factor.is_safe = false;
+    return safety_factor;
+  };
+
+  if (collision_point_objects) {
+    RCLCPP_WARN_THROTTLE(
+      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      "[TM ObstacleStop] Detected collision with object at arc length %f m",
+      collision_point_objects->arc_length);
+    if (debug_data_.colliding_object) {
+      auto safety_factor = get_safety_factor(
+        debug_data_.colliding_object->kinematics.initial_pose_with_covariance.pose.position,
+        SafetyFactor::OBJECT);
+      safety_factor.object_id = debug_data_.colliding_object->object_id;
+      safety_factors_.factors.push_back(safety_factor);
+    }
+  }
+
+  if (collision_point_pcd) {
+    RCLCPP_WARN_THROTTLE(
+      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      "[TM ObstacleStop] Detected collision with pointcloud at arc length %f m",
+      collision_point_pcd->arc_length);
+    auto safety_factor = get_safety_factor(collision_point_pcd->point, SafetyFactor::POINTCLOUD);
+    safety_factors_.factors.push_back(safety_factor);
+  }
+
+  nearest_collision_point_ = std::invoke([&]() -> std::optional<CollisionPoint> {
+    const auto is_collision_point_pcd = params_.enable_stop_for_pointcloud && collision_point_pcd;
+    const auto is_collision_point_objects =
+      params_.enable_stop_for_objects && collision_point_objects;
+    if (!is_collision_point_pcd && !is_collision_point_objects) return std::nullopt;
+    if (!is_collision_point_pcd) return collision_point_objects.value();
+    if (!is_collision_point_objects) return collision_point_pcd.value();
+    return collision_point_pcd->arc_length < collision_point_objects->arc_length
+             ? collision_point_pcd.value()
+             : collision_point_objects.value();
+  });
+}
+
 std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
   const TrajectoryPoints & traj_points)
 {
@@ -328,7 +390,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
   filter_objects_by_velocity(predicted_objects, params_.objects.max_velocity_th);
 
   PredictedObjects active_objects;
-  obstacle_tracker_->update_objects(predicted_objects, active_objects);
+  obstacle_tracker_->update_objects(predicted_objects, active_objects, get_clock()->now());
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
   auto collision_point = get_nearest_object_collision(
@@ -402,7 +464,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
   }
 
   PointCloud::Ptr active_points(new PointCloud);
-  obstacle_tracker_->update_points(clustered_points, active_points);
+  obstacle_tracker_->update_points(clustered_points, active_points, get_clock()->now());
 
   std::optional<CollisionPoint> collision_point;
   {

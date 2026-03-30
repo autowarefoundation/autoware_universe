@@ -25,8 +25,14 @@
       lateral_margin: 0.0     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
       duplicate_check_threshold: 1.0 # threshold to check if the stop point is already in the trajectory [m]
       arrived_distance_threshold: 0.5 # threshold to check if the ego vehicle has arrived at the stop point [m]
-      on_time_buffer: 0.5
-      off_time_buffer: 1.0
+
+      obstacle_tracking:
+        on_time_buffer: 0.5
+        off_time_buffer: 1.0
+        object_distance_th: 1.0 # [m]
+        object_yaw_th: 0.1745 # [rad] (10 degrees)
+        pcd_distance_th: 0.5 # [m]
+        grace_period: 0.2 # [s]
 
       objects:
         object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"] # object types to consider for obstacle stop

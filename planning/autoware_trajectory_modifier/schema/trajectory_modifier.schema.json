@@ -119,17 +119,48 @@
               "default": 0.5,
               "minimum": 0.0
             },
-            "on_time_buffer": {
-              "type": "number",
-              "description": "Continuous detection duration to consider object/pointcloud to be persistent [s]",
-              "default": 0.5,
-              "minimum": 0.0
-            },
-            "off_time_buffer": {
-              "type": "number",
-              "description": "Continuous non-detection duration to consider object/pointcloud as not persistent [s]",
-              "default": 1.0,
-              "minimum": 0.0
+            "obstacle_tracking": {
+              "type": "object",
+              "properties": {
+                "on_time_buffer": {
+                  "type": "number",
+                  "description": "Continuous detection duration to consider object/pointcloud to be persistent [s]",
+                  "default": 0.5,
+                  "minimum": 0.0
+                },
+                "off_time_buffer": {
+                  "type": "number",
+                  "description": "Continuous non-detection duration to consider object/pointcloud as not persistent [s]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                },
+                "object_distance_th": {
+                  "type": "number",
+                  "description": "Distance threshold for object tracking [m]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                },
+                "object_yaw_th": {
+                  "type": "number",
+                  "description": "Yaw threshold for object tracking [rad]",
+                  "default": 0.1745,
+                  "minimum": 0.0
+                },
+                "pcd_distance_th": {
+                  "type": "number",
+                  "description": "Distance threshold for pointcloud tracking [m]",
+                  "default": 0.5,
+                  "minimum": 0.0
+                },
+                "grace_period": {
+                  "type": "number",
+                  "description": "Grace period for object tracking [s]",
+                  "default": 0.2,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
             },
             "objects": {
               "type": "object",
