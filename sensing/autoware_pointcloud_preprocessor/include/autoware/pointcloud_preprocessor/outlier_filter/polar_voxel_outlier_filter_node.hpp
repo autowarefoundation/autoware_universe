@@ -18,8 +18,8 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/hysteresis_state_machine.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
-#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
