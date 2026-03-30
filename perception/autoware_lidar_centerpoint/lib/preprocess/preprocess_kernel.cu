@@ -39,6 +39,7 @@
 namespace
 {
 const std::size_t MAX_POINT_IN_VOXEL_SIZE = 32;  // CAUTION: must match max_point_in_voxel_size_ in config
+const std::size_t NUM_THREADS_IN_WARP = 32;  // CAUTION: NUM_THREADS_IN_WARP = MAX_POINT_IN_VOXEL_SIZE
 const std::size_t WARPS_PER_BLOCK = 4;
 
 const std::size_t POINT_DIM_XYZT = 4;   // X, Y, Z, Time_lag
@@ -232,11 +233,17 @@ __global__ void generateFeatures_kernel(
   // voxel_num_points (int): (max_voxel_size)
   // coords (int): (max_voxel_size, point_dim_size)
   int point_idx = threadIdx.x % MAX_POINT_IN_VOXEL_SIZE;
+  int thread_in_warp = point_idx;
+  // 1 warp processes 1 pillar (= voxel).
   int pillar_idx_inBlock = threadIdx.x / MAX_POINT_IN_VOXEL_SIZE;  // max_point_in_voxel_size
   int pillar_idx = blockIdx.x * WARPS_PER_BLOCK + pillar_idx_inBlock;
+  // int pillar_idx_org = pillar_idx;
+  // int max_pillar_idx = blockIdx.x * WARPS_PER_BLOCK 
 
   unsigned int num_pillars = num_voxels[0];
+
   if (pillar_idx >= num_pillars) {
+    // The warp that this thread belongs to does not have any pillar to process.
     return;
   }
 
@@ -258,6 +265,7 @@ __global__ void generateFeatures_kernel(
     pillarSumSM[threadIdx.x] = {0, 0, 0};
   }
 
+#if 0
 #pragma unroll
   for (int i = 0; i < point_dim; i++) {
     int pillarSMId = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim +
@@ -267,6 +275,24 @@ __global__ void generateFeatures_kernel(
     ((float *)pillarSM)[pillarSMId] = ((float *)voxel_features)[voxel_feature_id];
   }
   // Make it sure that all data are initialized.
+#else  // 0
+  // Each thread reads values from the global memory ignoring the meaning into the shared memory.
+  // This pattern allows coalesced access.
+  // const int THREADS_IN_WARP = 32;
+  const int block_offset =
+        pillar_idx * MAX_POINT_IN_VOXEL_SIZE * point_dim;
+//      (blockIdx.x * WARPS_PER_BLOCK * THREADS_IN_WARP * MAX_POINT_IN_VOXEL_SIZE * point_dim);  // This can be const;
+  const int pillar_offset = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim;
+#pragma unroll
+  for (int i = 0; i < point_dim; i++) {
+    int thread_offset = NUM_THREADS_IN_WARP * i + thread_in_warp;
+    int dst_point = thread_offset / point_dim;
+    int dst_dim = thread_offset % point_dim;
+    int dst_index = dst_dim * NUM_THREADS_IN_WARP + dst_point;
+    int src_index = i * MAX_POINT_IN_VOXEL_SIZE + thread_in_warp;
+    ((float *)pillarSM)[pillar_offset + dst_index] = ((float *)voxel_features)[block_offset + src_index];
+  }
+#endif  // 0
   __syncthreads();
 
   // calculate sm in a pillar
