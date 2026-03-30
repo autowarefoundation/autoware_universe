@@ -108,30 +108,81 @@ Path generateCandidate(
 void calculateCartesian(
   const autoware::sampler_common::transform::Spline2D & reference, Path & path)
 {
-  if (!path.frenet_points.empty()) {
-    path.points.reserve(path.frenet_points.size());
-    path.yaws.reserve(path.frenet_points.size());
-    path.lengths.reserve(path.frenet_points.size());
-    path.curvatures.reserve(path.frenet_points.size());
-    path.poses.reserve(path.frenet_points.size());
-    // Calculate cartesian positions
-    for (const auto & fp : path.frenet_points) {
-      path.points.push_back(reference.cartesian(fp));
-    }
-    // TODO(Maxime CLEMENT): more precise calculations are proposed in Appendix I of the paper:
-    // Optimal path Generation for Dynamic Street Scenarios in a Frenet Frame (Werling2010)
-    // Calculate cartesian yaw and interval values
-    path.lengths.push_back(0.0);
-    for (auto it = path.points.begin(); it != std::prev(path.points.end()); ++it) {
-      const auto dx = std::next(it)->x() - it->x();
-      const auto dy = std::next(it)->y() - it->y();
-      const auto yaw = std::atan2(dy, dx);
-      path.yaws.push_back(yaw);
-      path.lengths.push_back(path.lengths.back() + std::hypot(dx, dy));
+  if (path.frenet_points.empty()) return;
+
+  const auto n = path.frenet_points.size();
+  path.points.reserve(n);
+  path.yaws.reserve(n);
+  path.lengths.reserve(n);
+  path.curvatures.reserve(n);
+  path.poses.reserve(n);
+
+  // Calculate cartesian positions
+  for (const auto & fp : path.frenet_points) {
+    path.points.push_back(reference.cartesian(fp));
+  }
+
+  // Calculate arc lengths from cartesian points
+  path.lengths.push_back(0.0);
+  for (size_t i = 0; i + 1 < n; ++i) {
+    const auto dx = path.points[i + 1].x() - path.points[i].x();
+    const auto dy = path.points[i + 1].y() - path.points[i].y();
+    path.lengths.push_back(path.lengths.back() + std::hypot(dx, dy));
+  }
+
+  if (path.lateral_polynomial.has_value()) {
+    // Werling 2010 Appendix I: analytical yaw and curvature from lateral polynomial d(s)
+    const double s0 = path.frenet_points.front().s;
+    for (size_t i = 0; i < n; ++i) {
+      const auto & fp = path.frenet_points[i];
+      const double s_local = fp.s - s0;
+
+      // Reference path properties
+      const double theta_r = reference.yaw(fp.s);
+      const double kappa_r = reference.curvature(fp.s);
+      const double kappa_r_deriv = reference.curvatureDerivative(fp.s);
+
+      // Lateral polynomial derivatives
+      const double d_val = path.lateral_polynomial->position(s_local);
+      const double d_prim = path.lateral_polynomial->velocity(s_local);
+      const double d_bis = path.lateral_polynomial->acceleration(s_local);
+
+      // Heading: θ = θ_r + arctan(d' / (1 - κ_r · d))
+      const double one_minus_krd = std::max(std::abs(1.0 - kappa_r * d_val), 1e-6) *
+                                   ((1.0 - kappa_r * d_val) >= 0.0 ? 1.0 : -1.0);
+      const double delta_theta = std::atan2(d_prim, one_minus_krd);
+      const double theta = theta_r + delta_theta;
+
+      // Curvature (Werling 2010 eq. from Appendix I)
+      const double cos_dtheta = std::cos(delta_theta);
+      const double tan_dtheta = std::tan(delta_theta);
+      const double kappa =
+        ((d_bis + (kappa_r_deriv * d_val + kappa_r * d_prim) * tan_dtheta) * cos_dtheta *
+           cos_dtheta / one_minus_krd +
+         kappa_r) *
+        cos_dtheta / one_minus_krd;
+
+      path.yaws.push_back(theta);
+      path.curvatures.push_back(kappa);
 
       geometry_msgs::msg::Pose pose;
-      pose.position.x = it->x();
-      pose.position.y = it->y();
+      pose.position.x = path.points[i].x();
+      pose.position.y = path.points[i].y();
+      pose.position.z = 0.0;
+      pose.orientation = autoware_utils::create_quaternion_from_rpy(0.0, 0.0, theta);
+      path.poses.push_back(pose);
+    }
+  } else {
+    // Fallback: finite-difference yaw and curvature (for Bezier or reused paths)
+    for (size_t i = 0; i + 1 < n; ++i) {
+      const auto dx = path.points[i + 1].x() - path.points[i].x();
+      const auto dy = path.points[i + 1].y() - path.points[i].y();
+      const auto yaw = std::atan2(dy, dx);
+      path.yaws.push_back(yaw);
+
+      geometry_msgs::msg::Pose pose;
+      pose.position.x = path.points[i].x();
+      pose.position.y = path.points[i].y();
       pose.position.z = 0.0;
       pose.orientation = autoware_utils::create_quaternion_from_rpy(0.0, 0.0, yaw);
       path.poses.push_back(pose);
@@ -139,11 +190,11 @@ void calculateCartesian(
     path.yaws.push_back(path.yaws.back());
     path.poses.push_back(path.poses.back());
 
-    // Calculate curvatures
     for (size_t i = 1; i < path.yaws.size(); ++i) {
       const auto dyaw =
         autoware::common::helper_functions::wrap_angle(path.yaws[i] - path.yaws[i - 1]);
-      path.curvatures.push_back(dyaw / (path.lengths[i] - path.lengths[i - 1]));
+      const auto dl = path.lengths[i] - path.lengths[i - 1];
+      path.curvatures.push_back(dl > 1e-10 ? dyaw / dl : 0.0);
     }
     path.curvatures.push_back(path.curvatures.back());
   }
@@ -151,36 +202,107 @@ void calculateCartesian(
 void calculateCartesian(
   const autoware::sampler_common::transform::Spline2D & reference, Trajectory & trajectory)
 {
-  if (!trajectory.frenet_points.empty()) {
-    trajectory.points.reserve(trajectory.frenet_points.size());
-    // Calculate cartesian positions
-    for (const auto & fp : trajectory.frenet_points)
-      trajectory.points.push_back(reference.cartesian(fp));
-    calculateLengthsAndYaws(trajectory);
-    std::vector<double> d_yaws;
-    d_yaws.reserve(trajectory.yaws.size());
-    for (size_t i = 0; i + 1 < trajectory.yaws.size(); ++i)
-      d_yaws.push_back(
-        autoware::common::helper_functions::wrap_angle(
-          trajectory.yaws[i + 1] - trajectory.yaws[i]));
-    d_yaws.push_back(0.0);
-    // Calculate curvatures
-    for (size_t i = 1; i < trajectory.yaws.size(); ++i) {
-      const auto curvature = trajectory.lengths[i] == trajectory.lengths[i - 1]
-                               ? 0.0
-                               : d_yaws[i] / (trajectory.lengths[i] - trajectory.lengths[i - 1]);
-      trajectory.curvatures.push_back(curvature);
+  if (trajectory.frenet_points.empty()) return;
+
+  const auto n = trajectory.frenet_points.size();
+  trajectory.points.reserve(n);
+
+  // Calculate cartesian positions
+  for (const auto & fp : trajectory.frenet_points)
+    trajectory.points.push_back(reference.cartesian(fp));
+
+  // Calculate arc lengths
+  trajectory.lengths.push_back(0.0);
+  for (size_t i = 0; i + 1 < n; ++i) {
+    const auto dx = trajectory.points[i + 1].x() - trajectory.points[i].x();
+    const auto dy = trajectory.points[i + 1].y() - trajectory.points[i].y();
+    trajectory.lengths.push_back(trajectory.lengths.back() + std::hypot(dx, dy));
+  }
+
+  const bool has_polynomials =
+    trajectory.lateral_polynomial.has_value() && trajectory.longitudinal_polynomial.has_value();
+
+  if (has_polynomials) {
+    // Werling 2010 Appendix I: analytical yaw and curvature
+    // Trajectory uses d(t) and s(t), so we convert derivatives to d-w.r.t.-s via chain rule:
+    //   d'(s) = (dd/dt) / (ds/dt)
+    //   d''(s) = ((d²d/dt²)(ds/dt) - (dd/dt)(d²s/dt²)) / (ds/dt)³
+    trajectory.yaws.reserve(n);
+    trajectory.curvatures.reserve(n);
+
+    for (size_t i = 0; i < n; ++i) {
+      const auto & fp = trajectory.frenet_points[i];
+      const double time = trajectory.times[i];
+
+      // Reference path properties at this s
+      const double theta_r = reference.yaw(fp.s);
+      const double kappa_r = reference.curvature(fp.s);
+      const double kappa_r_deriv = reference.curvatureDerivative(fp.s);
+
+      // Time-domain polynomial derivatives
+      const double d_val = fp.d;
+      const double dd_dt = trajectory.lateral_polynomial->velocity(time);
+      const double d2d_dt2 = trajectory.lateral_polynomial->acceleration(time);
+      const double ds_dt = trajectory.longitudinal_polynomial->velocity(time);
+      const double d2s_dt2 = trajectory.longitudinal_polynomial->acceleration(time);
+
+      // Convert to s-domain derivatives via chain rule
+      const double ds_dt_safe = std::abs(ds_dt) > 1e-6 ? ds_dt : (ds_dt >= 0 ? 1e-6 : -1e-6);
+      const double d_prim = dd_dt / ds_dt_safe;
+      const double d_bis =
+        (d2d_dt2 * ds_dt_safe - dd_dt * d2s_dt2) / (ds_dt_safe * ds_dt_safe * ds_dt_safe);
+
+      // Heading: θ = θ_r + arctan(d' / (1 - κ_r · d))
+      const double one_minus_krd_raw = 1.0 - kappa_r * d_val;
+      const double one_minus_krd =
+        std::max(std::abs(one_minus_krd_raw), 1e-6) * (one_minus_krd_raw >= 0.0 ? 1.0 : -1.0);
+      const double delta_theta = std::atan2(d_prim, one_minus_krd);
+      const double theta = theta_r + delta_theta;
+
+      // Curvature (Werling 2010 Appendix I)
+      const double cos_dtheta = std::cos(delta_theta);
+      const double tan_dtheta = std::tan(delta_theta);
+      const double kappa =
+        ((d_bis + (kappa_r_deriv * d_val + kappa_r * d_prim) * tan_dtheta) * cos_dtheta *
+           cos_dtheta / one_minus_krd +
+         kappa_r) *
+        cos_dtheta / one_minus_krd;
+
+      trajectory.yaws.push_back(theta);
+      trajectory.curvatures.push_back(kappa);
     }
-    const auto last_curvature = trajectory.curvatures.empty() ? 0.0 : trajectory.curvatures.back();
+  } else {
+    // Fallback: finite-difference yaw and curvature
+    for (size_t i = 0; i + 1 < n; ++i) {
+      const auto dx = trajectory.points[i + 1].x() - trajectory.points[i].x();
+      const auto dy = trajectory.points[i + 1].y() - trajectory.points[i].y();
+      trajectory.yaws.push_back(std::atan2(dy, dx));
+    }
+    if (!trajectory.yaws.empty()) trajectory.yaws.push_back(trajectory.yaws.back());
+
+    for (size_t i = 1; i < trajectory.yaws.size(); ++i) {
+      const auto dyaw =
+        autoware::common::helper_functions::wrap_angle(trajectory.yaws[i] - trajectory.yaws[i - 1]);
+      const auto dl = trajectory.lengths[i] - trajectory.lengths[i - 1];
+      trajectory.curvatures.push_back(dl > 1e-10 ? dyaw / dl : 0.0);
+    }
+    const auto last_curvature =
+      trajectory.curvatures.empty() ? 0.0 : trajectory.curvatures.back();
     trajectory.curvatures.push_back(last_curvature);
-    // Calculate velocities, accelerations, jerk
+  }
+
+  // Calculate velocities, accelerations, jerk
+  if (has_polynomials) {
     for (size_t i = 0; i < trajectory.times.size(); ++i) {
       const auto time = trajectory.times[i];
       const auto s_vel = trajectory.longitudinal_polynomial->velocity(time);
       const auto s_acc = trajectory.longitudinal_polynomial->acceleration(time);
       const auto d_vel = trajectory.lateral_polynomial->velocity(time);
       const auto d_acc = trajectory.lateral_polynomial->acceleration(time);
-      Eigen::Rotation2D rotation(d_yaws[i]);
+      // Use the analytical delta_theta for rotation instead of finite-difference d_yaws
+      const double theta_r = reference.yaw(trajectory.frenet_points[i].s);
+      const double delta_theta = trajectory.yaws[i] - theta_r;
+      Eigen::Rotation2D rotation(delta_theta);
       Eigen::Vector2d vel_vector{s_vel, d_vel};
       Eigen::Vector2d acc_vector{s_acc, d_acc};
       const auto vel = rotation * vel_vector;
@@ -190,20 +312,22 @@ void calculateCartesian(
       trajectory.longitudinal_accelerations.push_back(acc.x());
       trajectory.lateral_accelerations.push_back(acc.y());
       trajectory.jerks.push_back(
-        trajectory.longitudinal_polynomial->jerk(time) + trajectory.lateral_polynomial->jerk(time));
+        trajectory.longitudinal_polynomial->jerk(time) +
+        trajectory.lateral_polynomial->jerk(time));
     }
-    if (trajectory.longitudinal_accelerations.empty()) {
-      trajectory.longitudinal_accelerations.push_back(0.0);
-      trajectory.lateral_accelerations.push_back(0.0);
-    }
-    for (auto i = 0UL; i < trajectory.points.size(); ++i) {
-      geometry_msgs::msg::Pose pose;
-      pose.position.x = trajectory.points[i].x();
-      pose.position.y = trajectory.points[i].y();
-      pose.position.z = 0.0;
-      pose.orientation = autoware_utils::create_quaternion_from_rpy(0.0, 0.0, trajectory.yaws[i]);
-      trajectory.poses.push_back(pose);
-    }
+  }
+  if (trajectory.longitudinal_accelerations.empty()) {
+    trajectory.longitudinal_accelerations.push_back(0.0);
+    trajectory.lateral_accelerations.push_back(0.0);
+  }
+
+  for (size_t i = 0; i < trajectory.points.size(); ++i) {
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = trajectory.points[i].x();
+    pose.position.y = trajectory.points[i].y();
+    pose.position.z = 0.0;
+    pose.orientation = autoware_utils::create_quaternion_from_rpy(0.0, 0.0, trajectory.yaws[i]);
+    trajectory.poses.push_back(pose);
   }
 }
 

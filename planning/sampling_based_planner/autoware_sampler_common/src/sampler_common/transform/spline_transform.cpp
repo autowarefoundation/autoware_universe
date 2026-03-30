@@ -306,6 +306,16 @@ double Spline2D::curvature(const double s) const
   return (y_acc * x_vel - x_acc * y_vel) / std::pow(x_vel * x_vel + y_vel * y_vel, 3.0 / 2.0);
 }
 
+double Spline2D::curvatureDerivative(const double s) const
+{
+  constexpr double ds = 0.01;
+  const double s_lo = std::max(s - ds, firstS());
+  const double s_hi = std::min(s + ds, lastS());
+  const double denom = s_hi - s_lo;
+  if (denom < 1e-10) return 0.0;
+  return (curvature(s_hi) - curvature(s_lo)) / denom;
+}
+
 double Spline2D::yaw(const double s) const
 {
   const double x_vel = x_spline_.velocity(s, s_);

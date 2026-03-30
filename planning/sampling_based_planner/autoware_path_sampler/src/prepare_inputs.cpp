@@ -20,11 +20,10 @@
 #include "autoware_sampler_common/transform/spline_transform.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
-#include <eigen3/unsupported/Eigen/Splines>
-
 #include <boost/geometry/geometry.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <list>
 #include <memory>
@@ -116,29 +115,25 @@ autoware::sampler_common::transform::Spline2D preparePathSpline(
   std::vector<double> x;
   std::vector<double> y;
   if (smooth_path) {
-    // TODO(Maxime CLEMENT): this version using Eigen::Spline is unreliable and sometimes crashes
-    constexpr auto spline_dim = 3;
-    Eigen::MatrixXd control_points(path.size(), 2);
-    for (auto i = 0lu; i < path.size(); ++i) {
-      const auto & point = path[i];
-      control_points(i, 0) = point.pose.position.x;
-      control_points(i, 1) = point.pose.position.y;
+    // Build a temporary Spline2D from the raw points, then resample at uniform arc-length
+    // intervals. This replaces the unstable Eigen::Spline implementation with the project's
+    // own cubic spline, producing evenly-spaced smooth points.
+    std::vector<double> raw_x;
+    std::vector<double> raw_y;
+    raw_x.reserve(path.size());
+    raw_y.reserve(path.size());
+    for (const auto & point : path) {
+      raw_x.push_back(point.pose.position.x);
+      raw_y.push_back(point.pose.position.y);
     }
-    control_points.transposeInPlace();
-    const auto nb_knots = path.size() + spline_dim + 3;
-    Eigen::RowVectorXd knots(nb_knots);
-    constexpr auto repeat_end_knots = 3lu;
-    const auto knot_step = 1.0 / static_cast<double>(nb_knots - 2 * repeat_end_knots);
-    auto i = 0lu;
-    for (; i < repeat_end_knots; ++i) knots[i] = 0.0;
-    for (; i < nb_knots - repeat_end_knots; ++i) knots[i] = knots[i - 1] + knot_step;
-    for (; i < nb_knots; ++i) knots[i] = 1.0;
-    const auto spline = Eigen::Spline<double, 2, spline_dim>(knots, control_points);
-    x.reserve(path.size());
-    y.reserve(path.size());
-    const auto t_step = 1 / static_cast<double>(path.size());
-    for (auto t = 0.0; t < 1.0; t += t_step) {
-      const auto p = spline(t);
+    const autoware::sampler_common::transform::Spline2D raw_spline(raw_x, raw_y);
+    const double total_length = raw_spline.lastS();
+    const auto num_points = path.size();
+    x.reserve(num_points);
+    y.reserve(num_points);
+    for (size_t i = 0; i < num_points; ++i) {
+      const double s = total_length * static_cast<double>(i) / static_cast<double>(num_points - 1);
+      const auto p = raw_spline.cartesian(s);
       x.push_back(p.x());
       y.push_back(p.y());
     }

@@ -355,8 +355,10 @@ struct Constraints
     double max_curvature;
     double min_dist_from_obstacles;
     bool limit_footprint_inside_drivable_area;
+    double drivable_area_footprint_margin{0.0};  // [m] shrink footprint for drivable area check
   } hard{};
   LinearRing2d ego_footprint;
+  LinearRing2d drivable_area_ego_footprint;  // shrunken footprint for drivable area check
   double ego_width;
   double ego_length;
   MultiPolygon2d obstacle_polygons;

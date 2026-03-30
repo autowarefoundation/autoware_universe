@@ -33,21 +33,26 @@ namespace
 const auto to_eigen = [](const Point2d & p) { return Eigen::Vector2d(p.x(), p.y()); };
 }  // namespace
 
-MultiPoint2d buildFootprintPoints(const Path & path, const Constraints & constraints)
+MultiPoint2d buildFootprintPoints(
+  const Path & path, const LinearRing2d & footprint_shape)
 {
   MultiPoint2d footprint;
-
   footprint.reserve(path.points.size() * 4);
   for (auto i = 0UL; i < path.points.size(); ++i) {
     const Eigen::Vector2d p = to_eigen(path.points[i]);
     const double heading = path.yaws[i];
     Eigen::Matrix2d rotation;
     rotation << std::cos(heading), -std::sin(heading), std::sin(heading), std::cos(heading);
-    for (const auto & fp : constraints.ego_footprint) {
+    for (const auto & fp : footprint_shape) {
       const Eigen::Vector2d fp_point = p + rotation * fp;
       footprint.emplace_back(fp_point.x(), fp_point.y());
     }
   }
   return footprint;
+}
+
+MultiPoint2d buildFootprintPoints(const Path & path, const Constraints & constraints)
+{
+  return buildFootprintPoints(path, constraints.ego_footprint);
 }
 }  // namespace autoware::sampler_common::constraints

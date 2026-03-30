@@ -87,6 +87,8 @@ PathSampler::PathSampler(const rclcpp::NodeOptions & node_options)
       declare_parameter<double>("constraints.hard.min_distance_from_obstacles");
     params_.constraints.hard.limit_footprint_inside_drivable_area =
       declare_parameter<bool>("constraints.hard.limit_footprint_inside_drivable_area");
+    params_.constraints.hard.drivable_area_footprint_margin =
+      declare_parameter<double>("constraints.hard.drivable_area_footprint_margin");
     params_.constraints.soft.lateral_deviation_weight =
       declare_parameter<double>("constraints.soft.lateral_deviation_weight");
     params_.constraints.soft.length_weight =
@@ -127,6 +129,19 @@ PathSampler::PathSampler(const rclcpp::NodeOptions & node_options)
     params_.constraints.ego_footprint = vehicle_info_.createFootprint();
     params_.constraints.ego_width = vehicle_info_.vehicle_width_m;
     params_.constraints.ego_length = vehicle_info_.vehicle_length_m;
+
+    // Build shrunken footprint for drivable area check
+    const double da_margin = params_.constraints.hard.drivable_area_footprint_margin;
+    if (da_margin > 0.0 && !params_.constraints.ego_footprint.empty()) {
+      params_.constraints.drivable_area_ego_footprint = params_.constraints.ego_footprint;
+      for (auto & p : params_.constraints.drivable_area_ego_footprint) {
+        const double px = p.x();
+        const double py = p.y();
+        p = autoware_utils::Point2d(
+          px > 0 ? std::max(0.0, px - da_margin) : std::min(0.0, px + da_margin),
+          py > 0 ? std::max(0.0, py - da_margin) : std::min(0.0, py + da_margin));
+      }
+    }
 
     // parameter for debug info
     time_keeper_ptr_->enable_calculation_time_info =

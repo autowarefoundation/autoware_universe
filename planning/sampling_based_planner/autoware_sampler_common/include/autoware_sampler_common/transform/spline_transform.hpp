@@ -72,6 +72,7 @@ public:
   [[nodiscard]] Point2d cartesian(const double s) const;
   [[nodiscard]] Point2d cartesian(const FrenetPoint & fp) const;
   [[nodiscard]] double curvature(const double s) const;
+  [[nodiscard]] double curvatureDerivative(const double s) const;
   [[nodiscard]] double yaw(const double s) const;
   [[nodiscard]] double firstS() const { return s_.empty() ? 0.0 : s_.front(); }
   [[nodiscard]] double lastS() const { return s_.empty() ? 0.0 : s_.back(); }

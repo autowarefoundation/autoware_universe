@@ -24,6 +24,9 @@ namespace autoware::sampler_common::constraints
 /// @param constraints input constraint object containing vehicle footprint offsets
 /// @return the polygon footprint of the path
 MultiPoint2d buildFootprintPoints(const Path & path, const Constraints & constraints);
+/// @brief Calculate the footprint using a custom footprint shape
+MultiPoint2d buildFootprintPoints(
+  const Path & path, const LinearRing2d & footprint_shape);
 }  // namespace autoware::sampler_common::constraints
 
 #endif  // AUTOWARE_SAMPLER_COMMON__CONSTRAINTS__FOOTPRINT_HPP_

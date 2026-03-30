@@ -44,9 +44,18 @@ MultiPoint2d checkHardConstraints(Path & path, const Constraints & constraints)
 {
   const auto footprint = buildFootprintPoints(path, constraints);
   if (!footprint.empty()) {
-    if (constraints.hard.limit_footprint_inside_drivable_area)
-      path.constraint_results.inside_drivable_area =
-        boost::geometry::within(footprint, constraints.drivable_polygons);
+    if (constraints.hard.limit_footprint_inside_drivable_area) {
+      // Use shrunken footprint for drivable area check if available
+      if (!constraints.drivable_area_ego_footprint.empty()) {
+        const auto da_footprint =
+          buildFootprintPoints(path, constraints.drivable_area_ego_footprint);
+        path.constraint_results.inside_drivable_area =
+          boost::geometry::within(da_footprint, constraints.drivable_polygons);
+      } else {
+        path.constraint_results.inside_drivable_area =
+          boost::geometry::within(footprint, constraints.drivable_polygons);
+      }
+    }
     path.constraint_results.collision_free = !has_collision(
       footprint, constraints.obstacle_polygons, constraints.hard.min_dist_from_obstacles);
   }

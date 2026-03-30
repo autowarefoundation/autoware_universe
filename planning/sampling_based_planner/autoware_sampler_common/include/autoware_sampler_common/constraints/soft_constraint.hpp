@@ -24,7 +24,7 @@ namespace autoware::sampler_common::constraints
 void calculateCurvatureCost(Path & path, const Constraints & constraints);
 /// @brief calculate the length cost of the given path
 void calculateLengthCost(Path & path, const Constraints & constraints);
-/// @brief calculate the lateral deviation cost at the end of the given path
+/// @brief calculate the average lateral deviation cost along the entire path
 void calculateLateralDeviationCost(
   Path & path, const Constraints & constraints, const transform::Spline2D & reference);
 /// @brief calculate the overall cost of the given path

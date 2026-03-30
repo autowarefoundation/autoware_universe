@@ -38,9 +38,14 @@ void calculateLengthCost(Path & path, const Constraints & constraints)
 void calculateLateralDeviationCost(
   Path & path, const Constraints & constraints, const transform::Spline2D & reference)
 {
-  const auto fp = reference.frenet(path.points.back());
-  const double lateral_deviation = std::abs(fp.d);
-  path.cost += constraints.soft.lateral_deviation_weight * lateral_deviation;
+  if (path.points.empty()) return;
+  double sum = 0.0;
+  for (const auto & pt : path.points) {
+    const auto fp = reference.frenet(pt);
+    sum += std::abs(fp.d);
+  }
+  path.cost +=
+    constraints.soft.lateral_deviation_weight * sum / static_cast<double>(path.points.size());
 }
 
 void calculateCost(
