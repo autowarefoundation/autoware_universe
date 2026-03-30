@@ -128,11 +128,11 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<bool>("planning_factor.enable_stop", false);
   planning_factor_params_.enable_slowdown =
     this->declare_parameter<bool>("planning_factor.enable_slowdown", false);
-  planning_factor_params_.stop_velocity_threshold =
+  planning_factor_params_.detection_config.stop_velocity_threshold =
     this->declare_parameter<double>("planning_factor.stop_velocity_threshold", 0.1);
-  planning_factor_params_.stop_keep_duration_threshold =
+  planning_factor_params_.detection_config.stop_keep_duration_threshold =
     this->declare_parameter<double>("planning_factor.stop_keep_duration_threshold", 1.0);
-  planning_factor_params_.slowdown_accel_threshold =
+  planning_factor_params_.detection_config.slowdown_accel_threshold =
     this->declare_parameter<double>("planning_factor.slowdown_accel_threshold", -0.3);
 
   // debug params
@@ -396,58 +396,22 @@ void DiffusionPlanner::on_timer()
 void DiffusionPlanner::publish_planning_factor(const Trajectory & trajectory)
 {
   const auto & points = trajectory.points;
-  if (points.empty()) {
-    planning_factor_interface_->publish();
-    return;
-  }
+  const auto detection_result =
+    detect_planning_factors(points, planning_factor_params_.detection_config);
 
-  std::optional<size_t> slowdown_start_idx;
-  std::optional<size_t> slowdown_end_idx;
-  std::optional<size_t> stop_idx;
-  rclcpp::Duration stop_start_time(0, 0);
-  bool is_valid_stop = true;
-
-  for (size_t i = 0; i < points.size(); ++i) {
-    // for stop
-    if (
-      !stop_idx &&
-      points[i].longitudinal_velocity_mps <= planning_factor_params_.stop_velocity_threshold) {
-      stop_idx = i;
-      stop_start_time = rclcpp::Duration(points[i].time_from_start);
-    }
-    if (stop_idx) {
-      if (
-        (rclcpp::Duration(points[i].time_from_start) - stop_start_time).seconds() <
-        planning_factor_params_.stop_keep_duration_threshold) {
-        if (points[i].longitudinal_velocity_mps > planning_factor_params_.stop_velocity_threshold)
-          is_valid_stop = false;
-      }
-    }
-
-    // for slowdown
-    if (points[i].acceleration_mps2 < planning_factor_params_.slowdown_accel_threshold) {
-      if (!slowdown_start_idx) slowdown_start_idx = i;
-    } else if (slowdown_start_idx && !slowdown_end_idx) {
-      slowdown_end_idx = i;
-    }
-  }
-
-  const auto start_pos = points[0].pose;
-
-  // stop planning factor
-  if (planning_factor_params_.enable_stop && stop_idx && is_valid_stop) {
+  if (planning_factor_params_.enable_stop && detection_result.stop) {
+    const auto & stop = *detection_result.stop;
     planning_factor_interface_->add(
-      points, start_pos, points[*stop_idx].pose, PlanningFactor::STOP,
+      points, stop.ego_pose, stop.stop_pose, PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{});
   }
 
-  // slowdown planning factor
-  if (planning_factor_params_.enable_slowdown && slowdown_start_idx && slowdown_end_idx) {
+  if (planning_factor_params_.enable_slowdown && detection_result.slowdown) {
+    const auto & slowdown = *detection_result.slowdown;
     planning_factor_interface_->add(
-      points, start_pos, points[*slowdown_start_idx].pose, points[*slowdown_end_idx].pose,
-      PlanningFactor::SLOW_DOWN, autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true,
-      static_cast<double>(points[*slowdown_start_idx].longitudinal_velocity_mps),
-      static_cast<double>(points[*slowdown_end_idx].longitudinal_velocity_mps));
+      points, slowdown.ego_pose, slowdown.start_pose, slowdown.end_pose, PlanningFactor::SLOW_DOWN,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true, slowdown.start_velocity,
+      slowdown.end_velocity);
   }
 
   planning_factor_interface_->publish();

@@ -16,6 +16,7 @@
 #define AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_NODE_HPP_
 
 #include "autoware/diffusion_planner/diffusion_planner_core.hpp"
+#include "autoware/diffusion_planner/utils/planning_factor_utils.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
@@ -66,11 +67,9 @@ struct DiffusionPlannerDebugParams
 
 struct DiffusionPlannerPlanningFactorParams
 {
-  double stop_velocity_threshold{0.1};
-  double stop_keep_duration_threshold{1.0};
-  double slowdown_accel_threshold{-0.3};
   bool enable_stop{false};
   bool enable_slowdown{false};
+  PlanningFactorDetectionConfig detection_config;
 };
 
 /**
