@@ -178,7 +178,7 @@ def generate_launch_description():
                     [
                         FindPackageShare("autoware_probabilistic_occupancy_grid_map"),
                         "config",
-                        "updater.param.yaml",
+                        "binary_bayes_filter_updater.param.yaml",
                     ]
                 ),
             ),
