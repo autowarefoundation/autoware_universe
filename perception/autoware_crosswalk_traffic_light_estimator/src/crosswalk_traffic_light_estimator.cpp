@@ -509,6 +509,15 @@ bool is_unknown_or_absent(const std::optional<uint8_t> & color)
   return *color == TrafficSignalElement::UNKNOWN;
 }
 
+// Determine whether a lanelet's traffic light is in a non-red state.
+// Falls back to the last detected color when the current color is unavailable.
+//
+// | current_color | last_color     | result |
+// |---------------|----------------|--------|
+// | GREEN/AMBER   | (any)          | true   |
+// | RED           | (any)          | false  |
+// | UNKNOWN/NA    | GREEN/AMBER    | true   |
+// | UNKNOWN/NA    | RED/UNKNOWN/NA | false  |
 bool is_lanelet_non_red(
   const lanelet::ConstLanelet & lanelet, const TrafficLightIdMap & traffic_light_id_map,
   const TrafficLightIdMap & last_detect_color, bool use_last_detect_color)
