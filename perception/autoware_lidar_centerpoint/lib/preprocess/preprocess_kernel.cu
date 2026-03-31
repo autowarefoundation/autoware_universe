@@ -296,16 +296,36 @@ __global__ void generateFeatures_kernel(
   __syncthreads();
 
   // calculate sm in a pillar
+#if 0
   if (point_idx < pointsNumSM[pillar_idx_inBlock]) {
     atomicAdd(&(pillarSumSM[pillar_idx_inBlock].x), pillarSM[pillar_idx_inBlock][0][point_idx]);
     atomicAdd(&(pillarSumSM[pillar_idx_inBlock].y), pillarSM[pillar_idx_inBlock][1][point_idx]);
     atomicAdd(&(pillarSumSM[pillar_idx_inBlock].z), pillarSM[pillar_idx_inBlock][2][point_idx]);
   }
+#else  // 0
+  float validPoints = pointsNumSM[pillar_idx_inBlock];
+  // 1. Load value into register
+  float x_val = (point_idx < validPoints) ? pillarSM[pillar_idx_inBlock][0][point_idx] : 0.0f;
+  float y_val = (point_idx < validPoints) ? pillarSM[pillar_idx_inBlock][1][point_idx] : 0.0f;
+  float z_val = (point_idx < validPoints) ? pillarSM[pillar_idx_inBlock][2][point_idx] : 0.0f;
+  // 2. Parallel Reduction using Warp Shuffle
+  for (int offset = 16; offset > 0; offset /= 2) {
+    x_val += __shfl_down_sync(0xffffffff, x_val, offset);
+    y_val += __shfl_down_sync(0xffffffff, y_val, offset);
+    z_val += __shfl_down_sync(0xffffffff, z_val, offset);
+  }
+  // 3. Thread 0 writes the result to Shared Memory once
+  if (point_idx == 0) {
+    pillarSumSM[pillar_idx_inBlock].x = x_val;
+    pillarSumSM[pillar_idx_inBlock].y = y_val;
+    pillarSumSM[pillar_idx_inBlock].z = z_val;
+  }
+#endif  // 0
   __syncthreads();
 
   // feature-mean
   float3 mean;
-  float validPoints = pointsNumSM[pillar_idx_inBlock];
+  // float validPoints = pointsNumSM[pillar_idx_inBlock];
   // There should be at least one valid point since the thread processes only non-empty pillars.
   mean.x = pillarSumSM[pillar_idx_inBlock].x / validPoints;
   mean.y = pillarSumSM[pillar_idx_inBlock].y / validPoints;
