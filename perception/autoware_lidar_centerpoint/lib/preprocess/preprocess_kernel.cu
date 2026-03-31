@@ -253,17 +253,19 @@ __global__ void generateFeatures_kernel(
 
   // load src
   __shared__ float pillarSM[WARPS_PER_BLOCK][point_dim][MAX_POINT_IN_VOXEL_SIZE];
-  __shared__ float3 pillarSumSM[WARPS_PER_BLOCK];
-  __shared__ int3 cordsSM[WARPS_PER_BLOCK];
-  __shared__ int pointsNumSM[WARPS_PER_BLOCK];
   __shared__ float pillarOutSM[WARPS_PER_BLOCK][ENCODER_IN_FEATURE_SIZE][MAX_POINT_IN_VOXEL_SIZE];
 
-  // Each thread-block has dedicated GPU shared memory areas which need to be initialized.
-  if (threadIdx.x < WARPS_PER_BLOCK) {
-    pointsNumSM[threadIdx.x] = voxel_num_points[blockIdx.x * WARPS_PER_BLOCK + threadIdx.x];
-    cordsSM[threadIdx.x] = ((int3 *)coords)[blockIdx.x * WARPS_PER_BLOCK + threadIdx.x];
-    pillarSumSM[threadIdx.x] = {0, 0, 0};
+  // Lane 0 reads pillar metadata and broadcasts to the warp.
+  int points_num = 0;
+  int3 cords = {0, 0, 0};
+  if (point_idx == 0) {
+    points_num = static_cast<int>(voxel_num_points[pillar_idx]);
+    cords = ((const int3 *)coords)[pillar_idx];
   }
+  points_num = __shfl_sync(0xffffffff, points_num, 0);
+  cords.x = __shfl_sync(0xffffffff, cords.x, 0);
+  cords.y = __shfl_sync(0xffffffff, cords.y, 0);
+  cords.z = __shfl_sync(0xffffffff, cords.z, 0);
 
   // Each thread reads values from the global memory ignoring the meaning into the shared memory.
   // This pattern allows coalesced access.
@@ -281,10 +283,10 @@ __global__ void generateFeatures_kernel(
     int src_index = i * MAX_POINT_IN_VOXEL_SIZE + thread_in_warp;
     ((float *)pillarSM)[dst_offset + dst_index] = ((float *)voxel_features)[src_offset + src_index];
   }
-  __syncthreads();
+  __syncwarp();
 
   // calculate sm in a pillar
-  float validPoints = pointsNumSM[pillar_idx_inBlock];
+  float validPoints = static_cast<float>(points_num);
   // 1. Load value into register
   float x_val = (point_idx < validPoints) ? pillarSM[pillar_idx_inBlock][0][point_idx] : 0.0f;
   float y_val = (point_idx < validPoints) ? pillarSM[pillar_idx_inBlock][1][point_idx] : 0.0f;
@@ -295,21 +297,17 @@ __global__ void generateFeatures_kernel(
     y_val += __shfl_down_sync(0xffffffff, y_val, offset);
     z_val += __shfl_down_sync(0xffffffff, z_val, offset);
   }
-  // 3. Thread 0 writes the result to Shared Memory once
-  if (point_idx == 0) {
-    pillarSumSM[pillar_idx_inBlock].x = x_val;
-    pillarSumSM[pillar_idx_inBlock].y = y_val;
-    pillarSumSM[pillar_idx_inBlock].z = z_val;
-  }
-  __syncthreads();
+  // 3. Broadcast warp reduction results from lane 0.
+  const float sum_x = __shfl_sync(0xffffffff, x_val, 0);
+  const float sum_y = __shfl_sync(0xffffffff, y_val, 0);
+  const float sum_z = __shfl_sync(0xffffffff, z_val, 0);
 
   // feature-mean
   float3 mean;
-  // float validPoints = pointsNumSM[pillar_idx_inBlock];
   // There should be at least one valid point since the thread processes only non-empty pillars.
-  mean.x = pillarSumSM[pillar_idx_inBlock].x / validPoints;
-  mean.y = pillarSumSM[pillar_idx_inBlock].y / validPoints;
-  mean.z = pillarSumSM[pillar_idx_inBlock].z / validPoints;
+  mean.x = sum_x / validPoints;
+  mean.y = sum_y / validPoints;
+  mean.z = sum_z / validPoints;
 
   mean.x = pillarSM[pillar_idx_inBlock][0][point_idx] - mean.x;
   mean.y = pillarSM[pillar_idx_inBlock][1][point_idx] - mean.y;
@@ -317,9 +315,9 @@ __global__ void generateFeatures_kernel(
 
   // calculate offset
   // Is the order of z,y,x correct?
-  float x_offset = voxel_x / 2 + cordsSM[pillar_idx_inBlock].z * voxel_x + range_min_x;
-  float y_offset = voxel_y / 2 + cordsSM[pillar_idx_inBlock].y * voxel_y + range_min_y;
-  float z_offset = voxel_z / 2 + cordsSM[pillar_idx_inBlock].x * voxel_z + range_min_z;
+  float x_offset = voxel_x / 2 + cords.z * voxel_x + range_min_x;
+  float y_offset = voxel_y / 2 + cords.y * voxel_y + range_min_y;
+  float z_offset = voxel_z / 2 + cords.x * voxel_z + range_min_z;
 
   // feature-offset
   float3 center;
@@ -328,7 +326,7 @@ __global__ void generateFeatures_kernel(
   center.z = pillarSM[pillar_idx_inBlock][2][point_idx] - z_offset;
 
   // store output
-  if (point_idx < pointsNumSM[pillar_idx_inBlock]) {
+  if (point_idx < points_num) {
     pillarOutSM[pillar_idx_inBlock][0][point_idx] = pillarSM[pillar_idx_inBlock][0][point_idx];
     pillarOutSM[pillar_idx_inBlock][1][point_idx] = pillarSM[pillar_idx_inBlock][1][point_idx];
     pillarOutSM[pillar_idx_inBlock][2][point_idx] = pillarSM[pillar_idx_inBlock][2][point_idx];
@@ -377,7 +375,7 @@ __global__ void generateFeatures_kernel(
     }
   }
 
-  __syncthreads();
+  __syncwarp();
 
   // Each thread reads values from the global memory ignoring the meaning into the shared memory.
   // This pattern allows coalesced access.
