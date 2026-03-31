@@ -265,17 +265,6 @@ __global__ void generateFeatures_kernel(
     pillarSumSM[threadIdx.x] = {0, 0, 0};
   }
 
-#if 0
-#pragma unroll
-  for (int i = 0; i < point_dim; i++) {
-    int pillarSMId = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim +
-                     i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
-    int voxel_feature_id =
-      (pillar_idx * MAX_POINT_IN_VOXEL_SIZE + point_idx) * point_dim + i;
-    ((float *)pillarSM)[pillarSMId] = ((float *)voxel_features)[voxel_feature_id];
-  }
-  // Make it sure that all data are initialized.
-#else  // 0
   // Each thread reads values from the global memory ignoring the meaning into the shared memory.
   // This pattern allows coalesced access.
   // const int THREADS_IN_WARP = 32;
@@ -292,17 +281,9 @@ __global__ void generateFeatures_kernel(
     int src_index = i * MAX_POINT_IN_VOXEL_SIZE + thread_in_warp;
     ((float *)pillarSM)[pillar_offset + dst_index] = ((float *)voxel_features)[block_offset + src_index];
   }
-#endif  // 0
   __syncthreads();
 
   // calculate sm in a pillar
-#if 0
-  if (point_idx < pointsNumSM[pillar_idx_inBlock]) {
-    atomicAdd(&(pillarSumSM[pillar_idx_inBlock].x), pillarSM[pillar_idx_inBlock][0][point_idx]);
-    atomicAdd(&(pillarSumSM[pillar_idx_inBlock].y), pillarSM[pillar_idx_inBlock][1][point_idx]);
-    atomicAdd(&(pillarSumSM[pillar_idx_inBlock].z), pillarSM[pillar_idx_inBlock][2][point_idx]);
-  }
-#else  // 0
   float validPoints = pointsNumSM[pillar_idx_inBlock];
   // 1. Load value into register
   float x_val = (point_idx < validPoints) ? pillarSM[pillar_idx_inBlock][0][point_idx] : 0.0f;
@@ -320,7 +301,6 @@ __global__ void generateFeatures_kernel(
     pillarSumSM[pillar_idx_inBlock].y = y_val;
     pillarSumSM[pillar_idx_inBlock].z = z_val;
   }
-#endif  // 0
   __syncthreads();
 
   // feature-mean
