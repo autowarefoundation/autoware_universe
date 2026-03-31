@@ -268,10 +268,10 @@ __global__ void generateFeatures_kernel(
   // Each thread reads values from the global memory ignoring the meaning into the shared memory.
   // This pattern allows coalesced access.
   // const int THREADS_IN_WARP = 32;
-  const int block_offset =
+  const int src_offset =
         pillar_idx * MAX_POINT_IN_VOXEL_SIZE * point_dim;
 //      (blockIdx.x * WARPS_PER_BLOCK * THREADS_IN_WARP * MAX_POINT_IN_VOXEL_SIZE * point_dim);  // This can be const;
-  const int pillar_offset = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim;
+  const int dst_offset = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim;
 #pragma unroll
   for (int i = 0; i < point_dim; i++) {
     int thread_offset = NUM_THREADS_IN_WARP * i + thread_in_warp;
@@ -279,7 +279,7 @@ __global__ void generateFeatures_kernel(
     int dst_dim = thread_offset % point_dim;
     int dst_index = dst_dim * NUM_THREADS_IN_WARP + dst_point;
     int src_index = i * MAX_POINT_IN_VOXEL_SIZE + thread_in_warp;
-    ((float *)pillarSM)[pillar_offset + dst_index] = ((float *)voxel_features)[block_offset + src_index];
+    ((float *)pillarSM)[dst_offset + dst_index] = ((float *)voxel_features)[src_offset + src_index];
   }
   __syncthreads();
 
@@ -379,11 +379,20 @@ __global__ void generateFeatures_kernel(
 
   __syncthreads();
 
+  // Each thread reads values from the global memory ignoring the meaning into the shared memory.
+  // This pattern allows coalesced access.
+  // const int THREADS_IN_WARP = 32;
+  const int out_dst_offset =
+        pillar_idx * MAX_POINT_IN_VOXEL_SIZE * ENCODER_IN_FEATURE_SIZE;
+  const int out_src_offset = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * ENCODER_IN_FEATURE_SIZE;
+#pragma unroll
   for (int i = 0; i < ENCODER_IN_FEATURE_SIZE; i++) {
-    int outputSMId = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * ENCODER_IN_FEATURE_SIZE +
-                     i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
-    int outputId = (pillar_idx * MAX_POINT_IN_VOXEL_SIZE + point_idx) * ENCODER_IN_FEATURE_SIZE + i;
-    features[outputId] = ((float *)pillarOutSM)[outputSMId];
+    int thread_offset = NUM_THREADS_IN_WARP * i + thread_in_warp;
+    int src_point = thread_offset / ENCODER_IN_FEATURE_SIZE;
+    int src_dim = thread_offset % ENCODER_IN_FEATURE_SIZE;
+    int src_index = src_dim * NUM_THREADS_IN_WARP + src_point;
+    int dst_index = i * MAX_POINT_IN_VOXEL_SIZE + thread_in_warp;
+    features[out_dst_offset + dst_index] = ((float *)pillarOutSM)[out_src_offset + src_index];
   }
 }
 
