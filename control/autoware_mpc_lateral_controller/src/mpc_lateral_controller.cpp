@@ -119,6 +119,7 @@ MpcLateralController::MpcLateralController(
   {
     enable_auto_steering_offset_removal_ =
       dp_bool("steering_offset.enable_auto_steering_offset_removal");
+    m_steer_offset_max_update_th_ = dp_double("steering_offset.max_update_th");
     if (enable_auto_steering_offset_removal_) {
       const auto cutoff_hz = dp_double("steering_offset.steer_offset_filter_cutoff_hz");
       lpf_steer_offset_ =
@@ -250,8 +251,19 @@ trajectory_follower::LateralOutput MpcLateralController::run(
   m_current_kinematic_state = input_data.current_odometry;
   m_current_steering = input_data.current_steering;
 
-  m_steering_offset_filtered_ =
-    enable_auto_steering_offset_removal_ ? lpf_steer_offset_->filter(m_steering_offset_) : 0.0;
+  m_steering_offset_target_ = std::invoke([&]() {
+    if (!enable_auto_steering_offset_removal_) return 0.0;
+    if (abs(m_steering_offset_target_ - m_steering_offset_filtered_) > 1e-4)
+      return m_steering_offset_target_;
+    const double delta_offset = m_steering_offset_ - m_steering_offset_target_;
+    const double delta_offset_clamped =
+      std::clamp(delta_offset, -m_steer_offset_max_update_th_, m_steer_offset_max_update_th_);
+    return m_steering_offset_target_ + delta_offset_clamped;
+  });
+
+  m_steering_offset_filtered_ = enable_auto_steering_offset_removal_
+                                  ? lpf_steer_offset_->filter(m_steering_offset_target_)
+                                  : 0.0;
   m_current_steering.steering_tire_angle += static_cast<float>(m_steering_offset_filtered_);
 
   Lateral ctrl_cmd;
