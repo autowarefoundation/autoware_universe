@@ -185,6 +185,16 @@ SimplePlanningSimulator::SimplePlanningSimulator(const rclcpp::NodeOptions & opt
     this, get_clock(), std::chrono::milliseconds(timer_sampling_time_ms_),
     std::bind(&SimplePlanningSimulator::on_timer, this));
 
+<<<<<<< HEAD
+=======
+  group_api_service_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+  // Initialize::name = "/localization/initialize"
+  srv_initialize_ = create_service<Initialize::Service>(
+    Initialize::name, std::bind(&SimplePlanningSimulator::on_initialize, this, _1, _2),
+    rmw_qos_profile_services_default, group_api_service_);
+
+>>>>>>> 29ae458b200312039739551452a8ed9289953a30
   // set vehicle model type
   initialize_vehicle_model(vehicle_model_type_str);
 
@@ -561,6 +571,38 @@ void SimplePlanningSimulator::on_initialtwist(const TwistStamped::ConstSharedPtr
   initial_twist_ = *msg;
 }
 
+<<<<<<< HEAD
+=======
+void SimplePlanningSimulator::on_initialize(
+  const Initialize::Service::Request::SharedPtr request,
+  const Initialize::Service::Response::SharedPtr response)
+{
+  if (request->pose_with_covariance.empty()) {
+    response->status.success = false;
+    response->status.code = autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR;
+    response->status.message = "pose_with_covariance is empty";
+    return;
+  }
+
+  // save initial pose
+  Twist initial_twist;
+  PoseStamped initial_pose;
+  const auto & pose_with_covariance = request->pose_with_covariance.front();
+  initial_pose.header = pose_with_covariance.header;
+  initial_pose.pose = pose_with_covariance.pose.pose;
+  set_initial_state_with_transform(initial_pose, initial_twist);
+
+  // Print initial pose for debugging
+  RCLCPP_DEBUG(
+    this->get_logger(), "Set initial pose: [x: %.2f, y: %.2f, z: %.2f, yaw: %.2f]",
+    initial_pose.pose.position.x, initial_pose.pose.position.y, initial_pose.pose.position.z,
+    tf2::getYaw(initial_pose.pose.orientation));
+
+  response->status.success = true;
+  response->status.message = "success";
+}
+
+>>>>>>> 29ae458b200312039739551452a8ed9289953a30
 void SimplePlanningSimulator::set_input(const InputCommand & cmd, const double acc_by_slope)
 {
   std::visit(

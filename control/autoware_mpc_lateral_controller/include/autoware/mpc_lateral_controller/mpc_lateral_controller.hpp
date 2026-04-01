@@ -72,6 +72,7 @@ private:
 
   std::shared_ptr<Butterworth2dFilter> lpf_steer_offset_;
   double m_steering_offset_{0.0};
+  double m_steering_offset_target_{0.0};
   double m_steering_offset_filtered_{0.0};
 
   std::shared_ptr<diagnostic_updater::Updater>
@@ -151,6 +152,9 @@ private:
 
   // Flag indicating whether auto steering offset removal is enabled.
   bool enable_auto_steering_offset_removal_;
+
+  // Threshold for maximum change in steering offset to prevent large updates.
+  double m_steer_offset_max_update_th_;
 
   /**
    * @brief Initialize the timer

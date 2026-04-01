@@ -3,43 +3,173 @@
   "title": "Parameters for Multi Object Tracker Node",
   "type": "object",
   "definitions": {
-    "multi_object_tracker_node": {
+    "tracker_type": {
+      "type": "string",
+      "enum": [
+        "pass_through_tracker",
+        "pedestrian_and_bicycle_tracker",
+        "pedestrian_tracker",
+        "bicycle_tracker",
+        "multi_vehicle_tracker",
+        "general_vehicle_tracker",
+        "normal_vehicle_tracker",
+        "big_vehicle_tracker",
+        "vehicle_tracker",
+        "polygon_tracker"
+      ]
+    },
+    "initial_tracker": {
       "type": "object",
       "properties": {
-        "car_tracker": {
-          "type": "string",
+        "car": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
           "description": "Tracker model for car class.",
           "default": "multi_vehicle_tracker"
         },
-        "truck_tracker": {
-          "type": "string",
+        "truck": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
           "description": "Tracker model for truck class.",
           "default": "multi_vehicle_tracker"
         },
-        "bus_tracker": {
-          "type": "string",
+        "bus": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
           "description": "Tracker model for bus class.",
           "default": "multi_vehicle_tracker"
         },
-        "trailer_tracker": {
-          "type": "string",
+        "trailer": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
           "description": "Tracker model for trailer class.",
           "default": "multi_vehicle_tracker"
         },
-        "pedestrian_tracker": {
-          "type": "string",
+        "pedestrian": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
           "description": "Tracker model for pedestrian class.",
           "default": "pedestrian_and_bicycle_tracker"
         },
-        "bicycle_tracker": {
-          "type": "string",
+        "bicycle": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
           "description": "Tracker model for bicycle class.",
           "default": "pedestrian_and_bicycle_tracker"
         },
-        "motorcycle_tracker": {
-          "type": "string",
+        "motorcycle": {
+          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
           "description": "Tracker model for motorcycle class.",
           "default": "pedestrian_and_bicycle_tracker"
+        }
+      },
+      "required": ["car", "truck", "bus", "trailer", "pedestrian", "bicycle", "motorcycle"]
+    },
+    "pruning_generalized_iou_thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unknown": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "car": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "truck": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "bus": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "trailer": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "motorcycle": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "bicycle": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "pedestrian": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        }
+      },
+      "required": [
+        "unknown",
+        "car",
+        "truck",
+        "bus",
+        "trailer",
+        "motorcycle",
+        "bicycle",
+        "pedestrian"
+      ],
+      "description": "Generalized IoU threshold for each tracked class."
+    },
+    "pruning_distance_thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unknown": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "car": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "truck": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "bus": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "trailer": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "motorcycle": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "bicycle": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "pedestrian": {
+          "type": "number",
+          "minimum": 0.0
+        }
+      },
+      "required": [
+        "unknown",
+        "car",
+        "truck",
+        "bus",
+        "trailer",
+        "motorcycle",
+        "bicycle",
+        "pedestrian"
+      ],
+      "description": "Overlap distance threshold for each tracked class."
+    },
+    "multi_object_tracker_node": {
+      "type": "object",
+      "properties": {
+        "initial_tracker": {
+          "$ref": "#/definitions/initial_tracker"
         },
         "publish_rate": {
           "type": "number",
@@ -92,14 +222,17 @@
           "default": 0.001
         },
         "pruning_generalized_iou_thresholds": {
-          "type": "array",
-          "items": {
-            "type": "number",
-            "minimum": -1.0,
-            "maximum": 1.0
-          },
-          "description": "Generalized IoU threshold for each class.",
-          "default": [-0.3, -0.4, -0.6, -0.6, -0.6, -0.1, -0.1, -0.1]
+          "$ref": "#/definitions/pruning_generalized_iou_thresholds",
+          "default": {
+            "unknown": -0.3,
+            "car": -0.4,
+            "truck": -0.6,
+            "bus": -0.6,
+            "trailer": -0.6,
+            "motorcycle": -0.1,
+            "bicycle": -0.1,
+            "pedestrian": -0.1
+          }
         },
         "pruning_static_object_speed": {
           "type": "number",
@@ -117,13 +250,17 @@
           "default": 0.0
         },
         "pruning_distance_thresholds": {
-          "type": "array",
-          "items": {
-            "type": "number",
-            "minimum": 0.0
-          },
-          "description": "Overlap distance threshold for each class.",
-          "default": [9.0, 5.0, 9.0, 9.0, 9.0, 4.0, 3.0, 2.0]
+          "$ref": "#/definitions/pruning_distance_thresholds",
+          "default": {
+            "unknown": 9.0,
+            "car": 5.0,
+            "truck": 9.0,
+            "bus": 9.0,
+            "trailer": 9.0,
+            "motorcycle": 4.0,
+            "bicycle": 3.0,
+            "pedestrian": 2.0
+          }
         },
         "publish_processing_time": {
           "type": "boolean",
@@ -167,13 +304,7 @@
         }
       },
       "required": [
-        "car_tracker",
-        "truck_tracker",
-        "bus_tracker",
-        "trailer_tracker",
-        "pedestrian_tracker",
-        "bicycle_tracker",
-        "motorcycle_tracker",
+        "initial_tracker",
         "publish_rate",
         "world_frame_id",
         "ego_frame_id",
@@ -186,6 +317,7 @@
         "pruning_static_object_speed",
         "pruning_moving_object_speed",
         "pruning_static_iou_threshold",
+        "pruning_distance_thresholds",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_tentative_objects",
