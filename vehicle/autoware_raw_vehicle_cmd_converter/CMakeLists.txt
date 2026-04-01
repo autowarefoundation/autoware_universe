@@ -26,9 +26,11 @@ target_link_libraries(autoware_raw_vehicle_cmd_converter_node_component
   vehicle_adaptor
 )
 
-rclcpp_components_register_node(autoware_raw_vehicle_cmd_converter_node_component
+autoware_agnocast_wrapper_register_node(autoware_raw_vehicle_cmd_converter_node_component
   PLUGIN "autoware::raw_vehicle_cmd_converter::RawVehicleCommandConverterNode"
   EXECUTABLE autoware_raw_vehicle_cmd_converter_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)

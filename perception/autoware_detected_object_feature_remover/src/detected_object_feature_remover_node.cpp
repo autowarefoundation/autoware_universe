@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2021 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,36 +14,35 @@
 
 #include "detected_object_feature_remover_node.hpp"
 
+#include <algorithm>
 #include <memory>
+#include <vector>
 
 namespace autoware::detected_object_feature_remover
 {
 DetectedObjectFeatureRemover::DetectedObjectFeatureRemover(const rclcpp::NodeOptions & node_options)
 : Node("detected_object_feature_remover", node_options)
 {
-  using std::placeholders::_1;
   pub_ = this->create_publisher<DetectedObjects>("~/output", rclcpp::QoS(1));
-  sub_ = this->create_subscription<DetectedObjectsWithFeature>(
-    "~/input", 1, std::bind(&DetectedObjectFeatureRemover::objectCallback, this, _1));
+  AUTOWARE_SUBSCRIPTION_OPTIONS options;
+  sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    DetectedObjectsWithFeature, "~/input", 1,
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input) {
+      this->objectCallback(input);
+    },
+    options);
+  convert_params_.run_convex_hull_conversion =
+    this->declare_parameter<bool>("run_convex_hull_conversion", false);
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 
 void DetectedObjectFeatureRemover::objectCallback(
-  const DetectedObjectsWithFeature::ConstSharedPtr input)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input)
 {
   DetectedObjects output;
-  convert(*input, output);
+  convert::convertToDetectedObjects(*input, output, convert_params_);
   pub_->publish(output);
   published_time_publisher_->publish_if_subscribed(pub_, output.header.stamp);
-}
-
-void DetectedObjectFeatureRemover::convert(
-  const DetectedObjectsWithFeature & objs_with_feature, DetectedObjects & objs)
-{
-  objs.header = objs_with_feature.header;
-  for (const auto & obj_with_feature : objs_with_feature.feature_objects) {
-    objs.objects.emplace_back(obj_with_feature.object);
-  }
 }
 
 }  // namespace autoware::detected_object_feature_remover

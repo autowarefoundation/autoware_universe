@@ -17,6 +17,14 @@ This technology makes it relatively easy to operate model predictive control, wh
   </a>
 </p>
 
+## Requirements
+
+It's recommended to install these in a virtual environment.
+
+```bash
+pip3 install numba==0.58.1 GPy
+```
+
 ## Provided features
 
 This package provides smart MPC logic for path-following control as well as mechanisms for learning and evaluation. These features are described below.

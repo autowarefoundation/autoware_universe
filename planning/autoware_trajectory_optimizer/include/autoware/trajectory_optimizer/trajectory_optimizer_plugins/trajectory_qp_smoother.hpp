@@ -18,6 +18,7 @@
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__TRAJECTORY_QP_SMOOTHER_HPP_
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
 
 #include <Eigen/Dense>
 #include <autoware/osqp_interface/osqp_interface.hpp>
@@ -94,7 +95,7 @@ public:
 
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    const TrajectoryOptimizerData & data) override;
+    TrajectoryOptimizerData & data) override;
 
   void set_up_params() override;
 
@@ -108,15 +109,19 @@ private:
   /**
    * @brief Solve the QP problem for trajectory smoothing
    * @param input_trajectory Original trajectory from planner
+   * @param semantic_speed_tracker Tracker containing semantic speed information (e.g., stop points)
    * @param output_trajectory Smoothed trajectory (output)
    * @return true if optimization succeeded, false otherwise
    */
   bool solve_qp_problem(
-    const TrajectoryPoints & input_trajectory, TrajectoryPoints & output_trajectory);
+    const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+    TrajectoryPoints & output_trajectory) const;
 
   /**
    * @brief Construct matrices for OSQP solver
    * @param input_trajectory Original trajectory for fidelity term
+   * @param semantic_speed_tracker Tracker used to add hard equality constraints at detected stop
+   *        positions (pinning them in place regardless of smoothness weight)
    * @param H Hessian matrix (objective quadratic term)
    * @param A Constraint matrix
    * @param f_vec Gradient vector (objective linear term)
@@ -124,8 +129,9 @@ private:
    * @param u_vec Upper bounds for constraints
    */
   void prepare_osqp_matrices(
-    const TrajectoryPoints & input_trajectory, Eigen::MatrixXd & H, Eigen::MatrixXd & A,
-    std::vector<double> & f_vec, std::vector<double> & l_vec, std::vector<double> & u_vec) const;
+    const TrajectoryPoints & input_trajectory, const SemanticSpeedTracker & semantic_speed_tracker,
+    Eigen::MatrixXd & H, Eigen::MatrixXd & A, std::vector<double> & f_vec,
+    std::vector<double> & l_vec, std::vector<double> & u_vec) const;
 
   /**
    * @brief Convert QP solution back to trajectory format
@@ -135,6 +141,7 @@ private:
    */
   void post_process_trajectory(
     const Eigen::VectorXd & solution, const TrajectoryPoints & input_trajectory,
+    const SemanticSpeedTracker & semantic_speed_tracker,
     TrajectoryPoints & output_trajectory) const;
 
   /**

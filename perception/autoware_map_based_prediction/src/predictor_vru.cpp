@@ -14,10 +14,13 @@
 
 #include "map_based_prediction/predictor_vru.hpp"
 
+#include "map_based_prediction/data_structure.hpp"
 #include "map_based_prediction/path_generator.hpp"
 #include "map_based_prediction/utils.hpp"
 
+#include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 
@@ -428,7 +431,7 @@ bool PredictorVru::hasPotentialToReachWithHistory(
   // If this is the first time observing this crossing point, initialize its intention state
   if (itr == last_object_data.intention_history.end()) {
     last_object_data.intention_history.push_back(
-      Intention{rclcpp::Time(0, 0, RCL_ROS_TIME), now, center_point});
+      CrosswalkUser::Intention{rclcpp::Time(0, 0, RCL_ROS_TIME), now, center_point});
     return has_crossing_intention;
   }
 
@@ -573,12 +576,13 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
     // If the object is not crossing the crosswalk, in the road lanelets, try to find the closest
     // crosswalk and generate path to the crosswalk edge
   } else if (within_road) {
-    lanelet::ConstLanelet closest_crosswalk{};
     const auto & obj_pose = mutable_object.kinematics.pose_with_covariance.pose;
-    const auto found_closest_crosswalk =
-      lanelet::utils::query::getClosestLanelet(crosswalks_, obj_pose, &closest_crosswalk);
-    if (found_closest_crosswalk && within_minimum_distance(obj_pose.position, closest_crosswalk)) {
-      const auto edge_points = getCrosswalkEdgePoints(closest_crosswalk);
+    const auto closest_crosswalk_opt =
+      experimental::lanelet2_utils::get_closest_lanelet(crosswalks_, obj_pose);
+    if (
+      closest_crosswalk_opt &&
+      within_minimum_distance(obj_pose.position, closest_crosswalk_opt.value())) {
+      const auto edge_points = getCrosswalkEdgePoints(closest_crosswalk_opt.value());
       if (hasPotentialToReachWithHistory(
             mutable_object, edge_points.front_center_point, edge_points.front_right_point,
             edge_points.front_left_point, prediction_time_horizon_ * 2.0,
@@ -688,19 +692,19 @@ void PredictorVru::updateCrosswalkUserHistory(
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const auto now = node_.get_clock()->now();
-  CrosswalkUserData crosswalk_user_data;
-  crosswalk_user_data.header = header;
-  crosswalk_user_data.tracked_object = object;
+  CrosswalkUser crosswalk_user;
+  crosswalk_user.header = header;
+  crosswalk_user.tracked_object = object;
 
   if (crosswalk_users_history_.count(object_id) == 0) {
-    crosswalk_users_history_.emplace(object_id, std::deque<CrosswalkUserData>{crosswalk_user_data});
+    crosswalk_users_history_.emplace(object_id, std::deque<CrosswalkUser>{crosswalk_user});
     return;
   }
 
   const auto last_object_data = crosswalk_users_history_.at(object_id).back();
-  crosswalk_user_data.intention_history = last_object_data.intention_history;
-  crosswalk_user_data.is_crossing = last_object_data.is_crossing;
-  crosswalk_users_history_.at(object_id).push_back(crosswalk_user_data);
+  crosswalk_user.intention_history = last_object_data.intention_history;
+  crosswalk_user.is_crossing = last_object_data.is_crossing;
+  crosswalk_users_history_.at(object_id).push_back(crosswalk_user);
 }
 
 std::string PredictorVru::tryMatchNewObjectToDisappeared(

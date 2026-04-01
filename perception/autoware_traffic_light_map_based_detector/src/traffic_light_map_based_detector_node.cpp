@@ -19,12 +19,13 @@
 #include <Eigen/Core>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <tf2/LinearMath/Matrix3x3.hpp>
 #include <tf2/LinearMath/Transform.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <lanelet2_core/Exceptions.h>
 #include <lanelet2_core/geometry/Point.h>
@@ -34,12 +35,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 namespace autoware::traffic_light
 {

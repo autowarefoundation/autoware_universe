@@ -2,6 +2,60 @@
 Changelog for package autoware_boundary_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(boundary_departure): rename Abnormalities type (`#12071 <https://github.com/autowarefoundation/autoware_universe/issues/12071>`_)
+  * refactor(boundary_departure): rename Abnormalities type
+  * refactor: rename variable name
+  * refactor: replace order or member variable
+  ---------
+* chore: reflect the move of the description packages (`#11969 <https://github.com/autowarefoundation/autoware_universe/issues/11969>`_)
+* refactor(boundary_departure): footprint generator and renaming abnormality type to footprint type (`#11992 <https://github.com/autowarefoundation/autoware_universe/issues/11992>`_)
+  * refactor(boundary_departure): abnormality generator
+  * refactor: rename generator to footprint generator
+  * rename folder
+  * renaming type to Footprint type
+  * refactor: precommit
+  * fix: remove unused variables
+  * refactor: rename abnormality_to_check variable
+  * refactor: rename (build failure)
+  * refactoring: variable name change
+  * Update common/autoware_boundary_departure_checker/src/footprint_generator/steering_footprint.cpp
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+  * Update common/autoware_boundary_departure_checker/src/footprint_generator/steering_footprint.cpp
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+  * chore: pre-commit
+  ---------
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+* refactor(boundary_departure): reduce number of defined structs and alias (`#11985 <https://github.com/autowarefoundation/autoware_universe/issues/11985>`_)
+  * refactor(boundary_departure): replace hardcoded abnormality to map
+  * refactor(boundary_departure): remove CriticalDeparturePoint struct
+  * Reduce using alias
+  * refactor(boundary_departure): setting up critical departure
+  * refactor(boundary_departure): remove unnecessary structs
+  * fix optional access
+  ---------
+* refactor(boundary_departure): move debug marker related functions (`#11952 <https://github.com/autowarefoundation/autoware_universe/issues/11952>`_)
+  * refactor(boundary_departure): move debug marker related functions
+  * Update common/autoware_boundary_departure_checker/src/debug.cpp
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+  * Update common/autoware_boundary_departure_checker/include/autoware/boundary_departure_checker/debug.hpp
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+  ---------
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+* refactor(boundary_departure): move function from boundary_departure_prevention to uncrossable_boundary_departure_checker (`#11944 <https://github.com/autowarefoundation/autoware_universe/issues/11944>`_)
+  * refactor(boundary_departure): move function from bdp to bdc
+  * minor refactoring
+  * move clock, change to static
+  ---------
+* refactor(boundary_departure): reduce call to boundary_departure_checker_ptr and class renaming (`#11864 <https://github.com/autowarefoundation/autoware_universe/issues/11864>`_)
+  * refactor: move function so that only one call is needed to find abnormality data
+  * fix precommit
+  * removed unnecessary member variable
+  ---------
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu, Zulfaqar Azmi
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

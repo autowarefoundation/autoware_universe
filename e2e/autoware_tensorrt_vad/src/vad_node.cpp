@@ -14,6 +14,7 @@
 
 #include "vad_node.hpp"
 
+#include "utils/classification_loader.hpp"
 #include "utils/transform_utils.hpp"
 
 #include <rclcpp_components/register_node_macro.hpp>
@@ -447,7 +448,7 @@ bool VadNode::load_classification_config(const ClassificationConfig & params)
 
 bool VadNode::load_map_configuration(VadConfig & config)
 {
-  return load_classification_config(
+  return utils::load_classification_config(
     {this->get_parameter("model_params.map_class_names").as_string_array(),
      this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
      &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
@@ -457,7 +458,7 @@ bool VadNode::load_map_configuration(VadConfig & config)
 bool VadNode::load_map_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  return load_classification_config(
+  return utils::load_classification_config(
     {model_params.map_classes,
      this->get_parameter("model_params.map_confidence_thresholds").as_double_array(),
      &config.map_class_names, &config.map_confidence_thresholds, &config.map_num_classes,
@@ -466,7 +467,7 @@ bool VadNode::load_map_configuration_with_model_params(
 
 bool VadNode::load_object_configuration(VadConfig & config)
 {
-  return load_classification_config(
+  return utils::load_classification_config(
     {this->get_parameter("model_params.object_class_names").as_string_array(),
      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,
@@ -476,7 +477,7 @@ bool VadNode::load_object_configuration(VadConfig & config)
 bool VadNode::load_object_configuration_with_model_params(
   VadConfig & config, const utils::ModelParams & model_params)
 {
-  return load_classification_config(
+  return utils::load_classification_config(
     {model_params.object_classes,
      this->get_parameter("model_params.object_confidence_thresholds").as_double_array(),
      &config.bbox_class_names, &config.object_confidence_thresholds, nullptr,

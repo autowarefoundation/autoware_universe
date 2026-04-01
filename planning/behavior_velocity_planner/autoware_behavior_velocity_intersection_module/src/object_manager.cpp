@@ -16,7 +16,7 @@
 
 #include "autoware/behavior_velocity_intersection_module/util.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
 
@@ -68,7 +68,7 @@ std::optional<geometry_msgs::msg::Point> ObjectInfo::estimated_past_position(
     return std::nullopt;
   }
   const auto attention_lanelet = attention_lanelet_opt_.value();
-  const auto current_arc_coords = lanelet::utils::getArcCoordinates(
+  const auto current_arc_coords = autoware::experimental::lanelet2_utils::get_arc_coordinates(
     {attention_lanelet}, predicted_object_.kinematics.initial_pose_with_covariance.pose);
   const auto distance = current_arc_coords.distance;
   const auto past_length =
@@ -88,15 +88,15 @@ void ObjectInfo::calc_dist_to_stopline()
     return;
   }
   const auto attention_lanelet = attention_lanelet_opt_.value();
-  const auto object_arc_coords = lanelet::utils::getArcCoordinates(
+  const auto object_arc_coords = autoware::experimental::lanelet2_utils::get_arc_coordinates(
     {attention_lanelet}, predicted_object_.kinematics.initial_pose_with_covariance.pose);
   const auto stopline = stopline_opt_.value();
   geometry_msgs::msg::Pose stopline_center;
   stopline_center.position.x = (stopline.front().x() + stopline.back().x()) / 2.0;
   stopline_center.position.y = (stopline.front().y() + stopline.back().y()) / 2.0;
   stopline_center.position.z = (stopline.front().z() + stopline.back().z()) / 2.0;
-  const auto stopline_arc_coords =
-    lanelet::utils::getArcCoordinates({attention_lanelet}, stopline_center);
+  const auto stopline_arc_coords = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+    {attention_lanelet}, stopline_center);
   dist_to_stopline_opt_ = (stopline_arc_coords.length - object_arc_coords.length);
 }
 

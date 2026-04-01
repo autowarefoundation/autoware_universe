@@ -21,6 +21,8 @@
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 #include <tier4_perception_msgs/msg/semantic.hpp>
 
@@ -29,14 +31,6 @@
 #include <message_filters/synchronizer.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-#endif
 
 #include <memory>
 #include <string>

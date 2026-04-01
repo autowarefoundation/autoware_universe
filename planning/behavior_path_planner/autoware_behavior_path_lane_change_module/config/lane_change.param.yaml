@@ -60,7 +60,7 @@
           lateral_distance_max_threshold: 0.5           # [m]
           longitudinal_distance_min_threshold: 1.0      # [m]
           longitudinal_velocity_delta_time: 0.0         # [s]
-          extended_polygon_policy: "along-path"         # [-] available options are `rectangle` or `along-path`
+          extended_polygon_policy: "along_path"         # [-] available options are `rectangle` or `along_path`
         execution:
           expected_front_deceleration: -1.0
           expected_rear_deceleration: -1.0
@@ -154,6 +154,19 @@
       lane_change_finish_judge_buffer: 2.0      # [m]
       finish_judge_lateral_threshold: 0.1        # [m]
       finish_judge_lateral_angle_deviation: 1.0 # [deg]
+
+      # path miss detection
+      path_miss:
+        enable_path_miss_detection: false  # enable/disable path miss detection
+        threshold_longitudinal: 1.0       # [m] - max longitudinal deviation from lc end allowed (fixed, no scaling)
+
+        # path miss velocity scaling parameters
+        # Lateral threshold will be dynamically scaled based on ego velocity using these interpolation points
+        # At zero speed: stricter tolerance (to update lc path when ego is stopped)
+        # At low speeds: higher tolerance (to allow ego to follow lc path)
+        # At high speeds: stricter tolerance (to update lc path when ego is moving)
+        velocity_points: [ 0.0, 0.1, 0.11, 2.77, 2.78, 20.0 ]   # [m/s] - velocity points for interpolation
+        lateral_thresholds: [ 3.0, 3.0, 5.0,  5.0,  1.5,   0.8 ]     # corresponding lateral thresholds [m]
 
       # debug
       publish_debug_marker: true

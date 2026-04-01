@@ -15,6 +15,9 @@
 #ifndef AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__NODE_HPP_
 #define AUTOWARE__DUMMY_PERCEPTION_PUBLISHER__NODE_HPP_
 
+#include "autoware/dummy_perception_publisher/dummy_object_movement_base_plugin.hpp"
+#include "autoware/dummy_perception_publisher/object_info.hpp"
+
 #include <autoware/point_types/types.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/LinearMath/Transform.hpp>
@@ -24,23 +27,13 @@
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tier4_simulation_msgs/msg/dummy_object.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <pcl/common/distances.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
-
-#include "autoware/dummy_perception_publisher/dummy_object_movement_base_plugin.hpp"
-#include "autoware/dummy_perception_publisher/object_info.hpp"
-
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -103,8 +96,7 @@ class DummyPerceptionPublisherNode : public rclcpp::Node
 {
 private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_pub_;
-  rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr
-    detected_object_with_feature_pub_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr detected_object_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr
     ground_truth_objects_pub_;
   rclcpp::Subscription<DummyObject>::SharedPtr object_sub_;
@@ -115,9 +107,7 @@ private:
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;
-  bool use_object_recognition_;
   bool use_base_link_z_;
-  bool publish_ground_truth_objects_;
   std::unique_ptr<PointCloudCreator> pointcloud_creator_;
   // dummy object movement plugins
   std::vector<std::shared_ptr<pluginlib::DummyObjectMovementBasePlugin>> movement_plugins_;

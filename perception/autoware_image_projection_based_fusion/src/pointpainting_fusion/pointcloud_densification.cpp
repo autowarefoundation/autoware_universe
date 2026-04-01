@@ -15,15 +15,11 @@
 #include "autoware/image_projection_based_fusion/pointpainting_fusion/pointcloud_densification.hpp"
 
 #include <pcl_ros/transforms.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/optional.hpp>
 
 #include <pcl_conversions/pcl_conversions.h>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <string>
 #include <utility>

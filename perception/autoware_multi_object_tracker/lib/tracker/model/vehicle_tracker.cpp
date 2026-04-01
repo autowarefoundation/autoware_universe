@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,19 +21,14 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/utils.hpp>
 
-#include <bits/stdc++.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
+
+#include <bits/stdc++.h>
 
 #include <algorithm>
 
@@ -45,16 +40,24 @@ VehicleTracker::VehicleTracker(
 : Tracker(time, object), logger_(rclcpp::get_logger("VehicleTracker")), object_model_(object_model)
 {
   // set tracker type based on object model
-  if (object_model.type == object_model::ObjectModelType::NormalVehicle) {
-    tracker_type_ = TrackerType::NORMAL_VEHICLE;
-  } else if (object_model.type == object_model::ObjectModelType::BigVehicle) {
-    tracker_type_ = TrackerType::BIG_VEHICLE;
-  } else if (object_model.type == object_model::ObjectModelType::Bicycle) {
-    tracker_type_ = TrackerType::BICYCLE;
-  } else {
-    // not supported object model type
-    RCLCPP_ERROR(logger_, "Unsupported object model type: %d", static_cast<int>(object_model.type));
-    tracker_type_ = TrackerType::UNKNOWN;
+  switch (object_model.type) {
+    case object_model::ObjectModelType::GeneralVehicle:
+      tracker_type_ = TrackerType::GENERAL_VEHICLE;
+      break;
+    case object_model::ObjectModelType::NormalVehicle:
+      tracker_type_ = TrackerType::NORMAL_VEHICLE;
+      break;
+    case object_model::ObjectModelType::BigVehicle:
+      tracker_type_ = TrackerType::BIG_VEHICLE;
+      break;
+    case object_model::ObjectModelType::Bicycle:
+      tracker_type_ = TrackerType::BICYCLE;
+      break;
+    default:
+      RCLCPP_ERROR(
+        logger_, "VehicleTracker: Unsupported object model type: %d",
+        static_cast<int>(object_model.type));
+      break;
   }
 
   // velocity deviation threshold

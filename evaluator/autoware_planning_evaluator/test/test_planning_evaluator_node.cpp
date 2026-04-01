@@ -662,8 +662,8 @@ TEST_F(EvalTest, TestObstacleDRAC)
   const double ego_baselink_at_collision = ego_initial_x + ego_velocity * t_collision;
   const double ego_travel_distance = ego_baselink_at_collision - ego_initial_x;
 
-  const double expected_drac = std::abs(
-    (obj_velocity * obj_velocity - ego_velocity * ego_velocity) / (2.0 * ego_travel_distance));
+  const double expected_drac =
+    std::abs(std::pow(obj_velocity - ego_velocity, 2) / (2.0 * ego_travel_distance));
 
   // Create a moving obstacle (same direction as ego, but slower)
   Objects objs;

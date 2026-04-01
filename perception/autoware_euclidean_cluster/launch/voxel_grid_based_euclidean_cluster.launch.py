@@ -72,12 +72,15 @@ def launch_setup(context, *args, **kwargs):
 
     container = ComposableNodeContainer(
         name="euclidean_cluster_container",
-        package="rclcpp_components",
+        package=LaunchConfiguration("container_package"),
         namespace=ns,
-        executable="component_container",
+        executable=LaunchConfiguration("container_executable"),
         composable_node_descriptions=[],
         output="screen",
         condition=UnlessCondition(LaunchConfiguration("use_pointcloud_container")),
+        additional_env={
+            "LD_PRELOAD": LaunchConfiguration("ld_preload_value"),
+        },
     )
 
     target_container = (
@@ -119,11 +122,14 @@ def generate_launch_description():
             add_launch_arg("use_low_height_cropbox", "false"),
             add_launch_arg("use_pointcloud_container", "false"),
             add_launch_arg("pointcloud_container_name", "pointcloud_container"),
+            add_launch_arg("ld_preload_value", ""),
+            add_launch_arg("container_package", "rclcpp_components"),
+            add_launch_arg("container_executable", "component_container"),
             add_launch_arg(
                 "voxel_grid_based_euclidean_param_path",
                 [
-                    FindPackageShare("autoware_launch"),
-                    "/config/perception/object_recognition/detection/clustering/voxel_grid_based_euclidean_cluster.param.yaml",
+                    FindPackageShare("autoware_euclidean_cluster"),
+                    "/config/voxel_grid_based_euclidean_cluster.param.yaml",
                 ],
             ),
             OpaqueFunction(function=launch_setup),

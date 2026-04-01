@@ -72,11 +72,12 @@ void TrackerObjectDebugger::reset()
 
 void TrackerObjectDebugger::collect(
   const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
-  const types::DynamicObjectList & detected_objects,
-  const std::unordered_map<int, int> & direct_assignment,
-  const std::unordered_map<int, int> & /*reverse_assignment*/)
+  const types::AssociatedObjects & associated_objects)
 {
   is_initialized_ = true;
+
+  const auto & detected_objects = associated_objects.objects;
+  const auto & association_result = associated_objects.association;
 
   message_time_ = message_time;
 
@@ -99,14 +100,22 @@ void TrackerObjectDebugger::collect(
     tracker_point.z = tracked_object.pose.position.z;
 
     // associated detection
-    if (direct_assignment.find(tracker_idx) != direct_assignment.end()) {
-      const auto & associated_object =
-        detected_objects.objects.at(direct_assignment.find(tracker_idx)->second);
-      detection_point.x = associated_object.pose.position.x;
-      detection_point.y = associated_object.pose.position.y;
-      detection_point.z = associated_object.pose.position.z;
-      is_associated = true;
-    } else {
+    unique_identifier_msgs::msg::UUID tracker_uuid = (*tracker_itr)->getUUID();
+
+    if (association_result.tracker_to_measurement.count(tracker_uuid)) {
+      const auto & measurement_uuid = association_result.tracker_to_measurement.at(tracker_uuid);
+      const auto measurement_idx_opt = detected_objects.getObjectIndexByUuid(measurement_uuid);
+
+      if (measurement_idx_opt) {
+        const auto & associated_object = detected_objects.objects.at(*measurement_idx_opt);
+        detection_point.x = associated_object.pose.position.x;
+        detection_point.y = associated_object.pose.position.y;
+        detection_point.z = associated_object.pose.position.z;
+        is_associated = true;
+      }
+    }
+
+    if (!is_associated) {
       // no detection
       detection_point.x = tracker_point.x;
       detection_point.y = tracker_point.y;
@@ -228,12 +237,11 @@ void TrackerObjectDebugger::draw(
       std::to_string(static_cast<int>(object_data_front.total_existence_probability * 100)) + "\n";
 
     // probability per channel
-    const size_t channel_size = channels_config_.size();
-    for (size_t i = 0; i < channel_size; ++i) {
-      if (object_data_front.existence_vector[i] < 0.00101) continue;
+    for (const auto & prob : object_data_front.existence_vector) {
+      if (prob.existence_probability < 0.00101) continue;
       existence_probability_text +=
-        channels_config_[i].short_name +
-        std::to_string(static_cast<int>(object_data_front.existence_vector[i] * 100)) + ":";
+        channels_config_[prob.channel_index].short_name +
+        std::to_string(static_cast<int>(prob.existence_probability * 100)) + ":";
     }
     if (!existence_probability_text.empty()) {
       existence_probability_text.pop_back();

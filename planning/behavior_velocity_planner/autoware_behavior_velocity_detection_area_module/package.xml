@@ -2,12 +2,10 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_behavior_velocity_detection_area_module</name>
-  <version>0.49.0</version>
+  <version>0.50.0</version>
   <description>The autoware_behavior_velocity_detection_area_module package</description>
 
-  <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
-  <maintainer email="tomoya.kimura@tier4.jp">Tomoya Kimura</maintainer>
-  <maintainer email="shumpei.wakabayashi@tier4.jp">Shumpei Wakabayashi</maintainer>
+  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
   <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
 

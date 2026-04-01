@@ -38,6 +38,10 @@
 #include <boost/geometry/strategies/agnostic/hull_graham_andrew.hpp>
 #endif
 
+#include <tf2_eigen/tf2_eigen.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/crop_hull.h>
 #include <pcl/filters/extract_indices.h>
@@ -55,14 +59,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#endif
 
 namespace
 {

@@ -68,6 +68,7 @@ enum class ObjectInfo {
   AMBIGUOUS_STOPPED_VEHICLE,
   PARKING_VIOLATION_VEHICLE,
   IS_ADJACENT_LANE_STOP_VEHICLE,
+  CLOSE_DISTANCE_AVOIDANCE,
 };
 
 struct ObjectParameter
@@ -124,14 +125,14 @@ struct AvoidanceParameters
   // enable avoidance for adjacent lane stop vehicle
   std::string policy_adjacent_lane_stop_vehicle{"auto"};
 
+  // policy for close distance avoidance
+  std::string policy_close_distance_avoidance{"ignore"};
+
   // enable yield maneuver.
   bool enable_yield_maneuver{false};
 
-  // enable yield maneuver during shifting.
+  // enable yield maneuver.
   bool enable_yield_maneuver_during_shifting{false};
-
-  // enable signalling during yield maneuver.
-  bool enable_signalling_during_yield{false};
 
   // use hatched road markings for avoidance
   bool use_hatched_road_markings{false};
@@ -332,6 +333,18 @@ struct AvoidanceParameters
 
   // policy
   std::string policy_lateral_margin{"best_effort"};
+
+  // policy for turn signal output during candidate path (waiting approval)
+  // "none"             : never output turn signal for candidate paths.
+  // "stopped_candidate": output turn signal only when vehicle is stopped and candidate path exists.
+  // "all_candidate"    : always output turn signal whenever a candidate path exists.
+  // "stop_on_approval" : no turn signal during candidate phase; after approval, stop for
+  //                      `turn_signal_on_approval_hold_duration` seconds while outputting turn
+  //                      signal, then proceed with avoidance.
+  std::string policy_candidate_path_turn_signal{"stopped_candidate"};
+
+  // duration [s] to hold stop and turn signal after approval (used by "stop_on_approval" policy)
+  double turn_signal_on_approval_hold_duration{3.0};
 
   // path generation method.
   std::string path_generation_method{"shift_line_base"};

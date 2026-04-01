@@ -85,6 +85,7 @@ nav:
       - 'Trajectory Optimizer': planning/autoware_trajectory_optimizer
       - 'Trajectory Ranker': planning/autoware_trajectory_ranker
       - 'Trajectory Safety Filter': planning/autoware_trajectory_safety_filter
+      - 'Continuous Jerk Filter': planning/autoware_trajectory_optimizer/docs/continuous_jerk_filter
 
   - 'Scenario Selector': planning/autoware_scenario_selector
 

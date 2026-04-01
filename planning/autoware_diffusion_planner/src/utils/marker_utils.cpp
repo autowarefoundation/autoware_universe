@@ -139,6 +139,82 @@ ColorRGBA get_traffic_light_color(float g, float y, float r, const ColorRGBA & o
   return original_color;
 };
 
+MarkerArray create_linestring_marker(
+  const Eigen::Matrix4d & transform_ego_to_map, const std::vector<float> & linestring_vector,
+  const std::vector<int64_t> & shape, const Time & stamp, const rclcpp::Duration & lifetime,
+  const std::string & frame_id)
+{
+  MarkerArray marker_array;
+  if (shape.size() < 4) {
+    return marker_array;
+  }
+  const int64_t P = shape[2];
+  const int64_t D = shape[3];
+  if (P <= 0 || D <= 0 || linestring_vector.size() % static_cast<size_t>(P * D) != 0) {
+    return marker_array;
+  }
+  const size_t num_line_strings = linestring_vector.size() / static_cast<size_t>(P * D);
+  constexpr float near_zero_threshold = 1e-2f;
+  // The tensor layout is [x, y, one_hot_types...], so the type indices come from 2 + LineStringType
+  constexpr int64_t stop_line_type_idx = 2 + LINE_STRING_TYPE_STOP_LINE;
+  constexpr int64_t road_border_type_idx = 2 + LINE_STRING_TYPE_ROAD_BORDER;
+
+  // Dark red
+  ColorRGBA road_border_color;
+  road_border_color.r = 0.8f;
+  road_border_color.g = 0.0f;
+  road_border_color.b = 0.2f;
+  road_border_color.a = 0.8f;
+
+  // Orange
+  ColorRGBA stop_line_color;
+  stop_line_color.r = 1.0f;
+  stop_line_color.g = 0.65f;
+  stop_line_color.b = 0.0f;
+  stop_line_color.a = 0.8f;
+
+  for (size_t l = 0; l < num_line_strings; ++l) {
+    // All points in a line string share the same type; check the first point's type flag
+    const bool is_stop_line =
+      linestring_vector[P * D * static_cast<int64_t>(l) + stop_line_type_idx] > 0.5f;
+    const bool is_road_border =
+      linestring_vector[P * D * static_cast<int64_t>(l) + road_border_type_idx] > 0.5f;
+
+    if (!is_road_border && !is_stop_line) {
+      continue;
+    }
+
+    std::string ns = is_stop_line ? "stop_line" : "road_border";
+    ColorRGBA color = is_stop_line ? stop_line_color : road_border_color;
+    Marker marker = create_base_marker(
+      stamp, frame_id, ns, static_cast<int>(l), Marker::LINE_STRIP, color, lifetime, 0.2);
+
+    float total_norm = 0.0f;
+    for (int64_t p = 0; p < P; ++p) {
+      const float x = linestring_vector[P * D * static_cast<int64_t>(l) + p * D + X];
+      const float y = linestring_vector[P * D * static_cast<int64_t>(l) + p * D + Y];
+      const float norm = std::sqrt(x * x + y * y);
+      total_norm += norm;
+
+      if (norm < near_zero_threshold) {
+        continue;
+      }
+
+      const Eigen::Vector4d pt_ego(x, y, 0.0, 1.0);
+      const Eigen::Vector4d pt_map = transform_ego_to_map * pt_ego;
+      add_point_to_marker(marker, pt_map.x(), pt_map.y(), pt_map.z() + 0.1);
+    }
+
+    if (total_norm < near_zero_threshold || marker.points.empty()) {
+      continue;
+    }
+
+    marker_array.markers.push_back(marker);
+  }
+
+  return marker_array;
+}
+
 MarkerArray create_lane_marker(
   const Eigen::Matrix4d & transform_ego_to_map, const std::vector<float> & lane_vector,
   const std::vector<int64_t> & shape, const Time & stamp, const rclcpp::Duration & lifetime,

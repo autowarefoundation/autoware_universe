@@ -58,7 +58,7 @@ std::set<int> SimilarAreaSearcher::search(
   auto compare = [](KeyAndArea a, KeyAndArea b) { return a.count < b.count; };
   std::priority_queue<KeyAndArea, std::vector<KeyAndArea>, decltype(compare)> key_queue{compare};
   for (auto [key, count] : count_map) {
-    key_queue.push({key, count});
+    key_queue.emplace(key, count);
   }
 
   const Eigen::MatrixXf ref_histogram = histogram_map.at(best_road_like_class).eval();

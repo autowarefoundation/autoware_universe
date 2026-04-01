@@ -2,6 +2,15 @@
 Changelog for package tier4_planning_factor_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(tier4_planning_factor_rviz_plugin): use service call to retrieve vehicle info (`#11827 <https://github.com/autowarefoundation/autoware_universe/issues/11827>`_)
+  * refactor(tier4_planning_factor_rviz_plugin): use service call to retrieve vehicle info
+  * fix(planning_factor_rviz_plugin): change log level from INFO to WARN_ONCE while waiting for vehicle_info service
+  ---------
+* Contributors: Ryohsuke Mitsudome, Yukinari Hisaki
+
 0.49.0 (2025-12-30)
 -------------------
 

@@ -22,8 +22,8 @@
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -31,10 +31,10 @@
 #include <utility>
 #include <vector>
 
+using autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline;
 using autoware::motion_utils::findNearestIndex;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
-using lanelet::utils::getArcCoordinatesOnEgoCenterline;
 namespace autoware::behavior_path_planner
 {
 using start_planner_utils::getPullOutLanes;
@@ -158,7 +158,9 @@ std::optional<PullOutPath> ShiftPullOut::plan(
       const auto long_offset_to_next_point =
         autoware::motion_utils::calcLongitudinalOffsetToSegment(
           cropped_path.points, start_segment_idx_after_crop + 1, start_pose.position);
-      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) < max_long_offset;
+      constexpr double eps = 1e-2;
+      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) <
+             max_long_offset + eps;
     };
 
     if (!validate_cropped_path(cropped_path)) {
@@ -264,7 +266,7 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
 
   // generate road lane reference path
   const auto arc_position_start =
-    getArcCoordinatesOnEgoCenterline(road_lanes, start_pose, route_handler.getLaneletMapPtr());
+    get_arc_coordinates_on_ego_centerline(road_lanes, start_pose, route_handler.getLaneletMapPtr());
   const double s_start = std::max(arc_position_start.length - backward_path_length, 0.0);
   const auto path_end_info =
     autoware::behavior_path_planner::utils::parking_departure::calcEndArcLength(
@@ -285,6 +287,9 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
     non_shifted_path.start_pose = start_pose;
     non_shifted_path.end_pose = start_pose;
     non_shifted_path.pairs_terminal_velocity_and_accel.push_back(std::make_pair(0, 0));
+    std::tie(non_shifted_path.shift_length.start, non_shifted_path.shift_length.end) =
+      start_planner_utils::calc_start_and_end_shift_length(
+        road_lanes, non_shifted_path.start_pose, non_shifted_path.end_pose);
     return non_shifted_path;
   });
 
@@ -464,6 +469,9 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
     candidate_path.end_pose = shift_line.end;
     candidate_path.pairs_terminal_velocity_and_accel.push_back(
       std::make_pair(terminal_velocity, longitudinal_acc));
+    candidate_path.shift_length.start = shift_line.start_shift_length;
+    candidate_path.shift_length.end = shift_line.end_shift_length;
+
     candidate_paths.push_back(candidate_path);
   }
 
