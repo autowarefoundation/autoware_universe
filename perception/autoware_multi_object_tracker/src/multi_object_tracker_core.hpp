@@ -36,7 +36,7 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <utility>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -54,14 +54,10 @@ struct MultiObjectTrackerParameters
 
   std::vector<types::InputChannel> input_channels_config;
 
-  std::vector<int64_t> can_assign_matrix;
-  std::vector<double> max_dist_matrix;
-  std::vector<double> max_area_matrix;
-  std::vector<double> min_area_matrix;
-  std::vector<double> min_iou_matrix;
+  AssociatorConfig::LabelToTrackerAssociationParametersMap association_params_map;
   std::map<std::string, std::string> tracker_type_map;
-  std::vector<double> pruning_giou_thresholds;
-  std::vector<double> pruning_distance_thresholds;
+  TrackedLabelThresholds pruning_giou_thresholds;
+  TrackedLabelThresholds pruning_distance_thresholds;
 
   // Induced parameters
   TrackerProcessorConfig processor_config;
