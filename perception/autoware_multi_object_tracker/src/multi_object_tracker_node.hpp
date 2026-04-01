@@ -15,13 +15,8 @@
 #ifndef MULTI_OBJECT_TRACKER_NODE_HPP_
 #define MULTI_OBJECT_TRACKER_NODE_HPP_
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
-#include "autoware/multi_object_tracker/odometry.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "debugger/debugger.hpp"
 #include "multi_object_tracker_core.hpp"
-#include "processor/input_manager.hpp"
-#include "processor/processor.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -29,12 +24,7 @@
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
 
-#include <list>
-#include <map>
 #include <memory>
-#include <string>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
 namespace autoware::multi_object_tracker
