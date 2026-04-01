@@ -15,8 +15,8 @@
 #ifndef NETWORKS__NET_HPP_
 #define NETWORKS__NET_HPP_
 
-#include "networks/tensor.hpp"
 #include "core/vad_logger.hpp"
+#include "networks/tensor.hpp"
 #include "vad_config.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>

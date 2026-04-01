@@ -18,8 +18,7 @@ namespace autoware::tensorrt_vad
 {
 
 VadPipeline::VadPipeline(
-  const VadConfig & vad_config,
-  const autoware::tensorrt_common::TrtCommonConfig & backbone_config,
+  const VadConfig & vad_config, const autoware::tensorrt_common::TrtCommonConfig & backbone_config,
   const autoware::tensorrt_common::TrtCommonConfig & head_config,
   const autoware::tensorrt_common::TrtCommonConfig & head_no_prev_config,
   const std::shared_ptr<VadLogger> & logger)

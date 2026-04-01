@@ -15,9 +15,9 @@
 #ifndef NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
 #define NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
 
+#include "core/vad_logger.hpp"
 #include "data_types.hpp"
 #include "networks/postprocess/object_postprocess_kernel.hpp"
-#include "core/vad_logger.hpp"
 
 #include <cuda_runtime.h>
 

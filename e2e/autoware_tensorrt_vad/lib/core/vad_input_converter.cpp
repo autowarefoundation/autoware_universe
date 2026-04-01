@@ -43,9 +43,8 @@ VadInputData VadInputConverter::convert(const CoreInputFrame & frame)
     }
   }
 
-  input.vad_base2img = cached_vad_base2img_.has_value()
-                         ? cached_vad_base2img_.value()
-                         : compute_vad_base2img(frame.camera_infos);
+  input.vad_base2img = cached_vad_base2img_.has_value() ? cached_vad_base2img_.value()
+                                                        : compute_vad_base2img(frame.camera_infos);
 
   if (frame.kinematic_state.has_value() && frame.acceleration.has_value()) {
     input.can_bus = compute_can_bus(frame.kinematic_state.value(), frame.acceleration.value());
@@ -165,10 +164,10 @@ std::vector<float> VadInputConverter::compute_shift(
   float translation_angle = std::atan2(delta_y, delta_x) / static_cast<float>(M_PI) * 180.0f;
   float bev_angle = ego_angle - translation_angle;
 
-  float shift_y = translation_length * std::cos(bev_angle / 180.0f * static_cast<float>(M_PI)) /
-                  real_h;
-  float shift_x = translation_length * std::sin(bev_angle / 180.0f * static_cast<float>(M_PI)) /
-                  real_w;
+  float shift_y =
+    translation_length * std::cos(bev_angle / 180.0f * static_cast<float>(M_PI)) / real_h;
+  float shift_x =
+    translation_length * std::sin(bev_angle / 180.0f * static_cast<float>(M_PI)) / real_w;
 
   return {shift_x, shift_y};
 }
@@ -184,13 +183,10 @@ Eigen::Matrix4f VadInputConverter::create_cam2img(const CoreCameraInfo & camera_
   return cam2img;
 }
 
-std::pair<float, float> VadInputConverter::calculate_scale(
-  const CoreCameraInfo & camera_info) const
+std::pair<float, float> VadInputConverter::calculate_scale(const CoreCameraInfo & camera_info) const
 {
-  const float scale_width =
-    config_.target_image_width / static_cast<float>(camera_info.width);
-  const float scale_height =
-    config_.target_image_height / static_cast<float>(camera_info.height);
+  const float scale_width = config_.target_image_width / static_cast<float>(camera_info.width);
+  const float scale_height = config_.target_image_height / static_cast<float>(camera_info.height);
   return std::make_pair(scale_width, scale_height);
 }
 

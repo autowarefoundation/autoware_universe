@@ -15,6 +15,7 @@
 #ifndef VAD_MODEL_HPP_
 #define VAD_MODEL_HPP_
 
+#include "core/vad_logger.hpp"
 #include "data_types.hpp"
 #include "networks/backbone.hpp"
 #include "networks/head.hpp"
@@ -22,7 +23,6 @@
 #include "networks/postprocess/map_postprocess.hpp"
 #include "networks/postprocess/object_postprocess.hpp"
 #include "networks/preprocess/multi_camera_preprocess.hpp"
-#include "core/vad_logger.hpp"
 #include "vad_config.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>

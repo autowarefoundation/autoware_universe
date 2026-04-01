@@ -17,9 +17,9 @@
 #include <string>
 #define NETWORKS__POSTPROCESS__MAP_POSTPROCESS_HPP_
 
+#include "core/vad_logger.hpp"
 #include "data_types.hpp"
 #include "networks/postprocess/map_postprocess_kernel.hpp"
-#include "core/vad_logger.hpp"
 
 #include <cuda_runtime.h>
 

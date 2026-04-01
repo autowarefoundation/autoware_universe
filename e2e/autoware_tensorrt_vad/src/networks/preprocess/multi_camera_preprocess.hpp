@@ -15,8 +15,8 @@
 #ifndef NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_HPP_
 #define NETWORKS__PREPROCESS__MULTI_CAMERA_PREPROCESS_HPP_
 
-#include "networks/preprocess/multi_camera_preprocess_kernel.hpp"
 #include "core/vad_logger.hpp"
+#include "networks/preprocess/multi_camera_preprocess_kernel.hpp"
 
 #include <opencv2/core/mat.hpp>
 

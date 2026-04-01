@@ -15,8 +15,8 @@
 #ifndef VAD_NODE_HPP_
 #define VAD_NODE_HPP_
 
-#include "ros_data_types.hpp"
 #include "core/vad_pipeline.hpp"
+#include "ros_data_types.hpp"
 #include "ros_vad_logger.hpp"
 #include "synchronization_strategy.hpp"
 #include "utils/classification_loader.hpp"

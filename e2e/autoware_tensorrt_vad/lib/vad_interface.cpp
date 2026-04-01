@@ -99,10 +99,8 @@ CoreInputFrame to_core_frame(const VadInputTopicData & vad_input_topic_data)
     state.position = Eigen::Vector3d(pose.position.x, pose.position.y, pose.position.z);
     state.orientation = Eigen::Quaterniond(
       pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
-    state.linear_velocity = Eigen::Vector3d(
-      twist.linear.x, twist.linear.y, twist.linear.z);
-    state.angular_velocity = Eigen::Vector3d(
-      twist.angular.x, twist.angular.y, twist.angular.z);
+    state.linear_velocity = Eigen::Vector3d(twist.linear.x, twist.linear.y, twist.linear.z);
+    state.angular_velocity = Eigen::Vector3d(twist.angular.x, twist.angular.y, twist.angular.z);
     frame.kinematic_state = state;
   }
 

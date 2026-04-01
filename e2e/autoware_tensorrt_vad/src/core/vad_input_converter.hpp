@@ -31,7 +31,8 @@ namespace autoware::tensorrt_vad
 class VadInputConverter
 {
 public:
-  VadInputConverter(const TransformProvider & transform_provider, const VadInterfaceConfig & config);
+  VadInputConverter(
+    const TransformProvider & transform_provider, const VadInterfaceConfig & config);
 
   VadInputData convert(const CoreInputFrame & frame);
 
