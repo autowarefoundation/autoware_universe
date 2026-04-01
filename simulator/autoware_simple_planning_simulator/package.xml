@@ -17,13 +17,10 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
-  <depend>autoware_common_msgs</depend>
-  <depend>autoware_component_interface_specs</depend>
   <depend>autoware_control_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_learning_based_vehicle_model</depend>
-  <depend>autoware_localization_msgs</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
