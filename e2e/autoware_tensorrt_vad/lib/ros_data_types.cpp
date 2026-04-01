@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/data_types.hpp"
+#include "../src/ros_data_types.hpp"
 
 namespace autoware::tensorrt_vad
 {
@@ -24,14 +24,12 @@ VadInputTopicData::VadInputTopicData(const int32_t num_cameras)
 
 bool VadInputTopicData::is_complete() const
 {
-  // Check if vector sizes match expected camera count
   if (
     static_cast<int32_t>(images.size()) != num_cameras_ ||
     static_cast<int32_t>(camera_infos.size()) != num_cameras_) {
     return false;
   }
 
-  // Check if all required data is available
   for (int32_t i = 0; i < num_cameras_; ++i) {
     if (!images[i] || !camera_infos[i]) {
       return false;
@@ -45,13 +43,11 @@ void VadInputTopicData::reset()
 {
   frame_started_ = false;
 
-  // Reset all images and camera_infos using clear + resize
   images.clear();
   images.resize(num_cameras_);
   camera_infos.clear();
   camera_infos.resize(num_cameras_);
 
-  // Reset other data
   kinematic_state = nullptr;
   acceleration = nullptr;
 }
@@ -68,7 +64,7 @@ void VadInputTopicData::set_image(
   const std::size_t camera_id, const sensor_msgs::msg::Image::ConstSharedPtr & msg)
 {
   if (camera_id >= images.size()) {
-    return;  // Invalid camera ID
+    return;
   }
   ensure_frame_started(msg->header.stamp);
   images[camera_id] = msg;
@@ -78,7 +74,7 @@ void VadInputTopicData::set_camera_info(
   const std::size_t camera_id, const sensor_msgs::msg::CameraInfo::ConstSharedPtr & msg)
 {
   if (camera_id >= camera_infos.size()) {
-    return;  // Invalid camera ID
+    return;
   }
   ensure_frame_started(msg->header.stamp);
   camera_infos[camera_id] = msg;

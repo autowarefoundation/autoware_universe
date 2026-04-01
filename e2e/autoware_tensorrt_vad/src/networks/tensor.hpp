@@ -15,7 +15,7 @@
 #ifndef NETWORKS__TENSOR_HPP_
 #define NETWORKS__TENSOR_HPP_
 
-#include "ros_vad_logger.hpp"
+#include "core/vad_logger.hpp"
 
 #include <NvInfer.h>
 #include <NvInferRuntime.h>

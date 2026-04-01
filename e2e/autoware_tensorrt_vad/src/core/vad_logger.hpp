@@ -12,31 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NETWORKS__BACKBONE_HPP_
-#define NETWORKS__BACKBONE_HPP_
+#ifndef CORE__VAD_LOGGER_HPP_
+#define CORE__VAD_LOGGER_HPP_
 
-#include "networks/net.hpp"
-
-#include <memory>
 #include <string>
-#include <vector>
-
 
 namespace autoware::tensorrt_vad
 {
 
-class Backbone : public Net
+class VadLogger
 {
 public:
-  Backbone(
-    const VadConfig & vad_config,
-    const autoware::tensorrt_common::TrtCommonConfig & trt_common_config,
-    const std::string & plugins_path, std::shared_ptr<VadLogger> logger);
+  virtual ~VadLogger() = default;
 
-  std::vector<autoware::tensorrt_common::NetworkIO> setup_network_io(
-    const VadConfig & vad_config) override;
+  virtual void debug(const std::string & message) = 0;
+  virtual void info(const std::string & message) = 0;
+  virtual void warn(const std::string & message) = 0;
+  virtual void error(const std::string & message) = 0;
 };
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // NETWORKS__BACKBONE_HPP_
+#endif  // CORE__VAD_LOGGER_HPP_

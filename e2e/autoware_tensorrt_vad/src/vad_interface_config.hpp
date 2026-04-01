@@ -18,8 +18,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <tf2_ros/buffer.h>
-
 #include <array>
 #include <map>
 #include <memory>

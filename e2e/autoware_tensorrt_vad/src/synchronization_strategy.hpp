@@ -15,7 +15,7 @@
 #ifndef SYNCHRONIZATION_STRATEGY_HPP_
 #define SYNCHRONIZATION_STRATEGY_HPP_
 
-#include "vad_interface.hpp"
+#include "ros_data_types.hpp"
 
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>

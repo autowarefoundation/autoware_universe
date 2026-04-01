@@ -15,6 +15,8 @@
 #ifndef COORDINATE_TRANSFORMER_HPP_
 #define COORDINATE_TRANSFORMER_HPP_
 
+#include "core/transform_provider.hpp"
+
 #include <Eigen/Dense>
 #include <tf2_eigen/tf2_eigen.hpp>
 
@@ -37,7 +39,7 @@ namespace autoware::tensorrt_vad::vad_interface
  * so no coordinate transformation is needed. This class only provides TF buffer lookups
  * for camera frame transformations (base_link to camera frames).
  */
-class CoordinateTransformer
+class CoordinateTransformer : public autoware::tensorrt_vad::TransformProvider
 {
 public:
   /**
@@ -51,7 +53,7 @@ public:
    * @param source_frame Camera frame name (e.g., "camera0", "camera1")
    * @return Optional transformation matrix from base_link to camera
    */
-  std::optional<Eigen::Matrix4f> lookup_base2cam(const std::string & source_frame) const;
+  std::optional<Eigen::Matrix4f> lookup_base2cam(const std::string & source_frame) const override;
 
 private:
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;  ///< TF buffer for dynamic transformations

@@ -15,6 +15,8 @@
 #ifndef VAD_NODE_HPP_
 #define VAD_NODE_HPP_
 
+#include "ros_data_types.hpp"
+#include "core/vad_pipeline.hpp"
 #include "ros_vad_logger.hpp"
 #include "synchronization_strategy.hpp"
 #include "utils/model_config.hpp"
@@ -22,7 +24,6 @@
 #include "utils/version_checker.hpp"
 #include "vad_interface.hpp"
 #include "vad_interface_config.hpp"
-#include "vad_model.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware/tensorrt_common/utils.hpp>
@@ -140,8 +141,8 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::AccelWithCovarianceStamped>::SharedPtr acceleration_sub_;
   rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr tf_static_sub_;
 
-  // VAD model
-  std::unique_ptr<VadModel<RosVadLogger>> vad_model_ptr_{};
+  // VAD pipeline (core inference wrapper)
+  std::unique_ptr<VadPipeline> vad_pipeline_ptr_{};
 
   // VAD interface
   std::unique_ptr<VadInterface> vad_interface_ptr_{};

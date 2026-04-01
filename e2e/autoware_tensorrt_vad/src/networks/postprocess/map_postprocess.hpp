@@ -19,7 +19,7 @@
 
 #include "data_types.hpp"
 #include "networks/postprocess/map_postprocess_kernel.hpp"
-#include "ros_vad_logger.hpp"
+#include "core/vad_logger.hpp"
 
 #include <cuda_runtime.h>
 

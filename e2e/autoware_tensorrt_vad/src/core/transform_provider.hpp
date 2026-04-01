@@ -12,31 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NETWORKS__BACKBONE_HPP_
-#define NETWORKS__BACKBONE_HPP_
+#ifndef CORE__TRANSFORM_PROVIDER_HPP_
+#define CORE__TRANSFORM_PROVIDER_HPP_
 
-#include "networks/net.hpp"
+#include <Eigen/Dense>
 
-#include <memory>
+#include <optional>
 #include <string>
-#include <vector>
-
 
 namespace autoware::tensorrt_vad
 {
 
-class Backbone : public Net
+class TransformProvider
 {
 public:
-  Backbone(
-    const VadConfig & vad_config,
-    const autoware::tensorrt_common::TrtCommonConfig & trt_common_config,
-    const std::string & plugins_path, std::shared_ptr<VadLogger> logger);
+  virtual ~TransformProvider() = default;
 
-  std::vector<autoware::tensorrt_common::NetworkIO> setup_network_io(
-    const VadConfig & vad_config) override;
+  virtual std::optional<Eigen::Matrix4f> lookup_base2cam(
+    const std::string & source_frame) const = 0;
 };
 
 }  // namespace autoware::tensorrt_vad
 
-#endif  // NETWORKS__BACKBONE_HPP_
+#endif  // CORE__TRANSFORM_PROVIDER_HPP_

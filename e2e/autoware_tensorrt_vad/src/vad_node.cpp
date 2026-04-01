@@ -317,7 +317,7 @@ bool VadNode::initialize_vad_model()
 
     // Create RosVadLogger using the logger
     auto ros_logger = std::make_shared<RosVadLogger>(this->get_logger());
-    vad_model_ptr_ = std::make_unique<VadModel<RosVadLogger>>(
+    vad_pipeline_ptr_ = std::make_unique<VadPipeline>(
       vad_config, backbone_trt_config, head_trt_config, head_no_prev_trt_config, ros_logger);
 
     RCLCPP_INFO_THROTTLE(
@@ -602,9 +602,9 @@ VadNode::load_trt_common_configs()
 std::optional<VadOutputTopicData> VadNode::execute_inference(
   const VadInputTopicData & vad_input_topic_data)
 {
-  if (!vad_interface_ptr_ || !vad_model_ptr_) {
+  if (!vad_interface_ptr_ || !vad_pipeline_ptr_) {
     RCLCPP_ERROR_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "VAD interface or model not initialized");
+      this->get_logger(), *this->get_clock(), 5000, "VAD interface or pipeline not initialized");
     return std::nullopt;
   }
 
@@ -619,7 +619,7 @@ std::optional<VadOutputTopicData> VadNode::execute_inference(
     const auto vad_input = vad_interface_ptr_->convert_input(vad_input_topic_data);
 
     // Execute inference with VadModel
-    const auto vad_output = vad_model_ptr_->infer(vad_input);
+    const auto vad_output = vad_pipeline_ptr_->infer(vad_input);
 
     const auto [base2map_transform, map2base_transform] =
       utils::get_transform_matrix(*vad_input_topic_data.kinematic_state);

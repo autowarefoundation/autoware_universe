@@ -22,7 +22,7 @@
 #include "networks/postprocess/map_postprocess.hpp"
 #include "networks/postprocess/object_postprocess.hpp"
 #include "networks/preprocess/multi_camera_preprocess.hpp"
-#include "ros_vad_logger.hpp"
+#include "core/vad_logger.hpp"
 #include "vad_config.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>

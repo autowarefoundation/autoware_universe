@@ -15,25 +15,12 @@
 #ifndef ROS_VAD_LOGGER_HPP_
 #define ROS_VAD_LOGGER_HPP_
 
-#include <rclcpp/rclcpp.hpp>
+#include "core/vad_logger.hpp"
 
-#include <string>
+#include <rclcpp/rclcpp.hpp>
 
 namespace autoware::tensorrt_vad
 {
-
-// VadLogger interface definition
-class VadLogger
-{
-public:
-  virtual ~VadLogger() = default;
-
-  // Define each log level method as pure virtual function
-  virtual void debug(const std::string & message) = 0;
-  virtual void info(const std::string & message) = 0;
-  virtual void warn(const std::string & message) = 0;
-  virtual void error(const std::string & message) = 0;
-};
 
 /**
  * @brief VadLogger implementation for ROS 2
