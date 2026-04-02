@@ -39,9 +39,7 @@ def _should_launch_converter(simulator_model_param_path: str) -> bool:
 
 
 def launch_setup(context, *args, **kwargs):
-    simulator_model_param_path = LaunchConfiguration("simulator_model_param_file").perform(
-        context
-    )
+    simulator_model_param_path = LaunchConfiguration("simulator_model_param_file").perform(context)
     if not _should_launch_converter(simulator_model_param_path):
         return []
 
