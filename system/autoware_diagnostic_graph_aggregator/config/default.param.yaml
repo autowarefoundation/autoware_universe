@@ -1,6 +1,7 @@
 /**:
   ros__parameters:
     use_operation_mode_availability: true
+    initial_latch_suppression: true
     rate: 10.0
     input_qos_depth: 1000
     graph_qos_depth: 1

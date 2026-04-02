@@ -16,6 +16,8 @@
 #include "autoware/boundary_departure_checker/utils.hpp"
 #include "test_plot_utils.hpp"
 
+#include <autoware/motion_utils/distance/distance.hpp>
+
 #include <gtest/gtest.h>
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
@@ -193,8 +195,10 @@ TEST(UncrossableBoundaryUtilsTest, TestCalcJudgeLineDist)
   constexpr double delay_time = 1.0;
 
   constexpr double v_test = 10.0;
-  const double dist = utils::calc_judge_line_dist_with_jerk_limit(
+  const auto dist_opt = motion_utils::calculate_stop_distance(
     v_test, acceleration, max_stop_accel, max_stop_jerk, delay_time);
+  ASSERT_TRUE(dist_opt.has_value());
+  const double dist = dist_opt.value();
   EXPECT_GT(dist, 22.5);
 
   BDC_PLOT_RESULT({
@@ -204,9 +208,12 @@ TEST(UncrossableBoundaryUtilsTest, TestCalcJudgeLineDist)
     std::vector<double> distances;
     for (double v = 0.0; v <= 20.0; v += 1.0) {
       velocities.push_back(v);
-      distances.push_back(
-        utils::calc_judge_line_dist_with_jerk_limit(
-          v, acceleration, max_stop_accel, max_stop_jerk, delay_time));
+
+      if (
+        const auto dist_it_opt = motion_utils::calculate_stop_distance(
+          v, acceleration, max_stop_accel, max_stop_jerk, delay_time)) {
+        distances.push_back(*dist_it_opt);
+      }
     }
 
     plt.plot(Args(velocities, distances), Kwargs("marker"_a = "o"));
