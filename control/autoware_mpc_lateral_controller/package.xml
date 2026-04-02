@@ -5,8 +5,7 @@
   <version>0.50.0</version>
   <description>MPC-based lateral controller</description>
 
-  <maintainer email="takamasa.horibe@tier4.jp">Takamasa Horibe</maintainer>
-  <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
+  <maintainer email="arjun.ram@tier4.jp">Arjun Ram</maintainer>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
 

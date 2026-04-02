@@ -29,12 +29,12 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 // for the svg mapper
 #include <autoware/behavior_path_planner_common/utils/path_safety_checker/objects_filtering.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -163,7 +163,13 @@ bool path_footprint_exceeds_target_lane_bound(
   const auto & target_lanes = common_data_ptr->lanes_ptr->target;
   const bool is_left = common_data_ptr->direction == Direction::LEFT;
 
-  const auto combined_target_lane = lanelet::utils::combineLaneletsShape(target_lanes);
+  const auto combined_target_lane_opt =
+    autoware::experimental::lanelet2_utils::combine_lanelets_shape(target_lanes);
+  if (!combined_target_lane_opt) {
+    // empty target_lanes -> no boundary
+    return false;
+  }
+  const auto & combined_target_lane = combined_target_lane_opt.value();
 
   for (const auto & path_point : path.points) {
     const auto & pose = path_point.point.pose;
@@ -248,7 +254,8 @@ std::vector<std::vector<int64_t>> get_sorted_lane_ids(const CommonDataPtr & comm
   const auto & current_pose = common_data_ptr->get_ego_pose();
 
   const auto rough_shift_length =
-    lanelet::utils::getArcCoordinates(target_lanes, current_pose).distance;
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(target_lanes, current_pose)
+      .distance;
 
   std::vector<std::vector<int64_t>> sorted_lane_ids{};
   sorted_lane_ids.reserve(target_lanes.size());
@@ -580,7 +587,14 @@ lanelet::BasicPolygon2d create_polygon(
     return {};
   }
 
-  const auto polygon_3d = lanelet::utils::getPolygonFromArcLength(lanes, start_dist, end_dist);
+  const auto polygon_3d_opt = autoware::experimental::lanelet2_utils::get_polygon_from_arc_length(
+    lanes, start_dist, end_dist);
+
+  if (!polygon_3d_opt.has_value()) {
+    return {};
+  }
+
+  const auto & polygon_3d = polygon_3d_opt.value();
   return lanelet::utils::to2D(polygon_3d).basicPolygon();
 }
 
@@ -659,7 +673,15 @@ lanelet::ConstLanelets generateExpandedLanelets(
 {
   const auto left_extend_offset = (direction == Direction::LEFT) ? left_offset : 0.0;
   const auto right_extend_offset = (direction == Direction::RIGHT) ? -right_offset : 0.0;
-  return lanelet::utils::getExpandedLanelets(lanes, left_extend_offset, right_extend_offset);
+
+  const auto expand_lanelets_opt =
+    autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+      lanes, left_extend_offset, right_extend_offset);
+  if (expand_lanelets_opt) {
+    return *expand_lanelets_opt;
+  }
+
+  return lanes;
 }
 
 rclcpp::Logger getLogger(const std::string & type)
@@ -1014,7 +1036,8 @@ bool filter_target_lane_objects(
 
   const auto is_lateral_far = std::invoke([&]() -> bool {
     const auto dist_object_to_current_lanes_center =
-      lanelet::utils::getLateralDistanceToClosestLanelet(current_lanes, object.initial_pose);
+      autoware::experimental::lanelet2_utils::get_lateral_distance_to_centerline(
+        current_lanes, object.initial_pose);
     const auto lateral = dist_object_to_current_lanes_center - dist_ego_to_current_lanes_center;
     return std::abs(lateral) > (vehicle_width / 2);
   });
@@ -1440,10 +1463,10 @@ bool is_intersecting_no_lane_change_lines(
         const auto & path_p2 = path_segment[1].point.pose.position;
 
         for (size_t i = 0; i + 1 < line.size(); ++i) {
-          const auto line_p1 = lanelet::utils::conversion::toGeomMsgPt(line[i]);
-          const auto line_p2 = lanelet::utils::conversion::toGeomMsgPt(line[i + 1]);
+          const auto line_p1 = experimental::lanelet2_utils::to_ros(line[i]);
+          const auto line_p2 = experimental::lanelet2_utils::to_ros(line[i + 1]);
 
-          if (autoware_utils_geometry::intersect(path_p1, path_p2, line_p1, line_p2).has_value()) {
+          if (autoware_utils_geometry::intersect(path_p1, path_p2, line_p1, line_p2)) {
             return true;
           }
         }

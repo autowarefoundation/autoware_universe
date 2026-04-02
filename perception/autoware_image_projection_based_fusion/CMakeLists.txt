@@ -6,6 +6,7 @@ add_compile_options(-Wno-unknown-pragmas -fopenmp)
 find_package(autoware_cmake REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 find_package(OpenMP REQUIRED)
@@ -34,14 +35,28 @@ target_link_libraries(${PROJECT_NAME}
   ${EIGEN3_LIBRARIES}
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::image_projection_based_fusion::RoiDetectedObjectFusionNode"
-  EXECUTABLE roi_detected_object_fusion_node
+target_include_directories(${PROJECT_NAME} PRIVATE
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+ament_target_dependencies(${PROJECT_NAME}
+  autoware_agnocast_wrapper
+)
+
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::image_projection_based_fusion::RoiDetectedObjectFusionNode"
+  EXECUTABLE roi_detected_object_fusion_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::image_projection_based_fusion::RoiClusterFusionNode"
   EXECUTABLE roi_cluster_fusion_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
@@ -49,9 +64,11 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE segmentation_pointcloud_fusion_node
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::image_projection_based_fusion::RoiPointCloudFusionNode"
   EXECUTABLE roi_pointcloud_fusion_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 set(CUDA_VERBOSE OFF)
@@ -115,16 +132,21 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/pointpainting_fusion/voxel_generator.cpp
   )
 
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
-  if(CUDA_VERSION VERSION_LESS "13.0")
-    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_101,code=sm_101")
-  else()  # CUDA 13.0 renamed SM101 to SM110
-    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_110,code=sm_110")
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "12.8")
+    if(CUDA_VERSION VERSION_LESS "13.0")
+      list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_101,code=sm_101")
+    else()  # CUDA 13.0 renamed SM101 to SM110
+      list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_110,code=sm_110")
+    endif()
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=compute_120")
+  else()
+    list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
   endif()
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=compute_120")
 
   cuda_add_library(pointpainting_cuda_lib SHARED
     src/pointpainting_fusion/preprocess_kernel.cu
@@ -174,7 +196,7 @@ if(BUILD_TESTING)
 
 endif()
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
     launch
     config
 )

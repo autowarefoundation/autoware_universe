@@ -314,13 +314,14 @@ __device__ inline std::pair<float, float> decode_depth_intensity(unsigned long l
  * @param max_depth The maximum depth threshold for valid points.
  * @param depth_intensity_buffer Pointer to the depth-intensity buffer to be updated.
  * @param num_points_projected Pointer to a counter for the number of projected points.
+ * @param ego_mask Optional binary mask (H*W) where 0=occluded by ego chassis, nullptr to disable.
  */
 __global__ void project_points_kernel(
   const InputPointType * __restrict__ input_points, const double * __restrict__ tf_matrix,
   const double * __restrict__ projection_matrix, const size_t num_points, const size_t width,
   const size_t height, const double max_depth,
   unsigned long long * __restrict__ depth_intensity_buffer,
-  uint32_t * __restrict__ num_points_projected)
+  uint32_t * __restrict__ num_points_projected, const uint8_t * __restrict__ ego_mask)
 {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -353,6 +354,11 @@ __global__ void project_points_kernel(
     return;
   }
 
+  // Skip points that project onto pixels occluded by the ego vehicle chassis
+  if (ego_mask != nullptr && ego_mask[v * width + u] == 0) {
+    return;
+  }
+
   auto packed = encode_depth_intensity(p_cam_z, p.intensity);
   auto old = atomicMin(&depth_intensity_buffer[v * width + u], packed);
   if (old != packed) {
@@ -374,16 +380,24 @@ __global__ void project_points_kernel(
  * @param dilation_size The size of the dilation kernel (in pixels).
  * @param depth_intensity_buffer Pointer to the depth-intensity buffer.
  * @param output_array Pointer to the output array for RGB, depth, and intensity data.
+ * @param ego_mask Optional binary mask (H*W) where 0=occluded by ego chassis, nullptr to disable.
  */
 __global__ void dilate_kernel(
   InputImageBGR8Type * __restrict__ undistorted_image, const size_t width, const size_t height,
   const double max_depth, const int dilation_size,
-  const unsigned long long * __restrict__ depth_intensity_buffer, float * __restrict__ output_array)
+  const unsigned long long * __restrict__ depth_intensity_buffer, float * __restrict__ output_array,
+  const uint8_t * __restrict__ ego_mask)
 {
   const size_t u = blockIdx.x * blockDim.x + threadIdx.x;
   const size_t v = blockIdx.y * blockDim.y + threadIdx.y;
 
   if (u >= width || v >= height) {
+    return;
+  }
+
+  // Skip pixels occluded by the ego vehicle chassis - prevents dilation from
+  // bleeding projected points into the masked region
+  if (ego_mask != nullptr && ego_mask[v * width + u] == 0) {
     return;
   }
 
@@ -422,7 +436,8 @@ __global__ void dilate_kernel(
 cudaError_t PreprocessCuda::project_points_launch(
   const InputPointType * input_points, InputImageBGR8Type * undistorted_image,
   const double * tf_matrix, const double * projection_matrix, const size_t num_points,
-  const size_t width, const size_t height, float * output_array, uint32_t * num_points_projected)
+  const size_t width, const size_t height, float * output_array, uint32_t * num_points_projected,
+  const uint8_t * ego_mask)
 {
   // Reset buffer to max value - closest points are promoted
   CHECK_CUDA_ERROR(cudaMemsetAsync(
@@ -432,7 +447,7 @@ cudaError_t PreprocessCuda::project_points_launch(
   dim3 blocks_proj((num_points + threads_proj.x - 1) / threads_proj.x);
   project_points_kernel<<<blocks_proj, threads_proj, 0, stream_>>>(
     input_points, tf_matrix, projection_matrix, num_points, width, height, max_depth_,
-    depth_intensity_buffer_.get(), num_points_projected);
+    depth_intensity_buffer_.get(), num_points_projected, ego_mask);
 
   dim3 threads_dilate(kernel_2d_dim, kernel_2d_dim);
   dim3 blocks_dilate(
@@ -440,7 +455,7 @@ cudaError_t PreprocessCuda::project_points_launch(
     (height + threads_dilate.y - 1) / threads_dilate.y);
   dilate_kernel<<<blocks_dilate, threads_dilate, 0, stream_>>>(
     undistorted_image, width, height, max_depth_, dilation_size_, depth_intensity_buffer_.get(),
-    output_array);
+    output_array, ego_mask);
 
   return cudaGetLastError();
 }

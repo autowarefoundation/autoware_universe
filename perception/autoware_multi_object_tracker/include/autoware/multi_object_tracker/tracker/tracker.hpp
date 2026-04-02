@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,10 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Yukihiro Saito
-//
 
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKER_HPP_
@@ -23,8 +19,8 @@
 #include "model/pass_through_tracker.hpp"
 #include "model/pedestrian_and_bicycle_tracker.hpp"
 #include "model/pedestrian_tracker.hpp"
+#include "model/polygon_tracker.hpp"
 #include "model/tracker_base.hpp"
-#include "model/unknown_tracker.hpp"
 #include "model/vehicle_tracker.hpp"
 
 #endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKER_HPP_

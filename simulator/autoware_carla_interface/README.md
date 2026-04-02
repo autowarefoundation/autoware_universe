@@ -60,8 +60,18 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
        map_path:=$HOME/autoware_map/Town01 \
        vehicle_model:=sample_vehicle \
        sensor_model:=carla_sensor_kit \
+       simulator_type:=carla
+   ```
+
+   For E2E planning with VAD:
+
+   ```bash
+   ros2 launch autoware_launch e2e_simulator.launch.xml \
+       map_path:=$HOME/autoware_map/Town01 \
+       vehicle_model:=sample_vehicle \
+       sensor_model:=carla_sensor_kit \
        simulator_type:=carla \
-       carla_map:=Town01
+       use_e2e_planning:=true
    ```
 
 3. Set initial pose (Init by GNSS)
@@ -112,7 +122,6 @@ All the key parameters can be configured in `autoware_carla_interface.launch.xml
 | `ego_vehicle_role_name`  | string | "ego_vehicle"                                                                     | Role name for the ego vehicle                                                                                                                                                                                       |
 | `vehicle_type`           | string | "vehicle.toyota.prius"                                                            | Blueprint ID of the vehicle to spawn. The Blueprint ID of vehicles can be found in [CARLA Blueprint ID](https://carla.readthedocs.io/en/latest/catalogue_vehicles/)                                                 |
 | `spawn_point`            | string | None                                                                              | Coordinates for spawning the ego vehicle (None is random). Format = [x, y, z, roll, pitch, yaw]                                                                                                                     |
-| `carla_map`              | string | "Town01"                                                                          | Name of the map to load in CARLA                                                                                                                                                                                    |
 | `sync_mode`              | bool   | True                                                                              | Boolean flag to set synchronous mode in CARLA                                                                                                                                                                       |
 | `fixed_delta_seconds`    | double | 0.05                                                                              | Time step for the simulation (related to client FPS)                                                                                                                                                                |
 | `use_traffic_manager`    | bool   | False                                                                             | Boolean flag to set traffic manager in CARLA                                                                                                                                                                        |

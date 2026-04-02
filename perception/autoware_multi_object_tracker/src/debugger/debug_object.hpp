@@ -55,7 +55,7 @@ struct ObjectData
   bool is_associated{false};
 
   // existence probabilities
-  std::vector<float> existence_vector;
+  std::vector<types::ExistenceProbability> existence_vector;
   float total_existence_probability;
 
   // detection channel id
@@ -83,9 +83,7 @@ private:
 public:
   void collect(
     const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
-    const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & direct_assignment,
-    const std::unordered_map<int, int> & reverse_assignment);
+    const types::AssociatedObjects & associated_objects);
 
   void reset();
   void draw(

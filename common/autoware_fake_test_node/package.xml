@@ -14,7 +14,6 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>ament_cmake_ros</depend>
-  <depend>autoware_auto_common</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tf2</depend>

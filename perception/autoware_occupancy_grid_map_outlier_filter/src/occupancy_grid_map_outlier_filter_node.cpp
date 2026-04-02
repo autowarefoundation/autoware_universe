@@ -254,7 +254,15 @@ OccupancyGridMapOutlierFilterComponent::OccupancyGridMapOutlierFilterComponent(
     std::bind(
       &OccupancyGridMapOutlierFilterComponent::onOccupancyGridMapAndPointCloud2, this,
       std::placeholders::_1, std::placeholders::_2));
-  pointcloud_pub_ = create_publisher<PointCloud2>("~/output/pointcloud", rclcpp::SensorDataQoS());
+
+  /**
+   * To avoid data loss and simplify the operation, the hard coded QoS setting as Reliable is used
+   * for the publisher of obstacle_segmentation/pointcloud. If there is a clear distinction between
+   * data collection and autonomous driving modes, PublisherOptions with
+   * QosOverridingOptions::with_default_policies should be good options instead of hard-coding QoS
+   * setting.
+   */
+  pointcloud_pub_ = create_publisher<PointCloud2>("~/output/pointcloud", rclcpp::QoS{5}.reliable());
 
   /* Radius search 2d filter */
   if (use_radius_search_2d_filter) {

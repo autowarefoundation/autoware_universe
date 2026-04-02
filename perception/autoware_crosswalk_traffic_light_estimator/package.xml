@@ -9,6 +9,7 @@
   <maintainer email="tao.zhong@tier4.jp">Tao Zhong</maintainer>
   <maintainer email="masato.saeki@tier4.jp">Masato Saeki</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+  <maintainer email="masaki.baba.2@tier4.jp">Masaki Baba</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
@@ -19,7 +20,6 @@
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_perception_msgs</depend>
-  <depend>autoware_planning_msgs</depend>
   <depend>autoware_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

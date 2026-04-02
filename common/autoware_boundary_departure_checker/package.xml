@@ -18,7 +18,6 @@
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_interpolation</depend>
-  <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
@@ -48,6 +47,7 @@
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
+  <test_depend>autoware_pyplot</test_depend>
   <test_depend>autoware_test_utils</test_depend>
 
   <export>

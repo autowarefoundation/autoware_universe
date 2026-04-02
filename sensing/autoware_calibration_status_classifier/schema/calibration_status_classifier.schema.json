@@ -39,6 +39,16 @@
           "description": "The queue size in synchronized callbacks.",
           "default": 5
         },
+        "ego_box": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 6,
+          "maxItems": 6,
+          "description": "Ego vehicle bounding box in lidar frame [x_min, y_min, z_min, x_max, y_max, z_max]. Used to generate an occlusion mask that prevents projecting LiDAR points through the vehicle chassis onto the image. Set all values to 0.0 to disable.",
+          "default": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        },
         "input": {
           "type": "object",
           "properties": {
@@ -66,6 +76,15 @@
               "description": "The approximate time deltas in seconds for each topic pair (LiDAR and camera) for Approximate Time Synchronization Policy. The length of this array must be equal to maximum length of cloud_topics and image_topics arrays or be a single value which will be applied to all topic pairs.",
               "default": ["0.1"]
             },
+            "miscalibration_confidence_thresholds": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 1,
+              "description": "Per-pair confidence threshold for determining miscalibration. The length must be 1 (applied to all pairs) or match the number of LiDAR-camera pairs. Positive values shift the decision boundary towards detecting miscalibration, while negative values shift it towards detecting proper calibration. A value of 0.0 means the decision is based solely on the model output without bias.",
+              "default": [0.0]
+            },
             "already_rectified": {
               "type": "array",
               "items": {
@@ -75,53 +94,111 @@
               "default": [true]
             }
           },
-          "required": ["cloud_topics", "image_topics", "approx_deltas", "already_rectified"],
+          "required": [
+            "cloud_topics",
+            "image_topics",
+            "approx_deltas",
+            "miscalibration_confidence_thresholds",
+            "already_rectified"
+          ],
           "additionalProperties": false
         },
         "prerequisite": {
           "type": "object",
           "properties": {
-            "check_velocity": {
-              "type": "boolean",
-              "description": "Flag to enable or disable velocity check for calibration status verification. If enabled, the node will subscribe to the specified velocity source topics and verify that the vehicle is moving at maximum velocity defined by velocity_threshold.",
-              "default": true
+            "linear_velocity_check": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Flag to enable or disable linear velocity check for calibration status verification.",
+                  "default": true
+                },
+                "source": {
+                  "type": "string",
+                  "description": "The twist message type to subscribe for linear velocity check.",
+                  "enum": ["twist_stamped", "twist_with_cov_stamped", "odometry"],
+                  "default": "twist_with_cov_stamped"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "The linear velocity threshold in meters per second. If exceeded, calibration check is skipped.",
+                  "default": 3.0,
+                  "minimum": 0.0
+                },
+                "timeout": {
+                  "type": "number",
+                  "description": "Time in seconds the value must stay below the threshold before the prerequisite is considered met again.",
+                  "default": 1.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": ["enabled", "source", "threshold", "timeout"],
+              "additionalProperties": false
             },
-            "velocity_source": {
-              "type": "string",
-              "description": "The msg type to subscribe for velocity check. Available options are 'twist', 'twist_stamped', 'twist_with_cov', 'twist_with_cov_stamped', 'odometry'.",
-              "enum": [
-                "twist",
-                "twist_with_cov",
-                "twist_stamped",
-                "twist_with_cov_stamped",
-                "odometry"
-              ],
-              "default": "twist_with_cov_stamped"
+            "angular_velocity_check": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Flag to enable or disable angular velocity check for calibration status verification.",
+                  "default": true
+                },
+                "source": {
+                  "type": "string",
+                  "description": "The twist message type to subscribe for angular velocity check.",
+                  "enum": ["twist_stamped", "twist_with_cov_stamped", "odometry"],
+                  "default": "twist_with_cov_stamped"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "The angular velocity magnitude threshold in radians per second. If exceeded, calibration check is skipped.",
+                  "default": 0.1745,
+                  "minimum": 0.0
+                },
+                "timeout": {
+                  "type": "number",
+                  "description": "Time in seconds the value must stay below the threshold before the prerequisite is considered met again.",
+                  "default": 1.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": ["enabled", "source", "threshold", "timeout"],
+              "additionalProperties": false
             },
-            "velocity_threshold": {
-              "type": "number",
-              "description": "The maximum velocity threshold in meters per second for the vehicle to be considered moving. If the vehicle's velocity is below this threshold, the calibration status verification will not be performed.",
-              "default": 5.0
-            },
-            "check_objects": {
-              "type": "boolean",
-              "description": "Flag to enable or disable object check for calibration status verification. If enabled, the node will subscribe to the specified object source topics and verify that the number of objects is within the defined limit.",
-              "default": true
-            },
-            "objects_limit": {
-              "type": "integer",
-              "description": "The maximum number of objects allowed for the vehicle to be considered in a valid state for calibration status verification. If the number of detected objects exceeds this limit, the calibration status verification will not be performed.",
-              "default": 100,
-              "minimum": 0
+            "objects_check": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Flag to enable or disable object count check for calibration status verification.",
+                  "default": true
+                },
+                "source": {
+                  "type": "string",
+                  "description": "The object message type to subscribe for object count check.",
+                  "enum": ["predicted_objects", "tracked_objects", "detected_objects"],
+                  "default": "predicted_objects"
+                },
+                "threshold": {
+                  "type": "integer",
+                  "description": "The maximum number of objects allowed. If exceeded, calibration check is skipped.",
+                  "default": 100,
+                  "minimum": 0
+                },
+                "timeout": {
+                  "type": "number",
+                  "description": "Time in seconds the value must stay below the threshold before the prerequisite is considered met again.",
+                  "default": 1.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": ["enabled", "source", "threshold", "timeout"],
+              "additionalProperties": false
             }
           },
-          "required": ["check_velocity", "velocity_source", "velocity_threshold"],
+          "required": ["linear_velocity_check", "angular_velocity_check", "objects_check"],
           "additionalProperties": false
-        },
-        "miscalibration_confidence_threshold": {
-          "type": "number",
-          "description": "The confidence threshold for determining miscalibration. Positive values shifts the decision boundary towards detecting miscalibration, while negative values shifts it towards detecting proper calibration. A value of 0.0 means that the decision is based solely on the model's output without any bias.",
-          "default": "0.0"
         }
       },
       "required": [
@@ -131,9 +208,9 @@
         "runtime_mode",
         "period",
         "queue_size",
+        "ego_box",
         "input",
-        "prerequisite",
-        "miscalibration_confidence_threshold"
+        "prerequisite"
       ],
       "additionalProperties": false
     }

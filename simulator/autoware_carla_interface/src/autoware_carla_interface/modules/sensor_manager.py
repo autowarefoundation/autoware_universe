@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Sensor management module for CARLA-Autoware interface."""
 
 from dataclasses import dataclass
@@ -52,10 +51,13 @@ class SensorRegistry:
     """Centralized registry for managing sensors."""
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        """Initialize sensor registry.
+        """
+        Initialize sensor registry.
 
         Args:
+        ----
             logger: Logger instance for output
+
         """
         self.logger = logger or logging.getLogger(__name__)
         self.sensors: Dict[str, SensorConfig] = {}
@@ -87,13 +89,17 @@ class SensorRegistry:
         )
 
     def register_sensor(self, config: SensorConfig) -> bool:
-        """Register a new sensor.
+        """
+        Register a new sensor.
 
         Args:
+        ----
             config: Sensor configuration
 
-        Returns:
+        Returns
+        -------
             True if successfully registered, False otherwise
+
         """
         if config.sensor_id in self.sensors:
             self.logger.warning(f"Sensor {config.sensor_id} already registered, updating...")
@@ -108,44 +114,59 @@ class SensorRegistry:
         return True
 
     def get_sensor(self, sensor_id: str) -> Optional[SensorConfig]:
-        """Get sensor configuration by ID.
+        """
+        Get sensor configuration by ID.
 
         Args:
+        ----
             sensor_id: Sensor identifier
 
-        Returns:
+        Returns
+        -------
             Sensor configuration or None if not found
+
         """
         return self.sensors.get(sensor_id)
 
     def get_sensors_by_type(self, sensor_type: str) -> List[SensorConfig]:
-        """Get all sensors of a specific type.
+        """
+        Get all sensors of a specific type.
 
         Args:
+        ----
             sensor_type: CARLA sensor type
 
-        Returns:
+        Returns
+        -------
             List of matching sensor configurations
+
         """
         return [sensor for sensor in self.sensors.values() if sensor.carla_type == sensor_type]
 
     def get_enabled_sensors(self) -> List[SensorConfig]:
-        """Get all enabled sensors.
+        """
+        Get all enabled sensors.
 
-        Returns:
+        Returns
+        -------
             List of enabled sensor configurations
+
         """
         return [sensor for sensor in self.sensors.values() if sensor.enabled]
 
     def update_sensor_timestamp(self, sensor_id: str, timestamp: float) -> bool:
-        """Update sensor last publish timestamp.
+        """
+        Update sensor last publish timestamp.
 
         Args:
+        ----
             sensor_id: Sensor identifier
             timestamp: New timestamp
 
-        Returns:
+        Returns
+        -------
             True if updated, False if sensor not found
+
         """
         sensor = self.get_sensor(sensor_id)
         if sensor:
@@ -155,14 +176,18 @@ class SensorRegistry:
         return False
 
     def should_publish(self, sensor_id: str, current_time: float) -> bool:
-        """Check if sensor should publish based on frequency.
+        """
+        Check if sensor should publish based on frequency.
 
         Args:
+        ----
             sensor_id: Sensor identifier
             current_time: Current timestamp
 
-        Returns:
+        Returns
+        -------
             True if should publish, False otherwise
+
         """
         sensor = self.get_sensor(sensor_id)
         if not sensor or not sensor.enabled:
@@ -175,10 +200,13 @@ class SensorRegistry:
         return time_diff >= (1.0 / sensor.frequency_hz)
 
     def get_all_sensors(self) -> Dict[str, SensorConfig]:
-        """Get all registered sensors.
+        """
+        Get all registered sensors.
 
-        Returns:
+        Returns
+        -------
             Dictionary of all sensors
+
         """
         return self.sensors.copy()
 

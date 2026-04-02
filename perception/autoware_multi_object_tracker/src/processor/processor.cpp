@@ -19,8 +19,6 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
 
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
 #include <boost/geometry.hpp>
@@ -29,12 +27,13 @@
 #include <boost/geometry/index/rtree.hpp>
 
 #include <algorithm>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -42,8 +41,6 @@
 namespace autoware::multi_object_tracker
 {
 using autoware_utils_debug::ScopedTimeTrack;
-using Label = autoware_perception_msgs::msg::ObjectClassification;
-using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
 TrackerProcessor::TrackerProcessor(
   const TrackerProcessorConfig & config, const AssociatorConfig & associator_config,
@@ -66,42 +63,55 @@ void TrackerProcessor::predict(
   }
 }
 
-void TrackerProcessor::associate(
-  const types::DynamicObjectList & detected_objects,
-  std::unordered_map<int, int> & direct_assignment,
-  std::unordered_map<int, int> & reverse_assignment) const
+types::AssociationResult TrackerProcessor::associate(
+  const types::DynamicObjectList & detected_objects) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  types::AssociationResult association_result;
   const auto & tracker_list = list_tracker_;
+
   // global nearest neighbor
-  Eigen::MatrixXd score_matrix = association_->calcScoreMatrix(
+  types::AssociationData association_data = association_->calcAssociationData(
     detected_objects, tracker_list);  // row : tracker, col : measurement
-  association_->assign(score_matrix, direct_assignment, reverse_assignment);
+  association_->assign(association_data, association_result);
+  return association_result;
 }
 
-void TrackerProcessor::update(
-  const types::DynamicObjectList & detected_objects,
-  const std::unordered_map<int, int> & direct_assignment)
+void TrackerProcessor::update(const types::AssociatedObjects & associated_objects)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  const auto & detected_objects = associated_objects.objects;
+  const auto & association_result = associated_objects.association;
 
   int tracker_idx = 0;
   const auto & time = detected_objects.header.stamp;
   for (auto tracker_itr = list_tracker_.begin(); tracker_itr != list_tracker_.end();
        ++tracker_itr, ++tracker_idx) {
-    auto it = direct_assignment.find(tracker_idx);
-    if (it != direct_assignment.end()) {
+    bool found = false;
+    size_t measurement_idx = 0;
+    unique_identifier_msgs::msg::UUID tracker_uuid = (*tracker_itr)->getUUID();
+
+    if (association_result.tracker_to_measurement.count(tracker_uuid)) {
+      unique_identifier_msgs::msg::UUID measurement_uuid =
+        association_result.tracker_to_measurement.at(tracker_uuid);
+      const auto idx = detected_objects.getObjectIndexByUuid(measurement_uuid);
+      if (idx) {
+        measurement_idx = *idx;
+        found = true;
+      }
+    }
+
+    if (found) {
       // found
-      size_t measurement_idx = static_cast<size_t>(it->second);
       const auto & associated_object = detected_objects.objects.at(measurement_idx);
       const types::InputChannel channel_info = channels_config_[associated_object.channel_index];
 
       // do conditioned update based on significant shape change info
-      bool has_significant_shape_change =
-        association_->hasSignificantShapeChange(tracker_idx, measurement_idx);
+      bool has_significant_shape_change = association_result.wasShapeChanged(tracker_uuid);
       (*(tracker_itr))
         ->updateWithMeasurement(
           associated_object, time, channel_info, has_significant_shape_change);
@@ -112,12 +122,13 @@ void TrackerProcessor::update(
   }
 }
 
-void TrackerProcessor::spawn(
-  const types::DynamicObjectList & detected_objects,
-  const std::unordered_map<int, int> & reverse_assignment)
+void TrackerProcessor::spawn(const types::AssociatedObjects & associated_objects)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  const auto & detected_objects = associated_objects.objects;
+  const auto & association_result = associated_objects.association;
 
   const auto channel_config = channels_config_[detected_objects.channel_index];
   // If spawn is disabled, return
@@ -128,10 +139,10 @@ void TrackerProcessor::spawn(
   // Spawn new trackers for the objects that are not associated
   const auto & time = detected_objects.header.stamp;
   for (size_t i = 0; i < detected_objects.objects.size(); ++i) {
-    if (reverse_assignment.find(i) != reverse_assignment.end()) {  // found
+    const auto & new_object = detected_objects.objects.at(i);
+    if (association_result.measurement_to_tracker.count(new_object.uuid)) {  // found
       continue;
     }
-    const auto & new_object = detected_objects.objects.at(i);
     std::shared_ptr<Tracker> tracker = createNewTracker(new_object, time);
 
     // Initialize existence probabilities
@@ -151,31 +162,39 @@ void TrackerProcessor::spawn(
 std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   const types::DynamicObject & object, const rclcpp::Time & time) const
 {
-  const LabelType label =
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
-  if (config_.tracker_map.count(label) != 0) {
-    const auto tracker_type = config_.tracker_map.at(label);
-    if (tracker_type == TrackerType::MULTIPLE_VEHICLE)
-      return std::make_shared<MultipleVehicleTracker>(time, object);
-    if (tracker_type == TrackerType::PEDESTRIAN_AND_BICYCLE)
-      return std::make_shared<PedestrianAndBicycleTracker>(time, object);
-    if (tracker_type == TrackerType::UNKNOWN)
-      return std::make_shared<UnknownTracker>(
-        time, object, config_.enable_unknown_object_velocity_estimation,
-        config_.enable_unknown_object_motion_output);
-    if (tracker_type == TrackerType::NORMAL_VEHICLE)
-      return std::make_shared<VehicleTracker>(object_model::normal_vehicle, time, object);
-    if (tracker_type == TrackerType::PEDESTRIAN)
-      return std::make_shared<PedestrianTracker>(time, object);
-    if (tracker_type == TrackerType::BICYCLE)
-      return std::make_shared<VehicleTracker>(object_model::bicycle, time, object);
-    if (tracker_type == TrackerType::BIG_VEHICLE)
-      return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
-    if (tracker_type == TrackerType::PASS_THROUGH)
-      return std::make_shared<PassThroughTracker>(time, object);
+  const classes::Label label = classes::getHighestProbLabel(object.classification);
+  const auto tracker_type_opt = get_map_value_if_exists(config_.tracker_map, label);
+  if (tracker_type_opt) {
+    const auto tracker_type = tracker_type_opt->get();
+    switch (tracker_type) {
+      case types::TrackerType::MULTIPLE_VEHICLE:
+        return std::make_shared<MultipleVehicleTracker>(time, object);
+      case types::TrackerType::GENERAL_VEHICLE:
+        return std::make_shared<VehicleTracker>(object_model::general_vehicle, time, object);
+      case types::TrackerType::PEDESTRIAN_AND_BICYCLE:
+        return std::make_shared<PedestrianAndBicycleTracker>(time, object);
+      case types::TrackerType::NORMAL_VEHICLE:
+        return std::make_shared<VehicleTracker>(object_model::normal_vehicle, time, object);
+      case types::TrackerType::PEDESTRIAN:
+        return std::make_shared<PedestrianTracker>(time, object);
+      case types::TrackerType::BICYCLE:
+        return std::make_shared<VehicleTracker>(object_model::bicycle, time, object);
+      case types::TrackerType::BIG_VEHICLE:
+        return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
+      case types::TrackerType::POLYGON:
+        return std::make_shared<PolygonTracker>(
+          time, object, config_.enable_unknown_object_velocity_estimation,
+          config_.enable_unknown_object_motion_output);
+      case types::TrackerType::PASS_THROUGH:
+        return std::make_shared<PassThroughTracker>(time, object);
+      default:
+        return std::make_shared<PolygonTracker>(
+          time, object, config_.enable_unknown_object_velocity_estimation,
+          config_.enable_unknown_object_motion_output);
+    }
   }
-  // If no specific tracker type is found, return an UnknownTracker
-  return std::make_shared<UnknownTracker>(
+  // If no specific tracker type is found, return an PolygonTracker
+  return std::make_shared<PolygonTracker>(
     time, object, config_.enable_unknown_object_velocity_estimation,
     config_.enable_unknown_object_motion_output);
 }
@@ -246,7 +265,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   {
     std::shared_ptr<Tracker> tracker;
     types::DynamicObject object;
-    uint8_t label;
+    classes::Label label;
     bool is_unknown;
     int tracker_priority;
     int measurement_count;
@@ -256,7 +275,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     explicit TrackerData(const std::shared_ptr<Tracker> & t)
     : tracker(t),
       object(),
-      label(0),
+      label(classes::Label::UNKNOWN),
       is_unknown(false),
       tracker_priority(0),
       measurement_count(0),
@@ -274,10 +293,16 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 
     constexpr double precision_threshold = 0.;
     constexpr double recall_threshold = 0.5;
-    const double generalized_iou_threshold = config_.pruning_giou_thresholds.at(source_data.label);
+    const auto generalized_iou_threshold_opt =
+      get_map_value_if_exists(config_.pruning_giou_thresholds, source_data.label);
+    if (!generalized_iou_threshold_opt) {
+      return false;
+    }
+    const double generalized_iou_threshold = generalized_iou_threshold_opt->get();
 
     const bool is_pedestrian =
-      (source_data.label == Label::PEDESTRIAN && target_data.label == Label::PEDESTRIAN);
+      (source_data.label == classes::Label::PEDESTRIAN &&
+       target_data.label == classes::Label::PEDESTRIAN);
     const bool is_target_known = target_data.tracker->getKnownObjectProbability() >= min_known_prob;
     const bool is_source_known = source_data.tracker->getKnownObjectProbability() >= min_known_prob;
 
@@ -332,7 +357,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     }
 
     data.label = tracker->getHighestProbLabel();
-    data.is_unknown = (data.label == Label::UNKNOWN);
+    data.is_unknown = (data.label == classes::Label::UNKNOWN);
     data.tracker_priority = tracker->getTrackerPriority();
     data.measurement_count = tracker->getTotalMeasurementCount();
     data.elapsed_time = tracker->getElapsedTimeFromLastUpdate(time);
@@ -356,15 +381,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
       return a.elapsed_time < b.elapsed_time;
     });
 
-  // Create a map for search distance squared per label
-  const size_t label_size = config_.pruning_distance_thresholds.size();
-  std::vector<double> search_distance_sq_per_label(label_size, 0.0);
-  for (size_t i = 0; i < label_size; ++i) {
-    search_distance_sq_per_label[i] =
-      config_.pruning_distance_thresholds.at(static_cast<LabelType>(i)) *
-      config_.pruning_distance_thresholds.at(static_cast<LabelType>(i));
-  }
-
   // Build spatial index for quick neighbor lookup
   using Point = boost::geometry::model::point<double, 2, boost::geometry::cs::cartesian>;
   using Value = std::pair<Point, size_t>;  // Point and index into valid_trackers
@@ -378,7 +394,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     if (!data.is_valid) continue;
 
     Point p(data.object.pose.position.x, data.object.pose.position.y);
-    rtree_points.push_back(std::make_pair(p, i));
+    rtree_points.emplace_back(p, i);
   }
   rtree.insert(rtree_points.begin(), rtree_points.end());
 
@@ -396,8 +412,12 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     std::vector<Value> nearby;
     nearby.reserve(16);  // Reasonable initial capacity
 
-    Point p1(data1.object.pose.position.x, data1.object.pose.position.y);
-    double max_search_dist_sq = search_distance_sq_per_label[data1.label];
+    const auto max_search_dist_sq_opt =
+      get_map_value_if_exists(config_.pruning_distance_thresholds_sq, data1.label);
+    if (!max_search_dist_sq_opt) {
+      continue;
+    }
+    const double max_search_dist_sq = max_search_dist_sq_opt->get();
 
     // Query R-tree with circle
     rtree.query(
@@ -486,11 +506,22 @@ bool TrackerProcessor::canMergeOverlappedTarget(
     }
     // both are known class, check the IoU
     // compare probability vector, prioritize lower index of the probability vector
-    std::vector<float> target_existence_prob = target.getExistenceProbabilityVector();
-    std::vector<float> other_existence_prob = other.getExistenceProbabilityVector();
+    std::vector<types::ExistenceProbability> target_existence_prob =
+      target.getExistenceProbabilityVector();
+    std::vector<types::ExistenceProbability> other_existence_prob =
+      other.getExistenceProbabilityVector();
     constexpr float prob_buffer = 0.4;
-    for (size_t i = 0; i < target_existence_prob.size(); ++i) {
-      if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
+
+    for (const auto & other_prob : other_existence_prob) {
+      float target_prob_val = 0.001f;
+      for (const auto & target_prob : target_existence_prob) {
+        if (target_prob.channel_index == other_prob.channel_index) {
+          target_prob_val = target_prob.existence_probability;
+          break;
+        }
+      }
+
+      if (target_prob_val + prob_buffer < other_prob.existence_probability) {
         // if a channel probability has a large difference in higher index, remove the target
         return true;
       }

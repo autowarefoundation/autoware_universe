@@ -20,16 +20,16 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 
 #include <limits>
 #include <memory>
 #include <utility>
 
+using autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline;
 using autoware::motion_utils::findNearestIndex;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
-using lanelet::utils::getArcCoordinatesOnEgoCenterline;
 namespace autoware::behavior_path_planner
 {
 using start_planner_utils::getPullOutLanes;
@@ -65,7 +65,7 @@ std::optional<PullOutPath> GeometricPullOut::plan(
 
   // check if the ego is at left or right side of road lane center
   const bool left_side_start =
-    0 < getArcCoordinatesOnEgoCenterline(
+    0 < get_arc_coordinates_on_ego_centerline(
           road_lanes, start_pose, planner_data->route_handler->getLaneletMapPtr())
           .distance;
   const double max_steer_angle =
@@ -131,6 +131,10 @@ std::optional<PullOutPath> GeometricPullOut::plan(
 
   output.start_pose = planner_.getArcPaths().at(0).points.front().point.pose;
   output.end_pose = planner_.getArcPaths().at(1).points.back().point.pose;
+
+  std::tie(output.shift_length.start, output.shift_length.end) =
+    start_planner_utils::calc_start_and_end_shift_length(
+      pull_out_lanes, output.start_pose, output.end_pose);
 
   if (isPullOutPathCollided(
         output, planner_data, parameters_.geometric_collision_check_distance_from_end)) {

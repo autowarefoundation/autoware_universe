@@ -11,17 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Taekjin Lee
 
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__UNCERTAINTY__UNCERTAINTY_PROCESSOR_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__UNCERTAINTY__UNCERTAINTY_PROCESSOR_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
-
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -32,16 +27,15 @@ namespace autoware::multi_object_tracker
 namespace uncertainty
 {
 
-using autoware::multi_object_tracker::object_model::ObjectModel;
-using autoware_perception_msgs::msg::ObjectClassification;
 using nav_msgs::msg::Odometry;
+using object_model::ObjectModel;
 
-ObjectModel decodeObjectModel(const ObjectClassification & object_class);
+ObjectModel decodeObjectModel(const classes::Classification & object_class);
 
 types::DynamicObjectList modelUncertainty(const types::DynamicObjectList & detected_objects);
 
 object_model::StateCovariance covarianceFromObjectClass(
-  const types::DynamicObject & detected_object, const ObjectClassification & object_class);
+  const types::DynamicObject & detected_object, const classes::Classification & object_class);
 
 void normalizeUncertainty(types::DynamicObjectList & detected_objects);
 
