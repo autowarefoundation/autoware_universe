@@ -89,43 +89,9 @@ TrafficLightFilter::TrafficLightFilter() : ValidatorInterface("TrafficLightFilte
 {
 }
 
-void TrafficLightFilter::set_parameters(rclcpp::Node & node)
+void TrafficLightFilter::update_parameters(const validator::Params & params)
 {
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-  params_.deceleration_limit =
-    get_or_declare_parameter<double>(node, "traffic_light.deceleration_limit");
-  params_.jerk_limit = get_or_declare_parameter<double>(node, "traffic_light.jerk_limit");
-  params_.delay_response_time =
-    get_or_declare_parameter<double>(node, "traffic_light.delay_response_time");
-  params_.crossing_time_limit =
-    get_or_declare_parameter<double>(node, "traffic_light.crossing_time_limit");
-  params_.treat_amber_light_as_red_light =
-    get_or_declare_parameter<bool>(node, "traffic_light.treat_amber_light_as_red_light");
-  params_.checked_trajectory_length.deceleration_limit = get_or_declare_parameter<double>(
-    node, "traffic_light.checked_trajectory_length.deceleration_limit");
-  params_.checked_trajectory_length.jerk_limit =
-    get_or_declare_parameter<double>(node, "traffic_light.checked_trajectory_length.jerk_limit");
-}
-
-void TrafficLightFilter::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
-{
-  using autoware_utils_rclcpp::update_param;
-
-  update_param<double>(parameters, "traffic_light.deceleration_limit", params_.deceleration_limit);
-  update_param<double>(parameters, "traffic_light.jerk_limit", params_.jerk_limit);
-  update_param<double>(
-    parameters, "traffic_light.delay_response_time", params_.delay_response_time);
-  update_param<double>(
-    parameters, "traffic_light.crossing_time_limit", params_.crossing_time_limit);
-  update_param<bool>(
-    parameters, "traffic_light.treat_amber_light_as_red_light",
-    params_.treat_amber_light_as_red_light);
-  update_param<double>(
-    parameters, "traffic_light.checked_trajectory_length.deceleration_limit",
-    params_.checked_trajectory_length.deceleration_limit);
-  update_param<double>(
-    parameters, "traffic_light.checked_trajectory_length.jerk_limit",
-    params_.checked_trajectory_length.jerk_limit);
+  params_ = params.traffic_light;
 }
 
 std::pair<std::vector<lanelet::BasicLineString2d>, std::vector<lanelet::BasicLineString2d>>
