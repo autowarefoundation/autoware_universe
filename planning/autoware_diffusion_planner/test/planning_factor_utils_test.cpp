@@ -157,7 +157,11 @@ TEST_F(PlanningFactorUtilsTest, SlowdownWithoutEnd)
   points.push_back(make_point(1.5, 3.0, 0.5f, -0.5f));
 
   const auto result = detect_planning_factors(points, config_);
-  EXPECT_FALSE(result.slowdown.has_value());
+  ASSERT_TRUE(result.slowdown.has_value());
+  EXPECT_DOUBLE_EQ(result.slowdown->start_pose.position.x, 1.0);
+  EXPECT_DOUBLE_EQ(result.slowdown->end_pose.position.x, 3.0);
+  EXPECT_DOUBLE_EQ(result.slowdown->start_velocity, 3.0);
+  EXPECT_DOUBLE_EQ(result.slowdown->end_velocity, 0.5);
 }
 
 TEST_F(PlanningFactorUtilsTest, SingleStoppedPoint)
