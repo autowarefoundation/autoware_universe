@@ -173,6 +173,7 @@ PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   // cppcheck-suppress unknownMacro
   agnocast_sub_input_ = AUTOWARE_CREATE_SUBSCRIPTION(
     PointCloud2, "input", rclcpp::SensorDataQoS().keep_last(max_queue_size_),
+    // cppcheck-suppress unknownMacro
     [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2) msg) {
       auto holder =
         std::make_shared<AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloud2)>(std::move(msg));
