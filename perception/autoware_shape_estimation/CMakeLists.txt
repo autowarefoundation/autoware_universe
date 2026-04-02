@@ -110,7 +110,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )
