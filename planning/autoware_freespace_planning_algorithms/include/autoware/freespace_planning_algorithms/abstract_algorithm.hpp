@@ -181,6 +181,7 @@ public:
   }
 
   virtual void setMap(const nav_msgs::msg::OccupancyGrid & costmap);
+  virtual void setReparking(bool is_reparking) = 0;
   virtual bool makePlan(
     const geometry_msgs::msg::Pose & start_pose, const geometry_msgs::msg::Pose & goal_pose) = 0;
   virtual bool makePlan(

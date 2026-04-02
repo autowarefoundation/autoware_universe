@@ -62,6 +62,7 @@ public:
   bool makePlan(
     const geometry_msgs::msg::Pose & start_pose,
     const std::vector<geometry_msgs::msg::Pose> & goal_candidates) override;
+  void setReparking(bool is_reparking) override;
   bool hasObstacleOnTrajectory(const geometry_msgs::msg::PoseArray & trajectory) const override;
 
 private:
