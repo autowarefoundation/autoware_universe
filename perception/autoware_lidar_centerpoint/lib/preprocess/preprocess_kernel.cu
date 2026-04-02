@@ -39,7 +39,8 @@
 namespace
 {
 const std::size_t NUM_THREADS_IN_WARP = 32;
-const std::size_t MAX_POINT_IN_VOXEL_SIZE = NUM_THREADS_IN_WARP;  // CAUTION: must match max_point_in_voxel_size_ in config
+const std::size_t MAX_POINT_IN_VOXEL_SIZE =
+  NUM_THREADS_IN_WARP;                  // CAUTION: must match max_point_in_voxel_size_ in config
 const std::size_t WARPS_PER_BLOCK = 4;  // Determined by the size of shared memory
 
 const std::size_t POINT_DIM_XYZT = 4;   // X, Y, Z, Time_lag
@@ -278,7 +279,8 @@ __global__ void generateFeatures_kernel(
       const int dst_dim = point_offset % point_dim;
       const int dst_index = dst_dim * MAX_POINT_IN_VOXEL_SIZE + dst_point;
       const int src_index = i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
-      ((float *)pillarSM)[dst_offset + dst_index] = ((float *)voxel_features)[src_offset + src_index];
+      ((float *)pillarSM)[dst_offset + dst_index] =
+        ((float *)voxel_features)[src_offset + src_index];
     }
   }
   __syncwarp();
