@@ -15,12 +15,13 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
 
+#include "autoware/multi_object_tracker/object_model/classes.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
-#include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_object_kinematics.hpp>
@@ -34,6 +35,7 @@
 
 #include <boost/optional.hpp>
 
+#include <array>
 #include <functional>
 #include <optional>
 #include <string>
@@ -45,9 +47,87 @@ namespace autoware::multi_object_tracker
 {
 namespace types
 {
+
+enum class TrackerType {
+  PASS_THROUGH = 0,
+  PEDESTRIAN_AND_BICYCLE = 10,
+  PEDESTRIAN = 11,
+  BICYCLE = 12,
+  MULTIPLE_VEHICLE = 20,
+  GENERAL_VEHICLE = 21,
+  NORMAL_VEHICLE = 22,
+  BIG_VEHICLE = 23,
+  VEHICLE = 24,
+  POLYGON = 30,
+};
+
+inline constexpr std::array<TrackerType, 10> ALL_TRACKER_TYPES = {
+  TrackerType::PASS_THROUGH,     TrackerType::PEDESTRIAN_AND_BICYCLE,
+  TrackerType::PEDESTRIAN,       TrackerType::BICYCLE,
+  TrackerType::MULTIPLE_VEHICLE, TrackerType::GENERAL_VEHICLE,
+  TrackerType::NORMAL_VEHICLE,   TrackerType::BIG_VEHICLE,
+  TrackerType::VEHICLE,          TrackerType::POLYGON};
+
+inline bool isVehicleTrackerType(const TrackerType tracker_type)
+{
+  return tracker_type == TrackerType::MULTIPLE_VEHICLE ||
+         tracker_type == TrackerType::GENERAL_VEHICLE ||
+         tracker_type == TrackerType::NORMAL_VEHICLE || tracker_type == TrackerType::BIG_VEHICLE ||
+         tracker_type == TrackerType::VEHICLE;
+}
+
+inline const std::array<TrackerType, 10> & allTrackerTypes()
+{
+  return ALL_TRACKER_TYPES;
+}
+
+inline std::string toString(const TrackerType tracker_type)
+{
+  switch (tracker_type) {
+    case TrackerType::PASS_THROUGH:
+      return "pass_through_tracker";
+    case TrackerType::PEDESTRIAN_AND_BICYCLE:
+      return "pedestrian_and_bicycle_tracker";
+    case TrackerType::PEDESTRIAN:
+      return "pedestrian_tracker";
+    case TrackerType::BICYCLE:
+      return "bicycle_tracker";
+    case TrackerType::MULTIPLE_VEHICLE:
+      return "multi_vehicle_tracker";
+    case TrackerType::GENERAL_VEHICLE:
+      return "general_vehicle_tracker";
+    case TrackerType::NORMAL_VEHICLE:
+      return "normal_vehicle_tracker";
+    case TrackerType::BIG_VEHICLE:
+      return "big_vehicle_tracker";
+    case TrackerType::VEHICLE:
+      return "vehicle_tracker";
+    case TrackerType::POLYGON:
+      return "polygon_tracker";
+    default:
+      return "polygon_tracker";
+  }
+}
+
+inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name)
+{
+  if (tracker_name == "pass_through_tracker") return TrackerType::PASS_THROUGH;
+  if (tracker_name == "pedestrian_and_bicycle_tracker") {
+    return TrackerType::PEDESTRIAN_AND_BICYCLE;
+  }
+  if (tracker_name == "pedestrian_tracker") return TrackerType::PEDESTRIAN;
+  if (tracker_name == "bicycle_tracker") return TrackerType::BICYCLE;
+  if (tracker_name == "multi_vehicle_tracker") return TrackerType::MULTIPLE_VEHICLE;
+  if (tracker_name == "general_vehicle_tracker") return TrackerType::GENERAL_VEHICLE;
+  if (tracker_name == "normal_vehicle_tracker") return TrackerType::NORMAL_VEHICLE;
+  if (tracker_name == "big_vehicle_tracker") return TrackerType::BIG_VEHICLE;
+  if (tracker_name == "vehicle_tracker") return TrackerType::VEHICLE;
+  if (tracker_name == "polygon_tracker") return TrackerType::POLYGON;
+  return std::nullopt;
+}
+
 // constants
 constexpr float default_existence_probability = 0.75;
-constexpr int NUM_LABELS = 8;
 
 // channel configuration
 struct InputChannel
@@ -98,7 +178,7 @@ struct DynamicObject
   std::vector<ExistenceProbability> existence_probabilities;
 
   // object classification
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> classification;
+  std::vector<classes::Classification> classification;
 
   // object kinematics (pose and twist)
   ObjectKinematics kinematics;
@@ -267,6 +347,14 @@ autoware_perception_msgs::msg::DetectedObject toDetectedObjectMsg(const DynamicO
 double getArea(const autoware_perception_msgs::msg::Shape & shape);
 
 }  // namespace types
+
+using types::ALL_TRACKER_TYPES;
+using types::allTrackerTypes;
+using types::isVehicleTrackerType;
+using types::toString;
+using types::toTrackerType;
+using types::TrackerType;
+
 }  // namespace autoware::multi_object_tracker
 
 #endif  // AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_

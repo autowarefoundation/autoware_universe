@@ -18,6 +18,7 @@
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
+#include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
 
 #include <Eigen/Core>
@@ -33,7 +34,6 @@
 
 #include <list>
 #include <memory>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -48,16 +48,6 @@ typedef bg::model::point<double, 2, bg::cs::cartesian> Point;
 typedef bg::model::box<Point> Box;
 typedef std::pair<Point, size_t> ValueType;  // Point and tracker index
 
-struct AssociatorConfig
-{
-  std::unordered_map<TrackerType, std::array<bool, types::NUM_LABELS>> can_assign_map;
-  Eigen::MatrixXd max_dist_matrix;
-  Eigen::MatrixXd max_area_matrix;
-  Eigen::MatrixXd min_area_matrix;
-  Eigen::MatrixXd min_iou_matrix;
-  double unknown_association_giou_threshold;
-};
-
 struct InverseCovariance2D
 {
   double inv00;  // (d / det)
@@ -68,8 +58,8 @@ struct InverseCovariance2D
 struct PreparationData
 {
   std::vector<types::DynamicObject> tracked_objects;
-  std::vector<std::uint8_t> tracker_labels;
-  std::vector<TrackerType> tracker_types;
+  std::vector<classes::Label> tracker_labels;
+  std::vector<types::TrackerType> tracker_types;
   std::vector<InverseCovariance2D> tracker_inverse_covariances;
 };
 
@@ -86,7 +76,7 @@ private:
   // Cache of maximum squared distances per measurement class
   // For each measurement class, stores the maximum squared distance it could match with any tracker
   // class
-  std::vector<double> max_squared_dist_per_class_;
+  AssociatorConfig::LabelDoubleMap max_squared_dist_per_class_;
 
   // Helper to compute max search distances from config
   void updateMaxSearchDistances();
@@ -97,7 +87,7 @@ private:
     const std::list<std::shared_ptr<Tracker>> & trackers);
   void processMeasurement(
     const types::DynamicObject & measurement_object, size_t measurement_idx,
-    const std::uint8_t measurement_label, const PreparationData & prep_data,
+    const classes::Label measurement_label, const PreparationData & prep_data,
     types::AssociationData & association_data);
 
 public:
@@ -108,8 +98,10 @@ public:
   void assign(const types::AssociationData & data, types::AssociationResult & association_result);
 
   double calculateScore(
-    const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
-    const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
+    const types::DynamicObject & tracked_object, const classes::Label tracker_label,
+    const types::TrackerType tracker_type,
+    const AssociatorConfig::TrackerAssociationParameters & association_params,
+    const types::DynamicObject & measurement_object, const classes::Label measurement_label,
     const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const;
 
   types::AssociationData calcAssociationData(
