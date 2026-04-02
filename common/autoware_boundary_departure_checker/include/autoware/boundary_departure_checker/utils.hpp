@@ -372,27 +372,6 @@ tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_li
  */
 TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const double cutoff_time_s);
 
-/**
- * @brief Compute the longitudinal distance required to stop with jerk- and
- *        acceleration limits (“judge line”).
- *
- * @param velocity              Current longitudinal speed *v₀* [m/s].
- * @param acceleration          Current longitudinal acceleration *a₀* [m/s²].
- * @param max_stop_acceleration Maximum (most negative) braking acceleration
- *                              *a_brake* [m/s²] (e.g. −4.0).
- * @param max_stop_jerk         Maximum (most negative) braking jerk
- *                              *j_brake* [m/s³] (e.g. −10.0).
- * @param delay_response_time   Latency before any braking begins *t₁* [s].
- *
- * @return Minimum longitudinal distance [m] from the current pose to the
- *         stopping line that guarantees the vehicle can reach *v = 0* under the
- *         provided jerk and acceleration limits. Returns 0 m if the current
- *         velocity is already non-positive.
- */
-double calc_judge_line_dist_with_jerk_limit(
-  const double velocity, const double acceleration, const double max_stop_acceleration,
-  const double max_stop_jerk, const double delay_response_time);
-
 std::optional<double> calc_signed_lateral_distance_to_boundary(
   const lanelet::ConstLineString3d & boundary, const Pose & reference_pose);
 

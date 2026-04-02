@@ -17,12 +17,14 @@
 
 #define EIGEN_MPL2_ONLY
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
+#include "autoware/multi_object_tracker/object_model/classes.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/object_model/uuid.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/unstable_shape_filter.hpp"
 
 #include <Eigen/Core>
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
+#include <autoware_utils_geometry/msg/covariance.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object.hpp>
@@ -32,25 +34,13 @@
 
 #include <boost/circular_buffer.hpp>
 
+#include <array>
 #include <optional>
 #include <string>
 #include <vector>
 
 namespace autoware::multi_object_tracker
 {
-
-enum class TrackerType {
-  PASS_THROUGH = 0,
-  PEDESTRIAN_AND_BICYCLE = 10,
-  PEDESTRIAN = 11,
-  BICYCLE = 12,
-  MULTIPLE_VEHICLE = 20,
-  GENERAL_VEHICLE = 21,
-  NORMAL_VEHICLE = 22,
-  BIG_VEHICLE = 23,
-  VEHICLE = 24,
-  POLYGON = 30,
-};
 
 class Tracker
 {
@@ -62,7 +52,7 @@ private:
   rclcpp::Time last_update_with_measurement_time_;
   std::vector<types::ExistenceProbability> existence_probabilities_;
   float total_existence_probability_;
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
+  std::vector<classes::Classification> classification_;
 
   // conditioned update configs
   // EMA/ema below are abbreviation for exponential moving average
@@ -90,10 +80,7 @@ public:
   {
     return existence_probabilities_;
   }
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> getClassification() const
-  {
-    return classification_;
-  }
+  std::vector<classes::Classification> getClassification() const { return classification_; }
   float getTotalExistenceProbability() const { return total_existence_probability_; }
   void updateTotalExistenceProbability(const float & existence_probability);
   void mergeExistenceProbabilities(
@@ -104,8 +91,7 @@ public:
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
     const types::InputChannel & channel_info, bool has_significant_shape_change = false);
   bool updateWithoutMeasurement(const rclcpp::Time & now);
-  void updateClassification(
-    const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);
+  void updateClassification(const std::vector<classes::Classification> & classification);
   virtual void setObjectShape(const autoware_perception_msgs::msg::Shape & shape)
   {
     object_.shape = shape;
@@ -124,12 +110,12 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   float getKnownObjectProbability() const;
   double getPositionCovarianceDeterminant() const;
-  virtual TrackerType getTrackerType() const { return tracker_type_; }
+  virtual types::TrackerType getTrackerType() const { return tracker_type_; }
   int getTrackerPriority() const { return static_cast<int>(getTrackerType()); }
 
-  std::uint8_t getHighestProbLabel() const
+  classes::Label getHighestProbLabel() const
   {
-    return autoware::object_recognition_utils::getHighestProbLabel(object_.classification);
+    return classes::getHighestProbLabel(object_.classification);
   }
 
   // existence states
@@ -168,7 +154,7 @@ public:
 
 protected:
   types::DynamicObject object_;
-  TrackerType tracker_type_{TrackerType::POLYGON};
+  types::TrackerType tracker_type_{types::TrackerType::POLYGON};
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {
