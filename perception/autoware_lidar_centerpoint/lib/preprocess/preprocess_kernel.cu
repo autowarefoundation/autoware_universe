@@ -38,9 +38,9 @@
 
 namespace
 {
-const std::size_t MAX_POINT_IN_VOXEL_SIZE = 32;  // CAUTION: must match max_point_in_voxel_size_ in config
-const std::size_t NUM_THREADS_IN_WARP = 32;  // CAUTION: NUM_THREADS_IN_WARP = MAX_POINT_IN_VOXEL_SIZE
-const std::size_t WARPS_PER_BLOCK = 4;
+const std::size_t NUM_THREADS_IN_WARP = 32;
+const std::size_t MAX_POINT_IN_VOXEL_SIZE = NUM_THREADS_IN_WARP;  // CAUTION: must match max_point_in_voxel_size_ in config
+const std::size_t WARPS_PER_BLOCK = 4;  // Determined by the size of shared memory
 
 const std::size_t POINT_DIM_XYZT = 4;   // X, Y, Z, Time_lag
 const std::size_t POINT_DIM_XYZIT = 5;  // X, Y, Z, Intensity, Time_lag
@@ -232,18 +232,16 @@ __global__ void generateFeatures_kernel(
   // voxel_features (float): (max_voxel_size, max_point_in_voxel_size, point_feature_size)
   // voxel_num_points (int): (max_voxel_size)
   // coords (int): (max_voxel_size, point_dim_size)
-  int point_idx = threadIdx.x % MAX_POINT_IN_VOXEL_SIZE;
-  int thread_in_warp = point_idx;
+  const int point_idx = threadIdx.x % MAX_POINT_IN_VOXEL_SIZE;
   // 1 warp processes 1 pillar (= voxel).
-  int pillar_idx_inBlock = threadIdx.x / MAX_POINT_IN_VOXEL_SIZE;  // max_point_in_voxel_size
-  int pillar_idx = blockIdx.x * WARPS_PER_BLOCK + pillar_idx_inBlock;
-  // int pillar_idx_org = pillar_idx;
-  // int max_pillar_idx = blockIdx.x * WARPS_PER_BLOCK 
+  const int pillar_idx_inBlock = threadIdx.x / MAX_POINT_IN_VOXEL_SIZE;  // max_point_in_voxel_size
+  const int pillar_idx = blockIdx.x * WARPS_PER_BLOCK + pillar_idx_inBlock;
 
-  unsigned int num_pillars = num_voxels[0];
+  const unsigned int num_pillars = num_voxels[0];
 
   if (pillar_idx >= num_pillars) {
-    // The warp that this thread belongs to does not have any pillar to process.
+    // The warp which this thread belongs to does not have any pillar to process.
+    // As all threads in the warp returns here, thread divergence won't be a problem.
     return;
   }
 
@@ -252,69 +250,68 @@ __global__ void generateFeatures_kernel(
     (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_11) ? POINT_DIM_XYZIT : POINT_DIM_XYZT;
 
   // load src
+  // The last dimension is MAX_POINT_IN_VOXEL_SIZE to allow coalesced memory access in a warp.
   __shared__ float pillarSM[WARPS_PER_BLOCK][point_dim][MAX_POINT_IN_VOXEL_SIZE];
   __shared__ float pillarOutSM[WARPS_PER_BLOCK][ENCODER_IN_FEATURE_SIZE][MAX_POINT_IN_VOXEL_SIZE];
 
-  // Lane 0 reads pillar metadata and broadcasts to the warp.
+  // Lane 0 reads pillar metadata and broadcasts to the warp members.
   int points_num = 0;
   int3 cords = {0, 0, 0};
   if (point_idx == 0) {
     points_num = static_cast<int>(voxel_num_points[pillar_idx]);
     cords = ((const int3 *)coords)[pillar_idx];
   }
-  points_num = __shfl_sync(0xffffffff, points_num, 0);
-  cords.x = __shfl_sync(0xffffffff, cords.x, 0);
-  cords.y = __shfl_sync(0xffffffff, cords.y, 0);
-  cords.z = __shfl_sync(0xffffffff, cords.z, 0);
+  constexpr uint32_t ALL_THREADS_IN_WARP_MASK = 0xffffffff;  // 32 threads
+  points_num = __shfl_sync(ALL_THREADS_IN_WARP_MASK, points_num, 0);
+  cords.x = __shfl_sync(ALL_THREADS_IN_WARP_MASK, cords.x, 0);
+  cords.y = __shfl_sync(ALL_THREADS_IN_WARP_MASK, cords.y, 0);
+  cords.z = __shfl_sync(ALL_THREADS_IN_WARP_MASK, cords.z, 0);
 
-  // Each thread reads values from the global memory ignoring the meaning into the shared memory.
-  // This pattern allows coalesced access.
-  // const int THREADS_IN_WARP = 32;
-  const int src_offset =
-        pillar_idx * MAX_POINT_IN_VOXEL_SIZE * point_dim;
-//      (blockIdx.x * WARPS_PER_BLOCK * THREADS_IN_WARP * MAX_POINT_IN_VOXEL_SIZE * point_dim);  // This can be const;
-  const int dst_offset = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim;
+  // Copy data from global memory to shared memory with transposition for coalesced access.
+  {
+    const int src_offset = pillar_idx * MAX_POINT_IN_VOXEL_SIZE * point_dim;
+    const int dst_offset = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim;
 #pragma unroll
-  for (int i = 0; i < point_dim; i++) {
-    int thread_offset = NUM_THREADS_IN_WARP * i + thread_in_warp;
-    int dst_point = thread_offset / point_dim;
-    int dst_dim = thread_offset % point_dim;
-    int dst_index = dst_dim * NUM_THREADS_IN_WARP + dst_point;
-    int src_index = i * MAX_POINT_IN_VOXEL_SIZE + thread_in_warp;
-    ((float *)pillarSM)[dst_offset + dst_index] = ((float *)voxel_features)[src_offset + src_index];
+    for (int i = 0; i < point_dim; ++i) {
+      const int point_offset = MAX_POINT_IN_VOXEL_SIZE * i + point_idx;
+      const int dst_point = point_offset / point_dim;
+      const int dst_dim = point_offset % point_dim;
+      const int dst_index = dst_dim * MAX_POINT_IN_VOXEL_SIZE + dst_point;
+      const int src_index = i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
+      ((float *)pillarSM)[dst_offset + dst_index] = ((float *)voxel_features)[src_offset + src_index];
+    }
   }
   __syncwarp();
 
   // calculate sm in a pillar
-  float validPoints = static_cast<float>(points_num);
   // 1. Load value into register
-  float x_val = (point_idx < validPoints) ? pillarSM[pillar_idx_inBlock][0][point_idx] : 0.0f;
-  float y_val = (point_idx < validPoints) ? pillarSM[pillar_idx_inBlock][1][point_idx] : 0.0f;
-  float z_val = (point_idx < validPoints) ? pillarSM[pillar_idx_inBlock][2][point_idx] : 0.0f;
+  float x_val = (point_idx < points_num) ? pillarSM[pillar_idx_inBlock][0][point_idx] : 0.0f;
+  float y_val = (point_idx < points_num) ? pillarSM[pillar_idx_inBlock][1][point_idx] : 0.0f;
+  float z_val = (point_idx < points_num) ? pillarSM[pillar_idx_inBlock][2][point_idx] : 0.0f;
   // 2. Parallel Reduction using Warp Shuffle
   for (int offset = 16; offset > 0; offset /= 2) {
-    x_val += __shfl_down_sync(0xffffffff, x_val, offset);
-    y_val += __shfl_down_sync(0xffffffff, y_val, offset);
-    z_val += __shfl_down_sync(0xffffffff, z_val, offset);
+    x_val += __shfl_down_sync(ALL_THREADS_IN_WARP_MASK, x_val, offset);
+    y_val += __shfl_down_sync(ALL_THREADS_IN_WARP_MASK, y_val, offset);
+    z_val += __shfl_down_sync(ALL_THREADS_IN_WARP_MASK, z_val, offset);
   }
   // 3. Broadcast warp reduction results from lane 0.
-  const float sum_x = __shfl_sync(0xffffffff, x_val, 0);
-  const float sum_y = __shfl_sync(0xffffffff, y_val, 0);
-  const float sum_z = __shfl_sync(0xffffffff, z_val, 0);
+  const float sum_x = __shfl_sync(ALL_THREADS_IN_WARP_MASK, x_val, 0);
+  const float sum_y = __shfl_sync(ALL_THREADS_IN_WARP_MASK, y_val, 0);
+  const float sum_z = __shfl_sync(ALL_THREADS_IN_WARP_MASK, z_val, 0);
 
   // feature-mean
   float3 mean;
   // There should be at least one valid point since the thread processes only non-empty pillars.
-  mean.x = sum_x / validPoints;
-  mean.y = sum_y / validPoints;
-  mean.z = sum_z / validPoints;
+  // "division by zero" never happens.
+  mean.x = sum_x / points_num;
+  mean.y = sum_y / points_num;
+  mean.z = sum_z / points_num;
 
   mean.x = pillarSM[pillar_idx_inBlock][0][point_idx] - mean.x;
   mean.y = pillarSM[pillar_idx_inBlock][1][point_idx] - mean.y;
   mean.z = pillarSM[pillar_idx_inBlock][2][point_idx] - mean.z;
 
   // calculate offset
-  // Is the order of z,y,x correct?
   float x_offset = voxel_x / 2 + cords.z * voxel_x + range_min_x;
   float y_offset = voxel_y / 2 + cords.y * voxel_y + range_min_y;
   float z_offset = voxel_z / 2 + cords.x * voxel_z + range_min_z;
@@ -326,6 +323,7 @@ __global__ void generateFeatures_kernel(
   center.z = pillarSM[pillar_idx_inBlock][2][point_idx] - z_offset;
 
   // store output
+  // All threads take the same execution path, so thread divergence won't be a problem.
   if (point_idx < points_num) {
     pillarOutSM[pillar_idx_inBlock][0][point_idx] = pillarSM[pillar_idx_inBlock][0][point_idx];
     pillarOutSM[pillar_idx_inBlock][1][point_idx] = pillarSM[pillar_idx_inBlock][1][point_idx];
@@ -353,44 +351,41 @@ __global__ void generateFeatures_kernel(
         pillarOutSM[pillar_idx_inBlock][9][point_idx] = center.z;
       }
     }
-
   } else {
-    pillarOutSM[pillar_idx_inBlock][0][point_idx] = 0;
-    pillarOutSM[pillar_idx_inBlock][1][point_idx] = 0;
-    pillarOutSM[pillar_idx_inBlock][2][point_idx] = 0;
-    pillarOutSM[pillar_idx_inBlock][3][point_idx] = 0;
+    pillarOutSM[pillar_idx_inBlock][0][point_idx] = 0.0f;
+    pillarOutSM[pillar_idx_inBlock][1][point_idx] = 0.0f;
+    pillarOutSM[pillar_idx_inBlock][2][point_idx] = 0.0f;
+    pillarOutSM[pillar_idx_inBlock][3][point_idx] = 0.0f;
 
-    pillarOutSM[pillar_idx_inBlock][4][point_idx] = 0;
-    pillarOutSM[pillar_idx_inBlock][5][point_idx] = 0;
-    pillarOutSM[pillar_idx_inBlock][6][point_idx] = 0;
+    pillarOutSM[pillar_idx_inBlock][4][point_idx] = 0.0f;
+    pillarOutSM[pillar_idx_inBlock][5][point_idx] = 0.0f;
+    pillarOutSM[pillar_idx_inBlock][6][point_idx] = 0.0f;
 
-    pillarOutSM[pillar_idx_inBlock][7][point_idx] = 0;
-    pillarOutSM[pillar_idx_inBlock][8][point_idx] = 0;
+    pillarOutSM[pillar_idx_inBlock][7][point_idx] = 0.0f;
+    pillarOutSM[pillar_idx_inBlock][8][point_idx] = 0.0f;
 
     if (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_10) {
-      pillarOutSM[pillar_idx_inBlock][9][point_idx] = 0;
+      pillarOutSM[pillar_idx_inBlock][9][point_idx] = 0.0f;
     }
     if (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_11) {
-      pillarOutSM[pillar_idx_inBlock][10][point_idx] = 0;
+      pillarOutSM[pillar_idx_inBlock][10][point_idx] = 0.0f;
     }
   }
-
   __syncwarp();
 
-  // Each thread reads values from the global memory ignoring the meaning into the shared memory.
-  // This pattern allows coalesced access.
-  // const int THREADS_IN_WARP = 32;
-  const int out_dst_offset =
-        pillar_idx * MAX_POINT_IN_VOXEL_SIZE * ENCODER_IN_FEATURE_SIZE;
-  const int out_src_offset = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * ENCODER_IN_FEATURE_SIZE;
+  // Copy data from shared memory to global memory with transposition for coalesced access.
+  {
+    const int dst_offset = pillar_idx * MAX_POINT_IN_VOXEL_SIZE * ENCODER_IN_FEATURE_SIZE;
+    const int src_offset = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * ENCODER_IN_FEATURE_SIZE;
 #pragma unroll
-  for (int i = 0; i < ENCODER_IN_FEATURE_SIZE; i++) {
-    int thread_offset = NUM_THREADS_IN_WARP * i + thread_in_warp;
-    int src_point = thread_offset / ENCODER_IN_FEATURE_SIZE;
-    int src_dim = thread_offset % ENCODER_IN_FEATURE_SIZE;
-    int src_index = src_dim * NUM_THREADS_IN_WARP + src_point;
-    int dst_index = i * MAX_POINT_IN_VOXEL_SIZE + thread_in_warp;
-    features[out_dst_offset + dst_index] = ((float *)pillarOutSM)[out_src_offset + src_index];
+    for (int i = 0; i < ENCODER_IN_FEATURE_SIZE; ++i) {
+      const int point_offset = MAX_POINT_IN_VOXEL_SIZE * i + point_idx;
+      const int src_point = point_offset / ENCODER_IN_FEATURE_SIZE;
+      const int src_dim = point_offset % ENCODER_IN_FEATURE_SIZE;
+      const int src_index = src_dim * MAX_POINT_IN_VOXEL_SIZE + src_point;
+      const int dst_index = i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
+      features[dst_offset + dst_index] = ((float *)pillarOutSM)[src_offset + src_index];
+    }
   }
 }
 
