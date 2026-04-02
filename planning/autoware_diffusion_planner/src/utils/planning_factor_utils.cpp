@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,13 +35,12 @@ std::optional<DetectedStopFactor> detect_stop_factor(
       stop_idx = i;
       stop_start_time = rclcpp::Duration(points[i].time_from_start);
     }
-    if (stop_idx) {
-      if (
-        (rclcpp::Duration(points[i].time_from_start) - stop_start_time).seconds() <
-        config.stop_keep_duration_threshold) {
-        if (points[i].longitudinal_velocity_mps > config.stop_velocity_threshold)
-          is_valid_stop = false;
-      }
+    if (
+      stop_idx &&
+      (rclcpp::Duration(points[i].time_from_start) - stop_start_time).seconds() <
+        config.stop_keep_duration_threshold &&
+      points[i].longitudinal_velocity_mps > config.stop_velocity_threshold) {
+      is_valid_stop = false;
     }
   }
 
@@ -69,7 +68,11 @@ std::optional<DetectedSlowdownFactor> detect_slowdown_factor(
     }
   }
 
-  if (!slowdown_start_idx || !slowdown_end_idx) {
+  if (slowdown_start_idx && !slowdown_end_idx) {
+    slowdown_end_idx = points.size() - 1;
+  }
+
+  if (!slowdown_start_idx) {
     return std::nullopt;
   }
 
