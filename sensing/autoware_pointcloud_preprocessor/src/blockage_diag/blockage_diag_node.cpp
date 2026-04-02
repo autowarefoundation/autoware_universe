@@ -137,6 +137,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   }
 
   // Subscriber setup
+  // cppcheck-suppress unknownMacro
   pointcloud_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
     sensor_msgs::msg::PointCloud2, "input", rclcpp::SensorDataQoS(),
     std::bind(&BlockageDiagComponent::update_diagnostics, this, std::placeholders::_1),
