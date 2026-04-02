@@ -248,6 +248,7 @@ void BlockageDiagComponent::publish_blockage_debug_info(
   }
 }
 
+// cppcheck-suppress unknownMacro
 void BlockageDiagComponent::update_diagnostics(
   AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) input)
 {
