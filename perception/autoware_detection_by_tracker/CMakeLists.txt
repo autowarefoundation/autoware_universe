@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_detection_by_tracker)
 
 find_package(autoware_cmake REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 # Ignore -Wnonportable-include-path in Clang for mussp
@@ -28,14 +29,26 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/tracker/tracker_handler.cpp
 )
 
+target_include_directories(${PROJECT_NAME} PRIVATE
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
+
+ament_target_dependencies(${PROJECT_NAME}
+  autoware_agnocast_wrapper
+)
+
 target_link_libraries(${PROJECT_NAME}
   Eigen3::Eigen
   ${PCL_LIBRARIES}
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::detection_by_tracker::DetectionByTracker"
   EXECUTABLE detection_by_tracker_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 ament_auto_package(INSTALL_TO_SHARE
   launch

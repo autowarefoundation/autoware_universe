@@ -6,31 +6,50 @@
     "ml_package_frnet": {
       "type": "object",
       "properties": {
+        "fov_up_deg": {
+          "type": "number",
+          "description": "LiDAR's upper elevation angle in degrees.",
+          "default": "15.0",
+          "minimum": -90.0,
+          "maximum": 90.0
+        },
+        "fov_down_deg": {
+          "type": "number",
+          "description": "LiDAR's lower elevation angle in degrees.",
+          "default": "-25.0",
+          "minimum": -90.0,
+          "maximum": 90.0
+        },
+        "frustum_width": {
+          "type": "integer",
+          "description": "Width of the FRNet frustum in pixels.",
+          "default": "1024",
+          "minimum": 1
+        },
+        "frustum_height": {
+          "type": "integer",
+          "description": "Height of the FRNet frustum in pixels.",
+          "default": "128",
+          "minimum": 1
+        },
+        "interpolation_width": {
+          "type": "integer",
+          "description": "Width of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
+          "default": "4096",
+          "minimum": 1
+        },
+        "interpolation_height": {
+          "type": "integer",
+          "description": "Height of the FRNet LiDAR's points to 2D plane interpolation in pixels.",
+          "default": "128",
+          "minimum": 1
+        },
         "class_names": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "description": "An array of class names which will be predicted.",
-          "default": [
-            "barrier",
-            "bicycle",
-            "bus",
-            "car",
-            "construction_vehicle",
-            "motorcycle",
-            "pedestrian",
-            "traffic_cone",
-            "trailer",
-            "truck",
-            "driveable_surface",
-            "other_flat",
-            "sidewalk",
-            "terrain",
-            "manmade",
-            "vegetation",
-            "unknown"
-          ],
           "uniqueItems": true
         },
         "num_points": {
@@ -39,7 +58,7 @@
             "type": "integer"
           },
           "description": "TensorRT optimization profile for number of points [min, opt, max].",
-          "default": [30000, 150000, 300000]
+          "default": [5000, 60000, 120000]
         },
         "num_unique_coors": {
           "type": "array",
@@ -47,10 +66,30 @@
             "type": "integer"
           },
           "description": "TensorRT optimization profile for number of unique coordinates [min, opt, max].",
-          "default": [5000, 10000, 30000]
+          "default": [3000, 30000, 60000]
+        },
+        "palette": {
+          "type": "array",
+          "description": "A sequence of RGB values for each class name. The length of the array must be 3 times the number of class names.",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          }
         }
       },
-      "required": ["class_names", "num_points", "num_unique_coors"],
+      "required": [
+        "fov_up_deg",
+        "fov_down_deg",
+        "frustum_width",
+        "frustum_height",
+        "interpolation_width",
+        "interpolation_height",
+        "class_names",
+        "num_points",
+        "num_unique_coors",
+        "palette"
+      ],
       "additionalProperties": false
     }
   },

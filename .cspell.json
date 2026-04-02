@@ -2,17 +2,36 @@
   "ignorePaths": [
     "perception/autoware_bytetrack/lib/**",
     "planning/behavior_velocity_planner/autoware_behavior_velocity_intersection_module/scripts/**",
-    "perception/autoware_shape_estimation/resource/**"
+    "perception/autoware_shape_estimation/resource/**",
+    "planning/autoware_path_optimizer/src/acados_mpc/**",
+    "planning/autoware_path_optimizer/scripts/**"
   ],
   "ignoreRegExpList": [],
   "words": [
-    "dltype",
-    "tvmgen",
-    "fromarray",
-    "soblin",
-    "brkay54",
+    "blasfeo",
+    "CUDA_HOSTDEV",
+    "expl",
+    "hpipm",
+    "HPIPM",
+    "idxbu",
+    "idxsh",
+    "ineq",
+    "lacados",
+    "lambdify",
+    "Lambdify",
+    "libacados",
     "libtensorrt",
+    "psidot",
+    "Psidot",
+    "Psi̇",
+    "trigsimp",
     "TRTBEV",
-    "CUDA_HOSTDEV"
+    "tvmgen",
+    "utraj",
+    "vertcat",
+    "xdot",
+    "xtraj",
+    "ydot",
+    "yref"
   ]
 }

@@ -31,6 +31,7 @@
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -45,31 +46,64 @@ using tensorrt_common::ProfileDims;
 using tensorrt_common::TrtCommon;
 using tensorrt_common::TrtCommonConfig;
 
+/**
+ * @brief Lidar FRNet pipeline: preprocess (project + interpolate), TensorRT inference, postprocess.
+ *
+ * Supports multiple cloud formats (XYZIRCAEDT, XYZIRADRT, XYZIRC, XYZI). Outputs segmentation,
+ * visualization, and optionally filtered point clouds. Ego crop box is applied in preprocess when
+ * a static transform is provided.
+ */
 class LIDAR_FRNET_PUBLIC LidarFRNet
 {
 public:
+  /**
+   * @brief Construct and initialize TensorRT engine, preprocess/postprocess CUDA, and GPU buffers.
+   * @param trt_config TensorRT config (e.g. ONNX path, precision)
+   * @param network_params Network and preprocessing params (profiles, FOV, crop box)
+   * @param postprocessing_params Filter classes, palette, crop box bounds
+   * @param logger Logger for diagnostics
+   */
   LidarFRNet(
     const tensorrt_common::TrtCommonConfig & trt_config,
     const utils::NetworkParams & network_params,
-    const utils::PreprocessingParams & preprocessing_params,
     const utils::PostprocessingParams & postprocessing_params, const rclcpp::Logger & logger);
   ~LidarFRNet() = default;
 
+  /**
+   * @brief Run full pipeline: copy input, preprocess, inference, postprocess; fill output clouds.
+   * @param cloud_in Input point cloud (GPU)
+   * @param cloud_seg_out Segmentation output (x,y,z,class_id,probability); size set by pipeline
+   * @param cloud_viz_out Visualization output (x,y,z,rgb); size set by pipeline
+   * @param cloud_filtered Filtered point cloud (filtered_output_format); width/row_step set by
+   * pipeline
+   * @param filtered_output_format Requested output format for the filtered point cloud
+   * @param active_comm Which outputs have subscribers (skip work when false)
+   * @param proc_timing Map filled with per-stage timings (e.g. preprocess_ms, inference_ms)
+   * @param crop_sensor_to_ref Optional 12-float transform (sensor to ref) for ego crop box
+   * @return true on success, false on validation or CUDA error
+   */
   bool process(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & cloud_in,
     cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
     cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
-    cuda_blackboard::CudaPointCloud2 & cloud_filtered, const utils::ActiveComm & active_comm,
-    std::unordered_map<std::string, double> & proc_timing);
+    cuda_blackboard::CudaPointCloud2 & cloud_filtered, CloudFormat filtered_output_format,
+    const utils::ActiveComm & active_comm, std::unordered_map<std::string, double> & proc_timing,
+    const std::array<float, 12> * crop_sensor_to_ref = nullptr);
 
 private:
+  /** Detect cloud format from PointCloud2 fields (XYZIRCAEDT, XYZIRADRT, XYZIRC, XYZI). */
+  [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
+  /** Project points, interpolate, generate unique coors; set num_points_, num_points_raw_. */
   bool preprocess(const uint32_t input_num_points);
+  /** Run TensorRT enqueue. */
   bool inference();
+  /** Fill seg/viz/filtered clouds from network output; set cloud width/row_step. */
   bool postprocess(
-    const uint32_t input_num_points, const utils::ActiveComm & active_comm,
-    cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
+    const uint32_t num_points, const uint32_t num_points_raw, CloudFormat filtered_output_format,
+    const utils::ActiveComm & active_comm, cuda_blackboard::CudaPointCloud2 & cloud_seg_out,
     cuda_blackboard::CudaPointCloud2 & cloud_viz_out,
     cuda_blackboard::CudaPointCloud2 & cloud_filtered);
+  /** Allocate all GPU buffers to max profile sizes (called once in constructor). */
   void initTensors();
 
   std::once_flag init_cloud_;
@@ -81,25 +115,34 @@ private:
   std::unique_ptr<PostprocessCuda> postprocess_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   utils::NetworkParams network_params_;
-  utils::PreprocessingParams preprocessing_params_;
   utils::PostprocessingParams postprocessing_params_;
 
   cudaStream_t stream_;
+
+  // Input cloud format detection
+  CloudFormat input_format_{CloudFormat::UNKNOWN};
+  std::size_t input_point_step_{0};
+
+  // Distinct number of points before and after interpolation
+  uint32_t num_points_raw_{0};
+  uint32_t num_points_{0};
+
   // Inference
   CudaUniquePtr<float[]> points_d_{nullptr};         // N x 4 (x, y, z, intensity)
   CudaUniquePtr<int64_t[]> coors_d_{nullptr};        // N x 3 (0, y, x)
   CudaUniquePtr<int64_t[]> voxel_coors_d_{nullptr};  // M x 3 (0, y, x)
   CudaUniquePtr<int64_t[]> inverse_map_d_{nullptr};  // N
-  CudaUniquePtr<float[]> seg_logit_d_{nullptr};      // NUM_CLASSES x 1
+  CudaUniquePtr<float[]> pred_probs_d_{nullptr};     // NUM_CLASSES x 1
   // Preprocess & Postprocess
-  CudaUniquePtr<InputPointType[]> cloud_in_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> cloud_in_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> cloud_compact_d_{nullptr};  // compact input points for filtered
   CudaUniquePtr<int64_t[]> coors_keys_d_{nullptr};
   CudaUniquePtr<uint32_t[]> num_points_d_{nullptr};
   CudaUniquePtr<uint32_t[]> proj_idxs_d_{nullptr};
   CudaUniquePtr<uint64_t[]> proj_2d_d_{nullptr};
   CudaUniquePtr<OutputSegmentationPointType[]> seg_data_d_{nullptr};
   CudaUniquePtr<OutputVisualizationPointType[]> viz_data_d_{nullptr};
-  CudaUniquePtr<InputPointType[]> cloud_filtered_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> cloud_filtered_d_{nullptr};
   CudaUniquePtr<uint32_t[]> num_points_filtered_d_{nullptr};
 };
 

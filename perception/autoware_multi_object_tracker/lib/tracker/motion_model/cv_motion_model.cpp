@@ -1,4 +1,4 @@
-// Copyright 2024 Tier IV, Inc.
+// Copyright 2024 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,10 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Taekjin Lee
-//
+
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
@@ -25,6 +22,8 @@
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/utils.hpp>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace autoware::multi_object_tracker
 {

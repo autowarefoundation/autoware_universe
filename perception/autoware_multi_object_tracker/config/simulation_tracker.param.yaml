@@ -1,8 +1,10 @@
 /**:
   ros__parameters:
-    car_tracker: "pass_through_tracker"
-    truck_tracker: "pass_through_tracker"
-    bus_tracker: "pass_through_tracker"
-    pedestrian_tracker: "pass_through_tracker"
-    bicycle_tracker: "pass_through_tracker"
-    motorcycle_tracker: "pass_through_tracker"
+    initial_tracker:
+      car: "pass_through_tracker"
+      truck: "pass_through_tracker"
+      bus: "pass_through_tracker"
+      trailer: "pass_through_tracker"
+      pedestrian: "pass_through_tracker"
+      bicycle: "pass_through_tracker"
+      motorcycle: "pass_through_tracker"

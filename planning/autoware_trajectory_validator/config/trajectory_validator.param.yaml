@@ -1,0 +1,39 @@
+/**:
+  ros__parameters:
+    filter_names:
+      [
+        "safety::OutOfLaneFilter",
+        "safety::CollisionFilter",
+        "safety::VehicleConstraintFilter",
+        "traffic_rule::TrafficLightFilter",
+      ]
+    # available filters:
+    #  "safety::OutOfLaneFilter"
+    #  "safety::CollisionFilter"
+    #  "safety::VehicleConstraintFilter"
+    #  "traffic_rule::TrafficLightFilter"
+
+    out_of_lane:
+      time: 2.0
+      min_value: 0.0
+
+    collision:
+      time: 3.0
+      min_value: 2.0
+
+    vehicle_constraint:
+      max_speed: 16.7 # m/s
+      max_acceleration: 5.0 # m/s^2
+      max_deceleration: 5.0 # m/s^2 (positive but represents deceleration)
+      max_steering_angle: 0.8 # rad
+      max_steering_rate: 0.3 # rad/s
+
+    traffic_light:
+      deceleration_limit: 2.8  # [m/s^2] trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit
+      jerk_limit: 5.0  # [m/s^3] trajectories crossing an amber light are rejected if ego can stop at the stop line without breaking this limit
+      delay_response_time: 0.5 # [s] delay response time used to estimate the minimum ego stopping distance
+      crossing_time_limit: 2.75 # [s] trajectories crossing an amber light are rejected if they cannot cross before this time
+      treat_amber_light_as_red_light: true # [-] when true, amber lights are handled like red lights
+      checked_trajectory_length:  # maximum length of the planned trajectory that is scanned for traffic light stop lines.
+        deceleration_limit: 2.0  # [m/s^2] deceleration limit to calculate the stop distance used as trajectory length limit
+        jerk_limit: 2.0  # [m/s^3] jerk limit to calculate the stop distance used as trajectory length limit

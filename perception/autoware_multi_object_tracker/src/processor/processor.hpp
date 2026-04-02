@@ -30,28 +30,10 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace autoware::multi_object_tracker
 {
-using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
-
-struct TrackerProcessorConfig
-{
-  std::unordered_map<LabelType, TrackerType> tracker_map;
-  float tracker_lifetime;                // [s]
-  float min_known_object_removal_iou;    // ratio [0, 1]
-  float min_unknown_object_removal_iou;  // ratio [0, 1]
-  bool enable_unknown_object_velocity_estimation;
-  bool enable_unknown_object_motion_output;
-  std::unordered_map<LabelType, double> pruning_giou_thresholds;
-  std::unordered_map<LabelType, double> pruning_distance_thresholds;  // [m]
-  double pruning_static_object_speed;                                 // [m/s]
-  double pruning_moving_object_speed;                                 // [m/s]
-  double pruning_static_iou_threshold;                                // [ratio]
-};
-
 class TrackerProcessor
 {
 public:
@@ -62,16 +44,9 @@ public:
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
   // tracker processes
   void predict(const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose);
-  void associate(
-    const types::DynamicObjectList & detected_objects,
-    std::unordered_map<int, int> & direct_assignment,
-    std::unordered_map<int, int> & reverse_assignment) const;
-  void update(
-    const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & direct_assignment);
-  void spawn(
-    const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & reverse_assignment);
+  types::AssociationResult associate(const types::DynamicObjectList & detected_objects) const;
+  void update(const types::AssociatedObjects & associated_objects);
+  void spawn(const types::AssociatedObjects & associated_objects);
   void prune(const rclcpp::Time & time);
 
   // output processes
