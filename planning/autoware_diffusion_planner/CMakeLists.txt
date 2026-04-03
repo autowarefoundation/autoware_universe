@@ -62,6 +62,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/preprocessing/traffic_signals.cpp
     src/utils/utils.cpp
     src/utils/marker_utils.cpp
+    src/utils/planning_factor_utils.cpp
     src/postprocessing/turn_indicator_manager.cpp
     src/inference/tensorrt_inference.cpp
   )
@@ -97,7 +98,8 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       test/agent_edge_case_test.cpp
       test/lanelet_edge_case_test.cpp
       test/diffusion_planner_integration_test.cpp
-      test/rtc_prefix_test.cpp)
+      test/rtc_prefix_test.cpp
+      test/planning_factor_utils_test.cpp)
 
     target_link_libraries(test_diffusion_planner autoware_diffusion_planner_component)
     ament_target_dependencies(test_diffusion_planner

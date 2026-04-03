@@ -18,6 +18,7 @@
 #include "autoware/boundary_departure_checker/footprint_generator/footprint_manager.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
+#include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
@@ -431,19 +432,28 @@ Side<ProjectionsToBound> UncrossableBoundaryDepartureChecker::get_closest_projec
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto & th_trigger = param_.th_trigger;
 
-  const auto min_braking_dist = utils::calc_judge_line_dist_with_jerk_limit(
-    curr_vel, curr_acc, th_trigger.th_acc_mps2.max, th_trigger.th_jerk_mps3.max,
-    th_trigger.brake_delay_s);
+  const auto max_jerk = th_trigger.th_jerk_mps3.max;
+  const auto max_decel = th_trigger.th_acc_mps2.min;
+  const auto braking_delay = th_trigger.brake_delay_s;
 
-  const auto max_braking_dist = utils::calc_judge_line_dist_with_jerk_limit(
-    curr_vel, curr_acc, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.min,
-    th_trigger.brake_delay_s);
+  const auto min_braking_dist_opt =
+    motion_utils::calculate_stop_distance(curr_vel, curr_acc, max_decel, max_jerk, braking_delay);
+
+  const auto min_jerk = th_trigger.th_jerk_mps3.min;
+  const auto min_decel = th_trigger.th_acc_mps2.min;
+
+  const auto max_braking_dist_opt =
+    motion_utils::calculate_stop_distance(curr_vel, curr_acc, min_decel, min_jerk, braking_delay);
+
+  if (!min_braking_dist_opt || !max_braking_dist_opt) {
+    return {};
+  }
 
   Side<ProjectionsToBound> min_to_bound;
 
   for (const auto side_key : g_side_keys) {
     auto closest_projections_opt = utils::get_closest_projections_for_side(
-      projections_to_bound, param_, min_braking_dist, max_braking_dist, side_key);
+      projections_to_bound, param_, *min_braking_dist_opt, *max_braking_dist_opt, side_key);
 
     if (closest_projections_opt) {
       min_to_bound[side_key] = std::move(*closest_projections_opt);

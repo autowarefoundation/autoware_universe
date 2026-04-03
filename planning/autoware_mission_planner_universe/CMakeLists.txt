@@ -4,11 +4,11 @@ project(autoware_mission_planner_universe)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
-ament_auto_add_library(goal_pose_visualizer_component SHARED
+ament_auto_add_library(${PROJECT_NAME}_goal_pose_visualizer_component SHARED
   src/goal_pose_visualizer/goal_pose_visualizer.cpp
 )
 
-rclcpp_components_register_node(goal_pose_visualizer_component
+rclcpp_components_register_node(${PROJECT_NAME}_goal_pose_visualizer_component
   PLUGIN "autoware::mission_planner_universe::GoalPoseVisualizer"
   EXECUTABLE goal_pose_visualizer
 )

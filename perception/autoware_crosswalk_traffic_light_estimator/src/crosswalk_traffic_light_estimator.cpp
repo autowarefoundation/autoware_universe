@@ -17,8 +17,6 @@
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
-#include <boost/optional.hpp>
-
 #include <lanelet2_routing/RoutingGraphContainer.h>
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
@@ -157,6 +155,7 @@ lanelet::Ids parse_ids(std::string_view input)
   }
   return ids;
 }
+
 bool is_invalid_detection_status(const TrafficSignal & signal)
 {
   if (signal.elements.empty()) {
@@ -170,10 +169,10 @@ bool is_invalid_detection_status(const TrafficSignal & signal)
   return false;
 }
 
-boost::optional<uint8_t> get_highest_confidence_traffic_signal(
+std::optional<uint8_t> get_highest_confidence_traffic_signal(
   const lanelet::Id & id, const TrafficLightIdMap & traffic_light_id_map)
 {
-  boost::optional<uint8_t> ret{boost::none};
+  std::optional<uint8_t> ret{std::nullopt};
 
   double highest_confidence = 0.0;
   if (traffic_light_id_map.count(id) == 0) {
@@ -494,53 +493,70 @@ void CrosswalkTrafficLightEstimator::set_crosswalk_traffic_signal(
   }
 }
 
+bool is_green_or_amber(const std::optional<uint8_t> & color)
+{
+  if (!color) {
+    return false;
+  }
+  return *color == TrafficSignalElement::GREEN || *color == TrafficSignalElement::AMBER;
+}
+
+bool is_unknown_or_absent(const std::optional<uint8_t> & color)
+{
+  if (!color) {
+    return true;
+  }
+  return *color == TrafficSignalElement::UNKNOWN;
+}
+
+// Determine whether a lanelet's traffic light is in a non-red state.
+// Falls back to the last detected color when the current color is unavailable.
+//
+// | current_color | last_color     | result |
+// |---------------|----------------|--------|
+// | GREEN/AMBER   | (any)          | true   |
+// | RED           | (any)          | false  |
+// | UNKNOWN/NA    | GREEN/AMBER    | true   |
+// | UNKNOWN/NA    | RED/UNKNOWN/NA | false  |
+bool is_lanelet_non_red(
+  const lanelet::ConstLanelet & lanelet, const TrafficLightIdMap & traffic_light_id_map,
+  const TrafficLightIdMap & last_detect_color, bool use_last_detect_color)
+{
+  const auto traffic_light_reg_elems = lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
+  if (traffic_light_reg_elems.empty()) {
+    return false;
+  }
+  const auto traffic_light_id = traffic_light_reg_elems.front()->id();
+
+  // detection with current color
+  const auto current_color =
+    get_highest_confidence_traffic_signal(traffic_light_id, traffic_light_id_map);
+  const auto current_color_is_not_red = is_green_or_amber(current_color);
+  if (current_color_is_not_red) {
+    return true;
+  }
+
+  // detection with last detected color
+  if (!use_last_detect_color) {
+    return false;
+  }
+  const auto last_color =
+    get_highest_confidence_traffic_signal(traffic_light_id, last_detect_color);
+  const auto current_color_is_not_available = is_unknown_or_absent(current_color);
+  const auto last_color_is_not_red = is_green_or_amber(last_color);
+  return current_color_is_not_available && last_color_is_not_red;
+}
+
 lanelet::ConstLanelets CrosswalkTrafficLightEstimator::get_non_red_lanelets(
   const lanelet::ConstLanelets & lanelets, const TrafficLightIdMap & traffic_light_id_map) const
 {
   lanelet::ConstLanelets non_red_lanelets{};
 
   for (const auto & lanelet : lanelets) {
-    const auto tl_reg_elems = lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
-
-    if (tl_reg_elems.empty()) {
-      continue;
+    if (is_lanelet_non_red(
+          lanelet, traffic_light_id_map, last_detect_color_, config_.use_last_detect_color)) {
+      non_red_lanelets.push_back(lanelet);
     }
-
-    const auto tl_reg_elem = tl_reg_elems.front();
-    const auto current_detected_signal =
-      get_highest_confidence_traffic_signal(tl_reg_elem->id(), traffic_light_id_map);
-
-    if (!current_detected_signal && !config_.use_last_detect_color) {
-      continue;
-    }
-
-    const auto current_is_not_red =
-      current_detected_signal ? current_detected_signal.get() == TrafficSignalElement::GREEN ||
-                                  current_detected_signal.get() == TrafficSignalElement::AMBER
-                              : true;
-
-    const auto current_is_unknown_or_none =
-      current_detected_signal ? current_detected_signal.get() == TrafficSignalElement::UNKNOWN
-                              : true;
-
-    const auto last_detected_signal =
-      get_highest_confidence_traffic_signal(tl_reg_elem->id(), last_detect_color_);
-
-    const auto has_no_signal_info = !current_detected_signal && !last_detected_signal;
-    if (has_no_signal_info) {
-      continue;
-    }
-
-    const auto was_not_red = current_is_unknown_or_none && last_detected_signal &&
-                             (last_detected_signal.get() == TrafficSignalElement::GREEN ||
-                              last_detected_signal.get() == TrafficSignalElement::AMBER) &&
-                             config_.use_last_detect_color;
-
-    if (!current_is_not_red && !was_not_red) {
-      continue;
-    }
-
-    non_red_lanelets.push_back(lanelet);
   }
 
   return non_red_lanelets;
