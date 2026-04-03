@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: BehaviorPathPlanner.node
+
+package:
+  name: autoware_behavior_path_planner
+  provider: autoware
+
 launch:
-  package: autoware_behavior_path_planner
   plugin: autoware::behavior_path_planner::BehaviorPathPlannerNode
   executable: behavior_path_planner_node
-  use_container: true
-  container_name: behavior_planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: vector_map
@@ -26,7 +31,8 @@ inputs:
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
   - name: scenario
     message_type: tier4_planning_msgs/msg/Scenario
-outputs:
+
+publishers:
   - name: path
     message_type: autoware_planning_msgs/msg/Path
   - name: turn_indicators_cmd
@@ -37,15 +43,9 @@ outputs:
     message_type: geometry_msgs/msg/PoseStamped
   - name: stop_reasons
     message_type: tier4_planning_msgs/msg/StopReasonArray
-parameters:
-  - name: launch_modules
-    type: string_array
-    default:
-      - autoware::behavior_path_planner::LaneChangeRightModuleManager
-      - autoware::behavior_path_planner::LaneChangeLeftModuleManager
-      - autoware::behavior_path_planner::StaticObstacleAvoidanceModuleManager
-      - autoware::behavior_path_planner::GoalPlannerModuleManager
-parameter_files:
+
+# parameters
+param_files:
   - name: behavior_path_planner_param
     default: $(find-pkg-share autoware_behavior_path_planner)/config/behavior_path_planner.param.yaml
   - name: lane_change_param
@@ -54,6 +54,17 @@ parameter_files:
     default: $(find-pkg-share autoware_behavior_path_planner)/config/goal_planner.param.yaml
   - name: avoidance_param
     default: $(find-pkg-share autoware_behavior_path_planner)/config/avoidance.param.yaml
+
+param_values:
+  - name: launch_modules
+    type: string_array
+    default:
+      - autoware::behavior_path_planner::LaneChangeRightModuleManager
+      - autoware::behavior_path_planner::LaneChangeLeftModuleManager
+      - autoware::behavior_path_planner::StaticObstacleAvoidanceModuleManager
+      - autoware::behavior_path_planner::GoalPlannerModuleManager
+
+# processes
 processes:
   - name: plan_path
     trigger_conditions:

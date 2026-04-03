@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: LaneDepartureChecker.node
+
+package:
+  name: autoware_lane_departure_checker
+  provider: autoware
+
 launch:
-  package: autoware_lane_departure_checker
   plugin: autoware::lane_departure_checker::LaneDepartureCheckerNode
   executable: lane_departure_checker_node
-  use_container: true
-  container_name: control_check_container
-inputs:
+
+# interfaces
+subscribers:
   - name: odometry
     message_type: nav_msgs/msg/Odometry
   - name: lanelet_map_bin
@@ -18,13 +23,20 @@ inputs:
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-outputs:
+
+publishers:
   - name: diagnostic
     message_type: diagnostic_msgs/msg/DiagnosticStatus
-parameter_files:
+
+# parameters
+param_files:
   - name: lane_departure_checker_param
     default: $(find-pkg-share autoware_lane_departure_checker)/config/lane_departure_checker.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: check_departure
     trigger_conditions:

@@ -1,26 +1,38 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: PathSampler.node
+
+package:
+  name: autoware_path_sampler
+  provider: autoware
+
 launch:
-  package: autoware_path_sampler
   plugin: autoware::path_sampler::PathSampler
   executable: path_sampler_exe
-  use_container: true
-  container_name: motion_planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: path
     message_type: autoware_planning_msgs/msg/Path
   - name: odometry
     message_type: nav_msgs/msg/Odometry
   - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
-outputs:
+
+publishers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-parameter_files:
+
+# parameters
+param_files:
   - name: path_sampler_param
     default: $(find-pkg-share autoware_path_sampler)/config/path_sampler.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: sample_path
     trigger_conditions:

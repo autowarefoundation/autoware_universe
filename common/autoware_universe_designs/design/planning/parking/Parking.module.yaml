@@ -1,50 +1,48 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# module information
 name: Parking.module
+
 instances:
   - name: costmap_generator
     entity: CostmapGenerator.node
   - name: freespace_planner
     entity: FreespacePlanner.node
-external_interfaces:
-  input:
-    - name: objects
-    - name: points_no_ground
-    - name: vector_map
-    - name: scenario
-    - name: route
-    - name: odometry
-  output:
-    - name: trajectory
-    - name: is_completed
-    - name: grid_map # Exposed for visualization/debugging
+
+# interfaces
+subscribers:
+  - name: objects
+  - name: points_no_ground
+  - name: vector_map
+  - name: scenario
+  - name: route
+  - name: odometry
+
+publishers:
+  - name: trajectory
+  - name: is_completed
+  - name: grid_map
+
 connections:
-  # External Inputs -> Costmap Generator
-  - from: input.objects
-    to: costmap_generator.input.objects
-  - from: input.points_no_ground
-    to: costmap_generator.input.points_no_ground
-  - from: input.vector_map
-    to: costmap_generator.input.vector_map
-  - from: input.scenario
-    to: costmap_generator.input.scenario
-
-  # Internal Wiring: Costmap -> Planner
-  - from: costmap_generator.output.occupancy_grid
-    to: freespace_planner.input.occupancy_grid
-
-  # External Inputs -> Freespace Planner
-  - from: input.route
-    to: freespace_planner.input.route
-  - from: input.scenario
-    to: freespace_planner.input.scenario
-  - from: input.odometry
-    to: freespace_planner.input.odometry
-
-  # Internal Outputs -> External Outputs
-  - from: freespace_planner.output.trajectory
-    to: output.trajectory
-  - from: freespace_planner.output.is_completed
-    to: output.is_completed
-  - from: costmap_generator.output.grid_map
-    to: output.grid_map
+  - - subscriber.objects
+    - costmap_generator.subscriber.objects
+  - - subscriber.points_no_ground
+    - costmap_generator.subscriber.points_no_ground
+  - - subscriber.vector_map
+    - costmap_generator.subscriber.vector_map
+  - - subscriber.scenario
+    - costmap_generator.subscriber.scenario
+  - - costmap_generator.publisher.occupancy_grid
+    - freespace_planner.subscriber.occupancy_grid
+  - - subscriber.route
+    - freespace_planner.subscriber.route
+  - - subscriber.scenario
+    - freespace_planner.subscriber.scenario
+  - - subscriber.odometry
+    - freespace_planner.subscriber.odometry
+  - - freespace_planner.publisher.trajectory
+    - publisher.trajectory
+  - - freespace_planner.publisher.is_completed
+    - publisher.is_completed
+  - - costmap_generator.publisher.grid_map
+    - publisher.grid_map

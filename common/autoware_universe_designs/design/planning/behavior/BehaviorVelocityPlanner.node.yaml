@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: BehaviorVelocityPlanner.node
+
+package:
+  name: autoware_behavior_velocity_planner
+  provider: autoware
+
 launch:
-  package: autoware_behavior_velocity_planner
   plugin: autoware::behavior_velocity_planner::experimental::BehaviorVelocityPlannerNode
   executable: behavior_velocity_planner_node
-  use_container: true
-  container_name: behavior_planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: path_with_lane_id
     message_type: autoware_planning_msgs/msg/Path
   - name: vector_map
@@ -32,7 +37,8 @@ inputs:
     message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
   - name: occupancy_grid
     message_type: nav_msgs/msg/OccupancyGrid
-outputs:
+
+publishers:
   - name: path
     message_type: autoware_planning_msgs/msg/Path
   - name: stop_reasons
@@ -41,19 +47,9 @@ outputs:
     message_type: tier4_planning_msgs/msg/InfrastructureCommandArray
   - name: traffic_signal
     message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
-parameters:
-  - name: is_simulation
-    type: bool
-    default: false
-  - name: launch_modules
-    type: string_array
-    default:
-      - autoware::behavior_velocity_planner::experimental::CrosswalkModulePlugin
-      - autoware::behavior_velocity_planner::experimental::TrafficLightModulePlugin
-      - autoware::behavior_velocity_planner::experimental::IntersectionModulePlugin
-      - autoware::behavior_velocity_planner::experimental::BlindSpotModulePlugin
-      - autoware::behavior_velocity_planner::experimental::DetectionAreaModulePlugin
-parameter_files:
+
+# parameters
+param_files:
   - name: common_param
     default: $(find-pkg-share autoware_planning_common)/config/common.param.yaml
   - name: behavior_velocity_planner_param
@@ -64,6 +60,21 @@ parameter_files:
     default: $(find-pkg-share autoware_behavior_velocity_planner)/config/traffic_light_module.param.yaml
   - name: intersection_module_param
     default: $(find-pkg-share autoware_behavior_velocity_planner)/config/intersection_module.param.yaml
+
+param_values:
+  - name: is_simulation
+    type: bool
+    default: False
+  - name: launch_modules
+    type: string_array
+    default:
+      - autoware::behavior_velocity_planner::experimental::CrosswalkModulePlugin
+      - autoware::behavior_velocity_planner::experimental::TrafficLightModulePlugin
+      - autoware::behavior_velocity_planner::experimental::IntersectionModulePlugin
+      - autoware::behavior_velocity_planner::experimental::BlindSpotModulePlugin
+      - autoware::behavior_velocity_planner::experimental::DetectionAreaModulePlugin
+
+# processes
 processes:
   - name: plan_velocity
     trigger_conditions:

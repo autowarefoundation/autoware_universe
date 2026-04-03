@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: ScenarioSelector.node
+
+package:
+  name: autoware_scenario_selector
+  provider: autoware
+
 launch:
-  package: autoware_scenario_selector
   plugin: autoware::scenario_selector::ScenarioSelectorNode
   executable: scenario_selector_node
-  use_container: true
-  container_name: planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: lane_driving_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: parking_trajectory
@@ -22,13 +27,19 @@ inputs:
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
   - name: is_parking_completed
     message_type: std_msgs/msg/Bool
-outputs:
+
+publishers:
   - name: scenario
     message_type: tier4_planning_msgs/msg/Scenario
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-parameter_files: []
-parameters: []
+
+# parameters
+param_files: []
+param_values:
+  []
+
+# processes
 processes:
   - name: select_scenario
     trigger_conditions:

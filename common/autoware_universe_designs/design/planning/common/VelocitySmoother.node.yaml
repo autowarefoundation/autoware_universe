@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: VelocitySmoother.node
+
+package:
+  name: autoware_velocity_smoother
+  provider: autoware
+
 launch:
-  package: autoware_velocity_smoother
   plugin: autoware::velocity_smoother::VelocitySmootherNode
   executable: velocity_smoother_node
-  use_container: true
-  container_name: velocity_smoother_container
-inputs:
+
+# interfaces
+subscribers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: external_velocity_limit_mps
@@ -16,19 +21,26 @@ inputs:
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
   - name: operation_mode_state
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
-outputs:
+
+publishers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: current_velocity_limit_mps
     message_type: tier4_planning_msgs/msg/VelocityLimit
-parameter_files:
+
+# parameters
+param_files:
   - name: common_param
     default: $(find-pkg-share autoware_planning_common)/config/common.param.yaml
   - name: nearest_search_param
     default: $(find-pkg-share autoware_planning_common)/config/nearest_search.param.yaml
   - name: velocity_smoother_param
     default: $(find-pkg-share autoware_velocity_smoother)/config/velocity_smoother.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: smooth_velocity
     trigger_conditions:

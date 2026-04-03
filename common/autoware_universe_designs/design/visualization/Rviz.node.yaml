@@ -1,24 +1,22 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: Rviz.node
 
-launch:
-  package: rviz2
-  executable: rviz2
-  args: --display-config $(find-pkg-share autoware_launch)/rviz/autoware.rviz
+package:
+  name: rviz2
+  provider: autoware
 
-# interface
-inputs: []
-outputs: []
+launch:
+  executable: rviz2
+  node_output: screen
 
 # parameters
-parameter_files: []
-parameters: []
+param_values:
+  []
 
 # processes
 processes:
   - name: run
-    trigger_conditions: []
-    outcomes: []
-
-
+    trigger_conditions:
+    outcomes:

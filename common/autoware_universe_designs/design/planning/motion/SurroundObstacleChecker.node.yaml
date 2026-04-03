@@ -1,20 +1,26 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: SurroundObstacleChecker.node
+
+package:
+  name: autoware_surround_obstacle_checker
+  provider: autoware
+
 launch:
-  package: autoware_surround_obstacle_checker
   plugin: autoware::surround_obstacle_checker::SurroundObstacleCheckerNode
   executable: autoware_surround_obstacle_checker_node
-  use_container: true
-  container_name: motion_planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: odometry
     message_type: nav_msgs/msg/Odometry
   - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
-outputs:
+
+publishers:
   - name: max_velocity
     message_type: tier4_planning_msgs/msg/VelocityLimit
   - name: velocity_limit_clear_command
@@ -23,10 +29,16 @@ outputs:
     message_type: tier4_planning_msgs/msg/StopReasonArray
   - name: no_start_reason
     message_type: tier4_planning_msgs/msg/StopReasonArray
-parameter_files:
+
+# parameters
+param_files:
   - name: surround_obstacle_checker_param
     default: $(find-pkg-share autoware_surround_obstacle_checker)/config/surround_obstacle_checker.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: check_surroundings
     trigger_conditions:

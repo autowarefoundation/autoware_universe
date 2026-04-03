@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: TrajectoryFollower.node
+
+package:
+  name: autoware_trajectory_follower_node
+  provider: autoware
+
 launch:
-  package: autoware_trajectory_follower_node
   plugin: autoware::motion::control::trajectory_follower_node::Controller
   executable: trajectory_follower_node
-  use_container: true
-  container_name: control_container
-inputs:
+
+# interfaces
+subscribers:
   - name: reference_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: current_odometry
@@ -18,7 +23,8 @@ inputs:
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
   - name: current_operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
-outputs:
+
+publishers:
   - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: lateral_diagnostic
@@ -31,7 +37,9 @@ outputs:
     message_type: tier4_planning_msgs/msg/StopReasonArray
   - name: control_cmd
     message_type: autoware_control_msgs/msg/Control
-parameter_files:
+
+# parameters
+param_files:
   - name: trajectory_follower_node_param
     default: $(find-pkg-share autoware_trajectory_follower_node)/config/trajectory_follower_node.param.yaml
   - name: lat_controller_param
@@ -40,7 +48,11 @@ parameter_files:
     default: $(find-pkg-share autoware_trajectory_follower_node)/config/longitudinal_controller.param.yaml
   - name: vehicle_param
     default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: follow_trajectory
     trigger_conditions:

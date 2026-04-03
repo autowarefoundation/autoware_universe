@@ -1,23 +1,31 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: PlanningValidator.node
+
+package:
+  name: autoware_planning_validator
+  provider: autoware
+
 launch:
-  package: autoware_planning_validator
   plugin: autoware::planning_validator::PlanningValidator
   executable: planning_validator_node
-  use_container: true
-  container_name: planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
-outputs:
+
+publishers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-parameter_files:
+
+# parameters
+param_files:
   - name: planning_validator_param
     default: $(find-pkg-share autoware_planning_validator)/config/planning_validator.param.yaml
   - name: latency_checker_param
@@ -28,7 +36,11 @@ parameter_files:
     default: $(find-pkg-share autoware_planning_validator)/config/planning_validator_intersection_collision_checker.param.yaml
   - name: rear_collision_checker_param
     default: $(find-pkg-share autoware_planning_validator)/config/planning_validator_rear_collision_checker.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: validate_trajectory
     trigger_conditions:

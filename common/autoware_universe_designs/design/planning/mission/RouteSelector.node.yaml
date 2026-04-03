@@ -1,22 +1,36 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: RouteSelector.node
+
+package:
+  name: autoware_mission_planner_universe
+  provider: autoware
+
 launch:
-  package: autoware_mission_planner_universe
   plugin: autoware::mission_planner_universe::RouteSelector
   executable: route_selector
-inputs:
+  node_output: screen
+
+# interfaces
+subscribers:
   - name: planner_route
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: planner_state
     message_type: autoware_planning_msgs/msg/RouteState
-outputs:
+
+publishers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: state
     message_type: autoware_planning_msgs/msg/RouteState
-parameter_files: []
-parameters: []
+
+# parameters
+param_values:
+  []
+param_files: []
+
+# processes
 processes:
   - name: on_route_update
     trigger_conditions:

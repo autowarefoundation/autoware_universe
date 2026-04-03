@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: AutonomousEmergencyBraking.node
+
+package:
+  name: autoware_autonomous_emergency_braking
+  provider: autoware
+
 launch:
-  package: autoware_autonomous_emergency_braking
   plugin: autoware::motion::control::autonomous_emergency_braking::AEB
   executable: autonomous_emergency_braking_node
-  use_container: true
-  container_name: control_check_container
-inputs:
+
+# interfaces
+subscribers:
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
   - name: velocity
@@ -18,18 +23,22 @@ inputs:
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-outputs:
+
+publishers:
   - name: debug_marker
     message_type: visualization_msgs/msg/MarkerArray
-parameter_files:
+
+# parameters
+param_files:
   - name: aeb_param
     default: $(find-pkg-share autoware_autonomous_emergency_braking)/config/autonomous_emergency_braking.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: check_collision
     trigger_conditions:
       - on_input: pointcloud
     outcomes:
-      - terminal: null
-      # AEB typically halts the system via diagnostics or internal state,
-      # explicit output port varies by implementation version.

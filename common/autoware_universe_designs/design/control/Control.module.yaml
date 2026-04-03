@@ -1,248 +1,166 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# module information
 name: Control.module
+
 instances:
-  - name: control_container
-    entity: ControlContainer.node
+  # - name: control_container
+  #   entity: ControlContainer.node
   - name: trajectory_follower
     entity: TrajectoryFollower.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: shift_decider
     entity: ShiftDecider.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: vehicle_cmd_gate
     entity: VehicleCmdGate.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: operation_mode_transition_manager
     entity: OperationModeTransitionManager.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: external_cmd_selector
     entity: ExternalCmdSelector.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: external_cmd_converter
     entity: ExternalCmdConverter.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: lane_departure_checker
     entity: LaneDepartureChecker.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: control_validator
     entity: ControlValidator.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: autonomous_emergency_braking
     entity: AutonomousEmergencyBraking.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: collision_detector
     entity: CollisionDetector.node
-    launch:
-      use_container: true
-      container_name: control_container
   - name: control_evaluator
     entity: ControlEvaluator.node
-    launch:
-      use_container: true
-      container_name: control_container
 
-external_interfaces:
-  input:
-    # Trajectory & Map
-    - name: trajectory
-    - name: route
-    - name: vector_map
+# interfaces
+subscribers:
+  - name: trajectory
+  - name: route
+  - name: vector_map
+  - name: odometry
+  - name: acceleration
+  - name: steering_status
+  - name: gear_status
+  - name: velocity_status
+  - name: imu
+  - name: operation_mode_state
+  - name: autoware_state
+  - name: mrm_state
+  - name: objects
+  - name: pointcloud
+  - name: turn_indicators_cmd
+  - name: hazard_lights_cmd
+  - name: remote_pedals_cmd
+  - name: remote_steering_cmd
+  - name: remote_gear_cmd
+  - name: remote_turn_indicators_cmd
+  - name: remote_hazard_lights_cmd
+  - name: remote_heartbeat
+  - name: local_pedals_cmd
+  - name: local_steering_cmd
+  - name: local_gear_cmd
+  - name: local_turn_indicators_cmd
+  - name: local_hazard_lights_cmd
+  - name: local_heartbeat
 
-    # Vehicle State
-    - name: odometry
-    - name: acceleration
-    - name: steering_status
-    - name: gear_status
-    - name: velocity_status
-    - name: imu
-
-    # System & Operation
-    - name: operation_mode_state
-    - name: autoware_state
-    - name: mrm_state
-
-    # Perception
-    - name: objects
-    - name: pointcloud
-
-    # Planning Commands
-    - name: turn_indicators_cmd
-    - name: hazard_lights_cmd
-
-    # External Overrides
-    - name: remote_pedals_cmd
-    - name: remote_steering_cmd
-    - name: remote_gear_cmd
-    - name: remote_turn_indicators_cmd
-    - name: remote_hazard_lights_cmd
-    - name: remote_heartbeat
-    - name: local_pedals_cmd
-    - name: local_steering_cmd
-    - name: local_gear_cmd
-    - name: local_turn_indicators_cmd
-    - name: local_hazard_lights_cmd
-    - name: local_heartbeat
-
-  output:
-    # Actuation
-    - name: control_cmd
-    - name: gear_cmd
-    - name: turn_indicators_cmd
-    - name: hazard_lights_cmd
-
-    # Status
-    - name: control_mode
-    - name: gate_mode
-    - name: is_autonomous_available
-    - name: diagnostic
-    - name: control_evaluation
+publishers:
+  - name: control_cmd
+  - name: gear_cmd
+  - name: turn_indicators_cmd
+  - name: hazard_lights_cmd
+  - name: control_mode
+  - name: gate_mode
+  - name: is_autonomous_available
+  - name: diagnostic
+  - name: control_evaluation
 
 connections:
-  # ==========================================
-  # 1. Trajectory Following Loop
-  # ==========================================
-  - from: input.trajectory
-    to: trajectory_follower.input.reference_trajectory
-  - from: input.odometry
-    to: trajectory_follower.input.current_odometry
-  - from: input.steering_status
-    to: trajectory_follower.input.current_steering
-  - from: input.acceleration
-    to: trajectory_follower.input.current_accel
-  - from: input.operation_mode_state
-    to: trajectory_follower.input.current_operation_mode
-
-  # ==========================================
-  # 2. Shift Logic
-  # ==========================================
-  - from: trajectory_follower.output.control_cmd
-    to: shift_decider.input.control_cmd
-  - from: input.gear_status
-    to: shift_decider.input.current_gear
-  - from: input.autoware_state
-    to: shift_decider.input.state
-
-  # ==========================================
-  # 3. External Command Pipeline
-  # ==========================================
-  - from: input.remote_pedals_cmd
-    to: external_cmd_selector.input.remote_pedals_cmd
-  - from: input.remote_gear_cmd
-    to: external_cmd_selector.input.remote_gear_cmd
-  - from: input.remote_steering_cmd
-    to: external_cmd_selector.input.remote_steering_cmd
-  - from: input.remote_turn_indicators_cmd
-    to: external_cmd_selector.input.remote_turn_indicators_cmd
-  - from: input.remote_hazard_lights_cmd
-    to: external_cmd_selector.input.remote_hazard_lights_cmd
-  - from: input.remote_heartbeat
-    to: external_cmd_selector.input.remote_heartbeat
-
-  # ==========================================
-  # 4. Command Gating (Arbitration)
-  # ==========================================
-  # Auto Inputs
-  - from: trajectory_follower.output.control_cmd
-    to: vehicle_cmd_gate.input.auto_control_cmd
-  - from: shift_decider.output.gear_cmd
-    to: vehicle_cmd_gate.input.auto_gear_cmd
-  - from: input.turn_indicators_cmd
-    to: vehicle_cmd_gate.input.auto_turn_indicators_cmd
-  - from: input.hazard_lights_cmd
-    to: vehicle_cmd_gate.input.auto_hazard_lights_cmd
-
-  # External Inputs
-  - from: external_cmd_converter.output.control_cmd
-    to: vehicle_cmd_gate.input.external_control_cmd
-
-  # System Inputs
-  - from: input.operation_mode_state
-    to: vehicle_cmd_gate.input.operation_mode
-  - from: input.mrm_state
-    to: vehicle_cmd_gate.input.mrm_state
-  - from: input.odometry
-    to: vehicle_cmd_gate.input.kinematics
-
-  # ==========================================
-  # 5. Operation Mode Manager
-  # ==========================================
-  - from: input.trajectory
-    to: operation_mode_transition_manager.input.trajectory
-  - from: trajectory_follower.output.control_cmd
-    to: operation_mode_transition_manager.input.trajectory_follower_control_cmd
-  - from: vehicle_cmd_gate.output.control_cmd
-    to: operation_mode_transition_manager.input.control_cmd
-  - from: input.steering_status
-    to: operation_mode_transition_manager.input.steering
-
-  # ==========================================
-  # 6. Safety Checks & Evaluator
-  # ==========================================
-  # Lane Departure
-  - from: input.odometry
-    to: lane_departure_checker.input.odometry
-  - from: input.vector_map
-    to: lane_departure_checker.input.lanelet_map_bin
-  - from: input.route
-    to: lane_departure_checker.input.route
-  - from: input.trajectory
-    to: lane_departure_checker.input.reference_trajectory
-
-  # AEB
-  - from: input.pointcloud
-    to: autonomous_emergency_braking.input.pointcloud
-  - from: input.objects
-    to: autonomous_emergency_braking.input.objects
-  - from: input.velocity_status
-    to: autonomous_emergency_braking.input.velocity
-  - from: input.imu
-    to: autonomous_emergency_braking.input.imu
-  - from: trajectory_follower.output.predicted_trajectory
-    to: autonomous_emergency_braking.input.predicted_trajectory
-
-  # Evaluator
-  - from: input.trajectory
-    to: control_evaluator.input.trajectory
-  - from: input.odometry
-    to: control_evaluator.input.odometry
-  - from: input.acceleration
-    to: control_evaluator.input.acceleration
-  - from: input.steering_status
-    to: control_evaluator.input.steering_status
-
-  # ==========================================
-  # 7. Global Outputs
-  # ==========================================
-  - from: vehicle_cmd_gate.output.control_cmd
-    to: output.control_cmd
-  - from: vehicle_cmd_gate.output.gear_cmd
-    to: output.gear_cmd
-  - from: vehicle_cmd_gate.output.turn_indicators_cmd
-    to: output.turn_indicators_cmd
-  - from: vehicle_cmd_gate.output.hazard_lights_cmd
-    to: output.hazard_lights_cmd
-  - from: vehicle_cmd_gate.output.gate_mode
-    to: output.gate_mode
-  - from: operation_mode_transition_manager.output.is_autonomous_available
-    to: output.is_autonomous_available
-  - from: control_evaluator.output.metrics
-    to: output.control_evaluation
+  - - subscriber.trajectory
+    - trajectory_follower.subscriber.reference_trajectory
+  - - subscriber.odometry
+    - trajectory_follower.subscriber.current_odometry
+  - - subscriber.steering_status
+    - trajectory_follower.subscriber.current_steering
+  - - subscriber.acceleration
+    - trajectory_follower.subscriber.current_accel
+  - - subscriber.operation_mode_state
+    - trajectory_follower.subscriber.current_operation_mode
+  - - trajectory_follower.publisher.control_cmd
+    - shift_decider.subscriber.control_cmd
+  - - subscriber.gear_status
+    - shift_decider.subscriber.current_gear
+  - - subscriber.autoware_state
+    - shift_decider.subscriber.state
+  - - subscriber.remote_pedals_cmd
+    - external_cmd_selector.subscriber.remote_pedals_cmd
+  - - subscriber.remote_gear_cmd
+    - external_cmd_selector.subscriber.remote_gear_cmd
+  - - subscriber.remote_steering_cmd
+    - external_cmd_selector.subscriber.remote_steering_cmd
+  - - subscriber.remote_turn_indicators_cmd
+    - external_cmd_selector.subscriber.remote_turn_indicators_cmd
+  - - subscriber.remote_hazard_lights_cmd
+    - external_cmd_selector.subscriber.remote_hazard_lights_cmd
+  - - subscriber.remote_heartbeat
+    - external_cmd_selector.subscriber.remote_heartbeat
+  - - trajectory_follower.publisher.control_cmd
+    - vehicle_cmd_gate.subscriber.auto_control_cmd
+  - - shift_decider.publisher.gear_cmd
+    - vehicle_cmd_gate.subscriber.auto_gear_cmd
+  - - subscriber.turn_indicators_cmd
+    - vehicle_cmd_gate.subscriber.auto_turn_indicators_cmd
+  - - subscriber.hazard_lights_cmd
+    - vehicle_cmd_gate.subscriber.auto_hazard_lights_cmd
+  - - external_cmd_converter.publisher.control_cmd
+    - vehicle_cmd_gate.subscriber.external_control_cmd
+  - - subscriber.operation_mode_state
+    - vehicle_cmd_gate.subscriber.operation_mode
+  - - subscriber.mrm_state
+    - vehicle_cmd_gate.subscriber.mrm_state
+  - - subscriber.odometry
+    - vehicle_cmd_gate.subscriber.kinematics
+  - - subscriber.trajectory
+    - operation_mode_transition_manager.subscriber.trajectory
+  - - trajectory_follower.publisher.control_cmd
+    - operation_mode_transition_manager.subscriber.trajectory_follower_control_cmd
+  - - vehicle_cmd_gate.publisher.control_cmd
+    - operation_mode_transition_manager.subscriber.control_cmd
+  - - subscriber.steering_status
+    - operation_mode_transition_manager.subscriber.steering
+  - - subscriber.odometry
+    - lane_departure_checker.subscriber.odometry
+  - - subscriber.vector_map
+    - lane_departure_checker.subscriber.lanelet_map_bin
+  - - subscriber.route
+    - lane_departure_checker.subscriber.route
+  - - subscriber.trajectory
+    - lane_departure_checker.subscriber.reference_trajectory
+  - - subscriber.pointcloud
+    - autonomous_emergency_braking.subscriber.pointcloud
+  - - subscriber.objects
+    - autonomous_emergency_braking.subscriber.objects
+  - - subscriber.velocity_status
+    - autonomous_emergency_braking.subscriber.velocity
+  - - subscriber.imu
+    - autonomous_emergency_braking.subscriber.imu
+  - - trajectory_follower.publisher.predicted_trajectory
+    - autonomous_emergency_braking.subscriber.predicted_trajectory
+  - - subscriber.trajectory
+    - control_evaluator.subscriber.trajectory
+  - - subscriber.odometry
+    - control_evaluator.subscriber.odometry
+  - - subscriber.acceleration
+    - control_evaluator.subscriber.acceleration
+  - - subscriber.steering_status
+    - control_evaluator.subscriber.steering_status
+  - - vehicle_cmd_gate.publisher.control_cmd
+    - publisher.control_cmd
+  - - vehicle_cmd_gate.publisher.gear_cmd
+    - publisher.gear_cmd
+  - - vehicle_cmd_gate.publisher.turn_indicators_cmd
+    - publisher.turn_indicators_cmd
+  - - vehicle_cmd_gate.publisher.hazard_lights_cmd
+    - publisher.hazard_lights_cmd
+  - - vehicle_cmd_gate.publisher.gate_mode
+    - publisher.gate_mode
+  - - operation_mode_transition_manager.publisher.is_autonomous_available
+    - publisher.is_autonomous_available
+  - - control_evaluator.publisher.metrics
+    - publisher.control_evaluation

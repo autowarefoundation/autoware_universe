@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: PredictedPathChecker.node
+
+package:
+  name: autoware_predicted_path_checker
+  provider: autoware
+
 launch:
-  package: autoware_predicted_path_checker
   plugin: autoware::predicted_path_checker::PredictedPathCheckerNode
   executable: predicted_path_checker_node
-  use_container: true
-  container_name: control_check_container
-inputs:
+
+# interfaces
+subscribers:
   - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: reference_trajectory
@@ -18,13 +23,20 @@ inputs:
     message_type: nav_msgs/msg/Odometry
   - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-outputs:
+
+publishers:
   - name: status
     message_type: diagnostic_msgs/msg/DiagnosticStatus
-parameter_files:
+
+# parameters
+param_files:
   - name: predicted_path_checker_param
     default: $(find-pkg-share autoware_predicted_path_checker)/config/predicted_path_checker.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: check_path
     trigger_conditions:

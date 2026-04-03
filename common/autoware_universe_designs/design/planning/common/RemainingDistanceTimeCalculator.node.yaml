@@ -1,26 +1,36 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: RemainingDistanceTimeCalculator.node
+
+package:
+  name: autoware_remaining_distance_time_calculator
+  provider: autoware
+
 launch:
-  package: autoware_remaining_distance_time_calculator
   plugin: autoware::remaining_distance_time_calculator::RemainingDistanceTimeCalculatorNode
   executable: remaining_distance_time_calculator_node
-  use_container: true
-  container_name: planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: mission_route
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: odometry
     message_type: nav_msgs/msg/Odometry
   - name: map
     message_type: autoware_map_msgs/msg/LaneletMapBin
-outputs:
+
+publishers:
   - name: mission_remaining_distance
     message_type: tier4_debug_msgs/msg/Float32Stamped
   - name: mission_remaining_time
     message_type: tier4_debug_msgs/msg/Float32Stamped
-parameter_files: []
-parameters: []
+
+# parameters
+param_values:
+  []
+
+# processes
 processes:
   - name: calculate_metrics
     trigger_conditions:

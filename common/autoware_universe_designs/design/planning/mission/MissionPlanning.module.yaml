@@ -1,57 +1,49 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# module information
 name: MissionPlanning.module
+
 instances:
-  - name: mission_planning_container
-    entity: MissionPlanningContainer.node
+  # - name: mission_planning_container
+  #   entity: MissionPlanningContainer.node
   - name: mission_planner
     entity: MissionPlanner.node
-    launch:
-      use_container: true
-      container_name: mission_planner_container
   - name: route_selector
     entity: RouteSelector.node
-    launch:
-      use_container: true
-      container_name: mission_planner_container
   - name: goal_pose_visualizer
     entity: GoalPoseVisualizer.node
-    launch:
-      use_container: true
-      container_name: mission_planner_container
-external_interfaces:
-  input:
-    - name: vector_map
-    - name: modified_goal
-    - name: odometry
-    - name: operation_mode_state
-    - name: reroute_availability
-  output:
-    - name: route
-    - name: state
-    - name: route_marker
-connections:
-  # Inputs -> Mission Planner
-  - from: input.modified_goal
-    to: mission_planner.input.modified_goal
-  - from: input.vector_map
-    to: mission_planner.input.vector_map
-  - from: input.odometry
-    to: mission_planner.input.odometry
-  - from: input.operation_mode_state
-    to: mission_planner.input.operation_mode_state
-  - from: input.reroute_availability
-    to: mission_planner.input.reroute_availability
-  # Mission Planner -> Route Selector
-  - from: mission_planner.output.route
-    to: route_selector.input.planner_route
-  - from: mission_planner.output.state
-    to: route_selector.input.planner_state
 
-  # Route Selector outputs
-  - from: route_selector.output.route
-    to: goal_pose_visualizer.input.route
-  - from: route_selector.output.route
-    to: output.route
-  - from: route_selector.output.state
-    to: output.state
+# interfaces
+subscribers:
+  - name: vector_map
+  - name: modified_goal
+  - name: odometry
+  - name: operation_mode_state
+  - name: reroute_availability
+
+publishers:
+  - name: route
+  - name: state
+  - name: route_marker
+
+connections:
+  - - subscriber.modified_goal
+    - mission_planner.subscriber.modified_goal
+  - - subscriber.vector_map
+    - mission_planner.subscriber.vector_map
+  - - subscriber.odometry
+    - mission_planner.subscriber.odometry
+  - - subscriber.operation_mode_state
+    - mission_planner.subscriber.operation_mode_state
+  - - subscriber.reroute_availability
+    - mission_planner.subscriber.reroute_availability
+  - - mission_planner.publisher.route
+    - route_selector.subscriber.planner_route
+  - - mission_planner.publisher.state
+    - route_selector.subscriber.planner_state
+  - - route_selector.publisher.route
+    - goal_pose_visualizer.subscriber.route
+  - - route_selector.publisher.route
+    - publisher.route
+  - - route_selector.publisher.state
+    - publisher.state

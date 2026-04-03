@@ -1,6 +1,8 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# module information
 name: Planning.module
+
 instances:
   - name: mission_planning
     entity: MissionPlanning.module
@@ -15,126 +17,88 @@ instances:
   - name: remaining_distance_time_calculator
     entity: RemainingDistanceTimeCalculator.node
 
-external_interfaces:
-  input:
-    # Map & State
-    - name: vector_map
-    - name: odometry
-    - name: acceleration
-    - name: operation_mode_state
+# interfaces
+subscribers:
+  - name: vector_map
+  - name: odometry
+  - name: acceleration
+  - name: operation_mode_state
+  - name: objects
+  - name: pointcloud
+  - name: occupancy_grid_map
+  - name: traffic_signals
+  - name: virtual_traffic_light_states
+  - name: modified_goal
 
-    # Perception
-    - name: objects
-    - name: pointcloud
-    - name: occupancy_grid_map
-    - name: traffic_signals
-    - name: virtual_traffic_light_states
-
-    # Mission
-    - name: modified_goal
-
-  output:
-    # Final Trajectory
-    - name: trajectory
-
-    # Status & Feedback
-    - name: route
-    - name: state
-    - name: turn_indicators_cmd
-    - name: hazard_lights_cmd
-    - name: stop_reasons
-    - name: scenario
+publishers:
+  - name: trajectory
+  - name: route
+  - name: state
+  - name: turn_indicators_cmd
+  - name: hazard_lights_cmd
+  - name: stop_reasons
+  - name: scenario
 
 connections:
-  # ==========================================
-  # 1. Mission Planning Subsystem
-  # ==========================================
-  - from: input.modified_goal
-    to: mission_planning.input.modified_goal
-  - from: input.vector_map
-    to: mission_planning.input.vector_map
-  - from: input.odometry
-    to: mission_planning.input.odometry
-  - from: input.operation_mode_state
-    to: mission_planning.input.operation_mode_state
-
-  # Manual Lane Change Handler
-  - from: mission_planning.output.route
-    to: manual_lane_change_handler.input.route
-  - from: input.odometry
-    to: manual_lane_change_handler.input.odometry
-
-  # ==========================================
-  # 2. Scenario Planning Subsystem
-  # ==========================================
-  # Inputs from Mission Planning
-  - from: mission_planning.output.route
-    to: scenario_planning.input.route
-
-  # Inputs from External
-  - from: input.vector_map
-    to: scenario_planning.input.vector_map
-  - from: input.odometry
-    to: scenario_planning.input.odometry
-  - from: input.acceleration
-    to: scenario_planning.input.acceleration
-  - from: input.operation_mode_state
-    to: scenario_planning.input.operation_mode_state
-  - from: input.objects
-    to: scenario_planning.input.perception_objects
-  - from: input.pointcloud
-    to: scenario_planning.input.pointcloud
-  - from: input.occupancy_grid_map
-    to: scenario_planning.input.occupancy_grid_map
-  - from: input.traffic_signals
-    to: scenario_planning.input.traffic_signals
-  - from: input.virtual_traffic_light_states
-    to: scenario_planning.input.virtual_traffic_light_states
-
-  # ==========================================
-  # 3. Validation & Evaluation
-  # ==========================================
-  # Scenario Planning -> Validator
-  - from: scenario_planning.output.trajectory
-    to: planning_validator.input.trajectory
-
-  # Validator Inputs
-  - from: input.objects
-    to: planning_validator.input.objects
-  - from: input.pointcloud
-    to: planning_validator.input.pointcloud
-
-  # Validator -> Evaluator
-  - from: planning_validator.output.trajectory
-    to: planning_evaluator.input.trajectory
-  - from: input.odometry
-    to: planning_evaluator.input.odometry
-
-  # ==========================================
-  # 4. Utilities
-  # ==========================================
-  # Remaining Distance
-  - from: mission_planning.output.route
-    to: remaining_distance_time_calculator.input.mission_route
-  - from: input.odometry
-    to: remaining_distance_time_calculator.input.odometry
-  - from: input.vector_map
-    to: remaining_distance_time_calculator.input.map
-
-  # ==========================================
-  # 5. Global Outputs
-  # ==========================================
-  - from: planning_validator.output.trajectory
-    to: output.trajectory
-  - from: mission_planning.output.route
-    to: output.route
-  - from: mission_planning.output.state
-    to: output.state
-  - from: scenario_planning.output.turn_indicators_cmd
-    to: output.turn_indicators_cmd
-  - from: scenario_planning.output.hazard_lights_cmd
-    to: output.hazard_lights_cmd
-  - from: scenario_planning.output.stop_reasons
-    to: output.stop_reasons
-  - from: scenario_planning.output.scenario
-    to: output.scenario
+  - - subscriber.modified_goal
+    - mission_planning.subscriber.modified_goal
+  - - subscriber.vector_map
+    - mission_planning.subscriber.vector_map
+  - - subscriber.odometry
+    - mission_planning.subscriber.odometry
+  - - subscriber.operation_mode_state
+    - mission_planning.subscriber.operation_mode_state
+  - - mission_planning.publisher.route
+    - manual_lane_change_handler.subscriber.route
+  - - subscriber.odometry
+    - manual_lane_change_handler.subscriber.odometry
+  - - mission_planning.publisher.route
+    - scenario_planning.subscriber.route
+  - - subscriber.vector_map
+    - scenario_planning.subscriber.vector_map
+  - - subscriber.odometry
+    - scenario_planning.subscriber.odometry
+  - - subscriber.acceleration
+    - scenario_planning.subscriber.acceleration
+  - - subscriber.operation_mode_state
+    - scenario_planning.subscriber.operation_mode_state
+  - - subscriber.objects
+    - scenario_planning.subscriber.perception_objects
+  - - subscriber.pointcloud
+    - scenario_planning.subscriber.pointcloud
+  - - subscriber.occupancy_grid_map
+    - scenario_planning.subscriber.occupancy_grid_map
+  - - subscriber.traffic_signals
+    - scenario_planning.subscriber.traffic_signals
+  - - subscriber.virtual_traffic_light_states
+    - scenario_planning.subscriber.virtual_traffic_light_states
+  - - scenario_planning.publisher.trajectory
+    - planning_validator.subscriber.trajectory
+  - - subscriber.objects
+    - planning_validator.subscriber.objects
+  - - subscriber.pointcloud
+    - planning_validator.subscriber.pointcloud
+  - - planning_validator.publisher.trajectory
+    - planning_evaluator.subscriber.trajectory
+  - - subscriber.odometry
+    - planning_evaluator.subscriber.odometry
+  - - mission_planning.publisher.route
+    - remaining_distance_time_calculator.subscriber.mission_route
+  - - subscriber.odometry
+    - remaining_distance_time_calculator.subscriber.odometry
+  - - subscriber.vector_map
+    - remaining_distance_time_calculator.subscriber.map
+  - - planning_validator.publisher.trajectory
+    - publisher.trajectory
+  - - mission_planning.publisher.route
+    - publisher.route
+  - - mission_planning.publisher.state
+    - publisher.state
+  - - scenario_planning.publisher.turn_indicators_cmd
+    - publisher.turn_indicators_cmd
+  - - scenario_planning.publisher.hazard_lights_cmd
+    - publisher.hazard_lights_cmd
+  - - scenario_planning.publisher.stop_reasons
+    - publisher.stop_reasons
+  - - scenario_planning.publisher.scenario
+    - publisher.scenario

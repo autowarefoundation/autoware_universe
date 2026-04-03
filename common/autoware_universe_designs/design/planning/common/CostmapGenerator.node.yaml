@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: CostmapGenerator.node
+
+package:
+  name: autoware_costmap_generator
+  provider: autoware
+
 launch:
-  package: autoware_costmap_generator
   plugin: autoware::costmap_generator::CostmapGenerator
   executable: costmap_generator_node
-  use_container: true
-  container_name: parking_container
-inputs:
+
+# interfaces
+subscribers:
   - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: points_no_ground
@@ -16,17 +21,24 @@ inputs:
     message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: scenario
     message_type: tier4_planning_msgs/msg/Scenario
-outputs:
+
+publishers:
   - name: grid_map
     message_type: grid_map_msgs/msg/GridMap
   - name: occupancy_grid
     message_type: nav_msgs/msg/OccupancyGrid
-parameter_files:
+
+# parameters
+param_files:
   - name: costmap_generator_param
     default: $(find-pkg-share autoware_costmap_generator)/config/costmap_generator.param.yaml
   - name: vehicle_param
     default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: generate_costmap
     trigger_conditions:

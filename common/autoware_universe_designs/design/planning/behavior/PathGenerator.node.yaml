@@ -1,30 +1,42 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: PathGenerator.node
+
+package:
+  name: autoware_path_generator
+  provider: autoware
+
 launch:
-  package: autoware_path_generator
   plugin: autoware::path_generator::PathGenerator
   executable: path_generator_node
-  use_container: true
-  container_name: behavior_planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: odometry
     message_type: nav_msgs/msg/Odometry
-outputs:
+
+publishers:
   - name: path
     message_type: autoware_planning_msgs/msg/Path
   - name: turn_indicators_cmd
     message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
   - name: hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
-parameter_files:
+
+# parameters
+param_files:
   - name: path_generator_param
     default: $(find-pkg-share autoware_path_generator)/config/path_generator.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: generate_path
     trigger_conditions:

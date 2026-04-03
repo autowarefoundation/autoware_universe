@@ -1,14 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: ExternalCmdSelector.node
+
+package:
+  name: autoware_external_cmd_selector
+  provider: autoware
+
 launch:
-  package: autoware_external_cmd_selector
   plugin: autoware::external_cmd_selector::ExternalCmdSelector
   executable: external_cmd_selector_node
-  use_container: true
-  container_name: target_container
-inputs:
-  # Local Source Inputs
+
+# interfaces
+subscribers:
   - name: local_pedals_cmd
     message_type: autoware_vehicle_msgs/msg/ActuationCommandStamped
   - name: local_steering_cmd
@@ -21,8 +25,6 @@ inputs:
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
   - name: local_heartbeat
     message_type: tier4_external_api_msgs/msg/Heartbeat
-
-  # Remote Source Inputs
   - name: remote_pedals_cmd
     message_type: autoware_vehicle_msgs/msg/ActuationCommandStamped
   - name: remote_steering_cmd
@@ -36,8 +38,7 @@ inputs:
   - name: remote_heartbeat
     message_type: tier4_external_api_msgs/msg/Heartbeat
 
-outputs:
-  # Selected Command Outputs
+publishers:
   - name: pedals_cmd
     message_type: autoware_vehicle_msgs/msg/ActuationCommandStamped
   - name: steering_cmd
@@ -50,22 +51,24 @@ outputs:
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
   - name: heartbeat
     message_type: tier4_external_api_msgs/msg/Heartbeat
-
-  # Status Output
   - name: current_selector_mode
     message_type: tier4_external_api_msgs/msg/SelectorMode
 
-parameter_files:
+# parameters
+param_files:
   - name: external_cmd_selector_param
     default: $(find-pkg-share autoware_external_cmd_selector)/config/external_cmd_selector.param.yaml
-parameters: []
 
+param_values:
+  []
+
+# processes
 processes:
   - name: select_command
     trigger_conditions:
       - on_input: local_heartbeat
       - on_input: remote_heartbeat
-      - periodic: 10.0 # Heartbeat check
+      - periodic: 10.0
     outcomes:
       - to_output: pedals_cmd
       - to_output: steering_cmd

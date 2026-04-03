@@ -1,13 +1,18 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: MotionVelocityPlanner.node
+
+package:
+  name: autoware_motion_velocity_planner
+  provider: autoware
+
 launch:
-  package: autoware_motion_velocity_planner
   plugin: autoware::motion_velocity_planner::MotionVelocityPlannerNode
   executable: autoware_motion_velocity_planner_node
-  use_container: true
-  container_name: motion_planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: vector_map
@@ -26,7 +31,8 @@ inputs:
     message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
   - name: occupancy_grid
     message_type: nav_msgs/msg/OccupancyGrid
-outputs:
+
+publishers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: velocity_limit
@@ -37,13 +43,9 @@ outputs:
     message_type: tier4_planning_msgs/msg/StopReasonArray
   - name: velocity_factors
     message_type: tier4_planning_msgs/msg/VelocityFactorArray
-parameters:
-  - name: launch_modules
-    type: string_array
-    default:
-      - autoware::motion_velocity_planner::ObstacleStopModule
-      - autoware::motion_velocity_planner::ObstacleSlowDownModule
-parameter_files:
+
+# parameters
+param_files:
   - name: motion_velocity_planner_param
     default: $(find-pkg-share autoware_motion_velocity_planner)/config/motion_velocity_planner.param.yaml
   - name: obstacle_stop_module_param
@@ -56,6 +58,15 @@ parameter_files:
     default: $(find-pkg-share autoware_motion_velocity_run_out_module)/config/run_out_module.param.yaml
   - name: out_of_lane_module_param
     default: $(find-pkg-share autoware_motion_velocity_out_of_lane_module)/config/out_of_lane_module.param.yaml
+
+param_values:
+  - name: launch_modules
+    type: string_array
+    default:
+      - autoware::motion_velocity_planner::ObstacleStopModule
+      - autoware::motion_velocity_planner::ObstacleSlowDownModule
+
+# processes
 processes:
   - name: plan_velocity
     trigger_conditions:

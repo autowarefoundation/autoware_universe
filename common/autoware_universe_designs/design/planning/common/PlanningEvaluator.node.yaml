@@ -1,26 +1,38 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: PlanningEvaluator.node
+
+package:
+  name: autoware_planning_evaluator
+  provider: autoware
+
 launch:
-  package: autoware_planning_evaluator
   plugin: autoware::planning_evaluator::PlanningEvaluatorNode
   executable: planning_evaluator_node
-  use_container: true
-  container_name: planning_container
-inputs:
+
+# interfaces
+subscribers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: reference_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: odometry
     message_type: nav_msgs/msg/Odometry
-outputs:
+
+publishers:
   - name: metrics
     message_type: autoware_planning_msgs/msg/PlanningAnalysis
-parameter_files:
+
+# parameters
+param_files:
   - name: planning_evaluator_param
     default: $(find-pkg-share autoware_planning_evaluator)/config/planning_evaluator.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: evaluate
     trigger_conditions:

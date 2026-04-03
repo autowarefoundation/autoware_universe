@@ -1,21 +1,35 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# node information
 name: ExternalVelocityLimitSelector.node
+
+package:
+  name: autoware_external_velocity_limit_selector
+  provider: autoware
+
 launch:
-  package: autoware_external_velocity_limit_selector
   plugin: autoware::external_velocity_limit_selector::ExternalVelocityLimitSelectorNode
   executable: external_velocity_limit_selector
-  use_container: false # Launched via include in snippet
-inputs:
+  node_output: screen
+
+# interfaces
+subscribers:
   - name: api_limit
     message_type: tier4_planning_msgs/msg/VelocityLimit
-outputs:
+
+publishers:
   - name: external_velocity_limit_mps
     message_type: tier4_planning_msgs/msg/VelocityLimit
-parameter_files:
+
+# parameters
+param_files:
   - name: common_param
     default: $(find-pkg-share autoware_planning_common)/config/common.param.yaml
-parameters: []
+
+param_values:
+  []
+
+# processes
 processes:
   - name: select_limit
     trigger_conditions:

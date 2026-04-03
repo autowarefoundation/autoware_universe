@@ -1,6 +1,8 @@
-autoware_system_design_format: v0.1.0
+autoware_system_design_format: 0.3.0
 
+# module information
 name: ScenarioPlanning.module
+
 instances:
   - name: lane_driving
     entity: LaneDriving.module
@@ -15,130 +17,98 @@ instances:
   - name: hazard_lights_selector
     entity: HazardLightsSelector.node
 
-external_interfaces:
-  input:
-    # Sensor & State
-    - name: perception_objects
-    - name: pointcloud
-    - name: vector_map
-    - name: route
-    - name: odometry
-    - name: acceleration
-    - name: operation_mode_state
+# interfaces
+subscribers:
+  - name: perception_objects
+  - name: pointcloud
+  - name: vector_map
+  - name: route
+  - name: odometry
+  - name: acceleration
+  - name: operation_mode_state
+  - name: occupancy_grid_map
+  - name: costmap
+  - name: traffic_signals
+  - name: virtual_traffic_light_states
 
-    # Maps
-    - name: occupancy_grid_map
-    - name: costmap
-    - name: traffic_signals
-    - name: virtual_traffic_light_states
-
-  output:
-    # Final Control Outputs
-    - name: trajectory
-    - name: hazard_lights_cmd
-    - name: turn_indicators_cmd
-
-    # Status
-    - name: scenario
-    - name: current_max_velocity
-    - name: stop_reasons
+publishers:
+  - name: trajectory
+  - name: hazard_lights_cmd
+  - name: turn_indicators_cmd
+  - name: scenario
+  - name: current_max_velocity
+  - name: stop_reasons
 
 connections:
-  # ==========================================
-  # 1. Inputs -> Sub-Modules (Lane Driving)
-  # ==========================================
-  - from: input.route
-    to: lane_driving.input.route
-  - from: input.vector_map
-    to: lane_driving.input.vector_map
-  - from: input.perception_objects
-    to: lane_driving.input.perception
-  - from: input.occupancy_grid_map
-    to: lane_driving.input.occupancy_grid_map
-  - from: input.costmap
-    to: lane_driving.input.costmap
-  - from: input.traffic_signals
-    to: lane_driving.input.traffic_signals
-  - from: input.virtual_traffic_light_states
-    to: lane_driving.input.virtual_traffic_light_states
-  - from: input.odometry
-    to: lane_driving.input.odometry
-  - from: input.acceleration
-    to: lane_driving.input.accel
-  - from: input.pointcloud
-    to: lane_driving.input.no_ground_pointcloud
-  - from: scenario_selector.output.scenario
-    to: lane_driving.input.scenario
-  - from: external_velocity_limit_selector.output.external_velocity_limit_mps
-    to: lane_driving.input.external_velocity_limit_mps
-
-  # ==========================================
-  # 2. Inputs -> Sub-Modules (Parking)
-  # ==========================================
-  - from: input.perception_objects
-    to: parking.input.objects
-  - from: input.pointcloud
-    to: parking.input.points_no_ground
-  - from: input.vector_map
-    to: parking.input.vector_map
-  - from: input.route
-    to: parking.input.route
-  - from: input.odometry
-    to: parking.input.odometry
-  - from: scenario_selector.output.scenario
-    to: parking.input.scenario
-
-  # ==========================================
-  # 3. Scenario Selection Logic
-  # ==========================================
-  # Inputs to Selector
-  - from: lane_driving.output.trajectory
-    to: scenario_selector.input.lane_driving_trajectory
-  - from: parking.output.trajectory
-    to: scenario_selector.input.parking_trajectory
-  - from: input.vector_map
-    to: scenario_selector.input.lanelet_map
-  - from: input.route
-    to: scenario_selector.input.route
-  - from: input.odometry
-    to: scenario_selector.input.odometry
-  - from: input.operation_mode_state
-    to: scenario_selector.input.operation_mode_state
-  - from: parking.output.is_completed
-    to: scenario_selector.input.is_parking_completed
-
-  # ==========================================
-  # 4. Velocity Smoothing
-  # ==========================================
-  - from: scenario_selector.output.trajectory
-    to: velocity_smoother.input.trajectory
-  - from: external_velocity_limit_selector.output.external_velocity_limit_mps
-    to: velocity_smoother.input.external_velocity_limit_mps
-  - from: input.acceleration
-    to: velocity_smoother.input.acceleration
-  - from: input.operation_mode_state
-    to: velocity_smoother.input.operation_mode_state
-
-  # ==========================================
-  # 5. Hazard Lights Logic
-  # ==========================================
-  - from: lane_driving.output.hazard_lights_cmd
-    to: hazard_lights_selector.input.lane_driving_hazard_lights_cmd
-  # Note: Parking module usually handles hazard lights internally or has a simpler output,
-  # here we assume connection if the port exists or it remains unconnected/default.
-
-  # ==========================================
-  # 6. Global Outputs
-  # ==========================================
-  - from: velocity_smoother.output.trajectory
-    to: output.trajectory
-  - from: velocity_smoother.output.current_velocity_limit_mps
-    to: output.current_max_velocity
-  - from: scenario_selector.output.scenario
-    to: output.scenario
-  - from: hazard_lights_selector.output.hazard_lights_cmd
-    to: output.hazard_lights_cmd
-  - from: lane_driving.output.turn_indicators_cmd
-    to: output.turn_indicators_cmd
-  - from: lane_driving.output.stop_reasons
-    to: output.stop_reasons
+  - - subscriber.route
+    - lane_driving.subscriber.route
+  - - subscriber.vector_map
+    - lane_driving.subscriber.vector_map
+  - - subscriber.perception_objects
+    - lane_driving.subscriber.perception
+  - - subscriber.occupancy_grid_map
+    - lane_driving.subscriber.occupancy_grid_map
+  - - subscriber.costmap
+    - lane_driving.subscriber.costmap
+  - - subscriber.traffic_signals
+    - lane_driving.subscriber.traffic_signals
+  - - subscriber.virtual_traffic_light_states
+    - lane_driving.subscriber.virtual_traffic_light_states
+  - - subscriber.odometry
+    - lane_driving.subscriber.odometry
+  - - subscriber.acceleration
+    - lane_driving.subscriber.accel
+  - - subscriber.pointcloud
+    - lane_driving.subscriber.no_ground_pointcloud
+  - - scenario_selector.publisher.scenario
+    - lane_driving.subscriber.scenario
+  - - external_velocity_limit_selector.publisher.external_velocity_limit_mps
+    - lane_driving.subscriber.external_velocity_limit_mps
+  - - subscriber.perception_objects
+    - parking.subscriber.objects
+  - - subscriber.pointcloud
+    - parking.subscriber.points_no_ground
+  - - subscriber.vector_map
+    - parking.subscriber.vector_map
+  - - subscriber.route
+    - parking.subscriber.route
+  - - subscriber.odometry
+    - parking.subscriber.odometry
+  - - scenario_selector.publisher.scenario
+    - parking.subscriber.scenario
+  - - lane_driving.publisher.trajectory
+    - scenario_selector.subscriber.lane_driving_trajectory
+  - - parking.publisher.trajectory
+    - scenario_selector.subscriber.parking_trajectory
+  - - subscriber.vector_map
+    - scenario_selector.subscriber.lanelet_map
+  - - subscriber.route
+    - scenario_selector.subscriber.route
+  - - subscriber.odometry
+    - scenario_selector.subscriber.odometry
+  - - subscriber.operation_mode_state
+    - scenario_selector.subscriber.operation_mode_state
+  - - parking.publisher.is_completed
+    - scenario_selector.subscriber.is_parking_completed
+  - - scenario_selector.publisher.trajectory
+    - velocity_smoother.subscriber.trajectory
+  - - external_velocity_limit_selector.publisher.external_velocity_limit_mps
+    - velocity_smoother.subscriber.external_velocity_limit_mps
+  - - subscriber.acceleration
+    - velocity_smoother.subscriber.acceleration
+  - - subscriber.operation_mode_state
+    - velocity_smoother.subscriber.operation_mode_state
+  - - lane_driving.publisher.hazard_lights_cmd
+    - hazard_lights_selector.subscriber.lane_driving_hazard_lights_cmd
+  - - velocity_smoother.publisher.trajectory
+    - publisher.trajectory
+  - - velocity_smoother.publisher.current_velocity_limit_mps
+    - publisher.current_max_velocity
+  - - scenario_selector.publisher.scenario
+    - publisher.scenario
+  - - hazard_lights_selector.publisher.hazard_lights_cmd
+    - publisher.hazard_lights_cmd
+  - - lane_driving.publisher.turn_indicators_cmd
+    - publisher.turn_indicators_cmd
+  - - lane_driving.publisher.stop_reasons
+    - publisher.stop_reasons
