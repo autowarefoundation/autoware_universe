@@ -16,6 +16,7 @@
 #define AUTOWARE__BEVFUSION__BEVFUSION_NODE_HPP_
 
 #include "autoware/bevfusion/bevfusion_trt.hpp"
+#include "autoware/bevfusion/camera/camera_data.hpp"
 #include "autoware/bevfusion/detection_class_remapper.hpp"
 #include "autoware/bevfusion/postprocess/non_maximum_suppression.hpp"
 #include "autoware/bevfusion/preprocess/pointcloud_densification.hpp"
@@ -67,7 +68,8 @@ private:
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // Helper methods for constructor
-  void initializeSensorFusionSubscribers(std::int64_t num_cameras);
+  void initializeSensorFusionSubscribers(
+    std::int64_t num_cameras, const ImagePreProcessingParams & image_pre_processing_params);
   void validateParameters(
     const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size);
 
@@ -100,6 +102,11 @@ private:
   std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::ConstSharedPtr> camera_info_subs_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_{
     nullptr};
+  // unique_ptr to avoid copying the actual camera data in memory since there's gpu buffer in the
+  // camera data
+  std::vector<std::unique_ptr<CameraData>> camera_data_ptrs_;
+  // One CameraMatrices object can be shared by several CameraData
+  std::vector<std::shared_ptr<CameraMatrices>> camera_matrices_ptrs_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
@@ -109,9 +116,7 @@ private:
   std::optional<std::string> lidar_frame_;
   float max_camera_lidar_delay_;
 
-  std::vector<sensor_msgs::msg::Image::ConstSharedPtr> image_msgs_;
   std::vector<float> camera_masks_;
-  std::vector<std::optional<sensor_msgs::msg::CameraInfo>> camera_info_msgs_;
   std::vector<std::optional<Matrix4f>> lidar2camera_extrinsics_;
 
   bool sensor_fusion_{false};

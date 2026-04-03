@@ -70,6 +70,11 @@
           "description": "A name of frame id where world coordinates system is defined with respect to.",
           "default": "map"
         },
+        "run_image_undistortion": {
+          "type": "boolean",
+          "description": "A flag to run image undistortion.",
+          "default": true
+        },
         "circle_nms_dist_threshold": {
           "type": "number",
           "description": "A distance threshold between detections in NMS.",

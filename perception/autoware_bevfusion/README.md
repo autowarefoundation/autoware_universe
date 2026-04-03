@@ -14,11 +14,11 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 ### Input
 
-| Name                   | Type                            | Description               |
-| ---------------------- | ------------------------------- | ------------------------- |
-| `~/input/pointcloud`   | `sensor_msgs::msg::PointCloud2` | Input pointcloud topics.  |
-| `~/input/image*`       | `sensor_msgs::msg::Image`       | Input image topics.       |
-| `~/input/camera_info*` | `sensor_msgs::msg::CameraInfo`  | Input camera info topics. |
+| Name                   | Type                            | Description                                                   |
+| ---------------------- | ------------------------------- | ------------------------------------------------------------- |
+| `~/input/pointcloud`   | `sensor_msgs::msg::PointCloud2` | Input pointcloud topics.                                      |
+| `~/input/image*`       | `sensor_msgs::msg::Image`       | Input image topics. The image is assumed to be RGB8 encoding. |
+| `~/input/camera_info*` | `sensor_msgs::msg::CameraInfo`  | Input camera info topics.                                     |
 
 ### Output
 
