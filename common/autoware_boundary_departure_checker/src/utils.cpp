@@ -34,6 +34,7 @@
 #include <cstddef>
 #include <limits>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -569,8 +570,10 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
   const EgoSides & ego_sides_from_footprints)
 {
   Side<ProjectionsToBound> side;
+  std::unordered_map<SideKey, bool> has_passed_border;
   for (const auto & side_key : g_side_keys) {
     side[side_key].reserve(ego_sides_from_footprints.size());
+    has_passed_border[side_key] = false;
   }
 
   auto s = 0.0;
@@ -592,7 +595,8 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
       // Assign negative sign if the boundary has been crossed
       if (
         closest_bound.lat_dist > 0.0 &&
-        closest_bound.lat_dist < std::numeric_limits<double>::max()) {
+        closest_bound.lat_dist < std::numeric_limits<double>::max() &&
+        has_passed_border[side_key]) {
         const auto & ego_front = fp[side_key].first;
         const auto & ego_rear = fp[side_key].second;
 
@@ -618,6 +622,9 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
       closest_bound.time_from_start = rclcpp::Duration(ego_pred_traj[i].time_from_start).seconds();
       closest_bound.lon_dist_on_pred_traj = s - closest_bound.lon_offset;
       side[side_key].push_back(closest_bound);
+      if (closest_bound.lat_dist < 0.01 && !has_passed_border[side_key]) {
+        has_passed_border[side_key] = true;
+      }
     }
   }
 
