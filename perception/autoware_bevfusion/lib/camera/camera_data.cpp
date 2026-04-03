@@ -213,6 +213,11 @@ bool CameraData::is_camera_matrices_ready() const
   }
 }
 
+bool CameraData::is_image_encoding_supported() const
+{
+  return image_msg_->encoding == supported_image_encoding_;
+}
+
 cudaError_t CameraData::sync_cuda_stream()
 {
   return cudaStreamSynchronize(stream_);

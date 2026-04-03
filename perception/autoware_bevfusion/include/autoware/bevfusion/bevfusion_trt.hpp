@@ -112,8 +112,7 @@ protected:
 
   void clearDeviceMemory();
 
-  bool checkImageCameraMatricesReady(
-    const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs);
+  bool checkImageCameraReady(const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs);
 
   bool processImages(
     const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs,

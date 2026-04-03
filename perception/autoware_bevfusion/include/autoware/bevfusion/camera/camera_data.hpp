@@ -22,6 +22,7 @@
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <sensor_msgs/image_encodings.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -76,6 +77,7 @@ public:
 
   bool preprocess_image(std::uint8_t * output_img);
   bool is_camera_matrices_ready() const;
+  bool is_image_encoding_supported() const;
   cudaError_t sync_cuda_stream();
 
 private:
@@ -99,6 +101,9 @@ private:
   cudaStream_t stream_{nullptr};
   std::unique_ptr<CameraPreprocess> camera_preprocess_ptr_{nullptr};
   std::shared_ptr<CameraMatrices> camera_matrices_ptr_{nullptr};
+
+  // Supported image encoding, only RGB8 is supported for now
+  const std::stringsupported_image_encoding_ = sensor_msgs::image_encodings::RGB8;
 };
 }  // namespace autoware::bevfusion
 #endif  // AUTOWARE__BEVFUSION__CAMERA__CAMERA_DATA_HPP_
