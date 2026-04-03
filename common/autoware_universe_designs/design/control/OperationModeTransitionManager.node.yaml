@@ -39,8 +39,7 @@ param_files:
   - name: operation_mode_transition_manager_param
     default: $(find-pkg-share autoware_operation_mode_transition_manager)/config/operation_mode_transition_manager.param.yaml
 
-param_values:
-  []
+param_values: []
 
 # processes
 processes:

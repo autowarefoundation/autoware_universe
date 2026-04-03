@@ -22,11 +22,9 @@ publishers:
     message_type: geometry_msgs/msg/PoseStamped
 
 # parameters
-param_files:
-  []
+param_files: []
 
-param_values:
-  []
+param_values: []
 
 # processes
 processes:

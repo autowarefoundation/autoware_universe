@@ -38,8 +38,7 @@ param_files:
   - name: config
     default: $(find-pkg-share autoware_control_command_gate)/config/default.param.yaml
 
-param_values:
-  []
+param_values: []
 
 # processes
 processes:

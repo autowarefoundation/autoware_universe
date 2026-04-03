@@ -27,8 +27,9 @@ publishers:
     message_type: tier4_debug_msgs/msg/Float32Stamped
 
 # parameters
-param_values:
-  []
+param_files: []
+
+param_values: []
 
 # processes
 processes:

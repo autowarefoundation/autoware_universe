@@ -29,8 +29,7 @@ param_files:
   - name: path_sampler_param
     default: $(find-pkg-share autoware_path_sampler)/config/path_sampler.param.yaml
 
-param_values:
-  []
+param_values: []
 
 # processes
 processes:

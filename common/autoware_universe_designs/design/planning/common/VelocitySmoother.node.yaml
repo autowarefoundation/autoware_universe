@@ -37,8 +37,7 @@ param_files:
   - name: velocity_smoother_param
     default: $(find-pkg-share autoware_velocity_smoother)/config/velocity_smoother.param.yaml
 
-param_values:
-  []
+param_values: []
 
 # processes
 processes:

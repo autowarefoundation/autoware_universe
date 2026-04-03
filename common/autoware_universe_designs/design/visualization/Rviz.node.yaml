@@ -11,12 +11,15 @@ launch:
   executable: rviz2
   node_output: screen
 
+# interfaces
+subscribers: []
+
+publishers: []
+
 # parameters
-param_values:
-  []
+param_files: []
+
+param_values: []
 
 # processes
-processes:
-  - name: run
-    trigger_conditions:
-    outcomes:
+processes: []

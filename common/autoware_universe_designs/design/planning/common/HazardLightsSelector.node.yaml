@@ -24,8 +24,7 @@ publishers:
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
 
 # parameters
-param_values:
-  []
+param_values: []
 param_files: []
 # processes
 processes:

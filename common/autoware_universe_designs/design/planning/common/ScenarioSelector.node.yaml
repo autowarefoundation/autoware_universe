@@ -36,8 +36,7 @@ publishers:
 
 # parameters
 param_files: []
-param_values:
-  []
+param_values: []
 
 # processes
 processes:

@@ -26,8 +26,7 @@ publishers:
     message_type: autoware_planning_msgs/msg/RouteState
 
 # parameters
-param_values:
-  []
+param_values: []
 param_files: []
 
 # processes

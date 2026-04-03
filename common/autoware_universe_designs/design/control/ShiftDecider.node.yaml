@@ -29,8 +29,7 @@ param_files:
   - name: shift_decider_param
     default: $(find-pkg-share autoware_shift_decider)/config/shift_decider.param.yaml
 
-param_values:
-  []
+param_values: []
 
 # processes
 processes:
