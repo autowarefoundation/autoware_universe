@@ -29,8 +29,10 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -122,15 +124,16 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   // tracker type map
-  params_.tracker_type_map["car_tracker"] = declare_parameter<std::string>("car_tracker");
-  params_.tracker_type_map["truck_tracker"] = declare_parameter<std::string>("truck_tracker");
-  params_.tracker_type_map["bus_tracker"] = declare_parameter<std::string>("bus_tracker");
-  params_.tracker_type_map["trailer_tracker"] = declare_parameter<std::string>("trailer_tracker");
-  params_.tracker_type_map["pedestrian_tracker"] =
-    declare_parameter<std::string>("pedestrian_tracker");
-  params_.tracker_type_map["bicycle_tracker"] = declare_parameter<std::string>("bicycle_tracker");
-  params_.tracker_type_map["motorcycle_tracker"] =
-    declare_parameter<std::string>("motorcycle_tracker");
+  const auto declare_initial_tracker_parameter = [this](const std::string & classification) {
+    return declare_parameter<std::string>("initial_tracker." + classification);
+  };
+  params_.tracker_type_map["car"] = declare_initial_tracker_parameter("car");
+  params_.tracker_type_map["truck"] = declare_initial_tracker_parameter("truck");
+  params_.tracker_type_map["bus"] = declare_initial_tracker_parameter("bus");
+  params_.tracker_type_map["trailer"] = declare_initial_tracker_parameter("trailer");
+  params_.tracker_type_map["pedestrian"] = declare_initial_tracker_parameter("pedestrian");
+  params_.tracker_type_map["bicycle"] = declare_initial_tracker_parameter("bicycle");
+  params_.tracker_type_map["motorcycle"] = declare_initial_tracker_parameter("motorcycle");
 
   params_.processor_config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
   params_.processor_config.min_known_object_removal_iou =
@@ -138,9 +141,31 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.processor_config.min_unknown_object_removal_iou =
     declare_parameter<double>("min_unknown_object_removal_iou");
 
+  const auto declare_tracked_label_thresholds =
+    [this](const std::string & parameter_namespace) -> TrackedLabelThresholds {
+    TrackedLabelThresholds thresholds;
+    thresholds.unknown = declare_parameter<double>(
+      parameter_namespace + "." + classes::toString(classes::Label::UNKNOWN));
+    thresholds.car =
+      declare_parameter<double>(parameter_namespace + "." + classes::toString(classes::Label::CAR));
+    thresholds.truck = declare_parameter<double>(
+      parameter_namespace + "." + classes::toString(classes::Label::TRUCK));
+    thresholds.bus =
+      declare_parameter<double>(parameter_namespace + "." + classes::toString(classes::Label::BUS));
+    thresholds.trailer = declare_parameter<double>(
+      parameter_namespace + "." + classes::toString(classes::Label::TRAILER));
+    thresholds.motorcycle = declare_parameter<double>(
+      parameter_namespace + "." + classes::toString(classes::Label::MOTORCYCLE));
+    thresholds.bicycle = declare_parameter<double>(
+      parameter_namespace + "." + classes::toString(classes::Label::BICYCLE));
+    thresholds.pedestrian = declare_parameter<double>(
+      parameter_namespace + "." + classes::toString(classes::Label::PEDESTRIAN));
+    return thresholds;
+  };
+
   // pruning parameters
   params_.pruning_giou_thresholds =
-    declare_parameter<std::vector<double>>("pruning_generalized_iou_thresholds");
+    declare_tracked_label_thresholds("pruning_generalized_iou_thresholds");
   params_.processor_config.pruning_static_object_speed =
     declare_parameter<double>("pruning_static_object_speed");
   params_.processor_config.pruning_moving_object_speed =
@@ -150,18 +175,51 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // overlap distance threshold
   params_.pruning_distance_thresholds =
-    declare_parameter<std::vector<double>>("pruning_distance_thresholds");
+    declare_tracked_label_thresholds("pruning_distance_thresholds");
   params_.processor_config.enable_unknown_object_velocity_estimation =
     declare_parameter<bool>("enable_unknown_object_velocity_estimation");
   params_.processor_config.enable_unknown_object_motion_output =
     declare_parameter<bool>("enable_unknown_object_motion_output");
 
-  // Parameters for associator
-  params_.can_assign_matrix = this->declare_parameter<std::vector<int64_t>>("can_assign_matrix");
-  params_.max_dist_matrix = this->declare_parameter<std::vector<double>>("max_dist_matrix");
-  params_.max_area_matrix = this->declare_parameter<std::vector<double>>("max_area_matrix");
-  params_.min_area_matrix = this->declare_parameter<std::vector<double>>("min_area_matrix");
-  params_.min_iou_matrix = this->declare_parameter<std::vector<double>>("min_iou_matrix");
+  // Parameters for associator (explicit layered configuration)
+  params_.association_params_map.clear();
+  for (const auto measurement_label : classes::trackedLabels()) {
+    const auto measurement_label_name = classes::toString(measurement_label);
+    const auto can_assign_parameter_name = "association.can_assign." + measurement_label_name;
+    const auto tracker_type_names =
+      declare_parameter<std::vector<std::string>>(can_assign_parameter_name);
+    if (tracker_type_names.empty()) {
+      throw std::invalid_argument(
+        can_assign_parameter_name + " must contain at least one tracker type");
+    }
+
+    std::unordered_set<TrackerType, AssociatorConfig::EnumClassHash> unique_tracker_types;
+    for (const auto & tracker_type_name : tracker_type_names) {
+      const auto tracker_type = toTrackerType(tracker_type_name);
+      if (!tracker_type.has_value()) {
+        throw std::invalid_argument(
+          "Invalid tracker type: '" + tracker_type_name + "' in parameter '" +
+          can_assign_parameter_name + "'. Strict string match is required.");
+      }
+      unique_tracker_types.insert(*tracker_type);
+    }
+
+    using TrackerAssociationParameters = AssociatorConfig::TrackerAssociationParameters;
+    for (const auto tracker_type : unique_tracker_types) {
+      const auto tracker_type_name = toString(tracker_type);
+      const auto max_dist = declare_parameter<double>(
+        "association.max_dist." + measurement_label_name + "." + tracker_type_name);
+      params_.association_params_map[measurement_label][tracker_type] =
+        TrackerAssociationParameters{
+          max_dist * max_dist,
+          declare_parameter<double>(
+            "association.max_area." + measurement_label_name + "." + tracker_type_name),
+          declare_parameter<double>(
+            "association.min_area." + measurement_label_name + "." + tracker_type_name),
+          declare_parameter<double>(
+            "association.min_iou." + measurement_label_name + "." + tracker_type_name)};
+    }
+  }
 
   // Set the unknown-unknown association GIoU threshold
   params_.associator_config.unknown_association_giou_threshold =

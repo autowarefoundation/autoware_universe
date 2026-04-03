@@ -54,14 +54,7 @@ void CrosswalkTrafficLightEstimatorNode::on_map(const LaneletMapBin::ConstShared
   auto lanelet_map_ptr = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 
-  auto routing_graph_and_traffic_rules =
-    autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
-      lanelet_map_ptr);
-
-  auto routing_graph_ptr =
-    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
-
-  estimator_.update_map(lanelet_map_ptr, routing_graph_ptr);
+  estimator_.update_map(lanelet_map_ptr);
 
   RCLCPP_DEBUG(get_logger(), "[CrosswalkTrafficLightEstimatorNode]: Map is loaded");
 }

@@ -316,7 +316,12 @@
         # "none"             : never output turn signal for candidate paths.
         # "stopped_candidate": output turn signal only when vehicle is stopped and candidate path exists.
         # "all_candidate"    : always output turn signal whenever a candidate path exists.
+        # "stop_on_approval" : no turn signal during candidate phase; after approval, hold a stop
+        #                      point and turn signal for `turn_signal_on_approval_hold_duration`
+        #                      seconds before proceeding with avoidance.
         candidate_path_turn_signal: "none" # [-]
+        # duration [s] to hold stop and turn signal after approval (used by "stop_on_approval" policy)
+        turn_signal_on_approval_hold_duration: 3.0 # [s]
 
       # --------------------------------------
       # FOLLOWING PARAMETERS ARE FOR DEVELOPER

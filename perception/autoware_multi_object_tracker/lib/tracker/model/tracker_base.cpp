@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -183,8 +183,7 @@ bool Tracker::updateWithMeasurement(
   // Update classification
   if (
     channel_info.trust_classification &&
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification) !=
-      autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+    classes::getHighestProbLabel(object.classification) != classes::Label::UNKNOWN) {
     updateClassification(object.classification);
   }
 
@@ -334,8 +333,7 @@ bool Tracker::createPseudoMeasurement(
   return true;
 }
 
-void Tracker::updateClassification(
-  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & input)
+void Tracker::updateClassification(const std::vector<classes::Classification> & input)
 {
   // classification algorithm:
   // 1. Update the matched classification probability
@@ -455,9 +453,12 @@ void Tracker::getPositionCovarianceEigenSq(
   auto & pose_cov = object.pose_covariance;
 
   // principal component of the position covariance matrix
+  const double a = pose_cov[XYZRPY_COV_IDX::X_X];
+  const double c = pose_cov[XYZRPY_COV_IDX::Y_Y];
+  const double b = 0.5 * (pose_cov[XYZRPY_COV_IDX::X_Y] + pose_cov[XYZRPY_COV_IDX::Y_X]);
+
   Eigen::Matrix2d covariance;
-  covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
-    pose_cov[XYZRPY_COV_IDX::Y_X], pose_cov[XYZRPY_COV_IDX::Y_Y];
+  covariance << a, b, b, c;
   // check if the covariance is valid
   if (covariance(0, 0) <= 0.0 || covariance(1, 1) <= 0.0) {
     RCLCPP_WARN(
@@ -468,15 +469,36 @@ void Tracker::getPositionCovarianceEigenSq(
     return;
   }
   // Direct eigenvalue calculation for 2x2 symmetric matrix
-  const double a = covariance(0, 0);
-  const double b = covariance(0, 1);
-  const double c = covariance(1, 1);
   const double trace = a + c;
   const double det = a * c - b * b;
-  const double sqrt_term = std::sqrt(trace * trace / 4.0 - det);
 
-  major_axis_sq = trace / 2.0 + sqrt_term;
-  minor_axis_sq = trace / 2.0 - sqrt_term;
+  double sqrt_arg = trace * trace / 4.0 - det;
+  if (!std::isfinite(sqrt_arg)) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("Tracker"),
+      "Covariance eigen calc became invalid. trace: %f, det: %f, sqrt_arg: %f", trace, det,
+      sqrt_arg);
+    major_axis_sq = 0.0;
+    minor_axis_sq = 0.0;
+    return;
+  }
+
+  // Allow small negative values caused by floating-point round-off.
+  constexpr double sqrt_arg_eps = 1e-12;
+  if (sqrt_arg < -sqrt_arg_eps) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("Tracker"),
+      "Covariance eigen calc became invalid. trace: %f, det: %f, sqrt_arg: %f", trace, det,
+      sqrt_arg);
+    major_axis_sq = 0.0;
+    minor_axis_sq = 0.0;
+    return;
+  }
+  sqrt_arg = std::max(0.0, sqrt_arg);
+
+  const double sqrt_term = std::sqrt(sqrt_arg);
+  major_axis_sq = std::max(0.0, trace / 2.0 + sqrt_term);
+  minor_axis_sq = std::max(0.0, trace / 2.0 - sqrt_term);
 }
 
 double Tracker::getBEVArea() const
@@ -602,7 +624,7 @@ float Tracker::getKnownObjectProbability() const
   // find unknown probability
   float unknown_probability = 0.0;
   for (const auto & a_class : object_.classification) {
-    if (a_class.label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+    if (a_class.label == classes::Label::UNKNOWN) {
       unknown_probability = a_class.probability;
       break;
     }

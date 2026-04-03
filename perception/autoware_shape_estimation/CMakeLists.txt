@@ -12,6 +12,7 @@ find_package(pcl_conversions REQUIRED)
 
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 
 find_package(CUDA)
 find_package(TENSORRT)
@@ -78,9 +79,13 @@ target_include_directories(${PROJECT_NAME}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )
 
-ament_target_dependencies(${PROJECT_NAME} ${SHAPE_ESTIMATION_DEPENDENCIES})
+ament_target_dependencies(${PROJECT_NAME}
+  ${SHAPE_ESTIMATION_DEPENDENCIES}
+  autoware_agnocast_wrapper
+)
 
 target_link_libraries(${PROJECT_NAME}
   ${PROJECT_NAME}_lib
@@ -96,18 +101,22 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
   TENSORRT_VERSION_MAJOR=${TENSORRT_VERSION_MAJOR}
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_setup(${PROJECT_NAME})
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::shape_estimation::ShapeEstimationNode"
   EXECUTABLE shape_estimation_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )
 
 ## Tests
-if(BUILD_TESTING)
+if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
   find_package(ament_cmake_ros REQUIRED)
   set(ament_cmake_uncrustify_FOUND TRUE)
 
