@@ -15,8 +15,6 @@
 #ifndef TRAJECTORY_ADAPTER_NODE_HPP_
 #define TRAJECTORY_ADAPTER_NODE_HPP_
 
-#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
-#include <autoware_trajectory_adapter/autoware_trajectory_adapter_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -28,7 +26,6 @@
 namespace autoware::trajectory_adapter
 {
 
-using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_internal_planning_msgs::msg::ScoredCandidateTrajectories;
 using autoware_planning_msgs::msg::Trajectory;
 
@@ -40,8 +37,6 @@ public:
 private:
   void process(const ScoredCandidateTrajectories::ConstSharedPtr msg);
 
-  void publish_planning_factor(const Trajectory & trajectory);
-
   rclcpp::Subscription<ScoredCandidateTrajectories>::SharedPtr sub_trajectories_;
 
   rclcpp::Publisher<Trajectory>::SharedPtr pub_trajectory_;
@@ -49,12 +44,6 @@ private:
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
-
-  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
-    planning_factor_interface_;
-
-  std::unique_ptr<::trajectory_adapter::ParamListener> param_listener_;
-  ::trajectory_adapter::Params params_;
 };
 
 }  // namespace autoware::trajectory_adapter
