@@ -16,8 +16,10 @@
 #define AUTOWARE__DIFFUSION_PLANNER__DIFFUSION_PLANNER_NODE_HPP_
 
 #include "autoware/diffusion_planner/diffusion_planner_core.hpp"
+#include "autoware/diffusion_planner/utils/planning_factor_utils.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/update_param.hpp>
@@ -49,6 +51,7 @@ using autoware_planning_msgs::msg::Trajectory;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using autoware::vehicle_info_utils::VehicleInfo;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_utils_diagnostics::DiagnosticsInterface;
 using geometry_msgs::msg::Pose;
 using rcl_interfaces::msg::SetParametersResult;
@@ -60,6 +63,13 @@ struct DiffusionPlannerDebugParams
   bool publish_debug_route{true};
   bool publish_debug_map{false};
   bool publish_debug_linestrings{true};
+};
+
+struct DiffusionPlannerPlanningFactorParams
+{
+  bool enable_stop{false};
+  bool enable_slowdown{false};
+  PlanningFactorDetectionConfig detection_config;
 };
 
 /**
@@ -147,6 +157,12 @@ private:
   void publish_first_traffic_light_on_route(const FrameContext & frame_context) const;
 
   /**
+   * @brief Publish planning factors (stop/slowdown) derived from the trajectory.
+   * @param trajectory The planned trajectory.
+   */
+  void publish_planning_factor(const Trajectory & trajectory);
+
+  /**
    * @brief Callback for dynamic parameter updates.
    * @param parameters Updated parameters.
    * @return Result of parameter update.
@@ -198,6 +214,10 @@ private:
 
   std::unique_ptr<DiagnosticsInterface> diagnostics_inference_;
   std::shared_ptr<const lanelet::LaneletMap> lanelet_map_ptr_{nullptr};
+
+  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_;
+  DiffusionPlannerPlanningFactorParams planning_factor_params_;
 };
 
 }  // namespace autoware::diffusion_planner
