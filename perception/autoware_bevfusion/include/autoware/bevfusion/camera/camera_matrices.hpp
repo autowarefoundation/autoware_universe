@@ -40,7 +40,7 @@ struct CameraMatrices
 
   CameraMatrices();
   void update_camera_matrices(const sensor_msgs::msg::CameraInfo & camera_info);
-  void compute_undistorted_map_x_y();
+  void compute_undistorted_map_x_y(cudaStream_t stream);
 };
 }  // namespace autoware::bevfusion
 #endif  // AUTOWARE__BEVFUSION__CAMERA__CAMERA_MATRICES_HPP_

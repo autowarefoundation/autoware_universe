@@ -56,7 +56,7 @@ void CameraMatrices::update_camera_matrices(const sensor_msgs::msg::CameraInfo &
   map_height = camera_info.height;
 }
 
-void CameraMatrices::compute_undistorted_map_x_y()
+void CameraMatrices::compute_undistorted_map_x_y(cudaStream_t stream)
 {
   undistorted_map_x_d_ = autoware::cuda_utils::make_unique<float[]>(map_width * map_height);
   undistorted_map_y_d_ = autoware::cuda_utils::make_unique<float[]>(map_width * map_height);
@@ -68,12 +68,12 @@ void CameraMatrices::compute_undistorted_map_x_y()
     undistort_map_y);
 
   // Always sync the data to the GPU since it only runs once for every camera
-  CHECK_CUDA_ERROR(cudaMemcpy(
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     undistorted_map_x_d_.get(), undistort_map_x.data, map_width * map_height * sizeof(float),
-    cudaMemcpyHostToDevice));
-  CHECK_CUDA_ERROR(cudaMemcpy(
+    cudaMemcpyHostToDevice, stream));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
     undistorted_map_y_d_.get(), undistort_map_y.data, map_width * map_height * sizeof(float),
-    cudaMemcpyHostToDevice));
+    cudaMemcpyHostToDevice, stream));
 
   matrices_ready = true;
 }

@@ -116,7 +116,7 @@ void CameraData::update_camera_info(const sensor_msgs::msg::CameraInfo & camera_
   camera_matrices_ptr_->update_camera_matrices(camera_info_msg);
 
   // Compute undistorted map x and y
-  camera_matrices_ptr_->compute_undistorted_map_x_y();
+  camera_matrices_ptr_->compute_undistorted_map_x_y(stream_);
 }
 
 bool CameraData::is_image_msg_available() const
