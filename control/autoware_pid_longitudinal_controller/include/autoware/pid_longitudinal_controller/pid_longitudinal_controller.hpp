@@ -85,19 +85,6 @@ private:
   };
   enum class Shift { Forward = 0, Reverse };
 
-  struct ControlData
-  {
-    autoware_planning_msgs::msg::Trajectory interpolated_traj{};
-    size_t nearest_idx{0};  // nearest_idx = 0 when nearest_idx is not found with findNearestIdx
-    size_t target_idx{0};
-    StateAfterDelay state_after_delay{0.0, 0.0, 0.0};
-    Motion current_motion{};
-    Shift shift{Shift::Forward};  // shift is used only to calculate the sign of pitch compensation
-    double stop_dist{0.0};  // signed distance that is positive when car is before the stopline
-    double slope_angle{0.0};
-    double dt{0.0};
-  };
-
   struct ExperimentalControlData
   {
     TrajectoryExperimental interpolated_traj{};
@@ -128,7 +115,6 @@ private:
   // pointers for ros topic
   nav_msgs::msg::Odometry m_current_kinematic_state;
   geometry_msgs::msg::AccelWithCovarianceStamped m_current_accel;
-  autoware_planning_msgs::msg::Trajectory m_trajectory;
   TrajectoryExperimental m_trajectory_experimental;
   OperationModeState m_current_operation_mode;
 
@@ -293,12 +279,6 @@ private:
   void setCurrentOperationMode(const OperationModeState & msg);
 
   /**
-   * @brief set reference trajectory with received message
-   * @param [in] msg trajectory message
-   */
-  void setTrajectory(const autoware_planning_msgs::msg::Trajectory & msg);
-
-  /**
    * @brief set reference trajectory from experimental trajectory
    * @param [in] trajectory experimental trajectory
    */
@@ -312,11 +292,6 @@ private:
   trajectory_follower::LongitudinalOutput run(
     trajectory_follower::InputData const & input_data) override;
 
-  /**
-   * @brief calculate data for controllers whose type is ControlData
-   * @param [in] current_pose current ego pose
-   */
-  ControlData getControlData(const geometry_msgs::msg::Pose & current_pose);
   std::optional<ExperimentalControlData> getExperimentalControlData(
     const geometry_msgs::msg::Pose & current_pose);
 
@@ -337,14 +312,12 @@ private:
    * @brief update control state according to the current situation
    * @param [in] control_data control data
    */
-  void updateControlState(const ControlData & control_data);
   void updateControlState(const ExperimentalControlData & control_data);
 
   /**
    * @brief calculate control command based on the current control state
    * @param [in] control_data control data
    */
-  Motion calcCtrlCmd(const ControlData & control_data);
   Motion calcCtrlCmd(const ExperimentalControlData & control_data);
 
   /**
@@ -360,7 +333,6 @@ private:
    * @param [in] ctrl_cmd calculated control command to control velocity
    * @param [in] control_data data for control calculation
    */
-  void publishDebugData(const Motion & ctrl_cmd, const ControlData & control_data);
   void publishDebugData(const Motion & ctrl_cmd, const ExperimentalControlData & control_data);
 
   /**
@@ -377,16 +349,7 @@ private:
    * @brief calculate direction (forward or backward) that vehicle moves
    * @param [in] control_data data for control calculation
    */
-  enum Shift getCurrentShift(const ControlData & control_data) const;
   enum Shift getCurrentShift(const ExperimentalControlData & control_data) const;
-
-  /**
-   * @brief filter acceleration command with limitation of acceleration and jerk, and slope
-   * compensation
-   * @param [in] raw_acc acceleration before filtered
-   * @param [in] control_data data for control calculation
-   */
-  double calcFilteredAcc(const double raw_acc, const ControlData & control_data);
 
   /**
    * @brief store acceleration command before slope compensation
@@ -408,20 +371,7 @@ private:
    * @param [in] motion delay compensated target motion
    */
   Motion keepBrakeBeforeStop(
-    const ControlData & control_data, const Motion & target_motion, const size_t nearest_idx) const;
-  Motion keepBrakeBeforeStop(
     const ExperimentalControlData & control_data, const Motion & target_motion) const;
-
-  /**
-   * @brief interpolate trajectory point that is nearest to vehicle
-   * @param [in] traj reference trajectory
-   * @param [in] point vehicle position
-   * @param [in] nearest_idx index of the trajectory point nearest to the vehicle position
-   */
-  std::pair<autoware_planning_msgs::msg::TrajectoryPoint, size_t>
-  calcInterpolatedTrajPointAndSegment(
-    const autoware_planning_msgs::msg::Trajectory & traj,
-    const geometry_msgs::msg::Pose & pose) const;
 
   /**
    * @brief calculate predicted velocity after time delay based on past control commands
@@ -435,7 +385,6 @@ private:
    * @brief calculate velocity feedback with feed forward and pid controller
    * @param [in] control_data data for control calculation
    */
-  double applyVelocityFeedback(const ControlData & control_data);
   double applyVelocityFeedback(const ExperimentalControlData & control_data);
 
   /**
@@ -454,7 +403,6 @@ private:
    * @param [in] ctrl_cmd latest calculated control command
    * @param [in] control_data data for control calculation
    */
-  void updateDebugVelAcc(const ControlData & control_data);
   void updateDebugVelAcc(const ExperimentalControlData & control_data);
 
   double getTimeUnderControl();
