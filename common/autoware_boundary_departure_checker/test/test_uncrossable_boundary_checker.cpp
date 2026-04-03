@@ -369,18 +369,19 @@ TEST(UncrossableBoundaryTest, TestRealisticLaneDeparture)
     plot_bound(right_bound, "darkred", "Right Boundary");
 
     // Plot Projections
-    auto plot_projs = [&](const std::vector<ProjectionToBound> & projs, const std::string & color) {
-      for (const auto & proj : projs) {
-        std::vector<double> px = {proj.pt_on_ego.x(), proj.pt_on_bound.x()};
-        std::vector<double> py = {proj.pt_on_ego.y(), proj.pt_on_bound.y()};
-        plt.plot(Args(px, py), Kwargs("color"_a = color, "linestyle"_a = ":"));
-        plt.scatter(
-          Args(std::vector<double>{proj.pt_on_ego.x()}, std::vector<double>{proj.pt_on_ego.y()}),
-          Kwargs("color"_a = "orange", "s"_a = 30, "zorder"_a = 5));
-      }
-    };
-    plot_projs(result.left, "green");
-    plot_projs(result.right, "lightgreen");
+    auto plot_projections =
+      [&](const std::vector<ProjectionToBound> & projections, const std::string & color) {
+        for (const auto & proj : projections) {
+          std::vector<double> px = {proj.pt_on_ego.x(), proj.pt_on_bound.x()};
+          std::vector<double> py = {proj.pt_on_ego.y(), proj.pt_on_bound.y()};
+          plt.plot(Args(px, py), Kwargs("color"_a = color, "linestyle"_a = ":"));
+          plt.scatter(
+            Args(std::vector<double>{proj.pt_on_ego.x()}, std::vector<double>{proj.pt_on_ego.y()}),
+            Kwargs("color"_a = "orange", "s"_a = 30, "zorder"_a = 5));
+        }
+      };
+    plot_projections(result.left, "green");
+    plot_projections(result.right, "lightgreen");
 
     plt.legend();
     plt.axis(Args("equal"));
@@ -528,11 +529,11 @@ TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
     plot_bound(right_bound, "red", "Right Boundary");
 
     // Plot Projections
-    auto plot_projs = [&](
-                        const std::vector<ProjectionToBound> & projs, const std::string & color,
-                        const std::string & label) {
+    auto plot_projections = [&](
+                              const std::vector<ProjectionToBound> & projections,
+                              const std::string & color, const std::string & label) {
       bool added_label = false;
-      for (const auto & proj : projs) {
+      for (const auto & proj : projections) {
         std::vector<double> px = {proj.pt_on_ego.x(), proj.pt_on_bound.x()};
         std::vector<double> py = {proj.pt_on_ego.y(), proj.pt_on_bound.y()};
 
@@ -548,8 +549,8 @@ TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
           Kwargs("color"_a = "orange", "s"_a = 30, "zorder"_a = 5));
       }
     };
-    plot_projs(result.left, "lightgreen", "Left Projections");
-    plot_projs(result.right, "green", "Right Projections");
+    plot_projections(result.left, "lightgreen", "Left Projections");
+    plot_projections(result.right, "green", "Right Projections");
 
     plt.legend();
     plt.axis(Args("equal"));

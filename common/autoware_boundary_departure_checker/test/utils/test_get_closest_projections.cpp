@@ -267,7 +267,7 @@ INSTANTIATE_TEST_SUITE_P(
       "FilteredByPreviousLongitudinalDistance",
       {create_mock_projection(FootprintType::LOCALIZATION, 0.8, 5.2, 1.0)},
       5.0,
-      std::nullopt,  // Remains nullopt (Filtered out by downsampler)
+      std::nullopt,  // Remains nullopt (Filtered out by down sample)
       std::nullopt},
     ProjectionAtIndexTestParam{
       "CriticalNotFilteredByPreviousDistance",
