@@ -20,20 +20,20 @@ subscribers:
   - name: ros_transform_static
     message_type: tf2_msgs/msg/TFMessage
     global: /tf_static
-  - name: object
+  - name: dummy_objects
     message_type: tier4_simulation_msgs/msg/DummyObject
     remap_target: input/object
   - name: predicted_objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
     remap_target: input/predicted_objects
 publishers:
-  - name: dynamic_object
-    message_type: tier4_perception_msgs/msg/DetectedObjectsWithFeature
-    remap_target: output/dynamic_object
   - name: points_raw
     message_type: sensor_msgs/msg/PointCloud2
     remap_target: output/points_raw
-  - name: ground_truth_objects
+  - name: detected_objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: output/dynamic_object
+  - name: tracked_objects
     message_type: autoware_perception_msgs/msg/TrackedObjects
     remap_target: ~/output/debug/ground_truth_objects
 
@@ -47,24 +47,14 @@ param_values:
     default: 300.0
   - name: detection_successful_rate
     default: 0.999
-  - name: enable_ray_tracing
-    default: false
-  - name: use_object_recognition
-    default: true
-  - name: object_centric_pointcloud
-    default: false
   - name: use_base_link_z
-    default: true
-  - name: publish_ground_truth
     default: true
 
 # processes
 processes:
   - name: publish
     trigger_conditions:
-      - and:
-          - on_input: object
+      - on_input: dummy_objects
     outcomes:
-      - to_output: dynamic_object
+      - to_output: detected_objects
       - to_output: points_raw
-      - to_output: ground_truth_objects
