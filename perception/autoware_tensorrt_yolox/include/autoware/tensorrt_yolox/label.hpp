@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__TENSORRT_YOLOX__LABEL_HPP_
 #define AUTOWARE__TENSORRT_YOLOX__LABEL_HPP_
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <unordered_map>

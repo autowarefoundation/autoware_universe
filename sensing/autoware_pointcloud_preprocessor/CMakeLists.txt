@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_pointcloud_preprocessor)
 
 find_package(autoware_cmake REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 # Suppress CGAL warning
@@ -188,9 +189,12 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE voxel_grid_outlier_filter_node)
 
 # -- Polar Voxel Outlier Filter --
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::PolarVoxelOutlierFilterComponent"
-  EXECUTABLE polar_voxel_outlier_filter_node)
+  EXECUTABLE polar_voxel_outlier_filter_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 # -- Radius Search 2D Outlier Filter --
 rclcpp_components_register_node(pointcloud_preprocessor_filter
@@ -229,9 +233,19 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   EXECUTABLE distortion_corrector_node)
 
 # ========== Blockage Diagnostics ===========
-rclcpp_components_register_node(pointcloud_preprocessor_filter
+target_include_directories(pointcloud_preprocessor_filter PRIVATE
+  ${agnocastlib_INCLUDE_DIRS}
+  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+)
+ament_target_dependencies(pointcloud_preprocessor_filter
+  autoware_agnocast_wrapper
+)
+autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::BlockageDiagComponent"
-  EXECUTABLE blockage_diag_node)
+  EXECUTABLE blockage_diag_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
 
 # ========== PolygonRemover ==========
 rclcpp_components_register_node(pointcloud_preprocessor_filter
