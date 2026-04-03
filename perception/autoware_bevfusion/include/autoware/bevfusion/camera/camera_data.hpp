@@ -103,7 +103,7 @@ private:
   std::shared_ptr<CameraMatrices> camera_matrices_ptr_{nullptr};
 
   // Supported image encoding, only RGB8 is supported for now
-  const std::stringsupported_image_encoding_ = sensor_msgs::image_encodings::RGB8;
+  const std::string supported_image_encoding_ = sensor_msgs::image_encodings::RGB8;
 };
 }  // namespace autoware::bevfusion
 #endif  // AUTOWARE__BEVFUSION__CAMERA__CAMERA_DATA_HPP_

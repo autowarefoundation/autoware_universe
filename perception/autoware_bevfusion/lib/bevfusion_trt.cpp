@@ -500,19 +500,11 @@ void BEVFusionTRT::clearDeviceMemory()
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-bool BEVFusionTRT::checkImageCameraReady(
+bool BEVFusionTRT::checkImageCameraMatricesReady(
   const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs)
 {
   for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
     if (!camera_data_ptrs[camera_id]->is_camera_matrices_ready()) {
-      return false;
-    }
-    if (!camera_data_ptrs[camera_id]->is_image_encoding_supported()) {
-      rclcpp::Clock clock{RCL_ROS_TIME};
-      RCLCPP_WARN_THROTTLE(
-        rclcpp::get_logger("bevfusion"), clock, 1000,
-        "Only RGB8 encoding is supported for now, and the image encoding is %s. Skipping detection",
-        camera_data_ptrs[camera_id]->image_msg()->encoding.c_str());
       return false;
     }
   }
@@ -524,6 +516,16 @@ bool BEVFusionTRT::processImages(
   const std::vector<float> & camera_masks)
 {
   for (std::int64_t camera_id = 0; camera_id < config_.num_cameras_; camera_id++) {
+    // Check if the image encoding is supported
+    if (!camera_data_ptrs[camera_id]->is_image_encoding_supported()) {
+      rclcpp::Clock clock{RCL_ROS_TIME};
+      RCLCPP_WARN_THROTTLE(
+        rclcpp::get_logger("bevfusion"), clock, 1000,
+        "Only RGB8 encoding is supported, and the image encoding is %s.",
+        camera_data_ptrs[camera_id]->image_msg()->encoding.c_str());
+      return false;
+    }
+    // Preprocess the image
     auto roi_tensor_offset = camera_data_ptrs[camera_id]->output_img_offset();
     if (!camera_data_ptrs[camera_id]->preprocess_image(&roi_tensor_d_[roi_tensor_offset])) {
       return false;
@@ -635,10 +637,11 @@ bool BEVFusionTRT::preProcess(
   // Process images if sensor fusion is enabled
   if (config_.sensor_fusion_) {
     // Check if all image cameras are ready
-    if (!checkImageCameraReady(camera_data_ptrs)) {
-      RCLCPP_ERROR(
-        rclcpp::get_logger("bevfusion"),
-        "Image camera matrices are not ready. Skipping pre-processing.");
+    if (!checkImageCameraMatricesReady(camera_data_ptrs)) {
+      rclcpp::Clock clock{RCL_ROS_TIME};
+      RCLCPP_WARN_THROTTLE(
+        rclcpp::get_logger("bevfusion"), clock, 1000,
+        "Image and camera matrices are not ready. Skipping pre-processing.");
       return false;
     }
 
