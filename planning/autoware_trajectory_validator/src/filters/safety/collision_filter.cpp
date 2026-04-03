@@ -240,13 +240,6 @@ bool CollisionFilter::check_collision(
   return ttc >= 0.0 && ttc < params_.min_ttc;
 }
 
-void CollisionFilter::set_parameters(rclcpp::Node & node)
-{
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-  params_.max_check_time = get_or_declare_parameter<double>(node, "collision.time");
-  params_.min_ttc = get_or_declare_parameter<double>(node, "collision.min_value");
-}
-
 tl::expected<void, std::string> CollisionFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
@@ -276,12 +269,10 @@ tl::expected<void, std::string> CollisionFilter::is_feasible(
   return {};
 }
 
-void CollisionFilter::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
+void CollisionFilter::update_parameters(const validator::Params & params)
 {
-  using autoware_utils_rclcpp::update_param;
-
-  update_param<double>(parameters, "collision.time", params_.max_check_time);
-  update_param<double>(parameters, "collision.min_value", params_.min_ttc);
+  params_.max_check_time = params.collision.time;
+  params_.min_ttc = params.collision.min_value;
 }
 }  // namespace autoware::trajectory_validator::plugin::safety
 
