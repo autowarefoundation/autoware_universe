@@ -17,7 +17,7 @@
 #include <string>
 #define NETWORKS__POSTPROCESS__MAP_POSTPROCESS_HPP_
 
-#include "data_types.hpp"
+#include "data_types_core.hpp"
 #include "networks/postprocess/map_postprocess_kernel.hpp"
 #include "ros_vad_logger.hpp"
 

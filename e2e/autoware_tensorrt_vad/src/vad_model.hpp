@@ -15,7 +15,7 @@
 #ifndef VAD_MODEL_HPP_
 #define VAD_MODEL_HPP_
 
-#include "data_types.hpp"
+#include "data_types_core.hpp"
 #include "networks/backbone.hpp"
 #include "networks/head.hpp"
 #include "networks/net.hpp"
