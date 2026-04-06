@@ -30,6 +30,8 @@ TrajectoryAdapterNode::TrajectoryAdapterNode(const rclcpp::NodeOptions & node_op
     "~/debug/processing_time_detail_ms/trajectory_adapter", 1);
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
+  debug_latency_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "~/debug/planning_component_latency_s", 1);
 }
 
 void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstSharedPtr msg)
@@ -62,6 +64,10 @@ void TrajectoryAdapterNode::process(const ScoredCandidateTrajectories::ConstShar
                             .points(trajectory_itr->candidate_trajectory.points);
 
   pub_trajectory_->publish(trajectory);
+  autoware_internal_debug_msgs::msg::Float64Stamped latency_msg;
+  latency_msg.stamp = now();
+  latency_msg.data = (now() - trajectory.header.stamp).seconds();
+  debug_latency_pub_->publish(latency_msg);
 }
 
 }  // namespace autoware::trajectory_adapter
