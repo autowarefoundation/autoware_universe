@@ -150,7 +150,7 @@ __global__ void generateVoxels_random_kernel(
   unsigned int voxel_index = (grid_x_size - 1 - voxel_idx) * grid_y_size + voxel_idy;
 
   // point_id must be in the range of [0, MAX_POINT_IN_VOXEL_SIZE)
-  unsigned int point_id = atomicInc(&(mask[voxel_index]), MAX_POINT_IN_VOXEL_SIZE);
+  unsigned int point_id = atomicAdd(&(mask[voxel_index]), 1);
   if (point_id >= MAX_POINT_IN_VOXEL_SIZE) {
     return;
   }
@@ -194,7 +194,7 @@ __global__ void generateBaseFeatures_kernel(
 
   unsigned int current_pillarId = 0;
   // current_pillarId must be in the range of [0, max_voxel_size)
-  current_pillarId = atomicInc(pillar_num, max_voxel_size);
+  current_pillarId = atomicAdd(pillar_num, 1);
   if (current_pillarId >= max_voxel_size) {
     return;
   }
@@ -289,7 +289,9 @@ __global__ void generateFeatures_kernel(
   float y_val = (point_idx < points_num) ? pillarSM[pillar_idx_inBlock][1][point_idx] : 0.0f;
   float z_val = (point_idx < points_num) ? pillarSM[pillar_idx_inBlock][2][point_idx] : 0.0f;
   // 2. Parallel Reduction using Warp Shuffle
-  for (int offset = 16; offset > 0; offset /= 2) {
+  // Note that all threads in the warp participate in the reduction as there is no thread divergence.
+#pragma unroll
+  for (int offset = 16; offset > 0; (offset = offset >> 1)) {
     x_val += __shfl_down_sync(ALL_THREADS_IN_WARP_MASK, x_val, offset);
     y_val += __shfl_down_sync(ALL_THREADS_IN_WARP_MASK, y_val, offset);
     z_val += __shfl_down_sync(ALL_THREADS_IN_WARP_MASK, z_val, offset);
