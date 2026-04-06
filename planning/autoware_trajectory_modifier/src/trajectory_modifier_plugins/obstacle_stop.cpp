@@ -36,6 +36,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_modifier::plugin
@@ -114,22 +115,11 @@ bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & 
     autoware_utils_debug::ScopedTimeTrack st(
       "ObstacleStop::get_trajectory_shape", *get_time_keeper());
 
-    auto nominal_stop_dist = std::invoke([&]() -> double {
-      auto nominal_stopping_distance = motion_utils::calculate_stop_distance(
-        data_->current_odometry->twist.twist.linear.x,
-        data_->current_acceleration->accel.accel.linear.x, params_.nominal_stopping_decel,
-        params_.stopping_jerk, 0.0);
-      if (nominal_stopping_distance) {
-        constexpr double buffer_length = 1.0;
-        const auto margin = params_.stop_margin + buffer_length;
-        return nominal_stopping_distance.value() + margin;
-      }
-      return std::numeric_limits<double>::max();
-    });
-
     debug_data_.trajectory_shape = get_trajectory_shape(
-      traj_points, data_->current_odometry->pose.pose, data_->vehicle_info, nominal_stop_dist,
-      params_.lateral_margin);
+      traj_points, data_->current_odometry->pose.pose, data_->vehicle_info,
+      data_->current_odometry->twist.twist.linear.x,
+      data_->current_acceleration->accel.accel.linear.x, params_.nominal_stopping_decel,
+      params_.stopping_jerk, params_.stop_margin, params_.lateral_margin);
   }
 
   check_obstacles(traj_points);
@@ -144,9 +134,17 @@ bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::modify_trajectory", *get_time_keeper());
 
-  if (!enabled_ || !is_trajectory_modification_required(traj_points)) return false;
+  if (!enabled_) return false;
+
+  auto trajectory = traj_points;
+  utils::obstacle_stop::trim_trajectory_and_remove_duplicates(trajectory);
+  if (trajectory.empty()) return false;
+
+  if (!is_trajectory_modification_required(trajectory)) return false;
 
   if (!nearest_collision_point_) return false;
+
+  traj_points = std::move(trajectory);
 
   return set_stop_point(traj_points);
 }
@@ -161,8 +159,9 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
       data_->current_acceleration->accel.accel.linear.x, params_.maximum_stopping_decel,
       params_.stopping_jerk, 0.0);
     if (!min_stopping_distance) min_stopping_distance = 0.0;
-    return std::max<double>(
-      nearest_collision_point_->arc_length - stop_margin, min_stopping_distance.value());
+    return std::clamp(
+      nearest_collision_point_->arc_length - stop_margin, min_stopping_distance.value(),
+      debug_data_.trajectory_shape.trajectory_length);
   });
 
   auto skip = [&](const std::string & msg) {
@@ -185,12 +184,6 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
       if (checked_distance < target_stop_point_arc_length) {
         return skip("Preceding stop point exists");
       }
-      if (
-        abs(target_stop_point_arc_length - checked_distance) < params_.duplicate_check_threshold) {
-        return skip("Duplicate stop point detected near target stop point");
-      }
-      if (checked_distance > target_stop_point_arc_length + params_.duplicate_check_threshold)
-        break;
     }
   }
 
@@ -259,6 +252,34 @@ size_t update_velocities(TrajectoryPoints & trajectory, const double jerk, const
   return vel_update_start_index;
 }
 
+size_t insert_stop_point(
+  TrajectoryPoints & trajectory, const double target_stop_point_arc_length,
+  const double traj_length)
+{
+  const auto index = motion_utils::insertStopPoint(target_stop_point_arc_length, trajectory);
+  if (index) return index.value();
+
+  // TODO (Quda): this is a temporary fix, need to check why insertStopPoint fails when target
+  // distance is equal to trajectory length
+  if (target_stop_point_arc_length < traj_length) {
+    auto dist = 0.0;
+    auto it = std::adjacent_find(
+      trajectory.begin(), trajectory.end(), [&](const auto & p, const auto & next) {
+        dist += autoware_utils::calc_distance2d(p.pose.position, next.pose.position);
+        return dist >= target_stop_point_arc_length - 1e-3;
+      });
+    if (it != trajectory.end()) {
+      it->longitudinal_velocity_mps = 0.0;
+      it->acceleration_mps2 = 0.0;
+      return std::distance(trajectory.begin(), it);
+    }
+  }
+
+  trajectory.back().longitudinal_velocity_mps = 0.0;
+  trajectory.back().acceleration_mps2 = 0.0;
+  return trajectory.size() - 1;
+}
+
 bool ObstacleStop::apply_stopping(
   TrajectoryPoints & traj_points, const double target_stop_point_arc_length) const
 {
@@ -266,10 +287,10 @@ bool ObstacleStop::apply_stopping(
 
   auto trajectory = traj_points;
 
-  const auto stop_index = motion_utils::insertStopPoint(target_stop_point_arc_length, trajectory);
-  if (!stop_index) return false;
+  const auto stop_index = insert_stop_point(
+    trajectory, target_stop_point_arc_length, debug_data_.trajectory_shape.trajectory_length);
 
-  trajectory.erase(trajectory.begin() + stop_index.value() + 1, trajectory.end());
+  trajectory.erase(trajectory.begin() + stop_index + 1, trajectory.end());
   trajectory.back().longitudinal_velocity_mps = 0.0;
   trajectory.back().acceleration_mps2 = 0.0;
 
@@ -394,7 +415,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
   auto collision_point = get_nearest_object_collision(
-    traj_points, debug_data_.trajectory_shape.polygon, active_objects, debug_data_.target_polygons,
+    traj_points, debug_data_.trajectory_shape, active_objects, debug_data_.target_polygons,
     colliding_object);
   if (collision_point) debug_data_.colliding_object = colliding_object;
 
@@ -471,8 +492,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
     autoware_utils_debug::ScopedTimeTrack st(
       "ObstacleStop::get_nearest_pcd_collision", *get_time_keeper());
     collision_point = get_nearest_pcd_collision(
-      traj_points, debug_data_.trajectory_shape.polygon, active_points,
-      debug_data_.target_pcd_points);
+      traj_points, debug_data_.trajectory_shape, active_points, debug_data_.target_pcd_points);
   }
 
   return collision_point;

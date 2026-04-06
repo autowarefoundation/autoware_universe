@@ -109,6 +109,8 @@ struct TrajectoryShape
 {
   MultiPolygon2d polygon;
   autoware_utils_geometry::Box2d bounding_box;
+  double trajectory_length;
+  double forward_traj_length;
 };
 
 struct DebugData
@@ -122,9 +124,12 @@ struct DebugData
   std::optional<PredictedObject> colliding_object;
 };
 
+void trim_trajectory_and_remove_duplicates(TrajectoryPoints & trajectory_points);
+
 TrajectoryShape get_trajectory_shape(
   const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & ego_pose,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, double trim_length,
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double ego_vel,
+  const double ego_accel, const double decel, const double jerk, const double stop_margin,
   const double lateral_margin = 0.0, const double longitudinal_margin = 0.0);
 
 void filter_objects_by_type(
@@ -133,11 +138,11 @@ void filter_objects_by_type(
 void filter_objects_by_velocity(PredictedObjects & objects, const double max_velocity);
 
 std::optional<CollisionPoint> get_nearest_pcd_collision(
-  const TrajectoryPoints & trajectory_points, const MultiPolygon2d & trajectory_polygon,
+  const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const PointCloud::Ptr & pointcloud, std::vector<geometry_msgs::msg::Point> & target_pcd_points);
 
 std::optional<CollisionPoint> get_nearest_object_collision(
-  const TrajectoryPoints & trajectory_points, const MultiPolygon2d & trajectory_polygon,
+  const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const PredictedObjects & objects, MultiPolygon2d & target_polygons,
   PredictedObject & colliding_object);
 

@@ -14,6 +14,7 @@
 
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/obstacle_stop_utils.hpp"
 
+#include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
@@ -22,6 +23,7 @@
 
 #include <boost/geometry.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <string>
@@ -30,25 +32,78 @@
 namespace autoware::trajectory_modifier::utils::obstacle_stop
 {
 
+void trim_trajectory_and_remove_duplicates(TrajectoryPoints & trajectory_points)
+{
+  if (trajectory_points.empty()) return;
+  const auto zero_velocity_index =
+    autoware::motion_utils::searchZeroVelocityIndex(trajectory_points);
+  if (zero_velocity_index && zero_velocity_index.value() < trajectory_points.size() - 1) {
+    trajectory_points.erase(
+      trajectory_points.begin() + zero_velocity_index.value() + 1, trajectory_points.end());
+  }
+  trajectory_points = autoware::motion_utils::removeOverlapPoints(trajectory_points);
+}
+
+double get_detection_length(
+  const double forward_traj_length, const double current_vel, const double current_accel,
+  const double decel, const double jerk, const double stop_margin)
+{
+  // add a buffer length to account for the reaction time of the vehicle
+  constexpr double buffer_length = 1.0;
+  const auto margin = stop_margin + buffer_length;
+  auto nominal_stopping_distance =
+    autoware::motion_utils::calculate_stop_distance(current_vel, current_accel, decel, jerk, 0.0);
+  if (nominal_stopping_distance) {
+    return nominal_stopping_distance.value() + margin;
+  }
+  return forward_traj_length + margin;
+}
+
+TrajectoryPoints extend_trajectory(const TrajectoryPoints & trajectory_points, const double length)
+{
+  if (length < 1e-3) return trajectory_points;
+  auto extended_trajectory = trajectory_points;
+  auto p = trajectory_points.back();
+  p.pose = autoware_utils::calc_offset_pose(p.pose, length, 0, 0);
+  extended_trajectory.push_back(p);
+  return extended_trajectory;
+}
+
 TrajectoryShape get_trajectory_shape(
   const TrajectoryPoints & trajectory_points, const geometry_msgs::msg::Pose & ego_pose,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, double trim_length,
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double ego_vel,
+  const double ego_accel, const double decel, const double jerk, const double stop_margin,
   const double lateral_margin, const double longitudinal_margin)
 {
   const auto offset_pose =
     autoware_utils::calc_offset_pose(ego_pose, vehicle_info.max_longitudinal_offset_m, 0, 0);
   auto start_idx = motion_utils::findNearestSegmentIndex(trajectory_points, offset_pose.position);
-  const auto forward_traj_points =
-    motion_utils::cropForwardPoints(trajectory_points, ego_pose.position, start_idx, trim_length);
+
+  const auto traj_length = motion_utils::calcArcLength(trajectory_points);
+  const auto ego_arc_length =
+    motion_utils::calcSignedArcLength(trajectory_points, 0, ego_pose.position);
+  const auto forward_traj_length = traj_length - ego_arc_length;
+
+  const auto detection_length =
+    get_detection_length(forward_traj_length, ego_vel, ego_accel, decel, jerk, stop_margin);
+
+  const auto detection_traj = std::invoke([&]() -> TrajectoryPoints {
+    if (detection_length < forward_traj_length) {
+      motion_utils::cropForwardPoints(
+        trajectory_points, ego_pose.position, start_idx, detection_length);
+    }
+    const auto diff = detection_length - forward_traj_length;
+    return extend_trajectory(trajectory_points, diff);
+  });
 
   autoware_utils_geometry::LineString2d ls_front_right;
   autoware_utils_geometry::LineString2d ls_front_left;
   autoware_utils_geometry::LineString2d ls_rear_right;
   autoware_utils_geometry::LineString2d ls_rear_left;
-  ls_front_right.reserve(forward_traj_points.size());
-  ls_front_left.reserve(forward_traj_points.size());
-  ls_rear_right.reserve(forward_traj_points.size());
-  ls_rear_left.reserve(forward_traj_points.size());
+  ls_front_right.reserve(detection_traj.size());
+  ls_front_left.reserve(detection_traj.size());
+  ls_rear_right.reserve(detection_traj.size());
+  ls_rear_left.reserve(detection_traj.size());
 
   autoware_utils_geometry::Polygon2d polygon_front;
   autoware_utils_geometry::Polygon2d polygon_rear;
@@ -56,9 +111,9 @@ TrajectoryShape get_trajectory_shape(
   constexpr double min_resolution = 0.1;
 
   const auto base_footprint = vehicle_info.createFootprint(lateral_margin, longitudinal_margin);
-  for (const auto & [idx, p] : forward_traj_points | ranges::views::enumerate) {
+  for (const auto & [idx, p] : detection_traj | ranges::views::enumerate) {
     if (idx > 0) {
-      const auto prev_p = forward_traj_points[idx - 1];
+      const auto prev_p = detection_traj[idx - 1];
       const auto dist = autoware_utils::calc_distance2d(prev_p, p);
       if (dist < min_resolution) continue;
     }
@@ -100,7 +155,7 @@ TrajectoryShape get_trajectory_shape(
   autoware_utils_geometry::Box2d envelope;
   boost::geometry::envelope(trajectory_polygon, envelope);
 
-  return TrajectoryShape{trajectory_polygon, envelope};
+  return TrajectoryShape{trajectory_polygon, envelope, traj_length, forward_traj_length};
 }
 
 void filter_objects_by_type(
@@ -139,15 +194,15 @@ void filter_objects_by_velocity(PredictedObjects & objects, const double max_vel
 }
 
 std::optional<CollisionPoint> get_nearest_pcd_collision(
-  const TrajectoryPoints & trajectory_points,
-  const autoware_utils_geometry::MultiPolygon2d & trajectory_polygon,
+  const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const PointCloud::Ptr & pointcloud, std::vector<geometry_msgs::msg::Point> & target_pcd_points)
 {
   if (pointcloud->empty()) return std::nullopt;
 
   PointCloud::Ptr pointcloud_in_polygon(new PointCloud);
   for (const auto & point : *pointcloud) {
-    if (boost::geometry::within(autoware_utils::Point2d{point.x, point.y}, trajectory_polygon)) {
+    if (boost::geometry::within(
+          autoware_utils::Point2d{point.x, point.y}, trajectory_shape.polygon)) {
       pointcloud_in_polygon->push_back(point);
     }
   }
@@ -160,7 +215,7 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
     geometry_msgs::msg::Point p;
     p.x = point.x;
     p.y = point.y;
-    const auto arc_length = motion_utils::calcSignedArcLength(trajectory_points, 0, p);
+    auto arc_length = motion_utils::calcSignedArcLength(trajectory_points, 0, p);
     if (arc_length < min_arc_length) {
       min_arc_length = arc_length;
       nearest_collision_point = p;
@@ -172,8 +227,7 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
 }
 
 std::optional<CollisionPoint> get_nearest_object_collision(
-  const TrajectoryPoints & trajectory_points,
-  const autoware_utils_geometry::MultiPolygon2d & trajectory_polygon,
+  const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const PredictedObjects & objects, MultiPolygon2d & target_polygons,
   PredictedObject & colliding_object)
 {
@@ -185,13 +239,13 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   for (const auto & object : objects.objects) {
     const auto object_pose = object.kinematics.initial_pose_with_covariance.pose;
     const auto object_polygon = autoware_utils::to_polygon2d(object_pose, object.shape);
-    if (boost::geometry::disjoint(object_polygon, trajectory_polygon)) {
+    if (boost::geometry::disjoint(object_polygon, trajectory_shape.polygon)) {
       continue;
     }
     found_collision = true;
     for (const auto & point : object_polygon.outer()) {
       geometry_msgs::msg::Point p = geometry_msgs::msg::Point().set__x(point.x()).set__y(point.y());
-      const auto arc_length = motion_utils::calcSignedArcLength(trajectory_points, 0, p);
+      auto arc_length = motion_utils::calcSignedArcLength(trajectory_points, 0, p);
       if (arc_length < min_arc_length) {
         min_arc_length = arc_length;
         nearest_collision_point = p;
