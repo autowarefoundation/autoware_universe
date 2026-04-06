@@ -38,11 +38,8 @@ TrafficLightMapBasedDetector::TrafficLightMapBasedDetector(
 {
 }
 
-ProcessMapResult TrafficLightMapBasedDetector::setMap(
-  const autoware_map_msgs::msg::LaneletMapBin & map_msg)
+void TrafficLightMapBasedDetector::setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg)
 {
-  ProcessMapResult result;
-
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(map_msg));
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
@@ -83,8 +80,6 @@ ProcessMapResult TrafficLightMapBasedDetector::setMap(
   lanelet::routing::RoutingGraphContainer overall_graphs({vehicle_graph, pedestrian_graph});
   overall_graphs_ptr_ =
     std::make_shared<const lanelet::routing::RoutingGraphContainer>(overall_graphs);
-
-  return result;
 }
 
 SetRouteResult TrafficLightMapBasedDetector::setRoute(
