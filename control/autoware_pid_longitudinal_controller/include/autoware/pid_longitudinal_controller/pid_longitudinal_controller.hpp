@@ -169,6 +169,8 @@ private:
   bool m_enable_integration_at_low_speed;
   double m_current_vel_threshold_pid_integrate;
   double m_time_threshold_before_pid_integrate;
+  double m_ff_scale_min{0.5};
+  double m_ff_scale_max{2.0};
   bool m_enable_brake_keeping_before_stop;
   double m_brake_keeping_acc;
 
