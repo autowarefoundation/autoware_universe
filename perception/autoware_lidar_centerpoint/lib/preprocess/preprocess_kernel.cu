@@ -291,7 +291,8 @@ __global__ void generateFeatures_kernel(
   float y_val = (point_idx < points_num) ? pillarSM[pillar_idx_inBlock][1][point_idx] : 0.0f;
   float z_val = (point_idx < points_num) ? pillarSM[pillar_idx_inBlock][2][point_idx] : 0.0f;
   // 2. Parallel Reduction using Warp Shuffle
-  // Note that all threads in the warp participate in the reduction as there is no thread divergence.
+  // Note that all threads in the warp participate in the reduction as there is no thread
+  // divergence.
 #pragma unroll
   for (int offset = 16; offset > 0; (offset = offset >> 1)) {
     x_val += __shfl_down_sync(ALL_THREADS_IN_WARP_MASK, x_val, offset);
