@@ -24,8 +24,8 @@ publishers:
 
 # parameters
 param_files:
-  - name: mission_planner_param
-    default: $(find-pkg-share autoware_mission_planner_universe)/config/mission_planner.param.yaml
+  - name: manual_lane_change_handler_param
+    default: config/manual_lane_change_handler.param.yaml
 
 param_values: []
 

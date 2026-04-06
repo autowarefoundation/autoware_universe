@@ -51,7 +51,7 @@ publishers:
 # parameters
 param_files:
   - name: common_param
-    default: $(find-pkg-share autoware_planning_common)/config/common.param.yaml
+    default: $(find-pkg-share autoware_core_planning)/config/common.param.yaml
   - name: behavior_velocity_planner_param
     default: $(find-pkg-share autoware_behavior_velocity_planner)/config/behavior_velocity_planner.param.yaml
   - name: crosswalk_module_param
