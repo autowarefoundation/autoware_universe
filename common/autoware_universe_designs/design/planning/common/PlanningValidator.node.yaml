@@ -50,7 +50,7 @@ param_files:
     default: config/planning_validator_rear_collision_checker.param.yaml
 
 param_values:
-  - name: planning_validator_launch_modules
+  - name: launch_modules
     default:
       - autoware::planning_validator::LatencyChecker
       - autoware::planning_validator::TrajectoryChecker
