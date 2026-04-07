@@ -22,9 +22,9 @@ import yaml
 # This launch file is intended for simulation usage.
 
 
-def get_vehicle_model_type(context, *args, **kwargs) -> list:
+def use_actuation_command(context, *args, **kwargs) -> list:
     simulator_model_param_path = LaunchConfiguration("simulator_model_param_file").perform(context)
-    vehicle_model_type = ""
+    use_actuation_command = "false"
 
     if simulator_model_param_path:
         try:
@@ -32,10 +32,14 @@ def get_vehicle_model_type(context, *args, **kwargs) -> list:
                 simulator_model_param_yaml = yaml.safe_load(f) or {}
             params = simulator_model_param_yaml.get("/**", {}).get("ros__parameters", {})
             vehicle_model_type = params.get("vehicle_model_type", "")
+            if vehicle_model_type.startswith("ACTUATION_CMD"):
+                use_actuation_command = "true"
         except Exception:
-            vehicle_model_type = ""
+            use_actuation_command = "false"
 
-    return [SetLaunchConfiguration(name="vehicle_model_type", value=vehicle_model_type)]
+    return [
+        SetLaunchConfiguration(name="use_actuation_command", value=use_actuation_command),
+    ]
 
 
 def generate_launch_description():
@@ -52,4 +56,4 @@ def generate_launch_description():
         "path to config file for simulator_model",
     )
 
-    return LaunchDescription(launch_arguments + [OpaqueFunction(function=get_vehicle_model_type)])
+    return LaunchDescription(launch_arguments + [OpaqueFunction(function=use_actuation_command)])
