@@ -13,7 +13,13 @@ launch:
   node_output: screen
 
 # interfaces
-subscribers: []
+subscribers:
+  - name: route_state
+    message_type: autoware_planning_msgs/msg/RouteState
+  - name: steering
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: velocity
+    message_type: autoware_vehicle_msgs/msg/VelocityReport
 
 publishers:
   - name: control
