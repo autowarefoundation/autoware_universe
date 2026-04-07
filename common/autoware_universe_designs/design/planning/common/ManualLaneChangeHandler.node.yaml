@@ -16,8 +16,15 @@ subscribers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
     remap_target: /planning/mission_planning/route
+  - name: reroute_availability
+    message_type: tier4_planning_msgs/msg/RerouteAvailability
   - name: odometry
     message_type: nav_msgs/msg/Odometry
+
+servers:
+  - name: set_preferred_lane
+    message_type: tier4_external_api_msgs/srv/SetPreferredLane
+    remap_target: ~/set_preferred_lane
 
 publishers: []
 
