@@ -13,7 +13,9 @@
 # limitations under the License.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, SetLaunchConfiguration
+from launch.actions import DeclareLaunchArgument
+from launch.actions import OpaqueFunction
+from launch.actions import SetLaunchConfiguration
 from launch.substitutions import LaunchConfiguration
 import yaml
 
@@ -21,9 +23,7 @@ import yaml
 
 
 def get_vehicle_model_type(context, *args, **kwargs) -> list:
-    simulator_model_param_path = LaunchConfiguration("simulator_model_param_file").perform(
-        context
-    )
+    simulator_model_param_path = LaunchConfiguration("simulator_model_param_file").perform(context)
     vehicle_model_type = ""
 
     if simulator_model_param_path:
@@ -35,9 +35,7 @@ def get_vehicle_model_type(context, *args, **kwargs) -> list:
         except Exception:
             vehicle_model_type = ""
 
-    return [
-        SetLaunchConfiguration(name="vehicle_model_type", value=vehicle_model_type)
-    ]
+    return [SetLaunchConfiguration(name="vehicle_model_type", value=vehicle_model_type)]
 
 
 def generate_launch_description():

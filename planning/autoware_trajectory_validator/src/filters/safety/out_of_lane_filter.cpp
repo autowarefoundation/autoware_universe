@@ -65,25 +65,10 @@ OutOfLaneFilter::OutOfLaneFilter() : ValidatorInterface("OutOfLaneFilter")
   // BoundaryDepartureChecker will be initialized when vehicle_info is set
 }
 
-void OutOfLaneFilter::set_parameters(rclcpp::Node & node)
+void OutOfLaneFilter::update_parameters(const validator::Params & params)
 {
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-  params_.max_check_time = get_or_declare_parameter<double>(node, "out_of_lane.time");
-  params_.min_value = get_or_declare_parameter<double>(node, "out_of_lane.min_value");
-
-  // Initialize boundary departure checker if vehicle_info is available
-  if (!boundary_departure_checker_ && vehicle_info_ptr_) {
-    autoware::boundary_departure_checker::Param bdc_param{};
-    boundary_departure_checker_ =
-      std::make_unique<autoware::boundary_departure_checker::BoundaryDepartureChecker>(
-        bdc_param, *vehicle_info_ptr_);
-  }
-}
-
-void OutOfLaneFilter::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
-{
-  autoware_utils_rclcpp::update_param(parameters, "out_of_lane.time", params_.max_check_time);
-  autoware_utils_rclcpp::update_param(parameters, "out_of_lane.min_value", params_.min_value);
+  params_.max_check_time = params.out_of_lane.time;
+  params_.min_value = params.out_of_lane.min_value;
 }
 
 tl::expected<void, std::string> OutOfLaneFilter::is_feasible(

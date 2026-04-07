@@ -17,6 +17,12 @@
     delay_step: 0
     line_string_max_step_m: 5.0
     use_time_interpolation: false
+    planning_factor:
+      enable_stop: true
+      enable_slowdown: false
+      stop_keep_duration_threshold: 1.0  # [s]
+      stop_velocity_threshold: 0.1       # [m/s]
+      slowdown_accel_threshold: -0.3     # [m/s^2]
     debug_params:
       publish_debug_route: true
       publish_debug_map: false
