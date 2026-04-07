@@ -134,13 +134,13 @@ jobs:
           build-depends-repos: build_depends.repos
 
       - name: Upload coverage to CodeCov
-        if: ${{ steps.test.outputs.coverage-report-files != '' }}
+        if: ${{ steps.test.outputs.coverage-report-files != '' && inputs.container-suffix == '-cuda' && inputs.rosdistro == 'jazzy' }}
         uses: codecov/codecov-action@v6
         with:
           files: ${{ steps.test.outputs.coverage-report-files }}
           fail_ci_if_error: false
           verbose: true
-          flags: differential${{ inputs.container-suffix }}
+          flags: differential-${{ inputs.rosdistro }}-cuda
           token: ${{ secrets.codecov-token }}
           disable_search: true
 
