@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -183,8 +183,7 @@ bool Tracker::updateWithMeasurement(
   // Update classification
   if (
     channel_info.trust_classification &&
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification) !=
-      autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+    classes::getHighestProbLabel(object.classification) != classes::Label::UNKNOWN) {
     updateClassification(object.classification);
   }
 
@@ -334,8 +333,7 @@ bool Tracker::createPseudoMeasurement(
   return true;
 }
 
-void Tracker::updateClassification(
-  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & input)
+void Tracker::updateClassification(const std::vector<classes::Classification> & input)
 {
   // classification algorithm:
   // 1. Update the matched classification probability
@@ -626,7 +624,7 @@ float Tracker::getKnownObjectProbability() const
   // find unknown probability
   float unknown_probability = 0.0;
   for (const auto & a_class : object_.classification) {
-    if (a_class.label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+    if (a_class.label == classes::Label::UNKNOWN) {
       unknown_probability = a_class.probability;
       break;
     }

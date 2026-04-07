@@ -176,6 +176,57 @@ jobs:
       - name: Show disk space after the tasks
         run: df -h
 
+  clang-tidy:
+    needs: build-and-test
+    if: ${{ inputs.rosdistro == 'jazzy' && inputs.container-suffix == '-cuda' }}
+    runs-on: ubuntu-latest
+    container: ${{ inputs.container }}${{ inputs.container-suffix }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Show disk space before the tasks
+        run: df -h
+
+      - name: Remove exec_depend
+        uses: autowarefoundation/autoware-github-actions/remove-exec-depend@v1
+
+      - name: Get self packages
+        id: get-self-packages
+        uses: autowarefoundation/autoware-github-actions/get-self-packages@v1
+
+      - name: Export CUDA state as a variable for adding to cache key
+        run: |
+          build_type_cuda_state=nocuda
+          if [[ "${{ inputs.container-suffix }}" == "-cuda" ]]; then
+            build_type_cuda_state=cuda
+          fi
+          echo "BUILD_TYPE_CUDA_STATE=$build_type_cuda_state" >> "${GITHUB_ENV}"
+          echo "::notice::BUILD_TYPE_CUDA_STATE=$build_type_cuda_state"
+        shell: bash
+
+      - name: Prepare build_depends.repos file
+        uses: ./.github/actions/combine-repos-action
+        with:
+          base_file: build_depends_humble.repos
+          overlay_file: build_depends_nightly.repos
+          output_file: build_depends.repos
+
+      - name: Run clang-tidy
+        if: ${{ steps.get-self-packages.outputs.self-packages != '' }}
+        uses: autowarefoundation/autoware-github-actions/clang-tidy@v1
+        with:
+          rosdistro: ${{ inputs.rosdistro }}
+          target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
+          clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy-ci
+          clang-tidy-ignore-path: .clang-tidy-ignore
+          build-depends-repos: build_depends.repos
+          cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
+          artifact-name: clang-tidy-result-${{ inputs.rosdistro }}${{ inputs.container-suffix }}
+
+      - name: Show disk space after the tasks
+        run: df -h
+
   upload-coverage:
     runs-on: ubuntu-latest
     needs: build-and-test

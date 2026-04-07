@@ -133,7 +133,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_voxel_distance_based_compare_map_filter ${PROJECT_NAME})
 
 endif()
-ament_auto_package(
+autoware_ament_auto_package(
   INSTALL_TO_SHARE
   launch
   config

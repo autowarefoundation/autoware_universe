@@ -23,20 +23,10 @@
           "default": true,
           "description": "Enable ray tracing for visibility calculation"
         },
-        "use_object_recognition": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable object recognition mode"
-        },
         "use_base_link_z": {
           "type": "boolean",
           "default": true,
           "description": "Use base_link z coordinate for object positioning"
-        },
-        "publish_ground_truth": {
-          "type": "boolean",
-          "default": false,
-          "description": "Publish ground truth objects for evaluation"
         },
         "random_seed": {
           "type": "integer",
@@ -177,9 +167,7 @@
         "visible_range",
         "detection_successful_rate",
         "enable_ray_tracing",
-        "use_object_recognition",
         "use_base_link_z",
-        "publish_ground_truth",
         "random_seed",
         "use_fixed_random_seed",
         "object_centric_pointcloud",

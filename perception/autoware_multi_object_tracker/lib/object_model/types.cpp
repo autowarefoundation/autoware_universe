@@ -78,7 +78,7 @@ DynamicObject toDynamicObject(
   dynamic_object.existence_probabilities.push_back(
     {channel_index, dynamic_object.existence_probability});
 
-  dynamic_object.classification = det_object.classification;
+  dynamic_object.classification = classes::toClassifications(det_object.classification);
 
   dynamic_object.pose = det_object.kinematics.pose_with_covariance.pose;
   dynamic_object.pose_covariance = det_object.kinematics.pose_with_covariance.covariance;
@@ -139,7 +139,7 @@ autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObj
   autoware_perception_msgs::msg::TrackedObject tracked_object;
   tracked_object.object_id = dyn_object.uuid;
   tracked_object.existence_probability = dyn_object.existence_probability;
-  tracked_object.classification = dyn_object.classification;
+  tracked_object.classification = classes::toClassificationMsgs(dyn_object.classification);
 
   tracked_object.kinematics.pose_with_covariance.pose = dyn_object.pose;
   tracked_object.kinematics.pose_with_covariance.covariance = dyn_object.pose_covariance;
@@ -160,7 +160,7 @@ autoware_perception_msgs::msg::DetectedObject toDetectedObjectMsg(const DynamicO
 {
   autoware_perception_msgs::msg::DetectedObject detected_object;
   detected_object.existence_probability = dyn_object.existence_probability;
-  detected_object.classification = dyn_object.classification;
+  detected_object.classification = classes::toClassificationMsgs(dyn_object.classification);
 
   detected_object.kinematics.pose_with_covariance.pose = dyn_object.pose;
   detected_object.kinematics.pose_with_covariance.covariance = dyn_object.pose_covariance;
