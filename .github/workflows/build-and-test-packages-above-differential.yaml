@@ -136,13 +136,14 @@ jobs:
 
       - name: Upload coverage to CodeCov
         if: ${{ steps.test.outputs.coverage-report-files != '' }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           files: ${{ steps.test.outputs.coverage-report-files }}
           fail_ci_if_error: false
           verbose: true
           flags: differential${{ inputs.container-suffix }}
           token: ${{ secrets.codecov-token }}
+          disable_search: true
 
       - name: Show disk space after the tasks
         run: df -h
