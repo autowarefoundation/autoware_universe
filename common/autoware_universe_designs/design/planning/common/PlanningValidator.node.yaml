@@ -56,6 +56,9 @@ param_values:
       - autoware::planning_validator::TrajectoryChecker
       - autoware::planning_validator::IntersectionCollisionChecker
       - autoware::planning_validator::RearCollisionChecker
+  - name: use_intra_process_comms
+    type: bool
+    default: false
 
 # processes
 processes:

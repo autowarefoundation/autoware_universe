@@ -36,7 +36,10 @@ param_files:
   - name: planning_evaluator_param
     default: config/planning_evaluator.param.yaml
 
-param_values: []
+param_values:
+  - name: output_metrics
+    type: bool
+    default: false
 
 # processes
 processes:
