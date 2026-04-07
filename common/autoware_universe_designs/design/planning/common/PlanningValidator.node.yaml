@@ -51,7 +51,7 @@ param_files:
 
 param_values:
   - name: planning_validator_launch_modules
-    default: 
+    default:
       - autoware::planning_validator::LatencyChecker
       - autoware::planning_validator::TrajectoryChecker
       - autoware::planning_validator::IntersectionCollisionChecker

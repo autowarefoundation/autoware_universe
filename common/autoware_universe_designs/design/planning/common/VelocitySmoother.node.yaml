@@ -26,7 +26,7 @@ publishers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: current_velocity_limit_mps
-    message_type: tier4_planning_msgs/msg/VelocityLimit 
+    message_type: tier4_planning_msgs/msg/VelocityLimit
 
 # parameters
 param_files:
