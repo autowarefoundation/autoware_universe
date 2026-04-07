@@ -179,6 +179,9 @@ jobs:
           flags: ${{ inputs.codecov-flag }}
           token: ${{ secrets.codecov-token }}
           disable_search: true
+          # Disable gcov and xcode plugins, keeping only pycoverage.
+          # Default plugins: https://github.com/getsentry/prevent-cli/blob/45e518e5ca344c9fb7a5cbe596a21b7ab85a39ed/codecov-cli/README.md?plain=1#L178
+          plugins: pycoverage
 
       - name: Show disk space after the tasks
         run: df -h
