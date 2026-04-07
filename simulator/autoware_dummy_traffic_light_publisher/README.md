@@ -55,6 +55,22 @@ To override the mode:
 ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml mode:=empty
 ```
 
+## Design and extension tactics
+
+This package separates concerns into three layers:
+
+| Layer | Class | Role |
+| --- | --- | --- |
+| ROS I/O | `DummyTrafficLightPublisherNode` | Subscriptions (`take()`), timer, publisher. No logic. |
+| Message assembly | `DummyTrafficLight` | Pass-through judgment, vector map ID extraction, `TrafficLightGroupArray` construction. |
+| Signal generation | `TrafficLightCycle` | Phase transition (Green/Yellow/Red) and `TrafficLightElement` output. |
+
+When extending, modify only the layer that owns the responsibility:
+
+- **Adding arrow shapes, flashing patterns, or new signal types** — change `TrafficLightCycle`. It owns `TrafficLightElement` construction. Node and `DummyTrafficLight` are unaffected.
+- **Per-intersection or per-ID signal control** — change `DummyTrafficLight`. It maps IDs to elements. `TrafficLightCycle` and Node are unaffected.
+- **Adding new input sources or output topics** — change `DummyTrafficLightPublisherNode`. Logic layers are unaffected.
+
 ### Run node directly
 
 ```bash
