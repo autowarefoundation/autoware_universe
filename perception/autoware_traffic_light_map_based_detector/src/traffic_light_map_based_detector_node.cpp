@@ -33,24 +33,32 @@ namespace autoware::traffic_light
 MapBasedDetector::MapBasedDetector(const rclcpp::NodeOptions & node_options)
 : Node("traffic_light_map_based_detector", node_options),
   tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_),
-  detector_(
-    TrafficLightMapBasedDetectorConfig{
-      this->declare_parameter<double>("max_vibration_pitch"),
-      this->declare_parameter<double>("max_vibration_yaw"),
-      this->declare_parameter<double>("max_vibration_height"),
-      this->declare_parameter<double>("max_vibration_width"),
-      this->declare_parameter<double>("max_vibration_depth"),
-      this->declare_parameter<double>("max_detection_range"),
-      this->declare_parameter<double>("car_traffic_light_max_angle_range"),
-      this->declare_parameter<double>("pedestrian_traffic_light_max_angle_range")}),
-  transform_sampling_config_{
-    this->declare_parameter<double>("min_timestamp_offset"),
-    this->declare_parameter<double>("max_timestamp_offset"),
-    this->declare_parameter<double>("timestamp_sample_len")}
+  tf_listener_(tf_buffer_)
 {
   using std::placeholders::_1;
 
+  // detector config
+  TrafficLightMapBasedDetectorConfig config{
+    this->declare_parameter<double>("max_vibration_pitch"),
+    this->declare_parameter<double>("max_vibration_yaw"),
+    this->declare_parameter<double>("max_vibration_height"),
+    this->declare_parameter<double>("max_vibration_width"),
+    this->declare_parameter<double>("max_vibration_depth"),
+    this->declare_parameter<double>("max_detection_range"),
+    this->declare_parameter<double>("car_traffic_light_max_angle_range"),
+    this->declare_parameter<double>("pedestrian_traffic_light_max_angle_range")};
+  // transform sampling config
+  transform_sampling_config_ = {
+    this->declare_parameter<double>("min_timestamp_offset"),
+    this->declare_parameter<double>("max_timestamp_offset"),
+    this->declare_parameter<double>("timestamp_sample_len")};
+
+  if (config.max_detection_range <= 0) {
+    RCLCPP_ERROR_STREAM(
+      get_logger(), "Invalid param max_detection_range = " << config.max_detection_range
+                                                           << ", set to default value = 200");
+    config.max_detection_range = 200.0;
+  }
   if (transform_sampling_config_.timestamp_sample_len <= 0) {
     RCLCPP_ERROR_STREAM(
       get_logger(),
@@ -66,6 +74,9 @@ MapBasedDetector::MapBasedDetector(const rclcpp::NodeOptions & node_options)
     transform_sampling_config_.max_timestamp_offset = 0.0;
     transform_sampling_config_.min_timestamp_offset = 0.0;
   }
+
+  // create detector
+  detector_ = std::make_unique<TrafficLightMapBasedDetector>(config);
 
   // subscribers
   map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
@@ -102,7 +113,7 @@ bool MapBasedDetector::getTransform(
 void MapBasedDetector::cameraInfoCallback(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr input_msg)
 {
-  if (!detector_.hasTrafficLights()) {
+  if (!detector_->hasTrafficLights()) {
     return;
   }
 
@@ -131,7 +142,7 @@ void MapBasedDetector::cameraInfoCallback(
     tf_map2camera_vec.push_back(tf_map2camera);
   }
 
-  auto result = detector_.detect(tf_map2camera_vec, tf_map2camera, *input_msg);
+  auto result = detector_->detect(tf_map2camera_vec, tf_map2camera, *input_msg);
 
   roi_pub_->publish(result.rough_rois);
   expect_roi_pub_->publish(result.expect_rois);
@@ -141,13 +152,13 @@ void MapBasedDetector::cameraInfoCallback(
 void MapBasedDetector::mapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg)
 {
-  detector_.setMap(*input_msg);
+  detector_->setMap(*input_msg);
 }
 
 void MapBasedDetector::routeCallback(
   const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr input_msg)
 {
-  auto result = detector_.setRoute(*input_msg);
+  auto result = detector_->setRoute(*input_msg);
   logMessages(result.logs);
 }
 

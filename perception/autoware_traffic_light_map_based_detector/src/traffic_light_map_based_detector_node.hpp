@@ -55,7 +55,7 @@ private:
     double timestamp_sample_len;
   };
 
-  TrafficLightMapBasedDetector detector_;
+  std::unique_ptr<TrafficLightMapBasedDetector> detector_;
   TransformSamplingConfig transform_sampling_config_;
 
   bool getTransform(
