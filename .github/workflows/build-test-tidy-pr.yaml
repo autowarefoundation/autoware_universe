@@ -82,8 +82,6 @@ jobs:
       container: ${{ matrix.container }}
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}
       runner: "['self-hosted', 'Linux', 'X64']"
-    secrets:
-      codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build-and-test-differential-cuda:
     if: ${{ always() }}

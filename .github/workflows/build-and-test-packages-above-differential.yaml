@@ -26,9 +26,6 @@ on:
         required: false
         default: ""
         type: string
-    secrets:
-      codecov-token:
-        required: true
 
 env:
   CC: /usr/lib/ccache/gcc
@@ -133,17 +130,6 @@ jobs:
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
           build-depends-repos: build_depends.repos
           packages-above-repos: packages_above.repos
-
-      - name: Upload coverage to CodeCov
-        if: ${{ steps.test.outputs.coverage-report-files != '' }}
-        uses: codecov/codecov-action@v6
-        with:
-          files: ${{ steps.test.outputs.coverage-report-files }}
-          fail_ci_if_error: false
-          verbose: true
-          flags: differential${{ inputs.container-suffix }}
-          token: ${{ secrets.codecov-token }}
-          disable_search: true
 
       - name: Show disk space after the tasks
         run: df -h
