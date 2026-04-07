@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::collision_detector::CollisionDetectorNode
-  executable: collision_detector_node
+  executable: autoware_collision_detector_node
 
 # interfaces
 subscribers:

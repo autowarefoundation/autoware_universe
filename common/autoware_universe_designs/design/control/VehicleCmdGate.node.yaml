@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::vehicle_cmd_gate::VehicleCmdGate
-  executable: vehicle_cmd_gate_node
+  executable: vehicle_cmd_gate_exe
 
 # interfaces
 subscribers:

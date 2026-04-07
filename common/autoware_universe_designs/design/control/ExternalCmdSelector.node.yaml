@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::external_cmd_selector::ExternalCmdSelector
-  executable: external_cmd_selector_node
+  executable: autoware_external_cmd_selector
 
 # interfaces
 subscribers:

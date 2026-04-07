@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::costmap_generator::CostmapGenerator
-  executable: costmap_generator_node
+  executable: costmap_generator
 
 # interfaces
 subscribers:

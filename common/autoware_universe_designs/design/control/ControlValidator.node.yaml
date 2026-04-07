@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::control_validator::ControlValidator
-  executable: control_validator_node
+  executable: autoware_control_validator_node
 
 # interfaces
 subscribers:

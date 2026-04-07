@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::motion::control::trajectory_follower_node::Controller
-  executable: trajectory_follower_node
+  executable: controller_node_exe
 
 # interfaces
 subscribers:
@@ -23,6 +23,8 @@ subscribers:
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
   - name: current_operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: steering_offset_update
+    message_type: autoware_internal_debug_msgs/msg/Float32Stamped
 
 publishers:
   - name: predicted_trajectory

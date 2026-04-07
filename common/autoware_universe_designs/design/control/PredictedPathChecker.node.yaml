@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::predicted_path_checker::PredictedPathCheckerNode
-  executable: predicted_path_checker_node
+  executable: autoware_predicted_path_checker_node
 
 # interfaces
 subscribers:

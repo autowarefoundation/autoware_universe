@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::behavior_velocity_planner::experimental::BehaviorVelocityPlannerNode
-  executable: behavior_velocity_planner_node
+  executable: experimental_autoware_behavior_velocity_planner_node
 
 # interfaces
 subscribers:

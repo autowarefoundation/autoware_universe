@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::shift_decider::ShiftDecider
-  executable: shift_decider_node
+  executable: autoware_shift_decider
 
 # interfaces
 subscribers:

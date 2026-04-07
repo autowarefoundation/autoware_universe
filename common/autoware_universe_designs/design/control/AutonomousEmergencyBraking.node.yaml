@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::motion::control::autonomous_emergency_braking::AEB
-  executable: autonomous_emergency_braking_node
+  executable: autoware_autonomous_emergency_braking
 
 # interfaces
 subscribers:

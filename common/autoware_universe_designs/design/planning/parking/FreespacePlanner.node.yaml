@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::freespace_planner::FreespacePlannerNode
-  executable: freespace_planner_node
+  executable: freespace_planner
 
 # interfaces
 subscribers:

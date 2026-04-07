@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::manual_lane_change_handler::ManualLaneChangeHandler
-  executable: manual_lane_change_handler_node
+  executable: autoware_manual_lane_change_handler_node
 
 # interfaces
 subscribers:

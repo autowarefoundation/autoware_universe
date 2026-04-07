@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::remaining_distance_time_calculator::RemainingDistanceTimeCalculatorNode
-  executable: remaining_distance_time_calculator_node
+  executable: autoware_remaining_distance_time_calculator_node
 
 # interfaces
 subscribers:

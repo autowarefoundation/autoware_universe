@@ -8,8 +8,8 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::planning_validator::PlanningValidator
-  executable: planning_validator_node
+  plugin: autoware::planning_validator::PlanningValidatorNode
+  executable: autoware_planning_validator_node
 
 # interfaces
 subscribers:

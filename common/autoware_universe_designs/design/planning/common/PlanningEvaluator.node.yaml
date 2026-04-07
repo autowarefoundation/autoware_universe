@@ -8,8 +8,8 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::planning_evaluator::PlanningEvaluatorNode
-  executable: planning_evaluator_node
+  plugin: planning_diagnostics::PlanningEvaluatorNode
+  executable: planning_evaluator
 
 # interfaces
 subscribers:

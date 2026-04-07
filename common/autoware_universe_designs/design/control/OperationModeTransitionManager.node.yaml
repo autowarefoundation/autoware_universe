@@ -9,14 +9,12 @@ package:
 
 launch:
   plugin: autoware::operation_mode_transition_manager::OperationModeTransitionManager
-  executable: operation_mode_transition_manager_node
+  executable: autoware_operation_mode_transition_manager_exe
 
 # interfaces
 subscribers:
   - name: kinematics
     message_type: nav_msgs/msg/Odometry
-  - name: steering
-    message_type: autoware_vehicle_msgs/msg/SteeringReport
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: control_cmd
@@ -29,10 +27,12 @@ subscribers:
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
 
 publishers:
-  - name: is_autonomous_available
-    message_type: std_msgs/msg/Bool
+  - name: operation_mode
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+
+clients:
   - name: control_mode_request
-    message_type: autoware_vehicle_msgs/msg/ControlModeCommand
+    message_type: autoware_vehicle_msgs/srv/ControlModeCommand
 
 # parameters
 param_files:
@@ -47,4 +47,4 @@ processes:
     trigger_conditions:
       - periodic: 10.0
     outcomes:
-      - to_output: control_mode_request
+      - to_output: operation_mode
