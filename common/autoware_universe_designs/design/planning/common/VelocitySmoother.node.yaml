@@ -26,7 +26,7 @@ publishers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: current_velocity_limit_mps
-    message_type: tier4_planning_msgs/msg/VelocityLimit
+    message_type: tier4_planning_msgs/msg/VelocityLimit 
 
 # parameters
 param_files:
@@ -34,10 +34,18 @@ param_files:
     default: $(find-pkg-share autoware_core_planning)/config/common.param.yaml
   - name: nearest_search_param
     default: $(find-pkg-share autoware_core_planning)/config/nearest_search.param.yaml
+  - name: param_path
+    default: config/default_velocity_smoother.param.yaml
   - name: velocity_smoother_param
-    default: config/velocity_smoother.param.yaml
+    default: config/JerkFiltered.param.yaml
 
-param_values: []
+param_values:
+  - name: publish_debug_trajs
+    type: bool
+    default: false
+  - name: algorithm_type
+    type: string
+    default: JerkFiltered
 
 # processes
 processes:

@@ -16,10 +16,12 @@ launch:
 subscribers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: input/route
 
 publishers:
   - name: goal_pose
     message_type: geometry_msgs/msg/PoseStamped
+    remap_target: output/goal_pose
 
 # parameters
 param_files: []

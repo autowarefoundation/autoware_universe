@@ -31,9 +31,12 @@ param_files:
   - name: vehicle_param
     default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
   - name: elastic_band_smoother_param
-    default: $(find-pkg-share autoware_path_smoother)/config/elastic_band_smoother.param.yaml
+    default: config/elastic_band_smoother.param.yaml
 
-param_values: []
+param_values:
+  - name: enable_debug_info
+    type: bool
+    default: false
 
 # processes
 processes:
