@@ -57,6 +57,7 @@ jobs:
       container-suffix: ${{ matrix.container-suffix }}
       runner: ${{ matrix.runner }}
       build-pre-command: ${{ matrix.build-pre-command }}
+      arch: ${{ matrix.arch }}
       pull-ccache: true
       push-ccache: false
       concurrency-group: build-and-test-daily-${{ matrix.rosdistro }}-${{ matrix.arch }}-${{ matrix.cache-suffix }}-${{ github.ref }}-${{ github.run_id }}
