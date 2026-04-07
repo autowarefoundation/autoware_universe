@@ -16,14 +16,40 @@ launch:
 subscribers:
   - name: planner_route
     message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: ~/planner/route
   - name: planner_state
     message_type: autoware_planning_msgs/msg/RouteState
+    remap_target: ~/planner/state
 
 publishers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: ~/main/route
   - name: state
     message_type: autoware_planning_msgs/msg/RouteState
+    remap_target: ~/main/state
+
+servers:
+  - name: clear_route
+    message_type: autoware_planning_msgs/srv/ClearRoute
+    remap_target: ~/main/clear_route
+  - name: set_lanelet_route
+    message_type: autoware_planning_msgs/srv/SetLaneletRoute
+    remap_target: ~/main/set_lanelet_route
+  - name: set_waypoint_route
+    message_type: autoware_planning_msgs/srv/SetWaypointRoute
+    remap_target: ~/main/set_waypoint_route
+
+clients:
+  - name: planner_clear_route
+    message_type: autoware_planning_msgs/srv/ClearRoute
+    remap_target: ~/planner/clear_route
+  - name: planner_set_lanelet_route
+    message_type: autoware_planning_msgs/srv/SetLaneletRoute
+    remap_target: ~/planner/set_lanelet_route
+  - name: planner_set_waypoint_route
+    message_type: autoware_planning_msgs/srv/SetWaypointRoute
+    remap_target: ~/planner/set_waypoint_route
 
 # parameters
 param_values: []
