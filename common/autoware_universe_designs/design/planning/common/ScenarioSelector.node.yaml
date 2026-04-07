@@ -44,7 +44,7 @@ publishers:
     remap_target: output/trajectory
 
 # parameters
-param_files: 
+param_files:
   - name: scenario_selector
     default: config/scenario_selector.param.yaml
 param_values: []
