@@ -31,7 +31,7 @@ publishers:
 # parameters
 param_files:
   - name: path_generator_param
-    default: $(find-pkg-share autoware_path_generator)/config/path_generator.param.yaml
+    default: config/path_generator.param.yaml
 
 param_values: []
 

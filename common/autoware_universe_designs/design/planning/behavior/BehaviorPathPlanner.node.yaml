@@ -47,13 +47,13 @@ publishers:
 # parameters
 param_files:
   - name: behavior_path_planner_param
-    default: $(find-pkg-share autoware_behavior_path_planner)/config/behavior_path_planner.param.yaml
+    default: config/behavior_path_planner.param.yaml
   - name: lane_change_param
-    default: $(find-pkg-share autoware_behavior_path_planner)/config/lane_change.param.yaml
+    default: config/lane_change.param.yaml
   - name: goal_planner_param
-    default: $(find-pkg-share autoware_behavior_path_planner)/config/goal_planner.param.yaml
+    default: config/goal_planner.param.yaml
   - name: avoidance_param
-    default: $(find-pkg-share autoware_behavior_path_planner)/config/avoidance.param.yaml
+    default: config/avoidance.param.yaml
 
 param_values:
   - name: launch_modules

@@ -30,7 +30,9 @@ publishers:
     message_type: autoware_internal_msgs/msg/MissionRemainingDistanceTime
 
 # parameters
-param_files: []
+param_files:
+  - name: remaining_distance_time_calculator
+    default: config/remaining_distance_time_calculator.param.yaml
 
 param_values: []
 

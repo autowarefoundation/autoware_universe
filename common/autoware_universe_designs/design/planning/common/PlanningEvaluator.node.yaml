@@ -27,7 +27,7 @@ publishers:
 # parameters
 param_files:
   - name: planning_evaluator_param
-    default: $(find-pkg-share autoware_planning_evaluator)/config/planning_evaluator.param.yaml
+    default: config/planning_evaluator.param.yaml
 
 param_values: []
 

@@ -31,7 +31,7 @@ publishers:
 # parameters
 param_files:
   - name: costmap_generator_param
-    default: $(find-pkg-share autoware_costmap_generator)/config/costmap_generator.param.yaml
+    default: config/costmap_generator.param.yaml
   - name: vehicle_param
     default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
 

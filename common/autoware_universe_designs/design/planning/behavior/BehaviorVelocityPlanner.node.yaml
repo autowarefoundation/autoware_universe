@@ -41,13 +41,13 @@ param_files:
   - name: common_param
     default: $(find-pkg-share autoware_core_planning)/config/common.param.yaml
   - name: behavior_velocity_planner_param
-    default: $(find-pkg-share autoware_behavior_velocity_planner)/config/behavior_velocity_planner.param.yaml
+    default: config/behavior_velocity_planner.param.yaml
   - name: crosswalk_module_param
-    default: $(find-pkg-share autoware_behavior_velocity_planner)/config/crosswalk_module.param.yaml
+    default: config/crosswalk_module.param.yaml
   - name: traffic_light_module_param
-    default: $(find-pkg-share autoware_behavior_velocity_planner)/config/traffic_light_module.param.yaml
+    default: config/traffic_light_module.param.yaml
   - name: intersection_module_param
-    default: $(find-pkg-share autoware_behavior_velocity_planner)/config/intersection_module.param.yaml
+    default: config/intersection_module.param.yaml
 
 param_values:
   - name: is_simulation
