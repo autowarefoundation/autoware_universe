@@ -215,6 +215,8 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.
 | enable_integration_at_low_speed       | bool   | Whether to enable integration of acceleration errors when the vehicle speed is lower than `current_vel_threshold_pid_integration` or not.                          | false         |
 | current_vel_threshold_pid_integration | double | Velocity error is integrated for I-term only when the absolute value of current velocity is larger than this parameter. [m/s]                                      | 0.5           |
 | time_threshold_before_pid_integration | double | How much time without the vehicle moving must past to enable PID error integration. [s]                                                                            | 5.0           |
+| ff_scale_min                          | double | Minimum clamp value for feedforward scaling applied during the time-to-arclength conversion.                                                                       | 0.5           |
+| ff_scale_max                          | double | Maximum clamp value for feedforward scaling applied during the time-to-arclength conversion.                                                                       | 2.0           |
 | brake_keeping_acc                     | double | If `enable_brake_keeping_before_stop` is true, a certain acceleration is kept during DRIVE state before the ego stops [m/s^2] See [Brake keeping](#brake-keeping). | 0.2           |
 
 ### STOPPING Parameter (smooth stop)

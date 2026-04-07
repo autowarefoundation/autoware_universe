@@ -33,6 +33,8 @@
     enable_integration_at_low_speed: false
     current_vel_threshold_pid_integration: 0.5
     time_threshold_before_pid_integration: 2.0
+    ff_scale_min: 0.5
+    ff_scale_max: 2.0
     enable_brake_keeping_before_stop: false
     brake_keeping_acc: -0.2
 
