@@ -14,7 +14,7 @@ launch:
 # interfaces
 subscribers:
   - name: path_with_lane_id
-    message_type: autoware_planning_msgs/msg/Path
+    message_type: autoware_internal_planning_msgs/msg/PathWithLaneId
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: vehicle_odometry
@@ -25,15 +25,9 @@ subscribers:
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: no_ground_pointcloud
     message_type: sensor_msgs/msg/PointCloud2
-  - name: compare_map_filtered_pointcloud
-    message_type: sensor_msgs/msg/PointCloud2
-  - name: vector_map_inside_area_filtered_pointcloud
-    message_type: sensor_msgs/msg/PointCloud2
   - name: external_velocity_limit_mps
-    message_type: tier4_planning_msgs/msg/VelocityLimit
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
   - name: traffic_signals
-    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
-  - name: virtual_traffic_light_states
     message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
   - name: occupancy_grid
     message_type: nav_msgs/msg/OccupancyGrid
@@ -41,12 +35,6 @@ subscribers:
 publishers:
   - name: path
     message_type: autoware_planning_msgs/msg/Path
-  - name: stop_reasons
-    message_type: tier4_planning_msgs/msg/StopReasonArray
-  - name: infrastructure_commands
-    message_type: tier4_planning_msgs/msg/InfrastructureCommandArray
-  - name: traffic_signal
-    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
 
 # parameters
 param_files:

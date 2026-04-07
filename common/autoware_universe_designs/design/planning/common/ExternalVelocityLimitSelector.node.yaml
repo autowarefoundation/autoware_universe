@@ -15,11 +15,19 @@ launch:
 # interfaces
 subscribers:
   - name: api_limit
-    message_type: tier4_planning_msgs/msg/VelocityLimit
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+    remap_target: input/velocity_limit_from_api
+  - name: internal_limit
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+    remap_target: input/velocity_limit_from_internal
+  - name: velocity_limit_clear_command
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimitClearCommand
+    remap_target: input/velocity_limit_clear_command_from_internal
 
 publishers:
-  - name: external_velocity_limit_mps
-    message_type: tier4_planning_msgs/msg/VelocityLimit
+  - name: external_velocity_limit
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+    remap_target: output/external_velocity_limit
 
 # parameters
 param_files:
@@ -34,4 +42,4 @@ processes:
     trigger_conditions:
       - periodic: 10.0
     outcomes:
-      - to_output: external_velocity_limit_mps
+      - to_output: external_velocity_limit

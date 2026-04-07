@@ -16,8 +16,10 @@ launch:
 subscribers:
   - name: lane_driving_hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/planning/hazard_lights_command
   - name: parking_hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/system/hazard_lights_command
 
 publishers:
   - name: hazard_lights_cmd

@@ -15,14 +15,18 @@ launch:
 subscribers:
   - name: control_cmd
     message_type: autoware_control_msgs/msg/Control
+    remap_target: input/control_cmd
   - name: state
     message_type: autoware_system_msgs/msg/AutowareState
+    remap_target: input/state
   - name: current_gear
     message_type: autoware_vehicle_msgs/msg/GearReport
+    remap_target: input/current_gear
 
 publishers:
   - name: gear_cmd
     message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: output/gear_cmd
 
 # parameters
 param_files:

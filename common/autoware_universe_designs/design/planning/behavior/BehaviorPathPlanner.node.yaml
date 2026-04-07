@@ -30,19 +30,19 @@ subscribers:
   - name: accel
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
   - name: scenario
-    message_type: tier4_planning_msgs/msg/Scenario
+    message_type: autoware_internal_planning_msgs/msg/Scenario
 
 publishers:
   - name: path
-    message_type: autoware_planning_msgs/msg/Path
+    message_type: autoware_internal_planning_msgs/msg/PathWithLaneId
   - name: turn_indicators_cmd
     message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
   - name: hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
   - name: modified_goal
-    message_type: geometry_msgs/msg/PoseStamped
-  - name: stop_reasons
-    message_type: tier4_planning_msgs/msg/StopReasonArray
+    message_type: geometry_msgs/msg/PoseWithUuidStamped
+  - name: is_reroute_available
+    message_type: tier4_planning_msgs/msg/RerouteAvailability
 
 # parameters
 param_files:

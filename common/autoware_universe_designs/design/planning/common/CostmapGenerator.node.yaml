@@ -20,7 +20,7 @@ subscribers:
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: scenario
-    message_type: tier4_planning_msgs/msg/Scenario
+    message_type: autoware_internal_planning_msgs/msg/Scenario
 
 publishers:
   - name: grid_map

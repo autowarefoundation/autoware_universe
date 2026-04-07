@@ -28,7 +28,7 @@ subscribers:
 
 publishers:
   - name: validation_status
-    message_type: tier4_debug_msgs/msg/StringStamped
+    message_type: autoware_control_validator/msg/ControlValidatorStatus
 
 # parameters
 param_files:

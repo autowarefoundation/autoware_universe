@@ -9,33 +9,44 @@ package:
 
 launch:
   plugin: autoware::scenario_selector::ScenarioSelectorNode
-  executable: scenario_selector_node
+  executable: autoware_scenario_selector_node
 
 # interfaces
 subscribers:
   - name: lane_driving_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: input/lane_driving/trajectory
   - name: parking_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: input/parking/trajectory
   - name: lanelet_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
+    remap_target: input/lanelet_map
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: input/route
   - name: odometry
     message_type: nav_msgs/msg/Odometry
+    remap_target: input/odometry
   - name: operation_mode_state
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    remap_target: input/operation_mode_state
   - name: is_parking_completed
     message_type: std_msgs/msg/Bool
+    remap_target: is_parking_completed
 
 publishers:
   - name: scenario
-    message_type: tier4_planning_msgs/msg/Scenario
+    message_type: autoware_internal_planning_msgs/msg/Scenario
+    remap_target: output/scenario
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: output/trajectory
 
 # parameters
-param_files: []
+param_files: 
+  - name: scenario_selector
+    default: config/scenario_selector.param.yaml
 param_values: []
 
 # processes

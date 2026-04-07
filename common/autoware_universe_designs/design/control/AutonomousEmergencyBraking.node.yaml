@@ -23,10 +23,17 @@ subscribers:
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
+  - name: autoware_state
+    message_type: autoware_system_msgs/msg/AutowareState
+    global: /autoware/state
 
 publishers:
   - name: debug_marker
     message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/markers
+  - name: virtual_wall
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/virtual_wall
 
 # parameters
 param_files:

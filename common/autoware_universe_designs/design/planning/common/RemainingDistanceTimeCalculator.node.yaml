@@ -13,18 +13,21 @@ launch:
 
 # interfaces
 subscribers:
-  - name: mission_route
-    message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: odometry
     message_type: nav_msgs/msg/Odometry
   - name: map
     message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: scenario
+    message_type: autoware_internal_planning_msgs/msg/Scenario
+  - name: planning_velocity
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+    global: /planning/scenario_planning/current_max_velocity
 
 publishers:
-  - name: mission_remaining_distance
-    message_type: tier4_debug_msgs/msg/Float32Stamped
-  - name: mission_remaining_time
-    message_type: tier4_debug_msgs/msg/Float32Stamped
+  - name: mission_remaining_distance_time
+    message_type: autoware_internal_msgs/msg/MissionRemainingDistanceTime
 
 # parameters
 param_files: []
@@ -37,5 +40,4 @@ processes:
     trigger_conditions:
       - on_input: odometry
     outcomes:
-      - to_output: mission_remaining_distance
-      - to_output: mission_remaining_time
+      - to_output: mission_remaining_distance_time

@@ -19,10 +19,11 @@ subscribers:
     message_type: sensor_msgs/msg/PointCloud2
   - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    global: /api/operation_mode/state
 
-publishers:
-  - name: collision_status
-    message_type: std_msgs/msg/Bool
+publishers: []
 
 # parameters
 param_files:
@@ -37,4 +38,4 @@ processes:
     trigger_conditions:
       - on_input: pointcloud
     outcomes:
-      - to_output: collision_status
+      - terminal: null

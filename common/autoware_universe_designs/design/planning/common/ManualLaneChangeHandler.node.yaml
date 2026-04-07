@@ -15,12 +15,11 @@ launch:
 subscribers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
+    global: /planning/mission_planning/route
   - name: odometry
     message_type: nav_msgs/msg/Odometry
 
-publishers:
-  - name: lane_change_approval
-    message_type: autoware_planning_msgs/msg/LaneChangeApproval
+publishers: []
 
 # parameters
 param_files:
@@ -35,4 +34,4 @@ processes:
     trigger_conditions:
       - periodic: 10.0
     outcomes:
-      - to_output: lane_change_approval
+      - terminal: null

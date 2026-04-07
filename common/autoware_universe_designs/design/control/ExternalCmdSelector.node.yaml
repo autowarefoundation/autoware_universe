@@ -14,35 +14,47 @@ launch:
 # interfaces
 subscribers:
   - name: local_pedals_cmd
-    message_type: autoware_vehicle_msgs/msg/ActuationCommandStamped
+    message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
+    remap_target: input/local/pedals_cmd
   - name: local_steering_cmd
-    message_type: autoware_vehicle_msgs/msg/SteeringCommandStamped
+    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+    remap_target: input/local/steering_cmd
   - name: local_gear_cmd
     message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: input/local/gear_cmd
   - name: local_turn_indicators_cmd
     message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+    remap_target: input/local/turn_indicators_cmd
   - name: local_hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/local/hazard_lights_cmd
   - name: local_heartbeat
-    message_type: tier4_external_api_msgs/msg/Heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
+    remap_target: input/local/heartbeat
   - name: remote_pedals_cmd
-    message_type: autoware_vehicle_msgs/msg/ActuationCommandStamped
+    message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
+    remap_target: input/remote/pedals_cmd
   - name: remote_steering_cmd
-    message_type: autoware_vehicle_msgs/msg/SteeringCommandStamped
+    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+    remap_target: input/remote/steering_cmd
   - name: remote_gear_cmd
     message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: input/remote/gear_cmd
   - name: remote_turn_indicators_cmd
     message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+    remap_target: input/remote/turn_indicators_cmd
   - name: remote_hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/remote/hazard_lights_cmd
   - name: remote_heartbeat
-    message_type: tier4_external_api_msgs/msg/Heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
+    remap_target: input/remote/heartbeat
 
 publishers:
   - name: pedals_cmd
-    message_type: autoware_vehicle_msgs/msg/ActuationCommandStamped
+    message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
   - name: steering_cmd
-    message_type: autoware_vehicle_msgs/msg/SteeringCommandStamped
+    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
   - name: gear_cmd
     message_type: autoware_vehicle_msgs/msg/GearCommand
   - name: turn_indicators_cmd
@@ -50,9 +62,9 @@ publishers:
   - name: hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
   - name: heartbeat
-    message_type: tier4_external_api_msgs/msg/Heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
   - name: current_selector_mode
-    message_type: tier4_external_api_msgs/msg/SelectorMode
+    message_type: tier4_control_msgs/msg/ExternalCommandSelectorMode
 
 # parameters
 param_files:
@@ -72,3 +84,7 @@ processes:
       - to_output: pedals_cmd
       - to_output: steering_cmd
       - to_output: gear_cmd
+      - to_output: turn_indicators_cmd
+      - to_output: hazard_lights_cmd
+      - to_output: heartbeat
+      - to_output: current_selector_mode

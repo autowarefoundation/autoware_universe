@@ -15,14 +15,26 @@ launch:
 subscribers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-  - name: objects
-    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: lanelet_map_bin
+    message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: pointcloud
     message_type: sensor_msgs/msg/PointCloud2
+  - name: kinematics
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: operational_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
 
 publishers:
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
+  - name: validation_status
+    message_type: autoware_planning_validator/msg/PlanningValidatorStatus
 
 # parameters
 param_files:

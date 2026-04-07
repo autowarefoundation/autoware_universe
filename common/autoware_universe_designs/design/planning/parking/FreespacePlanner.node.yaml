@@ -16,7 +16,7 @@ subscribers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: scenario
-    message_type: tier4_planning_msgs/msg/Scenario
+    message_type: autoware_internal_planning_msgs/msg/Scenario
   - name: occupancy_grid
     message_type: nav_msgs/msg/OccupancyGrid
   - name: odometry
@@ -27,6 +27,7 @@ publishers:
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: is_completed
     message_type: std_msgs/msg/Bool
+    remap_target: is_completed
 
 # parameters
 param_files:

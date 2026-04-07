@@ -15,24 +15,32 @@ launch:
 subscribers:
   - name: kinematics
     message_type: nav_msgs/msg/Odometry
+    remap_target: kinematics
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: trajectory
   - name: control_cmd
     message_type: autoware_control_msgs/msg/Control
+    remap_target: control_cmd
   - name: trajectory_follower_control_cmd
     message_type: autoware_control_msgs/msg/Control
+    remap_target: trajectory_follower_control_cmd
   - name: control_mode_report
     message_type: autoware_vehicle_msgs/msg/ControlModeReport
+    remap_target: control_mode_report
   - name: gate_operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    remap_target: gate_operation_mode
 
 publishers:
   - name: operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    global: /system/operation_mode/state
 
 clients:
   - name: control_mode_request
     message_type: autoware_vehicle_msgs/srv/ControlModeCommand
+    remap_target: control_mode_request
 
 # parameters
 param_files:
