@@ -1,0 +1,66 @@
+# autoware_dummy_traffic_light_publisher
+
+## Purpose
+
+Publish dummy traffic light signals for simulation environments where a traffic light recognition module is not available.
+
+## Modes
+
+| Mode | Description |
+| --- | --- |
+| `standalone` | Cycles through Green -> Yellow -> Red for all traffic lights found in the vector map. |
+| `empty` | Publishes an empty `TrafficLightGroupArray` (no traffic light groups). |
+
+## Pass-through
+
+When a message is received on the input topic (`~/input/traffic_signals`), the node relays it as-is instead of generating its own signals. If no new input arrives within `passthrough_timeout` seconds, the node falls back to its configured mode.
+
+## Interface
+
+### Subscriptions
+
+| Topic | Type | Description |
+| --- | --- | --- |
+| `~/input/vector_map` | `autoware_map_msgs/msg/LaneletMapBin` | Lanelet2 map to extract traffic light regulatory element IDs. |
+| `~/input/traffic_signals` | `autoware_perception_msgs/msg/TrafficLightGroupArray` | External traffic light signals for pass-through. |
+
+### Publications
+
+| Topic | Type | Description |
+| --- | --- | --- |
+| `~/output/traffic_signals` | `autoware_perception_msgs/msg/TrafficLightGroupArray` | Generated or relayed traffic light signals. |
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mode` | string | `"standalone"` | Operating mode: `"standalone"` or `"empty"`. |
+| `publish_rate` | double | `10.0` | Publishing frequency [Hz]. |
+| `green_duration` | double | `30.0` | Duration of the green phase [s]. |
+| `yellow_duration` | double | `3.0` | Duration of the yellow phase [s]. |
+| `red_duration` | double | `30.0` | Duration of the red phase [s]. |
+| `passthrough_timeout` | double | `1.0` | Time after last input before falling back to the configured mode [s]. |
+
+## Usage
+
+### Launch
+
+```bash
+ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml
+```
+
+To override the mode:
+
+```bash
+ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml mode:=empty
+```
+
+### Run node directly
+
+```bash
+ros2 run autoware_dummy_traffic_light_publisher autoware_dummy_traffic_light_publisher_node --ros-args \
+  -p mode:=standalone \
+  -r ~/input/vector_map:=/map/vector_map \
+  -r ~/input/traffic_signals:=/simulator/input/traffic_signals \
+  -r ~/output/traffic_signals:=/perception/traffic_light_recognition/traffic_signals
+```
