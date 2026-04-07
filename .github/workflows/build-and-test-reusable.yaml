@@ -170,6 +170,7 @@ jobs:
           verbose: true
           flags: ${{ inputs.codecov-flag }}
           token: ${{ secrets.codecov-token }}
+          disable_search: true
 
       - name: Show disk space after the tasks
         run: df -h
