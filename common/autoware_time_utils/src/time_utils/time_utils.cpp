@@ -23,7 +23,7 @@ namespace autoware::time_utils
 std::chrono::nanoseconds interpolate(
   std::chrono::nanoseconds a, std::chrono::nanoseconds b, float t) noexcept
 {
-  // TODO(c.ho) consider long double
+  // TODO(c.ho) consider using long double for better precision
   const auto t_ = static_cast<double>(std::min(std::max(t, 0.0F), 1.0F));
   const auto del = std::chrono::duration_cast<std::chrono::duration<double>>(b - a);
   const auto del_ = std::chrono::duration_cast<std::chrono::nanoseconds>(t_ * del);

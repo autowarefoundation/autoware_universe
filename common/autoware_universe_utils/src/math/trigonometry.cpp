@@ -23,6 +23,7 @@
 namespace autoware::universe_utils
 {
 
+// Compute sine using a discrete lookup table
 float sin(float radian)
 {
   float degree = radian * (180.f / static_cast<float>(autoware::universe_utils::pi)) *

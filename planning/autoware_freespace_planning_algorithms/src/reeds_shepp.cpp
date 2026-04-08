@@ -86,7 +86,7 @@
 
 namespace
 {
-// The comments, variable names, etc. use the nomenclature from the Reeds & Shepp paper.
+// The comments, variable names, etc. use the nomenclature from the Reeds & Shepp paper (1990).
 using autoware::freespace_planning_algorithms::ReedsSheppStateSpace;
 
 const double pi = M_PI;
