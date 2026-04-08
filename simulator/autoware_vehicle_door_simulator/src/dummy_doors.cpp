@@ -15,6 +15,8 @@
 #include "dummy_doors.hpp"
 
 #include <memory>
+#include <string>
+#include <utility>
 
 namespace autoware::vehicle_door_simulator
 {
@@ -113,6 +115,14 @@ void DummyDoors::on_timer()
 }
 
 }  // namespace autoware::vehicle_door_simulator
+
+// TODO(xmfcx): remove this function after clang-tidy PR comments workflow is confirmed working
+std::string trigger_clang_tidy_test()
+{
+  std::string value = "test";
+  auto moved = std::move(value);
+  return value;  // bugprone-use-after-move
+}
 
 int main(int argc, char ** argv)
 {
