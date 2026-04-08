@@ -182,8 +182,7 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
 
   // Create a dedicated callback group for fusion collector timers so they are not
   // starved by agnocast subscription processing in SingleThreadedAgnocastExecutor.
-  timer_callback_group_ =
-    this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+  timer_callback_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
   // Diagnostic Updater
   diagnostic_updater_.setHardwareID(node_name + "_checker");
