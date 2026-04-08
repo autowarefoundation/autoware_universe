@@ -13,6 +13,8 @@ launch:
 
 # interfaces
 subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
     remap_target: /planning/mission_planning/route
@@ -21,12 +23,17 @@ subscribers:
   - name: odometry
     message_type: nav_msgs/msg/Odometry
 
+publishers: []
+
 servers:
   - name: set_preferred_lane
     message_type: tier4_external_api_msgs/srv/SetPreferredLane
     remap_target: ~/set_preferred_lane
 
-publishers: []
+clients:
+  - name: set_preferred_primitive
+    message_type: autoware_planning_msgs/srv/SetPreferredPrimitive
+    remap_target: /planning/mission_planning/mission_planner/set_preferred_primitive
 
 # parameters
 param_files:
