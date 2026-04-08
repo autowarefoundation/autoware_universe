@@ -42,6 +42,8 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail", 1);
 
+  pub_processing_time_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
@@ -59,6 +61,9 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
 void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;
+  stop_watch.tic(__func__);
+
   if (!initialized_modifiers_) {
     throw std::runtime_error("Modifiers not initialized");
   }
@@ -100,6 +105,10 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
   }
 
   trajectories_pub_->publish(output_trajectories);
+
+  const auto processing_time_ms = stop_watch.toc(__func__);
+  pub_processing_time_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+    "processing_time_ms", processing_time_ms);
 }
 
 void TrajectoryModifier::set_data()

@@ -21,6 +21,7 @@
 
 #include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -88,6 +89,7 @@ private:
 
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
+  std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_processing_time_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
   pluginlib::ClassLoader<plugin::TrajectoryModifierPluginBase> plugin_loader_;
