@@ -31,6 +31,6 @@ jobs:
       pull-ccache: false
       push-ccache: true
       upload-coverage: ${{ matrix.rosdistro == 'jazzy' }}
-      codecov-flag: total-${{ matrix.rosdistro }}-cuda
+      codecov-flag: full-suite
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
