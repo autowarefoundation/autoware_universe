@@ -54,7 +54,6 @@ protected:
     options.append_parameter_override("max_detection_range", 200.0);
     options.append_parameter_override("min_timestamp_offset", -0.01);
     options.append_parameter_override("max_timestamp_offset", 0.0);
-    options.append_parameter_override("timestamp_sample_len", 0.02);
     options.append_parameter_override("car_traffic_light_max_angle_range", 40.0);
     options.append_parameter_override("pedestrian_traffic_light_max_angle_range", 80.0);
 
