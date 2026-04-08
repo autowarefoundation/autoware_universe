@@ -180,12 +180,11 @@ MarkerArray create_departure_footprint_marker(
   const ProjectionsToBound & projections_to_bound, const FootprintMap<Footprints> & footprints,
   const rclcpp::Time & curr_time, const double base_link_z)
 {
-  int32_t id{0};
   const auto add_marker = [&](
                             const auto color, const ProjectionToBound & projection_to_bound,
-                            const std::string & type) -> Marker {
+                            const std::string & type, int32_t id) -> Marker {
     auto marker_ll = autoware_utils_visualization::create_default_marker(
-      "map", curr_time, "footprint_" + type, ++id, visualization_msgs::msg::Marker::LINE_LIST,
+      "map", curr_time, "footprint_" + type, id, visualization_msgs::msg::Marker::LINE_LIST,
       autoware_utils_visualization::create_marker_scale(0.05, 0, 0), color);
 
     if (!projection_to_bound.footprint_type_opt) {
@@ -207,16 +206,21 @@ MarkerArray create_departure_footprint_marker(
   MarkerArray marker_array;
   marker_array.markers.reserve(footprints[FootprintType::NORMAL].size());
 
+  int32_t id_near{0};
+  int32_t id_approaching{0};
+  int32_t id_critical{0};
+
   for (const auto & pt : projections_to_bound) {
     if (!pt.departure_type_opt) {
       continue;
     }
     if (pt.is_near_boundary()) {
-      marker_array.markers.push_back(add_marker(color::green(), pt, "near"));
+      marker_array.markers.push_back(add_marker(color::green(), pt, "near", ++id_near));
     } else if (pt.departure_type_opt == DepartureType::APPROACHING_DEPARTURE) {
-      marker_array.markers.push_back(add_marker(color::yellow(), pt, "approaching"));
+      marker_array.markers.push_back(
+        add_marker(color::yellow(), pt, "approaching", ++id_approaching));
     } else if (pt.is_critical_departure()) {
-      marker_array.markers.push_back(add_marker(color::magenta(), pt, "critical"));
+      marker_array.markers.push_back(add_marker(color::magenta(), pt, "critical", ++id_critical));
     }
   }
   return marker_array;

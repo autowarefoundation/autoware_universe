@@ -612,10 +612,10 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
         const double cross_prod = v_fwd_x * v_lat_y - v_fwd_y * v_lat_x;
 
         // If cross_prod < 0, boundary is to the RIGHT. If > 0, boundary is to the LEFT.
-        if (side_key == SideKey::LEFT && cross_prod < 0.0) {
-          closest_bound.lat_dist = -closest_bound.lat_dist;  // Crossed left boundary!
-        } else if (side_key == SideKey::RIGHT && cross_prod > 0.0) {
-          closest_bound.lat_dist = -closest_bound.lat_dist;  // Crossed right boundary!
+        const bool crossed_left = (side_key == SideKey::LEFT && cross_prod < 0.0);
+        const bool crossed_right = (side_key == SideKey::RIGHT && cross_prod > 0.0);
+        if (crossed_left || crossed_right) {
+          closest_bound.lat_dist = -closest_bound.lat_dist;
         }
       }
 
@@ -848,7 +848,7 @@ std::optional<ProjectionsToBound> get_closest_projections_for_side(
   }
 
   if (!min_to_bound.empty() && min_to_bound.back().is_critical_departure()) {
-    const double crash_s =
+    const double arc_length_to_departure =
       min_to_bound.back().lon_dist_on_pred_traj - min_to_bound.back().lon_offset;
     constexpr double longitudinal_buffer_m = 1.0;
 
@@ -856,18 +856,18 @@ std::optional<ProjectionsToBound> get_closest_projections_for_side(
 
     for (auto itr = min_to_bound.rbegin(); itr != min_to_bound.rend(); ++itr) {
       if (itr->footprint_type_opt == FootprintType::NORMAL) {
-        const double dist_to_crash = crash_s - itr->lon_dist_on_pred_traj;
+        const double dist_to_departure = arc_length_to_departure - itr->lon_dist_on_pred_traj;
 
-        if (dist_to_crash <= longitudinal_buffer_m) {
+        if (dist_to_departure <= longitudinal_buffer_m) {
           itr->departure_type_opt = DepartureType::CRITICAL_DEPARTURE;
           earliest_critical_it = itr.base() - 1;
-        } else if (dist_to_crash <= max_braking_dist + longitudinal_buffer_m) {
+        } else if (dist_to_departure <= max_braking_dist + longitudinal_buffer_m) {
           itr->departure_type_opt = DepartureType::APPROACHING_DEPARTURE;
         }
       }
     }
 
-    // Erase the physical crash points, keeping ONLY the newly buffered critical point
+    // Erase the physical departure points, keeping ONLY the newly buffered critical point
     if (earliest_critical_it != min_to_bound.end() - 1) {
       min_to_bound.erase(earliest_critical_it + 1, min_to_bound.end());
     }
@@ -896,20 +896,6 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
   const double th_dist_critical = param.th_trigger.th_dist_to_boundary_m[side_key].min;
   const double th_dist_near = param.th_trigger.th_dist_to_boundary_m[side_key].max;
 
-  const auto get_severity = [](const DepartureType type) -> uint8_t {
-    switch (type) {
-      case DepartureType::CRITICAL_DEPARTURE:
-        return 3;
-      case DepartureType::APPROACHING_DEPARTURE:
-        return 2;
-      case DepartureType::NEAR_BOUNDARY:
-        return 1;
-      case DepartureType::NONE:
-        return 0;
-    }
-    return 0;
-  };
-
   for (auto candidate : candidate_projections) {
     if (!candidate.footprint_type_opt) continue;
 
@@ -930,8 +916,8 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
     if (!best_projection) {
       best_projection = candidate;
     } else {
-      const uint8_t cand_severity = get_severity(candidate.departure_type_opt.value());
-      const uint8_t best_severity = get_severity(best_projection->departure_type_opt.value());
+      const auto cand_severity = candidate.departure_type_opt.value();
+      const auto best_severity = best_projection->departure_type_opt.value();
 
       if (cand_severity > best_severity) {
         best_projection = candidate;
