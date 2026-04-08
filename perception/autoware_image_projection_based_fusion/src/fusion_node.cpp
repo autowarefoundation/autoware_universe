@@ -183,7 +183,7 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
   // Create a dedicated callback group for agnocast subscriptions so that
   // CallbackIsolatedAgnocastExecutor assigns a SingleThreadedAgnocastExecutor only
   // to this group, keeping timers and ROS 2 subscriptions starvation-free.
-  agnocast_callback_group_ =
+  agnocast_msg3d_sub_callback_group_ =
     this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
   // Diagnostic Updater
