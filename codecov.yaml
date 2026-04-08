@@ -27,7 +27,7 @@ flag_management:
         target: 0% # Make CI always succeed
         threshold: 100% # Make CI always succeed
   individual_flags:
-    - name: differential-jazzy-cuda
+    - name: full-suite
       carryforward: true
 
 ignore:
