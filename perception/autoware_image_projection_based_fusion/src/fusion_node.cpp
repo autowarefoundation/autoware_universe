@@ -180,6 +180,11 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
     stop_watch_ptr_->tic("processing_time");
   }
 
+  // Create a dedicated callback group for fusion collector timers so they are not
+  // starved by agnocast subscription processing in SingleThreadedAgnocastExecutor.
+  timer_callback_group_ =
+    this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
   // Diagnostic Updater
   diagnostic_updater_.setHardwareID(node_name + "_checker");
   diagnostic_updater_.add(node_name + "_status", this, &FusionNode::check_fusion_status);
@@ -212,7 +217,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_collector_list()
     fusion_collectors_.emplace_back(
       std::make_shared<FusionCollector<Msg3D, Msg2D, ExportObj>>(
         std::dynamic_pointer_cast<FusionNode>(shared_from_this()), rois_number_, det2d_status_list_,
-        collector_debug_mode_));
+        collector_debug_mode_, timer_callback_group_));
   }
   init_collector_list_ = true;
 }
