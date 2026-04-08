@@ -14,7 +14,7 @@
 
 #include "radar_objects_adapter.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
 #include <map>
@@ -128,8 +128,8 @@ void RadarObjectsAdapter::radar_cov_to_detection_pose_cov(
   const std::array<float, 6> & radar_pose_cov, const double orientation_std,
   std::array<double, 36> & pose_cov)
 {
-  using DETECTION_COV_IDX = autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  using RADAR_COV_IDX = autoware::universe_utils::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
+  using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
 
   pose_cov[DETECTION_COV_IDX::X_X] = mask_cov_value(radar_pose_cov[RADAR_COV_IDX::X_X]);
   pose_cov[DETECTION_COV_IDX::X_Y] = mask_cov_value(radar_pose_cov[RADAR_COV_IDX::X_Y]);
@@ -145,8 +145,8 @@ void RadarObjectsAdapter::radar_cov_to_detection_twist_cov(
   const std::array<float, 6> & radar_twist_cov, const float yaw, const float yaw_rate_std,
   std::array<double, 36> & twist_cov)
 {
-  using DETECTION_COV_IDX = autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  using RADAR_COV_IDX = autoware::universe_utils::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
+  using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
 
   const float c = std::cos(yaw);
   const float s = std::sin(yaw);
@@ -175,8 +175,8 @@ void RadarObjectsAdapter::radar_cov_to_detection_acceleration_cov(
   const std::array<float, 6> & radar_acceleration_cov, const float yaw,
   std::array<double, 36> & acceleration_cov)
 {
-  using DETECTION_COV_IDX = autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  using RADAR_COV_IDX = autoware::universe_utils::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
+  using DETECTION_COV_IDX = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using RADAR_COV_IDX = autoware_utils_geometry::xyz_upper_covariance_index::XYZ_UPPER_COV_IDX;
 
   const float c = std::cos(yaw);
   const float s = std::sin(yaw);
@@ -230,7 +230,7 @@ void RadarObjectsAdapter::populate_common_fields(
   output_pose.position.x = input_object.position.x;
   output_pose.position.y = input_object.position.y;
   output_pose.position.z = position_z_available_ ? input_object.position.z : default_position_z_;
-  output_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(yaw);
+  output_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
 
   radar_cov_to_detection_pose_cov(
     input_object.position_covariance, input_object.orientation_std,
