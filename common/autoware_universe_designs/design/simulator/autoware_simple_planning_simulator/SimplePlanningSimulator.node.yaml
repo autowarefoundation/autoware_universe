@@ -85,7 +85,6 @@ publishers:
   - name: perception/traffic_light_recognition/traffic_signals
     message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
 
-
 servers:
   - name: api/simulator/set/pose
     message_type: tier4_external_api_msgs/srv/InitializePose
