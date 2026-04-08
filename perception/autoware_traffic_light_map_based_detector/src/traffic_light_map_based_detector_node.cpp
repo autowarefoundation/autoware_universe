@@ -53,17 +53,11 @@ MapBasedDetector::MapBasedDetector(const rclcpp::NodeOptions & node_options)
     this->declare_parameter<double>("min_timestamp_offset"),
     this->declare_parameter<double>("max_timestamp_offset")};
 
-  if (config.max_detection_range <= 0) {
-    throw std::invalid_argument(
-      "max_detection_range must be positive, got " + std::to_string(config.max_detection_range));
-  }
   if (
-    transform_sampling_config_.max_timestamp_offset <=
+    transform_sampling_config_.max_timestamp_offset <
     transform_sampling_config_.min_timestamp_offset) {
     throw std::invalid_argument(
-      "max_timestamp_offset (" + std::to_string(transform_sampling_config_.max_timestamp_offset) +
-      ") must be greater than min_timestamp_offset (" +
-      std::to_string(transform_sampling_config_.min_timestamp_offset) + ")");
+      "max_timestamp_offset must be greater than or equal to min_timestamp_offset");
   }
 
   // create detector
