@@ -25,6 +25,10 @@ on:
         type: string
         default: ""
         required: false
+      arch:
+        type: string
+        default: amd64
+        required: false
       push-ccache:
         type: boolean
         default: false
@@ -177,7 +181,7 @@ jobs:
 
   clang-tidy:
     needs: build-and-test
-    if: ${{ inputs.rosdistro == 'jazzy' && inputs.container-suffix == '-cuda' }}
+    if: ${{ inputs.rosdistro == 'jazzy' && inputs.container-suffix == '-cuda' && inputs.arch == 'amd64' }}
     runs-on: ubuntu-latest
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
     steps:
