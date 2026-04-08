@@ -61,6 +61,7 @@ jobs:
       pull-ccache: true
       push-ccache: false
       concurrency-group: build-and-test-daily-${{ matrix.rosdistro }}-${{ matrix.arch }}-${{ matrix.cache-suffix }}-${{ github.ref }}-${{ github.run_id }}
+      upload-coverage: ${{ matrix.rosdistro == 'jazzy' && matrix.arch == 'amd64' && matrix.cuda }}
       codecov-flag: daily-${{ matrix.rosdistro }}-${{ matrix.arch }}-${{ matrix.cache-suffix }}
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
