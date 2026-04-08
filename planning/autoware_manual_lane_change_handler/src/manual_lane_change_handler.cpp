@@ -102,6 +102,12 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
   auto route = *msg;
   planner_->updateRoute(*msg);
 
+  if (!planner_->ready()) {
+    RCLCPP_WARN(logger_, "Lanelet map not yet loaded; skipping primitive sort.");
+    current_route_ = std::make_shared<LaneletRoute>(route);
+    return;
+  }
+
   const auto & route_handler = planner_->getRouteHandler();
   std::for_each(route.segments.begin(), route.segments.end(), [&](auto & segment) {
     segment.primitives =
