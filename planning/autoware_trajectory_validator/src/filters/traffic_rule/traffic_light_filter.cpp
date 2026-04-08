@@ -56,7 +56,8 @@ collect_stop_lines(
       continue;
     }
 
-    const auto traffic_light = std::dynamic_pointer_cast<lanelet::TrafficLight>(*traffic_light_it);
+    const auto traffic_light =
+      std::dynamic_pointer_cast<const lanelet::TrafficLight>(*traffic_light_it);
     if (!traffic_light || !traffic_light->stopLine().has_value()) {
       continue;
     }
