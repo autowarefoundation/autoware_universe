@@ -15,7 +15,7 @@ launch:
 # interfaces
 subscribers:
   - name: modified_goal
-    message_type: geometry_msgs/msg/PoseStamped
+    message_type: autoware_planning_msgs/msg/PoseWithUuidStamped
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: odometry

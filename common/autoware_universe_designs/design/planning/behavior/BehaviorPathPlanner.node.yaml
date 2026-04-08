@@ -40,7 +40,7 @@ publishers:
   - name: hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
   - name: modified_goal
-    message_type: geometry_msgs/msg/PoseWithUuidStamped
+    message_type: autoware_planning_msgs/msg/PoseWithUuidStamped
   - name: is_reroute_available
     message_type: tier4_planning_msgs/msg/RerouteAvailability
 
