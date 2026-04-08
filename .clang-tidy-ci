@@ -1,0 +1,34 @@
+Checks: "
+  -*,
+  bugprone-*,
+  -bugprone-assignment-in-if-condition,
+  -bugprone-branch-clone,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-empty-catch,
+  -bugprone-exception-escape,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-infinite-loop,
+  -bugprone-integer-division,
+  -bugprone-macro-parentheses,
+  -bugprone-multi-level-implicit-pointer-conversion,
+  -bugprone-narrowing-conversions,
+  -bugprone-optional-value-conversion,
+  -bugprone-parent-virtual-call,
+  -bugprone-reserved-identifier,
+  -bugprone-signed-char-misuse,
+  -bugprone-switch-missing-default-case,
+  -bugprone-unchecked-optional-access,
+  -bugprone-unused-local-non-trivial-variable,
+  -bugprone-unused-return-value"
+
+WarningsAsErrors: "*"
+
+ExtraArgs:
+  - -std=c++17
+  - -Wno-c11-extensions
+  - -Wno-unknown-warning-option
+  - -Wno-deprecated-declarations
+  - -Wno-delete-non-abstract-non-virtual-dtor
+  - -Wno-unused-private-field
+  - -Wno-unused-but-set-variable
+  - -Wno-deprecated-builtins
