@@ -78,7 +78,7 @@ public:
   FusionCollector(
     std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && ros2_parent_node,
     std::size_t rois_number, const std::vector<Det2dStatus<Msg2D>> & det2d_status_list,
-    bool debug_mode, rclcpp::CallbackGroup::SharedPtr timer_callback_group = nullptr);
+    bool debug_mode);
   void process_msg3d(const typename Msg3D::ConstSharedPtr msg3d, double msg3d_timeout);
   void process_rois(
     const std::size_t & rois_id, const typename Msg2D::ConstSharedPtr rois_msg,

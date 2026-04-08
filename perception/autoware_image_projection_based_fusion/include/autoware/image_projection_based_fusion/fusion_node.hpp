@@ -170,8 +170,10 @@ protected:
 
   std::string matching_strategy_;
 
-  // callback group for fusion collector timers (isolated from agnocast subscriptions)
-  rclcpp::CallbackGroup::SharedPtr timer_callback_group_;
+  // callback group for agnocast subscriptions (isolated so that
+  // CallbackIsolatedAgnocastExecutor assigns a SingleThreadedAgnocastExecutor
+  // only to this group, keeping the remaining groups starvation-free)
+  rclcpp::CallbackGroup::SharedPtr agnocast_callback_group_;
 
   // output publisher
   typename rclcpp::Publisher<ExportObj>::SharedPtr pub_ptr_;

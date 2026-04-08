@@ -80,7 +80,7 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
       auto ros2_msg = std::make_shared<const ClusterMsgType>(*msg);
       this->sub_callback(ros2_msg);
     },
-    AUTOWARE_SUBSCRIPTION_OPTIONS{});
+    AUTOWARE_SUBSCRIPTION_OPTIONS{.callback_group = agnocast_callback_group_});
 
   // publisher
   // TODO(Koichi98): replace pub_ptr_ in FusionNode with agnocast_wrapper
