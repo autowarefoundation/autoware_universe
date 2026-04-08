@@ -82,6 +82,9 @@ publishers:
   - name: sensing/imu/imu_data
     message_type: sensor_msgs/msg/Imu
     remap_target: output/imu
+  - name: perception/traffic_light_recognition/traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+
 
 servers:
   - name: api/simulator/set/pose
