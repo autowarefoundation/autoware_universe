@@ -127,9 +127,16 @@ struct ProjectionToBound
     return departure_type_opt && departure_type_opt.value() == DepartureType::NEAR_BOUNDARY;
   }
 
+  [[nodiscard]] bool is_approaching_departure() const
+  {
+    return footprint_type_opt && footprint_type_opt.value() == FootprintType::NORMAL &&
+           departure_type_opt && departure_type_opt.value() == DepartureType::APPROACHING_DEPARTURE;
+  }
+
   [[nodiscard]] bool is_critical_departure() const
   {
-    return departure_type_opt && departure_type_opt.value() == DepartureType::CRITICAL_DEPARTURE;
+    return footprint_type_opt && footprint_type_opt.value() == FootprintType::NORMAL &&
+           departure_type_opt && departure_type_opt.value() == DepartureType::CRITICAL_DEPARTURE;
   }
 };
 

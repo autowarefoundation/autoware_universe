@@ -423,6 +423,13 @@ std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
   const std::vector<ProjectionToBound> & candidate_projections, const Param & param,
   const double min_braking_dist, const double max_braking_dist, const SideKey side_key,
   const std::optional<double> previous_longitudinal_distance);
+
+DepartureType assign_departure_type(
+  const double longitudinal_distance_to_departure_point,
+  const double longitudinal_offset_to_departure_point, const double minimum_braking_distance,
+  const double maximum_braking_distance, const double cutoff_time, const double time_from_start,
+  const double lat_dist, const double th_lat_near, const double th_lat_critical,
+  const FootprintType footprint_type);
 }  // namespace autoware::boundary_departure_checker::utils
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
