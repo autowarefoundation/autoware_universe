@@ -25,6 +25,10 @@ on:
         type: string
         default: ""
         required: false
+      arch:
+        type: string
+        default: amd64
+        required: false
       push-ccache:
         type: boolean
         default: false
@@ -38,6 +42,10 @@ on:
         default: ${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }} # unique per run
         required: false
       cancel-in-progress:
+        type: boolean
+        default: false
+        required: false
+      upload-coverage:
         type: boolean
         default: false
         required: false
@@ -61,8 +69,6 @@ jobs:
   build-and-test:
     runs-on: ${{ fromJson(inputs.runner) }}
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
-    outputs:
-      coverage-files: ${{ steps.test.outputs.coverage-report-files }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -163,22 +169,26 @@ jobs:
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
           build-depends-repos: build_depends.repos
 
-      # Cache lcov/coverage directories for next job
-      - name: Upload coverage artifacts
-        if: ${{ steps.test.outputs.coverage-report-files != '' }}
-        uses: actions/upload-artifact@v4
+      - name: Upload coverage to CodeCov
+        if: ${{ steps.test.outputs.coverage-report-files != '' && inputs.upload-coverage }}
+        uses: codecov/codecov-action@v6
         with:
-          name: coverage-${{ inputs.codecov-flag }}-${{ inputs.rosdistro }}
-          path: |
-            build
-            lcov
+          files: ${{ steps.test.outputs.coverage-report-files }}
+          fail_ci_if_error: false
+          verbose: true
+          flags: ${{ inputs.codecov-flag }}
+          token: ${{ secrets.codecov-token }}
+          disable_search: true
+          # Disable gcov and xcode plugins, keeping only pycoverage.
+          # Default plugins: https://github.com/getsentry/prevent-cli/blob/45e518e5ca344c9fb7a5cbe596a21b7ab85a39ed/codecov-cli/README.md?plain=1#L178
+          plugins: pycoverage
 
       - name: Show disk space after the tasks
         run: df -h
 
   clang-tidy:
     needs: build-and-test
-    if: ${{ inputs.rosdistro == 'jazzy' && inputs.container-suffix == '-cuda' }}
+    if: ${{ inputs.rosdistro == 'jazzy' && inputs.container-suffix == '-cuda' && inputs.arch == 'amd64' }}
     runs-on: ubuntu-latest
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
     steps:
@@ -218,7 +228,7 @@ jobs:
         with:
           rosdistro: ${{ inputs.rosdistro }}
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
-          clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy-ci
+          clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware_universe/main/.clang-tidy-ci
           clang-tidy-ignore-path: .clang-tidy-ignore
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
@@ -226,25 +236,3 @@ jobs:
 
       - name: Show disk space after the tasks
         run: df -h
-
-  upload-coverage:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: ${{ needs.build-and-test.outputs.coverage-files != '' }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download coverage artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-${{ inputs.codecov-flag }}-${{ inputs.rosdistro }}
-
-      - name: Upload coverage to CodeCov
-        uses: codecov/codecov-action@v4
-        with:
-          files: ${{ needs.build-and-test.outputs.coverage-files }}
-          fail_ci_if_error: false
-          verbose: true
-          flags: ${{ inputs.codecov-flag }}
-          token: ${{ secrets.codecov-token }}

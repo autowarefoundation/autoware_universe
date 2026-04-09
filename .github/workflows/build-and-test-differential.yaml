@@ -134,14 +134,18 @@ jobs:
           build-depends-repos: build_depends.repos
 
       - name: Upload coverage to CodeCov
-        if: ${{ steps.test.outputs.coverage-report-files != '' }}
-        uses: codecov/codecov-action@v4
+        if: ${{ steps.test.outputs.coverage-report-files != '' && inputs.container-suffix == '-cuda' && inputs.rosdistro == 'jazzy' }}
+        uses: codecov/codecov-action@v6
         with:
           files: ${{ steps.test.outputs.coverage-report-files }}
           fail_ci_if_error: false
           verbose: true
-          flags: differential${{ inputs.container-suffix }}
+          flags: full-suite
           token: ${{ secrets.codecov-token }}
+          disable_search: true
+          # Disable gcov and xcode plugins, keeping only pycoverage.
+          # Default plugins: https://github.com/getsentry/prevent-cli/blob/45e518e5ca344c9fb7a5cbe596a21b7ab85a39ed/codecov-cli/README.md?plain=1#L178
+          plugins: pycoverage
 
       - name: Show disk space after the tasks
         run: df -h
