@@ -6,10 +6,10 @@ Publish dummy traffic light signals for simulation environments where a traffic 
 
 ## Modes
 
-| Mode | Description |
-| --- | --- |
+| Mode         | Description                                                                           |
+| ------------ | ------------------------------------------------------------------------------------- |
 | `standalone` | Cycles through Green -> Yellow -> Red for all traffic lights found in the vector map. |
-| `empty` | Publishes an empty `TrafficLightGroupArray` (no traffic light groups). |
+| `empty`      | Publishes an empty `TrafficLightGroupArray` (no traffic light groups).                |
 
 ## Pass-through
 
@@ -19,27 +19,27 @@ When a message is received on the input topic (`~/input/traffic_signals`), the n
 
 ### Subscriptions
 
-| Topic | Type | Description |
-| --- | --- | --- |
-| `~/input/vector_map` | `autoware_map_msgs/msg/LaneletMapBin` | Lanelet2 map to extract traffic light regulatory element IDs. |
-| `~/input/traffic_signals` | `autoware_perception_msgs/msg/TrafficLightGroupArray` | External traffic light signals for pass-through. |
+| Topic                     | Type                                                  | Description                                                   |
+| ------------------------- | ----------------------------------------------------- | ------------------------------------------------------------- |
+| `~/input/vector_map`      | `autoware_map_msgs/msg/LaneletMapBin`                 | Lanelet2 map to extract traffic light regulatory element IDs. |
+| `~/input/traffic_signals` | `autoware_perception_msgs/msg/TrafficLightGroupArray` | External traffic light signals for pass-through.              |
 
 ### Publications
 
-| Topic | Type | Description |
-| --- | --- | --- |
+| Topic                      | Type                                                  | Description                                 |
+| -------------------------- | ----------------------------------------------------- | ------------------------------------------- |
 | `~/output/traffic_signals` | `autoware_perception_msgs/msg/TrafficLightGroupArray` | Generated or relayed traffic light signals. |
 
 ## Parameters
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `mode` | string | `"empty"` | Operating mode: `"standalone"` or `"empty"`. |
-| `publish_rate` | double | `10.0` | Publishing frequency [Hz]. |
-| `green_duration` | double | `30.0` | Duration of the green phase [s]. |
-| `yellow_duration` | double | `3.0` | Duration of the yellow phase [s]. |
-| `red_duration` | double | `30.0` | Duration of the red phase [s]. |
-| `passthrough_timeout` | double | `1.0` | Time after last input before falling back to the configured mode [s]. |
+| Parameter             | Type   | Default   | Description                                                           |
+| --------------------- | ------ | --------- | --------------------------------------------------------------------- |
+| `mode`                | string | `"empty"` | Operating mode: `"standalone"` or `"empty"`.                          |
+| `publish_rate`        | double | `10.0`    | Publishing frequency [Hz].                                            |
+| `green_duration`      | double | `30.0`    | Duration of the green phase [s].                                      |
+| `yellow_duration`     | double | `3.0`     | Duration of the yellow phase [s].                                     |
+| `red_duration`        | double | `30.0`    | Duration of the red phase [s].                                        |
+| `passthrough_timeout` | double | `1.0`     | Time after last input before falling back to the configured mode [s]. |
 
 ## Usage
 
@@ -59,11 +59,11 @@ ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher
 
 This package separates concerns into three layers:
 
-| Layer | Class | Role |
-| --- | --- | --- |
-| ROS I/O | `DummyTrafficLightPublisherNode` | Subscriptions (`take()`), timer, publisher, vector map parsing. |
-| Message assembly | `DummyTrafficLight` | Pass-through judgment, traffic light ID management, `TrafficLightGroupArray` construction. |
-| Signal generation | `TrafficLightCycle` | Phase computation (Green/Yellow/Red) from elapsed time and `TrafficLightElement` output. |
+| Layer             | Class                            | Role                                                                                       |
+| ----------------- | -------------------------------- | ------------------------------------------------------------------------------------------ |
+| ROS I/O           | `DummyTrafficLightPublisherNode` | Subscriptions (`take()`), timer, publisher, vector map parsing.                            |
+| Message assembly  | `DummyTrafficLight`              | Pass-through judgment, traffic light ID management, `TrafficLightGroupArray` construction. |
+| Signal generation | `TrafficLightCycle`              | Phase computation (Green/Yellow/Red) from elapsed time and `TrafficLightElement` output.   |
 
 When extending, modify only the layer that owns the responsibility:
 

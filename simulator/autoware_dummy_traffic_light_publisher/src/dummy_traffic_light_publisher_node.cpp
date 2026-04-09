@@ -41,7 +41,8 @@ DummyTrafficLightPublisherNode::DummyTrafficLightPublisherNode(const rclcpp::Nod
   // publish
   const auto publish_rate = this->declare_parameter<double>("publish_rate");
   if (publish_rate <= 0.0) {
-    throw std::invalid_argument("publish_rate must be positive, got: " + std::to_string(publish_rate));
+    throw std::invalid_argument(
+      "publish_rate must be positive, got: " + std::to_string(publish_rate));
   }
   // traffic light cycle
   const auto green_duration = this->declare_parameter<double>("green_duration");
@@ -51,8 +52,7 @@ DummyTrafficLightPublisherNode::DummyTrafficLightPublisherNode(const rclcpp::Nod
     throw std::invalid_argument("duration values must be non-negative");
   }
   if (green_duration + yellow_duration + red_duration <= 0.0) {
-    throw std::invalid_argument(
-      "green_duration + yellow_duration + red_duration must be positive");
+    throw std::invalid_argument("green_duration + yellow_duration + red_duration must be positive");
   }
   const auto passthrough_timeout = this->declare_parameter<double>("passthrough_timeout");
   if (passthrough_timeout < 0.0) {
@@ -69,9 +69,9 @@ DummyTrafficLightPublisherNode::DummyTrafficLightPublisherNode(const rclcpp::Nod
   pub_ = this->create_publisher<autoware_perception_msgs::msg::TrafficLightGroupArray>(
     "~/output/traffic_signals", rclcpp::QoS(1));
 
-  // use the take metdhod in onTimer, so create dummy subscriptions with empty callbacks to get the subscription objects.
-  manual_group_ =
-    this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
+  // use the take metdhod in onTimer, so create dummy subscriptions with empty callbacks to get the
+  // subscription objects.
+  manual_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
 
   rclcpp::SubscriptionOptions sub_options;
   sub_options.callback_group = manual_group_;
@@ -113,9 +113,8 @@ void DummyTrafficLightPublisherNode::try_update_vector_map()
   rclcpp::MessageInfo info;
   if (sub_vector_map_->take(msg, info)) {
     try {
-      lanelet::LaneletMapPtr lanelet_map =
-        autoware::experimental::lanelet2_utils::remove_const(
-          autoware::experimental::lanelet2_utils::from_autoware_map_msgs(msg));
+      lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+        autoware::experimental::lanelet2_utils::from_autoware_map_msgs(msg));
       lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map);
       std::vector<lanelet::TrafficLightConstPtr> tl_reg_elems =
         lanelet::utils::query::trafficLights(all_lanelets);

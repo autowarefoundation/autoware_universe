@@ -40,8 +40,7 @@ private:
 
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr pub_;
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_vector_map_;
-  rclcpp::Subscription<autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr
-    sub_input_;
+  rclcpp::Subscription<autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr sub_input_;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::CallbackGroup::SharedPtr manual_group_;
 };
