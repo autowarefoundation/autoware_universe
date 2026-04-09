@@ -18,6 +18,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: ${{ env.PR_FETCH_DEPTH }}
 
+      - name: Set git safe directory
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
       - name: Install Cppcheck
         run: |
           apt-get update
