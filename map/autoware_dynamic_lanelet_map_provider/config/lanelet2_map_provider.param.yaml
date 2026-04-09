@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    map_radius: 150.0               # [m] Radius around ego to include map cells.
+    update_distance_threshold: 50.0 # [m] Minimum distance the ego must travel before triggering a submap update.

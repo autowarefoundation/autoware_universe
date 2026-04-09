@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "lanelet2_map_provider parameters",
+  "type": "object",
+  "definitions": {
+    "lanelet2_map_provider": {
+      "type": "object",
+      "properties": {
+        "map_radius": {
+          "type": "number",
+          "description": "Radius [m] around the ego vehicle used to select lanelet2 map cells.",
+          "default": 150.0,
+          "minimum": 1.0
+        },
+        "update_distance_threshold": {
+          "type": "number",
+          "description": "Minimum distance [m] the ego must travel before the submap is re-requested.",
+          "default": 50.0,
+          "minimum": 0.0
+        }
+      },
+      "required": ["map_radius", "update_distance_threshold"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/lanelet2_map_provider"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}
