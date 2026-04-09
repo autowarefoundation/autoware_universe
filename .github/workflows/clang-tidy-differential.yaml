@@ -113,6 +113,7 @@ jobs:
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
           artifact-name: clang-tidy-result-${{ inputs.rosdistro }}${{ inputs.container-suffix }}
+          use-clang-tidy-cache: true
 
       - name: Show disk space after the tasks
         run: df -h
