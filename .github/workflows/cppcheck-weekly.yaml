@@ -31,7 +31,7 @@ jobs:
         run: |
           #!/bin/bash
           temp_file=$(mktemp)
-          grep -oP '(?<=id=")[^"]+" severity="[^"]+' cppcheck-report.xml | sed 's/" severity="/,/g' > "$temp_file"
+          grep -oP '(?<=id=")[^"]+" severity="[^"]+' cppcheck-report.xml | sed 's/" severity="/,/g' > "$temp_file" || true
           echo "Error counts by error ID and severity:"
           sort "$temp_file" | uniq -c
           rm "$temp_file"
