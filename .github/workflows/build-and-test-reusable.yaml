@@ -170,7 +170,7 @@ jobs:
           build-depends-repos: build_depends.repos
 
       - name: Upload coverage to CodeCov
-        if: ${{ steps.test.outputs.coverage-report-files != '' && inputs.upload-coverage && secrets.codecov-token != '' }}
+        if: ${{ steps.test.outputs.coverage-report-files != '' && inputs.upload-coverage }}
         uses: codecov/codecov-action@v6
         with:
           files: ${{ steps.test.outputs.coverage-report-files }}
