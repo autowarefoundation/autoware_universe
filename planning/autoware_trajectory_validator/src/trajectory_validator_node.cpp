@@ -31,36 +31,6 @@
 #include <unordered_map>
 #include <vector>
 
-namespace
-{
-// for error diagnostic. Will be removed once node is combined.
-std::unordered_map<std::string, std::string> get_generator_uuid_to_name_map(
-  const autoware_internal_planning_msgs::msg::CandidateTrajectories & candidate_trajectories)
-{
-  std::unordered_map<std::string, std::string> uuid_to_name;
-  uuid_to_name.reserve(candidate_trajectories.generator_info.size());
-  for (const auto & info : candidate_trajectories.generator_info) {
-    uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
-  }
-  return uuid_to_name;
-}
-
-bool has_trajectory_from_generator(
-  const std::unordered_map<std::string, std::string> & uuid_to_generator_name_map,
-  const autoware_internal_planning_msgs::msg::CandidateTrajectories & trajectories,
-  const std::string & generator_name_prefix)
-{
-  return std::any_of(
-    trajectories.candidate_trajectories.cbegin(), trajectories.candidate_trajectories.cend(),
-    [&](const autoware_internal_planning_msgs::msg::CandidateTrajectory & trajectory) {
-      const auto generator_id_str = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
-      const auto generator_name_it = uuid_to_generator_name_map.find(generator_id_str);
-      return generator_name_it != uuid_to_generator_name_map.end() &&
-             generator_name_it->second.rfind(generator_name_prefix, 0) == 0;
-    });
-}
-}  // namespace
-
 namespace autoware::trajectory_validator
 {
 
@@ -141,17 +111,20 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
 
   diagnostics_interface_.clear();
   evaluation_tables_.clear();
+  size_t num_feasible_trajectories = 0;
 
   // Create output message for filtered trajectories
   auto filtered_msg = std::make_unique<CandidateTrajectories>();
 
-  // Process and filter trajectories
   for (const auto & trajectory : msg->candidate_trajectories) {
     // Apply each filter to the trajectory
 
     EvaluationTable table;
     table.generator_id = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
 
+    // NOTE: this is used to determine diagnostic status, and doesn't affect whether filtering is
+    // applied
+    bool is_overall_feasible = true;
     for (const auto & plugin : plugins_) {
       PluginEvaluation evaluation;
       evaluation.plugin_name = plugin->get_name();
@@ -165,10 +138,11 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
         evaluation.reason = res.error();
 
         if (plugin->is_shadow_mode()) {
+          table.is_overall_feasible = false;
           continue;
         }
 
-        table.is_overall_feasible = false;
+        is_overall_feasible = false;
       }
 
       table.evaluations[plugin->category()].push_back(evaluation);
@@ -176,7 +150,10 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
 
     evaluation_tables_.push_back(table);
 
+    // NOTE: table.is_overall_feasible considers debug mode,
+    // so in debug mode, all trajectories are kept
     if (table.is_overall_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
+    if (is_overall_feasible) ++num_feasible_trajectories;
   }
 
   // Also filter generator_info to match kept trajectories
@@ -190,7 +167,7 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
     }
   }
 
-  update_diagnostic(*msg, *filtered_msg);
+  update_diagnostic(*msg, num_feasible_trajectories);
   pub_trajectories_->publish(*filtered_msg);
 }
 
@@ -257,25 +234,19 @@ void TrajectoryValidator::unload_metric(const std::string & name)
 }
 
 void TrajectoryValidator::update_diagnostic(
-  const CandidateTrajectories & input_trajectories,
-  const CandidateTrajectories & filtered_trajectories)
+  const CandidateTrajectories & input_trajectories, const size_t num_feasible_trajectories)
 {
-  const auto uuid_to_name_map = get_generator_uuid_to_name_map(input_trajectories);
-  const auto input_has_diffusion_trajectories =
-    has_trajectory_from_generator(uuid_to_name_map, input_trajectories, "Diffusion");
-  const auto filtered_has_diffusion_trajectories =
-    has_trajectory_from_generator(uuid_to_name_map, filtered_trajectories, "Diffusion");
-  if (
-    !input_trajectories.candidate_trajectories.empty() &&
-    filtered_trajectories.candidate_trajectories.empty()) {
+  if (input_trajectories.candidate_trajectories.size() == num_feasible_trajectories) {
+    // All trajectories are feasible
+    diagnostics_interface_.update_level_and_message(diagnostic_msgs::msg::DiagnosticStatus::OK, "");
+  } else if (num_feasible_trajectories == 0) {
+    // No feasible trajectories found
     diagnostics_interface_.update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No feasible trajectories found");
-  } else if (input_has_diffusion_trajectories && !filtered_has_diffusion_trajectories) {
-    diagnostics_interface_.update_level_and_message(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN,
-      "All diffusion planner trajectories are infeasible");
   } else {
-    diagnostics_interface_.update_level_and_message(diagnostic_msgs::msg::DiagnosticStatus::OK, "");
+    // At least one trajectory is infeasible
+    diagnostics_interface_.update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "At least one trajectory is infeasible");
   }
 
   diagnostics_interface_.publish(this->get_clock()->now());

@@ -84,8 +84,7 @@ private:
    */
   void unload_metric(const std::string & name);
   void update_diagnostic(
-    const CandidateTrajectories & input_trajectories,
-    const CandidateTrajectories & filtered_trajectories);
+    const CandidateTrajectories & input_trajectories, const size_t num_feasible_trajectories);
 
   validator::ParamListener listener_;
   validator::Params params_;
