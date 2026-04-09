@@ -14,6 +14,10 @@
 
 #include "autoware/dummy_traffic_light_publisher/dummy_traffic_light.hpp"
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 namespace autoware::dummy_traffic_light_publisher
 {
 

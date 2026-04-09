@@ -16,6 +16,8 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+
 using autoware::dummy_traffic_light_publisher::DummyTrafficLight;
 using autoware::dummy_traffic_light_publisher::Mode;
 using autoware::dummy_traffic_light_publisher::TrafficLightCycle;

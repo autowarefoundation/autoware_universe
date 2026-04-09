@@ -18,8 +18,10 @@
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace autoware::dummy_traffic_light_publisher
 {
@@ -69,7 +71,7 @@ DummyTrafficLightPublisherNode::DummyTrafficLightPublisherNode(const rclcpp::Nod
   pub_ = this->create_publisher<autoware_perception_msgs::msg::TrafficLightGroupArray>(
     "~/output/traffic_signals", rclcpp::QoS(1));
 
-  // use the take metdhod in onTimer, so create dummy subscriptions with empty callbacks to get the subscription objects.
+  // use the take method in onTimer, so create dummy subscriptions with empty callbacks to get the subscription objects.
   manual_group_ =
     this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
 
