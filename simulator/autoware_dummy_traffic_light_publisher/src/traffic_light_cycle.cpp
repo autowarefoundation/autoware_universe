@@ -14,7 +14,7 @@
 
 #include "autoware/dummy_traffic_light_publisher/traffic_light_cycle.hpp"
 
-#include <array>
+#include <cmath>
 
 namespace autoware::dummy_traffic_light_publisher
 {
@@ -30,25 +30,27 @@ autoware_perception_msgs::msg::TrafficLightElement TrafficLightCycle::update(
 {
   using Element = autoware_perception_msgs::msg::TrafficLightElement;
 
-  static constexpr std::array<Phase, 3> kNextPhase = {Phase::Yellow, Phase::Red, Phase::Green};
-  static constexpr std::array<uint8_t, 3> kColor = {Element::GREEN, Element::AMBER, Element::RED};
-  const std::array<double, 3> durations = {green_duration_, yellow_duration_, red_duration_};
-
-  // advance phase
-  if (!initialized_) {
-    last_transition_time_ = now;
-    initialized_ = true;
-  } else {
-    const auto i = static_cast<int>(phase_);
-    if ((now - last_transition_time_).seconds() >= durations[i]) {
-      last_transition_time_ = now;
-      phase_ = kNextPhase[i];
-    }
+  if (!start_time_) {
+    start_time_ = now;
   }
 
-  // build element
+  const double total = green_duration_ + yellow_duration_ + red_duration_;
+  double elapsed = std::fmod((now - *start_time_).seconds(), total);
+  if (elapsed < 0.0) {
+    elapsed += total;
+  }
+
+  uint8_t color;
+  if (elapsed < green_duration_) {
+    color = Element::GREEN;
+  } else if (elapsed < green_duration_ + yellow_duration_) {
+    color = Element::AMBER;
+  } else {
+    color = Element::RED;
+  }
+
   Element element;
-  element.color = kColor[static_cast<int>(phase_)];
+  element.color = color;
   element.shape = Element::CIRCLE;
   element.status = Element::SOLID_ON;
   element.confidence = 1.0;

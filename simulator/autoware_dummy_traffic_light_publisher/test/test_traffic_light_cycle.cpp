@@ -28,7 +28,7 @@ protected:
 
   TrafficLightCycle cycle{kGreenDuration, kYellowDuration, kRedDuration};
 
-  rclcpp::Time makeTime(double seconds) const
+  rclcpp::Time timeFromSec(double seconds) const
   {
     return rclcpp::Time(static_cast<int64_t>(seconds * 1e9));
   }
@@ -36,7 +36,7 @@ protected:
 
 TEST_F(TrafficLightCycleTest, InitialOutputIsGreen)
 {
-  const auto element = cycle.update(makeTime(0.0));
+  const auto element = cycle.update(timeFromSec(0.0));
   EXPECT_EQ(element.color, TrafficLightElement::GREEN);
   EXPECT_EQ(element.shape, TrafficLightElement::CIRCLE);
   EXPECT_EQ(element.status, TrafficLightElement::SOLID_ON);
@@ -45,42 +45,101 @@ TEST_F(TrafficLightCycleTest, InitialOutputIsGreen)
 
 TEST_F(TrafficLightCycleTest, StaysGreenBeforeDuration)
 {
-  cycle.update(makeTime(0.0));
-  const auto element = cycle.update(makeTime(kGreenDuration - 0.1));
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(kGreenDuration - 0.1));
   EXPECT_EQ(element.color, TrafficLightElement::GREEN);
 }
 
 TEST_F(TrafficLightCycleTest, TransitionsToYellow)
 {
-  cycle.update(makeTime(0.0));
-  const auto element = cycle.update(makeTime(kGreenDuration));
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(kGreenDuration));
   EXPECT_EQ(element.color, TrafficLightElement::AMBER);
 }
 
 TEST_F(TrafficLightCycleTest, TransitionsToRed)
 {
-  cycle.update(makeTime(0.0));
-  cycle.update(makeTime(kGreenDuration));
-  const auto element = cycle.update(makeTime(kGreenDuration + kYellowDuration));
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(kGreenDuration + kYellowDuration));
   EXPECT_EQ(element.color, TrafficLightElement::RED);
 }
 
 TEST_F(TrafficLightCycleTest, CyclesBackToGreen)
 {
-  cycle.update(makeTime(0.0));
-  cycle.update(makeTime(kGreenDuration));
-  cycle.update(makeTime(kGreenDuration + kYellowDuration));
-  const auto element = cycle.update(makeTime(kGreenDuration + kYellowDuration + kRedDuration));
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(kGreenDuration + kYellowDuration + kRedDuration));
   EXPECT_EQ(element.color, TrafficLightElement::GREEN);
 }
 
-TEST_F(TrafficLightCycleTest, SecondCycleWorks)
+TEST_F(TrafficLightCycleTest, MidGreenStaysGreen)
+{
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(15.0));
+  EXPECT_EQ(element.color, TrafficLightElement::GREEN);
+}
+
+TEST_F(TrafficLightCycleTest, MidYellowStaysYellow)
+{
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(31.5));
+  EXPECT_EQ(element.color, TrafficLightElement::AMBER);
+}
+
+TEST_F(TrafficLightCycleTest, MidRedStaysRed)
+{
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(50.0));
+  EXPECT_EQ(element.color, TrafficLightElement::RED);
+}
+
+TEST_F(TrafficLightCycleTest, SecondCycleGreen)
 {
   const double full_cycle = kGreenDuration + kYellowDuration + kRedDuration;
-  cycle.update(makeTime(0.0));
-  cycle.update(makeTime(kGreenDuration));
-  cycle.update(makeTime(kGreenDuration + kYellowDuration));
-  cycle.update(makeTime(full_cycle));
-  const auto element = cycle.update(makeTime(full_cycle + kGreenDuration));
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(full_cycle + 1.0));
+  EXPECT_EQ(element.color, TrafficLightElement::GREEN);
+}
+
+TEST_F(TrafficLightCycleTest, SecondCycleYellow)
+{
+  const double full_cycle = kGreenDuration + kYellowDuration + kRedDuration;
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(full_cycle + kGreenDuration));
   EXPECT_EQ(element.color, TrafficLightElement::AMBER);
+}
+
+TEST_F(TrafficLightCycleTest, SecondCycleRed)
+{
+  const double full_cycle = kGreenDuration + kYellowDuration + kRedDuration;
+  cycle.update(timeFromSec(0.0));
+  const auto element = cycle.update(timeFromSec(full_cycle + kGreenDuration + kYellowDuration));
+  EXPECT_EQ(element.color, TrafficLightElement::RED);
+}
+
+TEST_F(TrafficLightCycleTest, LargeTimeJump)
+{
+  cycle.update(timeFromSec(0.0));
+  // 1000s = 15 full cycles + 55s remainder (55 >= 33 → Red phase)
+  const auto element = cycle.update(timeFromSec(1000.0));
+  EXPECT_EQ(element.color, TrafficLightElement::RED);
+}
+
+TEST_F(TrafficLightCycleTest, TimeRewindWrapsAround)
+{
+  cycle.update(timeFromSec(10.0));
+  // Rewind: now < start_time_ → negative elapsed → corrected by adding total
+  const auto element = cycle.update(timeFromSec(5.0));
+  // (5 - 10) = -5, fmod(-5, 63) = -5, +63 = 58 → Red
+  EXPECT_EQ(element.color, TrafficLightElement::RED);
+}
+
+TEST_F(TrafficLightCycleTest, NonZeroStartTime)
+{
+  cycle.update(timeFromSec(100.0));
+  // 15s after start → still Green
+  EXPECT_EQ(cycle.update(timeFromSec(115.0)).color, TrafficLightElement::GREEN);
+  // 30s after start → Yellow
+  EXPECT_EQ(cycle.update(timeFromSec(130.0)).color, TrafficLightElement::AMBER);
+  // 33s after start → Red
+  EXPECT_EQ(cycle.update(timeFromSec(133.0)).color, TrafficLightElement::RED);
 }

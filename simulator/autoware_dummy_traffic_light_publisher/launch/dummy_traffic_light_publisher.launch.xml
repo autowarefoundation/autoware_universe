@@ -1,5 +1,5 @@
 <launch>
-  <arg name="mode" default="standalone"/>
+  <arg name="mode" default="empty"/>
   <arg name="dummy_traffic_light_publisher_param_file" default="$(find-pkg-share autoware_dummy_traffic_light_publisher)/config/dummy_traffic_light_publisher.param.yaml"/>
 
   <node pkg="autoware_dummy_traffic_light_publisher" exec="autoware_dummy_traffic_light_publisher_node" name="dummy_traffic_light_publisher" output="screen">

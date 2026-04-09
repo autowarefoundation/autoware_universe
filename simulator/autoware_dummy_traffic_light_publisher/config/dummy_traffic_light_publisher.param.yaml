@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    mode: "standalone"  # "standalone" or "empty"
+    mode: "empty"  # "standalone" or "empty"
     publish_rate: 10.0  # Hz
     green_duration: 30.0  # seconds
     yellow_duration: 3.0  # seconds

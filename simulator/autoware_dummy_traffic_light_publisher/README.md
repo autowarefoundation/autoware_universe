@@ -34,7 +34,7 @@ When a message is received on the input topic (`~/input/traffic_signals`), the n
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `mode` | string | `"standalone"` | Operating mode: `"standalone"` or `"empty"`. |
+| `mode` | string | `"empty"` | Operating mode: `"standalone"` or `"empty"`. |
 | `publish_rate` | double | `10.0` | Publishing frequency [Hz]. |
 | `green_duration` | double | `30.0` | Duration of the green phase [s]. |
 | `yellow_duration` | double | `3.0` | Duration of the yellow phase [s]. |
@@ -52,7 +52,7 @@ ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher
 To override the mode:
 
 ```bash
-ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml mode:=empty
+ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml mode:=standalone
 ```
 
 ## Design and extension tactics
@@ -61,9 +61,9 @@ This package separates concerns into three layers:
 
 | Layer | Class | Role |
 | --- | --- | --- |
-| ROS I/O | `DummyTrafficLightPublisherNode` | Subscriptions (`take()`), timer, publisher. No logic. |
-| Message assembly | `DummyTrafficLight` | Pass-through judgment, vector map ID extraction, `TrafficLightGroupArray` construction. |
-| Signal generation | `TrafficLightCycle` | Phase transition (Green/Yellow/Red) and `TrafficLightElement` output. |
+| ROS I/O | `DummyTrafficLightPublisherNode` | Subscriptions (`take()`), timer, publisher, vector map parsing. |
+| Message assembly | `DummyTrafficLight` | Pass-through judgment, traffic light ID management, `TrafficLightGroupArray` construction. |
+| Signal generation | `TrafficLightCycle` | Phase computation (Green/Yellow/Red) from elapsed time and `TrafficLightElement` output. |
 
 When extending, modify only the layer that owns the responsibility:
 

@@ -19,7 +19,6 @@
 
 #include <rclcpp/time.hpp>
 
-#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
 #include <memory>
@@ -42,7 +41,7 @@ public:
 
   DummyTrafficLight(const Config & config, std::unique_ptr<TrafficLightCycle> cycle);
 
-  void update_vector_map(const autoware_map_msgs::msg::LaneletMapBin & msg);
+  void set_traffic_light_ids(const std::vector<int64_t> & ids);
   void update_input_signals(
     const autoware_perception_msgs::msg::TrafficLightGroupArray & msg, const rclcpp::Time & now);
   autoware_perception_msgs::msg::TrafficLightGroupArray create_message(const rclcpp::Time & now);
@@ -57,7 +56,7 @@ private:
 
   Config config_;
   std::unique_ptr<TrafficLightCycle> cycle_;
-  std::vector<int> traffic_light_ids_;
+  std::vector<int64_t> traffic_light_ids_;
   std::optional<autoware_perception_msgs::msg::TrafficLightGroupArray> last_input_;
   std::optional<rclcpp::Time> last_input_time_;
 };

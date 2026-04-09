@@ -14,10 +14,6 @@
 
 #include "autoware/dummy_traffic_light_publisher/dummy_traffic_light.hpp"
 
-#include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-
 namespace autoware::dummy_traffic_light_publisher
 {
 
@@ -27,18 +23,9 @@ DummyTrafficLight::DummyTrafficLight(
 {
 }
 
-void DummyTrafficLight::update_vector_map(const autoware_map_msgs::msg::LaneletMapBin & msg)
+void DummyTrafficLight::set_traffic_light_ids(const std::vector<int64_t> & ids)
 {
-  lanelet::LaneletMapPtr lanelet_map(new lanelet::LaneletMap);
-  lanelet::utils::conversion::fromBinMsg(msg, lanelet_map);
-  lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map);
-  std::vector<lanelet::TrafficLightConstPtr> tl_reg_elems =
-    lanelet::utils::query::trafficLights(all_lanelets);
-
-  traffic_light_ids_.clear();
-  for (const auto & tl_reg_elem : tl_reg_elems) {
-    traffic_light_ids_.push_back(static_cast<int>(tl_reg_elem->id()));
-  }
+  traffic_light_ids_ = ids;
 }
 
 void DummyTrafficLight::update_input_signals(

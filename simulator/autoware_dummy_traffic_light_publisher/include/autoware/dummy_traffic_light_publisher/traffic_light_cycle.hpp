@@ -19,6 +19,8 @@
 
 #include <autoware_perception_msgs/msg/traffic_light_element.hpp>
 
+#include <optional>
+
 namespace autoware::dummy_traffic_light_publisher
 {
 
@@ -30,14 +32,10 @@ public:
   autoware_perception_msgs::msg::TrafficLightElement update(const rclcpp::Time & now);
 
 private:
-  enum class Phase { Green, Yellow, Red };
-
-  Phase phase_{Phase::Green};
   double green_duration_;
   double yellow_duration_;
   double red_duration_;
-  rclcpp::Time last_transition_time_;
-  bool initialized_{false};
+  std::optional<rclcpp::Time> start_time_;
 };
 
 }  // namespace autoware::dummy_traffic_light_publisher
