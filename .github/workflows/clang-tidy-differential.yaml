@@ -4,7 +4,8 @@ on:
   workflow_call:
     inputs:
       container:
-        required: true
+        required: false
+        default: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
         type: string
       container-suffix:
         required: false
@@ -12,7 +13,7 @@ on:
         type: string
       rosdistro:
         type: string
-        default: humble
+        default: jazzy
         required: false
       # Why is it a JSON string?
       # https://github.com/orgs/community/discussions/11692#discussioncomment-3541856
@@ -90,7 +91,7 @@ jobs:
         with:
           rosdistro: ${{ inputs.rosdistro }}
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
-          clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy-ci
+          clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware_universe/main/.clang-tidy-ci
           clang-tidy-ignore-path: .clang-tidy-ignore
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}

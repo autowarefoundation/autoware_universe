@@ -18,7 +18,6 @@
 #include "autoware/simple_planning_simulator/vehicle_model/sim_model_interface.hpp"
 #include "autoware/simple_planning_simulator/visibility_control.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tier4_api_utils/tier4_api_utils.hpp"
 
 #include "autoware_control_msgs/msg/control.hpp"
 #include "autoware_map_msgs/msg/lanelet_map_bin.hpp"
@@ -43,7 +42,6 @@
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/imu.hpp"
-#include "tier4_external_api_msgs/srv/initialize_pose.hpp"
 #include "tier4_vehicle_msgs/msg/actuation_command_stamped.hpp"
 #include "tier4_vehicle_msgs/msg/actuation_status_stamped.hpp"
 
@@ -83,7 +81,6 @@ using geometry_msgs::msg::Twist;
 using geometry_msgs::msg::TwistStamped;
 using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::Imu;
-using tier4_external_api_msgs::srv::InitializePose;
 using tier4_vehicle_msgs::msg::ActuationCommandStamped;
 using tier4_vehicle_msgs::msg::ActuationStatusStamped;
 
@@ -158,7 +155,6 @@ private:
   rclcpp::Service<ControlModeCommand>::SharedPtr srv_mode_req_;
 
   rclcpp::CallbackGroup::SharedPtr group_api_service_;
-  tier4_api_utils::Service<InitializePose>::SharedPtr srv_set_pose_;
 
   uint32_t timer_sampling_time_ms_;        //!< @brief timer sampling time
   rclcpp::TimerBase::SharedPtr on_timer_;  //!< @brief timer for simulation
@@ -262,13 +258,6 @@ private:
    * @brief set initial twist for simulation with received message
    */
   void on_initialtwist(const TwistStamped::ConstSharedPtr msg);
-
-  /**
-   * @brief set initial pose for simulation with received request
-   */
-  void on_set_pose(
-    const InitializePose::Request::ConstSharedPtr request,
-    const InitializePose::Response::SharedPtr response);
 
   /**
    * @brief subscribe trajectory for deciding self z position.
