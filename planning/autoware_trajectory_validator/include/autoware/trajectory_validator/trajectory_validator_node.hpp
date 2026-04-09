@@ -38,6 +38,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::trajectory_validator
@@ -54,6 +55,20 @@ using nav_msgs::msg::Odometry;
 class TrajectoryValidator : public rclcpp::Node
 {
 public:
+  struct PluginEvaluation
+  {
+    std::string plugin_name;
+    bool is_feasible{true};
+    std::string reason;
+  };
+
+  struct EvaluationTable
+  {
+    std::string generator_id;
+    bool is_overall_feasible{true};
+    std::unordered_map<std::string, std::vector<PluginEvaluation>> evaluations;
+  };
+
   explicit TrajectoryValidator(const rclcpp::NodeOptions & node_options);
 
 private:
@@ -98,6 +113,7 @@ private:
 
   pluginlib::ClassLoader<plugin::ValidatorInterface> plugin_loader_;
   std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins_;
+  std::vector<EvaluationTable> evaluation_tables_;
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   DiagnosticsInterface diagnostics_interface_{this, "trajectory_validator"};

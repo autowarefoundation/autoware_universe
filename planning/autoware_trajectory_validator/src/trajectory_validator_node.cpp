@@ -140,6 +140,7 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
   }
 
   diagnostics_interface_.clear();
+  evaluation_tables_.clear();
 
   // Create output message for filtered trajectories
   auto filtered_msg = std::make_unique<CandidateTrajectories>();
@@ -147,8 +148,14 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
   // Process and filter trajectories
   for (const auto & trajectory : msg->candidate_trajectories) {
     // Apply each filter to the trajectory
-    bool is_feasible = true;
+
+    EvaluationTable table;
+    table.generator_id = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
+
     for (const auto & plugin : plugins_) {
+      PluginEvaluation evaluation;
+      evaluation.plugin_name = plugin->get_name();
+
       if (const auto res = plugin->is_feasible(trajectory.points, context); !res) {
         RCLCPP_WARN_THROTTLE(
           get_logger(), *get_clock(), 1000, "Not feasible: %s", res.error().c_str());
@@ -157,12 +164,18 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
         if (plugin->is_shadow_mode()) {
           continue;
         }
+        evaluation.is_feasible = false;
+        evaluation.reason = res.error();
 
-        is_feasible = false;
+        table.is_overall_feasible = false;
       }
+
+      table.evaluations[plugin->category()].push_back(evaluation);
     }
 
-    if (is_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
+    evaluation_tables_.push_back(table);
+
+    if (table.is_overall_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
   }
 
   // Also filter generator_info to match kept trajectories
@@ -205,6 +218,12 @@ void TrajectoryValidator::load_metric(const std::string & name, const bool is_sh
     plugin->set_vehicle_info(vehicle_info_);
     plugin->set_shadow_mode(is_shadow_mode);
     plugin->update_parameters(params_);
+    std::string category;
+    size_t pos = name.find("::");
+    if (pos != std::string::npos) {
+      category = name.substr(0, pos);
+    }
+    plugin->set_category(category);
 
     plugins_.push_back(plugin);
 

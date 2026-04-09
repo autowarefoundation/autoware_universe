@@ -58,6 +58,9 @@ public:
   }
 
   void set_shadow_mode(const bool is_shadow_mode) { is_shadow_mode_ = is_shadow_mode; }
+  void set_category(const std::string & category) { category_ = category; }
+
+  [[nodiscard]] std::string category() const { return category_; }
 
   [[nodiscard]] std::string get_name() const { return name_; }
   [[nodiscard]] bool is_shadow_mode() const { return is_shadow_mode_; }
@@ -65,6 +68,7 @@ public:
 protected:
   std::string name_;
   bool is_shadow_mode_{false};
+  std::string category_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
 };
 }  // namespace autoware::trajectory_validator::plugin
