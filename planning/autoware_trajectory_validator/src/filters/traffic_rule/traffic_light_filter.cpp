@@ -179,7 +179,8 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
 
   const auto current_point = offset_trajectory.compute_from_time(offset_trajectory.start_time());
   for (const auto & amber_stop_line : amber_stop_lines) {
-    const auto crossed_points = experimental::trajectory::crossed(offset_trajectory, amber_stop_line);
+    const auto crossed_points =
+      experimental::trajectory::crossed(offset_trajectory, amber_stop_line);
     if (crossed_points.empty()) {
       continue;
     }
