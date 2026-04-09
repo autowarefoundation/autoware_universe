@@ -52,12 +52,29 @@ jobs:
       - name: Remove exec_depend
         uses: autowarefoundation/autoware-github-actions/remove-exec-depend@v1
 
+      - name: Check if clang-tidy config changed
+        id: check-config-changed
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -q '^\.clang-tidy-ci$'; then
+            echo "config-changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "config-changed=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Get self packages
+        id: get-self-packages
+        if: ${{ steps.check-config-changed.outputs.config-changed == 'true' }}
+        uses: autowarefoundation/autoware-github-actions/get-self-packages@v1
+
       - name: Get modified packages
         id: get-modified-packages
+        if: ${{ steps.check-config-changed.outputs.config-changed == 'false' }}
         uses: autowarefoundation/autoware-github-actions/get-modified-packages@v1
 
       - name: Get changed files (existing files only)
         id: get-changed-files
+        if: ${{ steps.check-config-changed.outputs.config-changed == 'false' }}
         run: |
           echo "changed-files=$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD | grep -E '\.(cpp|hpp)$' | while read -r file; do [ -e "$file" ] && echo -n "$file "; done)" >> $GITHUB_OUTPUT
         shell: bash
@@ -86,12 +103,12 @@ jobs:
         shell: bash
 
       - name: Run clang-tidy
-        if: ${{ steps.get-changed-files.outputs.changed-files != '' }}
+        if: ${{ steps.check-config-changed.outputs.config-changed == 'true' || steps.get-changed-files.outputs.changed-files != '' }}
         uses: autowarefoundation/autoware-github-actions/clang-tidy@v1
         with:
           rosdistro: ${{ inputs.rosdistro }}
-          target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
-          clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware_universe/main/.clang-tidy-ci
+          target-packages: ${{ steps.check-config-changed.outputs.config-changed == 'true' && steps.get-self-packages.outputs.self-packages || steps.get-modified-packages.outputs.modified-packages }}
+          clang-tidy-config-url: https://raw.githubusercontent.com/${{ github.event.pull_request.head.repo.full_name }}/${{ github.event.pull_request.head.sha }}/.clang-tidy-ci
           clang-tidy-ignore-path: .clang-tidy-ignore
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
