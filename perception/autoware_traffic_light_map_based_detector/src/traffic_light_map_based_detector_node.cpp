@@ -39,7 +39,7 @@ MapBasedDetector::MapBasedDetector(const rclcpp::NodeOptions & node_options)
   using std::placeholders::_1;
 
   // detector config
-  TrafficLightMapBasedDetectorConfig config{
+  detector_config_ = {
     this->declare_parameter<double>("max_vibration_pitch"),
     this->declare_parameter<double>("max_vibration_yaw"),
     this->declare_parameter<double>("max_vibration_height"),
@@ -59,9 +59,6 @@ MapBasedDetector::MapBasedDetector(const rclcpp::NodeOptions & node_options)
     throw std::invalid_argument(
       "max_timestamp_offset must be greater than or equal to min_timestamp_offset");
   }
-
-  // create detector
-  detector_ = std::make_unique<TrafficLightMapBasedDetector>(config);
 
   // subscribers
   map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
@@ -98,7 +95,7 @@ bool MapBasedDetector::getTransform(
 void MapBasedDetector::cameraInfoCallback(
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr input_msg)
 {
-  if (!detector_->hasTrafficLights()) {
+  if (!detector_) {
     return;
   }
 
@@ -137,12 +134,15 @@ void MapBasedDetector::cameraInfoCallback(
 void MapBasedDetector::mapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg)
 {
-  detector_->setMap(*input_msg);
+  detector_ = std::make_unique<TrafficLightMapBasedDetector>(detector_config_, *input_msg);
 }
 
 void MapBasedDetector::routeCallback(
   const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr input_msg)
 {
+  if (!detector_) {
+    return;
+  }
   auto result = detector_->setRoute(*input_msg);
   logMessages(result.logs);
 }

@@ -55,6 +55,7 @@ private:
   };
 
   std::unique_ptr<TrafficLightMapBasedDetector> detector_;
+  TrafficLightMapBasedDetectorConfig detector_config_;
   TransformSamplingConfig transform_sampling_config_;
 
   bool getTransform(

@@ -86,9 +86,9 @@ public:
 
   using TrafficLightSet = std::set<lanelet::ConstLineString3d, IdLessThan>;
 
-  explicit TrafficLightMapBasedDetector(const TrafficLightMapBasedDetectorConfig & config);
-
-  void setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
+  TrafficLightMapBasedDetector(
+    const TrafficLightMapBasedDetectorConfig & config,
+    const autoware_map_msgs::msg::LaneletMapBin & map_msg);
 
   SetRouteResult setRoute(const autoware_planning_msgs::msg::LaneletRoute & route_msg);
 
@@ -96,9 +96,9 @@ public:
     const std::vector<tf2::Transform> & tf_map2camera_vec, const tf2::Transform & tf_map2camera,
     const sensor_msgs::msg::CameraInfo & camera_info) const;
 
-  bool hasTrafficLights() const;
-
 private:
+  void setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
+
   /**
    * @brief Filter traffic lights that are visible from the camera
    *
