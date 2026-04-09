@@ -19,7 +19,7 @@ jobs:
           apt-get update
           apt-get install -y cppcheck
 
-      # cspell: ignore suppr
+      # cspell: ignore suppr Dslots
       - name: Run Cppcheck on all files
         continue-on-error: true
         id: cppcheck
