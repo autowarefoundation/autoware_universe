@@ -1,11 +1,3 @@
 *:*/test/*
 *:*/examples/*
 *:*/benchmarks/*
-
-checkersReport
-missingInclude
-missingIncludeSystem
-unmatchedSuppression
-unusedFunction
-useInitializationList
-useStlAlgorithm
