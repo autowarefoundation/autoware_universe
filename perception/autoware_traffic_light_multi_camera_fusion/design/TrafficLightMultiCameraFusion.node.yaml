@@ -36,7 +36,7 @@ subscribers:
     remap_target: camera2/detection/rois
 publishers:
   - name: traffic_signals
-    message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
     qos:
       reliability: reliable
       durability: transient_local
