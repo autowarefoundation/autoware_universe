@@ -1,12 +1,13 @@
-name: cppcheck-weekly
+name: cppcheck
 
 on:
-  schedule:
-    - cron: 0 0 * * 1
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  cppcheck-weekly:
+  cppcheck:
     runs-on: ubuntu-latest
     container: ros:jazzy
 
