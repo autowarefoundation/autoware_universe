@@ -26,41 +26,39 @@
 namespace autoware::dummy_traffic_light_publisher
 {
 
+Mode parse_mode(const std::string & mode_str)
+{
+  if (mode_str == "standalone") {
+    return Mode::Standalone;
+  }
+  if (mode_str == "empty") {
+    return Mode::Empty;
+  }
+  throw std::invalid_argument("mode must be 'standalone' or 'empty', got: '" + mode_str + "'");
+}
+
+void validate_positive(const std::string & name, double value)
+{
+  if (value <= 0.0) {
+    throw std::invalid_argument(name + " must be positive, got: " + std::to_string(value));
+  }
+}
+
 DummyTrafficLightPublisherNode::DummyTrafficLightPublisherNode(const rclcpp::NodeOptions & options)
 : Node("dummy_traffic_light_publisher", options)
 {
   // Parameters
-  const auto mode_str = this->declare_parameter<std::string>("mode");
-  Mode mode;
-  if (mode_str == "standalone") {
-    mode = Mode::Standalone;
-  } else if (mode_str == "empty") {
-    mode = Mode::Empty;
-  } else {
-    throw std::invalid_argument("mode must be 'standalone' or 'empty', got: '" + mode_str + "'");
-  }
-
-  // publish
+  const auto mode = parse_mode(this->declare_parameter<std::string>("mode"));
   const auto publish_rate = this->declare_parameter<double>("publish_rate");
-  if (publish_rate <= 0.0) {
-    throw std::invalid_argument(
-      "publish_rate must be positive, got: " + std::to_string(publish_rate));
-  }
-  // traffic light cycle
+  validate_positive("publish_rate", publish_rate);
   const auto green_duration = this->declare_parameter<double>("green_duration");
+  validate_positive("green_duration", green_duration);
   const auto yellow_duration = this->declare_parameter<double>("yellow_duration");
+  validate_positive("yellow_duration", yellow_duration);
   const auto red_duration = this->declare_parameter<double>("red_duration");
-  if (green_duration < 0.0 || yellow_duration < 0.0 || red_duration < 0.0) {
-    throw std::invalid_argument("duration values must be non-negative");
-  }
-  if (green_duration + yellow_duration + red_duration <= 0.0) {
-    throw std::invalid_argument("green_duration + yellow_duration + red_duration must be positive");
-  }
+  validate_positive("red_duration", red_duration);
   const auto passthrough_timeout = this->declare_parameter<double>("passthrough_timeout");
-  if (passthrough_timeout < 0.0) {
-    throw std::invalid_argument(
-      "passthrough_timeout must be non-negative, got: " + std::to_string(passthrough_timeout));
-  }
+  validate_positive("passthrough_timeout", passthrough_timeout);
 
   // Logic
   dummy_traffic_light_ = std::make_unique<DummyTrafficLight>(
