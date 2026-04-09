@@ -26,6 +26,7 @@
 
 #include <cstdlib>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -36,6 +37,9 @@ TrafficLightMapBasedDetector::TrafficLightMapBasedDetector(
   const TrafficLightMapBasedDetectorConfig & config)
 : config_(config)
 {
+  if (config_.max_detection_range <= 0) {
+    throw std::invalid_argument("max_detection_range must be positive");
+  }
 }
 
 void TrafficLightMapBasedDetector::setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg)

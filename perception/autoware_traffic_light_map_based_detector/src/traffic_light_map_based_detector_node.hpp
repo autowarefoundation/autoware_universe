@@ -52,7 +52,6 @@ private:
   {
     double min_timestamp_offset;
     double max_timestamp_offset;
-    double timestamp_sample_len;
   };
 
   std::unique_ptr<TrafficLightMapBasedDetector> detector_;

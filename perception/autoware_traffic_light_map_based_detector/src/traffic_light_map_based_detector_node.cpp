@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -50,29 +51,13 @@ MapBasedDetector::MapBasedDetector(const rclcpp::NodeOptions & node_options)
   // transform sampling config
   transform_sampling_config_ = {
     this->declare_parameter<double>("min_timestamp_offset"),
-    this->declare_parameter<double>("max_timestamp_offset"),
-    this->declare_parameter<double>("timestamp_sample_len")};
+    this->declare_parameter<double>("max_timestamp_offset")};
 
-  if (config.max_detection_range <= 0) {
-    RCLCPP_ERROR_STREAM(
-      get_logger(), "Invalid param max_detection_range = " << config.max_detection_range
-                                                           << ", set to default value = 200");
-    config.max_detection_range = 200.0;
-  }
-  if (transform_sampling_config_.timestamp_sample_len <= 0) {
-    RCLCPP_ERROR_STREAM(
-      get_logger(),
-      "Invalid param timestamp_sample_len = " << transform_sampling_config_.timestamp_sample_len
-                                              << ", set to default value = 0.01");
-    transform_sampling_config_.timestamp_sample_len = 200.0;
-  }
   if (
-    transform_sampling_config_.max_timestamp_offset <=
+    transform_sampling_config_.max_timestamp_offset <
     transform_sampling_config_.min_timestamp_offset) {
-    RCLCPP_ERROR_STREAM(
-      get_logger(), "max_timestamp_offset <= min_timestamp_offset. Set both to 0");
-    transform_sampling_config_.max_timestamp_offset = 0.0;
-    transform_sampling_config_.min_timestamp_offset = 0.0;
+    throw std::invalid_argument(
+      "max_timestamp_offset must be greater than or equal to min_timestamp_offset");
   }
 
   // create detector
