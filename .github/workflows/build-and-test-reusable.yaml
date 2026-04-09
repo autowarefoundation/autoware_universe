@@ -132,7 +132,7 @@ jobs:
       - name: Prepare build_depends.repos file
         uses: ./.github/actions/combine-repos-action
         with:
-          base_file: build_depends_humble.repos
+          base_file: build_depends_stable.repos
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
@@ -218,7 +218,7 @@ jobs:
       - name: Prepare build_depends.repos file
         uses: ./.github/actions/combine-repos-action
         with:
-          base_file: build_depends_humble.repos
+          base_file: build_depends_stable.repos
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
