@@ -14,24 +14,21 @@
 
 #include "autoware/trajectory_validator/filters/traffic_rule/traffic_light_filter.hpp"
 
-#include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <rclcpp/logger.hpp>
-#include <rclcpp/logging.hpp>
+#include <autoware/trajectory/temporal_trajectory.hpp>
+#include <autoware/trajectory/threshold.hpp>
+#include <autoware/trajectory/utils/add_offset.hpp>
+#include <autoware/trajectory/utils/crossed.hpp>
+#include <autoware/trajectory/utils/find_intervals.hpp>
 #include <tl_expected/expected.hpp>
 
-#include <boost/geometry.hpp>
-#include <boost/geometry/algorithms/for_each.hpp>
-
 #include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/geometry/Lanelet.h>
-#include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 #include <lanelet2_core/primitives/LineString.h>
 
-#include <ctime>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -130,82 +127,68 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
   if (const auto has_invalid_input = is_invalid_input(context, vehicle_info_ptr_)) {
     return tl::make_unexpected(*has_invalid_input);
   }
-  TrajectoryPoints trajectory;
-  lanelet::BasicLineString2d trajectory_ls;
+
+  if (traj_points.empty()) {
+    return {};  // allow empty trajectory
+  }
+
   constexpr auto delay_response_time = 0.0;
   const auto distance_for_ego_to_stop = motion_utils::calculate_stop_distance(
     context.odometry->twist.twist.linear.x, context.acceleration->accel.accel.linear.x,
     params_.checked_trajectory_length.deceleration_limit,
     params_.checked_trajectory_length.jerk_limit, delay_response_time);
   const auto max_trajectory_length = distance_for_ego_to_stop.value_or(0.0);
-  auto length = 0.0;
-  for (const auto & p : traj_points) {
-    // skip points behind ego
-    if (rclcpp::Duration(p.time_from_start).seconds() < 0.0) {
-      continue;
-    }
-    const lanelet::BasicPoint2d lanelet_p(p.pose.position.x, p.pose.position.y);
-    if (!trajectory_ls.empty()) {
-      length += lanelet::geometry::distance2d(trajectory_ls.back(), lanelet_p);
-    }
-    // skip points beyond the first stop, or skip once we reach the maximum length
-    if (p.longitudinal_velocity_mps <= 0.0 || length > max_trajectory_length) {
-      break;
-    }
-    trajectory.push_back(p);
-    trajectory_ls.emplace_back(lanelet_p);
+
+  auto trajectory_opt = experimental::trajectory::TemporalTrajectory::Builder().build(traj_points);
+
+  if (!trajectory_opt) {
+    return tl::make_unexpected("Failed to build TemporalTrajectory");
   }
 
-  if (trajectory_ls.size() < 2) {
-    return {};  // allow empty or stopped trajectories as they do not cross traffic lights
+  auto trajectory = trajectory_opt.value();
+
+  trajectory.crop_time(0.0, trajectory.end_time());  // Only consider future trajectory points
+
+  trajectory.crop_distance(
+    0.0, max_trajectory_length);  // Only consider trajectory points within the maximum length
+
+  auto stopped_trajectory = experimental::trajectory::find_intervals(
+    trajectory, [](const auto & point) { return point.longitudinal_velocity_mps <= 0.0; });
+
+  auto stopped_intervals =
+    stopped_trajectory.empty() ? trajectory.length() : stopped_trajectory.front().start.distance;
+
+  trajectory.crop_distance(
+    0.0, stopped_intervals);  // Only consider trajectory points before the first stop
+
+  if (trajectory.length() <= experimental::trajectory::k_points_minimum_dist_threshold) {
+    return {};  // allow trajectories that are too short as they do not cross traffic lights
   }
 
-  if (vehicle_info_ptr_->max_longitudinal_offset_m > 0.0) {
-    // extend the trajectory linestring by the vehicle's longitudinal offset
-    const lanelet::BasicSegment2d last_segment(
-      trajectory_ls[trajectory_ls.size() - 2], trajectory_ls.back());
-    const auto last_vector = last_segment.second - last_segment.first;
-    const auto last_length = boost::geometry::length(last_segment);
-    if (last_length > 0.0) {
-      const auto ratio = (last_length + vehicle_info_ptr_->max_longitudinal_offset_m) / last_length;
-      lanelet::BasicPoint2d front_vehicle_point = last_segment.first + last_vector * ratio;
-      trajectory_ls.emplace_back(front_vehicle_point);
-    }
-  }
+  auto offset_trajectory = experimental::trajectory::add_offset(
+    trajectory, vehicle_info_ptr_->max_longitudinal_offset_m, 0.0);
 
   const auto [red_stop_lines, amber_stop_lines] =
     get_stop_lines(*context.lanelet_map, *context.traffic_light_signals);
+
   for (const auto & red_stop_line : red_stop_lines) {
-    if (boost::geometry::intersects(trajectory_ls, red_stop_line)) {
+    if (!experimental::trajectory::crossed(offset_trajectory, red_stop_line).empty()) {
       return tl::make_unexpected("crosses red light");  // Reject trajectory (cross red light)
     }
   }
+
+  const auto current_point = offset_trajectory.compute_from_time(offset_trajectory.start_time());
   for (const auto & amber_stop_line : amber_stop_lines) {
-    auto distance_to_stop_line = 0.0;
-    std::optional<double> amber_stop_line_crossing_time;
-    for (size_t i = 0; i + 1 < trajectory.size(); ++i) {
-      lanelet::BasicPoints2d intersection_points;
-      const lanelet::BasicLineString2d segment{trajectory_ls[i], trajectory_ls[i + 1]};
-      const auto segment_length = static_cast<double>(boost::geometry::length(segment));
-      boost::geometry::intersection(segment, amber_stop_line, intersection_points);
-      if (!intersection_points.empty()) {
-        const auto distance_to_intersection =
-          boost::geometry::distance(segment.front(), intersection_points.front());
-        distance_to_stop_line += distance_to_intersection;
-        const auto ratio = distance_to_intersection / segment_length;
-        amber_stop_line_crossing_time = interpolation::lerp(
-          rclcpp::Duration(trajectory[i].time_from_start).seconds(),
-          rclcpp::Duration(trajectory[i + 1].time_from_start).seconds(), ratio);
-        break;
-      }
-      distance_to_stop_line += segment_length;
+    const auto crossed_points = experimental::trajectory::crossed(offset_trajectory, amber_stop_line);
+    if (crossed_points.empty()) {
+      continue;
     }
-    const auto current_velocity = trajectory.front().longitudinal_velocity_mps;
-    const auto current_acceleration = trajectory.front().acceleration_mps2;
-    if (
-      amber_stop_line_crossing_time && !can_pass_amber_light(
-                                         distance_to_stop_line, current_velocity,
-                                         current_acceleration, *amber_stop_line_crossing_time)) {
+
+    const auto & crossed_point = crossed_points.front();
+    const auto current_velocity = current_point.longitudinal_velocity_mps;
+    const auto current_acceleration = current_point.acceleration_mps2;
+    if (!can_pass_amber_light(
+          crossed_point.distance, current_velocity, current_acceleration, crossed_point.time)) {
       return tl::make_unexpected("crosses amber light");  // Reject trajectory (cross amber light)
     }
   }
