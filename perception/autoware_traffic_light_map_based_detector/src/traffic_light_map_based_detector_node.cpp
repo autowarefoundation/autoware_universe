@@ -141,23 +141,12 @@ void MapBasedDetector::routeCallback(
   const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr input_msg)
 {
   if (!detector_) {
+    RCLCPP_WARN(get_logger(), "cannot set traffic light in route because don't receive map");
     return;
   }
-  auto result = detector_->setRoute(*input_msg);
-  logMessages(result.logs);
-}
-
-void MapBasedDetector::logMessages(const std::vector<LogMessage> & logs)
-{
-  for (const auto & log : logs) {
-    switch (log.level) {
-      case LogLevel::Warn:
-        RCLCPP_WARN(get_logger(), "%s", log.text.c_str());
-        break;
-      case LogLevel::Error:
-        RCLCPP_ERROR(get_logger(), "%s", log.text.c_str());
-        break;
-    }
+  auto error = detector_->setRoute(*input_msg);
+  if (error) {
+    RCLCPP_ERROR(get_logger(), "%s", error->message.c_str());
   }
 }
 }  // namespace autoware::traffic_light

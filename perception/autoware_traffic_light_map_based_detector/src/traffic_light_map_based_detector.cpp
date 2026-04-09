@@ -88,20 +88,16 @@ void TrafficLightMapBasedDetector::setMap(const autoware_map_msgs::msg::LaneletM
     std::make_shared<const lanelet::routing::RoutingGraphContainer>(overall_graphs);
 }
 
-SetRouteResult TrafficLightMapBasedDetector::setRoute(
+std::optional<SetRouteError> TrafficLightMapBasedDetector::setRoute(
   const autoware_planning_msgs::msg::LaneletRoute & route_msg)
 {
-  SetRouteResult result;
-
   lanelet::ConstLanelets route_lanelets;
   for (const auto & segment : route_msg.segments) {
     for (const auto & primitive : segment.primitives) {
       try {
         route_lanelets.push_back(lanelet_map_ptr_->laneletLayer.get(primitive.id));
       } catch (const lanelet::NoSuchPrimitiveError & ex) {
-        result.success = false;
-        result.logs.push_back({LogLevel::Error, ex.what()});
-        return result;
+        return SetRouteError{ex.what()};
       }
     }
   }
@@ -150,7 +146,7 @@ SetRouteResult TrafficLightMapBasedDetector::setRoute(
     }
   }
 
-  return result;
+  return std::nullopt;
 }
 
 DetectionResult TrafficLightMapBasedDetector::detect(
