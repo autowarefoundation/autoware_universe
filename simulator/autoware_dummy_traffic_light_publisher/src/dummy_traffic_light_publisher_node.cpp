@@ -72,9 +72,9 @@ DummyTrafficLightPublisherNode::DummyTrafficLightPublisherNode(const rclcpp::Nod
     "~/output/traffic_signals", rclcpp::QoS(1));
 
 <<<<<<< HEAD
-  // use the take method in onTimer, so create dummy subscriptions with empty callbacks to get the subscription objects.
-  manual_group_ =
-    this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
+  // use the take method in onTimer, so create dummy subscriptions with empty callbacks to get the
+  // subscription objects.
+  manual_group_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive, false);
 =======
   // use the take metdhod in onTimer, so create dummy subscriptions with empty callbacks to get the
   // subscription objects.
