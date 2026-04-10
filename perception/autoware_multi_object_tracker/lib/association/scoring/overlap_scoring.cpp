@@ -85,9 +85,8 @@ bool isIoUOverThreshold(
     }
     // Adjust threshold based on known partner's speed and static/moving status
     const double known_object_speed =
-      is_target_known
-        ? std::hypot(target_object.twist.linear.x, target_object.twist.linear.y)
-        : std::hypot(source_object.twist.linear.x, source_object.twist.linear.y);
+      is_target_known ? std::hypot(target_object.twist.linear.x, target_object.twist.linear.y)
+                      : std::hypot(source_object.twist.linear.x, source_object.twist.linear.y);
     const double generalized_iou_threshold_unknown = calcGeneralizedIoUThresholdUnknown(
       known_object_speed, generalized_iou_threshold, config.pruning_static_object_speed,
       config.pruning_moving_object_speed, config.pruning_static_iou_threshold);

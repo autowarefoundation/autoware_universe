@@ -99,14 +99,16 @@ void process_parameters(MultiObjectTrackerParameters & params)
     {Label::MOTORCYCLE, getTrackerType("motorcycle")},
     {Label::UNKNOWN, TrackerType::POLYGON}};
   // Set the pruning thresholds for overlap merger config
-  params.tracker_merger_config.pruning_giou_thresholds = params.pruning_giou_thresholds.to_label_map();
+  params.tracker_merger_config.pruning_giou_thresholds =
+    params.pruning_giou_thresholds.to_label_map();
   params.tracker_merger_config.pruning_distance_thresholds =
     params.pruning_distance_thresholds.to_label_map();
   params.tracker_merger_config.pruning_distance_thresholds_sq.clear();
   params.tracker_merger_config.pruning_distance_thresholds_sq.reserve(
     params.tracker_merger_config.pruning_distance_thresholds.size());
   for (const auto & [label, threshold] : params.tracker_merger_config.pruning_distance_thresholds) {
-    params.tracker_merger_config.pruning_distance_thresholds_sq.emplace(label, threshold * threshold);
+    params.tracker_merger_config.pruning_distance_thresholds_sq.emplace(
+      label, threshold * threshold);
   }
 
   for (const auto measurement_label : classes::trackedLabels()) {

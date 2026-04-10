@@ -40,7 +40,7 @@ set(${PROJECT_NAME}_src
 )
 set(${PROJECT_NAME}_lib
   lib/odometry.cpp
-  lib/association/association.cpp
+  lib/association/bev_area_association.cpp
   lib/association/association_manager.cpp
   lib/association/overlap_merger.cpp
   lib/association/sensor_perspective.cpp

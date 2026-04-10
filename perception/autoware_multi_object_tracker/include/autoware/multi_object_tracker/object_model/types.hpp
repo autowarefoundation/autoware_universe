@@ -131,22 +131,22 @@ constexpr float default_existence_probability = 0.75;
 
 // Association algorithm selection per input channel
 enum class AssociationType {
-  BEV,               // BevAreaAssociation: bird's-eye-view area scoring + GNN linear assignment
+  BEV,                // BevAreaAssociation: bird's-eye-view area scoring + GNN linear assignment
   SENSOR_PERSPECTIVE  // SensorPerspectiveAssociation: sensor-perspective area scoring
 };
 
 // channel configuration
 struct InputChannel
 {
-  uint index;                                 // index of the channel
-  bool is_enabled = true;                     // enable the channel
-  std::string long_name = "Detected Object";  // full name of the detection
-  std::string short_name = "DET";             // abbreviation of the name
-  bool is_spawn_enabled = true;               // enable spawn of the object
-  bool trust_existence_probability = false;   // trust object existence probability
-  bool trust_extension = true;                // trust object extension
-  bool trust_classification = true;           // trust object classification
-  bool trust_orientation = true;              // trust object orientation(yaw)
+  uint index;                                              // index of the channel
+  bool is_enabled = true;                                  // enable the channel
+  std::string long_name = "Detected Object";               // full name of the detection
+  std::string short_name = "DET";                          // abbreviation of the name
+  bool is_spawn_enabled = true;                            // enable spawn of the object
+  bool trust_existence_probability = false;                // trust object existence probability
+  bool trust_extension = true;                             // trust object extension
+  bool trust_classification = true;                        // trust object classification
+  bool trust_orientation = true;                           // trust object orientation(yaw)
   AssociationType associator_type = AssociationType::BEV;  // which associator to use
 };
 

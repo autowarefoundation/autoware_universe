@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/association/association.hpp"
+#include "autoware/multi_object_tracker/association/bev_area_association.hpp"
 
 #include "autoware/multi_object_tracker/association/scoring/match_scoring.hpp"
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"

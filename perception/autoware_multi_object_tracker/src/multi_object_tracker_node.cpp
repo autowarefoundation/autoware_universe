@@ -110,12 +110,11 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
       // association algorithm selection for this channel (default: "bev")
       {
-        const std::string associator_type_str = declare_parameter<std::string>(
-          input_channel_config_name + ".associator_type", "bev");
-        input_channel_config.associator_type =
-          (associator_type_str == "sensor_perspective")
-            ? types::AssociationType::SENSOR_PERSPECTIVE
-            : types::AssociationType::BEV;
+        const std::string associator_type_str =
+          declare_parameter<std::string>(input_channel_config_name + ".associator_type", "bev");
+        input_channel_config.associator_type = (associator_type_str == "sensor_perspective")
+                                                 ? types::AssociationType::SENSOR_PERSPECTIVE
+                                                 : types::AssociationType::BEV;
       }
 
       // optional parameters

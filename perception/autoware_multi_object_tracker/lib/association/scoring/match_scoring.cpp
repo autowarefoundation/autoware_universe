@@ -16,6 +16,7 @@
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace autoware::multi_object_tracker
@@ -24,8 +25,7 @@ namespace
 {
 constexpr double INVALID_SCORE = 0.0;
 
-inline double getMahalanobisDistanceFast(
-  double dx, double dy, const InverseCovariance2D & inv_cov)
+inline double getMahalanobisDistanceFast(double dx, double dy, const InverseCovariance2D & inv_cov)
 {
   return dx * dx * inv_cov.inv00 + 2.0 * dx * dy * inv_cov.inv01 + dy * dy * inv_cov.inv11;
 }

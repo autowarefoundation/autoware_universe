@@ -14,6 +14,8 @@
 
 #include "autoware/multi_object_tracker/association/sensor_perspective.hpp"
 
+#include <list>
+
 namespace autoware::multi_object_tracker
 {
 

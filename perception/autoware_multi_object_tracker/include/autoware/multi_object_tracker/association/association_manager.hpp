@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_MANAGER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_MANAGER_HPP_
 
-#include "autoware/multi_object_tracker/association/association.hpp"
+#include "autoware/multi_object_tracker/association/bev_area_association.hpp"
 #include "autoware/multi_object_tracker/association/i_association.hpp"
 #include "autoware/multi_object_tracker/association/overlap_merger.hpp"
 #include "autoware/multi_object_tracker/association/sensor_perspective.hpp"
@@ -35,7 +35,7 @@ namespace autoware::multi_object_tracker
 /// Orchestrates two layers of association:
 ///
 ///   Layer 1 — Detection-to-tracker (D2T):
-///     Routes each measurement batch to the associator designated per input channel
+///     Routes each measurement batch to the association implementation designated per input channel
 ///     (selected via InputChannel::associator_type).
 ///     Available algorithms:
 ///       BEV               → BevAreaAssociation  (bird's-eye-view area scoring + GNN assignment)
@@ -47,10 +47,10 @@ class AssociationManager
 {
 public:
   AssociationManager(
-    const AssociatorConfig & bev_config, const TrackerMergerConfig & tracker_merger_config,
+    const AssociatorConfig & bev_area_config, const TrackerMergerConfig & tracker_merger_config,
     const std::vector<types::InputChannel> & channels_config);
 
-  /// Layer 1 (D2T): match measurements to trackers using the channel's designated associator.
+  /// Layer 1 (D2T): match measurements to trackers using the channel's designated association.
   types::AssociationResult associate(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
@@ -64,12 +64,12 @@ public:
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
 private:
-  /// Select the D2T associator for the given channel index.
-  IAssociation & getAssociatorForChannel(uint channel_index) const;
+  /// Select the D2T association implementation for the given channel index.
+  IAssociation & getAssociationForChannel(uint channel_index) const;
 
   std::vector<types::InputChannel> channels_config_;
-  std::unique_ptr<BevAreaAssociation> bev_association_;
-  std::unique_ptr<SensorPerspectiveAssociation> sensor_association_;
+  std::unique_ptr<BevAreaAssociation> bev_area_association_;
+  std::unique_ptr<SensorPerspectiveAssociation> sensor_perspective_association_;
   std::unique_ptr<TrackerMerger> tracker_merger_;
 };
 

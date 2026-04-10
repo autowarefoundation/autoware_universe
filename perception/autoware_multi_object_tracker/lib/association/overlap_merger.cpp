@@ -23,6 +23,8 @@
 #include <boost/geometry/index/rtree.hpp>
 
 #include <algorithm>
+#include <list>
+#include <memory>
 #include <unordered_set>
 #include <utility>
 #include <vector>

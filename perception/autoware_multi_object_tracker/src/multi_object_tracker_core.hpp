@@ -15,7 +15,7 @@
 #ifndef MULTI_OBJECT_TRACKER_CORE_HPP_
 #define MULTI_OBJECT_TRACKER_CORE_HPP_
 
-#include "autoware/multi_object_tracker/association/association.hpp"
+#include "autoware/multi_object_tracker/association/bev_area_association.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
 #include "debugger/debugger.hpp"
