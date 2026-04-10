@@ -61,7 +61,7 @@ autoware_internal_planning_msgs::msg::PathWithLaneId convert_to_path_with_lane_i
 }
 }  // namespace
 
-OutOfLaneFilter::OutOfLaneFilter() : ValidatorInterface("OutOfLaneFilter")
+OutOfLaneFilter::OutOfLaneFilter() : ValidatorInterface("out_of_lane_filter")
 {
   // BoundaryDepartureChecker will be initialized when vehicle_info is set
 }
