@@ -64,7 +64,7 @@ FunctionTimings runIterationsAssociation(
   RosbagWriterHelper writer(write_bag);
 
   const auto lifecycle_config = createLifecycleConfig();
-  const auto overlap_config = createOverlapMergerConfig();
+  const auto overlap_config = createTrackerMergerConfig();
   const auto associator_config = createAssociatorConfig();
   const auto input_channels_config = createInputChannelsConfig();
 
@@ -155,7 +155,7 @@ FunctionTimings runIterations(
   RosbagWriterHelper writer(write_bag);
 
   const auto lifecycle_config = createLifecycleConfig();
-  const auto overlap_config = createOverlapMergerConfig();
+  const auto overlap_config = createTrackerMergerConfig();
   const auto associator_config = createAssociatorConfig();
   const auto input_channels_config = createInputChannelsConfig();
 
@@ -272,7 +272,7 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
     node->get_logger(), node->get_clock(), tf_buffer, world_frame_id, ego_frame_id, true);
 
   const auto lifecycle_config = createLifecycleConfig();
-  const auto overlap_config = createOverlapMergerConfig();
+  const auto overlap_config = createTrackerMergerConfig();
   const auto associator_config = createAssociatorConfig();
   const auto input_channels_config = createInputChannelsConfig();
 
