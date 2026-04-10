@@ -129,6 +129,12 @@ inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name
 // constants
 constexpr float default_existence_probability = 0.75;
 
+// Association algorithm selection per input channel
+enum class AssociationType {
+  ONLINE,             // DataAssociation: score matrix + GNN linear assignment
+  SENSOR_PERSPECTIVE  // SensorPerspectiveAssociation: sensor-geometry-based matching
+};
+
 // channel configuration
 struct InputChannel
 {
@@ -141,6 +147,7 @@ struct InputChannel
   bool trust_extension = true;                // trust object extension
   bool trust_classification = true;           // trust object classification
   bool trust_orientation = true;              // trust object orientation(yaw)
+  AssociationType associator_type = AssociationType::ONLINE;  // which associator to use
 };
 
 struct ExistenceProbability

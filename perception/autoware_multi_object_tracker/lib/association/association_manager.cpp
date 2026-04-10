@@ -14,33 +14,39 @@
 
 #include "autoware/multi_object_tracker/association/association_manager.hpp"
 
+#include <stdexcept>
 #include <utility>
 
 namespace autoware::multi_object_tracker
 {
 
 AssociationManager::AssociationManager(
-  const AssociatorConfig & online_config, const OverlapMergerConfig & overlap_config)
-: online_association_(std::make_unique<DataAssociation>(online_config)),
-  overlap_merger_(std::make_unique<OverlapMerger>(overlap_config)),
-  sensor_association_(std::make_unique<SensorPerspectiveAssociation>())
+  const AssociatorConfig & online_config, const OverlapMergerConfig & overlap_config,
+  const std::vector<types::InputChannel> & channels_config)
+: channels_config_(channels_config),
+  online_association_(std::make_unique<DataAssociation>(online_config)),
+  sensor_association_(std::make_unique<SensorPerspectiveAssociation>()),
+  overlap_merger_(std::make_unique<OverlapMerger>(overlap_config))
 {
+}
+
+IAssociation & AssociationManager::getAssociatorForChannel(const uint channel_index) const
+{
+  if (channel_index < channels_config_.size()) {
+    if (
+      channels_config_[channel_index].associator_type ==
+      types::AssociationType::SENSOR_PERSPECTIVE) {
+      return *sensor_association_;
+    }
+  }
+  return *online_association_;
 }
 
 types::AssociationResult AssociationManager::associate(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
-  const types::AssociationData association_data =
-    online_association_->calcAssociationData(measurements, trackers);
-
-  types::AssociationResult result;
-  online_association_->assign(association_data, result);
-
-  // Future hook: sensor-perspective refinement (currently no-op)
-  sensor_association_->refine(result, measurements, trackers);
-
-  return result;
+  return getAssociatorForChannel(measurements.channel_index).associate(measurements, trackers);
 }
 
 void AssociationManager::pruneOverlaps(

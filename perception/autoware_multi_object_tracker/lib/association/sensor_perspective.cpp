@@ -17,11 +17,13 @@
 namespace autoware::multi_object_tracker
 {
 
-void SensorPerspectiveAssociation::refine(
-  types::AssociationResult & /*result*/, const types::DynamicObjectList & /*measurements*/,
-  const std::list<std::shared_ptr<Tracker>> & /*trackers*/) const
+types::AssociationResult SensorPerspectiveAssociation::associate(
+  const types::DynamicObjectList & /*measurements*/,
+  const std::list<std::shared_ptr<Tracker>> & /*trackers*/)
 {
-  // No-op: sensor-perspective refinement algorithm not yet implemented.
+  // TODO(sensor_perspective): implement sensor-geometry-based association.
+  // For now, return an empty result (all measurements unassigned, all trackers unassigned).
+  return types::AssociationResult{};
 }
 
 }  // namespace autoware::multi_object_tracker

@@ -78,6 +78,16 @@ void DataAssociation::updateMaxSearchDistances()
   }
 }
 
+types::AssociationResult DataAssociation::associate(
+  const types::DynamicObjectList & measurements,
+  const std::list<std::shared_ptr<Tracker>> & trackers)
+{
+  const types::AssociationData data = calcAssociationData(measurements, trackers);
+  types::AssociationResult result;
+  assign(data, result);
+  return result;
+}
+
 void DataAssociation::assign(
   const types::AssociationData & data, types::AssociationResult & association_result)
 {

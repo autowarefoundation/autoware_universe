@@ -108,6 +108,16 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       input_channel_config.trust_orientation =
         declare_parameter<bool>(input_channel_config_name + ".flags.can_trust_orientation", true);
 
+      // association algorithm selection for this channel (default: "online")
+      {
+        const std::string associator_type_str = declare_parameter<std::string>(
+          input_channel_config_name + ".associator_type", "online");
+        input_channel_config.associator_type =
+          (associator_type_str == "sensor_perspective")
+            ? types::AssociationType::SENSOR_PERSPECTIVE
+            : types::AssociationType::ONLINE;
+      }
+
       // optional parameters
       const std::string default_name = input_channel;
       const std::string name_long =

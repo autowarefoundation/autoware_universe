@@ -43,7 +43,7 @@ TrackerProcessor::TrackerProcessor(
 : lifecycle_config_(lifecycle_config), channels_config_(channels_config)
 {
   association_manager_ =
-    std::make_unique<AssociationManager>(associator_config, overlap_config);
+    std::make_unique<AssociationManager>(associator_config, overlap_config, channels_config);
 }
 
 void TrackerProcessor::predict(

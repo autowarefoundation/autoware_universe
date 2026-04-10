@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SENSOR_PERSPECTIVE_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SENSOR_PERSPECTIVE_HPP_
 
+#include "autoware/multi_object_tracker/association/i_association.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
@@ -24,20 +25,23 @@
 namespace autoware::multi_object_tracker
 {
 
-/// Placeholder for a sensor-perspective association algorithm.
-/// This class is reserved for a future algorithm that refines or augments the online
-/// tracker↔measurement matching using per-sensor visibility and uncertainty models.
-/// Currently a no-op; implement refine() to activate the algorithm.
-class SensorPerspectiveAssociation
+/// Sensor-perspective association algorithm.
+/// An alternative to DataAssociation (GNN-based), intended for channels where
+/// sensor geometry, visibility, or uncertainty models guide matching.
+/// Assigned per input channel via InputChannel::associator_type =
+/// AssociationType::SENSOR_PERSPECTIVE.
+/// Currently a stub; implement associate() to activate.
+class SensorPerspectiveAssociation : public IAssociation
 {
 public:
   SensorPerspectiveAssociation() = default;
+  ~SensorPerspectiveAssociation() override = default;
 
-  /// Called after online matching. May modify result to apply sensor-specific corrections.
-  /// No-op until a concrete algorithm is implemented.
-  void refine(
-    types::AssociationResult & result, const types::DynamicObjectList & measurements,
-    const std::list<std::shared_ptr<Tracker>> & trackers) const;
+  /// IAssociation implementation.
+  /// Performs sensor-perspective based measurement-to-tracker matching.
+  types::AssociationResult associate(
+    const types::DynamicObjectList & measurements,
+    const std::list<std::shared_ptr<Tracker>> & trackers) override;
 };
 
 }  // namespace autoware::multi_object_tracker

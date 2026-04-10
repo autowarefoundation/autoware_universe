@@ -16,6 +16,7 @@
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_MANAGER_HPP_
 
 #include "autoware/multi_object_tracker/association/association.hpp"
+#include "autoware/multi_object_tracker/association/i_association.hpp"
 #include "autoware/multi_object_tracker/association/overlap_merger.hpp"
 #include "autoware/multi_object_tracker/association/sensor_perspective.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
@@ -26,26 +27,34 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <vector>
 
 namespace autoware::multi_object_tracker
 {
 
-/// Single entry point for all association algorithms:
-///   1. Online matching  – DataAssociation (score matrix + GNN solver)
-///   2. Overlap merging  – OverlapMerger   (prune spatially redundant trackers)
-///   3. Sensor perspective – SensorPerspectiveAssociation (future refinement hook)
+/// Orchestrates all association algorithms.
+///
+/// Responsibilities:
+///   1. Route each measurement batch to the associator designated for its input channel
+///      (selected via InputChannel::associator_type).
+///   2. Prune spatially redundant trackers via OverlapMerger.
+///
+/// Available associators:
+///   - ONLINE            → DataAssociation (score matrix + GNN linear assignment)
+///   - SENSOR_PERSPECTIVE → SensorPerspectiveAssociation (sensor-geometry-based matching)
 class AssociationManager
 {
 public:
   AssociationManager(
-    const AssociatorConfig & online_config, const OverlapMergerConfig & overlap_config);
+    const AssociatorConfig & online_config, const OverlapMergerConfig & overlap_config,
+    const std::vector<types::InputChannel> & channels_config);
 
-  /// Step A: match measurements to trackers via online scoring + GNN assignment.
+  /// Match measurements to trackers using the associator designated for the channel.
   types::AssociationResult associate(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
-  /// Step B: remove spatially overlapping / redundant trackers.
+  /// Remove spatially overlapping / redundant trackers.
   void pruneOverlaps(
     std::list<std::shared_ptr<Tracker>> & trackers, const rclcpp::Time & time,
     const AdaptiveThresholdCache & threshold_cache,
@@ -54,9 +63,13 @@ public:
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
 private:
+  /// Select the associator for the given channel index.
+  IAssociation & getAssociatorForChannel(uint channel_index) const;
+
+  std::vector<types::InputChannel> channels_config_;
   std::unique_ptr<DataAssociation> online_association_;
-  std::unique_ptr<OverlapMerger> overlap_merger_;
   std::unique_ptr<SensorPerspectiveAssociation> sensor_association_;
+  std::unique_ptr<OverlapMerger> overlap_merger_;
 };
 
 }  // namespace autoware::multi_object_tracker
