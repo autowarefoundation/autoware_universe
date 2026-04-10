@@ -18,8 +18,6 @@
 #include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
-#include <tier4_planning_msgs/msg/lateral_offset.hpp>
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -108,8 +106,5 @@ void publishMandatoryTopics(
   test_manager->publishInput(
     test_target_node, "system/operation_mode/state",
     autoware_adapi_v1_msgs::msg::OperationModeState{});
-  test_manager->publishInput(
-    test_target_node, "behavior_path_planner/input/lateral_offset",
-    tier4_planning_msgs::msg::LateralOffset{});
 }
 }  // namespace autoware::behavior_path_planner
