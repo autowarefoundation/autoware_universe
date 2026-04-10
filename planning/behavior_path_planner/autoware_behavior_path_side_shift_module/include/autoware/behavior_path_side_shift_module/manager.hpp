@@ -57,11 +57,15 @@ private:
 
   void onLateralOffset(const tier4_planning_msgs::msg::LateralOffset::ConstSharedPtr msg);
 
+  void publishInsertedLateralOffsetTimerCallback();
+
   std::shared_ptr<SideShiftParameters> parameters_;
   std::shared_ptr<InsertedLateralOffsetState> inserted_lateral_offset_state_;
   std::shared_ptr<RequestedLateralOffsetState> requested_lateral_offset_state_;
   rclcpp::Service<tier4_planning_msgs::srv::SetLateralOffset>::SharedPtr set_lateral_offset_srv_;
+  rclcpp::Publisher<tier4_planning_msgs::msg::LateralOffset>::SharedPtr lateral_offset_publisher_;
   rclcpp::Subscription<tier4_planning_msgs::msg::LateralOffset>::SharedPtr lateral_offset_sub_;
+  rclcpp::TimerBase::SharedPtr lateral_offset_publish_timer_;
 };
 
 }  // namespace autoware::behavior_path_planner

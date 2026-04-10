@@ -61,9 +61,17 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
                               &SideShiftModuleManager::onSetLateralOffset, this,
                               std::placeholders::_1, std::placeholders::_2));
 
+  lateral_offset_publisher_ =
+    node->create_publisher<tier4_planning_msgs::msg::LateralOffset>("~/output/lateral_offset", 1);
+
   lateral_offset_sub_ = node->create_subscription<tier4_planning_msgs::msg::LateralOffset>(
     "~/input/lateral_offset", rclcpp::QoS{1},
     std::bind(&SideShiftModuleManager::onLateralOffset, this, std::placeholders::_1));
+
+  const auto period = std::chrono::milliseconds(100);  // 10 Hz
+  lateral_offset_publish_timer_ = rclcpp::create_timer(
+    node_, node_->get_clock(), period,
+    std::bind(&SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback, this));
 }
 
 void SideShiftModuleManager::onSetLateralOffset(
@@ -93,6 +101,14 @@ void SideShiftModuleManager::onSetLateralOffset(
   if (response->status.success) {
     requested_lateral_offset_state_->value.store(lateral_offset);
   }
+}
+
+void SideShiftModuleManager::publishInsertedLateralOffsetTimerCallback()
+{
+  tier4_planning_msgs::msg::LateralOffset msg;
+  msg.stamp = node_->now();
+  msg.lateral_offset = static_cast<float>(inserted_lateral_offset_state_->value.load());
+  lateral_offset_publisher_->publish(msg);
 }
 
 void SideShiftModuleManager::onLateralOffset(
