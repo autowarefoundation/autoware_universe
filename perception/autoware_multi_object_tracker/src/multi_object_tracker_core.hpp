@@ -61,7 +61,7 @@ struct MultiObjectTrackerParameters
 
   // Induced parameters
   TrackerLifecycleConfig lifecycle_config;
-  OverlapMergerConfig overlap_config;
+  TrackerMergerConfig tracker_merger_config;
   AssociatorConfig associator_config;
 };
 

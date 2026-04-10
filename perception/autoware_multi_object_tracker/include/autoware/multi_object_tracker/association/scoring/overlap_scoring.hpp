@@ -33,7 +33,7 @@ double calcGeneralizedIoUThresholdUnknown(
 bool isIoUOverThreshold(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const classes::Label source_label, const classes::Label target_label, float source_known_prob,
-  float target_known_prob, const OverlapMergerConfig & config);
+  float target_known_prob, const TrackerMergerConfig & config);
 
 }  // namespace autoware::multi_object_tracker
 

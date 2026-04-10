@@ -131,8 +131,8 @@ constexpr float default_existence_probability = 0.75;
 
 // Association algorithm selection per input channel
 enum class AssociationType {
-  ONLINE,             // DataAssociation: score matrix + GNN linear assignment
-  SENSOR_PERSPECTIVE  // SensorPerspectiveAssociation: sensor-geometry-based matching
+  BEV,               // BevAreaAssociation: bird's-eye-view area scoring + GNN linear assignment
+  SENSOR_PERSPECTIVE  // SensorPerspectiveAssociation: sensor-perspective area scoring
 };
 
 // channel configuration
@@ -147,7 +147,7 @@ struct InputChannel
   bool trust_extension = true;                // trust object extension
   bool trust_classification = true;           // trust object classification
   bool trust_orientation = true;              // trust object orientation(yaw)
-  AssociationType associator_type = AssociationType::ONLINE;  // which associator to use
+  AssociationType associator_type = AssociationType::BEV;  // which associator to use
 };
 
 struct ExistenceProbability

@@ -36,11 +36,11 @@ namespace bgi = boost::geometry::index;
 using OmPoint = bg::model::point<double, 2, bg::cs::cartesian>;
 using OmValue = std::pair<OmPoint, size_t>;  // (position, index into valid_trackers)
 
-OverlapMerger::OverlapMerger(const OverlapMergerConfig & config) : config_(config)
+TrackerMerger::TrackerMerger(const TrackerMergerConfig & config) : config_(config)
 {
 }
 
-bool OverlapMerger::canMergeTarget(
+bool TrackerMerger::canMergeTarget(
   const Tracker & target, const Tracker & other, const rclcpp::Time & time,
   const AdaptiveThresholdCache & threshold_cache,
   const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
@@ -100,7 +100,7 @@ bool OverlapMerger::canMergeTarget(
   return true;
 }
 
-void OverlapMerger::merge(
+void TrackerMerger::merge(
   std::list<std::shared_ptr<Tracker>> & tracker_list, const rclcpp::Time & time,
   const AdaptiveThresholdCache & threshold_cache,
   const std::optional<geometry_msgs::msg::Pose> & ego_pose)

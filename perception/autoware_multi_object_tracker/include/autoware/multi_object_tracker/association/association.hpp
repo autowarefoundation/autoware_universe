@@ -59,7 +59,7 @@ struct PreparationData
   std::vector<InverseCovariance2D> tracker_inverse_covariances;
 };
 
-class DataAssociation : public IAssociation
+class BevAreaAssociation : public IAssociation
 {
 private:
   AssociatorConfig config_;
@@ -85,8 +85,8 @@ private:
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  explicit DataAssociation(const AssociatorConfig & config);
-  ~DataAssociation() override = default;
+  explicit BevAreaAssociation(const AssociatorConfig & config);
+  ~BevAreaAssociation() override = default;
 
   /// IAssociation implementation: full pipeline (calcAssociationData + assign).
   types::AssociationResult associate(

@@ -32,10 +32,10 @@ namespace autoware::multi_object_tracker
 
 /// Detects and merges spatially overlapping trackers produced by different sensors or detectors.
 /// Higher-priority trackers absorb lower-priority ones when sufficient overlap is confirmed.
-class OverlapMerger
+class TrackerMerger
 {
 public:
-  explicit OverlapMerger(const OverlapMergerConfig & config);
+  explicit TrackerMerger(const TrackerMergerConfig & config);
 
   /// Scans tracker_list for overlapping pairs and merges the lower-priority one into the higher.
   void merge(
@@ -44,7 +44,7 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose);
 
 private:
-  OverlapMergerConfig config_;
+  TrackerMergerConfig config_;
 
   /// Returns true if target may be merged (absorbed) into other.
   bool canMergeTarget(

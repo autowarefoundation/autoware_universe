@@ -108,14 +108,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       input_channel_config.trust_orientation =
         declare_parameter<bool>(input_channel_config_name + ".flags.can_trust_orientation", true);
 
-      // association algorithm selection for this channel (default: "online")
+      // association algorithm selection for this channel (default: "bev")
       {
         const std::string associator_type_str = declare_parameter<std::string>(
-          input_channel_config_name + ".associator_type", "online");
+          input_channel_config_name + ".associator_type", "bev");
         input_channel_config.associator_type =
           (associator_type_str == "sensor_perspective")
             ? types::AssociationType::SENSOR_PERSPECTIVE
-            : types::AssociationType::ONLINE;
+            : types::AssociationType::BEV;
       }
 
       // optional parameters
@@ -146,9 +146,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.tracker_type_map["motorcycle"] = declare_initial_tracker_parameter("motorcycle");
 
   params_.lifecycle_config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
-  params_.overlap_config.min_known_object_removal_iou =
+  params_.tracker_merger_config.min_known_object_removal_iou =
     declare_parameter<double>("min_known_object_removal_iou");
-  params_.overlap_config.min_unknown_object_removal_iou =
+  params_.tracker_merger_config.min_unknown_object_removal_iou =
     declare_parameter<double>("min_unknown_object_removal_iou");
 
   const auto declare_tracked_label_thresholds =
@@ -176,11 +176,11 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // pruning parameters
   params_.pruning_giou_thresholds =
     declare_tracked_label_thresholds("pruning_generalized_iou_thresholds");
-  params_.overlap_config.pruning_static_object_speed =
+  params_.tracker_merger_config.pruning_static_object_speed =
     declare_parameter<double>("pruning_static_object_speed");
-  params_.overlap_config.pruning_moving_object_speed =
+  params_.tracker_merger_config.pruning_moving_object_speed =
     declare_parameter<double>("pruning_moving_object_speed");
-  params_.overlap_config.pruning_static_iou_threshold =
+  params_.tracker_merger_config.pruning_static_iou_threshold =
     declare_parameter<double>("pruning_static_iou_threshold");
 
   // overlap distance threshold

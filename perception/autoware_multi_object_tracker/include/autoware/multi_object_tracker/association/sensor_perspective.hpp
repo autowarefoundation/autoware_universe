@@ -26,7 +26,7 @@ namespace autoware::multi_object_tracker
 {
 
 /// Sensor-perspective association algorithm.
-/// An alternative to DataAssociation (GNN-based), intended for channels where
+/// An alternative to BevAreaAssociation (BEV area scoring), intended for channels where
 /// sensor geometry, visibility, or uncertainty models guide matching.
 /// Assigned per input channel via InputChannel::associator_type =
 /// AssociationType::SENSOR_PERSPECTIVE.

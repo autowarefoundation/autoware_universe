@@ -39,7 +39,7 @@ class TrackerProcessor
 public:
   TrackerProcessor(
     const TrackerLifecycleConfig & lifecycle_config, const AssociatorConfig & associator_config,
-    const OverlapMergerConfig & overlap_config,
+    const TrackerMergerConfig & tracker_merger_config,
     const std::vector<types::InputChannel> & channels_config);
 
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }

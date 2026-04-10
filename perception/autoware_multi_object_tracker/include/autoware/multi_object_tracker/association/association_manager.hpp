@@ -32,30 +32,31 @@
 namespace autoware::multi_object_tracker
 {
 
-/// Orchestrates all association algorithms.
+/// Orchestrates two layers of association:
 ///
-/// Responsibilities:
-///   1. Route each measurement batch to the associator designated for its input channel
-///      (selected via InputChannel::associator_type).
-///   2. Prune spatially redundant trackers via OverlapMerger.
+///   Layer 1 — Detection-to-tracker (D2T):
+///     Routes each measurement batch to the associator designated per input channel
+///     (selected via InputChannel::associator_type).
+///     Available algorithms:
+///       BEV               → BevAreaAssociation  (bird's-eye-view area scoring + GNN assignment)
+///       SENSOR_PERSPECTIVE → SensorPerspectiveAssociation (sensor-perspective area scoring)
 ///
-/// Available associators:
-///   - ONLINE            → DataAssociation (score matrix + GNN linear assignment)
-///   - SENSOR_PERSPECTIVE → SensorPerspectiveAssociation (sensor-geometry-based matching)
+///   Layer 2 — Tracker-to-tracker (T2T):
+///     TrackerMerger removes spatially redundant trackers after D2T association.
 class AssociationManager
 {
 public:
   AssociationManager(
-    const AssociatorConfig & online_config, const OverlapMergerConfig & overlap_config,
+    const AssociatorConfig & bev_config, const TrackerMergerConfig & tracker_merger_config,
     const std::vector<types::InputChannel> & channels_config);
 
-  /// Match measurements to trackers using the associator designated for the channel.
+  /// Layer 1 (D2T): match measurements to trackers using the channel's designated associator.
   types::AssociationResult associate(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
-  /// Remove spatially overlapping / redundant trackers.
-  void pruneOverlaps(
+  /// Layer 2 (T2T): remove spatially overlapping / redundant trackers.
+  void mergeTrackers(
     std::list<std::shared_ptr<Tracker>> & trackers, const rclcpp::Time & time,
     const AdaptiveThresholdCache & threshold_cache,
     const std::optional<geometry_msgs::msg::Pose> & ego_pose);
@@ -63,13 +64,13 @@ public:
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
 private:
-  /// Select the associator for the given channel index.
+  /// Select the D2T associator for the given channel index.
   IAssociation & getAssociatorForChannel(uint channel_index) const;
 
   std::vector<types::InputChannel> channels_config_;
-  std::unique_ptr<DataAssociation> online_association_;
+  std::unique_ptr<BevAreaAssociation> bev_association_;
   std::unique_ptr<SensorPerspectiveAssociation> sensor_association_;
-  std::unique_ptr<OverlapMerger> overlap_merger_;
+  std::unique_ptr<TrackerMerger> tracker_merger_;
 };
 
 }  // namespace autoware::multi_object_tracker

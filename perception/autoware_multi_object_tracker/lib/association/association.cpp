@@ -46,20 +46,20 @@ struct MeasurementWithIndex
   MeasurementWithIndex(const types::DynamicObject & obj, size_t idx) : object(obj), index(idx) {}
 };
 
-DataAssociation::DataAssociation(const AssociatorConfig & config)
+BevAreaAssociation::BevAreaAssociation(const AssociatorConfig & config)
 : config_(config), score_threshold_(0.01)
 {
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
   updateMaxSearchDistances();
 }
 
-void DataAssociation::setTimeKeeper(
+void BevAreaAssociation::setTimeKeeper(
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
 }
 
-void DataAssociation::updateMaxSearchDistances()
+void BevAreaAssociation::updateMaxSearchDistances()
 {
   max_squared_dist_per_class_.clear();
   for (const auto measurement_label : classes::trackedLabels()) {
@@ -78,7 +78,7 @@ void DataAssociation::updateMaxSearchDistances()
   }
 }
 
-types::AssociationResult DataAssociation::associate(
+types::AssociationResult BevAreaAssociation::associate(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
@@ -88,7 +88,7 @@ types::AssociationResult DataAssociation::associate(
   return result;
 }
 
-void DataAssociation::assign(
+void BevAreaAssociation::assign(
   const types::AssociationData & data, types::AssociationResult & association_result)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
@@ -173,7 +173,7 @@ inline InverseCovariance2D precomputeInverseCovarianceFromPose(
   return result;
 }
 
-PreparationData DataAssociation::prepareAssociationData(
+PreparationData BevAreaAssociation::prepareAssociationData(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
@@ -212,7 +212,7 @@ PreparationData DataAssociation::prepareAssociationData(
   return prep_data;
 }
 
-void DataAssociation::processMeasurement(
+void BevAreaAssociation::processMeasurement(
   const types::DynamicObject & measurement_object, const size_t measurement_idx,
   const classes::Label measurement_label, const PreparationData & prep_data,
   types::AssociationData & association_data)
@@ -262,7 +262,7 @@ void DataAssociation::processMeasurement(
   }
 }
 
-types::AssociationData DataAssociation::calcAssociationData(
+types::AssociationData BevAreaAssociation::calcAssociationData(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
@@ -300,7 +300,7 @@ types::AssociationData DataAssociation::calcAssociationData(
   return association_data;
 }
 
-std::vector<std::vector<double>> DataAssociation::formatScoreMatrix(
+std::vector<std::vector<double>> BevAreaAssociation::formatScoreMatrix(
   const types::AssociationData & data) const
 {
   std::vector<std::vector<double>> score_matrix(

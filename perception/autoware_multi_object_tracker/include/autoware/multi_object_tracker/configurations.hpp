@@ -86,10 +86,10 @@ struct TrackedLabelThresholds
 };
 
 // ---------------------------------------------------------------------------
-// Overlap merger (post-processing: remove spatially redundant trackers)
+// Tracker merger (tracker-to-tracker layer: remove spatially redundant trackers)
 // ---------------------------------------------------------------------------
 
-struct OverlapMergerConfig
+struct TrackerMergerConfig
 {
   float min_known_object_removal_iou;    // ratio [0, 1]
   float min_unknown_object_removal_iou;  // ratio [0, 1]
