@@ -14,10 +14,17 @@
 
 #include "autoware/behavior_path_side_shift_module/manager.hpp"
 
+#include "autoware/behavior_path_side_shift_module/validation.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
+#include <rclcpp/create_timer.hpp>
+#include <rclcpp/logging.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_common_msgs/msg/response_status.hpp>
+
+#include <algorithm>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -40,9 +47,63 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
   p.min_shifting_distance = node->declare_parameter<double>(ns + "min_shifting_distance");
   p.min_shifting_speed = node->declare_parameter<double>(ns + "min_shifting_speed");
   p.shift_request_time_limit = node->declare_parameter<double>(ns + "shift_request_time_limit");
+  p.max_shift_magnitude = node->declare_parameter<double>(ns + "max_shift_magnitude");
+  p.min_shift_gap = node->declare_parameter<double>(ns + "min_shift_gap");
+  p.unit_shift_amount = node->declare_parameter<double>(ns + "unit_shift_amount");
   p.publish_debug_marker = node->declare_parameter<bool>(ns + "publish_debug_marker");
 
   parameters_ = std::make_shared<SideShiftParameters>(p);
+  inserted_lateral_offset_state_ = std::make_shared<InsertedLateralOffsetState>();
+  requested_lateral_offset_state_ = std::make_shared<RequestedLateralOffsetState>();
+
+  set_lateral_offset_srv_ = node->create_service<SetLateralOffset>(
+    "~/set_lateral_offset", std::bind(
+                              &SideShiftModuleManager::onSetLateralOffset, this,
+                              std::placeholders::_1, std::placeholders::_2));
+
+  lateral_offset_sub_ = node->create_subscription<tier4_planning_msgs::msg::LateralOffset>(
+    "~/input/lateral_offset", rclcpp::QoS{1},
+    std::bind(&SideShiftModuleManager::onLateralOffset, this, std::placeholders::_1));
+}
+
+void SideShiftModuleManager::onSetLateralOffset(
+  const SetLateralOffset::Request::SharedPtr request,
+  SetLateralOffset::Response::SharedPtr response)
+{
+  if (!planner_data_ || !planner_data_->route_handler->isHandlerReady()) {
+    response->status.success = false;
+    response->status.code = autoware_common_msgs::msg::ResponseStatus::SERVICE_UNREADY;
+    response->status.message = getStatusMessage(response->status.code);
+    return;
+  }
+
+  const double current_inserted =
+    inserted_lateral_offset_state_ ? inserted_lateral_offset_state_->value.load() : 0.0;
+
+  const auto [status_code, lateral_offset] =
+    validateAndComputeLateralOffset(*request, current_inserted, parameters_);
+
+  // WARN_EXCEEDED_LIMIT will be treated as success since the shift itself will be performed
+  response->status.success =
+    (status_code == SetLateralOffset::Response::SUCCESS ||
+     status_code == SetLateralOffset::Response::WARN_EXCEEDED_LIMIT);
+  response->status.code = status_code;
+  response->status.message = getStatusMessage(status_code);
+
+  if (response->status.success) {
+    requested_lateral_offset_state_->value.store(lateral_offset);
+  }
+}
+
+void SideShiftModuleManager::onLateralOffset(
+  const tier4_planning_msgs::msg::LateralOffset::ConstSharedPtr msg)
+{
+  const auto new_offset = static_cast<double>(msg->lateral_offset);
+
+  const auto validation_result =
+    validateRawValue(new_offset, inserted_lateral_offset_state_->value.load(), parameters_);
+
+  requested_lateral_offset_state_->value.store(validation_result.second);
 }
 
 void SideShiftModuleManager::updateModuleParams(
