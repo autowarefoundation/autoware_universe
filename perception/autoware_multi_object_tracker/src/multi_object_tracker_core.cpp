@@ -56,7 +56,8 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize processor
   processor = std::make_unique<TrackerProcessor>(
-    params.processor_config, params.associator_config, params.input_channels_config);
+    params.lifecycle_config, params.associator_config, params.overlap_config,
+    params.input_channels_config);
 
   last_publish_time = node.now();
   last_updated_time = node.now();
@@ -87,8 +88,8 @@ void process_parameters(MultiObjectTrackerParameters & params)
     return *tracker_type;
   };
 
-  // Set the tracker map for processor config
-  params.processor_config.tracker_map = {
+  // Set the tracker map for lifecycle config
+  params.lifecycle_config.tracker_map = {
     {Label::CAR, getTrackerType("car")},
     {Label::TRUCK, getTrackerType("truck")},
     {Label::BUS, getTrackerType("bus")},
@@ -97,15 +98,15 @@ void process_parameters(MultiObjectTrackerParameters & params)
     {Label::BICYCLE, getTrackerType("bicycle")},
     {Label::MOTORCYCLE, getTrackerType("motorcycle")},
     {Label::UNKNOWN, TrackerType::POLYGON}};
-  // Set the pruning thresholds for processor config
-  params.processor_config.pruning_giou_thresholds = params.pruning_giou_thresholds.to_label_map();
-  params.processor_config.pruning_distance_thresholds =
+  // Set the pruning thresholds for overlap merger config
+  params.overlap_config.pruning_giou_thresholds = params.pruning_giou_thresholds.to_label_map();
+  params.overlap_config.pruning_distance_thresholds =
     params.pruning_distance_thresholds.to_label_map();
-  params.processor_config.pruning_distance_thresholds_sq.clear();
-  params.processor_config.pruning_distance_thresholds_sq.reserve(
-    params.processor_config.pruning_distance_thresholds.size());
-  for (const auto & [label, threshold] : params.processor_config.pruning_distance_thresholds) {
-    params.processor_config.pruning_distance_thresholds_sq.emplace(label, threshold * threshold);
+  params.overlap_config.pruning_distance_thresholds_sq.clear();
+  params.overlap_config.pruning_distance_thresholds_sq.reserve(
+    params.overlap_config.pruning_distance_thresholds.size());
+  for (const auto & [label, threshold] : params.overlap_config.pruning_distance_thresholds) {
+    params.overlap_config.pruning_distance_thresholds_sq.emplace(label, threshold * threshold);
   }
 
   for (const auto measurement_label : classes::trackedLabels()) {
@@ -120,7 +121,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
     const auto & label_params = label_params_opt->get();
 
     const auto default_tracker_type_opt =
-      get_map_value_if_exists(params.processor_config.tracker_map, measurement_label);
+      get_map_value_if_exists(params.lifecycle_config.tracker_map, measurement_label);
     if (!default_tracker_type_opt) {
       throw std::runtime_error(
         "Missing default tracker mapping for measurement label: " +

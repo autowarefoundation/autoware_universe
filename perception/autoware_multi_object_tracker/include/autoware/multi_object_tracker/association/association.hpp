@@ -17,6 +17,7 @@
 
 #define EIGEN_MPL2_ONLY
 
+#include "autoware/multi_object_tracker/association/scoring/match_scoring.hpp"
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
@@ -43,18 +44,12 @@ namespace autoware::multi_object_tracker
 namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
 
-// Define point and box types for R-tree
+// Spatial index types for R-tree tracker lookup
 typedef bg::model::point<double, 2, bg::cs::cartesian> Point;
 typedef bg::model::box<Point> Box;
-typedef std::pair<Point, size_t> ValueType;  // Point and tracker index
+typedef std::pair<Point, size_t> ValueType;  // (position, tracker index)
 
-struct InverseCovariance2D
-{
-  double inv00;  // (d / det)
-  double inv01;  // (-b / det)
-  double inv11;  // (a / det)
-};
-
+// Per-tracker precomputed data for a single association round
 struct PreparationData
 {
   std::vector<types::DynamicObject> tracked_objects;
@@ -73,18 +68,15 @@ private:
 
   // R-tree for spatial indexing of trackers
   bgi::rtree<ValueType, bgi::quadratic<16>> rtree_;
-  // Cache of maximum squared distances per measurement class
-  // For each measurement class, stores the maximum squared distance it could match with any tracker
-  // class
+  // Maximum squared search distance per measurement class (precomputed from config)
   AssociatorConfig::LabelDoubleMap max_squared_dist_per_class_;
 
-  // Helper to compute max search distances from config
   void updateMaxSearchDistances();
 
-  // Preparation and processing stages for association
   PreparationData prepareAssociationData(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
+
   void processMeasurement(
     const types::DynamicObject & measurement_object, size_t measurement_idx,
     const classes::Label measurement_label, const PreparationData & prep_data,
@@ -97,21 +89,11 @@ public:
 
   void assign(const types::AssociationData & data, types::AssociationResult & association_result);
 
-  double calculateScore(
-    const types::DynamicObject & tracked_object, const classes::Label tracker_label,
-    const types::TrackerType tracker_type,
-    const AssociatorConfig::TrackerAssociationParameters & association_params,
-    const types::DynamicObject & measurement_object, const classes::Label measurement_label,
-    const InverseCovariance2D & inv_cov, bool & has_significant_shape_change) const;
-
   types::AssociationData calcAssociationData(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
   std::vector<std::vector<double>> formatScoreMatrix(const types::AssociationData & data) const;
-
-  const double CHECK_GIOU_THRESHOLD = 0.7;
-  const double AREA_RATIO_THRESHOLD = 1.3;
 
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 };

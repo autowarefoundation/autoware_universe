@@ -135,10 +135,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.tracker_type_map["bicycle"] = declare_initial_tracker_parameter("bicycle");
   params_.tracker_type_map["motorcycle"] = declare_initial_tracker_parameter("motorcycle");
 
-  params_.processor_config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
-  params_.processor_config.min_known_object_removal_iou =
+  params_.lifecycle_config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
+  params_.overlap_config.min_known_object_removal_iou =
     declare_parameter<double>("min_known_object_removal_iou");
-  params_.processor_config.min_unknown_object_removal_iou =
+  params_.overlap_config.min_unknown_object_removal_iou =
     declare_parameter<double>("min_unknown_object_removal_iou");
 
   const auto declare_tracked_label_thresholds =
@@ -166,19 +166,19 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // pruning parameters
   params_.pruning_giou_thresholds =
     declare_tracked_label_thresholds("pruning_generalized_iou_thresholds");
-  params_.processor_config.pruning_static_object_speed =
+  params_.overlap_config.pruning_static_object_speed =
     declare_parameter<double>("pruning_static_object_speed");
-  params_.processor_config.pruning_moving_object_speed =
+  params_.overlap_config.pruning_moving_object_speed =
     declare_parameter<double>("pruning_moving_object_speed");
-  params_.processor_config.pruning_static_iou_threshold =
+  params_.overlap_config.pruning_static_iou_threshold =
     declare_parameter<double>("pruning_static_iou_threshold");
 
   // overlap distance threshold
   params_.pruning_distance_thresholds =
     declare_tracked_label_thresholds("pruning_distance_thresholds");
-  params_.processor_config.enable_unknown_object_velocity_estimation =
+  params_.lifecycle_config.enable_unknown_object_velocity_estimation =
     declare_parameter<bool>("enable_unknown_object_velocity_estimation");
-  params_.processor_config.enable_unknown_object_motion_output =
+  params_.lifecycle_config.enable_unknown_object_motion_output =
     declare_parameter<bool>("enable_unknown_object_motion_output");
 
   // Parameters for associator (explicit layered configuration)
