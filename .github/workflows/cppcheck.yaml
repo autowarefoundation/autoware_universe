@@ -1,36 +1,38 @@
-name: cppcheck-weekly
+name: cppcheck
 
 on:
-  schedule:
-    - cron: 0 0 * * 1
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  cppcheck-weekly:
-    runs-on: ubuntu-22.04
+  cppcheck:
+    runs-on: ubuntu-latest
+    container: ros:jazzy
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
 
-      # cppcheck from apt does not yet support --check-level args, and thus install from snap
-      - name: Install Cppcheck from snap
+      - name: Install Cppcheck
         run: |
-          sudo snap install cppcheck
+          apt-get update
+          apt-get install -y cppcheck
 
-      # cspell: ignore suppr
+      # cspell: ignore suppr Dslots
       - name: Run Cppcheck on all files
         continue-on-error: true
         id: cppcheck
         run: |
-          cppcheck --enable=all --inconclusive --check-level=exhaustive -D'PLUGINLIB_EXPORT_CLASS(class_type, base_class)=' -Dslots= -DQ_SLOTS= --suppress=*:*/test/* --error-exitcode=1 --xml --inline-suppr . 2> cppcheck-report.xml
+          cppcheck --enable=all --inconclusive --check-level=exhaustive -D'PLUGINLIB_EXPORT_CLASS(class_type, base_class)=' -Dslots= -DQ_SLOTS= --error-exitcode=1 --xml --suppressions-list=.cppcheck_suppressions --inline-suppr . 2> cppcheck-report.xml
         shell: bash
 
       - name: Count errors by error ID and severity
         run: |
           #!/bin/bash
           temp_file=$(mktemp)
-          grep -oP '(?<=id=")[^"]+" severity="[^"]+' cppcheck-report.xml | sed 's/" severity="/,/g' > "$temp_file"
+          grep -oP '(?<=id=")[^"]+" severity="[^"]+' cppcheck-report.xml | sed 's/" severity="/,/g' > "$temp_file" || true
           echo "Error counts by error ID and severity:"
           sort "$temp_file" | uniq -c
           rm "$temp_file"

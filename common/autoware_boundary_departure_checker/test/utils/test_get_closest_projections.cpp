@@ -62,6 +62,87 @@ Param create_mock_param()
   p.th_cutoff_time_near_boundary_s = cutoff_time_near;
   return p;
 }
+#ifdef EXPORT_TEST_PLOT_FIGURE
+void plot_trajectory_evaluation(
+  const std::vector<ProjectionToBound> & res_vec, const std::string & title,
+  const FootprintMap<Side<ProjectionsToBound>> * all_projections = nullptr,
+  const std::optional<double> braking_zone_start = std::nullopt)
+{
+  auto plt = autoware::pyplot::import();
+
+  // 1. Plot safety thresholds
+  plt.axhline(
+    Args(th_critical),
+    Kwargs("color"_a = "red", "linestyle"_a = "--", "label"_a = "Critical Thresh"));
+  plt.axhline(
+    Args(th_near), Kwargs("color"_a = "orange", "linestyle"_a = "--", "label"_a = "Near Thresh"));
+  plt.axvline(
+    Args(braking_dist_max),
+    Kwargs("color"_a = "black", "linestyle"_a = ":", "label"_a = "Max Braking"));
+
+  // Optional: Plot the start of the braking zone
+  if (braking_zone_start) {
+    plt.axvline(
+      Args(*braking_zone_start),
+      Kwargs("color"_a = "orange", "linestyle"_a = ":", "label"_a = "Braking Zone Start"));
+  }
+
+  // 2. Plot ALL initial candidates as gray 'x' marks
+  if (all_projections) {
+    std::vector<double> cand_x;
+    std::vector<double> cand_y;
+    for (const auto & [type, side_map] : all_projections->data) {
+      // Use .at() or [] safely because we know it's a test environment
+      if (side_map.right.empty() && side_map.left.empty()) continue;
+      for (const auto & cand : side_map[SideKey::LEFT]) {
+        cand_x.push_back(cand.lon_dist_on_pred_traj);
+        cand_y.push_back(cand.lat_dist);
+      }
+    }
+    if (!cand_x.empty()) {
+      plt.scatter(
+        Args(cand_x, cand_y), Kwargs(
+                                "color"_a = "gray", "marker"_a = "x", "s"_a = 60,
+                                "label"_a = "All Candidates", "alpha"_a = 0.5));
+    }
+  }
+
+  // 3. Plot the selected winners as solid circles
+  std::vector<double> near_x;
+  std::vector<double> near_y;
+  std::vector<double> app_x;
+  std::vector<double> app_y;
+  std::vector<double> crit_x;
+  std::vector<double> crit_y;
+  for (const auto & res : res_vec) {
+    if (res.departure_type_opt == DepartureType::NEAR_BOUNDARY) {
+      near_x.push_back(res.lon_dist_on_pred_traj);
+      near_y.push_back(res.lat_dist);
+    } else if (res.departure_type_opt == DepartureType::APPROACHING_DEPARTURE) {
+      app_x.push_back(res.lon_dist_on_pred_traj);
+      app_y.push_back(res.lat_dist);
+    } else if (res.departure_type_opt == DepartureType::CRITICAL_DEPARTURE) {
+      crit_x.push_back(res.lon_dist_on_pred_traj);
+      crit_y.push_back(res.lat_dist);
+    }
+  }
+
+  if (!near_x.empty())
+    plt.scatter(Args(near_x, near_y), Kwargs("color"_a = "green", "label"_a = "Selected (Near)"));
+  if (!app_x.empty())
+    plt.scatter(
+      Args(app_x, app_y), Kwargs("color"_a = "orange", "label"_a = "Selected (Approaching)"));
+  if (!crit_x.empty())
+    plt.scatter(Args(crit_x, crit_y), Kwargs("color"_a = "red", "label"_a = "Selected (Critical)"));
+
+  plt.xlabel(Args("Longitudinal Distance [m]"));
+  plt.ylabel(Args("Lateral Distance [m]"));
+  plt.title(Args(title));
+  plt.legend();
+
+  save_figure(plt, "test_get_closest_projections");
+}
+#endif
 }  // namespace
 
 // ==============================================================================
@@ -172,8 +253,8 @@ INSTANTIATE_TEST_SUITE_P(
       "OutsideNearThreshold",
       {create_mock_projection(FootprintType::NORMAL, 3.0, 5.0, 1.0)},
       std::nullopt,
-      std::nullopt,
-      std::nullopt},
+      DepartureType::NONE,  // CHANGED: Now expects the safe NONE skeleton
+      3.0},                 // CHANGED: The distance of the skeleton
     ProjectionAtIndexTestParam{
       "ClosestNearBoundary",
       {create_mock_projection(FootprintType::NORMAL, 1.5, 5.0, 1.0),
@@ -186,7 +267,7 @@ INSTANTIATE_TEST_SUITE_P(
       "FilteredByPreviousLongitudinalDistance",
       {create_mock_projection(FootprintType::LOCALIZATION, 0.8, 5.2, 1.0)},
       5.0,
-      std::nullopt,
+      std::nullopt,  // Remains nullopt (Filtered out by down sample)
       std::nullopt},
     ProjectionAtIndexTestParam{
       "CriticalNotFilteredByPreviousDistance",
@@ -199,8 +280,8 @@ INSTANTIATE_TEST_SUITE_P(
       {create_mock_projection(
         FootprintType::NORMAL, 1.0, braking_dist_max + 1.0, cutoff_time_near + 0.5)},
       std::nullopt,
-      std::nullopt,
-      std::nullopt},
+      DepartureType::NONE,  // CHANGED: Now expects the safe NONE skeleton
+      1.0},                 // CHANGED: The distance of the skeleton
     ProjectionAtIndexTestParam{
       "CriticalDowngradedToApproaching",
       {create_mock_projection(
@@ -249,15 +330,17 @@ TEST_F(GetClosestProjectionsForSideTest, TestValidFootprintsWithoutCritical)
   projections[FootprintType::NORMAL][SideKey::LEFT] = {
     create_mock_projection(std::nullopt, 3.0, 0.0, 1.0, 0),
     create_mock_projection(std::nullopt, 1.5, 10.0, 1.0, 1),
-    create_mock_projection(std::nullopt, 1.2, 20.0, 1.0, 2)};
+    create_mock_projection(std::nullopt, 1.2, 14.0, 1.0, 2)};
+
   projections[FootprintType::LOCALIZATION][SideKey::LEFT] = {
     create_mock_projection(std::nullopt, 3.0, 0.0, 1.0, 0),
     create_mock_projection(std::nullopt, 0.8, 10.0, 1.0, 1),
-    create_mock_projection(std::nullopt, 1.5, 20.0, 1.0, 2)};
+    create_mock_projection(std::nullopt, 1.5, 14.0, 1.0, 2)};
+
   projections[FootprintType::STEERING_STUCK][SideKey::LEFT] = {
     create_mock_projection(std::nullopt, 3.0, 0.0, 1.0, 0),
     create_mock_projection(std::nullopt, 1.8, 10.0, 1.0, 1),
-    create_mock_projection(std::nullopt, 1.9, 20.0, 1.0, 2)};
+    create_mock_projection(std::nullopt, 1.9, 14.0, 1.0, 2)};
 
   auto result = utils::get_closest_projections_for_side(
     projections, param, braking_dist_min, braking_dist_max, SideKey::LEFT);
@@ -265,7 +348,7 @@ TEST_F(GetClosestProjectionsForSideTest, TestValidFootprintsWithoutCritical)
   ASSERT_TRUE(result.has_value());
   const auto & res_vec = result.value();
 
-  ASSERT_EQ(res_vec.size(), 2);  // Point 0 was ignored (too far)
+  ASSERT_EQ(res_vec.size(), 2);
 
   EXPECT_EQ(res_vec[0].ego_sides_idx, 1);
   EXPECT_EQ(res_vec[0].footprint_type_opt.value(), FootprintType::LOCALIZATION);
@@ -274,6 +357,11 @@ TEST_F(GetClosestProjectionsForSideTest, TestValidFootprintsWithoutCritical)
   EXPECT_EQ(res_vec[1].ego_sides_idx, 2);
   EXPECT_EQ(res_vec[1].footprint_type_opt.value(), FootprintType::NORMAL);
   EXPECT_EQ(res_vec[1].departure_type_opt.value(), DepartureType::NEAR_BOUNDARY);
+
+  BDC_PLOT_RESULT({
+    plot_trajectory_evaluation(
+      res_vec, "Trajectory Filtering: Valid Footprints w/o Critical", &projections);
+  });
 }
 
 TEST_F(GetClosestProjectionsForSideTest, TestApproachingDowngradeLoop)
@@ -284,8 +372,8 @@ TEST_F(GetClosestProjectionsForSideTest, TestApproachingDowngradeLoop)
   // CRITICAL threshold = 0.5, braking_dist_max = 15.0
   projections[FootprintType::NORMAL][SideKey::LEFT] = {
     create_mock_projection(std::nullopt, 1.5, 0.0, 1.0, 0),   // Index 0: 30m away from wall
-    create_mock_projection(std::nullopt, 1.5, 16.0, 1.0, 1),  // Index 1: 14m away from wall
-    create_mock_projection(std::nullopt, 0.1, 30.0, 1.0, 2),  // Index 2: Hits wall (Critical)
+    create_mock_projection(std::nullopt, 1.5, 14.0, 1.0, 1),  // Index 1: 14m away from wall
+    create_mock_projection(std::nullopt, 0.1, 28.0, 1.0, 2),  // Index 2: Hits wall (Critical)
     create_mock_projection(std::nullopt, 0.1, 40.0, 1.0, 3)   // Index 3: Past wall
   };
 
@@ -299,7 +387,7 @@ TEST_F(GetClosestProjectionsForSideTest, TestApproachingDowngradeLoop)
     projections, param, braking_dist_min, braking_dist_max, SideKey::LEFT);
 
   ASSERT_TRUE(result.has_value());
-  auto res_vec = result.value();
+  const auto & res_vec = result.value();
 
   ASSERT_EQ(res_vec.size(), 3);  // Breaks after index 2
 
@@ -316,52 +404,72 @@ TEST_F(GetClosestProjectionsForSideTest, TestApproachingDowngradeLoop)
   EXPECT_EQ(res_vec[2].departure_type_opt.value(), DepartureType::CRITICAL_DEPARTURE);
 
   BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-
-    std::vector<double> near_x;
-    std::vector<double> near_y;
-    std::vector<double> app_x;
-    std::vector<double> app_y;
-    std::vector<double> crit_x;
-    std::vector<double> crit_y;
-
-    for (const auto & res : res_vec) {
-      if (res.departure_type_opt == DepartureType::NEAR_BOUNDARY) {
-        near_x.push_back(res.lon_dist_on_pred_traj);
-        near_y.push_back(res.lat_dist);
-      } else if (res.departure_type_opt == DepartureType::APPROACHING_DEPARTURE) {
-        app_x.push_back(res.lon_dist_on_pred_traj);
-        app_y.push_back(res.lat_dist);
-      } else if (res.departure_type_opt == DepartureType::CRITICAL_DEPARTURE) {
-        crit_x.push_back(res.lon_dist_on_pred_traj);
-        crit_y.push_back(res.lat_dist);
-      }
-    }
-
-    plt.axhline(
-      Args(th_critical),
-      Kwargs("color"_a = "red", "linestyle"_a = "--", "label"_a = "Critical Thresh"));
-
-    // Plot the start of the braking zone relative to the critical point
     double braking_start = res_vec.back().lon_dist_on_pred_traj - braking_dist_max;
-    plt.axvline(
-      Args(braking_start),
-      Kwargs("color"_a = "orange", "linestyle"_a = ":", "label"_a = "Braking Zone Start"));
-
-    if (!near_x.empty())
-      plt.scatter(Args(near_x, near_y), Kwargs("color"_a = "green", "label"_a = "Near"));
-    if (!app_x.empty())
-      plt.scatter(Args(app_x, app_y), Kwargs("color"_a = "orange", "label"_a = "Approaching"));
-    if (!crit_x.empty())
-      plt.scatter(Args(crit_x, crit_y), Kwargs("color"_a = "red", "label"_a = "Critical"));
-
-    plt.xlabel(Args("Longitudinal Distance [m]"));
-    plt.ylabel(Args("Lateral Distance [m]"));
-    plt.title(Args("Trajectory Downgrade Logic"));
-    plt.legend();
-
-    save_figure(plt, "test_get_closest_projections");
+    plot_trajectory_evaluation(res_vec, "Trajectory Downgrade Logic", nullptr, braking_start);
   });
 }
 
+TEST_F(GetClosestProjectionsForSideTest, TestBackwardBufferAndCleanup)
+{
+  FootprintMap<Side<ProjectionsToBound>> projections;
+
+  // We simulate a physical crash at s = 20.0m.
+  // min_braking = 10.0, max_braking = 15.0, cutoff = 2.0 (from mock param)
+  // Buffer is 1.0m. Therefore:
+  // - CRITICAL zone: 19.0m to 20.0m
+  // - APPROACHING zone: 4.0m to 19.0m (20.0 - 15.0 - 1.0 = 4.0)
+  projections[FootprintType::NORMAL][SideKey::LEFT] = {
+    create_mock_projection(
+      std::nullopt, 1.5, 0.0, 0.0, 0),  // dist_to_crash = 20.0 (> 16.0) -> NEAR
+    create_mock_projection(
+      std::nullopt, 1.5, 10.0, 1.0, 1),  // dist_to_crash = 10.0 (<= 16.0) -> APPROACHING
+    create_mock_projection(
+      std::nullopt, 1.5, 19.0, 1.9,
+      2),  // dist_to_crash = 1.0  (<= 1.0) -> CRITICAL (Earliest buffered point!)
+    create_mock_projection(
+      std::nullopt, 1.5, 19.5, 1.95,
+      3),  // dist_to_crash = 0.5  (<= 1.0) -> CRITICAL (Will be erased)
+    create_mock_projection(
+      std::nullopt, 0.1, 20.0, 2.0,
+      4)  // dist_to_crash = 0.0  -> CRITICAL (Original crash, will be erased)
+  };
+
+  // Dummy data so map matches sizes
+  projections[FootprintType::LOCALIZATION][SideKey::LEFT] =
+    projections[FootprintType::NORMAL][SideKey::LEFT];
+  projections[FootprintType::STEERING_STUCK][SideKey::LEFT] =
+    projections[FootprintType::NORMAL][SideKey::LEFT];
+
+  auto result = utils::get_closest_projections_for_side(
+    projections, param, braking_dist_min, braking_dist_max, SideKey::LEFT);
+
+  ASSERT_TRUE(result.has_value());
+  const auto & res_vec = result.value();
+
+  // 1. Verify Cleanup: Original size was 5. The last two (indices 3 and 4) should be erased.
+  ASSERT_EQ(res_vec.size(), 3);
+
+  // 2. Verify States
+  EXPECT_EQ(res_vec[0].ego_sides_idx, 0);
+  EXPECT_EQ(res_vec[0].departure_type_opt.value(), DepartureType::NEAR_BOUNDARY);
+
+  EXPECT_EQ(res_vec[1].ego_sides_idx, 1);
+  EXPECT_EQ(res_vec[1].departure_type_opt.value(), DepartureType::APPROACHING_DEPARTURE);
+
+  // 3. Verify the Buffered Critical Point
+  EXPECT_EQ(res_vec[2].ego_sides_idx, 2);
+  EXPECT_EQ(res_vec[2].departure_type_opt.value(), DepartureType::CRITICAL_DEPARTURE);
+
+  // 4. Verify the math: The new CRITICAL point must be exactly at the 1.0m buffer line (s = 19.0)
+  EXPECT_DOUBLE_EQ(res_vec.back().lon_dist_on_pred_traj, 19.0);
+
+  // Plot it using our shiny new helper!
+  BDC_PLOT_RESULT({
+    // Calculate the original braking start line based on the original crash point (20.0)
+    double original_crash_s = 20.0;
+    double braking_start = original_crash_s - braking_dist_max;
+    plot_trajectory_evaluation(
+      res_vec, "Backward Buffer and Cleanup Logic", nullptr, braking_start);
+  });
+}
 }  // namespace autoware::boundary_departure_checker

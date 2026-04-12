@@ -22,12 +22,12 @@ subscribers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: traffic_signals
-    message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
     remap_target: ~/input/classified/traffic_signals
 
 publishers:
   - name: traffic_signals
-    message_type: tier4_perception_msgs/msg/TrafficLightGroupArray
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
     qos:
       reliability: reliable
       durability: transient_local
