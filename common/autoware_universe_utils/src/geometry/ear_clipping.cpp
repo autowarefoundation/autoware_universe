@@ -23,6 +23,9 @@ namespace autoware::universe_utils
 
 void remove_point(const std::size_t p_index, std::vector<LinkedPoint> & points)
 {
+  if (!points[p_index].prev_index.has_value() || !points[p_index].next_index.has_value()) {
+    return;  // invariant: active nodes always have prev/next set; guard for clang-tidy
+  }
   std::size_t prev_index = points[p_index].prev_index.value();
   std::size_t next_index = points[p_index].next_index.value();
 
@@ -78,6 +81,7 @@ bool middle_inside(
 
   while (p_idx.has_value()) {
     std::size_t current_idx = p_idx.value();
+    if (!points[current_idx].next_index.has_value()) break;
     std::size_t next_idx = points[current_idx].next_index.value();
 
     if (
@@ -227,6 +231,10 @@ std::size_t insert_point(
     points[p_idx].next_index = p_idx;
   } else {
     std::size_t last = last_index.value();
+    if (!points[last].next_index.has_value()) {
+      points[p_idx].next_index = p_idx;
+      return p_idx;  // invariant: never reached; guard for clang-tidy
+    }
     std::size_t next = points[last].next_index.value();
     points[p_idx].prev_index = last;
     points[p_idx].next_index = next;
@@ -272,6 +280,10 @@ std::size_t linked_list(
   }
 
   vertices += len;
+  if (!last_index.has_value()) {
+    throw std::runtime_error(
+      "ear_clipping::linked_list: called with empty ring (caller invariant violated)");
+  }
   return last_index.value();
 }
 
@@ -297,6 +309,7 @@ std::size_t find_hole_bridge(
   double hy = points[hole_index].y();
   double qx = -std::numeric_limits<double>::infinity();
   std::optional<std::size_t> bridge_index = std::nullopt;
+  if (!points[p].next_index.has_value()) return outer_point_index;
   std::size_t next_index = points[p].next_index.value();
 
   while (p != outer_point_index) {
@@ -312,6 +325,7 @@ std::size_t find_hole_bridge(
       }
     }
     p = next_index;
+    if (!points[p].next_index.has_value()) break;
     next_index = points[p].next_index.value();
   }
 
@@ -323,6 +337,7 @@ std::size_t find_hole_bridge(
   p = bridge_index.value();
   double mx = points[p].x();
   double my = points[p].y();
+  if (!points[p].next_index.has_value()) return bridge_index.value();
   next_index = points[p].next_index.value();
 
   while (p != stop) {
@@ -343,6 +358,7 @@ std::size_t find_hole_bridge(
     }
 
     p = next_index;
+    if (!points[p].next_index.has_value()) break;
     next_index = points[p].next_index.value();
   }
 
@@ -352,6 +368,9 @@ std::size_t find_hole_bridge(
 std::size_t split_polygon(
   std::size_t a_index, std::size_t b_index, std::vector<LinkedPoint> & points)
 {
+  if (!points[a_index].next_index.has_value() || !points[b_index].prev_index.has_value()) {
+    return a_index;  // invariant: never reached; guard for clang-tidy
+  }
   std::size_t an_idx = points[a_index].next_index.value();
   std::size_t bp_idx = points[b_index].prev_index.value();
 
@@ -386,17 +405,20 @@ std::size_t filter_points(
     again = false;
 
     if (
-      !points[p].steiner &&
+      !points[p].steiner && points[p].next_index.has_value() &&
+      points[p].prev_index.has_value() &&
       (equals(p, points[p].next_index.value(), points) ||
        area(points, points[p].prev_index.value(), p, points[p].next_index.value()) == 0)) {
       remove_point(p, points);
+      if (!points[p].prev_index.has_value()) break;
       p = points[p].prev_index.value();
 
-      if (p == points[p].next_index.value()) {
+      if (!points[p].next_index.has_value() || p == points[p].next_index.value()) {
         break;
       }
       again = true;
     } else {
+      if (!points[p].next_index.has_value()) break;
       p = points[p].next_index.value();
     }
   }
@@ -410,9 +432,11 @@ std::size_t eliminate_hole(
   auto bridge = find_hole_bridge(hole_index, outer_index, points);
   auto bridge_reverse = split_polygon(bridge, hole_index, points);
 
+  if (!points[bridge_reverse].next_index.has_value()) return bridge_reverse;
   auto next_index_bridge_reverse = points[bridge_reverse].next_index.value();
   filter_points(bridge_reverse, next_index_bridge_reverse, points);
 
+  if (!points[bridge].next_index.has_value()) return bridge;
   auto next_index_bridge = points[bridge].next_index.value();
   return filter_points(bridge, next_index_bridge, points);
 }
@@ -429,7 +453,8 @@ std::size_t eliminate_holes(
     }
     auto inner_index = linked_list(ring, false, vertices, points);
 
-    if (points[inner_index].next_index.value() == inner_index) {
+    if (points[inner_index].next_index.has_value() &&
+        points[inner_index].next_index.value() == inner_index) {
       points[inner_index].steiner = true;
     }
 
@@ -449,6 +474,9 @@ std::size_t eliminate_holes(
 
 bool is_ear(const std::size_t ear_index, const std::vector<LinkedPoint> & points)
 {
+  if (!points[ear_index].prev_index.has_value() || !points[ear_index].next_index.has_value()) {
+    return false;  // invariant: never reached; guard for clang-tidy
+  }
   const auto a_index = points[ear_index].prev_index.value();
   const auto b_index = ear_index;
   const auto c_index = points[ear_index].next_index.value();
@@ -458,14 +486,17 @@ bool is_ear(const std::size_t ear_index, const std::vector<LinkedPoint> & points
   const auto c = points[c_index];
 
   if (area(points, a_index, b_index, c_index) >= 0) return false;
+  if (!points[c_index].next_index.has_value()) return true;
   auto p_index = points[c_index].next_index.value();
   while (p_index != a_index) {
     const auto p = points[p_index];
     if (
       point_in_triangle(a.x(), a.y(), b.x(), b.y(), c.x(), c.y(), p.x(), p.y()) &&
+      p.prev_index.has_value() && p.next_index.has_value() &&
       area(points, p.prev_index.value(), p_index, p.next_index.value()) >= 0) {
       return false;
     }
+    if (!points[p_index].next_index.has_value()) break;
     p_index = points[p_index].next_index.value();
   }
 
@@ -480,24 +511,28 @@ std::size_t cure_local_intersections(
 
   while (p != start_index || updated) {
     updated = false;
+    if (!points[p].prev_index.has_value() || !points[p].next_index.has_value()) break;
     auto a_idx = points[p].prev_index.value();
-    auto b_idx = points[points[p].next_index.value()].next_index.value();
+    const std::size_t p_next = points[p].next_index.value();
+    if (!points[p_next].next_index.has_value()) break;
+    auto b_idx = points[p_next].next_index.value();
 
     if (
       !equals(a_idx, b_idx, points) &&
-      intersects(
-        a_idx, p, points[points[p].next_index.value()].next_index.value(), b_idx, points) &&
+      intersects(a_idx, p, p_next, b_idx, points) &&
       locally_inside(a_idx, b_idx, points) && locally_inside(b_idx, a_idx, points)) {
       indices.push_back(a_idx);
       indices.push_back(p);
       indices.push_back(b_idx);
 
+      // UNSAFE #2 fix: p_next was pre-saved above before any removal; use it directly
       remove_point(p, points);
-      remove_point(points[p].next_index.value(), points);
+      remove_point(p_next, points);
 
       p = start_index = b_idx;
       updated = true;
     } else {
+      if (!points[p].next_index.has_value()) break;
       p = points[p].next_index.value();
     }
   }
@@ -511,11 +546,15 @@ void split_ear_clipping(
 {
   std::size_t a_idx = start_idx;
   do {
-    std::size_t b_idx = points[points[a_idx].next_index.value()].next_index.value();
+    if (!points[a_idx].next_index.has_value() || !points[a_idx].prev_index.has_value()) break;
+    const std::size_t a_next = points[a_idx].next_index.value();
+    if (!points[a_next].next_index.has_value()) break;
+    std::size_t b_idx = points[a_next].next_index.value();
     while (b_idx != points[a_idx].prev_index.value()) {
       if (a_idx != b_idx && is_valid_diagonal(a_idx, b_idx, points)) {
         std::size_t c_idx = split_polygon(a_idx, b_idx, points);
 
+        if (!points[a_idx].next_index.has_value() || !points[c_idx].next_index.has_value()) break;
         a_idx = filter_points(start_idx, points[a_idx].next_index.value(), points);
         c_idx = filter_points(start_idx, points[c_idx].next_index.value(), points);
 
@@ -523,8 +562,10 @@ void split_ear_clipping(
         ear_clipping_linked(c_idx, indices, points);
         return;
       }
+      if (!points[b_idx].next_index.has_value()) break;
       b_idx = points[b_idx].next_index.value();
     }
+    if (!points[a_idx].next_index.has_value()) break;
     a_idx = points[a_idx].next_index.value();
   } while (a_idx != start_idx);
 }
@@ -536,7 +577,9 @@ void ear_clipping_linked(
   auto stop = ear_index;
   std::optional<std::size_t> next = std::nullopt;
 
-  while (points[ear_index].prev_index.value() != points[ear_index].next_index.value()) {
+  while (
+    points[ear_index].prev_index.has_value() && points[ear_index].next_index.has_value() &&
+    points[ear_index].prev_index.value() != points[ear_index].next_index.value()) {
     next = points[ear_index].next_index;
 
     if (is_ear(ear_index, points)) {
@@ -546,6 +589,7 @@ void ear_clipping_linked(
 
       remove_point(ear_index, points);
 
+      if (!next.has_value() || !points[next.value()].next_index.has_value()) break;
       ear_index = points[next.value()].next_index.value();
       stop = points[next.value()].next_index.value();
       continue;
@@ -615,7 +659,9 @@ std::vector<alt::ConvexPolygon2d> triangulate(const alt::Polygon2d & poly)
     vertices.push_back(points[indices[i + 2]].pt);
     vertices.push_back(points[indices[i]].pt);
 
-    triangles.push_back(alt::ConvexPolygon2d::create(vertices).value());
+    auto tri_opt = alt::ConvexPolygon2d::create(vertices);
+    if (!tri_opt.has_value()) continue;
+    triangles.push_back(tri_opt.value());
   }
   points.clear();
   return triangles;
@@ -624,6 +670,7 @@ std::vector<alt::ConvexPolygon2d> triangulate(const alt::Polygon2d & poly)
 std::vector<Polygon2d> triangulate(const Polygon2d & poly)
 {
   const auto alt_poly = alt::Polygon2d::create(poly);
+  if (!alt_poly.has_value()) return {};
   const auto alt_triangles = triangulate(alt_poly.value());
   std::vector<Polygon2d> triangles;
   for (const auto & alt_triangle : alt_triangles) {
