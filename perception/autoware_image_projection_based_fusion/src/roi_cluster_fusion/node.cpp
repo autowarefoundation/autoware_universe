@@ -82,7 +82,11 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
     },
     [this]() {
       AUTOWARE_SUBSCRIPTION_OPTIONS opts;
-      opts.callback_group = agnocast_msg3d_sub_callback_group_;
+      // Use a dedicated callback group because this subscription may run as an agnocast
+      // subscription, which should be separated from other callbacks. This would not cause
+      // any issue after migrating to agnocast::Node, but is planned to be removed then.
+      opts.callback_group =
+        this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
       return opts;
     }());
 

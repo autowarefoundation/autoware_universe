@@ -180,12 +180,6 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
     stop_watch_ptr_->tic("processing_time");
   }
 
-  // Create a dedicated callback group for agnocast subscriptions so that
-  // CallbackIsolatedAgnocastExecutor assigns a SingleThreadedAgnocastExecutor only
-  // to this group, keeping timers and ROS 2 subscriptions starvation-free.
-  agnocast_msg3d_sub_callback_group_ =
-    this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-
   // Diagnostic Updater
   diagnostic_updater_.setHardwareID(node_name + "_checker");
   diagnostic_updater_.add(node_name + "_status", this, &FusionNode::check_fusion_status);

@@ -170,11 +170,6 @@ protected:
 
   std::string matching_strategy_;
 
-  // callback group for the agnocast point cloud subscription (isolated so that
-  // CallbackIsolatedAgnocastExecutor assigns a SingleThreadedAgnocastExecutor
-  // only to this group, keeping the remaining groups starvation-free)
-  rclcpp::CallbackGroup::SharedPtr agnocast_msg3d_sub_callback_group_;
-
   // output publisher
   typename rclcpp::Publisher<ExportObj>::SharedPtr pub_ptr_;
 
