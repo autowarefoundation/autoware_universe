@@ -50,7 +50,7 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   params_ = param_listener_->get_params();
 
   // initialize plugins
-  for (const auto & name : this->declare_parameter<std::vector<std::string>>("launch_modules")) {
+  for (const auto & name : params_.plugin_names) {
     if (name.empty()) continue;
     load_plugin(name);
   }

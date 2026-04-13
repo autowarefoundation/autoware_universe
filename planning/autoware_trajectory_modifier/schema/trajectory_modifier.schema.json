@@ -6,6 +6,17 @@
     "trajectory_modifier": {
       "type": "object",
       "properties": {
+        "plugin_names": {
+          "type": "array",
+          "description": "List of trajectory modifier plugins to load",
+          "default": [
+            "autoware::trajectory_modifier::plugin::StopPointFixer",
+            "autoware::trajectory_modifier::plugin::ObstacleStop"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
         "use_stop_point_fixer": {
           "type": "boolean",
           "description": "Enable the stop point fixer modifier plugin",
