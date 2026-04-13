@@ -117,7 +117,7 @@ void MapBasedDetector::cameraInfoCallback(
   if (!getTransform(
         rclcpp::Time(input_msg->header.stamp), input_msg->header.frame_id, tf_map2camera)) {
     RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), 5000, "cannot get transform from map frame to camera frame");
+      get_logger(), *get_clock(), 5000, "failed to get transform from map frame to camera frame");
     return;
   }
   if (tf_map2camera_vec.empty()) {
@@ -141,7 +141,7 @@ void MapBasedDetector::routeCallback(
   const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr input_msg)
 {
   if (!detector_) {
-    RCLCPP_WARN(get_logger(), "cannot set traffic light in route because don't receive map");
+    RCLCPP_WARN(get_logger(), "failed to set traffic lights in route: map not received");
     return;
   }
   auto error = detector_->setRoute(*input_msg);
