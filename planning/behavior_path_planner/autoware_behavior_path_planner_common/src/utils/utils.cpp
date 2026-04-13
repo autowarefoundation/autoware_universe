@@ -17,7 +17,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
 
-#include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/deprecated/boundary_departure_checker/utils.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>

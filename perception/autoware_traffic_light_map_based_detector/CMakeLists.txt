@@ -12,6 +12,7 @@ include_directories(
 )
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
+  src/traffic_light_map_based_detector.cpp
   src/traffic_light_map_based_detector_node.cpp
   src/traffic_light_map_based_detector_process.cpp
 )
@@ -25,6 +26,9 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_auto_add_gtest(test_utils
     test/test_utils.cpp
+  )
+  ament_auto_add_gtest(test_traffic_light_map_based_detector_node
+    test/test_traffic_light_map_based_detector_node.cpp
   )
 endif()
 
