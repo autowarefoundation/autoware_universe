@@ -176,6 +176,21 @@ std::vector<double> calcTrajectoryCurvature(
   const bool use_short_segment_protection = false);
 
 /**
+ * @brief Calculate curvature for temporal trajectories by spatially resampling.
+ * Temporal trajectories have non-uniform spatial point distribution, which makes index-based
+ * curvature calculation unreliable. This function resamples the trajectory at equal spatial
+ * intervals, calculates curvature on the resampled points, then maps the result back to the
+ * original temporal trajectory points via arc-length interpolation.
+ * @param [in] curvature_smoothing_num_traj index distance for 3 points for curvature calculation
+ * @param [in] curvature_smoothing_num_ref_steer index distance for 3 points for smoothed curvature
+ * @param [in] resample_interval_dist spatial resampling interval [m]
+ * @param [inout] traj temporal trajectory whose k and smooth_k will be updated
+ */
+void calcTrajectoryCurvatureBySpatialResample(
+  const int curvature_smoothing_num_traj, const int curvature_smoothing_num_ref_steer,
+  const double resample_interval_dist, MPCTrajectory & traj);
+
+/**
  * @brief calculate nearest pose on MPCTrajectory with linear interpolation
  * @param [in] traj reference trajectory
  * @param [in] self_pose object pose

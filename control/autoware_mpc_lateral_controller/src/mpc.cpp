@@ -321,11 +321,11 @@ void MPC::setReferenceTrajectory(
     mpc_traj_resampled = resampled;
   }
 
-    const auto is_forward_shift =
-      autoware::motion_utils::isDrivingForward(mpc_traj_resampled.toTrajectoryPoints());
+  const auto is_forward_shift =
+    autoware::motion_utils::isDrivingForward(mpc_traj_resampled.toTrajectoryPoints());
 
-    // if driving direction is unknown, use previous value
-    m_is_forward_shift = is_forward_shift ? is_forward_shift.value() : m_is_forward_shift;
+  // if driving direction is unknown, use previous value
+  m_is_forward_shift = is_forward_shift ? is_forward_shift.value() : m_is_forward_shift;
 
   // path smoothing
   MPCTrajectory mpc_traj_smoothed = mpc_traj_resampled;  // smooth filtered trajectory
@@ -362,9 +362,15 @@ void MPC::setReferenceTrajectory(
   MPCUtils::convertEulerAngleToMonotonic(mpc_traj_smoothed.yaw);
 
   // calculate curvature
-  MPCUtils::calcTrajectoryCurvature(
-    param.curvature_smoothing_num_traj, param.curvature_smoothing_num_ref_steer, mpc_traj_smoothed,
-    m_use_temporal_trajectory);
+  if (m_use_temporal_trajectory) {
+    MPCUtils::calcTrajectoryCurvatureBySpatialResample(
+      param.curvature_smoothing_num_traj, param.curvature_smoothing_num_ref_steer,
+      param.traj_resample_dist, mpc_traj_smoothed);
+  } else {
+    MPCUtils::calcTrajectoryCurvature(
+      param.curvature_smoothing_num_traj, param.curvature_smoothing_num_ref_steer,
+      mpc_traj_smoothed);
+  }
 
   // stop velocity at a terminal point
   mpc_traj_smoothed.vx.back() = 0.0;
