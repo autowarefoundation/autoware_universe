@@ -42,15 +42,106 @@
           "description": "If the intensity get lesser than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much lesser, the node only overwrites in the under exposure situations. Therefore, If you wouldn't like to use this feature set this value to `-1.0`. The confidence of overwritten signal is set to `0.0`.",
           "default": -0.83
         },
+        "score_threshold": {
+          "type": "number",
+          "description": "Minimum detection score for LampRecognizer/CNN outputs (objectness * class probability where applicable).",
+          "default": 0.2
+        },
+        "nms_threshold": {
+          "type": "number",
+          "description": "IoU threshold for non-maximum suppression after decoding detections (LampRecognizer).",
+          "default": 0.2
+        },
+        "max_batch_size": {
+          "type": "integer",
+          "description": "Maximum batch size for TensorRT inference (CNN / LampRecognizer).",
+          "default": 64
+        },
         "classifier_type": {
           "type": "integer",
-          "description": "Type of classifier used. {0: hsv_filter, 1: cnn}.",
+          "description": "Type of classifier used. {0: hsv_filter (rule-based), 1: cnn (single-crop), 2: LampRecognizer (cnn per lamp).",
           "default": 1
         },
         "traffic_light_type": {
           "type": "integer",
           "description": "Type of traffic light to classify. {0: car, 1: pedestrian}.",
           "default": 1
+        },
+        "regression_arch.num_anchors": {
+          "type": "integer",
+          "description": "Number of anchor boxes per grid cell for LampRecognizer decode (must match model). Nested under regression_arch in YAML.",
+          "default": 3
+        },
+        "regression_arch.chans_per_anchor": {
+          "type": "integer",
+          "description": "Output channels per anchor for LampRecognizer (full head width before grid flatten).",
+          "default": 16
+        },
+        "regression_arch.x_index": {
+          "type": "integer",
+          "description": "Channel index of bbox x (within each anchor slice) for LampRecognizer.",
+          "default": 0
+        },
+        "regression_arch.y_index": {
+          "type": "integer",
+          "description": "Channel index of bbox y (within each anchor slice) for LampRecognizer.",
+          "default": 1
+        },
+        "regression_arch.w_index": {
+          "type": "integer",
+          "description": "Channel index of bbox w (within each anchor slice) for LampRecognizer.",
+          "default": 2
+        },
+        "regression_arch.h_index": {
+          "type": "integer",
+          "description": "Channel index of bbox h (within each anchor slice) for LampRecognizer.",
+          "default": 3
+        },
+        "regression_arch.obj_index": {
+          "type": "integer",
+          "description": "Channel index of objectness for LampRecognizer.",
+          "default": 4
+        },
+        "regression_arch.color_start": {
+          "type": "integer",
+          "description": "First channel index of color logits (length regression_arch.num_colors) for LampRecognizer.",
+          "default": 5
+        },
+        "regression_arch.type_start": {
+          "type": "integer",
+          "description": "First channel index of shape/type logits (length regression_arch.num_types) for LampRecognizer.",
+          "default": 8
+        },
+        "regression_arch.num_types": {
+          "type": "integer",
+          "description": "Number of shape/type classes for LampRecognizer.",
+          "default": 6
+        },
+        "regression_arch.num_colors": {
+          "type": "integer",
+          "description": "Number of color classes for LampRecognizer.",
+          "default": 3
+        },
+        "regression_arch.cos_index": {
+          "type": "integer",
+          "description": "Channel index of cos(angle) for LampRecognizer.",
+          "default": 14
+        },
+        "regression_arch.sin_index": {
+          "type": "integer",
+          "description": "Channel index of sin(angle) for LampRecognizer.",
+          "default": 15
+        },
+        "regression_arch.scale_x_y": {
+          "type": "number",
+          "description": "YOLO-style center decode scale for x/y (with offset derived as 0.5*(scale-1)).",
+          "default": 2.0
+        },
+        "regression_arch.anchors": {
+          "type": "array",
+          "description": "Anchor widths and heights interleaved [w0,h0,w1,h1,...]; length must be 2*regression_arch.num_anchors.",
+          "items": { "type": "number" },
+          "default": [7.0, 7.0, 14.0, 14.0, 42.0, 42.0]
         }
       },
       "required": [
@@ -60,7 +151,9 @@
         "std",
         "over_exposure_threshold",
         "under_exposure_threshold",
-        "classifier_type",
+        "score_threshold",
+        "nms_threshold",
+        "max_batch_size",
         "traffic_light_type"
       ],
       "additionalProperties": false
