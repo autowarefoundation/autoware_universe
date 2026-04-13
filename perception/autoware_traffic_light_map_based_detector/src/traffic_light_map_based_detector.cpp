@@ -34,12 +34,14 @@ namespace autoware::traffic_light
 {
 
 TrafficLightMapBasedDetector::TrafficLightMapBasedDetector(
-  const TrafficLightMapBasedDetectorConfig & config)
+  const TrafficLightMapBasedDetectorConfig & config,
+  const autoware_map_msgs::msg::LaneletMapBin & map_msg)
 : config_(config)
 {
   if (config_.max_detection_range <= 0) {
     throw std::invalid_argument("max_detection_range must be positive");
   }
+  setMap(map_msg);
 }
 
 void TrafficLightMapBasedDetector::setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg)
@@ -86,27 +88,16 @@ void TrafficLightMapBasedDetector::setMap(const autoware_map_msgs::msg::LaneletM
     std::make_shared<const lanelet::routing::RoutingGraphContainer>(overall_graphs);
 }
 
-SetRouteResult TrafficLightMapBasedDetector::setRoute(
+std::optional<SetRouteError> TrafficLightMapBasedDetector::setRoute(
   const autoware_planning_msgs::msg::LaneletRoute & route_msg)
 {
-  SetRouteResult result;
-
-  if (lanelet_map_ptr_ == nullptr) {
-    result.success = false;
-    result.logs.push_back(
-      {LogLevel::Warn, "cannot set traffic light in route because don't receive map"});
-    return result;
-  }
-
   lanelet::ConstLanelets route_lanelets;
   for (const auto & segment : route_msg.segments) {
     for (const auto & primitive : segment.primitives) {
       try {
         route_lanelets.push_back(lanelet_map_ptr_->laneletLayer.get(primitive.id));
       } catch (const lanelet::NoSuchPrimitiveError & ex) {
-        result.success = false;
-        result.logs.push_back({LogLevel::Error, ex.what()});
-        return result;
+        return SetRouteError{ex.what()};
       }
     }
   }
@@ -155,12 +146,7 @@ SetRouteResult TrafficLightMapBasedDetector::setRoute(
     }
   }
 
-  return result;
-}
-
-bool TrafficLightMapBasedDetector::hasTrafficLights() const
-{
-  return all_traffic_lights_ptr_ != nullptr || route_traffic_lights_ptr_ != nullptr;
+  return std::nullopt;
 }
 
 DetectionResult TrafficLightMapBasedDetector::detect(
@@ -179,11 +165,9 @@ DetectionResult TrafficLightMapBasedDetector::detect(
   if (route_traffic_lights_ptr_ != nullptr) {
     getVisibleTrafficLights(
       *route_traffic_lights_ptr_, tf_map2camera_vec, pinhole_camera_model, visible_traffic_lights);
-  } else if (all_traffic_lights_ptr_ != nullptr) {
+  } else {
     getVisibleTrafficLights(
       *all_traffic_lights_ptr_, tf_map2camera_vec, pinhole_camera_model, visible_traffic_lights);
-  } else {
-    return result;
   }
 
   // set all offset to zero when calculating the expect roi

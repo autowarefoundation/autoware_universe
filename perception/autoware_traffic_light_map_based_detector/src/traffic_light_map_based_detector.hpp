@@ -32,6 +32,7 @@
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -39,18 +40,9 @@
 namespace autoware::traffic_light
 {
 
-enum class LogLevel { Warn, Error };
-
-struct LogMessage
+struct SetRouteError
 {
-  LogLevel level;
-  std::string text;
-};
-
-struct SetRouteResult
-{
-  bool success = true;
-  std::vector<LogMessage> logs;
+  std::string message;
 };
 
 struct DetectionResult
@@ -86,19 +78,20 @@ public:
 
   using TrafficLightSet = std::set<lanelet::ConstLineString3d, IdLessThan>;
 
-  explicit TrafficLightMapBasedDetector(const TrafficLightMapBasedDetectorConfig & config);
+  TrafficLightMapBasedDetector(
+    const TrafficLightMapBasedDetectorConfig & config,
+    const autoware_map_msgs::msg::LaneletMapBin & map_msg);
 
-  void setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
-
-  SetRouteResult setRoute(const autoware_planning_msgs::msg::LaneletRoute & route_msg);
+  std::optional<SetRouteError> setRoute(
+    const autoware_planning_msgs::msg::LaneletRoute & route_msg);
 
   DetectionResult detect(
     const std::vector<tf2::Transform> & tf_map2camera_vec, const tf2::Transform & tf_map2camera,
     const sensor_msgs::msg::CameraInfo & camera_info) const;
 
-  bool hasTrafficLights() const;
-
 private:
+  void setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
+
   /**
    * @brief Filter traffic lights that are visible from the camera
    *
