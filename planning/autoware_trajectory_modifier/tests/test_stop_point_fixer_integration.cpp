@@ -399,11 +399,11 @@ TEST_F(StopPointFixerIntegrationTest, ForceCloseStopFlag_True_CloseStopCondition
 
   TrajectoryPoints trajectory;
   trajectory.push_back(
-    create_trajectory_point(0.0, 0.0, params_.stop_point_fixer.velocity_threshold_mps * 2.0));
+    create_trajectory_point(0.0, 0.0, params_.stop_point_fixer.velocity_threshold * 2.0));
   trajectory.push_back(
-    create_trajectory_point(0.5, 0.0, params_.stop_point_fixer.velocity_threshold_mps * 2.0));
+    create_trajectory_point(0.5, 0.0, params_.stop_point_fixer.velocity_threshold * 2.0));
 
-  set_odometry_data(0.0, 0.0, params_.stop_point_fixer.velocity_threshold_mps * 0.2);
+  set_odometry_data(0.0, 0.0, params_.stop_point_fixer.velocity_threshold * 0.2);
 
   EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory));
 }

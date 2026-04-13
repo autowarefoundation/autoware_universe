@@ -260,7 +260,8 @@ size_t update_velocities(TrajectoryPoints & trajectory, const double jerk, const
     const auto a_ref =
       backward ? std::abs(ref_point.acceleration_mps2) : ref_point.acceleration_mps2;
 
-    const auto ds = autoware_utils::calc_distance2d(point.pose.position, ref_point.pose.position);
+    const auto ds =
+      autoware_utils_geometry::calc_distance2d(point.pose.position, ref_point.pose.position);
     const auto da = jerk * (ds / std::max<double>(v_ref, 0.1));
     const auto a_curr = backward ? std::min(a_ref + da, decel) : a_ref - da;
     const auto a_avg = (a_ref + a_curr) / 2.0;
@@ -317,7 +318,7 @@ size_t insert_stop_point(
     auto dist = 0.0;
     auto it = std::adjacent_find(
       trajectory.begin(), trajectory.end(), [&](const auto & p, const auto & next) {
-        dist += autoware_utils::calc_distance2d(p.pose.position, next.pose.position);
+        dist += autoware_utils_geometry::calc_distance2d(p.pose.position, next.pose.position);
         return dist >= target_stop_point_arc_length - 1e-3;
       });
     if (it != trajectory.end()) {
@@ -499,9 +500,9 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
     autoware_utils_debug::ScopedTimeTrack stt(
       "ObstacleStop::filter_pointcloud", *get_time_keeper());
     const auto & bounding_box = debug_data_.trajectory_shape.bounding_box;
-    const auto rel_min_point = autoware_utils::inverse_transform_point(
+    const auto rel_min_point = autoware_utils_geometry::inverse_transform_point(
       bounding_box.min_corner().to_3d(), data_->current_odometry->pose.pose);
-    const auto rel_max_point = autoware_utils::inverse_transform_point(
+    const auto rel_max_point = autoware_utils_geometry::inverse_transform_point(
       bounding_box.max_corner().to_3d(), data_->current_odometry->pose.pose);
     const auto min_z = params_.pointcloud.min_height;
     const auto max_z = data_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer;
