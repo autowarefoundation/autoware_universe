@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__MATCH_SCORING_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__MATCH_SCORING_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__ASSIGNMENT_SCORING_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__ASSIGNMENT_SCORING_HPP_
 
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
@@ -34,10 +34,10 @@ constexpr double CHECK_GIOU_THRESHOLD = 0.7;
 // Area ratio above which the shape change is considered significant
 constexpr double AREA_RATIO_THRESHOLD = 1.3;
 
-/// Computes a [0, 1] association score between a tracker and a measurement.
+/// Computes a [0, 1] assignment score between a tracker and a measurement for D2T GNN assignment.
 /// Returns 0.0 (INVALID_SCORE) when the pair fails any gate and should be rejected.
 /// Sets has_significant_shape_change=true when matched vehicle objects differ noticeably in size.
-double calculateMatchScore(
+double calculateAssignmentScore(
   const types::DynamicObject & tracked_object, const classes::Label tracker_label,
   const types::TrackerType tracker_type,
   const AssociatorConfig::TrackerAssociationParameters & association_params,
@@ -47,4 +47,4 @@ double calculateMatchScore(
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__MATCH_SCORING_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__ASSIGNMENT_SCORING_HPP_

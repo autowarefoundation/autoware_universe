@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/association/scoring/overlap_scoring.hpp"
+#include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
@@ -21,7 +21,7 @@
 namespace autoware::multi_object_tracker
 {
 
-double calcGeneralizedIoUThresholdUnknown(
+double calcAdaptiveGIoUThreshold(
   const double object_speed, const double generalized_iou_threshold,
   const double static_object_speed, const double moving_object_speed,
   const double static_iou_threshold)
@@ -42,7 +42,7 @@ double calcGeneralizedIoUThresholdUnknown(
   return static_iou_threshold;
 }
 
-bool isIoUOverThreshold(
+bool isRedundant(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const classes::Label source_label, const classes::Label target_label,
   const float source_known_prob, const float target_known_prob,
@@ -88,12 +88,12 @@ bool isIoUOverThreshold(
     const double known_object_speed =
       is_target_known ? std::hypot(target_object.twist.linear.x, target_object.twist.linear.y)
                       : std::hypot(source_object.twist.linear.x, source_object.twist.linear.y);
-    const double generalized_iou_threshold_unknown = calcGeneralizedIoUThresholdUnknown(
+    const double adaptive_threshold = calcAdaptiveGIoUThreshold(
       known_object_speed, generalized_iou_threshold, config.pruning_static_object_speed,
       config.pruning_moving_object_speed, config.pruning_static_iou_threshold);
     return (
       precision > precision_threshold || recall > recall_threshold ||
-      generalized_iou > generalized_iou_threshold_unknown);
+      generalized_iou > adaptive_threshold);
   } else {
     // Both are unknown: use generalized IoU
     iou = shapes::get2dGeneralizedIoU(source_object, target_object);

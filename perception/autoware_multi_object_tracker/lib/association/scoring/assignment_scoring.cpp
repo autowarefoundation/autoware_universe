@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/association/scoring/match_scoring.hpp"
+#include "autoware/multi_object_tracker/association/scoring/assignment_scoring.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
@@ -31,7 +31,7 @@ inline double getMahalanobisDistanceFast(double dx, double dy, const InverseCova
 }
 }  // namespace
 
-double calculateMatchScore(
+double calculateAssignmentScore(
   const types::DynamicObject & tracked_object, const classes::Label tracker_label,
   const types::TrackerType tracker_type,
   const AssociatorConfig::TrackerAssociationParameters & association_params,

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__OVERLAP_SCORING_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__OVERLAP_SCORING_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__REDUNDANCY_CHECK_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__REDUNDANCY_CHECK_HPP_
 
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
@@ -21,20 +21,20 @@
 namespace autoware::multi_object_tracker
 {
 
-/// Interpolates the GIoU removal threshold for unknown objects based on the known partner's speed.
+/// Interpolates the GIoU removal threshold based on the known partner's speed.
 /// Between static_object_speed and moving_object_speed the threshold is linearly interpolated
 /// from static_iou_threshold down to generalized_iou_threshold.
-double calcGeneralizedIoUThresholdUnknown(
+double calcAdaptiveGIoUThreshold(
   double object_speed, double generalized_iou_threshold, double static_object_speed,
   double moving_object_speed, double static_iou_threshold);
 
-/// Returns true when source and target objects overlap enough to trigger tracker merging.
+/// Returns true when source and target trackers are spatially redundant and should be merged.
 /// Handles four cases: pedestrian/pedestrian, known/known, known/unknown, unknown/unknown.
-bool isIoUOverThreshold(
+bool isRedundant(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const classes::Label source_label, const classes::Label target_label, float source_known_prob,
   float target_known_prob, const TrackerOverlapManagerConfig & config);
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__OVERLAP_SCORING_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__REDUNDANCY_CHECK_HPP_

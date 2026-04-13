@@ -14,7 +14,7 @@
 
 #include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 
-#include "autoware/multi_object_tracker/association/scoring/overlap_scoring.hpp"
+#include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
 #include <boost/geometry.hpp>
@@ -208,7 +208,7 @@ void TrackerOverlapManager::merge(
 
       if (
         canMergeTarget(*data2.tracker, *data1.tracker, time, threshold_cache, ego_pose) &&
-        isIoUOverThreshold(
+        isRedundant(
           data1.object, data2.object, data1.label, data2.label,
           data1.tracker->getKnownObjectProbability(), data2.tracker->getKnownObjectProbability(),
           config_)) {

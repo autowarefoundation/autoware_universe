@@ -14,7 +14,7 @@
 
 #include "autoware/multi_object_tracker/association/bev_association.hpp"
 
-#include "autoware/multi_object_tracker/association/scoring/match_scoring.hpp"
+#include "autoware/multi_object_tracker/association/scoring/assignment_scoring.hpp"
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
@@ -250,7 +250,7 @@ void BevAssociation::processMeasurement(
     const auto tracker_label = prep_data.tracker_labels[tracker_idx];
 
     bool has_significant_shape_change = false;
-    const double score = calculateMatchScore(
+    const double score = calculateAssignmentScore(
       tracked_object, tracker_label, tracker_type, association_params_opt->get(),
       measurement_object, measurement_label, prep_data.tracker_inverse_covariances[tracker_idx],
       config_.unknown_association_giou_threshold, has_significant_shape_change);
