@@ -16,6 +16,7 @@
 
 #include <list>
 #include <memory>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -26,7 +27,8 @@ AssociationManager::AssociationManager(
   const AssociatorConfig & bev_config, const std::vector<types::InputChannel> & channels_config)
 : channels_config_(channels_config),
   bev_association_(std::make_unique<BevAssociation>(bev_config)),
-  polar_association_(std::make_unique<PolarAssociation>())
+  polar_association_(std::make_unique<PolarAssociation>()),
+  uuid_association_(std::make_unique<UUIDAssociation>())
 {
 }
 
@@ -44,7 +46,62 @@ types::AssociationResult AssociationManager::associate(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
-  return getAssociationForChannel(measurements.channel_index).associate(measurements, trackers);
+  const auto channel_index = measurements.channel_index;
+
+  // For DETECTED_OBJECTS channels: single-stage geometric association
+  if (
+    channel_index >= channels_config_.size() ||
+    channels_config_[channel_index].input_type != types::InputType::TRACKED_OBJECTS) {
+    return getAssociationForChannel(channel_index).associate(measurements, trackers);
+  }
+
+  // For TRACKED_OBJECTS channels: two-stage association
+  // Stage 1 — UUID identity matching
+  auto result = uuid_association_->associate(measurements, trackers);
+
+  if (result.unassigned_measurements.empty() || result.unassigned_trackers.empty()) {
+    return result;
+  }
+
+  // Stage 2 — geometric fallback for unmatched pairs
+  // Build unmatched measurement list using the existing UUID index
+  types::DynamicObjectList unmatched_measurements;
+  unmatched_measurements.header = measurements.header;
+  unmatched_measurements.channel_index = measurements.channel_index;
+  for (const auto & meas_uuid : result.unassigned_measurements) {
+    const auto idx = measurements.getObjectIndexByUuid(meas_uuid);
+    if (idx) {
+      unmatched_measurements.objects.push_back(measurements.objects[*idx]);
+    }
+  }
+
+  // Build unmatched tracker list using a hash set for O(n + m) filtering
+  std::unordered_set<
+    unique_identifier_msgs::msg::UUID, types::UUIDHash, types::UUIDEqual>
+    unassigned_tracker_set(
+      result.unassigned_trackers.begin(), result.unassigned_trackers.end());
+  std::list<std::shared_ptr<Tracker>> unmatched_trackers;
+  for (const auto & tracker : trackers) {
+    if (unassigned_tracker_set.count(tracker->getUUID())) {
+      unmatched_trackers.push_back(tracker);
+    }
+  }
+
+  // Run geometric association on the unmatched subsets
+  const auto fallback_result =
+    getAssociationForChannel(channel_index).associate(unmatched_measurements, unmatched_trackers);
+
+  // Merge fallback into the main result
+  for (const auto & [tracker_uuid, meas_uuid] : fallback_result.tracker_to_measurement) {
+    result.add(tracker_uuid, meas_uuid);
+  }
+  for (const auto & uuid : fallback_result.trackers_with_shape_change) {
+    result.trackers_with_shape_change.insert(uuid);
+  }
+  result.unassigned_measurements = fallback_result.unassigned_measurements;
+  result.unassigned_trackers = fallback_result.unassigned_trackers;
+
+  return result;
 }
 
 void AssociationManager::setTimeKeeper(

@@ -67,32 +67,46 @@ void InputStream::push(
   }
 }
 
+bool InputStream::transformInPlace(types::DynamicObjectList & objects)
+{
+  auto transformed = odometry_->transformObjects(objects);
+  if (!transformed) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000, "InputManager::processMessage %s: Failed to transform objects.",
+      channel_.long_name.c_str());
+    return false;
+  }
+  objects = std::move(*transformed);
+  return true;
+}
+
+void InputStream::applyChannelConfig(types::DynamicObjectList & objects) const
+{
+  for (auto & object : objects.objects) {
+    object.trust_extension = channel_.trust_extension;
+  }
+  if (!channel_.trust_existence_probability) {
+    for (auto & object : objects.objects) {
+      object.existence_probability = types::default_existence_probability;
+    }
+  }
+}
+
 std::optional<types::DynamicObjectList> InputStream::processMessage(
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
-  const autoware_perception_msgs::msg::DetectedObjects & objects = *msg;
-  const rclcpp::Time timestamp = objects.header.stamp;
+  types::DynamicObjectList dynamic_objects =
+    types::toDynamicObjectList(*msg, channel_.index);
 
-  types::DynamicObjectList dynamic_objects = types::toDynamicObjectList(objects, channel_.index);
-
-  // Set trust_extension information from channel configuration
-  for (auto & object : dynamic_objects.objects) {
-    object.trust_extension = channel_.trust_extension;
-  }
-
-  // Model the object uncertainty only if it is not available
+  // Model the object uncertainty
   types::DynamicObjectList objects_with_uncertainty =
     uncertainty::modelUncertainty(dynamic_objects);
 
   // Transform the objects to the world frame
-  auto transformed_objects = odometry_->transformObjects(objects_with_uncertainty);
-  if (!transformed_objects) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_, 1000, "InputManager::onMessage %s: Failed to transform objects.",
-      channel_.long_name.c_str());
+  if (!transformInPlace(objects_with_uncertainty)) {
     return std::nullopt;
   }
-  dynamic_objects = transformed_objects.value();
+  dynamic_objects = std::move(objects_with_uncertainty);
 
   // object shape processing
   for (auto & object : dynamic_objects.objects) {
@@ -100,14 +114,13 @@ std::optional<types::DynamicObjectList> InputStream::processMessage(
     if (label == classes::Label::UNKNOWN) {
       continue;
     }
-
     // check object shape type, bounding box, cylinder, polygon
     const auto object_type = object.shape.type;
     if (object_type == autoware_perception_msgs::msg::Shape::POLYGON) {
       // convert convex hull to bounding box
       if (!shapes::convertConvexHullToBoundingBox(object, object)) {
         RCLCPP_WARN(
-          logger_, "InputManager::onMessage %s: Failed to convert convex hull to bounding box.",
+          logger_, "InputManager::processMessage %s: Failed to convert convex hull to bounding box.",
           channel_.long_name.c_str());
         continue;
       }
@@ -121,12 +134,8 @@ std::optional<types::DynamicObjectList> InputStream::processMessage(
   // Normalize the object uncertainty
   uncertainty::normalizeUncertainty(dynamic_objects);
 
-  // If the channel does not trust existence probability, set it to default
-  if (!channel_.trust_existence_probability) {
-    for (auto & object : dynamic_objects.objects) {
-      object.existence_probability = types::default_existence_probability;
-    }
-  }
+  // Apply channel configuration (trust_extension, existence probability)
+  applyChannelConfig(dynamic_objects);
 
   return dynamic_objects;
 }
@@ -237,6 +246,22 @@ void InputStream::getObjectsOlderThan(
   }
 }
 
+std::optional<types::DynamicObjectList> InputStream::processMessage(
+  const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr msg)
+{
+  types::DynamicObjectList dynamic_objects = types::toDynamicObjectList(*msg, channel_.index);
+
+  // Transform the objects to the world frame
+  if (!transformInPlace(dynamic_objects)) {
+    return std::nullopt;
+  }
+
+  // Apply channel configuration (trust_extension, existence probability)
+  applyChannelConfig(dynamic_objects);
+
+  return dynamic_objects;
+}
+
 ////////////////////////////
 /////// InputManager ///////
 ////////////////////////////
@@ -292,6 +317,19 @@ void InputManager::push(
 std::optional<types::DynamicObjectList> InputManager::processMessage(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+{
+  if (channel_index >= input_streams_.size()) {
+    RCLCPP_WARN(
+      logger_, "InputManager::processMessage Invalid channel index: %lu, input_streams_ size: %lu",
+      channel_index, input_streams_.size());
+    return std::nullopt;
+  }
+  return input_streams_.at(channel_index)->processMessage(msg);
+}
+
+std::optional<types::DynamicObjectList> InputManager::processMessage(
+  const size_t channel_index,
+  const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr msg)
 {
   if (channel_index >= input_streams_.size()) {
     RCLCPP_WARN(

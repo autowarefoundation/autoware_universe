@@ -39,6 +39,8 @@ private:
   // ROS interface
   std::vector<rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr>
     sub_objects_array_{};
+  std::vector<rclcpp::Subscription<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr>
+    sub_tracked_objects_array_{};
 
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
@@ -64,6 +66,9 @@ private:
   void onMeasurement(
     const size_t channel_index,
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
+  void onTrackedMeasurement(
+    const size_t channel_index,
+    const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr msg);
 
   // publish processes
   void publish();

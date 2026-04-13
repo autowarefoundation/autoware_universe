@@ -18,6 +18,7 @@
 #include "autoware/multi_object_tracker/association/association_base.hpp"
 #include "autoware/multi_object_tracker/association/bev_association.hpp"
 #include "autoware/multi_object_tracker/association/polar_association.hpp"
+#include "autoware/multi_object_tracker/association/uuid_association.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
@@ -56,6 +57,7 @@ private:
   std::vector<types::InputChannel> channels_config_;
   std::unique_ptr<BevAssociation> bev_association_;
   std::unique_ptr<PolarAssociation> polar_association_;
+  std::unique_ptr<UUIDAssociation> uuid_association_;
 };
 
 }  // namespace autoware::multi_object_tracker
