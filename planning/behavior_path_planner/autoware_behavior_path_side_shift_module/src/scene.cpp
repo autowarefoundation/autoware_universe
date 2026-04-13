@@ -275,9 +275,15 @@ BehaviorModuleOutput SideShiftModule::plan()
     RCLCPP_DEBUG(getLogger(), "change is not requested");
   }
 
-  // Refine path
+  // While SHIFTING, keep the entire shifted path fixed until AFTER_SHIFT.
   ShiftedPath shifted_path;
-  path_shifter_.generate(&shifted_path);
+  if (
+    shift_status_ == SideShiftStatus::SHIFTING && !lateral_offset_change_request_ &&
+    !prev_output_.path.points.empty()) {
+    shifted_path = prev_output_;
+  } else {
+    path_shifter_.generate(&shifted_path);
+  }
 
   if (shifted_path.path.points.empty()) {
     RCLCPP_ERROR(getLogger(), "Generated shift_path has no points");
@@ -322,9 +328,14 @@ CandidateOutput SideShiftModule::planCandidate() const
 
 BehaviorModuleOutput SideShiftModule::planWaitingApproval()
 {
-  // Refine path
   ShiftedPath shifted_path;
-  path_shifter_.generate(&shifted_path);
+  if (
+    shift_status_ == SideShiftStatus::SHIFTING && !lateral_offset_change_request_ &&
+    !prev_output_.path.points.empty()) {
+    shifted_path = prev_output_;
+  } else {
+    path_shifter_.generate(&shifted_path);
+  }
 
   // Reset orientation
   setOrientation(&shifted_path.path);
