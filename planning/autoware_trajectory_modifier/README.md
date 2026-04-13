@@ -18,7 +18,7 @@ The trajectory modifier uses a plugin-based system where different modification 
 All modifier plugins must inherit from `TrajectoryModifierPluginBase` and implement:
 
 - `modify_trajectory()` - Main method to modify trajectory points
-- `on_initialze()` - Initialize plugin members and parameters
+- `on_initialize()` - Initialize plugin members and parameters
 - `update_params()` - Handle parameter updates
 - `is_trajectory_modification_required()` - Determine if modification is needed
 
@@ -38,7 +38,7 @@ Both conditions are individually enabled or disabled via parameters, allowing fi
 The Obstacle Stop plugin serves as a deterministic safety shield operating independently of the generative model to:
 
 - **Enforce Longitudinal Safety**: Monitors the gap to dynamic and static obstacles to ensure a safe distance is maintained under all kinematic conditions.
-- **Ensure Definitive Stopping**: Guarantees zero-velocity setpoints for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.
+- **Ensure Definitive Stopping**: Guarantees zero-velocity set-points for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.
 - **Provide Predictable Deceleration**: Standardizes the vehicle’s stopping profile to ensure consistent, comfortable, and physically guaranteed deceleration regardless of the AI's intended path.
 
 ## Dependencies

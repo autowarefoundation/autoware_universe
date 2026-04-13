@@ -1,12 +1,12 @@
 trajectory_modifier_params:
   use_stop_point_fixer:
     type: bool
-    default_value: false
+    default_value: true
     description: Enable the use of stop point fixer
     read_only: false
   use_obstacle_stop:
     type: bool
-    default_value: false
+    default_value: true
     description: Enable the use of obstacle stop
     read_only: false
   trajectory_time_step:

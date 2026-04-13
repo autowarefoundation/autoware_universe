@@ -140,6 +140,12 @@ bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & 
 {
   debug_data_ = DebugData();
   safety_factors_ = SafetyFactorArray{};
+
+  if (traj_points.empty()) {
+    nearest_collision_point_ = std::nullopt;
+    return false;
+  }
+
   {
     autoware_utils_debug::ScopedTimeTrack st(
       "ObstacleStop::get_trajectory_shape", *get_time_keeper());
@@ -489,9 +495,9 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
 
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   pcl::fromROSMsg(*data_->obstacle_pointcloud, *filtered_pointcloud);
-
   {
-    autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::filter_pointcloud", *get_time_keeper());
+    autoware_utils_debug::ScopedTimeTrack stt(
+      "ObstacleStop::filter_pointcloud", *get_time_keeper());
     const auto & bounding_box = debug_data_.trajectory_shape.bounding_box;
     const auto rel_min_point = autoware_utils::inverse_transform_point(
       bounding_box.min_corner().to_3d(), data_->current_odometry->pose.pose);
@@ -506,7 +512,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
 
   PointCloud::Ptr clustered_points(new PointCloud);
   {
-    autoware_utils_debug::ScopedTimeTrack st(
+    autoware_utils_debug::ScopedTimeTrack stt(
       "ObstacleStop::cluster_pointcloud", *get_time_keeper());
     pointcloud_filter_->cluster_pointcloud(
       filtered_pointcloud, clustered_points, params_.pointcloud.clustering.min_height);
@@ -535,7 +541,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
   }
 
   if (data_->predicted_objects && !data_->predicted_objects->objects.empty()) {
-    autoware_utils_debug::ScopedTimeTrack st(
+    autoware_utils_debug::ScopedTimeTrack stt(
       "ObstacleStop::filter_pointcloud_by_object", *get_time_keeper());
     pointcloud_filter_->filter_pointcloud_by_object(clustered_points, *data_->predicted_objects);
   }
@@ -545,7 +551,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
 
   std::optional<CollisionPoint> collision_point;
   {
-    autoware_utils_debug::ScopedTimeTrack st(
+    autoware_utils_debug::ScopedTimeTrack stt(
       "ObstacleStop::get_nearest_pcd_collision", *get_time_keeper());
     collision_point = get_nearest_pcd_collision(
       traj_points, debug_data_.trajectory_shape, active_points, debug_data_.target_pcd_points);
