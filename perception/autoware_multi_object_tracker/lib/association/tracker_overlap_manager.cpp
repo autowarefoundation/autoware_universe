@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/association/overlap_merger.hpp"
+#include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 
 #include "autoware/multi_object_tracker/association/scoring/overlap_scoring.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
@@ -38,11 +38,12 @@ namespace bgi = boost::geometry::index;
 using OmPoint = bg::model::point<double, 2, bg::cs::cartesian>;
 using OmValue = std::pair<OmPoint, size_t>;  // (position, index into valid_trackers)
 
-TrackerMerger::TrackerMerger(const TrackerMergerConfig & config) : config_(config)
+TrackerOverlapManager::TrackerOverlapManager(const TrackerOverlapManagerConfig & config)
+: config_(config)
 {
 }
 
-bool TrackerMerger::canMergeTarget(
+bool TrackerOverlapManager::canMergeTarget(
   const Tracker & target, const Tracker & other, const rclcpp::Time & time,
   const AdaptiveThresholdCache & threshold_cache,
   const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
@@ -102,7 +103,7 @@ bool TrackerMerger::canMergeTarget(
   return true;
 }
 
-void TrackerMerger::merge(
+void TrackerOverlapManager::merge(
   std::list<std::shared_ptr<Tracker>> & tracker_list, const rclcpp::Time & time,
   const AdaptiveThresholdCache & threshold_cache,
   const std::optional<geometry_msgs::msg::Pose> & ego_pose)

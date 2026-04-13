@@ -38,12 +38,12 @@ using autoware_utils_debug::ScopedTimeTrack;
 
 TrackerProcessor::TrackerProcessor(
   const TrackerLifecycleConfig & lifecycle_config, const AssociatorConfig & associator_config,
-  const TrackerMergerConfig & tracker_merger_config,
+  const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
   const std::vector<types::InputChannel> & channels_config)
 : lifecycle_config_(lifecycle_config), channels_config_(channels_config)
 {
-  association_manager_ =
-    std::make_unique<AssociationManager>(associator_config, tracker_merger_config, channels_config);
+  association_manager_ = std::make_unique<AssociationManager>(
+    associator_config, tracker_overlap_manager_config, channels_config);
 }
 
 void TrackerProcessor::predict(

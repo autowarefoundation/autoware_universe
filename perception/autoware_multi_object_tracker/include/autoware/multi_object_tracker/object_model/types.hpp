@@ -131,8 +131,8 @@ constexpr float default_existence_probability = 0.75;
 
 // Association algorithm selection per input channel
 enum class AssociationType {
-  BEV,                // BevAreaAssociation: bird's-eye-view area scoring + GNN linear assignment
-  SENSOR_PERSPECTIVE  // SensorPerspectiveAssociation: sensor-perspective area scoring
+  BEV,   // BevAssociation: bird's-eye-view area scoring + GNN linear assignment
+  POLAR  // PolarAssociation: polar-coordinate (range-bearing) based scoring
 };
 
 // channel configuration

@@ -16,9 +16,9 @@
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_MANAGER_HPP_
 
 #include "autoware/multi_object_tracker/association/association_base.hpp"
-#include "autoware/multi_object_tracker/association/bev_area_association.hpp"
-#include "autoware/multi_object_tracker/association/overlap_merger.hpp"
-#include "autoware/multi_object_tracker/association/sensor_perspective.hpp"
+#include "autoware/multi_object_tracker/association/bev_association.hpp"
+#include "autoware/multi_object_tracker/association/polar_association.hpp"
+#include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
@@ -38,16 +38,17 @@ namespace autoware::multi_object_tracker
 ///     Routes each measurement batch to the association implementation designated per input channel
 ///     (selected via InputChannel::associator_type).
 ///     Available algorithms:
-///       BEV               → BevAreaAssociation  (bird's-eye-view area scoring + GNN assignment)
-///       SENSOR_PERSPECTIVE → SensorPerspectiveAssociation (sensor-perspective area scoring)
+///       BEV   → BevAssociation    (bird's-eye-view area scoring + GNN assignment)
+///       POLAR → PolarAssociation  (polar-coordinate range-bearing scoring)
 ///
 ///   Layer 2 — Tracker-to-tracker (T2T):
-///     TrackerMerger removes spatially redundant trackers after D2T association.
+///     TrackerOverlapManager removes spatially redundant trackers after D2T association.
 class AssociationManager
 {
 public:
   AssociationManager(
-    const AssociatorConfig & bev_area_config, const TrackerMergerConfig & tracker_merger_config,
+    const AssociatorConfig & bev_config,
+    const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
     const std::vector<types::InputChannel> & channels_config);
 
   /// Layer 1 (D2T): match measurements to trackers using the channel's designated association.
@@ -68,9 +69,9 @@ private:
   AssociationBase & getAssociationForChannel(uint channel_index) const;
 
   std::vector<types::InputChannel> channels_config_;
-  std::unique_ptr<BevAreaAssociation> bev_area_association_;
-  std::unique_ptr<SensorPerspectiveAssociation> sensor_perspective_association_;
-  std::unique_ptr<TrackerMerger> tracker_merger_;
+  std::unique_ptr<BevAssociation> bev_association_;
+  std::unique_ptr<PolarAssociation> polar_association_;
+  std::unique_ptr<TrackerOverlapManager> tracker_overlap_manager_;
 };
 
 }  // namespace autoware::multi_object_tracker

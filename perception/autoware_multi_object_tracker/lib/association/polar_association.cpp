@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/association/sensor_perspective.hpp"
+#include "autoware/multi_object_tracker/association/polar_association.hpp"
 
 #include <list>
 
 namespace autoware::multi_object_tracker
 {
 
-types::AssociationResult SensorPerspectiveAssociation::associate(
+types::AssociationResult PolarAssociation::associate(
   const types::DynamicObjectList & /*measurements*/,
   const std::list<std::shared_ptr<Tracker>> & /*trackers*/)
 {
-  // TODO(sensor_perspective): implement sensor-geometry-based association.
+  // TODO(polar_association): implement range-bearing based association.
   // For now, return an empty result (all measurements unassigned, all trackers unassigned).
   return types::AssociationResult{};
 }

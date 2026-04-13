@@ -23,25 +23,24 @@ namespace autoware::multi_object_tracker
 {
 
 AssociationManager::AssociationManager(
-  const AssociatorConfig & bev_area_config, const TrackerMergerConfig & tracker_merger_config,
+  const AssociatorConfig & bev_config,
+  const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
   const std::vector<types::InputChannel> & channels_config)
 : channels_config_(channels_config),
-  bev_area_association_(std::make_unique<BevAreaAssociation>(bev_area_config)),
-  sensor_perspective_association_(std::make_unique<SensorPerspectiveAssociation>()),
-  tracker_merger_(std::make_unique<TrackerMerger>(tracker_merger_config))
+  bev_association_(std::make_unique<BevAssociation>(bev_config)),
+  polar_association_(std::make_unique<PolarAssociation>()),
+  tracker_overlap_manager_(std::make_unique<TrackerOverlapManager>(tracker_overlap_manager_config))
 {
 }
 
 AssociationBase & AssociationManager::getAssociationForChannel(const uint channel_index) const
 {
   if (channel_index < channels_config_.size()) {
-    if (
-      channels_config_[channel_index].associator_type ==
-      types::AssociationType::SENSOR_PERSPECTIVE) {
-      return *sensor_perspective_association_;
+    if (channels_config_[channel_index].associator_type == types::AssociationType::POLAR) {
+      return *polar_association_;
     }
   }
-  return *bev_area_association_;
+  return *bev_association_;
 }
 
 types::AssociationResult AssociationManager::associate(
@@ -56,13 +55,13 @@ void AssociationManager::mergeTrackers(
   const AdaptiveThresholdCache & threshold_cache,
   const std::optional<geometry_msgs::msg::Pose> & ego_pose)
 {
-  tracker_merger_->merge(trackers, time, threshold_cache, ego_pose);
+  tracker_overlap_manager_->merge(trackers, time, threshold_cache, ego_pose);
 }
 
 void AssociationManager::setTimeKeeper(
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
-  bev_area_association_->setTimeKeeper(std::move(time_keeper_ptr));
+  bev_association_->setTimeKeeper(std::move(time_keeper_ptr));
 }
 
 }  // namespace autoware::multi_object_tracker

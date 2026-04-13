@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__BEV_AREA_ASSOCIATION_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__BEV_AREA_ASSOCIATION_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__BEV_ASSOCIATION_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__BEV_ASSOCIATION_HPP_
 
 #define EIGEN_MPL2_ONLY
 
@@ -59,7 +59,7 @@ struct PreparationData
   std::vector<InverseCovariance2D> tracker_inverse_covariances;
 };
 
-class BevAreaAssociation : public AssociationBase
+class BevAssociation : public AssociationBase
 {
 private:
   AssociatorConfig config_;
@@ -85,8 +85,8 @@ private:
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  explicit BevAreaAssociation(const AssociatorConfig & config);
-  ~BevAreaAssociation() override = default;
+  explicit BevAssociation(const AssociatorConfig & config);
+  ~BevAssociation() override = default;
 
   /// AssociationBase implementation: full pipeline (calcAssociationData + assign).
   types::AssociationResult associate(
@@ -107,4 +107,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__BEV_AREA_ASSOCIATION_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__BEV_ASSOCIATION_HPP_

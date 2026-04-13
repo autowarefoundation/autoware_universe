@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__OVERLAP_MERGER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__OVERLAP_MERGER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__TRACKER_OVERLAP_MANAGER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__TRACKER_OVERLAP_MANAGER_HPP_
 
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
@@ -32,10 +32,10 @@ namespace autoware::multi_object_tracker
 
 /// Detects and merges spatially overlapping trackers produced by different sensors or detectors.
 /// Higher-priority trackers absorb lower-priority ones when sufficient overlap is confirmed.
-class TrackerMerger
+class TrackerOverlapManager
 {
 public:
-  explicit TrackerMerger(const TrackerMergerConfig & config);
+  explicit TrackerOverlapManager(const TrackerOverlapManagerConfig & config);
 
   /// Scans tracker_list for overlapping pairs and merges the lower-priority one into the higher.
   void merge(
@@ -44,7 +44,7 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose);
 
 private:
-  TrackerMergerConfig config_;
+  TrackerOverlapManagerConfig config_;
 
   /// Returns true if target may be merged (absorbed) into other.
   bool canMergeTarget(
@@ -55,4 +55,4 @@ private:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__OVERLAP_MERGER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__TRACKER_OVERLAP_MANAGER_HPP_

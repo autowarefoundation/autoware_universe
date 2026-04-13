@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SENSOR_PERSPECTIVE_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SENSOR_PERSPECTIVE_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__POLAR_ASSOCIATION_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__POLAR_ASSOCIATION_HPP_
 
 #include "autoware/multi_object_tracker/association/association_base.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
@@ -25,20 +25,19 @@
 namespace autoware::multi_object_tracker
 {
 
-/// Sensor-perspective association algorithm.
-/// An alternative to BevAreaAssociation (BEV area scoring), intended for channels where
-/// sensor geometry, visibility, or uncertainty models guide matching.
-/// Assigned per input channel via InputChannel::associator_type =
-/// AssociationType::SENSOR_PERSPECTIVE.
+/// Polar-coordinate association algorithm.
+/// An alternative to BevAssociation (BEV area scoring), intended for channels where
+/// sensor geometry, visibility, or range-bearing uncertainty models guide matching.
+/// Assigned per input channel via InputChannel::associator_type = AssociationType::POLAR.
 /// Currently a stub; implement associate() to activate.
-class SensorPerspectiveAssociation : public AssociationBase
+class PolarAssociation : public AssociationBase
 {
 public:
-  SensorPerspectiveAssociation() = default;
-  ~SensorPerspectiveAssociation() override = default;
+  PolarAssociation() = default;
+  ~PolarAssociation() override = default;
 
   /// AssociationBase implementation.
-  /// Performs sensor-perspective based measurement-to-tracker matching.
+  /// Performs polar-coordinate based measurement-to-tracker matching.
   types::AssociationResult associate(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers) override;
@@ -46,4 +45,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SENSOR_PERSPECTIVE_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__POLAR_ASSOCIATION_HPP_

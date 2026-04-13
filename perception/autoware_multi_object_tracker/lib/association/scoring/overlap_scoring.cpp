@@ -45,7 +45,8 @@ double calcGeneralizedIoUThresholdUnknown(
 bool isIoUOverThreshold(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const classes::Label source_label, const classes::Label target_label,
-  const float source_known_prob, const float target_known_prob, const TrackerMergerConfig & config)
+  const float source_known_prob, const float target_known_prob,
+  const TrackerOverlapManagerConfig & config)
 {
   constexpr double min_union_iou_area = 1e-2;
   constexpr float min_known_prob = 0.2;

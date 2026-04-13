@@ -50,9 +50,9 @@ autoware::multi_object_tracker::TrackerLifecycleConfig createLifecycleConfig()
   return config;
 }
 
-autoware::multi_object_tracker::TrackerMergerConfig createTrackerMergerConfig()
+autoware::multi_object_tracker::TrackerOverlapManagerConfig createTrackerOverlapManagerConfig()
 {
-  autoware::multi_object_tracker::TrackerMergerConfig config;
+  autoware::multi_object_tracker::TrackerOverlapManagerConfig config;
   using Label = autoware::multi_object_tracker::classes::Label;
 
   config.min_known_object_removal_iou = 0.1;      // [ratio]

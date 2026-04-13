@@ -15,7 +15,7 @@
 #ifndef MULTI_OBJECT_TRACKER_CORE_HPP_
 #define MULTI_OBJECT_TRACKER_CORE_HPP_
 
-#include "autoware/multi_object_tracker/association/bev_area_association.hpp"
+#include "autoware/multi_object_tracker/association/bev_association.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
 #include "debugger/debugger.hpp"
@@ -61,7 +61,7 @@ struct MultiObjectTrackerParameters
 
   // Induced parameters
   TrackerLifecycleConfig lifecycle_config;
-  TrackerMergerConfig tracker_merger_config;
+  TrackerOverlapManagerConfig tracker_overlap_manager_config;
   AssociatorConfig associator_config;
 };
 
