@@ -275,7 +275,7 @@ BehaviorModuleOutput SideShiftModule::plan()
     RCLCPP_DEBUG(getLogger(), "change is not requested");
   }
 
-  // While SHIFTING, keep the entire shifted path fixed (no regenerate) until AFTER_SHIFT.
+  // While SHIFTING, keep the entire shifted path fixed until AFTER_SHIFT.
   ShiftedPath shifted_path;
   if (
     shift_status_ == SideShiftStatus::SHIFTING && !lateral_offset_change_request_ &&
