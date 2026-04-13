@@ -61,10 +61,19 @@ public:
     PlannerDebugData & planner_debug_data) = 0;
 
 protected:
+  /**
+   * @brief Check if pull-out path collides and return the index of first collision point
+   * @param pull_out_path Pull-out path to check
+   * @param planner_data Planner data
+   * @param collision_check_distance_from_end Distance from end to check collision
+   * @param collision_pose Output: collision point (if collision detected)
+   * @return true if path collides, false otherwise
+   */
   bool isPullOutPathCollided(
-    const autoware::behavior_path_planner::PullOutPath & pull_out_path,
+    autoware::behavior_path_planner::PullOutPath & pull_out_path,
     const std::shared_ptr<const PlannerData> & planner_data,
-    double collision_check_distance_from_end) const;
+    double collision_check_distance_from_end,
+    std::optional<geometry_msgs::msg::Pose> & collision_pose) const;
 
   StartPlannerParameters parameters_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;

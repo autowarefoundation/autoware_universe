@@ -136,9 +136,21 @@ std::optional<PullOutPath> GeometricPullOut::plan(
     start_planner_utils::calc_start_and_end_shift_length(
       pull_out_lanes, output.start_pose, output.end_pose);
 
+  std::optional<geometry_msgs::msg::Pose> collision_pose = std::nullopt;
   if (isPullOutPathCollided(
-        output, planner_data, parameters_.geometric_collision_check_distance_from_end)) {
+        output, planner_data, parameters_.geometric_collision_check_distance_from_end,
+        collision_pose)) {
     planner_debug_data.conditions_evaluation.emplace_back("collision");
+
+    // Append collision point information if available
+    if (collision_pose) {
+      const auto relative_collision_pose =
+        start_planner_utils::calculate_relative_pose_in_vehicle_coordinate(
+          start_pose, *collision_pose);
+      planner_debug_data.conditions_evaluation.back().append(
+        " (at local_x:" + std::to_string(relative_collision_pose.longitudinal_distance_vehicle) +
+        ", local_y:" + std::to_string(relative_collision_pose.lateral_distance_vehicle) + ")");
+    }
     return {};
   }
 
