@@ -17,7 +17,7 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/association/i_association.hpp"
+#include "autoware/multi_object_tracker/association/association_base.hpp"
 #include "autoware/multi_object_tracker/association/scoring/match_scoring.hpp"
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
@@ -59,7 +59,7 @@ struct PreparationData
   std::vector<InverseCovariance2D> tracker_inverse_covariances;
 };
 
-class BevAreaAssociation : public IAssociation
+class BevAreaAssociation : public AssociationBase
 {
 private:
   AssociatorConfig config_;
@@ -88,7 +88,7 @@ public:
   explicit BevAreaAssociation(const AssociatorConfig & config);
   ~BevAreaAssociation() override = default;
 
-  /// IAssociation implementation: full pipeline (calcAssociationData + assign).
+  /// AssociationBase implementation: full pipeline (calcAssociationData + assign).
   types::AssociationResult associate(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers) override;

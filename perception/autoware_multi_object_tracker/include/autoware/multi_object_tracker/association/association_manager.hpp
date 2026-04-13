@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_MANAGER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_MANAGER_HPP_
 
+#include "autoware/multi_object_tracker/association/association_base.hpp"
 #include "autoware/multi_object_tracker/association/bev_area_association.hpp"
-#include "autoware/multi_object_tracker/association/i_association.hpp"
 #include "autoware/multi_object_tracker/association/overlap_merger.hpp"
 #include "autoware/multi_object_tracker/association/sensor_perspective.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
@@ -65,7 +65,7 @@ public:
 
 private:
   /// Select the D2T association implementation for the given channel index.
-  IAssociation & getAssociationForChannel(uint channel_index) const;
+  AssociationBase & getAssociationForChannel(uint channel_index) const;
 
   std::vector<types::InputChannel> channels_config_;
   std::unique_ptr<BevAreaAssociation> bev_area_association_;

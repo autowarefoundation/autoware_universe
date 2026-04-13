@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SENSOR_PERSPECTIVE_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SENSOR_PERSPECTIVE_HPP_
 
-#include "autoware/multi_object_tracker/association/i_association.hpp"
+#include "autoware/multi_object_tracker/association/association_base.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
@@ -31,13 +31,13 @@ namespace autoware::multi_object_tracker
 /// Assigned per input channel via InputChannel::associator_type =
 /// AssociationType::SENSOR_PERSPECTIVE.
 /// Currently a stub; implement associate() to activate.
-class SensorPerspectiveAssociation : public IAssociation
+class SensorPerspectiveAssociation : public AssociationBase
 {
 public:
   SensorPerspectiveAssociation() = default;
   ~SensorPerspectiveAssociation() override = default;
 
-  /// IAssociation implementation.
+  /// AssociationBase implementation.
   /// Performs sensor-perspective based measurement-to-tracker matching.
   types::AssociationResult associate(
     const types::DynamicObjectList & measurements,

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__I_ASSOCIATION_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__I_ASSOCIATION_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_BASE_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_BASE_HPP_
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
@@ -27,10 +27,10 @@ namespace autoware::multi_object_tracker
 /// Abstract interface for measurement-to-tracker association algorithms.
 /// Each concrete implementation provides an independent association strategy
 /// that can be assigned per input channel via InputChannel::associator_type.
-class IAssociation
+class AssociationBase
 {
 public:
-  virtual ~IAssociation() = default;
+  virtual ~AssociationBase() = default;
 
   /// Perform association between measurements and the current tracker list.
   /// Returns a full AssociationResult mapping trackers ↔ measurements.
@@ -41,4 +41,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__I_ASSOCIATION_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__ASSOCIATION_BASE_HPP_

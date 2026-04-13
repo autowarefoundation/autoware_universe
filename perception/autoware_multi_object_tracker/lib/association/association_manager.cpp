@@ -32,7 +32,7 @@ AssociationManager::AssociationManager(
 {
 }
 
-IAssociation & AssociationManager::getAssociationForChannel(const uint channel_index) const
+AssociationBase & AssociationManager::getAssociationForChannel(const uint channel_index) const
 {
   if (channel_index < channels_config_.size()) {
     if (
