@@ -18,6 +18,7 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/hysteresis_state_machine.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -255,6 +256,10 @@ protected:
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr area_marker_pub_;
   diagnostic_updater::Updater updater_;
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+
+  // TODO(Koichi98): Remove once Filter base class supports agnocast_wrapper.
+  // cppcheck-suppress unknownMacro
+  AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::PointCloud2) agnocast_sub_input_;
 
   // Diagnostic helper methods
   void calculate_visibility_metric(const VoxelPointCountMap & voxel_point_counts);

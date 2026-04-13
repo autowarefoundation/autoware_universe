@@ -1,13 +1,14 @@
 /**:
   ros__parameters:
-    # default tracker models for each class
-    car_tracker: "multi_vehicle_tracker"
-    truck_tracker: "multi_vehicle_tracker"
-    bus_tracker: "multi_vehicle_tracker"
-    trailer_tracker: "multi_vehicle_tracker"
-    pedestrian_tracker: "pedestrian_and_bicycle_tracker"
-    bicycle_tracker: "pedestrian_and_bicycle_tracker"
-    motorcycle_tracker: "pedestrian_and_bicycle_tracker"
+    # initial tracker models for each class
+    initial_tracker:
+      car: "multi_vehicle_tracker"
+      truck: "multi_vehicle_tracker"
+      bus: "multi_vehicle_tracker"
+      trailer: "multi_vehicle_tracker"
+      pedestrian: "pedestrian_and_bicycle_tracker"
+      bicycle: "pedestrian_and_bicycle_tracker"
+      motorcycle: "pedestrian_and_bicycle_tracker"
 
     # default tracker node parameters
     publish_rate: 10.0
@@ -24,16 +25,28 @@
     min_unknown_object_removal_iou: 0.001  # [ratio]
 
     # pruning parameters
-    # list of generalized IoU thresholds for each class
+    # generalized IoU thresholds for tracked classes
     pruning_generalized_iou_thresholds:
-      # UNKNOWN,  CAR, TRUCK,  BUS, TRAILER, MOTORCYCLE, BICYCLE, PEDESTRIAN
-      [    -0.3, -0.4,  -0.6, -0.6,    -0.6,       -0.1,    -0.1,       -0.1]
+      unknown: -0.3
+      car: -0.4
+      truck: -0.6
+      bus: -0.6
+      trailer: -0.6
+      motorcycle: -0.1
+      bicycle: -0.1
+      pedestrian: -0.1
+    pruning_distance_thresholds:
+      unknown: 9.0
+      car: 5.0
+      truck: 9.0
+      bus: 9.0
+      trailer: 9.0
+      motorcycle: 4.0
+      bicycle: 3.0
+      pedestrian: 2.0
     pruning_static_object_speed: 1.38  # [m/s]
     pruning_moving_object_speed: 5.5   # [m/s]
     pruning_static_iou_threshold: 0.0  # [ratio]
-    pruning_distance_thresholds:
-      # UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE, PEDESTRIAN
-      [     9.0, 5.0,   9.0, 9.0,     9.0,        4.0,     3.0,        2.0]
 
     # debug parameters
     publish_processing_time: false
