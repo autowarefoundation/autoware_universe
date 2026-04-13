@@ -5,34 +5,26 @@ on:
 
 jobs:
   cppcheck-differential:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container: ros:jazzy
 
     steps:
       - name: Set PR fetch depth
         run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
 
       - name: Checkout PR branch and all PR commits
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: ${{ env.PR_FETCH_DEPTH }}
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git
+      - name: Set git safe directory
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
-      - name: Install colcon
+      - name: Install Cppcheck
         run: |
-          sudo sh -c 'echo "deb [arch=amd64,arm64] http://repo.ros2.org/ubuntu/main `lsb_release -cs` main" > /etc/apt/sources.list.d/ros2-latest.list'
-          curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
-          sudo apt update
-          sudo apt install python3-colcon-common-extensions
-
-      # cppcheck from apt does not yet support --check-level args, and thus install from snap
-      - name: Install Cppcheck from snap
-        run: |
-          sudo snap install cppcheck
+          apt-get update
+          apt-get install -y cppcheck
 
       - name: Fetch the base branch with enough history for a common merge-base commit
         run: git fetch origin ${{ github.base_ref }}
@@ -64,7 +56,7 @@ jobs:
           done
           echo "filtered-full-paths=$filtered_paths" >> $GITHUB_OUTPUT
 
-      # cspell: ignore suppr
+      # cspell: ignore suppr Dslots
       - name: Run Cppcheck on modified packages
         if: ${{ steps.filter-paths-no-cpp-files.outputs.filtered-full-paths != '' }}
         continue-on-error: true
