@@ -321,18 +321,11 @@ void MPC::setReferenceTrajectory(
     mpc_traj_resampled = resampled;
   }
 
-  if (m_use_temporal_trajectory) {
-    // Temporary policy for temporal mode: force forward direction.
-    // TODO(go-sakayori): Revisit with velocity-sign-based direction detection when reverse
-    // support is required in temporal mode.
-    m_is_forward_shift = true;
-  } else {
     const auto is_forward_shift =
       autoware::motion_utils::isDrivingForward(mpc_traj_resampled.toTrajectoryPoints());
 
     // if driving direction is unknown, use previous value
     m_is_forward_shift = is_forward_shift ? is_forward_shift.value() : m_is_forward_shift;
-  }
 
   // path smoothing
   MPCTrajectory mpc_traj_smoothed = mpc_traj_resampled;  // smooth filtered trajectory
