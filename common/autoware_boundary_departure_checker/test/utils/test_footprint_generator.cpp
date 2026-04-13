@@ -26,11 +26,15 @@
 
 namespace autoware::boundary_departure_checker
 {
+
+namespace
+{
 void plot_steering_footprints(
   [[maybe_unused]] const TrajectoryPoints & pred_traj,
   [[maybe_unused]] const std::vector<autoware_utils_geometry::LinearRing2d> & footprints,
   [[maybe_unused]] const std::string & title, [[maybe_unused]] const std::string & sub_dir)
 {
+#ifdef EXPORT_TEST_PLOT_FIGURE
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
 
@@ -70,109 +74,16 @@ void plot_steering_footprints(
     plt.axis(Args("equal"));
     plt.legend();
 
-    save_figure(plt, sub_dir);
+    autoware::boundary_departure_checker::save_figure(plt, sub_dir);
   });
+#endif
 }
 
-class FootprintGeneratorTest : public ::testing::Test
+void plot_sides_results(
+  [[maybe_unused]] const footprints::Footprints & test_footprints,
+  [[maybe_unused]] const std::vector<Side<autoware_utils_geometry::Segment2d>> & sides_array)
 {
-protected:
-  void SetUp() override
-  {
-    // 1. Create Mock Vehicle Info
-    vehicle_info_ = autoware::vehicle_info_utils::createVehicleInfo(
-      0.383, 0.235, 2.79, 1.64, 1.0, 1.1, 0.128, 0.128, 2.5, 0.70);
-
-    // 2. Setup Trajectory
-    TrajectoryPoint p1;
-    p1.pose.position.x = 0.0;
-    p1.pose.position.y = 0.0;
-    p1.pose.orientation.w = 1.0;
-    p1.longitudinal_velocity_mps = 10.0;
-    p1.time_from_start = rclcpp::Duration::from_seconds(0.0);
-    pred_traj_.push_back(p1);
-
-    TrajectoryPoint p2 = p1;
-    p2.pose.position.x = 1.0;
-    p2.time_from_start = rclcpp::Duration::from_seconds(0.1);
-    pred_traj_.push_back(p2);
-
-    // 4. Setup base uncertainty margin
-    pose_with_cov_.pose.orientation.w = 1.0;
-    for (auto & c : pose_with_cov_.covariance) {
-      c = 0.0;
-    }
-  }
-
-  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
-  TrajectoryPoints pred_traj_;
-  geometry_msgs::msg::PoseWithCovariance pose_with_cov_;
-};
-
-TEST_F(FootprintGeneratorTest, TestNormalFootprintGenerator)
-{
-  const auto footprints = footprints::generate(pred_traj_, vehicle_info_, pose_with_cov_);
-
-  ASSERT_EQ(footprints.size(), pred_traj_.size());
-  // Normal footprint should strictly follow base vehicle specs since extra margin is 0.0
-  // Left Front is at X = Front_Overhang + Wheelbase, Y = Half_Tread + Left_Overhang
-  const double expected_x = vehicle_info_.wheel_base_m + vehicle_info_.front_overhang_m;
-  EXPECT_DOUBLE_EQ(footprints[0][VehicleInfo::FrontLeftIndex].x(), expected_x);
-}
-
-TEST_F(FootprintGeneratorTest, TestSteeringFootprintGeneratorEmptyTrajectory)
-{
-  TrajectoryPoints empty_traj;
-  const auto footprints = footprints::generate(empty_traj, vehicle_info_, pose_with_cov_);
-  EXPECT_TRUE(footprints.empty());
-}
-
-TEST_F(FootprintGeneratorTest, TestGetSidesFromFootprintsEmpty)
-{
-  footprints::Footprints empty_footprints;
-  const auto sides_array = footprints::get_sides_from_footprints(empty_footprints);
-  EXPECT_TRUE(sides_array.empty());
-}
-
-TEST_F(FootprintGeneratorTest, TestGetSidesFromFootprints)
-{
-  using autoware::vehicle_info_utils::VehicleInfo;
-
-  // 1. Create a dummy footprint at the origin (0, 0)
-  const auto base_fp = vehicle_info_.createFootprint(0.0, 0.0);
-  footprints::Footprints test_footprints = {base_fp};
-
-  // 2. Create a second footprint offset by X = 5.0 to test array processing
-  auto offset_fp = base_fp;
-  for (auto & p : offset_fp) {
-    p = autoware_utils_geometry::Point2d{p.x() + 5.0, p.y()};
-  }
-  test_footprints.push_back(offset_fp);
-
-  // 3. Run the target function
-  const auto sides_array = footprints::get_sides_from_footprints(test_footprints);
-
-  // 4. Validate output size
-  ASSERT_EQ(sides_array.size(), 2);
-
-  // 5. Verify the first footprint's extracted sides against the original footprint corners
-  EXPECT_DOUBLE_EQ(sides_array[0].left.first.x(), base_fp[VehicleInfo::FrontLeftIndex].x());
-  EXPECT_DOUBLE_EQ(sides_array[0].left.first.y(), base_fp[VehicleInfo::FrontLeftIndex].y());
-  EXPECT_DOUBLE_EQ(sides_array[0].left.second.x(), base_fp[VehicleInfo::RearLeftIndex].x());
-  EXPECT_DOUBLE_EQ(sides_array[0].left.second.y(), base_fp[VehicleInfo::RearLeftIndex].y());
-
-  EXPECT_DOUBLE_EQ(sides_array[0].right.first.x(), base_fp[VehicleInfo::FrontRightIndex].x());
-  EXPECT_DOUBLE_EQ(sides_array[0].right.first.y(), base_fp[VehicleInfo::FrontRightIndex].y());
-  EXPECT_DOUBLE_EQ(sides_array[0].right.second.x(), base_fp[VehicleInfo::RearRightIndex].x());
-  EXPECT_DOUBLE_EQ(sides_array[0].right.second.y(), base_fp[VehicleInfo::RearRightIndex].y());
-
-  // 6. Verify the second footprint's extracted sides
-  EXPECT_DOUBLE_EQ(sides_array[1].left.first.x(), offset_fp[VehicleInfo::FrontLeftIndex].x());
-  EXPECT_DOUBLE_EQ(sides_array[1].left.first.y(), offset_fp[VehicleInfo::FrontLeftIndex].y());
-  EXPECT_DOUBLE_EQ(sides_array[1].right.second.x(), offset_fp[VehicleInfo::RearRightIndex].x());
-  EXPECT_DOUBLE_EQ(sides_array[1].right.second.y(), offset_fp[VehicleInfo::RearRightIndex].y());
-
-  // 7. Plotting
+#ifdef EXPORT_TEST_PLOT_FIGURE
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
 
@@ -212,7 +123,125 @@ TEST_F(FootprintGeneratorTest, TestGetSidesFromFootprints)
     plt.axis(Args("equal"));
     plt.title(Args("Extracted Ego Sides from Footprints"));
     plt.legend();
-    save_figure(plt, "test_get_sides_from_footprints");
+    autoware::boundary_departure_checker::save_figure(plt, "test_get_sides_from_footprints");
   });
+#endif
+}
+}  // namespace
+
+class FootprintGeneratorTest : public ::testing::Test
+{
+protected:
+  void SetUp() override
+  {
+    // 1. Create Mock Vehicle Info
+    vehicle_info_ = autoware::vehicle_info_utils::createVehicleInfo(
+      0.383, 0.235, 2.79, 1.64, 1.0, 1.1, 0.128, 0.128, 2.5, 0.70);
+
+    // 2. Setup Trajectory
+    TrajectoryPoint p1;
+    p1.pose.position.x = 0.0;
+    p1.pose.position.y = 0.0;
+    p1.pose.orientation.w = 1.0;
+    p1.longitudinal_velocity_mps = 10.0;
+    p1.time_from_start = rclcpp::Duration::from_seconds(0.0);
+    pred_traj_.push_back(p1);
+
+    TrajectoryPoint p2 = p1;
+    p2.pose.position.x = 1.0;
+    p2.time_from_start = rclcpp::Duration::from_seconds(0.1);
+    pred_traj_.push_back(p2);
+
+    // 4. Setup base uncertainty margin
+    pose_with_cov_.pose.orientation.w = 1.0;
+    for (auto & c : pose_with_cov_.covariance) {
+      c = 0.0;
+    }
+  }
+
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
+  TrajectoryPoints pred_traj_;
+  geometry_msgs::msg::PoseWithCovariance pose_with_cov_;
+};
+
+// Evaluates normal footprint generation without extra covariance-based margin.
+TEST_F(FootprintGeneratorTest, TestNormalFootprintGenerator)
+{
+  // Act:
+  const auto footprints = footprints::generate(pred_traj_, vehicle_info_, pose_with_cov_);
+
+  // Assert:
+  ASSERT_EQ(footprints.size(), pred_traj_.size());
+  // Expected x: wheelbase(2.79) + front_overhang(1.0) = 3.79m
+  const double expected_x = vehicle_info_.wheel_base_m + vehicle_info_.front_overhang_m;
+  EXPECT_DOUBLE_EQ(footprints[0][VehicleInfo::FrontLeftIndex].x(), expected_x);
+}
+
+// Evaluates that an empty trajectory results in empty footprints.
+TEST_F(FootprintGeneratorTest, TestSteeringFootprintGeneratorEmptyTrajectory)
+{
+  // Arrange:
+  TrajectoryPoints empty_traj;
+
+  // Act:
+  const auto footprints = footprints::generate(empty_traj, vehicle_info_, pose_with_cov_);
+
+  // Assert:
+  EXPECT_TRUE(footprints.empty());
+}
+
+// Evaluates side extraction behavior from an empty footprint list.
+TEST_F(FootprintGeneratorTest, TestGetSidesFromFootprintsEmpty)
+{
+  // Arrange:
+  footprints::Footprints empty_footprints;
+
+  // Act:
+  const auto sides_array = footprints::get_sides_from_footprints(empty_footprints);
+
+  // Assert:
+  EXPECT_TRUE(sides_array.empty());
+}
+
+// Evaluates the extraction of left and right vehicle sides from footprint polygons.
+TEST_F(FootprintGeneratorTest, TestGetSidesFromFootprints)
+{
+  // Arrange:
+  using autoware::vehicle_info_utils::VehicleInfo;
+
+  const auto base_fp = vehicle_info_.createFootprint(0.0, 0.0);
+  footprints::Footprints test_footprints = {base_fp};
+
+  // offset by 5.0m in X
+  auto offset_fp = base_fp;
+  for (auto & p : offset_fp) {
+    p = autoware_utils_geometry::Point2d{p.x() + 5.0, p.y()};
+  }
+  test_footprints.push_back(offset_fp);
+
+  // Act:
+  const auto sides_array = footprints::get_sides_from_footprints(test_footprints);
+
+  // Assert:
+  ASSERT_EQ(sides_array.size(), 2);
+  // first footprint
+  EXPECT_DOUBLE_EQ(sides_array[0].left.first.x(), base_fp[VehicleInfo::FrontLeftIndex].x());
+  EXPECT_DOUBLE_EQ(sides_array[0].left.first.y(), base_fp[VehicleInfo::FrontLeftIndex].y());
+  EXPECT_DOUBLE_EQ(sides_array[0].left.second.x(), base_fp[VehicleInfo::RearLeftIndex].x());
+  EXPECT_DOUBLE_EQ(sides_array[0].left.second.y(), base_fp[VehicleInfo::RearLeftIndex].y());
+
+  EXPECT_DOUBLE_EQ(sides_array[0].right.first.x(), base_fp[VehicleInfo::FrontRightIndex].x());
+  EXPECT_DOUBLE_EQ(sides_array[0].right.first.y(), base_fp[VehicleInfo::FrontRightIndex].y());
+  EXPECT_DOUBLE_EQ(sides_array[0].right.second.x(), base_fp[VehicleInfo::RearRightIndex].x());
+  EXPECT_DOUBLE_EQ(sides_array[0].right.second.y(), base_fp[VehicleInfo::RearRightIndex].y());
+
+  // second footprint
+  EXPECT_DOUBLE_EQ(sides_array[1].left.first.x(), offset_fp[VehicleInfo::FrontLeftIndex].x());
+  EXPECT_DOUBLE_EQ(sides_array[1].left.first.y(), offset_fp[VehicleInfo::FrontLeftIndex].y());
+  EXPECT_DOUBLE_EQ(sides_array[1].right.second.x(), offset_fp[VehicleInfo::RearRightIndex].x());
+  EXPECT_DOUBLE_EQ(sides_array[1].right.second.y(), offset_fp[VehicleInfo::RearRightIndex].y());
+
+  // Assert: (Plotting)
+  plot_sides_results(test_footprints, sides_array);
 }
 }  // namespace autoware::boundary_departure_checker

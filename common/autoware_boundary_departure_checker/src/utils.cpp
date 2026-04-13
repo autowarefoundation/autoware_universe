@@ -343,21 +343,22 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
         const auto & ego_front = fp[side_key].first;
         const auto & ego_rear = fp[side_key].second;
 
-        // Forward vector of the ego side segment
+        // Vector along the ego side (rear to front)
         const double v_fwd_x = ego_front.x() - ego_rear.x();
         const double v_fwd_y = ego_front.y() - ego_rear.y();
 
-        // Lateral vector pointing from ego to the boundary
+        // Vector from ego side to boundary point
         const double v_lat_x = closest_bound.pt_on_bound.x() - closest_bound.pt_on_ego.x();
         const double v_lat_y = closest_bound.pt_on_bound.y() - closest_bound.pt_on_ego.y();
 
-        // 2D Cross Product (Z-component)
+        // 2D cross product to determine if the boundary is to the left or right of the ego side
         const double cross_prod = v_fwd_x * v_lat_y - v_fwd_y * v_lat_x;
 
         const bool is_crossing_left_boundary = side_key == SideKey::LEFT && cross_prod < 0.0;
         const bool is_crossing_right_boundary = side_key == SideKey::RIGHT && cross_prod > 0.0;
+
         if (is_crossing_left_boundary || is_crossing_right_boundary) {
-          closest_bound.lat_dist = -closest_bound.lat_dist;  // crossed left boundary
+          closest_bound.lat_dist = -closest_bound.lat_dist;
         }
       }
 

@@ -24,15 +24,17 @@ namespace autoware::boundary_departure_checker::utils
 {
 /**
  * @brief Convert a 3D Eigen vector to a 2D point by dropping the z-coordinate.
- * @param ll_pt A 3D point in Eigen format.
+ *
+ * @param[in] ll_pt A 3D point in Eigen format.
  * @return A 2D point using the x and y values.
  */
 Point2d to_point_2d(const Eigen::Matrix<double, 3, 1> & ll_pt);
 
 /**
  * @brief Convert two 3D Eigen points to a 2D line segment.
- * @param ll_pt1 First 3D point.
- * @param ll_pt2 Second 3D point.
+ *
+ * @param[in] ll_pt1 First 3D point.
+ * @param[in] ll_pt2 Second 3D point.
  * @return A 2D line segment made from the projected 2D points.
  */
 Segment2d to_segment_2d(
@@ -41,17 +43,19 @@ Segment2d to_segment_2d(
 /**
  * @brief Converts a 3D segment into its 2D representation by discarding the Z-coordinates.
  *
- * @param segment The input 3D segment to convert.
+ * @param[in] segment The input 3D segment to convert.
  * @return A new 2D segment with the Z-coordinates of the original segment's endpoints removed.
  */
 Segment2d to_segment_2d(const Segment3d & segment);
 
 /**
  * @brief Convert a 2D point and a z value into a 3D ROS geometry_msgs Point.
- * @param point A 2D point.
- * @param z The z-coordinate to assign.
+ *
+ * @param[in] point A 2D point.
+ * @param[in] z The z-coordinate to assign.
  * @return A ROS Point with x, y from the 2D point and the given z.
  */
 Point to_geom_pt(const Point2d & point, const double z = 0.0);
 }  // namespace autoware::boundary_departure_checker::utils
+
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__CONVERSION_HPP_

@@ -11,6 +11,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
+
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/pose_deviation.hpp>
@@ -28,18 +32,21 @@
 
 #include <vector>
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
-
+/**
+ * @brief Namespace for the boundary departure checker.
+ */
 namespace autoware::boundary_departure_checker
 {
+// ROS Message Aliases
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
-
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::SteeringReport;
+using geometry_msgs::msg::Point;
+using geometry_msgs::msg::Pose;
 
+// Geometry Aliases
 using autoware_utils_geometry::Box2d;
 using autoware_utils_geometry::LinearRing2d;
 using autoware_utils_geometry::LineString2d;
@@ -50,15 +57,15 @@ using autoware_utils_geometry::Polygon2d;
 using autoware_utils_geometry::Segment2d;
 using autoware_utils_geometry::Segment3d;
 
+// Vehicle Info Alias
 using autoware::vehicle_info_utils::VehicleInfo;  // NOLINT
 
+// Namespace Aliases
 namespace bg = boost::geometry;
 namespace bgi = bg::index;                        // NOLINT
 namespace trajectory = experimental::trajectory;  // NOLINT
 
-using geometry_msgs::msg::Point;
-using geometry_msgs::msg::Pose;
-
+// Container Aliases
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 }  // namespace autoware::boundary_departure_checker

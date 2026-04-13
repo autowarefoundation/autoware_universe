@@ -99,35 +99,36 @@ constexpr const char * export_folder = "test_boundary_utils";
 // 1. calc_nearest_projection Tests
 // ==============================================================================
 
+// Evaluates lateral distance calculation for two parallel segments.
 TEST(UncrossableBoundaryUtilsTest, TestSegmentToSegmentProjection)
 {
-  // 1. Setup PyPlot context
+  // Arrange:
+  Segment2d ego_seg{{0.0, 0.0}, {0.0, 2.0}};       // vertical segment at x=0
+  Segment2d boundary_seg{{1.0, 0.0}, {1.0, 2.0}};  // vertical segment at x=1
 
-  // Define segments
-  Segment2d ego_seg{{0.0, 0.0}, {0.0, 2.0}};
-  Segment2d boundary_seg{{1.0, 0.0}, {1.0, 2.0}};
-
+  // Act:
   auto result = utils::calc_nearest_projection(ego_seg, boundary_seg, 0);
 
+  // Assert:
   ASSERT_TRUE(result.has_value());
   EXPECT_NEAR(result->lat_dist, 1.0, 1e-6);
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-    plot_ego_and_boundary(plt, ego_seg, boundary_seg, result);
-    save_figure(plt, export_folder);
-  });
+
+  // Assert: (Plotting)
+  plot_ego_and_boundary(ego_seg, boundary_seg, result, export_folder);
 }
 
+// Evaluates that intersecting segments return a lateral distance of zero.
 TEST(UncrossableBoundaryUtilsTest, TestIntersectionDetection)
 {
-  // Ego side segment crossing the boundary
-  Segment2d ego_seg{{0.0, 0.0}, {1.0, 2.0}};
-  Segment2d boundary_seg{{1.0, 0.0}, {1.0, 2.0}};
+  // Arrange:
+  Segment2d ego_seg{{0.0, 0.0}, {1.0, 2.0}};       // diagonal crossing x=1
+  Segment2d boundary_seg{{1.0, 0.0}, {1.0, 2.0}};  // vertical segment at x=1
 
+  // Act:
   auto result = utils::calc_nearest_projection(ego_seg, boundary_seg, 0);
 
+  // Assert:
   ASSERT_TRUE(result.has_value());
-  // Distance should be 0.0 because they intersect
   EXPECT_DOUBLE_EQ(result->lat_dist, 0.0);
 
   BDC_PLOT_RESULT({
@@ -137,14 +138,17 @@ TEST(UncrossableBoundaryUtilsTest, TestIntersectionDetection)
   });
 }
 
+// Evaluates behavior when the boundary segment is beyond the ego segment's reach.
 TEST(UncrossableBoundaryUtilsTest, TestPointBeyondSegmentEnd)
 {
-  // Boundary segment is short and far ahead of ego
-  Segment2d ego_seg{{0.0, 0.0}, {1.0, 0.0}};
-  Segment2d boundary_seg{{3.0, 2.0}, {4.0, 2.0}};
+  // Arrange:
+  Segment2d ego_seg{{0.0, 0.0}, {1.0, 0.0}};       // horizontal at y=0, x=[0,1]
+  Segment2d boundary_seg{{3.0, 2.0}, {4.0, 2.0}};  // horizontal at y=2, x=[3,4]
 
+  // Act:
   auto result = utils::calc_nearest_projection(ego_seg, boundary_seg, 0);
 
+  // Assert:
   ASSERT_FALSE(result.has_value());
 
   BDC_PLOT_RESULT({
@@ -158,26 +162,24 @@ TEST(UncrossableBoundaryUtilsTest, TestPointBeyondSegmentEnd)
 // 2. find_closest_segment Tests (Includes Coverage for Fallbacks)
 // ==============================================================================
 
+// Evaluates closest segment detection when an intersection occurs with the vehicle rear.
 TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentRearIntersection)
 {
-  // Simulate a 2x4m Ego Vehicle
-  // We evaluate the FRONT-HALF of the left side to intentionally evade projection
-  Segment2d ego_side_seg{{0.0, 4.0}, {0.0, 2.0}};
-
-  // The rear of the vehicle
-  Segment2d ego_rear_seg{{0.0, 0.0}, {2.0, 0.0}};
+  // Arrange:
+  Segment2d ego_side_seg{{0.0, 4.0}, {0.0, 2.0}};  // front-half of left side
+  Segment2d ego_rear_seg{{0.0, 0.0}, {2.0, 0.0}};  // vehicle rear
   size_t curr_fp_idx = 42;
 
-  // A boundary segment that crosses exactly through the middle of the vehicle's rear
-  // It spans Y from -1 to +1. Because our side segment stops at Y=2, they cannot project!
+  // Boundary segment crossing the rear middle
   std::vector<SegmentWithIdx> boundary_segments;
   IdxForRTreeSegment id{1, 0, 1};
   boundary_segments.emplace_back(Segment2d{{1.0, -1.0}, {1.0, 1.0}}, id);
 
+  // Act:
   auto result =
     utils::find_closest_segment(ego_side_seg, ego_rear_seg, curr_fp_idx, boundary_segments);
 
-  // Assert it successfully fell through the logic and hit the rear intersection branch
+  // Assert:
   EXPECT_EQ(result.pose_index, curr_fp_idx);
   EXPECT_DOUBLE_EQ(result.lat_dist, 0.0);
   EXPECT_DOUBLE_EQ(result.pt_on_ego.x(), 1.0);
@@ -191,29 +193,24 @@ TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentRearIntersection)
   });
 }
 
+// Evaluates fallback behavior when no projection or intersection is found.
 TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentFallback)
 {
-  // 1. Simulate a 2x4m Ego Vehicle
-  // Ego side is strictly X=0, Y in [2.0, 4.0]
-  Segment2d ego_side_seg{{0.0, 4.0}, {0.0, 2.0}};
-
-  // Ego rear is strictly Y=0, X in [0.0, 2.0]
-  Segment2d ego_rear_seg{{0.0, 0.0}, {2.0, 0.0}};
+  // Arrange:
+  Segment2d ego_side_seg{{0.0, 4.0}, {0.0, 2.0}};  // left side y=[2,4]
+  Segment2d ego_rear_seg{{0.0, 0.0}, {2.0, 0.0}};  // rear x=[0,2]
   size_t curr_fp_idx = 99;
 
-  // 2. A boundary that completely misses the vehicle in both projection and intersection
-  // We place it at Y=-2.0, X in [4.0, 5.0].
-  // - It misses the side segment's Y-band [2.0, 4.0] (no projection)
-  // - It misses the rear segment's X-band [0.0, 2.0] (no intersection)
+  // Boundary that misses both projection and intersection
   std::vector<SegmentWithIdx> boundary_segments;
   IdxForRTreeSegment id{1, 0, 1};
   boundary_segments.emplace_back(Segment2d{{4.0, -2.0}, {5.0, -2.0}}, id);
 
+  // Act:
   auto result =
     utils::find_closest_segment(ego_side_seg, ego_rear_seg, curr_fp_idx, boundary_segments);
 
-  // 3. Since there's no projection and no intersection, it hits the final fallback return
-  // statement.
+  // Assert:
   EXPECT_EQ(result.pose_index, curr_fp_idx);
   EXPECT_DOUBLE_EQ(result.lat_dist, std::numeric_limits<double>::max());
 
@@ -225,17 +222,18 @@ TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentFallback)
   });
 }
 
+// Evaluates signed lateral distance raycasting from a given pose to a boundary.
 TEST(UncrossableBoundaryUtilsTest, TestCalcSignedLateralDistanceToBoundary)
 {
-  // 1. Setup Ego Pose (At Origin, Yaw = 0.0)
-  // With Yaw = 0, the vehicle points along the +X axis.
-  // Its lateral Y-axis ray points along the +Y axis (Left) and -Y axis (Right).
+  // Arrange:
   geometry_msgs::msg::Pose ego_pose;
   ego_pose.position.x = 0.0;
   ego_pose.position.y = 0.0;
   ego_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(0.0);
 
-  // 2. Invalid boundary (empty or 1 point)
+  // Act & Assert:
+
+  // 1. Invalid boundary
   lanelet::LineString3d empty_ls(lanelet::utils::getId());
   EXPECT_FALSE(utils::calc_signed_lateral_distance_to_boundary(empty_ls, ego_pose).has_value());
 
@@ -243,55 +241,41 @@ TEST(UncrossableBoundaryUtilsTest, TestCalcSignedLateralDistanceToBoundary)
   lanelet::LineString3d single_pt_ls(lanelet::utils::getId(), {p1});
   EXPECT_FALSE(utils::calc_signed_lateral_distance_to_boundary(single_pt_ls, ego_pose).has_value());
 
-  // 3. Boundary to the LEFT (Positive distance)
-  // Spans from X=-5 to X=5 at Y=5. The lateral ray (X=0) intersects it exactly at Y=5.
+  // 2. Boundary to the LEFT
   lanelet::Point3d p2(lanelet::utils::getId(), 5.0, 5.0, 0.0);
   lanelet::LineString3d left_boundary(lanelet::utils::getId(), {p1, p2});
-
   auto dist_left = utils::calc_signed_lateral_distance_to_boundary(left_boundary, ego_pose);
   ASSERT_TRUE(dist_left.has_value());
   EXPECT_DOUBLE_EQ(dist_left.value(), 5.0);
 
-  // 4. Boundary to the RIGHT (Negative distance)
-  // Spans from X=-5 to X=5 at Y=-3. The lateral ray (X=0) intersects it exactly at Y=-3.
+  // 3. Boundary to the RIGHT
   lanelet::Point3d p3(lanelet::utils::getId(), -5.0, -3.0, 0.0);
   lanelet::Point3d p4(lanelet::utils::getId(), 5.0, -3.0, 0.0);
   lanelet::LineString3d right_boundary(lanelet::utils::getId(), {p3, p4});
-
   auto dist_right = utils::calc_signed_lateral_distance_to_boundary(right_boundary, ego_pose);
   ASSERT_TRUE(dist_right.has_value());
   EXPECT_DOUBLE_EQ(dist_right.value(), -3.0);
 
-  // 5. Ray misses the segment (Intersection occurs outside segment bounds)
-  // Boundary spans from X=2 to X=10 at Y=5.
-  // The lateral ray is at X=0, which completely misses the start of the segment.
+  // 4. Ray misses the segment
   lanelet::Point3d p5(lanelet::utils::getId(), 2.0, 5.0, 0.0);
   lanelet::Point3d p6(lanelet::utils::getId(), 10.0, 5.0, 0.0);
   lanelet::LineString3d missed_boundary(lanelet::utils::getId(), {p5, p6});
-
   auto dist_miss = utils::calc_signed_lateral_distance_to_boundary(missed_boundary, ego_pose);
   EXPECT_FALSE(dist_miss.has_value());
 
-  // 6. Parallel Boundary (No intersection)
-  // Boundary is a vertical line at X=5, spanning Y from -10 to 10.
-  // This is perfectly parallel to the lateral Y-axis ray.
+  // 5. Parallel Boundary
   lanelet::Point3d p7(lanelet::utils::getId(), 5.0, -10.0, 0.0);
   lanelet::Point3d p8(lanelet::utils::getId(), 5.0, 10.0, 0.0);
   lanelet::LineString3d parallel_boundary(lanelet::utils::getId(), {p7, p8});
-
   auto dist_parallel = utils::calc_signed_lateral_distance_to_boundary(parallel_boundary, ego_pose);
   EXPECT_FALSE(dist_parallel.has_value());
 
-  // 7. Multiple segments, picks the closest
-  // A U-shaped boundary: Top line at Y=8, Vertical line at X=10, Bottom line at Y=4.
-  // The lateral ray (X=0) intersects BOTH the Top (Y=8) and Bottom (Y=4) lines.
-  // It must correctly select the shortest distance (4.0).
+  // 6. Multiple segments, picks the closest
   lanelet::Point3d p9(lanelet::utils::getId(), -10.0, 8.0, 0.0);
   lanelet::Point3d p10(lanelet::utils::getId(), 10.0, 8.0, 0.0);
   lanelet::Point3d p11(lanelet::utils::getId(), 10.0, 4.0, 0.0);
   lanelet::Point3d p12(lanelet::utils::getId(), -10.0, 4.0, 0.0);
   lanelet::LineString3d multi_boundary(lanelet::utils::getId(), {p9, p10, p11, p12});
-
   auto dist_multi = utils::calc_signed_lateral_distance_to_boundary(multi_boundary, ego_pose);
   ASSERT_TRUE(dist_multi.has_value());
   EXPECT_DOUBLE_EQ(dist_multi.value(), 4.0);
@@ -381,6 +365,64 @@ TEST(UncrossableBoundaryUtilsTest, TestIsClosestToBoundarySegment)
 
   // 3. Boundary is perfectly equidistant (exactly in the middle at Y = 0)
   // The function uses `<=` so an equidistant boundary should return true for both sides.
+  Segment2d bound_center{{0.0, 0.0}, {2.0, 0.0}};
+  EXPECT_TRUE(utils::is_closest_to_boundary_segment(bound_center, left_side, right_side));
+  EXPECT_TRUE(utils::is_closest_to_boundary_segment(bound_center, right_side, left_side));
+}
+
+TEST(UncrossableBoundaryUtilsTest, TestIsSegmentWithinEgoHeight)
+{
+  const double ego_z = 0.0;
+  const double ego_height = 2.5;
+
+  // 1. Fully within height bounds (z from 1.0 to 1.5)
+  Segment3d seg_within{{0.0, 0.0, 1.0}, {1.0, 0.0, 1.5}};
+  EXPECT_TRUE(utils::is_segment_within_ego_height(seg_within, ego_z, ego_height));
+
+  // 2. Partial overlap: Starts within (z=2.0), ends above vehicle height (z=3.0)
+  // Function checks if the *minimum* distance to the base is within the height.
+  Segment3d seg_partial{{0.0, 0.0, 2.0}, {1.0, 0.0, 3.0}};
+  EXPECT_TRUE(utils::is_segment_within_ego_height(seg_partial, ego_z, ego_height));
+
+  // 3. Fully above vehicle (e.g., an overpass or high sign at z=3.0 to z=4.0)
+  Segment3d seg_above{{0.0, 0.0, 3.0}, {1.0, 0.0, 4.0}};
+  EXPECT_FALSE(utils::is_segment_within_ego_height(seg_above, ego_z, ego_height));
+
+  // 4. Fully below vehicle (e.g., a road on a lower bridge layer at z=-3.0)
+  Segment3d seg_below{{0.0, 0.0, -3.0}, {1.0, 0.0, -4.0}};
+  EXPECT_FALSE(utils::is_segment_within_ego_height(seg_below, ego_z, ego_height));
+}
+
+TEST(UncrossableBoundaryUtilsTest, TestIsCritical)
+{
+  Side<std::optional<CriticalPointPair>> projections;
+
+  // 1. Empty sides -> Not critical
+  EXPECT_FALSE(utils::is_critical(projections));
+
+  // 2. Contains only safe and approaching points -> Not critical
+  CriticalPointPair pair_safe;
+  pair_safe.physical_departure_point.departure_type = DepartureType::NONE;
+  CriticalPointPair pair_app;
+  pair_app.physical_departure_point.departure_type = DepartureType::APPROACHING;
+
+  projections.left = pair_safe;
+  projections.right = pair_app;
+  EXPECT_FALSE(utils::is_critical(projections));
+
+  // 3. Add a critical point to the left side -> Critical
+  CriticalPointPair pair_crit;
+  pair_crit.physical_departure_point.departure_type = DepartureType::CRITICAL;
+  projections.left = pair_crit;
+  EXPECT_TRUE(utils::is_critical(projections));
+
+  // 4. Critical point on the right side -> Critical
+  projections.left = std::nullopt;
+  projections.right = pair_crit;
+  EXPECT_TRUE(utils::is_critical(projections));
+}
+}  // namespace autoware::boundary_departure_checker
+ant boundary should return true for both sides.
   Segment2d bound_center{{0.0, 0.0}, {2.0, 0.0}};
   EXPECT_TRUE(utils::is_closest_to_boundary_segment(bound_center, left_side, right_side));
   EXPECT_TRUE(utils::is_closest_to_boundary_segment(bound_center, right_side, left_side));

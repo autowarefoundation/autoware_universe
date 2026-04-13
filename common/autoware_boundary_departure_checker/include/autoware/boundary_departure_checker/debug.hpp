@@ -25,6 +25,17 @@ namespace autoware::boundary_departure_checker::debug
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
+/**
+ * @brief Create debug markers for boundary departure detection.
+ *
+ * Generates visualization markers representing the ego vehicle footprints,
+ * the boundaries being checked, and any detected departure points or projections.
+ *
+ * @param[in] departure_data The data structure containing all departure check results.
+ * @param[in] curr_time The current ROS time for marker headers.
+ * @param[in] base_link_z The z-coordinate of the base link for 3D visualization.
+ * @return A MarkerArray containing all visualization primitives.
+ */
 MarkerArray create_debug_markers(
   const DepartureData & departure_data, const rclcpp::Time & curr_time, const double base_link_z);
 }  // namespace autoware::boundary_departure_checker::debug
