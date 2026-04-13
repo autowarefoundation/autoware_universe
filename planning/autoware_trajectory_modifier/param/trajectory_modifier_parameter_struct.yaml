@@ -245,3 +245,81 @@ trajectory_modifier_params:
           validation:
             gt<>: [0]
           read_only: false
+
+    rss_params:
+      enable:
+        type: bool
+        default_value: true
+        description: Enable the use of RSS parameters for obstacle stop
+        read_only: false
+      object_decel:
+        car:
+          type: double
+          default_value: 1.5
+          description: Deceleration for car type objects [m/s^2]
+          validation:
+            gt_eq<>: [0.0]
+          read_only: false
+        truck:
+          type: double
+          default_value: 1.5
+          description: Deceleration for truck type objects [m/s^2]
+          validation:
+            gt_eq<>: [0.0]
+          read_only: false
+        bus:
+          type: double
+          default_value: 1.5
+          description: Deceleration for bus type objects [m/s^2]
+          validation:
+            gt_eq<>: [0.0]
+          read_only: false
+        trailer:
+          type: double
+          default_value: 1.5
+          description: Deceleration for trailer type objects [m/s^2]
+          validation:
+            gt_eq<>: [0.0]
+          read_only: false
+        motorcycle:
+          type: double
+          default_value: 3.0
+          description: Deceleration for motorcycle type objects [m/s^2]
+          validation:
+            gt_eq<>: [0.0]
+          read_only: false
+        bicycle:
+          type: double
+          default_value: 5.0
+          description: Deceleration for bicycle type objects [m/s^2]
+          validation:
+            gt_eq<>: [0.0]
+          read_only: false
+        pedestrian:
+          type: double
+          default_value: 5.0
+          description: Deceleration for pedestrian type objects [m/s^2]
+          validation:
+            gt_eq<>: [0.0]
+          read_only: false
+      reaction_time:
+        type: double
+        default_value: 0.2
+        description: Reaction time to consider for RSS calculation [s]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      safety_margin:
+        type: double
+        default_value: 2.0
+        description: Safety margin to consider for RSS calculation [m]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false
+      min_vel_th:
+        type: double
+        default_value: 0.5
+        description: Minimum velocity threshold for object to be considered for RSS calculation [m/s]
+        validation:
+          gt_eq<>: [0.0]
+        read_only: false

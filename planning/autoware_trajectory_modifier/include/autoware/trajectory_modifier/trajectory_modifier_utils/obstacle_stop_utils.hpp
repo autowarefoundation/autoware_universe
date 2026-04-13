@@ -43,6 +43,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace autoware::trajectory_modifier::utils::obstacle_stop
@@ -145,6 +146,57 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const PredictedObjects & objects, MultiPolygon2d & target_polygons,
   PredictedObject & colliding_object);
+
+using ObjectDecelMap = std::unordered_map<ObjectType, double>;
+std::optional<CollisionPoint> get_nearest_object_collision(
+  const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PredictedObjects & objects,
+  const ObjectDecelMap & object_decel_map, const double ego_vel, const double ego_decel,
+  const double reaction_time, const double safety_margin, const double min_vel_th,
+  MultiPolygon2d & target_polygons, PredictedObject & colliding_object);
+
+struct ObjectFilter
+{
+  ObjectFilter(const std::vector<std::string> & object_type_strings, const double max_velocity_th)
+  : max_velocity_th_(max_velocity_th)
+  {
+    for (const auto & object_type_string : object_type_strings) {
+      if (string_to_object_type.count(object_type_string) == 0) continue;
+      object_types_.emplace(string_to_object_type.at(object_type_string));
+    }
+  }
+
+  void filter_objects(PredictedObjects & objects)
+  {
+    objects.objects.erase(
+      std::remove_if(
+        objects.objects.begin(), objects.objects.end(),
+        [&](const auto & object) {
+          if (object.kinematics.initial_twist_with_covariance.twist.linear.x > max_velocity_th_)
+            return true;
+          const auto & label = object.classification.empty() ? ObjectClassification::UNKNOWN
+                                                             : object.classification.front().label;
+          if (classification_to_object_type.count(label) == 0) return true;
+          return object_types_.count(classification_to_object_type.at(label)) == 0;
+        }),
+      objects.objects.end());
+  }
+
+  void set_params(
+    const std::vector<std::string> & object_type_strings, const double max_velocity_th)
+  {
+    object_types_.clear();
+    for (const auto & object_type_string : object_type_strings) {
+      if (string_to_object_type.count(object_type_string) == 0) continue;
+      object_types_.emplace(string_to_object_type.at(object_type_string));
+    }
+    max_velocity_th_ = max_velocity_th;
+  }
+
+private:
+  std::unordered_set<ObjectType> object_types_;
+  double max_velocity_th_;
+};
 
 struct PointCloudFilter
 {

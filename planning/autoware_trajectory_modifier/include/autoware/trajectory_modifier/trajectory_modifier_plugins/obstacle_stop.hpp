@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::trajectory_modifier::plugin
@@ -67,9 +68,13 @@ private:
 
   std::unique_ptr<utils::obstacle_stop::PointCloudFilter> pointcloud_filter_;
 
+  std::unique_ptr<utils::obstacle_stop::ObjectFilter> object_filter_;
+
   std::unique_ptr<utils::obstacle_stop::ObstacleTracker> obstacle_tracker_;
 
   SafetyFactorArray safety_factors_;
+
+  std::unordered_map<utils::obstacle_stop::ObjectType, double> object_decel_map_;
 
   MarkerArray marker_array_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;

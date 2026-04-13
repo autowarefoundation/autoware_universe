@@ -41,8 +41,6 @@
 
 namespace autoware::trajectory_modifier::plugin
 {
-using utils::obstacle_stop::filter_objects_by_type;
-using utils::obstacle_stop::filter_objects_by_velocity;
 using utils::obstacle_stop::get_nearest_object_collision;
 using utils::obstacle_stop::get_nearest_pcd_collision;
 using utils::obstacle_stop::get_trajectory_shape;
@@ -78,10 +76,26 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
   }
 
   {
+    const auto & p = params_.objects;
+    object_filter_ =
+      std::make_unique<utils::obstacle_stop::ObjectFilter>(p.object_types, p.max_velocity_th);
+  }
+
+  {
     const auto & p = params_.obstacle_tracking;
     obstacle_tracker_ = std::make_unique<utils::obstacle_stop::ObstacleTracker>(
       p.on_time_buffer, p.off_time_buffer, p.object_distance_th, p.object_yaw_th, p.pcd_distance_th,
       p.grace_period);
+  }
+
+  {
+    const auto & p = params_.rss_params;
+    object_decel_map_ = {
+      {utils::obstacle_stop::ObjectType::CAR, p.object_decel.car},
+      {utils::obstacle_stop::ObjectType::TRUCK, p.object_decel.truck},
+      {utils::obstacle_stop::ObjectType::BUS, p.object_decel.bus},
+      {utils::obstacle_stop::ObjectType::BICYCLE, p.object_decel.bicycle},
+      {utils::obstacle_stop::ObjectType::PEDESTRIAN, p.object_decel.pedestrian}};
   }
 }
 
@@ -100,10 +114,25 @@ void ObstacleStop::update_params(const TrajectoryModifierParams & params)
   }
 
   {
+    const auto & p = params_.objects;
+    object_filter_->set_params(p.object_types, p.max_velocity_th);
+  }
+
+  {
     const auto & p = params_.obstacle_tracking;
     obstacle_tracker_->set_params(
       p.on_time_buffer, p.off_time_buffer, p.object_distance_th, p.object_yaw_th, p.pcd_distance_th,
       p.grace_period);
+  }
+
+  {
+    const auto & p = params_.rss_params;
+    object_decel_map_ = {
+      {utils::obstacle_stop::ObjectType::CAR, p.object_decel.car},
+      {utils::obstacle_stop::ObjectType::TRUCK, p.object_decel.truck},
+      {utils::obstacle_stop::ObjectType::BUS, p.object_decel.bus},
+      {utils::obstacle_stop::ObjectType::BICYCLE, p.object_decel.bicycle},
+      {utils::obstacle_stop::ObjectType::PEDESTRIAN, p.object_decel.pedestrian}};
   }
 }
 
@@ -216,38 +245,55 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
 
 size_t update_velocities(TrajectoryPoints & trajectory, const double jerk, const double decel)
 {
+  if (trajectory.size() < 2) return 0;
+
+  auto get_vel_accel = [&](
+                         const auto & point, const auto & ref_point,
+                         const bool backward) -> std::pair<double, double> {
+    const auto v_ref = ref_point.longitudinal_velocity_mps;
+    const auto a_ref =
+      backward ? std::abs(ref_point.acceleration_mps2) : ref_point.acceleration_mps2;
+
+    const auto ds = autoware_utils::calc_distance2d(point.pose.position, ref_point.pose.position);
+    const auto da = jerk * (ds / std::max<double>(v_ref, 0.1));
+    const auto a_curr = backward ? std::min(a_ref + da, decel) : a_ref - da;
+    const auto a_avg = (a_ref + a_curr) / 2.0;
+    const auto v_curr = std::sqrt(std::max(0.0, v_ref * v_ref + 2.0 * a_avg * ds));
+    return {v_curr, a_curr};
+  };
+
   const auto stop_index = trajectory.size() - 1;
   auto vel_update_start_index = stop_index;
-  for (int i = static_cast<int>(stop_index) - 1; i >= 0; --i) {
+  for (int i = static_cast<int>(stop_index) - 1; i > 0; --i) {
     auto & curr = trajectory.at(i);
     const auto & next = trajectory.at(i + 1);
-    const auto v_next = next.longitudinal_velocity_mps;
-    const auto a_next = std::abs(next.acceleration_mps2);
+    const auto [v_curr, a_curr] = get_vel_accel(curr, next, true);
 
-    const auto ds =
-      autoware_utils_geometry::calc_distance2d(curr.pose.position, next.pose.position);
-    const auto da = jerk * (ds / std::max<double>(v_next, 0.1));
-    const auto a_curr = std::min(a_next + da, decel);
-    const auto a_avg = (a_next + a_curr) / 2.0;
-    const auto v_curr = std::sqrt(v_next * v_next + 2.0 * a_avg * ds);
+    if (v_curr >= curr.longitudinal_velocity_mps) break;
+    curr.longitudinal_velocity_mps = static_cast<float>(v_curr);
+    curr.acceleration_mps2 = static_cast<float>(a_curr) * -1.0f;
+    vel_update_start_index = i;
+  }
 
-    // apply moving average to velocities around connection to smoothen acceleration
-    if (v_curr >= curr.longitudinal_velocity_mps) {
-      auto j = std::min(i + 3, static_cast<int>(stop_index) - 1);
-      auto stop = std::max(i - 3, 1);
-      for (; j > stop; --j) {
+  const auto start_idx = std::max<int>(static_cast<int>(vel_update_start_index), 1);
+  for (int i = start_idx; i <= static_cast<int>(stop_index); ++i) {
+    auto & curr = trajectory.at(i);
+    const auto & prev = trajectory.at(i - 1);
+    const auto [v_curr, a_curr] = get_vel_accel(curr, prev, false);
+
+    if (v_curr <= curr.longitudinal_velocity_mps) {
+      auto j = std::max(i - 3, 1);
+      auto stop = std::min(i + 3, static_cast<int>(stop_index));
+      for (; j < stop; ++j) {
         auto v_sum = trajectory.at(j - 1).longitudinal_velocity_mps +
                      trajectory.at(j).longitudinal_velocity_mps +
                      trajectory.at(j + 1).longitudinal_velocity_mps;
         trajectory.at(j).longitudinal_velocity_mps = v_sum / 3.0f;
-        vel_update_start_index = j;
       }
       break;
     }
-
-    curr.longitudinal_velocity_mps = static_cast<float>(v_curr);
-    curr.acceleration_mps2 = static_cast<float>(a_curr) * -1.0f;
-    vel_update_start_index = i;
+    curr.longitudinal_velocity_mps = v_curr;
+    curr.acceleration_mps2 = a_curr;
   }
   return vel_update_start_index;
 }
@@ -259,7 +305,7 @@ size_t insert_stop_point(
   const auto index = motion_utils::insertStopPoint(target_stop_point_arc_length, trajectory);
   if (index) return index.value();
 
-  // TODO (Quda): this is a temporary fix, need to check why insertStopPoint fails when target
+  // TODO(Quda): this is a temporary fix, need to check why insertStopPoint fails when target
   // distance is equal to trajectory length
   if (target_stop_point_arc_length < traj_length) {
     auto dist = 0.0;
@@ -407,16 +453,26 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
     return std::nullopt;
   auto predicted_objects = *data_->predicted_objects;
 
-  filter_objects_by_type(predicted_objects, params_.objects.object_types);
-  filter_objects_by_velocity(predicted_objects, params_.objects.max_velocity_th);
+  object_filter_->filter_objects(predicted_objects);
 
   PredictedObjects active_objects;
   obstacle_tracker_->update_objects(predicted_objects, active_objects, get_clock()->now());
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
-  auto collision_point = get_nearest_object_collision(
-    traj_points, debug_data_.trajectory_shape, active_objects, debug_data_.target_polygons,
-    colliding_object);
+  auto collision_point = std::invoke([&]() -> std::optional<CollisionPoint> {
+    if (!params_.rss_params.enable) {
+      return get_nearest_object_collision(
+        traj_points, debug_data_.trajectory_shape, active_objects, debug_data_.target_polygons,
+        colliding_object);
+    }
+    return get_nearest_object_collision(
+      traj_points, debug_data_.trajectory_shape, data_->vehicle_info, active_objects,
+      object_decel_map_, data_->current_odometry->twist.twist.linear.x,
+      params_.nominal_stopping_decel, params_.rss_params.reaction_time,
+      params_.rss_params.safety_margin, params_.rss_params.min_vel_th, debug_data_.target_polygons,
+      colliding_object);
+  });
+
   if (collision_point) debug_data_.colliding_object = colliding_object;
 
   return collision_point;

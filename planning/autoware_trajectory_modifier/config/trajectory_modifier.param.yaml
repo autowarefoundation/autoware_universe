@@ -52,3 +52,17 @@
           min_height: 0.5
           min_size: 10
           max_size: 10000
+
+      rss_params:
+        enable: true
+        object_decel:
+          car: 1.5
+          truck: 1.5
+          bus: 1.5
+          trailer: 1.5
+          motorcycle: 3.0
+          bicycle: 5.0
+          pedestrian: 5.0
+        response_time: 0.2 # [s]
+        safety_margin: 2.0 # [m]
+        min_vel_th: 0.5 # [m/s] minimum object velocity to consider for rss check
