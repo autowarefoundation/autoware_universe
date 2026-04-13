@@ -287,6 +287,97 @@ void calcTrajectoryCurvature(
     calcTrajectoryCurvature(curvature_smoothing_num_ref_steer, traj, use_short_segment_protection);
 }
 
+void calcTrajectoryCurvatureBySpatialResample(
+  const int curvature_smoothing_num_traj, const int curvature_smoothing_num_ref_steer,
+  const double resample_interval_dist, MPCTrajectory & traj)
+{
+  if (traj.size() < 3) {
+    return;
+  }
+
+  // 1. Compute arc length of original temporal trajectory
+  std::vector<double> orig_arclength;
+  calcMPCTrajectoryArcLength(traj, orig_arclength);
+  const double total_length = orig_arclength.back();
+  if (total_length < 1e-6) {
+    return;
+  }
+
+  // 2. Remove spatially duplicate points (stopped vehicle).
+  //    Spline requires strictly increasing arc length.
+  constexpr double dedup_eps = 1e-3;
+  std::vector<double> unique_arclength;
+  std::vector<double> unique_x;
+  std::vector<double> unique_y;
+  unique_arclength.push_back(orig_arclength.front());
+  unique_x.push_back(traj.x.front());
+  unique_y.push_back(traj.y.front());
+  for (size_t i = 1; i < orig_arclength.size(); ++i) {
+    if (orig_arclength[i] - unique_arclength.back() > dedup_eps) {
+      unique_arclength.push_back(orig_arclength[i]);
+      unique_x.push_back(traj.x[i]);
+      unique_y.push_back(traj.y[i]);
+    }
+  }
+  if (unique_arclength.size() < 3) {
+    return;
+  }
+
+  // 3. Generate equally-spaced arc length points
+  std::vector<double> resampled_arclength;
+  for (double s = 0.0; s < total_length; s += resample_interval_dist) {
+    resampled_arclength.push_back(s);
+  }
+  if (resampled_arclength.back() < total_length - 1e-6) {
+    resampled_arclength.push_back(total_length);
+  }
+  if (resampled_arclength.size() < 3) {
+    return;
+  }
+
+  // 4. Spatially resample x, y using spline interpolation on deduplicated points
+  MPCTrajectory spatial_traj;
+  spatial_traj.x = autoware::interpolation::spline(unique_arclength, unique_x, resampled_arclength);
+  spatial_traj.y = autoware::interpolation::spline(unique_arclength, unique_y, resampled_arclength);
+  const auto n = resampled_arclength.size();
+  spatial_traj.z.resize(n, 0.0);
+  spatial_traj.yaw.resize(n, 0.0);
+  spatial_traj.vx.resize(n, 0.0);
+  spatial_traj.k.resize(n, 0.0);
+  spatial_traj.smooth_k.resize(n, 0.0);
+  spatial_traj.relative_time.resize(n, 0.0);
+
+  // 5. Calculate curvature on the spatially uniform trajectory
+  const auto k_spatial = calcTrajectoryCurvature(curvature_smoothing_num_traj, spatial_traj, false);
+  const auto smooth_k_spatial =
+    calcTrajectoryCurvature(curvature_smoothing_num_ref_steer, spatial_traj, false);
+
+  // 6. Map curvature back to original temporal trajectory.
+  //    Use lerp on unique (strictly increasing) arc lengths.
+  //    Duplicate-arclength points (stopped) get curvature = 0.
+  const auto k_at_unique =
+    autoware::interpolation::lerp(resampled_arclength, k_spatial, unique_arclength);
+  const auto smooth_k_at_unique =
+    autoware::interpolation::lerp(resampled_arclength, smooth_k_spatial, unique_arclength);
+
+  traj.k.assign(traj.size(), 0.0);
+  traj.smooth_k.assign(traj.size(), 0.0);
+  size_t unique_idx = 0;
+  for (size_t i = 0; i < traj.size(); ++i) {
+    // Find matching unique point
+    while (unique_idx + 1 < unique_arclength.size() &&
+           unique_arclength[unique_idx + 1] <= orig_arclength[i] + dedup_eps) {
+      ++unique_idx;
+    }
+    // Only assign curvature if this point has a unique spatial position
+    if (i == 0 || orig_arclength[i] - orig_arclength[i - 1] > dedup_eps) {
+      traj.k[i] = k_at_unique[unique_idx];
+      traj.smooth_k[i] = smooth_k_at_unique[unique_idx];
+    }
+    // else: remains 0.0 (stopped / duplicate point)
+  }
+}
+
 std::vector<double> calcTrajectoryCurvature(
   const int curvature_smoothing_num, const MPCTrajectory & traj,
   const bool use_short_segment_protection)
