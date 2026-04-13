@@ -106,7 +106,8 @@ void process_parameters(MultiObjectTrackerParameters & params)
   params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.clear();
   params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.reserve(
     params.tracker_overlap_manager_config.pruning_distance_thresholds.size());
-  for (const auto & [label, threshold] : params.tracker_overlap_manager_config.pruning_distance_thresholds) {
+  for (const auto & [label, threshold] :
+       params.tracker_overlap_manager_config.pruning_distance_thresholds) {
     params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.emplace(
       label, threshold * threshold);
   }

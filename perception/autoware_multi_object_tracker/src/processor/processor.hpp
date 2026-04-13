@@ -17,6 +17,7 @@
 
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/association/association_manager.hpp"
+#include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
@@ -69,6 +70,7 @@ private:
   const std::vector<types::InputChannel> & channels_config_;
 
   std::unique_ptr<AssociationManager> association_manager_;
+  std::unique_ptr<TrackerOverlapManager> tracker_overlap_manager_;
 
   mutable rclcpp::Time last_prune_time_;
 

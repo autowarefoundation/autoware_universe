@@ -18,7 +18,6 @@
 #include "autoware/multi_object_tracker/association/association_base.hpp"
 #include "autoware/multi_object_tracker/association/bev_association.hpp"
 #include "autoware/multi_object_tracker/association/polar_association.hpp"
-#include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
@@ -32,35 +31,21 @@
 namespace autoware::multi_object_tracker
 {
 
-/// Orchestrates two layers of association:
-///
-///   Layer 1 — Detection-to-tracker (D2T):
-///     Routes each measurement batch to the association implementation designated per input channel
-///     (selected via InputChannel::associator_type).
-///     Available algorithms:
-///       BEV   → BevAssociation    (bird's-eye-view area scoring + GNN assignment)
-///       POLAR → PolarAssociation  (polar-coordinate range-bearing scoring)
-///
-///   Layer 2 — Tracker-to-tracker (T2T):
-///     TrackerOverlapManager removes spatially redundant trackers after D2T association.
+/// Routes each measurement batch to the D2T association implementation designated per input
+/// channel (selected via InputChannel::associator_type).
+/// Available algorithms:
+///   BEV   → BevAssociation    (bird's-eye-view area scoring + GNN assignment)
+///   POLAR → PolarAssociation  (polar-coordinate range-bearing scoring)
 class AssociationManager
 {
 public:
   AssociationManager(
-    const AssociatorConfig & bev_config,
-    const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
-    const std::vector<types::InputChannel> & channels_config);
+    const AssociatorConfig & bev_config, const std::vector<types::InputChannel> & channels_config);
 
-  /// Layer 1 (D2T): match measurements to trackers using the channel's designated association.
+  /// Match measurements to trackers using the channel's designated association.
   types::AssociationResult associate(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
-
-  /// Layer 2 (T2T): remove spatially overlapping / redundant trackers.
-  void mergeTrackers(
-    std::list<std::shared_ptr<Tracker>> & trackers, const rclcpp::Time & time,
-    const AdaptiveThresholdCache & threshold_cache,
-    const std::optional<geometry_msgs::msg::Pose> & ego_pose);
 
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
@@ -71,7 +56,6 @@ private:
   std::vector<types::InputChannel> channels_config_;
   std::unique_ptr<BevAssociation> bev_association_;
   std::unique_ptr<PolarAssociation> polar_association_;
-  std::unique_ptr<TrackerOverlapManager> tracker_overlap_manager_;
 };
 
 }  // namespace autoware::multi_object_tracker

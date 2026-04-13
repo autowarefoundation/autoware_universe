@@ -42,8 +42,9 @@ TrackerProcessor::TrackerProcessor(
   const std::vector<types::InputChannel> & channels_config)
 : lifecycle_config_(lifecycle_config), channels_config_(channels_config)
 {
-  association_manager_ = std::make_unique<AssociationManager>(
-    associator_config, tracker_overlap_manager_config, channels_config);
+  association_manager_ = std::make_unique<AssociationManager>(associator_config, channels_config);
+  tracker_overlap_manager_ =
+    std::make_unique<TrackerOverlapManager>(tracker_overlap_manager_config);
 }
 
 void TrackerProcessor::predict(
@@ -189,7 +190,7 @@ void TrackerProcessor::prune(const rclcpp::Time & time)
   }
 
   removeOldTracker(time);
-  association_manager_->mergeTrackers(list_tracker_, time, adaptive_threshold_cache_, ego_pose_);
+  tracker_overlap_manager_->merge(list_tracker_, time, adaptive_threshold_cache_, ego_pose_);
 
   last_prune_time_ = time;
 }

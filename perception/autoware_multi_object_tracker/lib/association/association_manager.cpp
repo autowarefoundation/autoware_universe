@@ -23,13 +23,10 @@ namespace autoware::multi_object_tracker
 {
 
 AssociationManager::AssociationManager(
-  const AssociatorConfig & bev_config,
-  const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
-  const std::vector<types::InputChannel> & channels_config)
+  const AssociatorConfig & bev_config, const std::vector<types::InputChannel> & channels_config)
 : channels_config_(channels_config),
   bev_association_(std::make_unique<BevAssociation>(bev_config)),
-  polar_association_(std::make_unique<PolarAssociation>()),
-  tracker_overlap_manager_(std::make_unique<TrackerOverlapManager>(tracker_overlap_manager_config))
+  polar_association_(std::make_unique<PolarAssociation>())
 {
 }
 
@@ -48,14 +45,6 @@ types::AssociationResult AssociationManager::associate(
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
   return getAssociationForChannel(measurements.channel_index).associate(measurements, trackers);
-}
-
-void AssociationManager::mergeTrackers(
-  std::list<std::shared_ptr<Tracker>> & trackers, const rclcpp::Time & time,
-  const AdaptiveThresholdCache & threshold_cache,
-  const std::optional<geometry_msgs::msg::Pose> & ego_pose)
-{
-  tracker_overlap_manager_->merge(trackers, time, threshold_cache, ego_pose);
 }
 
 void AssociationManager::setTimeKeeper(
