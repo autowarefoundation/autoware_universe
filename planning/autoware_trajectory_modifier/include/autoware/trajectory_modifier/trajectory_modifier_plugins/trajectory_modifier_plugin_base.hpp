@@ -50,10 +50,11 @@ public:
     const std::shared_ptr<TrajectoryModifierData> & data,
     [[maybe_unused]] const TrajectoryModifierParams & params)
   {
-    name_ = std::invoke([&name]() {
+    short_name_ = std::invoke([&name]() {
       const auto npos = name.find_last_of(':');
       return npos != std::string::npos ? name.substr(npos + 1) : name;
     });
+    name_ = std::move(name);
     node_ptr_ = node_ptr;
     time_keeper_ = time_keeper;
     data_ = data;
@@ -66,6 +67,7 @@ public:
   virtual bool modify_trajectory(TrajectoryPoints & traj_points) = 0;
   virtual bool is_trajectory_modification_required(const TrajectoryPoints & traj_points) = 0;
   std::string get_name() const { return name_; }
+  std::string get_short_name() const { return short_name_; }
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
   virtual void update_params(const TrajectoryModifierParams & params) = 0;
@@ -98,6 +100,7 @@ protected:
 
 private:
   std::string name_;
+  std::string short_name_;
   rclcpp::Node * node_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };

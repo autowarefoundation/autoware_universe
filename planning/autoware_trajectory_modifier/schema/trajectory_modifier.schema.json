@@ -278,6 +278,85 @@
               },
               "required": [],
               "additionalProperties": false
+            },
+            "rss_params": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable RSS safety check",
+                  "default": true
+                },
+                "object_decel": {
+                  "type": "object",
+                  "properties": {
+                    "car": {
+                      "type": "number",
+                      "description": "Deceleration for car type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "truck": {
+                      "type": "number",
+                      "description": "Deceleration for truck type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "bus": {
+                      "type": "number",
+                      "description": "Deceleration for bus type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "trailer": {
+                      "type": "number",
+                      "description": "Deceleration for trailer type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "motorcycle": {
+                      "type": "number",
+                      "description": "Deceleration for motorcycle type objects [m/s^2]",
+                      "default": 3.0,
+                      "minimum": 0.0
+                    },
+                    "bicycle": {
+                      "type": "number",
+                      "description": "Deceleration for bicycle type objects [m/s^2]",
+                      "default": 5.0,
+                      "minimum": 0.0
+                    },
+                    "pedestrian": {
+                      "type": "number",
+                      "description": "Deceleration for pedestrian type objects [m/s^2]",
+                      "default": 5.0,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "response_time": {
+                  "type": "number",
+                  "description": "Response time to consider for RSS calculation [s]",
+                  "default": 0.2,
+                  "minimum": 0.0
+                },
+                "safety_margin": {
+                  "type": "number",
+                  "description": "Safety margin to consider for RSS calculation [m]",
+                  "default": 2.0,
+                  "minimum": 0.0
+                },
+                "min_vel_th": {
+                  "type": "number",
+                  "description": "Minimum velocity threshold for object to be considered for RSS safety check [m/s]",
+                  "default": 0.5,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
             }
           },
           "required": [],

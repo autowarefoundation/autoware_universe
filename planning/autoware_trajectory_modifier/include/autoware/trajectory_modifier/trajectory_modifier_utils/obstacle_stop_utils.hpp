@@ -17,6 +17,7 @@
 
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
+#include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -39,8 +40,8 @@
 #include <pcl/surface/convex_hull.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include <chrono>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -132,11 +133,6 @@ TrajectoryShape get_trajectory_shape(
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double ego_vel,
   const double ego_accel, const double decel, const double jerk, const double stop_margin,
   const double lateral_margin = 0.0, const double longitudinal_margin = 0.0);
-
-void filter_objects_by_type(
-  PredictedObjects & objects, const std::vector<std::string> & object_type_strings);
-
-void filter_objects_by_velocity(PredictedObjects & objects, const double max_velocity);
 
 std::optional<CollisionPoint> get_nearest_pcd_collision(
   const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
