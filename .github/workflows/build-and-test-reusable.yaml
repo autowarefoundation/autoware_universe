@@ -55,7 +55,7 @@ on:
         required: false
     secrets:
       codecov-token:
-        required: true
+        required: false
 
 concurrency:
   group: ${{ inputs.concurrency-group }}
@@ -132,7 +132,7 @@ jobs:
       - name: Prepare build_depends.repos file
         uses: ./.github/actions/combine-repos-action
         with:
-          base_file: build_depends_humble.repos
+          base_file: build_depends_stable.repos
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
@@ -218,7 +218,7 @@ jobs:
       - name: Prepare build_depends.repos file
         uses: ./.github/actions/combine-repos-action
         with:
-          base_file: build_depends_humble.repos
+          base_file: build_depends_stable.repos
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
@@ -233,6 +233,7 @@ jobs:
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
           artifact-name: clang-tidy-result-${{ inputs.rosdistro }}${{ inputs.container-suffix }}
+          use-clang-tidy-cache: true
 
       - name: Show disk space after the tasks
         run: df -h
