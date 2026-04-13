@@ -447,8 +447,8 @@ void CnnLampRecognizer::decodeTlrOutput(
           const float objectness = out[base + ml_params.obj_index * grid_size];
           if (objectness < score_threshold_) continue;
 
-          const float pw = ml_params.anchors[static_cast<size_t>(a * 2)];
-          const float ph = ml_params.anchors[static_cast<size_t>(a * 2 + 1)];
+          const float pw = ml_params.anchors[static_cast<size_t>(a) * 2];
+          const float ph = ml_params.anchors[static_cast<size_t>(a) * 2 + 1];
           const float tx = out[base + ml_params.x_index * grid_size];
           const float ty = out[base + ml_params.y_index * grid_size];
           const float tw = out[base + ml_params.w_index * grid_size];
