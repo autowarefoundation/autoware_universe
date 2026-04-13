@@ -18,10 +18,10 @@ on:
         default: true
         required: false
         type: boolean
-      container-suffix:
+      cuda:
         required: false
-        default: ""
-        type: string
+        default: false
+        type: boolean
       build-pre-command:
         required: false
         default: ""
@@ -35,7 +35,9 @@ jobs:
   build-and-test-packages-above-differential:
     if: ${{ inputs.run-condition }}
     runs-on: ${{ fromJson(inputs.runner) }}
-    container: ${{ inputs.container }}${{ inputs.container-suffix }}
+    container:
+      image: ${{ inputs.container }}
+      options: --cap-add=NET_ADMIN
     steps:
       - name: Set PR fetch depth
         run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
@@ -46,6 +48,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: ${{ env.PR_FETCH_DEPTH }}
+
+      - name: Tune DDS network settings
+        uses: ./.github/actions/tune-dds-network
 
       - name: Show disk space before the tasks
         run: df -h
@@ -85,9 +90,10 @@ jobs:
 
       - name: Export CUDA state as a variable for adding to cache key
         run: |
-          build_type_cuda_state=nocuda
-          if [[ "${{ inputs.container-suffix }}" == "-cuda" ]]; then
+          if [[ "${{ inputs.cuda }}" == "true" ]]; then
             build_type_cuda_state=cuda
+          else
+            build_type_cuda_state=nocuda
           fi
           echo "BUILD_TYPE_CUDA_STATE=$build_type_cuda_state" >> "${GITHUB_ENV}"
           echo "::notice::BUILD_TYPE_CUDA_STATE=$build_type_cuda_state"
