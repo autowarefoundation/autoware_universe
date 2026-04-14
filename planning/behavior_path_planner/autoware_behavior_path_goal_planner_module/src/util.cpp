@@ -16,7 +16,7 @@
 
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
-#include "autoware/boundary_departure_checker/utils.hpp"
+#include "autoware/deprecated/boundary_departure_checker/utils.hpp"
 #include "autoware_lanelet2_extension/regulatory_elements/bus_stop_area.hpp"
 
 #include <Eigen/Core>

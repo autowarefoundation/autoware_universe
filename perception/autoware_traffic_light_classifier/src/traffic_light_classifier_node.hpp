@@ -30,6 +30,7 @@
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
+// cppcheck-suppress preprocessorErrorDirective
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
 #include <cv_bridge/cv_bridge.hpp>
 #else
@@ -45,6 +46,7 @@
 
 #if ENABLE_GPU
 #include "classifier/cnn_classifier.hpp"
+#include "classifier/cnn_lamp_recognizer.hpp"
 #endif
 
 #include "classifier/color_classifier.hpp"
@@ -63,9 +65,11 @@ public:
     const sensor_msgs::msg::Image::ConstSharedPtr & input_image_msg,
     const tier4_perception_msgs::msg::TrafficLightRoiArray::ConstSharedPtr & input_rois_msg);
 
+  // Backend that produces classification result from ROI (all output used as classifier result)
   enum ClassifierType {
-    HSVFilter = 0,
-    CNN = 1,
+    HSVFilter = 0,       // Rule-based: HSV color filter
+    CNN = 1,             // CNN: single-crop classifier
+    LampRecognizer = 2,  // Per-lamp recognizer based classifier: bbox + color + type + angle
   };
 
   uint8_t classify_traffic_light_type_;
