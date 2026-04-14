@@ -70,7 +70,7 @@ private:
     std::make_shared<autoware_utils_debug::TimeKeeper>();
   double last_no_critical_dpt_time_{0.0};
   double last_found_critical_dpt_time_{0.0};
-  Side<ProjectionsToBound> critical_departure_;
+  Side<ProjectionsToBound> critical_departure_history_;
 
   /**
    * @brief Queries a spatial index (R-tree) to find nearby uncrossable lane boundaries and filters

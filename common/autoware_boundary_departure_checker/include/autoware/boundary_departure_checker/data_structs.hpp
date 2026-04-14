@@ -143,6 +143,7 @@ struct DepartureData
   BoundarySegmentsBySide boundary_segments;
 
   Side<ProjectionsToBound> projections_to_bound;
+  Side<ProjectionsToBound> critical_departure_history;
   Side<std::optional<CriticalPointPair>> evaluated_projections;
   DepartureType status{DepartureType::NONE};
 };

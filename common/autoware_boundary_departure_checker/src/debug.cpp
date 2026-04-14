@@ -94,49 +94,47 @@ Marker create_projections_to_bound_marker(
   return marker;
 }
 
-Marker create_result_projection_marker(
-  const CriticalPointPair & result_pair, Marker marker, const std::string & side_key_str,
-  const double base_link_z)
+MarkerArray create_evaluated_projection_markers(
+  const CriticalPointPair & result_pair, const rclcpp::Time & curr_time,
+  const footprints::Footprints & footprints, const double base_link_z,
+  const std::string & side_key_str)
 {
-  marker.ns = "result_projection_to_bound_" + side_key_str;
+  const auto line_list = visualization_msgs::msg::Marker::LINE_LIST;
+  const auto add_marker = [&](
+                            const auto color, const ProjectionToBound & projection_to_bound,
+                            const std::string & type) -> Marker {
+    auto marker = autoware_utils_visualization::create_default_marker(
+      "map", curr_time, "critical_" + side_key_str + type, 0, line_list,
+      autoware_utils_visualization::create_marker_scale(0.05, 0, 0), color);
+
+    const auto & footprint = footprints.at(projection_to_bound.pose_index);
+    for (size_t i = 0; i + 1 < footprint.size(); ++i) {
+      const auto & p1 = footprint.at(i);
+      const auto & p2 = footprint.at(i + 1);
+
+      marker.points.push_back(autoware_utils_geometry::to_msg(p1.to_3d(base_link_z)));
+      marker.points.push_back(autoware_utils_geometry::to_msg(p2.to_3d(base_link_z)));
+    }
+    return marker;
+  };
+
+  MarkerArray marker_array;
+  marker_array.markers.reserve(4);
+  marker_array.markers.push_back(
+    add_marker(color::magenta(), result_pair.physical_departure_point, "physical_departure_point"));
+  marker_array.markers.push_back(
+    add_marker(color::green(), result_pair.safety_buffer_start, "safety_buffer_start"));
+
+  const auto color = color::green();
+  const auto m_scale = autoware_utils_visualization::create_marker_scale(0.05, 0, 0);
+  int32_t id{0};
+  auto marker = autoware_utils_visualization::create_default_marker(
+    "map", curr_time, "", 0, line_list, m_scale, color);
+  marker.ns = "critical_" + side_key_str + "_pair";
+  marker.id = ++id;
   marker.color = color::aqua();
   add_projection_to_marker(marker, result_pair.physical_departure_point, base_link_z);
   add_projection_to_marker(marker, result_pair.safety_buffer_start, base_link_z);
-  return marker;
-}
-
-MarkerArray create_projections_type_wall_marker(
-  const ProjectionsToBound & projections_to_bound, const rclcpp::Time & curr_time,
-  const std::string & side_key_str, const double base_link_z)
-{
-  int32_t id{0};
-  auto marker_approaching = autoware_utils_visualization::create_default_marker(
-    "map", curr_time, "departure_type_line_" + side_key_str, ++id,
-    visualization_msgs::msg::Marker::POINTS,
-    autoware_utils_visualization::create_marker_scale(0.25, 0.25, 1.0), color::yellow());
-  auto marker_critical = autoware_utils_visualization::create_default_marker(
-    "map", curr_time, "departure_type_line_" + side_key_str, ++id,
-    visualization_msgs::msg::Marker::POINTS,
-    autoware_utils_visualization::create_marker_scale(0.25, 0.25, 1.0), color::magenta());
-
-  MarkerArray marker_array;
-
-  const auto to_geom = [base_link_z](const auto & pt) {
-    return autoware_utils_geometry::to_msg(pt.to_3d(base_link_z));
-  };
-
-  for (const auto & pt : projections_to_bound) {
-    if (pt.is_none_departure()) {
-      continue;
-    }
-    if (pt.is_approaching()) {
-      marker_approaching.points.push_back(to_geom(pt.pt_on_bound));
-    } else if (pt.is_critical()) {
-      marker_critical.points.push_back(to_geom(pt.pt_on_bound));
-    }
-  }
-  marker_array.markers.push_back(marker_approaching);
-  marker_array.markers.push_back(marker_critical);
   return marker_array;
 }
 
@@ -199,10 +197,8 @@ MarkerArray create_departure_footprint_marker(
     if (pt.is_none_departure()) {
       continue;
     }
-    if (pt.is_approaching()) {
-      marker_array.markers.push_back(add_marker(color::yellow(), pt, "approaching"));
-    } else if (pt.is_critical()) {
-      marker_array.markers.push_back(add_marker(color::magenta(), pt, "critical"));
+    if  (pt.is_critical()) {
+      marker_array.markers.push_back(add_marker(color::yellow(), pt, "critical"));
     }
   }
   return marker_array;
@@ -244,23 +240,21 @@ MarkerArray create_debug_markers(
   marker_array.markers.push_back(create_boundary_segments_marker(
     departure_data.boundary_segments, marker, "boundary_segments", base_link_z));
 
-  departure_data.projections_to_bound.for_each([&](auto key_constant, auto & side_value) {
+  departure_data.critical_departure_history.for_each([&](auto key_constant, auto & side_value) {
     const std::string side_str = to_string(key_constant.value);
-    marker_array.markers.push_back(
-      create_projections_to_bound_marker(side_value, marker, "closest", side_str, base_link_z));
-    autoware_utils_visualization::append_marker_array(
-      create_projections_type_wall_marker(side_value, curr_time, side_str, base_link_z),
-      &marker_array);
     autoware_utils_visualization::append_marker_array(
       create_departure_footprint_marker(
         side_value, departure_data.footprints, curr_time, base_link_z),
       &marker_array);
   });
 
-  departure_data.evaluated_projections.for_each([&](auto key_constant, auto & side_value) {
-    if (side_value.has_value()) {
-      marker_array.markers.push_back(create_result_projection_marker(
-        side_value.value(), marker, to_string(key_constant.value), base_link_z));
+  departure_data.evaluated_projections.for_each([&](auto key_constant, auto & side_value_opt) {
+    if (side_value_opt.has_value()) {
+      autoware_utils_visualization::append_marker_array(
+        create_evaluated_projection_markers(
+          *side_value_opt, curr_time, departure_data.footprints, base_link_z,
+          to_string(key_constant)),
+        &marker_array);
     }
   });
 

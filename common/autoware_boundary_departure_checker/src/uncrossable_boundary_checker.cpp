@@ -115,6 +115,8 @@ tl::expected<DepartureData, std::string> UncrossableBoundaryChecker::check_depar
   departure_data.status =
     determine_departure_type(departure_data.evaluated_projections, ego_state.current_time_s);
 
+  departure_data.critical_departure_history = critical_departure_;
+
   return departure_data;
 }
 
@@ -133,7 +135,7 @@ DepartureType UncrossableBoundaryChecker::determine_departure_type(
       critical_departure_.for_each_side([](auto & side) { side.clear(); });
       evaluated_projections.for_each([&](auto key_constant, auto & side_value) {
         if (side_value.has_value() && side_value->safety_buffer_start.is_critical()) {
-          critical_departure_[key_constant.value].push_back(side_value->safety_buffer_start);
+          critical_departure_[key_constant.value].push_back(side_value->physical_departure_point);
         }
       });
       return DepartureType::CRITICAL;
