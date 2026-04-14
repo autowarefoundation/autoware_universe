@@ -102,16 +102,15 @@ struct TrackerOverlapManagerConfig
 };
 
 // ---------------------------------------------------------------------------
-// Tracker lifecycle (spawning, expiry, type mapping)
+// Tracker creation (spawning, type mapping)
 // ---------------------------------------------------------------------------
 
-struct TrackerLifecycleConfig
+struct TrackerCreationConfig
 {
   using LabelToTrackerTypeMap =
     std::unordered_map<classes::Label, types::TrackerType, AssociatorConfig::EnumClassHash>;
 
   LabelToTrackerTypeMap tracker_map;
-  float tracker_lifetime;  // [s]
   bool enable_unknown_object_velocity_estimation;
   bool enable_unknown_object_motion_output;
 };

@@ -60,7 +60,7 @@ struct MultiObjectTrackerParameters
   TrackedLabelThresholds pruning_distance_thresholds;
 
   // Induced parameters
-  TrackerLifecycleConfig lifecycle_config;
+  TrackerCreationConfig creation_config;
   TrackerOverlapManagerConfig tracker_overlap_manager_config;
   AssociatorConfig associator_config;
 };

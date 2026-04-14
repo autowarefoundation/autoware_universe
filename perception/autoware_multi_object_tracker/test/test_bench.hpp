@@ -133,7 +133,7 @@ struct ScenarioParams
 };
 
 // Configuration creation functions
-autoware::multi_object_tracker::TrackerLifecycleConfig createLifecycleConfig();
+autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfig();
 autoware::multi_object_tracker::TrackerOverlapManagerConfig createTrackerOverlapManagerConfig();
 autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig();
 std::vector<autoware::multi_object_tracker::types::InputChannel> createInputChannelsConfig();

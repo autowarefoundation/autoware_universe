@@ -27,9 +27,9 @@
 #include <vector>
 
 // Configuration creation functions
-autoware::multi_object_tracker::TrackerLifecycleConfig createLifecycleConfig()
+autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfig()
 {
-  autoware::multi_object_tracker::TrackerLifecycleConfig config;
+  autoware::multi_object_tracker::TrackerCreationConfig config;
   using autoware::multi_object_tracker::TrackerType;
   using Label = autoware::multi_object_tracker::classes::Label;
 
@@ -43,7 +43,6 @@ autoware::multi_object_tracker::TrackerLifecycleConfig createLifecycleConfig()
     {Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE},
     {Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE}};
 
-  config.tracker_lifetime = 1.0;  // [s]
   config.enable_unknown_object_velocity_estimation = false;
   config.enable_unknown_object_motion_output = false;
 

@@ -39,7 +39,7 @@ class TrackerProcessor
 {
 public:
   TrackerProcessor(
-    const TrackerLifecycleConfig & lifecycle_config, const AssociatorConfig & associator_config,
+    const TrackerCreationConfig & creation_config, const AssociatorConfig & associator_config,
     const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
     const std::vector<types::InputChannel> & channels_config);
 
@@ -66,7 +66,7 @@ public:
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
 private:
-  const TrackerLifecycleConfig lifecycle_config_;
+  const TrackerCreationConfig creation_config_;
   const std::vector<types::InputChannel> & channels_config_;
 
   std::unique_ptr<AssociationManager> association_manager_;

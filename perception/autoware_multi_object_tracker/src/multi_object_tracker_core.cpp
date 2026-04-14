@@ -56,7 +56,7 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize processor
   processor = std::make_unique<TrackerProcessor>(
-    params.lifecycle_config, params.associator_config, params.tracker_overlap_manager_config,
+    params.creation_config, params.associator_config, params.tracker_overlap_manager_config,
     params.input_channels_config);
 
   last_publish_time = node.now();
@@ -88,8 +88,8 @@ void process_parameters(MultiObjectTrackerParameters & params)
     return *tracker_type;
   };
 
-  // Set the tracker map for lifecycle config
-  params.lifecycle_config.tracker_map = {
+  // Set the tracker map for creation config
+  params.creation_config.tracker_map = {
     {Label::CAR, getTrackerType("car")},
     {Label::TRUCK, getTrackerType("truck")},
     {Label::BUS, getTrackerType("bus")},
@@ -124,7 +124,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
     const auto & label_params = label_params_opt->get();
 
     const auto default_tracker_type_opt =
-      get_map_value_if_exists(params.lifecycle_config.tracker_map, measurement_label);
+      get_map_value_if_exists(params.creation_config.tracker_map, measurement_label);
     if (!default_tracker_type_opt) {
       throw std::runtime_error(
         "Missing default tracker mapping for measurement label: " +
