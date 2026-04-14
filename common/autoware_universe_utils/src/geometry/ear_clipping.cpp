@@ -405,8 +405,7 @@ std::size_t filter_points(
     again = false;
 
     if (
-      !points[p].steiner && points[p].next_index.has_value() &&
-      points[p].prev_index.has_value() &&
+      !points[p].steiner && points[p].next_index.has_value() && points[p].prev_index.has_value() &&
       (equals(p, points[p].next_index.value(), points) ||
        area(points, points[p].prev_index.value(), p, points[p].next_index.value()) == 0)) {
       remove_point(p, points);
@@ -453,8 +452,9 @@ std::size_t eliminate_holes(
     }
     auto inner_index = linked_list(ring, false, vertices, points);
 
-    if (points[inner_index].next_index.has_value() &&
-        points[inner_index].next_index.value() == inner_index) {
+    if (
+      points[inner_index].next_index.has_value() &&
+      points[inner_index].next_index.value() == inner_index) {
       points[inner_index].steiner = true;
     }
 
@@ -518,8 +518,7 @@ std::size_t cure_local_intersections(
     auto b_idx = points[p_next].next_index.value();
 
     if (
-      !equals(a_idx, b_idx, points) &&
-      intersects(a_idx, p, p_next, b_idx, points) &&
+      !equals(a_idx, b_idx, points) && intersects(a_idx, p, p_next, b_idx, points) &&
       locally_inside(a_idx, b_idx, points) && locally_inside(b_idx, a_idx, points)) {
       indices.push_back(a_idx);
       indices.push_back(p);
@@ -577,9 +576,8 @@ void ear_clipping_linked(
   auto stop = ear_index;
   std::optional<std::size_t> next = std::nullopt;
 
-  while (
-    points[ear_index].prev_index.has_value() && points[ear_index].next_index.has_value() &&
-    points[ear_index].prev_index.value() != points[ear_index].next_index.value()) {
+  while (points[ear_index].prev_index.has_value() && points[ear_index].next_index.has_value() &&
+         points[ear_index].prev_index.value() != points[ear_index].next_index.value()) {
     next = points[ear_index].next_index;
 
     if (is_ear(ear_index, points)) {
