@@ -156,7 +156,7 @@ private:
   /**
    * @brief Cached projections for detected critical departures.
    */
-  Side<ProjectionsToBound> critical_departure_history_;
+  Side<ProjectionsToBound> critical_departure_;
 };
 }  // namespace autoware::boundary_departure_checker
 

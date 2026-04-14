@@ -115,8 +115,6 @@ tl::expected<DepartureData, std::string> UncrossableBoundaryChecker::check_depar
   departure_data.status =
     determine_departure_type(departure_data.evaluated_projections, ego_state.current_time_s);
 
-  departure_data.critical_departure_history = critical_departure_history_;
-
   return departure_data;
 }
 
@@ -132,11 +130,10 @@ DepartureType UncrossableBoundaryChecker::determine_departure_type(
       last_found_critical_dpt_time_ = current_time_s;
 
       // Save the critical points for visualization/downstream use
-      critical_departure_history_.for_each_side([](auto & side) { side.clear(); });
+      critical_departure_.for_each_side([](auto & side) { side.clear(); });
       evaluated_projections.for_each([&](auto key_constant, auto & side_value) {
         if (side_value.has_value() && side_value->safety_buffer_start.is_critical()) {
-          critical_departure_history_[key_constant.value].push_back(
-            side_value->physical_departure_point);
+          critical_departure_[key_constant.value].push_back(side_value->safety_buffer_start);
         }
       });
       return DepartureType::CRITICAL;
@@ -148,12 +145,12 @@ DepartureType UncrossableBoundaryChecker::determine_departure_type(
   last_no_critical_dpt_time_ = current_time_s;
 
   // If we were previously in a CRITICAL state, check the OFF buffer
-  if (!critical_departure_history_.all_empty()) {
+  if (!critical_departure_.all_empty()) {
     if (current_time_s - last_found_critical_dpt_time_ < param_.off_time_buffer_s) {
       return DepartureType::CRITICAL;  // Hold the CRITICAL state!
     }
     // The OFF buffer has officially expired. Clear the saved state.
-    critical_departure_history_.for_each_side([](auto & side) { side.clear(); });
+    critical_departure_.for_each_side([](auto & side) { side.clear(); });
   }
 
   return DepartureType::NONE;

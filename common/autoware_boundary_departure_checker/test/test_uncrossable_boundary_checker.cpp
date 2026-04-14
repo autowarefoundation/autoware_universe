@@ -225,11 +225,10 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
   plot_hysteresis_results(traj_safe, traj_danger, vehicle_info_);
 }
 }  // namespace autoware::boundary_departure_checker
-== == == == == == == == == == == == == == == == == == == == == ==
-  =
+=============================================
 
-    // Evaluates state transition hysteresis (ON/OFF buffers) during boundary departure.
-  TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
+// Evaluates state transition hysteresis (ON/OFF buffers) during boundary departure.
+TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 {
   // Arrange:
   checker_.set_lanelet_map(map_);

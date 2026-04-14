@@ -97,7 +97,7 @@ TEST(UncrossableBoundaryTest, TestParallelSegments)
 TEST(UncrossableBoundaryTest, TestPerpendicularNonIntersecting)
 {
   // Arrange:
-  Segment2d ego_seg{{0.0, 0.0}, {1.0, 0.0}};        // horizontal x=[0,1]
+  Segment2d ego_seg{{0.0, 0.0}, {1.0, 0.0}};       // horizontal x=[0,1]
   Segment2d boundary_seg{{2.0, -1.0}, {2.0, 1.0}};  // vertical at x=2
 
   // Act:
@@ -224,10 +224,10 @@ TEST(UncrossableBoundaryTest, TestRealisticLaneDeparture)
   // Assert:
   ASSERT_EQ(result.left.size(), 5);
   ASSERT_EQ(result.right.size(), 5);
-  EXPECT_NEAR(result.left[0].lat_dist, 5.6, 1e-6);   // approaching
-  EXPECT_NEAR(result.left[1].lat_dist, 0.0, 1e-6);   // intersecting
-  EXPECT_NEAR(result.left[2].lat_dist, -5.6, 1e-6);  // crossed
-  EXPECT_NEAR(result.right[0].lat_dist, 1.2, 1e-6);  // RR corner at -3.8, bound at -5.0
+  EXPECT_NEAR(result.left[0].lat_dist, 5.6, 1e-6);    // approaching
+  EXPECT_NEAR(result.left[1].lat_dist, 0.0, 1e-6);    // intersecting
+  EXPECT_NEAR(result.left[2].lat_dist, -5.6, 1e-6);   // crossed
+  EXPECT_NEAR(result.right[0].lat_dist, 1.2, 1e-6);   // RR corner at -3.8, bound at -5.0
   EXPECT_NEAR(result.right[1].lat_dist, 8.2, 1e-6);
 
   BDC_PLOT_RESULT({
@@ -334,13 +334,13 @@ TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
   ASSERT_EQ(result.right.size(), 5);
 
   // RIGHT BOUNDARY verification
-  EXPECT_NEAR(result.right[0].lat_dist, 5.6, 1e-6);  // approaching
-  EXPECT_NEAR(result.right[1].lat_dist, 0.0, 1e-6);  // intersecting
+  EXPECT_NEAR(result.right[0].lat_dist, 5.6, 1e-6);   // approaching
+  EXPECT_NEAR(result.right[1].lat_dist, 0.0, 1e-6);   // intersecting
   EXPECT_DOUBLE_EQ(result.right[1].pt_on_ego.x(), 23.3);
   EXPECT_DOUBLE_EQ(result.right[1].pt_on_ego.y(), -9.4);
   EXPECT_DOUBLE_EQ(result.right[1].ego_front_to_proj_offset_m, 5.0);
   EXPECT_DOUBLE_EQ(result.right[1].dist_along_trajectory_m, 20.0);
-  EXPECT_NEAR(result.right[2].lat_dist, -5.6, 1e-6);  // crossed
+  EXPECT_NEAR(result.right[2].lat_dist, -5.6, 1e-6);   // crossed
   EXPECT_NEAR(result.right[3].lat_dist, -12.6, 1e-6);
   EXPECT_NEAR(result.right[4].lat_dist, -19.6, 1e-6);
 
@@ -559,7 +559,7 @@ TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityNone)
   param.lateral_margin_m = 0.5;
 
   ProjectionToBound safe_pt(0);
-  safe_pt.lat_dist = 2.0;  // safely away (> 0.5)
+  safe_pt.lat_dist = 2.0;               // safely away (> 0.5)
   safe_pt.dist_along_trajectory_m = 5.0;
   safe_pt.time_from_start = 1.0;
   input.left.push_back(safe_pt);
@@ -587,10 +587,10 @@ TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityApproaching)
   double min_braking_dist = 10.0;
 
   ProjectionToBound app_pt(0);
-  app_pt.lat_dist = 0.1;                  // laterally close (<= 0.5)
+  app_pt.lat_dist = 0.1;               // laterally close (<= 0.5)
   app_pt.dist_along_trajectory_m = 15.0;  // longitudinally far (> 10.0)
   app_pt.ego_front_to_proj_offset_m = 0.0;
-  app_pt.time_from_start = 3.0;  // temporally far (> 2.0)
+  app_pt.time_from_start = 3.0;        // temporally far (> 2.0)
   input.left.push_back(app_pt);
 
   // Act:
@@ -680,37 +680,37 @@ TEST(UncrossableBoundaryUtilsTest, TestBuildUncrossableBoundariesRTree)
 }
 }  // namespace autoware::boundary_departure_checker
 Id(), {p4, p5});
-ls2.attributes()[lanelet::AttributeName::Type] = "lane_divider";
-map.add(ls2);
+  ls2.attributes()[lanelet::AttributeName::Type] = "lane_divider";
+  map.add(ls2);
 
-std::vector<std::string> types_to_detect = {"road_border"};
+  std::vector<std::string> types_to_detect = {"road_border"};
 
-// Act:
-auto rtree = utils::build_uncrossable_boundaries_rtree(map, types_to_detect);
+  // Act:
+  auto rtree = utils::build_uncrossable_boundaries_rtree(map, types_to_detect);
 
-// Assert:
-EXPECT_EQ(rtree.size(), 2);  // 2 segments from ls1
-std::vector<SegmentWithIdx> results;
-rtree.query(bgi::nearest(lanelet::BasicPoint2d(0.5, 0.0), 1), std::back_inserter(results));
-ASSERT_EQ(results.size(), 1);
-EXPECT_EQ(results.front().second.linestring_id, ls1.id());
+  // Assert:
+  EXPECT_EQ(rtree.size(), 2);  // 2 segments from ls1
+  std::vector<SegmentWithIdx> results;
+  rtree.query(bgi::nearest(lanelet::BasicPoint2d(0.5, 0.0), 1), std::back_inserter(results));
+  ASSERT_EQ(results.size(), 1);
+  EXPECT_EQ(results.front().second.linestring_id, ls1.id());
 }
 }  // namespace autoware::boundary_departure_checker
 {p4, p5});
-ls2.attributes()[lanelet::AttributeName::Type] = "lane_divider";
-map.add(ls2);
+  ls2.attributes()[lanelet::AttributeName::Type] = "lane_divider";
+  map.add(ls2);
 
-std::vector<std::string> types_to_detect = {"road_border"};
+  std::vector<std::string> types_to_detect = {"road_border"};
 
-// Act:
-auto rtree = utils::build_uncrossable_boundaries_rtree(map, types_to_detect);
+  // Act:
+  auto rtree = utils::build_uncrossable_boundaries_rtree(map, types_to_detect);
 
-// Assert:
-EXPECT_EQ(rtree.size(), 2);  // 2 segments from ls1
-std::vector<SegmentWithIdx> results;
-rtree.query(bgi::nearest(lanelet::BasicPoint2d(0.5, 0.0), 1), std::back_inserter(results));
-ASSERT_EQ(results.size(), 1);
-EXPECT_EQ(results.front().second.linestring_id, ls1.id());
+  // Assert:
+  EXPECT_EQ(rtree.size(), 2);  // 2 segments from ls1
+  std::vector<SegmentWithIdx> results;
+  rtree.query(bgi::nearest(lanelet::BasicPoint2d(0.5, 0.0), 1), std::back_inserter(results));
+  ASSERT_EQ(results.size(), 1);
+  EXPECT_EQ(results.front().second.linestring_id, ls1.id());
 }
 }  // namespace autoware::boundary_departure_checker
 Args(
@@ -718,17 +718,18 @@ Args(
         std::vector<double>{segment.first.y(), segment.second.y()}),
       Kwargs("color"_a = "red", "label"_a = "Boundary Segment"));
 
-// Plot Point and its projection
-plt.scatter(
-  Args(std::vector<double>{p.x()}, std::vector<double>{p.y()}), Kwargs("label"_a = "Ego Point"));
-plt.plot(
-  Args(std::vector<double>{p.x(), proj.x()}, std::vector<double>{p.y(), proj.y()}),
-  Kwargs("color"_a = "green", "linestyle"_a = "--", "label"_a = "Lateral Projection"));
+    // Plot Point and its projection
+    plt.scatter(
+      Args(std::vector<double>{p.x()}, std::vector<double>{p.y()}),
+      Kwargs("label"_a = "Ego Point"));
+    plt.plot(
+      Args(std::vector<double>{p.x(), proj.x()}, std::vector<double>{p.y(), proj.y()}),
+      Kwargs("color"_a = "green", "linestyle"_a = "--", "label"_a = "Lateral Projection"));
 
-plt.axis(Args("equal"));
-plt.legend();
-save_figure(plt, export_folder);
-});
+    plt.axis(Args("equal"));
+    plt.legend();
+    save_figure(plt, export_folder);
+  });
 }
 
 // Evaluates uncrossable boundary type detection based on attribute strings.
@@ -772,7 +773,7 @@ TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityNone)
   param.lateral_margin_m = 0.5;
 
   ProjectionToBound safe_pt(0);
-  safe_pt.lat_dist = 2.0;  // safely away (> 0.5)
+  safe_pt.lat_dist = 2.0;               // safely away (> 0.5)
   safe_pt.dist_along_trajectory_m = 5.0;
   safe_pt.time_from_start = 1.0;
   input.left.push_back(safe_pt);
@@ -800,10 +801,10 @@ TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityApproaching)
   double min_braking_dist = 10.0;
 
   ProjectionToBound app_pt(0);
-  app_pt.lat_dist = 0.1;                  // laterally close (<= 0.5)
+  app_pt.lat_dist = 0.1;               // laterally close (<= 0.5)
   app_pt.dist_along_trajectory_m = 15.0;  // longitudinally far (> 10.0)
   app_pt.ego_front_to_proj_offset_m = 0.0;
-  app_pt.time_from_start = 3.0;  // temporally far (> 2.0)
+  app_pt.time_from_start = 3.0;        // temporally far (> 2.0)
   input.left.push_back(app_pt);
 
   // Act:
