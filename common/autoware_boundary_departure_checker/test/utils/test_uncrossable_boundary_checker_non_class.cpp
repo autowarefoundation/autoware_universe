@@ -45,7 +45,8 @@ void plot_separate_segment(
 }
 
 void plot_projection_line(
-  [[maybe_unused]] autoware::pyplot::PyPlot & plt, [[maybe_unused]] const ProjectionToBound & projection)
+  [[maybe_unused]] autoware::pyplot::PyPlot & plt,
+  [[maybe_unused]] const ProjectionToBound & projection)
 {
 #ifdef EXPORT_TEST_PLOT_FIGURE
   plt.plot(
@@ -77,10 +78,12 @@ void plot_ego_and_boundary(
 
 void plot_realistic_departure(
   [[maybe_unused]] const autoware::boundary_departure_checker::TrajectoryPoints & ego_pred_traj,
-  [[maybe_unused]] const autoware::boundary_departure_checker::FootprintSideSegmentsArray & ego_sides,
+  [[maybe_unused]] const autoware::boundary_departure_checker::FootprintSideSegmentsArray &
+    ego_sides,
   [[maybe_unused]] const autoware::boundary_departure_checker::SegmentWithIdx & left_bound,
   [[maybe_unused]] const autoware::boundary_departure_checker::SegmentWithIdx & right_bound,
-  [[maybe_unused]] const autoware::boundary_departure_checker::Side<std::vector<ProjectionToBound>> & result,
+  [[maybe_unused]] const autoware::boundary_departure_checker::Side<
+    std::vector<ProjectionToBound>> & result,
   [[maybe_unused]] const std::string & title)
 {
 #ifdef EXPORT_TEST_PLOT_FIGURE
@@ -148,15 +151,21 @@ void plot_braking_distance(
     std::vector<double> velocities, distances;
     for (double v = 0.0; v <= 20.0; v += 1.0) {
       velocities.push_back(v);
-      if (const auto d_opt = autoware::motion_utils::calculate_stop_distance(v, acceleration, max_stop_accel, max_stop_jerk, delay_time))
+      if (
+        const auto d_opt = autoware::motion_utils::calculate_stop_distance(
+          v, acceleration, max_stop_accel, max_stop_jerk, delay_time))
         distances.push_back(*d_opt);
     }
     plt.plot(Args(velocities, distances), Kwargs("marker"_a = "o"));
     plt.xlabel(Args("Velocity [m/s]"));
     plt.ylabel(Args("Judge Line Distance [m]"));
     plt.title(Args("Braking Distance with Jerk Limit"));
-    plt.plot(Args(std::vector<double>{v_test, v_test}, std::vector<double>{0.0, dist}), Kwargs("color"_a = "gray", "linestyle"_a = "--", "alpha"_a = 0.5));
-    plt.plot(Args(std::vector<double>{0.0, v_test}, std::vector<double>{dist, dist}), Kwargs("color"_a = "gray", "linestyle"_a = "--", "alpha"_a = 0.5));
+    plt.plot(
+      Args(std::vector<double>{v_test, v_test}, std::vector<double>{0.0, dist}),
+      Kwargs("color"_a = "gray", "linestyle"_a = "--", "alpha"_a = 0.5));
+    plt.plot(
+      Args(std::vector<double>{0.0, v_test}, std::vector<double>{dist, dist}),
+      Kwargs("color"_a = "gray", "linestyle"_a = "--", "alpha"_a = 0.5));
     autoware::boundary_departure_checker::save_figure(plt, "test_uncrossable_boundary_checker");
   });
 #endif
@@ -170,9 +179,17 @@ void plot_point_projection(
 #ifdef EXPORT_TEST_PLOT_FIGURE
   BDC_PLOT_RESULT({
     auto plt = autoware::pyplot::import();
-    plt.plot(Args(std::vector<double>{segment.first.x(), segment.second.x()}, std::vector<double>{segment.first.y(), segment.second.y()}), Kwargs("color"_a = "red", "label"_a = "Boundary Segment"));
-    plt.scatter(Args(std::vector<double>{p.x()}, std::vector<double>{p.y()}), Kwargs("label"_a = "Ego Point"));
-    plt.plot(Args(std::vector<double>{p.x(), proj.x()}, std::vector<double>{p.y(), proj.y()}), Kwargs("color"_a = "green", "linestyle"_a = "--", "label"_a = "Lateral Projection"));
+    plt.plot(
+      Args(
+        std::vector<double>{segment.first.x(), segment.second.x()},
+        std::vector<double>{segment.first.y(), segment.second.y()}),
+      Kwargs("color"_a = "red", "label"_a = "Boundary Segment"));
+    plt.scatter(
+      Args(std::vector<double>{p.x()}, std::vector<double>{p.y()}),
+      Kwargs("label"_a = "Ego Point"));
+    plt.plot(
+      Args(std::vector<double>{p.x(), proj.x()}, std::vector<double>{p.y(), proj.y()}),
+      Kwargs("color"_a = "green", "linestyle"_a = "--", "label"_a = "Lateral Projection"));
     plt.axis(Args("equal"));
     plt.legend();
     autoware::boundary_departure_checker::save_figure(plt, "test_uncrossable_boundary_checker");
@@ -192,12 +209,21 @@ void plot_backward_buffer(
       cand_x.push_back(cand.dist_along_trajectory_m);
       cand_y.push_back(cand.lat_dist);
     }
-    plt.scatter(Args(cand_x, cand_y), Kwargs("color"_a = "gray", "marker"_a = "x", "s"_a = 60, "label"_a = "All Candidates", "alpha"_a = 0.5));
-    std::vector<double> crit_x = {crit_pair.physical_departure_point.dist_along_trajectory_m, crit_pair.safety_buffer_start.dist_along_trajectory_m};
-    std::vector<double> crit_y = {crit_pair.physical_departure_point.lat_dist, crit_pair.safety_buffer_start.lat_dist};
+    plt.scatter(
+      Args(cand_x, cand_y), Kwargs(
+                              "color"_a = "gray", "marker"_a = "x", "s"_a = 60,
+                              "label"_a = "All Candidates", "alpha"_a = 0.5));
+    std::vector<double> crit_x = {
+      crit_pair.physical_departure_point.dist_along_trajectory_m,
+      crit_pair.safety_buffer_start.dist_along_trajectory_m};
+    std::vector<double> crit_y = {
+      crit_pair.physical_departure_point.lat_dist, crit_pair.safety_buffer_start.lat_dist};
     plt.scatter(Args(crit_x, crit_y), Kwargs("color"_a = "red", "label"_a = "Critical (Buffered)"));
-    plt.axvline(Args(15.0), Kwargs("color"_a = "black", "linestyle"_a = ":", "label"_a = "Crash Point"));
-    plt.axvline(Args(14.0), Kwargs("color"_a = "purple", "linestyle"_a = "--", "label"_a = "Buffer Limit (1.0m)"));
+    plt.axvline(
+      Args(15.0), Kwargs("color"_a = "black", "linestyle"_a = ":", "label"_a = "Crash Point"));
+    plt.axvline(
+      Args(14.0),
+      Kwargs("color"_a = "purple", "linestyle"_a = "--", "label"_a = "Buffer Limit (1.0m)"));
     plt.xlabel(Args("Longitudinal Distance [m]"));
     plt.ylabel(Args("Lateral Distance [m]"));
     plt.title(Args("Evaluate Projections Severity: Backward Buffer"));
@@ -266,7 +292,8 @@ TEST(UncrossableBoundaryTest, TestCollinearSegments)
 
 TEST(UncrossableBoundaryTest, TestMiddleOfSegmentCrossingForLonDist)
 {
-  // Verifies accurate longitudinal distance calculation when boundary crosses in the middle of an ego segment.
+  // Verifies accurate longitudinal distance calculation when boundary crosses in the middle of an
+  // ego segment.
 
   // Arrange:
   TrajectoryPoints ego_pred_traj;
@@ -292,7 +319,8 @@ TEST(UncrossableBoundaryTest, TestMiddleOfSegmentCrossingForLonDist)
   boundaries.left.push_back(bound);
 
   // Act:
-  auto result = utils::get_closest_boundary_segments_from_side(ego_pred_traj, boundaries, ego_sides);
+  auto result =
+    utils::get_closest_boundary_segments_from_side(ego_pred_traj, boundaries, ego_sides);
 
   // Assert:
   ASSERT_EQ(result.left.size(), 3);
@@ -339,13 +367,15 @@ TEST(UncrossableBoundaryTest, TestRealisticLaneDeparture)
   boundaries.right.push_back(right_bound);
 
   // Act:
-  auto result = utils::get_closest_boundary_segments_from_side(ego_pred_traj, boundaries, ego_sides);
+  auto result =
+    utils::get_closest_boundary_segments_from_side(ego_pred_traj, boundaries, ego_sides);
 
   // Assert:
   EXPECT_NEAR(result.left[0].lat_dist, 5.6, 1e-6);
   EXPECT_NEAR(result.left[1].lat_dist, 0.0, 1e-6);
   EXPECT_NEAR(result.left[2].lat_dist, -5.6, 1e-6);
-  plot_realistic_departure(ego_pred_traj, ego_sides, left_bound, right_bound, result, "Left Signed Distance Verification");
+  plot_realistic_departure(
+    ego_pred_traj, ego_sides, left_bound, right_bound, result, "Left Signed Distance Verification");
 }
 
 TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
@@ -358,7 +388,8 @@ TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
     TrajectoryPoint p;
     p.pose.position.x = i * 24.0;
     p.pose.position.y = i * -7.0;
-    p.pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(std::atan2(-7.0, 24.0));
+    p.pose.orientation =
+      autoware_utils_geometry::create_quaternion_from_yaw(std::atan2(-7.0, 24.0));
     p.time_from_start = rclcpp::Duration::from_seconds(i);
     ego_pred_traj.push_back(p);
   }
@@ -383,13 +414,16 @@ TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
   boundaries.right.push_back(right_bound);
 
   // Act:
-  auto result = utils::get_closest_boundary_segments_from_side(ego_pred_traj, boundaries, ego_sides);
+  auto result =
+    utils::get_closest_boundary_segments_from_side(ego_pred_traj, boundaries, ego_sides);
 
   // Assert:
   EXPECT_NEAR(result.right[0].lat_dist, 5.6, 1e-6);
   EXPECT_NEAR(result.right[1].lat_dist, 0.0, 1e-6);
   EXPECT_NEAR(result.right[2].lat_dist, -5.6, 1e-6);
-  plot_realistic_departure(ego_pred_traj, ego_sides, left_bound, right_bound, result, "Right Signed Distance Verification");
+  plot_realistic_departure(
+    ego_pred_traj, ego_sides, left_bound, right_bound, result,
+    "Right Signed Distance Verification");
 }
 
 TEST(UncrossableBoundaryUtilsTest, TestCalcJudgeLineDist)
@@ -404,7 +438,8 @@ TEST(UncrossableBoundaryUtilsTest, TestCalcJudgeLineDist)
   constexpr double v_test = 10.0;
 
   // Act:
-  const auto dist_opt = autoware::motion_utils::calculate_stop_distance(v_test, acceleration, max_stop_accel, max_stop_jerk, delay_time);
+  const auto dist_opt = autoware::motion_utils::calculate_stop_distance(
+    v_test, acceleration, max_stop_accel, max_stop_jerk, delay_time);
 
   // Assert:
   ASSERT_TRUE(dist_opt.has_value());
@@ -474,7 +509,8 @@ TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityBackwardBuffer
 
   // Act:
   auto result = input.transform_each_side([&](const auto & side_value) {
-    const auto min_to_bounds = utils::filter_and_assign_departure_types(side_value, param, min_braking_dist);
+    const auto min_to_bounds =
+      utils::filter_and_assign_departure_types(side_value, param, min_braking_dist);
     return utils::apply_backward_buffer_and_filter(min_to_bounds, param);
   });
 
@@ -505,7 +541,9 @@ TEST(UncrossableBoundaryUtilsTest, TestBuildUncrossableBoundariesRTree)
   // Assert:
   EXPECT_EQ(rtree.size(), 2);
   std::vector<SegmentWithIdx> results;
-  rtree.query(boost::geometry::index::nearest(lanelet::BasicPoint2d(0.5, 0.0), 1), std::back_inserter(results));
+  rtree.query(
+    boost::geometry::index::nearest(lanelet::BasicPoint2d(0.5, 0.0), 1),
+    std::back_inserter(results));
   ASSERT_EQ(results.size(), 1);
   EXPECT_EQ(results.front().second.linestring_id, ls1.id());
 }
