@@ -70,5 +70,6 @@
     steering_offset:
       enable_auto_steering_offset_removal: true
       steer_offset_filter_cutoff_hz: 0.3 # cutoff frequency of lowpass filter for steering offset [Hz]
+      max_update_th: 0.01 # maximum change in steering offset [rad]
 
     publish_debug_trajectories: true # flag to publish predicted trajectory and resampled reference trajectory for debug purpose

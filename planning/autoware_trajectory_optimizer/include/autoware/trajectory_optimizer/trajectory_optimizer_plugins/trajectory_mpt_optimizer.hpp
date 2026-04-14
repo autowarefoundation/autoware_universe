@@ -76,7 +76,7 @@ public:
 
   void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    const TrajectoryOptimizerData & data) override;
+    TrajectoryOptimizerData & data) override;
 
   void set_up_params() override;
 

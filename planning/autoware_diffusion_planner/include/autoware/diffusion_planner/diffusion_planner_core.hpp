@@ -117,6 +117,8 @@ struct DiffusionPlannerParams
   float turn_indicator_keep_offset;
   double turn_indicator_hold_duration;
   bool shift_x;
+  int64_t delay_step;
+  double line_string_max_step_m;
   bool use_time_interpolation;
 };
 
@@ -284,6 +286,7 @@ private:
   std::deque<TurnIndicatorsReport> turn_indicators_history_;
   AgentData agent_data_;
   std::map<lanelet::Id, TrafficSignalStamped> traffic_light_id_map_;
+  std::vector<std::vector<std::vector<Eigen::Matrix4d>>> last_agent_poses_map_;
 
   // Lanelet map
   LaneletRoute::ConstSharedPtr route_ptr_;

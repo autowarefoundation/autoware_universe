@@ -17,6 +17,8 @@
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_OPTIMIZER__TRAJECTORY_OPTIMIZER_PLUGINS__PLUGIN_UTILS__TRAJECTORY_POINT_FIXER_UTILS_HPP_
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_structs.hpp"
+
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -103,11 +105,14 @@ void resample_single_cluster(
  * them along a line direction while preserving arc length ratios.
  *
  * @param traj_points Trajectory to resample (modified in place)
+ * @param semantic_speed_tracker Tracker for semantic speed information (modified in place)
  * @param current_odometry Current ego vehicle odometry
  * @param min_dist_m Minimum distance threshold for clustering
  */
 void resample_close_proximity_points(
-  TrajectoryPoints & traj_points, const Odometry & current_odometry, const double min_dist_m);
+  TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+  const Odometry & current_odometry, const double min_dist_m,
+  const double stop_velocity_threshold_mps = 0.3);
 
 /**
  * @brief Removes invalid points from the trajectory.
@@ -124,12 +129,46 @@ void remove_invalid_points(TrajectoryPoints & input_trajectory);
  *
  * Iterates through the trajectory and removes consecutive points that are closer
  * than the minimum distance threshold. Always keeps the first point.
+ * At constant time-step spacing, close proximity implies low speed, so the retained
+ * point at the end of each removed cluster is registered as a stop candidate.
  *
  * @param input_trajectory_array The trajectory points to be cleaned (modified in place)
+ * @param semantic_speed_tracker Tracker for semantic speed information (modified in place)
  * @param min_dist The minimum distance between points (default: 1E-2)
  */
 void remove_close_proximity_points(
-  TrajectoryPoints & input_trajectory_array, const double min_dist = 1e-2);
+  TrajectoryPoints & input_trajectory_array, SemanticSpeedTracker & semantic_speed_tracker,
+  const double min_dist = 1e-2);
+
+/**
+ * @brief Detects stop-approach zones from velocity profile when geometric detection missed them.
+ *
+ * Runs only when slow_down_ranges is still empty after geometric cluster detection.
+ * Handles constant-spacing trajectories (e.g. Akima-resampled) where no close proximity
+ * clusters exist but the velocity profile clearly shows a deceleration to stop.
+ * Take-off zones (accelerating from rest) are explicitly excluded.
+ *
+ * @param traj_points Trajectory to scan
+ * @param semantic_speed_tracker Tracker (modified in place)
+ * @param stop_velocity_threshold_mps Velocity below which a point is considered a stop
+ */
+void detect_velocity_based_stop(
+  const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker,
+  const double stop_velocity_threshold_mps);
+
+/**
+ * @brief Builds slow_down_ranges from stop_points using velocity direction.
+ *
+ * For each stop point, checks whether velocity is decreasing toward it (stop approach)
+ * or increasing (take-off). For stop approaches, traces back to find the deceleration
+ * onset and creates a SlowSpeedInfo entry with arc length data for remap support.
+ * Replaces the slow_speed_ranges cross-validation mechanism entirely.
+ *
+ * @param traj_points Trajectory with velocity profile
+ * @param semantic_speed_tracker Tracker whose stop_points are processed (slow_down_ranges rebuilt)
+ */
+void build_stop_approach_ranges(
+  const TrajectoryPoints & traj_points, SemanticSpeedTracker & semantic_speed_tracker);
 
 }  // namespace autoware::trajectory_optimizer::plugin::trajectory_point_fixer_utils
 

@@ -66,7 +66,7 @@ std::vector<ConfigYaml> ConfigYaml::list() const
   }
   std::vector<ConfigYaml> result;
   for (const auto & node : yaml_) {
-    result.push_back(ConfigYaml(node));
+    result.emplace_back(node);
   }
   return result;
 }

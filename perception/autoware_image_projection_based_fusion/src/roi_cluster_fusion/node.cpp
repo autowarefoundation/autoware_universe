@@ -70,8 +70,29 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
     get_logger(), "Pedestrian size validation: %s",
     pedestrian_size_params_.enable_size_validation ? "enabled" : "disabled");
 
+  // Replace base class subscription with Agnocast subscription
+  // TODO(Koichi98): replace sub_callback in FusionNode with agnocast_wrapper to avoid copy
+  msg3d_sub_.reset();
+  agnocast_msg3d_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    ClusterMsgType, "input", rclcpp::QoS(1).best_effort(),
+    // cppcheck-suppress unknownMacro
+    [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(ClusterMsgType) msg) {
+      auto ros2_msg = std::make_shared<const ClusterMsgType>(*msg);
+      this->sub_callback(ros2_msg);
+    },
+    [this]() {
+      AUTOWARE_SUBSCRIPTION_OPTIONS opts;
+      // Use a dedicated callback group because this subscription may run as an agnocast
+      // subscription, which should be separated from other callbacks. This would not cause
+      // any issue after migrating to agnocast::Node, but is planned to be removed then.
+      opts.callback_group =
+        this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+      return opts;
+    }());
+
   // publisher
-  pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
+  // TODO(Koichi98): replace pub_ptr_ in FusionNode with agnocast_wrapper
+  agnocast_pub_ptr_ = AUTOWARE_CREATE_PUBLISHER2(ClusterMsgType, "output", rclcpp::QoS{1});
 }
 
 void RoiClusterFusionNode::preprocess(ClusterMsgType & output_cluster_msg)
@@ -342,6 +363,14 @@ bool RoiClusterFusionNode::validateSizeForClass(
     default:
       return true;
   }
+}
+
+void RoiClusterFusionNode::publish(const ClusterMsgType & output_msg)
+{
+  // TODO(Koichi98): replace publish function in FusionNode with agnocast_wrapper
+  auto agnocast_output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(agnocast_pub_ptr_);
+  *agnocast_output_msg = output_msg;
+  agnocast_pub_ptr_->publish(std::move(agnocast_output_msg));
 }
 
 }  // namespace autoware::image_projection_based_fusion
