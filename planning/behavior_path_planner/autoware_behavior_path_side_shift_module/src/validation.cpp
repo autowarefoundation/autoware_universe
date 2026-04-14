@@ -131,7 +131,7 @@ const char * getStatusMessage(uint16_t status_code)
     case SetLateralOffset::Response::ERROR_MODULES_CONFLICTING:
       return "Other modules are running in the behavior_path_planner";
     case SetLateralOffset::Response::WARN_UNKNOWN:
-      return "Unknown warning occured";
+      return "Unknown warning occurred";
     case SetLateralOffset::Response::WARN_EXCEEDED_LIMIT:
       return "The shift length reached limit. Shifted to the possible end.";
     case ResponseStatus::SERVICE_UNREADY:
