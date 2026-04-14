@@ -34,8 +34,8 @@ namespace autoware::multi_object_tracker
 /// Routes each measurement batch to the D2T association implementation designated per input
 /// channel (selected via InputChannel::associator_type).
 /// Available algorithms:
-///   BEV   → BevAssociation    (bird's-eye-view area scoring + GNN assignment)
-///   POLAR → PolarAssociation  (polar-coordinate range-bearing scoring)
+///   BEV   -> BevAssociation    (bird's-eye-view area scoring + GNN assignment)
+///   POLAR -> PolarAssociation  (polar-coordinate range-bearing scoring)
 class AssociationManager
 {
 public:

@@ -66,7 +66,7 @@ bool TrackerOverlapManager::canMergeTarget(
   if (target_known_prob >= min_known_prob) {
     // Target class is known
     if (other_known_prob < min_known_prob) {
-      // Other is unknown → keep target
+      // Other is unknown -> keep target
       return false;
     }
     // Both known: compare per-channel existence probabilities
@@ -85,7 +85,7 @@ bool TrackerOverlapManager::canMergeTarget(
         }
       }
       if (target_prob_val + prob_buffer < other_prob.existence_probability) {
-        // Other significantly outperforms target on this channel → remove target
+        // Other significantly outperforms target on this channel -> remove target
         return true;
       }
     }
@@ -99,7 +99,7 @@ bool TrackerOverlapManager::canMergeTarget(
     // Both unknown: remove the one with larger position uncertainty
     return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
   }
-  // Other is known, target is unknown → remove target
+  // Other is known, target is unknown -> remove target
   return true;
 }
 
@@ -151,7 +151,7 @@ void TrackerOverlapManager::merge(
     valid_trackers.push_back(std::move(data));
   }
 
-  // Sort by priority: lower index → higher priority, then non-unknown, then more measurements
+  // Sort by priority: lower index -> higher priority, then non-unknown, then more measurements
   std::sort(
     valid_trackers.begin(), valid_trackers.end(), [](const TrackerData & a, const TrackerData & b) {
       if (a.tracker_priority != b.tracker_priority) {

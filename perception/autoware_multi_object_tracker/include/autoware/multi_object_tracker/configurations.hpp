@@ -54,7 +54,7 @@ struct AssociatorConfig
   using LabelToTrackerAssociationParametersMap =
     std::unordered_map<classes::Label, TrackerAssociationParametersMap, EnumClassHash>;
 
-  // Effective association parameters (per measurement label → tracker type).
+  // Effective association parameters (per measurement label -> tracker type).
   LabelToTrackerAssociationParametersMap association_params_map;
 
   double unknown_association_giou_threshold;
