@@ -30,60 +30,20 @@ using Footprint = autoware_utils_geometry::LinearRing2d;
 using Footprints = std::vector<Footprint>;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
-/**
- * @brief Structure representing lateral and longitudinal margins for a footprint.
- */
 struct FootprintMargin
 {
-  // Member Variables
-  /**
-   * @brief Lateral margin [m].
-   */
   double lat_m{1000.0};
-
-  /**
-   * @brief Longitudinal margin [m].
-   */
   double lon_m{1000.0};
 };
 
-/**
- * @brief Generate vehicle footprints along a trajectory.
- *
- * Calculates the polygon representing the vehicle's spatial occupancy at each
- * trajectory point, considering vehicle dimensions and pose uncertainty.
- *
- * @param[in] trajectory_points The list of points defining the vehicle's path.
- * @param[in] vehicle_info Static dimensions and properties of the vehicle.
- * @param[in] covariance The pose covariance used to calculate safety margins.
- * @return A vector of Footprint polygons.
- */
 Footprints generate(
   const std::vector<TrajectoryPoint> & trajectory_points,
   const vehicle_info_utils::VehicleInfo & vehicle_info,
   const geometry_msgs::msg::PoseWithCovariance & covariance);
 
-/**
- * @brief Extract the left and right segments from a sequence of footprints.
- *
- * Identifies the lateral boundaries of the vehicle's swept path.
- *
- * @param[in] footprints The sequence of vehicle footprints.
- * @return A vector of Side objects, each containing the left and right segments of a footprint.
- */
 std::vector<Side<autoware_utils_geometry::Segment2d>> get_sides_from_footprints(
   const Footprints & footprints);
 
-/**
- * @brief Calculate footprint margins based on pose covariance.
- *
- * Determines the safety buffer to be added to the vehicle dimensions based on
- * the uncertainty in its current pose estimate.
- *
- * @param[in] covariance The current pose covariance.
- * @param[in] scale Optional scaling factor for the calculated margins.
- * @return A FootprintMargin structure with lateral and longitudinal values.
- */
 FootprintMargin calc_margin_from_covariance(
   const geometry_msgs::msg::PoseWithCovariance & covariance, const double scale = 0.0);
 

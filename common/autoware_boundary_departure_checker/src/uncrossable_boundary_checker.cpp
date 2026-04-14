@@ -176,7 +176,7 @@ std::vector<SegmentWithIdx> UncrossableBoundaryChecker::find_closest_boundary_se
   for (const auto & nearest : nearest_raw) {
     const auto & id = nearest.second;
     if (unique_id.find(id) != unique_id.end()) {
-      continue;
+      continue;  // Skip if this segment has already been added
     }
 
     auto boundary_segment_3d = utils::get_segment_3d_from_id(lanelet_map_ptr_, id);

@@ -34,64 +34,58 @@ namespace autoware::boundary_departure_checker
 
 class FootprintManager;
 
-/**
- * @brief Main class for checking vehicle departure from uncrossable boundaries.
- *
- * This class manages spatial indexing of road boundaries and performs real-time
- * checks against predicted trajectories to detect potential lane departures.
- */
 class UncrossableBoundaryChecker
 {
 public:
   UncrossableBoundaryChecker() = default;
-
-  // Public/API Methods
-  /**
-   * @brief Set the Lanelet2 map and initialize the spatial index.
-   * @param[in] lanelet_map_ptr Shared pointer to the Lanelet2 map.
-   */
   void set_lanelet_map(const lanelet::LaneletMapPtr lanelet_map_ptr);
-
-  /**
-   * @brief Initialize the checker, building necessary internal structures.
-   * @return A tl::expected containing void on success, or a string error message.
-   * @retval Error message if the map is not set or indexing fails.
-   */
   tl::expected<void, std::string> initialize();
 
-  /**
-   * @brief Update the checker parameters.
-   * @param[in] param The new parameters to apply.
-   */
   void set_param(const UncrossableBoundaryDepartureParam & param);
 
   /**
-   * @brief Check for boundary departures along a predicted trajectory.
+   * @brief Generate data structure with embedded abnormality information based on the
+   * predicted trajectory and current ego state.
    *
-   * Generates ego footprints and computes closest boundary projections to
-   * determine if the vehicle is approaching or has crossed a boundary.
+   * This function creates extended ego footprints for various abnormality types (e.g.,
+   * localization, steering) and computes their corresponding closest boundary projections and
+   * segments.
    *
-   * @param[in] predicted_traj Ego's predicted trajectory.
-   * @param[in] vehicle_info Static vehicle dimensions and properties.
-   * @param[in] ego_state Current dynamic state of the ego vehicle.
-   * @return DepartureData containing footprints and projection results on success.
-   * @retval Error message string if calculation fails.
+   * @param predicted_traj         Ego's predicted trajectory (from MPC or trajectory follower).
+   * @param vehicle_info           Vehicle information.
+   * @param ego_state              Ego dynamic state (pose, velocity, acceleration).
+   * @return DepartureData containing footprints, their left/right sides, and projections to
+   * boundaries. Returns an error message string on failure.
    */
   tl::expected<DepartureData, std::string> check_departure(
     const TrajectoryPoints & predicted_traj, const vehicle_info_utils::VehicleInfo & vehicle_info,
     const EgoDynamicState & ego_state);
 
 private:
-  // Private Methods
+  // Member variables
+  UncrossableBoundaryDepartureParam param_;
+  lanelet::LaneletMapPtr lanelet_map_ptr_;
+  std::unique_ptr<UncrossableBoundsRTree> uncrossable_boundaries_rtree_ptr_;
+  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ =
+    std::make_shared<autoware_utils_debug::TimeKeeper>();
+  double last_no_critical_dpt_time_{0.0};
+  double last_found_critical_dpt_time_{0.0};
+  Side<ProjectionsToBound> critical_departure_;
+
   /**
-   * @brief Find nearby uncrossable boundary segments using the R-tree.
+   * @brief Queries a spatial index (R-tree) to find nearby uncrossable lane boundaries and filters
+   * them.
    *
-   * @param[in] ego_ref_segment Reference side segment of the ego vehicle.
-   * @param[in] ego_opposite_ref_segment Opposite side segment for filtering.
-   * @param[in] ego_z_position Current vertical position of the ego vehicle.
-   * @param[in] ego_vehicle_height Total height of the vehicle.
-   * @param[in] unique_id Set of already processed segment IDs to avoid duplicates.
-   * @return Filtered vector of relevant boundary segments.
+   * @param ego_ref_segment The reference side of the ego vehicle (e.g., the left side) used as the
+   * query origin.
+   * @param ego_opposite_ref_segment The opposite side of the ego vehicle (e.g., the right side),
+   * used to filter out boundaries on the wrong side.
+   * @param ego_z_position The current vertical (Z-axis) position of the ego vehicle, used to filter
+   * boundaries by height.
+   * @param unique_id A set of segment IDs that have already been processed, used to avoid adding
+   * duplicate boundaries.
+   * @return A vector of `SegmentWithIdx` containing the filtered boundary segments that are deemed
+   * relevant and close to the reference side.
    */
   [[nodiscard]] std::vector<SegmentWithIdx> find_closest_boundary_segments(
     const Segment2d & ego_ref_segment, const Segment2d & ego_opposite_ref_segment,
@@ -99,64 +93,22 @@ private:
     const std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> & unique_id) const;
 
   /**
-   * @brief Collect all relevant boundary segments along the predicted path.
+   * @brief Collects all relevant uncrossable boundary segments along a predicted trajectory.
    *
-   * @param[in] footprints_sides Sides of the vehicle footprints along the trajectory.
-   * @param[in] trimmed_pred_trajectory The trajectory points corresponding to the footprints.
-   * @param[in] ego_vehicle_height Total height of the vehicle.
-   * @return BoundarySegmentsBySide containing relevant segments for both sides.
+   * @param footprints_sides A container of the vehicle's left and right side segments for
+   * each point along the trajectory.
+   * @param trimmed_pred_trajectory The predicted trajectory of the ego vehicle, used to get the
+   * Z-position at each step.
+   * @return A `BoundarySegmentsBySide` struct containing two vectors: one for all unique, relevant
+   * boundaries found to the left of the trajectory, and one for the right.
    */
   [[nodiscard]] BoundarySegmentsBySide get_boundary_segments(
     const FootprintSideSegmentsArray & footprints_sides,
     const TrajectoryPoints & trimmed_pred_trajectory, const double ego_vehicle_height) const;
 
-  /**
-   * @brief Determine the overall departure severity based on evaluated projections.
-   *
-   * @param[in] evaluated_projections The result of projection evaluations for both sides.
-   * @param[in] current_time_s Current timestamp for hysteresis handling.
-   * @return The final DepartureType.
-   */
   DepartureType determine_departure_type(
     const Side<std::optional<CriticalPointPair>> & evaluated_projections,
     const double current_time_s);
-
-  // Member Variables
-  /**
-   * @brief Configuration parameters for the checker.
-   */
-  UncrossableBoundaryDepartureParam param_;
-
-  /**
-   * @brief Pointer to the map containing road boundaries.
-   */
-  lanelet::LaneletMapPtr lanelet_map_ptr_;
-
-  /**
-   * @brief Spatial index for fast lookup of boundary segments.
-   */
-  std::unique_ptr<UncrossableBoundsRTree> uncrossable_boundaries_rtree_ptr_;
-
-  /**
-   * @brief Shared utility for performance monitoring and debug logging.
-   */
-  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ =
-    std::make_shared<autoware_utils_debug::TimeKeeper>();
-
-  /**
-   * @brief Timestamp of the last time no critical departure was detected [s].
-   */
-  double last_no_critical_dpt_time_{0.0};
-
-  /**
-   * @brief Timestamp of the last time a critical departure was found [s].
-   */
-  double last_found_critical_dpt_time_{0.0};
-
-  /**
-   * @brief Cached projections for detected critical departures.
-   */
-  Side<ProjectionsToBound> critical_departure_;
 };
 }  // namespace autoware::boundary_departure_checker
 
