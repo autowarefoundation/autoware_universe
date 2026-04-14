@@ -424,8 +424,8 @@ TEST(UncrossableBoundaryUtilsTest, TestIsCritical)
 }  // namespace autoware::boundary_departure_checker
 ant boundary should return true for both sides.
   Segment2d bound_center{{0.0, 0.0}, {2.0, 0.0}};
-  EXPECT_TRUE(utils::is_closest_to_boundary_segment(bound_center, left_side, right_side));
-  EXPECT_TRUE(utils::is_closest_to_boundary_segment(bound_center, right_side, left_side));
+EXPECT_TRUE(utils::is_closest_to_boundary_segment(bound_center, left_side, right_side));
+EXPECT_TRUE(utils::is_closest_to_boundary_segment(bound_center, right_side, left_side));
 }
 
 TEST(UncrossableBoundaryUtilsTest, TestIsSegmentWithinEgoHeight)

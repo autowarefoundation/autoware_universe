@@ -286,6 +286,11 @@ public:
   Side<std::optional<CriticalPointPair>> evaluated_projections;
 
   /**
+   * @brief history of critical departure points for each side, used for hysteresis
+   */
+  Side<ProjectionsToBound> critical_departure_history;
+
+  /**
    * @brief Overall departure status.
    */
   DepartureType status{DepartureType::NONE};

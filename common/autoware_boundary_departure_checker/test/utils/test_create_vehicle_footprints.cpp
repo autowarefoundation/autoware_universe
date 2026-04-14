@@ -188,28 +188,33 @@ INSTANTIATE_TEST_SUITE_P(
 }  // namespace autoware::boundary_departure_checker
 ngParamName());
 }  // namespace autoware::boundary_departure_checker
-At (10.0, 0.0) facing +Y (Yaw = PI/2)
-        // Formula: Global_X = Base_X - Local_Y | Global_Y = Base_Y + Local_X
-        {{10.0 - half_width_left, wheel_base_to_front_overhang},  // Front-Left
-         {10.0 + half_width_right,
-          wheel_base_to_front_overhang},               // Front-Right (Local Y is -half_width_right)
-         {10.0 + half_width_right, half_wheel_base},   // Mid-Right
-         {10.0 + half_width_right, -rear_overhang_m},  // Rear-Right
-         {10.0 - half_width_left, -rear_overhang_m},   // Rear-Left
-         {10.0 - half_width_left, half_wheel_base},    // Mid-Left
-         {10.0 - half_width_left, wheel_base_to_front_overhang}},  // Closing Front-Left
+At(10.0, 0.0) facing + Y(Yaw = PI / 2)
+  // Formula: Global_X = Base_X - Local_Y | Global_Y = Base_Y + Local_X
+  {{10.0 - half_width_left, wheel_base_to_front_overhang},  // Front-Left
+   {10.0 + half_width_right,
+    wheel_base_to_front_overhang},               // Front-Right (Local Y is -half_width_right)
+   {10.0 + half_width_right, half_wheel_base},   // Mid-Right
+   {10.0 + half_width_right, -rear_overhang_m},  // Rear-Right
+   {10.0 - half_width_left, -rear_overhang_m},   // Rear-Left
+   {10.0 - half_width_left, half_wheel_base},    // Mid-Left
+   {10.0 - half_width_left, wheel_base_to_front_overhang}},  // Closing Front-Left
 
-        // Expected Footprint 2: At (0.0, 10.0) facing -X (Yaw = PI)
-        // Formula: Global_X = Base_X - Local_X | Global_Y = Base_Y - Local_Y
-        {{-wheel_base_to_front_overhang, 10.0 - half_width_left},  // Front-Left
-         {-wheel_base_to_front_overhang,
-          10.0 + half_width_right},                    // Front-Right (Local Y is -half_width_right)
-         {-half_wheel_base, 10.0 + half_width_right},  // Mid-Right
-         {rear_overhang_m, 10.0 + half_width_right},   // Rear-Right (Local X is -rear_overhang_m)
-         {rear_overhang_m, 10.0 - half_width_left},    // Rear-Left
-         {-half_wheel_base, 10.0 - half_width_left},   // Mid-Left
-         {-wheel_base_to_front_overhang, 10.0 - half_width_left}}  // Closing Front-Left
-      }}),
+// Expected Footprint 2: At (0.0, 10.0) facing -X (Yaw = PI)
+// Formula: Global_X = Base_X - Local_X | Global_Y = Base_Y - Local_Y
+{
+  {-wheel_base_to_front_overhang, 10.0 - half_width_left},  // Front-Left
+    {-wheel_base_to_front_overhang,
+     10.0 + half_width_right},                    // Front-Right (Local Y is -half_width_right)
+    {-half_wheel_base, 10.0 + half_width_right},  // Mid-Right
+    {rear_overhang_m, 10.0 + half_width_right},   // Rear-Right (Local X is -rear_overhang_m)
+    {rear_overhang_m, 10.0 - half_width_left},    // Rear-Left
+    {-half_wheel_base, 10.0 - half_width_left},   // Mid-Left
+  {
+    -wheel_base_to_front_overhang, 10.0 - half_width_left
+  }
+}  // Closing Front-Left
+}
+}),
   ::testing::PrintToStringParamName());
 }  // namespace autoware::boundary_departure_checker
 ngParamName());
