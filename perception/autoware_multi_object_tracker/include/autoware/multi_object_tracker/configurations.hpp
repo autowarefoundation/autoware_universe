@@ -25,9 +25,7 @@
 namespace autoware::multi_object_tracker
 {
 
-// ---------------------------------------------------------------------------
-// Online association (measurement ↔ tracker matching)
-// ---------------------------------------------------------------------------
+//// Online association (measurement <-> tracker matching)
 
 struct AssociatorConfig
 {
@@ -60,9 +58,7 @@ struct AssociatorConfig
   double unknown_association_giou_threshold;
 };
 
-// ---------------------------------------------------------------------------
-// Helper: per-label threshold table
-// ---------------------------------------------------------------------------
+//// Helper: per-label threshold table
 
 struct TrackedLabelThresholds
 {
@@ -85,9 +81,7 @@ struct TrackedLabelThresholds
   }
 };
 
-// ---------------------------------------------------------------------------
-// Tracker overlap manager (tracker-to-tracker layer: remove spatially redundant trackers)
-// ---------------------------------------------------------------------------
+//// Tracker overlap manager (tracker-to-tracker layer: remove spatially redundant trackers)
 
 struct TrackerOverlapManagerConfig
 {
@@ -101,9 +95,7 @@ struct TrackerOverlapManagerConfig
   double pruning_static_iou_threshold;                              // [ratio]
 };
 
-// ---------------------------------------------------------------------------
-// Tracker creation (spawning, type mapping)
-// ---------------------------------------------------------------------------
+//// Tracker creation (spawning, type mapping)
 
 struct TrackerCreationConfig
 {
@@ -115,9 +107,7 @@ struct TrackerCreationConfig
   bool enable_unknown_object_motion_output;
 };
 
-// ---------------------------------------------------------------------------
-// Utility: safe map lookup
-// ---------------------------------------------------------------------------
+//// Utility: safe map lookup
 
 template <typename Map, typename Key>
 auto get_map_value_if_exists(const Map & map, const Key & key)

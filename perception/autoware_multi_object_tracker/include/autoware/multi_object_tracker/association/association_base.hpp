@@ -33,7 +33,7 @@ public:
   virtual ~AssociationBase() = default;
 
   /// Perform association between measurements and the current tracker list.
-  /// Returns a full AssociationResult mapping trackers ↔ measurements.
+  /// Returns a full AssociationResult mapping trackers <-> measurements.
   virtual types::AssociationResult associate(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers) = 0;
