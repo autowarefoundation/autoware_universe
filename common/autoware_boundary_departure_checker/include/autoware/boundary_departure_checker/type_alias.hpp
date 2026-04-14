@@ -11,6 +11,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
+
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/pose_deviation.hpp>
@@ -27,9 +31,6 @@
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <vector>
-
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
 
 namespace autoware::boundary_departure_checker
 {

@@ -25,6 +25,13 @@ namespace autoware::boundary_departure_checker::debug
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
+/**
+ * @brief Create debug markers for boundary departure.
+ * @param[in] departure_data data about the departure check
+ * @param[in] curr_time current time
+ * @param[in] base_link_z z-coordinate of the base_link
+ * @return array of markers for visualization
+ */
 MarkerArray create_debug_markers(
   const DepartureData & departure_data, const rclcpp::Time & curr_time, const double base_link_z);
 }  // namespace autoware::boundary_departure_checker::debug

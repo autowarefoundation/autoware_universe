@@ -101,8 +101,6 @@ tl::expected<DepartureData, std::string> UncrossableBoundaryChecker::check_depar
     departure_data.footprints_sides, predicted_traj, vehicle_info.vehicle_height_m);
 
   if (departure_data.boundary_segments.all_empty()) {
-    // couldn't find any nearby boundary segments, so we can skip the rest of the processing and
-    // return early
     return departure_data;
   }
 
@@ -115,7 +113,7 @@ tl::expected<DepartureData, std::string> UncrossableBoundaryChecker::check_depar
   departure_data.status =
     determine_departure_type(departure_data.evaluated_projections, ego_state.current_time_s);
 
-  departure_data.critical_departure_history = critical_departure_;
+  departure_data.critical_departure_history = critical_departure_history_;
 
   return departure_data;
 }
@@ -126,33 +124,31 @@ DepartureType UncrossableBoundaryChecker::determine_departure_type(
   const bool current_is_critical = utils::is_critical(evaluated_projections);
 
   if (current_is_critical) {
-    // Geometrically critical. Check if the ON buffer has expired.
+    // check if ON buffer expired
     if (current_time_s - last_no_critical_dpt_time_ >= param_.on_time_buffer_s) {
-      // We officially entered the CRITICAL state. Record this exact time!
       last_found_critical_dpt_time_ = current_time_s;
 
-      // Save the critical points for visualization/downstream use
-      critical_departure_.for_each_side([](auto & side) { side.clear(); });
+      critical_departure_history_.for_each_side([](auto & side) { side.clear(); });
       evaluated_projections.for_each([&](auto key_constant, auto & side_value) {
         if (side_value.has_value() && side_value->safety_buffer_start.is_critical()) {
-          critical_departure_[key_constant.value].push_back(side_value->physical_departure_point);
+          critical_departure_history_[key_constant.value].push_back(
+            side_value->physical_departure_point);
         }
       });
       return DepartureType::CRITICAL;
     }
-    // Geometrically critical, but still waiting for the ON buffer to expire
     return DepartureType::NONE;
   }
-  // Geometrically safe. Continually update the safe timestamp.
+
+  // update safe timestamp
   last_no_critical_dpt_time_ = current_time_s;
 
-  // If we were previously in a CRITICAL state, check the OFF buffer
-  if (!critical_departure_.all_empty()) {
+  // check OFF buffer
+  if (!critical_departure_history_.all_empty()) {
     if (current_time_s - last_found_critical_dpt_time_ < param_.off_time_buffer_s) {
-      return DepartureType::CRITICAL;  // Hold the CRITICAL state!
+      return DepartureType::CRITICAL;
     }
-    // The OFF buffer has officially expired. Clear the saved state.
-    critical_departure_.for_each_side([](auto & side) { side.clear(); });
+    critical_departure_history_.for_each_side([](auto & side) { side.clear(); });
   }
 
   return DepartureType::NONE;
@@ -178,7 +174,7 @@ std::vector<SegmentWithIdx> UncrossableBoundaryChecker::find_closest_boundary_se
   for (const auto & nearest : nearest_raw) {
     const auto & id = nearest.second;
     if (unique_id.find(id) != unique_id.end()) {
-      continue;  // Skip if this segment has already been added
+      continue;
     }
 
     auto boundary_segment_3d = utils::get_segment_3d_from_id(lanelet_map_ptr_, id);

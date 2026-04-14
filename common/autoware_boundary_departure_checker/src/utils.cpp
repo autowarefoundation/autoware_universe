@@ -103,17 +103,15 @@ std::optional<CriticalPointPair> apply_backward_buffer_and_filter(
 
   CriticalPointPair result;
   result.physical_departure_point = departure_point;
-  result.safety_buffer_start = departure_point;  // Default to the crash point itself
+  result.safety_buffer_start = departure_point;
 
-  // Only apply buffering if the intersection is actually critical
   if (!departure_point.is_critical()) {
-    return result;  // No need to search backwards if it's not critical
+    return result;
   }
 
   const double departure_s =
     departure_point.dist_along_trajectory_m - departure_point.ego_front_to_proj_offset_m;
 
-  // Search backwards for the earliest point within the longitudinal buffer
   for (auto it = std::next(side_value.rbegin()); it != side_value.rend(); ++it) {
     const double dist_to_crash = departure_s - it->dist_along_trajectory_m;
 
@@ -121,7 +119,6 @@ std::optional<CriticalPointPair> apply_backward_buffer_and_filter(
       result.safety_buffer_start = *it;
       result.safety_buffer_start.departure_type = DepartureType::CRITICAL;
     } else {
-      // dist_to_crash strictly increases, so we can stop searching.
       break;
     }
   }
@@ -156,18 +153,13 @@ DepartureType assign_departure_type(
     metrics.time_from_start > thresholds.cutoff_time) {
     return DepartureType::APPROACHING;
   }
-  // Set CRITICAL if:
-  // - Short Dist & Short Time: boundary crossing is less than braking distance and we will hit it
-  // in less than cutoff time.
-  // - Long Dist but Short Time: At 100 km/h, the boundary crossing is 30 meters away, but ego
-  // will hit the crossing in less than cutoff time.
-  // - Long time, but dist less than braking: Creeping forward in a parking lot at 2 km/h, and it
-  // takes it will 4 seconds to reach it, however, the boundary less than minimum braking
-  // distance.
+
+  // Critical if short distance or short time
   return DepartureType::CRITICAL;
 }
+
 bool is_uncrossable_type(
-  std::vector<std::string> boundary_types_to_detect, const lanelet::ConstLineString3d & ls)
+  const std::vector<std::string> & boundary_types_to_detect, const lanelet::ConstLineString3d & ls)
 {
   constexpr auto no_type = "";
   const auto type = ls.attributeOr(lanelet::AttributeName::Type, no_type);
@@ -278,8 +270,6 @@ ProjectionToBound find_closest_segment(
   for (const auto & [seg, id] : boundary_segments) {
     const auto & [ego_lr, ego_rr] = ego_rear_seg;
     const auto & [seg_f, seg_r] = seg;
-    // we can assume that before front touches boundary, either left or right side will touch
-    // boundary first
     if (const auto proj_opt = calc_nearest_projection(ego_side_seg, seg, curr_fp_idx)) {
       if (!closest_proj || proj_opt->lat_dist < closest_proj->lat_dist) {
         closest_proj = *proj_opt;
@@ -343,21 +333,21 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
         const auto & ego_front = fp[side_key].first;
         const auto & ego_rear = fp[side_key].second;
 
-        // Forward vector of the ego side segment
+        // forward vector of ego side
         const double v_fwd_x = ego_front.x() - ego_rear.x();
         const double v_fwd_y = ego_front.y() - ego_rear.y();
 
-        // Lateral vector pointing from ego to the boundary
+        // lateral vector from ego to boundary
         const double v_lat_x = closest_bound.pt_on_bound.x() - closest_bound.pt_on_ego.x();
         const double v_lat_y = closest_bound.pt_on_bound.y() - closest_bound.pt_on_ego.y();
 
-        // 2D Cross Product (Z-component)
+        // cross product for crossing direction
         const double cross_prod = v_fwd_x * v_lat_y - v_fwd_y * v_lat_x;
 
         const bool is_crossing_left_boundary = side_key == SideKey::LEFT && cross_prod < 0.0;
         const bool is_crossing_right_boundary = side_key == SideKey::RIGHT && cross_prod > 0.0;
         if (is_crossing_left_boundary || is_crossing_right_boundary) {
-          closest_bound.lat_dist = -closest_bound.lat_dist;  // crossed left boundary
+          closest_bound.lat_dist = -closest_bound.lat_dist;
         }
       }
 
@@ -395,12 +385,10 @@ std::optional<double> calc_signed_lateral_distance_to_boundary(
     const Eigen::Vector2d segment_end(p2.x(), p2.y());
     const Eigen::Vector2d segment_direction = segment_end - segment_start;
 
-    // Calculate intersection between Y-axis line and boundary segment
     const double det = y_axis_direction.x() * (-segment_direction.y()) -
                        y_axis_direction.y() * (-segment_direction.x());
 
     if (std::abs(det) < 1e-10) {
-      // this segment and the Y-axis are parallel
       continue;
     }
 
@@ -409,7 +397,6 @@ std::optional<double> calc_signed_lateral_distance_to_boundary(
       ((-segment_direction.y()) * rhs.x() - (-segment_direction.x()) * rhs.y()) / det;
     const double s = (y_axis_direction.x() * rhs.y() - y_axis_direction.y() * rhs.x()) / det;
 
-    // Check if intersection is within segment bounds
     if (s >= 0.0 && s <= 1.0) {
       const double distance = std::abs(t);
 
@@ -475,13 +462,10 @@ double calc_minimum_braking_distance(
   const EgoDynamicState & ego_state, const UncrossableBoundaryDepartureParam & param,
   const vehicle_info_utils::VehicleInfo & vehicle_info)
 {
-  // 1. Calculate the kinematic distance needed to stop the base_link coordinate
   const auto kinematic_stop_dist = motion_utils::calculate_stop_distance(
     ego_state.velocity, ego_state.acceleration, param.max_deceleration_mps2, param.max_jerk_mps3,
     param.brake_delay_s);
 
-  // 2. Total distance = (Front Overhang) + (Kinematic Braking Distance)
-  // Even at zero velocity, the "braking zone" is the front of the car.
   return vehicle_info.front_overhang_m +
          (kinematic_stop_dist ? std::max(0.0, *kinematic_stop_dist) : 0.0);
 }

@@ -37,6 +37,11 @@
 namespace autoware::boundary_departure_checker
 {
 #ifdef EXPORT_TEST_PLOT_FIGURE
+/**
+ * @brief Save the current figure to a file.
+ * @param[in,out] plt PyPlot instance
+ * @param[in] sub_dir subdirectory to save the figure
+ */
 void save_figure(autoware::pyplot::PyPlot & plt, const std::string & sub_dir = "");
 #endif
 }  // namespace autoware::boundary_departure_checker

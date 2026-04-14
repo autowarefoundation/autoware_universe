@@ -30,20 +30,41 @@ using Footprint = autoware_utils_geometry::LinearRing2d;
 using Footprints = std::vector<Footprint>;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
+/**
+ * @brief Margin for the footprint.
+ */
 struct FootprintMargin
 {
-  double lat_m{1000.0};
-  double lon_m{1000.0};
+  double lat_m{1000.0};  ///< lateral margin [m]
+  double lon_m{1000.0};  ///< longitudinal margin [m]
 };
 
+/**
+ * @brief Generate vehicle footprints along a trajectory.
+ * @param[in] trajectory_points points along the trajectory
+ * @param[in] vehicle_info information about the vehicle
+ * @param[in] covariance pose covariance to consider for margin
+ * @return list of generated footprints
+ */
 Footprints generate(
   const std::vector<TrajectoryPoint> & trajectory_points,
   const vehicle_info_utils::VehicleInfo & vehicle_info,
   const geometry_msgs::msg::PoseWithCovariance & covariance);
 
+/**
+ * @brief Extract left and right side segments from footprints.
+ * @param[in] footprints list of vehicle footprints
+ * @return list of side segments for each footprint
+ */
 std::vector<Side<autoware_utils_geometry::Segment2d>> get_sides_from_footprints(
   const Footprints & footprints);
 
+/**
+ * @brief Calculate margin based on pose covariance.
+ * @param[in] covariance pose covariance
+ * @param[in] scale scale factor for the covariance
+ * @return calculated footprint margin
+ */
 FootprintMargin calc_margin_from_covariance(
   const geometry_msgs::msg::PoseWithCovariance & covariance, const double scale = 0.0);
 

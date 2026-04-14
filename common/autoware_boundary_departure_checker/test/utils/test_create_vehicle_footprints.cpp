@@ -24,15 +24,16 @@
 #include <string>
 #include <vector>
 
+namespace
+{
 using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils_geometry::LinearRing2d;
 using geometry_msgs::msg::PoseWithCovariance;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
+using autoware::boundary_departure_checker::footprints::Footprints;
 
-namespace
-{
 PoseWithCovariance create_pose_with_covariance(
   const Eigen::Matrix2d & covariance_xy, const double yaw)
 {
@@ -59,6 +60,38 @@ TrajectoryPoints create_trajectory_points(
     trajectory_points.push_back(p);
   }
   return trajectory_points;
+}
+
+void plot_footprints_along_trajectory(
+  [[maybe_unused]] const TrajectoryPoints & trajectory_points,
+  [[maybe_unused]] const Footprints & footprints)
+{
+#ifdef EXPORT_TEST_PLOT_FIGURE
+  BDC_PLOT_RESULT({
+    auto plt = autoware::pyplot::import();
+
+    std::vector<double> px;
+    std::vector<double> py;
+    for (const auto & pt : trajectory_points) {
+      px.push_back(pt.pose.position.x);
+      py.push_back(pt.pose.position.y);
+    }
+    plt.plot(Args(px, py), Kwargs("color"_a = "gray", "linestyle"_a = "--", "label"_a = "Path"));
+
+    for (const auto & fp : footprints) {
+      std::vector<double> fx;
+      std::vector<double> fy;
+      for (const auto & p_fp : fp) {
+        fx.push_back(p_fp.x());
+        fy.push_back(p_fp.y());
+      }
+      plt.plot(Args(fx, fy), Kwargs("alpha"_a = 0.5));
+    }
+
+    plt.axis(Args("equal"));
+    autoware::boundary_departure_checker::save_figure(plt, "test_create_vehicle_footprint");
+  });
+#endif
 }
 
 // reference:
@@ -112,41 +145,20 @@ protected:
 
 TEST_P(CreateVehicleFootprintsAlongTrajectoryTest, test_create_vehicle_footprints)
 {
+  // 1-line summary: Verifies vehicle footprint generation along various trajectory configurations.
+
+  // Arrange:
   const auto & p = GetParam();
   const auto trajectory_points = create_trajectory_points(p.trajectory_points);
   const auto pose_with_covariance = create_pose_with_covariance(p.covariance_xy, p.yaw);
 
-  // Notice: footprint_margin_scale is purposely omitted based on the new implementation
+  // Act:
   const auto footprints =
     footprints::generate(trajectory_points, vehicle_info, pose_with_covariance);
 
-  // 1. Integrated Visualization
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
+  // Assert:
+  plot_footprints_along_trajectory(trajectory_points, footprints);
 
-    // Plot the base path points
-    std::vector<double> px, py;
-    for (const auto & pt : trajectory_points) {
-      px.push_back(pt.pose.position.x);
-      py.push_back(pt.pose.position.y);
-    }
-    plt.plot(Args(px, py), Kwargs("color"_a = "gray", "linestyle"_a = "--", "label"_a = "Path"));
-
-    // Plot generated footprints
-    for (const auto & fp : footprints) {
-      std::vector<double> fx, fy;
-      for (const auto & p_fp : fp) {
-        fx.push_back(p_fp.x());
-        fy.push_back(p_fp.y());
-      }
-      plt.plot(Args(fx, fy), Kwargs("alpha"_a = 0.5));
-    }
-
-    plt.axis(Args("equal"));
-    save_figure(plt, "test_create_vehicle_footprint");
-  });
-
-  // 2. Comprehensive Edge Assertions
   ASSERT_EQ(footprints.size(), p.expected_footprints.size());
   for (size_t i = 0; i < footprints.size(); ++i) {
     const auto & footprint = footprints.at(i);
@@ -178,31 +190,23 @@ INSTANTIATE_TEST_SUITE_P(
         {wheel_base_to_front_overhang, half_width_left}}}},
     CreateVehicleFootprintsAlongTrajectoryParam{
       "CurvedPathAtNinetyDeg",
-      Eigen::Matrix2d::Zero(),  // No covariance/margin
+      Eigen::Matrix2d::Zero(),
       0.0,
-      {{{10.0, 0.0}, M_PI_2}, {{0.0, 10.0}, M_PI}},  // Two-point trajectory
-      {
-        // Expected Footprint 1: At (10.0, 0.0) facing +Y (Yaw = PI/2)
-        // Formula: Global_X = Base_X - Local_Y | Global_Y = Base_Y + Local_X
-        {{10.0 - half_width_left, wheel_base_to_front_overhang},  // Front-Left
-         {10.0 + half_width_right,
-          wheel_base_to_front_overhang},               // Front-Right (Local Y is -half_width_right)
-         {10.0 + half_width_right, half_wheel_base},   // Mid-Right
-         {10.0 + half_width_right, -rear_overhang_m},  // Rear-Right
-         {10.0 - half_width_left, -rear_overhang_m},   // Rear-Left
-         {10.0 - half_width_left, half_wheel_base},    // Mid-Left
-         {10.0 - half_width_left, wheel_base_to_front_overhang}},  // Closing Front-Left
+      {{{10.0, 0.0}, M_PI_2}, {{0.0, 10.0}, M_PI}},
+      {{{10.0 - half_width_left, wheel_base_to_front_overhang},
+        {10.0 + half_width_right, wheel_base_to_front_overhang},
+        {10.0 + half_width_right, half_wheel_base},
+        {10.0 + half_width_right, -rear_overhang_m},
+        {10.0 - half_width_left, -rear_overhang_m},
+        {10.0 - half_width_left, half_wheel_base},
+        {10.0 - half_width_left, wheel_base_to_front_overhang}},
 
-        // Expected Footprint 2: At (0.0, 10.0) facing -X (Yaw = PI)
-        // Formula: Global_X = Base_X - Local_X | Global_Y = Base_Y - Local_Y
-        {{-wheel_base_to_front_overhang, 10.0 - half_width_left},  // Front-Left
-         {-wheel_base_to_front_overhang,
-          10.0 + half_width_right},                    // Front-Right (Local Y is -half_width_right)
-         {-half_wheel_base, 10.0 + half_width_right},  // Mid-Right
-         {rear_overhang_m, 10.0 + half_width_right},   // Rear-Right (Local X is -rear_overhang_m)
-         {rear_overhang_m, 10.0 - half_width_left},    // Rear-Left
-         {-half_wheel_base, 10.0 - half_width_left},   // Mid-Left
-         {-wheel_base_to_front_overhang, 10.0 - half_width_left}}  // Closing Front-Left
-      }}),
+       {{-wheel_base_to_front_overhang, 10.0 - half_width_left},
+        {-wheel_base_to_front_overhang, 10.0 + half_width_right},
+        {-half_wheel_base, 10.0 + half_width_right},
+        {rear_overhang_m, 10.0 + half_width_right},
+        {rear_overhang_m, 10.0 - half_width_left},
+        {-half_wheel_base, 10.0 - half_width_left},
+        {-wheel_base_to_front_overhang, 10.0 - half_width_left}}}}),
   ::testing::PrintToStringParamName());
 }  // namespace autoware::boundary_departure_checker
