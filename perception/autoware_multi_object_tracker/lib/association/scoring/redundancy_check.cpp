@@ -66,13 +66,12 @@ bool isRedundant(
   const bool is_target_known = target_known_prob >= min_known_prob;
   const bool is_source_known = source_known_prob >= min_known_prob;
 
-  double iou = 0.0;
   if (is_pedestrian) {
-    iou = shapes::get1dIoU(source_object, target_object);
+    double iou = shapes::get1dIoU(source_object, target_object);
     if (iou < min_valid_iou) return false;
     return iou > config.min_known_object_removal_iou;
   } else if (is_target_known && is_source_known) {
-    iou = shapes::get2dIoU(source_object, target_object, min_union_iou_area);
+    double iou = shapes::get2dIoU(source_object, target_object, min_union_iou_area);
     if (iou < min_valid_iou) return false;
     return iou > config.min_known_object_removal_iou;
   } else if (is_target_known || is_source_known) {
@@ -96,7 +95,7 @@ bool isRedundant(
       generalized_iou > adaptive_threshold);
   } else {
     // Both are unknown: use generalized IoU
-    iou = shapes::get2dGeneralizedIoU(source_object, target_object);
+    double iou = shapes::get2dGeneralizedIoU(source_object, target_object);
     return iou > generalized_iou_threshold;
   }
 }

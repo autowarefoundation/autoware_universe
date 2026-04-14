@@ -17,7 +17,7 @@
 #include "multi_object_tracker_node.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>

@@ -47,7 +47,7 @@ set(${PROJECT_NAME}_lib
   lib/association/scoring/assignment_scoring.cpp
   lib/association/scoring/redundancy_check.cpp
   lib/association/mu_successive_shortest_path/mu_ssp.cpp
-  lib/object_model/types.cpp
+  lib/types.cpp
   lib/object_model/uuid.cpp
   lib/object_model/shapes.cpp
   lib/tracker/motion_model/bicycle_motion_model.cpp

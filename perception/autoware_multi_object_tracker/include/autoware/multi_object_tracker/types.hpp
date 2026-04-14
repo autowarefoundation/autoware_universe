@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TYPES_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TYPES_HPP_
 
 #include "autoware/multi_object_tracker/object_model/classes.hpp"
 
@@ -364,4 +364,4 @@ using types::TrackerType;
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TYPES_HPP_

@@ -16,7 +16,7 @@
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__ASSIGNMENT_SCORING_HPP_
 
 #include "autoware/multi_object_tracker/configurations.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
 {

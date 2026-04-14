@@ -15,7 +15,7 @@
 #include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 
 #include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/box.hpp>

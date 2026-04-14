@@ -19,7 +19,7 @@
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/object_model/classes.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/object_model/uuid.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/unstable_shape_filter.hpp"
 

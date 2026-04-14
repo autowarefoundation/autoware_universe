@@ -13,7 +13,7 @@
 // limitations under the License.
 #include "test_bench.hpp"
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <algorithm>
 #include <cmath>

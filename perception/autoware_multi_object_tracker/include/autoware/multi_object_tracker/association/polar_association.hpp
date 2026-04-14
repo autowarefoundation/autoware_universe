@@ -16,7 +16,7 @@
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__POLAR_ASSOCIATION_HPP_
 
 #include "autoware/multi_object_tracker/association/association_base.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
 #include <list>

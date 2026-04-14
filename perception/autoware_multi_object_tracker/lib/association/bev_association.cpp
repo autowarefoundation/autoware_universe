@@ -16,7 +16,7 @@
 
 #include "autoware/multi_object_tracker/association/scoring/assignment_scoring.hpp"
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

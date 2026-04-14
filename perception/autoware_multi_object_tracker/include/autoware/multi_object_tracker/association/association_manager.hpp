@@ -19,7 +19,7 @@
 #include "autoware/multi_object_tracker/association/bev_association.hpp"
 #include "autoware/multi_object_tracker/association/polar_association.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
 
