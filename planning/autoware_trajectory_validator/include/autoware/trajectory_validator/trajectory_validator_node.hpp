@@ -19,6 +19,10 @@
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_trajectory_validator/autoware_trajectory_validator_param.hpp>
+#include <autoware_trajectory_validator/msg/metric_report.hpp>
+#include <autoware_trajectory_validator/msg/validation_report.hpp>
+#include <autoware_trajectory_validator/msg/validation_report_array.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
@@ -36,6 +40,8 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <algorithm>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -48,6 +54,9 @@ using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_trajectory_validator::msg::MetricReport;
+using autoware_trajectory_validator::msg::ValidationReport;
+using autoware_trajectory_validator::msg::ValidationReportArray;
 using autoware_utils_diagnostics::DiagnosticsInterface;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
@@ -59,14 +68,41 @@ public:
   {
     std::string plugin_name;
     bool is_feasible{true};
+    bool is_shadow_mode{false};
     std::string reason;
   };
 
   struct EvaluationTable
   {
     std::string generator_id;
-    bool is_overall_feasible{true};
     std::unordered_map<std::string, std::vector<PluginEvaluation>> evaluations;
+
+    /**
+     * @brief Returns true if any evaluation is feasible or in shadow mode.
+     */
+    bool all_acceptable() const
+    {
+      return all_evaluations([](const auto & e) { return e.is_feasible || e.is_shadow_mode; });
+    }
+
+    /**
+     * @brief Returns true if all evaluations are feasible.
+     */
+    bool all_feasible() const
+    {
+      return all_evaluations([](const auto & e) { return e.is_feasible; });
+    }
+
+  private:
+    /**
+     * @brief Returns true if all evaluations satisfy the given predicate.
+     */
+    bool all_evaluations(const std::function<bool(const PluginEvaluation &)> & pred) const
+    {
+      return std::all_of(evaluations.begin(), evaluations.end(), [&](const auto & pair) {
+        return std::all_of(pair.second.begin(), pair.second.end(), pred);
+      });
+    }
   };
 
   explicit TrajectoryValidator(const rclcpp::NodeOptions & node_options);
@@ -85,6 +121,12 @@ private:
   void unload_metric(const std::string & name);
   void update_diagnostic(
     const CandidateTrajectories & input_trajectories, const size_t num_feasible_trajectories);
+
+  /**
+   * @brief Publishes validation reports
+   * @param reports Validation reports to publish
+   */
+  void publish_validation_reports(const std::vector<ValidationReport> & reports);
 
   validator::ParamListener listener_;
   validator::Params params_;
@@ -107,6 +149,7 @@ private:
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
 
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
+  std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_validation_reports_;
 
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 

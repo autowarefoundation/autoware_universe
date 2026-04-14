@@ -71,7 +71,7 @@ void OutOfLaneFilter::update_parameters(const validator::Params & params)
   params_.min_value = params.out_of_lane.min_value;
 }
 
-tl::expected<void, std::string> OutOfLaneFilter::is_feasible(
+OutOfLaneFilter::result_t OutOfLaneFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   // Check required context data
@@ -87,11 +87,18 @@ tl::expected<void, std::string> OutOfLaneFilter::is_feasible(
   const bool will_leave_lane =
     boundary_departure_checker_->checkPathWillLeaveLane(context.lanelet_map, path);
 
-  // Return false if the path will leave the lane
-  if (will_leave_lane) {
-    return tl::make_unexpected("Trajectory goes out of lane boundaries");
-  }
-  return {};
+  // Set metrics as ERROR if the path will leave the lane
+  std::vector<MetricReport> metrics{
+    autoware_trajectory_validator::build<MetricReport>()
+      .validator_name(get_name())
+      .validator_category(category())
+      .metric_name("check_out_of_lane")
+      .metric_value(0.0)
+      .level(will_leave_lane ? MetricReport::ERROR : MetricReport::OK)};
+
+  const auto is_feasible = !will_leave_lane;
+
+  return ValidationResult{is_feasible, std::move(metrics)};
 }
 
 }  // namespace autoware::trajectory_validator::plugin::safety

@@ -31,6 +31,20 @@
 #include <unordered_map>
 #include <vector>
 
+namespace
+{
+std::unordered_map<std::string, std::string> get_generator_uuid_to_name_map(
+  const autoware_internal_planning_msgs::msg::CandidateTrajectories & candidate_trajectories)
+{
+  std::unordered_map<std::string, std::string> uuid_to_name;
+  uuid_to_name.reserve(candidate_trajectories.generator_info.size());
+  for (const auto & info : candidate_trajectories.generator_info) {
+    uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
+  }
+  return uuid_to_name;
+}
+}  // namespace
+
 namespace autoware::trajectory_validator
 {
 
@@ -64,8 +78,16 @@ TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
 
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/feasible_trajectory_filter", 1);
-  time_keeper_ =
-    std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
+  time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
+
+  pub_processing_time_text_ = create_publisher<autoware_internal_debug_msgs::msg::StringStamped>(
+    "~/debug/processing_time_text", rclcpp::QoS(1));
+
+  pub_processing_time_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+  pub_debug_markers_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+  pub_validation_reports_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+
+  pseudo_emergency_stop_handler_ = std::make_unique<PseudoEmergencyStopHandler>(*this);
 }
 
 void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr msg)
@@ -114,46 +136,66 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
   size_t num_feasible_trajectories = 0;
 
   // Create output message for filtered trajectories
+  const auto uuid_to_name = get_generator_uuid_to_name_map(*msg);
+
   auto filtered_msg = std::make_unique<CandidateTrajectories>();
+  diagnostics_interface_.clear();
+  size_t num_feasible_trajectories = 0;
+  std::vector<ValidationReport> reports;
 
   for (const auto & trajectory : msg->candidate_trajectories) {
     // Apply each filter to the trajectory
 
     EvaluationTable table;
-    table.generator_id = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
+    const auto hex_generator_id = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
+    table.generator_id = hex_generator_id;
 
-    // NOTE: this is used to determine diagnostic status, and doesn't affect whether filtering is
-    // applied
-    bool is_overall_feasible = true;
+    std::vector<MetricReport> metrics;
     for (const auto & plugin : plugins_) {
       PluginEvaluation evaluation;
       evaluation.plugin_name = plugin->get_name();
+      evaluation.is_shadow_mode = plugin->is_shadow_mode();
 
-      if (const auto res = plugin->is_feasible(trajectory.points, context); !res) {
-        RCLCPP_WARN_THROTTLE(
-          get_logger(), *get_clock(), 1000, "Not feasible: %s", res.error().c_str());
-        diagnostics_interface_.add_key_value(plugin->get_name(), res.error());
+      stop_watch.tic(evaluation.plugin_name);
 
+      const auto res = plugin->is_feasible(trajectory.points, context);
+      if (!res) {
         evaluation.is_feasible = false;
         evaluation.reason = res.error();
-
-        if (plugin->is_shadow_mode()) {
-          table.is_overall_feasible = false;
-          continue;
+      } else {
+        const auto & val = res.value();
+        evaluation.is_feasible = evaluation.is_feasible && val.is_feasible;
+        if (!val.is_feasible) {
+          evaluation.reason = "Found failed metrics";
         }
-
-        is_overall_feasible = false;
+        metrics.insert(metrics.end(), val.metrics.begin(), val.metrics.end());
       }
 
+      if (!evaluation.is_feasible) {
+        RCLCPP_WARN_THROTTLE(
+          get_logger(), *get_clock(), 1000, "[%s] %s", plugin->get_name().c_str(),
+          evaluation.reason.c_str());
+      }
+
+      diagnostics_interface_.add_key_value(
+        plugin->get_name(), evaluation.is_feasible ? std::string("OK") : std::string("NG"));
+      processing_time_ms[evaluation.plugin_name] += stop_watch.toc(evaluation.plugin_name);
       table.evaluations[plugin->category()].push_back(evaluation);
     }
 
     evaluation_tables_.push_back(table);
 
-    // NOTE: table.is_overall_feasible considers debug mode,
-    // so in debug mode, all trajectories are kept
-    if (table.is_overall_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
-    if (is_overall_feasible) ++num_feasible_trajectories;
+    if (table.all_acceptable()) filtered_msg->candidate_trajectories.push_back(trajectory);
+
+    const auto all_feasible = table.all_feasible();
+    if (all_feasible) ++num_feasible_trajectories;
+
+    reports.push_back(autoware_trajectory_validator::build<ValidationReport>()
+                        .trajectory_stamp(trajectory.header.stamp)
+                        .generator_id(trajectory.generator_id)
+                        .generator_name(uuid_to_name.at(hex_generator_id))
+                        .level(all_feasible ? ValidationReport::OK : ValidationReport::ERROR)
+                        .metrics(std::move(metrics)));
   }
 
   // Also filter generator_info to match kept trajectories
@@ -168,6 +210,7 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
   }
 
   update_diagnostic(*msg, num_feasible_trajectories);
+  publish_validation_reports(reports);
   pub_trajectories_->publish(*filtered_msg);
 }
 
@@ -250,6 +293,73 @@ void TrajectoryValidator::update_diagnostic(
   }
 
   diagnostics_interface_.publish(this->get_clock()->now());
+}
+
+void TrajectoryValidator::publish_processing_time(
+  const std::unordered_map<std::string, double> & processing_time)
+{
+  for (const auto & [key, value] : processing_time) {
+    if (key == "Total") {
+      pub_processing_time_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+        "processing_time_ms", value);
+      continue;
+    }
+    pub_processing_time_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      key + "/processing_time_ms", value);
+  }
+}
+
+void TrajectoryValidator::publish_internal_state(
+  const std::unordered_map<std::string, double> & processing_time,
+  const std::vector<EvaluationTable> & evaluation_tables, const geometry_msgs::msg::Pose & ego_pose)
+{
+  std::unordered_map<std::string, std::vector<std::string>> plugin_filtered_paths;
+  // 1. Group the filtered paths by plugin
+  for (const auto & eval : evaluation_tables) {
+    std::string short_uuid = eval.generator_id.substr(0, 8);  // Just using short UUID as requested
+    for (const auto & [category, evaluations] : eval.evaluations) {
+      for (const auto & plugin_eval : evaluations) {
+        if (!plugin_eval.is_feasible) {
+          plugin_filtered_paths[plugin_eval.plugin_name].push_back(short_uuid);
+        }
+      }
+    }
+  }
+
+  // 2. Extract and sort the plugin names alphabetically
+  std::vector<std::string> sorted_plugins;
+  for (const auto & [plugin_name, _] : processing_time) {
+    if (plugin_name != "Total") {
+      sorted_plugins.push_back(plugin_name);
+    }
+  }
+  std::sort(sorted_plugins.begin(), sorted_plugins.end());
+
+  std::string report = "\n--- Trajectory Validator Processing Time Report ---\n";
+  double total_time_ms = processing_time.count("Total") ? processing_time.at("Total") : 0.0;
+  report += fmt::format("Total: {:.2f} ms\n", total_time_ms);
+
+  for (const auto & plugin_name : sorted_plugins) {
+    double time = processing_time.at(plugin_name);
+    report += fmt::format("- {}: {:.2f} ms\n", plugin_name, time);
+  }
+
+  autoware_internal_debug_msgs::msg::StringStamped text_msg;
+  text_msg.stamp = this->now();
+  text_msg.data = report;
+  pub_processing_time_text_->publish(text_msg);
+
+  constexpr double offset = 1.0;
+  auto internal_state_text = create_internal_state_text(
+    plugin_filtered_paths, sorted_plugins, ego_pose, get_clock()->now(),
+    vehicle_info_.vehicle_height_m + offset);
+  pub_debug_markers_->publish<visualization_msgs::msg::MarkerArray>("markers", internal_state_text);
+}
+
+void TrajectoryValidator::publish_validation_reports(const std::vector<ValidationReport> & reports)
+{
+  auto msg = autoware_trajectory_validator::build<ValidationReportArray>().reports(reports);
+  pub_validation_reports_->publish<ValidationReportArray>("validation_reports", msg);
 }
 }  // namespace autoware::trajectory_validator
 

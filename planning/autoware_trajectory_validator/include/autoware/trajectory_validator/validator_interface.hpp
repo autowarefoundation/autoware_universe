@@ -18,6 +18,7 @@
 #include "autoware/trajectory_validator/filter_context.hpp"
 
 #include <autoware_trajectory_validator/autoware_trajectory_validator_param.hpp>
+#include <autoware_trajectory_validator/msg/metric_report.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <tl_expected/expected.hpp>
 
@@ -33,10 +34,23 @@ namespace autoware::trajectory_validator::plugin
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using VehicleInfo = autoware::vehicle_info_utils::VehicleInfo;
+using autoware_trajectory_validator::msg::MetricReport;
+
+/**
+ * @brief Result of a validation operation, including feasibility and a list of metrics.
+ * @note Default-constructed ValidationResult is feasible with no metrics.
+ */
+struct ValidationResult
+{
+  bool is_feasible{true};
+  std::vector<MetricReport> metrics{};
+};
 
 class ValidatorInterface
 {
 public:
+  using result_t = tl::expected<ValidationResult, std::string>;
+
   explicit ValidatorInterface(std::string name) : name_(std::move(name)) {}
 
   virtual ~ValidatorInterface() = default;
@@ -46,7 +60,7 @@ public:
   ValidatorInterface & operator=(ValidatorInterface &&) = delete;
 
   // Main filter method with context for plugin-specific data
-  virtual tl::expected<void, std::string> is_feasible(
+  virtual result_t is_feasible(
     const TrajectoryPoints & traj_points, const FilterContext & context) = 0;
 
   virtual void update_parameters(const validator::Params & params) = 0;

@@ -240,7 +240,7 @@ bool CollisionFilter::check_collision(
   return ttc >= 0.0 && ttc < params_.min_ttc;
 }
 
-tl::expected<void, std::string> CollisionFilter::is_feasible(
+CollisionFilter::result_t CollisionFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   if (!context.predicted_objects || context.predicted_objects->objects.empty()) {
@@ -251,6 +251,8 @@ tl::expected<void, std::string> CollisionFilter::is_feasible(
     precompute_object_positions(*context.predicted_objects, params_.max_check_time);
 
   // Check each trajectory point within time horizon
+  bool is_feasible = true;
+  std::vector<MetricReport> metrics;
   for (const auto & point : traj_points) {
     const double time_from_start = rclcpp::Duration(point.time_from_start).seconds();
     if (time_from_start > params_.max_check_time) {
@@ -259,14 +261,18 @@ tl::expected<void, std::string> CollisionFilter::is_feasible(
 
     // Check collision with each cached object
     for (size_t obj_idx = 0; obj_idx < cache.size(); ++obj_idx) {
-      if (check_collision(point, cache, obj_idx, time_from_start)) {
-        return tl::make_unexpected(
-          fmt::format("Collision with object at time {:.2f}s", time_from_start));
-      }
+      is_feasible = is_feasible && !check_collision(point, cache, obj_idx, time_from_start);
     }
   }
 
-  return {};
+  metrics.push_back(autoware_trajectory_validator::build<MetricReport>()
+                      .validator_name(get_name())
+                      .validator_category(category())
+                      .metric_name("check_collision")
+                      .metric_value(0.0)
+                      .level(is_feasible ? MetricReport::OK : MetricReport::ERROR));
+
+  return ValidationResult{is_feasible, std::move(metrics)};
 }
 
 void CollisionFilter::update_parameters(const validator::Params & params)
