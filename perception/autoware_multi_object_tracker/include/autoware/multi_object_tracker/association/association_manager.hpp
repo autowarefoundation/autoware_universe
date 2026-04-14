@@ -23,6 +23,8 @@
 
 #include <autoware_utils_debug/time_keeper.hpp>
 
+#include <geometry_msgs/msg/pose.hpp>
+
 #include <list>
 #include <memory>
 #include <optional>
@@ -47,6 +49,7 @@ public:
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
+  void setEgoPose(const std::optional<geometry_msgs::msg::Pose> & ego_pose);
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
 private:

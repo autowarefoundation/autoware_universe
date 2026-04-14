@@ -26,7 +26,7 @@ AssociationManager::AssociationManager(
   const AssociatorConfig & bev_config, const std::vector<types::InputChannel> & channels_config)
 : channels_config_(channels_config),
   bev_association_(std::make_unique<BevAssociation>(bev_config)),
-  polar_association_(std::make_unique<PolarAssociation>())
+  polar_association_(std::make_unique<PolarAssociation>(bev_config))
 {
 }
 
@@ -36,6 +36,11 @@ AssociationBase & AssociationManager::getAssociationForChannel(const uint channe
     return *polar_association_;
   }
   return *bev_association_;
+}
+
+void AssociationManager::setEgoPose(const std::optional<geometry_msgs::msg::Pose> & ego_pose)
+{
+  polar_association_->setEgoPose(ego_pose);
 }
 
 types::AssociationResult AssociationManager::associate(
@@ -48,6 +53,7 @@ types::AssociationResult AssociationManager::associate(
 void AssociationManager::setTimeKeeper(
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
+  polar_association_->setTimeKeeper(time_keeper_ptr);
   bev_association_->setTimeKeeper(std::move(time_keeper_ptr));
 }
 

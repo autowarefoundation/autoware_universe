@@ -66,6 +66,7 @@ types::AssociationResult TrackerProcessor::associate(
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  association_manager_->setEgoPose(ego_pose_);
   return association_manager_->associate(detected_objects, list_tracker_);
 }
 

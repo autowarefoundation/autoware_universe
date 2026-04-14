@@ -16,31 +16,87 @@
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__POLAR_ASSOCIATION_HPP_
 
 #include "autoware/multi_object_tracker/association/association_base.hpp"
+#include "autoware/multi_object_tracker/association/azimuth_bin_index.hpp"
+#include "autoware/multi_object_tracker/association/scoring/polar_assignment_scoring.hpp"
+#include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
+#include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
+#include <autoware_utils_debug/time_keeper.hpp>
+
+#include <geometry_msgs/msg/pose.hpp>
+
 #include <list>
 #include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
 
 namespace autoware::multi_object_tracker
 {
 
 /// Polar-coordinate association algorithm.
-/// An alternative to BevAssociation (BEV area scoring), intended for channels where
-/// sensor geometry, visibility, or range-bearing uncertainty models guide matching.
-/// Assigned per input channel via InputChannel::associator_type = AssociationType::POLAR.
-/// Currently a stub; implement associate() to activate.
+/// Converts measurement and tracker bounding boxes to polar coordinates centered at the ego
+/// vehicle (base_link origin in map frame), then scores overlap based on azimuth interval IoU.
+
 class PolarAssociation : public AssociationBase
 {
 public:
-  PolarAssociation() = default;
+  explicit PolarAssociation(const AssociatorConfig & config);
   ~PolarAssociation() override = default;
 
   /// AssociationBase implementation.
-  /// Performs polar-coordinate based measurement-to-tracker matching.
   types::AssociationResult associate(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers) override;
+
+  /// Set ego pose for polar coordinate computation. Must be called before associate().
+  void setEgoPose(const std::optional<geometry_msgs::msg::Pose> & ego_pose);
+
+  void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
+
+private:
+  // Per-tracker entry bundling all precomputed data for one tracker
+  struct TrackerPolarEntry
+  {
+    types::DynamicObject object;
+    classes::Label label;
+    types::TrackerType type;
+    polar_scoring::PolarFootprint footprint;
+  };
+
+  // Per-tracker precomputed data for a single association round
+  struct PolarPreparationData
+  {
+    std::vector<TrackerPolarEntry> trackers;
+  };
+
+  AssociatorConfig config_;
+  const double score_threshold_;
+  std::unique_ptr<gnn_solver::GnnSolverInterface> gnn_solver_ptr_;
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
+  std::optional<geometry_msgs::msg::Pose> ego_pose_;
+
+  AzimuthBinIndex azimuth_bin_index_;
+
+  PolarPreparationData prepareAssociationData(
+    const types::DynamicObjectList & measurements,
+    const std::list<std::shared_ptr<Tracker>> & trackers, double ego_x, double ego_y, double ego_z,
+    double ego_yaw);
+
+  void processMeasurement(
+    const types::DynamicObject & measurement_object, size_t measurement_idx,
+    classes::Label measurement_label, const PolarPreparationData & prep_data, double ego_x,
+    double ego_y, double ego_z, double ego_yaw, types::AssociationData & association_data);
+
+  types::AssociationData calcAssociationData(
+    const types::DynamicObjectList & measurements,
+    const std::list<std::shared_ptr<Tracker>> & trackers);
+
+  void assign(const types::AssociationData & data, types::AssociationResult & result);
+
+  std::vector<std::vector<double>> formatScoreMatrix(const types::AssociationData & data) const;
 };
 
 }  // namespace autoware::multi_object_tracker
