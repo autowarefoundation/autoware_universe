@@ -21,6 +21,34 @@
 namespace autoware::universe_utils
 {
 
+namespace
+{
+struct Neighbors
+{
+  std::size_t prev;
+  std::size_t next;
+  bool valid;
+};
+
+inline Neighbors get_neighbors(const std::vector<LinkedPoint> & points, std::size_t i)
+{
+  const auto & p = points[i];
+  if (!p.prev_index.has_value() || !p.next_index.has_value()) return {0, 0, false};
+  return {p.prev_index.value(), p.next_index.value(), true};
+}
+
+inline bool point_blocks_ear(
+  std::size_t p_index, std::size_t a_index, const LinkedPoint & a, const LinkedPoint & b,
+  const LinkedPoint & c, const std::vector<LinkedPoint> & points)
+{
+  const auto & p = points[p_index];
+  if (!point_in_triangle(a.x(), a.y(), b.x(), b.y(), c.x(), c.y(), p.x(), p.y())) return false;
+  const auto nb = get_neighbors(points, p_index);
+  if (!nb.valid) return false;
+  return area(points, nb.prev, p_index, nb.next) >= 0;
+}
+}  // namespace
+
 void remove_point(const std::size_t p_index, std::vector<LinkedPoint> & points)
 {
   if (!points[p_index].prev_index.has_value() || !points[p_index].next_index.has_value()) {
@@ -474,32 +502,25 @@ std::size_t eliminate_holes(
 
 bool is_ear(const std::size_t ear_index, const std::vector<LinkedPoint> & points)
 {
-  if (!points[ear_index].prev_index.has_value() || !points[ear_index].next_index.has_value()) {
-    return false;  // invariant: never reached; guard for clang-tidy
-  }
-  const auto a_index = points[ear_index].prev_index.value();
-  const auto b_index = ear_index;
-  const auto c_index = points[ear_index].next_index.value();
+  const auto nb = get_neighbors(points, ear_index);
+  if (!nb.valid) return false;
 
+  const auto a_index = nb.prev;
+  const auto b_index = ear_index;
+  const auto c_index = nb.next;
   const auto a = points[a_index];
   const auto b = points[b_index];
   const auto c = points[c_index];
 
   if (area(points, a_index, b_index, c_index) >= 0) return false;
-  if (!points[c_index].next_index.has_value()) return true;
-  auto p_index = points[c_index].next_index.value();
-  while (p_index != a_index) {
-    const auto p = points[p_index];
-    if (
-      point_in_triangle(a.x(), a.y(), b.x(), b.y(), c.x(), c.y(), p.x(), p.y()) &&
-      p.prev_index.has_value() && p.next_index.has_value() &&
-      area(points, p.prev_index.value(), p_index, p.next_index.value()) >= 0) {
-      return false;
-    }
-    if (!points[p_index].next_index.has_value()) break;
-    p_index = points[p_index].next_index.value();
-  }
 
+  auto p_opt = points[c_index].next_index;
+  while (p_opt.has_value()) {
+    const auto p_index = p_opt.value();
+    if (p_index == a_index) break;
+    if (point_blocks_ear(p_index, a_index, a, b, c, points)) return false;
+    p_opt = points[p_index].next_index;
+  }
   return true;
 }
 
@@ -569,42 +590,50 @@ void split_ear_clipping(
   } while (a_idx != start_idx);
 }
 
+namespace
+{
+inline void apply_fallback_pass(
+  int pass, std::size_t ear_index, std::vector<std::size_t> & indices,
+  std::vector<LinkedPoint> & points)
+{
+  if (pass == 0) {
+    ear_clipping_linked(filter_points(ear_index, ear_index, points), indices, points, 1);
+  } else if (pass == 1) {
+    ear_index =
+      cure_local_intersections(filter_points(ear_index, ear_index, points), indices, points);
+    ear_clipping_linked(ear_index, indices, points, 2);
+  } else if (pass == 2) {
+    split_ear_clipping(points, ear_index, indices);
+  }
+}
+}  // namespace
+
 void ear_clipping_linked(
   std::size_t ear_index, std::vector<std::size_t> & indices, std::vector<LinkedPoint> & points,
   const int pass)
 {
   auto stop = ear_index;
-  std::optional<std::size_t> next = std::nullopt;
 
-  while (points[ear_index].prev_index.has_value() && points[ear_index].next_index.has_value() &&
-         points[ear_index].prev_index.value() != points[ear_index].next_index.value()) {
-    next = points[ear_index].next_index;
+  while (true) {
+    const auto nb = get_neighbors(points, ear_index);
+    if (!nb.valid || nb.prev == nb.next) break;
+    const auto next = nb.next;
 
     if (is_ear(ear_index, points)) {
-      indices.push_back(points[ear_index].prev_index.value());
+      indices.push_back(nb.prev);
       indices.push_back(ear_index);
-      indices.push_back(next.value());
-
+      indices.push_back(next);
       remove_point(ear_index, points);
 
-      if (!next.has_value() || !points[next.value()].next_index.has_value()) break;
-      ear_index = points[next.value()].next_index.value();
-      stop = points[next.value()].next_index.value();
+      const auto advance = points[next].next_index;
+      if (!advance.has_value()) break;
+      ear_index = stop = advance.value();
       continue;
     }
 
-    ear_index = next.value();
-
+    ear_index = next;
     if (ear_index == stop) {
-      if (pass == 0) {
-        ear_clipping_linked(filter_points(ear_index, ear_index, points), indices, points, 1);
-      } else if (pass == 1) {
-        ear_index =
-          cure_local_intersections(filter_points(ear_index, ear_index, points), indices, points);
-        ear_clipping_linked(ear_index, indices, points, 2);
-      } else if (pass == 2) {
-        split_ear_clipping(points, ear_index, indices);
-      }
+      apply_fallback_pass(pass, ear_index, indices, points);
       break;
     }
   }
