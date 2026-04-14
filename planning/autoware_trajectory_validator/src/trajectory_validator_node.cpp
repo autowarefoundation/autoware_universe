@@ -77,6 +77,10 @@ TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
     load_metric(filter);
   }
 
+  for (const auto & filter : params_.shadow_mode_filter_names) {
+    load_metric(filter);
+  }
+
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectoryValidator::map_callback, this, std::placeholders::_1));
@@ -145,10 +149,15 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
     bool is_feasible = true;
     for (const auto & plugin : plugins_) {
       if (const auto res = plugin->is_feasible(trajectory.points, context); !res) {
-        is_feasible = false;
         RCLCPP_WARN_THROTTLE(
           get_logger(), *get_clock(), 1000, "Not feasible: %s", res.error().c_str());
         diagnostics_interface_.add_key_value(plugin->get_name(), res.error());
+
+        if (is_shadow_mode(plugin->get_name())) {
+          continue;
+        }
+
+        is_feasible = false;
       }
     }
 
@@ -246,6 +255,12 @@ void TrajectoryValidator::update_diagnostic(
   }
 
   diagnostics_interface_.publish(this->get_clock()->now());
+}
+
+bool TrajectoryValidator::is_shadow_mode(const std::string & plugin_name) const
+{
+  const auto & names = params_.shadow_mode_filter_names;
+  return std::find(names.begin(), names.end(), plugin_name) != names.end();
 }
 }  // namespace autoware::trajectory_validator
 

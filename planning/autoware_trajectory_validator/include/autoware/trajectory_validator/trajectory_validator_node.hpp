@@ -72,6 +72,8 @@ private:
     const CandidateTrajectories & input_trajectories,
     const CandidateTrajectories & filtered_trajectories);
 
+  bool is_shadow_mode(const std::string & plugin_name) const;
+
   validator::ParamListener listener_;
   validator::Params params_;
 
