@@ -30,7 +30,7 @@ std::pair<uint16_t, double> validateAndComputeLateralOffset(
   const SetLateralOffset::Request & request, const double current_inserted_lateral_offset,
   const std::shared_ptr<SideShiftParameters> & parameters)
 {
-  if (request.shift_mode == SetLateralOffset::Request::RAW_VALUE) {
+  if (request.shift_mode == SetLateralOffset::Request::EXPLICIT_LATERAL_OFFSET_AMOUNT) {
     return validateRawValue(
       static_cast<double>(request.shift_value), current_inserted_lateral_offset, parameters);
   }

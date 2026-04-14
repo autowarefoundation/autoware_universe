@@ -32,7 +32,8 @@ using SetLateralOffset = tier4_planning_msgs::srv::SetLateralOffset;
 
 /**
  * @brief Validation for SetLateralOffset service request.
- * @param request SetLateralOffset service request (uses Request::RAW_VALUE, Request::DIRECTION,
+ * @param request SetLateralOffset service request (uses Request::EXPLICIT_LATERAL_OFFSET_AMOUNT,
+ *        Request::DIRECTION,
  *        Request::RESET, Request::LEFT, Request::RIGHT from the message)
  * @param current_inserted_lateral_offset Current inserted lateral offset [m]
  * @param parameters Parameters used for the side shift module
