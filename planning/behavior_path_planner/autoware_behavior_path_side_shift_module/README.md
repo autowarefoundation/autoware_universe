@@ -4,13 +4,26 @@
 
 ## Overview of the Side Shift Module Process
 
-1. Receive the required lateral offset input.
+1. Receive the required lateral offset from the topic and/or the `~/set_lateral_offset` service.
 2. Update the `requested_lateral_offset_` under the following conditions:
    a. Verify if the last update time has elapsed.
    b. Ensure the required lateral offset value is different from the previous one.
 3. Insert the shift points into the path if the side shift module's status is not in the SHIFTING status.
 
 Please be aware that `requested_lateral_offset_` is continuously updated with the latest values and is not queued.
+
+## Lateral offset inputs and outputs
+
+Offsets use the same sign convention as `tier4_planning_msgs/msg/LateralOffset` (**positive = left** of the reference path, **negative = right**).
+
+| Interface    | Message / service                                               | Role                                                                                                                                                                                |
+| ------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Subscription | `~/input/lateral_offset` (`tier4_planning_msgs/LateralOffset`)  | Stream of requested lateral offset [m].                                                                                                                                             |
+| Service      | `~/set_lateral_offset` (`tier4_planning_msgs/SetLateralOffset`) | Request a new offset with a response: `EXPLICIT_LATERAL_OFFSET_AMOUNT` sets `shift_value` [m] directly; `DIRECTION` uses `LEFT` / `RIGHT` / `RESET` with step size from parameters. |
+| Publisher    | `~/output/lateral_offset` (`tier4_planning_msgs/LateralOffset`) | Reports the **current** inserted lateral offset [m] for feedback.                                                                                                                   |
+
+The same validation (magnitude limits, minimum gap versus the previous offset, and so on) applies whether the request arrives on the topic or through the service.
+It is recommended to use services so that the user can understand whether the request is accepted or not.
 
 ## Statuses of the Side Shift
 
