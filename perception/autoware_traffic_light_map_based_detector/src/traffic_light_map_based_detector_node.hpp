@@ -55,6 +55,7 @@ private:
   };
 
   std::unique_ptr<TrafficLightMapBasedDetector> detector_;
+  TrafficLightMapBasedDetectorConfig detector_config_;
   TransformSamplingConfig transform_sampling_config_;
 
   bool getTransform(
@@ -62,7 +63,6 @@ private:
   void mapCallback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
   void cameraInfoCallback(const sensor_msgs::msg::CameraInfo::ConstSharedPtr input_msg);
   void routeCallback(const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr input_msg);
-  void logMessages(const std::vector<LogMessage> & logs);
 };
 }  // namespace autoware::traffic_light
 #endif  // TRAFFIC_LIGHT_MAP_BASED_DETECTOR_NODE_HPP_

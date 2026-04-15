@@ -18,9 +18,7 @@
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
-#include <iostream>
 #include <memory>
-#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
@@ -61,6 +59,13 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
     classifier_ptr_ = std::make_shared<CNNClassifier>(this);
 #else
     RCLCPP_ERROR(this->get_logger(), "please install CUDA, and TensorRT to use cnn classifier");
+#endif
+  } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::LampRecognizer) {
+#if ENABLE_GPU
+    classifier_ptr_ = std::make_shared<CnnLampRecognizer>(this);
+#else
+    RCLCPP_ERROR(
+      this->get_logger(), "please install CUDA, CUDNN and TensorRT to use LampRecognizer");
 #endif
   }
 
