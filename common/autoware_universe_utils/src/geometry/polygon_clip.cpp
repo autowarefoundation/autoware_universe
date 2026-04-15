@@ -51,7 +51,7 @@ bool is_inside(const LinkedVertex & v, const ExtendedPolygon & poly)
   constexpr double tolerance = 1e-9;
 
   std::size_t vertexIndex = poly.first;
-  std::size_t next_index = poly.vertices[vertexIndex].next.value_or(poly.first);
+  std::size_t next_index = poly.vertices[vertexIndex].next();
 
   do {
     const LinkedVertex & vertex = poly.vertices[vertexIndex];
@@ -65,13 +65,13 @@ bool is_inside(const LinkedVertex & v, const ExtendedPolygon & poly)
 
       if (std::abs(vertex.x - next.x) < tolerance && std::abs(vertex.y - next.y) < tolerance) {
         vertexIndex = next_index;
-        next_index = poly.vertices[vertexIndex].next.value_or(poly.first);
+        next_index = poly.vertices[vertexIndex].next();
         continue;
       }
     }
 
     vertexIndex = next_index;
-    next_index = poly.vertices[vertexIndex].next.value_or(poly.first);
+    next_index = poly.vertices[vertexIndex].next();
   } while (vertexIndex != poly.first);
 
   return contains;
@@ -124,12 +124,12 @@ std::size_t add_vertex(
   polygon.vertices.push_back(new_vertex);
   if (!polygon.vertices.empty()) {
     std::size_t last = last_index;
-    std::size_t next = polygon.vertices[last].next.value_or(0);
-    polygon.vertices[p_idx].prev = last;
-    polygon.vertices[p_idx].next = next;
-    polygon.vertices[last].next = p_idx;
+    std::size_t next = polygon.vertices[last].next_index.value_or(0);
+    polygon.vertices[p_idx].prev_index = last;
+    polygon.vertices[p_idx].next_index = next;
+    polygon.vertices[last].next_index = p_idx;
     if (next != p_idx) {
-      polygon.vertices[next].prev = p_idx;
+      polygon.vertices[next].prev_index = p_idx;
     }
   }
   return p_idx;
@@ -146,8 +146,8 @@ ExtendedPolygon create_extended_polygon(const autoware::universe_utils::Polygon2
     const auto & point = outer[i];
     LinkedVertex vertex{point.x(), point.y()};
 
-    vertex.prev = (i == 0) ? outer.size() - 1 : i - 1;
-    vertex.next = (i + 1) % outer.size();
+    vertex.prev_index = (i == 0) ? outer.size() - 1 : i - 1;
+    vertex.next_index = (i + 1) % outer.size();
 
     polygon.vertices[i] = vertex;
   }
@@ -160,8 +160,8 @@ ExtendedPolygon create_extended_polygon(const LinkedVertex & vertex)
 
   polygon.vertices.push_back(vertex);
 
-  polygon.vertices.back().prev = std::nullopt;
-  polygon.vertices.back().next = std::nullopt;
+  polygon.vertices.back().prev_index = std::nullopt;
+  polygon.vertices.back().next_index = std::nullopt;
   return polygon;
 }
 
@@ -173,23 +173,21 @@ void insert_vertex(
 
   while (current_index != end_index &&
          vertices[current_index].distance < vertices[vertex_index].distance) {
-    if (!vertices[current_index].next.has_value()) break;
-    current_index = vertices[current_index].next.value();
+    current_index = vertices[current_index].next();
   }
 
-  vertices[vertex_index].next = current_index;
-  if (!vertices[current_index].prev.has_value()) return;
-  vertices[vertex_index].prev = vertices[current_index].prev.value();
-  std::size_t prev_index = vertices[current_index].prev.value();
+  vertices[vertex_index].next_index = current_index;
+  vertices[vertex_index].prev_index = vertices[current_index].prev();
+  const std::size_t prev_index = vertices[current_index].prev();
 
   if (prev_index != current_index) {
-    vertices[prev_index].next = vertex_index;
+    vertices[prev_index].next_index = vertex_index;
   }
-  vertices[current_index].prev = vertex_index;
+  vertices[current_index].prev_index = vertex_index;
 
   if (current_index == start_index) {
-    vertices[vertex_index].prev = start_index;
-    vertices[vertex_index].next = start_index;
+    vertices[vertex_index].prev_index = start_index;
+    vertices[vertex_index].next_index = start_index;
   }
 }
 
@@ -197,8 +195,7 @@ std::size_t get_next(std::size_t index, const std::vector<LinkedVertex> & vertic
 {
   std::size_t current_index = index;
   while (vertices[current_index].is_intersection) {
-    if (!vertices[current_index].next.has_value()) break;
-    current_index = vertices[current_index].next.value();
+    current_index = vertices[current_index].next();
   }
   return current_index;
 }
@@ -210,8 +207,7 @@ std::size_t get_first_intersect(ExtendedPolygon & polygon)
 
   do {
     if (polygon.vertices[v].is_intersection && !polygon.vertices[v].visited) break;
-    if (!polygon.vertices[v].next.has_value()) break;
-    v = polygon.vertices[v].next.value();
+    v = polygon.vertices[v].next();
   } while (v != polygon.first);
 
   polygon.first_intersect = v;
@@ -228,8 +224,7 @@ bool has_unprocessed(ExtendedPolygon & polygon)
       polygon.last_unprocessed = v;
       return true;
     }
-    if (!polygon.vertices[v].next.has_value()) break;
-    v = polygon.vertices[v].next.value();
+    v = polygon.vertices[v].next();
   } while (v != polygon.first);
   polygon.last_unprocessed = std::nullopt;
   return false;
@@ -250,8 +245,7 @@ autoware::universe_utils::Polygon2d get_points(const ExtendedPolygon & polygon)
       outer_ringA.push_back(point);
     }
 
-    if (!vertex.next.has_value()) break;
-    v_index = vertex.next.value();
+    v_index = vertex.next();
   } while (v_index != start_index);
 
   boost::geometry::append(poly.outer(), outer_ringA);
@@ -266,8 +260,7 @@ void mark_intersections(ExtendedPolygon & source, ExtendedPolygon & clip, bool &
 
   do {
     if (source.vertices[source_vertex_index].is_intersection) {
-      if (!source.vertices[source_vertex_index].next.has_value()) break;
-      source_vertex_index = source.vertices[source_vertex_index].next.value();
+      source_vertex_index = source.vertices[source_vertex_index].next();
       continue;
     }
 
@@ -275,21 +268,17 @@ void mark_intersections(ExtendedPolygon & source, ExtendedPolygon & clip, bool &
 
     do {
       if (clip.vertices[clip_vertex_index].is_intersection) {
-        if (!clip.vertices[clip_vertex_index].next.has_value()) break;
-        clip_vertex_index = clip.vertices[clip_vertex_index].next.value();
+        clip_vertex_index = clip.vertices[clip_vertex_index].next();
         continue;
       }
 
-      if (!source.vertices[source_vertex_index].next.has_value()) break;
-      if (!clip.vertices[clip_vertex_index].next.has_value()) break;
       Intersection i = intersection(
         source.vertices, source_vertex_index,
-        get_next(source.vertices[source_vertex_index].next.value(), source.vertices), clip.vertices,
-        clip_vertex_index, get_next(clip.vertices[clip_vertex_index].next.value(), clip.vertices));
+        get_next(source.vertices[source_vertex_index].next(), source.vertices), clip.vertices,
+        clip_vertex_index, get_next(clip.vertices[clip_vertex_index].next(), clip.vertices));
 
       if (!valid(i)) {
-        if (!clip.vertices[clip_vertex_index].next.has_value()) break;
-        clip_vertex_index = clip.vertices[clip_vertex_index].next.value();
+        clip_vertex_index = clip.vertices[clip_vertex_index].next();
         continue;
       }
 
@@ -310,23 +299,17 @@ void mark_intersections(ExtendedPolygon & source, ExtendedPolygon & clip, bool &
       source.vertices[index1].corresponding = index2;
       clip.vertices[index2].corresponding = index1;
 
-      if (source.vertices[source_vertex_index].next.has_value()) {
-        insert_vertex(
-          source.vertices, index1, source_vertex_index,
-          get_next(source.vertices[source_vertex_index].next.value(), source.vertices));
-      }
-      if (clip.vertices[clip_vertex_index].next.has_value()) {
-        insert_vertex(
-          clip.vertices, index2, clip_vertex_index,
-          get_next(clip.vertices[clip_vertex_index].next.value(), clip.vertices));
-      }
+      insert_vertex(
+        source.vertices, index1, source_vertex_index,
+        get_next(source.vertices[source_vertex_index].next(), source.vertices));
+      insert_vertex(
+        clip.vertices, index2, clip_vertex_index,
+        get_next(clip.vertices[clip_vertex_index].next(), clip.vertices));
 
-      if (!clip.vertices[clip_vertex_index].next.has_value()) break;
-      clip_vertex_index = clip.vertices[clip_vertex_index].next.value();
+      clip_vertex_index = clip.vertices[clip_vertex_index].next();
     } while (clip_vertex_index != clip.first);
 
-    if (!source.vertices[source_vertex_index].next.has_value()) break;
-    source_vertex_index = source.vertices[source_vertex_index].next.value();
+    source_vertex_index = source.vertices[source_vertex_index].next();
   } while (source_vertex_index != source.first);
 }
 
@@ -346,8 +329,7 @@ void identify_entry_exit(
       source.vertices[source_vertex_index].is_entry = source_forwards;
       source_forwards = !source_forwards;
     }
-    if (!source.vertices[source_vertex_index].next.has_value()) break;
-    source_vertex_index = source.vertices[source_vertex_index].next.value();
+    source_vertex_index = source.vertices[source_vertex_index].next();
   } while (source_vertex_index != source.first);
 
   do {
@@ -355,8 +337,7 @@ void identify_entry_exit(
       clip.vertices[clip_vertex_index].is_entry = clip_forwards;
       clip_forwards = !clip_forwards;
     }
-    if (!clip.vertices[clip_vertex_index].next.has_value()) break;
-    clip_vertex_index = clip.vertices[clip_vertex_index].next.value();
+    clip_vertex_index = clip.vertices[clip_vertex_index].next();
   } while (clip_vertex_index != clip.first);
 }
 
@@ -378,39 +359,38 @@ std::vector<autoware::universe_utils::Polygon2d> construct_clipped_polygons(
       if (usingSource) {
         if (source.vertices[currentIndex].is_entry) {
           do {
-            if (!source.vertices[currentIndex].next.has_value()) break;
-            currentIndex = source.vertices[currentIndex].next.value();
+            currentIndex = source.vertices[currentIndex].next();
             last_idx = add_vertex(clipped, source.vertices[currentIndex], last_idx);
           } while (!source.vertices[currentIndex].is_intersection);
         } else {
           do {
-            if (!source.vertices[currentIndex].prev.has_value()) break;
-            currentIndex = source.vertices[currentIndex].prev.value();
+            currentIndex = source.vertices[currentIndex].prev();
             last_idx = add_vertex(clipped, source.vertices[currentIndex], last_idx);
           } while (!source.vertices[currentIndex].is_intersection);
         }
       } else {
         if (clip.vertices[currentIndex].is_entry) {
           do {
-            if (!clip.vertices[currentIndex].next.has_value()) break;
-            currentIndex = clip.vertices[currentIndex].next.value();
+            currentIndex = clip.vertices[currentIndex].next();
             last_idx = add_vertex(clipped, clip.vertices[currentIndex], last_idx);
           } while (!clip.vertices[currentIndex].is_intersection);
         } else {
           do {
-            if (!clip.vertices[currentIndex].prev.has_value()) break;
-            currentIndex = clip.vertices[currentIndex].prev.value();
+            currentIndex = clip.vertices[currentIndex].prev();
             last_idx = add_vertex(clipped, clip.vertices[currentIndex], last_idx);
           } while (!clip.vertices[currentIndex].is_intersection);
         }
       }
 
-      // UNSAFE #3 fix: .corresponding is only set for intersection vertices;
-      // the do-while above should have stopped at an intersection vertex, but guard defensively.
+      // `corresponding` is genuinely optional: it is only set on intersection
+      // vertices. The traversal above is supposed to land on an intersection
+      // vertex (loop guard) before we read it, but if an earlier bug breaks
+      // that assumption we must not dereference nullopt. (Original UNSAFE #3
+      // fix — retained; defensively breaks instead of crashing.)
       const auto & cur_vert =
         usingSource ? source.vertices[currentIndex] : clip.vertices[currentIndex];
       if (!cur_vert.corresponding.has_value()) {
-        break;  // defensive: non-intersection vertex encountered unexpectedly
+        break;
       }
       currentIndex = cur_vert.corresponding.value();
       usingSource = !usingSource;
