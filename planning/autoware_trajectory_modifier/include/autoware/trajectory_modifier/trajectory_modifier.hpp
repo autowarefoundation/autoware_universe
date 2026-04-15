@@ -20,9 +20,9 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
 
 #include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
-#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
@@ -82,7 +82,7 @@ private:
   autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects> sub_objects_{
     this, "~/input/objects"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
-    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
+    this, "~/input/pointcloud", autoware_utils_rclcpp::single_depth_sensor_qos()};
 
   Odometry::ConstSharedPtr current_odometry_ptr_;
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration_ptr_;

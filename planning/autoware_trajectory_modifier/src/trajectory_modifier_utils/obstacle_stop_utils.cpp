@@ -113,7 +113,7 @@ TrajectoryShape get_trajectory_shape(
   const auto base_footprint = vehicle_info.createFootprint(lateral_margin, longitudinal_margin);
   for (const auto & [idx, p] : detection_traj | ranges::views::enumerate) {
     if (idx > 0) {
-      const auto prev_p = detection_traj[idx - 1];
+      const auto & prev_p = detection_traj[idx - 1];
       const auto dist = autoware_utils::calc_distance2d(prev_p, p);
       if (dist < min_resolution) continue;
     }

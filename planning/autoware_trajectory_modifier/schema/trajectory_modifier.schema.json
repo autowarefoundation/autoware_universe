@@ -31,7 +31,7 @@
           "type": "number",
           "description": "Time step for trajectory modification [s]",
           "default": 0.1,
-          "minimum": 0.0
+          "exclusiveMinimum": 0.0
         },
         "stop_point_fixer": {
           "type": "object",
@@ -116,12 +116,6 @@
               "type": "number",
               "description": "Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]",
               "default": 0.5,
-              "minimum": 0.0
-            },
-            "duplicate_check_threshold": {
-              "type": "number",
-              "description": "Threshold to check if the stop point is already in the trajectory [m]",
-              "default": 1.0,
               "minimum": 0.0
             },
             "arrived_distance_threshold": {
@@ -347,9 +341,9 @@
                   "required": [],
                   "additionalProperties": false
                 },
-                "response_time": {
+                "reaction_time": {
                   "type": "number",
-                  "description": "Response time to consider for RSS calculation [s]",
+                  "description": "Reaction time to consider for RSS calculation [s]",
                   "default": 0.2,
                   "minimum": 0.0
                 },

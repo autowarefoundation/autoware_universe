@@ -4,7 +4,7 @@ trajectory_modifier_params:
     default_value:
       [
         autoware::trajectory_modifier::plugin::ObstacleStop,
-        autoware::trajectory_modifier::plugin::StopPointFixer
+        autoware::trajectory_modifier::plugin::StopPointFixer,
       ]
     description: List of trajectory modifier plugins to load
     read_only: false
@@ -62,12 +62,12 @@ trajectory_modifier_params:
   obstacle_stop:
     use_objects:
       type: bool
-      default_value: false
+      default_value: true
       description: Enable the use of objects for obstacle stop
       read_only: false
     use_pointcloud:
       type: bool
-      default_value: false
+      default_value: true
       description: Enable the use of pointcloud for obstacle stop
       read_only: false
     enable_stop_for_objects:
@@ -77,7 +77,7 @@ trajectory_modifier_params:
       read_only: false
     enable_stop_for_pointcloud:
       type: bool
-      default_value: true
+      default_value: false
       description: Enable stopping behavior when pointcloud is detected as obstacle
       read_only: false
     stop_margin:
@@ -112,13 +112,6 @@ trajectory_modifier_params:
       type: double
       default_value: 0.5
       description: Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
-      validation:
-        bounds<>: [0.0, 10.0]
-      read_only: false
-    duplicate_check_threshold:
-      type: double
-      default_value: 1.0
-      description: Threshold to check if the stop point is already in the trajectory [m]
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false

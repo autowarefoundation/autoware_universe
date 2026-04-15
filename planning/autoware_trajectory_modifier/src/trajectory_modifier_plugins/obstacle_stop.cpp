@@ -94,6 +94,8 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
       {utils::obstacle_stop::ObjectType::CAR, p.object_decel.car},
       {utils::obstacle_stop::ObjectType::TRUCK, p.object_decel.truck},
       {utils::obstacle_stop::ObjectType::BUS, p.object_decel.bus},
+      {utils::obstacle_stop::ObjectType::TRAILER, p.object_decel.trailer},
+      {utils::obstacle_stop::ObjectType::MOTORCYCLE, p.object_decel.motorcycle},
       {utils::obstacle_stop::ObjectType::BICYCLE, p.object_decel.bicycle},
       {utils::obstacle_stop::ObjectType::PEDESTRIAN, p.object_decel.pedestrian}};
   }
@@ -131,6 +133,8 @@ void ObstacleStop::update_params(const TrajectoryModifierParams & params)
       {utils::obstacle_stop::ObjectType::CAR, p.object_decel.car},
       {utils::obstacle_stop::ObjectType::TRUCK, p.object_decel.truck},
       {utils::obstacle_stop::ObjectType::BUS, p.object_decel.bus},
+      {utils::obstacle_stop::ObjectType::TRAILER, p.object_decel.trailer},
+      {utils::obstacle_stop::ObjectType::MOTORCYCLE, p.object_decel.motorcycle},
       {utils::obstacle_stop::ObjectType::BICYCLE, p.object_decel.bicycle},
       {utils::obstacle_stop::ObjectType::PEDESTRIAN, p.object_decel.pedestrian}};
   }
@@ -206,19 +210,16 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
     return false;
   };
 
-  constexpr double stop_velocity_threshold = 0.01;
-
-  if (params_.duplicate_check_threshold > std::numeric_limits<double>::epsilon()) {
-    auto checked_distance = 0.0;
-    for (size_t i = 1; i < traj_points.size(); ++i) {
-      const auto & curr = traj_points.at(i);
-      const auto & prev = traj_points.at(i - 1);
-      checked_distance +=
-        autoware_utils_geometry::calc_distance2d(curr.pose.position, prev.pose.position);
-      if (curr.longitudinal_velocity_mps > stop_velocity_threshold) continue;
-      if (checked_distance < target_stop_point_arc_length) {
-        return skip("Preceding stop point exists");
-      }
+  constexpr double zero_velocity_threshold = 0.01;
+  auto checked_distance = 0.0;
+  for (size_t i = 1; i < traj_points.size(); ++i) {
+    const auto & curr = traj_points.at(i);
+    const auto & prev = traj_points.at(i - 1);
+    checked_distance +=
+      autoware_utils_geometry::calc_distance2d(curr.pose.position, prev.pose.position);
+    if (curr.longitudinal_velocity_mps > zero_velocity_threshold) continue;
+    if (checked_distance < target_stop_point_arc_length) {
+      return skip("Preceding stop point exists");
     }
   }
 
@@ -348,6 +349,15 @@ bool ObstacleStop::apply_stopping(
   }
 
   const auto dt = trajectory_time_step_;
+
+  if (dt < 1e-3) {
+    RCLCPP_ERROR_THROTTLE(
+      get_node_ptr()->get_logger(), *get_clock(), 1000,
+      "[TM ObstacleStop] Invalid trajectory time step: %f, unable to interpolate trajectory", dt);
+    traj_points = std::move(trajectory);
+    return true;
+  }
+
   const auto s_max = trajectory_interpolation_util->length();
   const auto interpolate_start_arc_length =
     trajectory_interpolation_util->get_underlying_bases().at(interpolate_start_index);
