@@ -48,7 +48,7 @@ void setSignalUnknown(tier4_perception_msgs::msg::TrafficLight & signal, float c
  */
 bool hasTrafficLightShapeColor(
   const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
-  const uint8_t & lamp_shape, const uint8_t & lamp_color = std::nullopt);
+  const uint8_t & lamp_shape, const uint8_t & lamp_color);
 
 /**
  * @brief Determines if a traffic signal indicates a stop for the given lanelet.
