@@ -589,12 +589,15 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   if (mpt_traj_points) {
     // 9.a. publish trajectories for debug
     publishDebugTrajectories(p.header, ref_points, *mpt_traj_points);
+  } else {
+    publishDebugTrajectories(p.header, ref_points, std::vector<TrajectoryPoint>());
   }
 
   debug_data_ptr_->ref_points = ref_points;
   prev_ref_points_ptr_ = std::make_shared<std::vector<ReferencePoint>>(ref_points);
   prev_optimized_traj_points_ptr_ =
-    mpt_traj_points ? std::make_shared<std::vector<TrajectoryPoint>>(*mpt_traj_points) : nullptr;
+    mpt_traj_points ? std::make_shared<std::vector<TrajectoryPoint>>(std::move(*mpt_traj_points))
+                    : nullptr;
 
   return output_trajectory;
 }
