@@ -1,0 +1,40 @@
+/**:
+  ros__parameters:
+    max_cluster_size: 3000
+    min_cluster_size: 10
+    tolerance: 0.7
+    use_height: false
+    min_probability: 0.5
+    target_class_ids: [5, 6, 9, 15, 16, 17]
+    class_names:
+      [
+        "drivable_surface",
+        "other_flat_surface",
+        "sidewalk",
+        "manmade",
+        "vegetation",
+        "car",
+        "bus",
+        "emergency_vehicle",
+        "train",
+        "truck",
+        "tractor_unit",
+        "semi_trailer",
+        "construction_vehicle",
+        "forklift",
+        "kart",
+        "motorcycle",
+        "bicycle",
+        "pedestrian",
+        "personal_mobility",
+        "animal",
+        "pushable_pullable",
+        "traffic_cone",
+        "debris",
+        "stroller",
+        "other_stuff",
+        "noise+ghost_point"
+      ]
+    use_shape_estimation_corrector: false
+    use_shape_estimation_filter: false
+    use_boost_bbox_optimizer: false
