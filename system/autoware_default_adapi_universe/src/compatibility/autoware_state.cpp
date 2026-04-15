@@ -137,9 +137,9 @@ void AutowareStateNode::on_timer()
       case AutowareState::DRIVING:            return "Driving";
       case AutowareState::ARRIVED_GOAL:       return "ArrivedGoal";
       case AutowareState::FINALIZING:         return "Finalizing";
+      default:                                return "Unknown(" + std::to_string(state) + ")";
     }
     // clang-format on
-    return "Unknown(" + std::to_string(state) + ")";
   };
 
   const auto state = convert_state();

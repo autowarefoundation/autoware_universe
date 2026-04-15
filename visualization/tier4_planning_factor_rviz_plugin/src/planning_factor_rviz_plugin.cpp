@@ -249,6 +249,8 @@ void PlanningFactorRvizPlugin::processMessage(
           add_marker(std::make_shared<visualization_msgs::msg::MarkerArray>(virtual_wall));
         }
         break;
+      default:
+        break;
     }
 
     if (show_safety_factors_.getBool()) {
