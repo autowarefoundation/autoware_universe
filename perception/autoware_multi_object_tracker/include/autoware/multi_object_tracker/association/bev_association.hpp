@@ -18,7 +18,7 @@
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/multi_object_tracker/association/association_base.hpp"
-#include "autoware/multi_object_tracker/association/scoring/assignment_scoring.hpp"
+#include "autoware/multi_object_tracker/association/scoring/bev_assignment_scoring.hpp"
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"

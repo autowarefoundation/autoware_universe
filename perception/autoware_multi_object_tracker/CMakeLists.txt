@@ -44,7 +44,7 @@ set(${PROJECT_NAME}_lib
   lib/association/association_manager.cpp
   lib/association/tracker_overlap_manager.cpp
   lib/association/polar_association.cpp
-  lib/association/scoring/assignment_scoring.cpp
+  lib/association/scoring/bev_assignment_scoring.cpp
   lib/association/scoring/redundancy_check.cpp
   lib/association/mu_successive_shortest_path/mu_ssp.cpp
   lib/types.cpp
