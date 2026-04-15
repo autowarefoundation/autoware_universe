@@ -36,31 +36,19 @@ namespace autoware::traffic_light_utils
 void setSignalUnknown(tier4_perception_msgs::msg::TrafficLight & signal, float confidence);
 
 /**
- * @brief Checks if a traffic light state includes a circle-shaped light with the specified color.
+ * @brief Checks if a traffic light state includes a light with the specified shape and color.
  *
- * Iterates through the traffic light elements to find a circle-shaped light that matches the given
- * color.
+ * Iterates through the traffic light elements to find a light that matches the given shape
+ * and color.
  *
- * @param tl_state The traffic light state to check.
- * @param lamp_color The color to look for in the traffic light's circle-shaped lamps.
- * @return True if a circle-shaped light with the specified color is found, false otherwise.
+ * @param elements The traffic light elements to check.
+ * @param lamp_shape The shape to look for in the traffic light's lamps.
+ * @param lamp_color The color to look for.
+ * @return True if a matching light is found, false otherwise.
  */
-bool hasTrafficLightCircleColor(
+bool hasTrafficLightShapeColor(
   const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
-  const uint8_t & lamp_color);
-
-/**
- * @brief Checks if a traffic light state includes a light with the specified shape.
- *
- * Searches through the traffic light elements to find a light that matches the given shape.
- *
- * @param tl_state The traffic light state to check.
- * @param shape The shape to look for in the traffic light's lights.
- * @return True if a light with the specified shape is found, false otherwise.
- */
-bool hasTrafficLightShape(
-  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
-  const uint8_t & lamp_shape);
+  const uint8_t & lamp_shape, const uint8_t & lamp_color = std::nullopt);
 
 /**
  * @brief Determines if a traffic signal indicates a stop for the given lanelet.

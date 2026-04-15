@@ -172,11 +172,11 @@ bool isTrafficSignalRedStop(
   const lanelet::ConstLanelet & lanelet,
   const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements)
 {
-  using autoware::traffic_light_utils::hasTrafficLightCircleColor;
-  using autoware::traffic_light_utils::hasTrafficLightShape;
+  using autoware::traffic_light_utils::hasTrafficLightShapeColor;
 
-  if (!hasTrafficLightCircleColor(
-        elements, autoware_perception_msgs::msg::TrafficLightElement::RED)) {
+  if (!hasTrafficLightShapeColor(
+        elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+        autoware_perception_msgs::msg::TrafficLightElement::RED)) {
     return false;
   }
 
@@ -188,19 +188,23 @@ bool isTrafficSignalRedStop(
 
   if (
     autoware::experimental::lanelet2_utils::is_right_direction(lanelet) &&
-    hasTrafficLightShape(
-      elements, autoware_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW)) {
+    hasTrafficLightShapeColor(
+      elements, autoware_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW,
+      autoware_perception_msgs::msg::TrafficLightElement::RED)) {
     return false;
   }
   if (
     autoware::experimental::lanelet2_utils::is_left_direction(lanelet) &&
-    hasTrafficLightShape(
-      elements, autoware_perception_msgs::msg::TrafficLightElement::LEFT_ARROW)) {
+    hasTrafficLightShapeColor(
+      elements, autoware_perception_msgs::msg::TrafficLightElement::LEFT_ARROW,
+      autoware_perception_msgs::msg::TrafficLightElement::RED)) {
     return false;
   }
   if (
     autoware::experimental::lanelet2_utils::is_straight_direction(lanelet) &&
-    hasTrafficLightShape(elements, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW)) {
+    hasTrafficLightShapeColor(
+      elements, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW,
+      autoware_perception_msgs::msg::TrafficLightElement::RED)) {
     return false;
   }
   return true;
