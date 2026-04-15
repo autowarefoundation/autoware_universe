@@ -1,7 +1,0 @@
-/**:
-  ros__parameters:
-    map_frame: map
-    goal_angle_threshold_deg: 45.0
-    enable_correct_goal_pose: false
-    consider_no_drivable_lanes: false # This flag is for considering no_drivable_lanes in planning or not.
-    check_footprint_inside_lanes: true

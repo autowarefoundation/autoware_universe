@@ -14,9 +14,14 @@ jobs:
         cuda: [false, true]
         arch: [amd64, arm64]
 
-        # Exclude Jazzy arm64 until autoware docker-build-and-push publishes native arm64 Jazzy images
         exclude:
-          - rosdistro: jazzy
+          # Humble is being phased out; only run CUDA amd64 as a minimal check
+          - rosdistro: humble
+            arch: arm64
+          - rosdistro: humble
+            cuda: false
+          # Non-CUDA arm64 has no deployment target; keep non-CUDA only on amd64 as a sanity check
+          - cuda: false
             arch: arm64
 
         include:
@@ -52,9 +57,11 @@ jobs:
       container-suffix: ${{ matrix.container-suffix }}
       runner: ${{ matrix.runner }}
       build-pre-command: ${{ matrix.build-pre-command }}
+      arch: ${{ matrix.arch }}
       pull-ccache: true
       push-ccache: false
       concurrency-group: build-and-test-daily-${{ matrix.rosdistro }}-${{ matrix.arch }}-${{ matrix.cache-suffix }}-${{ github.ref }}-${{ github.run_id }}
-      codecov-flag: daily-${{ matrix.rosdistro }}-${{ matrix.arch }}-${{ matrix.cache-suffix }}
+      upload-coverage: ${{ matrix.rosdistro == 'jazzy' && matrix.arch == 'amd64' && matrix.cuda }}
+      codecov-flag: daily
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}

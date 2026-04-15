@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__BEVFUSION__BEVFUSION_TRT_HPP_
 #define AUTOWARE__BEVFUSION__BEVFUSION_TRT_HPP_
 
+#include "autoware/bevfusion/camera/camera_data.hpp"
 #include "autoware/bevfusion/postprocess/postprocess_kernel.hpp"
 #include "autoware/bevfusion/preprocess/pointcloud_densification.hpp"
 #include "autoware/bevfusion/preprocess/preprocess_kernel.hpp"
@@ -87,7 +88,7 @@ public:
 
   bool detect(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg_ptr,
-    const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+    const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs,
     const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
     std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing,
     bool & is_num_voxels_within_range);
@@ -102,7 +103,7 @@ protected:
 
   bool preProcess(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
-    const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+    const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs,
     const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
     bool & is_num_voxels_within_range);
 
@@ -111,8 +112,11 @@ protected:
 
   void clearDeviceMemory();
 
-  void processImages(
-    const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
+  bool checkImageCameraMatricesReady(
+    const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs);
+
+  bool processImages(
+    const std::vector<std::unique_ptr<CameraData>> & camera_data_ptrs,
     const std::vector<float> & camera_masks);
 
   std::int64_t processPointCloudVoxelization(
@@ -140,7 +144,6 @@ protected:
   std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
   std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
   cudaStream_t stream_{nullptr};
-  std::vector<cudaStream_t> camera_streams_{};
 
   BEVFusionConfig config_;
   std::vector<int> roi_start_y_vector_;
@@ -171,7 +174,6 @@ protected:
 
   // image buffers
   CudaUniquePtr<std::uint8_t[]> roi_tensor_d_{nullptr};
-  std::vector<CudaUniquePtr<std::uint8_t[]>> image_buffers_d_{};
   CudaUniquePtr<float[]> camera_masks_d_{nullptr};
 
   // image feature buffers for fusion model

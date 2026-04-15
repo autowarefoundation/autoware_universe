@@ -50,6 +50,10 @@ ImplicitGemmPlugin::ImplicitGemmPlugin(
   tuner_fp16_ptr_ =
     std::make_unique<ConvTunerSimple>(ConvMain::get_all_conv_algo_desp());  // cSpell:ignore desp
   tuner_fp32_ptr_ = std::make_unique<ConvTunerSimple>(ConvMain::get_all_conv_algo_desp());
+
+  // Pre-allocate CPU mask tensor to avoid heap allocation during CUDA graph capture.
+  mask_tensor_ = tv::zeros({1}, tv::uint32, -1);
+  mask_tensor_.data_ptr<uint32_t>()[0] = 0xffffffff;
 }
 
 void ImplicitGemmPlugin::initFieldsToSerialize()
@@ -268,11 +272,6 @@ std::int32_t ImplicitGemmPlugin::enqueue(
 
   tv::Tensor out_features = tv::from_blob(outputs[0], {num_act_out, num_out_features}, dtype, 0);
 
-  tv::Tensor mask_tensor = tv::zeros({1}, tv::uint32, -1);
-
-  auto mask_tensor_ptr = mask_tensor.data_ptr<uint32_t>();
-  mask_tensor_ptr[0] = 0xffffffff;
-
   std::vector<tv::Tensor> pair_mask_splits;
   std::vector<tv::Tensor> mask_argsort_splits;
 
@@ -289,7 +288,7 @@ std::int32_t ImplicitGemmPlugin::enqueue(
 
   auto conv_run_status = ConvGemmOps::implicit_gemm(
     alloc2, *tuner_ptr, input_features, weights, pair_fwd, pair_mask_splits, mask_argsort_splits,
-    num_act_out, mask_tensor, arch_, false, params_.is_subm,
+    num_act_out, mask_tensor_, arch_, false, params_.is_subm,
     reinterpret_cast<std::uintptr_t>(stream), tv::CUDAKernelTimer(false), true, false, tv::Tensor(),
     0.0, 0.0, tv::gemm::Activation::kNone, false, 1.0, tv::Tensor(), tv::Tensor(), 0.0, -1);
 

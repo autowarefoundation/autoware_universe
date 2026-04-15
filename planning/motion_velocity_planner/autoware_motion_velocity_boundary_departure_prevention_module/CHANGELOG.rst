@@ -39,7 +39,7 @@ Changelog for package autoware_motion_velocity_boundary_departure_prevention_mod
   * refactor(boundary_departure): move debug marker related functions
   * Update common/autoware_boundary_departure_checker/src/debug.cpp
   Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
-  * Update common/autoware_boundary_departure_checker/include/autoware/boundary_departure_checker/debug.hpp
+  * Update common/autoware_boundary_departure_checker/include/autoware/deprecated/boundary_departure_checker/debug.hpp
   Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
   ---------
   Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
