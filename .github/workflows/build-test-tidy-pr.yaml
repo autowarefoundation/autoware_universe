@@ -82,8 +82,6 @@ jobs:
       container: ${{ matrix.container }}
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}
       runner: "['self-hosted', 'Linux', 'X64']"
-    secrets:
-      codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build-and-test-differential-cuda:
     if: ${{ always() }}
@@ -113,20 +111,8 @@ jobs:
     needs:
       - check-if-cuda-job-is-needed
       - build-and-test-differential
-    strategy:
-      fail-fast: false
-      matrix:
-        rosdistro: [humble, jazzy]
-        include:
-          - rosdistro: humble
-            container: ghcr.io/autowarefoundation/autoware:universe-devel
-          - rosdistro: jazzy
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
-
     uses: ./.github/workflows/clang-tidy-differential.yaml
     with:
-      rosdistro: ${{ matrix.rosdistro }}
-      container: ${{ matrix.container }}
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'false' && needs.build-and-test-differential.result == 'success' }}
 
   clang-tidy-differential-cuda:
@@ -134,20 +120,8 @@ jobs:
     needs:
       - check-if-cuda-job-is-needed
       - build-and-test-differential-cuda
-    strategy:
-      fail-fast: false
-      matrix:
-        rosdistro: [humble, jazzy]
-        include:
-          - rosdistro: humble
-            container: ghcr.io/autowarefoundation/autoware:universe-devel
-          - rosdistro: jazzy
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
-
     uses: ./.github/workflows/clang-tidy-differential.yaml
     with:
-      rosdistro: ${{ matrix.rosdistro }}
-      container: ${{ matrix.container }}
       container-suffix: -cuda
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' && needs.build-and-test-differential-cuda.result == 'success' }}
       runner: "['self-hosted', 'Linux', 'X64']"

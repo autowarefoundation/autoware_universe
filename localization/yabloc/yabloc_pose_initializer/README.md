@@ -12,7 +12,7 @@ To download and extract the model manually:
 ```bash
 $ mkdir -p ~/autoware_data/yabloc_pose_initializer/
 $ wget -P ~/autoware_data/yabloc_pose_initializer/ \
-       https://s3.ap-northeast-2.wasabisys.com/pinto-model-zoo/136_road-segmentation-adas-0001/resources.tar.gz
+       https://autoware-files.s3.us-west-2.amazonaws.com/models/yabloc/136_road-segmentation-adas-0001/resources.tar.gz
 $ tar xzf ~/autoware_data/yabloc_pose_initializer/resources.tar.gz -C ~/autoware_data/yabloc_pose_initializer/
 ```
 

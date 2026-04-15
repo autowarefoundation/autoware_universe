@@ -57,9 +57,11 @@ jobs:
       container-suffix: ${{ matrix.container-suffix }}
       runner: ${{ matrix.runner }}
       build-pre-command: ${{ matrix.build-pre-command }}
+      arch: ${{ matrix.arch }}
       pull-ccache: true
       push-ccache: false
       concurrency-group: build-and-test-daily-${{ matrix.rosdistro }}-${{ matrix.arch }}-${{ matrix.cache-suffix }}-${{ github.ref }}-${{ github.run_id }}
-      codecov-flag: daily-${{ matrix.rosdistro }}-${{ matrix.arch }}-${{ matrix.cache-suffix }}
+      upload-coverage: ${{ matrix.rosdistro == 'jazzy' && matrix.arch == 'amd64' && matrix.cuda }}
+      codecov-flag: daily
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}

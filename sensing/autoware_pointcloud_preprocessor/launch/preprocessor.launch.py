@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-from ament_index_python.packages import get_package_share_directory
 import launch
 from launch.actions import DeclareLaunchArgument
 from launch.actions import LogInfo
 from launch.actions import OpaqueFunction
 from launch.substitutions import LaunchConfiguration
+from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import PythonExpression
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 from launch_ros.parameter_descriptions import ParameterFile
+from launch_ros.substitutions import FindPackageShare
 
 
 def launch_setup(context, *args, **kwargs):
@@ -165,9 +164,6 @@ def launch_setup(context, *args, **kwargs):
 
 def generate_launch_description():
     launch_arguments = []
-    autoware_pointcloud_preprocessor_share_dir = get_package_share_directory(
-        "autoware_pointcloud_preprocessor"
-    )
 
     def add_launch_arg(name: str, default_value=None, description=None):
         # a default_value of None is equivalent to not passing that kwarg at all
@@ -185,37 +181,45 @@ def generate_launch_description():
     add_launch_arg("tf_output_frame", "base_link")
     add_launch_arg(
         "concatenate_and_time_sync_node_param_path",
-        os.path.join(
-            autoware_pointcloud_preprocessor_share_dir,
-            "config",
-            "concatenate_and_time_sync_node.param.yaml",
+        PathJoinSubstitution(
+            [
+                FindPackageShare("autoware_pointcloud_preprocessor"),
+                "config",
+                "concatenate_and_time_sync_node.param.yaml",
+            ]
         ),
         description="path to parameter file of concatenate and time sync node",
     )
     add_launch_arg(
         "concatenate_pointclouds_node_param_path",
-        os.path.join(
-            autoware_pointcloud_preprocessor_share_dir,
-            "config",
-            "concatenate_pointclouds.param.yaml",
+        PathJoinSubstitution(
+            [
+                FindPackageShare("autoware_pointcloud_preprocessor"),
+                "config",
+                "concatenate_pointclouds.param.yaml",
+            ]
         ),
         description="path to parameter file of concatenate pointclouds node",
     )
     add_launch_arg(
         "time_synchronizer_node_param_path",
-        os.path.join(
-            autoware_pointcloud_preprocessor_share_dir,
-            "config",
-            "time_synchronizer_node.param.yaml",
+        PathJoinSubstitution(
+            [
+                FindPackageShare("autoware_pointcloud_preprocessor"),
+                "config",
+                "time_synchronizer_node.param.yaml",
+            ]
         ),
         description="path to parameter file of time synchronizer node",
     )
     add_launch_arg(
         "crop_box_filter_node_param_path",
-        os.path.join(
-            autoware_pointcloud_preprocessor_share_dir,
-            "config",
-            "crop_box_filter_node.param.yaml",
+        PathJoinSubstitution(
+            [
+                FindPackageShare("autoware_pointcloud_preprocessor"),
+                "config",
+                "crop_box_filter_node.param.yaml",
+            ]
         ),
         description="path to parameter file of crop box filter node",
     )

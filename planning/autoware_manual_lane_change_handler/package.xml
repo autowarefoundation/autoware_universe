@@ -9,10 +9,12 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
   <depend>autoware_internal_debug_msgs</depend>
+  <depend>autoware_lanelet2_extension</depend>
+  <depend>autoware_map_msgs</depend>
   <depend>autoware_mission_planner_universe</depend>
   <depend>autoware_planning_msgs</depend>
+  <depend>autoware_route_handler</depend>
   <depend>nav_msgs</depend>
-  <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tier4_external_api_msgs</depend>

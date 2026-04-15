@@ -25,6 +25,10 @@ on:
         type: string
         default: ""
         required: false
+      arch:
+        type: string
+        default: amd64
+        required: false
       push-ccache:
         type: boolean
         default: false
@@ -41,13 +45,17 @@ on:
         type: boolean
         default: false
         required: false
+      upload-coverage:
+        type: boolean
+        default: false
+        required: false
       codecov-flag:
         type: string
         default: temp
         required: false
     secrets:
       codecov-token:
-        required: true
+        required: false
 
 concurrency:
   group: ${{ inputs.concurrency-group }}
@@ -124,7 +132,7 @@ jobs:
       - name: Prepare build_depends.repos file
         uses: ./.github/actions/combine-repos-action
         with:
-          base_file: build_depends_humble.repos
+          base_file: build_depends_stable.repos
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
@@ -162,7 +170,7 @@ jobs:
           build-depends-repos: build_depends.repos
 
       - name: Upload coverage to CodeCov
-        if: ${{ steps.test.outputs.coverage-report-files != '' }}
+        if: ${{ steps.test.outputs.coverage-report-files != '' && inputs.upload-coverage }}
         uses: codecov/codecov-action@v6
         with:
           files: ${{ steps.test.outputs.coverage-report-files }}
@@ -170,13 +178,17 @@ jobs:
           verbose: true
           flags: ${{ inputs.codecov-flag }}
           token: ${{ secrets.codecov-token }}
+          disable_search: true
+          # Disable gcov and xcode plugins, keeping only pycoverage.
+          # Default plugins: https://github.com/getsentry/prevent-cli/blob/45e518e5ca344c9fb7a5cbe596a21b7ab85a39ed/codecov-cli/README.md?plain=1#L178
+          plugins: pycoverage
 
       - name: Show disk space after the tasks
         run: df -h
 
   clang-tidy:
     needs: build-and-test
-    if: ${{ inputs.rosdistro == 'jazzy' && inputs.container-suffix == '-cuda' }}
+    if: ${{ inputs.rosdistro == 'jazzy' && inputs.container-suffix == '-cuda' && inputs.arch == 'amd64' }}
     runs-on: ubuntu-latest
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
     steps:
@@ -206,7 +218,7 @@ jobs:
       - name: Prepare build_depends.repos file
         uses: ./.github/actions/combine-repos-action
         with:
-          base_file: build_depends_humble.repos
+          base_file: build_depends_stable.repos
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 
@@ -216,11 +228,12 @@ jobs:
         with:
           rosdistro: ${{ inputs.rosdistro }}
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
-          clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware/main/.clang-tidy-ci
+          clang-tidy-config-url: https://raw.githubusercontent.com/autowarefoundation/autoware_universe/main/.clang-tidy-ci
           clang-tidy-ignore-path: .clang-tidy-ignore
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
           artifact-name: clang-tidy-result-${{ inputs.rosdistro }}${{ inputs.container-suffix }}
+          use-clang-tidy-cache: true
 
       - name: Show disk space after the tasks
         run: df -h
