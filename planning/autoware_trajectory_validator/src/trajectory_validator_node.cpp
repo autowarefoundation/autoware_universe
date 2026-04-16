@@ -77,8 +77,9 @@ TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
     load_metric(filter);
   }
 
+  constexpr bool shadow_mode = true;
   for (const auto & filter : params_.shadow_mode_filter_names) {
-    load_metric(filter);
+    load_metric(filter, shadow_mode);
   }
 
   sub_map_ = create_subscription<LaneletMapBin>(
@@ -153,7 +154,7 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
           get_logger(), *get_clock(), 1000, "Not feasible: %s", res.error().c_str());
         diagnostics_interface_.add_key_value(plugin->get_name(), res.error());
 
-        if (is_shadow_mode(plugin->get_name())) {
+        if (plugin->is_shadow_mode()) {
           continue;
         }
 
@@ -187,7 +188,7 @@ void TrajectoryValidator::map_callback(const LaneletMapBin::ConstSharedPtr msg)
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 }
 
-void TrajectoryValidator::load_metric(const std::string & name)
+void TrajectoryValidator::load_metric(const std::string & name, const bool is_shadow_mode)
 {
   try {
     auto plugin = plugin_loader_.createSharedInstance(name);
@@ -200,6 +201,7 @@ void TrajectoryValidator::load_metric(const std::string & name)
     }
 
     plugin->set_vehicle_info(vehicle_info_);
+    plugin->set_shadow_mode(is_shadow_mode);
     plugin->update_parameters(params_);
 
     plugins_.push_back(plugin);
@@ -255,12 +257,6 @@ void TrajectoryValidator::update_diagnostic(
   }
 
   diagnostics_interface_.publish(this->get_clock()->now());
-}
-
-bool TrajectoryValidator::is_shadow_mode(const std::string & plugin_name) const
-{
-  const auto & names = params_.shadow_mode_filter_names;
-  return std::find(names.begin(), names.end(), plugin_name) != names.end();
 }
 }  // namespace autoware::trajectory_validator
 
