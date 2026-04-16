@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
 #include <vector>
 
 using autoware::trajectory_validator::FilterContext;
@@ -81,7 +82,8 @@ protected:
   }
 
   // Helper to create a simple straight lanelet map with a traffic light
-  void create_and_set_map(lanelet::Id light_id, double stop_line_x)
+  void create_and_set_map(
+    lanelet::Id light_id, double stop_line_x, const std::string & turn_direction = "else")
   {
     // 1. Create Stop Line
     lanelet::Point3d sl1(lanelet::utils::getId(), stop_line_x, -5, 0);
@@ -107,6 +109,7 @@ protected:
 
     // 5. Create Lanelet and add RE
     lanelet::Lanelet lanelet(lanelet::utils::getId(), left, right);
+    lanelet.attributes()["turn_direction"] = turn_direction;
     lanelet.addRegulatoryElement(traffic_light_re);
 
     // 6. Create and Set Map
@@ -114,19 +117,28 @@ protected:
   }
 
   // Helper to set traffic light signal
-  void set_traffic_light_signal(lanelet::Id id, uint8_t color)
+  void set_traffic_light_signal(
+    lanelet::Id id, uint8_t color, uint8_t shape = TrafficLightElement::CIRCLE)
+  {
+    set_traffic_light_signals(id, {{color, shape}});
+  }
+
+  // Helper to set multiple traffic light signal elements
+  void set_traffic_light_signals(
+    lanelet::Id id, const std::vector<std::pair<uint8_t, uint8_t>> & elements_data)
   {
     auto signals = std::make_shared<TrafficLightGroupArray>();
     TrafficLightGroup group;
     group.traffic_light_group_id = id;
 
-    TrafficLightElement element;
-    element.color = color;
-    element.shape = TrafficLightElement::CIRCLE;
-    element.status = TrafficLightElement::SOLID_ON;
-    element.confidence = 1.0;
-
-    group.elements.push_back(element);
+    for (const auto & data : elements_data) {
+      TrafficLightElement element;
+      element.color = data.first;
+      element.shape = data.second;
+      element.status = TrafficLightElement::SOLID_ON;
+      element.confidence = 1.0;
+      group.elements.push_back(element);
+    }
     signals->traffic_light_groups.push_back(group);
 
     context_.traffic_light_signals = signals;
@@ -354,6 +366,82 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
 
   EXPECT_FALSE(filter_->is_feasible(points, context_))
     << "Should return false for amber light when treat_amber_light_as_red_light is true";
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithRedCircleAndMatchingGreenRightArrow)
+{
+  const lanelet::Id light_id = 400;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x, "right");
+  set_traffic_light_signals(
+    light_id, {{TrafficLightElement::RED, TrafficLightElement::CIRCLE},
+               {TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW}});
+
+  auto points = create_trajectory(0.0, 10.0);
+  EXPECT_TRUE(filter_->is_feasible(points, context_))
+    << "Should return true for red circle + green right arrow when turning right";
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithRedCircleAndMatchingGreenLeftArrow)
+{
+  const lanelet::Id light_id = 401;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x, "left");
+  set_traffic_light_signals(
+    light_id, {{TrafficLightElement::RED, TrafficLightElement::CIRCLE},
+               {TrafficLightElement::GREEN, TrafficLightElement::LEFT_ARROW}});
+
+  auto points = create_trajectory(0.0, 10.0);
+  EXPECT_TRUE(filter_->is_feasible(points, context_))
+    << "Should return true for red circle + green left arrow when turning left";
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithRedCircleAndMatchingGreenUpArrow)
+{
+  const lanelet::Id light_id = 402;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x, "straight");
+  set_traffic_light_signals(
+    light_id, {{TrafficLightElement::RED, TrafficLightElement::CIRCLE},
+               {TrafficLightElement::GREEN, TrafficLightElement::UP_ARROW}});
+
+  auto points = create_trajectory(0.0, 10.0);
+  EXPECT_TRUE(filter_->is_feasible(points, context_))
+    << "Should return true for red circle + green up arrow when going straight";
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedCircleAndMismatchingGreenArrow)
+{
+  const lanelet::Id light_id = 403;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x, "right");
+  // Red circle + green LEFT arrow, but lanelet is RIGHT turn.
+  set_traffic_light_signals(
+    light_id, {{TrafficLightElement::RED, TrafficLightElement::CIRCLE},
+               {TrafficLightElement::GREEN, TrafficLightElement::LEFT_ARROW}});
+
+  auto points = create_trajectory(0.0, 10.0);
+  EXPECT_FALSE(filter_->is_feasible(points, context_))
+    << "Should return false for mismatching green arrow";
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedCircleAndGreenArrowNoTurnDirection)
+{
+  const lanelet::Id light_id = 404;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x, "else");
+  set_traffic_light_signals(
+    light_id, {{TrafficLightElement::RED, TrafficLightElement::CIRCLE},
+               {TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW}});
+
+  auto points = create_trajectory(0.0, 10.0);
+  EXPECT_FALSE(filter_->is_feasible(points, context_))
+    << "Should return false for green arrow if turn_direction is else/unknown";
 }
 
 int main(int argc, char ** argv)
