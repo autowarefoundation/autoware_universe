@@ -1,4 +1,4 @@
-# Expected usage: first import build_depends_$ROS_DISTRO.repos, then import this.
+# Expected usage: first import build_depends_stable.repos, then import this.
 
 repositories:
   # core

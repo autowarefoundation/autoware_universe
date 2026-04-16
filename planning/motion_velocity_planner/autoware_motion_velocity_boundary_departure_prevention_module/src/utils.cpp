@@ -14,8 +14,8 @@
 
 #include "utils.hpp"
 
-#include <autoware/boundary_departure_checker/conversion.hpp>
-#include <autoware/boundary_departure_checker/data_structs.hpp>
+#include <autoware/deprecated/boundary_departure_checker/conversion.hpp>
+#include <autoware/deprecated/boundary_departure_checker/data_structs.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
