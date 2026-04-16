@@ -8,22 +8,34 @@
 
 #### Input
 
-| Name                   | Type                                            | Description      |
-| :--------------------- | :---------------------------------------------- | :--------------- |
-| `~/input/lanelet2_map` | `autoware_map_msgs::msg::HADMapBin`             | Data of lanelet2 |
-| `~/input/pointcloud`   | `sensor_msgs::msg::PointCloud2`                 | PointCloud       |
-| `~/input/ekf_pose`     | `geometry_msgs::msg::PoseWithCovarianceStamped` | EKF Pose         |
+| Name                   | Type                                            | Description                                                                                                    |
+| :--------------------- | :---------------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
+| `~/input/lanelet2_map` | `autoware_map_msgs::msg::HADMapBin`             | Data of lanelet2                                                                                               |
+| `~/input/pointcloud`   | `sensor_msgs::msg::PointCloud2`                 | PointType: `PointXYZIRC` is recommended in Autoware, but `PointXYZIRADRT` are also supported in this node.[^1] |
+| `~/input/ekf_pose`     | `geometry_msgs::msg::PoseWithCovarianceStamped` | EKF Pose                                                                                                       |
+
+[^1]: Assumed `ring` of `PointXYZIRADRT` as `channel` of `PointXYZIRC`.
 
 #### Output
 
-| Name                            | Type                                            | Description                                                        |
-| :------------------------------ | :---------------------------------------------- | :----------------------------------------------------------------- |
-| `~/output/pose_with_covariance` | `geometry_msgs::msg::PoseWithCovarianceStamped` | Estimated pose                                                     |
-| `~/debug/pose_with_covariance`  | `geometry_msgs::msg::PoseWithCovarianceStamped` | [debug topic] Estimated pose                                       |
-| `~/debug/marker_detected`       | `geometry_msgs::msg::PoseArray`                 | [debug topic] Detected marker poses                                |
-| `~/debug/marker_mapped`         | `visualization_msgs::msg::MarkerArray`          | [debug topic] Loaded landmarks to visualize in Rviz as thin boards |
-| `~/debug/marker_pointcloud`     | `sensor_msgs::msg::PointCloud2`                 | [debug topic] PointCloud of the detected marker                    |
-| `/diagnostics`                  | `diagnostic_msgs::msg::DiagnosticArray`         | Diagnostics outputs                                                |
+| Name                            | Type                                            | Description         |
+| :------------------------------ | :---------------------------------------------- | :------------------ |
+| `~/output/pose_with_covariance` | `geometry_msgs::msg::PoseWithCovarianceStamped` | Estimated pose      |
+| `/diagnostics`                  | `diagnostic_msgs::msg::DiagnosticArray`         | Diagnostics outputs |
+
+##### For debug
+
+| Name                            | Type                                            | Description                                          |
+| :------------------------------ | :---------------------------------------------- | :--------------------------------------------------- |
+| `~/debug/pose_with_covariance`  | `geometry_msgs::msg::PoseWithCovarianceStamped` | Estimated pose                                       |
+| `~/debug/marker_detected`       | `geometry_msgs::msg::PoseArray`                 | Detected marker poses                                |
+| `~/debug/marker_mapped`         | `visualization_msgs::msg::MarkerArray`          | Loaded landmarks to visualize in Rviz as thin boards |
+| `~/debug/marker_pointcloud`     | `sensor_msgs::msg::PointCloud2`                 | PointCloud of the detected marker                    |
+| `~/debug/center_intensity_grid` | `nav_msgs::msg::OccupancyGrid`                  | Center intensity grid for debug                      |
+| `~/debug/positive_grid`         | `nav_msgs::msg::OccupancyGrid`                  | Positive match grid for debug                        |
+| `~/debug/negative_grid`         | `nav_msgs::msg::OccupancyGrid`                  | Negative match grid for debug                        |
+| `~/debug/matched_grid`          | `nav_msgs::msg::OccupancyGrid`                  | Matched pattern grid for debug                       |
+| `~/debug/vote_grid`             | `nav_msgs::msg::OccupancyGrid`                  | Vote grid for marker detection debug                 |
 
 ## Parameters
 
@@ -98,7 +110,8 @@ end group
 
 1. Split the LiDAR point cloud into rings along the x-axis of the base_link coordinate system at intervals of the `resolution` size.
 2. Find the portion of intensity that matches the `intensity_pattern`.
-3. Perform steps 1 and 2 for each ring, accumulate the matching indices, and detect portions where the count exceeds the `vote_threshold_for_detect_marker` as markers.
+3. If `max_average_intensity_threshold` is set to a value greater than 0.0, check if the average intensity exceeds the threshold. If it exceeds, skip the pattern match to prevent false detection on surfaces directly facing the LiDAR receiver.
+4. Perform steps 1 and 2 for each ring, accumulate the matching indices, and detect portions where the count exceeds the `vote_threshold_for_detect_marker` as markers.
 
 ## Sample Dataset
 
@@ -111,4 +124,4 @@ The reflectors were installed by [Taisei Corporation](https://www.taisei.co.jp/e
 
 - [TIER IV](https://tier4.jp/en/)
 - [Taisei Corporation](https://www.taisei.co.jp/english/)
-- [Yuri Shimizu](https://github.com/YuriShimizu824)
+  - [Yuri Shimizu](https://github.com/YuriShimizu824)
