@@ -17,8 +17,8 @@
 #include "autoware/planning_evaluator/metrics/metric.hpp"
 #include "autoware/planning_evaluator/metrics/output_metric.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
 
@@ -149,8 +149,12 @@ PlanningEvaluatorNode::~PlanningEvaluatorNode()
     json output_json;
     for (OutputMetric metric : metrics_for_output_) {
       const json j = metrics_accumulator_.getOutputJson(metric);
-      if (!j.empty()) {
-        output_json[output_metric_to_str.at(metric)] = j;
+      if (j.empty()) {
+        continue;
+      }
+      const std::string base_name = output_metric_to_str.at(metric) + "/";
+      for (const auto & item : j.items()) {
+        output_json[base_name + item.key()] = item.value();
       }
     }
 
@@ -183,9 +187,9 @@ PlanningEvaluatorNode::~PlanningEvaluatorNode()
       RCLCPP_ERROR(this->get_logger(), "Failed to open file: %s", output_file_str.c_str());
     }
   } catch (const std::exception & e) {
-    std::cerr << "Exception in MotionEvaluatorNode destructor: " << e.what() << std::endl;
+    std::cerr << "Exception in PlanningEvaluatorNode destructor: " << e.what() << std::endl;
   } catch (...) {
-    std::cerr << "Unknown exception in MotionEvaluatorNode destructor" << std::endl;
+    std::cerr << "Unknown exception in PlanningEvaluatorNode destructor" << std::endl;
   }
 }
 
@@ -224,7 +228,8 @@ void PlanningEvaluatorNode::AddLaneletMetricMsg(const Odometry::ConstSharedPtr e
       closest_lanelets.end(), shoulder_lanelets.begin(), shoulder_lanelets.end());
     return closest_lanelets;
   }();
-  const auto arc_coordinates = lanelet::utils::getArcCoordinates(current_lanelets, ego_pose);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, ego_pose);
   const auto current_lane_opt =
     autoware::experimental::lanelet2_utils::get_closest_lanelet(current_lanelets, ego_pose);
   if (!current_lane_opt) {

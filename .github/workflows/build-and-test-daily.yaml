@@ -7,49 +7,61 @@ on:
 
 jobs:
   build-and-test-daily:
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro: [humble, jazzy]
+        cuda: [false, true]
+        arch: [amd64, arm64]
+
+        exclude:
+          # Humble is being phased out; only run CUDA amd64 as a minimal check
+          - rosdistro: humble
+            arch: arm64
+          - rosdistro: humble
+            cuda: false
+          # Non-CUDA arm64 has no deployment target; keep non-CUDA only on amd64 as a sanity check
+          - cuda: false
+            arch: arm64
+
+        include:
+          # ROS distribution specific configurations
+          - rosdistro: humble
+            container-base: ghcr.io/autowarefoundation/autoware:universe-devel
+
+          - rosdistro: jazzy
+            container-base: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
+
+          # CUDA variant configurations
+          - cuda: true
+            container-suffix: -cuda
+            cache-suffix: cuda
+
+          - cuda: false
+            container-suffix: ""
+            cache-suffix: nocuda
+
+          # Architecture specific configurations
+          - arch: amd64
+            runner: "['self-hosted', 'Linux', 'X64']"
+            build-pre-command: ""
+
+          - arch: arm64
+            runner: "['ubuntu-22.04-arm']"
+            build-pre-command: taskset --cpu-list 0-6
+
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
-      runner: "['self-hosted', 'Linux', 'X64']"
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
-      container-suffix: ""
+      rosdistro: ${{ matrix.rosdistro }}
+      container: ${{ matrix.container-base }}
+      container-suffix: ${{ matrix.container-suffix }}
+      runner: ${{ matrix.runner }}
+      build-pre-command: ${{ matrix.build-pre-command }}
+      arch: ${{ matrix.arch }}
       pull-ccache: true
-      concurrency-group: build-and-test-daily-${{ github.ref }}-${{ github.run_id }}
+      push-ccache: false
+      concurrency-group: build-and-test-daily-${{ matrix.rosdistro }}-${{ matrix.arch }}-${{ matrix.cache-suffix }}-${{ github.ref }}-${{ github.run_id }}
+      upload-coverage: ${{ matrix.rosdistro == 'jazzy' && matrix.arch == 'amd64' && matrix.cuda }}
       codecov-flag: daily
-    secrets:
-      codecov-token: ${{ secrets.CODECOV_TOKEN }}
-
-  build-and-test-daily-cuda:
-    uses: ./.github/workflows/build-and-test-reusable.yaml
-    with:
-      runner: "['self-hosted', 'Linux', 'X64']"
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
-      container-suffix: -cuda
-      pull-ccache: true
-      concurrency-group: build-and-test-daily-cuda-${{ github.ref }}-${{ github.run_id }}
-      codecov-flag: daily-cuda
-    secrets:
-      codecov-token: ${{ secrets.CODECOV_TOKEN }}
-
-  build-and-test-daily-arm64:
-    uses: ./.github/workflows/build-and-test-reusable.yaml
-    with:
-      runner: "['ubuntu-22.04-arm']"
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
-      container-suffix: ""
-      build-pre-command: taskset --cpu-list 0-6
-      concurrency-group: build-and-test-daily-arm64-${{ github.ref }}-${{ github.run_id }}
-      codecov-flag: daily-arm64
-    secrets:
-      codecov-token: ${{ secrets.CODECOV_TOKEN }}
-
-  build-and-test-daily-arm64-cuda:
-    uses: ./.github/workflows/build-and-test-reusable.yaml
-    with:
-      runner: "['ubuntu-22.04-arm']"
-      container: ghcr.io/autowarefoundation/autoware:universe-devel
-      container-suffix: -cuda
-      build-pre-command: taskset --cpu-list 0-6
-      concurrency-group: build-and-test-daily-arm64-cuda-${{ github.ref }}-${{ github.run_id }}
-      codecov-flag: daily-arm64-cuda
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}

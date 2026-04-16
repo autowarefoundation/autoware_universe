@@ -44,6 +44,7 @@
 #include "tf2_msgs/msg/tf_message.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include <autoware_control_msgs/msg/detail/control_horizon__struct.hpp>
+#include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 
 #include <memory>
@@ -105,6 +106,9 @@ private:
 
   autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_operation_mode_{
     this, "~/input/current_operation_mode", rclcpp::QoS{1}.transient_local()};
+
+  rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr
+    sub_steering_offset_update_;
 
   // Publishers
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr control_cmd_pub_;

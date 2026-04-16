@@ -741,12 +741,23 @@ void GoalPlannerModule::updateData()
 
   if (getCurrentStatus() == ModuleStatus::IDLE) {
     const bool lane_change_ctx_expired = !lane_change_ctx_.is_in_consistent_transition();
-    if (
-      !lane_parking_response_.pull_over_path_candidates.empty() &&
-      lane_parking_response_.original_upstream_module_output) {
+
+    // Copy lane_parking_response_ under lock to avoid data race with LaneParkingPlanner thread
+    std::optional<BehaviorModuleOutput> original_upstream_module_output_copy;
+    bool has_candidates = false;
+    {
+      std::lock_guard<std::mutex> guard(lane_parking_mutex_);
+      has_candidates = !lane_parking_response_.pull_over_path_candidates.empty();
+      if (has_candidates && lane_parking_response_.original_upstream_module_output) {
+        original_upstream_module_output_copy =
+          lane_parking_response_.original_upstream_module_output;
+      }
+    }
+
+    if (has_candidates && original_upstream_module_output_copy) {
       const auto result = goal_planner_utils::should_regenerate_path_candidates(
         planner_data_->self_odometry->pose.pose, getPreviousModuleOutput(),
-        lane_parking_response_.original_upstream_module_output.value(), lane_change_ctx_expired);
+        original_upstream_module_output_copy.value(), lane_change_ctx_expired);
 
       if (!result.reason.empty()) {
         RCLCPP_INFO_THROTTLE(
@@ -1454,6 +1465,14 @@ void GoalPlannerModule::setModifiedGoal(
 void GoalPlannerModule::setTurnSignalInfo(
   const PullOverContextData & context_data, BehaviorModuleOutput & output)
 {
+  if (output.path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000,
+      "setTurnSignalInfo() received empty path. Keeping previous turn signal.");
+    output.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
+    return;
+  }
+
   const auto original_signal = getPreviousModuleOutput().turn_signal_info;
   const auto new_signal = calcTurnSignalInfo(context_data);
   const auto current_seg_idx = planner_data_->findEgoSegmentIndex(output.path.points);
@@ -1467,6 +1486,14 @@ void GoalPlannerModule::setTurnSignalInfoForStopPath(
   const BehaviorModuleOutput & stop_path, const Pose & decel_start_pose,
   const std::optional<Pose> & stop_pose, BehaviorModuleOutput & output)
 {
+  if (stop_path.path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000,
+      "setTurnSignalInfoForStopPath() received empty stop path. Keeping previous turn signal.");
+    output.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
+    return;
+  }
+
   const auto original_signal = getPreviousModuleOutput().turn_signal_info;
   const auto current_seg_idx = planner_data_->findEgoSegmentIndex(stop_path.path.points);
   auto preempt_turn_signal =
