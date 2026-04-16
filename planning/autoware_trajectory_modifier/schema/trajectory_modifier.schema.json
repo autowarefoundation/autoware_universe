@@ -10,8 +10,8 @@
           "type": "array",
           "description": "List of trajectory modifier plugins to load",
           "default": [
-            "autoware::trajectory_modifier::plugin::StopPointFixer",
-            "autoware::trajectory_modifier::plugin::ObstacleStop"
+            "autoware::trajectory_modifier::plugin::ObstacleStop",
+            "autoware::trajectory_modifier::plugin::StopPointFixer"
           ],
           "items": {
             "type": "string"
@@ -210,12 +210,6 @@
                   "type": "number",
                   "description": "Minimum height of pointcloud [m]",
                   "default": 0.2,
-                  "minimum": 0.0
-                },
-                "detection_range": {
-                  "type": "number",
-                  "description": "Detection range [m]",
-                  "default": 100.0,
                   "minimum": 0.0
                 },
                 "voxel_grid_filter": {

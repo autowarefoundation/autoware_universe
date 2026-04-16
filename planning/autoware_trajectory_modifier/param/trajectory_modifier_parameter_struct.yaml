@@ -39,7 +39,7 @@ trajectory_modifier_params:
       read_only: false
     velocity_threshold:
       type: double
-      default_value: 0.1
+      default_value: 0.25
       description: Velocity threshold below which ego vehicle is considered stationary [m/s]
       read_only: false
       validation:
@@ -195,13 +195,6 @@ trajectory_modifier_params:
         description: Minimum height of pointcloud [m]
         validation:
           bounds<>: [0.0, 10.0]
-        read_only: false
-      detection_range:
-        type: double
-        default_value: 50.0
-        description: Detection range [m]
-        validation:
-          bounds<>: [0.0, 200.0]
         read_only: false
       voxel_grid_filter:
         x:

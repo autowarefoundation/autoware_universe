@@ -58,10 +58,8 @@ public:
 
 private:
   void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
-  void initialize_modifiers();
   void load_plugin(const std::string & name);
   void unload_plugin(const std::string & name);
-  void reset_previous_data();
   void set_data();
   bool initialized_modifiers_{false};
 
@@ -72,8 +70,6 @@ private:
 
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr trajectories_sub_;
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr trajectories_pub_;
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
-    debug_processing_time_detail_;
 
   autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry> sub_current_odometry_{
     this, "~/input/odometry"};
@@ -83,9 +79,6 @@ private:
     this, "~/input/objects"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
     this, "~/input/pointcloud", autoware_utils_rclcpp::single_depth_sensor_qos()};
-
-  Odometry::ConstSharedPtr current_odometry_ptr_;
-  AccelWithCovarianceStamped::ConstSharedPtr current_acceleration_ptr_;
 
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;

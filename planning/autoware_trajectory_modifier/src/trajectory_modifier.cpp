@@ -15,6 +15,7 @@
 #include "autoware/trajectory_modifier/trajectory_modifier.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
@@ -65,7 +66,8 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
   stop_watch.tic(__func__);
 
   if (!initialized_modifiers_) {
-    throw std::runtime_error("Modifiers not initialized");
+    RCLCPP_ERROR(get_logger(), "Modifiers not initialized");
+    return;
   }
 
   set_data();
@@ -135,10 +137,10 @@ void TrajectoryModifier::load_plugin(const std::string & name)
     plugin->initialize(name, this, time_keeper_, data_, params_);
     // register
     plugins_.push_back(plugin);
-    RCLCPP_INFO(this->get_logger(), "The plugin '%s' has been loaded", name.c_str());
+    RCLCPP_INFO(this->get_logger(), "The modifier plugin '%s' has been loaded", name.c_str());
     initialized_modifiers_ = true;
   } else {
-    RCLCPP_ERROR(this->get_logger(), "The plugin '%s' is not available", name.c_str());
+    RCLCPP_ERROR(this->get_logger(), "The modifier plugin '%s' is not available", name.c_str());
   }
 }
 
@@ -150,10 +152,11 @@ void TrajectoryModifier::unload_plugin(const std::string & name)
 
   if (it == plugins_.end()) {
     RCLCPP_WARN(
-      this->get_logger(), "The plugin '%s' is not in the registered modules", name.c_str());
+      this->get_logger(), "The modifier plugin '%s' is not in the registered modules",
+      name.c_str());
   } else {
     plugins_.erase(it, plugins_.end());
-    RCLCPP_INFO(this->get_logger(), "The scene plugin '%s' has been unloaded", name.c_str());
+    RCLCPP_INFO(this->get_logger(), "The modifier plugin '%s' has been unloaded", name.c_str());
   }
 }
 

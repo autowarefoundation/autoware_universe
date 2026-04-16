@@ -43,7 +43,6 @@
       pointcloud:
         height_buffer: 0.5  # height buffer to add above ego height [m]
         min_height: 0.2  # minimum height of pointcloud [m]
-        detection_range: 50.0 # detection range [m]
         voxel_grid_filter:
           x: 0.2
           y: 0.2
