@@ -33,7 +33,7 @@ public:
     const std::vector<lanelet::AutowareTrafficLightConstPtr> & regulatory_elements);
 
   std::vector<visualization_msgs::msg::Marker> generate_markers(
-    const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_lights,
+    const autoware_perception_msgs::msg::TrafficLightGroupArray & detected_traffic_lights,
     const builtin_interfaces::msg::Time & stamp) const;
 
 private:

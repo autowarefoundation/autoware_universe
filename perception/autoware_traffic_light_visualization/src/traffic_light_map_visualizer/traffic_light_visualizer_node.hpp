@@ -31,7 +31,6 @@ class TrafficLightMapVisualizerNode : public rclcpp::Node
 {
 public:
   explicit TrafficLightMapVisualizerNode(const rclcpp::NodeOptions & node_options);
-  ~TrafficLightMapVisualizerNode() = default;
 
 private:
   void traffic_lights_callback(
