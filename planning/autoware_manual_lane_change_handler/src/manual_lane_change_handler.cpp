@@ -110,8 +110,8 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
     if (segment.preferred_primitive.primitive_type == "area") {
       return;
     }
-    segment.primitives =
-      sort_primitives_left_to_right(route_handler_, segment.preferred_primitive, segment.primitives);
+    segment.primitives = sort_primitives_left_to_right(
+      route_handler_, segment.preferred_primitive, segment.primitives);
   });
 
   if (!current_route_) {
