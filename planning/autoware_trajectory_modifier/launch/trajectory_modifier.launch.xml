@@ -3,10 +3,14 @@
   <arg name="input_candidate_trajectories" default="/planning/diffusion_planner/candidate_trajectories"/>
   <arg name="input_odometry" default="/localization/kinematic_state"/>
   <arg name="input_acceleration" default="/localization/acceleration"/>
+  <arg name="input_objects_topic_name" default="/perception/object_recognition/objects"/>
+  <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
   <arg name="output_candidate_trajectories" default="~/output/candidate_trajectories"/>
 
   <node pkg="autoware_trajectory_modifier" exec="autoware_trajectory_modifier_node" name="trajectory_modifier" output="screen">
     <param from="$(var trajectory_modifier_param_path)"/>
+    <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
+    <remap from="~/input/pointcloud" to="$(var input_pointcloud_topic_name)"/>
     <remap from="~/input/candidate_trajectories" to="$(var input_candidate_trajectories)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
     <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
