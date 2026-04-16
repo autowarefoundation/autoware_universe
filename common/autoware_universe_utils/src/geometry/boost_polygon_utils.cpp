@@ -271,7 +271,7 @@ Polygon2d expandPolygon(const Polygon2d & input_polygon, const double offset)
     const Eigen::Vector2d offset_point =
       Eigen::Vector2d(curr_p.x(), curr_p.y()) + offset_vector * scaled_offset;
 
-    expanded_polygon.outer().push_back(Point2d(offset_point.x(), offset_point.y()));
+    expanded_polygon.outer().emplace_back(offset_point.x(), offset_point.y());
   }
 
   boost::geometry::correct(expanded_polygon);
