@@ -60,13 +60,50 @@ double get_detection_length(
   return forward_traj_length + margin;
 }
 
-TrajectoryPoints extend_trajectory(const TrajectoryPoints & trajectory_points, const double length)
+TrajectoryPoints extend_trajectory(
+  const TrajectoryPoints & trajectory_points, const double length, const double wheelbase_length)
 {
-  if (length < 1e-3) return trajectory_points;
-  auto extended_trajectory = trajectory_points;
-  auto p = trajectory_points.back();
-  p.pose = autoware_utils::calc_offset_pose(p.pose, length, 0, 0);
-  extended_trajectory.push_back(p);
+  if (length < 1e-3 || trajectory_points.empty()) return trajectory_points;
+
+  const auto & last_p = trajectory_points.back();
+  const auto yaw_last = tf2::getYaw(last_p.pose.orientation);
+  constexpr double lookback_distance = 1.0;  // [m]
+  const auto lookback_pose = motion_utils::calcLongitudinalOffsetPose(
+    trajectory_points, trajectory_points.size() - 1, -1.0 * lookback_distance);
+
+  auto steering_angle = 0.0;
+  if (lookback_pose) {
+    const auto lookback_yaw = tf2::getYaw(lookback_pose.value().orientation);
+    const auto delta_yaw = autoware_utils_geometry::normalize_radian(yaw_last - lookback_yaw);
+    const auto k = delta_yaw / lookback_distance;
+    steering_angle = std::atan(k * wheelbase_length);
+  }
+
+  if (std::abs(steering_angle) < 1e-3) {
+    auto extended_trajectory = trajectory_points;
+    auto p = trajectory_points.back();
+    p.pose = autoware_utils::calc_offset_pose(p.pose, length, 0, 0);
+    extended_trajectory.push_back(p);
+    return extended_trajectory;
+  }
+
+  const auto turn_radius = wheelbase_length / std::tan(steering_angle);
+  const auto yaw = tf2::getYaw(last_p.pose.orientation);
+
+  constexpr double step = 0.5;
+  TrajectoryPoints extended_trajectory;
+  for (auto d = length; d > 0; d -= step) {
+    auto p = last_p;
+    const auto beta = d / turn_radius;
+    p.pose.position.x += turn_radius * (std::sin(yaw + beta) - std::sin(yaw));
+    p.pose.position.y += turn_radius * (std::cos(yaw) - std::cos(yaw + beta));
+    p.pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw + beta);
+    extended_trajectory.push_back(p);
+  }
+  std::reverse(extended_trajectory.begin(), extended_trajectory.end());
+
+  extended_trajectory.insert(
+    extended_trajectory.begin(), trajectory_points.begin(), trajectory_points.end());
   return extended_trajectory;
 }
 
@@ -93,7 +130,7 @@ TrajectoryShape get_trajectory_shape(
       return motion_utils::cropForwardPoints(
         trajectory_points, ego_pose.position, start_idx, detection_length);
     }
-    return extend_trajectory(trajectory_points, stop_margin);
+    return extend_trajectory(trajectory_points, stop_margin, vehicle_info.wheel_base_m);
   });
 
   autoware_utils_geometry::LineString2d ls_front_right;
@@ -181,9 +218,8 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
   auto min_arc_length = std::numeric_limits<double>::max();
   geometry_msgs::msg::Point nearest_collision_point;
   for (const auto & point : *pointcloud_in_polygon) {
-    geometry_msgs::msg::Point p;
-    p.x = point.x;
-    p.y = point.y;
+    geometry_msgs::msg::Point p =
+      geometry_msgs::msg::Point().set__x(point.x).set__y(point.y).set__z(point.z);
     auto arc_length = motion_utils::calcSignedArcLength(trajectory_points, 0, p);
     if (arc_length < min_arc_length) {
       min_arc_length = arc_length;

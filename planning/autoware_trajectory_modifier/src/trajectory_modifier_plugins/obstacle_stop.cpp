@@ -487,15 +487,18 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
     autoware_utils_debug::ScopedTimeTrack stt(
       "ObstacleStop::filter_pointcloud", *get_time_keeper());
     const auto & bounding_box = debug_data_.trajectory_shape.bounding_box;
-    const auto rel_min_point = autoware_utils_geometry::inverse_transform_point(
+    const auto rel_min_corner = autoware_utils_geometry::inverse_transform_point(
       bounding_box.min_corner().to_3d(), data_->current_odometry->pose.pose);
-    const auto rel_max_point = autoware_utils_geometry::inverse_transform_point(
+    const auto rel_max_corner = autoware_utils_geometry::inverse_transform_point(
       bounding_box.max_corner().to_3d(), data_->current_odometry->pose.pose);
+    constexpr double buffer = 1.0;
+    const auto [min_x, max_x] = std::minmax(rel_min_corner.x(), rel_max_corner.x());
+    const auto [min_y, max_y] = std::minmax(rel_min_corner.y(), rel_max_corner.y());
     const auto min_z = params_.pointcloud.min_height;
     const auto max_z = data_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer;
     pointcloud_filter_->filter_pointcloud(
-      filtered_pointcloud, rel_min_point.x(), rel_max_point.x(), rel_min_point.y(),
-      rel_max_point.y(), min_z, max_z);
+      filtered_pointcloud, min_x - buffer, max_x + buffer, min_y - buffer, max_y + buffer, min_z,
+      max_z);
   }
 
   PointCloud::Ptr clustered_points(new PointCloud);
@@ -556,6 +559,7 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
   const auto ego_z = data_->current_odometry->pose.pose.position.z;
   const auto white = autoware_utils::create_marker_color(1.0, 1.0, 1.0, 1.0);
   const auto yellow = autoware_utils::create_marker_color(1.0, 1.0, 0.0, 1.0);
+  const auto magenta = autoware_utils::create_marker_color(1.0, 0.0, 1.0, 1.0);
 
   auto add_point_marker = [&](
                             const geometry_msgs::msg::Point & point, const std::string & ns,
@@ -589,7 +593,7 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
 
   int id = 0;
   for (const auto & traj_polygon : debug_data_.trajectory_shape.polygon) {
-    add_polygon_marker(traj_polygon, ns + "/traj_polygon", id, white);
+    add_polygon_marker(traj_polygon, ns + "/traj_polygon", id, yellow);
     id++;
   }
 
@@ -605,12 +609,12 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
   }
 
   for (const auto & target_polygon : debug_data_.target_polygons) {
-    add_polygon_marker(target_polygon, ns + "/target_objects", id, yellow);
+    add_polygon_marker(target_polygon, ns + "/target_objects", id, magenta);
     id++;
   }
 
   for (const auto & target_pcd_point : debug_data_.target_pcd_points) {
-    add_point_marker(target_pcd_point, ns + "/target_pcd", id, yellow, 0.25);
+    add_point_marker(target_pcd_point, ns + "/target_pcd", id, magenta, 0.25);
     id++;
   }
 
