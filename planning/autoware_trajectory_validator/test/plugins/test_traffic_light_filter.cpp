@@ -144,26 +144,95 @@ protected:
     context_.traffic_light_signals = signals;
   }
 
+  // Helper to create an intersection map with multiple lanelets
+  void create_intersection_map(lanelet::Id light_id, double stop_x)
+  {
+    // Common start
+    lanelet::Point3d p_start_l(lanelet::utils::getId(), 0, 2.5, 0);
+    lanelet::Point3d p_start_r(lanelet::utils::getId(), 0, -2.5, 0);
+    lanelet::Point3d p_stop_l(lanelet::utils::getId(), stop_x, 2.5, 0);
+    lanelet::Point3d p_stop_r(lanelet::utils::getId(), stop_x, -2.5, 0);
+
+    lanelet::LineString3d stop_line(lanelet::utils::getId(), {p_stop_l, p_stop_r});
+    lanelet::LineString3d light_shape(lanelet::utils::getId(), {p_stop_l});  // dummy
+    auto traffic_light_re =
+      lanelet::TrafficLight::make(light_id, lanelet::AttributeMap(), {light_shape}, stop_line);
+
+    // Straight
+    lanelet::Point3d p_straight_l(lanelet::utils::getId(), stop_x + 10, 2.5, 0);
+    lanelet::Point3d p_straight_r(lanelet::utils::getId(), stop_x + 10, -2.5, 0);
+    lanelet::Lanelet straight_ll(
+      lanelet::utils::getId(),
+      lanelet::LineString3d(lanelet::utils::getId(), {p_start_l, p_stop_l, p_straight_l}),
+      lanelet::LineString3d(lanelet::utils::getId(), {p_start_r, p_stop_r, p_straight_r}));
+    straight_ll.attributes()["turn_direction"] = "straight";
+    straight_ll.addRegulatoryElement(traffic_light_re);
+
+    // Left (45 deg turn)
+    lanelet::Point3d p_left_l(lanelet::utils::getId(), stop_x + 5, 10.0, 0);
+    lanelet::Point3d p_left_r(lanelet::utils::getId(), stop_x + 10, 5.0, 0);
+    lanelet::Lanelet left_ll(
+      lanelet::utils::getId(),
+      lanelet::LineString3d(lanelet::utils::getId(), {p_start_l, p_stop_l, p_left_l}),
+      lanelet::LineString3d(lanelet::utils::getId(), {p_start_r, p_stop_r, p_left_r}));
+    left_ll.attributes()["turn_direction"] = "left";
+    left_ll.addRegulatoryElement(traffic_light_re);
+
+    // Right (45 deg turn)
+    lanelet::Point3d p_right_l(lanelet::utils::getId(), stop_x + 10, -5.0, 0);
+    lanelet::Point3d p_right_r(lanelet::utils::getId(), stop_x + 5, -10.0, 0);
+    lanelet::Lanelet right_ll(
+      lanelet::utils::getId(),
+      lanelet::LineString3d(lanelet::utils::getId(), {p_start_l, p_stop_l, p_right_l}),
+      lanelet::LineString3d(lanelet::utils::getId(), {p_start_r, p_stop_r, p_right_r}));
+    right_ll.attributes()["turn_direction"] = "right";
+    right_ll.addRegulatoryElement(traffic_light_re);
+
+    context_.lanelet_map = lanelet::utils::createMap({straight_ll, left_ll, right_ll});
+  }
+
   // Helper to create a straight trajectory
   static std::vector<TrajectoryPoint> create_trajectory(
-    double start_x, double end_x, float velocity = 5.0)
+    double start_x, double end_x, float velocity = 5.0, double y = 0.0)
   {
     std::vector<TrajectoryPoint> points;
     TrajectoryPoint tp1;
     tp1.pose.position.x = start_x;
-    tp1.pose.position.y = 0;
+    tp1.pose.position.y = y;
     tp1.longitudinal_velocity_mps = velocity;
     tp1.time_from_start = rclcpp::Duration::from_seconds(0.0);
 
     TrajectoryPoint tp2;
     tp2.pose.position.x = end_x;
-    tp2.pose.position.y = 0;
+    tp2.pose.position.y = y;
     tp2.longitudinal_velocity_mps = velocity;
     tp2.time_from_start = rclcpp::Duration::from_seconds(
       std::abs(end_x - start_x) / std::max(0.1f, std::abs(velocity)));
 
     points.push_back(tp1);
     points.push_back(tp2);
+    return points;
+  }
+
+  // Helper to create a curved trajectory
+  static std::vector<TrajectoryPoint> create_curved_trajectory(
+    const std::vector<std::pair<double, double>> & waypoints, float velocity = 5.0)
+  {
+    std::vector<TrajectoryPoint> points;
+    double total_dist = 0.0;
+    for (size_t i = 0; i < waypoints.size(); ++i) {
+      if (i > 0) {
+        total_dist += std::hypot(
+          waypoints[i].first - waypoints[i - 1].first,
+          waypoints[i].second - waypoints[i - 1].second);
+      }
+      TrajectoryPoint tp;
+      tp.pose.position.x = waypoints[i].first;
+      tp.pose.position.y = waypoints[i].second;
+      tp.longitudinal_velocity_mps = velocity;
+      tp.time_from_start = rclcpp::Duration::from_seconds(total_dist / std::max(0.1f, velocity));
+      points.push_back(tp);
+    }
     return points;
   }
 
@@ -442,6 +511,47 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedCircleAndGreenArrowNoTurnDirec
   auto points = create_trajectory(0.0, 10.0);
   EXPECT_FALSE(filter_->is_feasible(points, context_))
     << "Should return false for green arrow if turn_direction is else/unknown";
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleComplexIntersection)
+{
+  const lanelet::Id light_id = 500;
+  const double stop_x = 5.0;
+  create_intersection_map(light_id, stop_x);
+
+  auto traj_straight = create_curved_trajectory({{0, 0}, {10, 0}});
+  auto traj_left = create_curved_trajectory({{0, 0}, {5, 0}, {10, 5}});
+  auto traj_right = create_curved_trajectory({{0, 0}, {5, 0}, {10, -5}});
+
+  // 1. Only RED
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  EXPECT_FALSE(filter_->is_feasible(traj_straight, context_));
+  EXPECT_FALSE(filter_->is_feasible(traj_left, context_));
+  EXPECT_FALSE(filter_->is_feasible(traj_right, context_));
+
+  // 2. RED + STRAIGHT GREEN ARROW
+  set_traffic_light_signals(
+    light_id, {{TrafficLightElement::RED, TrafficLightElement::CIRCLE},
+               {TrafficLightElement::GREEN, TrafficLightElement::UP_ARROW}});
+  EXPECT_TRUE(filter_->is_feasible(traj_straight, context_));
+  EXPECT_FALSE(filter_->is_feasible(traj_left, context_));
+  EXPECT_FALSE(filter_->is_feasible(traj_right, context_));
+
+  // 3. RED + LEFT GREEN ARROW
+  set_traffic_light_signals(
+    light_id, {{TrafficLightElement::RED, TrafficLightElement::CIRCLE},
+               {TrafficLightElement::GREEN, TrafficLightElement::LEFT_ARROW}});
+  EXPECT_FALSE(filter_->is_feasible(traj_straight, context_));
+  EXPECT_TRUE(filter_->is_feasible(traj_left, context_));
+  EXPECT_FALSE(filter_->is_feasible(traj_right, context_));
+
+  // 4. RED + RIGHT GREEN ARROW
+  set_traffic_light_signals(
+    light_id, {{TrafficLightElement::RED, TrafficLightElement::CIRCLE},
+               {TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW}});
+  EXPECT_FALSE(filter_->is_feasible(traj_straight, context_));
+  EXPECT_FALSE(filter_->is_feasible(traj_left, context_));
+  EXPECT_TRUE(filter_->is_feasible(traj_right, context_));
 }
 
 int main(int argc, char ** argv)
