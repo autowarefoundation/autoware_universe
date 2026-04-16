@@ -294,6 +294,10 @@ private:
   trajectory_follower::LongitudinalOutput run(
     trajectory_follower::InputData const & input_data) override;
 
+  /**
+   * @brief build control data from the experimental trajectory for the current ego pose
+   * @param [in] current_pose current ego pose used for nearest-point search
+   */
   std::optional<ExperimentalControlData> getExperimentalControlData(
     const geometry_msgs::msg::Pose & current_pose);
 

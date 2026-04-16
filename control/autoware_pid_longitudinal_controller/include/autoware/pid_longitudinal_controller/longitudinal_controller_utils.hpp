@@ -31,6 +31,10 @@ using geometry_msgs::msg::Quaternion;
 
 /**
  * @brief calculate distance to stopline from current vehicle position where velocity is 0
+ * @param [in] current_pose current vehicle pose
+ * @param [in] traj input trajectory
+ * @param [in] max_dist maximum distance threshold for nearest-point search
+ * @param [in] max_yaw maximum yaw threshold for nearest-point search
  */
 double calcStopDistance(
   const Pose & current_pose, const TrajectoryExperimental & traj, const double max_dist,
@@ -38,6 +42,7 @@ double calcStopDistance(
 
 /**
  * @brief calculate pitch angle from estimated current pose
+ * @param [in] quaternion orientation of the current pose
  */
 double getPitchByPose(const Quaternion & quaternion);
 
@@ -54,6 +59,10 @@ double getPitchByTraj(
 /**
  * @brief calculate vehicle pose after time delay by moving the vehicle at current velocity and
  * acceleration for delayed time
+ * @param [in] current_pose current vehicle pose
+ * @param [in] delay_time delay duration
+ * @param [in] current_vel current vehicle velocity
+ * @param [in] current_acc current vehicle acceleration
  */
 Pose calcPoseAfterTimeDelay(
   const Pose & current_pose, const double delay_time, const double current_vel,
