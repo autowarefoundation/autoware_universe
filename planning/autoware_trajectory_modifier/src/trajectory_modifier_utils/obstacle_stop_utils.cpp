@@ -398,7 +398,7 @@ void PointCloudFilter::filter_pointcloud_by_object(
         [&](const auto & point) {
           const autoware_utils_geometry::Point2d p(point.x, point.y);
           const auto rel_p = autoware_utils::inverse_transform_point(p.to_3d(), obj_pose);
-          if (abs(rel_p.x()) > x_th || abs(rel_p.y()) > y_th) {
+          if (std::abs(rel_p.x()) > x_th || std::abs(rel_p.y()) > y_th) {
             return false;
           }
           if (!obj_polygon) obj_polygon = get_object_polygon(obj);
@@ -428,9 +428,12 @@ void ObstacleTracker::update_objects(
     double min_distance = std::numeric_limits<double>::max();
     double yaw_diff = std::numeric_limits<double>::max();
     for (const auto & [uuid, existing_object] : persistent_objects_map_) {
-      if (
-        existing_object.object.classification.front().label != object.classification.front().label)
-        continue;
+      const auto existing_obj_label = existing_object.object.classification.empty()
+                                        ? ObjectClassification::UNKNOWN
+                                        : existing_object.object.classification.front().label;
+      const auto obj_label = object.classification.empty() ? ObjectClassification::UNKNOWN
+                                                           : object.classification.front().label;
+      if (existing_obj_label != obj_label) continue;
       const auto distance = autoware_utils::calc_distance2d(
         object.kinematics.initial_pose_with_covariance.pose.position,
         existing_object.object.kinematics.initial_pose_with_covariance.pose.position);
