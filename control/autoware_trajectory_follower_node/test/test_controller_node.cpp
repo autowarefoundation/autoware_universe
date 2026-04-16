@@ -59,14 +59,12 @@ rclcpp::NodeOptions makeNodeOptions(const bool enable_keep_stopped_until_steer_c
   rclcpp::NodeOptions node_options;
   node_options.append_parameter_override("lateral_controller_mode", "mpc");
   node_options.append_parameter_override("longitudinal_controller_mode", "pid");
-  node_options.append_parameter_override("steer_offset_param_name", "steer_offset");
   node_options.append_parameter_override(
     "enable_keep_stopped_until_steer_convergence",
     enable_keep_stopped_until_steer_convergence);  // longitudinal
   node_options.arguments(
     {"--ros-args", "--params-file",
      lateral_share_dir + "/param/lateral_controller_defaults.param.yaml", "--params-file",
-     lateral_share_dir + "/param/steer_offset.param.yaml", "--params-file",
      longitudinal_share_dir + "/config/autoware_pid_longitudinal_controller.param.yaml",
      "--params-file", share_dir + "/test/test_vehicle_info.param.yaml", "--params-file",
      share_dir + "/test/test_nearest_search.param.yaml", "--params-file",
@@ -366,8 +364,9 @@ TEST_F(FakeNodeFixture, longitudinal_keep_velocity)
   traj_msg.header.stamp = tester.node->now();
   traj_msg.header.frame_id = "map";
   traj_msg.points.push_back(make_traj_point(0.0, 0.0, 1.0f));
-  traj_msg.points.push_back(make_traj_point(50.0, 0.0, 1.0f));
-  traj_msg.points.push_back(make_traj_point(100.0, 0.0, 1.0f));
+  traj_msg.points.push_back(make_traj_point(1.0, 0.0, 1.0f));
+  traj_msg.points.push_back(make_traj_point(2.0, 0.0, 1.0f));
+  traj_msg.points.push_back(make_traj_point(3.0, 0.0, 1.0f));
   tester.traj_pub->publish(traj_msg);
 
   test_utils::waitForMessage(tester.node, this, tester.received_control_command);
@@ -403,8 +402,9 @@ TEST_F(FakeNodeFixture, longitudinal_slow_down)
   traj.header.stamp = tester.node->now();
   traj.header.frame_id = "map";
   traj.points.push_back(make_traj_point(0.0, 0.0, 0.5f));
-  traj.points.push_back(make_traj_point(50.0, 0.0, 0.5f));
-  traj.points.push_back(make_traj_point(100.0, 0.0, 0.5f));
+  traj.points.push_back(make_traj_point(1.0, 0.0, 0.5f));
+  traj.points.push_back(make_traj_point(2.0, 0.0, 0.5f));
+  traj.points.push_back(make_traj_point(3.0, 0.0, 0.5f));
   tester.traj_pub->publish(traj);
 
   test_utils::waitForMessage(tester.node, this, tester.received_control_command);
@@ -440,8 +440,9 @@ TEST_F(FakeNodeFixture, longitudinal_accelerate)
   traj.header.stamp = tester.node->now();
   traj.header.frame_id = "map";
   traj.points.push_back(make_traj_point(0.0, 0.0, 1.0f));
-  traj.points.push_back(make_traj_point(50.0, 0.0, 1.0f));
-  traj.points.push_back(make_traj_point(100.0, 0.0, 1.0f));
+  traj.points.push_back(make_traj_point(1.0, 0.0, 1.0f));
+  traj.points.push_back(make_traj_point(2.0, 0.0, 1.0f));
+  traj.points.push_back(make_traj_point(3.0, 0.0, 1.0f));
   tester.traj_pub->publish(traj);
 
   test_utils::waitForMessage(tester.node, this, tester.received_control_command);
@@ -474,8 +475,9 @@ TEST_F(FakeNodeFixture, longitudinal_stopped)
   traj.header.stamp = tester.node->now();
   traj.header.frame_id = "map";
   traj.points.push_back(make_traj_point(0.0, 0.0, 0.0f));
-  traj.points.push_back(make_traj_point(50.0, 0.0, 0.0f));
-  traj.points.push_back(make_traj_point(100.0, 0.0, 0.0f));
+  traj.points.push_back(make_traj_point(1.0, 0.0, 0.0f));
+  traj.points.push_back(make_traj_point(2.0, 0.0, 0.0f));
+  traj.points.push_back(make_traj_point(3.0, 0.0, 0.0f));
   tester.traj_pub->publish(traj);
 
   test_utils::waitForMessage(tester.node, this, tester.received_control_command);
@@ -504,8 +506,9 @@ TEST_F(FakeNodeFixture, longitudinal_reverse)
   traj.header.stamp = tester.node->now();
   traj.header.frame_id = "map";
   traj.points.push_back(make_traj_point(0.0, 0.0, -1.0f));
-  traj.points.push_back(make_traj_point(50.0, 0.0, -1.0f));
-  traj.points.push_back(make_traj_point(100.0, 0.0, -1.0f));
+  traj.points.push_back(make_traj_point(1.0, 0.0, -1.0f));
+  traj.points.push_back(make_traj_point(2.0, 0.0, -1.0f));
+  traj.points.push_back(make_traj_point(3.0, 0.0, -1.0f));
   tester.traj_pub->publish(traj);
 
   test_utils::waitForMessage(tester.node, this, tester.received_control_command);
@@ -534,8 +537,9 @@ TEST_F(FakeNodeFixture, longitudinal_not_check_steer_converged)
   traj.header.stamp = tester.node->now();
   traj.header.frame_id = "map";
   traj.points.push_back(make_traj_point(0.0, 0.0, 1.0f));
-  traj.points.push_back(make_traj_point(50.0, 0.0, 1.0f));
-  traj.points.push_back(make_traj_point(100.0, 0.0, 1.0f));
+  traj.points.push_back(make_traj_point(1.0, 0.0, 1.0f));
+  traj.points.push_back(make_traj_point(2.0, 0.0, 1.0f));
+  traj.points.push_back(make_traj_point(3.0, 0.0, 1.0f));
   tester.traj_pub->publish(traj);
 
   test_utils::waitForMessage(tester.node, this, tester.received_control_command);
@@ -565,8 +569,9 @@ TEST_F(FakeNodeFixture, longitudinal_check_steer_converged)
   traj.header.stamp = tester.node->now();
   traj.header.frame_id = "map";
   traj.points.push_back(make_traj_point(0.0, 0.0, 1.0f));
-  traj.points.push_back(make_traj_point(50.0, 0.0, 1.0f));
-  traj.points.push_back(make_traj_point(100.0, 0.0, 1.0f));
+  traj.points.push_back(make_traj_point(1.0, 0.0, 1.0f));
+  traj.points.push_back(make_traj_point(2.0, 0.0, 1.0f));
+  traj.points.push_back(make_traj_point(3.0, 0.0, 1.0f));
 
   {  // Check if the ego can keep stopped when the steering is not converged.
     tester.traj_pub->publish(traj);
