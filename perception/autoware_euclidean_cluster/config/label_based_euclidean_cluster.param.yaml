@@ -5,6 +5,7 @@
     tolerance: 0.7
     use_height: false
     min_probability: 0.5
+    default_probability: 1.0
     target_class_ids: [5, 6, 9, 15, 16, 17]
     class_names:
       [

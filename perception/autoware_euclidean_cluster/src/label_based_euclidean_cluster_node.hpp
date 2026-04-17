@@ -44,7 +44,7 @@ public:
 
 private:
   /// @brief Process an input semantic point cloud and publish clustered outputs.
-  /// @param input_msg Input point cloud containing xyz, class_id, and probability fields.
+  /// @param input_msg Input point cloud containing xyz, class_id, and an optional probability field.
   void on_point_cloud(sensor_msgs::msg::PointCloud2::ConstSharedPtr input_msg);
 
   /// @brief Build the mapping from semantic class IDs to Autoware object labels.
@@ -68,5 +68,6 @@ private:
 
   std::unordered_map<std::uint8_t, std::uint8_t> class_id_to_object_label_;
   float min_probability_;
+  float default_probability_;
 };
 }  // namespace autoware::euclidean_cluster

@@ -32,7 +32,7 @@ It also provides `label_based_euclidean_cluster`, which consumes the semantic po
 
 | Name    | Type                            | Description                                                |
 | ------- | ------------------------------- | ---------------------------------------------------------- |
-| `input` | `sensor_msgs::msg::PointCloud2` | PTV3 segmentation pointcloud with `class_id` and `probability` fields |
+| `input` | `sensor_msgs::msg::PointCloud2` | PTV3 pointcloud with `class_id` and an optional `probability` field |
 
 ### Output
 
@@ -69,7 +69,8 @@ It also provides `label_based_euclidean_cluster`, which consumes the semantic po
 | `min_cluster_size`                | int             | minimum number of points required to keep a cluster                         |
 | `max_cluster_size`                | int             | maximum number of points allowed in a cluster                               |
 | `tolerance`                       | float           | Euclidean clustering tolerance                                              |
-| `min_probability`                 | float           | minimum semantic probability to keep a point                                |
+| `min_probability`                 | float           | minimum point probability to keep a point when the input contains `probability` |
+| `default_probability`             | float           | fallback probability used when the input omits the `probability` field      |
 | `target_class_ids`                | integer array   | target PTV3 class indices to cluster                                        |
 | `class_names`                     | string array    | PTV3 class names used to map target class IDs into Autoware object labels   |
 | `use_shape_estimation_corrector`  | bool            | pass clusters through the standard shape estimation corrector                |
@@ -121,3 +122,5 @@ Example:
 The `use_height` option of `voxel_grid_based_euclidean_cluster` isn't implemented yet.
 
 `label_based_euclidean_cluster` currently targets the dynamic labels `car`, `bus`, `truck`, `motorcycle`, `bicycle`, and `pedestrian`. Unsupported PTV3 labels are ignored even if they are listed in `target_class_ids`.
+
+When the input is the PTv3 filtered obstacle pointcloud, `probability` is typically absent. In that mode the node uses `default_probability` for each point and still clusters by `class_id`.
