@@ -19,6 +19,7 @@
 #include <autoware/trajectory/temporal_trajectory.hpp>
 #include <autoware/trajectory/threshold.hpp>
 #include <autoware/trajectory/utils/add_offset.hpp>
+#include <autoware/trajectory/utils/crop.hpp>
 #include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware/trajectory/utils/find_intervals.hpp>
 #include <tl_expected/expected.hpp>
@@ -147,10 +148,14 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
 
   auto trajectory = trajectory_opt.value();
 
-  trajectory.crop_time(0.0, trajectory.end_time());  // Only consider future trajectory points
+  trajectory = experimental::trajectory::crop_time(
+    trajectory, 0.0, trajectory.end_time());  // Only consider future trajectory points
 
-  trajectory.crop_distance(
-    0.0, max_trajectory_length);  // Only consider trajectory points within the maximum length
+  trajectory = experimental::trajectory::crop_distance(
+    trajectory, 0.0,
+    std::min(
+      trajectory.length(),
+      max_trajectory_length));  // Only consider trajectory points within the maximum length
 
   auto stopped_trajectory = experimental::trajectory::find_intervals(
     trajectory, [](const auto & point) { return point.longitudinal_velocity_mps <= 0.0; });
@@ -158,8 +163,8 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
   auto stopped_intervals =
     stopped_trajectory.empty() ? trajectory.length() : stopped_trajectory.front().start.distance;
 
-  trajectory.crop_distance(
-    0.0, stopped_intervals);  // Only consider trajectory points before the first stop
+  trajectory = experimental::trajectory::crop_distance(
+    trajectory, 0.0, stopped_intervals);  // Only consider trajectory points before the first stop
 
   if (trajectory.length() <= experimental::trajectory::k_points_minimum_dist_threshold) {
     return {};  // allow trajectories that are too short as they do not cross traffic lights
@@ -179,7 +184,8 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
 
   const auto current_point = offset_trajectory.compute_from_time(offset_trajectory.start_time());
   for (const auto & amber_stop_line : amber_stop_lines) {
-    const auto crossed_points = experimental::trajectory::crossed(offset_trajectory, amber_stop_line);
+    const auto crossed_points =
+      experimental::trajectory::crossed(offset_trajectory, amber_stop_line);
     if (crossed_points.empty()) {
       continue;
     }
