@@ -36,17 +36,36 @@ namespace autoware::traffic_light_utils
 void setSignalUnknown(tier4_perception_msgs::msg::TrafficLight & signal, float confidence);
 
 /**
- * @brief Checks if a traffic light state includes a light with the specified shape and color.
- *
- * Iterates through the traffic light elements to find a light that matches the given shape
- * and color.
+ * @brief Checks if a traffic light state includes a light with the specified shape.
  *
  * @param elements The traffic light elements to check.
- * @param lamp_shape The shape to look for in the traffic light's lamps.
- * @param lamp_color The color to look for.
- * @return True if a matching light is found, false otherwise.
+ * @param lamp_shape The shape to look for.
+ * @return True if a light with the specified shape is found, false otherwise.
  */
-bool hasTrafficLightShapeColor(
+bool hasTrafficLightShape(
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
+  const uint8_t & lamp_shape);
+
+/**
+ * @brief Checks if a traffic light state includes a light with the specified color.
+ *
+ * @param elements The traffic light elements to check.
+ * @param lamp_color The color to look for.
+ * @return True if a light with the specified color is found, false otherwise.
+ */
+bool hasTrafficLightColor(
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
+  const uint8_t & lamp_color);
+
+/**
+ * @brief Checks if a traffic light state includes a light with the specified shape and color.
+ *
+ * @param elements The traffic light elements to check.
+ * @param lamp_shape The shape to look for.
+ * @param lamp_color The color to look for.
+ * @return True if a light matching both shape and color is found, false otherwise.
+ */
+bool hasTrafficLightShapeAndColor(
   const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
   const uint8_t & lamp_shape, const uint8_t & lamp_color);
 
