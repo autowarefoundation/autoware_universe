@@ -35,7 +35,7 @@ std::pair<uint16_t, double> validateAndComputeLateralOffset(
       static_cast<double>(request.shift_value), current_inserted_lateral_offset, parameters);
   }
 
-  if (request.shift_mode == SetLateralOffset::Request::DIRECTION) {
+  if (request.shift_mode == SetLateralOffset::Request::LATERAL_OFFSET_DIRECTION) {
     if (request.shift_direction_value == SetLateralOffset::Request::RESET) {
       return {SetLateralOffset::Response::SUCCESS, 0.0};
     }

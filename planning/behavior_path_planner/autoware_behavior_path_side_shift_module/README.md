@@ -16,14 +16,34 @@ Please be aware that `requested_lateral_offset_` is continuously updated with th
 
 Offsets use the same sign convention as `tier4_planning_msgs/msg/LateralOffset` (**positive = left** of the reference path, **negative = right**).
 
-| Interface    | Message / service                                               | Role                                                                                                                                                                                |
-| ------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Subscription | `~/input/lateral_offset` (`tier4_planning_msgs/LateralOffset`)  | Stream of requested lateral offset [m].                                                                                                                                             |
-| Service      | `~/set_lateral_offset` (`tier4_planning_msgs/SetLateralOffset`) | Request a new offset with a response: `EXPLICIT_LATERAL_OFFSET_AMOUNT` sets `shift_value` [m] directly; `DIRECTION` uses `LEFT` / `RIGHT` / `RESET` with step size from parameters. |
-| Publisher    | `~/output/lateral_offset` (`tier4_planning_msgs/LateralOffset`) | Reports the **current** inserted lateral offset [m] for feedback.                                                                                                                   |
+| Interface    | Message / service                                               | Role                                                                                                                                                                                               |
+| ------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Subscription | `~/input/lateral_offset` (`tier4_planning_msgs/LateralOffset`)  | Stream of requested lateral offset [m].                                                                                                                                                            |
+| Service      | `~/set_lateral_offset` (`tier4_planning_msgs/SetLateralOffset`) | Request a new offset with a response: `EXPLICIT_LATERAL_OFFSET_AMOUNT` sets `shift_value` [m] directly; `LATERAL_OFFSET_DIRECTION` uses `LEFT` / `RIGHT` / `RESET` with step size from parameters. |
+| Publisher    | `~/output/lateral_offset` (`tier4_planning_msgs/LateralOffset`) | Reports the **current** inserted lateral offset [m] for feedback.                                                                                                                                  |
 
 The same validation (magnitude limits, minimum gap versus the previous offset, and so on) applies whether the request arrives on the topic or through the service.
 It is recommended to use services so that the user can understand whether the request is accepted or not.
+
+### `~/set_lateral_offset` response `status.code` values
+
+The service fills `autoware_common_msgs/ResponseStatus` (`success`, `code`, `message`). The numeric `code` is either a constant from `tier4_planning_msgs/srv/SetLateralOffset` (service-specific) or from `autoware_common_msgs/msg/ResponseStatus` (shared infrastructure).
+
+| `code` value | Constant                    | Typical `success` | Meaning                                                                                                                                                                                                                  |
+| -----------: | --------------------------- | :---------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|            0 | `SUCCESS`                   |      `true`       | Request accepted; lateral offset updated as requested.                                                                                                                                                                   |
+|        10000 | `ERROR_UNKNOWN`             |      `false`      | Unspecified error.                                                                                                                                                                                                       |
+|        10001 | `ERROR_INVALID_MODE`        |      `false`      | `shift_mode` is not a supported value.                                                                                                                                                                                   |
+|        10002 | `ERROR_INVALID_DIRECTION`   |      `false`      | In `LATERAL_OFFSET_DIRECTION` mode, `shift_direction_value` is not `RESET`, `LEFT`, or `RIGHT`.                                                                                                                          |
+|        10003 | `ERROR_EXCEEDED_LIMIT`      |      `false`      | The path is shifted **already at limit** (configured by parameters) and your request is trying to go even further.                                                                                                       |
+|        10004 | `ERROR_SHIFT_GAP_TOO_SMALL` |      `false`      | Change versus the current offset is smaller than `min_shift_gap` (treated as no meaningful update).                                                                                                                      |
+|        10005 | `ERROR_MODULES_CONFLICTING` |      `false`      | Cannot perform side shift because modules that cannot be run together with the side_shift module is active in the `behavior_path_planner`                                                                                |
+|        20000 | `WARN_UNKNOWN`              |      `false`      | Unspecified warning.                                                                                                                                                                                                     |
+|        20001 | `WARN_EXCEEDED_LIMIT`       |      `true`       | You request reached the limit (configured by parameters) and side_shift module tries to shift the path to the possible maximum. If you try shift even further next, then the service will return `ERROR_EXCEEDED_LIMIT`. |
+|        50001 | `SERVICE_UNREADY`           |      `false`      | `behavior_path_planner` is not ready; request ignored.                                                                                                                                                                   |
+|        50004 | `PARAMETER_ERROR`           |      `false`      | Invalid side-shift node parameters were detected (e.g. non-positive `unit_shift_amount` when using direction steps).                                                                                                     |
+
+`success` is set to `true` only when `code` is `SUCCESS` (0) or `WARN_EXCEEDED_LIMIT` (20001); in those cases the requested offset (possibly clamped) is applied. For all other rows, the previous requested offset is left unchanged.
 
 ## Statuses of the Side Shift
 
