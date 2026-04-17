@@ -191,7 +191,7 @@ DetectionResult TrafficLightMapBasedDetector::detect(
   }
 
   // set all offset to zero when calculating the expect roi
-  const tf2::Transform & tf_map2camera_closest =
+  const tf2::Transform tf_map2camera_closest =
     findClosestTransform(tf_map2camera_samples, camera_info.header.stamp);
   TrafficLightMapBasedDetectorConfig expect_roi_config = config_;
   expect_roi_config.max_vibration_depth = 0;
