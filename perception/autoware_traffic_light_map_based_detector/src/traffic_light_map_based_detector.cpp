@@ -173,6 +173,10 @@ DetectionResult TrafficLightMapBasedDetector::detect(
   result.rough_rois.header = camera_info.header;
   result.expect_rois.header = camera_info.header;
 
+  if (tf_map2camera_samples.empty()) {
+    return result;
+  }
+
   image_geometry::PinholeCameraModel pinhole_camera_model;
   pinhole_camera_model.fromCameraInfo(camera_info);
 
