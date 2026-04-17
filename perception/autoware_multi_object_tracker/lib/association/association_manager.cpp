@@ -76,10 +76,8 @@ types::AssociationResult AssociationManager::associate(
   }
 
   // Build unmatched tracker list using a hash set for O(n + m) filtering
-  std::unordered_set<
-    unique_identifier_msgs::msg::UUID, types::UUIDHash, types::UUIDEqual>
-    unassigned_tracker_set(
-      result.unassigned_trackers.begin(), result.unassigned_trackers.end());
+  std::unordered_set<unique_identifier_msgs::msg::UUID, types::UUIDHash, types::UUIDEqual>
+    unassigned_tracker_set(result.unassigned_trackers.begin(), result.unassigned_trackers.end());
   std::list<std::shared_ptr<Tracker>> unmatched_trackers;
   for (const auto & tracker : trackers) {
     if (unassigned_tracker_set.count(tracker->getUUID())) {

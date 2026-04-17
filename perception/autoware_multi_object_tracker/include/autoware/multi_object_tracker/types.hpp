@@ -138,7 +138,7 @@ enum class InputType {
 
 // Geometric association algorithm selection per input channel.
 enum class AssociationType {
-  BEV,   // BevAssociation: bird's-eye-view area scoring + GNN linear assignment
+  BEV,    // BevAssociation: bird's-eye-view area scoring + GNN linear assignment
   POLAR,  // PolarAssociation: polar-coordinate (range-bearing) based scoring
 };
 

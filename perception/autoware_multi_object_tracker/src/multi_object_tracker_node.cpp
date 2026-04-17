@@ -263,8 +263,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     const std::string input_channel_topic = oss.str();
 
     if (input_channel.input_type == types::InputType::TRACKED_OBJECTS) {
-      std::function<void(
-        const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr msg)>
+      std::function<void(const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr msg)>
         func = std::bind(
           &MultiObjectTracker::onTrackedMeasurement, this, input_channel.index,
           std::placeholders::_1);
@@ -272,8 +271,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         create_subscription<autoware_perception_msgs::msg::TrackedObjects>(
           input_channel_topic, rclcpp::QoS{1}, func);
     } else {
-      std::function<void(
-        const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
+      std::function<void(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
         func = std::bind(
           &MultiObjectTracker::onMeasurement, this, input_channel.index, std::placeholders::_1);
       sub_objects_array_.at(index) =

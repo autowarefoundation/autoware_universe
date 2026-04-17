@@ -95,8 +95,7 @@ void InputStream::applyChannelConfig(types::DynamicObjectList & objects) const
 std::optional<types::DynamicObjectList> InputStream::processMessage(
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
-  types::DynamicObjectList dynamic_objects =
-    types::toDynamicObjectList(*msg, channel_.index);
+  types::DynamicObjectList dynamic_objects = types::toDynamicObjectList(*msg, channel_.index);
 
   // Model the object uncertainty
   types::DynamicObjectList objects_with_uncertainty =
@@ -120,7 +119,8 @@ std::optional<types::DynamicObjectList> InputStream::processMessage(
       // convert convex hull to bounding box
       if (!shapes::convertConvexHullToBoundingBox(object, object)) {
         RCLCPP_WARN(
-          logger_, "InputManager::processMessage %s: Failed to convert convex hull to bounding box.",
+          logger_,
+          "InputManager::processMessage %s: Failed to convert convex hull to bounding box.",
           channel_.long_name.c_str());
         continue;
       }
