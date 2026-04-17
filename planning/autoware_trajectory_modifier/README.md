@@ -6,6 +6,7 @@ The `autoware_trajectory_modifier` package provides a plugin-based architecture 
 
 - Plugin-based architecture for extensible trajectory modifications
 - Stop point fixing to prevent trajectory issues near stationary conditions
+- Obstacle detection and stopping to prevent collision
 - Configurable parameters to adjust modification behavior
 
 ## Architecture
@@ -17,8 +18,8 @@ The trajectory modifier uses a plugin-based system where different modification 
 All modifier plugins must inherit from `TrajectoryModifierPluginBase` and implement:
 
 - `modify_trajectory()` - Main method to modify trajectory points
-- `set_up_params()` - Initialize plugin parameters
-- `on_parameter()` - Handle parameter updates
+- `on_initialize()` - Initialize plugin members and parameters
+- `update_params()` - Handle parameter updates
 - `is_trajectory_modification_required()` - Determine if modification is needed
 
 ### Current Plugins
@@ -31,6 +32,14 @@ The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is 
 - **Long stop**: the trajectory commands ego to remain stopped for longer than a minimum duration threshold
 
 Both conditions are individually enabled or disabled via parameters, allowing fine-grained control over when the override is applied.
+
+#### Obstacle Stop
+
+The Obstacle Stop plugin serves as a deterministic safety shield operating independently of the generative model to:
+
+- **Enforce Longitudinal Safety**: Monitors the gap to dynamic and static obstacles to ensure a safe distance is maintained under all kinematic conditions.
+- **Ensure Definitive Stopping**: Guarantees zero-velocity set-points for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.
+- **Provide Predictable Deceleration**: Standardizes the vehicle’s stopping profile to ensure consistent, comfortable, and physically guaranteed deceleration regardless of the AI's intended path.
 
 ## Dependencies
 
@@ -49,17 +58,7 @@ This package depends on the following packages:
 
 ## Parameters
 
-- `use_stop_point_fixer`: Enable the stop point fixer modifier plugin (default: `true`)
-
-### Stop Point Fixer
-
-| Parameter                                                | Type   | Default | Description                                                                                          |
-| -------------------------------------------------------- | ------ | ------- | ---------------------------------------------------------------------------------------------------- |
-| `stop_point_fixer.force_stop_close_stopped_trajectories` | bool   | `true`  | Force zero-velocity trajectory when the stop point is within `min_distance_threshold_m` of ego       |
-| `stop_point_fixer.force_stop_long_stopped_trajectories`  | bool   | `true`  | Force zero-velocity trajectory when the trajectory commands a stop longer than `min_stop_duration_s` |
-| `stop_point_fixer.velocity_threshold_mps`                | double | `0.25`  | Velocity threshold (m/s) below which ego is considered stationary                                    |
-| `stop_point_fixer.min_distance_threshold_m`              | double | `1.0`   | Distance threshold (m) for the close-stop condition                                                  |
-| `stop_point_fixer.min_stop_duration_s`                   | double | `0.5`   | Minimum stop duration (s) for the long-stop condition                                                |
+{{ json_to_markdown("planning/autoware_trajectory_modifier/schema/trajectory_modifier.schema.json") }}
 
 Parameters can be set via YAML configuration files in the `config/` directory.
 
