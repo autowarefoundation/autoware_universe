@@ -32,10 +32,8 @@ AssociationManager::AssociationManager(
 
 AssociationBase & AssociationManager::getAssociationForChannel(const uint channel_index) const
 {
-  if (channel_index < channels_config_.size()) {
-    if (channels_config_[channel_index].associator_type == types::AssociationType::POLAR) {
-      return *polar_association_;
-    }
+  if (channels_config_[channel_index].associator_type == types::AssociationType::POLAR) {
+    return *polar_association_;
   }
   return *bev_association_;
 }
