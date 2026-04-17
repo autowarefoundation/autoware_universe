@@ -161,11 +161,12 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
           get_logger(), *get_clock(), 1000, "Not feasible: %s", res.error().c_str());
         diagnostics_interface_.add_key_value(plugin->get_name(), res.error());
 
+        evaluation.is_feasible = false;
+        evaluation.reason = res.error();
+
         if (plugin->is_shadow_mode()) {
           continue;
         }
-        evaluation.is_feasible = false;
-        evaluation.reason = res.error();
 
         table.is_overall_feasible = false;
       }
