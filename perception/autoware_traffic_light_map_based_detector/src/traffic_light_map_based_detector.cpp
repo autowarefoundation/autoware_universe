@@ -19,7 +19,6 @@
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
-#include <rclcpp/time.hpp>
 
 #include <lanelet2_core/Exceptions.h>
 #include <lanelet2_core/geometry/Point.h>
@@ -152,14 +151,13 @@ std::optional<SetRouteError> TrafficLightMapBasedDetector::setRoute(
 }
 
 const tf2::Transform & findClosestTransform(
-  const std::vector<StampedTransform> & samples, const builtin_interfaces::msg::Time & target_stamp)
+  const std::vector<StampedTransform> & samples, const rclcpp::Time & target_time)
 {
-  const rclcpp::Time target_time(target_stamp);
   const auto closest_iter = std::min_element(
     samples.begin(), samples.end(),
     [&target_time](const StampedTransform & lhs, const StampedTransform & rhs) {
-      const auto diff_lhs = std::abs((rclcpp::Time(lhs.stamp) - target_time).nanoseconds());
-      const auto diff_rhs = std::abs((rclcpp::Time(rhs.stamp) - target_time).nanoseconds());
+      const auto diff_lhs = std::abs((lhs.stamp - target_time).nanoseconds());
+      const auto diff_rhs = std::abs((rhs.stamp - target_time).nanoseconds());
       return diff_lhs < diff_rhs;
     });
   return closest_iter->transform;

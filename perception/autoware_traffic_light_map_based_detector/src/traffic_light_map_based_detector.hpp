@@ -18,7 +18,7 @@
 #include "traffic_light_map_based_detector_process.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
-#include <builtin_interfaces/msg/time.hpp>
+#include <rclcpp/time.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -48,7 +48,7 @@ struct SetRouteError
 
 struct StampedTransform
 {
-  builtin_interfaces::msg::Time stamp;
+  rclcpp::Time stamp;
   tf2::Transform transform;
 };
 
