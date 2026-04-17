@@ -116,6 +116,8 @@ std::pair<uint16_t, double> validateShiftRight(
 const char * getStatusMessage(uint16_t status_code)
 {
   switch (status_code) {
+    case SetLateralOffset::Response::UNKNOWN:
+      return "Unknown or uninitialized status";
     case SetLateralOffset::Response::SUCCESS:
       return "Updated successfully";
     case SetLateralOffset::Response::ERROR_UNKNOWN:

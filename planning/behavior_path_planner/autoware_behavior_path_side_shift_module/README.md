@@ -31,7 +31,8 @@ The service fills `autoware_common_msgs/ResponseStatus` (`success`, `code`, `mes
 
 | `code` value | Constant                    | Typical `success` | Meaning                                                                                                                                                                                                                  |
 | -----------: | --------------------------- | :---------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|            0 | `SUCCESS`                   |      `true`       | Request accepted; lateral offset updated as requested.                                                                                                                                                                   |
+|            0 | `UNKNOWN`                   |      `false`      | No specific result (e.g. zero-initialized `code`; this node always sets `code` explicitly on return).                                                                                                                    |
+|            1 | `SUCCESS`                   |      `true`       | Request accepted; lateral offset updated as requested.                                                                                                                                                                   |
 |        10000 | `ERROR_UNKNOWN`             |      `false`      | Unspecified error.                                                                                                                                                                                                       |
 |        10001 | `ERROR_INVALID_MODE`        |      `false`      | `shift_mode` is not a supported value.                                                                                                                                                                                   |
 |        10002 | `ERROR_INVALID_DIRECTION`   |      `false`      | In `LATERAL_OFFSET_DIRECTION` mode, `shift_direction_value` is not `RESET`, `LEFT`, or `RIGHT`.                                                                                                                          |
@@ -43,7 +44,7 @@ The service fills `autoware_common_msgs/ResponseStatus` (`success`, `code`, `mes
 |        50001 | `SERVICE_UNREADY`           |      `false`      | `behavior_path_planner` is not ready; request ignored.                                                                                                                                                                   |
 |        50004 | `PARAMETER_ERROR`           |      `false`      | Invalid side-shift node parameters were detected (e.g. non-positive `unit_shift_amount` when using direction steps).                                                                                                     |
 
-`success` is set to `true` only when `code` is `SUCCESS` (0) or `WARN_EXCEEDED_LIMIT` (20001); in those cases the requested offset (possibly clamped) is applied. For all other rows, the previous requested offset is left unchanged.
+`success` is set to `true` only when `code` is `SUCCESS` (1) or `WARN_EXCEEDED_LIMIT` (20001); in those cases the requested offset (possibly clamped) is applied. For all other rows, the previous requested offset is left unchanged.
 
 ## Statuses of the Side Shift
 
