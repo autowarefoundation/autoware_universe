@@ -23,12 +23,12 @@
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 
 #include <chrono>
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <unordered_map>
 #include <vector>
 
@@ -43,23 +43,18 @@ public:
   explicit LabelBasedEuclideanClusterNode(const rclcpp::NodeOptions & options);
 
 private:
-  /// @brief Process an input semantic point cloud and publish clustered outputs.
-  /// @param input_msg Input point cloud containing xyz, class_id, and an optional probability field.
-  void on_point_cloud(sensor_msgs::msg::PointCloud2::ConstSharedPtr input_msg);
+  /// @brief Process an input semantic point cloud and publish detected objects.
+  /// @param input_msg Input point cloud containing xyz, class_id, and probability fields.
+  void on_pointcloud(sensor_msgs::msg::PointCloud2::ConstSharedPtr input_msg);
 
   /// @brief Build the mapping from semantic class IDs to Autoware object labels.
-  /// @param class_names Configured semantic class names indexed by class ID.
-  /// @param target_class_ids Target class IDs to include in clustering.
-  /// @return True if at least one supported target class is configured.
+  /// @param class_mappings Ordered class mappings from original class name to Autoware label.
+  /// @return True if at least one supported class is configured.
   bool update_target_label_map(
-    const std::vector<std::string> & class_names,
-    const std::vector<std::int64_t> & target_class_ids);
+    const std::vector<std::pair<std::string, std::string>> & class_mappings);
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
-  rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr
-    labeled_cluster_pub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr boxes_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_pub_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_;
 
   std::shared_ptr<EuclideanCluster> cluster_;
   std::unique_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator_;
@@ -68,6 +63,5 @@ private:
 
   std::unordered_map<std::uint8_t, std::uint8_t> class_id_to_object_label_;
   float min_probability_;
-  float default_probability_;
 };
 }  // namespace autoware::euclidean_cluster

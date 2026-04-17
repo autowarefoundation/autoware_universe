@@ -39,8 +39,7 @@ def launch_setup(context, *args, **kwargs):
         name=AnonName("label_based_euclidean_cluster"),
         remappings=[
             ("input", LaunchConfiguration("input_pointcloud")),
-            ("output/labeled_clusters", LaunchConfiguration("output_labeled_clusters")),
-            ("output/boxes", LaunchConfiguration("output_boxes")),
+            ("output", LaunchConfiguration("output_objects")),
         ],
         parameters=[load_composable_node_param("param_path")],
     )
@@ -76,8 +75,7 @@ def generate_launch_description():
     return launch.LaunchDescription(
         [
             add_launch_arg("input_pointcloud", "/perception/ptv3/segmented/pointcloud"),
-            add_launch_arg("output_labeled_clusters", "labeled_clusters"),
-            add_launch_arg("output_boxes", "boxes"),
+            add_launch_arg("output_objects", "objects"),
             add_launch_arg("use_pointcloud_container", "false"),
             add_launch_arg("pointcloud_container_name", "pointcloud_container"),
             add_launch_arg(

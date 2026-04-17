@@ -1,41 +1,45 @@
 /**:
   ros__parameters:
-    max_cluster_size: 3000
-    min_cluster_size: 10
-    tolerance: 0.7
+    # Euclidean clustering
     use_height: false
-    min_probability: 0.5
-    default_probability: 1.0
-    target_class_ids: [5, 6, 9, 15, 16, 17]
+    tolerance: 0.7
+    min_cluster_size: 10
+    max_cluster_size: 3000
+
+    # Point filtering by semantic confidence
+    min_probability: 0.3
+
+    # Semantic label selection and mapping
+    # YAML declaration order is treated as the input class_id order.
     class_names:
-      [
-        "drivable_surface",
-        "other_flat_surface",
-        "sidewalk",
-        "manmade",
-        "vegetation",
-        "car",
-        "bus",
-        "emergency_vehicle",
-        "train",
-        "truck",
-        "tractor_unit",
-        "semi_trailer",
-        "construction_vehicle",
-        "forklift",
-        "kart",
-        "motorcycle",
-        "bicycle",
-        "pedestrian",
-        "personal_mobility",
-        "animal",
-        "pushable_pullable",
-        "traffic_cone",
-        "debris",
-        "stroller",
-        "other_stuff",
-        "noise+ghost_point"
-      ]
+      drivable_surface: ignore
+      other_flat_surface: ignore
+      sidewalk: ignore
+      manmade: ignore
+      vegetation: ignore
+      car: car
+      bus: bus
+      emergency_vehicle: ignore
+      train: ignore
+      truck: truck
+      tractor_unit: ignore
+      semi_trailer: ignore
+      construction_vehicle: ignore
+      forklift: ignore
+      kart: ignore
+      motorcycle: motorcycle
+      bicycle: bicycle
+      pedestrian: pedestrian
+      personal_mobility: ignore
+      animal: ignore
+      pushable_pullable: ignore
+      traffic_cone: ignore
+      debris: ignore
+      stroller: ignore
+      other_stuff: ignore
+      noise+ghost_point: ignore
+
+    # Shape estimation behavior
     use_shape_estimation_corrector: false
     use_shape_estimation_filter: false
     use_boost_bbox_optimizer: false

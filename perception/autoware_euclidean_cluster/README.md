@@ -6,8 +6,6 @@ autoware_euclidean_cluster is a package for clustering points into smaller parts
 
 This package has two clustering methods: `euclidean_cluster` and `voxel_grid_based_euclidean_cluster`.
 
-It also provides `label_based_euclidean_cluster`, which consumes the semantic pointcloud emitted by `autoware_ptv3`, clusters points per semantic label, and publishes both labeled clusters and simple boxed objects.
-
 ## Inner-workings / Algorithms
 
 ### euclidean_cluster
@@ -28,26 +26,12 @@ It also provides `label_based_euclidean_cluster`, which consumes the semantic po
 | ------- | ------------------------------- | ---------------- |
 | `input` | `sensor_msgs::msg::PointCloud2` | input pointcloud |
 
-#### label_based_euclidean_cluster
-
-| Name    | Type                            | Description                                                |
-| ------- | ------------------------------- | ---------------------------------------------------------- |
-| `input` | `sensor_msgs::msg::PointCloud2` | PTV3 pointcloud with `class_id` and an optional `probability` field |
-
 ### Output
 
 | Name             | Type                                                     | Description                                  |
 | ---------------- | -------------------------------------------------------- | -------------------------------------------- |
 | `output`         | `tier4_perception_msgs::msg::DetectedObjectsWithFeature` | cluster pointcloud                           |
 | `debug/clusters` | `sensor_msgs::msg::PointCloud2`                          | colored cluster pointcloud for visualization |
-
-#### label_based_euclidean_cluster
-
-| Name                    | Type                                                     | Description                                                |
-| ----------------------- | -------------------------------------------------------- | ---------------------------------------------------------- |
-| `output/labeled_clusters` | `tier4_perception_msgs::msg::DetectedObjectsWithFeature` | Semantic label aware clusters with cluster pointclouds     |
-| `output/boxes`         | `autoware_perception_msgs::msg::DetectedObjects`         | Boxed objects estimated from each semantic cluster         |
-| `debug/clusters`       | `sensor_msgs::msg::PointCloud2`                          | colored semantic cluster pointcloud for visualization      |
 
 ## Parameters
 
@@ -63,19 +47,17 @@ It also provides `label_based_euclidean_cluster`, which consumes the semantic po
 
 #### label_based_euclidean_cluster
 
-| Name                              | Type            | Description                                                                 |
-| --------------------------------- | --------------- | --------------------------------------------------------------------------- |
-| `use_height`                      | bool            | use point.z for clustering                                                  |
-| `min_cluster_size`                | int             | minimum number of points required to keep a cluster                         |
-| `max_cluster_size`                | int             | maximum number of points allowed in a cluster                               |
-| `tolerance`                       | float           | Euclidean clustering tolerance                                              |
-| `min_probability`                 | float           | minimum point probability to keep a point when the input contains `probability` |
-| `default_probability`             | float           | fallback probability used when the input omits the `probability` field      |
-| `target_class_ids`                | integer array   | target PTV3 class indices to cluster                                        |
-| `class_names`                     | string array    | PTV3 class names used to map target class IDs into Autoware object labels   |
-| `use_shape_estimation_corrector`  | bool            | pass clusters through the standard shape estimation corrector                |
-| `use_shape_estimation_filter`     | bool            | pass estimated boxes through the standard shape estimation filter            |
-| `use_boost_bbox_optimizer`        | bool            | use the boost optimizer in the shape estimation backend                      |
+| Name                                | Type   | Description                                                                                   |
+| ----------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| `use_height`                        | bool   | use point.z for clustering                                                                    |
+| `min_cluster_size`                  | int    | minimum number of points required to keep a cluster                                           |
+| `max_cluster_size`                  | int    | maximum number of points allowed in a cluster                                                 |
+| `tolerance`                         | float  | Euclidean clustering tolerance                                                                |
+| `min_probability`                   | float  | minimum point probability to keep a point                                                     |
+| `class_names.<original_class_name>` | string | mapped label keyed by original class name; YAML declaration order is used as input `class_id` |
+| `use_shape_estimation_corrector`    | bool   | pass clusters through the standard shape estimation corrector                                 |
+| `use_shape_estimation_filter`       | bool   | pass estimated boxes through the standard shape estimation filter                             |
+| `use_boost_bbox_optimizer`          | bool   | use the boost optimizer in the shape estimation backend                                       |
 
 ## Assumptions / Known limits
 
@@ -121,6 +103,6 @@ Example:
 
 The `use_height` option of `voxel_grid_based_euclidean_cluster` isn't implemented yet.
 
-`label_based_euclidean_cluster` currently targets the dynamic labels `car`, `bus`, `truck`, `motorcycle`, `bicycle`, and `pedestrian`. Unsupported PTV3 labels are ignored even if they are listed in `target_class_ids`.
+`label_based_euclidean_cluster` reads `class_names.<original_class_name>` in YAML declaration order and uses that order as `class_id`. Classes mapped to `car`, `bus`, `truck`, `motorcycle`, `bicycle`, or `pedestrian` are kept, and classes mapped to `ignore` are skipped.
 
-When the input is the PTv3 filtered obstacle pointcloud, `probability` is typically absent. In that mode the node uses `default_probability` for each point and still clusters by `class_id`.
+The node requires `probability` in the input pointcloud. Messages without that field are skipped.
