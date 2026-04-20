@@ -68,6 +68,11 @@ bool isTrafficSignalStop(
   const autoware_perception_msgs::msg::TrafficLightGroup & tl_state)
 {
   const auto & elements = tl_state.elements;
+  if (hasTrafficLightShapeAndColor(
+        elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+        autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
+    return false;
+  }
 
   const std::string turn_direction = lanelet.attributeOr("turn_direction", "else");
 
@@ -93,12 +98,6 @@ bool isTrafficSignalStop(
     hasTrafficLightShapeAndColor(
       elements, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW,
       autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
-    return false;
-  }
-
-  if (hasTrafficLightShapeAndColor(
-        elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
-        autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
     return false;
   }
 
