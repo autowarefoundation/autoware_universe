@@ -174,6 +174,12 @@ bool isTrafficSignalRedStop(
 {
   using autoware::traffic_light_utils::hasTrafficLightShapeAndColor;
 
+  if (!hasTrafficLightShapeAndColor(
+        elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+        autoware_perception_msgs::msg::TrafficLightElement::RED)) {
+    return false;
+  }
+
   // If there is no turn_direction attribute (neither straight, left, nor right), it treats logic as
   // "else" (stop for red).
   if (!autoware::experimental::lanelet2_utils::is_intersection_lanelet(lanelet)) {
@@ -199,12 +205,6 @@ bool isTrafficSignalRedStop(
     hasTrafficLightShapeAndColor(
       elements, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW,
       autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
-    return false;
-  }
-
-  if (!hasTrafficLightShapeAndColor(
-        elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
-        autoware_perception_msgs::msg::TrafficLightElement::RED)) {
     return false;
   }
 
