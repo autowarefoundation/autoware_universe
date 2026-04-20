@@ -107,6 +107,13 @@ struct CollisionPoint
   }
 };
 
+struct ObjectState
+{
+  double arc_length;
+  double lon_vel;
+  geometry_msgs::msg::Point nearest_point;
+};
+
 struct TrajectoryShape
 {
   MultiPolygon2d polygon;
@@ -118,7 +125,8 @@ struct TrajectoryShape
 struct DebugData
 {
   PointCloud2::SharedPtr cluster_points;
-  PointCloud2::SharedPtr voxel_points;
+  PointCloud2::SharedPtr filtered_points;
+  PredictedObjects filtered_objects;
   MultiPolygon2d target_polygons;
   TrajectoryShape trajectory_shape;
   std::vector<geometry_msgs::msg::Point> target_pcd_points;
@@ -148,8 +156,8 @@ using ObjectDecelMap = std::unordered_map<ObjectType, double>;
 std::optional<CollisionPoint> get_nearest_object_collision(
   const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PredictedObjects & objects,
-  const ObjectDecelMap & object_decel_map, const double ego_vel, const double ego_decel,
-  const double reaction_time, const double safety_margin, const double min_vel_th,
+  const ObjectDecelMap & object_decel_map, const double ego_decel, const double reaction_time,
+  const double safety_margin, const double stopped_vel_th, const double lookahead_horizon,
   MultiPolygon2d & target_polygons, PredictedObject & colliding_object);
 
 struct ObjectFilter

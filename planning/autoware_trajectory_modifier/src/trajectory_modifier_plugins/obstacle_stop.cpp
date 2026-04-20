@@ -55,12 +55,21 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
 
   pub_clustered_pointcloud_ =
     node_ptr->create_publisher<PointCloud2>("~/obstacle_stop/debug/cluster_points", 1);
+  pub_filtered_pointcloud_ =
+    node_ptr->create_publisher<PointCloud2>("~/obstacle_stop/debug/filtered_points", 1);
   debug_viz_pub_ = node_ptr->create_publisher<visualization_msgs::msg::MarkerArray>(
     "~/obstacle_stop/debug/marker", 1);
+  pub_debug_text_ = node_ptr->create_publisher<StringStamped>("~/obstacle_stop/debug/text", 1);
 
   params_ = params.obstacle_stop;
   enabled_ = params.use_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
+
+  {
+    auto & p = params_.rss_params;
+    p.ego_decel =
+      std::clamp(p.ego_decel, params_.nominal_stopping_decel, params_.maximum_stopping_decel);
+  }
 
   {
     const auto & p = params_.pointcloud;
@@ -101,6 +110,12 @@ void ObstacleStop::update_params(const TrajectoryModifierParams & params)
   params_ = params.obstacle_stop;
   enabled_ = params.use_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
+
+  {
+    auto & p = params_.rss_params;
+    p.ego_decel =
+      std::clamp(p.ego_decel, params_.nominal_stopping_decel, params_.maximum_stopping_decel);
+  }
 
   {
     const auto & p = params_.pointcloud;
@@ -163,14 +178,18 @@ bool ObstacleStop::is_trajectory_modification_required(
     nearest_collision_point_ ? nearest_collision_point_->point : geometry_msgs::msg::Point();
   debug_data_.ego_z = input.current_odometry->pose.pose.position.z;
 
-  return nearest_collision_point_ != std::nullopt;
+  const bool is_safe = nearest_collision_point_ == std::nullopt;
+
+  publish_debug_string(is_safe);
+
+  return !is_safe;
 }
 
 bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points, const InputData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::modify_trajectory", *get_time_keeper());
 
-  if (!enabled_) return false;
+  if (!enabled_ || traj_points.size() < 2) return false;
 
   auto trajectory = traj_points;
   utils::obstacle_stop::trim_trajectory_and_remove_duplicates(trajectory);
@@ -441,12 +460,13 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
     "ObstacleStop::check_predicted_objects", *get_time_keeper());
   if (!params_.use_objects || !input.predicted_objects || input.predicted_objects->objects.empty())
     return std::nullopt;
-  auto predicted_objects = *input.predicted_objects;
+  debug_data_.filtered_objects = *input.predicted_objects;
 
-  object_filter_->filter_objects(predicted_objects);
+  object_filter_->filter_objects(debug_data_.filtered_objects);
 
   PredictedObjects active_objects;
-  obstacle_tracker_->update_objects(predicted_objects, active_objects, get_clock()->now());
+  obstacle_tracker_->update_objects(
+    debug_data_.filtered_objects, active_objects, get_clock()->now());
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
   auto collision_point = std::invoke([&]() -> std::optional<CollisionPoint> {
@@ -457,10 +477,9 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
     }
     return get_nearest_object_collision(
       traj_points, debug_data_.trajectory_shape, context_->vehicle_info, active_objects,
-      object_decel_map_, input.current_odometry->twist.twist.linear.x,
-      params_.nominal_stopping_decel, params_.rss_params.reaction_time,
-      params_.rss_params.safety_margin, params_.rss_params.min_vel_th, debug_data_.target_polygons,
-      colliding_object);
+      object_decel_map_, params_.rss_params.ego_decel, params_.rss_params.reaction_time,
+      params_.rss_params.safety_margin, params_.objects.stopped_velocity_th,
+      params_.rss_params.lookahead_horizon, debug_data_.target_polygons, colliding_object);
   });
 
   if (collision_point) debug_data_.colliding_object = colliding_object;
@@ -521,11 +540,16 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
   }
 
   {
-    const auto cluster_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
-    pcl::toROSMsg(*clustered_points, *cluster_pointcloud);
-    cluster_pointcloud->header.stamp = input.obstacle_pointcloud->header.stamp;
-    cluster_pointcloud->header.frame_id = "map";
-    debug_data_.cluster_points = cluster_pointcloud;
+    const auto cluster_pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    const auto filtered_pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*clustered_points, *cluster_pointcloud_msg);
+    pcl::toROSMsg(*filtered_pointcloud, *filtered_pointcloud_msg);
+    cluster_pointcloud_msg->header.stamp = input.obstacle_pointcloud->header.stamp;
+    cluster_pointcloud_msg->header.frame_id = "map";
+    filtered_pointcloud_msg->header.stamp = input.obstacle_pointcloud->header.stamp;
+    filtered_pointcloud_msg->header.frame_id = "map";
+    debug_data_.cluster_points = cluster_pointcloud_msg;
+    debug_data_.filtered_points = filtered_pointcloud_msg;
   }
 
   if (input.predicted_objects && !input.predicted_objects->objects.empty()) {
@@ -548,8 +572,34 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
   return collision_point;
 }
 
+void ObstacleStop::publish_debug_string(bool is_safe) const
+{
+  const auto filtered_pcd_size =
+    debug_data_.filtered_points ? debug_data_.filtered_points->data.size() : 0;
+  const auto cluster_pcd_size =
+    debug_data_.cluster_points ? debug_data_.cluster_points->data.size() : 0;
+  std::ostringstream ss;
+  ss << std::fixed << std::setprecision(2) << std::boolalpha;
+  ss << "OBSTACLE STOP MODIFIER: " << "\n";
+  ss << "\t\t" << "SAFE: " << is_safe << "\n";
+  ss << "\t\t" << "OBJECTS: " << debug_data_.filtered_objects.objects.size() << " --> "
+     << debug_data_.target_polygons.size() << "\n";
+  ss << "\t\t" << "POINTCLOUD: " << filtered_pcd_size << " --> " << cluster_pcd_size << " --> "
+     << debug_data_.target_pcd_points.size() << "\n";
+  if (nearest_collision_point_) {
+    ss << "\t\t" << "DISTANCE TO COLLISION: " << nearest_collision_point_->arc_length << " m"
+       << "\n";
+  }
+
+  StringStamped string_stamp;
+  string_stamp.stamp = get_clock()->now();
+  string_stamp.data = ss.str();
+  pub_debug_text_->publish(string_stamp);
+}
+
 void ObstacleStop::publish_debug_data(const std::string & ns) const
 {
+  if (debug_data_.filtered_points) pub_filtered_pointcloud_->publish(*debug_data_.filtered_points);
   if (debug_data_.cluster_points) pub_clustered_pointcloud_->publish(*debug_data_.cluster_points);
 
   MarkerArray marker_array;

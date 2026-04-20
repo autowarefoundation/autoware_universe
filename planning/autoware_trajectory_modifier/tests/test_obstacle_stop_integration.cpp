@@ -254,7 +254,8 @@ protected:
     p.rss_params.object_decel.car = 1.5;
     p.rss_params.reaction_time = 0.2;
     p.rss_params.safety_margin = 2.0;
-    p.rss_params.min_vel_th = 0.5;
+    p.rss_params.ego_decel = 4.0;
+    p.rss_params.lookahead_horizon = 1.5;
   }
 
   std::shared_ptr<rclcpp::Node> node_;
