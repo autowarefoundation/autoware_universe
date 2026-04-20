@@ -30,6 +30,7 @@ on:
 env:
   CC: /usr/lib/ccache/gcc
   CXX: /usr/lib/ccache/g++
+  CCACHE_DIR: /root/.ccache
 
 jobs:
   build-and-test-packages-above-differential:
