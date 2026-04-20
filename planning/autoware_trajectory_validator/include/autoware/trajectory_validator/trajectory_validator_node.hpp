@@ -61,7 +61,7 @@ private:
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
-  void load_metric(const std::string & name);
+  void load_metric(const std::string & name, const bool is_shadow_mode = false);
 
   /**
    * @brief Unloads a metric plugin
