@@ -265,12 +265,13 @@ CollisionFilter::result_t CollisionFilter::is_feasible(
     }
   }
 
-  metrics.push_back(autoware_trajectory_validator::build<MetricReport>()
-                      .validator_name(get_name())
-                      .validator_category(category())
-                      .metric_name("check_collision")
-                      .metric_value(0.0)
-                      .level(is_feasible ? MetricReport::OK : MetricReport::ERROR));
+  metrics.push_back(
+    autoware_trajectory_validator::build<MetricReport>()
+      .validator_name(get_name())
+      .validator_category(category())
+      .metric_name("check_collision")
+      .metric_value(0.0)
+      .level(is_feasible ? MetricReport::OK : MetricReport::ERROR));
 
   return ValidationResult{is_feasible, std::move(metrics)};
 }

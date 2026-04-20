@@ -125,7 +125,7 @@ TrafficLightFilter::get_stop_lines(
   return {red_stop_lines, amber_stop_lines};
 }
 
-tl::expected<void, std::string> TrafficLightFilter::is_feasible(
+TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   if (const auto has_invalid_input = is_invalid_input(context, vehicle_info_ptr_)) {
@@ -187,12 +187,13 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
       return tl::make_unexpected("crosses red light");  // Reject trajectory (cross red light)
     }
   }
-  metrics.push_back(autoware_trajectory_validator::build<MetricReport>()
-                      .validator_name(get_name())
-                      .validator_category(category())
-                      .metric_name("check_crossing_red_light")
-                      .metric_value(0.0)
-                      .level(is_crossing_red ? MetricReport::ERROR : MetricReport::OK));
+  metrics.push_back(
+    autoware_trajectory_validator::build<MetricReport>()
+      .validator_name(get_name())
+      .validator_category(category())
+      .metric_name("check_crossing_red_light")
+      .metric_value(0.0)
+      .level(is_crossing_red ? MetricReport::ERROR : MetricReport::OK));
   is_feasible = is_feasible && !is_crossing_red;
 
   // Check for amber light crossings
@@ -226,12 +227,13 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
       return tl::make_unexpected("crosses amber light");  // Reject trajectory (cross amber light)
     }
   }
-  metrics.push_back(autoware_trajectory_validator::build<MetricReport>()
-                      .validator_name(get_name())
-                      .validator_category(category())
-                      .metric_name("check_crossing_amber_light")
-                      .metric_value(0.0)
-                      .level(is_crossing_amber ? MetricReport::ERROR : MetricReport::OK));
+  metrics.push_back(
+    autoware_trajectory_validator::build<MetricReport>()
+      .validator_name(get_name())
+      .validator_category(category())
+      .metric_name("check_crossing_amber_light")
+      .metric_value(0.0)
+      .level(is_crossing_amber ? MetricReport::ERROR : MetricReport::OK));
   is_feasible = is_feasible && !is_crossing_amber;
 
   return ValidationResult{is_feasible, std::move(metrics)};
