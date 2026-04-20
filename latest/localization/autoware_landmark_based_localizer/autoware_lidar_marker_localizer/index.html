@@ -22894,7 +22894,7 @@
 <tr>
 <td align="left"><code>~/input/pointcloud</code></td>
 <td align="left"><code>sensor_msgs::msg::PointCloud2</code></td>
-<td align="left">PointCloud</td>
+<td align="left">PointType: <code>PointXYZIRC</code> is recommended in Autoware, but <code>PointXYZIRADRT</code> are also supported in this node.<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup></td>
 </tr>
 <tr>
 <td align="left"><code>~/input/ekf_pose</code></td>
@@ -22919,29 +22919,66 @@
 <td align="left">Estimated pose</td>
 </tr>
 <tr>
+<td align="left"><code>/diagnostics</code></td>
+<td align="left"><code>diagnostic_msgs::msg::DiagnosticArray</code></td>
+<td align="left">Diagnostics outputs</td>
+</tr>
+</tbody>
+</table>
+<h5 id="for-debug">For debug<a class="headerlink" href="#for-debug" title="Permanent link">#</a></h5>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
 <td align="left"><code>~/debug/pose_with_covariance</code></td>
 <td align="left"><code>geometry_msgs::msg::PoseWithCovarianceStamped</code></td>
-<td align="left">[debug topic] Estimated pose</td>
+<td align="left">Estimated pose</td>
 </tr>
 <tr>
 <td align="left"><code>~/debug/marker_detected</code></td>
 <td align="left"><code>geometry_msgs::msg::PoseArray</code></td>
-<td align="left">[debug topic] Detected marker poses</td>
+<td align="left">Detected marker poses</td>
 </tr>
 <tr>
 <td align="left"><code>~/debug/marker_mapped</code></td>
 <td align="left"><code>visualization_msgs::msg::MarkerArray</code></td>
-<td align="left">[debug topic] Loaded landmarks to visualize in Rviz as thin boards</td>
+<td align="left">Loaded landmarks to visualize in Rviz as thin boards</td>
 </tr>
 <tr>
 <td align="left"><code>~/debug/marker_pointcloud</code></td>
 <td align="left"><code>sensor_msgs::msg::PointCloud2</code></td>
-<td align="left">[debug topic] PointCloud of the detected marker</td>
+<td align="left">PointCloud of the detected marker</td>
 </tr>
 <tr>
-<td align="left"><code>/diagnostics</code></td>
-<td align="left"><code>diagnostic_msgs::msg::DiagnosticArray</code></td>
-<td align="left">Diagnostics outputs</td>
+<td align="left"><code>~/debug/center_intensity_grid</code></td>
+<td align="left"><code>nav_msgs::msg::OccupancyGrid</code></td>
+<td align="left">Center intensity grid for debug</td>
+</tr>
+<tr>
+<td align="left"><code>~/debug/positive_grid</code></td>
+<td align="left"><code>nav_msgs::msg::OccupancyGrid</code></td>
+<td align="left">Positive match grid for debug</td>
+</tr>
+<tr>
+<td align="left"><code>~/debug/negative_grid</code></td>
+<td align="left"><code>nav_msgs::msg::OccupancyGrid</code></td>
+<td align="left">Negative match grid for debug</td>
+</tr>
+<tr>
+<td align="left"><code>~/debug/matched_grid</code></td>
+<td align="left"><code>nav_msgs::msg::OccupancyGrid</code></td>
+<td align="left">Matched pattern grid for debug</td>
+</tr>
+<tr>
+<td align="left"><code>~/debug/vote_grid</code></td>
+<td align="left"><code>nav_msgs::msg::OccupancyGrid</code></td>
+<td align="left">Vote grid for marker detection debug</td>
 </tr>
 </tbody>
 </table>
@@ -22957,6 +22994,27 @@
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>enable_read_all_target_ids</td>
+<td>boolean</td>
+<td></td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>target_ids</td>
+<td>array</td>
+<td>List of target marker IDs to be detected.</td>
+<td>['0000', '0001', '0002', '0003', '0004', '0005']</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>queue_size_for_output_pose</td>
+<td>float</td>
+<td>Queue size for output/pose_with_covariance publisher</td>
+<td>10</td>
+<td>≥0</td>
+</tr>
 <tr>
 <td>marker_name</td>
 <td>string</td>
@@ -23007,10 +23065,38 @@
 <td>≥0</td>
 </tr>
 <tr>
+<td>marker_to_vehicle_offset_y</td>
+<td>float</td>
+<td>Y-axis offset from the center of the marker to vehicle. [m]</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>marker_height_from_ground</td>
 <td>float</td>
 <td>Height from the ground to the center of the marker. [m]</td>
 <td>1.075</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>lower_ring_id_init</td>
+<td>float</td>
+<td>Initial value when searching for the lowest ring ID within the point cloud</td>
+<td>128</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>upper_ring_id_init</td>
+<td>float</td>
+<td>Initial value when searching for the highest ring ID within the point cloud</td>
+<td>0</td>
+<td>≥0</td>
+</tr>
+<tr>
+<td>reference_ring_number</td>
+<td>float</td>
+<td>Reference ring number when detecting the marker. Set 255 to disable ring filtering</td>
+<td>255</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23032,6 +23118,13 @@
 <td>float</td>
 <td>Distance limit for the purpose of determining whether the node should detect a marker. [m]</td>
 <td>2.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>limit_distance_from_self_pose_to_nearest_marker_y</td>
+<td>float</td>
+<td>Y-axis distance limit for the purpose of determining whether the node should detect a marker. [m]</td>
+<td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
@@ -23083,6 +23176,20 @@
 <td>velodyne_top</td>
 <td>N/A</td>
 </tr>
+<tr>
+<td>radius_for_extracting_marker_pointcloud</td>
+<td>float</td>
+<td>Only points closer than this value to the marker center on the xy plane are extracted as the “marker point cloud”. [m]</td>
+<td>0.4</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>queue_size_for_debug_pub_msg</td>
+<td>float</td>
+<td>Queue size for debug publishers</td>
+<td>10</td>
+<td>≥0.0</td>
+</tr>
 </tbody>
 </table>
 <h2 id="how-to-launch">How to launch<a class="headerlink" href="#how-to-launch" title="Permanent link">#</a></h2>
@@ -23110,9 +23217,19 @@ The reflectors were installed by <a href="https://www.taisei.co.jp/english/">Tai
 <h2 id="collaborators">Collaborators<a class="headerlink" href="#collaborators" title="Permanent link">#</a></h2>
 <ul>
 <li><a href="https://tier4.jp/en/">TIER IV</a></li>
-<li><a href="https://www.taisei.co.jp/english/">Taisei Corporation</a></li>
+<li><a href="https://www.taisei.co.jp/english/">Taisei Corporation</a><ul>
 <li><a href="https://github.com/YuriShimizu824">Yuri Shimizu</a></li>
-</ul></div>
+</ul>
+</li>
+</ul>
+<div class="footnote">
+<hr>
+<ol>
+<li id="fn:1">
+<p>Assumed <code>ring</code> of <code>PointXYZIRADRT</code> as <code>channel</code> of <code>PointXYZIRC</code>. <a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
+</li>
+</ol>
+</div></div>
 
 
 
