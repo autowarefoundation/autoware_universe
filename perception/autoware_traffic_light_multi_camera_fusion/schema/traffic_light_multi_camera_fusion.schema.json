@@ -20,6 +20,21 @@
           "type": "number",
           "description": "The uniform prior log-odds to initialize the belief for any new traffic light state. 0.0 (log(1)) means a neutral (50%) initial belief. Positive values make all states initially more likely, negative values make them less likely.",
           "default": 0.0
+        },
+        "cross_camera_validation": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "description": "Enables the validation feature. If set to true, the system checks for consistency among detected traffic light signals associated with a specific regulatory element.",
+              "default": false
+            },
+            "publish_partial_matched_signal": {
+              "type": "boolean",
+              "description": "Determines whether to publish common signals among traffic lights associated with a regulatory element. If set to true, partially matched signals will be published. If set to false, a single mismatch among the traffic lights will output a fail-safe signal.",
+              "default": false
+            }
+          }
         }
       },
       "required": ["message_lifespan", "approximate_sync"],

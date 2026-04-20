@@ -3,3 +3,6 @@
     message_lifespan: 0.09
     approximate_sync: false
     prior_log_odds: 0.0
+    cross_camera_validation:
+      enable: false
+      publish_partial_matched_signal: false
