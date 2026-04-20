@@ -125,6 +125,19 @@ TrafficLightFilter::get_stop_lines(
   return {red_stop_lines, amber_stop_lines};
 }
 
+bool TrafficLightFilter::is_stop_point_within_margin_from_stop_line(
+  const std::optional<TrajectoryPoint> & stop_point,
+  const lanelet::BasicLineString2d & stop_line) const
+{
+  if (stop_point.has_value()) {
+    const lanelet::BasicPoint2d stop_p(stop_point->pose.position.x, stop_point->pose.position.y);
+    if (boost::geometry::distance(stop_p, stop_line) <= params_.stop_overshoot_margin) {
+      return true;
+    }
+  }
+  return false;
+}
+
 TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
@@ -140,6 +153,7 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
     params_.checked_trajectory_length.jerk_limit, delay_response_time);
   const auto max_trajectory_length = distance_for_ego_to_stop.value_or(0.0);
   auto length = 0.0;
+  std::optional<TrajectoryPoint> stop_point;
   for (const auto & p : traj_points) {
     // skip points behind ego
     if (rclcpp::Duration(p.time_from_start).seconds() < 0.0) {
@@ -149,12 +163,20 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
     if (!trajectory_ls.empty()) {
       length += lanelet::geometry::distance2d(trajectory_ls.back(), lanelet_p);
     }
-    // skip points beyond the first stop, or skip once we reach the maximum length
-    if (p.longitudinal_velocity_mps <= 0.0 || length > max_trajectory_length) {
-      break;
-    }
+
     trajectory.push_back(p);
     trajectory_ls.emplace_back(lanelet_p);
+
+    // skip points beyond the first stop, or skip once we reach the maximum length
+    const auto is_stop_point = p.longitudinal_velocity_mps <= 0.0;
+    if (is_stop_point) {
+      stop_point = p;
+      break;
+    }
+
+    if (length > max_trajectory_length) {
+      break;
+    }
   }
 
   if (trajectory_ls.size() < 2) {
@@ -165,8 +187,8 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
     // extend the trajectory linestring by the vehicle's longitudinal offset
     const lanelet::BasicSegment2d last_segment(
       trajectory_ls[trajectory_ls.size() - 2], trajectory_ls.back());
-    const auto last_vector = last_segment.second - last_segment.first;
     const auto last_length = boost::geometry::length(last_segment);
+    const auto last_vector = last_segment.second - last_segment.first;
     if (last_length > 0.0) {
       const auto ratio = (last_length + vehicle_info_ptr_->max_longitudinal_offset_m) / last_length;
       lanelet::BasicPoint2d front_vehicle_point = last_segment.first + last_vector * ratio;
@@ -184,16 +206,19 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
   bool is_crossing_red = false;
   for (const auto & red_stop_line : red_stop_lines) {
     if (boost::geometry::intersects(trajectory_ls, red_stop_line)) {
-      return tl::make_unexpected("crosses red light");  // Reject trajectory (cross red light)
+      if (is_stop_point_within_margin_from_stop_line(stop_point, red_stop_line)) {
+        continue;
+      }
+      is_crossing_red = true;  // Reject trajectory (cross red light)
+      break;
     }
   }
-  metrics.push_back(
-    autoware_trajectory_validator::build<MetricReport>()
-      .validator_name(get_name())
-      .validator_category(category())
-      .metric_name("check_crossing_red_light")
-      .metric_value(0.0)
-      .level(is_crossing_red ? MetricReport::ERROR : MetricReport::OK));
+  metrics.push_back(autoware_trajectory_validator::build<MetricReport>()
+                      .validator_name(get_name())
+                      .validator_category(category())
+                      .metric_name("check_crossing_red_light")
+                      .metric_value(0.0)
+                      .level(is_crossing_red ? MetricReport::ERROR : MetricReport::OK));
   is_feasible = is_feasible && !is_crossing_red;
 
   // Check for amber light crossings
@@ -218,22 +243,27 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
       }
       distance_to_stop_line += segment_length;
     }
+
     const auto current_velocity = trajectory.front().longitudinal_velocity_mps;
     const auto current_acceleration = trajectory.front().acceleration_mps2;
-    if (
-      amber_stop_line_crossing_time && !can_pass_amber_light(
-                                         distance_to_stop_line, current_velocity,
-                                         current_acceleration, *amber_stop_line_crossing_time)) {
-      return tl::make_unexpected("crosses amber light");  // Reject trajectory (cross amber light)
+    if (amber_stop_line_crossing_time) {
+      if (is_stop_point_within_margin_from_stop_line(stop_point, amber_stop_line)) {
+        continue;
+      }
+      if (!can_pass_amber_light(
+            distance_to_stop_line, current_velocity, current_acceleration,
+            *amber_stop_line_crossing_time)) {
+        is_crossing_amber = true;  // Reject trajectory (cross amber light)
+        break;
+      }
     }
   }
-  metrics.push_back(
-    autoware_trajectory_validator::build<MetricReport>()
-      .validator_name(get_name())
-      .validator_category(category())
-      .metric_name("check_crossing_amber_light")
-      .metric_value(0.0)
-      .level(is_crossing_amber ? MetricReport::ERROR : MetricReport::OK));
+  metrics.push_back(autoware_trajectory_validator::build<MetricReport>()
+                      .validator_name(get_name())
+                      .validator_category(category())
+                      .metric_name("check_crossing_amber_light")
+                      .metric_value(0.0)
+                      .level(is_crossing_amber ? MetricReport::ERROR : MetricReport::OK));
   is_feasible = is_feasible && !is_crossing_amber;
 
   return ValidationResult{is_feasible, std::move(metrics)};

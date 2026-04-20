@@ -88,6 +88,11 @@ validator:
       default_value: true
       description: when true, amber lights are handled like red lights
       read_only: false
+    stop_overshoot_margin:
+      type: double
+      default_value: 0.5
+      description: Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible (m)
+      read_only: false
     checked_trajectory_length:
       deceleration_limit:
         type: double
