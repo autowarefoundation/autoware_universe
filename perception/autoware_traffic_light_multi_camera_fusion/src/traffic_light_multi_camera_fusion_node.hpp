@@ -19,6 +19,7 @@
 #include "traffic_light_multi_camera_fusion_process.hpp"
 #include "types.hpp"
 
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -29,8 +30,6 @@
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
-
-#include <autoware_utils/ros/diagnostics_interface.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <message_filters/subscriber.h>

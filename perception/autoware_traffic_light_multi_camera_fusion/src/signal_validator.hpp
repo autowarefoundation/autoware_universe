@@ -23,23 +23,26 @@
 
 namespace autoware::traffic_light
 {
-struct SignalHash {
-  size_t operator()(const std::pair<uint8_t, uint8_t> & keyval) const noexcept {
-      // shift the first 8 bits to the left, and combine it with the second 8 bits
-      // example: {0x01, 0x23} -> 0x0123
-      return (static_cast<size_t>(keyval.first) << 8) | keyval.second;
+struct SignalHash
+{
+  size_t operator()(const std::pair<uint8_t, uint8_t> & keyval) const noexcept
+  {
+    // shift the first 8 bits to the left, and combine it with the second 8 bits
+    // example: {0x01, 0x23} -> 0x0123
+    return (static_cast<size_t>(keyval.first) << 8) | keyval.second;
   }
 };
 
 using SignalLUT = std::unordered_set<std::pair<uint8_t, uint8_t>, SignalHash>;
 
 enum class ConflictType {
-  NO_CONFLICT = 0, // when all the signals are the same
-  CONFLICT,        // when all the signals are different
-  PARTIAL_CONFLICT // whene some of the signals are different 
+  NO_CONFLICT = 0,  // when all the signals are the same
+  CONFLICT,         // when all the signals are different
+  PARTIAL_CONFLICT  // whene some of the signals are different
 };
 
-struct ConflictStatus {
+struct ConflictStatus
+{
   ConflictType conflict_type;
   StateKey common_state_key;
 };
@@ -49,11 +52,9 @@ class SignalValidator
 public:
   using TrafficLightElement = tier4_perception_msgs::msg::TrafficLightElement;
 
-  ConflictStatus checkConflict(
-    const StateKey & state_a, const StateKey & state_b);
+  ConflictStatus checkConflict(const StateKey & state_a, const StateKey & state_b);
 
-  StateKey mergePartialMatch(
-    const StateKey & state_a, const StateKey & state_b);
+  StateKey mergePartialMatch(const StateKey & state_a, const StateKey & state_b);
 };
 
 }  // namespace autoware::traffic_light

@@ -61,8 +61,7 @@ double probabilityToLogOdds(double prob)
 inline StateKey getBestStatekey(const std::map<StateKey, double> & accumulated_log_odds)
 {
   auto best_element = std::max_element(
-    accumulated_log_odds.begin(), accumulated_log_odds.end(),
-    compareStateKeyLogOdds);
+    accumulated_log_odds.begin(), accumulated_log_odds.end(), compareStateKeyLogOdds);
 
   StateKey best_state_key = best_element->first;
 
@@ -84,8 +83,7 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
   message_lifespan_ = this->declare_parameter<double>("message_lifespan");
   prior_log_odds_ = this->declare_parameter<double>("prior_log_odds");
 
-  use_cross_camera_validation_ =
-    this->declare_parameter<bool>("cross_camera_validation.enable");
+  use_cross_camera_validation_ = this->declare_parameter<bool>("cross_camera_validation.enable");
   publish_partial_matched_signal_ =
     this->declare_parameter<bool>("cross_camera_validation.publish_partial_matched_signal");
 
@@ -121,12 +119,11 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
     });
   signal_pub_ = create_publisher<NewSignalArrayType>("~/output/traffic_signals", rclcpp::QoS{1});
 
-  diagnostics_interface_ptr_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "traffic light confliction status");
+  diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(
+    this, "traffic light confliction status");
 
   if (use_cross_camera_validation_) {
-    signal_validator_ =
-      std::make_unique<SignalValidator>();
+    signal_validator_ = std::make_unique<SignalValidator>();
   }
 }
 
@@ -399,7 +396,7 @@ void MultiCameraFusion::determineBestGroupState(
         // critical conflict will be overwritten with fail-safe record
         // we immediately exit the loop
         break;
-      } else { // partial conflict
+      } else {  // partial conflict
         if (publish_partial_matched_signal_) {
           continue;
         } else {
@@ -408,7 +405,8 @@ void MultiCameraFusion::determineBestGroupState(
       }
     }
 
-    if (conflict_result.conflict_type == ConflictType::CONFLICT || !publish_partial_matched_signal_) {
+    if (
+      conflict_result.conflict_type == ConflictType::CONFLICT || !publish_partial_matched_signal_) {
       // use a fail-safe record as a fallback for this regulatory element.
 
       // use the most probable one (the highest logarithmic odds) as the base
@@ -429,12 +427,13 @@ void MultiCameraFusion::determineBestGroupState(
 
       merged_record.signal.elements.clear();
 
-      for (const auto& elem : running_state) {
+      for (const auto & elem : running_state) {
         tier4_perception_msgs::msg::TrafficLightElement new_elem;
         new_elem.color = elem.first;
         new_elem.shape = elem.second;
         // keep the confidence of the base record
-        new_elem.confidence = group_info.best_record_for_state.at(best_state_key).signal.elements[0].confidence;
+        new_elem.confidence =
+          group_info.best_record_for_state.at(best_state_key).signal.elements[0].confidence;
 
         merged_record.signal.elements.push_back(new_elem);
       }
@@ -455,7 +454,7 @@ void MultiCameraFusion::publishDiagnostics(rclcpp::Time stamp)
   diagnostics_interface_ptr_->clear();
 
   // publish only conflicted RE status
-  for (const auto & conflicted_re: conflicted_regulatory_element_status_) {
+  for (const auto & conflicted_re : conflicted_regulatory_element_status_) {
     diagnostics_interface_ptr_->add_key_value(
       std::to_string(static_cast<int64_t>(conflicted_re.id)),
       static_cast<int>(conflicted_re.conflict_type));

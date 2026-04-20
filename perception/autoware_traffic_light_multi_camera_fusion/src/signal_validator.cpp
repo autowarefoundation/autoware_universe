@@ -13,46 +13,47 @@
 // limitations under the License.
 
 #include "signal_validator.hpp"
+
 #include "types.hpp"
 
 namespace autoware::traffic_light
 {
-namespace {
-  inline StateKey signalLutToStateKey(const SignalLUT & lut){
-    StateKey state_key;
-    for (const auto & signal : lut) {
-      state_key.emplace_back(std::make_pair(signal.first, signal.second));
-    }
-
-    return state_key;
+namespace
+{
+inline StateKey signalLutToStateKey(const SignalLUT & lut)
+{
+  StateKey state_key;
+  for (const auto & signal : lut) {
+    state_key.emplace_back(std::make_pair(signal.first, signal.second));
   }
 
-  inline SignalLUT createSignalLUT(const StateKey& state_key)
-  {
-    SignalLUT signal_lut;
+  return state_key;
+}
 
-    for (const auto& key : state_key) {
-      signal_lut.insert(key);
-    }
+inline SignalLUT createSignalLUT(const StateKey & state_key)
+{
+  SignalLUT signal_lut;
 
-    return signal_lut;
-  };
-
-  inline SignalLUT extractCommonSignals(
-    const SignalLUT & lut_a,
-    const SignalLUT & lut_b)
-  {
-    SignalLUT common_lut;
-
-    for (const auto & pair_a : lut_a) {
-      auto it_b = lut_b.find(pair_a);
-      if (it_b != lut_b.end()) {
-        common_lut.insert(pair_a);
-      }
-    }
-
-    return common_lut;
+  for (const auto & key : state_key) {
+    signal_lut.insert(key);
   }
+
+  return signal_lut;
+};
+
+inline SignalLUT extractCommonSignals(const SignalLUT & lut_a, const SignalLUT & lut_b)
+{
+  SignalLUT common_lut;
+
+  for (const auto & pair_a : lut_a) {
+    auto it_b = lut_b.find(pair_a);
+    if (it_b != lut_b.end()) {
+      common_lut.insert(pair_a);
+    }
+  }
+
+  return common_lut;
+}
 }  // namespace
 
 /**
@@ -61,8 +62,7 @@ namespace {
  * @param state_b Second StateKey.
  * @return Conflict status and common signals (StateKey).
  */
-ConflictStatus SignalValidator::checkConflict(
-  const StateKey & state_a, const StateKey & state_b)
+ConflictStatus SignalValidator::checkConflict(const StateKey & state_a, const StateKey & state_b)
 {
   if (state_a == state_b) {
     return ConflictStatus{ConflictType::NO_CONFLICT, state_a};
