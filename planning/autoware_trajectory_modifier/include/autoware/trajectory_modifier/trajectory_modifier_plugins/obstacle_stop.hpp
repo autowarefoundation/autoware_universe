@@ -21,6 +21,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <memory>
@@ -30,6 +31,7 @@
 
 namespace autoware::trajectory_modifier::plugin
 {
+using autoware_internal_debug_msgs::msg::StringStamped;
 using autoware_internal_planning_msgs::msg::SafetyFactor;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -79,7 +81,9 @@ private:
 
   MarkerArray marker_array_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_filtered_pointcloud_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
+  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
 
   void check_obstacles(const TrajectoryPoints & traj_points, const InputData & input);
   std::optional<CollisionPoint> check_predicted_objects(
@@ -91,6 +95,8 @@ private:
 
   bool apply_stopping(
     TrajectoryPoints & traj_points, const double target_stop_point_arc_length) const;
+
+  void publish_debug_string(bool is_safe) const;
 };
 
 }  // namespace autoware::trajectory_modifier::plugin

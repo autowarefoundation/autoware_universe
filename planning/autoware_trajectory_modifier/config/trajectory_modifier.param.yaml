@@ -33,12 +33,13 @@
         off_time_buffer: 1.0
         object_distance_th: 1.0 # [m]
         object_yaw_th: 0.1745 # [rad] (10 degrees)
-        pcd_distance_th: 0.5 # [m]
+        pcd_distance_th: 1.0 # [m]
         grace_period: 0.2 # [s]
 
       objects:
         object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"] # object types to consider for obstacle stop
-        max_velocity_th: 1.0      # maximum velocity threshold for target object [m/s]
+        max_velocity_th: 5.0      # maximum velocity threshold for target object [m/s]
+        stopped_velocity_th: 0.25 # [m/s]
 
       pointcloud:
         height_buffer: 0.5  # height buffer to add above ego height [m]
@@ -64,6 +65,7 @@
           motorcycle: 3.0
           bicycle: 5.0
           pedestrian: 5.0
+        ego_decel: 4.0 # [m/s^2]
         reaction_time: 0.2 # [s]
         safety_margin: 2.0 # [m]
-        min_vel_th: 0.5 # [m/s] minimum object velocity to consider for rss check
+        lookahead_horizon: 1.5 # [s]

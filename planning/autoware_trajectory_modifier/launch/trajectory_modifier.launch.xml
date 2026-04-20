@@ -7,7 +7,7 @@
   <arg name="input_pointcloud_topic_name" default="/perception/obstacle_segmentation/pointcloud"/>
   <arg name="output_candidate_trajectories" default="~/output/candidate_trajectories"/>
 
-  <node pkg="autoware_trajectory_modifier" exec="autoware_trajectory_modifier_node" name="trajectory_modifier" output="screen">
+  <node pkg="autoware_trajectory_modifier" exec="autoware_trajectory_modifier_node" name="trajectory_modifier" output="screen" launch-prefix="konsole -e gdb -ex run --args">
     <param from="$(var trajectory_modifier_param_path)"/>
     <remap from="~/input/objects" to="$(var input_objects_topic_name)"/>
     <remap from="~/input/pointcloud" to="$(var input_pointcloud_topic_name)"/>
