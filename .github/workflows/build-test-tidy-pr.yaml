@@ -100,7 +100,6 @@ jobs:
     with:
       rosdistro: ${{ matrix.rosdistro }}
       container: ${{ matrix.container }}
-      cuda: true
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' }}
       runner: "['self-hosted', 'Linux', 'X64']"
     secrets:
@@ -123,6 +122,5 @@ jobs:
     uses: ./.github/workflows/clang-tidy-differential.yaml
     with:
       container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-jazzy
-      cuda: true
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' && needs.build-and-test-differential-cuda.result == 'success' }}
       runner: "['self-hosted', 'Linux', 'X64']"

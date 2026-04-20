@@ -11,6 +11,5 @@ jobs:
     with:
       rosdistro: jazzy
       container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-jazzy
-      cuda: true
       runner: "['self-hosted', 'Linux', 'X64']"
       pull-ccache: true

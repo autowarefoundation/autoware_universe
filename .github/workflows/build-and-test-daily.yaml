@@ -56,7 +56,6 @@ jobs:
     with:
       rosdistro: ${{ matrix.rosdistro }}
       container: ${{ matrix.container-base }}
-      cuda: ${{ matrix.cuda }}
       runner: ${{ matrix.runner }}
       build-pre-command: ${{ matrix.build-pre-command }}
       arch: ${{ matrix.arch }}
