@@ -190,6 +190,8 @@ void TrajectoryValidator::map_callback(const LaneletMapBin::ConstSharedPtr msg)
 
 void TrajectoryValidator::load_metric(const std::string & name, const bool is_shadow_mode)
 {
+  if (name.empty()) return;
+
   try {
     auto plugin = plugin_loader_.createSharedInstance(name);
 
