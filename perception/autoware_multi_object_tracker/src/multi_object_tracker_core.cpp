@@ -56,7 +56,8 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize processor
   processor = std::make_unique<TrackerProcessor>(
-    params.processor_config, params.associator_config, params.input_channels_config);
+    params.creation_config, params.associator_config, params.tracker_overlap_manager_config,
+    params.input_channels_config);
 
   last_publish_time = node.now();
   last_updated_time = node.now();
@@ -66,7 +67,7 @@ void MultiObjectTrackerInternalState::init(
 namespace core
 {
 
-// Parameter processing
+//// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
   using Label = classes::Label;
@@ -87,8 +88,8 @@ void process_parameters(MultiObjectTrackerParameters & params)
     return *tracker_type;
   };
 
-  // Set the tracker map for processor config
-  params.processor_config.tracker_map = {
+  // Set the tracker map for creation config
+  params.creation_config.tracker_map = {
     {Label::CAR, getTrackerType("car")},
     {Label::TRUCK, getTrackerType("truck")},
     {Label::BUS, getTrackerType("bus")},
@@ -97,15 +98,18 @@ void process_parameters(MultiObjectTrackerParameters & params)
     {Label::BICYCLE, getTrackerType("bicycle")},
     {Label::MOTORCYCLE, getTrackerType("motorcycle")},
     {Label::UNKNOWN, TrackerType::POLYGON}};
-  // Set the pruning thresholds for processor config
-  params.processor_config.pruning_giou_thresholds = params.pruning_giou_thresholds.to_label_map();
-  params.processor_config.pruning_distance_thresholds =
+  // Set the pruning thresholds for tracker overlap manager config
+  params.tracker_overlap_manager_config.pruning_giou_thresholds =
+    params.pruning_giou_thresholds.to_label_map();
+  params.tracker_overlap_manager_config.pruning_distance_thresholds =
     params.pruning_distance_thresholds.to_label_map();
-  params.processor_config.pruning_distance_thresholds_sq.clear();
-  params.processor_config.pruning_distance_thresholds_sq.reserve(
-    params.processor_config.pruning_distance_thresholds.size());
-  for (const auto & [label, threshold] : params.processor_config.pruning_distance_thresholds) {
-    params.processor_config.pruning_distance_thresholds_sq.emplace(label, threshold * threshold);
+  params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.clear();
+  params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.reserve(
+    params.tracker_overlap_manager_config.pruning_distance_thresholds.size());
+  for (const auto & [label, threshold] :
+       params.tracker_overlap_manager_config.pruning_distance_thresholds) {
+    params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.emplace(
+      label, threshold * threshold);
   }
 
   for (const auto measurement_label : classes::trackedLabels()) {
@@ -120,7 +124,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
     const auto & label_params = label_params_opt->get();
 
     const auto default_tracker_type_opt =
-      get_map_value_if_exists(params.processor_config.tracker_map, measurement_label);
+      get_map_value_if_exists(params.creation_config.tracker_map, measurement_label);
     if (!default_tracker_type_opt) {
       throw std::runtime_error(
         "Missing default tracker mapping for measurement label: " +
@@ -139,7 +143,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
   params.associator_config.association_params_map = params.association_params_map;
 }
 
-// Utility functions
+//// Utility functions
 bool should_publish(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state)
@@ -206,7 +210,7 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
   return std::nullopt;
 }
 
-// Low-level processing functions
+//// Low-level processing functions
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
@@ -258,24 +262,24 @@ void process_objects_(
       measurement_time.seconds());
   }
 
-  /* predict trackers to the measurement time */
+  /// 1. Predict trackers to measurement time
   state.processor->predict(measurement_time, ego_pose);
 
-  /* object association */
+  /// 2. Object association
   const types::AssociatedObjects associated_objects{
     objects_with_associations.objects, objects_with_associations.association};
 
-  /* tracker update */
+  /// 3. Tracker update
   state.processor->update(associated_objects);
 
-  /* tracker pruning */
+  /// 4. Tracker pruning
   state.processor->prune(measurement_time);
 
-  /* spawn new tracker */
+  /// 5. Spawn new tracker
   state.processor->spawn(associated_objects);
 }
 
-// High-level orchestration functions
+//// High-level orchestration functions
 ObjectProcessingResult process_objects_batch(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
@@ -324,7 +328,7 @@ PublishingData prepare_publishing_data(
   // Calculate object_time based on delay compensation setting
   result.object_time = params.enable_delay_compensation ? current_time : last_tracker_time;
 
-  /* tracker pruning*/
+  /// Tracker pruning
   state.processor->prune(last_tracker_time);
 
   // Get tracked objects
