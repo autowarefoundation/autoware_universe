@@ -77,6 +77,11 @@ TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
     load_metric(filter);
   }
 
+  constexpr bool shadow_mode = true;
+  for (const auto & filter : params_.shadow_mode_filter_names) {
+    load_metric(filter, shadow_mode);
+  }
+
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectoryValidator::map_callback, this, std::placeholders::_1));
@@ -145,10 +150,15 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
     bool is_feasible = true;
     for (const auto & plugin : plugins_) {
       if (const auto res = plugin->is_feasible(trajectory.points, context); !res) {
-        is_feasible = false;
         RCLCPP_WARN_THROTTLE(
           get_logger(), *get_clock(), 1000, "Not feasible: %s", res.error().c_str());
         diagnostics_interface_.add_key_value(plugin->get_name(), res.error());
+
+        if (plugin->is_shadow_mode()) {
+          continue;
+        }
+
+        is_feasible = false;
       }
     }
 
@@ -166,7 +176,7 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
     }
   }
 
-  update_diagnostic(*filtered_msg);
+  update_diagnostic(*msg, *filtered_msg);
   pub_trajectories_->publish(*filtered_msg);
 }
 
@@ -178,8 +188,10 @@ void TrajectoryValidator::map_callback(const LaneletMapBin::ConstSharedPtr msg)
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 }
 
-void TrajectoryValidator::load_metric(const std::string & name)
+void TrajectoryValidator::load_metric(const std::string & name, const bool is_shadow_mode)
 {
+  if (name.empty()) return;
+
   try {
     auto plugin = plugin_loader_.createSharedInstance(name);
 
@@ -191,6 +203,7 @@ void TrajectoryValidator::load_metric(const std::string & name)
     }
 
     plugin->set_vehicle_info(vehicle_info_);
+    plugin->set_shadow_mode(is_shadow_mode);
     plugin->update_parameters(params_);
 
     plugins_.push_back(plugin);
@@ -223,13 +236,21 @@ void TrajectoryValidator::unload_metric(const std::string & name)
   }
 }
 
-void TrajectoryValidator::update_diagnostic(const CandidateTrajectories & filtered_trajectories)
+void TrajectoryValidator::update_diagnostic(
+  const CandidateTrajectories & input_trajectories,
+  const CandidateTrajectories & filtered_trajectories)
 {
-  const auto uuid_to_name_map = get_generator_uuid_to_name_map(filtered_trajectories);
-  if (filtered_trajectories.candidate_trajectories.empty()) {
+  const auto uuid_to_name_map = get_generator_uuid_to_name_map(input_trajectories);
+  const auto input_has_diffusion_trajectories =
+    has_trajectory_from_generator(uuid_to_name_map, input_trajectories, "Diffusion");
+  const auto filtered_has_diffusion_trajectories =
+    has_trajectory_from_generator(uuid_to_name_map, filtered_trajectories, "Diffusion");
+  if (
+    !input_trajectories.candidate_trajectories.empty() &&
+    filtered_trajectories.candidate_trajectories.empty()) {
     diagnostics_interface_.update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No feasible trajectories found");
-  } else if (!has_trajectory_from_generator(uuid_to_name_map, filtered_trajectories, "Diffusion")) {
+  } else if (input_has_diffusion_trajectories && !filtered_has_diffusion_trajectories) {
     diagnostics_interface_.update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN,
       "All diffusion planner trajectories are infeasible");

@@ -16,7 +16,7 @@
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_sensing_msgs</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils_geometry</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
 

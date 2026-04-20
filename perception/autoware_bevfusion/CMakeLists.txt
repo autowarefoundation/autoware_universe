@@ -101,6 +101,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     lib/postprocess/circle_nms_kernel.cu
     lib/postprocess/postprocess_kernel.cu
     lib/preprocess/preprocess_kernel.cu
+    lib/camera/camera_preprocess_kernel.cu
   )
 
   target_link_libraries(${PROJECT_NAME}_cuda_lib
@@ -120,6 +121,8 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     lib/preprocess/precomputed_features.cpp
     lib/ros_utils.cpp
     lib/bevfusion_trt.cpp
+    lib/camera/camera_matrices.cpp
+    lib/camera/camera_data.cpp
   )
 
   target_compile_definitions(${PROJECT_NAME}_lib PRIVATE

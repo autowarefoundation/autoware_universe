@@ -61,14 +61,16 @@ private:
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
-  void load_metric(const std::string & name);
+  void load_metric(const std::string & name, const bool is_shadow_mode = false);
 
   /**
    * @brief Unloads a metric plugin
    * @param name Metric plugin name to unload
    */
   void unload_metric(const std::string & name);
-  void update_diagnostic(const CandidateTrajectories & filtered_trajectories);
+  void update_diagnostic(
+    const CandidateTrajectories & input_trajectories,
+    const CandidateTrajectories & filtered_trajectories);
 
   validator::ParamListener listener_;
   validator::Params params_;
