@@ -15,9 +15,33 @@
 #ifndef POSE_ESTIMATOR_TYPE_HPP_
 #define POSE_ESTIMATOR_TYPE_HPP_
 
+#include <magic_enum.hpp>
+
 namespace autoware::pose_estimator_arbiter
 {
-enum class PoseEstimatorType : int { ndt = 1, yabloc = 2, eagleye = 4, artag = 8 };
+enum class PoseEstimatorType : int {
+  ndt = 1,
+  yabloc = 2,
+  eagleye = 4,
+  artag = 8,
+  lidar_marker = 16
+};
 }  // namespace autoware::pose_estimator_arbiter
+
+// Customize magic_enum to use "lidar-marker" string for lidar_marker enum
+namespace magic_enum::customize
+{
+template <>
+constexpr customize_t enum_name<autoware::pose_estimator_arbiter::PoseEstimatorType>(
+  autoware::pose_estimator_arbiter::PoseEstimatorType value) noexcept
+{
+  switch (value) {
+    case autoware::pose_estimator_arbiter::PoseEstimatorType::lidar_marker:
+      return "lidar-marker";
+    default:
+      return default_tag;
+  }
+}
+}  // namespace magic_enum::customize
 
 #endif  // POSE_ESTIMATOR_TYPE_HPP_
