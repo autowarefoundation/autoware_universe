@@ -27,10 +27,10 @@ namespace autoware::dummy_perception_publisher
 {
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::TrackedObject;
+using autoware_simulation_msgs::msg::SimulatedObject;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::TwistWithCovariance;
-using autoware_simulation_msgs::msg::SimulatedObject;
 
 struct ObjectInfo
 {
