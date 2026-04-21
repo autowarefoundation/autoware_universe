@@ -60,7 +60,7 @@ namespace autoware::boundary_departure_checker::debug
 {
 MarkerArray create_departure_footprint_marker(
   const ProjectionsToBound & projections_to_bound, const footprints::Footprints & footprints,
-  const rclcpp::Time & curr_time, const double base_link_z)
+  const builtin_interfaces::msg::Time & curr_time, const double base_link_z)
 {
   int32_t id{0};
   const auto add_marker = [&](
@@ -102,7 +102,7 @@ MarkerArray create_departure_footprint_marker(
 
 Marker create_projections_points_marker(
   const ProjectionsToBound & projections_to_bound, const std::string & side_key_str,
-  const rclcpp::Time & curr_time, const double base_link_z)
+  const builtin_interfaces::msg::Time & curr_time, const double base_link_z)
 {
   auto marker = autoware_utils_visualization::create_default_marker(
     "map", curr_time, "" + side_key_str, 0, visualization_msgs::msg::Marker::SPHERE_LIST,
@@ -124,7 +124,7 @@ Marker create_projections_points_marker(
 
 Marker create_projections_points_connection_marker(
   const ProjectionsToBound & projections_to_bound, const std::string & side_key_str,
-  const rclcpp::Time & curr_time, const double base_link_z)
+  const builtin_interfaces::msg::Time & curr_time, const double base_link_z)
 {
   auto marker = autoware_utils_visualization::create_default_marker(
     "map", curr_time, "" + side_key_str, 0, visualization_msgs::msg::Marker::LINE_LIST,
@@ -145,7 +145,7 @@ Marker create_projections_points_connection_marker(
 
 Marker create_projected_segment_bound_marker(
   const ProjectionsToBound & projections_to_bound, const std::string & side_key_str,
-  const rclcpp::Time & curr_time, const double base_link_z)
+  const builtin_interfaces::msg::Time & curr_time, const double base_link_z)
 {
   auto marker = autoware_utils_visualization::create_default_marker(
     "map", curr_time, "" + side_key_str, 0, visualization_msgs::msg::Marker::LINE_LIST,

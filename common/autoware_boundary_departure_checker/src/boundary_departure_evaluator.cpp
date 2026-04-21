@@ -29,7 +29,13 @@ BoundaryDepartureEvaluator::BoundaryDepartureEvaluator(
   vehicle_info_(vehicle_info),
   rtree_(*map, param.boundary_types_to_detect)
 {
-  assert(map_ != nullptr);
+  if (!map) {
+    throw std::runtime_error("Map is NULL");
+  }
+
+  if (map->lineStringLayer.empty()) {
+    throw std::runtime_error("Map without any linestrings.");
+  }
 }
 
 std::optional<Side<std::optional<CriticalPointPair>>> BoundaryDepartureEvaluator::evaluate(
