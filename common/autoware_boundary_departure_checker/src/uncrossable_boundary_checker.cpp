@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,191 +14,55 @@
 
 #include "autoware/boundary_departure_checker/uncrossable_boundary_checker.hpp"
 
-#include "autoware/boundary_departure_checker/conversion.hpp"
+#include "autoware/boundary_departure_checker/debug.hpp"
 #include "autoware/boundary_departure_checker/footprints_generator.hpp"
-#include "autoware/boundary_departure_checker/utils.hpp"
 
-#include <autoware/motion_utils/trajectory/interpolation.hpp>
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/trajectory/trajectory_point.hpp>
-#include <autoware/trajectory/utils/closest.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware_utils_math/normalization.hpp>
-#include <autoware_utils_math/unit_conversion.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
-#include <range/v3/algorithm.hpp>
-#include <range/v3/view.hpp>
-#include <tf2/utils.hpp>
-#include <tl_expected/expected.hpp>
-
-#include <boost/geometry.hpp>
-
-#include <lanelet2_core/geometry/Polygon.h>
 
 #include <memory>
-#include <string>
-#include <unordered_set>
-#include <utility>
-#include <vector>
 
 namespace autoware::boundary_departure_checker
 {
 UncrossableBoundaryChecker::UncrossableBoundaryChecker(
-  lanelet::LaneletMapPtr map, UncrossableBoundaryDepartureParam param,
+  const lanelet::LaneletMapPtr & map, const UncrossableBoundaryDepartureParam & param,
   const VehicleInfo & vehicle_info)
-: lanelet_map_ptr_(std::move(map)), param_(std::move(param)), vehicle_info_(vehicle_info)
+: param_(param), vehicle_info_(vehicle_info)
 {
-  if (!lanelet_map_ptr_ && lanelet_map_ptr_->lineStringLayer.empty()) {
-    throw std::runtime_error("Invalid lanelet map pointer or empty linestring layer");
-  }
-
-  uncrossable_boundaries_rtree_ptr_ = std::make_unique<UncrossableBoundsRTree>(
-    utils::build_uncrossable_boundaries_rtree(*lanelet_map_ptr_, param_.boundary_types_to_detect));
+  evaluator_ptr_ = std::make_unique<BoundaryDepartureEvaluator>(map, param, vehicle_info);
 }
 
 void UncrossableBoundaryChecker::update_parameters(const UncrossableBoundaryDepartureParam & param)
 {
   param_ = param;
+  evaluator_ptr_->update_parameters(param);
 }
 
-DepartureData UncrossableBoundaryChecker::check_departure(
+DepartureResult UncrossableBoundaryChecker::update_departure_status(
   const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  DepartureData departure_data;
-  if (predicted_traj.empty() || uncrossable_boundaries_rtree_ptr_->empty()) {
-    return departure_data;
+  DepartureResult result;
+  if (predicted_traj.empty()) {
+    return result;
   }
 
-  departure_data.footprints =
+  const auto footprints =
     footprints::generate(predicted_traj, vehicle_info_, ego_state.pose_with_cov);
+  const auto footprints_sides = footprints::get_sides_from_footprints(footprints);
 
-  departure_data.footprints_sides =
-    footprints::get_sides_from_footprints(departure_data.footprints);
+  const auto evaluation_result =
+    evaluator_ptr_->evaluate(predicted_traj, footprints_sides, ego_state);
 
-  departure_data.boundary_segments = get_boundary_segments(
-    departure_data.footprints_sides, predicted_traj, vehicle_info_.vehicle_height_m);
+  const auto hysteresis_result =
+    update_and_judge(hysteresis_state_, evaluation_result, param_, ego_state.current_time_s);
 
-  if (departure_data.boundary_segments.all_empty()) {
-    return departure_data;
-  }
+  hysteresis_state_ = hysteresis_result.updated_state;
 
-  departure_data.projections_to_bound = utils::get_closest_boundary_segments_from_side(
-    predicted_traj, departure_data.boundary_segments, departure_data.footprints_sides);
-
-  departure_data.evaluated_projections = utils::evaluate_projections_severity(
-    departure_data.projections_to_bound, param_, ego_state, vehicle_info_);
-
-  departure_data.status =
-    determine_departure_type(departure_data.evaluated_projections, ego_state.current_time_s);
-
-  departure_data.critical_departure_history = critical_departure_history_;
-
-  return departure_data;
+  result.status = hysteresis_result.status;
+  result.debug_markers = debug::create_debug_markers(
+    hysteresis_state_, footprints, ego_state, param_.enable_developer_marker);
+  return result;
 }
 
-DepartureType UncrossableBoundaryChecker::determine_departure_type(
-  const Side<std::optional<CriticalPointPair>> & evaluated_projections, const double current_time_s)
-{
-  const bool current_is_critical = utils::is_critical(evaluated_projections);
-
-  if (current_is_critical) {
-    // check if ON buffer expired
-    if (current_time_s - last_no_critical_dpt_time_ >= param_.on_time_buffer_s) {
-      last_found_critical_dpt_time_ = current_time_s;
-
-      critical_departure_history_.for_each_side([](auto & side) { side.clear(); });
-      evaluated_projections.for_each([&](auto key_constant, auto & side_value) {
-        if (side_value.has_value() && side_value->safety_buffer_start.is_critical()) {
-          critical_departure_history_[key_constant.value].push_back(
-            side_value->physical_departure_point);
-        }
-      });
-      return DepartureType::CRITICAL;
-    }
-    return DepartureType::NONE;
-  }
-
-  // update safe timestamp
-  last_no_critical_dpt_time_ = current_time_s;
-
-  // check OFF buffer
-  if (!critical_departure_history_.all_empty()) {
-    if (current_time_s - last_found_critical_dpt_time_ < param_.off_time_buffer_s) {
-      return DepartureType::CRITICAL;
-    }
-    critical_departure_history_.for_each_side([](auto & side) { side.clear(); });
-  }
-
-  return DepartureType::NONE;
-}
-
-std::vector<SegmentWithIdx> UncrossableBoundaryChecker::find_closest_boundary_segments(
-  const Segment2d & ego_ref_segment, const Segment2d & ego_opposite_ref_segment,
-  const double ego_z_position, const double ego_vehicle_height,
-  const std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> & unique_id) const
-{
-  if (!lanelet_map_ptr_ || !uncrossable_boundaries_rtree_ptr_) {
-    return {};
-  }
-
-  const auto & rtree = *uncrossable_boundaries_rtree_ptr_;
-  const lanelet::BasicPoint2d ego_start{ego_ref_segment.first.x(), ego_ref_segment.first.y()};
-
-  std::vector<SegmentWithIdx> nearest_raw;
-  rtree.query(
-    bgi::nearest(ego_start, param_.max_lateral_rtree_queries), std::back_inserter(nearest_raw));
-
-  std::vector<SegmentWithIdx> new_segments;
-  for (const auto & nearest : nearest_raw) {
-    const auto & id = nearest.second;
-    if (unique_id.find(id) != unique_id.end()) {
-      continue;
-    }
-
-    auto boundary_segment_3d = utils::get_segment_3d_from_id(lanelet_map_ptr_, id);
-
-    if (!utils::is_segment_within_ego_height(
-          boundary_segment_3d, ego_z_position, ego_vehicle_height)) {
-      continue;
-    }
-
-    auto boundary_segment = utils::to_segment_2d(boundary_segment_3d);
-
-    if (utils::is_closest_to_boundary_segment(
-          boundary_segment, ego_ref_segment, ego_opposite_ref_segment)) {
-      new_segments.emplace_back(boundary_segment, id);
-    }
-  }
-  return new_segments;
-}
-
-BoundarySegmentsBySide UncrossableBoundaryChecker::get_boundary_segments(
-  const FootprintSideSegmentsArray & footprints_sides,
-  const TrajectoryPoints & trimmed_pred_trajectory, const double ego_vehicle_height) const
-{
-  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  BoundarySegmentsBySide boundary_sides_with_idx;
-  std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> unique_ids;
-
-  for (const auto & [fp, traj_pt] : ranges::views::zip(footprints_sides, trimmed_pred_trajectory)) {
-    const auto ego_z = traj_pt.pose.position.z;
-
-    auto left_segs =
-      find_closest_boundary_segments(fp.left, fp.right, ego_z, ego_vehicle_height, unique_ids);
-    for (auto & seg : left_segs) {
-      unique_ids.insert(seg.second);
-      boundary_sides_with_idx.left.emplace_back(std::move(seg));
-    }
-
-    auto right_segs =
-      find_closest_boundary_segments(fp.right, fp.left, ego_z, ego_vehicle_height, unique_ids);
-    for (auto & seg : right_segs) {
-      unique_ids.insert(seg.second);
-      boundary_sides_with_idx.right.emplace_back(std::move(seg));
-    }
-  }
-  return boundary_sides_with_idx;
-}
 }  // namespace autoware::boundary_departure_checker

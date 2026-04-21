@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,10 +30,5 @@ Segment2d to_segment_2d(
 Segment2d to_segment_2d(const Segment3d & segment)
 {
   return {to_point_2d(segment.first), to_point_2d(segment.second)};
-}
-
-Point to_geom_pt(const Point2d & point, const double z)
-{
-  return autoware_utils_geometry::to_msg(point.to_3d(z));
 }
 }  // namespace autoware::boundary_departure_checker::utils

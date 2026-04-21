@@ -6,9 +6,14 @@ autoware_package()
 
 ament_auto_add_library(utils SHARED
   src/conversion.cpp
-  src/utils.cpp
-  src/debug.cpp
+  src/geometry_projection.cpp
+  src/uncrossable_boundaries_rtree.cpp
+  src/boundary_segment_finder.cpp
+  src/severity_evaluator.cpp
+  src/hysteresis_logic.cpp
+  src/boundary_departure_evaluator.cpp
   src/footprints_generator.cpp
+  src/debug.cpp
 )
 
 ament_auto_add_library(uncrossable_boundary_checker SHARED

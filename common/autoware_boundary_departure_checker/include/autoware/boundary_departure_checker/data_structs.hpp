@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DATA_STRUCTS_HPP_
 #define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DATA_STRUCTS_HPP_
 
-#include "autoware/boundary_departure_checker/footprints_generator.hpp"
 #include "autoware/boundary_departure_checker/side_struct.hpp"
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 
@@ -27,6 +26,7 @@
 #include <magic_enum.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <boost/functional/hash.hpp>
 #include <boost/geometry/geometry.hpp>
@@ -178,17 +178,12 @@ using FootprintSideSegments = Side<Segment2d>;
 using FootprintSideSegmentsArray = std::vector<FootprintSideSegments>;
 
 /**
- * @brief Data for boundary departure check.
+ * @brief Result of boundary departure check.
  */
-struct DepartureData
+struct DepartureResult
 {
-  footprints::Footprints footprints;                             ///< ego footprints
-  FootprintSideSegmentsArray footprints_sides;                   ///< sides of the ego footprints
-  BoundarySegmentsBySide boundary_segments;                      ///< relevant boundary segments
-  Side<ProjectionsToBound> projections_to_bound;                 ///< all projections to boundary
-  Side<ProjectionsToBound> critical_departure_history;           ///< history of critical departures
-  Side<std::optional<CriticalPointPair>> evaluated_projections;  ///< evaluated critical point pairs
-  DepartureType status{DepartureType::NONE};                     ///< current departure status
+  DepartureType status{DepartureType::NONE};           ///< current departure status
+  visualization_msgs::msg::MarkerArray debug_markers;  ///< debug markers for visualization
 };
 
 /**

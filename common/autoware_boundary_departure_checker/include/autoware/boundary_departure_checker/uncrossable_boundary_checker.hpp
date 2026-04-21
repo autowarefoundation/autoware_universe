@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
 #ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UNCROSSABLE_BOUNDARY_CHECKER_HPP_
 #define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UNCROSSABLE_BOUNDARY_CHECKER_HPP_
 
+#include "autoware/boundary_departure_checker/boundary_departure_evaluator.hpp"
 #include "autoware/boundary_departure_checker/data_structs.hpp"
+#include "autoware/boundary_departure_checker/hysteresis_logic.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
@@ -24,25 +26,20 @@
 #include <lanelet2_core/LaneletMap.h>
 
 #include <memory>
-#include <unordered_set>
-#include <vector>
 
 namespace autoware::boundary_departure_checker
 {
-
-class FootprintManager;
-
 /**
- * @brief Class for checking uncrossable boundary departure.
+ * @brief Orchestrator class for checking uncrossable boundary departure.
  */
 class UncrossableBoundaryChecker
 {
 public:
   /**
-   * @brief Default constructor.
+   * @brief Constructor.
    */
   UncrossableBoundaryChecker(
-    lanelet::LaneletMapPtr map, UncrossableBoundaryDepartureParam param,
+    const lanelet::LaneletMapPtr & map, const UncrossableBoundaryDepartureParam & param,
     const VehicleInfo & vehicle_info);
 
   /**
@@ -52,60 +49,22 @@ public:
   void update_parameters(const UncrossableBoundaryDepartureParam & param);
 
   /**
-   * @brief Check for boundary departure along a predicted trajectory.
+   * @brief Update departure status along a predicted trajectory.
    * @param[in] predicted_traj predicted trajectory
    * @param[in] ego_state current ego dynamic state
-   * @return departure data
+   * @return departure result
    */
-  DepartureData check_departure(
+  DepartureResult update_departure_status(
     const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state);
 
 private:
-  /**
-   * @brief Find closest boundary segments from R-tree.
-   * @param[in] ego_ref_segment reference segment of ego vehicle
-   * @param[in] ego_opposite_ref_segment opposite reference segment of ego vehicle
-   * @param[in] ego_z_position z-position of ego vehicle
-   * @param[in] ego_vehicle_height height of ego vehicle
-   * @param[in] unique_id set of already processed segment IDs
-   * @return list of closest boundary segments
-   */
-  [[nodiscard]] std::vector<SegmentWithIdx> find_closest_boundary_segments(
-    const Segment2d & ego_ref_segment, const Segment2d & ego_opposite_ref_segment,
-    const double ego_z_position, const double ego_vehicle_height,
-    const std::unordered_set<IdxForRTreeSegment, IdxForRTreeSegmentHash> & unique_id) const;
-
-  /**
-   * @brief Get boundary segments along the footprints.
-   * @param[in] footprints_sides side segments of footprints along trajectory
-   * @param[in] trimmed_pred_trajectory trimmed predicted trajectory
-   * @param[in] ego_vehicle_height height of ego vehicle
-   * @return boundary segments grouped by side
-   */
-  [[nodiscard]] BoundarySegmentsBySide get_boundary_segments(
-    const FootprintSideSegmentsArray & footprints_sides,
-    const TrajectoryPoints & trimmed_pred_trajectory, const double ego_vehicle_height) const;
-
-  /**
-   * @brief Determine departure type based on evaluation.
-   * @param[in] evaluated_projections evaluated critical point pairs
-   * @param[in] current_time_s current time [s]
-   * @return determined departure type
-   */
-  DepartureType determine_departure_type(
-    const Side<std::optional<CriticalPointPair>> & evaluated_projections,
-    const double current_time_s);
-
-  lanelet::LaneletMapPtr lanelet_map_ptr_;   ///< pointer to lanelet map
-  UncrossableBoundaryDepartureParam param_;  ///< checker parameters
-  std::unique_ptr<UncrossableBoundsRTree>
-    uncrossable_boundaries_rtree_ptr_;  ///< R-tree of boundary segments
-  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ =
-    std::make_shared<autoware_utils_debug::TimeKeeper>();  ///< time keeper for performance analysis
-  double last_no_critical_dpt_time_{0.0};     ///< last time no critical departure was found [s]
-  double last_found_critical_dpt_time_{0.0};  ///< last time critical departure was found [s]
-  Side<ProjectionsToBound> critical_departure_history_;  ///< history of critical departures
+  UncrossableBoundaryDepartureParam param_;
   VehicleInfo vehicle_info_;
+  std::unique_ptr<BoundaryDepartureEvaluator> evaluator_ptr_;
+  HysteresisState hysteresis_state_;
+
+  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ =
+    std::make_shared<autoware_utils_debug::TimeKeeper>();
 };
 }  // namespace autoware::boundary_departure_checker
 

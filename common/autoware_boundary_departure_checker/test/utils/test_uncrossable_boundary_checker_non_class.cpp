@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/boundary_departure_checker/boundary_segment_finder.hpp"
+#include "autoware/boundary_departure_checker/geometry_projection.hpp"
+#include "autoware/boundary_departure_checker/severity_evaluator.hpp"
 #include "autoware/boundary_departure_checker/type_alias.hpp"
-#include "autoware/boundary_departure_checker/utils.hpp"
+#include "autoware/boundary_departure_checker/uncrossable_boundaries_rtree.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
 
@@ -82,7 +85,7 @@ TEST(UncrossableBoundaryTest, TestParallelSegments)
   Segment2d boundary_seg{{1.0, 1.0}, {3.0, 1.0}};
 
   // Act:
-  auto result = utils::calc_nearest_projection(ego_seg, boundary_seg, 0);
+  auto result = geometry_projection::calc_nearest_projection(ego_seg, boundary_seg, 0);
 
   // Assert:
   ASSERT_TRUE(result.has_value());
@@ -114,7 +117,7 @@ TEST(UncrossableBoundaryTest, TestPerpendicularNonIntersecting)
   Segment2d boundary_seg{{2.0, -1.0}, {2.0, 1.0}};
 
   // Act:
-  auto result = utils::calc_nearest_projection(ego_seg, boundary_seg, 0);
+  auto result = geometry_projection::calc_nearest_projection(ego_seg, boundary_seg, 0);
 
   // Assert:
   ASSERT_TRUE(result.has_value());
@@ -146,7 +149,7 @@ TEST(UncrossableBoundaryTest, TestCollinearSegments)
   Segment2d boundary_seg{{2.0, 0.0}, {3.0, 0.0}};
 
   // Act:
-  auto result = utils::calc_nearest_projection(ego_seg, boundary_seg, 0);
+  auto result = geometry_projection::calc_nearest_projection(ego_seg, boundary_seg, 0);
 
   // Assert:
   ASSERT_FALSE(result.has_value());
@@ -171,8 +174,8 @@ TEST(UncrossableBoundaryTest, TestMiddleOfSegmentCrossingForLonDist)
   BoundarySegmentsBySide boundaries = make_boundaries({Segment2d{{10.0, 0.0}, {10.0, 2.0}}});
 
   // Act:
-  auto result =
-    utils::get_closest_boundary_segments_from_side(ego_pred_traj, boundaries, ego_sides);
+  auto result = boundary_segment_finder::get_closest_boundary_segments_from_side(
+    ego_pred_traj, boundaries, ego_sides);
 
   // Assert:
   ASSERT_EQ(result.left.size(), 3);
@@ -207,8 +210,8 @@ TEST(UncrossableBoundaryTest, TestRealisticLaneDeparture)
     {Segment2d{{-10.0, 9.4}, {120.0, 9.4}}}, {Segment2d{{-10.0, -5.0}, {120.0, -5.0}}});
 
   // Act:
-  auto result =
-    utils::get_closest_boundary_segments_from_side(ego_pred_traj, boundaries, ego_sides);
+  auto result = boundary_segment_finder::get_closest_boundary_segments_from_side(
+    ego_pred_traj, boundaries, ego_sides);
 
   // Assert:
   EXPECT_NEAR(result.left[0].lat_dist, 5.6, 1e-6);
@@ -241,8 +244,8 @@ TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
     {Segment2d{{-10.0, 5.0}, {120.0, 5.0}}}, {Segment2d{{-10.0, -9.4}, {120.0, -9.4}}});
 
   // Act:
-  auto result =
-    utils::get_closest_boundary_segments_from_side(ego_pred_traj, boundaries, ego_sides);
+  auto result = boundary_segment_finder::get_closest_boundary_segments_from_side(
+    ego_pred_traj, boundaries, ego_sides);
 
   // Assert:
   EXPECT_NEAR(result.right[0].lat_dist, 5.6, 1e-6);
@@ -279,7 +282,7 @@ TEST(UncrossableBoundaryUtilsTest, TestPointToSegmentProjection)
   Segment2d segment{{0.0, 0.0}, {1.0, 0.0}};
 
   // Act:
-  auto result = utils::point_to_segment_projection(p, segment);
+  auto result = geometry_projection::point_to_segment_projection(p, segment);
 
   // Assert:
   ASSERT_TRUE(result.has_value());
@@ -296,9 +299,9 @@ TEST(UncrossableBoundaryUtilsTest, TestIsUncrossableType)
   std::vector<std::string> types = {"road_border", "curb"};
 
   // Act & Assert:
-  EXPECT_TRUE(utils::is_uncrossable_type(types, ls));
+  EXPECT_TRUE(UncrossableBoundariesRTree::is_uncrossable_type(types, ls));
   ls.attributes()[lanelet::AttributeName::Type] = "lane_divider";
-  EXPECT_FALSE(utils::is_uncrossable_type(types, ls));
+  EXPECT_FALSE(UncrossableBoundariesRTree::is_uncrossable_type(types, ls));
 }
 
 TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityBackwardBuffer)
@@ -332,8 +335,8 @@ TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityBackwardBuffer
   // Act:
   auto result = input.transform_each_side([&](const auto & side_value) {
     const auto min_to_bounds =
-      utils::filter_and_assign_departure_types(side_value, param, min_braking_dist);
-    return utils::apply_backward_buffer_and_filter(min_to_bounds, param);
+      severity_evaluator::filter_and_assign_departure_types(side_value, param, min_braking_dist);
+    return severity_evaluator::apply_backward_buffer_and_filter(min_to_bounds, param);
   });
 
   // Assert:
@@ -357,14 +360,10 @@ TEST(UncrossableBoundaryUtilsTest, TestBuildUncrossableBoundariesRTree)
   std::vector<std::string> types = {"road_border"};
 
   // Act:
-  auto rtree = utils::build_uncrossable_boundaries_rtree(map, types);
+  UncrossableBoundariesRTree rtree(map, types);
 
   // Assert:
-  EXPECT_EQ(rtree.size(), 2);
-  std::vector<SegmentWithIdx> results;
-  rtree.query(
-    boost::geometry::index::nearest(lanelet::BasicPoint2d(0.5, 0.0), 1),
-    std::back_inserter(results));
+  std::vector<SegmentWithIdx> results = rtree.query(Point2d{0.5, 0.0}, 1);
   ASSERT_EQ(results.size(), 1);
   EXPECT_EQ(results.front().second.linestring_id, ls1.id());
 }

@@ -34,6 +34,7 @@ struct UncrossableBoundaryDepartureParam
   double time_to_departure_cutoff_s{2.0};  ///< time to departure cutoff [s]
   double on_time_buffer_s{0.15};           ///< buffer for activating departure detection [s]
   double off_time_buffer_s{0.15};          ///< buffer for deactivating departure detection [s]
+  bool enable_developer_marker{true};      ///< flag marker only for developer
   std::vector<std::string> boundary_types_to_detect{"road_border"};  ///< boundary types to detect
 };
 }  // namespace autoware::boundary_departure_checker

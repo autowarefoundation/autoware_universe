@@ -15,6 +15,7 @@
 #include "autoware/boundary_departure_checker/debug.hpp"
 
 #include "autoware/boundary_departure_checker/footprints_generator.hpp"
+#include "autoware/boundary_departure_checker/hysteresis_logic.hpp"
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 
 #include <autoware_utils_geometry/boost_geometry.hpp>
@@ -38,11 +39,6 @@ inline ColorRGBA yellow(float a = 0.99)
   return autoware_utils_visualization::create_marker_color(1., 1., 0., a);
 }
 
-inline ColorRGBA green(float a = 0.99)
-{
-  return autoware_utils_visualization::create_marker_color(0., 1., 0., a);
-}
-
 inline ColorRGBA red(float a = 0.99)
 {
   return autoware_utils_visualization::create_marker_color(1., 0., 0., a);
@@ -58,120 +54,10 @@ inline ColorRGBA magenta(float a = 0.99)
   return autoware_utils_visualization::create_marker_color(1., 0., 1., a);
 }
 
-inline ColorRGBA medium_orchid(float a = 0.99)
-{
-  return autoware_utils_visualization::create_marker_color(0.729, 0.333, 0.827, a);
-}
-
 }  // namespace color
 
 namespace autoware::boundary_departure_checker::debug
 {
-void add_projection_to_marker(
-  Marker & marker, const ProjectionToBound & pt, const double base_link_z)
-{
-  const auto to_geom = [base_link_z](const auto & p) {
-    return autoware_utils_geometry::to_msg(p.to_3d(base_link_z));
-  };
-  marker.points.push_back(to_geom(pt.pt_on_ego));
-  marker.points.push_back(to_geom(pt.pt_on_bound));
-  marker.points.push_back(to_geom(pt.nearest_bound_seg.first));
-  marker.points.push_back(to_geom(pt.nearest_bound_seg.second));
-}
-
-template <typename T>
-Marker create_projections_to_bound_marker(
-  const T & projections_to_bound, Marker marker, const std::string & type_str,
-  const std::string & side_key_str, const double base_link_z)
-{
-  marker.ns = type_str + "_projection_to_bound_" + side_key_str;
-  marker.color = color::blue();
-  for (const auto & pt : projections_to_bound) {
-    add_projection_to_marker(marker, pt, base_link_z);
-  }
-  return marker;
-}
-
-MarkerArray create_evaluated_projection_markers(
-  const CriticalPointPair & result_pair, const rclcpp::Time & curr_time,
-  const footprints::Footprints & footprints, const double base_link_z,
-  const std::string & side_key_str)
-{
-  const auto line_list = visualization_msgs::msg::Marker::LINE_LIST;
-  const auto add_marker = [&](
-                            const auto color, const ProjectionToBound & projection_to_bound,
-                            const std::string & type) -> Marker {
-    auto marker = autoware_utils_visualization::create_default_marker(
-      "map", curr_time, "critical_" + side_key_str + type, 0, line_list,
-      autoware_utils_visualization::create_marker_scale(0.05, 0, 0), color);
-
-    const auto & footprint = footprints.at(projection_to_bound.pose_index);
-    for (size_t i = 0; i + 1 < footprint.size(); ++i) {
-      const auto & p1 = footprint.at(i);
-      const auto & p2 = footprint.at(i + 1);
-
-      marker.points.push_back(autoware_utils_geometry::to_msg(p1.to_3d(base_link_z)));
-      marker.points.push_back(autoware_utils_geometry::to_msg(p2.to_3d(base_link_z)));
-    }
-    return marker;
-  };
-
-  MarkerArray marker_array;
-  marker_array.markers.reserve(4);
-  marker_array.markers.push_back(
-    add_marker(color::magenta(), result_pair.physical_departure_point, "physical_departure_point"));
-  marker_array.markers.push_back(
-    add_marker(color::green(), result_pair.safety_buffer_start, "safety_buffer_start"));
-
-  const auto color = color::green();
-  const auto m_scale = autoware_utils_visualization::create_marker_scale(0.05, 0, 0);
-  int32_t id{0};
-  auto marker_connection = autoware_utils_visualization::create_default_marker(
-    "map", curr_time, "", 0, line_list, m_scale, color);
-  marker_connection.ns = "critical_" + side_key_str + "_pair";
-  marker_connection.id = ++id;
-  marker_connection.color = color::blue();
-  add_projection_to_marker(marker_connection, result_pair.physical_departure_point, base_link_z);
-  add_projection_to_marker(marker_connection, result_pair.safety_buffer_start, base_link_z);
-
-  auto marker_crossed = autoware_utils_visualization::create_default_marker(
-    "map", curr_time, "critical_" + side_key_str + "_points", 0,
-    visualization_msgs::msg::Marker::POINTS,
-    autoware_utils_visualization::create_marker_scale(0.25, 0.25, 1.0), color::red());
-
-  marker_crossed.points.push_back(
-    autoware_utils_geometry::to_msg(
-      result_pair.physical_departure_point.pt_on_ego.to_3d(base_link_z)));
-  marker_array.markers.push_back(marker_connection);
-  marker_array.markers.push_back(marker_crossed);
-  return marker_array;
-}
-
-Marker create_footprint_marker(
-  const footprints::Footprints & footprints, const rclcpp::Time & curr_time,
-  const double base_link_z, const std_msgs::msg::ColorRGBA & color)
-{
-  int32_t id{0};
-  auto marker_ll = autoware_utils_visualization::create_default_marker(
-    "map", curr_time, "current_footprints", id, visualization_msgs::msg::Marker::LINE_LIST,
-    autoware_utils_visualization::create_marker_scale(0.05, 0, 0), color);
-  if (!footprints.empty()) {
-    marker_ll.points.reserve(footprints.size() * footprints.front().size());
-  }
-
-  for (const auto & footprint : footprints) {
-    for (size_t i = 0; i + 1 < footprint.size(); ++i) {
-      const auto & p1 = footprint.at(i);
-      const auto & p2 = footprint.at(i + 1);
-
-      marker_ll.points.push_back(autoware_utils_geometry::to_msg(p1.to_3d(base_link_z)));
-      marker_ll.points.push_back(autoware_utils_geometry::to_msg(p2.to_3d(base_link_z)));
-    }
-  }
-
-  return marker_ll;
-}
-
 MarkerArray create_departure_footprint_marker(
   const ProjectionsToBound & projections_to_bound, const footprints::Footprints & footprints,
   const rclcpp::Time & curr_time, const double base_link_z)
@@ -183,10 +69,6 @@ MarkerArray create_departure_footprint_marker(
     auto marker_ll = autoware_utils_visualization::create_default_marker(
       "map", curr_time, "footprint_" + type, ++id, visualization_msgs::msg::Marker::LINE_LIST,
       autoware_utils_visualization::create_marker_scale(0.05, 0, 0), color);
-
-    if (projection_to_bound.is_none_departure()) {
-      return marker_ll;
-    }
 
     const auto & footprint = footprints.at(projection_to_bound.pose_index);
     for (size_t i = 0; i + 1 < footprint.size(); ++i) {
@@ -206,6 +88,11 @@ MarkerArray create_departure_footprint_marker(
     if (pt.is_none_departure()) {
       continue;
     }
+
+    if (footprints.size() <= pt.pose_index) {
+      continue;
+    }
+
     if (pt.is_critical()) {
       marker_array.markers.push_back(add_marker(color::red(), pt, "critical"));
     }
@@ -213,58 +100,101 @@ MarkerArray create_departure_footprint_marker(
   return marker_array;
 }
 
-Marker create_boundary_segments_marker(
-  const BoundarySegmentsBySide & boundaries, Marker marker, std::string && ns,
-  const double base_link_z)
+Marker create_projections_points_marker(
+  const ProjectionsToBound & projections_to_bound, const std::string & side_key_str,
+  const rclcpp::Time & curr_time, const double base_link_z)
 {
-  marker.ns = ns;
+  auto marker = autoware_utils_visualization::create_default_marker(
+    "map", curr_time, "" + side_key_str, 0, visualization_msgs::msg::Marker::SPHERE_LIST,
+    autoware_utils_visualization::create_marker_scale(0.25, 0.25, 1.0), color::yellow());
+  marker.ns = side_key_str + "_projected_points";
 
-  const auto to_geom = [base_link_z](const auto & pt) {
-    return autoware_utils_geometry::to_msg(pt.to_3d(base_link_z));
+  const auto to_geom = [base_link_z](const auto & p) {
+    return autoware_utils_geometry::to_msg(p.to_3d(base_link_z));
   };
-  marker.color = color::medium_orchid();
-  for (const auto & [segment, id] : boundaries.left) {
-    marker.points.push_back(to_geom(segment.first));
-    marker.points.push_back(to_geom(segment.second));
-  }
-  for (const auto & [segment, id] : boundaries.right) {
-    marker.points.push_back(to_geom(segment.first));
-    marker.points.push_back(to_geom(segment.second));
+
+  for (const auto & pt : projections_to_bound) {
+    marker.points.push_back(to_geom(pt.pt_on_ego));
+    marker.points.push_back(to_geom(pt.pt_on_bound));
+    marker.points.push_back(to_geom(pt.nearest_bound_seg.first));
+    marker.points.push_back(to_geom(pt.nearest_bound_seg.second));
   }
   return marker;
 }
 
-MarkerArray create_debug_markers(
-  const DepartureData & departure_data, const rclcpp::Time & curr_time, const double base_link_z)
+Marker create_projections_points_connection_marker(
+  const ProjectionsToBound & projections_to_bound, const std::string & side_key_str,
+  const rclcpp::Time & curr_time, const double base_link_z)
 {
-  const auto line_list = visualization_msgs::msg::Marker::LINE_LIST;
-  const auto color = color::green();
-  const auto m_scale = autoware_utils_visualization::create_marker_scale(0.05, 0, 0);
-
-  MarkerArray marker_array;
-
   auto marker = autoware_utils_visualization::create_default_marker(
-    "map", curr_time, "", 0, line_list, m_scale, color);
+    "map", curr_time, "" + side_key_str, 0, visualization_msgs::msg::Marker::LINE_LIST,
+    autoware_utils_visualization::create_marker_scale(0.25, 0.25, 1.0), color::blue());
+  marker.ns = side_key_str + "_projected_points_connection";
 
-  marker_array.markers.push_back(create_boundary_segments_marker(
-    departure_data.boundary_segments, marker, "boundary_segments", base_link_z));
+  const auto to_geom = [base_link_z](const auto & p) {
+    return autoware_utils_geometry::to_msg(p.to_3d(base_link_z));
+  };
 
-  departure_data.critical_departure_history.for_each([&](auto key_constant, auto & side_value) {
-    const std::string side_str = to_string(key_constant.value);
+  for (const auto & pt : projections_to_bound) {
+    marker.points.push_back(to_geom(pt.pt_on_ego));
+    marker.points.push_back(to_geom(pt.pt_on_bound));
+  }
+
+  return marker;
+}
+
+Marker create_projected_segment_bound_marker(
+  const ProjectionsToBound & projections_to_bound, const std::string & side_key_str,
+  const rclcpp::Time & curr_time, const double base_link_z)
+{
+  auto marker = autoware_utils_visualization::create_default_marker(
+    "map", curr_time, "" + side_key_str, 0, visualization_msgs::msg::Marker::LINE_LIST,
+    autoware_utils_visualization::create_marker_scale(0.1, 0.0, 0.0), color::aqua());
+  marker.ns = side_key_str + "_projected_segment_bound";
+
+  const auto to_geom = [base_link_z](const auto & p) {
+    return autoware_utils_geometry::to_msg(p.to_3d(base_link_z));
+  };
+
+  for (const auto & pt : projections_to_bound) {
+    marker.points.push_back(to_geom(pt.nearest_bound_seg.first));
+    marker.points.push_back(to_geom(pt.nearest_bound_seg.second));
+  }
+
+  return marker;
+}
+
+MarkerArray create_debug_markers(
+  const HysteresisState & hysteresis_state, const footprints::Footprints & footprints,
+  const EgoDynamicState & ego_state, const bool enable_developer_marker)
+{
+  builtin_interfaces::msg::Time curr_time = std::invoke([&ego_state]() {
+    const auto current_time_s = ego_state.current_time_s;
+    builtin_interfaces::msg::Time stamp;
+    stamp.sec = static_cast<int32_t>(current_time_s);
+    stamp.nanosec = static_cast<uint32_t>((current_time_s - stamp.sec) * 1e9);
+    return stamp;
+  });
+  const double base_link_z = ego_state.pose_with_cov.pose.position.z;
+  MarkerArray marker_array;
+  hysteresis_state.critical_departure_history.for_each_side([&](auto & side_value) {
     autoware_utils_visualization::append_marker_array(
-      create_departure_footprint_marker(
-        side_value, departure_data.footprints, curr_time, base_link_z),
+      create_departure_footprint_marker(side_value, footprints, curr_time, base_link_z),
       &marker_array);
   });
 
-  departure_data.evaluated_projections.for_each([&](auto key_constant, auto & side_value_opt) {
-    if (side_value_opt.has_value()) {
-      autoware_utils_visualization::append_marker_array(
-        create_evaluated_projection_markers(
-          *side_value_opt, curr_time, departure_data.footprints, base_link_z,
-          to_string(key_constant)),
-        &marker_array);
-    }
+  if (!enable_developer_marker) {
+    return marker_array;
+  }
+
+  hysteresis_state.critical_departure_history.for_each([&](auto key_constant, auto & side_value) {
+    const std::string side_str = to_string(key_constant.value);
+    marker_array.markers.push_back(
+      create_projections_points_marker(side_value, side_str, curr_time, base_link_z));
+    marker_array.markers.push_back(
+      create_projections_points_connection_marker(side_value, side_str, curr_time, base_link_z));
+    marker_array.markers.push_back(
+      create_projected_segment_bound_marker(side_value, side_str, curr_time, base_link_z));
   });
 
   return marker_array;

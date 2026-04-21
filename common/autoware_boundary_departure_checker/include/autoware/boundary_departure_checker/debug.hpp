@@ -15,7 +15,8 @@
 #ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DEBUG_HPP_
 #define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DEBUG_HPP_
 
-#include "autoware/boundary_departure_checker/data_structs.hpp"
+#include "autoware/boundary_departure_checker/footprints_generator.hpp"
+#include "autoware/boundary_departure_checker/hysteresis_logic.hpp"
 
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -32,7 +33,8 @@ using visualization_msgs::msg::MarkerArray;
  * @return array of markers for visualization
  */
 MarkerArray create_debug_markers(
-  const DepartureData & departure_data, const rclcpp::Time & curr_time, const double base_link_z);
+  const HysteresisState & hysteresis_state, const footprints::Footprints & footprints,
+  const EgoDynamicState & ego_state, const bool enable_developer_marker);
 }  // namespace autoware::boundary_departure_checker::debug
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DEBUG_HPP_

@@ -129,7 +129,7 @@ TEST_F(UncrossableBoundaryCheckerTest, TestCheckDepartureEmptyTrajectory)
   auto ego_state = create_ego_state(empty_traj, 0.0, init_time);
 
   // Act:
-  auto result = checker_ptr_->check_departure(empty_traj, ego_state);
+  auto result = checker_ptr_->update_departure_status(empty_traj, ego_state);
 
   // Assert:
   EXPECT_TRUE(result.status == DepartureType::NONE);
@@ -143,7 +143,7 @@ TEST_F(UncrossableBoundaryCheckerTest, TestCheckDepartureZeroVelocity)
   auto ego_state = create_ego_state(traj, 0.0, init_time);
 
   // Act:
-  auto result = checker_ptr_->check_departure(traj, ego_state);
+  auto result = checker_ptr_->update_departure_status(traj, ego_state);
 
   // Assert:
   EXPECT_TRUE(result.status == DepartureType::NONE);
@@ -186,7 +186,7 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
   auto state_safe = create_ego_state(traj_safe, test_velocity, time_sec_toc(0.0));
 
   // Act:
-  auto res1 = checker_ptr_->check_departure(traj_safe, state_safe);
+  auto res1 = checker_ptr_->update_departure_status(traj_safe, state_safe);
 
   // Assert:
   EXPECT_TRUE(res1.status == DepartureType::NONE) << "Should be NONE when far from boundary.";
@@ -197,14 +197,14 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
   auto state_danger = create_ego_state(traj_danger, test_velocity, time_sec_toc(0.1));
 
   // Act:
-  auto res2 = checker_ptr_->check_departure(traj_danger, state_danger);
+  auto res2 = checker_ptr_->update_departure_status(traj_danger, state_danger);
 
   // Assert:
   EXPECT_TRUE(res2.status == DepartureType::NONE) << "Should be NONE due to ON time buffer.";
 
   // STEP 3: Wait for ON buffer to expire. Time increase by 0.2 second (Danger is continuous)
   // Act:
-  auto res3 = checker_ptr_->check_departure(
+  auto res3 = checker_ptr_->update_departure_status(
     traj_danger, create_ego_state(traj_danger, test_velocity, time_sec_toc(0.2)));
 
   // Assert:
@@ -213,7 +213,7 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 
   // STEP 4: Instantly teleport back to Safe Zone
   // Act:
-  auto res4 = checker_ptr_->check_departure(
+  auto res4 = checker_ptr_->update_departure_status(
     traj_safe, create_ego_state(traj_safe, test_velocity, time_sec_toc(0.0)));
 
   // Assert:
@@ -222,9 +222,7 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 
   // STEP 5: Wait for OFF buffer to expire (Safety is continuous)
   // Act:
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
-  auto res5 = checker_ptr_->check_departure(
+  auto res5 = checker_ptr_->update_departure_status(
     traj_safe, create_ego_state(traj_safe, test_velocity, time_sec_toc(0.2)));
 
   // Assert:

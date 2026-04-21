@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,13 +44,5 @@ Segment2d to_segment_2d(
  * @return 2D segment
  */
 Segment2d to_segment_2d(const Segment3d & segment);
-
-/**
- * @brief Convert a 2D point and a z value to a 3D ROS Point.
- * @param[in] point 2D point
- * @param[in] z z-coordinate
- * @return ROS Point
- */
-Point to_geom_pt(const Point2d & point, const double z = 0.0);
 }  // namespace autoware::boundary_departure_checker::utils
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__CONVERSION_HPP_
