@@ -57,10 +57,14 @@ public:
     vehicle_info_ptr_ = std::make_shared<VehicleInfo>(vehicle_info);
   }
 
+  void set_shadow_mode(const bool is_shadow_mode) { is_shadow_mode_ = is_shadow_mode; }
+
   [[nodiscard]] std::string get_name() const { return name_; }
+  [[nodiscard]] bool is_shadow_mode() const { return is_shadow_mode_; }
 
 protected:
   std::string name_;
+  bool is_shadow_mode_{false};
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
 };
 }  // namespace autoware::trajectory_validator::plugin

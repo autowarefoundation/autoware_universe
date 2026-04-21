@@ -1,0 +1,36 @@
+name: Tune DDS network settings
+description: |
+  Apply the DDS tweaks that docker-entrypoint.sh would have done, since
+  GitHub Actions overrides the image entrypoint with `tail -f /dev/null`.
+  The calling job's container must include `--cap-add=NET_ADMIN`.
+
+runs:
+  using: composite
+  steps:
+    - name: 📡 Enable multicast on loopback
+      run: |
+        if ip link set lo multicast on; then
+          echo "✅ multicast enabled on lo"
+        else
+          echo "::warning title=DDS tuning::could not enable multicast on lo (NET_ADMIN missing?)"
+        fi
+      shell: bash
+
+    - name: 🩹 Relax CycloneDDS receive buffer requirement
+      # Bridge until autowarefoundation/autoware ships min="default" in cyclonedds.xml.
+      run: |
+        if [ -f /home/aw/cyclonedds.xml ]; then
+          sed -i 's|min="10MB"|min="default"|' /home/aw/cyclonedds.xml
+          echo "✅ patched: SocketReceiveBufferSize min=\"default\""
+        else
+          echo "::notice title=DDS tuning::/home/aw/cyclonedds.xml not present, skipping patch"
+        fi
+      shell: bash
+
+    - name: 🔍 Show effective DDS-relevant settings
+      run: |
+        printf '  %-22s = %s\n' "net.core.rmem_max"     "$(cat /proc/sys/net/core/rmem_max         2>/dev/null || echo unknown)"
+        printf '  %-22s = %s\n' "net.ipv4.ipfrag_time"  "$(cat /proc/sys/net/ipv4/ipfrag_time      2>/dev/null || echo unknown)"
+        printf '  %-22s = %s\n' "net.ipv4.ipfrag_high"  "$(cat /proc/sys/net/ipv4/ipfrag_high_thresh 2>/dev/null || echo unknown)"
+        printf '  %-22s : %s\n' "lo flags"              "$(ip -o link show lo 2>/dev/null | head -1 || echo unknown)"
+      shell: bash

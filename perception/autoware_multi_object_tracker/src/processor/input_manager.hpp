@@ -15,8 +15,8 @@
 #ifndef PROCESSOR__INPUT_MANAGER_HPP_
 #define PROCESSOR__INPUT_MANAGER_HPP_
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
