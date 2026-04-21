@@ -14,7 +14,6 @@
 
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 #include "autoware/boundary_departure_checker/uncrossable_boundary_checker.hpp"
-#include "test_plot_utils.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -30,71 +29,6 @@ namespace autoware::boundary_departure_checker
 {
 namespace
 {
-void plot_hysteresis_test(
-  [[maybe_unused]] const TrajectoryPoints & traj_safe,
-  [[maybe_unused]] const TrajectoryPoints & traj_danger,
-  [[maybe_unused]] const vehicle_info_utils::VehicleInfo & vehicle_info)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-
-    // Plot the Boundary (Y = 2.0)
-    std::vector<double> bound_x = {-10.0, 30.0};
-    std::vector<double> bound_y = {2.0, 2.0};
-    plt.plot(
-      Args(bound_x, bound_y),
-      Kwargs("color"_a = "red", "linewidth"_a = 2.0, "label"_a = "Road Boundary"));
-
-    // Plot the Safe Trajectory (Y = 0.0)
-    std::vector<double> safe_x;
-    std::vector<double> safe_y;
-    for (const auto & p : traj_safe) {
-      safe_x.push_back(p.pose.position.x);
-      safe_y.push_back(p.pose.position.y);
-    }
-    plt.plot(
-      Args(safe_x, safe_y), Kwargs(
-                              "color"_a = "green", "marker"_a = "o", "linestyle"_a = "--",
-                              "label"_a = "Safe Trajectory (NONE)"));
-
-    // Plot the Danger Trajectory (Angled)
-    std::vector<double> danger_x;
-    std::vector<double> danger_y;
-    for (const auto & p : traj_danger) {
-      danger_x.push_back(p.pose.position.x);
-      danger_y.push_back(p.pose.position.y);
-    }
-    plt.plot(
-      Args(danger_x, danger_y), Kwargs(
-                                  "color"_a = "orange", "marker"_a = "x", "linestyle"_a = "--",
-                                  "label"_a = "Danger Trajectory (CRITICAL)"));
-
-    // Draw the actual vehicle footprint on the Danger Trajectory
-    auto local_fp = vehicle_info.createFootprint(0.0, 0.0);
-    auto transformed_fp = autoware_utils_geometry::transform_vector(
-      local_fp, autoware_utils_geometry::pose2transform(traj_danger.front().pose));
-
-    std::vector<double> box_x;
-    std::vector<double> box_y;
-    for (const auto & pt : transformed_fp) {
-      box_x.push_back(pt.x());
-      box_y.push_back(pt.y());
-    }
-    plt.plot(
-      Args(box_x, box_y),
-      Kwargs("color"_a = "gray", "alpha"_a = 0.5, "label"_a = "Ego Vehicle Footprint"));
-
-    plt.title(Args("Hysteresis Test: Top-Down View"));
-    plt.xlabel(Args("X [m]"));
-    plt.ylabel(Args("Y [m]"));
-    plt.axis(Args("equal"));
-    plt.legend(Kwargs("loc"_a = "lower right"));
-
-    autoware::boundary_departure_checker::save_figure(plt, "test_uncrossable_boundary_checker");
-  });
-#endif
-}
 }  // namespace
 
 class UncrossableBoundaryCheckerTest : public ::testing::Test
@@ -222,6 +156,23 @@ TEST_F(UncrossableBoundaryCheckerTest, TestCheckDepartureZeroVelocity)
 // 2. Hysteresis and Time Buffering Tests
 // ==============================================================================
 
+// clang-format off
+/**
+ * TestTimeBufferingHysteresis:
+ *
+ *    Y ^
+ *      |   Boundary (Uncrossable)
+ *  2.0 +-------------------------------------------------
+ *      |          / V_danger (Yaw=0.1, crosses at Y=2.0)
+ *  1.0 |         V
+ *      |        /   >>> Predicted Trajectory
+ *  0.0 +-------V-----------------------------------------> X
+ *              V_safe (Safe Y=0.0)
+ *
+ * Evaluates hysteresis logic: CRITICAL is held during OFF-buffer even if
+ * the vehicle returns to Safe Zone, and delayed during ON-buffer.
+ */
+// clang-format on
 TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 {
   // 1-line summary: Evaluates the hysteresis logic and time buffering (ON/OFF) for critical
@@ -284,6 +235,5 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
     << "Should return to NONE after OFF buffer expires.";
 
   // STEP 6: Visualization
-  plot_hysteresis_test(traj_safe, traj_danger, vehicle_info_);
 }
 }  // namespace autoware::boundary_departure_checker

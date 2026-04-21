@@ -13,13 +13,10 @@
 // limitations under the License.
 
 #include "autoware/boundary_departure_checker/footprints_generator.hpp"
-#include "test_plot_utils.hpp"
 
 #include <Eigen/Core>
 
 #include <gtest/gtest.h>
-#include <pybind11/embed.h>
-#include <pybind11/stl.h>
 
 #include <string>
 #include <vector>
@@ -60,38 +57,6 @@ TrajectoryPoints create_trajectory_points(
     trajectory_points.push_back(p);
   }
   return trajectory_points;
-}
-
-void plot_footprints_along_trajectory(
-  [[maybe_unused]] const TrajectoryPoints & trajectory_points,
-  [[maybe_unused]] const Footprints & footprints)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-
-    std::vector<double> px;
-    std::vector<double> py;
-    for (const auto & pt : trajectory_points) {
-      px.push_back(pt.pose.position.x);
-      py.push_back(pt.pose.position.y);
-    }
-    plt.plot(Args(px, py), Kwargs("color"_a = "gray", "linestyle"_a = "--", "label"_a = "Path"));
-
-    for (const auto & fp : footprints) {
-      std::vector<double> fx;
-      std::vector<double> fy;
-      for (const auto & p_fp : fp) {
-        fx.push_back(p_fp.x());
-        fy.push_back(p_fp.y());
-      }
-      plt.plot(Args(fx, fy), Kwargs("alpha"_a = 0.5));
-    }
-
-    plt.axis(Args("equal"));
-    autoware::boundary_departure_checker::save_figure(plt, "test_create_vehicle_footprint");
-  });
-#endif
 }
 
 // reference:
@@ -157,8 +122,6 @@ TEST_P(CreateVehicleFootprintsAlongTrajectoryTest, test_create_vehicle_footprint
     footprints::generate(trajectory_points, vehicle_info, pose_with_covariance);
 
   // Assert:
-  plot_footprints_along_trajectory(trajectory_points, footprints);
-
   ASSERT_EQ(footprints.size(), p.expected_footprints.size());
   for (size_t i = 0; i < footprints.size(); ++i) {
     const auto & footprint = footprints.at(i);

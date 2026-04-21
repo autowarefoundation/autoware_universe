@@ -41,7 +41,19 @@ FootprintMargin calc_margin_from_covariance(
 
   return FootprintMargin{cov_xy_vehicle(0, 0) * scale, cov_xy_vehicle(1, 1) * scale};
 }
-
+// clang-format off
+/**
+ * footprints::generate:
+ *
+ *          [V]--[V]        [V]--[V]
+ *           | Ego |         | Ego |
+ *     >>>  [V]--[V]  --->  [V]--[V]  --->  ...
+ *        (Pose 0)        (Pose 1)        (Trajectory)
+ *
+ * Generates full vehicle footprints at each pose along the trajectory,
+ * accounting for vehicle dimensions (overhangs, wheelbase).
+ */
+// clang-format on
 Footprints generate(
   const std::vector<TrajectoryPoint> & trajectory_points,
   const vehicle_info_utils::VehicleInfo & vehicle_info,
@@ -58,6 +70,23 @@ Footprints generate(
   return footprints;
 }
 
+// clang-format off
+/**
+ * get_sides_from_footprints:
+ *
+ *          V (Front Left)  Left Side Segment   V (Rear Left)
+ *           +---------------------------------+
+ *           |                                 |
+ *   Forward |               Ego               |
+ *     >>>   |             Vehicle             |
+ *           |                                 |
+ *           +---------------------------------+
+ *          V (Front Right) Right Side Segment  V (Rear Right)
+ *
+ * Extracts the longitudinal side segments (Left/Right) from a
+ * 4-point (or more) vehicle footprint.
+ */
+// clang-format on
 std::vector<Side<autoware_utils_geometry::Segment2d>> get_sides_from_footprints(
   const Footprints & footprints)
 {

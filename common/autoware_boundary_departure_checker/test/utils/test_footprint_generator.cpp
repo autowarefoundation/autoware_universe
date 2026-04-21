@@ -14,7 +14,6 @@
 
 #include "autoware/boundary_departure_checker/footprints_generator.hpp"
 #include "autoware/boundary_departure_checker/type_alias.hpp"
-#include "test_plot_utils.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -28,51 +27,6 @@ namespace autoware::boundary_departure_checker
 {
 namespace
 {
-void plot_extracted_sides(
-  [[maybe_unused]] const footprints::Footprints & test_footprints,
-  [[maybe_unused]] const std::vector<Side<autoware_utils_geometry::Segment2d>> & sides_array)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-
-    for (size_t i = 0; i < test_footprints.size(); ++i) {
-      std::vector<double> fx, fy;
-      for (const auto & p : test_footprints[i]) {
-        fx.push_back(p.x());
-        fy.push_back(p.y());
-      }
-      plt.plot(
-        Args(fx, fy),
-        Kwargs("color"_a = "gray", "alpha"_a = 0.5, "label"_a = i == 0 ? "Full Footprint" : ""));
-
-      auto left_side = sides_array[i].left;
-      auto right_side = sides_array[i].right;
-
-      plt.plot(
-        Args(
-          std::vector<double>{left_side.first.x(), left_side.second.x()},
-          std::vector<double>{left_side.first.y(), left_side.second.y()}),
-        Kwargs(
-          "color"_a = "blue", "linewidth"_a = 2.0,
-          "label"_a = i == 0 ? "Left Extracted Side" : ""));
-
-      plt.plot(
-        Args(
-          std::vector<double>{right_side.first.x(), right_side.second.x()},
-          std::vector<double>{right_side.first.y(), right_side.second.y()}),
-        Kwargs(
-          "color"_a = "red", "linewidth"_a = 2.0,
-          "label"_a = i == 0 ? "Right Extracted Side" : ""));
-    }
-
-    plt.axis(Args("equal"));
-    plt.title(Args("Extracted Ego Sides from Footprints"));
-    plt.legend();
-    autoware::boundary_departure_checker::save_figure(plt, "test_get_sides_from_footprints");
-  });
-#endif
-}
 }  // namespace
 
 class FootprintGeneratorTest : public ::testing::Test
@@ -183,6 +137,5 @@ TEST_F(FootprintGeneratorTest, TestGetSidesFromFootprints)
   EXPECT_DOUBLE_EQ(sides_array[1].right.second.x(), offset_fp[VehicleInfo::RearRightIndex].x());
   EXPECT_DOUBLE_EQ(sides_array[1].right.second.y(), offset_fp[VehicleInfo::RearRightIndex].y());
 
-  plot_extracted_sides(test_footprints, sides_array);
 }
 }  // namespace autoware::boundary_departure_checker

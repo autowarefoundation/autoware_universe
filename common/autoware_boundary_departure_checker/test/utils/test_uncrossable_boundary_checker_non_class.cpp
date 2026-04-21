@@ -14,228 +14,31 @@
 
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
-#include "test_plot_utils.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
 
 #include <gtest/gtest.h>
-#include <pybind11/embed.h>
-#include <pybind11/stl.h>
 
 #include <string>
 #include <utility>
 #include <vector>
 
-namespace
-{
-using autoware::boundary_departure_checker::ProjectionToBound;
-using autoware_utils_geometry::Segment2d;
-
-void plot_separate_segment(
-  [[maybe_unused]] autoware::pyplot::PyPlot & plt, [[maybe_unused]] const Segment2d & segment,
-  [[maybe_unused]] const std::string & color, [[maybe_unused]] const std::string & label)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  plt.plot(
-    Args(
-      std::vector<double>{segment.first.x(), segment.second.x()},
-      std::vector<double>{segment.first.y(), segment.second.y()}),
-    Kwargs("color"_a = color, "label"_a = label));
-#endif
-}
-
-void plot_projection_line(
-  [[maybe_unused]] autoware::pyplot::PyPlot & plt,
-  [[maybe_unused]] const ProjectionToBound & projection)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  plt.plot(
-    Args(
-      std::vector<double>{projection.pt_on_ego.x(), projection.pt_on_bound.x()},
-      std::vector<double>{projection.pt_on_ego.y(), projection.pt_on_bound.y()}),
-    Kwargs("color"_a = "green", "linestyle"_a = "--", "label"_a = "Shortest Projection"));
-#endif
-}
-
-void plot_ego_and_boundary(
-  [[maybe_unused]] const Segment2d & ego_seg, [[maybe_unused]] const Segment2d & boundary_seg,
-  [[maybe_unused]] const tl::expected<ProjectionToBound, std::string> & projection_opt)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-    plot_separate_segment(plt, ego_seg, "blue", "Ego Side");
-    plot_separate_segment(plt, boundary_seg, "red", "Boundary");
-    if (projection_opt) {
-      plot_projection_line(plt, *projection_opt);
-    }
-    plt.legend();
-    plt.axis(Args("equal"));
-    autoware::boundary_departure_checker::save_figure(plt, "test_uncrossable_boundary_checker");
-  });
-#endif
-}
-
-void plot_realistic_departure(
-  [[maybe_unused]] const autoware::boundary_departure_checker::TrajectoryPoints & ego_pred_traj,
-  [[maybe_unused]] const autoware::boundary_departure_checker::FootprintSideSegmentsArray &
-    ego_sides,
-  [[maybe_unused]] const autoware::boundary_departure_checker::SegmentWithIdx & left_bound,
-  [[maybe_unused]] const autoware::boundary_departure_checker::SegmentWithIdx & right_bound,
-  [[maybe_unused]] const autoware::boundary_departure_checker::Side<
-    std::vector<ProjectionToBound>> & result,
-  [[maybe_unused]] const std::string & title)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-
-    std::vector<double> traj_x, traj_y;
-    for (const auto & p : ego_pred_traj) {
-      traj_x.push_back(p.pose.position.x);
-      traj_y.push_back(p.pose.position.y);
-    }
-    plt.plot(
-      Args(traj_x, traj_y),
-      Kwargs("color"_a = "gray", "linestyle"_a = "--", "marker"_a = "o", "label"_a = "Trajectory"));
-
-    for (size_t i = 0; i < ego_sides.size(); ++i) {
-      auto fl = ego_sides[i].left.first;
-      auto rl = ego_sides[i].left.second;
-      auto fr = ego_sides[i].right.first;
-      auto rr = ego_sides[i].right.second;
-      std::vector<double> bx = {fl.x(), rl.x(), rr.x(), fr.x(), fl.x()};
-      std::vector<double> by = {fl.y(), rl.y(), rr.y(), fr.y(), fl.y()};
-      plt.plot(Args(bx, by), Kwargs("color"_a = "blue", "linewidth"_a = 1.5, "alpha"_a = 0.5));
-    }
-
-    auto plot_bound = [&](const auto & b, const std::string & color, const std::string & label) {
-      std::vector<double> bx = {b.first.first.x(), b.first.second.x()};
-      std::vector<double> by = {b.first.first.y(), b.first.second.y()};
-      plt.plot(Args(bx, by), Kwargs("color"_a = color, "linewidth"_a = 2.0, "label"_a = label));
-    };
-    plot_bound(left_bound, "red", "Left Boundary");
-    plot_bound(right_bound, "darkred", "Right Boundary");
-
-    auto plot_projs = [&](const std::vector<ProjectionToBound> & projs, const std::string & color) {
-      for (const auto & proj : projs) {
-        std::vector<double> px = {proj.pt_on_ego.x(), proj.pt_on_bound.x()};
-        std::vector<double> py = {proj.pt_on_ego.y(), proj.pt_on_bound.y()};
-        plt.plot(Args(px, py), Kwargs("color"_a = color, "linestyle"_a = ":"));
-        plt.scatter(
-          Args(std::vector<double>{proj.pt_on_ego.x()}, std::vector<double>{proj.pt_on_ego.y()}),
-          Kwargs("color"_a = "orange", "s"_a = 30, "zorder"_a = 5));
-      }
-    };
-    plot_projs(result.left, "green");
-    plot_projs(result.right, "lightgreen");
-
-    plt.legend();
-    plt.axis(Args("equal"));
-    plt.xlabel(Args("X [m]"));
-    plt.ylabel(Args("Y [m]"));
-    plt.title(Args(title));
-    autoware::boundary_departure_checker::save_figure(plt, "test_uncrossable_boundary_checker");
-  });
-#endif
-}
-
-void plot_braking_distance(
-  [[maybe_unused]] const double acceleration, [[maybe_unused]] const double max_stop_accel,
-  [[maybe_unused]] const double max_stop_jerk, [[maybe_unused]] const double delay_time,
-  [[maybe_unused]] const double v_test, [[maybe_unused]] const double dist)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-    std::vector<double> velocities, distances;
-    for (double v = 0.0; v <= 20.0; v += 1.0) {
-      velocities.push_back(v);
-      if (
-        const auto d_opt = autoware::motion_utils::calculate_stop_distance(
-          v, acceleration, max_stop_accel, max_stop_jerk, delay_time))
-        distances.push_back(*d_opt);
-    }
-    plt.plot(Args(velocities, distances), Kwargs("marker"_a = "o"));
-    plt.xlabel(Args("Velocity [m/s]"));
-    plt.ylabel(Args("Judge Line Distance [m]"));
-    plt.title(Args("Braking Distance with Jerk Limit"));
-    plt.plot(
-      Args(std::vector<double>{v_test, v_test}, std::vector<double>{0.0, dist}),
-      Kwargs("color"_a = "gray", "linestyle"_a = "--", "alpha"_a = 0.5));
-    plt.plot(
-      Args(std::vector<double>{0.0, v_test}, std::vector<double>{dist, dist}),
-      Kwargs("color"_a = "gray", "linestyle"_a = "--", "alpha"_a = 0.5));
-    autoware::boundary_departure_checker::save_figure(plt, "test_uncrossable_boundary_checker");
-  });
-#endif
-}
-
-void plot_point_projection(
-  [[maybe_unused]] const autoware_utils_geometry::Point2d & p,
-  [[maybe_unused]] const Segment2d & segment,
-  [[maybe_unused]] const autoware_utils_geometry::Point2d & proj)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-    plt.plot(
-      Args(
-        std::vector<double>{segment.first.x(), segment.second.x()},
-        std::vector<double>{segment.first.y(), segment.second.y()}),
-      Kwargs("color"_a = "red", "label"_a = "Boundary Segment"));
-    plt.scatter(
-      Args(std::vector<double>{p.x()}, std::vector<double>{p.y()}),
-      Kwargs("label"_a = "Ego Point"));
-    plt.plot(
-      Args(std::vector<double>{p.x(), proj.x()}, std::vector<double>{p.y(), proj.y()}),
-      Kwargs("color"_a = "green", "linestyle"_a = "--", "label"_a = "Lateral Projection"));
-    plt.axis(Args("equal"));
-    plt.legend();
-    autoware::boundary_departure_checker::save_figure(plt, "test_uncrossable_boundary_checker");
-  });
-#endif
-}
-
-void plot_backward_buffer(
-  [[maybe_unused]] const autoware::boundary_departure_checker::ProjectionsToBound & input_left,
-  [[maybe_unused]] const autoware::boundary_departure_checker::CriticalPointPair & crit_pair)
-{
-#ifdef EXPORT_TEST_PLOT_FIGURE
-  BDC_PLOT_RESULT({
-    auto plt = autoware::pyplot::import();
-    std::vector<double> cand_x, cand_y;
-    for (const auto & cand : input_left) {
-      cand_x.push_back(cand.dist_along_trajectory_m);
-      cand_y.push_back(cand.lat_dist);
-    }
-    plt.scatter(
-      Args(cand_x, cand_y), Kwargs(
-                              "color"_a = "gray", "marker"_a = "x", "s"_a = 60,
-                              "label"_a = "All Candidates", "alpha"_a = 0.5));
-    std::vector<double> crit_x = {
-      crit_pair.physical_departure_point.dist_along_trajectory_m,
-      crit_pair.safety_buffer_start.dist_along_trajectory_m};
-    std::vector<double> crit_y = {
-      crit_pair.physical_departure_point.lat_dist, crit_pair.safety_buffer_start.lat_dist};
-    plt.scatter(Args(crit_x, crit_y), Kwargs("color"_a = "red", "label"_a = "Critical (Buffered)"));
-    plt.axvline(
-      Args(15.0), Kwargs("color"_a = "black", "linestyle"_a = ":", "label"_a = "Crash Point"));
-    plt.axvline(
-      Args(14.0),
-      Kwargs("color"_a = "purple", "linestyle"_a = "--", "label"_a = "Buffer Limit (1.0m)"));
-    plt.xlabel(Args("Longitudinal Distance [m]"));
-    plt.ylabel(Args("Lateral Distance [m]"));
-    plt.title(Args("Evaluate Projections Severity: Backward Buffer"));
-    plt.legend();
-    autoware::boundary_departure_checker::save_figure(plt, "test_uncrossable_boundary_checker");
-  });
-#endif
-}
-}  // namespace
-
 namespace autoware::boundary_departure_checker
 {
+// clang-format off
+/**
+ * TestParallelSegments:
+ *
+ *    Y ^
+ *  1.0 |       [ Boundary Segment ] (X: 1.0 to 3.0)
+ *      |       +------------------+
+ *      |       : <--- lat_dist=1.0
+ *  0.0 | +------------------+             ---> X
+ *      | [   Ego Segment    ] (X: 0.0 to 2.0)
+ *
+ * Verifies shortest distance between two parallel segments with overlap.
+ */
+// clang-format on
 TEST(UncrossableBoundaryTest, TestParallelSegments)
 {
   // Verifies projection distance between parallel segments with partial longitudinal overlap.
@@ -252,9 +55,22 @@ TEST(UncrossableBoundaryTest, TestParallelSegments)
   EXPECT_NEAR(result->lat_dist, 1.0, 1e-6);
   EXPECT_GE(result->pt_on_ego.x(), 0.0);
   EXPECT_LE(result->pt_on_ego.x(), 2.0);
-  plot_ego_and_boundary(ego_seg, boundary_seg, result);
 }
 
+// clang-format off
+/**
+ * TestPerpendicularNonIntersecting:
+ *
+ *    Y ^
+ *  1.0 |               | [ Boundary ]
+ *      |               | (X=2.0, Y: -1 to 1)
+ *  0.0 | +-------+     | lat_dist=1.0     ---> X
+ *      | (Ego)         |
+ * -1.0 | (X: 0 to 1)   |
+ *
+ * Verifies shortest distance between perpendicular segments.
+ */
+// clang-format on
 TEST(UncrossableBoundaryTest, TestPerpendicularNonIntersecting)
 {
   // Verifies that perpendicular non-intersecting segments yield correct shortest distance.
@@ -271,9 +87,22 @@ TEST(UncrossableBoundaryTest, TestPerpendicularNonIntersecting)
   EXPECT_NEAR(result->lat_dist, 1.0, 1e-6);
   EXPECT_DOUBLE_EQ(result->pt_on_ego.x(), 1.0);
   EXPECT_DOUBLE_EQ(result->pt_on_bound.x(), 2.0);
-  plot_ego_and_boundary(ego_seg, boundary_seg, result);
 }
 
+// clang-format off
+/**
+ * TestCollinearSegments:
+ *
+ *    Y ^
+ *      |
+ *  0.0 | +-------+     +-------+          ---> X
+ *      |  (Ego)         (Boundary)
+ *      |  (X:0 to 1)    (X:2 to 3)
+ *      |         (Gap: No Projection)
+ *
+ * Verifies that no projection is found for collinear separated segments.
+ */
+// clang-format on
 TEST(UncrossableBoundaryTest, TestCollinearSegments)
 {
   // Verifies that no projection is found for collinear but longitudinally separated segments.
@@ -287,7 +116,6 @@ TEST(UncrossableBoundaryTest, TestCollinearSegments)
 
   // Assert:
   ASSERT_FALSE(result.has_value());
-  plot_ego_and_boundary(ego_seg, boundary_seg, result);
 }
 
 TEST(UncrossableBoundaryTest, TestMiddleOfSegmentCrossingForLonDist)
@@ -329,7 +157,6 @@ TEST(UncrossableBoundaryTest, TestMiddleOfSegmentCrossingForLonDist)
   EXPECT_DOUBLE_EQ(proj_at_i.pt_on_ego.x(), 10.0);
   EXPECT_DOUBLE_EQ(proj_at_i.ego_front_to_proj_offset_m, 2.0);
   EXPECT_DOUBLE_EQ(proj_at_i.dist_along_trajectory_m, 8.0);
-  plot_ego_and_boundary(ego_sides[1].left, bound.first, proj_at_i);
 }
 
 TEST(UncrossableBoundaryTest, TestRealisticLaneDeparture)
@@ -374,8 +201,6 @@ TEST(UncrossableBoundaryTest, TestRealisticLaneDeparture)
   EXPECT_NEAR(result.left[0].lat_dist, 5.6, 1e-6);
   EXPECT_NEAR(result.left[1].lat_dist, 0.0, 1e-6);
   EXPECT_NEAR(result.left[2].lat_dist, -5.6, 1e-6);
-  plot_realistic_departure(
-    ego_pred_traj, ego_sides, left_bound, right_bound, result, "Left Signed Distance Verification");
 }
 
 TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
@@ -421,9 +246,6 @@ TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
   EXPECT_NEAR(result.right[0].lat_dist, 5.6, 1e-6);
   EXPECT_NEAR(result.right[1].lat_dist, 0.0, 1e-6);
   EXPECT_NEAR(result.right[2].lat_dist, -5.6, 1e-6);
-  plot_realistic_departure(
-    ego_pred_traj, ego_sides, left_bound, right_bound, result,
-    "Right Signed Distance Verification");
 }
 
 TEST(UncrossableBoundaryUtilsTest, TestCalcJudgeLineDist)
@@ -444,7 +266,6 @@ TEST(UncrossableBoundaryUtilsTest, TestCalcJudgeLineDist)
   // Assert:
   ASSERT_TRUE(dist_opt.has_value());
   EXPECT_GT(*dist_opt, 22.5);
-  plot_braking_distance(acceleration, max_stop_accel, max_stop_jerk, delay_time, v_test, *dist_opt);
 }
 
 TEST(UncrossableBoundaryUtilsTest, TestPointToSegmentProjection)
@@ -461,7 +282,6 @@ TEST(UncrossableBoundaryUtilsTest, TestPointToSegmentProjection)
   // Assert:
   ASSERT_TRUE(result.has_value());
   EXPECT_DOUBLE_EQ(result->second, 1.0);
-  plot_point_projection(p, segment, result->first);
 }
 
 TEST(UncrossableBoundaryUtilsTest, TestIsUncrossableType)
@@ -518,7 +338,6 @@ TEST(UncrossableBoundaryUtilsTest, TestEvaluateProjectionsSeverityBackwardBuffer
   ASSERT_TRUE(result.left.has_value());
   EXPECT_DOUBLE_EQ(result.left->physical_departure_point.dist_along_trajectory_m, 15.0);
   EXPECT_DOUBLE_EQ(result.left->safety_buffer_start.dist_along_trajectory_m, 14.0);
-  plot_backward_buffer(input.left, *result.left);
 }
 
 TEST(UncrossableBoundaryUtilsTest, TestBuildUncrossableBoundariesRTree)
