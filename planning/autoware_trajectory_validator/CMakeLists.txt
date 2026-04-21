@@ -3,14 +3,10 @@ project(autoware_trajectory_validator)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
-pluginlib_export_plugin_description_file(autoware_trajectory_validator plugins.xml)
+pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 
 generate_parameter_library(${PROJECT_NAME}_param
   param/parameter_struct.yaml
-)
-
-include_directories(
-  SYSTEM
 )
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
@@ -30,36 +26,21 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE ${PROJECT_NAME}_node
 )
 
-ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
+ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   src/filters/safety/out_of_lane_filter.cpp
   src/filters/safety/collision_filter.cpp
   src/filters/safety/vehicle_constraint_filter.cpp
   src/filters/traffic_rule/traffic_light_filter.cpp
 )
 
-target_link_libraries(autoware_trajectory_validator_plugins
+target_link_libraries(${PROJECT_NAME}_plugins
   ${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
-  find_package(ament_cmake_gtest REQUIRED)
-  find_package(ament_lint_auto REQUIRED)
   ament_auto_find_test_dependencies()
 
-  # ==========================================
-  # 1. Plugin Unit Tests
-  # ==========================================
-  ament_add_gtest(test_vehicle_constraint_filter
-    test/plugins/test_vehicle_constraint_filter.cpp
-  )
-  target_link_libraries(test_vehicle_constraint_filter
-    autoware_trajectory_validator_plugins
-  )
-
-  # ==========================================
-  # 2. Dummy Plugin (Test Utility)
-  # ==========================================
-  pluginlib_export_plugin_description_file(autoware_trajectory_validator
+  pluginlib_export_plugin_description_file(${PROJECT_NAME}
     test/dummy_plugin/dummy_plugins.xml
   )
 
@@ -71,29 +52,18 @@ if(BUILD_TESTING)
     ${PROJECT_NAME}
   )
 
-  # ==========================================
-  # 3. Node Integration/Unit Tests
-  # ==========================================
-  ament_add_ros_isolated_gtest(test_trajectory_validator_node
+  set(test_sources
     test/node/test_trajectory_validator_node.cpp
-  )
-
-  target_link_libraries(test_trajectory_validator_node
-    ${PROJECT_NAME}
-    dummy_validator_plugin
-  )
-
-  ament_target_dependencies(test_trajectory_validator_node
-    autoware_test_utils
-  )
-
-  ament_add_gtest(test_traffic_light_filter
     test/plugins/test_traffic_light_filter.cpp
-  )
-  target_link_libraries(test_traffic_light_filter
-    autoware_trajectory_validator_plugins
+    test/plugins/test_vehicle_constraint_filter.cpp
   )
 
+  set(RUNNER "RUNNER" "${ament_cmake_ros_DIR}/run_test_isolated.py")
+
+  ament_auto_add_gtest(test_${PROJECT_NAME}
+    ${test_sources}
+    RUNNER "${RUNNER}"
+  )
 
 endif()
 

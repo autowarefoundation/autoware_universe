@@ -15,15 +15,13 @@
 #include "autoware/trajectory_validator/filters/traffic_rule/traffic_light_filter.hpp"
 
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
+#include <autoware_trajectory_validator/autoware_trajectory_validator_param.hpp>
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/geometry/LineString.h>
-#include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/RegulatoryElement.h>
-#include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
 #include <algorithm>
 #include <memory>
@@ -44,20 +42,10 @@ protected:
     if (!rclcpp::ok()) {
       rclcpp::init(0, nullptr);
     }
-    node_ = std::make_shared<rclcpp::Node>("test_traffic_light_filter_node");
     filter_ = std::make_shared<TrafficLightFilter>();
     autoware::vehicle_info_utils::VehicleInfo vehicle_info;
     vehicle_info.max_longitudinal_offset_m = 0.0;
     filter_->set_vehicle_info(vehicle_info);
-
-    // Initialize default parameters
-    node_->declare_parameter("traffic_light.deceleration_limit", 2.8);
-    node_->declare_parameter("traffic_light.jerk_limit", 5.0);
-    node_->declare_parameter("traffic_light.delay_response_time", 0.5);
-    node_->declare_parameter("traffic_light.crossing_time_limit", 2.75);
-    node_->declare_parameter("traffic_light.treat_amber_light_as_red_light", false);
-    node_->declare_parameter("traffic_light.checked_trajectory_length.deceleration_limit", 999.9);
-    node_->declare_parameter("traffic_light.checked_trajectory_length.jerk_limit", 999.9);
 
     validator::Params params;
     params.traffic_light.deceleration_limit = 2.8;
@@ -81,7 +69,7 @@ protected:
   }
 
   // Helper to create a simple straight lanelet map with a traffic light
-  void create_and_set_map(lanelet::Id light_id, double stop_line_x)
+  void create_and_set_map(const lanelet::Id light_id, double stop_line_x)
   {
     // 1. Create Stop Line
     lanelet::Point3d sl1(lanelet::utils::getId(), stop_line_x, -5, 0);
@@ -156,7 +144,6 @@ protected:
   }
 
   std::shared_ptr<TrafficLightFilter> filter_;
-  std::shared_ptr<rclcpp::Node> node_;
   FilterContext context_;
 };
 
@@ -354,10 +341,4 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
 
   EXPECT_FALSE(filter_->is_feasible(points, context_))
     << "Should return false for amber light when treat_amber_light_as_red_light is true";
-}
-
-int main(int argc, char ** argv)
-{
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
 }
