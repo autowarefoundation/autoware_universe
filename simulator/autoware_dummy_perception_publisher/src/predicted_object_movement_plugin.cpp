@@ -34,7 +34,8 @@ using autoware_utils_geometry::calc_distance2d;
 void PredictedObjectMovementPlugin::initialize()
 {
   using autoware_utils_rclcpp::get_or_declare_parameter;
-  set_associated_action_type(tier4_simulation_msgs::msg::DummyObject::PREDICT);
+  set_associated_movement_model(
+    autoware_simulation_msgs::msg::SimulatedObject::PREDICTED_PATH);
   // Declare prediction parameters
   auto node_ptr = get_node();
   predicted_object_params_.min_predicted_path_keep_duration =
@@ -85,7 +86,7 @@ void PredictedObjectMovementPlugin::predicted_objects_callback(
 }
 std::map<std::string, geometry_msgs::msg::Point>
 PredictedObjectMovementPlugin::collect_dummy_object_positions(
-  const std::vector<DummyObject> & dummy_objects, const rclcpp::Time & current_time,
+  const std::vector<SimulatedObject> & dummy_objects, const rclcpp::Time & current_time,
   std::vector<std::string> & unmapped_dummy_uuids)
 {
   std::map<std::string, Point> dummy_positions;
@@ -112,7 +113,7 @@ PredictedObjectMovementPlugin::collect_dummy_object_positions(
 }
 
 void PredictedObjectMovementPlugin::update_dummy_to_predicted_mapping(
-  const std::vector<tier4_simulation_msgs::msg::DummyObject> & dummy_objects,
+  const std::vector<SimulatedObject> & dummy_objects,
   const PredictedObjects & predicted_objects)
 {
   const auto node_ptr = get_node();
@@ -794,7 +795,7 @@ std::vector<ObjectInfo> PredictedObjectMovementPlugin::move_objects()
 }
 
 ObjectInfo PredictedObjectMovementPlugin::create_object_info_with_straight_line(
-  const DummyObject & object, const rclcpp::Time & current_time) const
+  const SimulatedObject & object, const rclcpp::Time & current_time) const
 {
   // Create basic ObjectInfo with dimensions and covariances
   auto obj_info = utils::MovementUtils::create_basic_object_info(object);
@@ -811,7 +812,7 @@ ObjectInfo PredictedObjectMovementPlugin::create_object_info_with_straight_line(
 }
 
 ObjectInfo PredictedObjectMovementPlugin::create_object_info_with_predicted_path(
-  const DummyObject & object, const PredictedObject & predicted_object,
+  const SimulatedObject & object, const PredictedObject & predicted_object,
   const rclcpp::Time & predicted_time, const rclcpp::Time & current_time) const
 {
   // Create basic ObjectInfo with dimensions and covariances

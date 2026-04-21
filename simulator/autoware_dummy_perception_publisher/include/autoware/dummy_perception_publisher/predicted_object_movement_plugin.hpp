@@ -22,7 +22,7 @@
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
-#include <tier4_simulation_msgs/msg/dummy_object.hpp>
+#include <autoware_simulation_msgs/msg/simulated_object.hpp>
 
 #include <deque>
 #include <map>
@@ -42,7 +42,7 @@ using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::TwistWithCovariance;
-using tier4_simulation_msgs::msg::DummyObject;
+using autoware_simulation_msgs::msg::SimulatedObject;
 
 struct CommonParameters
 {
@@ -107,7 +107,8 @@ private:
   std::pair<PredictedObject, rclcpp::Time> find_matching_predicted_object(
     const unique_identifier_msgs::msg::UUID & object_id, const rclcpp::Time & current_time);
   void update_dummy_to_predicted_mapping(
-    const std::vector<DummyObject> & dummy_objects, const PredictedObjects & predicted_objects);
+    const std::vector<SimulatedObject> & dummy_objects,
+    const PredictedObjects & predicted_objects);
 
   [[nodiscard]] bool is_valid_remapping_candidate(
     const PredictedObject & candidate_prediction, const std::string & dummy_uuid_str,
@@ -122,7 +123,7 @@ private:
   std::vector<std::string> find_disappeared_predicted_object_uuids(
     std::set<std::string> & available_predicted_uuids);
   std::map<std::string, geometry_msgs::msg::Point> collect_dummy_object_positions(
-    const std::vector<DummyObject> & dummy_objects, const rclcpp::Time & current_time,
+    const std::vector<SimulatedObject> & dummy_objects, const rclcpp::Time & current_time,
     std::vector<std::string> & unmapped_dummy_uuids);
   std::optional<std::string> find_best_predicted_object_match(
     const std::string & dummy_uuid, const geometry_msgs::msg::Point & dummy_position,
@@ -138,9 +139,9 @@ private:
 
   // Helper methods for creating ObjectInfo
   [[nodiscard]] ObjectInfo create_object_info_with_straight_line(
-    const DummyObject & object, const rclcpp::Time & current_time) const;
+    const SimulatedObject & object, const rclcpp::Time & current_time) const;
   [[nodiscard]] ObjectInfo create_object_info_with_predicted_path(
-    const DummyObject & object, const PredictedObject & predicted_object,
+    const SimulatedObject & object, const PredictedObject & predicted_object,
     const rclcpp::Time & predicted_time, const rclcpp::Time & current_time) const;
 };
 
