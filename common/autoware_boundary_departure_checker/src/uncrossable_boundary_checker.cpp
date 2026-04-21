@@ -35,7 +35,6 @@
 
 #include <lanelet2_core/geometry/Polygon.h>
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -44,61 +43,42 @@
 
 namespace autoware::boundary_departure_checker
 {
-void UncrossableBoundaryChecker::set_lanelet_map(const lanelet::LaneletMapPtr lanelet_map_ptr)
+UncrossableBoundaryChecker::UncrossableBoundaryChecker(
+  lanelet::LaneletMapPtr map, UncrossableBoundaryDepartureParam param,
+  const VehicleInfo & vehicle_info)
+: lanelet_map_ptr_(std::move(map)), param_(std::move(param)), vehicle_info_(vehicle_info)
 {
-  lanelet_map_ptr_ = lanelet_map_ptr;
-}
-
-tl::expected<void, std::string> UncrossableBoundaryChecker::initialize()
-{
-  if (!lanelet_map_ptr_ || lanelet_map_ptr_->lineStringLayer.empty()) {
-    return tl::make_unexpected("Invalid lanelet map pointer or empty linestring layer");
+  if (!lanelet_map_ptr_ && lanelet_map_ptr_->lineStringLayer.empty()) {
+    throw std::runtime_error("Invalid lanelet map pointer or empty linestring layer");
   }
 
   uncrossable_boundaries_rtree_ptr_ = std::make_unique<UncrossableBoundsRTree>(
     utils::build_uncrossable_boundaries_rtree(*lanelet_map_ptr_, param_.boundary_types_to_detect));
-
-  return {};
 }
 
-void UncrossableBoundaryChecker::set_param(const UncrossableBoundaryDepartureParam & param)
+void UncrossableBoundaryChecker::update_parameters(const UncrossableBoundaryDepartureParam & param)
 {
   param_ = param;
 }
 
-tl::expected<DepartureData, std::string> UncrossableBoundaryChecker::check_departure(
-  const TrajectoryPoints & predicted_traj, const vehicle_info_utils::VehicleInfo & vehicle_info,
-  const EgoDynamicState & ego_state)
+DepartureData UncrossableBoundaryChecker::check_departure(
+  const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  if (!lanelet_map_ptr_ || !uncrossable_boundaries_rtree_ptr_) {
-    return tl::make_unexpected("Checker not properly initialized with lanelet map and R-tree");
-  }
-
-  if (predicted_traj.empty()) {
-    return {};
-  }
-
   DepartureData departure_data;
-  departure_data.footprints =
-    footprints::generate(predicted_traj, vehicle_info, ego_state.pose_with_cov);
-
-  if (predicted_traj.size() != departure_data.footprints.size()) {
-    return tl::make_unexpected(
-      "Size of generated footprints does not match size of predicted trajectory");
+  if (predicted_traj.empty() || uncrossable_boundaries_rtree_ptr_->empty()) {
+    return departure_data;
   }
+
+  departure_data.footprints =
+    footprints::generate(predicted_traj, vehicle_info_, ego_state.pose_with_cov);
 
   departure_data.footprints_sides =
     footprints::get_sides_from_footprints(departure_data.footprints);
 
-  if (departure_data.footprints.size() != departure_data.footprints_sides.size()) {
-    return tl::make_unexpected(
-      "Size of generated footprints does not match size of predicted trajectory");
-  }
-
   departure_data.boundary_segments = get_boundary_segments(
-    departure_data.footprints_sides, predicted_traj, vehicle_info.vehicle_height_m);
+    departure_data.footprints_sides, predicted_traj, vehicle_info_.vehicle_height_m);
 
   if (departure_data.boundary_segments.all_empty()) {
     return departure_data;
@@ -108,7 +88,7 @@ tl::expected<DepartureData, std::string> UncrossableBoundaryChecker::check_depar
     predicted_traj, departure_data.boundary_segments, departure_data.footprints_sides);
 
   departure_data.evaluated_projections = utils::evaluate_projections_severity(
-    departure_data.projections_to_bound, param_, ego_state, vehicle_info);
+    departure_data.projections_to_bound, param_, ego_state, vehicle_info_);
 
   departure_data.status =
     determine_departure_type(departure_data.evaluated_projections, ego_state.current_time_s);

@@ -20,12 +20,10 @@
 
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 
 #include <memory>
-#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -43,36 +41,24 @@ public:
   /**
    * @brief Default constructor.
    */
-  UncrossableBoundaryChecker() = default;
+  UncrossableBoundaryChecker(
+    lanelet::LaneletMapPtr map, UncrossableBoundaryDepartureParam param,
+    const VehicleInfo & vehicle_info);
 
   /**
-   * @brief Set the lanelet map.
-   * @param[in] lanelet_map_ptr pointer to the lanelet map
-   */
-  void set_lanelet_map(const lanelet::LaneletMapPtr lanelet_map_ptr);
-
-  /**
-   * @brief Initialize the checker.
-   * @return success if initialization is successful, error message otherwise
-   */
-  tl::expected<void, std::string> initialize();
-
-  /**
-   * @brief Set parameters for the checker.
+   * @brief Update parameters for the checker.
    * @param[in] param parameters
    */
-  void set_param(const UncrossableBoundaryDepartureParam & param);
+  void update_parameters(const UncrossableBoundaryDepartureParam & param);
 
   /**
    * @brief Check for boundary departure along a predicted trajectory.
    * @param[in] predicted_traj predicted trajectory
-   * @param[in] vehicle_info vehicle information
    * @param[in] ego_state current ego dynamic state
-   * @return departure data if successful, error message otherwise
+   * @return departure data
    */
-  tl::expected<DepartureData, std::string> check_departure(
-    const TrajectoryPoints & predicted_traj, const vehicle_info_utils::VehicleInfo & vehicle_info,
-    const EgoDynamicState & ego_state);
+  DepartureData check_departure(
+    const TrajectoryPoints & predicted_traj, const EgoDynamicState & ego_state);
 
 private:
   /**
@@ -110,8 +96,8 @@ private:
     const Side<std::optional<CriticalPointPair>> & evaluated_projections,
     const double current_time_s);
 
-  UncrossableBoundaryDepartureParam param_;  ///< checker parameters
   lanelet::LaneletMapPtr lanelet_map_ptr_;   ///< pointer to lanelet map
+  UncrossableBoundaryDepartureParam param_;  ///< checker parameters
   std::unique_ptr<UncrossableBoundsRTree>
     uncrossable_boundaries_rtree_ptr_;  ///< R-tree of boundary segments
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ =
@@ -119,6 +105,7 @@ private:
   double last_no_critical_dpt_time_{0.0};     ///< last time no critical departure was found [s]
   double last_found_critical_dpt_time_{0.0};  ///< last time critical departure was found [s]
   Side<ProjectionsToBound> critical_departure_history_;  ///< history of critical departures
+  VehicleInfo vehicle_info_;
 };
 }  // namespace autoware::boundary_departure_checker
 
