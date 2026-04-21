@@ -55,23 +55,17 @@ struct TestMapResult
   lanelet::Id yellow_bulb_id;
 };
 
-// Creates the following map structure:
+// Creates the following map structure (XZ side view, all elements at y=2.0):
 //
-//         Y
+//         Z
 //         ^
-//    10.0 |  L─────────────R
-//         |  │  Lanelet    │
-//         |  │             │
-//         |  │             │
-//    5.0  |  │  ●  ●  ●   │  <- lightBulbs (z=5.0)
-//         |  │  G  Y  R   │    green(1.0,2.0) yellow(1.5,2.0) red(2.0,2.0)
-//    4.0  |  │  +------+  │  <- traffic light base (z=4.0)
-//         |  │             │
-//         |  │             │
-//         |  │             │
-//    0.0  |  L─────────────R
-//         +──────────────────> X
-//         0.0  1.0 1.5 2.0 3.0
+//    5.0  |     ●  ●  ●      <- lightBulbs
+//         |     G  Y  R        green(1.0) yellow(1.5) red(2.0)
+//    4.0  |  +--------+      <- traffic light base
+//         |
+//    0.0  |  L────────R      <- lanelet bounds (y: 0.0 to 10.0)
+//         +──────────────> X
+//         0.0 1.0 1.5 2.0 3.0
 //
 // The node only uses lightBulbs (id, position, color attribute).
 // Lanelet, traffic light base, and stop line exist solely to satisfy
