@@ -16,7 +16,6 @@
 #include "autoware/boundary_departure_checker/type_alias.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
 
@@ -44,12 +43,14 @@ protected:
     p1.pose.position.y = 0.0;
     p1.pose.orientation.w = 1.0;
     p1.longitudinal_velocity_mps = 10.0;
-    p1.time_from_start = rclcpp::Duration::from_seconds(0.0);
+    p1.time_from_start.sec = static_cast<int32_t>(0.0);
+    p1.time_from_start.nanosec = static_cast<uint32_t>((0.0 - p1.time_from_start.sec) * 1e9);
     pred_traj_.push_back(p1);
 
     TrajectoryPoint p2 = p1;
     p2.pose.position.x = 1.0;
-    p2.time_from_start = rclcpp::Duration::from_seconds(0.1);
+    p2.time_from_start.sec = static_cast<int32_t>(0.1);
+    p2.time_from_start.nanosec = static_cast<uint32_t>((0.1 - p2.time_from_start.sec) * 1e9);
     pred_traj_.push_back(p2);
 
     // 3. Setup covariance
@@ -136,6 +137,5 @@ TEST_F(FootprintGeneratorTest, TestGetSidesFromFootprints)
   EXPECT_DOUBLE_EQ(sides_array[1].left.first.y(), offset_fp[VehicleInfo::FrontLeftIndex].y());
   EXPECT_DOUBLE_EQ(sides_array[1].right.second.x(), offset_fp[VehicleInfo::RearRightIndex].x());
   EXPECT_DOUBLE_EQ(sides_array[1].right.second.y(), offset_fp[VehicleInfo::RearRightIndex].y());
-
 }
 }  // namespace autoware::boundary_departure_checker

@@ -16,7 +16,6 @@
 #include "autoware/boundary_departure_checker/uncrossable_boundary_checker.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
 
@@ -36,8 +35,6 @@ class UncrossableBoundaryCheckerTest : public ::testing::Test
 protected:
   void SetUp() override
   {
-    rclcpp::init(0, nullptr);
-
     // 1. Setup Vehicle Info (Standard Sedan Size)
     vehicle_info_ = autoware::vehicle_info_utils::createVehicleInfo(
       0.383,  // front_overhang [m]
@@ -72,8 +69,6 @@ protected:
     checker_ptr_ = std::make_unique<UncrossableBoundaryChecker>(map_, param_, vehicle_info_);
   }
 
-  void TearDown() override { rclcpp::shutdown(); }
-
   static TrajectoryPoints create_trajectory(
     double start_x, double start_y, double velocity, double yaw = 0.0)
   {
@@ -83,7 +78,9 @@ protected:
       p.pose.position.x = start_x + i * 5.0 * std::cos(yaw);
       p.pose.position.y = start_y + i * 5.0 * std::sin(yaw);
       p.pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
-      p.time_from_start = rclcpp::Duration::from_seconds(i * 0.5);
+      const double time = i * 0.5;
+      p.time_from_start.sec = static_cast<int32_t>(time);
+      p.time_from_start.nanosec = static_cast<uint32_t>((time - p.time_from_start.sec) * 1e9);
       p.longitudinal_velocity_mps = static_cast<float>(velocity);
       traj.push_back(p);
     }

@@ -351,7 +351,8 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
         }
       }
 
-      closest_bound.time_from_start = rclcpp::Duration(ego_pred_traj[i].time_from_start).seconds();
+      closest_bound.time_from_start =
+        ego_pred_traj[i].time_from_start.sec + ego_pred_traj[i].time_from_start.nanosec * 1e-9;
       closest_bound.dist_along_trajectory_m = s - closest_bound.ego_front_to_proj_offset_m;
       side_value.push_back(closest_bound);
       if (closest_bound.lat_dist < 0.01 && !has_passed_boundary[side_key]) {

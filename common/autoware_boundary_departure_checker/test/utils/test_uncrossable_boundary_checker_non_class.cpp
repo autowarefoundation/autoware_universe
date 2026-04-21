@@ -25,6 +25,40 @@
 
 namespace autoware::boundary_departure_checker
 {
+namespace
+{
+TrajectoryPoint make_trajectory_point(double x, double y, double time)
+{
+  TrajectoryPoint p;
+  p.pose.position.x = x;
+  p.pose.position.y = y;
+  p.time_from_start.sec = static_cast<int32_t>(time);
+  p.time_from_start.nanosec = static_cast<uint32_t>((time - p.time_from_start.sec) * 1e9);
+  return p;
+}
+
+FootprintSideSegments make_footprint_sides(Segment2d left, Segment2d right)
+{
+  FootprintSideSegments s;
+  s.left = std::move(left);
+  s.right = std::move(right);
+  return s;
+}
+
+BoundarySegmentsBySide make_boundaries(
+  const std::vector<Segment2d> & left_segments, const std::vector<Segment2d> & right_segments = {})
+{
+  BoundarySegmentsBySide boundaries;
+  for (const auto & seg : left_segments) {
+    boundaries.left.emplace_back(seg, IdxForRTreeSegment{1, 0, 1});
+  }
+  for (const auto & seg : right_segments) {
+    boundaries.right.emplace_back(seg, IdxForRTreeSegment{2, 0, 1});
+  }
+  return boundaries;
+}
+}  // namespace
+
 // clang-format off
 /**
  * TestParallelSegments:
@@ -124,27 +158,17 @@ TEST(UncrossableBoundaryTest, TestMiddleOfSegmentCrossingForLonDist)
   // ego segment.
 
   // Arrange:
-  TrajectoryPoints ego_pred_traj;
-  for (int i = 0; i < 3; ++i) {
-    TrajectoryPoint p;
-    p.pose.position.x = i * 10.0;
-    p.pose.position.y = 0.0;
-    p.time_from_start = rclcpp::Duration::from_seconds(i);
-    ego_pred_traj.push_back(p);
-  }
+  TrajectoryPoints ego_pred_traj = {
+    make_trajectory_point(0.0, 0.0, 0.0), make_trajectory_point(10.0, 0.0, 1.0),
+    make_trajectory_point(20.0, 0.0, 2.0)};
 
-  FootprintSideSegmentsArray ego_sides(ego_pred_traj.size());
-  for (size_t i = 0; i < ego_pred_traj.size(); ++i) {
-    double cx = ego_pred_traj[i].pose.position.x;
-    ego_sides[i].left = Segment2d{{cx + 2.0, 1.0}, {cx - 2.0, 1.0}};
-    ego_sides[i].right = Segment2d{{cx + 2.0, -1.0}, {cx - 2.0, -1.0}};
-  }
+  FootprintSideSegmentsArray ego_sides = {
+    make_footprint_sides(Segment2d{{2.0, 1.0}, {-2.0, 1.0}}, Segment2d{{2.0, -1.0}, {-2.0, -1.0}}),
+    make_footprint_sides(Segment2d{{12.0, 1.0}, {8.0, 1.0}}, Segment2d{{12.0, -1.0}, {8.0, -1.0}}),
+    make_footprint_sides(
+      Segment2d{{22.0, 1.0}, {18.0, 1.0}}, Segment2d{{22.0, -1.0}, {18.0, -1.0}})};
 
-  BoundarySegmentsBySide boundaries;
-  SegmentWithIdx bound;
-  bound.first = Segment2d{{10.0, 0.0}, {10.0, 2.0}};
-  bound.second = IdxForRTreeSegment{1, 0, 1};
-  boundaries.left.push_back(bound);
+  BoundarySegmentsBySide boundaries = make_boundaries({Segment2d{{10.0, 0.0}, {10.0, 2.0}}});
 
   // Act:
   auto result =
@@ -164,34 +188,23 @@ TEST(UncrossableBoundaryTest, TestRealisticLaneDeparture)
   // Verifies signed lateral distance transitions during a realistic left-side departure.
 
   // Arrange:
-  TrajectoryPoints ego_pred_traj;
-  for (int i = 0; i < 5; ++i) {
-    TrajectoryPoint p;
-    p.pose.position.x = i * 24.0;
-    p.pose.position.y = i * 7.0;
-    p.pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(std::atan2(7.0, 24.0));
-    p.time_from_start = rclcpp::Duration::from_seconds(i);
-    ego_pred_traj.push_back(p);
-  }
+  TrajectoryPoints ego_pred_traj = {
+    make_trajectory_point(0.0, 0.0, 0.0), make_trajectory_point(24.0, 7.0, 1.0),
+    make_trajectory_point(48.0, 14.0, 2.0), make_trajectory_point(72.0, 21.0, 3.0),
+    make_trajectory_point(96.0, 28.0, 4.0)};
 
-  FootprintSideSegmentsArray ego_sides(ego_pred_traj.size());
-  for (size_t i = 0; i < ego_pred_traj.size(); ++i) {
-    double cx = ego_pred_traj[i].pose.position.x;
-    double cy = ego_pred_traj[i].pose.position.y;
-    ego_sides[i].left = Segment2d{{cx + 4.1, cy + 3.8}, {cx - 5.5, cy + 1.0}};
-    ego_sides[i].right = Segment2d{{cx + 5.5, cy - 1.0}, {cx - 4.1, cy - 3.8}};
-  }
+  FootprintSideSegmentsArray ego_sides = {
+    make_footprint_sides(Segment2d{{4.1, 3.8}, {-5.5, 1.0}}, Segment2d{{5.5, -1.0}, {-4.1, -3.8}}),
+    make_footprint_sides(Segment2d{{28.1, 10.8}, {18.5, 8.0}}, Segment2d{{29.5, 6.0}, {19.9, 3.2}}),
+    make_footprint_sides(
+      Segment2d{{52.1, 17.8}, {42.5, 15.0}}, Segment2d{{53.5, 13.0}, {43.9, 10.2}}),
+    make_footprint_sides(
+      Segment2d{{76.1, 24.8}, {66.5, 22.0}}, Segment2d{{77.5, 20.0}, {67.9, 17.2}}),
+    make_footprint_sides(
+      Segment2d{{100.1, 31.8}, {90.5, 29.0}}, Segment2d{{101.5, 27.0}, {91.9, 24.2}})};
 
-  BoundarySegmentsBySide boundaries;
-  SegmentWithIdx left_bound;
-  left_bound.first = Segment2d{{-10.0, 9.4}, {120.0, 9.4}};
-  left_bound.second = IdxForRTreeSegment{1, 0, 1};
-  boundaries.left.push_back(left_bound);
-
-  SegmentWithIdx right_bound;
-  right_bound.first = Segment2d{{-10.0, -5.0}, {120.0, -5.0}};
-  right_bound.second = IdxForRTreeSegment{2, 0, 1};
-  boundaries.right.push_back(right_bound);
+  BoundarySegmentsBySide boundaries = make_boundaries(
+    {Segment2d{{-10.0, 9.4}, {120.0, 9.4}}}, {Segment2d{{-10.0, -5.0}, {120.0, -5.0}}});
 
   // Act:
   auto result =
@@ -208,35 +221,24 @@ TEST(UncrossableBoundaryTest, TestRealisticRightLaneDeparture)
   // Verifies signed lateral distance transitions during a realistic right-side departure.
 
   // Arrange:
-  TrajectoryPoints ego_pred_traj;
-  for (int i = 0; i < 5; ++i) {
-    TrajectoryPoint p;
-    p.pose.position.x = i * 24.0;
-    p.pose.position.y = i * -7.0;
-    p.pose.orientation =
-      autoware_utils_geometry::create_quaternion_from_yaw(std::atan2(-7.0, 24.0));
-    p.time_from_start = rclcpp::Duration::from_seconds(i);
-    ego_pred_traj.push_back(p);
-  }
+  TrajectoryPoints ego_pred_traj = {
+    make_trajectory_point(0.0, 0.0, 0.0), make_trajectory_point(24.0, -7.0, 1.0),
+    make_trajectory_point(48.0, -14.0, 2.0), make_trajectory_point(72.0, -21.0, 3.0),
+    make_trajectory_point(96.0, -28.0, 4.0)};
 
-  FootprintSideSegmentsArray ego_sides(ego_pred_traj.size());
-  for (size_t i = 0; i < ego_pred_traj.size(); ++i) {
-    double cx = ego_pred_traj[i].pose.position.x;
-    double cy = ego_pred_traj[i].pose.position.y;
-    ego_sides[i].left = Segment2d{{cx + 5.5, cy + 1.0}, {cx - 4.1, cy + 3.8}};
-    ego_sides[i].right = Segment2d{{cx + 4.1, cy - 3.8}, {cx - 5.5, cy - 1.0}};
-  }
+  FootprintSideSegmentsArray ego_sides = {
+    make_footprint_sides(Segment2d{{5.5, 1.0}, {-4.1, 3.8}}, Segment2d{{4.1, -3.8}, {-5.5, -1.0}}),
+    make_footprint_sides(
+      Segment2d{{29.5, -6.0}, {19.9, -3.2}}, Segment2d{{28.1, -10.8}, {18.5, -8.0}}),
+    make_footprint_sides(
+      Segment2d{{53.5, -13.0}, {43.9, -10.2}}, Segment2d{{52.1, -17.8}, {42.5, -15.0}}),
+    make_footprint_sides(
+      Segment2d{{77.5, -20.0}, {67.9, -17.2}}, Segment2d{{76.1, -24.8}, {66.5, -22.0}}),
+    make_footprint_sides(
+      Segment2d{{101.5, -27.0}, {91.9, -24.2}}, Segment2d{{100.1, -31.8}, {90.5, -29.0}})};
 
-  BoundarySegmentsBySide boundaries;
-  SegmentWithIdx left_bound;
-  left_bound.first = Segment2d{{-10.0, 5.0}, {120.0, 5.0}};
-  left_bound.second = IdxForRTreeSegment{1, 0, 1};
-  boundaries.left.push_back(left_bound);
-
-  SegmentWithIdx right_bound;
-  right_bound.first = Segment2d{{-10.0, -9.4}, {120.0, -9.4}};
-  right_bound.second = IdxForRTreeSegment{2, 0, 1};
-  boundaries.right.push_back(right_bound);
+  BoundarySegmentsBySide boundaries = make_boundaries(
+    {Segment2d{{-10.0, 5.0}, {120.0, 5.0}}}, {Segment2d{{-10.0, -9.4}, {120.0, -9.4}}});
 
   // Act:
   auto result =
