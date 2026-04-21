@@ -3,7 +3,13 @@ validator:
     type: string_array
     default_value: []
     description: metrics.
-    read_only: false
+    read_only: true
+
+  shadow_mode_filter_names:
+    type: string_array
+    default_value: []
+    description: List of filter names that run in which results are logged but do not affect trajectory feasibility.
+    read_only: true
 
   out_of_lane:
     time:

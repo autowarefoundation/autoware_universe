@@ -526,15 +526,16 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
 
   // 6. optimize steer angles
   const auto optimized_variables = calcOptimizedSteerAngles(ref_points, obj_mat, const_mat);
-  if (!optimized_variables) {
+  if (!optimized_variables && !mpt_param_.use_acados) {
     RCLCPP_WARN(logger_, "return std::nullopt since could not solve qp");
 
     return std::nullopt;
   }
 
   // 7. convert to points with validation
-  auto mpt_traj_points = calcMPTPoints(ref_points, *optimized_variables, mpt_mat);
-  if (!mpt_traj_points) {
+  std::optional<std::vector<TrajectoryPoint>> mpt_traj_points =
+    optimized_variables ? calcMPTPoints(ref_points, *optimized_variables, mpt_mat) : std::nullopt;
+  if (!mpt_traj_points && !mpt_param_.use_acados) {
     RCLCPP_WARN(logger_, "return std::nullopt since lateral or yaw error is too large.");
     return std::nullopt;
   }
@@ -544,15 +545,17 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   if (mpt_param_.use_acados) {
     ref_points_spline.updateCurvatureSpline();
 
-    const size_t D_x = state_equation_generator_.getDimX();
-    const size_t D_u = state_equation_generator_.getDimU();
-    const size_t N_ref = ref_points.size();
-    const size_t N_x = N_ref * D_x;
-    const size_t N_u = (N_ref - 1) * D_u;
-    const auto & optimized_states = optimized_variables->segment(0, N_x);
-    const auto & optimized_steering = optimized_variables->segment(N_x, N_u);
-    publishOptimizedSteering(optimized_steering);
-    publishOptimizedStates(optimized_states, N_ref);
+    if (optimized_variables) {
+      const size_t D_x = state_equation_generator_.getDimX();
+      const size_t D_u = state_equation_generator_.getDimU();
+      const size_t N_ref = ref_points.size();
+      const size_t N_x = N_ref * D_x;
+      const size_t N_u = (N_ref - 1) * D_u;
+      const auto & optimized_states = optimized_variables->segment(0, N_x);
+      const auto & optimized_steering = optimized_variables->segment(N_x, N_u);
+      publishOptimizedSteering(optimized_steering);
+      publishOptimizedStates(optimized_states, N_ref);
+    }
 
     // 8. run acados mpt (optional)
     std::optional<std::vector<TrajectoryPoint>> acados_traj_points;
@@ -583,13 +586,18 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
     output_trajectory = std::move(acados_traj_points);
   }
 
-  // 9.a. publish trajectories for debug
-  publishDebugTrajectories(p.header, ref_points, *mpt_traj_points);
+  if (mpt_traj_points) {
+    // 9.a. publish trajectories for debug
+    publishDebugTrajectories(p.header, ref_points, *mpt_traj_points);
+  } else {
+    publishDebugTrajectories(p.header, ref_points, std::vector<TrajectoryPoint>());
+  }
 
   debug_data_ptr_->ref_points = ref_points;
   prev_ref_points_ptr_ = std::make_shared<std::vector<ReferencePoint>>(ref_points);
   prev_optimized_traj_points_ptr_ =
-    std::make_shared<std::vector<TrajectoryPoint>>(*mpt_traj_points);
+    mpt_traj_points ? std::make_shared<std::vector<TrajectoryPoint>>(std::move(*mpt_traj_points))
+                    : nullptr;
 
   return output_trajectory;
 }
@@ -1039,16 +1047,15 @@ MPTOptimizer::calcReferencePoints(
   updateCurvature(ref_points, ref_points_spline);
 
   // 4. crop backward
-  // NOTE: Start point may change. Spline calculation is required.
+  // NOTE: Start point may change; spline is refreshed after updateFixedPoint (step 5).
   ref_points = autoware::motion_utils::cropPoints(
     ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length + tmp_margin,
     backward_traj_length);
-  ref_points_spline = autoware::interpolation::SplineInterpolationPoints2d(ref_points);
   ego_seg_idx = trajectory_utils::findEgoSegmentIndex(ref_points, p.ego_pose, ego_nearest_param_);
 
   // 5. update fixed points, and resample
   // NOTE: This must be after backward cropping.
-  //       New start point may be added and resampled. Spline calculation is required.
+  //       New start point may be added and resampled. Spline is rebuilt on ref_points below.
   updateFixedPoint(ref_points);
   ref_points = trajectory_utils::sanitizePoints(ref_points);
   ref_points_spline = autoware::interpolation::SplineInterpolationPoints2d(ref_points);
@@ -1067,12 +1074,19 @@ MPTOptimizer::calcReferencePoints(
 
   // 9. crop forward — pre-acados used resize(); acados path uses cropForwardPoints
   if (mpt_param_.use_acados) {
+    ego_seg_idx = trajectory_utils::findEgoSegmentIndex(ref_points, p.ego_pose, ego_nearest_param_);
     ref_points = autoware::motion_utils::cropForwardPoints(
       ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length);
 
-    if (ref_points_spline.getSize() == 0) {
-      return std::make_pair(ref_points, ref_points_spline);
+    if (ref_points.size() < 2) {
+      return std::make_pair(ref_points, autoware::interpolation::SplineInterpolationPoints2d{});
     }
+
+    // Must rebuild spline after forward crop; returning the pre-crop spline breaks
+    // projectPointOntoSpline / yaw / curvature when ego or the window jumps.
+    ref_points_spline = autoware::interpolation::SplineInterpolationPoints2d(ref_points);
+    updateOrientation(ref_points, ref_points_spline);
+    updateCurvature(ref_points, ref_points_spline);
 
     return std::make_pair(ref_points, ref_points_spline);
   }

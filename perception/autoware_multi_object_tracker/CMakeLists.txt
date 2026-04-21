@@ -40,9 +40,14 @@ set(${PROJECT_NAME}_src
 )
 set(${PROJECT_NAME}_lib
   lib/odometry.cpp
-  lib/association/association.cpp
+  lib/association/bev_association.cpp
+  lib/association/association_manager.cpp
+  lib/association/tracker_overlap_manager.cpp
+  lib/association/polar_association.cpp
+  lib/association/scoring/bev_assignment_scoring.cpp
+  lib/association/scoring/redundancy_check.cpp
   lib/association/mu_successive_shortest_path/mu_ssp.cpp
-  lib/object_model/types.cpp
+  lib/types.cpp
   lib/object_model/uuid.cpp
   lib/object_model/shapes.cpp
   lib/tracker/motion_model/bicycle_motion_model.cpp
