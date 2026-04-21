@@ -26,9 +26,9 @@
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
+#include <autoware_simulation_msgs/msg/simulated_object.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <autoware_simulation_msgs/msg/simulated_object.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <pcl/common/distances.h>
@@ -43,9 +43,9 @@
 
 namespace autoware::dummy_perception_publisher
 {
+using autoware_simulation_msgs::msg::SimulatedObject;
 using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::TwistWithCovariance;
-using autoware_simulation_msgs::msg::SimulatedObject;
 
 class PointCloudCreator
 {

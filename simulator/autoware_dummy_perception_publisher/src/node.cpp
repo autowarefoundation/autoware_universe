@@ -48,11 +48,11 @@ namespace autoware::dummy_perception_publisher
 
 using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
+using autoware_simulation_msgs::msg::SimulatedObject;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::PoseStamped;
 using geometry_msgs::msg::Transform;
 using geometry_msgs::msg::TransformStamped;
-using autoware_simulation_msgs::msg::SimulatedObject;
 
 DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
 : Node("dummy_perception_publisher"), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)

@@ -31,9 +31,9 @@
 
 namespace autoware::dummy_perception_publisher::utils
 {
+using autoware_simulation_msgs::msg::SimulatedObject;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Transform;
-using autoware_simulation_msgs::msg::SimulatedObject;
 
 geometry_msgs::msg::Pose MovementUtils::calculate_straight_line_position(
   const SimulatedObject & object, const rclcpp::Time & current_time)
