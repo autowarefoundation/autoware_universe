@@ -177,7 +177,7 @@ MarkerArray create_debug_markers(
   });
   const double base_link_z = ego_state.pose_with_cov.pose.position.z;
   MarkerArray marker_array;
-  hysteresis_state.critical_departure_history.for_each_side([&](auto & side_value) {
+  hysteresis_state.critical_departure_history.for_each_side([&](const auto & side_value) {
     autoware_utils_visualization::append_marker_array(
       create_departure_footprint_marker(side_value, footprints, curr_time, base_link_z),
       &marker_array);
@@ -187,15 +187,16 @@ MarkerArray create_debug_markers(
     return marker_array;
   }
 
-  hysteresis_state.critical_departure_history.for_each([&](auto key_constant, auto & side_value) {
-    const std::string side_str = to_string(key_constant.value);
-    marker_array.markers.push_back(
-      create_projections_points_marker(side_value, side_str, curr_time, base_link_z));
-    marker_array.markers.push_back(
-      create_projections_points_connection_marker(side_value, side_str, curr_time, base_link_z));
-    marker_array.markers.push_back(
-      create_projected_segment_bound_marker(side_value, side_str, curr_time, base_link_z));
-  });
+  hysteresis_state.critical_departure_history.for_each(
+    [&](const auto key_constant, const auto & side_value) {
+      const std::string side_str = to_string(key_constant.value);
+      marker_array.markers.push_back(
+        create_projections_points_marker(side_value, side_str, curr_time, base_link_z));
+      marker_array.markers.push_back(
+        create_projections_points_connection_marker(side_value, side_str, curr_time, base_link_z));
+      marker_array.markers.push_back(
+        create_projected_segment_bound_marker(side_value, side_str, curr_time, base_link_z));
+    });
 
   return marker_array;
 }
