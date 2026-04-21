@@ -109,9 +109,11 @@ public:
   bool update_current_lanelet(const geometry_msgs::msg::Pose & current_pose);
 
   // Path planning
-  std::optional<PathWithLaneId> plan_path(const geometry_msgs::msg::Pose & current_pose);
+  std::optional<PathWithLaneId> plan_path(
+    const geometry_msgs::msg::Pose & current_pose, double ego_velocity);
   std::optional<PathWithLaneId> generate_path(
-    const lanelet::LaneletSequence & lanelet_sequence, double s_start, double s_end);
+    const lanelet::LaneletSequence & lanelet_sequence, double s_start, double s_end,
+    double ego_velocity);
 
   // Trajectory shifting
   Trajectory shift_trajectory_to_ego(
@@ -123,6 +125,11 @@ public:
 
   // Params update
   void update_params(const Params & params);
+
+  // Lane change interpolation
+  void interpolate_lane_change_sections(
+    std::vector<PathPointWithLaneId> & path_points,
+    const lanelet::LaneletSequence & lanelet_sequence, double ego_velocity);
 
 private:
   void set_route(const LaneletRoute::ConstSharedPtr & route_ptr);

@@ -251,7 +251,8 @@ void MinimumRuleBasedPlannerNode::on_timer()
     if (input_data.test_path_with_lane_id_ptr) {
       return *input_data.test_path_with_lane_id_ptr;
     }
-    return path_planner_->plan_path(input_data.odometry_ptr->pose.pose);
+    return path_planner_->plan_path(
+      input_data.odometry_ptr->pose.pose, input_data.odometry_ptr->twist.twist.linear.x);
   }();
 
   if (!path) {

@@ -670,6 +670,9 @@ std::vector<geometry_msgs::msg::Point> crop_line_string(
   }
 
   trajectory->crop(s_start, s_end - s_start);
+  if (trajectory->length() < 1e-6) {
+    return {};
+  }
   return trajectory->restore();
 }
 
@@ -910,9 +913,80 @@ std::optional<PathPointTrajectory> modify_path_for_smooth_goal_connection(
 
 namespace
 {
-/**
- * @brief Select a lanelet from candidates, preferring one that is in the route.
- */
+// Peak curvature multiplier of the symmetric quintic shift: kappa_max = quintic_kappa_coeff*|d|/L^2
+constexpr double quintic_kappa_coeff = 5.773502691896258;  // 10*sqrt(3)/3
+constexpr double yaw_diff_clamp_rad = M_PI / 4.0;
+constexpr double lane_end_match_tolerance_sq = 4.0;  // [m^2] 2m tolerance squared
+constexpr double yaw_step = 0.1;  // [m] finite-difference step for centerline yaw
+
+struct QuinticShiftCoeffs
+{
+  double a0, a1, a2, a3, a4, a5;
+};
+
+// Closed-form coefficients of y(s) = a0 + a1 s + a2 s^2 + a3 s^3 + a4 s^4 + a5 s^5
+// solved from 6 boundary conditions:
+//   s=0: y=d, y'=q, y''=kappa0   ->   a0 = d, a1 = q, a2 = kappa0/2
+//   s=L: y=0, y'=0, y''=0        ->   solve the 3x3 system for (a3, a4, a5),
+//                                     yielding linear combinations of d, qL, kappa0 L^2.
+QuinticShiftCoeffs compute_quintic_shift_coeffs(
+  const double d, const double yaw_diff, const double kappa0, const double L)
+{
+  // Initial slope y'(0) for the quintic shift polynomial.
+  const double q = std::tan(std::clamp(yaw_diff, -yaw_diff_clamp_rad, yaw_diff_clamp_rad));
+  const double L2 = L * L;
+  const double L3 = L2 * L;
+  return {
+    d,
+    q,
+    kappa0 / 2.0,
+    -(20.0 * d + 12.0 * q * L + 3.0 * kappa0 * L2) / (2.0 * L3),
+    (30.0 * d + 16.0 * q * L + 3.0 * kappa0 * L2) / (2.0 * L3 * L),
+    -(12.0 * d + 6.0 * q * L + kappa0 * L2) / (2.0 * L3 * L2),
+  };
+}
+
+double evaluate_quintic(const QuinticShiftCoeffs & c, const double s)
+{
+  const double s2 = s * s;
+  const double s3 = s2 * s;
+  return c.a0 + c.a1 * s + c.a2 * s2 + c.a3 * s3 + c.a4 * s3 * s + c.a5 * s3 * s2;
+}
+
+double evaluate_quintic_derivative(const QuinticShiftCoeffs & c, const double s)
+{
+  const double s2 = s * s;
+  const double s3 = s2 * s;
+  return c.a1 + 2.0 * c.a2 * s + 3.0 * c.a3 * s2 + 4.0 * c.a4 * s3 + 5.0 * c.a5 * s3 * s;
+}
+
+double compute_shift_length_from_lateral_accel(
+  const double abs_d, const double velocity, const double lateral_accel_limit,
+  const double min_length)
+{
+  return std::max(
+    min_length, velocity * std::sqrt(quintic_kappa_coeff * abs_d / lateral_accel_limit));
+}
+
+double signed_curvature_3pt(
+  const lanelet::BasicPoint2d & p0, const lanelet::BasicPoint2d & p1,
+  const lanelet::BasicPoint2d & p2)
+{
+  const double v1x = p1.x() - p0.x();
+  const double v1y = p1.y() - p0.y();
+  const double v2x = p2.x() - p1.x();
+  const double v2y = p2.y() - p1.y();
+  const double cross = v1x * v2y - v1y * v2x;
+  const double l1 = std::hypot(v1x, v1y);
+  const double l2 = std::hypot(v2x, v2y);
+  const double l3 = std::hypot(p2.x() - p0.x(), p2.y() - p0.y());
+  const double denom = l1 * l2 * l3;
+  if (denom < 1e-9) {
+    return 0.0;
+  }
+  return 2.0 * cross / denom;
+}
+
 lanelet::ConstLanelet select_route_preferred_lanelet(
   const lanelet::ConstLanelets & candidates, const RouteContext & route_context)
 {
@@ -924,6 +998,186 @@ lanelet::ConstLanelet select_route_preferred_lanelet(
     });
   return it != candidates.end() ? *it : candidates.front();
 }
+
+// ---------------------------------------------------------------------------
+// Lane-change interpolation helpers
+// ---------------------------------------------------------------------------
+
+struct LaneChangeBoundaryInfo
+{
+  double lateral_offset;
+  double abs_lateral_offset;
+  double yaw_diff;
+  double start_curvature;
+  double s_projection;
+  double next_centerline_length;
+  geometry_msgs::msg::Point prev_end_geom;
+};
+
+std::optional<size_t> find_lane_change_boundary(
+  const lanelet::ConstLanelets & lanelets, const double min_shift_length)
+{
+  for (size_t li = 0; li + 1 < lanelets.size(); ++li) {
+    const auto & prev_centerline = lanelets[li].centerline();
+    const auto & next_centerline = lanelets[li + 1].centerline();
+    if (prev_centerline.size() < 2 || next_centerline.size() < 2) {
+      continue;
+    }
+    const double gap = lanelet::geometry::distance2d(
+      lanelet::utils::to2D(prev_centerline.back()), lanelet::utils::to2D(next_centerline.front()));
+    if (gap >= min_shift_length) {
+      return li;
+    }
+  }
+  return std::nullopt;
+}
+
+LaneChangeBoundaryInfo compute_lane_change_boundary_info(
+  const lanelet::ConstLanelet & lanelet_prev, const lanelet::ConstLanelet & lanelet_next)
+{
+  const auto & prev_centerline = lanelet_prev.centerline();
+  const auto & prev_end_pt = prev_centerline.back();
+
+  const auto arc_on_next = lanelet::geometry::toArcCoordinates(
+    lanelet_next.centerline2d(), lanelet::utils::to2D(prev_end_pt));
+
+  const auto & next_centerline = lanelet_next.centerline();
+  const double prev_yaw = std::atan2(
+    prev_end_pt.y() - (prev_centerline.end() - 2)->y(),
+    prev_end_pt.x() - (prev_centerline.end() - 2)->x());
+  const double next_yaw = std::atan2(
+    (next_centerline.begin() + 1)->y() - next_centerline.front().y(),
+    (next_centerline.begin() + 1)->x() - next_centerline.front().x());
+
+  const double kappa0 = [&]() {
+    if (prev_centerline.size() < 3) {
+      return 0.0;
+    }
+    const auto & p0 = *(prev_centerline.end() - 3);
+    const auto & p1 = *(prev_centerline.end() - 2);
+    const auto & p2 = *(prev_centerline.end() - 1);
+    return signed_curvature_3pt(
+      lanelet::utils::to2D(p0).basicPoint(), lanelet::utils::to2D(p1).basicPoint(),
+      lanelet::utils::to2D(p2).basicPoint());
+  }();
+
+  return {
+    arc_on_next.distance,
+    std::abs(arc_on_next.distance),
+    autoware_utils::normalize_radian(prev_yaw - next_yaw),
+    kappa0,
+    std::max(0.0, arc_on_next.length),
+    static_cast<double>(lanelet::geometry::length(lanelet_next.centerline2d())),
+    lanelet::utils::conversion::toGeomMsgPt(prev_end_pt),
+  };
+}
+
+std::optional<size_t> find_closest_path_index(
+  const std::vector<PathPointWithLaneId> & path_points, const lanelet::Id lanelet_id,
+  const geometry_msgs::msg::Point & target_point)
+{
+  std::optional<size_t> closest_idx;
+  double min_dist_sq = std::numeric_limits<double>::max();
+  for (size_t pi = 0; pi < path_points.size(); ++pi) {
+    const auto & ids = path_points[pi].lane_ids;
+    if (std::find(ids.begin(), ids.end(), lanelet_id) == ids.end()) {
+      continue;
+    }
+    const auto & pp = path_points[pi].point.pose.position;
+    const double dx = pp.x - target_point.x;
+    const double dy = pp.y - target_point.y;
+    const double d2 = dx * dx + dy * dy;
+    if (d2 < min_dist_sq) {
+      min_dist_sq = d2;
+      closest_idx = pi;
+    }
+  }
+  if (!closest_idx || min_dist_sq > lane_end_match_tolerance_sq) {
+    return std::nullopt;
+  }
+  return closest_idx;
+}
+
+std::vector<PathPointWithLaneId> generate_shift_points(
+  const LaneChangeBoundaryInfo & info, const QuinticShiftCoeffs & coeffs, const double L,
+  const double delta_arc_length, const double speed_limit,
+  const lanelet::ConstLanelet & lanelet_next, const lanelet::Id lanelet_prev_id)
+{
+  std::vector<PathPointWithLaneId> interp_points;
+  for (double s = 0.0; s <= L + 1e-6; s += delta_arc_length) {
+    const double sc = std::min(s, L);
+    const double y_s = evaluate_quintic(coeffs, sc);
+    const double yp_s = evaluate_quintic_derivative(coeffs, sc);
+
+    const double s_on_next = info.s_projection + sc;
+    if (s_on_next > info.next_centerline_length) {
+      break;
+    }
+
+    const auto base_2d =
+      lanelet::geometry::interpolatedPointAtDistance(lanelet_next.centerline2d(), s_on_next);
+    const auto base_3d =
+      lanelet::geometry::interpolatedPointAtDistance(lanelet_next.centerline(), s_on_next);
+
+    const double ds = std::min(yaw_step, info.next_centerline_length - s_on_next);
+    double base_yaw;
+    if (ds > 1e-6) {
+      const auto fwd =
+        lanelet::geometry::interpolatedPointAtDistance(lanelet_next.centerline2d(), s_on_next + ds);
+      base_yaw = std::atan2(fwd.y() - base_2d.y(), fwd.x() - base_2d.x());
+    } else {
+      const auto bwd = lanelet::geometry::interpolatedPointAtDistance(
+        lanelet_next.centerline2d(), std::max(0.0, s_on_next - yaw_step));
+      base_yaw = std::atan2(base_2d.y() - bwd.y(), base_2d.x() - bwd.x());
+    }
+
+    PathPointWithLaneId pp;
+    pp.point.pose.position.x = base_2d.x() + y_s * (-std::sin(base_yaw));
+    pp.point.pose.position.y = base_2d.y() + y_s * std::cos(base_yaw);
+    pp.point.pose.position.z = base_3d.z();
+    pp.point.pose.orientation =
+      autoware_utils::create_quaternion_from_yaw(base_yaw + std::atan2(yp_s, 1.0));
+    pp.point.longitudinal_velocity_mps = speed_limit;
+    pp.lane_ids = {lanelet_next.id()};
+    if (sc < L / 2.0) {
+      pp.lane_ids.push_back(lanelet_prev_id);
+    }
+    interp_points.push_back(pp);
+  }
+  return interp_points;
+}
+
+void splice_shift_points(
+  std::vector<PathPointWithLaneId> & path_points, const size_t prev_end_idx,
+  const std::vector<PathPointWithLaneId> & interp_points,
+  const lanelet::ConstLanelet & lanelet_next, const double merge_s_on_next)
+{
+  size_t merge_idx = path_points.size();
+  std::optional<size_t> last_next_idx;
+  for (size_t pi = prev_end_idx + 1; pi < path_points.size(); ++pi) {
+    const auto & ids = path_points[pi].lane_ids;
+    if (std::find(ids.begin(), ids.end(), lanelet_next.id()) == ids.end()) {
+      continue;
+    }
+    last_next_idx = pi;
+    const auto pp_2d = lanelet::BasicPoint2d(
+      path_points[pi].point.pose.position.x, path_points[pi].point.pose.position.y);
+    const auto pp_arc = lanelet::geometry::toArcCoordinates(lanelet_next.centerline2d(), pp_2d);
+    if (pp_arc.length >= merge_s_on_next) {
+      merge_idx = pi;
+      break;
+    }
+  }
+  if (merge_idx == path_points.size() && last_next_idx) {
+    merge_idx = *last_next_idx + 1;
+  }
+
+  const size_t erase_begin = prev_end_idx;
+  const size_t erase_end = std::min(merge_idx, path_points.size());
+  path_points.erase(path_points.begin() + erase_begin, path_points.begin() + erase_end);
+  path_points.insert(path_points.begin() + erase_begin, interp_points.begin(), interp_points.end());
+}
+
 }  // namespace
 
 // ===========================================================================
@@ -983,7 +1237,8 @@ bool PathPlanner::update_current_lanelet(const geometry_msgs::msg::Pose & curren
   return false;
 }
 
-std::optional<PathWithLaneId> PathPlanner::plan_path(const geometry_msgs::msg::Pose & current_pose)
+std::optional<PathWithLaneId> PathPlanner::plan_path(
+  const geometry_msgs::msg::Pose & current_pose, const double ego_velocity)
 {
   const auto path_length_backward = params_.path_planning.path_length.backward;
   const auto path_length_forward = params_.path_planning.path_length.forward;
@@ -1034,7 +1289,7 @@ std::optional<PathWithLaneId> PathPlanner::plan_path(const geometry_msgs::msg::P
     if (prev_lanelets.empty()) {
       break;
     }
-    // [Bug fix] Prefer a lanelet that is in the route at branch points
+    // Prefer a lanelet that is in the route at branch points
     const auto selected = select_route_preferred_lanelet(prev_lanelets, route_context_);
     lanelets.insert(lanelets.begin(), selected);
     backward_lanelets_length += lanelet::geometry::length2d(selected);
@@ -1054,18 +1309,57 @@ std::optional<PathWithLaneId> PathPlanner::plan_path(const geometry_msgs::msg::P
   lanelets.insert(
     lanelets.end(), forward_lanelets_within_route->begin(), forward_lanelets_within_route->end());
 
-  //  Extend lanelets by forward_length even outside planned route to ensure
-  //  ego footprint is inside lanelets if ego is at the end of goal lane
-  auto forward_lanelets_length = lanelet::utils::getLaneletLength2d(*forward_lanelets_within_route);
-  while (forward_lanelets_length < forward_length) {
-    const auto next_lanelets = route_context_.routing_graph_ptr->following(lanelets.back());
-    if (next_lanelets.empty()) {
-      break;
+  // If the next preferred lanelet is a lateral neighbor of the last one we collected, extend
+  // across the lane change. `s_before_lc` holds the arc length at the discontinuity within
+  // `lanelets` and serves as the intersection-check cutoff for that case.
+  std::optional<double> s_before_lc = [&]() -> std::optional<double> {
+    const auto & preferred = route_context_.preferred_lanelets;
+    auto pref_it = preferred.end();
+    for (auto it = lanelets.rbegin(); it != lanelets.rend(); ++it) {
+      pref_it = std::find_if(
+        preferred.begin(), preferred.end(), [&](const auto & ll) { return ll.id() == it->id(); });
+      if (pref_it != preferred.end()) {
+        break;
+      }
     }
-    // [Bug fix] Prefer a lanelet that is in the route at branch points
-    const auto selected = select_route_preferred_lanelet(next_lanelets, route_context_);
-    lanelets.insert(lanelets.end(), selected);
-    forward_lanelets_length += lanelet::geometry::length2d(selected);
+    if (pref_it == preferred.end() || std::next(pref_it) == preferred.end()) {
+      return std::nullopt;
+    }
+    const auto & next_preferred = *std::next(pref_it);
+    const auto following = route_context_.routing_graph_ptr->following(*pref_it);
+    const bool is_longitudinal_successor = std::any_of(
+      following.begin(), following.end(),
+      [&](const auto & ll) { return ll.id() == next_preferred.id(); });
+    if (is_longitudinal_successor) {
+      return std::nullopt;
+    }
+
+    while (lanelets.back().id() != pref_it->id()) {
+      lanelets.pop_back();
+    }
+    const double s_boundary = lanelet::utils::getLaneletLength2d(lanelets);
+    lanelets.push_back(next_preferred);
+    const auto forward_from_next =
+      utils::get_lanelets_within_route_after(next_preferred, route_context_, forward_length);
+    if (forward_from_next) {
+      lanelets.insert(lanelets.end(), forward_from_next->begin(), forward_from_next->end());
+    }
+    return s_boundary;
+  }();
+
+  if (!s_before_lc) {
+    auto forward_lanelets_length =
+      lanelet::utils::getLaneletLength2d(*forward_lanelets_within_route);
+    while (forward_lanelets_length < forward_length) {
+      const auto next_lanelets = route_context_.routing_graph_ptr->following(lanelets.back());
+      if (next_lanelets.empty()) {
+        break;
+      }
+      // Prefer a lanelet that is in the route at branch points
+      const auto selected = select_route_preferred_lanelet(next_lanelets, route_context_);
+      lanelets.insert(lanelets.end(), selected);
+      forward_lanelets_length += lanelet::geometry::length2d(selected);
+    }
   }
 
   const auto s = s_on_current_lanelet + backward_lanelets_length;
@@ -1094,11 +1388,16 @@ std::optional<PathWithLaneId> PathPlanner::plan_path(const geometry_msgs::msg::P
       goal_arc_length += lanelet::geometry::length2d(*it);
     }
 
+    // Limit the intersection check to the pre-lane-change range to avoid false positives from
+    // the centerline/bound discontinuity at the lane-change boundary.
+    const double s_check_end =
+      s_before_lc ? std::min(s_end_val + vehicle_info_.max_longitudinal_offset_m, *s_before_lc)
+                  : s_end_val + vehicle_info_.max_longitudinal_offset_m;
     const lanelet::LaneletSequence lanelet_seq(lanelets);
     if (
       const auto s_intersection = utils::get_first_intersection_arc_length(
-        lanelet_seq, std::max(0., s_start - vehicle_info_.max_longitudinal_offset_m),
-        s_end_val + vehicle_info_.max_longitudinal_offset_m, vehicle_info_.vehicle_length_m)) {
+        lanelet_seq, std::max(0., s_start - vehicle_info_.max_longitudinal_offset_m), s_check_end,
+        vehicle_info_.vehicle_length_m)) {
       s_end_val = std::min(
         s_end_val, std::max(0., *s_intersection - vehicle_info_.max_longitudinal_offset_m));
     }
@@ -1113,11 +1412,12 @@ std::optional<PathWithLaneId> PathPlanner::plan_path(const geometry_msgs::msg::P
     return std::nullopt;
   }
 
-  return generate_path(lanelets, s_start, s_end);
+  return generate_path(lanelets, s_start, s_end, ego_velocity);
 }
 
 std::optional<PathWithLaneId> PathPlanner::generate_path(
-  const lanelet::LaneletSequence & lanelet_sequence, const double s_start, const double s_end)
+  const lanelet::LaneletSequence & lanelet_sequence, const double s_start, const double s_end,
+  const double ego_velocity)
 {
   if (lanelet_sequence.empty()) {
     RCLCPP_ERROR(logger_, "Lanelet sequence is empty");
@@ -1215,6 +1515,9 @@ std::optional<PathWithLaneId> PathPlanner::generate_path(
     return std::nullopt;
   }
 
+  interpolate_lane_change_sections(
+    path_points_with_lane_id, extended_lanelet_sequence, ego_velocity);
+
   auto trajectory = autoware::experimental::trajectory::pretty_build(path_points_with_lane_id);
   if (!trajectory) {
     RCLCPP_ERROR(logger_, "Failed to build trajectory from path points");
@@ -1290,7 +1593,83 @@ std::optional<PathWithLaneId> PathPlanner::generate_path(
 }
 
 // ===========================================================================
-// Trajectory shifting (from path_shift_to_ego.cpp)
+// Lane change interpolation
+// ===========================================================================
+
+void PathPlanner::interpolate_lane_change_sections(
+  std::vector<PathPointWithLaneId> & path_points, const lanelet::LaneletSequence & lanelet_sequence,
+  const double ego_velocity)
+{
+  if (lanelet_sequence.size() < 2 || path_points.size() < 2) {
+    return;
+  }
+
+  const auto & shift_params = params_.path_planning.path_shift;
+  const auto & lanelets = lanelet_sequence.lanelets();
+
+  const auto boundary_idx = find_lane_change_boundary(lanelets, shift_params.minimum_shift_length);
+  if (!boundary_idx) {
+    return;
+  }
+
+  const auto & lanelet_prev = lanelets[*boundary_idx];
+  const auto & lanelet_next = lanelets[*boundary_idx + 1];
+
+  // Project the previous lanelet's end onto the next centerline to obtain
+  // lateral offset, yaw diff, initial curvature, and arc-length projection.
+  const auto info = compute_lane_change_boundary_info(lanelet_prev, lanelet_next);
+  if (info.abs_lateral_offset < shift_params.minimum_shift_length) {
+    return;
+  }
+
+  const auto prev_end_idx =
+    find_closest_path_index(path_points, lanelet_prev.id(), info.prev_end_geom);
+  if (!prev_end_idx) {
+    return;
+  }
+
+  const double clamped_v =
+    std::max(std::max(0.0, ego_velocity), shift_params.min_speed_for_curvature);
+  double L = compute_shift_length_from_lateral_accel(
+    info.abs_lateral_offset, clamped_v, shift_params.lateral_accel_limit,
+    shift_params.minimum_shift_distance);
+
+  // Intentionally limit the shift length to lanelet_next only; extending the
+  // shift across subsequent lanelets would require multi-lanelet interpolation
+  // in generate_shift_points/splice_shift_points and is not supported.
+  // TODO(odashima): check required behavior
+  const double available_length = info.next_centerline_length - info.s_projection;
+  if (L > available_length) {
+    RCLCPP_WARN(
+      logger_, "Lane change interpolation: shift length %.2f m > available %.2f m, clamping.", L,
+      available_length);
+    L = available_length;
+  }
+  if (L < 1e-3) {
+    return;
+  }
+
+  const auto coeffs =
+    compute_quintic_shift_coeffs(info.lateral_offset, info.yaw_diff, info.start_curvature, L);
+
+  const double next_speed_limit =
+    route_context_.traffic_rules_ptr
+      ->speedLimit(route_context_.lanelet_map_ptr->laneletLayer.get(lanelet_next.id()))
+      .speedLimit.value();
+
+  const auto interp_points = generate_shift_points(
+    info, coeffs, L, params_.path_planning.output.delta_arc_length, next_speed_limit, lanelet_next,
+    lanelet_prev.id());
+  if (interp_points.empty()) {
+    return;
+  }
+
+  splice_shift_points(
+    path_points, *prev_end_idx, interp_points, lanelet_next, info.s_projection + L);
+}
+
+// ===========================================================================
+// Trajectory shifting to base_link
 // ===========================================================================
 
 Trajectory PathPlanner::shift_trajectory_to_ego(
@@ -1317,22 +1696,11 @@ Trajectory PathPlanner::shift_trajectory_to_ego(
     return trajectory;
   }
 
-  // Lower bound on velocity used to compute kappa0 = yaw_rate / v.
-  const double clamped_velocity = std::max(std::abs(ego_velocity), params.min_speed_for_curvature);
-
-  // Allowed lateral acceleration (comfort/safety budget).
-  const double a_limit = params.lateral_accel_limit;
-
-  // Peak curvature of the quintic polynomial (q=0, kappa0=0 case):
-  //   kappa_max = |y''|_max = (10*sqrt(3)/3) * |d| / L^2  ~=  5.774 * |d| / L^2
-  constexpr double kappa_coeff = 5.77;  // 10*sqrt(3)/3
-
-  // Require a_lat = v^2 * kappa_max <= a_limit
-  //   => L >= v * sqrt(kappa_coeff * |d| / a_limit)
+  const double clamped_velocity =
+    std::max(std::max(0.0, ego_velocity), params.min_speed_for_curvature);
   const double abs_d = std::abs(lateral_offset);
-  double L = std::max(
-    params.minimum_shift_distance,
-    std::abs(clamped_velocity) * std::sqrt(kappa_coeff * abs_d / a_limit));
+  double L = compute_shift_length_from_lateral_accel(
+    abs_d, clamped_velocity, params.lateral_accel_limit, params.minimum_shift_distance);
 
   double accumulated_length = 0.0;
   size_t merge_idx = nearest_idx;
@@ -1356,19 +1724,7 @@ Trajectory PathPlanner::shift_trajectory_to_ego(
   }
 
   const double kappa0 = ego_yaw_rate / clamped_velocity;
-
-  // Quintic polynomial: y(s) = a0 + a1*s + a2*s^2 + a3*s^3 + a4*s^4 + a5*s^5
-  // BCs: s=0: y=d, y'=tan(dtheta), y''=kappa0; s=L: y=0, y'=0, y''=0
-  const double d = lateral_offset;
-  const double q = std::tan(std::clamp(signed_yaw_dev, -M_PI / 4.0, M_PI / 4.0));
-  const double L2 = L * L;
-  const double L3 = L2 * L;
-  const double a0 = d;
-  const double a1 = q;
-  const double a2 = kappa0 / 2.0;
-  const double a3 = -(20.0 * d + 12.0 * q * L + 3.0 * kappa0 * L2) / (2.0 * L3);
-  const double a4 = (30.0 * d + 16.0 * q * L + 3.0 * kappa0 * L2) / (2.0 * L3 * L);
-  const double a5 = -(12.0 * d + 6.0 * q * L + kappa0 * L2) / (2.0 * L3 * L2);
+  const auto coeffs = compute_quintic_shift_coeffs(lateral_offset, signed_yaw_dev, kappa0, L);
 
   const double ref_velocity = trajectory.points.at(nearest_idx).longitudinal_velocity_mps;
   std::vector<TrajectoryPoint> shifted_points;
@@ -1379,10 +1735,8 @@ Trajectory PathPlanner::shift_trajectory_to_ego(
   shifted_points.push_back(ego_pt);
 
   for (double s = delta_arc_length; s < L; s += delta_arc_length) {
-    const double s2 = s * s;
-    const double s3 = s2 * s;
-    const double y_s = a0 + a1 * s + a2 * s2 + a3 * s3 + a4 * s3 * s + a5 * s3 * s2;
-    const double yp_s = a1 + 2.0 * a2 * s + 3.0 * a3 * s2 + 4.0 * a4 * s3 + 5.0 * a5 * s3 * s;
+    const double y_s = evaluate_quintic(coeffs, s);
+    const double yp_s = evaluate_quintic_derivative(coeffs, s);
 
     const auto base_pose =
       autoware::motion_utils::calcLongitudinalOffsetPose(trajectory.points, ego_pose.position, s);
