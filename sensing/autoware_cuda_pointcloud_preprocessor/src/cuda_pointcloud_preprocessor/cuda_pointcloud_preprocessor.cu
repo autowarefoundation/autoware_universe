@@ -101,6 +101,8 @@ CudaPointcloudPreprocessor::CudaPointcloudPreprocessor() : stream_(initialize_st
 
   device_transformed_points_.resize(num_organized_points_);
   device_crop_mask_.resize(num_organized_points_);
+  device_nan_mask_.resize(num_organized_points_);
+  device_mismatch_mask_.resize(num_organized_points_);
   device_ring_outlier_mask_.resize(num_organized_points_);
   device_indices_.resize(num_organized_points_);
 

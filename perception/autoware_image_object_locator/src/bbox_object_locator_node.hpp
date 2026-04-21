@@ -15,7 +15,7 @@
 #ifndef BBOX_OBJECT_LOCATOR_NODE_HPP_
 #define BBOX_OBJECT_LOCATOR_NODE_HPP_
 
-#include <autoware/universe_utils/ros/transform_listener.hpp>
+#include <autoware_utils_tf/transform_listener.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -41,9 +41,9 @@
 
 namespace autoware::image_object_locator
 {
-using autoware::universe_utils::TransformListener;
 using autoware_perception_msgs::msg::DetectedObject;
 using autoware_perception_msgs::msg::DetectedObjects;
+using autoware_utils_tf::TransformListener;
 using sensor_msgs::msg::CameraInfo;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
