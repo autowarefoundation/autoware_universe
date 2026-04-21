@@ -9,7 +9,7 @@ validator:
     type: string_array
     default_value: [""]
     description: List of filter names that run in which results are logged but do not affect trajectory feasibility.
-    read_only: true
+    read_only: false
 
   out_of_lane:
     time:

@@ -213,12 +213,13 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
       break;
     }
   }
-  metrics.push_back(autoware_trajectory_validator::build<MetricReport>()
-                      .validator_name(get_name())
-                      .validator_category(category())
-                      .metric_name("check_crossing_red_light")
-                      .metric_value(0.0)
-                      .level(is_crossing_red ? MetricReport::ERROR : MetricReport::OK));
+  metrics.push_back(
+    autoware_trajectory_validator::build<MetricReport>()
+      .validator_name(get_name())
+      .validator_category(category())
+      .metric_name("check_crossing_red_light")
+      .metric_value(0.0)
+      .level(is_crossing_red ? MetricReport::ERROR : MetricReport::OK));
   is_feasible = is_feasible && !is_crossing_red;
 
   // Check for amber light crossings
@@ -258,12 +259,13 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
       }
     }
   }
-  metrics.push_back(autoware_trajectory_validator::build<MetricReport>()
-                      .validator_name(get_name())
-                      .validator_category(category())
-                      .metric_name("check_crossing_amber_light")
-                      .metric_value(0.0)
-                      .level(is_crossing_amber ? MetricReport::ERROR : MetricReport::OK));
+  metrics.push_back(
+    autoware_trajectory_validator::build<MetricReport>()
+      .validator_name(get_name())
+      .validator_category(category())
+      .metric_name("check_crossing_amber_light")
+      .metric_value(0.0)
+      .level(is_crossing_amber ? MetricReport::ERROR : MetricReport::OK));
   is_feasible = is_feasible && !is_crossing_amber;
 
   return ValidationResult{is_feasible, std::move(metrics)};
