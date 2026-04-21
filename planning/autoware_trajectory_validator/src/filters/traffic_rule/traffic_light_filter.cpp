@@ -166,7 +166,7 @@ tl::expected<void, std::string> TrafficLightFilter::is_feasible(
   trajectory = experimental::trajectory::crop_distance(
     trajectory, 0.0, stopped_intervals);  // Only consider trajectory points before the first stop
 
-  if (trajectory.length() <= experimental::trajectory::k_points_minimum_dist_threshold) {
+  if (trajectory.length() <= experimental::trajectory::k_epsilon_distance) {
     return {};  // allow trajectories that are too short as they do not cross traffic lights
   }
 
