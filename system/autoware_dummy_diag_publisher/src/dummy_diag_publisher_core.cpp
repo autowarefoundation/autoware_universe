@@ -26,17 +26,6 @@
 
 namespace autoware::dummy_diag_publisher
 {
-std::vector<std::string> split(const std::string & str, const char delim)
-{
-  std::vector<std::string> elems;
-  std::stringstream ss(str);
-  std::string item;
-  while (std::getline(ss, item, delim)) {
-    elems.push_back(item);
-  }
-  return elems;
-}
-
 std::optional<DummyDiagPublisher::Status> DummyDiagPublisher::convertStrToStatus(
   const std::string & status_str)
 {
@@ -91,12 +80,27 @@ void DummyDiagPublisher::loadRequiredDiags()
 
   std::set<std::string> diag_names;
 
-  for (const auto & param_name : param_names) {
-    const auto split_names = split(param_name, '.');
-    const auto & param_required_diags = split_names.at(0);
-    const auto & param_diag = split_names.at(1);
+  const std::string required_diags_prefix = param_key + std::string(".");
+  static const std::string is_active_suffix = ".is_active";
+  static const std::string status_suffix = ".status";
+  const auto ends_with = [](const std::string & s, const std::string & suf) {
+    return s.size() > suf.size() &&
+           s.compare(s.size() - suf.size(), suf.size(), suf) == 0;
+  };
 
-    const auto diag_name_with_prefix = fmt::format("{0}.{1}", param_required_diags, param_diag);
+  for (const auto & param_name : param_names) {
+    if (param_name.rfind(required_diags_prefix, 0) != 0) {
+      continue;
+    }
+
+    std::string param_diag = param_name.substr(required_diags_prefix.size());
+    if (ends_with(param_diag, is_active_suffix)) {
+      param_diag.resize(param_diag.size() - is_active_suffix.size());
+    } else if (ends_with(param_diag, status_suffix)) {
+      param_diag.resize(param_diag.size() - status_suffix.size());
+    }
+
+    const auto diag_name_with_prefix = required_diags_prefix + param_diag;
 
     if (diag_names.count(diag_name_with_prefix) != 0) {
       continue;
