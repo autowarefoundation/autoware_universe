@@ -109,16 +109,14 @@ std::optional<CriticalPointPair> apply_backward_buffer_and_filter(
     return result;
   }
 
-  const double departure_s =
-    departure_point.dist_along_trajectory_m - departure_point.ego_front_to_proj_offset_m;
-
   for (auto it = std::next(side_value.rbegin()); it != side_value.rend(); ++it) {
-    const double dist_to_crash = departure_s - it->dist_along_trajectory_m;
+    const double dist_between_proj =
+      bg::distance(result.physical_departure_point.pt_on_ego, it->pt_on_ego);
 
-    if (dist_to_crash <= param.longitudinal_margin_m) {
+    if (dist_between_proj >= param.longitudinal_margin_m) {
+      // dist_to_crash strictly increases, so we can stop searching.
       result.safety_buffer_start = *it;
       result.safety_buffer_start.departure_type = DepartureType::CRITICAL;
-    } else {
       break;
     }
   }
@@ -353,7 +351,7 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
 
       closest_bound.time_from_start =
         ego_pred_traj[i].time_from_start.sec + ego_pred_traj[i].time_from_start.nanosec * 1e-9;
-      closest_bound.dist_along_trajectory_m = s - closest_bound.ego_front_to_proj_offset_m;
+      closest_bound.dist_along_trajectory_m = s;
       side_value.push_back(closest_bound);
       if (closest_bound.lat_dist < 0.01 && !has_passed_boundary[side_key]) {
         has_passed_boundary[side_key] = true;

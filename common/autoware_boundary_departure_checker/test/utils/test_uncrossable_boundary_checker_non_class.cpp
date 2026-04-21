@@ -180,7 +180,7 @@ TEST(UncrossableBoundaryTest, TestMiddleOfSegmentCrossingForLonDist)
   EXPECT_DOUBLE_EQ(proj_at_i.lat_dist, 0.0);
   EXPECT_DOUBLE_EQ(proj_at_i.pt_on_ego.x(), 10.0);
   EXPECT_DOUBLE_EQ(proj_at_i.ego_front_to_proj_offset_m, 2.0);
-  EXPECT_DOUBLE_EQ(proj_at_i.dist_along_trajectory_m, 8.0);
+  EXPECT_DOUBLE_EQ(proj_at_i.dist_along_trajectory_m, 10.0);
 }
 
 TEST(UncrossableBoundaryTest, TestRealisticLaneDeparture)

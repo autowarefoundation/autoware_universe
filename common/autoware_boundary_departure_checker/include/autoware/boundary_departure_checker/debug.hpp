@@ -16,7 +16,6 @@
 #define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DEBUG_HPP_
 
 #include "autoware/boundary_departure_checker/data_structs.hpp"
-#include "autoware/boundary_departure_checker/type_alias.hpp"
 
 #include <visualization_msgs/msg/marker_array.hpp>
 
