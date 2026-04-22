@@ -341,6 +341,8 @@ void TrajectoryValidator::publish_debug(
   const std::unordered_map<std::string, double> & processing_time,
   const geometry_msgs::msg::Pose & marker_pose)
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
   publish_plugins_debug_markers();
   publish_plugins_report_text(marker_pose);
   publish_processing_time(processing_time);
@@ -349,6 +351,8 @@ void TrajectoryValidator::publish_debug(
 
 void TrajectoryValidator::publish_plugins_debug_markers() const
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
   for (const auto & plugin : plugins_) {
     auto plugin_markers = plugin->take_debug_markers();
     pub_debug_->publish<visualization_msgs::msg::MarkerArray>(
@@ -358,6 +362,8 @@ void TrajectoryValidator::publish_plugins_debug_markers() const
 
 void TrajectoryValidator::publish_plugins_report_text(const geometry_msgs::msg::Pose & marker_pose)
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
   std::unordered_map<std::string, int> used_filters;
   for (const auto & eval : evaluation_tables_) {
     for (const auto & [category, evaluations] : eval.evaluations) {
@@ -413,6 +419,8 @@ void TrajectoryValidator::publish_plugins_report_text(const geometry_msgs::msg::
 void TrajectoryValidator::publish_processing_time(
   const std::unordered_map<std::string, double> & processing_time)
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
   for (const auto & [key, value] : processing_time) {
     if (key == "Total") {
       pub_debug_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -427,6 +435,8 @@ void TrajectoryValidator::publish_processing_time(
 void TrajectoryValidator::publish_processing_time_text(
   const std::unordered_map<std::string, double> & processing_time)
 {
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
   fmt::memory_buffer out;
   auto time_report = std::back_inserter(out);
   fmt::format_to(time_report, "\n--- Trajectory Validator Processing Time Report ---\n");

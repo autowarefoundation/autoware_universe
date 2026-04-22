@@ -80,6 +80,9 @@ public:
   [[nodiscard]] std::string get_name() const { return name_; }
   [[nodiscard]] bool is_shadow_mode() const { return is_shadow_mode_; }
 
+  /**
+   * @brief Atomically retrieve and clear the plugin's accumulated debug markers.
+   */
   [[nodiscard]] visualization_msgs::msg::MarkerArray take_debug_markers()
   {
     visualization_msgs::msg::MarkerArray output_markers;

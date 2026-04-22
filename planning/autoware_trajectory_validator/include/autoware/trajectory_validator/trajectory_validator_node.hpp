@@ -108,10 +108,19 @@ public:
   explicit TrajectoryValidator(const rclcpp::NodeOptions & node_options);
 
 private:
+  /**
+   * @brief Initialise the node's subscribers.
+   */
   void subscribers();
 
+  /**
+   * @brief Initialise the node's publishers.
+   */
   void publishers();
 
+  /**
+   * @brief Gather the latest inputs required to run the filter plugins.
+   */
   tl::expected<FilterContext, std::string> take_data();
 
   void process(const CandidateTrajectories::ConstSharedPtr msg);
@@ -134,14 +143,35 @@ private:
    */
   void publish_validation_reports(const std::vector<ValidationReport> & reports);
 
-  void publish_plugins_debug_markers() const;
-  void publish_plugins_report_text(const geometry_msgs::msg::Pose & marker_pose);
+  /**
+   * @brief Publish the union of all debug information.
+   */
   void publish_debug(
     const std::unordered_map<std::string, double> & processing_time,
     const geometry_msgs::msg::Pose & marker_pose);
+
+  /**
+   * @brief Publish each plugin's debug markers.
+   */
+  void publish_plugins_debug_markers() const;
+
+  /**
+   * @brief Publish each plugin's filtering report in a single string stamped marker.
+   */
+  void publish_plugins_report_text(const geometry_msgs::msg::Pose & marker_pose);
+
+  /**
+   * @brief Publish each plugin's processing time as scalar value.
+   * @param processing_time Map of plugin name -> elapsed time in [ms].
+   */
+  void publish_processing_time(const std::unordered_map<std::string, double> & processing_time);
+
+  /**
+   * @brief Publish each plugin's processing time in a single string stamped marker.
+   * @param processing_time Map of plugin name -> elapsed time in [ms].
+   */
   void publish_processing_time_text(
     const std::unordered_map<std::string, double> & processing_time);
-  void publish_processing_time(const std::unordered_map<std::string, double> & processing_time);
 
   // Parameters
   validator::ParamListener listener_;
