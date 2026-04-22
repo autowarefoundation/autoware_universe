@@ -84,7 +84,8 @@ void DummyDiagPublisher::loadRequiredDiags()
   static const std::string is_active_suffix = ".is_active";
   static const std::string status_suffix = ".status";
   const auto ends_with = [](const std::string & s, const std::string & suffix) {
-    return s.size() > suffix.size() && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+    return s.size() > suffix.size() &&
+           s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
   };
 
   for (const auto & param_name : param_names) {
