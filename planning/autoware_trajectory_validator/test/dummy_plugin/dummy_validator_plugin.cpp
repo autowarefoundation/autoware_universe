@@ -31,7 +31,7 @@ class DummyFilter : public ValidatorInterface
 public:
   DummyFilter() : ValidatorInterface("DummyFilter") {}
 
-  tl::expected<void, std::string> is_feasible(
+  result_t is_feasible(
     const TrajectoryPoints & traj_points, const FilterContext & /*context*/) final
   {
     if (traj_points.empty()) {

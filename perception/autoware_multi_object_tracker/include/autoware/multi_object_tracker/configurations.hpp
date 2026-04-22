@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__CONFIGURATIONS_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__CONFIGURATIONS_HPP_
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -24,6 +24,8 @@
 
 namespace autoware::multi_object_tracker
 {
+
+//// Online association (measurement <-> tracker matching)
 
 struct AssociatorConfig
 {
@@ -56,6 +58,8 @@ struct AssociatorConfig
   double unknown_association_giou_threshold;
 };
 
+//// Helper: per-label threshold table
+
 struct TrackedLabelThresholds
 {
   double unknown;
@@ -77,17 +81,12 @@ struct TrackedLabelThresholds
   }
 };
 
-struct TrackerProcessorConfig
-{
-  using LabelToTrackerTypeMap =
-    std::unordered_map<classes::Label, types::TrackerType, AssociatorConfig::EnumClassHash>;
+//// Tracker overlap manager (tracker-to-tracker layer: remove spatially redundant trackers)
 
-  LabelToTrackerTypeMap tracker_map;
-  float tracker_lifetime;                // [s]
+struct TrackerOverlapManagerConfig
+{
   float min_known_object_removal_iou;    // ratio [0, 1]
   float min_unknown_object_removal_iou;  // ratio [0, 1]
-  bool enable_unknown_object_velocity_estimation;
-  bool enable_unknown_object_motion_output;
   AssociatorConfig::LabelDoubleMap pruning_giou_thresholds;
   AssociatorConfig::LabelDoubleMap pruning_distance_thresholds;     // [m]
   AssociatorConfig::LabelDoubleMap pruning_distance_thresholds_sq;  // [m^2]
@@ -95,6 +94,20 @@ struct TrackerProcessorConfig
   double pruning_moving_object_speed;                               // [m/s]
   double pruning_static_iou_threshold;                              // [ratio]
 };
+
+//// Tracker creation (spawning, type mapping)
+
+struct TrackerCreationConfig
+{
+  using LabelToTrackerTypeMap =
+    std::unordered_map<classes::Label, types::TrackerType, AssociatorConfig::EnumClassHash>;
+
+  LabelToTrackerTypeMap tracker_map;
+  bool enable_unknown_object_velocity_estimation;
+  bool enable_unknown_object_motion_output;
+};
+
+//// Utility: safe map lookup
 
 template <typename Map, typename Key>
 auto get_map_value_if_exists(const Map & map, const Key & key)
