@@ -209,7 +209,9 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedLightIntersection)
   // Trajectory crossing stop line (0 -> 10)
   auto points = create_trajectory(0.0, 10.0);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible)
     << "Should return false when crossing red light stop line";
 }
 
@@ -257,7 +259,9 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithFrontOverhang)
   vehicle_info.max_longitudinal_offset_m = 2.0;
   filter_->set_vehicle_info(vehicle_info);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible)
     << "Should return false when crossing red light stop line";
 }
 
@@ -277,7 +281,9 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
 
   auto points = create_trajectory(0.0, 30.0, 5.0);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible)
     << "Should return false if amber light can be stopped";
 }
 
@@ -329,7 +335,9 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStopAndCannotPass)
 
   auto points = create_trajectory(0.0, 200.0, 10.0);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible)
     << "Should return false if ego can stop but cannot pass";
 }
 
@@ -352,7 +360,9 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
   // it should be rejected because it's treated as red.
   auto points = create_trajectory(0.0, 10.0, 10.0);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible)
     << "Should return false for amber light when treat_amber_light_as_red_light is true";
 }
 
