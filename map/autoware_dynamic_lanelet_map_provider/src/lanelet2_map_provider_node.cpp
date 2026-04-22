@@ -28,10 +28,8 @@ Lanelet2MapProviderNode::Lanelet2MapProviderNode(const rclcpp::NodeOptions & opt
   map_radius_ = declare_parameter<double>("map_radius");
   update_distance_threshold_ = declare_parameter<double>("update_distance_threshold");
 
-  cb_group_timer_ =
-    create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  cb_group_client_ =
-    create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+  cb_group_timer_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+  cb_group_client_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
   rclcpp::SubscriptionOptions sub_opts;
   sub_opts.callback_group = cb_group_timer_;
@@ -44,14 +42,13 @@ Lanelet2MapProviderNode::Lanelet2MapProviderNode(const rclcpp::NodeOptions & opt
     "input/lanelet2_map_metadata", rclcpp::QoS{1}.transient_local(),
     [this](const LaneletMapMetaData::ConstSharedPtr msg) { on_map_metadata(msg); }, sub_opts);
 
-  pub_submap_ = create_publisher<LaneletMapBin>(
-    "output/lanelet2_submap", rclcpp::QoS{1}.transient_local());
+  pub_submap_ =
+    create_publisher<LaneletMapBin>("output/lanelet2_submap", rclcpp::QoS{1}.transient_local());
 
   client_ = create_client<GetSelectedLanelet2Map>(
     "service/get_selected_lanelet2_map", rmw_qos_profile_services_default, cb_group_client_);
 
-  timer_ = create_wall_timer(
-    std::chrono::seconds(1), [this] { on_timer(); }, cb_group_timer_);
+  timer_ = create_wall_timer(std::chrono::seconds(1), [this] { on_timer(); }, cb_group_timer_);
 }
 
 void Lanelet2MapProviderNode::on_odometry(const Odometry::ConstSharedPtr msg)
@@ -63,8 +60,7 @@ void Lanelet2MapProviderNode::on_map_metadata(const LaneletMapMetaData::ConstSha
 {
   map_metadata_ = *msg;
   RCLCPP_INFO(
-    get_logger(), "Received lanelet2 map metadata with %zu cells.",
-    msg->metadata_list.size());
+    get_logger(), "Received lanelet2 map metadata with %zu cells.", msg->metadata_list.size());
 }
 
 void Lanelet2MapProviderNode::on_timer()
@@ -83,7 +79,8 @@ void Lanelet2MapProviderNode::on_timer()
 
   const auto cell_ids = select_cells(cx, cy, map_radius_);
   if (cell_ids.empty()) {
-    RCLCPP_WARN(get_logger(), "No map cells overlap the ego position (radius=%.1f m).", map_radius_);
+    RCLCPP_WARN(
+      get_logger(), "No map cells overlap the ego position (radius=%.1f m).", map_radius_);
     return;
   }
 
@@ -101,8 +98,7 @@ void Lanelet2MapProviderNode::on_timer()
   first_update_ = false;
 
   client_->async_send_request(
-    request,
-    [this](rclcpp::Client<GetSelectedLanelet2Map>::SharedFuture future) {
+    request, [this](rclcpp::Client<GetSelectedLanelet2Map>::SharedFuture future) {
       request_in_flight_ = false;
       const auto response = future.get();
       if (response->lanelet2_cells.data.empty()) {
