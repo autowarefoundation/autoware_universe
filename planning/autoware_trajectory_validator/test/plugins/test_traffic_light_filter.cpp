@@ -211,8 +211,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedLightIntersection)
 
   const auto res = filter_->is_feasible(points, context_);
   ASSERT_TRUE(res.has_value());
-  EXPECT_FALSE(res->is_feasible)
-    << "Should return false when crossing red light stop line";
+  EXPECT_FALSE(res->is_feasible) << "Should return false when crossing red light stop line";
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithGreenLight)
@@ -261,8 +260,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithFrontOverhang)
 
   const auto res = filter_->is_feasible(points, context_);
   ASSERT_TRUE(res.has_value());
-  EXPECT_FALSE(res->is_feasible)
-    << "Should return false when crossing red light stop line";
+  EXPECT_FALSE(res->is_feasible) << "Should return false when crossing red light stop line";
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
@@ -283,8 +281,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
 
   const auto res = filter_->is_feasible(points, context_);
   ASSERT_TRUE(res.has_value());
-  EXPECT_FALSE(res->is_feasible)
-    << "Should return false if amber light can be stopped";
+  EXPECT_FALSE(res->is_feasible) << "Should return false if amber light can be stopped";
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberLightCannotStop)
@@ -337,8 +334,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStopAndCannotPass)
 
   const auto res = filter_->is_feasible(points, context_);
   ASSERT_TRUE(res.has_value());
-  EXPECT_FALSE(res->is_feasible)
-    << "Should return false if ego can stop but cannot pass";
+  EXPECT_FALSE(res->is_feasible) << "Should return false if ego can stop but cannot pass";
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
