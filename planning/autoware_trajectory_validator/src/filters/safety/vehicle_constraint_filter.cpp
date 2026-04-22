@@ -105,7 +105,7 @@ std::vector<std::optional<double>> to_steering_angles(
 }
 }  // namespace
 
-VehicleConstraintFilter::VehicleConstraintFilter() : ValidatorInterface("VehicleConstraintFilter")
+VehicleConstraintFilter::VehicleConstraintFilter() : ValidatorInterface("vehicle_constraint_filter")
 {
 }
 

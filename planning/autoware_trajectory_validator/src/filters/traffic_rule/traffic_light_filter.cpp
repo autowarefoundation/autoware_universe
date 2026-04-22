@@ -91,7 +91,7 @@ std::optional<std::string> is_invalid_input(
 namespace autoware::trajectory_validator::plugin::traffic_rule
 {
 
-TrafficLightFilter::TrafficLightFilter() : ValidatorInterface("TrafficLightFilter")
+TrafficLightFilter::TrafficLightFilter() : ValidatorInterface("traffic_light_filter")
 {
 }
 
