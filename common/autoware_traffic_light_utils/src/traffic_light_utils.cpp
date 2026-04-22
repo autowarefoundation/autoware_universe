@@ -55,8 +55,8 @@ bool hasTrafficLightShapeAndColor(
   const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
   const uint8_t & lamp_shape, const uint8_t & lamp_color)
 {
-  const auto it_lamp = std::find_if(
-    elements.begin(), elements.end(), [&lamp_shape, &lamp_color](const auto & x) {
+  const auto it_lamp =
+    std::find_if(elements.begin(), elements.end(), [&lamp_shape, &lamp_color](const auto & x) {
       return x.shape == lamp_shape && x.color == lamp_color;
     });
 
