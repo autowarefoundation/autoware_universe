@@ -80,7 +80,8 @@ TEST_F(TestCellOverlapsCircle, CornerJustInsideRadius)
   const double r = 5.0;
   const double offset = r - 0.01;  // just inside
   EXPECT_TRUE(
-    Lanelet2MapProviderNode::cell_overlaps_circle(cell, 10.0 + offset * 0.707, 10.0 + offset * 0.707, r));
+    Lanelet2MapProviderNode::cell_overlaps_circle(
+      cell, 10.0 + offset * 0.707, 10.0 + offset * 0.707, r));
 }
 
 TEST_F(TestCellOverlapsCircle, CornerJustOutsideRadius)
@@ -88,7 +89,8 @@ TEST_F(TestCellOverlapsCircle, CornerJustOutsideRadius)
   const double r = 5.0;
   const double offset = r + 0.01;  // just outside
   EXPECT_FALSE(
-    Lanelet2MapProviderNode::cell_overlaps_circle(cell, 10.0 + offset * 0.707, 10.0 + offset * 0.707, r));
+    Lanelet2MapProviderNode::cell_overlaps_circle(
+      cell, 10.0 + offset * 0.707, 10.0 + offset * 0.707, r));
 }
 
 TEST_F(TestCellOverlapsCircle, CircleOutsideCellNoOverlap)
@@ -153,10 +155,9 @@ TEST_F(TestLanelet2MapProviderNode, SubmapPublishedAfterServiceResponse)
 
   // Stub out the GetSelectedLanelet2Map service so the node doesn't hang.
   auto service = helper_->create_service<GetSelectedLanelet2Map>(
-    "service/get_selected_lanelet2_map",
-    [](
-      const GetSelectedLanelet2Map::Request::SharedPtr /*req*/,
-      GetSelectedLanelet2Map::Response::SharedPtr res) {
+    "service/get_selected_lanelet2_map", [](
+                                           const GetSelectedLanelet2Map::Request::SharedPtr /*req*/,
+                                           GetSelectedLanelet2Map::Response::SharedPtr res) {
       // Return a non-empty (but minimal) LaneletMapBin.
       res->header.frame_id = "map";
       res->lanelet2_cells.data = {0x01};  // arbitrary non-empty payload
