@@ -83,8 +83,8 @@ void DummyDiagPublisher::loadRequiredDiags()
   const std::string required_diags_prefix = param_key + std::string(".");
   static const std::string is_active_suffix = ".is_active";
   static const std::string status_suffix = ".status";
-  const auto ends_with = [](const std::string & s, const std::string & suf) {
-    return s.size() > suf.size() && s.compare(s.size() - suf.size(), suf.size(), suf) == 0;
+  const auto ends_with = [](const std::string & s, const std::string & suffix) {
+    return s.size() > suffix.size() && s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
   };
 
   for (const auto & param_name : param_names) {
@@ -107,10 +107,10 @@ void DummyDiagPublisher::loadRequiredDiags()
 
     diag_names.insert(diag_name_with_prefix);
 
-    const auto is_active_key = diag_name_with_prefix + std::string(".is_active");
+    const auto is_active_key = diag_name_with_prefix + is_active_suffix;
     std::string is_active_str;
     this->get_parameter_or(is_active_key, is_active_str, std::string("true"));
-    const auto status_key = diag_name_with_prefix + std::string(".status");
+    const auto status_key = diag_name_with_prefix + status_suffix;
     std::string status_str;
     this->get_parameter_or(status_key, status_str, std::string("OK"));
 
