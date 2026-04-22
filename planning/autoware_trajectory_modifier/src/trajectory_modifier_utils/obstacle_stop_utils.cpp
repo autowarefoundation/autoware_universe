@@ -204,7 +204,7 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
   const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const PointCloud::Ptr & pointcloud, std::vector<geometry_msgs::msg::Point> & target_pcd_points)
 {
-  if (pointcloud->empty()) return std::nullopt;
+  if (pointcloud->empty() || trajectory_points.size() < 2) return std::nullopt;
 
   PointCloud::Ptr pointcloud_in_polygon(new PointCloud);
   for (const auto & point : *pointcloud) {
@@ -237,7 +237,7 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   const PredictedObjects & objects, MultiPolygon2d & target_polygons,
   PredictedObject & colliding_object)
 {
-  if (objects.objects.empty()) return std::nullopt;
+  if (objects.objects.empty() || trajectory_points.size() < 2) return std::nullopt;
 
   auto min_arc_length = std::numeric_limits<double>::max();
   geometry_msgs::msg::Point nearest_collision_point;
@@ -327,7 +327,7 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   const double safety_margin, const double stopped_vel_th, const double lookahead_horizon,
   MultiPolygon2d & target_polygons, PredictedObject & colliding_object)
 {
-  if (objects.objects.empty()) return std::nullopt;
+  if (objects.objects.empty() || trajectory_points.size() < 2) return std::nullopt;
 
   const auto ego_front_offset = vehicle_info.max_longitudinal_offset_m;
 
@@ -351,7 +351,6 @@ std::optional<CollisionPoint> get_nearest_object_collision(
     const auto object_pose = object.kinematics.initial_pose_with_covariance.pose;
     const auto object_polygon = autoware_utils::to_polygon2d(object_pose, object.shape);
     if (boost::geometry::disjoint(object_polygon, trajectory_shape.polygon)) {
-      RCLCPP_INFO(rclcpp::get_logger("ObstacleStop"), "Object is out of trajectory shape");
       continue;
     }
     target_objects.objects.push_back(object);
