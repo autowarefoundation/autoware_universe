@@ -46,7 +46,7 @@ public:
   // data: Contains runtime vehicle state (odometry, acceleration)
   virtual void optimize_trajectory(
     TrajectoryPoints & traj_points, const TrajectoryOptimizerParams & params,
-    const TrajectoryOptimizerData & data) = 0;
+    TrajectoryOptimizerData & data) = 0;
 
   // Plugin parameter setup - plugins declare their own parameters here
   virtual void set_up_params() = 0;

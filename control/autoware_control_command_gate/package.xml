@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_control_command_gate</name>
-  <version>0.49.0</version>
+  <version>0.50.0</version>
   <description>The control_command_gate package</description>
   <maintainer email="isamu.takagi@tier4.jp">Takagi, Isamu</maintainer>
   <license>Apache License 2.0</license>
@@ -10,6 +10,7 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_command_mode_types</depend>
   <depend>autoware_component_interface_specs_universe</depend>
   <depend>autoware_component_interface_utils</depend>

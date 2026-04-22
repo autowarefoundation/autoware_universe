@@ -2,6 +2,20 @@
 Changelog for package autoware_calibration_status_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_calibration_status_classifier): update nvcc flags (`#12058 <https://github.com/autowarefoundation/autoware_universe/issues/12058>`_)
+* chore: update `autoware_calibration_status_classifier` maintainer (`#12035 <https://github.com/autowarefoundation/autoware_universe/issues/12035>`_)
+* chore(autoware_calibration_status_classifier): remove cudnn dependency (`#11902 <https://github.com/autowarefoundation/autoware_universe/issues/11902>`_)
+* chore: add maintainer of PTv3, FRNet, and CalibrationStatusClassifier (`#11945 <https://github.com/autowarefoundation/autoware_universe/issues/11945>`_)
+  * chore: update `autoware_ptv3` maintainer
+  * chore: update `autoware_lidar_frnet` maintainer
+  * chore: update `autoware_calibration_status_classifier` maintainer
+  ---------
+* fix: add missing ament_index_cpp dependency (`#11875 <https://github.com/autowarefoundation/autoware_universe/issues/11875>`_)
+* Contributors: Amadeusz Szymko, Manato Hirabayashi, Mete Fatih Cırıt, Patiphon Narksri, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

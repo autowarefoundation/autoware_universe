@@ -11,6 +11,8 @@ autoware_package()
 include_directories()
 
 ament_auto_add_library(autoware_crosswalk_traffic_light_estimator SHARED
+  src/crosswalk_traffic_light_estimator.cpp
+  src/flashing_detection.cpp
   src/node.cpp
 )
 
@@ -21,14 +23,36 @@ rclcpp_components_register_node(autoware_crosswalk_traffic_light_estimator
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+  find_package(ament_cmake_gtest)
   ament_lint_auto_find_test_dependencies()
+
+  ament_add_gtest(test_crosswalk_traffic_light_estimator_node
+    test/test_crosswalk_traffic_light_estimator_node.cpp
+  )
+  target_link_libraries(test_crosswalk_traffic_light_estimator_node
+    autoware_crosswalk_traffic_light_estimator
+  )
+
+  ament_add_gtest(test_flashing_detection
+    test/test_flashing_detection.cpp
+  )
+  target_link_libraries(test_flashing_detection
+    autoware_crosswalk_traffic_light_estimator
+  )
+
+  ament_add_gtest(test_crosswalk_traffic_light_estimator
+    test/test_crosswalk_traffic_light_estimator.cpp
+  )
+  target_link_libraries(test_crosswalk_traffic_light_estimator
+    autoware_crosswalk_traffic_light_estimator
+  )
 endif()
 
 #############
 ## Install ##
 #############
 
-ament_auto_package(
+autoware_ament_auto_package(
         INSTALL_TO_SHARE
         launch
         config

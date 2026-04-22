@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_NODE_HPP_
 #define AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_NODE_HPP_
 
-#include "autoware/boundary_departure_checker/boundary_departure_checker.hpp"
+#include "autoware/deprecated/boundary_departure_checker/boundary_departure_checker.hpp"
 #include "autoware/lane_departure_checker/parameters.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
 
@@ -61,7 +61,8 @@ private:
   autoware_utils::InterProcessPollingSubscriber<
     LaneletMapBin, autoware_utils::polling_policy::Newest>
     sub_lanelet_map_bin_{this, "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local()};
-  autoware_utils::InterProcessPollingSubscriber<LaneletRoute> sub_route_{this, "~/input/route"};
+  autoware_utils::InterProcessPollingSubscriber<LaneletRoute> sub_route_{
+    this, "~/input/route", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_reference_trajectory_{
     this, "~/input/reference_trajectory"};
   autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_trajectory_{

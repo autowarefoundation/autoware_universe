@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_raw_vehicle_cmd_converter</name>
-  <version>0.49.0</version>
+  <version>0.50.0</version>
   <description>The autoware_raw_vehicle_cmd_converter package</description>
   <maintainer email="takamasa.horibe@tier4.jp">Takamasa Horibe</maintainer>
   <maintainer email="taiki.tanaka@tier4.jp">Tanaka Taiki</maintainer>
@@ -22,6 +22,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_adapi_v1_msgs</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_control_msgs</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_interpolation</depend>

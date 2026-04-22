@@ -23,16 +23,15 @@
 #include "autoware/behavior_path_start_planner_module/pull_out_path.hpp"
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/math/normalization.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_math/normalization.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
 #include <tf2/utils.hpp>
 
@@ -56,12 +55,11 @@
 using autoware::motion_utils::findNearestIndex;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
-using lanelet::utils::getArcCoordinates;
 namespace autoware::behavior_path_planner
 {
-using autoware::universe_utils::normalizeRadian;
 using autoware_utils::deg2rad;
 using autoware_utils::rad2deg;
+using autoware_utils_math::normalize_radian;
 using start_planner_utils::get_lane_ids_from_pose;
 using start_planner_utils::getPullOutLanes;
 using start_planner_utils::set_lane_ids_to_path_point;
@@ -98,7 +96,7 @@ std::vector<geometry_msgs::msg::Point> correct_clothoid_by_rigid_transform(
   const double target_angle = std::atan2(target_dy, target_dx);
   double rotation_angle = target_angle - clothoid_angle;
 
-  rotation_angle = normalizeRadian(rotation_angle);
+  rotation_angle = normalize_radian(rotation_angle);
 
   // Choose shorter rotation if over 180 degrees
   if (std::abs(rotation_angle) > M_PI) {
@@ -166,7 +164,7 @@ generate_clothoid_entry_with_yaw(
     pose.position.y = current_y;
     pose.position.z = 0.0;  // This is temporarily set to 0.0. The z value will be overwritten from
                             // the lanelet when generating the final path.
-    pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+    pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
     poses.push_back(pose);
 
     // If not the last point, perform integration calculation to the next point
@@ -191,7 +189,7 @@ generate_clothoid_entry_with_yaw(
   end_pose.position.y = current_y;
   end_pose.position.z = 0.0;  // This is temporarily set to 0.0. The z value will be overwritten
                               // from the lanelet when generating the final path.
-  end_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+  end_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
 
   return {poses, end_pose};
 }
@@ -223,7 +221,7 @@ generate_circular_segment_with_yaw(
     pose.position.x = center_x + radius * std::cos(angle_from_center);
     pose.position.y = center_y + radius * std::sin(angle_from_center);
     pose.position.z = 0.0;
-    pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+    pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
 
     poses.push_back(pose);
   }
@@ -233,7 +231,7 @@ generate_circular_segment_with_yaw(
 
   geometry_msgs::msg::Pose end_pose;
   end_pose.position = poses.back().position;
-  end_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(final_psi);
+  end_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(final_psi);
 
   return {poses, end_pose};
 }
@@ -262,7 +260,7 @@ generate_clothoid_exit_with_yaw(
     pose.position.x = current_x;
     pose.position.y = current_y;
     pose.position.z = 0.0;
-    pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+    pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
     poses.push_back(pose);
 
     // If not the last point, perform integration calculation to the next point
@@ -288,7 +286,7 @@ generate_clothoid_exit_with_yaw(
   end_pose.position.y = current_y;
   end_pose.position.z = 0.0;  // This is temporarily set to 0.0. The z value will be overwritten
                               // from the lanelet when generating the final path.
-  end_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+  end_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
 
   return {poses, end_pose};
 }
@@ -1403,7 +1401,9 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
       const auto long_offset_to_next_point =
         autoware::motion_utils::calcLongitudinalOffsetToSegment(
           cropped_path.points, start_segment_idx_after_crop + 1, start_pose.position);
-      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) < max_long_offset;
+      constexpr double eps = 1e-2;
+      return std::abs(long_offset_to_closest_point - long_offset_to_next_point) <
+             max_long_offset + eps;
     };
 
     if (parameters_.check_clothoid_path_lane_departure && !validate_cropped_path(cropped_path)) {
@@ -1423,7 +1423,7 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
     // STEP 5-7: Collision check
     // ===================================================================
     // Create PullOutPath for collision check
-    const PullOutPath temp_pull_out_path{{clothoid_path}, {}, start_pose, target_pose};
+    const PullOutPath temp_pull_out_path{{clothoid_path}, {}, start_pose, target_pose, {}};
 
     if (isPullOutPathCollided(
           temp_pull_out_path, planner_data,
@@ -1450,6 +1450,19 @@ std::optional<PullOutPath> ClothoidPullOut::plan(
                                  ? start_pose
                                  : resampled_combined_path.points.front().point.pose;
     pull_out_path.end_pose = target_pose;
+    std::tie(pull_out_path.shift_length.start, pull_out_path.shift_length.end) =
+      start_planner_utils::calc_start_and_end_shift_length(
+        pull_out_lanes, pull_out_path.start_pose, pull_out_path.end_pose);
+
+    const double shift_length =
+      std::abs(pull_out_path.shift_length.end - pull_out_path.shift_length.start);
+    if (shift_length < parameters_.minimum_shift_length) {
+      RCLCPP_DEBUG(
+        rclcpp::get_logger("ClothoidPullOut"),
+        "Shift length too short %.2f m. Continuing to next candidate.", shift_length);
+      planner_debug_data.conditions_evaluation.emplace_back("shift length too small");
+      continue;
+    }
 
     RCLCPP_INFO(
       rclcpp::get_logger("clothoid_pull_out"),

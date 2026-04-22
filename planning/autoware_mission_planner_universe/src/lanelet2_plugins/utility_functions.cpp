@@ -121,8 +121,8 @@ bool is_in_parking_lot(
 double project_goal_to_map(
   const lanelet::ConstLanelet & lanelet_component, const lanelet::ConstPoint3d & goal_point)
 {
-  const lanelet::ConstLineString3d center_line =
-    lanelet::utils::generateFineCenterline(lanelet_component);
+  const auto center_line =
+    autoware::experimental::lanelet2_utils::get_fine_centerline(lanelet_component);
   lanelet::BasicPoint3d project = lanelet::geometry::project(center_line, goal_point.basicPoint());
   return project.z();
 }
@@ -139,8 +139,10 @@ geometry_msgs::msg::Pose get_closest_centerline_pose(
   }
   lanelet::Lanelet closest_lanelet = autoware::experimental::lanelet2_utils::remove_const(*opt);
 
-  const auto refined_center_line = lanelet::utils::generateFineCenterline(closest_lanelet, 1.0);
-  closest_lanelet.setCenterline(refined_center_line);
+  const auto refined_center_line =
+    autoware::experimental::lanelet2_utils::get_fine_centerline(closest_lanelet, 1.0);
+  closest_lanelet.setCenterline(
+    autoware::experimental::lanelet2_utils::remove_const(refined_center_line));
 
   const double lane_yaw = autoware::experimental::lanelet2_utils::get_lanelet_angle(
     closest_lanelet, autoware::experimental::lanelet2_utils::from_ros(point.position).basicPoint());

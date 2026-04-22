@@ -6,6 +6,7 @@ The `autoware_trajectory_modifier` package provides a plugin-based architecture 
 
 - Plugin-based architecture for extensible trajectory modifications
 - Stop point fixing to prevent trajectory issues near stationary conditions
+- Obstacle detection and stopping to prevent collision
 - Configurable parameters to adjust modification behavior
 
 ## Architecture
@@ -17,19 +18,28 @@ The trajectory modifier uses a plugin-based system where different modification 
 All modifier plugins must inherit from `TrajectoryModifierPluginBase` and implement:
 
 - `modify_trajectory()` - Main method to modify trajectory points
-- `set_up_params()` - Initialize plugin parameters
-- `on_parameter()` - Handle parameter updates
+- `on_initialize()` - Initialize plugin members and parameters
+- `update_params()` - Handle parameter updates
 - `is_trajectory_modification_required()` - Determine if modification is needed
 
 ### Current Plugins
 
 #### Stop Point Fixer
 
-The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is stationary or moving at very low speeds. It prevents problematic trajectory points that could cause planning issues by:
+The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is stationary or moving at very low speeds. It prevents problematic trajectory points that could cause planning issues by replacing the trajectory with a single stop point when either of two independently configurable conditions is met:
 
-- Monitoring ego vehicle velocity and trajectory distance
-- Replacing the trajectory with a single stop point when conditions are met
-- Ensuring smooth operation during stationary periods
+- **Close stop**: the trajectory's last point (stop point) is within a minimum distance threshold from ego
+- **Long stop**: the trajectory commands ego to remain stopped for longer than a minimum duration threshold
+
+Both conditions are individually enabled or disabled via parameters, allowing fine-grained control over when the override is applied.
+
+#### Obstacle Stop
+
+The Obstacle Stop plugin serves as a deterministic safety shield operating independently of the generative model to:
+
+- **Enforce Longitudinal Safety**: Monitors the gap to dynamic and static obstacles to ensure a safe distance is maintained under all kinematic conditions.
+- **Ensure Definitive Stopping**: Guarantees zero-velocity set-points for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.
+- **Provide Predictable Deceleration**: Standardizes the vehicle’s stopping profile to ensure consistent, comfortable, and physically guaranteed deceleration regardless of the AI's intended path.
 
 ## Dependencies
 
@@ -48,9 +58,7 @@ This package depends on the following packages:
 
 ## Parameters
 
-- `use_stop_point_fixer`: Enable the stop point fixer modifier plugin (default: true)
-- `stop_point_fixer.velocity_threshold_mps`: Velocity threshold below which ego vehicle is considered stationary (default: 0.1 m/s)
-- `stop_point_fixer.min_distance_threshold_m`: Minimum distance threshold to trigger trajectory replacement (default: 1.0 m)
+{{ json_to_markdown("planning/autoware_trajectory_modifier/schema/trajectory_modifier.schema.json") }}
 
 Parameters can be set via YAML configuration files in the `config/` directory.
 

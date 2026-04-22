@@ -2,6 +2,14 @@
 Changelog for package autoware_simple_planning_simulator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat!: remove ROS 2 Galactic codes (`#11905 <https://github.com/autowarefoundation/autoware_universe/issues/11905>`_)
+* chore: reflect the move of the description packages (`#11969 <https://github.com/autowarefoundation/autoware_universe/issues/11969>`_)
+* feat: simulation related packages support jazzy (`#11424 <https://github.com/autowarefoundation/autoware_universe/issues/11424>`_)
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu, 心刚
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

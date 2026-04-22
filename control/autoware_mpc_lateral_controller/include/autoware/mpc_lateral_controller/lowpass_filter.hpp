@@ -48,6 +48,14 @@ public:
   explicit Butterworth2dFilter(double dt = 0.01, double f_cutoff_hz = 5.0);
 
   /**
+   * @brief constructor with non-zero initial value
+   * @param [in] dt sampling time
+   * @param [in] f_cutoff_hz cutoff frequency [Hz]
+   * @param [in] initial_value initial value
+   */
+  explicit Butterworth2dFilter(double dt, double f_cutoff_hz, double initial_value);
+
+  /**
    * @brief destructor
    */
   ~Butterworth2dFilter();
@@ -57,7 +65,7 @@ public:
    * @param [in] dt sampling time
    * @param [in] f_cutoff_hz cutoff frequency [Hz]
    */
-  void initialize(const double & dt, const double & f_cutoff_hz);
+  void initialize(const double & dt, const double & f_cutoff_hz, const double initial_value = 0.0);
 
   /**
    * @brief filtering (call this function at each sampling time with input)

@@ -25,6 +25,7 @@
 #include <tf2/LinearMath/Vector3.hpp>
 
 #include <autoware_perception_msgs/msg/detail/tracked_objects__struct.hpp>
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <geometry_msgs/msg/detail/point__struct.hpp>
 #include <geometry_msgs/msg/detail/pose_stamped__struct.hpp>
@@ -59,11 +60,9 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   visible_range_ = this->declare_parameter("visible_range", 100.0);
   detection_successful_rate_ = this->declare_parameter("detection_successful_rate", 0.8);
   enable_ray_tracing_ = this->declare_parameter("enable_ray_tracing", true);
-  use_object_recognition_ = this->declare_parameter("use_object_recognition", true);
   use_base_link_z_ = this->declare_parameter("use_base_link_z", true);
   const bool object_centric_pointcloud =
     this->declare_parameter("object_centric_pointcloud", false);
-  publish_ground_truth_objects_ = this->declare_parameter("publish_ground_truth", false);
   const unsigned int random_seed =
     static_cast<unsigned int>(this->declare_parameter("random_seed", 0));
   const bool use_fixed_random_seed = this->declare_parameter("use_fixed_random_seed", false);
@@ -89,20 +88,15 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   // create subscriber and publisher
   rclcpp::QoS qos{1};
   qos.transient_local();
-  detected_object_with_feature_pub_ =
-    this->create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
-      "output/dynamic_object", qos);
+  detected_object_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
+    "output/dynamic_object", qos);
   pointcloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("output/points_raw", qos);
   object_sub_ = this->create_subscription<tier4_simulation_msgs::msg::DummyObject>(
     "input/object", 100,
     std::bind(&DummyPerceptionPublisherNode::objectCallback, this, std::placeholders::_1));
 
-  // optional ground truth publisher
-  if (publish_ground_truth_objects_) {
-    ground_truth_objects_pub_ =
-      this->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
-        "~/output/debug/ground_truth_objects", qos);
-  }
+  ground_truth_objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
+    "~/output/debug/ground_truth_objects", qos);
 
   using std::chrono_literals::operator""ms;
   timer_ = rclcpp::create_timer(
@@ -137,7 +131,7 @@ DummyPerceptionPublisherNode::convertPointCloudXYZtoXYZIRC(
 void DummyPerceptionPublisherNode::timerCallback()
 {
   // output msgs
-  tier4_perception_msgs::msg::DetectedObjectsWithFeature output_dynamic_object_msg;
+  autoware_perception_msgs::msg::DetectedObjects output_dynamic_object_msg;
   autoware_perception_msgs::msg::TrackedObjects output_ground_truth_objects_msg;
   PoseStamped output_moved_object_pose;
   sensor_msgs::msg::PointCloud2 output_pointcloud_msg;
@@ -188,9 +182,13 @@ void DummyPerceptionPublisherNode::timerCallback()
     }
   }
 
-  // publish ground truth
+  const bool has_ground_truth_subscribers =
+    ground_truth_objects_pub_->get_subscription_count() > 0U ||
+    ground_truth_objects_pub_->get_intra_process_subscription_count() > 0U;
+
+  // publish ground truth when subscribers exist
   // add Tracked Object
-  if (publish_ground_truth_objects_) {
+  if (has_ground_truth_subscribers) {
     for (size_t i = 0; i < all_objects.size(); ++i) {
       const auto & object = all_objects[i];
       // Use the same ObjectInfo as calculated above for consistency
@@ -224,13 +222,12 @@ void DummyPerceptionPublisherNode::timerCallback()
       detected_obj_infos.push_back(detected_obj_info);
     }
 
-    const auto pointclouds = pointcloud_creator_->create_pointclouds(
+    pointcloud_creator_->create_pointclouds(
       detected_obj_infos, tf_base_link2map, random_generator_, detected_merged_pointcloud_ptr);
 
     std::vector<unique_identifier_msgs::msg::UUID> delete_uuids;
 
     for (size_t i = 0; i < selected_indices.size(); ++i) {
-      const auto & pointcloud = pointclouds[i];
       const size_t selected_idx = selected_indices[i];
       const auto & object = all_objects.at(selected_idx);
       const auto & object_info = obj_infos[selected_idx];
@@ -246,22 +243,19 @@ void DummyPerceptionPublisherNode::timerCallback()
       tf_base_link2noised_moved_object =
         tf_base_link2map * object_info.tf_map2moved_object * tf_moved_object2noised_moved_object;
 
-      // add DetectedObjectWithFeature
-      tier4_perception_msgs::msg::DetectedObjectWithFeature feature_object;
-      feature_object.object.classification.push_back(object.classification);
-      feature_object.object.kinematics.pose_with_covariance = object.initial_state.pose_covariance;
-      feature_object.object.kinematics.twist_with_covariance =
-        object.initial_state.twist_covariance;
-      feature_object.object.kinematics.orientation_availability =
+      // add DetectedObject
+      autoware_perception_msgs::msg::DetectedObject detected_object;
+      detected_object.classification.push_back(object.classification);
+      detected_object.kinematics.pose_with_covariance = object.initial_state.pose_covariance;
+      detected_object.kinematics.twist_with_covariance = object.initial_state.twist_covariance;
+      detected_object.kinematics.orientation_availability =
         autoware_perception_msgs::msg::DetectedObjectKinematics::SIGN_UNKNOWN;
-      feature_object.object.kinematics.has_twist = false;
+      detected_object.kinematics.has_twist = false;
       tf2::toMsg(
-        tf_base_link2noised_moved_object,
-        feature_object.object.kinematics.pose_with_covariance.pose);
-      feature_object.object.shape = object.shape;
-      const auto pointcloud_xyzirc = convertPointCloudXYZtoXYZIRC(pointcloud);
-      pcl::toROSMsg(pointcloud_xyzirc, feature_object.feature.cluster);
-      output_dynamic_object_msg.feature_objects.push_back(feature_object);
+        tf_base_link2noised_moved_object, detected_object.kinematics.pose_with_covariance.pose);
+      detected_object.shape = object.shape;
+      detected_object.existence_probability = 1.0;
+      output_dynamic_object_msg.objects.push_back(detected_object);
 
       // check delete idx
       tf2::Transform tf_base_link2moved_object;
@@ -294,10 +288,8 @@ void DummyPerceptionPublisherNode::timerCallback()
 
   // publish
   pointcloud_pub_->publish(output_pointcloud_msg);
-  if (use_object_recognition_) {
-    detected_object_with_feature_pub_->publish(output_dynamic_object_msg);
-  }
-  if (publish_ground_truth_objects_) {
+  detected_object_pub_->publish(output_dynamic_object_msg);
+  if (has_ground_truth_subscribers) {
     ground_truth_objects_pub_->publish(output_ground_truth_objects_msg);
   }
 }

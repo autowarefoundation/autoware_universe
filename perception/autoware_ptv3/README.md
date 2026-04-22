@@ -20,19 +20,17 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 ### Output
 
-<!-- cSpell:ignore probs -->
-
-| Name                                   | Type                                                | Description                               |
-| -------------------------------------- | --------------------------------------------------- | ----------------------------------------- |
-| `~/output/segmented/pointcloud`        | `sensor_msgs::msg::PointCloud2`                     | RGB segmented pointcloud.                 |
-| `~/output/ground_segmented/pointcloud` | `sensor_msgs::msg::PointCloud2`                     | Pointcloud with the ground segmented out. |
-| `~/output/probs/pointcloud`            | `sensor_msgs::msg::PointCloud2`                     | Class probabilities segmented pointcloud. |
-| `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                         |
-| `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).               |
-| `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                          |
-| `debug/processing_time/inference_ms`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Inference time (ms).                      |
-| `debug/processing_time/postprocess_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocess time (ms).                    |
-| `debug/processing_time/total_ms`       | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms).               |
+| Name                                   | Type                                                | Description                                             |
+| -------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
+| `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with class ID and probability fields.         |
+| `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                               |
+| `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`. |
+| `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                       |
+| `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                             |
+| `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                        |
+| `debug/processing_time/inference_ms`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Inference time (ms).                                    |
+| `debug/processing_time/postprocess_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocess time (ms).                                  |
+| `debug/processing_time/total_ms`       | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms).                             |
 
 ## Parameters
 
@@ -43,6 +41,9 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 ### PTv3Node model
 
 {{ json_to_markdown("perception/autoware_ptv3/schema/ml_package_ptv3.schema.json") }}
+
+`filter.*` parameters are configured in `config/ptv3.param.yaml`, while class metadata and the
+visualization `palette` are configured in `config/ml_package_ptv3.param.yaml`.
 
 ### The `build_only` option
 
@@ -62,13 +63,26 @@ ros2 launch autoware_ptv3 ptv3.launch.xml log_level:=debug
 
 ## Assumptions / Known limits
 
-This node assumes that the input pointcloud follows the `PointXYZIRC` layout defined in `autoware_point_types`.
+This node detects the input pointcloud format automatically on the first received message and
+supports:
+
+- `XYZIRCAEDT` (10 fields)
+- `XYZIRADRT` (9 fields)
+- `XYZIRC` (6 fields)
+- `XYZI` (4 fields)
+
+The filtered output cloud format is controlled by `filter.output_format`. When it is set to an
+empty string, the filtered output preserves the same format as the input cloud.
 
 ## Trained Models
 
-- v1 – First model release trained with PoC pseudo labels for the internal T4 dataset.
+The model was trained on the T4Dataset using approximately 4,000 frames and is available in the Autoware artifacts.
 
-### Changelog
+## Troubleshooting
+
+### `Fail to create host memory`
+
+This error may occur when the system runs out of memory during TensorRT engine building. To mitigate this issue, consider reducing the `voxels_num` maximum limit in the model parameters, which controls the maximum number of voxels processed by the model. For the instance, using GPU with 8 GB of memory, setting maximum `voxels_num` to 192'000 may help to avoid this error.
 
 ## References/External links
 

@@ -72,12 +72,21 @@ public:
     Eigen::Matrix2d p_angle_;
     Eigen::Matrix2d q_angle_;
     Eigen::Matrix<double, 1, 1> r_angle_;
+    double initial_scale_;
+    double process_noise_q_angle_;
+    double noise_ekf_r_angle_;
     double max_variance_p_angle_;
     double min_covariance_angle_;
     double filtered_scale_angle_;
     double estimated_scale_angle_;
     double decay_coefficient_;
     bool has_gyro_yaw_angle_init_;
+    bool reinitialization_failed_;
+    bool filter_initialized_;
+    int samples_in_bounds_to_init_;
+    int in_bounds_sample_count_;
+    int reinitialization_count_;
+    int max_reinitialization_retries_;
   };
 
   sensor_msgs::msg::Imu modify_imu(
@@ -85,7 +94,8 @@ public:
   bool should_skip_update(double gyro_yaw_rate);
   double extract_yaw_from_pose(
     const geometry_msgs::msg::Quaternion & quat_msg, tf2::Quaternion & quat_out);
-  void update_angle_ekf(double yaw_ndt, EKFEstimateScaleAngleVars & ekf_angle) const;
+  void update_angle_ekf(double yaw_ndt, EKFEstimateScaleAngleVars & ekf_angle);
+  void reinitialize_angle_ekf(EKFEstimateScaleAngleVars & ekf_angle);
   friend class GyroBiasEstimatorTest;
 
 private:

@@ -18,8 +18,6 @@
 #include "autoware/diffusion_planner/dimensions.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <Eigen/src/Core/Matrix.h>
 #include <lanelet2_core/Forward.h>
@@ -51,8 +49,9 @@ uint8_t identify_current_light_status(
 
 // LaneSegmentContext implementation
 LaneSegmentContext::LaneSegmentContext(
-  const std::shared_ptr<const lanelet::LaneletMap> & lanelet_map_ptr)
-: lanelet_map_(convert_to_internal_lanelet_map(lanelet_map_ptr)),
+  const std::shared_ptr<const lanelet::LaneletMap> & lanelet_map_ptr,
+  const double line_string_max_step_m)
+: lanelet_map_(convert_to_internal_lanelet_map(lanelet_map_ptr, line_string_max_step_m)),
   lanelet_id_to_array_index_(create_lane_id_to_array_index_map(lanelet_map_.lane_segments))
 {
   if (lanelet_map_.lane_segments.empty()) {
@@ -116,6 +115,41 @@ std::vector<int64_t> LaneSegmentContext::select_route_segment_indices(
   }
 
   return selected_indices;
+}
+
+autoware_perception_msgs::msg::TrafficLightGroup
+LaneSegmentContext::get_first_traffic_light_on_route(
+  const LaneletRoute & route, const double center_x, const double center_y, const double center_z,
+  const std::map<lanelet::Id, TrafficSignalStamped> & traffic_light_id_map) const
+{
+  autoware_perception_msgs::msg::TrafficLightGroup result;
+  result.traffic_light_group_id = 0;
+
+  const std::vector<int64_t> segment_indices =
+    select_route_segment_indices(route, center_x, center_y, center_z, NUM_SEGMENTS_IN_ROUTE);
+
+  for (const int64_t segment_idx : segment_indices) {
+    const LaneSegment & segment = lanelet_map_.lane_segments[segment_idx];
+    if (segment.traffic_light_id == LaneSegment::TRAFFIC_LIGHT_ID_NONE) {
+      continue;
+    }
+
+    const auto it = traffic_light_id_map.find(segment.traffic_light_id);
+    if (it != traffic_light_id_map.end()) {
+      result = it->second.signal;
+    } else {
+      result.traffic_light_group_id = static_cast<int64_t>(segment.traffic_light_id);
+      autoware_perception_msgs::msg::TrafficLightElement unknown_element;
+      unknown_element.color = TrafficLightElement::UNKNOWN;
+      unknown_element.shape = TrafficLightElement::UNKNOWN;
+      unknown_element.status = TrafficLightElement::UNKNOWN;
+      unknown_element.confidence = 0.0f;
+      result.elements = {unknown_element};
+    }
+    return result;
+  }
+
+  return result;
 }
 
 std::vector<int64_t> LaneSegmentContext::select_lane_segment_indices(
@@ -307,10 +341,11 @@ LaneSegmentContext::create_tensor_data_from_indices(
   return {tensor_data, speed_limit_vector};
 }
 
+template <typename T>
 std::vector<float> LaneSegmentContext::create_line_tensor(
-  const std::vector<std::vector<LanePoint>> & polylines, const Eigen::Matrix4d & transform_matrix,
-  const double center_x, const double center_y, const int64_t num_elements,
-  const int64_t num_points) const
+  const std::vector<T> & elements, const Eigen::Matrix4d & transform_matrix, const double center_x,
+  const double center_y, const int64_t num_elements, const int64_t num_points,
+  const int64_t num_types) const
 {
   using autoware::diffusion_planner::constants::LANE_MASK_RANGE_M;
 
@@ -320,17 +355,18 @@ std::vector<float> LaneSegmentContext::create_line_tensor(
       y > center_y - LANE_MASK_RANGE_M && y < center_y + LANE_MASK_RANGE_M);
   };
 
-  struct PolylineWithDistance
+  struct ElementWithDistance
   {
     Polyline polyline;
+    int type;
     double min_distance;
   };
 
-  std::vector<PolylineWithDistance> result_list;
+  std::vector<ElementWithDistance> result_list;
 
-  for (const auto & polyline : polylines) {
+  for (const auto & element : elements) {
     bool inside_at_least_one = false;
-    for (const auto & point : polyline) {
+    for (const auto & point : element.points) {
       if (judge_inside(point.x(), point.y())) {
         inside_at_least_one = true;
         break;
@@ -341,11 +377,11 @@ std::vector<float> LaneSegmentContext::create_line_tensor(
     }
 
     std::vector<LanePoint> transformed_polyline;
-    for (const auto & point : polyline) {
+    for (const auto & point : element.points) {
       const Eigen::Vector4d transformed_point =
         transform_matrix * Eigen::Vector4d(point.x(), point.y(), point.z(), 1.0);
-      transformed_polyline.push_back(
-        Eigen::Vector3d(transformed_point.x(), transformed_point.y(), transformed_point.z()));
+      transformed_polyline.emplace_back(
+        transformed_point.x(), transformed_point.y(), transformed_point.z());
     }
 
     double min_distance = std::numeric_limits<double>::max();
@@ -354,32 +390,44 @@ std::vector<float> LaneSegmentContext::create_line_tensor(
       min_distance = std::min(min_distance, distance);
     }
 
-    result_list.push_back({transformed_polyline, min_distance});
+    result_list.push_back({transformed_polyline, static_cast<int>(element.type), min_distance});
   }
 
   std::sort(
     result_list.begin(), result_list.end(),
-    [](const PolylineWithDistance & a, const PolylineWithDistance & b) {
+    [](const ElementWithDistance & a, const ElementWithDistance & b) {
       return a.min_distance < b.min_distance;
     });
 
-  // Create tensor data
-  std::vector<float> tensor_data(num_elements * num_points * 2, 0.0f);
+  // Create tensor data: [x, y, one_hot_type...]
+  const int64_t point_dim = 2 + num_types;
+  std::vector<float> tensor_data(num_elements * num_points * point_dim, 0.0f);
   const size_t max_elements_size = std::min(static_cast<size_t>(num_elements), result_list.size());
   for (size_t i = 0; i < max_elements_size; ++i) {
-    const auto & polyline = result_list[i].polyline;
-    const size_t max_points_size = std::min(static_cast<size_t>(num_points), polyline.size());
+    const auto & result = result_list[i];
+    const size_t max_points_size =
+      std::min(static_cast<size_t>(num_points), result.polyline.size());
 
     for (size_t j = 0; j < max_points_size; ++j) {
-      const auto & point = polyline[j];
-      const size_t base_index = (i * num_points + j) * 2;
+      const auto & point = result.polyline[j];
+      const size_t base_index = (i * num_points + j) * point_dim;
       tensor_data[base_index + 0] = static_cast<float>(point.x());
       tensor_data[base_index + 1] = static_cast<float>(point.y());
+      // one-hot type encoding
+      tensor_data[base_index + 2 + result.type] = 1.0f;
     }
   }
 
   return tensor_data;
 }
+
+// Explicit template instantiations
+template std::vector<float> LaneSegmentContext::create_line_tensor<Polygon>(
+  const std::vector<Polygon> &, const Eigen::Matrix4d &, const double, const double, const int64_t,
+  const int64_t, const int64_t) const;
+template std::vector<float> LaneSegmentContext::create_line_tensor<LineString>(
+  const std::vector<LineString> &, const Eigen::Matrix4d &, const double, const double,
+  const int64_t, const int64_t, const int64_t) const;
 
 // Internal functions implementation
 namespace

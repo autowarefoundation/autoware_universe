@@ -2,6 +2,16 @@
 Changelog for package autoware_object_sorter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_object_sorter): fix object transformation (`#11957 <https://github.com/autowarefoundation/autoware_universe/issues/11957>`_)
+  * fix object transform
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Masaki Baba, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

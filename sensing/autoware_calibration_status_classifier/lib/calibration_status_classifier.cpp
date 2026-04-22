@@ -16,13 +16,17 @@
 
 #include "autoware/calibration_status_classifier/data_type.hpp"
 
+#include <Eigen/Dense>
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/cuda_utils.hpp>
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -33,9 +37,24 @@ namespace autoware::calibration_status_classifier
 
 CalibrationStatusClassifier::CalibrationStatusClassifier(
   const std::string & onnx_path, const std::string & trt_precision, int64_t cloud_capacity,
-  const CalibrationStatusClassifierConfig & config)
+  const std::vector<double> & ego_box, const CalibrationStatusClassifierConfig & config)
 : cloud_capacity_(static_cast<size_t>(cloud_capacity)), config_(config)
 {
+  if (!ego_box.empty() && ego_box.size() != 6) {
+    throw std::invalid_argument(
+      "ego_box must have exactly 6 elements [x_min, y_min, z_min, x_max, y_max, z_max]");
+  }
+  if (ego_box.size() == 6) {
+    const bool all_zeros =
+      std::all_of(ego_box.begin(), ego_box.end(), [](double v) { return v == 0.0; });
+    if (!all_zeros) {
+      if (ego_box[0] >= ego_box[3] || ego_box[1] >= ego_box[4] || ego_box[2] >= ego_box[5]) {
+        throw std::invalid_argument("ego_box min values must be less than max values");
+      }
+      ego_box_ = ego_box;
+    }
+  }
+
   tensorrt_common::TrtCommonConfig trt_config(onnx_path, trt_precision);
 
   std::vector<autoware::tensorrt_common::NetworkIO> network_io{
@@ -129,11 +148,31 @@ CalibrationStatusClassifierResult CalibrationStatusClassifier::process(
       in_d_.get()));
   }
 
+  // Generate ego occlusion mask on first call per pair (lazy init)
+  const uint8_t * ego_mask_ptr = nullptr;
+  if (!ego_box_.empty()) {
+    const std::string mask_key =
+      camera_lidar_info.camera_frame_id + "_" + camera_lidar_info.lidar_frame_id + "_" +
+      std::to_string(image_msg->width) + "x" + std::to_string(image_msg->height);
+
+    auto it = ego_masks_d_.find(mask_key);
+    if (it == ego_masks_d_.end()) {  // lazy init, only generate mask if not already stored
+      auto mask =
+        generate_ego_occlusion_mask(camera_lidar_info, image_msg->width, image_msg->height);
+      auto mask_d = cuda_utils::make_unique<uint8_t[]>(image_msg->width * image_msg->height);
+      CHECK_CUDA_ERROR(cudaMemcpyAsync(
+        mask_d.get(), mask.data(), sizeof(uint8_t) * image_msg->width * image_msg->height,
+        cudaMemcpyHostToDevice, stream_));
+      it = ego_masks_d_.emplace(mask_key, std::move(mask_d)).first;
+    }
+    ego_mask_ptr = it->second.get();
+  }
+
   // Project points
   CHECK_CUDA_ERROR(preprocess_ptr_->project_points_launch(
     cloud_d_.get(), image_undistorted_d_.get(), tf_matrix_d_.get(), projection_matrix_d_.get(),
     cloud_msg->width * cloud_msg->height, image_msg->width, image_msg->height, in_d_.get(),
-    num_points_projected_d_.get()));
+    num_points_projected_d_.get(), ego_mask_ptr));
   uint32_t num_points_projected = 0;
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &num_points_projected, num_points_projected_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost,
@@ -174,6 +213,104 @@ CalibrationStatusClassifierResult CalibrationStatusClassifier::process(
   result.inference_time_ms = static_cast<double>(time_inference_us) * 1e-3;
   result.num_points_projected = num_points_projected;
   return result;
+}
+
+std::vector<uint8_t> CalibrationStatusClassifier::generate_ego_occlusion_mask(
+  const CameraLidarInfo & camera_lidar_info, std::size_t image_width,
+  std::size_t image_height) const
+{
+  constexpr double occlusion_adjust_margin = 0.01;
+
+  std::vector<uint8_t> mask(image_width * image_height, 1);
+
+  if (ego_box_.empty()) {
+    return mask;
+  }
+
+  // Extract rotation and translation from the lidar-to-camera transform (row-major)
+  const auto & tf = camera_lidar_info.tf_camera_to_lidar;
+  Eigen::Matrix3d R = tf.block<3, 3>(0, 0);
+  Eigen::Vector3d t = tf.block<3, 1>(0, 3);
+
+  // Camera center in lidar frame: c = -R^T * t
+  Eigen::Vector3d camera_center_lidar = -R.transpose() * t;
+
+  // Prepare box bounds (copy to allow adjustment)
+  Eigen::Vector3d box_min(ego_box_[0], ego_box_[1], ego_box_[2]);
+  Eigen::Vector3d box_max(ego_box_[3], ego_box_[4], ego_box_[5]);
+
+  // Adjust box if camera is inside it (shrink closest X/Y wall)
+  if (
+    (camera_center_lidar.array() >= box_min.array()).all() &&
+    (camera_center_lidar.array() <= box_max.array()).all()) {
+    Eigen::Vector3d d_min = camera_center_lidar - box_min;
+    Eigen::Vector3d d_max = box_max - camera_center_lidar;
+
+    // Only adjust X (0) and Y (1) axes, leave Z untouched
+    for (int i = 0; i < 2; ++i) {
+      if (d_min[i] < d_max[i]) {
+        box_min[i] = camera_center_lidar[i] + occlusion_adjust_margin;
+      } else {
+        box_max[i] = camera_center_lidar[i] - occlusion_adjust_margin;
+      }
+    }
+  }
+
+  // Build back-projection: for each pixel (u, v), compute ray direction in lidar frame
+  const auto & P = camera_lidar_info.p;
+  Eigen::Matrix3d P_3x3 = P.block<3, 3>(0, 0);
+  Eigen::Matrix3d P_3x3_inv = P_3x3.inverse();
+
+  // R^T transforms directions from camera frame to lidar frame
+  Eigen::Matrix3d R_T = R.transpose();
+
+  for (std::size_t v = 0; v < image_height; ++v) {
+    for (std::size_t u = 0; u < image_width; ++u) {
+      // Back-project pixel to ray direction in camera frame
+      Eigen::Vector3d pixel_hom(static_cast<double>(u), static_cast<double>(v), 1.0);
+      Eigen::Vector3d dir_cam = P_3x3_inv * pixel_hom;
+
+      // Transform ray direction to lidar frame
+      Eigen::Vector3d dir_lidar = R_T * dir_cam;
+
+      // Slab intersection test with ego box
+      double t_enter = -std::numeric_limits<double>::infinity();
+      double t_exit = std::numeric_limits<double>::infinity();
+
+      bool valid = true;
+      for (int i = 0; i < 3; ++i) {
+        if (std::abs(dir_lidar[i]) < 1e-12) {
+          if (camera_center_lidar[i] < box_min[i] || camera_center_lidar[i] > box_max[i]) {
+            valid = false;
+            break;
+          }
+        } else {
+          double inv_d = 1.0 / dir_lidar[i];
+          double t1 = (box_min[i] - camera_center_lidar[i]) * inv_d;
+          double t2 = (box_max[i] - camera_center_lidar[i]) * inv_d;
+
+          if (t1 > t2) {
+            std::swap(t1, t2);
+          }
+
+          t_enter = std::max(t_enter, t1);
+          t_exit = std::min(t_exit, t2);
+
+          if (t_enter > t_exit) {
+            valid = false;
+            break;
+          }
+        }
+      }
+
+      // Ray hits the ego box if intersection is valid and box is in front (t_exit >= 0)
+      if (valid && t_exit >= 0.0 && t_enter <= t_exit) {
+        mask[v * image_width + u] = 0;
+      }
+    }
+  }
+
+  return mask;
 }
 
 }  // namespace autoware::calibration_status_classifier

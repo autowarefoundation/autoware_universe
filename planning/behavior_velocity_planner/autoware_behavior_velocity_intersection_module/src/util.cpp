@@ -19,8 +19,9 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
@@ -337,7 +338,14 @@ mergeLaneletsByTopologicalSort(
         to_be_merged.push_back(Id2lanelet[ind2Id[sub_ind]]);
         original.push_back(Id2lanelet[ind2Id[sub_ind]]);
       }
-      merged.push_back(lanelet::utils::combineLaneletsShape(to_be_merged));
+      const auto merged_ll_opt =
+        autoware::experimental::lanelet2_utils::combine_lanelets_shape(to_be_merged);
+      if (merged_ll_opt.has_value()) {
+        const auto & merged_ll = merged_ll_opt.value();
+        merged.push_back(merged_ll);
+      } else {
+        continue;
+      }
     }
   }
   return {merged, originals};
@@ -541,12 +549,12 @@ lanelet::ConstLanelets getPrevLanelets(
 }
 
 // end inclusive
-lanelet::ConstLanelet generatePathLanelet(
+std::optional<lanelet::ConstLanelet> generatePathLanelet(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t start_idx,
   const size_t end_idx, const double width, const double interval)
 {
-  lanelet::Points3d lefts;
-  lanelet::Points3d rights;
+  lanelet::ConstPoints3d lefts;
+  lanelet::ConstPoints3d rights;
   size_t prev_idx = start_idx;
   for (size_t i = start_idx; i <= end_idx; ++i) {
     const auto & p = path.points.at(i).point.pose;
@@ -566,10 +574,8 @@ lanelet::ConstLanelet generatePathLanelet(
     lefts.emplace_back(lanelet::InvalId, left_x, left_y, p.position.z);
     rights.emplace_back(lanelet::InvalId, right_x, right_y, p.position.z);
   }
-  lanelet::LineString3d left = lanelet::LineString3d(lanelet::InvalId, lefts);
-  lanelet::LineString3d right = lanelet::LineString3d(lanelet::InvalId, rights);
 
-  return lanelet::Lanelet(lanelet::InvalId, left, right);
+  return autoware::experimental::lanelet2_utils::create_safe_lanelet(lefts, rights);
 }
 
 std::optional<std::pair<size_t, const lanelet::CompoundPolygon3d &>> getFirstPointInsidePolygons(

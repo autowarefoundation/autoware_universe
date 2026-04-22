@@ -16,7 +16,10 @@
 #define AUTOWARE__IMAGE_PROJECTION_BASED_FUSION__ROI_CLUSTER_FUSION__NODE_HPP_
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
+#include "autoware/image_projection_based_fusion/utils/size_validation.hpp"
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
+
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 
 #include <map>
 #include <memory>
@@ -38,6 +41,7 @@ private:
     const RoiMsgType & input_rois_msg, ClusterMsgType & output_cluster_msg) override;
 
   void postprocess(const ClusterMsgType & output_cluster_msg, ClusterMsgType & output_msg) override;
+  void publish(const ClusterMsgType & output_msg) override;
 
   std::string strict_iou_match_mode_{"iou"};
   bool use_cluster_semantic_type_{false};
@@ -51,11 +55,26 @@ private:
   double strict_iou_fusion_distance_;
   std::string rough_iou_match_mode_{"iou_x"};
 
+  // Pedestrian size validation parameters
+  PedestrianSizeValidationParams pedestrian_size_params_;
+
+  AUTOWARE_PUBLISHER_PTR(ClusterMsgType) agnocast_pub_ptr_;
+  AUTOWARE_SUBSCRIPTION_PTR(ClusterMsgType) agnocast_msg3d_sub_;
+
   bool is_far_enough(const ClusterObjType & obj, const double distance_threshold);
   bool out_of_scope(const ClusterObjType & obj);
   double cal_iou_by_mode(
     const sensor_msgs::msg::RegionOfInterest & roi_1,
     const sensor_msgs::msg::RegionOfInterest & roi_2, const std::string iou_mode);
+
+  /**
+   * @brief Validate size for pedestrian class
+   * @param cluster PointCloud2 cluster data to extract 3D dimensions from
+   * @param cluster_roi The projected cluster ROI
+   * @param label The object classification label
+   * @return True if the object passes size validation (or is not a pedestrian)
+   */
+  bool validateSizeForClass(const sensor_msgs::msg::PointCloud2 & cluster, const uint8_t label);
 };
 
 }  // namespace autoware::image_projection_based_fusion

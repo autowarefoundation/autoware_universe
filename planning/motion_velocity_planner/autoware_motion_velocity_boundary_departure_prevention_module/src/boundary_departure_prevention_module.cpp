@@ -18,9 +18,9 @@
 #include "slow_down_interpolator.hpp"
 #include "utils.hpp"
 
-#include <autoware/boundary_departure_checker/data_structs.hpp>
-#include <autoware/boundary_departure_checker/parameters.hpp>
-#include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/deprecated/boundary_departure_checker/data_structs.hpp>
+#include <autoware/deprecated/boundary_departure_checker/parameters.hpp>
+#include <autoware/deprecated/boundary_departure_checker/utils.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -569,7 +569,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     return tl::make_unexpected(ref_traj_pts_opt.error().what);
   }
 
-  const auto abnormality_data_opt = boundary_departure_checker_ptr_->get_abnormalities_data(
+  const auto abnormality_data_opt = boundary_departure_checker_ptr_->get_departure_data(
     raw_trajectory_points, ego_pred_traj_ptr_->points, curr_pose, curr_vel, curr_acc);
 
   if (!abnormality_data_opt) {
@@ -577,7 +577,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   }
 
   output_.abnormalities_data = *abnormality_data_opt;
-  toc_curr_watch("get_abnormalities_data");
+  toc_curr_watch("get_departure_data");
 
   const auto ego_dist_on_traj_m =
     motion_utils::calcSignedArcLength(raw_trajectory_points, 0UL, curr_pose.pose.position);
@@ -684,11 +684,11 @@ std::pair<int8_t, std::string> BoundaryDeparturePreventionModule::get_diagnostic
       const auto & th_trigger = node_param_.bdc_param.th_trigger;
       const auto braking_start_vel =
         std::clamp(curr_vel, th_trigger.th_vel_mps.min, th_trigger.th_vel_mps.max);
-      const auto braking_dist =
-        boundary_departure_checker::utils::calc_judge_line_dist_with_jerk_limit(
-          braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
-          th_trigger.brake_delay_s);
-      return (pt.ego_dist_on_ref_traj - ego_dist_on_traj) <= braking_dist;
+      const auto braking_dist_opt = motion_utils::calculate_stop_distance(
+        braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
+        th_trigger.brake_delay_s);
+      return (pt.ego_dist_on_ref_traj - ego_dist_on_traj) <=
+             braking_dist_opt.value_or(std::numeric_limits<double>::min());
     };
 
     const auto critical_departure_points = output_.abnormalities_data.critical_departure_points;

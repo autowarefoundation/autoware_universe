@@ -52,6 +52,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   # Add your component library
   ament_auto_add_library(autoware_diffusion_planner_component SHARED
+    src/diffusion_planner_core.cpp
     src/diffusion_planner_node.cpp
     src/conversion/lanelet.cpp
     src/conversion/agent.cpp
@@ -61,6 +62,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/preprocessing/traffic_signals.cpp
     src/utils/utils.cpp
     src/utils/marker_utils.cpp
+    src/utils/planning_factor_utils.cpp
     src/postprocessing/turn_indicator_manager.cpp
     src/inference/tensorrt_inference.cpp
   )
@@ -95,10 +97,15 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       test/preprocessing_utils_edge_case_test.cpp
       test/agent_edge_case_test.cpp
       test/lanelet_edge_case_test.cpp
-      test/diffusion_planner_integration_test.cpp)
+      test/diffusion_planner_integration_test.cpp
+      test/rtc_prefix_test.cpp
+      test/planning_factor_utils_test.cpp)
 
     target_link_libraries(test_diffusion_planner autoware_diffusion_planner_component)
     ament_target_dependencies(test_diffusion_planner
+      autoware_lanelet2_extension
+      autoware_map_msgs
+      autoware_perception_msgs
       autoware_test_utils
     )
   endif()

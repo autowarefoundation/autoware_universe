@@ -2,6 +2,13 @@
 Changelog for package autoware_tensorrt_classifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_tensorrt_classifier): update nvcc flags (`#12055 <https://github.com/autowarefoundation/autoware_universe/issues/12055>`_)
+* chore(autoware_tensorrt_classifier): remove cudnn dependency (`#11895 <https://github.com/autowarefoundation/autoware_universe/issues/11895>`_)
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 

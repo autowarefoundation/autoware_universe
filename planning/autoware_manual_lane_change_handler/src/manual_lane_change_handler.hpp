@@ -15,16 +15,16 @@
 #ifndef MANUAL_LANE_CHANGE_HANDLER_HPP_
 #define MANUAL_LANE_CHANGE_HANDLER_HPP_
 
-#include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
 #include <autoware/mission_planner_universe/service_utils.hpp>
+#include <autoware/route_handler/route_handler.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
-#include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_primitive.hpp>
 #include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
 #include <autoware_planning_msgs/srv/set_preferred_primitive.hpp>
@@ -43,7 +43,6 @@
 namespace autoware::manual_lane_change_handler
 {
 
-using autoware::mission_planner_universe::PlannerPlugin;
 using autoware_planning_msgs::msg::LaneletPrimitive;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::srv::SetPreferredPrimitive;
@@ -77,13 +76,13 @@ public:
 
 private:
   std::vector<autoware_planning_msgs::msg::LaneletPrimitive> sort_primitives_left_to_right(
-    const route_handler::RouteHandler & route_handler,
+    const autoware::route_handler::RouteHandler & route_handler,
     autoware_planning_msgs::msg::LaneletPrimitive preferred_primitive,
     std::vector<autoware_planning_msgs::msg::LaneletPrimitive> primitives);
 
   lanelet::ConstLanelet get_lanelet_by_id(const int64_t id)
   {
-    return planner_->getRouteHandler().getLaneletMapPtr()->laneletLayer.get(id);
+    return route_handler_.getLaneletMapPtr()->laneletLayer.get(id);
   }
 
   void route_callback(const LaneletRoute::ConstSharedPtr msg);
@@ -95,6 +94,7 @@ private:
 
   rclcpp::Service<SetPreferredLane>::SharedPtr srv_set_preferred_lane;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odometry_;
+  rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_map_;
   rclcpp::Subscription<LaneletRoute>::SharedPtr sub_route_;
   autoware_utils::InterProcessPollingSubscriber<tier4_planning_msgs::msg::RerouteAvailability>
     sub_reroute_availability_{this, "~/input/reroute_availability"};
@@ -102,8 +102,7 @@ private:
     pub_processing_time_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Int32Stamped>::SharedPtr pub_shift_number_;
 
-  pluginlib::ClassLoader<PlannerPlugin> plugin_loader_;
-  std::shared_ptr<PlannerPlugin> planner_;
+  autoware::route_handler::RouteHandler route_handler_;
 
   nav_msgs::msg::Odometry::ConstSharedPtr odometry_;
   std::shared_ptr<LaneletRoute> current_route_;

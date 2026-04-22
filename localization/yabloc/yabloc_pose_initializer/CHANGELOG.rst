@@ -2,6 +2,15 @@
 Changelog for package yabloc_pose_initializer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.50.0 (2026-02-14)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* refactor(perception, localization): replace getClosestLanelet function (`#12033 <https://github.com/autowarefoundation/autoware_universe/issues/12033>`_)
+  * refactor(perception, localization): replace getClosestLanelet function
+  * replace toGeomMsg
+  ---------
+* Contributors: Mamoru Sobue, Ryohsuke Mitsudome
+
 0.49.0 (2025-12-30)
 -------------------
 * Merge remote-tracking branch 'origin/main' into prepare-0.49.0-changelog

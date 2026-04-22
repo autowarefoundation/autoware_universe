@@ -17,7 +17,10 @@
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
+#include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
+
+#include <autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -33,6 +36,12 @@ rclcpp::Logger get_logger()
   return rclcpp::get_logger("trajectory_optimizer");
 }
 
+void log_debug_throttle(const std::string & message)
+{
+  auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
+  RCLCPP_DEBUG_THROTTLE(get_logger(), *clock, 5000, "%s", message.c_str());
+}
+
 void log_error_throttle(const std::string & message)
 {
   auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
@@ -43,6 +52,38 @@ void log_warn_throttle(const std::string & message)
 {
   auto clock = rclcpp::Clock::make_shared(RCL_ROS_TIME);
   RCLCPP_WARN_THROTTLE(get_logger(), *clock, 5000, "%s", message.c_str());
+}
+
+TrajectoryPoints generate_three_point_stopped_trajectory(
+  const TrajectoryPoints & input_traj, const Odometry & odom)
+{
+  // ego vehicle is moving, returning a dummy trajectory might be dangerous
+  constexpr double moving_threshold_mps{0.1};
+  if (odom.twist.twist.linear.x > moving_threshold_mps) {
+    log_debug_throttle(
+      "Skip generating three point stopped trajectory since the vehicle is moving");
+    return input_traj;
+  }
+
+  log_debug_throttle("Generated three-point stopped trajectory");
+
+  TrajectoryPoint base_link_point;
+  base_link_point.time_from_start = rclcpp::Duration::from_seconds(0.);
+  base_link_point.pose = odom.pose.pose;
+  base_link_point.longitudinal_velocity_mps = 0.0;
+  base_link_point.acceleration_mps2 = 0.0;
+
+  TrajectoryPoint offset_point_1 = base_link_point;
+  TrajectoryPoint offset_point_2 = base_link_point;
+
+  constexpr double offset_x1{0.5};
+  constexpr double offset_x2{1.0};
+
+  offset_point_1.pose = autoware_utils_geometry::calc_offset_pose(
+    base_link_point.pose, /*offset_x*/ offset_x1, /*offset_y*/ 0., /*offset_z*/ 0.);
+  offset_point_2.pose = autoware_utils_geometry::calc_offset_pose(
+    base_link_point.pose, /*offset_x*/ offset_x2, /*offset_y*/ 0., /*offset_z*/ 0.);
+  return {base_link_point, offset_point_1, offset_point_2};
 }
 
 void smooth_trajectory_with_elastic_band(
