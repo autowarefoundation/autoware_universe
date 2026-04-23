@@ -110,30 +110,29 @@ ProjectionToBound find_closest_segment(
 {
   std::optional<ProjectionToBound> closest_proj;
 
-  const auto is_intersecting =
-    [&ego_side_seg, curr_fp_idx](
-      const Segment2d & ego_seg,
-      const Segment2d & boundary_seg) -> std::optional<ProjectionToBound> {
+  const auto is_intersecting = [curr_fp_idx](
+                                 const Segment2d & ego_seg, const Segment2d & boundary_seg,
+                                 double front_to_proj_offset) -> std::optional<ProjectionToBound> {
     const auto & [ego_lr, ego_rr] = ego_seg;
     const auto & [seg_f, seg_r] = boundary_seg;
     if (
-      const auto is_intersecting_rear = autoware_utils_geometry::intersect(
+      const auto intersected = autoware_utils_geometry::intersect(
         to_geom_pt(ego_lr), to_geom_pt(ego_rr), to_geom_pt(seg_f), to_geom_pt(seg_r))) {
-      Point2d point(is_intersecting_rear->x, is_intersecting_rear->y);
-      const auto front_to_proj_offset =
-        boost::geometry::distance(ego_side_seg.first, ego_side_seg.second);
+      Point2d point(intersected->x, intersected->y);
       return ProjectionToBound{point, point, boundary_seg, 0.0, front_to_proj_offset, curr_fp_idx};
     }
     return std::nullopt;
   };
 
   for (const auto & [seg, id] : boundary_segments) {
-    if (const auto intersecting_front = is_intersecting(ego_front_seg, seg)) {
+    if (const auto intersecting_front = is_intersecting(ego_front_seg, seg, 0.0)) {
       closest_proj = intersecting_front;
       break;
     }
 
-    if (const auto intersecting_rear = is_intersecting(ego_rear_seg, seg)) {
+    if (
+      const auto intersecting_rear = is_intersecting(
+        ego_rear_seg, seg, boost::geometry::distance(ego_side_seg.first, ego_side_seg.second))) {
       closest_proj = intersecting_rear;
       break;
     }

@@ -37,7 +37,15 @@ HysteresisResult update_and_judge(
   const bool current_is_critical = severity_evaluator::is_critical(*evaluation_result);
 
   if (current_is_critical) {
-    if (current_time_s - state.last_no_critical_dpt_time >= param.on_time_buffer_s) {
+    const bool is_imminent_critical =
+      evaluation_result->any_of_side([&param](const auto & side_value) {
+        return side_value.has_value() && side_value->physical_departure_point.is_critical() &&
+               side_value->physical_departure_point.time_from_start < param.on_time_buffer_s;
+      });
+
+    if (
+      is_imminent_critical ||
+      current_time_s - state.last_no_critical_dpt_time >= param.on_time_buffer_s) {
       result.updated_state.last_found_critical_dpt_time = current_time_s;
       result.updated_state.critical_departure_history.for_each_side(
         [](auto & side) { side.clear(); });
