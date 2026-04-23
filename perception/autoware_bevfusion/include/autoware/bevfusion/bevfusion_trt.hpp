@@ -26,7 +26,7 @@
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
@@ -139,7 +139,7 @@ protected:
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> image_backbone_trt_ptr_{nullptr};
   std::unique_ptr<VoxelGenerator> vg_ptr_{nullptr};
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
+  std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
     nullptr};
   std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
   std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};

@@ -17,7 +17,7 @@
 #include "multi_object_tracker_node.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
@@ -108,6 +108,15 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       input_channel_config.trust_orientation =
         declare_parameter<bool>(input_channel_config_name + ".flags.can_trust_orientation", true);
 
+      // association algorithm selection for this channel (default: "bev")
+      {
+        const std::string associator_type_str =
+          declare_parameter<std::string>(input_channel_config_name + ".associator_type", "bev");
+        input_channel_config.associator_type = (associator_type_str == "polar")
+                                                 ? types::AssociationType::POLAR
+                                                 : types::AssociationType::BEV;
+      }
+
       // optional parameters
       const std::string default_name = input_channel;
       const std::string name_long =
@@ -135,10 +144,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.tracker_type_map["bicycle"] = declare_initial_tracker_parameter("bicycle");
   params_.tracker_type_map["motorcycle"] = declare_initial_tracker_parameter("motorcycle");
 
-  params_.processor_config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
-  params_.processor_config.min_known_object_removal_iou =
+  params_.tracker_overlap_manager_config.min_known_object_removal_iou =
     declare_parameter<double>("min_known_object_removal_iou");
-  params_.processor_config.min_unknown_object_removal_iou =
+  params_.tracker_overlap_manager_config.min_unknown_object_removal_iou =
     declare_parameter<double>("min_unknown_object_removal_iou");
 
   const auto declare_tracked_label_thresholds =
@@ -166,19 +174,19 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // pruning parameters
   params_.pruning_giou_thresholds =
     declare_tracked_label_thresholds("pruning_generalized_iou_thresholds");
-  params_.processor_config.pruning_static_object_speed =
+  params_.tracker_overlap_manager_config.pruning_static_object_speed =
     declare_parameter<double>("pruning_static_object_speed");
-  params_.processor_config.pruning_moving_object_speed =
+  params_.tracker_overlap_manager_config.pruning_moving_object_speed =
     declare_parameter<double>("pruning_moving_object_speed");
-  params_.processor_config.pruning_static_iou_threshold =
+  params_.tracker_overlap_manager_config.pruning_static_iou_threshold =
     declare_parameter<double>("pruning_static_iou_threshold");
 
   // overlap distance threshold
   params_.pruning_distance_thresholds =
     declare_tracked_label_thresholds("pruning_distance_thresholds");
-  params_.processor_config.enable_unknown_object_velocity_estimation =
+  params_.creation_config.enable_unknown_object_velocity_estimation =
     declare_parameter<bool>("enable_unknown_object_velocity_estimation");
-  params_.processor_config.enable_unknown_object_motion_output =
+  params_.creation_config.enable_unknown_object_motion_output =
     declare_parameter<bool>("enable_unknown_object_motion_output");
 
   // Parameters for associator (explicit layered configuration)

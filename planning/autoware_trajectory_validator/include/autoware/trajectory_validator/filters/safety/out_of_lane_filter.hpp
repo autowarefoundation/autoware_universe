@@ -17,7 +17,7 @@
 
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
-#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
+#include <autoware/deprecated/boundary_departure_checker/boundary_departure_checker.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -43,8 +43,7 @@ class OutOfLaneFilter : public plugin::ValidatorInterface
 public:
   OutOfLaneFilter();
 
-  tl::expected<void, std::string> is_feasible(
-    const TrajectoryPoints & traj_points, const FilterContext & context) final;
+  result_t is_feasible(const TrajectoryPoints & traj_points, const FilterContext & context) final;
 
   void update_parameters(const validator::Params & params) final;
 
