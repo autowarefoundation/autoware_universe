@@ -264,7 +264,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircleMultipleArrows_RedCircleMultipleAr
 // ------------------------------------------
 // test circle with arrow and only arrow
 // -> critical conflict
-TEST_F(SignalValidatorCheckConflict, RedCicleGreendownarrow_GreenUparrow)
+TEST_F(SignalValidatorCheckConflict, RedCircleGreendownarrow_GreenUparrow)
 {
   StateKey input_a = {
     {TrafficLightElement::RED, TrafficLightElement::CIRCLE},
