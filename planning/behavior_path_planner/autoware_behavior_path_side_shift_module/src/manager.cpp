@@ -79,24 +79,35 @@ void SideShiftModuleManager::onSetLateralOffset(
   SetLateralOffset::Response::SharedPtr response)
 {
   if (!planner_data_ || !planner_data_->route_handler->isHandlerReady()) {
+    response->response_code = autoware_common_msgs::msg::ResponseStatus::SERVICE_UNREADY;
     response->status.success = false;
-    response->status.code = autoware_common_msgs::msg::ResponseStatus::SERVICE_UNREADY;
-    response->status.message = getStatusMessage(response->status.code);
+    response->status.code = response->response_code;
+    response->status.message = getStatusMessage(response->response_code);
     return;
   }
 
   const double current_inserted =
     inserted_lateral_offset_state_ ? inserted_lateral_offset_state_->value.load() : 0.0;
 
-  const auto [status_code, lateral_offset] =
+  const auto [shift_request_result, lateral_offset] =
     validateAndComputeLateralOffset(*request, current_inserted, parameters_);
+
+  if (shift_request_result == autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR) {
+    response->response_code = autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR;
+    response->status.success = false;
+    response->status.code = response->response_code;
+    response->status.message = getStatusMessage(response->response_code);
+    return;
+  }
+
+  response->response_code = shift_request_result;
 
   // WARN_EXCEEDED_LIMIT will be treated as success since the shift itself will be performed
   response->status.success =
-    (status_code == SetLateralOffset::Response::SUCCESS ||
-     status_code == SetLateralOffset::Response::WARN_EXCEEDED_LIMIT);
-  response->status.code = status_code;
-  response->status.message = getStatusMessage(status_code);
+    (shift_request_result == SetLateralOffset::Response::SUCCESS ||
+     shift_request_result == SetLateralOffset::Response::WARN_EXCEEDED_LIMIT);
+  response->status.code = autoware_common_msgs::msg::ResponseStatus::UNKNOWN;
+  response->status.message = getStatusMessage(response->response_code);
 
   if (response->status.success) {
     requested_lateral_offset_state_->value.store(lateral_offset);

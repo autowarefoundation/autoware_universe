@@ -136,12 +136,14 @@ const char * getStatusMessage(uint16_t status_code)
       return "Unknown warning occurred";
     case SetLateralOffset::Response::WARN_EXCEEDED_LIMIT:
       return "The shift length reached limit. Shifted to the possible end.";
+    case ResponseStatus::UNKNOWN:
+      return "Unknown response status";
     case ResponseStatus::SERVICE_UNREADY:
       return "The side_shift module is not ready";
     case ResponseStatus::PARAMETER_ERROR:
       return "Invalid parameters defined in the side_shift module";
     default:
-      return "Unknown status_code";
+      return "Unknown response_status";
   }
 }
 

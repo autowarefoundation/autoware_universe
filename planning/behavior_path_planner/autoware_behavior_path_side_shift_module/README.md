@@ -25,26 +25,28 @@ Offsets use the same sign convention as `tier4_planning_msgs/msg/LateralOffset` 
 The same validation (magnitude limits, minimum gap versus the previous offset, and so on) applies whether the request arrives on the topic or through the service.
 It is recommended to use services so that the user can understand whether the request is accepted or not.
 
-### `~/set_lateral_offset` response `status.code` values
+### `~/set_lateral_offset` response: `response_code` values
 
-The service fills `autoware_common_msgs/ResponseStatus` (`success`, `code`, `message`). The numeric `code` is either a constant from `tier4_planning_msgs/srv/SetLateralOffset` (service-specific) or from `autoware_common_msgs/msg/ResponseStatus` (shared infrastructure).
+`response_code` is the primary outcome field. It uses the lateral-shift constants from `tier4_planning_msgs/srv/SetLateralOffset`, and may also use **`SERVICE_UNREADY`** and **`PARAMETER_ERROR`** from `autoware_common_msgs/msg/ResponseStatus.msg` with the **same numeric values** as `ResponseStatus.code`.
 
-| `code` value | Constant                    | Typical `success` | Meaning                                                                                                                                                                                                                  |
-| -----------: | --------------------------- | :---------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|            0 | `UNKNOWN`                   |      `false`      | No specific result (e.g. zero-initialized `code`; this node always sets `code` explicitly on return).                                                                                                                    |
-|            1 | `SUCCESS`                   |      `true`       | Request accepted; lateral offset updated as requested.                                                                                                                                                                   |
-|        10000 | `ERROR_UNKNOWN`             |      `false`      | Unspecified error.                                                                                                                                                                                                       |
-|        10001 | `ERROR_INVALID_MODE`        |      `false`      | `shift_mode` is not a supported value.                                                                                                                                                                                   |
-|        10002 | `ERROR_INVALID_DIRECTION`   |      `false`      | In `LATERAL_OFFSET_DIRECTION` mode, `shift_direction_value` is not `RESET`, `LEFT`, or `RIGHT`.                                                                                                                          |
-|        10003 | `ERROR_EXCEEDED_LIMIT`      |      `false`      | The path is shifted **already at limit** (configured by parameters) and your request is trying to go even further.                                                                                                       |
-|        10004 | `ERROR_SHIFT_GAP_TOO_SMALL` |      `false`      | Change versus the current offset is smaller than `min_shift_gap` (treated as no meaningful update).                                                                                                                      |
-|        10005 | `ERROR_MODULES_CONFLICTING` |      `false`      | Cannot perform side shift because modules that cannot be run together with the side_shift module is active in the `behavior_path_planner`                                                                                |
-|        20000 | `WARN_UNKNOWN`              |      `false`      | Unspecified warning.                                                                                                                                                                                                     |
-|        20001 | `WARN_EXCEEDED_LIMIT`       |      `true`       | You request reached the limit (configured by parameters) and side_shift module tries to shift the path to the possible maximum. If you try shift even further next, then the service will return `ERROR_EXCEEDED_LIMIT`. |
-|        50001 | `SERVICE_UNREADY`           |      `false`      | `behavior_path_planner` is not ready; request ignored.                                                                                                                                                                   |
-|        50004 | `PARAMETER_ERROR`           |      `false`      | Invalid side-shift node parameters were detected (e.g. non-positive `unit_shift_amount` when using direction steps).                                                                                                     |
+| Value | Constant                    | Typical `success` | Meaning                                                                                                    |
+| ----: | --------------------------- | :---------------: | ---------------------------------------------------------------------------------------------------------- |
+|     0 | `UNKNOWN`                   |      `false`      | No result assigned (for example default-initialized; this implementation sets `response_code` explicitly). |
+|     1 | `SUCCESS`                   |      `true`       | The request was accepted and the lateral offset was updated.                                               |
+| 10000 | `ERROR_UNKNOWN`             |      `false`      | An unspecified error occurred.                                                                             |
+| 10001 | `ERROR_INVALID_MODE`        |      `false`      | `shift_mode` is not supported.                                                                             |
+| 10002 | `ERROR_INVALID_DIRECTION`   |      `false`      | In `LATERAL_OFFSET_DIRECTION` mode, `shift_direction_value` is not `RESET`, `LEFT`, or `RIGHT`.            |
+| 10003 | `ERROR_EXCEEDED_LIMIT`      |      `false`      | The offset is already at the configured limit and the request would exceed it.                             |
+| 10004 | `ERROR_SHIFT_GAP_TOO_SMALL` |      `false`      | The requested change is smaller than `min_shift_gap`.                                                      |
+| 10005 | `ERROR_MODULES_CONFLICTING` |      `false`      | Other active modules in `behavior_path_planner` conflict with this operation.                              |
+| 20000 | `WARN_UNKNOWN`              |      `false`      | An unspecified warning occurred.                                                                           |
+| 20001 | `WARN_EXCEEDED_LIMIT`       |      `true`       | The request hit the limit; the offset was clamped to the maximum allowed value.                            |
 
-`success` is set to `true` only when `code` is `SUCCESS` (1) or `WARN_EXCEEDED_LIMIT` (20001); in those cases the requested offset (possibly clamped) is applied. For all other rows, the previous requested offset is left unchanged.
+In addition, `status.success` is `true` only when `response_code` is `SUCCESS` (1) or `WARN_EXCEEDED_LIMIT` (20001); only then is the requested offset (possibly clamped) applied. Otherwise the previous requested offset is unchanged.
+
+### `~/set_lateral_offset` response: `status` (`autoware_common_msgs/ResponseStatus`)
+
+`status.message` summarizes the outcome using `response_code`. **`status.code` is never set to SetLateralOffset-specific values** (such as `SUCCESS` or `ERROR_EXCEEDED_LIMIT`); those appear only in `response_code`. When the failure is infrastructure or configuration, `status.code` is `SERVICE_UNREADY` or `PARAMETER_ERROR` (and matches `response_code`). For all other outcomes that use only SetLateralOffset constants, `status.code` is **`UNKNOWN`** (50000) from `ResponseStatus.msg`.
 
 ## Statuses of the Side Shift
 

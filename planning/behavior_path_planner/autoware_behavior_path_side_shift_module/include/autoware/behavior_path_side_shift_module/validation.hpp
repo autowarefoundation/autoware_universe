@@ -37,7 +37,7 @@ using SetLateralOffset = tier4_planning_msgs::srv::SetLateralOffset;
  *        Request::RESET, Request::LEFT, Request::RIGHT from the message)
  * @param current_inserted_lateral_offset Current inserted lateral offset [m]
  * @param parameters Parameters used for the side shift module
- * @return Computed lateral offset in meters, and its status_code reflecting the validation results
+ * @return Pair of (value for SetLateralOffset::Response::response_code, lateral offset [m])
  */
 std::pair<uint16_t, double> validateAndComputeLateralOffset(
   const SetLateralOffset::Request & request, const double current_inserted_lateral_offset,
