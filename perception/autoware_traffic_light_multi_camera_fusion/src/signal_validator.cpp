@@ -13,8 +13,9 @@
 // limitations under the License.
 
 #include "signal_validator.hpp"
-
 #include "types.hpp"
+
+#include <utility>
 
 namespace autoware::traffic_light
 {
