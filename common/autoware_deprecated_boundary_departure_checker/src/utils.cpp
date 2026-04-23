@@ -21,7 +21,6 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
@@ -796,7 +795,7 @@ std::optional<std::pair<double, double>> is_point_shifted(
   const auto yaw_diff_rad = std::abs(curr_pt_yaw_rad - prev_pt_yaw_rad);
 
   const auto dist_m =
-    autoware::universe_utils::calcDistance2d(curr_iter_pt.position, prev_iter_pt.position);
+    autoware_utils_geometry::calc_distance2d(curr_iter_pt.position, prev_iter_pt.position);
   if (dist_m > th_shift_m || yaw_diff_rad > th_yaw_diff_rad) {
     return std::make_pair(dist_m, yaw_diff_rad);
   }
