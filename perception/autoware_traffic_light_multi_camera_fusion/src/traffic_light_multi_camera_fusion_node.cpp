@@ -119,8 +119,8 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
     });
   signal_pub_ = create_publisher<NewSignalArrayType>("~/output/traffic_signals", rclcpp::QoS{1});
 
-  diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(
-    this, "traffic light confliction status");
+  diagnostics_interface_ptr_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "traffic light conflict status");
 
   if (use_cross_camera_validation_) {
     signal_validator_ = std::make_unique<SignalValidator>();
@@ -460,7 +460,7 @@ void MultiCameraFusion::publishDiagnostics(rclcpp::Time stamp)
 
   diagnostics_interface_ptr_->update_level_and_message(
     diagnostic_msgs::msg::DiagnosticStatus::WARN,
-    "Detected traffic light signal confliction in the fusion process.");
+    "Detected traffic light signal conflict in the fusion process.");
 
   diagnostics_interface_ptr_->publish(stamp);
   conflicted_regulatory_element_status_.clear();

@@ -39,7 +39,7 @@ using SignalLUT = std::unordered_set<std::pair<uint8_t, uint8_t>, SignalHash>;
 enum class ConflictType {
   NO_CONFLICT = 0,  // when all the signals are the same
   CONFLICT,         // when all the signals are different
-  PARTIAL_CONFLICT  // whene some of the signals are different
+  PARTIAL_CONFLICT  // when some of the signals are different
 };
 
 struct ConflictStatus
