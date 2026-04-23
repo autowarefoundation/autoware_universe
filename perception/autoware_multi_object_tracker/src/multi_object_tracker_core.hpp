@@ -15,9 +15,9 @@
 #ifndef MULTI_OBJECT_TRACKER_CORE_HPP_
 #define MULTI_OBJECT_TRACKER_CORE_HPP_
 
-#include "autoware/multi_object_tracker/association/association.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/association/bev_association.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "debugger/debugger.hpp"
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
@@ -60,7 +60,8 @@ struct MultiObjectTrackerParameters
   TrackedLabelThresholds pruning_distance_thresholds;
 
   // Induced parameters
-  TrackerProcessorConfig processor_config;
+  TrackerCreationConfig creation_config;
+  TrackerOverlapManagerConfig tracker_overlap_manager_config;
   AssociatorConfig associator_config;
 };
 
@@ -86,7 +87,7 @@ struct MultiObjectTrackerInternalState
 namespace core
 {
 
-// Result structs for core functions
+//// Result structs for core functions
 struct MeasurementProcessingResult
 {
   bool has_objects;     // true if objects were accepted from InputManager
@@ -112,10 +113,10 @@ struct OptionalPublishingData
   std::optional<autoware_perception_msgs::msg::TrackedObjects> tentative_objects;
 };
 
-// Parameter processing
+//// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params);
 
-// Utility functions
+//// Utility functions
 bool should_publish(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state);
@@ -128,7 +129,7 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
   const rclcpp::Time & object_time, const MultiObjectTrackerParameters & params,
   const MultiObjectTrackerInternalState & state, const rclcpp::Logger & logger);
 
-// Low-level processing functions
+//// Low-level processing functions
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
@@ -140,7 +141,7 @@ void process_objects_(
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger);
 
-// High-level orchestration functions
+//// High-level orchestration functions
 ObjectProcessingResult process_objects_batch(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,

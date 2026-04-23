@@ -88,6 +88,7 @@ public:
   CallbackInvokingVariable<Image::ConstSharedPtr> artag_input_image;
   CallbackInvokingVariable<PointCloud2::ConstSharedPtr> ndt_input_points;
   CallbackInvokingVariable<Image::ConstSharedPtr> yabloc_input_image;
+  // lidar_marker does not need input relay (directly subscribes to pointcloud)
 
   // Used for switch rule
   CallbackInvokingVariable<PoseCovStamped::ConstSharedPtr> localization_pose_cov;
