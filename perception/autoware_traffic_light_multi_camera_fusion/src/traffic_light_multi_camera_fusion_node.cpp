@@ -415,8 +415,6 @@ void MultiCameraFusion::determineBestGroupState(
       // set the best record that signal is overwritten with fail-safe record
       grouped_record_map[reg_ele_id] =
         utils::generateFailsafeRecord(group_info.best_record_for_state.at(best_state_key));
-
-      auto fusion_record = grouped_record_map[reg_ele_id];
     } else {
       // partially conflicted and allowed to publish the matched signals
 
