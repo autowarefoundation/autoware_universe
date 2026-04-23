@@ -105,13 +105,39 @@ std::optional<ProjectionToBound> calc_nearest_projection(
 }
 
 ProjectionToBound find_closest_segment(
-  const Segment2d & ego_side_seg, const Segment2d & ego_rear_seg, const size_t curr_fp_idx,
-  const std::vector<SegmentWithIdx> & boundary_segments)
+  const Segment2d & ego_side_seg, const Segment2d & ego_front_seg, const Segment2d & ego_rear_seg,
+  const size_t curr_fp_idx, const std::vector<SegmentWithIdx> & boundary_segments)
 {
   std::optional<ProjectionToBound> closest_proj;
+
+  const auto is_intersecting =
+    [&ego_side_seg, curr_fp_idx](
+      const Segment2d & ego_seg,
+      const Segment2d & boundary_seg) -> std::optional<ProjectionToBound> {
+    const auto & [ego_lr, ego_rr] = ego_seg;
+    const auto & [seg_f, seg_r] = boundary_seg;
+    if (
+      const auto is_intersecting_rear = autoware_utils_geometry::intersect(
+        to_geom_pt(ego_lr), to_geom_pt(ego_rr), to_geom_pt(seg_f), to_geom_pt(seg_r))) {
+      Point2d point(is_intersecting_rear->x, is_intersecting_rear->y);
+      const auto front_to_proj_offset =
+        boost::geometry::distance(ego_side_seg.first, ego_side_seg.second);
+      return ProjectionToBound{point, point, boundary_seg, 0.0, front_to_proj_offset, curr_fp_idx};
+    }
+    return std::nullopt;
+  };
+
   for (const auto & [seg, id] : boundary_segments) {
-    const auto & [ego_lr, ego_rr] = ego_rear_seg;
-    const auto & [seg_f, seg_r] = seg;
+    if (const auto intersecting_front = is_intersecting(ego_front_seg, seg)) {
+      closest_proj = intersecting_front;
+      break;
+    }
+
+    if (const auto intersecting_rear = is_intersecting(ego_rear_seg, seg)) {
+      closest_proj = intersecting_rear;
+      break;
+    }
+
     if (const auto proj_opt = calc_nearest_projection(ego_side_seg, seg, curr_fp_idx)) {
       if (!closest_proj || proj_opt->lat_dist < closest_proj->lat_dist) {
         closest_proj = *proj_opt;
@@ -119,20 +145,6 @@ ProjectionToBound find_closest_segment(
     }
     if (closest_proj) {
       continue;
-    }
-
-    if (
-      const auto is_intersecting_rear = autoware_utils_geometry::intersect(
-        to_geom_pt(ego_lr), to_geom_pt(ego_rr), to_geom_pt(seg_f), to_geom_pt(seg_r))) {
-      Point2d point(is_intersecting_rear->x, is_intersecting_rear->y);
-      closest_proj =
-        ProjectionToBound{point,
-                          point,
-                          seg,
-                          0.0,
-                          boost::geometry::distance(ego_side_seg.first, ego_side_seg.second),
-                          curr_fp_idx};
-      break;
     }
   }
 

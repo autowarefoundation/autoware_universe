@@ -46,14 +46,15 @@ std::optional<ProjectionToBound> calc_nearest_projection(
 /**
  * @brief Find the nearest boundary segment to an ego side segment.
  * @param[in] ego_side_seg side segment of the ego footprint
+ * @param[in] ego_front_seg front segment of the ego footprint
  * @param[in] ego_rear_seg rear segment of the ego footprint
  * @param[in] curr_fp_idx index of the current footprint
  * @param[in] boundary_segments candidate boundary segments
  * @return closest projection data
  */
 ProjectionToBound find_closest_segment(
-  const Segment2d & ego_side_seg, const Segment2d & ego_rear_seg, const size_t curr_fp_idx,
-  const std::vector<SegmentWithIdx> & boundary_segments);
+  const Segment2d & ego_side_seg, const Segment2d & ego_front_seg, const Segment2d & ego_rear_seg,
+  const size_t curr_fp_idx, const std::vector<SegmentWithIdx> & boundary_segments);
 
 /**
  * @brief Calculate signed lateral distance to a boundary.

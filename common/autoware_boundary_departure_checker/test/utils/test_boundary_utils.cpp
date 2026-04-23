@@ -83,6 +83,7 @@ TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentRearIntersection)
   // Arrange:
   Segment2d ego_side_seg{{0.0, 4.0}, {0.0, 2.0}};
   Segment2d ego_rear_seg{{0.0, 0.0}, {2.0, 0.0}};
+  Segment2d ego_front_seg{{0.0, 4.0}, {2.0, 4.0}};
   size_t curr_fp_idx = 42;
 
   std::vector<SegmentWithIdx> boundary_segments;
@@ -91,7 +92,7 @@ TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentRearIntersection)
 
   // Act:
   auto result = geometry_projection::find_closest_segment(
-    ego_side_seg, ego_rear_seg, curr_fp_idx, boundary_segments);
+    ego_side_seg, ego_front_seg, ego_rear_seg, curr_fp_idx, boundary_segments);
 
   // Assert:
   EXPECT_EQ(result.pose_index, curr_fp_idx);
@@ -100,11 +101,36 @@ TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentRearIntersection)
   EXPECT_DOUBLE_EQ(result.pt_on_ego.y(), 0.0);
 }
 
+TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentFrontIntersection)
+{
+  // Arrange:
+  Segment2d ego_side_seg{{0.0, 4.0}, {0.0, 2.0}};
+  Segment2d ego_rear_seg{{0.0, -4.0}, {2.0, -4.0}};
+  Segment2d ego_front_seg{{0.0, 4.0}, {2.0, 4.0}};
+  size_t curr_fp_idx = 42;
+
+  std::vector<SegmentWithIdx> boundary_segments;
+  IdxForRTreeSegment id{1, 0, 1};
+  boundary_segments.emplace_back(Segment2d{{1.0, 5.0}, {1.0, 3.0}}, id);
+
+  // Act:
+  auto result = geometry_projection::find_closest_segment(
+    ego_side_seg, ego_front_seg, ego_rear_seg, curr_fp_idx, boundary_segments);
+
+  // Assert:
+  EXPECT_EQ(result.pose_index, curr_fp_idx);
+  EXPECT_DOUBLE_EQ(result.lat_dist, 0.0);
+  EXPECT_DOUBLE_EQ(result.pt_on_ego.x(), 1.0);
+  EXPECT_DOUBLE_EQ(result.pt_on_ego.y(), 4.0);
+}
+
 TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentFallback)
 {
   // Arrange:
   Segment2d ego_side_seg{{0.0, 4.0}, {0.0, 2.0}};
   Segment2d ego_rear_seg{{0.0, 0.0}, {2.0, 0.0}};
+  Segment2d ego_front_seg{{0.0, 4.0}, {2.0, 4.0}};
+
   size_t curr_fp_idx = 99;
 
   std::vector<SegmentWithIdx> boundary_segments;
@@ -113,7 +139,7 @@ TEST(UncrossableBoundaryUtilsTest, TestFindClosestSegmentFallback)
 
   // Act:
   auto result = geometry_projection::find_closest_segment(
-    ego_side_seg, ego_rear_seg, curr_fp_idx, boundary_segments);
+    ego_side_seg, ego_front_seg, ego_rear_seg, curr_fp_idx, boundary_segments);
 
   // Assert:
   EXPECT_EQ(result.pose_index, curr_fp_idx);

@@ -47,12 +47,13 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
     const auto & ego_lb = fp.left.second;
     const auto & ego_rb = fp.right.second;
 
+    const auto front_seg = Segment2d(fp.left.first, fp.right.first);
     const auto rear_seg = Segment2d(ego_lb, ego_rb);
 
     side.for_each([&](auto key_constant, auto & side_value) {
       constexpr SideKey side_key = key_constant.value;
-      auto closest_bound =
-        geometry_projection::find_closest_segment(fp[side_key], rear_seg, i, boundaries[side_key]);
+      auto closest_bound = geometry_projection::find_closest_segment(
+        fp[side_key], front_seg, rear_seg, i, boundaries[side_key]);
 
       if (
         closest_bound.lat_dist > 0.0 &&
