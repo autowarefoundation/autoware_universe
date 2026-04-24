@@ -110,13 +110,13 @@ TrafficLightFilter::get_stop_lines(
   for (const auto & [stop_line, signal] :
        collect_stop_lines(lanelet_map, traffic_lights.traffic_light_groups)) {
     if (traffic_light_utils::hasTrafficLightShapeAndColor(
-          signal.elements, tier4_perception_msgs::msg::TrafficLightElement::CIRCLE,
-          tier4_perception_msgs::msg::TrafficLightElement::RED)) {
+          signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+          autoware_perception_msgs::msg::TrafficLightElement::RED)) {
       red_stop_lines.push_back(stop_line);
     }
     if (traffic_light_utils::hasTrafficLightShapeAndColor(
-          signal.elements, tier4_perception_msgs::msg::TrafficLightElement::CIRCLE,
-          tier4_perception_msgs::msg::TrafficLightElement::AMBER)) {
+          signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+          autoware_perception_msgs::msg::TrafficLightElement::AMBER)) {
       amber_stop_lines.push_back(stop_line);
     }
   }
