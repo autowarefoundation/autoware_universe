@@ -134,7 +134,7 @@ std::vector<SegmentWithIdx> find_closest_boundary_segments(
       continue;
     }
 
-    auto boundary_segment_3d = rtree.get_segment_3d_from_id(lanelet_map_ptr, id);
+    auto boundary_segment_3d = rtree.get_segment_3d_from_id(id);
 
     if (!is_segment_within_ego_height(boundary_segment_3d, ego_z_position, ego_vehicle_height)) {
       continue;

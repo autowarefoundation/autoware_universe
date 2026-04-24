@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <iterator>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::boundary_departure_checker
@@ -41,11 +42,15 @@ std::vector<SegmentWithIdx> create_local_segments(const lanelet::ConstLineString
 }  // namespace
 
 UncrossableBoundariesRTree::UncrossableBoundariesRTree(
-  const lanelet::LaneletMap & lanelet_map,
-  const std::vector<std::string> & boundary_types_to_detect)
+  lanelet::LaneletMapPtr lanelet_map_ptr, const std::vector<std::string> & boundary_types_to_detect)
+: lanelet_map_ptr_(std::move(lanelet_map_ptr))
 {
+  if (!lanelet_map_ptr_) {
+    throw std::runtime_error("UncrossableBoundariesRTree: Map is NULL");
+  }
+
   std::vector<SegmentWithIdx> segments;
-  for (const auto & linestring : lanelet_map.lineStringLayer) {
+  for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
     if (!is_uncrossable_type(boundary_types_to_detect, linestring)) {
       continue;
     }
@@ -59,9 +64,9 @@ UncrossableBoundariesRTree::UncrossableBoundariesRTree(
 }
 
 autoware_utils_geometry::Segment3d UncrossableBoundariesRTree::get_segment_3d_from_id(
-  const lanelet::LaneletMapPtr & lanelet_map_ptr, const IdxForRTreeSegment & seg_id)
+  const IdxForRTreeSegment & seg_id) const
 {
-  const auto & linestring_layer = lanelet_map_ptr->lineStringLayer;
+  const auto & linestring_layer = lanelet_map_ptr_->lineStringLayer;
   const auto basic_ls = linestring_layer.get(seg_id.linestring_id).basicLineString();
 
   auto p_start = autoware_utils_geometry::Point3d{

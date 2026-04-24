@@ -24,17 +24,14 @@ namespace autoware::boundary_departure_checker
 BoundaryDepartureEvaluator::BoundaryDepartureEvaluator(
   const lanelet::LaneletMapPtr & map, const UncrossableBoundaryDepartureParam & param,
   const vehicle_info_utils::VehicleInfo & vehicle_info)
-: map_(map),
-  param_(param),
-  vehicle_info_(vehicle_info),
-  rtree_(*map, param.boundary_types_to_detect)
+: map_(map), param_(param), vehicle_info_(vehicle_info), rtree_(map, param.boundary_types_to_detect)
 {
-  if (!map) {
-    throw std::runtime_error("Map is NULL");
+  if (!map_) {
+    throw std::runtime_error("BoundaryDepartureEvaluator: Map is NULL");
   }
 
-  if (map->lineStringLayer.empty()) {
-    throw std::runtime_error("Map without any linestrings.");
+  if (map_->lineStringLayer.empty()) {
+    throw std::runtime_error("BoundaryDepartureEvaluator: Map without any linestrings.");
   }
 }
 

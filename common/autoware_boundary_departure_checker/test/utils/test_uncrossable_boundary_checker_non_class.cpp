@@ -349,14 +349,14 @@ TEST(UncrossableBoundaryUtilsTest, TestBuildUncrossableBoundariesRTree)
 {
   // Verifies the construction and querying of an R-tree for uncrossable boundary segments.
 
-  // Arrange:
-  lanelet::LaneletMap map;
+  // Arrange
+  lanelet::LaneletMapPtr map = std::make_shared<lanelet::LaneletMap>();
   lanelet::Point3d p1(lanelet::utils::getId(), 0.0, 0.0, 0.0);
   lanelet::Point3d p2(lanelet::utils::getId(), 1.0, 0.0, 0.0);
   lanelet::Point3d p3(lanelet::utils::getId(), 2.0, 0.0, 0.0);
   lanelet::LineString3d ls1(lanelet::utils::getId(), {p1, p2, p3});
   ls1.attributes()[lanelet::AttributeName::Type] = "road_border";
-  map.add(ls1);
+  map->add(ls1);
   std::vector<std::string> types = {"road_border"};
 
   // Act:

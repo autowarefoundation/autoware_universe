@@ -37,17 +37,16 @@ public:
    * @param[in] boundary_types_to_detect list of boundary type names to consider as uncrossable
    */
   UncrossableBoundariesRTree(
-    const lanelet::LaneletMap & lanelet_map,
+    lanelet::LaneletMapPtr lanelet_map_ptr,
     const std::vector<std::string> & boundary_types_to_detect);
 
   /**
    * @brief Retrieve a 3D line segment from the Lanelet2 map.
-   * @param[in] lanelet_map_ptr pointer to the Lanelet2 map
    * @param[in] seg_id identifier for the segment
    * @return corresponding 3D segment
    */
-  static autoware_utils_geometry::Segment3d get_segment_3d_from_id(
-    const lanelet::LaneletMapPtr & lanelet_map_ptr, const IdxForRTreeSegment & seg_id);
+  [[nodiscard]] autoware_utils_geometry::Segment3d get_segment_3d_from_id(
+    const IdxForRTreeSegment & seg_id) const;
 
   /**
    * @brief Query the R-tree for segments near a point.
@@ -75,6 +74,7 @@ public:
 
 private:
   autoware::boundary_departure_checker::UncrossableBoundsRTree rtree_;
+  lanelet::LaneletMapPtr lanelet_map_ptr_;
 };
 
 }  // namespace autoware::boundary_departure_checker

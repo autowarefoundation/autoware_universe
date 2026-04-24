@@ -213,16 +213,16 @@ TEST(UncrossableBoundaryUtilsTest, TestGetSegment3DFromId)
   ls.attributes()[lanelet::AttributeName::Type] = "road_border";
   map->add(ls);
 
-  UncrossableBoundariesRTree rtree(*map, {"road_border"});
+  UncrossableBoundariesRTree rtree(map, {"road_border"});
 
   // Act & Assert:
   IdxForRTreeSegment id1{ls.id(), 0, 1};
-  auto seg1 = rtree.get_segment_3d_from_id(map, id1);
+  auto seg1 = rtree.get_segment_3d_from_id(id1);
   EXPECT_DOUBLE_EQ(seg1.first.x(), 1.0);
   EXPECT_DOUBLE_EQ(seg1.second.x(), 4.0);
 
   IdxForRTreeSegment id2{ls.id(), 1, 2};
-  auto seg2 = rtree.get_segment_3d_from_id(map, id2);
+  auto seg2 = rtree.get_segment_3d_from_id(id2);
   EXPECT_DOUBLE_EQ(seg2.first.x(), 4.0);
   EXPECT_DOUBLE_EQ(seg2.second.x(), 7.0);
 }
