@@ -197,8 +197,9 @@ void set_right_turn_target_lanelets(
       const auto traffic_light_elements = context->get_traffic_signal(regulatory_element->id());
       if (!traffic_light_elements.has_value()) continue;
 
-      if (autoware::traffic_light_utils::hasTrafficLightShape(
-            traffic_light_elements.value(), TrafficLightElement::RIGHT_ARROW)) {
+      if (autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
+            traffic_light_elements.value(), TrafficLightElement::RIGHT_ARROW,
+            TrafficLightElement::GREEN)) {
         return true;
       }
     }
@@ -295,13 +296,15 @@ void set_left_turn_target_lanelets(
       const auto traffic_light_elements = context->get_traffic_signal(regulatory_element->id());
       if (!traffic_light_elements.has_value()) continue;
 
-      if (autoware::traffic_light_utils::hasTrafficLightCircleColor(
-            traffic_light_elements.value(), TrafficLightElement::GREEN)) {
+      if (autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
+            traffic_light_elements.value(), TrafficLightElement::CIRCLE,
+            TrafficLightElement::GREEN)) {
         return true;
       }
 
-      if (autoware::traffic_light_utils::hasTrafficLightCircleColor(
-            traffic_light_elements.value(), TrafficLightElement::AMBER)) {
+      if (autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
+            traffic_light_elements.value(), TrafficLightElement::CIRCLE,
+            TrafficLightElement::AMBER)) {
         return true;
       }
     }
