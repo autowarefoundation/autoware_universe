@@ -128,6 +128,7 @@ public:
   enum class PolarDataType : uint8_t { PreComputed, DeriveFromCartesian };
 
   CudaPolarVoxelNoiseFilter();
+  ~CudaPolarVoxelNoiseFilter();
 
   /**
    * \brief Filters a point cloud based on polar voxel grid parameters.

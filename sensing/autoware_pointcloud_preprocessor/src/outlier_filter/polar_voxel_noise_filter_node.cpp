@@ -641,6 +641,8 @@ bool PolarVoxelNoiseFilterComponent::validate_negative_half_pi_to_half_pi(
 rcl_interfaces::msg::SetParametersResult PolarVoxelNoiseFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & params)
 {
+  std::scoped_lock lock(mutex_);
+
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
   result.reason = "success";

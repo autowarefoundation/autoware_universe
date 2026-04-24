@@ -486,6 +486,28 @@ CudaPolarVoxelNoiseFilter::CudaPolarVoxelNoiseFilter() : primary_return_type_dev
     autoware::cuda_utils::create_memory_pool(max_mem_pool_size_in_byte, current_device_id);
 }
 
+CudaPolarVoxelNoiseFilter::~CudaPolarVoxelNoiseFilter()
+{
+  if (stream_) {
+    cudaStreamSynchronize(stream_);
+  }
+
+  if (primary_return_type_dev_ && primary_return_type_dev_.value().return_types && stream_) {
+    cudaFreeAsync(primary_return_type_dev_.value().return_types, stream_);
+    cudaStreamSynchronize(stream_);
+  }
+  primary_return_type_dev_.reset();
+
+  if (mem_pool_) {
+    cudaMemPoolDestroy(mem_pool_);
+    mem_pool_ = nullptr;
+  }
+  if (stream_) {
+    cudaStreamDestroy(stream_);
+    stream_ = nullptr;
+  }
+}
+
 CudaPolarVoxelNoiseFilter::FilterReturn CudaPolarVoxelNoiseFilter::filter(
   const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_cloud,
   const CudaPolarVoxelNoiseFilterParameters & params, const PolarDataType polar_type)
