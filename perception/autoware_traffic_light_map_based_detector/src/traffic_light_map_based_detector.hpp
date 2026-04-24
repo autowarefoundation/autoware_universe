@@ -103,7 +103,7 @@ private:
    * @brief Filter traffic lights that are visible from the camera
    *
    * @param all_traffic_lights      all the traffic lights in the route or in the map
-   * @param tf_map2camera_samples    the stamped transformation samples from map to camera
+   * @param tf_map2camera_samples   the stamped transformation samples from map to camera
    * @param pinhole_camera_model    pinhole model calculated from camera_info
    * @param visible_traffic_lights  the visible traffic lights output
    */
