@@ -19,7 +19,6 @@
 
 #include <gtest/gtest.h>
 
-#include <string>
 #include <vector>
 
 namespace autoware::boundary_departure_checker

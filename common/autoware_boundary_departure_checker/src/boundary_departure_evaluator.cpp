@@ -17,7 +17,7 @@
 #include "autoware/boundary_departure_checker/boundary_segment_finder.hpp"
 #include "autoware/boundary_departure_checker/severity_evaluator.hpp"
 
-#include <cassert>
+#include <stdexcept>
 
 namespace autoware::boundary_departure_checker
 {

@@ -46,8 +46,8 @@ public:
    * @param[in] seg_id identifier for the segment
    * @return corresponding 3D segment
    */
-  autoware_utils_geometry::Segment3d get_segment_3d_from_id(
-    const lanelet::LaneletMapPtr & lanelet_map_ptr, const IdxForRTreeSegment & seg_id) const;
+  static autoware_utils_geometry::Segment3d get_segment_3d_from_id(
+    const lanelet::LaneletMapPtr & lanelet_map_ptr, const IdxForRTreeSegment & seg_id);
 
   /**
    * @brief Query the R-tree for segments near a point.
@@ -55,13 +55,13 @@ public:
    * @param[in] max_results maximum number of results to return
    * @return list of nearby segments
    */
-  std::vector<SegmentWithIdx> query(const Point2d & point, size_t max_results) const;
+  [[nodiscard]] std::vector<SegmentWithIdx> query(const Point2d & point, size_t max_results) const;
 
   /**
    * @brief Check if the R-tree is empty.
    * @return true if empty
    */
-  bool empty() const { return rtree_.empty(); }
+  [[nodiscard]] bool empty() const { return rtree_.empty(); }
 
   /**
    * @brief Check if a line string matches one of the uncrossable boundary types.

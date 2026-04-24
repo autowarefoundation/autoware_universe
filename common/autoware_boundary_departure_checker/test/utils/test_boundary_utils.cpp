@@ -22,14 +22,7 @@
 
 #include <limits>
 #include <memory>
-#include <string>
 #include <vector>
-
-namespace
-{
-using autoware::boundary_departure_checker::ProjectionToBound;
-using autoware_utils_geometry::Segment2d;
-}  // namespace
 
 namespace autoware::boundary_departure_checker
 {

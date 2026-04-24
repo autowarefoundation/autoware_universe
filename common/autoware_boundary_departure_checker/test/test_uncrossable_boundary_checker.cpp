@@ -19,98 +19,85 @@
 
 #include <gtest/gtest.h>
 
-#include <chrono>
 #include <memory>
-#include <thread>
 #include <vector>
 
 namespace autoware::boundary_departure_checker
 {
-namespace
+UncrossableBoundaryChecker create_default_checker()
 {
-}  // namespace
+  // 1. Setup Vehicle Info (Standard Sedan Size)
+  auto vehicle_info = autoware::vehicle_info_utils::createVehicleInfo(
+    0.383,  // front_overhang [m]
+    0.235,  // rear_overhang [m]
+    2.79,   // wheel_base [m]
+    1.64,   // wheel_tread [m]
+    1.0,    // left_overhang [m]
+    1.1,    // right_overhang [m]
+    2.5,    // vehicle_height [m]
+    0.128,  // cg_to_rear [m]
+    0.128,  // max_steer_angle [rad]
+    0.70    // min_steer_angle [rad]
+  );
 
-class UncrossableBoundaryCheckerTest : public ::testing::Test
+  // 2. Param
+  UncrossableBoundaryDepartureParam param;
+  param.lateral_margin_m = 0.01;   // [m]
+  param.on_time_buffer_s = 0.15;   // 150ms of continuous violation to trigger CRITICAL
+  param.off_time_buffer_s = 0.15;  // 150ms of continuous safety to clear CRITICAL
+  param.max_deceleration_mps2 = -4.0;
+  param.max_jerk_mps3 = -5.0;
+  param.brake_delay_s = 1.0;
+  param.time_to_departure_cutoff_s = 3.0;
+  param.boundary_types_to_detect = {"road_border"};
+
+  // 3. Create a LaneletMap with a straight road border at Y = 2.0
+  auto map = std::make_shared<lanelet::LaneletMap>();
+  lanelet::Point3d p1(lanelet::utils::getId(), -100.0, 2.0, 0.0);
+  lanelet::Point3d p2(lanelet::utils::getId(), 100.0, 2.0, 0.0);
+  lanelet::LineString3d boundary_ls(lanelet::utils::getId(), {p1, p2});
+  boundary_ls.attributes()[lanelet::AttributeName::Type] = "road_border";
+  map->add(boundary_ls);
+
+  return {map, param, vehicle_info};
+}
+
+TrajectoryPoints create_trajectory(
+  double start_x, double start_y, double velocity, double yaw = 0.0)
 {
-protected:
-  void SetUp() override
-  {
-    // 1. Setup Vehicle Info (Standard Sedan Size)
-    vehicle_info_ = autoware::vehicle_info_utils::createVehicleInfo(
-      0.383,  // front_overhang [m]
-      0.235,  // rear_overhang [m]
-      2.79,   // wheel_base [m]
-      1.64,   // wheel_tread [m]
-      1.0,    // left_overhang [m]
-      1.1,    // right_overhang [m]
-      2.5,    // vehicle_height [m]
-      0.128,  // cg_to_rear [m]
-      0.128,  // max_steer_angle [rad]
-      0.70    // min_steer_angle [rad]
-    );
-
-    // 2. Param
-    param_.lateral_margin_m = 0.01;   // [m]
-    param_.on_time_buffer_s = 0.15;   // 150ms of continuous violation to trigger CRITICAL
-    param_.off_time_buffer_s = 0.15;  // 150ms of continuous safety to clear CRITICAL
-    param_.max_deceleration_mps2 = -4.0;
-    param_.max_jerk_mps3 = -5.0;
-    param_.brake_delay_s = 1.0;
-    param_.time_to_departure_cutoff_s = 3.0;
-    param_.boundary_types_to_detect = {"road_border"};
-
-    // 3. Create a LaneletMap with a straight road border at Y = 2.0
-    map_ = std::make_shared<lanelet::LaneletMap>();
-    lanelet::Point3d p1(lanelet::utils::getId(), -100.0, 2.0, 0.0);
-    lanelet::Point3d p2(lanelet::utils::getId(), 100.0, 2.0, 0.0);
-    lanelet::LineString3d boundary_ls(lanelet::utils::getId(), {p1, p2});
-    boundary_ls.attributes()[lanelet::AttributeName::Type] = "road_border";
-    map_->add(boundary_ls);
-    checker_ptr_ = std::make_unique<UncrossableBoundaryChecker>(map_, param_, vehicle_info_);
+  TrajectoryPoints traj;
+  for (int i = 0; i < 5; ++i) {
+    TrajectoryPoint p;
+    p.pose.position.x = start_x + i * 5.0 * std::cos(yaw);
+    p.pose.position.y = start_y + i * 5.0 * std::sin(yaw);
+    p.pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
+    const double time = i * 0.5;
+    p.time_from_start.sec = static_cast<int32_t>(time);
+    p.time_from_start.nanosec = static_cast<uint32_t>((time - p.time_from_start.sec) * 1e9);
+    p.longitudinal_velocity_mps = static_cast<float>(velocity);
+    traj.push_back(p);
   }
+  return traj;
+}
 
-  static TrajectoryPoints create_trajectory(
-    double start_x, double start_y, double velocity, double yaw = 0.0)
-  {
-    TrajectoryPoints traj;
-    for (int i = 0; i < 5; ++i) {
-      TrajectoryPoint p;
-      p.pose.position.x = start_x + i * 5.0 * std::cos(yaw);
-      p.pose.position.y = start_y + i * 5.0 * std::sin(yaw);
-      p.pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(yaw);
-      const double time = i * 0.5;
-      p.time_from_start.sec = static_cast<int32_t>(time);
-      p.time_from_start.nanosec = static_cast<uint32_t>((time - p.time_from_start.sec) * 1e9);
-      p.longitudinal_velocity_mps = static_cast<float>(velocity);
-      traj.push_back(p);
-    }
-    return traj;
+EgoDynamicState create_ego_state(
+  const TrajectoryPoints & traj, double velocity, double current_time_s = 0.0)
+{
+  EgoDynamicState state;
+  if (!traj.empty()) {
+    state.pose_with_cov.pose = traj.front().pose;
   }
-
-  static EgoDynamicState create_ego_state(
-    const TrajectoryPoints & traj, double velocity, double current_time_s = 0.0)
-  {
-    EgoDynamicState state;
-    if (!traj.empty()) {
-      state.pose_with_cov.pose = traj.front().pose;
-    }
-    for (auto & c : state.pose_with_cov.covariance) c = 0.0;
-    state.velocity = velocity;
-    state.acceleration = 0.0;
-    state.current_time_s = current_time_s;
-    return state;
-  }
-
-  std::unique_ptr<UncrossableBoundaryChecker> checker_ptr_;
-  UncrossableBoundaryDepartureParam param_;
-  std::shared_ptr<lanelet::LaneletMap> map_;
-  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
-};
+  for (auto & c : state.pose_with_cov.covariance) c = 0.0;
+  state.velocity = velocity;
+  state.acceleration = 0.0;
+  state.current_time_s = current_time_s;
+  return state;
+}
 
 // ==============================================================================
 // 1. Initialization and Edge Cases
 // ==============================================================================
-TEST_F(UncrossableBoundaryCheckerTest, TestCheckDepartureEmptyTrajectory)
+TEST(UncrossableBoundaryCheckerTest, TestCheckDepartureEmptyTrajectory)
 {
   // Arrange:
   TrajectoryPoints empty_traj;
@@ -118,13 +105,14 @@ TEST_F(UncrossableBoundaryCheckerTest, TestCheckDepartureEmptyTrajectory)
   auto ego_state = create_ego_state(empty_traj, 0.0, init_time);
 
   // Act:
-  auto result = checker_ptr_->update_departure_status(empty_traj, ego_state);
+  auto checker = create_default_checker();
+  auto result = checker.update_departure_status(empty_traj, ego_state);
 
   // Assert:
   EXPECT_TRUE(result.status == DepartureType::NONE);
 }
 
-TEST_F(UncrossableBoundaryCheckerTest, TestCheckDepartureZeroVelocity)
+TEST(UncrossableBoundaryCheckerTest, TestCheckDepartureZeroVelocity)
 {
   // Arrange:
   auto traj = create_trajectory(0.0, -3.0, 0.0);
@@ -132,7 +120,8 @@ TEST_F(UncrossableBoundaryCheckerTest, TestCheckDepartureZeroVelocity)
   auto ego_state = create_ego_state(traj, 0.0, init_time);
 
   // Act:
-  auto result = checker_ptr_->update_departure_status(traj, ego_state);
+  auto checker = create_default_checker();
+  auto result = checker.update_departure_status(traj, ego_state);
 
   // Assert:
   EXPECT_TRUE(result.status == DepartureType::NONE);
@@ -159,7 +148,7 @@ TEST_F(UncrossableBoundaryCheckerTest, TestCheckDepartureZeroVelocity)
  * the vehicle returns to Safe Zone, and delayed during ON-buffer.
  */
 // clang-format on
-TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
+TEST(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 {
   // 1-line summary: Evaluates the hysteresis logic and time buffering (ON/OFF) for critical
   // departures.
@@ -176,7 +165,8 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
   auto state_safe = create_ego_state(traj_safe, test_velocity, 0.0);
 
   // Act:
-  auto res1 = checker_ptr_->update_departure_status(traj_safe, state_safe);
+  auto checker = create_default_checker();
+  auto res1 = checker.update_departure_status(traj_safe, state_safe);
 
   // Assert:
   EXPECT_TRUE(res1.status == DepartureType::NONE) << "Should be NONE when far from boundary.";
@@ -189,15 +179,15 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
   auto state_danger = create_ego_state(traj_danger, test_velocity, 0.1);
 
   // Act:
-  auto res2 = checker_ptr_->update_departure_status(traj_danger, state_danger);
+  auto res2 = checker.update_departure_status(traj_danger, state_danger);
 
   // Assert:
   EXPECT_TRUE(res2.status == DepartureType::NONE) << "Should be NONE due to ON time buffer.";
 
   // STEP 3: Wait for ON buffer to expire. Time increases by 0.2 seconds.
   // Act:
-  auto res3 = checker_ptr_->update_departure_status(
-    traj_danger, create_ego_state(traj_danger, test_velocity, 0.2));
+  auto res3 =
+    checker.update_departure_status(traj_danger, create_ego_state(traj_danger, test_velocity, 0.2));
 
   // Assert:
   EXPECT_TRUE(res3.status == DepartureType::CRITICAL)
@@ -205,8 +195,8 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 
   // STEP 4: Instantly teleport back to Safe Trajectory
   // Act:
-  auto res4 = checker_ptr_->update_departure_status(
-    traj_safe, create_ego_state(traj_safe, test_velocity, 0.3));
+  auto res4 =
+    checker.update_departure_status(traj_safe, create_ego_state(traj_safe, test_velocity, 0.3));
 
   // Assert:
   EXPECT_TRUE(res4.status == DepartureType::CRITICAL)
@@ -214,8 +204,8 @@ TEST_F(UncrossableBoundaryCheckerTest, TestTimeBufferingHysteresis)
 
   // STEP 5: Wait for OFF buffer to expire (Safety is continuous)
   // Act:
-  auto res5 = checker_ptr_->update_departure_status(
-    traj_safe, create_ego_state(traj_safe, test_velocity, 0.6));
+  auto res5 =
+    checker.update_departure_status(traj_safe, create_ego_state(traj_safe, test_velocity, 0.6));
 
   // Assert:
   EXPECT_TRUE(res5.status == DepartureType::NONE)

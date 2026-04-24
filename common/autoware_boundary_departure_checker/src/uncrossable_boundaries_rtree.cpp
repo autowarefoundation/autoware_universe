@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <iterator>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::boundary_departure_checker
@@ -60,7 +59,7 @@ UncrossableBoundariesRTree::UncrossableBoundariesRTree(
 }
 
 autoware_utils_geometry::Segment3d UncrossableBoundariesRTree::get_segment_3d_from_id(
-  const lanelet::LaneletMapPtr & lanelet_map_ptr, const IdxForRTreeSegment & seg_id) const
+  const lanelet::LaneletMapPtr & lanelet_map_ptr, const IdxForRTreeSegment & seg_id)
 {
   const auto & linestring_layer = lanelet_map_ptr->lineStringLayer;
   const auto basic_ls = linestring_layer.get(seg_id.linestring_id).basicLineString();

@@ -51,7 +51,7 @@ public:
    * @param[in] ego_state current ego dynamic state
    * @return evaluated critical point pairs if successful
    */
-  std::optional<Side<std::optional<CriticalPointPair>>> evaluate(
+  [[nodiscard]] std::optional<Side<std::optional<CriticalPointPair>>> evaluate(
     const TrajectoryPoints & predicted_traj, const FootprintSideSegmentsArray & footprints_sides,
     const EgoDynamicState & ego_state) const;
 
