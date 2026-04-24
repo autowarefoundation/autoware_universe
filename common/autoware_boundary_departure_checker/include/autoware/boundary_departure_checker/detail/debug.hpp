@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DEBUG_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DEBUG_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__DEBUG_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__DEBUG_HPP_
 
-#include "autoware/boundary_departure_checker/footprints_generator.hpp"
-#include "autoware/boundary_departure_checker/hysteresis_logic.hpp"
+#include "autoware/boundary_departure_checker/detail/footprints_generator.hpp"
+#include "autoware/boundary_departure_checker/detail/hysteresis_logic.hpp"
 
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -37,4 +37,4 @@ MarkerArray create_debug_markers(
   const EgoDynamicState & ego_state, const bool enable_developer_marker);
 }  // namespace autoware::boundary_departure_checker::debug
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DEBUG_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__DEBUG_HPP_

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DATA_STRUCTS_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DATA_STRUCTS_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__DATA_STRUCTS_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__DATA_STRUCTS_HPP_
 
-#include "autoware/boundary_departure_checker/side_struct.hpp"
-#include "autoware/boundary_departure_checker/type_alias.hpp"
+#include "autoware/boundary_departure_checker/detail/side_struct.hpp"
+#include "autoware/boundary_departure_checker/detail/type_alias.hpp"
 
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
@@ -218,4 +218,4 @@ struct ProjectionEvaluationMetrics
 };
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DATA_STRUCTS_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__DATA_STRUCTS_HPP_

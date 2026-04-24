@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__SIDE_STRUCT_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__SIDE_STRUCT_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__SIDE_STRUCT_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__SIDE_STRUCT_HPP_
 
 #include <magic_enum.hpp>
 
@@ -222,4 +222,4 @@ struct Side
 };
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__SIDE_STRUCT_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__SIDE_STRUCT_HPP_

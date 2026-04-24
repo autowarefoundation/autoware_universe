@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/debug.hpp"
+#include "autoware/boundary_departure_checker/detail/debug.hpp"
 
-#include "autoware/boundary_departure_checker/footprints_generator.hpp"
-#include "autoware/boundary_departure_checker/hysteresis_logic.hpp"
-#include "autoware/boundary_departure_checker/type_alias.hpp"
+#include "autoware/boundary_departure_checker/detail/footprints_generator.hpp"
+#include "autoware/boundary_departure_checker/detail/hysteresis_logic.hpp"
+#include "autoware/boundary_departure_checker/detail/type_alias.hpp"
 
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_visualization/marker_helper.hpp>

@@ -14,8 +14,8 @@
 
 #include "autoware/boundary_departure_checker/uncrossable_boundary_checker.hpp"
 
-#include "autoware/boundary_departure_checker/debug.hpp"
-#include "autoware/boundary_departure_checker/footprints_generator.hpp"
+#include "autoware/boundary_departure_checker/detail/debug.hpp"
+#include "autoware/boundary_departure_checker/detail/footprints_generator.hpp"
 
 #include <autoware_utils_system/stop_watch.hpp>
 

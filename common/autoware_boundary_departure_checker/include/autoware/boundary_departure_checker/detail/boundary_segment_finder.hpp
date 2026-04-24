@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__BOUNDARY_SEGMENT_FINDER_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__BOUNDARY_SEGMENT_FINDER_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__BOUNDARY_SEGMENT_FINDER_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__BOUNDARY_SEGMENT_FINDER_HPP_
 
-#include "autoware/boundary_departure_checker/data_structs.hpp"
+#include "autoware/boundary_departure_checker/detail/data_structs.hpp"
+#include "autoware/boundary_departure_checker/detail/type_alias.hpp"
+#include "autoware/boundary_departure_checker/detail/uncrossable_boundaries_rtree.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
-#include "autoware/boundary_departure_checker/type_alias.hpp"
-#include "autoware/boundary_departure_checker/uncrossable_boundaries_rtree.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
 
@@ -98,4 +98,4 @@ BoundarySegmentsBySide get_boundary_segments(
 
 }  // namespace autoware::boundary_departure_checker::boundary_segment_finder
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__BOUNDARY_SEGMENT_FINDER_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__BOUNDARY_SEGMENT_FINDER_HPP_

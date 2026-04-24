@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__TYPE_ALIAS_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__TYPE_ALIAS_HPP_
 
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
@@ -64,4 +64,4 @@ using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__TYPE_ALIAS_HPP_

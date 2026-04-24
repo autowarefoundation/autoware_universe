@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/uncrossable_boundaries_rtree.hpp"
+#include "autoware/boundary_departure_checker/detail/uncrossable_boundaries_rtree.hpp"
 
-#include "autoware/boundary_departure_checker/conversion.hpp"
+#include "autoware/boundary_departure_checker/detail/conversion.hpp"
 
 #include <algorithm>
 #include <iterator>

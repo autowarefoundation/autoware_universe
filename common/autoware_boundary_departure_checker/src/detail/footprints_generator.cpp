@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/footprints_generator.hpp"
+#include "autoware/boundary_departure_checker/detail/footprints_generator.hpp"
 
 #include <vector>
 

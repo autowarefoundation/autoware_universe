@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UNCROSSABLE_BOUNDARIES_RTREE_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UNCROSSABLE_BOUNDARIES_RTREE_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__UNCROSSABLE_BOUNDARIES_RTREE_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__UNCROSSABLE_BOUNDARIES_RTREE_HPP_
 
-#include "autoware/boundary_departure_checker/data_structs.hpp"
-#include "autoware/boundary_departure_checker/type_alias.hpp"
+#include "autoware/boundary_departure_checker/detail/data_structs.hpp"
+#include "autoware/boundary_departure_checker/detail/type_alias.hpp"
 
 #include <lanelet2_core/LaneletMap.h>
 
@@ -79,4 +79,4 @@ private:
 
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UNCROSSABLE_BOUNDARIES_RTREE_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__UNCROSSABLE_BOUNDARIES_RTREE_HPP_

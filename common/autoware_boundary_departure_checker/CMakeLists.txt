@@ -5,15 +5,15 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 ament_auto_add_library(utils SHARED
-  src/conversion.cpp
-  src/geometry_projection.cpp
-  src/uncrossable_boundaries_rtree.cpp
-  src/boundary_segment_finder.cpp
-  src/severity_evaluator.cpp
-  src/hysteresis_logic.cpp
-  src/boundary_departure_evaluator.cpp
-  src/footprints_generator.cpp
-  src/debug.cpp
+  src/detail/conversion.cpp
+  src/detail/geometry_projection.cpp
+  src/detail/uncrossable_boundaries_rtree.cpp
+  src/detail/boundary_segment_finder.cpp
+  src/detail/severity_evaluator.cpp
+  src/detail/hysteresis_logic.cpp
+  src/detail/boundary_departure_evaluator.cpp
+  src/detail/footprints_generator.cpp
+  src/detail/debug.cpp
 )
 
 ament_auto_add_library(uncrossable_boundary_checker SHARED

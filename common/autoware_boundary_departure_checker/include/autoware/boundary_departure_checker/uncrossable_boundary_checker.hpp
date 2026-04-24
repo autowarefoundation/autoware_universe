@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UNCROSSABLE_BOUNDARY_CHECKER_HPP_
 #define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UNCROSSABLE_BOUNDARY_CHECKER_HPP_
 
-#include "autoware/boundary_departure_checker/boundary_departure_evaluator.hpp"
-#include "autoware/boundary_departure_checker/data_structs.hpp"
-#include "autoware/boundary_departure_checker/hysteresis_logic.hpp"
+#include "autoware/boundary_departure_checker/detail/boundary_departure_evaluator.hpp"
+#include "autoware/boundary_departure_checker/detail/data_structs.hpp"
+#include "autoware/boundary_departure_checker/detail/hysteresis_logic.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>

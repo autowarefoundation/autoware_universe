@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/boundary_segment_finder.hpp"
+#include "autoware/boundary_departure_checker/detail/boundary_segment_finder.hpp"
 
-#include "autoware/boundary_departure_checker/conversion.hpp"
-#include "autoware/boundary_departure_checker/geometry_projection.hpp"
+#include "autoware/boundary_departure_checker/detail/conversion.hpp"
+#include "autoware/boundary_departure_checker/detail/geometry_projection.hpp"
 
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <range/v3/view.hpp>

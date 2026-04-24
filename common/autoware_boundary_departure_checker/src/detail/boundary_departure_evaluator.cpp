@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/boundary_departure_evaluator.hpp"
+#include "autoware/boundary_departure_checker/detail/boundary_departure_evaluator.hpp"
 
-#include "autoware/boundary_departure_checker/boundary_segment_finder.hpp"
-#include "autoware/boundary_departure_checker/severity_evaluator.hpp"
+#include "autoware/boundary_departure_checker/detail/boundary_segment_finder.hpp"
+#include "autoware/boundary_departure_checker/detail/severity_evaluator.hpp"
 
 #include <stdexcept>
 

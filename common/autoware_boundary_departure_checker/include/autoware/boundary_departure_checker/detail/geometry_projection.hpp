@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__GEOMETRY_PROJECTION_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__GEOMETRY_PROJECTION_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__GEOMETRY_PROJECTION_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__GEOMETRY_PROJECTION_HPP_
 
-#include "autoware/boundary_departure_checker/data_structs.hpp"
-#include "autoware/boundary_departure_checker/type_alias.hpp"
+#include "autoware/boundary_departure_checker/detail/data_structs.hpp"
+#include "autoware/boundary_departure_checker/detail/type_alias.hpp"
 
 #include <optional>
 #include <utility>
@@ -67,4 +67,4 @@ std::optional<double> calc_signed_lateral_distance_to_boundary(
 
 }  // namespace autoware::boundary_departure_checker::geometry_projection
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__GEOMETRY_PROJECTION_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__GEOMETRY_PROJECTION_HPP_

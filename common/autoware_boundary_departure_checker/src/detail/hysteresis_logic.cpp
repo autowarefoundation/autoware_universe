@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/hysteresis_logic.hpp"
+#include "autoware/boundary_departure_checker/detail/hysteresis_logic.hpp"
 
-#include "autoware/boundary_departure_checker/severity_evaluator.hpp"
+#include "autoware/boundary_departure_checker/detail/severity_evaluator.hpp"
 
 namespace autoware::boundary_departure_checker
 {

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__SEVERITY_EVALUATOR_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__SEVERITY_EVALUATOR_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__SEVERITY_EVALUATOR_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__SEVERITY_EVALUATOR_HPP_
 
-#include "autoware/boundary_departure_checker/data_structs.hpp"
+#include "autoware/boundary_departure_checker/detail/data_structs.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
@@ -86,4 +86,4 @@ double calc_minimum_braking_distance(
 
 }  // namespace autoware::boundary_departure_checker::severity_evaluator
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__SEVERITY_EVALUATOR_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__SEVERITY_EVALUATOR_HPP_

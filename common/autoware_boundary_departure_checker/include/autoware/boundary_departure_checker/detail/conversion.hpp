@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__CONVERSION_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__CONVERSION_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__CONVERSION_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__CONVERSION_HPP_
 
-#include "autoware/boundary_departure_checker/type_alias.hpp"
+#include "autoware/boundary_departure_checker/detail/type_alias.hpp"
 
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/Polygon.h>
@@ -45,4 +45,4 @@ Segment2d to_segment_2d(
  */
 Segment2d to_segment_2d(const Segment3d & segment);
 }  // namespace autoware::boundary_departure_checker::utils
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__CONVERSION_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__CONVERSION_HPP_

@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/boundary_segment_finder.hpp"
-#include "autoware/boundary_departure_checker/geometry_projection.hpp"
-#include "autoware/boundary_departure_checker/severity_evaluator.hpp"
-#include "autoware/boundary_departure_checker/type_alias.hpp"
-#include "autoware/boundary_departure_checker/uncrossable_boundaries_rtree.hpp"
+#include "autoware/boundary_departure_checker/detail/boundary_segment_finder.hpp"
+#include "autoware/boundary_departure_checker/detail/geometry_projection.hpp"
+#include "autoware/boundary_departure_checker/detail/severity_evaluator.hpp"
+#include "autoware/boundary_departure_checker/detail/type_alias.hpp"
+#include "autoware/boundary_departure_checker/detail/uncrossable_boundaries_rtree.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
 
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>

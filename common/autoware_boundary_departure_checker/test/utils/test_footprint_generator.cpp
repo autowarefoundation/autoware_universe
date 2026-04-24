@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/footprints_generator.hpp"
-#include "autoware/boundary_departure_checker/type_alias.hpp"
+#include "autoware/boundary_departure_checker/detail/footprints_generator.hpp"
+#include "autoware/boundary_departure_checker/detail/type_alias.hpp"
 
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 

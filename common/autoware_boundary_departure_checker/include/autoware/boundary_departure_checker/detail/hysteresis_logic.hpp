@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__HYSTERESIS_LOGIC_HPP_
-#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__HYSTERESIS_LOGIC_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__HYSTERESIS_LOGIC_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__HYSTERESIS_LOGIC_HPP_
 
-#include "autoware/boundary_departure_checker/data_structs.hpp"
+#include "autoware/boundary_departure_checker/detail/data_structs.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
 
 #include <optional>
@@ -56,4 +56,4 @@ HysteresisResult update_and_judge(
 
 }  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__HYSTERESIS_LOGIC_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__DETAIL__HYSTERESIS_LOGIC_HPP_

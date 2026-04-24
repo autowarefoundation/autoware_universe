@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/boundary_departure_checker/geometry_projection.hpp"
+#include "autoware/boundary_departure_checker/detail/geometry_projection.hpp"
 
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <tf2/utils.hpp>
