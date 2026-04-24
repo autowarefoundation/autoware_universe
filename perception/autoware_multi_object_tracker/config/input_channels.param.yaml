@@ -3,11 +3,13 @@
     input_channels:
       # Merged detected objects, i.e. "/perception/object_recognition/detection/objects"
       detected_objects:
+        associator_type: bev
         optional:
           name: "detected_objects"
           short_name: "all"
       # LIDAR - rule-based
       lidar_clustering:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: false
@@ -19,6 +21,7 @@
           short_name: "Lcl"
       # LIDAR - DNN
       lidar_centerpoint:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -29,6 +32,7 @@
           name: "centerpoint"
           short_name: "Lcp"
       lidar_centerpoint_short_range:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -39,6 +43,7 @@
           name: "centerpoint_short_range"
           short_name: "LcpS"
       lidar_apollo:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -51,6 +56,7 @@
       # LIDAR-CAMERA - DNN
       # cspell:ignore lidar_pointpainting pointpainting
       lidar_pointpainting:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -62,6 +68,7 @@
           short_name: "Lpp"
       # CAMERA - DNN
       camera_streampetr:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -73,6 +80,7 @@
           short_name: "Csp"
       # CAMERA-LIDAR
       camera_lidar_fusion:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: false
@@ -84,6 +92,7 @@
           short_name: "CLf"
       # CAMERA-LIDAR-IRREGULAR
       camera_lidar_fusion_irregular:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: false
@@ -95,6 +104,7 @@
           short_name: "Irreg"
       # CAMERA-LIDAR+TRACKER
       detection_by_tracker:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: false
           can_trust_existence_probability: false
@@ -106,6 +116,7 @@
           short_name: "dbT"
       # RADAR
       radar:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -117,6 +128,7 @@
           short_name: "Rad"
       # CAMERA VRU
       camera_vru:
+        associator_type: bev
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true

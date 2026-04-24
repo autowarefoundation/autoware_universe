@@ -206,11 +206,6 @@
           "description": "If True, export unknown object velocity.",
           "default": false
         },
-        "tracker_lifetime": {
-          "type": "number",
-          "description": "Lifetime of the tracker in seconds.",
-          "default": 1.0
-        },
         "min_known_object_removal_iou": {
           "type": "number",
           "description": "Minimum IOU between associated objects with known label to remove younger tracker",
@@ -310,7 +305,6 @@
         "ego_frame_id",
         "enable_delay_compensation",
         "consider_odometry_uncertainty",
-        "tracker_lifetime",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
         "pruning_generalized_iou_thresholds",

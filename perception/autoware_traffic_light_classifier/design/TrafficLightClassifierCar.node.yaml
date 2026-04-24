@@ -32,6 +32,10 @@ param_files:
     default: config/car_traffic_light_classifier.param.yaml
 
 param_values:
+  - name: classifier_type
+    type: int
+    default: 1
+    description: 0=HSVFilter, 1=CNN, 2=LampRecognizer
   - name: model_path
     type: string
     default: $(var data_path)/traffic_light_classifier/traffic_light_classifier_mobilenetv2_batch_6.onnx

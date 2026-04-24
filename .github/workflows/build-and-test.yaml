@@ -15,16 +15,15 @@ jobs:
         include:
           # ROS distribution specific configurations
           - rosdistro: humble
-            container: ghcr.io/autowarefoundation/autoware:universe-devel
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-humble
 
           - rosdistro: jazzy
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-jazzy
 
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
       rosdistro: ${{ matrix.rosdistro }}
       container: ${{ matrix.container }}
-      container-suffix: -cuda
       runner: "['self-hosted', 'Linux', 'X64']"
       concurrency-group: build-and-test-${{ matrix.rosdistro }}-${{ github.ref }}
       cancel-in-progress: false
