@@ -19,7 +19,6 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <boost/geometry.hpp>
-// #include <boost/geometry/algorithms/detail/distance/interface.hpp>
 
 #include <lanelet2_core/Forward.h>
 
