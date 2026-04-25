@@ -27,7 +27,7 @@ $ ls ~/autoware_data/diffusion_planner/v3.1/
 diffusion_planner.onnx diffusion_planner.param.json
 ```
 
-This can be downloaded from [setup-dev-env.sh](https://github.com/autowarefoundation/autoware/blob/main/setup-dev-env.sh).
+This can be downloaded by following [Download artifacts](https://github.com/autowarefoundation/autoware/blob/main/ansible/roles/artifacts/README.md#download-artifacts).
 
 ### (2) Modify launch files
 
@@ -227,8 +227,7 @@ The model version is defined either by the directory name provided to the node o
   Incremented when **only the weight files are updated**.
   As long as the major version matches, the node remains compatible, and the new model can be used directly.
 
-To download the latest model, simply run the provided setup script:
-[How to set up a development environment](https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#how-to-set-up-a-development-environment)
+To download the latest model, follow [Download artifacts](https://github.com/autowarefoundation/autoware/blob/main/ansible/roles/artifacts/README.md#download-artifacts).
 
 ### Model Version History
 
