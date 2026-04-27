@@ -25,6 +25,7 @@
 
 namespace
 {
+using autoware_perception_msgs::msg::TrafficLightElement;
 
 struct BulbColor
 {
@@ -40,8 +41,6 @@ bool has_bulb_color(const lanelet::ConstPoint3d & point, const std::string & exp
 
 std::optional<BulbColor> resolve_bulb_color(const lanelet::ConstPoint3d & point)
 {
-  using autoware_perception_msgs::msg::TrafficLightElement;
-
   BulbColor bulb;
   constexpr float marker_alpha = 0.999f;
   bulb.marker_color.a = marker_alpha;
@@ -63,8 +62,7 @@ std::optional<BulbColor> resolve_bulb_color(const lanelet::ConstPoint3d & point)
 }
 
 bool is_color_detected(
-  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & detected_elements,
-  uint8_t bulb_color)
+  const std::vector<TrafficLightElement> & detected_elements, uint8_t bulb_color)
 {
   for (const auto & element : detected_elements) {
     if (element.color == bulb_color) {
@@ -76,7 +74,7 @@ bool is_color_detected(
 
 visualization_msgs::msg::Marker create_bulb_marker(
   const lanelet::ConstPoint3d & point, const std_msgs::msg::ColorRGBA & color,
-  const builtin_interfaces::msg::Time & stamp)
+  builtin_interfaces::msg::Time stamp)
 {
   visualization_msgs::msg::Marker marker;
   marker.header.frame_id = "map";
@@ -108,8 +106,8 @@ visualization_msgs::msg::Marker create_bulb_marker(
 
 std::vector<visualization_msgs::msg::Marker> create_markers_for_active_bulbs(
   const std::vector<lanelet::ConstPoint3d> & bulb_points,
-  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & detected_elements,
-  const builtin_interfaces::msg::Time & stamp)
+  const std::vector<TrafficLightElement> & detected_elements,
+  builtin_interfaces::msg::Time stamp)
 {
   std::vector<visualization_msgs::msg::Marker> markers;
   for (const auto & point : bulb_points) {
