@@ -75,7 +75,7 @@ void DeleteAllObjectsTool::updateTopic()
   rclcpp::Node::SharedPtr raw_node = context_->getRosNodeAbstraction().lock()->get_raw_node();
   dummy_object_info_pub_ =
     raw_node->create_publisher<autoware_simulation_msgs::msg::SimulatedObject>(
-    topic_property_->getStdString(), 1);
+      topic_property_->getStdString(), 1);
   clock_ = raw_node->get_clock();
 }
 
