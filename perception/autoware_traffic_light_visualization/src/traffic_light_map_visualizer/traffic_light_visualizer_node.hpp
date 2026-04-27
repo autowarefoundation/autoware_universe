@@ -27,6 +27,9 @@
 
 namespace autoware::traffic_light
 {
+using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
+using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
+
 class TrafficLightMapVisualizerNode : public rclcpp::Node
 {
 public:
@@ -34,13 +37,12 @@ public:
 
 private:
   void traffic_lights_callback(
-    const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_lights);
-  void bin_map_callback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_map_msg);
+    const TrafficLightGroupArray::ConstSharedPtr detected_traffic_lights);
+  void bin_map_callback(const LaneletMapBin::ConstSharedPtr input_map_msg);
 
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr light_marker_pub_;
-  rclcpp::Subscription<autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr
-    tl_state_sub_;
-  rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr vector_map_sub_;
+  rclcpp::Subscription<TrafficLightGroupArray>::SharedPtr tl_state_sub_;
+  rclcpp::Subscription<LaneletMapBin>::SharedPtr vector_map_sub_;
 
   std::optional<TrafficLightVisualizer> visualizer_;
 };

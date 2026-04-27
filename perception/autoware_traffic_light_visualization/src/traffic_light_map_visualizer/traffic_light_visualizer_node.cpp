@@ -31,28 +31,28 @@ TrafficLightMapVisualizerNode::TrafficLightMapVisualizerNode(
 
   light_marker_pub_ =
     create_publisher<visualization_msgs::msg::MarkerArray>("~/output/traffic_light", 1);
-  tl_state_sub_ = create_subscription<autoware_perception_msgs::msg::TrafficLightGroupArray>(
+  tl_state_sub_ = create_subscription<TrafficLightGroupArray>(
     "~/input/tl_state", 1,
     std::bind(&TrafficLightMapVisualizerNode::traffic_lights_callback, this, _1));
-  vector_map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
+  vector_map_sub_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrafficLightMapVisualizerNode::bin_map_callback, this, _1));
 }
 
 void TrafficLightMapVisualizerNode::traffic_lights_callback(
-  const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_lights)
+  const TrafficLightGroupArray::ConstSharedPtr detected_traffic_lights)
 {
   if (!visualizer_) {
     return;
   }
   visualization_msgs::msg::MarkerArray output_msg;
   const builtin_interfaces::msg::Time current_time = now();
-  output_msg.markers = visualizer_->generate_markers(*traffic_lights, current_time);
+  output_msg.markers = visualizer_->generate_markers(*detected_traffic_lights, current_time);
   light_marker_pub_->publish(output_msg);
 }
 
 void TrafficLightMapVisualizerNode::bin_map_callback(
-  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_map_msg)
+  const LaneletMapBin::ConstSharedPtr input_map_msg)
 {
   lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_map_msg));
