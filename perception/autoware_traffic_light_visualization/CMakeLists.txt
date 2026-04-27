@@ -70,6 +70,20 @@ if(BUILD_TESTING)
     geometry_msgs
     visualization_msgs
   )
+
+  ament_add_gtest(test_extract_bulbs
+    test/test_extract_bulbs.cpp
+  )
+  target_include_directories(test_extract_bulbs PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_extract_bulbs
+    traffic_light_map_visualizer
+  )
+  ament_target_dependencies(test_extract_bulbs
+    autoware_lanelet2_extension
+    autoware_perception_msgs
+  )
 endif()
 
 # Copy the assets directory to the installation directory
