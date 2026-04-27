@@ -99,8 +99,8 @@ void MapBasedDetector::cameraInfoCallback(
     return;
   }
 
-  /* Camera pose in the period*/
-  std::vector<tf2::Transform> tf_map2camera_vec;
+  /* Camera pose in the period */
+  std::vector<StampedTransform> tf_map2camera_samples;
   rclcpp::Time t1 = rclcpp::Time(input_msg->header.stamp) +
                     rclcpp::Duration::from_seconds(transform_sampling_config_.min_timestamp_offset);
   rclcpp::Time t2 = rclcpp::Time(input_msg->header.stamp) +
@@ -109,10 +109,10 @@ void MapBasedDetector::cameraInfoCallback(
   for (auto t = t1; t <= t2; t += interval) {
     tf2::Transform tf;
     if (getTransform(t, input_msg->header.frame_id, tf)) {
-      tf_map2camera_vec.push_back(tf);
+      tf_map2camera_samples.push_back({t, tf});
     }
   }
-  /* camera pose at the exact moment*/
+  /* Camera pose at the exact moment */
   tf2::Transform tf_map2camera;
   if (!getTransform(
         rclcpp::Time(input_msg->header.stamp), input_msg->header.frame_id, tf_map2camera)) {
@@ -120,11 +120,9 @@ void MapBasedDetector::cameraInfoCallback(
       get_logger(), *get_clock(), 5000, "failed to get transform from map frame to camera frame");
     return;
   }
-  if (tf_map2camera_vec.empty()) {
-    tf_map2camera_vec.push_back(tf_map2camera);
-  }
+  tf_map2camera_samples.push_back({input_msg->header.stamp, tf_map2camera});
 
-  auto result = detector_->detect(tf_map2camera_vec, tf_map2camera, *input_msg);
+  auto result = detector_->detect(tf_map2camera_samples, *input_msg);
 
   roi_pub_->publish(result.rough_rois);
   expect_roi_pub_->publish(result.expect_rois);
