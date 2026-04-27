@@ -38,11 +38,11 @@ namespace autoware::dummy_perception_publisher::pluginlib
 
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_simulation_msgs::msg::SimulatedObject;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::TwistWithCovariance;
-using autoware_simulation_msgs::msg::SimulatedObject;
 
 struct CommonParameters
 {
@@ -107,8 +107,7 @@ private:
   std::pair<PredictedObject, rclcpp::Time> find_matching_predicted_object(
     const unique_identifier_msgs::msg::UUID & object_id, const rclcpp::Time & current_time);
   void update_dummy_to_predicted_mapping(
-    const std::vector<SimulatedObject> & dummy_objects,
-    const PredictedObjects & predicted_objects);
+    const std::vector<SimulatedObject> & dummy_objects, const PredictedObjects & predicted_objects);
 
   [[nodiscard]] bool is_valid_remapping_candidate(
     const PredictedObject & candidate_prediction, const std::string & dummy_uuid_str,

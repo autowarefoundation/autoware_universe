@@ -20,8 +20,8 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <geometry_msgs/msg/pose.hpp>
 #include <autoware_simulation_msgs/msg/simulated_object.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 
 namespace autoware::dummy_perception_publisher::utils
 {

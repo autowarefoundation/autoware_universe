@@ -34,8 +34,7 @@ using autoware_utils_geometry::calc_distance2d;
 void PredictedObjectMovementPlugin::initialize()
 {
   using autoware_utils_rclcpp::get_or_declare_parameter;
-  set_associated_movement_model(
-    autoware_simulation_msgs::msg::SimulatedObject::PREDICTED_PATH);
+  set_associated_movement_model(autoware_simulation_msgs::msg::SimulatedObject::PREDICTED_PATH);
   // Declare prediction parameters
   auto node_ptr = get_node();
   predicted_object_params_.min_predicted_path_keep_duration =
@@ -113,8 +112,7 @@ PredictedObjectMovementPlugin::collect_dummy_object_positions(
 }
 
 void PredictedObjectMovementPlugin::update_dummy_to_predicted_mapping(
-  const std::vector<SimulatedObject> & dummy_objects,
-  const PredictedObjects & predicted_objects)
+  const std::vector<SimulatedObject> & dummy_objects, const PredictedObjects & predicted_objects)
 {
   const auto node_ptr = get_node();
   const rclcpp::Time current_time = node_ptr->now();
