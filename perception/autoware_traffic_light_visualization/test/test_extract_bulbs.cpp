@@ -50,7 +50,7 @@ Point3d make_bulb_point_without_color(double x, double y, double z)
 // Builds an AutowareTrafficLight regulatory element wrapping the given bulb
 // points in a single lightBulbs linestring. The base linestring is a dummy
 // required by AutowareTrafficLight::make() but unused by extract_bulbs.
-AutowareTrafficLightConstPtr make_traffic_light(
+AutowareTrafficLightConstPtr make_map_traffic_light(
   const std::vector<Point3d> & bulb_points, bool with_traffic_light_id_attribute = true)
 {
   LineString3d light_bulbs(getId(), bulb_points);
@@ -77,7 +77,7 @@ TEST(ExtractBulbs, EmptyInputProducesEmptyResult)
 
 TEST(ExtractBulbs, RedGreenYellowResolveToCorrectColors)
 {
-  auto traffic_light = make_traffic_light({
+  auto traffic_light = make_map_traffic_light({
     make_bulb_point(1, 2, 3, "red"),
     make_bulb_point(4, 5, 6, "green"),
     make_bulb_point(7, 8, 9, "yellow"),
@@ -97,7 +97,7 @@ TEST(ExtractBulbs, RedGreenYellowResolveToCorrectColors)
 TEST(ExtractBulbs, BulbCarriesPointIdAndPosition)
 {
   auto point = make_bulb_point(1.5, 2.5, 3.5, "red");
-  auto traffic_light = make_traffic_light({point});
+  auto traffic_light = make_map_traffic_light({point});
 
   auto bulbs = extract_bulbs({traffic_light});
 
@@ -113,7 +113,7 @@ TEST(ExtractBulbs, BulbCarriesPointIdAndPosition)
 
 TEST(ExtractBulbs, PointWithoutColorAttributeIsSkipped)
 {
-  auto traffic_light = make_traffic_light({
+  auto traffic_light = make_map_traffic_light({
     make_bulb_point(0, 0, 0, "red"),
     make_bulb_point_without_color(1, 1, 1),
   });
@@ -126,7 +126,7 @@ TEST(ExtractBulbs, PointWithoutColorAttributeIsSkipped)
 
 TEST(ExtractBulbs, UnknownColorIsSkipped)
 {
-  auto traffic_light = make_traffic_light({make_bulb_point(0, 0, 0, "blue")});
+  auto traffic_light = make_map_traffic_light({make_bulb_point(0, 0, 0, "blue")});
 
   auto bulbs = extract_bulbs({traffic_light});
 
@@ -135,7 +135,7 @@ TEST(ExtractBulbs, UnknownColorIsSkipped)
 
 TEST(ExtractBulbs, LightBulbsWithoutTrafficLightIdAttributeIsSkipped)
 {
-  auto traffic_light = make_traffic_light(
+  auto traffic_light = make_map_traffic_light(
     {make_bulb_point(0, 0, 0, "red")}, /*with_traffic_light_id_attribute=*/false);
 
   auto bulbs = extract_bulbs({traffic_light});
@@ -145,8 +145,8 @@ TEST(ExtractBulbs, LightBulbsWithoutTrafficLightIdAttributeIsSkipped)
 
 TEST(ExtractBulbs, MultipleTrafficLightsProduceMultipleEntries)
 {
-  auto first = make_traffic_light({make_bulb_point(0, 0, 0, "red")});
-  auto second = make_traffic_light({make_bulb_point(1, 1, 1, "green")});
+  auto first = make_map_traffic_light({make_bulb_point(0, 0, 0, "red")});
+  auto second = make_map_traffic_light({make_bulb_point(1, 1, 1, "green")});
 
   auto bulbs = extract_bulbs({first, second});
 
