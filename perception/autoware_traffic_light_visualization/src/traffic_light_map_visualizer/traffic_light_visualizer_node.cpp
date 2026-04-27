@@ -58,8 +58,8 @@ void TrafficLightMapVisualizerNode::bin_map_callback(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_map_msg));
 
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map);
-  auto traffic_lights = lanelet::utils::query::autowareTrafficLights(all_lanelets);
-  visualizer_.emplace(extract_bulbs(traffic_lights));
+  auto map_traffic_lights = lanelet::utils::query::autowareTrafficLights(all_lanelets);
+  visualizer_.emplace(extract_bulbs(map_traffic_lights));
 }
 }  // namespace autoware::traffic_light
 

@@ -101,14 +101,14 @@ std::vector<visualization_msgs::msg::Marker> create_markers_for_active_bulbs(
 namespace autoware::traffic_light
 {
 BulbsByGroupId extract_bulbs(
-  const std::vector<lanelet::AutowareTrafficLightConstPtr> & traffic_lights)
+  const std::vector<lanelet::AutowareTrafficLightConstPtr> & map_traffic_lights)
 {
   BulbsByGroupId result;
-  for (const auto & traffic_light : traffic_lights) {
+  for (const auto & map_traffic_light : map_traffic_lights) {
     std::vector<Bulb> bulbs;
     // A lightBulbs linestring with "traffic_light_id" represents a bulb group.
     // Points with "color" attribute represent individual bulbs.
-    for (const auto & light_bulbs : traffic_light->lightBulbs()) {
+    for (const auto & light_bulbs : map_traffic_light->lightBulbs()) {
       if (!light_bulbs.hasAttribute("traffic_light_id")) {
         continue;
       }
@@ -135,7 +135,7 @@ BulbsByGroupId extract_bulbs(
       }
     }
     if (!bulbs.empty()) {
-      result.emplace(traffic_light->id(), std::move(bulbs));
+      result.emplace(map_traffic_light->id(), std::move(bulbs));
     }
   }
   return result;
