@@ -18,6 +18,7 @@
 #include "traffic_light_map_based_detector_process.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
+#include <rclcpp/time.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -32,6 +33,7 @@
 #include <lanelet2_traffic_rules/TrafficRulesFactory.h>
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -39,18 +41,15 @@
 namespace autoware::traffic_light
 {
 
-enum class LogLevel { Warn, Error };
-
-struct LogMessage
+struct SetRouteError
 {
-  LogLevel level;
-  std::string text;
+  std::string message;
 };
 
-struct SetRouteResult
+struct StampedTransform
 {
-  bool success = true;
-  std::vector<LogMessage> logs;
+  rclcpp::Time stamp;
+  tf2::Transform transform;
 };
 
 struct DetectionResult
@@ -86,30 +85,31 @@ public:
 
   using TrafficLightSet = std::set<lanelet::ConstLineString3d, IdLessThan>;
 
-  explicit TrafficLightMapBasedDetector(const TrafficLightMapBasedDetectorConfig & config);
+  TrafficLightMapBasedDetector(
+    const TrafficLightMapBasedDetectorConfig & config,
+    const autoware_map_msgs::msg::LaneletMapBin & map_msg);
 
-  void setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
-
-  SetRouteResult setRoute(const autoware_planning_msgs::msg::LaneletRoute & route_msg);
+  std::optional<SetRouteError> setRoute(
+    const autoware_planning_msgs::msg::LaneletRoute & route_msg);
 
   DetectionResult detect(
-    const std::vector<tf2::Transform> & tf_map2camera_vec, const tf2::Transform & tf_map2camera,
+    const std::vector<StampedTransform> & tf_map2camera_samples,
     const sensor_msgs::msg::CameraInfo & camera_info) const;
 
-  bool hasTrafficLights() const;
-
 private:
+  void setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
+
   /**
    * @brief Filter traffic lights that are visible from the camera
    *
    * @param all_traffic_lights      all the traffic lights in the route or in the map
-   * @param tf_map2camera_vec       the transformation sequences from map to camera
+   * @param tf_map2camera_samples   the stamped transformation samples from map to camera
    * @param pinhole_camera_model    pinhole model calculated from camera_info
    * @param visible_traffic_lights  the visible traffic lights output
    */
   void getVisibleTrafficLights(
     const TrafficLightSet & all_traffic_lights,
-    const std::vector<tf2::Transform> & tf_map2camera_vec,
+    const std::vector<StampedTransform> & tf_map2camera_samples,
     const image_geometry::PinholeCameraModel & pinhole_camera_model,
     std::vector<lanelet::ConstLineString3d> & visible_traffic_lights) const;
 
@@ -134,7 +134,7 @@ private:
   /**
    * @brief Compute the bounding ROI from multiple transforms
    *
-   * @param tf_map2camera_vec     the transformation vector
+   * @param tf_map2camera_samples the stamped transformation samples from map to camera
    * @param pinhole_camera_model  pinhole model calculated from camera_info
    * @param traffic_light         lanelet traffic light object
    * @param config                offset configuration
@@ -143,7 +143,7 @@ private:
    * @return false                the computation failed
    */
   bool getTrafficLightRoi(
-    const std::vector<tf2::Transform> & tf_map2camera_vec,
+    const std::vector<StampedTransform> & tf_map2camera_samples,
     const image_geometry::PinholeCameraModel & pinhole_camera_model,
     const lanelet::ConstLineString3d traffic_light,
     const TrafficLightMapBasedDetectorConfig & config,

@@ -14,7 +14,7 @@
 
 #include "bbox_object_locator_node.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/msg/covariance.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <rclcpp/qos.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -32,7 +32,7 @@
 
 namespace autoware::image_object_locator
 {
-using autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 using autoware_utils_math::deg2rad;
 
 void transformToRT(const geometry_msgs::msg::TransformStamped & tf, cv::Matx33d & R, cv::Vec3d & t)
@@ -580,7 +580,7 @@ void BboxObjectLocatorNode::roiCallback(
 
   // get transform from camera frame to target frame
   try {
-    transform_ = transform_listener_->getTransform(
+    transform_ = transform_listener_->get_transform(
       target_frame_, msg->header.frame_id, msg->header.stamp, rclcpp::Duration::from_seconds(0.01));
   } catch (const tf2::TransformException & ex) {
     RCLCPP_ERROR(get_logger(), "Failed to get transform: %s", ex.what());

@@ -59,6 +59,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   ament_auto_add_library(${PROJECT_NAME} SHARED
     src/classifier/color_classifier.cpp
     src/classifier/cnn_classifier.cpp
+    src/classifier/cnn_lamp_recognizer.cpp
     src/traffic_light_classifier_node.cpp
     src/traffic_light_classifier_process.cpp
   )
@@ -79,6 +80,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   ament_auto_add_library(single_image_debug_inference_node SHARED
     src/classifier/cnn_classifier.cpp
     src/classifier/color_classifier.cpp
+    src/classifier/cnn_lamp_recognizer.cpp
     src/traffic_light_classifier_node.cpp
     src/traffic_light_classifier_process.cpp
     src/single_image_debug_inference_node.cpp

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TYPES_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TYPES_HPP_
 
 #include "autoware/multi_object_tracker/object_model/classes.hpp"
 
@@ -129,18 +129,25 @@ inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name
 // constants
 constexpr float default_existence_probability = 0.75;
 
+// Association algorithm selection per input channel
+enum class AssociationType {
+  BEV,   // BevAssociation: bird's-eye-view area scoring + GNN linear assignment
+  POLAR  // PolarAssociation: polar-coordinate (range-bearing) based scoring
+};
+
 // channel configuration
 struct InputChannel
 {
-  uint index;                                 // index of the channel
-  bool is_enabled = true;                     // enable the channel
-  std::string long_name = "Detected Object";  // full name of the detection
-  std::string short_name = "DET";             // abbreviation of the name
-  bool is_spawn_enabled = true;               // enable spawn of the object
-  bool trust_existence_probability = false;   // trust object existence probability
-  bool trust_extension = true;                // trust object extension
-  bool trust_classification = true;           // trust object classification
-  bool trust_orientation = true;              // trust object orientation(yaw)
+  uint index;                                              // index of the channel
+  bool is_enabled = true;                                  // enable the channel
+  std::string long_name = "Detected Object";               // full name of the detection
+  std::string short_name = "DET";                          // abbreviation of the name
+  bool is_spawn_enabled = true;                            // enable spawn of the object
+  bool trust_existence_probability = false;                // trust object existence probability
+  bool trust_extension = true;                             // trust object extension
+  bool trust_classification = true;                        // trust object classification
+  bool trust_orientation = true;                           // trust object orientation(yaw)
+  AssociationType associator_type = AssociationType::BEV;  // which associator to use
 };
 
 struct ExistenceProbability
@@ -357,4 +364,4 @@ using types::TrackerType;
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TYPES_HPP_

@@ -18,7 +18,7 @@
 #include "autoware_command_mode_decider/plugin.hpp"
 #include "autoware_command_mode_decider/status.hpp"
 
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
