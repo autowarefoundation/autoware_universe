@@ -2,76 +2,101 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Parameters for boundary_departure_checker",
   "type": "object",
-  "properties": {
-    "boundary_types_to_detect": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "Linestring boundary tags to be treated as uncrossable.",
-      "default": ["road_border"]
-    },
-    "max_lateral_rtree_queries": {
-      "type": "integer",
-      "description": "Maximum number of lateral R-tree queries.",
-      "default": 5
-    },
-    "lateral_margin_m": {
-      "type": "number",
-      "description": "Lateral margin threshold [m].",
-      "default": 0.01
-    },
-    "longitudinal_margin_m": {
-      "type": "number",
-      "description": "Longitudinal safety buffer margin [m].",
-      "default": 1.0
-    },
-    "max_deceleration_mps2": {
-      "type": "number",
-      "description": "Maximum deceleration [m/s^2].",
-      "default": -4.0
-    },
-    "max_jerk_mps3": {
-      "type": "number",
-      "description": "Maximum jerk [m/s^3].",
-      "default": -5.0
-    },
-    "brake_delay_s": {
-      "type": "number",
-      "description": "Brake system reaction delay [s].",
-      "default": 1.0
-    },
-    "time_to_departure_cutoff_s": {
-      "type": "number",
-      "description": "Look-ahead time limit for departure evaluation [s].",
-      "default": 2.0
-    },
-    "on_time_buffer_s": {
-      "type": "number",
-      "description": "Continuous detection time required to trigger a departure alert [s].",
-      "default": 0.15
-    },
-    "off_time_buffer_s": {
-      "type": "number",
-      "description": "Continuous safe detection time required to clear a departure alert [s].",
-      "default": 0.15
-    },
-    "enable_developer_marker": {
-      "type": "boolean",
-      "description": "Enable advanced debug markers for developers.",
-      "default": true
+  "definitions": {
+    "boundary_departure_checker": {
+      "type": "object",
+      "properties": {
+        "boundary_types_to_detect": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Linestring boundary tags to be treated as uncrossable.",
+          "default": ["road_border"]
+        },
+        "max_lateral_rtree_queries": {
+          "type": "integer",
+          "description": "Maximum number of lateral R-tree queries.",
+          "default": 5
+        },
+        "lateral_margin_m": {
+          "type": "number",
+          "description": "Lateral margin threshold [m].",
+          "default": 0.01
+        },
+        "longitudinal_margin_m": {
+          "type": "number",
+          "description": "Longitudinal safety buffer margin [m].",
+          "default": 1.0
+        },
+        "max_deceleration_mps2": {
+          "type": "number",
+          "description": "Maximum deceleration [m/s^2].",
+          "default": -4.0
+        },
+        "max_jerk_mps3": {
+          "type": "number",
+          "description": "Maximum jerk [m/s^3].",
+          "default": -5.0
+        },
+        "brake_delay_s": {
+          "type": "number",
+          "description": "Brake system reaction delay [s].",
+          "default": 1.0
+        },
+        "time_to_departure_cutoff_s": {
+          "type": "number",
+          "description": "Look-ahead time limit for departure evaluation [s].",
+          "default": 2.0
+        },
+        "on_time_buffer_s": {
+          "type": "number",
+          "description": "Continuous detection time required to trigger a departure alert [s].",
+          "default": 0.15
+        },
+        "off_time_buffer_s": {
+          "type": "number",
+          "description": "Continuous safe detection time required to clear a departure alert [s].",
+          "default": 0.15
+        },
+        "enable_developer_marker": {
+          "type": "boolean",
+          "description": "Enable advanced debug markers for developers.",
+          "default": true
+        }
+      },
+      "required": [
+        "boundary_types_to_detect",
+        "max_lateral_rtree_queries",
+        "lateral_margin_m",
+        "longitudinal_margin_m",
+        "max_deceleration_mps2",
+        "max_jerk_mps3",
+        "brake_delay_s",
+        "time_to_departure_cutoff_s",
+        "on_time_buffer_s",
+        "off_time_buffer_s",
+        "enable_developer_marker"
+      ],
+      "additionalProperties": false
     }
   },
-  "required": [
-    "boundary_types_to_detect",
-    "max_lateral_rtree_queries",
-    "lateral_margin_m",
-    "longitudinal_margin_m",
-    "max_deceleration_mps2",
-    "max_jerk_mps3",
-    "brake_delay_s",
-    "time_to_departure_cutoff_s",
-    "on_time_buffer_s",
-    "off_time_buffer_s",
-    "enable_developer_marker"
-  ],
+  "properties": {
+    "/**": {
+      "properties": {
+        "ros__parameters": {
+          "type": "object",
+          "properties": {
+            "boundary_departure_checker": {
+              "$ref": "#/definitions/boundary_departure_checker"
+            }
+          },
+          "required": ["boundary_departure_checker"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
   "additionalProperties": false
 }
