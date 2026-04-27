@@ -921,7 +921,7 @@ autoware_control_msgs::msg::Longitudinal PidLongitudinalController::createCtrlCm
   cmd.acceleration = static_cast<decltype(cmd.acceleration)>(ctrl_cmd.acc);
 
   // store current velocity history
-  m_vel_hist.push_back({clock_->now(), current_vel});
+  m_vel_hist.emplace_back(clock_->now(), current_vel);
   while (m_vel_hist.size() >
          static_cast<size_t>(m_delay_compensation_time / m_longitudinal_ctrl_period)) {
     m_vel_hist.erase(m_vel_hist.begin());
