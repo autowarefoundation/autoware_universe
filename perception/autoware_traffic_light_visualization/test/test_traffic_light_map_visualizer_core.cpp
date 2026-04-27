@@ -35,25 +35,15 @@ using autoware_perception_msgs::msg::TrafficLightElement;
 using autoware_perception_msgs::msg::TrafficLightGroup;
 using autoware_perception_msgs::msg::TrafficLightGroupArray;
 
-geometry_msgs::msg::Point make_point(double x, double y, double z)
-{
-  geometry_msgs::msg::Point p;
-  p.x = x;
-  p.y = y;
-  p.z = z;
-  return p;
-}
-
 Bulb make_bulb(lanelet::Id id, double x, double y, double z, uint8_t color)
 {
-  return Bulb{id, make_point(x, y, z), color};
-}
-
-TrafficLightElement make_element(uint8_t color)
-{
-  TrafficLightElement element;
-  element.color = color;
-  return element;
+  Bulb bulb;
+  bulb.id = id;
+  bulb.position.x = x;
+  bulb.position.y = y;
+  bulb.position.z = z;
+  bulb.color = color;
+  return bulb;
 }
 
 TrafficLightGroup make_group(lanelet::Id group_id, const std::vector<uint8_t> & colors)
@@ -61,7 +51,9 @@ TrafficLightGroup make_group(lanelet::Id group_id, const std::vector<uint8_t> & 
   TrafficLightGroup group;
   group.traffic_light_group_id = group_id;
   for (auto color : colors) {
-    group.elements.push_back(make_element(color));
+    TrafficLightElement element;
+    element.color = color;
+    group.elements.push_back(element);
   }
   return group;
 }
