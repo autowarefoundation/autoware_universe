@@ -9,6 +9,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/scene.cpp
   src/utils.cpp
   src/manager.cpp
+  src/validation.cpp
 )
 
 if(BUILD_TESTING)
