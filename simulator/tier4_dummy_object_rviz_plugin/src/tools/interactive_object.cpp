@@ -296,9 +296,8 @@ void InteractiveObjectTool::onPoseSet(double x, double y, double theta)
   output_msg.max_velocity = max_velocity_->getFloat();
   output_msg.min_velocity = min_velocity_->getFloat();
   output_msg.action = SimulatedObject::ADD;
-  output_msg.movement_model =
-    predicted_property_->getBool() ? SimulatedObject::PREDICTED_PATH :
-    SimulatedObject::STRAIGHT_LINE;
+  output_msg.movement_model = predicted_property_->getBool() ? SimulatedObject::PREDICTED_PATH
+                                                             : SimulatedObject::STRAIGHT_LINE;
 
   dummy_object_info_pub_->publish(output_msg);
 }
@@ -324,9 +323,8 @@ void InteractiveObjectTool::publishObjectMsg(
 
   tf2::toMsg(object_tf.get(), output_msg.initial_state.pose_covariance.pose);
   output_msg.initial_state.twist_covariance.twist = object_twist.get();
-  output_msg.movement_model =
-    predicted_property_->getBool() ? SimulatedObject::PREDICTED_PATH :
-    SimulatedObject::STRAIGHT_LINE;
+  output_msg.movement_model = predicted_property_->getBool() ? SimulatedObject::PREDICTED_PATH
+                                                             : SimulatedObject::STRAIGHT_LINE;
 
   dummy_object_info_pub_->publish(output_msg);
 }

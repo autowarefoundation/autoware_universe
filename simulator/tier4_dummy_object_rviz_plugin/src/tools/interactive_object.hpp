@@ -61,9 +61,9 @@
 #include <rviz_default_plugins/tools/pose/pose_tool.hpp>
 #endif
 
+#include <autoware_simulation_msgs/msg/simulated_object.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <autoware_simulation_msgs/msg/simulated_object.hpp>
 
 #include <boost/optional.hpp>
 
