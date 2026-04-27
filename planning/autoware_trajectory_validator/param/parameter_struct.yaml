@@ -1,15 +1,15 @@
 validator:
   filter_names:
     type: string_array
-    default_value: []
+    default_value: [""]
     description: metrics.
     read_only: true
 
   shadow_mode_filter_names:
     type: string_array
-    default_value: []
+    default_value: [""]
     description: List of filter names that run in which results are logged but do not affect trajectory feasibility.
-    read_only: true
+    read_only: false
 
   out_of_lane:
     time:
@@ -87,6 +87,11 @@ validator:
       type: bool
       default_value: true
       description: when true, amber lights are handled like red lights
+      read_only: false
+    stop_overshoot_margin:
+      type: double
+      default_value: 0.5
+      description: Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible (m)
       read_only: false
     checked_trajectory_length:
       deceleration_limit:
