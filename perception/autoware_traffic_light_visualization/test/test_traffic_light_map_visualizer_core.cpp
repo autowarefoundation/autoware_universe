@@ -38,6 +38,7 @@ using autoware_perception_msgs::msg::TrafficLightGroupArray;
 constexpr lanelet::Id test_group_id = 100;
 constexpr lanelet::Id another_test_group_id = 200;
 constexpr lanelet::Id non_existent_group_id = 999;
+constexpr lanelet::Id arbitrary_bulb_id = 42;
 
 Bulb make_bulb(lanelet::Id id, double x, double y, double z, uint8_t color)
 {
@@ -85,7 +86,7 @@ TEST(TrafficLightVisualizer, RedBulbDetectedProducesRedMarker)
 {
   BulbsByGroupId map_data;
   map_data.emplace(
-    test_group_id, std::vector<Bulb>{make_bulb(42, 0, 0, 0, TrafficLightElement::RED)});
+    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, 0, 0, 0, TrafficLightElement::RED)});
   TrafficLightVisualizer visualizer{std::move(map_data)};
   auto detection = make_detection({make_group(test_group_id, {TrafficLightElement::RED})});
 
@@ -101,7 +102,7 @@ TEST(TrafficLightVisualizer, GreenBulbDetectedProducesGreenMarker)
 {
   BulbsByGroupId map_data;
   map_data.emplace(
-    test_group_id, std::vector<Bulb>{make_bulb(42, 0, 0, 0, TrafficLightElement::GREEN)});
+    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, 0, 0, 0, TrafficLightElement::GREEN)});
   TrafficLightVisualizer visualizer{std::move(map_data)};
   auto detection = make_detection({make_group(test_group_id, {TrafficLightElement::GREEN})});
 
@@ -117,7 +118,7 @@ TEST(TrafficLightVisualizer, AmberBulbDetectedProducesYellowMarker)
 {
   BulbsByGroupId map_data;
   map_data.emplace(
-    test_group_id, std::vector<Bulb>{make_bulb(42, 0, 0, 0, TrafficLightElement::AMBER)});
+    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, 0, 0, 0, TrafficLightElement::AMBER)});
   TrafficLightVisualizer visualizer{std::move(map_data)};
   auto detection = make_detection({make_group(test_group_id, {TrafficLightElement::AMBER})});
 
@@ -133,7 +134,7 @@ TEST(TrafficLightVisualizer, UnknownGroupIdProducesEmptyMarkers)
 {
   BulbsByGroupId map_data;
   map_data.emplace(
-    test_group_id, std::vector<Bulb>{make_bulb(42, 0, 0, 0, TrafficLightElement::RED)});
+    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, 0, 0, 0, TrafficLightElement::RED)});
   TrafficLightVisualizer visualizer{std::move(map_data)};
   auto detection = make_detection({make_group(non_existent_group_id, {TrafficLightElement::RED})});
 
@@ -188,7 +189,7 @@ TEST(TrafficLightVisualizer, EmptyDetectionProducesEmptyMarkers)
 {
   BulbsByGroupId map_data;
   map_data.emplace(
-    test_group_id, std::vector<Bulb>{make_bulb(42, 0, 0, 0, TrafficLightElement::RED)});
+    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, 0, 0, 0, TrafficLightElement::RED)});
   TrafficLightVisualizer visualizer{std::move(map_data)};
   auto detection = make_detection({});
 
