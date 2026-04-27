@@ -46,8 +46,8 @@ void TrafficLightMapVisualizerNode::traffic_lights_callback(
     return;
   }
   visualization_msgs::msg::MarkerArray output_msg;
-  const builtin_interfaces::msg::Time current_time = now();
-  output_msg.markers = visualizer_->generate_markers(*detected_traffic_lights, current_time);
+  const builtin_interfaces::msg::Time stamp = now();
+  output_msg.markers = visualizer_->generate_markers(*detected_traffic_lights, stamp);
   traffic_light_marker_pub_->publish(output_msg);
 }
 
