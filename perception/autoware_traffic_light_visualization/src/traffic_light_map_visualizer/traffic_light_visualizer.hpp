@@ -38,7 +38,7 @@ struct Bulb
 using BulbsByGroupId = std::unordered_map<lanelet::Id, std::vector<Bulb>>;
 
 BulbsByGroupId extract_bulbs(
-  const std::vector<lanelet::AutowareTrafficLightConstPtr> & regulatory_elements);
+  const std::vector<lanelet::AutowareTrafficLightConstPtr> & traffic_lights);
 
 class TrafficLightVisualizer
 {
