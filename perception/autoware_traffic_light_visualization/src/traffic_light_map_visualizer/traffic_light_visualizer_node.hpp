@@ -40,9 +40,9 @@ private:
     const TrafficLightGroupArray::ConstSharedPtr detected_traffic_lights);
   void bin_map_callback(const LaneletMapBin::ConstSharedPtr input_map_msg);
 
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr light_marker_pub_;
-  rclcpp::Subscription<TrafficLightGroupArray>::SharedPtr tl_state_sub_;
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr vector_map_sub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr traffic_light_marker_pub_;
+  rclcpp::Subscription<TrafficLightGroupArray>::SharedPtr traffic_light_state_sub_;
+  rclcpp::Subscription<LaneletMapBin>::SharedPtr lanelet_map_sub_;
 
   std::optional<TrafficLightVisualizer> visualizer_;
 };

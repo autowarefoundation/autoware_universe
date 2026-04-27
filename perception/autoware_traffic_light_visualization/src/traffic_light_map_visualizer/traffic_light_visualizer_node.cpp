@@ -29,12 +29,12 @@ TrafficLightMapVisualizerNode::TrafficLightMapVisualizerNode(
 {
   using std::placeholders::_1;
 
-  light_marker_pub_ =
+  traffic_light_marker_pub_ =
     create_publisher<visualization_msgs::msg::MarkerArray>("~/output/traffic_light", 1);
-  tl_state_sub_ = create_subscription<TrafficLightGroupArray>(
+  traffic_light_state_sub_ = create_subscription<TrafficLightGroupArray>(
     "~/input/tl_state", 1,
     std::bind(&TrafficLightMapVisualizerNode::traffic_lights_callback, this, _1));
-  vector_map_sub_ = create_subscription<LaneletMapBin>(
+  lanelet_map_sub_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrafficLightMapVisualizerNode::bin_map_callback, this, _1));
 }
@@ -48,7 +48,7 @@ void TrafficLightMapVisualizerNode::traffic_lights_callback(
   visualization_msgs::msg::MarkerArray output_msg;
   const builtin_interfaces::msg::Time current_time = now();
   output_msg.markers = visualizer_->generate_markers(*detected_traffic_lights, current_time);
-  light_marker_pub_->publish(output_msg);
+  traffic_light_marker_pub_->publish(output_msg);
 }
 
 void TrafficLightMapVisualizerNode::bin_map_callback(
