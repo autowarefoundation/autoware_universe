@@ -135,7 +135,7 @@ TEST(TrafficLightVisualizer, UnknownGroupIdProducesEmptyMarkers)
   map_data.emplace(
     test_group_id, std::vector<Bulb>{make_bulb(42, 1.0, 2.0, 3.0, TrafficLightElement::RED)});
   TrafficLightVisualizer visualizer{std::move(map_data)};
-  auto detection = make_detection({make_group(non_existent_group_id, {TrafficLightElement::RED})});
+  auto detection = make_detection({make_group(999, {TrafficLightElement::RED})});
 
   auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
 
@@ -190,8 +190,9 @@ TEST(TrafficLightVisualizer, EmptyDetectionProducesEmptyMarkers)
   map_data.emplace(
     test_group_id, std::vector<Bulb>{make_bulb(42, 1.0, 2.0, 3.0, TrafficLightElement::RED)});
   TrafficLightVisualizer visualizer{std::move(map_data)};
+  auto detection = make_detection({});
 
-  auto markers = visualizer.generate_markers(make_detection({}), builtin_interfaces::msg::Time{});
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
 
   EXPECT_TRUE(markers.empty());
 }
