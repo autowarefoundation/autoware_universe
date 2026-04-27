@@ -1,0 +1,201 @@
+// Copyright 2026 Tier IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "traffic_light_map_visualizer/traffic_light_visualizer.hpp"
+
+#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+#include <builtin_interfaces/msg/time.hpp>
+#include <geometry_msgs/msg/point.hpp>
+
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <utility>
+#include <vector>
+
+namespace
+{
+using autoware::traffic_light::Bulb;
+using autoware::traffic_light::BulbsByGroupId;
+using autoware::traffic_light::TrafficLightVisualizer;
+using autoware_perception_msgs::msg::TrafficLightElement;
+using autoware_perception_msgs::msg::TrafficLightGroup;
+using autoware_perception_msgs::msg::TrafficLightGroupArray;
+
+geometry_msgs::msg::Point make_point(double x, double y, double z)
+{
+  geometry_msgs::msg::Point p;
+  p.x = x;
+  p.y = y;
+  p.z = z;
+  return p;
+}
+
+Bulb make_bulb(lanelet::Id id, double x, double y, double z, uint8_t color)
+{
+  return Bulb{id, make_point(x, y, z), color};
+}
+
+TrafficLightElement make_element(uint8_t color)
+{
+  TrafficLightElement element;
+  element.color = color;
+  return element;
+}
+
+TrafficLightGroup make_group(lanelet::Id group_id, const std::vector<uint8_t> & colors)
+{
+  TrafficLightGroup group;
+  group.traffic_light_group_id = group_id;
+  for (auto color : colors) {
+    group.elements.push_back(make_element(color));
+  }
+  return group;
+}
+
+TrafficLightGroupArray make_detection(std::vector<TrafficLightGroup> groups)
+{
+  TrafficLightGroupArray array;
+  array.traffic_light_groups = std::move(groups);
+  return array;
+}
+
+}  // namespace
+
+TEST(TrafficLightVisualizer, EmptyBulbsProducesEmptyMarkers)
+{
+  TrafficLightVisualizer visualizer{BulbsByGroupId{}};
+  auto detection = make_detection({make_group(100, {TrafficLightElement::RED})});
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  EXPECT_TRUE(markers.empty());
+}
+
+TEST(TrafficLightVisualizer, RedBulbDetectedProducesRedMarker)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    100, std::vector<Bulb>{make_bulb(42, 1.0, 2.0, 3.0, TrafficLightElement::RED)});
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+  auto detection = make_detection({make_group(100, {TrafficLightElement::RED})});
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  ASSERT_EQ(markers.size(), 1u);
+  EXPECT_FLOAT_EQ(markers[0].color.r, 1.0f);
+  EXPECT_FLOAT_EQ(markers[0].color.g, 0.0f);
+  EXPECT_FLOAT_EQ(markers[0].color.b, 0.0f);
+}
+
+TEST(TrafficLightVisualizer, GreenBulbDetectedProducesGreenMarker)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    100, std::vector<Bulb>{make_bulb(42, 1.0, 2.0, 3.0, TrafficLightElement::GREEN)});
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+  auto detection = make_detection({make_group(100, {TrafficLightElement::GREEN})});
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  ASSERT_EQ(markers.size(), 1u);
+  EXPECT_FLOAT_EQ(markers[0].color.r, 0.0f);
+  EXPECT_FLOAT_EQ(markers[0].color.g, 1.0f);
+  EXPECT_FLOAT_EQ(markers[0].color.b, 0.0f);
+}
+
+TEST(TrafficLightVisualizer, AmberBulbDetectedProducesYellowMarker)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    100, std::vector<Bulb>{make_bulb(42, 1.0, 2.0, 3.0, TrafficLightElement::AMBER)});
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+  auto detection = make_detection({make_group(100, {TrafficLightElement::AMBER})});
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  ASSERT_EQ(markers.size(), 1u);
+  EXPECT_FLOAT_EQ(markers[0].color.r, 1.0f);
+  EXPECT_FLOAT_EQ(markers[0].color.g, 1.0f);
+  EXPECT_FLOAT_EQ(markers[0].color.b, 0.0f);
+}
+
+TEST(TrafficLightVisualizer, UnknownGroupIdProducesEmptyMarkers)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    100, std::vector<Bulb>{make_bulb(42, 1.0, 2.0, 3.0, TrafficLightElement::RED)});
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+  auto detection = make_detection({make_group(999, {TrafficLightElement::RED})});
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  EXPECT_TRUE(markers.empty());
+}
+
+TEST(TrafficLightVisualizer, OnlyDetectedColorsAreShown)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    100, std::vector<Bulb>{
+           make_bulb(1, 1.0, 0.0, 0.0, TrafficLightElement::RED),
+           make_bulb(2, 2.0, 0.0, 0.0, TrafficLightElement::GREEN),
+           make_bulb(3, 3.0, 0.0, 0.0, TrafficLightElement::AMBER),
+         });
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+  auto detection = make_detection({make_group(100, {TrafficLightElement::RED})});
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  ASSERT_EQ(markers.size(), 1u);
+  EXPECT_EQ(markers[0].id, 1);
+}
+
+TEST(TrafficLightVisualizer, TwoGroupsBothMatchedProduceFourMarkers)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    100, std::vector<Bulb>{
+           make_bulb(1, 0, 0, 0, TrafficLightElement::RED),
+           make_bulb(2, 0, 0, 0, TrafficLightElement::GREEN),
+         });
+  map_data.emplace(
+    200, std::vector<Bulb>{
+           make_bulb(3, 0, 0, 0, TrafficLightElement::RED),
+           make_bulb(4, 0, 0, 0, TrafficLightElement::GREEN),
+         });
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+  auto detection = make_detection({
+    make_group(100, {TrafficLightElement::RED, TrafficLightElement::GREEN}),
+    make_group(200, {TrafficLightElement::RED, TrafficLightElement::GREEN}),
+  });
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  EXPECT_EQ(markers.size(), 4u);
+}
+
+TEST(TrafficLightVisualizer, EmptyDetectionProducesEmptyMarkers)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    100, std::vector<Bulb>{make_bulb(42, 1.0, 2.0, 3.0, TrafficLightElement::RED)});
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+
+  auto markers = visualizer.generate_markers(make_detection({}), builtin_interfaces::msg::Time{});
+
+  EXPECT_TRUE(markers.empty());
+}
