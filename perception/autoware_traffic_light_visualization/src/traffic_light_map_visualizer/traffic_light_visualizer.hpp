@@ -19,25 +19,38 @@
 #include <builtin_interfaces/msg/time.hpp>
 
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+#include <geometry_msgs/msg/point.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
+#include <cstdint>
 #include <unordered_map>
 #include <vector>
 
 namespace autoware::traffic_light
 {
+struct Bulb
+{
+  lanelet::Id id;
+  geometry_msgs::msg::Point position;
+  uint8_t color;
+};
+
+using BulbsByGroupId = std::unordered_map<lanelet::Id, std::vector<Bulb>>;
+
+BulbsByGroupId extract_bulbs(
+  const std::vector<lanelet::AutowareTrafficLightConstPtr> & regulatory_elements);
+
 class TrafficLightVisualizer
 {
 public:
-  explicit TrafficLightVisualizer(
-    const std::vector<lanelet::AutowareTrafficLightConstPtr> & regulatory_elements);
+  explicit TrafficLightVisualizer(BulbsByGroupId bulbs_by_group_id);
 
   std::vector<visualization_msgs::msg::Marker> generate_markers(
     const autoware_perception_msgs::msg::TrafficLightGroupArray & detected_traffic_lights,
-    const builtin_interfaces::msg::Time & stamp) const;
+    builtin_interfaces::msg::Time stamp) const;
 
 private:
-  std::unordered_map<lanelet::Id, std::vector<lanelet::ConstPoint3d>> bulb_points_by_group_id_;
+  BulbsByGroupId bulbs_by_group_id_;
 };
 }  // namespace autoware::traffic_light
 

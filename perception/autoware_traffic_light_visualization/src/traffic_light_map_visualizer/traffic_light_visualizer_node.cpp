@@ -59,7 +59,8 @@ void TrafficLightMapVisualizerNode::bin_map_callback(
   RCLCPP_DEBUG(get_logger(), "Map is loaded");
 
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(viz_lanelet_map);
-  visualizer_.emplace(lanelet::utils::query::autowareTrafficLights(all_lanelets));
+  auto regulatory_elements = lanelet::utils::query::autowareTrafficLights(all_lanelets);
+  visualizer_.emplace(extract_bulbs(regulatory_elements));
 }
 }  // namespace autoware::traffic_light
 
