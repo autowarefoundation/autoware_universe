@@ -50,9 +50,9 @@ jobs:
         rosdistro: [humble, jazzy]
         include:
           - rosdistro: humble
-            container: ghcr.io/autowarefoundation/autoware:universe-devel
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-humble
           - rosdistro: jazzy
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-jazzy
 
     uses: ./.github/workflows/build-and-test-differential.yaml
     with:
@@ -72,9 +72,9 @@ jobs:
         rosdistro: [humble, jazzy]
         include:
           - rosdistro: humble
-            container: ghcr.io/autowarefoundation/autoware:universe-devel
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-humble
           - rosdistro: jazzy
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-jazzy
 
     uses: ./.github/workflows/build-and-test-packages-above-differential.yaml
     with:
@@ -92,15 +92,14 @@ jobs:
         rosdistro: [humble, jazzy]
         include:
           - rosdistro: humble
-            container: ghcr.io/autowarefoundation/autoware:universe-devel
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-humble
           - rosdistro: jazzy
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-jazzy
 
     uses: ./.github/workflows/build-and-test-differential.yaml
     with:
       rosdistro: ${{ matrix.rosdistro }}
       container: ${{ matrix.container }}
-      container-suffix: -cuda
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' }}
       runner: "['self-hosted', 'Linux', 'X64']"
     secrets:
@@ -122,6 +121,6 @@ jobs:
       - build-and-test-differential-cuda
     uses: ./.github/workflows/clang-tidy-differential.yaml
     with:
-      container-suffix: -cuda
+      container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-jazzy
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' && needs.build-and-test-differential-cuda.result == 'success' }}
       runner: "['self-hosted', 'Linux', 'X64']"

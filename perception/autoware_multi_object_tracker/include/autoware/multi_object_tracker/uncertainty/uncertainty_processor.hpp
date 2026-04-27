@@ -16,7 +16,7 @@
 #define AUTOWARE__MULTI_OBJECT_TRACKER__UNCERTAINTY__UNCERTAINTY_PROCESSOR_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <nav_msgs/msg/odometry.hpp>

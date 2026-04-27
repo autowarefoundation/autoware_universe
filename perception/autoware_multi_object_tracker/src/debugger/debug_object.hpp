@@ -15,8 +15,8 @@
 #ifndef DEBUGGER__DEBUG_OBJECT_HPP_
 #define DEBUGGER__DEBUG_OBJECT_HPP_
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

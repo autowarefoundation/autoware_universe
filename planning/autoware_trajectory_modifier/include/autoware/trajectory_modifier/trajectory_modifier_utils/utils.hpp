@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_MODIFIER__UTILS_HPP_
-#define AUTOWARE__TRAJECTORY_MODIFIER__UTILS_HPP_
+#ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_UTILS__UTILS_HPP_
+#define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_UTILS__UTILS_HPP_
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
@@ -39,4 +39,4 @@ bool is_ego_vehicle_moving(
 
 }  // namespace autoware::trajectory_modifier::utils
 
-#endif  // AUTOWARE__TRAJECTORY_MODIFIER__UTILS_HPP_
+#endif  // AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_UTILS__UTILS_HPP_

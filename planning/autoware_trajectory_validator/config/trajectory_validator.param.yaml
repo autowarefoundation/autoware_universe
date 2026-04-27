@@ -1,17 +1,15 @@
 /**:
   ros__parameters:
     filter_names:
+      [""]
+
+    shadow_mode_filter_names:
       [
         "safety::OutOfLaneFilter",
         "safety::CollisionFilter",
         "safety::VehicleConstraintFilter",
         "traffic_rule::TrafficLightFilter",
       ]
-    # available filters:
-    #  "safety::OutOfLaneFilter"
-    #  "safety::CollisionFilter"
-    #  "safety::VehicleConstraintFilter"
-    #  "traffic_rule::TrafficLightFilter"
 
     out_of_lane:
       time: 2.0

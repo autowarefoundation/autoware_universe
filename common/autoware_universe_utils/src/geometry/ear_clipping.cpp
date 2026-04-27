@@ -219,7 +219,7 @@ std::size_t insert_point(
   const std::optional<std::size_t> last_index)
 {
   std::size_t p_idx = points.size();
-  points.push_back(LinkedPoint(pt));
+  points.emplace_back(pt);
 
   // Making sure all next_index and prev_index will always have values
   if (!last_index.has_value()) {
