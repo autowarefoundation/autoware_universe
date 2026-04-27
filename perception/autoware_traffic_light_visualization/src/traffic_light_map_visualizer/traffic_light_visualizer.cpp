@@ -117,12 +117,12 @@ BulbsByGroupId extract_bulbs(
           continue;
         }
         Bulb bulb;
-        const auto & color_attr = point.attribute("color").value();
-        if (color_attr == "red") {
+        const auto & color_attribute = point.attribute("color").value();
+        if (color_attribute == "red") {
           bulb.color = TrafficLightElement::RED;
-        } else if (color_attr == "green") {
+        } else if (color_attribute == "green") {
           bulb.color = TrafficLightElement::GREEN;
-        } else if (color_attr == "yellow") {
+        } else if (color_attribute == "yellow") {
           bulb.color = TrafficLightElement::AMBER;
         } else {
           continue;
