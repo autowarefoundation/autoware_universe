@@ -2222,7 +2222,7 @@ void updateRoadShoulderDistance(
     o.avoid_margin = lateral_hard_margin + 0.5 * vehicle_width;
   }
   const auto extract_obstacles = generateObstaclePolygonsForDrivableArea(
-    clip_objects, parameters, planner_data->parameters.vehicle_width / 2.0);
+    clip_objects, parameters, planner_data->parameters.vehicle_width);
 
   auto tmp_path = data.reference_path;
   tmp_path.left_bound = data.left_bound;

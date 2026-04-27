@@ -1294,7 +1294,7 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::plan()
       parameters_->path_generation_method == "both") {
       current_drivable_area_info.obstacles =
         utils::static_obstacle_avoidance::generateObstaclePolygonsForDrivableArea(
-          clip_objects_, parameters_, planner_data_->parameters.vehicle_width / 2.0);
+          clip_objects_, parameters_, planner_data_->parameters.vehicle_width);
     }
 
     output.drivable_area_info = utils::combineDrivableAreaInfo(
