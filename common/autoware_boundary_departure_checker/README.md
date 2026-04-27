@@ -1,4 +1,4 @@
-# Boundary Departure Module Design Document
+# Boundary Departure Checker
 
 ## 1. Introduction
 

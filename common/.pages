@@ -9,6 +9,7 @@ nav:
       - 'comparisons': common/autoware_auto_common/design/comparisons
     - 'autoware_grid_map_utils': common/autoware_grid_map_utils
     - 'autoware_point_types': common/autoware_point_types
+    - "Boundary Departure Checker': common/autoware_boundary_departure_checker
     - 'Geography Utils': common/autoware_geography_utils
     - 'Global Parameter Loader': common/autoware_global_parameter_loader/Readme
     - 'Glog Component': common/autoware_glog_component
