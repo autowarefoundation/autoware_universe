@@ -121,7 +121,8 @@ TEST(ExtractBulbs, PointWithoutColorAttributeIsSkipped)
   auto bulbs = extract_bulbs({traffic_light});
 
   ASSERT_EQ(bulbs.size(), 1u);
-  EXPECT_EQ(bulbs.begin()->second.size(), 1u);
+  ASSERT_EQ(bulbs.begin()->second.size(), 1u);
+  EXPECT_EQ(bulbs.begin()->second[0].color, TrafficLightElement::RED);
 }
 
 TEST(ExtractBulbs, UnknownColorIsSkipped)
