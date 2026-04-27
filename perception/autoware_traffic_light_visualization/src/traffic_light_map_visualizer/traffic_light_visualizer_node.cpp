@@ -54,10 +54,10 @@ void TrafficLightMapVisualizerNode::traffic_lights_callback(
 void TrafficLightMapVisualizerNode::bin_map_callback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_map_msg)
 {
-  lanelet::LaneletMapPtr viz_lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
+  lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_map_msg));
 
-  lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(viz_lanelet_map);
+  lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map);
   auto regulatory_elements = lanelet::utils::query::autowareTrafficLights(all_lanelets);
   visualizer_.emplace(extract_bulbs(regulatory_elements));
 }
