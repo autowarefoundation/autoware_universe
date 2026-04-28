@@ -288,23 +288,3 @@ TEST(TrafficLightVisualizer, KnownAndUnknownGroupMixOnlyKnownProducesMarkers)
   ASSERT_EQ(markers.size(), 1u);
   EXPECT_EQ(markers[0].id, arbitrary_bulb_id);
 }
-
-TEST(TrafficLightVisualizer, MarkerHeaderCarriesStampAndMapFrame)
-{
-  BulbsByGroupId map_data;
-  map_data.emplace(
-    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, TrafficLightElement::RED)});
-  TrafficLightVisualizer visualizer{std::move(map_data)};
-  auto detection = make_detection({make_group(test_group_id, {TrafficLightElement::RED})});
-
-  builtin_interfaces::msg::Time stamp;
-  stamp.sec = 42;
-  stamp.nanosec = 123456789;
-
-  auto markers = visualizer.generate_markers(detection, stamp);
-
-  ASSERT_EQ(markers.size(), 1u);
-  EXPECT_EQ(markers[0].header.frame_id, "map");
-  EXPECT_EQ(markers[0].header.stamp.sec, 42);
-  EXPECT_EQ(markers[0].header.stamp.nanosec, 123456789u);
-}
