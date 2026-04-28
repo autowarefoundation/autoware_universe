@@ -18,6 +18,8 @@
 #include <std_msgs/msg/color_rgba.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
+#include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -25,6 +27,8 @@ namespace
 {
 using autoware::traffic_light::Bulb;
 using autoware_perception_msgs::msg::TrafficLightElement;
+
+// --- helpers for generate_markers ---
 
 bool is_color_detected(
   const std::vector<TrafficLightElement> & detected_elements, uint8_t bulb_color)
@@ -96,6 +100,16 @@ std::vector<visualization_msgs::msg::Marker> create_markers_for_active_bulbs(
   return markers;
 }
 
+// --- helpers for extract_bulbs ---
+
+std::optional<uint8_t> parse_bulb_color(const std::string & color_attribute)
+{
+  if (color_attribute == "red") return TrafficLightElement::RED;
+  if (color_attribute == "green") return TrafficLightElement::GREEN;
+  if (color_attribute == "yellow") return TrafficLightElement::AMBER;
+  return std::nullopt;
+}
+
 }  // namespace
 
 namespace autoware::traffic_light
@@ -116,21 +130,16 @@ BulbsByGroupId extract_bulbs(
         if (!point.hasAttribute("color")) {
           continue;
         }
-        Bulb bulb;
-        const auto & color_attribute = point.attribute("color").value();
-        if (color_attribute == "red") {
-          bulb.color = TrafficLightElement::RED;
-        } else if (color_attribute == "green") {
-          bulb.color = TrafficLightElement::GREEN;
-        } else if (color_attribute == "yellow") {
-          bulb.color = TrafficLightElement::AMBER;
-        } else {
+        const auto color = parse_bulb_color(point.attribute("color").value());
+        if (!color) {
           continue;
         }
+        Bulb bulb;
         bulb.id = point.id();
         bulb.position.x = point.x();
         bulb.position.y = point.y();
         bulb.position.z = point.z();
+        bulb.color = *color;
         bulbs.push_back(bulb);
       }
     }

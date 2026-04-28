@@ -35,6 +35,8 @@ struct Bulb
   uint8_t color;
 };
 
+// Key is the AutowareTrafficLight regulatory element ID, which equals
+// the `traffic_light_group_id` carried by TrafficLightGroupArray messages.
 using BulbsByGroupId = std::unordered_map<lanelet::Id, std::vector<Bulb>>;
 
 BulbsByGroupId extract_bulbs(
