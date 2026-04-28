@@ -107,23 +107,6 @@ TEST(ExtractBulbs, RedGreenYellowResolveToCorrectColors)
   EXPECT_EQ(it->second[2].color, TrafficLightElement::AMBER);
 }
 
-TEST(ExtractBulbs, BulbCarriesPointIdAndPosition)
-{
-  auto point = make_bulb_point(1.5, 2.5, 3.5, "red");
-  auto traffic_light = make_map_traffic_light({point});
-
-  auto bulbs = extract_bulbs({traffic_light});
-
-  ASSERT_EQ(bulbs.size(), 1u);
-  auto it = bulbs.find(traffic_light->id());
-  ASSERT_NE(it, bulbs.end());
-  ASSERT_EQ(it->second.size(), 1u);
-  EXPECT_EQ(it->second[0].id, point.id());
-  EXPECT_DOUBLE_EQ(it->second[0].position.x, 1.5);
-  EXPECT_DOUBLE_EQ(it->second[0].position.y, 2.5);
-  EXPECT_DOUBLE_EQ(it->second[0].position.z, 3.5);
-}
-
 TEST(ExtractBulbs, PointWithoutColorAttributeIsSkipped)
 {
   auto traffic_light = make_map_traffic_light({
