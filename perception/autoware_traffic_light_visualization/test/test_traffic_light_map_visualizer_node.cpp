@@ -44,16 +44,28 @@ using visualization_msgs::msg::MarkerArray;
 namespace
 {
 
-struct MinimalMap
+struct TestMap
 {
   LaneletMapBin msg;
   lanelet::Id traffic_light_group_id;
 };
 
-// Minimal lanelet map: 1 lanelet holding 1 AutowareTrafficLight regulatory
-// element with a single RED bulb. Smaller than the characterization test's
-// 3-color map; just enough to exercise the Node's pub/sub wiring.
-MinimalMap make_minimal_map()
+// Creates the following map structure (XZ side view, all elements at y=2.0):
+//
+//         Z
+//         ^
+//    5.0  |     ●  ●  ●      <- lightBulbs
+//         |     G  Y  R        green(1.0) yellow(1.5) red(2.0)
+//    4.0  |  +--------+      <- traffic light base
+//         |
+//    0.0  |  L────────R      <- lanelet bounds (y: 0.0 to 10.0)
+//         +──────────────> X
+//         0.0 1.0 1.5 2.0 3.0
+//
+// Mirrors the characterization test's map shape so the smoke test exercises a
+// realistic G/Y/R bulb set; only marker count is asserted, the rich behavior
+// (color/position) is left to test_traffic_light_map_visualizer.cpp.
+TestMap make_test_map()
 {
   using lanelet::Lanelet;
   using lanelet::LineString3d;
@@ -61,43 +73,52 @@ MinimalMap make_minimal_map()
   using lanelet::Point3d;
   using lanelet::utils::getId;
 
-  Point3d red_bulb(getId(), 0.0, 0.0, 1.0);
+  Point3d green_bulb(getId(), 1.0, 2.0, 5.0);
+  green_bulb.attributes()["color"] = "green";
+
+  Point3d yellow_bulb(getId(), 1.5, 2.0, 5.0);
+  yellow_bulb.attributes()["color"] = "yellow";
+
+  Point3d red_bulb(getId(), 2.0, 2.0, 5.0);
   red_bulb.attributes()["color"] = "red";
 
-  LineString3d light_bulbs(getId(), {red_bulb});
+  LineString3d light_bulbs(getId(), {green_bulb, yellow_bulb, red_bulb});
   light_bulbs.attributes()["traffic_light_id"] = "1";
 
   LineString3d traffic_light_base(
-    getId(), {Point3d(getId(), 0.0, 0.0, 0.0), Point3d(getId(), 1.0, 0.0, 0.0)});
+    getId(), {Point3d(getId(), 0.0, 2.0, 4.0), Point3d(getId(), 3.0, 2.0, 4.0)});
 
   auto regulatory_element = lanelet::autoware::AutowareTrafficLight::make(
     getId(), lanelet::AttributeMap(), {LineStringOrPolygon3d(traffic_light_base)}, {},
     {light_bulbs});
 
   LineString3d left_bound(
-    getId(), {Point3d(getId(), 0.0, 0.0, 0.0), Point3d(getId(), 0.0, 1.0, 0.0)});
+    getId(), {Point3d(getId(), 0.0, 0.0, 0.0), Point3d(getId(), 0.0, 10.0, 0.0)});
   LineString3d right_bound(
-    getId(), {Point3d(getId(), 1.0, 0.0, 0.0), Point3d(getId(), 1.0, 1.0, 0.0)});
+    getId(), {Point3d(getId(), 3.0, 0.0, 0.0), Point3d(getId(), 3.0, 10.0, 0.0)});
   Lanelet lanelet(getId(), left_bound, right_bound);
   lanelet.addRegulatoryElement(regulatory_element);
 
   auto map = std::make_shared<lanelet::LaneletMap>();
   map->add(lanelet);
 
-  MinimalMap result;
+  TestMap result;
   result.msg = autoware::experimental::lanelet2_utils::to_autoware_map_msgs(map);
   result.traffic_light_group_id = regulatory_element->id();
   return result;
 }
 
-TrafficLightGroupArray make_red_detection(lanelet::Id group_id)
+TrafficLightGroupArray make_all_colors_detection(lanelet::Id group_id)
 {
   TrafficLightGroupArray msg;
   TrafficLightGroup group;
   group.traffic_light_group_id = group_id;
-  TrafficLightElement element;
-  element.color = TrafficLightElement::RED;
-  group.elements.push_back(element);
+  for (auto color :
+       {TrafficLightElement::RED, TrafficLightElement::GREEN, TrafficLightElement::AMBER}) {
+    TrafficLightElement element;
+    element.color = color;
+    group.elements.push_back(element);
+  }
   msg.traffic_light_groups.push_back(group);
   return msg;
 }
@@ -166,16 +187,17 @@ protected:
 };
 
 // Smoke: data flows from map + detection inputs through the Node and produces
-// at least one marker on the output topic. Detailed marker contents are
-// covered by the characterization tests in test_traffic_light_map_visualizer.cpp.
-TEST_F(TestTrafficLightMapVisualizerNodeSmoke, MapAndDetectionProduceMarker)
+// the expected number of markers on the output topic. Detailed marker contents
+// (color, position) are covered by the characterization tests in
+// test_traffic_light_map_visualizer.cpp.
+TEST_F(TestTrafficLightMapVisualizerNodeSmoke, MapAndDetectionProduceMarkers)
 {
-  const auto minimal_map = make_minimal_map();
-  map_pub_->publish(minimal_map.msg);
+  const auto test_map = make_test_map();
+  map_pub_->publish(test_map.msg);
   spin_some();
 
-  traffic_light_pub_->publish(make_red_detection(minimal_map.traffic_light_group_id));
+  traffic_light_pub_->publish(make_all_colors_detection(test_map.traffic_light_group_id));
   ASSERT_TRUE(spin_until_received());
 
-  EXPECT_EQ(received_markers_->markers.size(), 1u);
+  EXPECT_EQ(received_markers_->markers.size(), 3u);
 }
