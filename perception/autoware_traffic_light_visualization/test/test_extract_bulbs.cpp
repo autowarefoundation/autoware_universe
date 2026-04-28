@@ -15,6 +15,7 @@
 #include "traffic_light_map_visualizer/traffic_light_visualizer.hpp"
 
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
+
 #include <autoware_perception_msgs/msg/traffic_light_element.hpp>
 
 #include <gtest/gtest.h>
@@ -47,21 +48,33 @@ Point3d make_bulb_point_without_color(double x, double y, double z)
   return Point3d(getId(), x, y, z);
 }
 
-// Builds an AutowareTrafficLight regulatory element wrapping the given bulb
-// points in a single lightBulbs linestring. The base linestring is a dummy
-// required by AutowareTrafficLight::make() but unused by extract_bulbs.
-AutowareTrafficLightConstPtr make_map_traffic_light(
+LineString3d make_light_bulbs(
   const std::vector<Point3d> & bulb_points, bool with_traffic_light_id_attribute = true)
 {
   LineString3d light_bulbs(getId(), bulb_points);
   if (with_traffic_light_id_attribute) {
     light_bulbs.attributes()["traffic_light_id"] = "1";
   }
+  return light_bulbs;
+}
 
+// Builds an AutowareTrafficLight regulatory element wrapping the given lightBulbs
+// linestrings. The base linestring is a dummy required by AutowareTrafficLight::make()
+// but unused by extract_bulbs.
+AutowareTrafficLightConstPtr make_map_traffic_light(
+  const std::vector<LineString3d> & light_bulbs_linestrings)
+{
   LineString3d base(getId(), {Point3d(getId(), 0, 0, 0), Point3d(getId(), 1, 0, 0)});
 
   return lanelet::autoware::AutowareTrafficLight::make(
-    getId(), lanelet::AttributeMap(), {LineStringOrPolygon3d(base)}, {}, {light_bulbs});
+    getId(), lanelet::AttributeMap(), {LineStringOrPolygon3d(base)}, {}, light_bulbs_linestrings);
+}
+
+// Convenience overload: wraps the given bulb points in a single lightBulbs linestring.
+AutowareTrafficLightConstPtr make_map_traffic_light(
+  const std::vector<Point3d> & bulb_points, bool with_traffic_light_id_attribute = true)
+{
+  return make_map_traffic_light({make_light_bulbs(bulb_points, with_traffic_light_id_attribute)});
 }
 
 }  // namespace
@@ -154,4 +167,38 @@ TEST(ExtractBulbs, MultipleTrafficLightsProduceMultipleEntries)
   EXPECT_EQ(bulbs.size(), 2u);
   EXPECT_NE(bulbs.find(first->id()), bulbs.end());
   EXPECT_NE(bulbs.find(second->id()), bulbs.end());
+}
+
+TEST(ExtractBulbs, MultipleLightBulbsLineStringsAreMerged)
+{
+  auto traffic_light = make_map_traffic_light({
+    make_light_bulbs({make_bulb_point(0, 0, 0, "red")}),
+    make_light_bulbs({make_bulb_point(1, 1, 1, "green")}),
+  });
+
+  auto bulbs = extract_bulbs({traffic_light});
+
+  ASSERT_EQ(bulbs.size(), 1u);
+  auto it = bulbs.find(traffic_light->id());
+  ASSERT_NE(it, bulbs.end());
+  ASSERT_EQ(it->second.size(), 2u);
+  EXPECT_EQ(it->second[0].color, TrafficLightElement::RED);
+  EXPECT_EQ(it->second[1].color, TrafficLightElement::GREEN);
+}
+
+TEST(ExtractBulbs, LightBulbsLineStringWithoutTrafficLightIdAttributeIsSkippedWhileOthersRemain)
+{
+  auto traffic_light = make_map_traffic_light({
+    make_light_bulbs({make_bulb_point(0, 0, 0, "red")}),
+    make_light_bulbs(
+      {make_bulb_point(1, 1, 1, "green")}, /*with_traffic_light_id_attribute=*/false),
+  });
+
+  auto bulbs = extract_bulbs({traffic_light});
+
+  ASSERT_EQ(bulbs.size(), 1u);
+  auto it = bulbs.find(traffic_light->id());
+  ASSERT_NE(it, bulbs.end());
+  ASSERT_EQ(it->second.size(), 1u);
+  EXPECT_EQ(it->second[0].color, TrafficLightElement::RED);
 }
