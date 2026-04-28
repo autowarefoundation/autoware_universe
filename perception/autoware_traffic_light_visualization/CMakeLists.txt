@@ -38,7 +38,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
   ament_add_gtest(test_traffic_light_map_visualizer
-    test/test_traffic_light_map_visualizer.cpp
+    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer.cpp
   )
   target_include_directories(test_traffic_light_map_visualizer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -56,7 +56,7 @@ if(BUILD_TESTING)
   )
 
   ament_add_gtest(test_traffic_light_map_visualizer_core
-    test/test_traffic_light_map_visualizer_core.cpp
+    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer_core.cpp
   )
   target_include_directories(test_traffic_light_map_visualizer_core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -72,7 +72,7 @@ if(BUILD_TESTING)
   )
 
   ament_add_gtest(test_extract_bulbs
-    test/test_extract_bulbs.cpp
+    test/traffic_light_map_visualizer/test_extract_bulbs.cpp
   )
   target_include_directories(test_extract_bulbs PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -86,7 +86,7 @@ if(BUILD_TESTING)
   )
 
   ament_add_gtest(test_traffic_light_map_visualizer_node
-    test/test_traffic_light_map_visualizer_node.cpp
+    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer_node.cpp
   )
   target_include_directories(test_traffic_light_map_visualizer_node PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
