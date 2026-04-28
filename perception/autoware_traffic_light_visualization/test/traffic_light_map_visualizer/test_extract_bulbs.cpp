@@ -133,6 +133,22 @@ TEST(ExtractBulbs, UnknownColorIsSkipped)
   EXPECT_TRUE(bulbs.empty());
 }
 
+TEST(ExtractBulbs, UnknownColorIsSkippedWhileOthersRemain)
+{
+  auto map_traffic_light = make_map_traffic_light({
+    make_bulb_point(0, 0, 0, "red"),
+    make_bulb_point(1, 1, 1, "blue"),  // unknown color
+  });
+
+  auto bulbs = extract_bulbs({map_traffic_light});
+
+  ASSERT_EQ(bulbs.size(), 1u);
+  auto it = bulbs.find(map_traffic_light->id());
+  ASSERT_NE(it, bulbs.end());
+  ASSERT_EQ(it->second.size(), 1u);
+  EXPECT_EQ(it->second[0].color, TrafficLightElement::RED);
+}
+
 TEST(ExtractBulbs, LightBulbsWithoutTrafficLightIdAttributeIsSkipped)
 {
   auto map_traffic_light = make_map_traffic_light(
