@@ -88,7 +88,7 @@ TestMap make_test_map()
   LineString3d traffic_light_base(
     getId(), {Point3d(getId(), 0.0, 2.0, 4.0), Point3d(getId(), 3.0, 2.0, 4.0)});
 
-  auto regulatory_element = lanelet::autoware::AutowareTrafficLight::make(
+  auto traffic_light = lanelet::autoware::AutowareTrafficLight::make(
     getId(), lanelet::AttributeMap(), {LineStringOrPolygon3d(traffic_light_base)}, {},
     {light_bulbs});
 
@@ -97,14 +97,14 @@ TestMap make_test_map()
   LineString3d right_bound(
     getId(), {Point3d(getId(), 3.0, 0.0, 0.0), Point3d(getId(), 3.0, 10.0, 0.0)});
   Lanelet lanelet(getId(), left_bound, right_bound);
-  lanelet.addRegulatoryElement(regulatory_element);
+  lanelet.addRegulatoryElement(traffic_light);
 
   auto map = std::make_shared<lanelet::LaneletMap>();
   map->add(lanelet);
 
   TestMap result;
   result.msg = autoware::experimental::lanelet2_utils::to_autoware_map_msgs(map);
-  result.traffic_light_group_id = regulatory_element->id();
+  result.traffic_light_group_id = traffic_light->id();
   return result;
 }
 
