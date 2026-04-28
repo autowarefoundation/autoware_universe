@@ -53,6 +53,7 @@ LineString3d make_light_bulbs(
 {
   LineString3d light_bulbs(getId(), bulb_points);
   if (with_traffic_light_id_attribute) {
+    // extract_bulbs only checks attribute existence; the value is arbitrary.
     light_bulbs.attributes()["traffic_light_id"] = "1";
   }
   return light_bulbs;
