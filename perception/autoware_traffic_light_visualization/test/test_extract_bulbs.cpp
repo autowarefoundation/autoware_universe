@@ -159,26 +159,6 @@ TEST(ExtractBulbs, LightBulbsWithoutTrafficLightIdAttributeIsSkipped)
   EXPECT_TRUE(bulbs.empty());
 }
 
-TEST(ExtractBulbs, MultipleTrafficLightsProduceMultipleEntries)
-{
-  auto first = make_map_traffic_light({make_bulb_point(0, 0, 0, "red")});
-  auto second = make_map_traffic_light({make_bulb_point(1, 1, 1, "green")});
-
-  auto bulbs = extract_bulbs({first, second});
-
-  ASSERT_EQ(bulbs.size(), 2u);
-
-  auto first_it = bulbs.find(first->id());
-  ASSERT_NE(first_it, bulbs.end());
-  ASSERT_EQ(first_it->second.size(), 1u);
-  EXPECT_EQ(first_it->second[0].color, TrafficLightElement::RED);
-
-  auto second_it = bulbs.find(second->id());
-  ASSERT_NE(second_it, bulbs.end());
-  ASSERT_EQ(second_it->second.size(), 1u);
-  EXPECT_EQ(second_it->second[0].color, TrafficLightElement::GREEN);
-}
-
 TEST(ExtractBulbs, MultipleLightBulbsLineStringsAreMerged)
 {
   auto traffic_light = make_map_traffic_light({
@@ -211,4 +191,24 @@ TEST(ExtractBulbs, LightBulbsLineStringWithoutTrafficLightIdAttributeIsSkippedWh
   ASSERT_NE(it, bulbs.end());
   ASSERT_EQ(it->second.size(), 1u);
   EXPECT_EQ(it->second[0].color, TrafficLightElement::RED);
+}
+
+TEST(ExtractBulbs, MultipleTrafficLightsProduceMultipleEntries)
+{
+  auto first = make_map_traffic_light({make_bulb_point(0, 0, 0, "red")});
+  auto second = make_map_traffic_light({make_bulb_point(1, 1, 1, "green")});
+
+  auto bulbs = extract_bulbs({first, second});
+
+  ASSERT_EQ(bulbs.size(), 2u);
+
+  auto first_it = bulbs.find(first->id());
+  ASSERT_NE(first_it, bulbs.end());
+  ASSERT_EQ(first_it->second.size(), 1u);
+  EXPECT_EQ(first_it->second[0].color, TrafficLightElement::RED);
+
+  auto second_it = bulbs.find(second->id());
+  ASSERT_NE(second_it, bulbs.end());
+  ASSERT_EQ(second_it->second.size(), 1u);
+  EXPECT_EQ(second_it->second[0].color, TrafficLightElement::GREEN);
 }
