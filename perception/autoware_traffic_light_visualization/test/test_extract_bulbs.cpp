@@ -134,8 +134,10 @@ TEST(ExtractBulbs, PointWithoutColorAttributeIsSkipped)
   auto bulbs = extract_bulbs({traffic_light});
 
   ASSERT_EQ(bulbs.size(), 1u);
-  ASSERT_EQ(bulbs.begin()->second.size(), 1u);
-  EXPECT_EQ(bulbs.begin()->second[0].color, TrafficLightElement::RED);
+  auto it = bulbs.find(traffic_light->id());
+  ASSERT_NE(it, bulbs.end());
+  ASSERT_EQ(it->second.size(), 1u);
+  EXPECT_EQ(it->second[0].color, TrafficLightElement::RED);
 }
 
 TEST(ExtractBulbs, UnknownColorIsSkipped)
@@ -164,9 +166,17 @@ TEST(ExtractBulbs, MultipleTrafficLightsProduceMultipleEntries)
 
   auto bulbs = extract_bulbs({first, second});
 
-  EXPECT_EQ(bulbs.size(), 2u);
-  EXPECT_NE(bulbs.find(first->id()), bulbs.end());
-  EXPECT_NE(bulbs.find(second->id()), bulbs.end());
+  ASSERT_EQ(bulbs.size(), 2u);
+
+  auto first_it = bulbs.find(first->id());
+  ASSERT_NE(first_it, bulbs.end());
+  ASSERT_EQ(first_it->second.size(), 1u);
+  EXPECT_EQ(first_it->second[0].color, TrafficLightElement::RED);
+
+  auto second_it = bulbs.find(second->id());
+  ASSERT_NE(second_it, bulbs.end());
+  ASSERT_EQ(second_it->second.size(), 1u);
+  EXPECT_EQ(second_it->second[0].color, TrafficLightElement::GREEN);
 }
 
 TEST(ExtractBulbs, MultipleLightBulbsLineStringsAreMerged)
