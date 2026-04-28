@@ -111,6 +111,19 @@ TEST(TrafficLightVisualizer, EmptyBulbsProducesEmptyMarkers)
   EXPECT_TRUE(markers.empty());
 }
 
+TEST(TrafficLightVisualizer, EmptyDetectionProducesEmptyMarkers)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, TrafficLightElement::RED)});
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+  auto detection = make_detection({});
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  EXPECT_TRUE(markers.empty());
+}
+
 TEST(TrafficLightVisualizer, RedBulbDetectedProducesRedMarker)
 {
   BulbsByGroupId map_data;
@@ -190,6 +203,23 @@ TEST(TrafficLightVisualizer, UnknownGroupIdProducesEmptyMarkers)
   EXPECT_TRUE(markers.empty());
 }
 
+TEST(TrafficLightVisualizer, KnownAndUnknownGroupMixOnlyKnownProducesMarkers)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, TrafficLightElement::RED)});
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+  auto detection = make_detection({
+    make_group(test_group_id, {TrafficLightElement::RED}),
+    make_group(non_existent_group_id, {TrafficLightElement::RED}),
+  });
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  ASSERT_EQ(markers.size(), 1u);
+  EXPECT_EQ(markers[0].id, arbitrary_bulb_id);
+}
+
 TEST(TrafficLightVisualizer, OnlyDetectedColorsAreShown)
 {
   BulbsByGroupId map_data;
@@ -206,6 +236,24 @@ TEST(TrafficLightVisualizer, OnlyDetectedColorsAreShown)
 
   ASSERT_EQ(markers.size(), 1u);
   EXPECT_EQ(markers[0].id, 1);
+}
+
+TEST(TrafficLightVisualizer, DetectionColorWithoutMapBulbIsIgnored)
+{
+  BulbsByGroupId map_data;
+  map_data.emplace(
+    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, TrafficLightElement::RED)});
+  TrafficLightVisualizer visualizer{std::move(map_data)};
+  // detection contains colors not represented in the map (GREEN, UNKNOWN);
+  // only RED has a corresponding bulb and should produce a marker.
+  auto detection = make_detection({make_group(
+    test_group_id,
+    {TrafficLightElement::RED, TrafficLightElement::GREEN, TrafficLightElement::UNKNOWN})});
+
+  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
+
+  ASSERT_EQ(markers.size(), 1u);
+  EXPECT_EQ(markers[0].id, arbitrary_bulb_id);
 }
 
 TEST(TrafficLightVisualizer, TwoGroupsBothMatchedProduceFourMarkers)
@@ -239,52 +287,4 @@ TEST(TrafficLightVisualizer, TwoGroupsBothMatchedProduceFourMarkers)
   EXPECT_DOUBLE_EQ(by_id.at(2)->pose.position.x, 2.0);
   EXPECT_DOUBLE_EQ(by_id.at(3)->pose.position.x, 3.0);
   EXPECT_DOUBLE_EQ(by_id.at(4)->pose.position.x, 4.0);
-}
-
-TEST(TrafficLightVisualizer, EmptyDetectionProducesEmptyMarkers)
-{
-  BulbsByGroupId map_data;
-  map_data.emplace(
-    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, TrafficLightElement::RED)});
-  TrafficLightVisualizer visualizer{std::move(map_data)};
-  auto detection = make_detection({});
-
-  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
-
-  EXPECT_TRUE(markers.empty());
-}
-
-TEST(TrafficLightVisualizer, DetectionColorWithoutMapBulbIsIgnored)
-{
-  BulbsByGroupId map_data;
-  map_data.emplace(
-    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, TrafficLightElement::RED)});
-  TrafficLightVisualizer visualizer{std::move(map_data)};
-  // detection contains colors not represented in the map (GREEN, UNKNOWN);
-  // only RED has a corresponding bulb and should produce a marker.
-  auto detection = make_detection({make_group(
-    test_group_id,
-    {TrafficLightElement::RED, TrafficLightElement::GREEN, TrafficLightElement::UNKNOWN})});
-
-  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
-
-  ASSERT_EQ(markers.size(), 1u);
-  EXPECT_EQ(markers[0].id, arbitrary_bulb_id);
-}
-
-TEST(TrafficLightVisualizer, KnownAndUnknownGroupMixOnlyKnownProducesMarkers)
-{
-  BulbsByGroupId map_data;
-  map_data.emplace(
-    test_group_id, std::vector<Bulb>{make_bulb(arbitrary_bulb_id, TrafficLightElement::RED)});
-  TrafficLightVisualizer visualizer{std::move(map_data)};
-  auto detection = make_detection({
-    make_group(test_group_id, {TrafficLightElement::RED}),
-    make_group(non_existent_group_id, {TrafficLightElement::RED}),
-  });
-
-  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
-
-  ASSERT_EQ(markers.size(), 1u);
-  EXPECT_EQ(markers[0].id, arbitrary_bulb_id);
 }
