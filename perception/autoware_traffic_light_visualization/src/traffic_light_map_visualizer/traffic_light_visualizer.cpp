@@ -23,8 +23,6 @@
 #include <utility>
 #include <vector>
 
-constexpr char kMarkerNamespace[] = "traffic_light";
-
 namespace
 {
 
@@ -84,7 +82,7 @@ visualization_msgs::msg::Marker create_bulb_marker(
   marker.header.frame_id = "map";
   marker.header.stamp = stamp;
   marker.frame_locked = true;
-  marker.ns = kMarkerNamespace;
+  marker.ns = "traffic_light";
   marker.id = point.id();
   constexpr uint32_t marker_lifetime_ns = 200000000u;
   marker.lifetime.sec = 0;
