@@ -90,16 +90,16 @@ TEST(ExtractBulbs, EmptyInputProducesEmptyResult)
 
 TEST(ExtractBulbs, RedGreenYellowResolveToCorrectColors)
 {
-  auto traffic_light = make_map_traffic_light({
+  auto map_traffic_light = make_map_traffic_light({
     make_bulb_point(1, 2, 3, "red"),
     make_bulb_point(4, 5, 6, "green"),
     make_bulb_point(7, 8, 9, "yellow"),
   });
 
-  auto bulbs = extract_bulbs({traffic_light});
+  auto bulbs = extract_bulbs({map_traffic_light});
 
   ASSERT_EQ(bulbs.size(), 1u);
-  auto it = bulbs.find(traffic_light->id());
+  auto it = bulbs.find(map_traffic_light->id());
   ASSERT_NE(it, bulbs.end());
   ASSERT_EQ(it->second.size(), 3u);
   EXPECT_EQ(it->second[0].color, TrafficLightElement::RED);
@@ -109,15 +109,15 @@ TEST(ExtractBulbs, RedGreenYellowResolveToCorrectColors)
 
 TEST(ExtractBulbs, PointWithoutColorAttributeIsSkipped)
 {
-  auto traffic_light = make_map_traffic_light({
+  auto map_traffic_light = make_map_traffic_light({
     make_bulb_point(0, 0, 0, "red"),
     make_bulb_point_without_color(1, 1, 1),
   });
 
-  auto bulbs = extract_bulbs({traffic_light});
+  auto bulbs = extract_bulbs({map_traffic_light});
 
   ASSERT_EQ(bulbs.size(), 1u);
-  auto it = bulbs.find(traffic_light->id());
+  auto it = bulbs.find(map_traffic_light->id());
   ASSERT_NE(it, bulbs.end());
   ASSERT_EQ(it->second.size(), 1u);
   EXPECT_EQ(it->second[0].color, TrafficLightElement::RED);
@@ -125,34 +125,34 @@ TEST(ExtractBulbs, PointWithoutColorAttributeIsSkipped)
 
 TEST(ExtractBulbs, UnknownColorIsSkipped)
 {
-  auto traffic_light = make_map_traffic_light({make_bulb_point(0, 0, 0, "blue")});
+  auto map_traffic_light = make_map_traffic_light({make_bulb_point(0, 0, 0, "blue")});
 
-  auto bulbs = extract_bulbs({traffic_light});
+  auto bulbs = extract_bulbs({map_traffic_light});
 
   EXPECT_TRUE(bulbs.empty());
 }
 
 TEST(ExtractBulbs, LightBulbsWithoutTrafficLightIdAttributeIsSkipped)
 {
-  auto traffic_light = make_map_traffic_light(
+  auto map_traffic_light = make_map_traffic_light(
     {make_bulb_point(0, 0, 0, "red")}, /*with_traffic_light_id_attribute=*/false);
 
-  auto bulbs = extract_bulbs({traffic_light});
+  auto bulbs = extract_bulbs({map_traffic_light});
 
   EXPECT_TRUE(bulbs.empty());
 }
 
 TEST(ExtractBulbs, MultipleLightBulbsLineStringsAreMerged)
 {
-  auto traffic_light = make_map_traffic_light({
+  auto map_traffic_light = make_map_traffic_light({
     make_light_bulbs({make_bulb_point(0, 0, 0, "red")}),
     make_light_bulbs({make_bulb_point(1, 1, 1, "green")}),
   });
 
-  auto bulbs = extract_bulbs({traffic_light});
+  auto bulbs = extract_bulbs({map_traffic_light});
 
   ASSERT_EQ(bulbs.size(), 1u);
-  auto it = bulbs.find(traffic_light->id());
+  auto it = bulbs.find(map_traffic_light->id());
   ASSERT_NE(it, bulbs.end());
   ASSERT_EQ(it->second.size(), 2u);
   EXPECT_EQ(it->second[0].color, TrafficLightElement::RED);
@@ -161,16 +161,16 @@ TEST(ExtractBulbs, MultipleLightBulbsLineStringsAreMerged)
 
 TEST(ExtractBulbs, LightBulbsLineStringWithoutTrafficLightIdAttributeIsSkippedWhileOthersRemain)
 {
-  auto traffic_light = make_map_traffic_light({
+  auto map_traffic_light = make_map_traffic_light({
     make_light_bulbs({make_bulb_point(0, 0, 0, "red")}),
     make_light_bulbs(
       {make_bulb_point(1, 1, 1, "green")}, /*with_traffic_light_id_attribute=*/false),
   });
 
-  auto bulbs = extract_bulbs({traffic_light});
+  auto bulbs = extract_bulbs({map_traffic_light});
 
   ASSERT_EQ(bulbs.size(), 1u);
-  auto it = bulbs.find(traffic_light->id());
+  auto it = bulbs.find(map_traffic_light->id());
   ASSERT_NE(it, bulbs.end());
   ASSERT_EQ(it->second.size(), 1u);
   EXPECT_EQ(it->second[0].color, TrafficLightElement::RED);
