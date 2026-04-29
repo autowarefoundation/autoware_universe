@@ -17,12 +17,14 @@
 #include "autoware/euclidean_cluster/utils.hpp"
 #include "autoware/image_projection_based_fusion/utils/geometry.hpp"
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
+#include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
+#include <array>
 #include <memory>
 #include <string>
 #include <utility>
@@ -30,13 +32,26 @@
 
 namespace autoware::image_projection_based_fusion
 {
+using autoware::object_recognition_utils::getHighestProbLabel;
 using autoware_utils::ScopedTimeTrack;
 using Classification = autoware_perception_msgs::msg::ObjectClassification;
 
 RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<PointCloudMsgType, RoiMsgType, ClusterMsgType>("roi_pointcloud_fusion", options)
 {
-  fuse_unknown_only_ = declare_parameter<bool>("fuse_unknown_only");
+  const std::array<std::pair<std::string, uint8_t>, 8> fusion_class_names = {
+    {{"UNKNOWN", Classification::UNKNOWN},
+     {"CAR", Classification::CAR},
+     {"TRUCK", Classification::TRUCK},
+     {"BUS", Classification::BUS},
+     {"TRAILER", Classification::TRAILER},
+     {"MOTORCYCLE", Classification::MOTORCYCLE},
+     {"BICYCLE", Classification::BICYCLE},
+     {"PEDESTRIAN", Classification::PEDESTRIAN}}};
+  for (const auto & [class_name, label] : fusion_class_names) {
+    fusion_enabled_classes_[label] =
+      declare_parameter<bool>("fusion_enabled_classes." + class_name);
+  }
   min_cluster_size_ = declare_parameter<int>("min_cluster_size");
   max_cluster_size_ = declare_parameter<int>("max_cluster_size");
   cluster_2d_tolerance_ = declare_parameter<double>("cluster_2d_tolerance");
@@ -66,26 +81,22 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
   std::vector<DetectedObjectWithFeature> output_objs;
   std::vector<sensor_msgs::msg::RegionOfInterest> debug_image_rois;
   std::vector<Eigen::Vector2d> debug_image_points;
-  // select ROIs for fusion
+  // select ROIs for fusion by per-class fusion_enabled_classes flag
   for (const auto & feature_obj : input_rois_msg.feature_objects) {
-    if (fuse_unknown_only_) {
-      bool is_roi_label_unknown =
-        feature_obj.object.classification.front().label == Classification::UNKNOWN;
-      if (is_roi_label_unknown) {
-        output_objs.push_back(feature_obj);
-        debug_image_rois.push_back(feature_obj.feature.roi);
-      }
-    } else {
-      // TODO(badai-nguyen): selected class from a list
-      if (override_class_with_unknown_) {
-        auto feature_obj_remap = feature_obj;
-        feature_obj_remap.object.classification.front().label = Classification::UNKNOWN;
-        output_objs.push_back(feature_obj_remap);
-      } else {
-        output_objs.push_back(feature_obj);
-      }
-      debug_image_rois.push_back(feature_obj.feature.roi);
+    const uint8_t roi_label = getHighestProbLabel(feature_obj.object.classification);
+    const bool fuse_this_class =
+      fusion_enabled_classes_.count(roi_label) && fusion_enabled_classes_.at(roi_label);
+    if (!fuse_this_class) {
+      continue;
     }
+    if (override_class_with_unknown_) {
+      auto feature_obj_remap = feature_obj;
+      feature_obj_remap.object.classification.front().label = Classification::UNKNOWN;
+      output_objs.push_back(feature_obj_remap);
+    } else {
+      output_objs.push_back(feature_obj);
+    }
+    debug_image_rois.push_back(feature_obj.feature.roi);
   }
 
   // check if there is no object to fuse
