@@ -15,10 +15,6 @@
       time: 2.0
       min_value: 0.0
 
-    collision:
-      time: 3.0
-      min_value: 2.0
-
     vehicle_constraint:
       max_speed: 16.7 # m/s
       max_acceleration: 5.0 # m/s^2

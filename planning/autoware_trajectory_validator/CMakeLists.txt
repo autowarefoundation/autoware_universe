@@ -34,7 +34,6 @@ rclcpp_components_register_node(${trajectory_validator_lib_target}
 
 ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
   src/filters/safety/out_of_lane_filter.cpp
-  src/filters/safety/collision_filter.cpp
   src/filters/safety/vehicle_constraint_filter.cpp
   src/filters/traffic_rule/traffic_light_filter.cpp
 )
