@@ -66,8 +66,8 @@ struct PredictedObjectParameters
   CommonParameters vehicle_params;
 };
 
-// Tracking info of a single dummy object and its mapping to a predicted object
-struct PredictedDummyObjectInfo
+// Tracking info of a single simulated object and its mapping to a predicted object
+struct PredictedSimulatedObjectInfo
 {
   std::string predicted_uuid;
   std::optional<geometry_msgs::msg::Point> last_known_position;
@@ -80,12 +80,12 @@ struct PredictedDummyObjectInfo
 
 // Struct that holds all tracking info, to track multiple NPCs moving using predicted objects'
 // predicted paths
-struct PredictedDummyObjectsTrackingInfo
+struct PredictedSimulatedObjectsTrackingInfo
 {
   std::deque<PredictedObjects> predicted_objects_buffer;
   size_t max_buffer_size{50};  // Store last 5 seconds at 10Hz
-  // mapping between dummy object UUID (string) and its tracking info
-  std::map<std::string, PredictedDummyObjectInfo> dummy_predicted_info_map;
+  // mapping between simulated object UUID (string) and its tracking info
+  std::map<std::string, PredictedSimulatedObjectInfo> simulated_predicted_info_map;
 };
 class PredictedObjectMovementPlugin : public DummyObjectMovementBasePlugin
 {
@@ -99,41 +99,42 @@ public:
 
 private:
   rclcpp::Subscription<PredictedObjects>::SharedPtr predicted_objects_sub_;
-  PredictedDummyObjectsTrackingInfo predicted_dummy_objects_tracking_info_;
+  PredictedSimulatedObjectsTrackingInfo predicted_simulated_objects_tracking_info_;
   PredictedObjectParameters predicted_object_params_;
   std::mt19937 random_generator_;
 
   void predicted_objects_callback(const PredictedObjects::ConstSharedPtr msg);
   std::pair<PredictedObject, rclcpp::Time> find_matching_predicted_object(
     const unique_identifier_msgs::msg::UUID & object_id, const rclcpp::Time & current_time);
-  void update_dummy_to_predicted_mapping(
-    const std::vector<SimulatedObject> & dummy_objects, const PredictedObjects & predicted_objects);
+  void update_simulated_to_predicted_mapping(
+    const std::vector<SimulatedObject> & simulated_objects,
+    const PredictedObjects & predicted_objects);
 
   [[nodiscard]] bool is_valid_remapping_candidate(
-    const PredictedObject & candidate_prediction, const std::string & dummy_uuid_str,
+    const PredictedObject & candidate_prediction, const std::string & simulated_uuid_str,
     const geometry_msgs::msg::Point & expected_position);
   std::optional<geometry_msgs::msg::Point> calculate_expected_position(
     const autoware_perception_msgs::msg::PredictedPath & last_prediction,
-    const std::string & dummy_uuid_str);
+    const std::string & simulated_uuid_str);
 
   static std::set<std::string> collect_available_predicted_uuids(
     const PredictedObjects & predicted_objects,
     std::map<std::string, geometry_msgs::msg::Point> & predicted_positions);
   std::vector<std::string> find_disappeared_predicted_object_uuids(
     std::set<std::string> & available_predicted_uuids);
-  std::map<std::string, geometry_msgs::msg::Point> collect_dummy_object_positions(
-    const std::vector<SimulatedObject> & dummy_objects, const rclcpp::Time & current_time,
-    std::vector<std::string> & unmapped_dummy_uuids);
+  std::map<std::string, geometry_msgs::msg::Point> collect_simulated_object_positions(
+    const std::vector<SimulatedObject> & simulated_objects, const rclcpp::Time & current_time,
+    std::vector<std::string> & unmapped_simulated_uuids);
   std::optional<std::string> find_best_predicted_object_match(
-    const std::string & dummy_uuid, const geometry_msgs::msg::Point & dummy_position,
+    const std::string & simulated_uuid, const geometry_msgs::msg::Point & simulated_position,
     const std::set<std::string> & available_predicted_uuids,
     const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
     const PredictedObjects & predicted_objects);
   void create_remapping_for_disappeared_objects(
-    const std::vector<std::string> & dummy_objects_to_remap,
+    const std::vector<std::string> & simulated_objects_to_remap,
     std::set<std::string> & available_predicted_uuids,
     const std::map<std::string, geometry_msgs::msg::Point> & predicted_positions,
-    const std::map<std::string, geometry_msgs::msg::Point> & dummy_positions,
+    const std::map<std::string, geometry_msgs::msg::Point> & simulated_positions,
     const PredictedObjects & predicted_objects);
 
   // Helper methods for creating ObjectInfo
