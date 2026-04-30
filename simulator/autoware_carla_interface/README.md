@@ -102,6 +102,36 @@ The combined view shows all 6 cameras with labels: FL (Front-Left), F (Front), F
 <!-- <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/> -->
 ```
 
+### Following the Ego Vehicle with the CARLA Spectator Camera
+
+The `spectator_follow` script locks the CARLA spectator (free) camera to the ego vehicle, so the in-simulator view chases the car automatically instead of having to pan manually. It connects to the running CARLA server, looks up the ego actor by its `role_name`, and updates the spectator transform at a fixed rate.
+
+Run it in a separate terminal while CARLA and the Autoware bridge are running:
+
+```bash
+ros2 run autoware_carla_interface spectator_follow
+```
+
+Common options (all optional):
+
+| Flag         | Default       | Description                                                        |
+| ------------ | ------------- | ------------------------------------------------------------------ |
+| `--host`     | `localhost`   | CARLA server host                                                  |
+| `--port`     | `2000`        | CARLA server RPC port                                              |
+| `--role`     | `ego_vehicle` | `role_name` attribute of the ego actor to follow                   |
+| `--distance` | `8.0`         | Meters behind the ego vehicle (use `0` for a top-down view)        |
+| `--height`   | `4.0`         | Meters above the ego vehicle                                       |
+| `--pitch`    | `-15.0`       | Camera pitch in degrees (negative looks down)                      |
+| `--rate`     | `30.0`        | Update rate in Hz                                                  |
+
+For a top-down view directly above the ego vehicle:
+
+```bash
+ros2 run autoware_carla_interface spectator_follow --distance 0 --height 30 --pitch -90
+```
+
+Press `Ctrl+C` to stop the script. It will keep retrying if the ego actor is not yet spawned, and re-acquire it if it is removed and respawned.
+
 ## Inner-workings / Algorithms
 
 The `InitializeInterface` class is key to setting up both the CARLA world and the ego vehicle. It fetches configuration parameters through the `autoware_carla_interface.launch.xml`.
