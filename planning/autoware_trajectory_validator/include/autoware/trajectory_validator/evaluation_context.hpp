@@ -28,7 +28,7 @@ namespace autoware::trajectory_validator
 {
 
 /**
- * @brief A read-only snapshot of the world state for a single pipeline execution.
+ * @brief A read-only snapshot of the world state for a single validation stage execution.
  * Callees receive it by `const &` and must not mutate fields.
  */
 struct EvaluationContext

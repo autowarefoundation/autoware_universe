@@ -14,7 +14,7 @@
 
 #include "autoware/trajectory_validator/trajectory_validator_node.hpp"
 
-#include "autoware/trajectory_validator/trajectory_pipeline.hpp"
+#include "autoware/trajectory_validator/validation_stage.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware_utils_system/stop_watch.hpp>
@@ -131,8 +131,8 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
     RCLCPP_INFO(get_logger(), "Dynamic parameters updated successfully.");
   }
 
-  // 4. Instantiate and execute the stateless Pipeline
-  TrajectoryPipeline pipeline(plugins_);
+  // 4. Instantiate and execute the stateless ValidationStage
+  ValidationStage validation_stage(plugins_);
 
   auto context_opt = take_data();
   if (!context_opt) {
@@ -141,7 +141,7 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
   }
 
   const auto & context = context_opt.value();
-  const auto report = pipeline.process(*msg, context);
+  const auto report = validation_stage.process(*msg, context);
 
   diagnostics_interface_.clear();
 

@@ -16,7 +16,7 @@
 #define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 
 #include "autoware/trajectory_validator/evaluation_context.hpp"
-#include "autoware/trajectory_validator/pipeline_report.hpp"
+#include "autoware/trajectory_validator/validation_stage_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>

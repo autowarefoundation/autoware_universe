@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__PIPELINE_REPORT_HPP_
-#define AUTOWARE__TRAJECTORY_VALIDATOR__PIPELINE_REPORT_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATION_STAGE_REPORT_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATION_STAGE_REPORT_HPP_
 
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
 
@@ -56,13 +56,13 @@ struct EvaluationTable
 };
 
 /**
- * @brief Final opaque result structure returned by the pipeline.
+ * @brief Final opaque result structure returned by the validation stage.
  * CONTRACT FOR ROS NODE ADAPTER:
  * The Node MUST iterate over `evaluation_tables` post-process to:
  * 1. Emit `RCLCPP_WARN_THROTTLE` for any `!evaluation.is_feasible`.
  * 2. Update the `diagnostics_interface_` per plugin using the final evaluation states.
  */
-struct PipelineReport
+struct ValidationStageReport
 {
   autoware_internal_planning_msgs::msg::CandidateTrajectories valid_trajectories;
   std::vector<EvaluationTable> evaluation_tables;
@@ -74,4 +74,4 @@ struct PipelineReport
 
 }  // namespace autoware::trajectory_validator
 
-#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__PIPELINE_REPORT_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATION_STAGE_REPORT_HPP_

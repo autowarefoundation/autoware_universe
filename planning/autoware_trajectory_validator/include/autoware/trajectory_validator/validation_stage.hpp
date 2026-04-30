@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_PIPELINE_HPP_
-#define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_PIPELINE_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATION_STAGE_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATION_STAGE_HPP_
 
 #include "autoware/trajectory_validator/evaluation_context.hpp"
-#include "autoware/trajectory_validator/pipeline_report.hpp"
+#include "autoware/trajectory_validator/validation_stage_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <memory>
@@ -26,15 +26,15 @@
 namespace autoware::trajectory_validator
 {
 
-class TrajectoryPipeline
+class ValidationStage
 {
 public:
-  explicit TrajectoryPipeline(std::vector<std::shared_ptr<plugin::ValidatorInterface>> validators)
+  explicit ValidationStage(std::vector<std::shared_ptr<plugin::ValidatorInterface>> validators)
   : validators_(std::move(validators))
   {
   }
 
-  [[nodiscard]] PipelineReport process(
+  [[nodiscard]] ValidationStageReport process(
     const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
     const EvaluationContext & context) const;
 
@@ -44,4 +44,4 @@ private:
 
 }  // namespace autoware::trajectory_validator
 
-#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_PIPELINE_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATION_STAGE_HPP_

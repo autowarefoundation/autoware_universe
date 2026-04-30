@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_validator/trajectory_pipeline.hpp"
+#include "autoware/trajectory_validator/validation_stage.hpp"
 
 #include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
@@ -26,11 +26,11 @@
 namespace autoware::trajectory_validator
 {
 
-PipelineReport TrajectoryPipeline::process(
+ValidationStageReport ValidationStage::process(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
   const EvaluationContext & context) const
 {
-  PipelineReport report;
+  ValidationStageReport report;
   autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;
   stop_watch.tic("Total");
 
