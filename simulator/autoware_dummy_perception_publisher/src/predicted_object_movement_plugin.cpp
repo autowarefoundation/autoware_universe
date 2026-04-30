@@ -76,8 +76,8 @@ void PredictedObjectMovementPlugin::predicted_objects_callback(
   // Add to buffer, removing oldest if necessary
   auto & predicted_objects_buffer =
     predicted_simulated_objects_tracking_info_.predicted_objects_buffer;
-  if (predicted_objects_buffer.size() >=
-    predicted_simulated_objects_tracking_info_.max_buffer_size) {
+  if (
+    predicted_objects_buffer.size() >= predicted_simulated_objects_tracking_info_.max_buffer_size) {
     predicted_objects_buffer.pop_front();
   }
   predicted_objects_buffer.push_back(*msg);
@@ -103,10 +103,10 @@ PredictedObjectMovementPlugin::collect_simulated_object_positions(
 
     simulated_positions[simulated_uuid_str] =
       (info_it != simulated_predicted_info_map.end() &&
-      info_it->second.last_known_position.has_value())
+       info_it->second.last_known_position.has_value())
         ? info_it->second.last_known_position.value()
-        : utils::MovementUtils::calculate_straight_line_position(
-          simulated_obj, current_time).position;
+        : utils::MovementUtils::calculate_straight_line_position(simulated_obj, current_time)
+            .position;
 
     if (info_it == simulated_predicted_info_map.end() || info_it->second.predicted_uuid.empty()) {
       unmapped_simulated_uuids.push_back(simulated_uuid_str);
@@ -168,10 +168,7 @@ void PredictedObjectMovementPlugin::update_simulated_to_predicted_mapping(
   }
 
   // Clean up mappings for simulated objects that no longer exist
-  for (
-    auto it = simulated_predicted_info_map.begin();
-    it != simulated_predicted_info_map.end();
-  ) {
+  for (auto it = simulated_predicted_info_map.begin(); it != simulated_predicted_info_map.end();) {
     if (current_simulated_uuids.find(it->first) != current_simulated_uuids.end()) {
       ++it;
       continue;
@@ -261,11 +258,10 @@ void PredictedObjectMovementPlugin::create_remapping_for_disappeared_objects(
     }
     auto info_it = simulated_predicted_info_map.find(simulated_uuid);
 
-    remapping_position =
-      (info_it != simulated_predicted_info_map.end() &&
-      info_it->second.last_known_position.has_value())
-        ? info_it->second.last_known_position.value()
-        : current_pos_it->second;
+    remapping_position = (info_it != simulated_predicted_info_map.end() &&
+                          info_it->second.last_known_position.has_value())
+                           ? info_it->second.last_known_position.value()
+                           : current_pos_it->second;
     // Find closest available predicted object for remapping
     auto best_match = find_best_predicted_object_match(
       simulated_uuid, remapping_position, available_predicted_uuids, predicted_positions,
@@ -388,8 +384,7 @@ bool PredictedObjectMovementPlugin::is_valid_remapping_candidate(
   }
 
   // Get simulated object speed for comparison (reuse simulated_it from above)
-  const double simulated_speed =
-    simulated_object.initial_state.twist_covariance.twist.linear.x;
+  const double simulated_speed = simulated_object.initial_state.twist_covariance.twist.linear.x;
 
   // Get candidate predicted object speed
   const auto & candidate_twist =
@@ -407,8 +402,7 @@ bool PredictedObjectMovementPlugin::is_valid_remapping_candidate(
     is_pedestrian ? pedestrian_params.speed_check_threshold : vehicle_params.speed_check_threshold;
 
   auto is_within_speed_bounds = [&](double speed) {
-    return speed >= min_speed_ratio * simulated_speed &&
-      speed <= max_speed_ratio * simulated_speed;
+    return speed >= min_speed_ratio * simulated_speed && speed <= max_speed_ratio * simulated_speed;
   };
 
   // Reject if candidate speed is too different when simulated speed is significant
@@ -433,8 +427,7 @@ bool PredictedObjectMovementPlugin::is_valid_remapping_candidate(
         "%fm/s, "
         "candidate: %fm/s, max_ratio: %f)",
         simulated_uuid_str.c_str(), is_pedestrian ? "pedestrian" : "vehicle", speed_ratio,
-        simulated_speed,
-        candidate_speed, max_speed_difference_ratio);
+        simulated_speed, candidate_speed, max_speed_difference_ratio);
       return false;
     }
   }
@@ -625,8 +618,7 @@ PredictedObjectMovementPlugin::find_matching_predicted_object(
     predicted_simulated_objects_tracking_info_.simulated_predicted_info_map;
   auto mapping_it = simulated_predicted_info_map.find(obj_uuid_str);
   if (
-    mapping_it == simulated_predicted_info_map.end() ||
-    mapping_it->second.predicted_uuid.empty()) {
+    mapping_it == simulated_predicted_info_map.end() || mapping_it->second.predicted_uuid.empty()) {
     return std::make_pair(empty_object, empty_time);
   }
 
@@ -788,8 +780,7 @@ std::vector<ObjectInfo> PredictedObjectMovementPlugin::move_objects()
         info_it->second.last_used_prediction_time.has_value()) {
         RCLCPP_DEBUG(
           rclcpp::get_logger("dummy_perception_publisher"),
-          "Using last known prediction for lost object with ID: %s",
-          simulated_uuid_str.c_str());
+          "Using last known prediction for lost object with ID: %s", simulated_uuid_str.c_str());
         return create_object_info_with_predicted_path(
           object, info_it->second.last_used_prediction.value(),
           info_it->second.last_used_prediction_time.value(), current_time);
@@ -797,8 +788,7 @@ std::vector<ObjectInfo> PredictedObjectMovementPlugin::move_objects()
 
       RCLCPP_DEBUG(
         rclcpp::get_logger("dummy_perception_publisher"),
-        "No matching predicted object found for object with ID: %s",
-        simulated_uuid_str.c_str());
+        "No matching predicted object found for object with ID: %s", simulated_uuid_str.c_str());
       // Use straight-line motion for all other cases
       return create_object_info_with_straight_line(object, current_time);
     }();
