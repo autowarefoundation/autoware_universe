@@ -131,7 +131,7 @@ bool SideShiftModule::canTransitSuccessState()
     const auto last_sp = path_shifter_.getLastShiftLine();
     if (last_sp) {
       const auto length = std::fabs(last_sp.value().end_shift_length);
-      const auto lateral_offset = std::fabs(requested_lateral_offset_);
+      const auto lateral_offset = std::fabs(calcMaxLateralOffset(requested_lateral_offset_));
       const auto offset_diff = lateral_offset - length;
       if (std::fabs(offset_diff) >= ZERO_THRESHOLD) {
         lateral_offset_change_request_ = true;
@@ -241,19 +241,16 @@ void SideShiftModule::updateData()
   path_shifter_.removeBehindShiftLineAndSetBaseOffset(nearest_idx);
 
   // Continuously clamp offsets against the current drivable boundary so the vehicle
-  // never departs when adjacent lanes disappear (e.g. at intersections, mode 2).
+  // never departs when adjacent lanes disappear, and so it can use newly available
+  // width while keeping the original requested offset.
   if (parameters_->drivable_area_check_mode != DrivableAreaCheckMode::DISABLED) {
     const double safe_offset = calcMaxLateralOffset(requested_lateral_offset_);
-    // Detect narrowing: safe boundary has moved inward relative to what was planned.
-    const bool boundary_tightened =
-      (requested_lateral_offset_ > 0.0 && safe_offset < requested_lateral_offset_ - 1.0e-4) ||
-      (requested_lateral_offset_ < 0.0 && safe_offset > requested_lateral_offset_ + 1.0e-4);
-    if (boundary_tightened) {
+    const bool boundary_changed = std::fabs(safe_offset - inserted_lateral_offset_) > 1.0e-4;
+    if (boundary_changed) {
       RCLCPP_DEBUG(
-        getLogger(), "SideShift: drivable area narrowed, clamping offset %.3f -> %.3f",
-        requested_lateral_offset_, safe_offset);
-      requested_lateral_offset_ = safe_offset;
-      inserted_lateral_offset_ = safe_offset;
+        getLogger(),
+        "SideShift: updating constrained offset %.3f -> %.3f for requested offset %.3f",
+        inserted_lateral_offset_, safe_offset, requested_lateral_offset_);
       lateral_offset_change_request_ = true;
     }
   }
@@ -280,7 +277,7 @@ void SideShiftModule::replaceShiftLine()
   // set to path_shifter
   path_shifter_.setShiftLines(shift_lines);
   lateral_offset_change_request_ = false;
-  inserted_lateral_offset_ = requested_lateral_offset_;
+  inserted_lateral_offset_ = new_sl.end_shift_length;
   inserted_shift_line_ = new_sl;
 
   return;
