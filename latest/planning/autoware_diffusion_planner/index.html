@@ -22941,7 +22941,7 @@
 <h3 id="1-prerequisites">(1) Prerequisites<a class="headerlink" href="#1-prerequisites" title="Permanent link">#</a></h3>
 <p>Make sure that the directory specified in <code>planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml</code> points to the correct model version and contains the required model weight and parameter files.</p>
 <p><code>bash
-$ ls ~/autoware_data/diffusion_planner/v3.1/
+$ ls ~/autoware_data/diffusion_planner/v4.0/
 diffusion_planner.onnx diffusion_planner.param.json</code></p>
 <p>This can be downloaded by following <a href="https://github.com/autowarefoundation/autoware/blob/main/ansible/roles/artifacts/README.md#download-artifacts">Download artifacts</a>.</p>
 <h3 id="2-modify-launch-files">(2) Modify launch files<a class="headerlink" href="#2-modify-launch-files" title="Permanent link">#</a></h3>
@@ -23103,24 +23103,17 @@ ros2 launch autoware_launch planning_simulator.launch.xml \
 <td>N/A</td>
 </tr>
 <tr>
-<td>artifact_dir</td>
-<td>string</td>
-<td>Path to the Artifact(onnx model, etc.) directory</td>
-<td>$(env HOME)/autoware_data/diffusion_planner</td>
-<td>N/A</td>
-</tr>
-<tr>
 <td>onnx_model_path</td>
 <td>string</td>
 <td>Path to the ONNX model file for the diffusion planner</td>
-<td>$(var artifact_dir)/diffusion_planner.onnx</td>
+<td>$(var data_path)/v4.0/diffusion_planner.onnx</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>args_path</td>
 <td>string</td>
 <td>Path to model argument/configuration file</td>
-<td>$(var artifact_dir)/diffusion_planner.param.json</td>
+<td>$(var data_path)/v4.0/diffusion_planner.param.json</td>
 <td>N/A</td>
 </tr>
 <tr>
