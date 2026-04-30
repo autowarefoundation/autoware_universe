@@ -1,5 +1,8 @@
-# Sensor mapping configuration for Autoware to CARLA
-# Maps carla_sensor_kit sensor names to CARLA sensor types and ROS topics
+# Light-weight sensor mapping configuration for Autoware to CARLA
+# Reduced-load variant of sensor_mapping.yaml for machines with limited GPU/CPU resources:
+#   - Single front camera (CAM_FRONT) with 120 deg FOV at 1080x720, instead of the 6-camera 360 deg setup
+#   - Same LiDAR, IMU, and GNSS configuration as sensor_mapping.yaml
+# Enable via the `use_light_weight_sensor_mapping` launch argument.
 
 # Default sensor kit to use (must be the _description package containing config/sensor_kit_calibration.yaml)
 default_sensor_kit_name: carla_sensor_kit_description
