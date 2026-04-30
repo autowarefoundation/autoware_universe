@@ -194,7 +194,7 @@ private:
    * @brief The prior log-odds for a traffic light state.
    */
   double prior_log_odds_;
-  bool use_cross_camera_validation_;
+  bool use_signal_consistency_check_;
   bool publish_partial_matched_signal_;
 
   std::unique_ptr<SignalValidator> signal_validator_;

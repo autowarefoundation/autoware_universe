@@ -99,9 +99,9 @@ Next, the "best shot" detections from Stage 1 are fused to determine a single, c
 
 This node includes an option to compare and validate detected traffic light signals within the same regulatory element.
 
-Setting `cross_camera_validation.enable` to true activates this validation. When enabled, the node compares traffic light signals across traffic light signals; if a conflict is detected, it uses a fail-safe signal instead of the conflicting input.
+Setting `signal_consistency_check.enable` to true activates this validation. When enabled, the node compares traffic light signals across traffic light signals; if a conflict is detected, it uses a fail-safe signal instead of the conflicting input.
 
-If `cross_camera_validation.publish_partial_matched_signal` is set to true, the node will publish the signal that is common to all sources when conflicts occur.
+If `signal_consistency_check.publish_partial_matched_signal` is set to true, the node will publish the signal that is common to all sources when conflicts occur.
 
 ### Example
 
@@ -112,11 +112,11 @@ Inputs:
 
 The validated output is shown in the following table:
 
-| cross_camera_validation | publish_partial_matched_signal | output                                                       |
-| ----------------------- | ------------------------------ | ------------------------------------------------------------ |
-| Disabled                | Disabled                       | `(RED, CIRCLE)`, `(GREEN, LEFT_ARROW)`: most probable signal |
-| Enabled                 | Disabled                       | `(UNKNOWN, UNKNOWN)`: fail-safe signal                       |
-| Enabled                 | Enabled                        | `(RED, CIRCLE)`: common signal                               |
+| signal_consistency_check | publish_partial_matched_signal | output                                                       |
+| ------------------------ | ------------------------------ | ------------------------------------------------------------ |
+| Disabled                 | Disabled                       | `(RED, CIRCLE)`, `(GREEN, LEFT_ARROW)`: most probable signal |
+| Enabled                  | Disabled                       | `(UNKNOWN, UNKNOWN)`: fail-safe signal                       |
+| Enabled                  | Enabled                        | `(RED, CIRCLE)`: common signal                               |
 
 ## Input topics
 

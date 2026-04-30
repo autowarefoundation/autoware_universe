@@ -83,9 +83,9 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
   message_lifespan_ = this->declare_parameter<double>("message_lifespan");
   prior_log_odds_ = this->declare_parameter<double>("prior_log_odds");
 
-  use_cross_camera_validation_ = this->declare_parameter<bool>("cross_camera_validation.enable");
+  use_signal_consistency_check_ = this->declare_parameter<bool>("signal_consistency_check.enable");
   publish_partial_matched_signal_ =
-    this->declare_parameter<bool>("cross_camera_validation.publish_partial_matched_signal");
+    this->declare_parameter<bool>("signal_consistency_check.publish_partial_matched_signal");
 
   for (const std::string & camera_ns : camera_namespaces) {
     std::string signal_topic = camera_ns + "/classification/traffic_signals";
@@ -122,7 +122,7 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
   diagnostics_interface_ptr_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "traffic light conflict status");
 
-  if (use_cross_camera_validation_) {
+  if (use_signal_consistency_check_) {
     signal_validator_ = std::make_unique<SignalValidator>();
   }
 }
@@ -370,7 +370,7 @@ void MultiCameraFusion::determineBestGroupState(
       continue;
     }
 
-    if (!use_cross_camera_validation_ || group_info.accumulated_log_odds.size() == 1) {
+    if (!use_signal_consistency_check_ || group_info.accumulated_log_odds.size() == 1) {
       // use the most probable one (the highest logarithmic odds) as the base
       const StateKey best_state_key = getBestStatekey(group_info.accumulated_log_odds);
       grouped_record_map[reg_ele_id] = group_info.best_record_for_state.at(best_state_key);
