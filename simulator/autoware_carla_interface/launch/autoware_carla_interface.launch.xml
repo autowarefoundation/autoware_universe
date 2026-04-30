@@ -22,7 +22,11 @@
     <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map)'"/>
 
     <!-- Sensor Configuration -->
-    <arg name="use_light_weight_sensor_mapping" default="False" description="Whether to use the light-weight sensor mapping YAML that reduces the number of sensors and their frequencies for performance optimization"/>
+    <arg
+      name="use_light_weight_sensor_mapping"
+      default="False"
+      description="Whether to use the light-weight sensor mapping YAML that reduces the number of sensors and their frequencies for performance optimization"
+    />
     <arg name="sensor_kit_name" default="carla_sensor_kit_description" description="Name of the sensor kit package containing calibration"/>
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping_light_weight.yaml" if="$(var use_light_weight_sensor_mapping)"/>
     <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>

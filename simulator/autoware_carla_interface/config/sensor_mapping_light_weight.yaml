@@ -41,7 +41,6 @@ sensor_mappings:
       image_size_y: 720
       fov: 120.0
 
-
   # IMU sensor
   tamagawa/imu_link:
     carla_type: sensor.other.imu
