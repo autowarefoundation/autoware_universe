@@ -22968,13 +22968,13 @@ This ros package enables communication between Autoware and CARLA for autonomous
 <h4 id="map-setup">Map Setup<a class="headerlink" href="#map-setup" title="Permanent link">#</a></h4>
 <ol>
 <li>Download the maps (y-axis inverted version) to an arbitrary location</li>
-<li>Create the map folder structure in <code>$HOME/autoware_map</code>:<ul>
-<li>Rename <code>point_cloud/Town01.pcd</code> → <code>$HOME/autoware_map/Town01/pointcloud_map.pcd</code></li>
-<li>Rename <code>vector_maps/lanelet2/Town01.osm</code> → <code>$HOME/autoware_map/Town01/lanelet2_map.osm</code></li>
+<li>Create the map folder structure in <code>$HOME/autoware_data/maps</code>:<ul>
+<li>Rename <code>point_cloud/Town01.pcd</code> → <code>$HOME/autoware_data/maps/Town01/pointcloud_map.pcd</code></li>
+<li>Rename <code>vector_maps/lanelet2/Town01.osm</code> → <code>$HOME/autoware_data/maps/Town01/lanelet2_map.osm</code></li>
 </ul>
 </li>
 <li>
-<p>Create <code>$HOME/autoware_map/Town01/map_projector_info.yaml</code> with:</p>
+<p>Create <code>$HOME/autoware_data/maps/Town01/map_projector_info.yaml</code> with:</p>
 <p><code>yaml
  projector_type: Local</code></p>
 </li>
@@ -22996,14 +22996,14 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release</code></p
 <p>Run Autoware with CARLA</p>
 <p><code>bash
  ros2 launch autoware_launch e2e_simulator.launch.xml \
-     map_path:=$HOME/autoware_map/Town01 \
+     map_path:=$HOME/autoware_data/maps/Town01 \
      vehicle_model:=sample_vehicle \
      sensor_model:=carla_sensor_kit \
      simulator_type:=carla</code></p>
 <p>For E2E planning with VAD:</p>
 <p><code>bash
  ros2 launch autoware_launch e2e_simulator.launch.xml \
-     map_path:=$HOME/autoware_map/Town01 \
+     map_path:=$HOME/autoware_data/maps/Town01 \
      vehicle_model:=sample_vehicle \
      sensor_model:=carla_sensor_kit \
      simulator_type:=carla \
