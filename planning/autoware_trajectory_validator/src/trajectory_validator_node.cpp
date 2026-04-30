@@ -148,7 +148,7 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
     return;
   }
 
-  const FilterContext & context = context_opt.value();
+  const EvaluationContext & context = context_opt.value();
 
   if (listener_.is_old(params_)) {
     params_ = listener_.get_params();

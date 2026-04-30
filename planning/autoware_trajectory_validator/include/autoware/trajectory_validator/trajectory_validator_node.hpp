@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 
+#include "autoware/trajectory_validator/evaluation_context.hpp"
+#include "autoware/trajectory_validator/pipeline_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
@@ -64,47 +66,6 @@ using nav_msgs::msg::Odometry;
 class TrajectoryValidator : public rclcpp::Node
 {
 public:
-  struct PluginEvaluation
-  {
-    std::string plugin_name;
-    bool is_feasible{true};
-    bool is_shadow_mode{false};
-    std::string reason;
-  };
-
-  struct EvaluationTable
-  {
-    std::string generator_id;
-    std::unordered_map<std::string, std::vector<PluginEvaluation>> evaluations;
-
-    /**
-     * @brief Returns true if any evaluation is feasible or in shadow mode.
-     */
-    bool all_acceptable() const
-    {
-      return all_evaluations([](const auto & e) { return e.is_feasible || e.is_shadow_mode; });
-    }
-
-    /**
-     * @brief Returns true if all evaluations are feasible.
-     */
-    bool all_feasible() const
-    {
-      return all_evaluations([](const auto & e) { return e.is_feasible; });
-    }
-
-  private:
-    /**
-     * @brief Returns true if all evaluations satisfy the given predicate.
-     */
-    bool all_evaluations(const std::function<bool(const PluginEvaluation &)> & pred) const
-    {
-      return std::all_of(evaluations.begin(), evaluations.end(), [&](const auto & pair) {
-        return std::all_of(pair.second.begin(), pair.second.end(), pred);
-      });
-    }
-  };
-
   explicit TrajectoryValidator(const rclcpp::NodeOptions & node_options);
 
 private:
@@ -121,7 +82,7 @@ private:
   /**
    * @brief Gather the latest inputs required to run the filter plugins.
    */
-  tl::expected<FilterContext, std::string> take_data();
+  tl::expected<EvaluationContext, std::string> take_data();
 
   void process(const CandidateTrajectories::ConstSharedPtr msg);
 
