@@ -23,7 +23,7 @@ It is implemented as a ROS 2 component node, making it easy to integrate into Au
 Make sure that the directory specified in `planning/autoware_diffusion_planner/config/diffusion_planner.param.yaml` points to the correct model version and contains the required model weight and parameter files.
 
 ```bash
-$ ls ~/autoware_data/diffusion_planner/v3.1/
+$ ls ~/autoware_data/diffusion_planner/v4.0/
 diffusion_planner.onnx diffusion_planner.param.json
 ```
 
