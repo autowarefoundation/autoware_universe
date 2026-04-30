@@ -386,7 +386,7 @@ void MultiCameraFusion::determineBestGroupState(
 
     ConflictStatus conflict_result{ConflictType::PARTIAL_CONFLICT, running_state};
 
-    // check if conflict exist among the signals with the same regulatory element id
+    // check if conflicts exist among the signals within the same regulatory element id
     for (++log_odds_it; log_odds_it != group_info.accumulated_log_odds.end(); ++log_odds_it) {
       const StateKey & competitor_state = (*log_odds_it).first;
       conflict_result = signal_validator_->checkConflict(running_state, competitor_state);
