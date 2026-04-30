@@ -153,8 +153,7 @@ void spin_for(rclcpp::Executor & executor, std::chrono::milliseconds duration)
 }
 
 template <typename Predicate>
-bool spin_until(
-  rclcpp::Executor & executor, std::chrono::milliseconds timeout, Predicate condition)
+bool spin_until(rclcpp::Executor & executor, std::chrono::milliseconds timeout, Predicate condition)
 {
   const auto deadline = std::chrono::steady_clock::now() + timeout;
   while (!condition() && std::chrono::steady_clock::now() < deadline) {
@@ -203,9 +202,8 @@ TEST(MapBasedDetectorNodeTest, PublishesRoiWhenAllInputsAreReceived)
 
   camera_info_pub->publish(camera_info);
 
-  const bool received_all = spin_until(executor, std::chrono::seconds(3), [&] {
-    return received_rois && received_expect_rois;
-  });
+  const bool received_all = spin_until(
+    executor, std::chrono::seconds(3), [&] { return received_rois && received_expect_rois; });
 
   // Assert
   ASSERT_TRUE(received_all);
