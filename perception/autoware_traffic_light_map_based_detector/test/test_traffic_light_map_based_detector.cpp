@@ -97,6 +97,26 @@ std::vector<StampedTransform> make_tf_samples(
 /// Create a lanelet map with one road lanelet and one traffic light linestring.
 /// Geometry matches the integration test so the traffic light is visible from
 /// the default camera pose with default config.
+///
+/// Coordinates are in the map frame (REP-103): +x = forward, +y = left, +z = up.
+/// The camera (see make_default_camera_pose) sits at the origin and looks along +x.
+///
+/// Top-down view (X-Y plane, looking from +z toward -z):
+///
+///                      +y (left)
+///                       ^
+///                       |
+///          y=+2    vl1 *-----------+------------* vl2      <- left lane edge
+///                       |          |            |
+///                       |          | TL bar     |          <- traffic-light line at x=20
+///                       |          | (y=+/-0.5) |             z = 3.5 (bottom)
+///                       |          |            |             z = 4.5 (top, via height=1)
+///                       |          |            |
+///          y=-2    vr1 *-----------+------------* vr2      <- right lane edge
+///                       |          |            |
+///                       C          |            |            ----> +x (forward)
+///                  camera(0,0,0)  x=20         x=30
+///
 LaneletMapBin make_test_map(const std::string & traffic_light_subtype = "red_yellow_green")
 {
   using lanelet::AttributeName;
