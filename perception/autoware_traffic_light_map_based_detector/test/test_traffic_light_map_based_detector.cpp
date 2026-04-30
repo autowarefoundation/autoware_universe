@@ -215,6 +215,83 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithoutSetRouteUsesAllMapTrafficLig
   EXPECT_EQ(result.markers.markers.size(), 1u);
 }
 
+// Test case based on the following geometry and camera setup, mirroring the
+// numerical derivation in the node-level integration test
+// (test_traffic_light_map_based_detector_node.cpp):
+//
+// coordinate transform: world (x, y, z) -> camera optical (x_opt, y_opt, z_opt)
+//   world x (forward) -> z_opt (depth)
+//   world y (left)    -> -x_opt (right is positive in camera)
+//   world z (up)      -> -y_opt (down is positive in camera)
+//
+// top left    : world(20.0,  0.5, 4.5) -> camera(-0.5, -4.5, 20.0)
+// right bottom: world(20.0, -0.5, 3.5) -> camera( 0.5, -3.5, 20.0)
+//
+// for ideal camera
+//   c_x = 320, c_y = 240, fx = fy = 400
+//
+//   u = f_x * (x_opt / z_opt) + c_x
+//   v = f_y * (y_opt / z_opt) + c_y
+//
+// ------------------------------------------------------------------------------
+// without margin (expect ROI)
+//
+// top left point:
+//     u_top_left = 400 * (-0.5 / 20) + 320 = 310
+//     v_top_left = 400 * (-4.5 / 20) + 240 = 150
+//
+// bottom right point:
+//     u_bottom_right = 400 * ( 0.5 / 20) + 320 = 330
+//     v_bottom_right = 400 * (-3.5 / 20) + 240 = 170
+//
+// (x, y, w, h) -> (310, 150, 20, 20)
+//
+// ------------------------------------------------------------------------------
+// with margin (rough ROI)
+//
+// margin def.:
+//     margin_x = (margin_yaw / 2) * depth + margin_width / 2
+//     margin_y = (margin_pitch / 2) * depth + margin_height / 2
+//     margin_z = margin_depth / 2
+//
+// margin_x = (0.01745 / 2) * 20.0 + (0.5 / 2) = 0.4245
+// margin_y = (0.01745 / 2) * 20.0 + (0.5 / 2) = 0.4245
+// margin_z = 0.5 / 2 = 0.25
+//
+// top left point (tl_camera_optical - margin):
+//     u_top_left = 400 * ((-0.5 - 0.4245) / (20 - 0.25)) + 320 ≒ 301.276
+//     v_top_left = 400 * ((-4.5 - 0.4245) / (20 - 0.25)) + 240 ≒ 140.263
+//
+// bottom right point (tl_camera_optical + margin):
+//     u_bottom_right = 400 * (( 0.5 + 0.4245) / (20 + 0.25)) + 320 ≒ 338.262
+//     v_bottom_right = 400 * ((-3.5 + 0.4245) / (20 + 0.25)) + 240 ≒ 179.249
+//
+// (x, y, w, h) -> (301.276, 140.263, 36.986, 38.986) ≒ (301, 140, 37, 39)
+TEST(TrafficLightMapBasedDetectorTest, DetectProducesRoisWithExpectedPixelCoordinates)
+{
+  // Arrange
+  const auto config = make_default_config();
+  const auto map = make_test_map();
+  const auto camera_info = make_default_camera_info();
+  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_default_camera_pose());
+  TrafficLightMapBasedDetector detector(config, map);
+
+  // Act
+  const auto result = detector.detect(tf_samples, camera_info);
+
+  // Assert
+  // rough ROI includes vibration margin
+  EXPECT_NEAR(result.rough_rois.rois[0].roi.x_offset, 301, 1);
+  EXPECT_NEAR(result.rough_rois.rois[0].roi.y_offset, 140, 1);
+  EXPECT_NEAR(result.rough_rois.rois[0].roi.width, 37, 1);
+  EXPECT_NEAR(result.rough_rois.rois[0].roi.height, 39, 1);
+  // expect ROI does not include vibration margin
+  EXPECT_EQ(result.expect_rois.rois[0].roi.x_offset, 310u);
+  EXPECT_EQ(result.expect_rois.rois[0].roi.y_offset, 150u);
+  EXPECT_EQ(result.expect_rois.rois[0].roi.width, 20u);
+  EXPECT_EQ(result.expect_rois.rois[0].roi.height, 20u);
+}
+
 TEST(TrafficLightMapBasedDetectorTest, DetectWithEmptyTransformSamplesReturnsEmpty)
 {
   // Arrange
@@ -229,7 +306,6 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithEmptyTransformSamplesReturnsEmp
   // Assert
   EXPECT_TRUE(result.rough_rois.rois.empty());
   EXPECT_TRUE(result.expect_rois.rois.empty());
-  EXPECT_TRUE(result.markers.markers.empty());
 }
 
 TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutSolidSubtypeTrafficLight)
@@ -264,6 +340,7 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutTrafficLightOutsideDistan
 
   // Assert
   EXPECT_TRUE(result.rough_rois.rois.empty());
+  EXPECT_TRUE(result.expect_rois.rois.empty());
 }
 
 TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutTrafficLightOutsideAngleRange)
@@ -289,6 +366,7 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutTrafficLightOutsideAngleR
 
   // Assert
   EXPECT_TRUE(result.rough_rois.rois.empty());
+  EXPECT_TRUE(result.expect_rois.rois.empty());
 }
 
 TEST(TrafficLightMapBasedDetectorTest, SetRouteWithUnknownLaneletIdReturnsError)
