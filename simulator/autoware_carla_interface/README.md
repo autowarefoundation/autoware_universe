@@ -114,15 +114,15 @@ ros2 run autoware_carla_interface spectator_follow
 
 Common options (all optional):
 
-| Flag         | Default       | Description                                                        |
-| ------------ | ------------- | ------------------------------------------------------------------ |
-| `--host`     | `localhost`   | CARLA server host                                                  |
-| `--port`     | `2000`        | CARLA server RPC port                                              |
-| `--role`     | `ego_vehicle` | `role_name` attribute of the ego actor to follow                   |
-| `--distance` | `8.0`         | Meters behind the ego vehicle (use `0` for a top-down view)        |
-| `--height`   | `4.0`         | Meters above the ego vehicle                                       |
-| `--pitch`    | `-15.0`       | Camera pitch in degrees (negative looks down)                      |
-| `--rate`     | `30.0`        | Update rate in Hz                                                  |
+| Flag         | Default       | Description                                                 |
+| ------------ | ------------- | ----------------------------------------------------------- |
+| `--host`     | `localhost`   | CARLA server host                                           |
+| `--port`     | `2000`        | CARLA server RPC port                                       |
+| `--role`     | `ego_vehicle` | `role_name` attribute of the ego actor to follow            |
+| `--distance` | `8.0`         | Meters behind the ego vehicle (use `0` for a top-down view) |
+| `--height`   | `4.0`         | Meters above the ego vehicle                                |
+| `--pitch`    | `-15.0`       | Camera pitch in degrees (negative looks down)               |
+| `--rate`     | `30.0`        | Update rate in Hz                                           |
 
 For a top-down view directly above the ego vehicle:
 
