@@ -22,8 +22,11 @@
     <log message="[CARLA Interface] Map Path: '$(var map_path)' -> Loading CARLA Map: '$(var carla_map)'"/>
 
     <!-- Sensor Configuration -->
+    <arg name="use_light_weight_sensor_mapping" default="False" description="Whether to use the light-weight sensor mapping YAML that reduces the number of sensors and their frequencies for performance optimization"/>
     <arg name="sensor_kit_name" default="carla_sensor_kit_description" description="Name of the sensor kit package containing calibration"/>
-    <arg name="sensor_mapping_file" default="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" description="Path to sensor mapping YAML"/>
+    <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping_light_weight.yaml" if="$(var use_light_weight_sensor_mapping)"/>
+    <let name="sensor_mapping_file_default" value="$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml" unless="$(var use_light_weight_sensor_mapping)"/>
+    <arg name="sensor_mapping_file" default="$(var sensor_mapping_file_default)" description="Path to sensor mapping YAML"/>
 
     <!-- CARLA Interface -->
     <node pkg="autoware_carla_interface" exec="autoware_carla_interface" name="autoware_carla_interface" output="screen">
@@ -72,45 +75,52 @@
       name="cam_front_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
     />
+
     <node
       pkg="image_transport"
       exec="republish"
       name="cam_front_left_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_LEFT/image_raw/compressed"
+      unless="$(var use_light_weight_sensor_mapping)"
     />
     <node
       pkg="image_transport"
       exec="republish"
       name="cam_front_right_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT_RIGHT/image_raw/compressed"
+      unless="$(var use_light_weight_sensor_mapping)"
     />
     <node
       pkg="image_transport"
       exec="republish"
       name="cam_back_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK/image_raw -r out/compressed:=/sensing/camera/CAM_BACK/image_raw/compressed"
+      unless="$(var use_light_weight_sensor_mapping)"
     />
     <node
       pkg="image_transport"
       exec="republish"
       name="cam_back_left_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_LEFT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_LEFT/image_raw/compressed"
+      unless="$(var use_light_weight_sensor_mapping)"
     />
     <node
       pkg="image_transport"
       exec="republish"
       name="cam_back_right_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_BACK_RIGHT/image_raw -r out/compressed:=/sensing/camera/CAM_BACK_RIGHT/image_raw/compressed"
+      unless="$(var use_light_weight_sensor_mapping)"
     />
     <node
       pkg="image_transport"
       exec="republish"
       name="traffic_light_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/traffic_light/image_raw -r out/compressed:=/sensing/camera/traffic_light/image_raw/compressed"
+      unless="$(var use_light_weight_sensor_mapping)"
     />
 
     <!-- Multi-camera combiner for RViz visualization -->
-    <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/>
+    <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen" unless="$(var use_light_weight_sensor_mapping)"/>
 
     <!-- E2E Planning Infrastructure -->
     <group if="$(var use_e2e_planning)">
