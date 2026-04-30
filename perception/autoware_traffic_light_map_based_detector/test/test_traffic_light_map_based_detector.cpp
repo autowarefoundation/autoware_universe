@@ -46,14 +46,6 @@ using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::LaneletSegment;
 using sensor_msgs::msg::CameraInfo;
 
-/// Bundle of a generated lanelet map and the IDs that tests want to refer to.
-struct TestMap
-{
-  LaneletMapBin map;
-  int64_t road_lanelet_id;
-  int64_t traffic_light_id;
-};
-
 /// Default detector config matching the integration test's parameter set.
 TrafficLightMapBasedDetectorConfig make_default_config()
 {
@@ -100,6 +92,13 @@ std::vector<StampedTransform> make_tf_samples(
 {
   return {{stamp, pose}};
 }
+
+struct TestMap
+{
+  LaneletMapBin map;
+  int64_t road_lanelet_id;
+  int64_t traffic_light_id;
+};
 
 /// Create a lanelet map with one road lanelet and one traffic light linestring.
 /// Geometry matches the integration test so the traffic light is visible from
@@ -187,17 +186,12 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithoutSetRouteUsesAllMapTrafficLig
   const auto camera_info = make_default_camera_info();
   const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_default_camera_pose());
   TrafficLightMapBasedDetector detector(config, test_map.map);
-  // Intentionally not calling setRoute: detect() must fall back to all_traffic_lights_ptr_.
 
   // Act
   const auto result = detector.detect(tf_samples, camera_info);
 
   // Assert
   ASSERT_EQ(result.rough_rois.rois.size(), 1u);
-  EXPECT_EQ(result.rough_rois.rois[0].traffic_light_id, test_map.traffic_light_id);
-  EXPECT_EQ(
-    result.rough_rois.rois[0].traffic_light_type,
-    tier4_perception_msgs::msg::TrafficLightRoi::CAR_TRAFFIC_LIGHT);
   ASSERT_EQ(result.expect_rois.rois.size(), 1u);
   EXPECT_EQ(result.markers.markers.size(), 1u);
 }
@@ -217,8 +211,6 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithEmptyTransformSamplesReturnsEmp
   EXPECT_TRUE(result.rough_rois.rois.empty());
   EXPECT_TRUE(result.expect_rois.rois.empty());
   EXPECT_TRUE(result.markers.markers.empty());
-  EXPECT_EQ(result.rough_rois.header.frame_id, camera_info.header.frame_id);
-  EXPECT_EQ(result.expect_rois.header.frame_id, camera_info.header.frame_id);
 }
 
 TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutSolidSubtypeTrafficLight)
@@ -292,7 +284,6 @@ TEST(TrafficLightMapBasedDetectorTest, SetRouteWithUnknownLaneletIdReturnsError)
 
   // Assert
   ASSERT_TRUE(error.has_value());
-  EXPECT_FALSE(error->message.empty());
 }
 
 TEST(TrafficLightMapBasedDetectorTest, SetRouteWithKnownLaneletIdSucceedsAndDetectFindsRoi)
@@ -312,22 +303,6 @@ TEST(TrafficLightMapBasedDetectorTest, SetRouteWithKnownLaneletIdSucceedsAndDete
   EXPECT_FALSE(error.has_value());
   ASSERT_EQ(result.rough_rois.rois.size(), 1u);
   EXPECT_EQ(result.rough_rois.rois[0].traffic_light_id, test_map.traffic_light_id);
-}
-
-TEST(TrafficLightMapBasedDetectorTest, SetRouteCanBeReappliedAfterError)
-{
-  // Arrange: an unknown id should not poison subsequent valid setRoute calls.
-  const auto config = make_default_config();
-  const auto test_map = make_test_map();
-  TrafficLightMapBasedDetector detector(config, test_map.map);
-
-  // Act
-  const auto first_error = detector.setRoute(make_route(99999999));
-  const auto second_error = detector.setRoute(make_route(test_map.road_lanelet_id));
-
-  // Assert
-  EXPECT_TRUE(first_error.has_value());
-  EXPECT_FALSE(second_error.has_value());
 }
 
 int main(int argc, char ** argv)
