@@ -23081,7 +23081,7 @@
 <p>Parameters can be set via configuration files:</p>
 <ul>
 <li>Deployment configuration (node and interface parameters): <code>config/vad_carla_tiny.param.yaml</code></li>
-<li>Model architecture parameters: <code>vad-carla-tiny.param.json</code> (downloaded with model to <code>~/autoware_data/vad/v0.1/</code>)</li>
+<li>Model architecture parameters: <code>vad-carla-tiny.param.json</code> (downloaded with model to <code>~/autoware_data/ml_models/vad/v0.1/</code>)</li>
 </ul>
 <hr>
 <h2 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">#</a></h2>
@@ -23170,7 +23170,7 @@ colcon test --packages-select autoware_tensorrt_vad --event-handlers console_coh
 <p>Then launch the E2E VAD system:</p>
 <p><code>bash
 ros2 launch autoware_launch e2e_simulator.launch.xml \
-  map_path:=$HOME/autoware_map/Town01 \
+  map_path:=$HOME/autoware_data/maps/Town01 \
   vehicle_model:=sample_vehicle \
   sensor_model:=carla_sensor_kit \
   simulator_type:=carla \
@@ -23181,7 +23181,7 @@ ros2 launch autoware_launch e2e_simulator.launch.xml \
 <p>The VAD model files are automatically downloaded when setting up the Autoware development environment.</p>
 <p>To download the latest models, simply run the provided setup script:
 <a href="https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#how-to-set-up-a-development-environment">How to set up a development environment</a></p>
-<p>The models will be downloaded to <code>~/autoware_data/vad/</code> by default.</p>
+<p>The models will be downloaded to <code>~/autoware_data/ml_models/vad/</code> by default.</p>
 <p><strong>Manual Download</strong> (if needed):
 Models are hosted at: <a href="https://awf.ml.dev.web.auto/planning/models/tensorrt_vad/carla_tiny/v0.1/">https://awf.ml.dev.web.auto/planning/models/tensorrt_vad/carla_tiny/v0.1/</a></p>
 <h3 id="model-preparation">Model Preparation<a class="headerlink" href="#model-preparation" title="Permanent link">#</a></h3>

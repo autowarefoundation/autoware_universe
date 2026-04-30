@@ -22964,7 +22964,7 @@ With the default settings, the performance of "mppi" mode is limited due to an i
 </blockquote>
 <p>To perform a simulation, run the following command:</p>
 <p><code>bash
-ros2 launch autoware_launch planning_simulator.launch.xml map_path:=$HOME/autoware_map/sample-map-planning vehicle_model:=sample_vehicle sensor_model:=sample_sensor_kit trajectory_follower_mode:=smart_mpc_trajectory_follower</code></p>
+ros2 launch autoware_launch planning_simulator.launch.xml map_path:=$HOME/autoware_data/maps/sample-map-planning vehicle_model:=sample_vehicle sensor_model:=sample_sensor_kit trajectory_follower_mode:=smart_mpc_trajectory_follower</code></p>
 <blockquote>
 <p>[!NOTE]
 When running with the nominal model set in <a href="./autoware_smart_mpc_trajectory_follower/param/nominal_param.yaml">nominal_param.yaml</a>, set <code>trained_model_parameter:control_application:use_trained_model</code> to <code>false</code> in <a href="./autoware_smart_mpc_trajectory_follower/param/trained_model_param.yaml">trained_model_param.yaml</a>. To run using the trained model, set <code>trained_model_parameter:control_application:use_trained_model</code> to <code>true</code>, but the trained model must have been generated according to the following procedure.</p>

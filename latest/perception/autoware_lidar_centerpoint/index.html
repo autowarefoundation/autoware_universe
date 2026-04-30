@@ -23331,7 +23331,7 @@
 <p>The <code>autoware_lidar_centerpoint</code> node has <code>build_only</code> option to build the TensorRT engine file from the ONNX file.
 Although it is preferred to move all the ROS parameters in <code>.param.yaml</code> file in Autoware Universe, the <code>build_only</code> option is not moved to the <code>.param.yaml</code> file for now, because it may be used as a flag to execute the build as a pre-task. You can execute with the following command:</p>
 <p><code>bash
-ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=centerpoint_tiny model_path:=/home/autoware/autoware_data/lidar_centerpoint model_param_path:=$(ros2 pkg prefix autoware_lidar_centerpoint --share)/config/centerpoint_tiny.param.yaml build_only:=true</code></p>
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=centerpoint_tiny model_path:=/home/autoware/autoware_data/ml_models/lidar_centerpoint model_param_path:=$(ros2 pkg prefix autoware_lidar_centerpoint --share)/config/centerpoint_tiny.param.yaml build_only:=true</code></p>
 <h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
 <ul>
 <li>The <code>object.existence_probability</code> is stored the value of classification confidence of a DNN, not probability.</li>
