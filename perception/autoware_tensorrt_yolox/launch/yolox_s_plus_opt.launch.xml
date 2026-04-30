@@ -4,7 +4,7 @@
   <arg name="yolox_node_name" default="tensorrt_yolox"/>
   <arg name="image_transport_decompressor_node_name" default="image_transport_decompressor_node"/>
 
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
 
   <arg name="input/image" default="/sensing/camera/camera0/image_rect_color"/>
   <arg name="output/objects" default="/perception/object_recognition/detection/rois0"/>

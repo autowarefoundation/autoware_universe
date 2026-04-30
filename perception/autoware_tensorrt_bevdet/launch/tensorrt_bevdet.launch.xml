@@ -19,7 +19,7 @@
   <arg name="input/img_back/camera_info" default="/nuscenes/CAM_BACK/camera_info"/>
   <arg name="input/img_back_right/camera_info" default="/nuscenes/CAM_BACK_RIGHT/camera_info"/>
 
-  <arg name="data_path" default="$(env HOME)/autoware_data"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models"/>
   <arg name="model_name" default="bevdet_one_lt_d"/>
   <arg name="model_path" default="$(var data_path)/tensorrt_bevdet"/>
   <arg name="model_config" default="$(find-pkg-share autoware_tensorrt_bevdet)/config/bevdet_r50_4dlongterm_depth.yaml"/>

@@ -10,10 +10,10 @@ It is also possible to download it manually. Even if the model is not downloaded
 To download and extract the model manually:
 
 ```bash
-$ mkdir -p ~/autoware_data/yabloc_pose_initializer/
-$ wget -P ~/autoware_data/yabloc_pose_initializer/ \
+$ mkdir -p ~/autoware_data/ml_models/yabloc_pose_initializer/
+$ wget -P ~/autoware_data/ml_models/yabloc_pose_initializer/ \
        https://autoware-files.s3.us-west-2.amazonaws.com/models/yabloc/136_road-segmentation-adas-0001/resources.tar.gz
-$ tar xzf ~/autoware_data/yabloc_pose_initializer/resources.tar.gz -C ~/autoware_data/yabloc_pose_initializer/
+$ tar xzf ~/autoware_data/ml_models/yabloc_pose_initializer/resources.tar.gz -C ~/autoware_data/ml_models/yabloc_pose_initializer/
 ```
 
 ## Note

@@ -197,7 +197,7 @@ flowchart TD
 
 ### Separation between model architecture and deployment parameters
 
-- Model architecture parameters (network structure, normalization, training dataset classes) are defined in `vad-carla-tiny.param.json` (downloaded with model to `~/autoware_data/vad/v0.1/`)
+- Model architecture parameters (network structure, normalization, training dataset classes) are defined in `vad-carla-tiny.param.json` (downloaded with model to `~/autoware_data/ml_models/vad/v0.1/`)
 - Deployment parameters (hardware settings, file paths, detection thresholds) are configured in [`vad_carla_tiny.param.yaml`](../config/vad_carla_tiny.param.yaml)
   - Object class remapping parameters are added to [`object_class_remapper_carla_tiny.param.yaml`](../config/object_class_remapper_carla_tiny.param.yaml)
     - Following the precedent of [`autoware_bevfusion`](../../../perception/autoware_bevfusion/README.md)

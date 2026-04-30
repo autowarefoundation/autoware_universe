@@ -21,7 +21,7 @@
   <arg name="input/img_back/camera_info" default="/nuscenes/CAM_BACK/camera_info"/>
   <arg name="input/img_back_right/camera_info" default="/nuscenes/CAM_BACK_RIGHT/camera_info"/>
 
-  <arg name="data_path" default="$(env HOME)/autoware_data/tensorrt_bevformer"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models/tensorrt_bevformer"/>
 
   <!-- TRT Engine and ONNX paths -->
   <arg name="onnx_file" default="$(var data_path)/bevformer_small.onnx"/>
