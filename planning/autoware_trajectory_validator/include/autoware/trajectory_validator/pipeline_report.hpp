@@ -1,8 +1,23 @@
+// Copyright 2026 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__PIPELINE_REPORT_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__PIPELINE_REPORT_HPP_
 
-#include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
+
+#include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 
 #include <algorithm>
 #include <string>
@@ -11,9 +26,6 @@
 
 namespace autoware::trajectory_validator
 {
-
-using autoware_internal_planning_msgs::msg::CandidateTrajectories;
-using autoware_trajectory_validator::msg::ValidationReport;
 
 struct PluginEvaluation
 {
@@ -26,24 +38,19 @@ struct PluginEvaluation
 struct EvaluationTable
 {
   std::string generator_id;
-  std::unordered_map<std::string, std::vector<PluginEvaluation>> evaluations;
+  std::vector<PluginEvaluation> plugin_evaluations;
 
   [[nodiscard]] bool all_acceptable() const
   {
-    return all_evaluations([](const auto & e) { return e.is_feasible || e.is_shadow_mode; });
+    return std::all_of(plugin_evaluations.begin(), plugin_evaluations.end(), [](const auto & e) {
+      return e.is_feasible || e.is_shadow_mode;
+    });
   }
 
   [[nodiscard]] bool all_feasible() const
   {
-    return all_evaluations([](const auto & e) { return e.is_feasible; });
-  }
-
-private:
-  template <typename Pred>
-  bool all_evaluations(Pred && pred) const
-  {
-    return std::all_of(evaluations.begin(), evaluations.end(), [&](const auto & pair) {
-      return std::all_of(pair.second.begin(), pair.second.end(), pred);
+    return std::all_of(plugin_evaluations.begin(), plugin_evaluations.end(), [](const auto & e) {
+      return e.is_feasible;
     });
   }
 };
@@ -57,12 +64,11 @@ private:
  */
 struct PipelineReport
 {
-  CandidateTrajectories valid_trajectories;
+  autoware_internal_planning_msgs::msg::CandidateTrajectories valid_trajectories;
   std::vector<EvaluationTable> evaluation_tables;
-  std::vector<ValidationReport> validation_reports; // Published ROS artifact
+  std::vector<autoware_trajectory_validator::msg::ValidationReport> validation_reports;
   size_t num_feasible_trajectories{0};
-  
-  // Observability / Timing
+
   std::unordered_map<std::string, double> processing_time_ms;
 };
 

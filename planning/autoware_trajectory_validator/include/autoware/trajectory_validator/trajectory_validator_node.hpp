@@ -108,6 +108,7 @@ private:
    * @brief Publish the union of all debug information.
    */
   void publish_debug(
+    const std::vector<EvaluationTable> & evaluation_tables,
     const std::unordered_map<std::string, double> & processing_time,
     const geometry_msgs::msg::Pose & marker_pose);
 
@@ -119,7 +120,9 @@ private:
   /**
    * @brief Publish each plugin's filtering report in a single string stamped marker.
    */
-  void publish_plugins_report_text(const geometry_msgs::msg::Pose & marker_pose);
+  void publish_plugins_report_text(
+    const std::vector<EvaluationTable> & evaluation_tables,
+    const geometry_msgs::msg::Pose & marker_pose);
 
   /**
    * @brief Publish each plugin's processing time as scalar value.
@@ -165,7 +168,6 @@ private:
   // Internal state
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
-  std::vector<EvaluationTable> evaluation_tables_;
   DiagnosticsInterface diagnostics_interface_{this, "trajectory_validator"};
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
