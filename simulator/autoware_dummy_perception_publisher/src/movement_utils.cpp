@@ -165,7 +165,7 @@ geometry_msgs::msg::Pose MovementUtils::calculate_trajectory_based_position(
   // Calculate elapsed time from predicted object timestamp to current time
   const double elapsed_time = (current_time - predicted_time).seconds();
 
-  // Calculate distance traveled based on elapsed time and dummy object speed
+  // Calculate distance traveled based on elapsed time and simulated object speed
   const double speed = object.initial_state.twist_covariance.twist.linear.x;
   const double distance_traveled = speed * elapsed_time;
 

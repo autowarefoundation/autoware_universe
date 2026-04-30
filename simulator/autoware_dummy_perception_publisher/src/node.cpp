@@ -297,7 +297,7 @@ void DummyPerceptionPublisherNode::timerCallback()
 void DummyPerceptionPublisherNode::objectCallback(
   const autoware_simulation_msgs::msg::SimulatedObject::ConstSharedPtr msg)
 {
-  auto create_dummy_object = [&]() -> std::optional<SimulatedObject> {
+  auto create_simulated_object = [&]() -> std::optional<SimulatedObject> {
     tf2::Transform tf_input2map;
     tf2::Transform tf_input2object_origin;
     tf2::Transform tf_map2object_origin;
@@ -369,12 +369,12 @@ void DummyPerceptionPublisherNode::objectCallback(
 
   switch (msg->action) {
     case autoware_simulation_msgs::msg::SimulatedObject::ADD: {
-      auto object = create_dummy_object();
+      auto object = create_simulated_object();
       if (!object) {
         break;
       }
       for (auto & plugin : movement_plugins_) {
-        if (plugin->set_dummy_object(*object)) {
+        if (plugin->set_simulated_object(*object)) {
           break;
         }
       }

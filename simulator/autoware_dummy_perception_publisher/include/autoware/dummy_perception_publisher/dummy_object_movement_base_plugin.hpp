@@ -64,7 +64,7 @@ public:
       }
     }
   }
-  bool set_dummy_object(const SimulatedObject & object)
+  bool set_simulated_object(const SimulatedObject & object)
   {
     // Check if the movement model matches
     if (object.movement_model != associated_movement_model_) {
