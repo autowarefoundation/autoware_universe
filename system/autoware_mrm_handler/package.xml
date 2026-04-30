@@ -5,7 +5,6 @@
   <version>0.50.0</version>
   <description>The mrm_handler ROS 2 package</description>
   <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>
-  <maintainer email="ryuta.kambe@tier4.jp">Ryuta Kambe</maintainer>
   <maintainer email="tetsuhiro.kawaguchi@tier4.jp">Tetsuhiro Kawaguchi</maintainer>
   <maintainer email="junya.sasaki@tier4.jp">Junya Sasaki</maintainer>
   <license>Apache License 2.0</license>
