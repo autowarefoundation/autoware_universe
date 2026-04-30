@@ -60,12 +60,25 @@ inline SignalLUT extractCommonSignals(const SignalLUT & lut_a, const SignalLUT &
 
 /**
  * @brief Compare two state keys and detect conflicts.
+ *
+ * Compares two StateKeys and identifies signal discrepancies.
+ * - Returns ConflictType::NO_CONFLICT if the signal sets match perfectly.
+ * - Returns ConflictType::CONFLICT if all signals between the sets are different.
+ * - Returns ConflictType::PARTIAL_CONFLICT if there are both matching signals.
+ * and conflicting signals.
+ *
  * @param state_a First StateKey.
  * @param state_b Second StateKey.
  * @return Conflict status and common signals (StateKey).
  */
 ConflictStatus SignalValidator::checkConflict(const StateKey & state_a, const StateKey & state_b)
 {
+  // check if states match across signals.
+  //
+  // NOTE: Currently, identical shape/color pairs (e.g., duplicate entries)
+  // are treated as distinct keys at this stage, but will be unified in downstream processing
+  //
+  // Example: {(RED, CIRCLE), (RED, CIRCLE)} vs. {(RED, CIRCLE)} will trigger a partial conflict.
   if (state_a == state_b) {
     return ConflictStatus{ConflictType::NO_CONFLICT, state_a};
   }
