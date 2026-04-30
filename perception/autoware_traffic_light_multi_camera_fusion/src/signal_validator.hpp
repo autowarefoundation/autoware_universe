@@ -53,7 +53,7 @@ class SignalValidator
 public:
   using TrafficLightElement = tier4_perception_msgs::msg::TrafficLightElement;
 
-  ConflictStatus checkConflict(const StateKey & state_a, const StateKey & state_b) const;
+  static ConflictStatus checkConflict(const StateKey & state_a, const StateKey & state_b);
 
   StateKey mergePartialMatch(const StateKey & state_a, const StateKey & state_b);
 };

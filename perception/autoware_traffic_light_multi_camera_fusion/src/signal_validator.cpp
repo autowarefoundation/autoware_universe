@@ -64,8 +64,7 @@ inline SignalLUT extractCommonSignals(const SignalLUT & lut_a, const SignalLUT &
  * @param state_b Second StateKey.
  * @return Conflict status and common signals (StateKey).
  */
-ConflictStatus SignalValidator::checkConflict(
-  const StateKey & state_a, const StateKey & state_b) const
+ConflictStatus SignalValidator::checkConflict(const StateKey & state_a, const StateKey & state_b)
 {
   if (state_a == state_b) {
     return ConflictStatus{ConflictType::NO_CONFLICT, state_a};
