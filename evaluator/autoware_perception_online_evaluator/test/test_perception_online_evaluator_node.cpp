@@ -264,6 +264,13 @@ protected:
 
   double publishObjectsAndGetMetric(const PredictedObjects & objects)
   {
+    // Flush any stale metrics still in the DDS pipeline from previous publish cycles
+    for (int i = 0; i < 3; ++i) {
+      rclcpp::spin_some(eval_node);
+      rclcpp::spin_some(dummy_node);
+      rclcpp::sleep_for(std::chrono::milliseconds(100));
+    }
+
     metric_updated_ = false;
     objects_pub_->publish(objects);
     const auto now = rclcpp::Clock().now();
@@ -282,8 +289,8 @@ protected:
   void publishObjects(const PredictedObjects & objects)
   {
     objects_pub_->publish(objects);
-    rclcpp::spin_some(eval_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
+    rclcpp::spin_some(eval_node);
     rclcpp::spin_some(dummy_node);
   }
 

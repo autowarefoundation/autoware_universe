@@ -15,7 +15,7 @@
 #ifndef DEBUGGER__DEBUGGER_HPP_
 #define DEBUGGER__DEBUGGER_HPP_
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "debug_object.hpp"
 
 #include <autoware_utils_debug/debug_publisher.hpp>
@@ -127,9 +127,7 @@ public:
   // Debug object
   void collectObjectInfo(
     const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
-    const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & direct_assignment,
-    const std::unordered_map<int, int> & reverse_assignment);
+    const types::AssociatedObjects & associated_objects);
   void publishObjectsMarkers();
 };
 

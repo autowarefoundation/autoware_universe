@@ -338,6 +338,23 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
     AstarNode * next_node = &graph_[getKey(next_index)];
     if (next_node->status == NodeStatus::Closed || detectCollision(next_index)) continue;
 
+    // Check intermediate points along the arc for collision
+    const double abs_distance = std::abs(distance);
+    if (astar_param_.adapt_expansion_distance && abs_distance > min_expansion_dist_) {
+      const int n = static_cast<int>(abs_distance / min_expansion_dist_);
+      bool has_intermediate_collision = false;
+      for (int j = 1; j < n; ++j) {
+        const double intermediate_dist = (abs_distance * j / n) * direction;
+        const auto intermediate_pose = kinematic_bicycle_model::getPose(
+          current_pose, collision_vehicle_shape_.base_length, steering, intermediate_dist);
+        if (detectCollision(intermediate_pose)) {
+          has_intermediate_collision = true;
+          break;
+        }
+      }
+      if (has_intermediate_collision) continue;
+    }
+
     const auto obs_edt = getObstacleEDT(next_index);
     const bool is_direction_switch =
       (current_node.parent != nullptr) && (is_back != current_node.is_back);
@@ -444,7 +461,7 @@ void AstarSearch::setPath(const AstarNode & goal_node)
     const auto parent_pose = node2pose(*node.parent);
     const double distance_2d = calc_distance2d(node2pose(node), parent_pose);
     const int n = static_cast<int>(distance_2d / min_expansion_dist_);
-    for (int i = 1; i < n; ++i) {
+    for (int i = n - 1; i >= 1; --i) {
       const double dist =
         ((distance_2d * i) / n) * (node.is_back == is_backward_search_ ? 1.0 : -1.0);
       const double steering = node.steering_index * steering_resolution_;

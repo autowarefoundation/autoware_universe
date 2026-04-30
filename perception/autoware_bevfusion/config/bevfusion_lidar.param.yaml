@@ -18,6 +18,8 @@
     # pre-process params
     densification_num_past_frames: 1
     densification_world_frame_id: map
+    run_image_undistortion: false
+
     # post-process params
     circle_nms_dist_threshold: 0.5
     iou_nms_search_distance_2d: 10.0

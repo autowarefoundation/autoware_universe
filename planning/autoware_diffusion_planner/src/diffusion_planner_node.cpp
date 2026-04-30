@@ -43,6 +43,7 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
     this->create_publisher<PredictedObjects>("~/output/predicted_objects", rclcpp::QoS(1));
   pub_route_marker_ = this->create_publisher<MarkerArray>("~/debug/route_marker", 10);
   pub_lane_marker_ = this->create_publisher<MarkerArray>("~/debug/lane_marker", 10);
+  pub_linestring_marker_ = this->create_publisher<MarkerArray>("~/debug/linestring_marker", 10);
   pub_turn_indicators_ =
     this->create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", 1);
   pub_traffic_signal_ = this->create_publisher<autoware_perception_msgs::msg::TrafficLightGroup>(
@@ -56,6 +57,10 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
 
   // Create core instance
   core_ = std::make_unique<DiffusionPlannerCore>(params_, vehicle_info_);
+
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      this, "diffusion_planner");
 
   diagnostics_inference_ = std::make_unique<DiagnosticsInterface>(this, "inference_status");
   try {
@@ -102,8 +107,6 @@ void DiffusionPlanner::set_up_params()
   params_.ignore_neighbors = this->declare_parameter<bool>("ignore_neighbors", false);
   params_.ignore_unknown_neighbors =
     this->declare_parameter<bool>("ignore_unknown_neighbors", false);
-  params_.predict_neighbor_trajectory =
-    this->declare_parameter<bool>("predict_neighbor_trajectory", false);
   params_.traffic_light_group_msg_timeout_seconds =
     this->declare_parameter<double>("traffic_light_group_msg_timeout_seconds", 0.2);
   params_.batch_size = this->declare_parameter<int>("batch_size", 1);
@@ -116,12 +119,29 @@ void DiffusionPlanner::set_up_params()
   params_.turn_indicator_hold_duration =
     this->declare_parameter<double>("turn_indicator_hold_duration", 0.0);
   params_.shift_x = this->declare_parameter<bool>("shift_x", false);
+  params_.delay_step = this->declare_parameter<int64_t>("delay_step", 0);
+  params_.line_string_max_step_m = this->declare_parameter<double>("line_string_max_step_m", 5.0);
+  params_.use_time_interpolation = this->declare_parameter<bool>("use_time_interpolation", false);
+
+  // planning factor params
+  planning_factor_params_.enable_stop =
+    this->declare_parameter<bool>("planning_factor.enable_stop", false);
+  planning_factor_params_.enable_slowdown =
+    this->declare_parameter<bool>("planning_factor.enable_slowdown", false);
+  planning_factor_params_.detection_config.stop_velocity_threshold =
+    this->declare_parameter<double>("planning_factor.stop_velocity_threshold", 0.1);
+  planning_factor_params_.detection_config.stop_keep_duration_threshold =
+    this->declare_parameter<double>("planning_factor.stop_keep_duration_threshold", 1.0);
+  planning_factor_params_.detection_config.slowdown_accel_threshold =
+    this->declare_parameter<double>("planning_factor.slowdown_accel_threshold", -0.3);
 
   // debug params
   debug_params_.publish_debug_map =
     this->declare_parameter<bool>("debug_params.publish_debug_map", false);
   debug_params_.publish_debug_route =
     this->declare_parameter<bool>("debug_params.publish_debug_route", true);
+  debug_params_.publish_debug_linestrings =
+    this->declare_parameter<bool>("debug_params.publish_debug_linestrings", true);
 }
 
 void DiffusionPlanner::load_model()
@@ -142,13 +162,12 @@ SetParametersResult DiffusionPlanner::on_parameter(
     const auto previous_args_path = params_.args_path;
     const auto previous_model_path = params_.model_path;
     const auto previous_batch_size = params_.batch_size;
+    const auto previous_line_string_max_step_m = params_.line_string_max_step_m;
     update_param<std::string>(parameters, "onnx_model_path", temp_params.model_path);
     update_param<std::string>(parameters, "args_path", temp_params.args_path);
     update_param<bool>(
       parameters, "ignore_unknown_neighbors", temp_params.ignore_unknown_neighbors);
     update_param<bool>(parameters, "ignore_neighbors", temp_params.ignore_neighbors);
-    update_param<bool>(
-      parameters, "predict_neighbor_trajectory", temp_params.predict_neighbor_trajectory);
     update_param<double>(
       parameters, "traffic_light_group_msg_timeout_seconds",
       temp_params.traffic_light_group_msg_timeout_seconds);
@@ -162,9 +181,14 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<double>(
       parameters, "turn_indicator_hold_duration", temp_params.turn_indicator_hold_duration);
     update_param<bool>(parameters, "shift_x", temp_params.shift_x);
+    update_param<int64_t>(parameters, "delay_step", temp_params.delay_step);
+    update_param<double>(parameters, "line_string_max_step_m", temp_params.line_string_max_step_m);
+    update_param<bool>(parameters, "use_time_interpolation", temp_params.use_time_interpolation);
     const bool args_path_changed = temp_params.args_path != previous_args_path;
     const bool model_path_changed = temp_params.model_path != previous_model_path;
     const bool batch_size_changed = temp_params.batch_size != previous_batch_size;
+    const bool line_string_max_step_changed =
+      temp_params.line_string_max_step_m != previous_line_string_max_step_m;
     params_ = temp_params;
     core_->update_params(params_);
 
@@ -179,6 +203,10 @@ SetParametersResult DiffusionPlanner::on_parameter(
         return result;
       }
     }
+
+    if (line_string_max_step_changed && lanelet_map_ptr_) {
+      core_->set_map(lanelet_map_ptr_);
+    }
   }
 
   {
@@ -187,6 +215,9 @@ SetParametersResult DiffusionPlanner::on_parameter(
       parameters, "debug_params.publish_debug_map", temp_debug_params.publish_debug_map);
     update_param<bool>(
       parameters, "debug_params.publish_debug_route", temp_debug_params.publish_debug_route);
+    update_param<bool>(
+      parameters, "debug_params.publish_debug_linestrings",
+      temp_debug_params.publish_debug_linestrings);
     debug_params_ = temp_debug_params;
   }
 
@@ -223,6 +254,15 @@ void DiffusionPlanner::publish_debug_markers(
       std::vector<int64_t>(LANES_SHAPE.begin(), LANES_SHAPE.end()), timestamp, lifetime,
       {0.1, 0.1, 0.7, 0.8}, "map", true);
     pub_lane_marker_->publish(lane_markers);
+  }
+
+  if (debug_params_.publish_debug_linestrings) {
+    auto lifetime = rclcpp::Duration::from_seconds(0.2);
+    auto linestring_markers = utils::create_linestring_marker(
+      ego_to_map_transform, input_data_map.at("line_strings"),
+      std::vector<int64_t>(LINE_STRINGS_SHAPE.begin(), LINE_STRINGS_SHAPE.end()), timestamp,
+      lifetime, "map");
+    pub_linestring_marker_->publish(linestring_markers);
   }
 }
 
@@ -344,20 +384,43 @@ void DiffusionPlanner::on_timer()
 
   pub_trajectory_->publish(planner_output.trajectory);
   pub_trajectories_->publish(planner_output.candidate_trajectories);
-  if (params_.predict_neighbor_trajectory) {
-    pub_objects_->publish(planner_output.predicted_objects);
-  }
+  pub_objects_->publish(planner_output.predicted_objects);
   pub_turn_indicators_->publish(planner_output.turn_indicator_command);
+
+  publish_planning_factor(planner_output.trajectory);
 
   // Publish diagnostics
   diagnostics_inference_->publish(frame_time);
 }
 
+void DiffusionPlanner::publish_planning_factor(const Trajectory & trajectory)
+{
+  const auto & points = trajectory.points;
+  const auto detection_result =
+    detect_planning_factors(points, planning_factor_params_.detection_config);
+
+  if (planning_factor_params_.enable_stop && detection_result.stop) {
+    const auto & stop = *detection_result.stop;
+    planning_factor_interface_->add(
+      points, stop.ego_pose, stop.stop_pose, PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{});
+  }
+
+  if (planning_factor_params_.enable_slowdown && detection_result.slowdown) {
+    const auto & slowdown = *detection_result.slowdown;
+    planning_factor_interface_->add(
+      points, slowdown.ego_pose, slowdown.start_pose, slowdown.end_pose, PlanningFactor::SLOW_DOWN,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true, slowdown.start_velocity,
+      slowdown.end_velocity);
+  }
+
+  planning_factor_interface_->publish();
+}
+
 void DiffusionPlanner::on_map(const HADMapBin::ConstSharedPtr map_msg)
 {
-  std::shared_ptr<const lanelet::LaneletMap> lanelet_map_ptr =
-    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg);
-  core_->set_map(lanelet_map_ptr);
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*map_msg);
+  core_->set_map(lanelet_map_ptr_);
 }
 
 }  // namespace autoware::diffusion_planner

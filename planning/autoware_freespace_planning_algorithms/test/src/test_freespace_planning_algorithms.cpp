@@ -409,6 +409,114 @@ TEST(RRTStarTestSuite, InformedUpdate)
   EXPECT_TRUE(test_algorithm(AlgorithmType::RRTSTAR_INFORMED_UPDATE));
 }
 
+enum class MonotonicityType { INCREASING, DECREASING, NONE };
+struct MonotonicityTestParams
+{
+  std::string test_name;
+  std::array<double, 3> start;
+  std::array<double, 3> goal;
+  MonotonicityType x_monotonicity;
+  MonotonicityType y_monotonicity;
+};
+
+std::ostream & operator<<(std::ostream & os, const MonotonicityTestParams & p)
+{
+  auto mono_to_string = [](MonotonicityType t) -> std::string_view {
+    switch (t) {
+      case MonotonicityType::INCREASING:
+        return "INCREASING";
+      case MonotonicityType::DECREASING:
+        return "DECREASING";
+      case MonotonicityType::NONE:
+        return "NONE";
+      default:
+        return "UNKNOWN";
+    }
+  };
+
+  os << "TestName: " << p.test_name << ", " << "Start: [" << p.start[0] << ", " << p.start[1]
+     << ", " << p.start[2] << "], " << "Goal: [" << p.goal[0] << ", " << p.goal[1] << ", "
+     << p.goal[2] << "], " << "X_Mono: " << mono_to_string(p.x_monotonicity) << ", "
+     << "Y_Mono: " << mono_to_string(p.y_monotonicity);
+  return os;
+}
+
+class AstarSearchMonotonicityTest : public ::testing::TestWithParam<MonotonicityTestParams>
+{
+};
+
+TEST_P(AstarSearchMonotonicityTest, CheckMonotonicity)
+{
+  const auto & params = GetParam();
+  auto algo = configure_astar(false);
+
+  nav_msgs::msg::OccupancyGrid costmap_msg{};
+  costmap_msg.info.width = 150;
+  costmap_msg.info.height = 150;
+  costmap_msg.info.resolution = 0.2;
+  costmap_msg.data.resize(150 * 150, 0);
+  algo->setMap(costmap_msg);
+
+  geometry_msgs::msg::Pose start_pose = create_pose_msg(params.start);
+  geometry_msgs::msg::Pose goal_pose = create_pose_msg(params.goal);
+
+  bool result = algo->makePlan(start_pose, goal_pose);
+  EXPECT_TRUE(result);
+
+  const auto & waypoints = algo->getWaypoints().waypoints;
+  EXPECT_GT(waypoints.size(), 2);
+
+  for (size_t i = 0; i < waypoints.size() - 1; ++i) {
+    double x_curr = waypoints[i].pose.pose.position.x;
+    double x_next = waypoints[i + 1].pose.pose.position.x;
+    double y_curr = waypoints[i].pose.pose.position.y;
+    double y_next = waypoints[i + 1].pose.pose.position.y;
+
+    if (params.x_monotonicity == MonotonicityType::INCREASING) {
+      EXPECT_LE(x_curr, x_next + 1e-3) << "Path should be monotonic increasing in X at index " << i;
+    } else if (params.x_monotonicity == MonotonicityType::DECREASING) {
+      EXPECT_GE(x_curr, x_next - 1e-3) << "Path should be monotonic decreasing in X at index " << i;
+    }
+
+    if (params.y_monotonicity == MonotonicityType::INCREASING) {
+      EXPECT_LE(y_curr, y_next + 1e-3) << "Path should be monotonic increasing in Y at index " << i;
+    } else if (params.y_monotonicity == MonotonicityType::DECREASING) {
+      EXPECT_GE(y_curr, y_next - 1e-3) << "Path should be monotonic decreasing in Y at index " << i;
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+  MonotonicityTests, AstarSearchMonotonicityTest,
+  ::testing::Values(
+    MonotonicityTestParams{
+      "StraightLineMonotonicX",
+      {5.0, 5.0, 0.0},
+      {25.0, 5.0, 0.0},
+      MonotonicityType::INCREASING,
+      MonotonicityType::NONE},
+    MonotonicityTestParams{
+      "StraightLineMonotonicY",
+      {15.0, 5.0, pi * 0.5},
+      {15.0, 25.0, pi * 0.5},
+      MonotonicityType::NONE,
+      MonotonicityType::INCREASING},
+    MonotonicityTestParams{
+      "StraightLineMonotonicDiagonalXPosYNeg",
+      {5.0, 25.0, -pi * 0.25},
+      {25.0, 5.0, -pi * 0.25},
+      MonotonicityType::INCREASING,
+      MonotonicityType::DECREASING},
+    MonotonicityTestParams{
+      "StraightLineMonotonicDiagonalXNegYPos",
+      {25.0, 5.0, pi * 0.75},
+      {5.0, 25.0, pi * 0.75},
+      MonotonicityType::DECREASING,
+      MonotonicityType::INCREASING}),
+  [](const ::testing::TestParamInfo<AstarSearchMonotonicityTest::ParamType> & info) {
+    return info.param.test_name;
+  });
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);

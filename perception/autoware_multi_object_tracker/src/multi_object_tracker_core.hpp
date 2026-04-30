@@ -15,9 +15,9 @@
 #ifndef MULTI_OBJECT_TRACKER_CORE_HPP_
 #define MULTI_OBJECT_TRACKER_CORE_HPP_
 
-#include "autoware/multi_object_tracker/association/association.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/association/bev_association.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "debugger/debugger.hpp"
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
@@ -28,7 +28,6 @@
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/transform.hpp>
-#include <geometry_msgs/msg/transform_stamped.hpp>
 
 #include <tf2_ros/buffer.h>
 
@@ -37,12 +36,11 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::multi_object_tracker
 {
-using ObjectsList = std::vector<types::DynamicObjectList>;
-
 struct MultiObjectTrackerParameters
 {
   // Given parameters
@@ -56,17 +54,14 @@ struct MultiObjectTrackerParameters
 
   std::vector<types::InputChannel> input_channels_config;
 
-  std::vector<int64_t> can_assign_matrix;
-  std::vector<double> max_dist_matrix;
-  std::vector<double> max_area_matrix;
-  std::vector<double> min_area_matrix;
-  std::vector<double> min_iou_matrix;
+  AssociatorConfig::LabelToTrackerAssociationParametersMap association_params_map;
   std::map<std::string, std::string> tracker_type_map;
-  std::vector<double> pruning_giou_thresholds;
-  std::vector<double> pruning_distance_thresholds;
+  TrackedLabelThresholds pruning_giou_thresholds;
+  TrackedLabelThresholds pruning_distance_thresholds;
 
   // Induced parameters
-  TrackerProcessorConfig processor_config;
+  TrackerCreationConfig creation_config;
+  TrackerOverlapManagerConfig tracker_overlap_manager_config;
   AssociatorConfig associator_config;
 };
 
@@ -76,14 +71,15 @@ struct MultiObjectTrackerInternalState
   std::unique_ptr<InputManager> input_manager;
   std::shared_ptr<Odometry> odometry;
 
-  rclcpp::Time last_published_time;
+  rclcpp::Time last_publish_time;
   rclcpp::Time last_updated_time;
+  rclcpp::Time last_tracker_time;
 
   MultiObjectTrackerInternalState();
 
   void init(
     const MultiObjectTrackerParameters & params, rclcpp::Node & node,
-    const std::function<void()> & trigger_function);
+    const std::function<void(size_t)> & trigger_function);
 
   std::shared_ptr<tf2_ros::Buffer> tf_buffer;
 };
@@ -91,30 +87,74 @@ struct MultiObjectTrackerInternalState
 namespace core
 {
 
-void process_objects(
-  const types::DynamicObjectList & objects, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
-  TrackerDebugger & debugger, const rclcpp::Logger & logger);
+//// Result structs for core functions
+struct MeasurementProcessingResult
+{
+  bool has_objects;     // true if objects were accepted from InputManager
+  bool should_process;  // true if this is the target channel
+};
 
-std::optional<ObjectsList> get_objects(
-  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state);
+struct ObjectProcessingResult
+{
+  bool should_publish;  // true if should publish immediately (no delay compensation)
+};
 
+struct PublishingData
+{
+  rclcpp::Time object_time;
+  autoware_perception_msgs::msg::TrackedObjects tracked_objects;
+  size_t tracked_objects_size;
+};
+
+struct OptionalPublishingData
+{
+  double min_extrapolation_time;
+  std::optional<autoware_perception_msgs::msg::DetectedObjects> merged_objects;
+  std::optional<autoware_perception_msgs::msg::TrackedObjects> tentative_objects;
+};
+
+//// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params);
 
+//// Utility functions
 bool should_publish(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state);
 
-autoware_perception_msgs::msg::TrackedObjects get_tracked_objects(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state);
+autoware_perception_msgs::msg::TrackedObjects get_tracked_objects_(
+  const rclcpp::Time & object_time, const MultiObjectTrackerParameters & params,
+  const MultiObjectTrackerInternalState & state);
 
-std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects(
-  const rclcpp::Time & publish_time, const rclcpp::Time & current_time,
-  const MultiObjectTrackerParameters & params, MultiObjectTrackerInternalState & state,
+std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects_(
+  const rclcpp::Time & object_time, const MultiObjectTrackerParameters & params,
+  const MultiObjectTrackerInternalState & state, const rclcpp::Logger & logger);
+
+//// Low-level processing functions
+MeasurementProcessingResult process_measurement(
+  const size_t channel_index,
+  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
+  TrackerDebugger & debugger);
+
+void process_objects_(
+  const types::ObjectsWithAssociation & objects_with_associations,
+  const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger);
 
-void prune_objects(const rclcpp::Time & time, MultiObjectTrackerInternalState & state);
+//// High-level orchestration functions
+ObjectProcessingResult process_objects_batch(
+  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
+  MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
+  const rclcpp::Logger & logger);
+
+PublishingData prepare_publishing_data(
+  const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
+  MultiObjectTrackerInternalState & state, const rclcpp::Logger & logger);
+
+OptionalPublishingData prepare_optional_publishing_data(
+  const rclcpp::Time & object_time, const MultiObjectTrackerParameters & params,
+  const MultiObjectTrackerInternalState & state, const TrackerDebugger & debugger,
+  const rclcpp::Logger & logger);
 
 }  // namespace core
 

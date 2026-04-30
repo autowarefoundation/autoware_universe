@@ -33,6 +33,28 @@ rclcpp_components_register_node(traffic_light_map_visualizer
   EXECUTABLE traffic_light_map_visualizer_node
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+
+  ament_add_gtest(test_traffic_light_map_visualizer
+    test/test_traffic_light_map_visualizer.cpp
+  )
+  target_include_directories(test_traffic_light_map_visualizer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_traffic_light_map_visualizer
+    traffic_light_map_visualizer
+  )
+  ament_target_dependencies(test_traffic_light_map_visualizer
+    autoware_lanelet2_extension
+    autoware_lanelet2_utils
+    autoware_map_msgs
+    autoware_perception_msgs
+    rclcpp
+    visualization_msgs
+  )
+endif()
+
 # Copy the assets directory to the installation directory
 install(
     DIRECTORY images/

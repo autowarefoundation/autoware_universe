@@ -81,6 +81,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   # but nvcc assume comma separated as argument of `-Xcompiler` option).
   # That is why `cuda_add_library` is used here.
 
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
@@ -171,9 +172,13 @@ rclcpp_components_register_node(${PROJECT_NAME}_node
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
+  ament_auto_add_gtest(test_label
+    test/test_label.cpp
+  )
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
   launch
   config
+  test/test_label_data
 )

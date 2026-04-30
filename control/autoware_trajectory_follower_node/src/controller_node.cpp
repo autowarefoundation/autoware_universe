@@ -105,6 +105,13 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
   debug_marker_pub_ =
     create_publisher<visualization_msgs::msg::MarkerArray>("~/output/debug_marker", rclcpp::QoS{1});
 
+  sub_steering_offset_update_ =
+    create_subscription<autoware_internal_debug_msgs::msg::Float32Stamped>(
+      "~/input/steering_offset_update", rclcpp::QoS{1}.transient_local(),
+      [this](const autoware_internal_debug_msgs::msg::Float32Stamped::ConstSharedPtr msg) {
+        lateral_controller_->set_steering_offset(static_cast<double>(msg->data));
+      });
+
   if (enable_control_cmd_horizon_pub_) {
     control_cmd_horizon_pub_ = create_publisher<autoware_control_msgs::msg::ControlHorizon>(
       "~/debug/control_cmd_horizon", 1);

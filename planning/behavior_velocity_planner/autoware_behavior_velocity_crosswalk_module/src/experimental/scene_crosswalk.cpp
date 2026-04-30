@@ -15,6 +15,7 @@
 #include "scene_crosswalk.hpp"
 
 #include "../parked_vehicles_stop.hpp"
+#include "autoware/behavior_velocity_crosswalk_module/util.hpp"
 #include "occluded_crosswalk.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
@@ -96,7 +97,7 @@ void offsetPolygon2d(
     const auto offset_pos =
       autoware_utils::calc_offset_pose(origin_point, polygon_point.x, polygon_point.y, 0.0)
         .position;
-    offset_polygon.outer().push_back(Point2d(offset_pos.x, offset_pos.y));
+    offset_polygon.outer().emplace_back(offset_pos.x, offset_pos.y);
   }
 }
 
@@ -448,6 +449,7 @@ bool CrosswalkModule::modifyPathVelocity(
   // Set distance
   // NOTE: If no stop point is inserted, distance to the virtual stop line has to be calculated.
   setDistanceToStop(path, default_stop_pose, nearest_stop_factor, planner_data);
+  set_previous_stop_pose(nearest_stop_factor);
 
   // plan Go/Stop
   if (isActivated()) {
@@ -502,8 +504,18 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForCrosswalkUse
   const auto crosswalk_attention_range = getAttentionRange(
     ego_path, first_path_point_on_crosswalk, last_path_point_on_crosswalk, planner_data);
 
+  const auto base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
+  const auto remaining_width = crosswalk_attention_range.second - base_link2front;
+  if (remaining_width < planner_param_.min_vru_crossing_width) {
+    RCLCPP_DEBUG(
+      logger_, "Stop decision skipped: remaining crosswalk width (%.2f) <= threshold (%.2f)",
+      remaining_width, planner_param_.min_vru_crossing_width);
+    return {};
+  }
+
   // Get attention area, which is ego's footprints on the crosswalk
-  const auto attention_area = getAttentionArea(ego_path, crosswalk_attention_range, planner_data);
+  const auto attention_area = getAttentionArea(
+    ego_path, crosswalk_attention_range, planner_data, 0.0, debug_data_.ego_polygons);
 
   // Update object state
   // This exceptional handling should be done in update(), but is compromised by history
@@ -1200,27 +1212,27 @@ void CrosswalkModule::applySlowDownByOcclusion(
 }
 
 Polygon2d CrosswalkModule::getAttentionArea(
-  const Trajectory & ego_path, const std::pair<double, double> & crosswalk_attention_range,
-  const PlannerData & planner_data) const
+  const Trajectory & ego_path, const std::pair<double, double> & attention_range,
+  const PlannerData & planner_data, const double lateral_margin,
+  std::vector<std::vector<geometry_msgs::msg::Point>> & polygons) const
 {
   const auto & ego_pos = planner_data.current_odometry->pose.position;
-  const auto ego_polygon = createVehiclePolygon(planner_data.vehicle_info_);
+  const auto ego_polygon = createVehiclePolygon(planner_data.vehicle_info_, lateral_margin);
 
   constexpr double sample_interval = 4.0;
   const auto ego_s = autoware::experimental::trajectory::find_nearest_index(ego_path, ego_pos);
 
   Polygon2d attention_area;
 
-  for (double s = crosswalk_attention_range.first; s <= crosswalk_attention_range.second;
-       s += sample_interval) {
+  for (double s = attention_range.first; s <= attention_range.second; s += sample_interval) {
     const double front_s = s;
-    const double back_s = std::min(s + sample_interval, crosswalk_attention_range.second);
+    const double back_s = std::min(s + sample_interval, attention_range.second);
 
-    if (back_s < crosswalk_attention_range.first) {
+    if (back_s < attention_range.first) {
       continue;
     }
 
-    if (crosswalk_attention_range.second < front_s) {
+    if (attention_range.second < front_s) {
       break;
     }
 
@@ -1238,7 +1250,7 @@ Polygon2d CrosswalkModule::getAttentionArea(
       offsetPolygon2d(pose_back, ego_polygon, ego_one_step_polygon);
       bg::correct(ego_one_step_polygon);
 
-      debug_data_.ego_polygons.push_back(toGeometryPointVector(ego_one_step_polygon, ego_pos.z));
+      polygons.push_back(toGeometryPointVector(ego_one_step_polygon, ego_pos.z));
       bg::model::multi_polygon<Polygon2d> unions;
       bg::union_(attention_area, ego_one_step_polygon, unions);
       if (!unions.empty()) {
@@ -1276,6 +1288,18 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
   const auto ego_s = autoware::experimental::trajectory::find_nearest_index(ego_path, ego_pos);
   const auto stop_pose_s =
     autoware::experimental::trajectory::find_nearest_index(ego_path, stop_pose->position);
+  const auto first_point_s =
+    autoware::experimental::trajectory::find_nearest_index(ego_path, first_path_point_on_crosswalk);
+  const auto last_point_s =
+    autoware::experimental::trajectory::find_nearest_index(ego_path, last_path_point_on_crosswalk);
+
+  const double required_space_length =
+    planner_data.vehicle_info_.vehicle_length_m + planner_param_.required_clearance;
+
+  std::vector<std::vector<geometry_msgs::msg::Point>> attention_polygons{};
+  const auto attention_area = getAttentionArea(
+    ego_path, std::make_pair(first_point_s - ego_s, last_point_s + required_space_length - ego_s),
+    planner_data, p.required_lateral_clearance, attention_polygons);
 
   for (const auto & object : objects) {
     if (!isVehicle(object)) {
@@ -1291,26 +1315,16 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
     const auto obj_s =
       autoware::experimental::trajectory::find_nearest_index(ego_path, obj_pose.position);
 
-    const auto nearest_path_pose = ego_path.compute(obj_s).point.pose;
-    const auto dx = obj_pose.position.x - nearest_path_pose.position.x;
-    const auto dy = obj_pose.position.y - nearest_path_pose.position.y;
-    const auto lateral_offset = std::hypot(dx, dy);
-
-    if (p.max_target_vehicle_lateral_offset < std::abs(lateral_offset)) {
+    const auto object_polygon = autoware_utils::to_polygon2d(object);
+    if (boost::geometry::disjoint(object_polygon, attention_area)) {
       continue;
     }
 
     // check if STOP is required
-    const auto first_point_s = autoware::experimental::trajectory::find_nearest_index(
-      ego_path, first_path_point_on_crosswalk);
-    const auto last_point_s = autoware::experimental::trajectory::find_nearest_index(
-      ego_path, last_path_point_on_crosswalk);
     const double crosswalk_front_to_obj_rear =
       (obj_s - first_point_s) - object.shape.dimensions.x / 2.0;
     const double crosswalk_back_to_obj_rear =
       (obj_s - last_point_s) - object.shape.dimensions.x / 2.0;
-    const double required_space_length =
-      planner_data.vehicle_info_.vehicle_length_m + planner_param_.required_clearance;
 
     if (crosswalk_front_to_obj_rear > 0.0 && crosswalk_back_to_obj_rear < required_space_length) {
       // If there exists at least one vehicle ahead, plan STOP considering min_acc, max_jerk and
@@ -1498,39 +1512,51 @@ CrosswalkModule::getNearestStopFactorAndReason(
   const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles,
   const PlannerData & planner_data)
 {
-  // the parked vehicles stop feature is only used if there are no other crosswalk stops
-  const auto use_parked_vehicles = !stop_factor_for_crosswalk_users &&
-                                   !stop_factor_for_obstruction_preventions &&
-                                   stop_factor_for_parked_vehicles;
-  if (use_parked_vehicles) {
-    return {stop_factor_for_parked_vehicles, "parked vehicles"};
-  }
+  const auto calc_signed_arc_length =
+    [](const auto & trajectory, const auto & ego_point, const auto & stop_point) {
+      const auto ego_s =
+        autoware::experimental::trajectory::find_nearest_index(trajectory, ego_point);
+      const auto stop_s =
+        autoware::experimental::trajectory::find_nearest_index(trajectory, stop_point);
+      return stop_s - ego_s;
+    };
 
-  const auto get_distance_to_stop = [&](const auto & stop_factor) -> std::optional<double> {
+  const auto get_distance_to_stop = [&](const auto & stop_factor) -> double {
+    if (!stop_factor.has_value()) {
+      return std::numeric_limits<double>::max();
+    }
     const auto & ego_pos = planner_data.current_odometry->pose.position;
-    const auto ego_s = autoware::experimental::trajectory::find_nearest_index(ego_path, ego_pos);
-    const auto stop_s = autoware::experimental::trajectory::find_nearest_index(
-      ego_path, stop_factor->stop_pose.position);
-    return stop_s - ego_s;
+    return calc_signed_arc_length(ego_path, ego_pos, stop_factor->stop_pose.position);
   };
 
-  std::optional<StopPoseWithObjectUuids> nearest_stop_factor{std::nullopt};
-  std::string reason = "";
+  const std::vector<std::pair<std::optional<StopPoseWithObjectUuids>, std::string>>
+    stop_and_reason = {
+      {stop_factor_for_crosswalk_users, ""},
+      {stop_factor_for_obstruction_preventions, "obstruction prevention"},
+      {stop_factor_for_parked_vehicles, "parked vehicles"}};
 
-  if (stop_factor_for_crosswalk_users) {
-    nearest_stop_factor = stop_factor_for_crosswalk_users;
-    reason = "";
+  const auto nearest_stop_and_reason = std::min_element(
+    stop_and_reason.begin(), stop_and_reason.end(), [&](const auto & a, const auto & b) {
+      return get_distance_to_stop(a.first) < get_distance_to_stop(b.first);
+    });
+  if (nearest_stop_and_reason == stop_and_reason.end() || !nearest_stop_and_reason->first) {
+    return {std::nullopt, ""};
   }
-  if (stop_factor_for_obstruction_preventions) {
-    if (
-      !nearest_stop_factor || get_distance_to_stop(stop_factor_for_obstruction_preventions) <
-                                get_distance_to_stop(nearest_stop_factor)) {
-      nearest_stop_factor = stop_factor_for_obstruction_preventions;
-      reason = "obstruction prevention";
+  constexpr auto previous_stop_reuse_margin =
+    1.0;  // [m] reuse the previous stop pose if it is within the margin
+  const auto dist_to_stop = get_distance_to_stop(nearest_stop_and_reason->first);
+  if (previous_stop_pose_) {
+    const auto dist_to_previous_stop = get_distance_to_stop(previous_stop_pose_);
+    const auto use_previous_stop_pose =
+      dist_to_stop > dist_to_previous_stop &&
+      dist_to_stop - dist_to_previous_stop < previous_stop_reuse_margin;
+    if (use_previous_stop_pose) {
+      previous_stop_pose_->target_object_ids = nearest_stop_and_reason->first->target_object_ids;
+      return {previous_stop_pose_, nearest_stop_and_reason->second};
     }
   }
 
-  return {nearest_stop_factor, reason};
+  return *nearest_stop_and_reason;
 }
 
 void CrosswalkModule::updateObjectState(
@@ -1733,7 +1759,7 @@ geometry_msgs::msg::Polygon CrosswalkModule::createObjectPolygon(
 }
 
 geometry_msgs::msg::Polygon CrosswalkModule::createVehiclePolygon(
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double margin)
 {
   const auto & i = vehicle_info;
   const auto & front_m = i.max_longitudinal_offset_m;
@@ -1742,10 +1768,10 @@ geometry_msgs::msg::Polygon CrosswalkModule::createVehiclePolygon(
 
   geometry_msgs::msg::Polygon polygon{};
 
-  polygon.points.push_back(createPoint32(front_m, -width_m, 0.0));
-  polygon.points.push_back(createPoint32(front_m, width_m, 0.0));
-  polygon.points.push_back(createPoint32(-back_m, width_m, 0.0));
-  polygon.points.push_back(createPoint32(-back_m, -width_m, 0.0));
+  polygon.points.push_back(createPoint32(front_m, -width_m - margin, 0.0));
+  polygon.points.push_back(createPoint32(front_m, width_m + margin, 0.0));
+  polygon.points.push_back(createPoint32(-back_m, width_m + margin, 0.0));
+  polygon.points.push_back(createPoint32(-back_m, -width_m - margin, 0.0));
 
   return polygon;
 }

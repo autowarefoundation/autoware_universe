@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,10 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Yukihiro Saito
-//
 
 #include "autoware/multi_object_tracker/tracker/model/pedestrian_and_bicycle_tracker.hpp"
 
@@ -49,12 +45,11 @@ bool PedestrianAndBicycleTracker::measure(
 bool PedestrianAndBicycleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  using Label = autoware_perception_msgs::msg::ObjectClassification;
-  const uint8_t label = getHighestProbLabel();
+  const auto label = getHighestProbLabel();
 
-  if (label == Label::BICYCLE || label == Label::MOTORCYCLE) {
+  if (label == classes::Label::BICYCLE || label == classes::Label::MOTORCYCLE) {
     bicycle_tracker_.getTrackedObject(time, object, to_publish);
-  } else if (label == Label::PEDESTRIAN) {
+  } else if (label == classes::Label::PEDESTRIAN) {
     pedestrian_tracker_.getTrackedObject(time, object, to_publish);
   } else {
     // If the label is others, use the bicycle tracker as a fallback

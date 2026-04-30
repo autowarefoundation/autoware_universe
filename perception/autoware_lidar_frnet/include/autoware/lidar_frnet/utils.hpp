@@ -16,6 +16,7 @@
 #define AUTOWARE__LIDAR_FRNET__UTILS_HPP_
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -25,11 +26,24 @@
 
 namespace autoware::lidar_frnet::utils
 {
+
+/** 1D CUDA kernel block size (threads per block). */
 constexpr uint32_t kernel_1d_size = 256;
+/** 2D CUDA kernel block size (threads per block, each dimension). */
 constexpr uint32_t kernel_2d_size = 16;
 
+/**
+ * @brief Flags indicating which output channels have active subscribers.
+ *
+ * Used to skip work when no one subscribes to seg, viz, or filtered output.
+ */
 struct ActiveComm
 {
+  /**
+   * @param is_seg_active True if segmentation output has subscribers
+   * @param is_viz_active True if visualization output has subscribers
+   * @param is_filtered_active True if filtered point cloud has subscribers
+   */
   ActiveComm(const bool is_seg_active, const bool is_viz_active, const bool is_filtered_active)
   : seg(is_seg_active), viz(is_viz_active), filtered(is_filtered_active)
   {
@@ -41,9 +55,16 @@ struct ActiveComm
   explicit operator bool() const { return seg || viz || filtered; }
 };
 
+/**
+ * @brief 2D dimensions (width and height); must be positive.
+ */
 struct Dims2d
 {
   Dims2d() = default;
+  /**
+   * @param width Width (must be > 0)
+   * @param height Height (must be > 0)
+   */
   Dims2d(const int64_t width, const int64_t height)
   : w(static_cast<uint32_t>(width)), h(static_cast<uint32_t>(height))
   {
@@ -55,9 +76,16 @@ struct Dims2d
   uint32_t h;
 };
 
+/**
+ * @brief Vertical field of view in radians (up, down, total span).
+ */
 struct FieldOfView
 {
   FieldOfView() = default;
+  /**
+   * @param fov_up_deg Upward FOV in degrees
+   * @param fov_down_deg Downward FOV in degrees
+   */
   FieldOfView(const double fov_up_deg, const double fov_down_deg)
   : up(static_cast<float>(M_PI * fov_up_deg / 180.0)),
     down(static_cast<float>(M_PI * fov_down_deg / 180.0)),
@@ -69,70 +97,98 @@ struct FieldOfView
   float total;
 };
 
-struct PreprocessingParams
-{
-  PreprocessingParams(
-    const double fov_up_deg, const double fov_down_deg, const int64_t frustum_width,
-    const int64_t frustum_height, const int64_t interpolation_width,
-    const int64_t interpolation_height)
-  : fov(fov_up_deg, fov_down_deg),
-    frustum(frustum_width, frustum_height),
-    interpolation(interpolation_width, interpolation_height)
-  {
-  }
-  const FieldOfView fov;
-  const Dims2d frustum;
-  const Dims2d interpolation;
-};
-
+/**
+ * @brief Postprocessing configuration: filter classes, palette, crop box bounds.
+ */
 struct PostprocessingParams
 {
+  /**
+   * @brief Construct from filter threshold, class names, palette and crop box.
+   * @param filter_class_probability_threshold Probability above which points are filtered out
+   * @param filter_classes Class names to filter (remove from output)
+   * @param crop_box_bounds [min_x, min_y, min_z, max_x, max_y, max_z] (may be unused)
+   * @param class_names All class names (for palette and filter index resolution)
+   * @param palette RGB palette as flat int64 vector (length class_names.size() * 3)
+   */
   PostprocessingParams(
-    const double score_threshold, const std::vector<std::string> & class_names,
-    const std::vector<int64_t> & palette, const std::vector<std::string> & excluded_class_names)
-  : score_threshold(static_cast<float>(score_threshold)),
-    palette([&palette, &class_names]() {
-      if (palette.size() % 3 != 0) {
-        throw std::runtime_error("Palette size must be a multiple of 3.");
-      }
-      if (palette.size() != class_names.size() * 3) {
-        throw std::runtime_error("Palette size does not match class names size.");
-      }
-      std::vector<float> colors;
-      for (size_t i = 0; i < palette.size(); i += 3) {
-        const auto & r = palette[i];
-        const auto & g = palette[i + 1];
-        const auto & b = palette[i + 2];
-        if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
-          throw std::runtime_error("Color values must be within 0-255 range.");
-        }
-        const int64_t color = (r << 16) + (g << 8) + b;
-        float result;
-        memcpy(&result, &color, sizeof(result));
-        colors.emplace_back(result);
-      }
-      return colors;
-    }()),
-    excluded_class_idxs([&class_names, &excluded_class_names]() {
-      std::vector<uint32_t> excluded_class_idxs;
-      for (const auto & class_name : excluded_class_names) {
-        auto it = std::find(class_names.begin(), class_names.end(), class_name);
-        if (it != class_names.end()) {
-          excluded_class_idxs.push_back(
-            static_cast<uint32_t>(std::distance(class_names.begin(), it)));
-        }
-      }
-      return excluded_class_idxs;
-    }())
+    const double filter_class_probability_threshold,
+    const std::vector<std::string> & filter_classes, const std::string & filter_output_format,
+    const std::array<float, 6> & crop_box_bounds, const std::vector<std::string> & class_names,
+    const std::vector<int64_t> & palette)
+  : filter_class_probability_threshold(static_cast<float>(filter_class_probability_threshold)),
+    palette(make_palette(class_names, palette)),
+    filter_class_indices(make_filter_class_indices(class_names, filter_classes)),
+    filter_output_format(filter_output_format),
+    crop_box_bounds(crop_box_bounds)
   {
   }
-  const float score_threshold;
+
+  /**
+   * @brief Build float palette from class names and RGB int vector.
+   * @param class_names Class names (size must match palette size / 3)
+   * @param palette Flat RGB values, each in [0,255], length class_names.size() * 3
+   * @return Float colors packed for visualization (one per class)
+   */
+  static std::vector<float> make_palette(
+    const std::vector<std::string> & class_names, const std::vector<int64_t> & palette)
+  {
+    if (palette.size() % 3 != 0) {
+      throw std::runtime_error("Palette size must be a multiple of 3.");
+    }
+    if (palette.size() != class_names.size() * 3) {
+      throw std::runtime_error("Palette size does not match class names size.");
+    }
+    std::vector<float> colors;
+    for (size_t i = 0; i < palette.size(); i += 3) {
+      const auto & r = palette[i];
+      const auto & g = palette[i + 1];
+      const auto & b = palette[i + 2];
+      if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+        throw std::runtime_error("Color values must be within 0-255 range.");
+      }
+      const uint32_t color = (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) |
+                             (static_cast<uint32_t>(b));
+      float result = 0.0f;
+      memcpy(&result, &color, sizeof(result));
+      colors.emplace_back(result);
+    }
+    return colors;
+  }
+
+  /**
+   * @brief Resolve filter class names to indices in class_names.
+   * @param class_names All class names
+   * @param filter_classes Names of classes to filter out
+   * @return Indices of filter_classes in class_names
+   */
+  static std::vector<uint32_t> make_filter_class_indices(
+    const std::vector<std::string> & class_names, const std::vector<std::string> & filter_classes)
+  {
+    std::vector<uint32_t> indices;
+    for (const auto & filter_class : filter_classes) {
+      auto it = std::find(class_names.begin(), class_names.end(), filter_class);
+      if (it == class_names.end()) {
+        throw std::runtime_error("Filter class '" + filter_class + "' not found in class names.");
+      }
+      indices.push_back(static_cast<uint32_t>(std::distance(class_names.begin(), it)));
+    }
+    return indices;
+  }
+  const float filter_class_probability_threshold;
   const std::vector<float> palette;
-  const std::vector<uint32_t> excluded_class_idxs;
+  const std::vector<uint32_t> filter_class_indices;
+  const std::string filter_output_format;
+  const std::array<float, 6> crop_box_bounds;  // [min_x, min_y, min_z, max_x, max_y, max_z]
 };
 
+/**
+ * @brief Min/opt/max profile (e.g. for TensorRT or point counts).
+ */
 struct Profile
 {
+  /**
+   * @param profile Vector of 3 elements [min, opt, max]
+   */
   explicit Profile(const std::vector<int64_t> & profile)
   : min(profile.at(0)), opt(profile.at(1)), max(profile.at(2))
   {
@@ -142,26 +198,64 @@ struct Profile
   const int64_t max;
 };
 
+/**
+ * @brief Network and preprocessing configuration (profiles, FOV, frustum, crop box).
+ */
 struct NetworkParams
 {
+  /**
+   * @brief Construct network params from class names, point/voxel profiles, FOV, dimensions.
+   * @param class_names Segmentation class names
+   * @param num_points [min, opt, max] point count profile
+   * @param num_unique_coors [min, opt, max] unique voxel count profile
+   * @param fov_up_deg Upward FOV in degrees
+   * @param fov_down_deg Downward FOV in degrees
+   * @param frustum_width Frustum width
+   * @param frustum_height Frustum height
+   * @param interpolation_width Interpolation grid width
+   * @param interpolation_height Interpolation grid height
+   * @param crop_box_enabled Whether ego crop box filtering is enabled
+   * @param crop_box_bounds [min_x, min_y, min_z, max_x, max_y, max_z]
+   */
   NetworkParams(
     const std::vector<std::string> & class_names, const std::vector<int64_t> & num_points,
-    const std::vector<int64_t> & num_unique_coors)
+    const std::vector<int64_t> & num_unique_coors, const double fov_up_deg,
+    const double fov_down_deg, const int64_t frustum_width, const int64_t frustum_height,
+    const int64_t interpolation_width, const int64_t interpolation_height,
+    bool crop_box_enabled = false, std::array<float, 6> crop_box_bounds = {})
   : class_names(class_names),
     num_points_profile(num_points),
     num_unique_coors_profile(num_unique_coors),
-    num_classes(class_names.size())
+    num_classes(class_names.size()),
+    fov(fov_up_deg, fov_down_deg),
+    frustum(frustum_width, frustum_height),
+    interpolation(interpolation_width, interpolation_height),
+    crop_box_enabled(crop_box_enabled),
+    crop_box_bounds(crop_box_bounds)
   {
   }
   const std::vector<std::string> class_names;
   const Profile num_points_profile;
   const Profile num_unique_coors_profile;
   const uint32_t num_classes;
+  const FieldOfView fov;
+  const Dims2d frustum;
+  const Dims2d interpolation;
+  const bool crop_box_enabled;
+  const std::array<float, 6> crop_box_bounds;  // [min_x, min_y, min_z, max_x, max_y, max_z]
 };
 
+/**
+ * @brief Diagnostic timing thresholds for processing time and delay.
+ */
 struct DiagnosticParams
 {
   DiagnosticParams() = default;
+  /**
+   * @param max_allowed_processing_time_ms Max allowed processing time (ms) before WARN
+   * @param max_acceptable_consecutive_delay_ms Max consecutive delay (ms) before ERROR
+   * @param validation_callback_interval_ms Diagnostic updater period (ms)
+   */
   DiagnosticParams(
     const double max_allowed_processing_time_ms, const double max_acceptable_consecutive_delay_ms,
     const double validation_callback_interval_ms)
@@ -175,6 +269,13 @@ struct DiagnosticParams
   double validation_callback_interval_ms;
 };
 
+/**
+ * @brief Integer ceiling division: (a + b - 1) / b.
+ *
+ * @param a Dividend (must be positive)
+ * @param b Divisor (must be positive)
+ * @return Smallest integer k such that k * b >= a
+ */
 template <typename T1, typename T2>
 uint32_t divup(const T1 a, const T2 b)
 {

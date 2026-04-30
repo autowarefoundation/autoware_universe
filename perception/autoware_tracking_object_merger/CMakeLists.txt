@@ -33,12 +33,14 @@ target_link_libraries(${PROJECT_NAME}
   Eigen3::Eigen
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::tracking_object_merger::DecorativeTrackerMergerNode"
   EXECUTABLE decorative_tracker_merger_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
-ament_auto_package(INSTALL_TO_SHARE
+autoware_ament_auto_package(INSTALL_TO_SHARE
   launch
   config
 )

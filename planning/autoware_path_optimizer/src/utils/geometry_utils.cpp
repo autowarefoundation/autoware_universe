@@ -125,14 +125,14 @@ Polygon2d createDrivablePolygon(
 
   // left bound
   for (const auto & p : left_bound) {
-    drivable_area_poly.outer().push_back(Point2d(p.x, p.y));
+    drivable_area_poly.outer().emplace_back(p.x, p.y);
   }
 
   // right bound
   auto reversed_right_bound = right_bound;
   std::reverse(reversed_right_bound.begin(), reversed_right_bound.end());
   for (const auto & p : reversed_right_bound) {
-    drivable_area_poly.outer().push_back(Point2d(p.x, p.y));
+    drivable_area_poly.outer().emplace_back(p.x, p.y);
   }
 
   drivable_area_poly.outer().push_back(drivable_area_poly.outer().front());

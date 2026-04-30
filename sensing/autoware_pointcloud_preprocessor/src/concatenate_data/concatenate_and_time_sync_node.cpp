@@ -51,7 +51,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
         replace_sync_topic_name_postfix(topic, params_.synchronized_pointcloud_postfix);
       auto publisher = this->create_publisher<sensor_msgs::msg::PointCloud2>(
         new_topic, rclcpp::SensorDataQoS().keep_last(params_.maximum_queue_size));
-      topic_to_transformed_cloud_publisher_map_.insert({topic, publisher});
+      topic_to_transformed_cloud_publisher_map_.emplace(topic, publisher);
     }
   }
 

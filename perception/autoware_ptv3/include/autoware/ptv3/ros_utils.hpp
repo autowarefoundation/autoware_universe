@@ -35,11 +35,11 @@ namespace autoware::ptv3
 {
 using sensor_msgs::msg::PointField;
 
-CHECK_FIELD(InputPointType, autoware::point_types::PointXYZIRC, x);
-CHECK_FIELD(InputPointType, autoware::point_types::PointXYZIRC, y);
-CHECK_FIELD(InputPointType, autoware::point_types::PointXYZIRC, z);
-CHECK_FIELD(InputPointType, autoware::point_types::PointXYZIRC, intensity);
-static_assert(sizeof(InputPointType) == sizeof(autoware::point_types::PointXYZIRC));
+CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, x);
+CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, y);
+CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, z);
+CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, intensity);
+static_assert(sizeof(CloudPointType) == sizeof(autoware::point_types::PointXYZIRC));
 
 }  // namespace autoware::ptv3
 
