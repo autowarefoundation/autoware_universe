@@ -17,7 +17,11 @@ import threading
 
 from autoware_vehicle_msgs.msg import ControlModeReport
 from autoware_vehicle_msgs.msg import GearReport
+from autoware_vehicle_msgs.msg import HazardLightsCommand
+from autoware_vehicle_msgs.msg import HazardLightsReport
 from autoware_vehicle_msgs.msg import SteeringReport
+from autoware_vehicle_msgs.msg import TurnIndicatorsCommand
+from autoware_vehicle_msgs.msg import TurnIndicatorsReport
 from autoware_vehicle_msgs.msg import VelocityReport
 from builtin_interfaces.msg import Time
 import carla
@@ -113,6 +117,12 @@ class carla_ros2_interface(object):
         self.pub_actuation_status = self.ros2_node.create_publisher(
             ActuationStatusStamped, "/vehicle/status/actuation_status", 1
         )
+        self.pub_turn_indicators_state = self.ros2_node.create_publisher(
+            TurnIndicatorsReport, "/vehicle/status/turn_indicators_status", 1
+        )
+        self.pub_hazard_lights_state = self.ros2_node.create_publisher(
+            HazardLightsReport, "/vehicle/status/hazard_lights_status", 1
+        )
 
     def _initialize_subscriptions(self):
         """Initialize all ROS 2 subscriptions."""
@@ -121,6 +131,18 @@ class carla_ros2_interface(object):
         )
         self.sub_vehicle_initialpose = self.ros2_node.create_subscription(
             PoseWithCovarianceStamped, "initialpose", self.initialpose_callback, 1
+        )
+        self.sub_turn_indicators = self.ros2_node.create_subscription(
+            TurnIndicatorsCommand,
+            "/control/command/turn_indicators_cmd",
+            self.turn_indicators_callback,
+            1,
+        )
+        self.sub_hazard_lights = self.ros2_node.create_subscription(
+            HazardLightsCommand,
+            "/control/command/hazard_lights_cmd",
+            self.hazard_lights_callback,
+            1,
         )
         self.current_control = carla.VehicleControl()
 
@@ -272,6 +294,8 @@ class carla_ros2_interface(object):
         self.ego_actor = None
         self.physics_control = None
         self.current_control = carla.VehicleControl()
+        self.current_turn_indicator = TurnIndicatorsCommand.DISABLE
+        self.current_hazard_lights = HazardLightsCommand.DISABLE
 
         # Thread synchronization (protects: current_control, ego_actor, timestamp, physics_control)
         self._state_lock = threading.Lock()
@@ -636,6 +660,45 @@ class carla_ros2_interface(object):
             out_cmd.brake = in_cmd.actuation.brake_cmd
             self.current_control = out_cmd
 
+    def turn_indicators_callback(self, in_cmd):
+        """Store turn indicator command (thread-safe)."""
+        with self._state_lock:
+            self.current_turn_indicator = in_cmd.command
+
+    def hazard_lights_callback(self, in_cmd):
+        """Store hazard lights command (thread-safe)."""
+        with self._state_lock:
+            self.current_hazard_lights = in_cmd.command
+
+    def apply_light_state(self):
+        """
+        Apply turn indicator and hazard lights commands to CARLA ego vehicle.
+
+        Hazard takes priority over turn indicator. Other light bits (brake,
+        reverse, headlights, etc.) are preserved so we do not interfere with
+        anything CARLA or another module manages.
+
+        """
+        with self._state_lock:
+            if not self.ego_actor:
+                return
+            turn_cmd = self.current_turn_indicator
+            hazard_cmd = self.current_hazard_lights
+            current_state = int(self.ego_actor.get_light_state())
+
+            left_bit = int(carla.VehicleLightState.LeftBlinker)
+            right_bit = int(carla.VehicleLightState.RightBlinker)
+
+            new_state = current_state & ~left_bit & ~right_bit
+            if hazard_cmd == HazardLightsCommand.ENABLE:
+                new_state |= left_bit | right_bit
+            elif turn_cmd == TurnIndicatorsCommand.ENABLE_LEFT:
+                new_state |= left_bit
+            elif turn_cmd == TurnIndicatorsCommand.ENABLE_RIGHT:
+                new_state |= right_bit
+
+            self.ego_actor.set_light_state(carla.VehicleLightState(new_state))
+
     def ego_status(self):
         """
         Publish ego vehicle status.
@@ -656,6 +719,7 @@ class carla_ros2_interface(object):
             ego_angular_velocity = self.ego_actor.get_angular_velocity()
             steer_angle = self.ego_actor.get_wheel_steer_angle(carla.VehicleWheelLocation.FL_Wheel)
             control = self.ego_actor.get_control()
+            light_state = int(self.ego_actor.get_light_state())
 
         # convert velocity from cartesian to ego frame
         trans_mat = numpy.array(ego_transform.get_matrix()).reshape(4, 4)
@@ -691,11 +755,36 @@ class carla_ros2_interface(object):
         out_actuation_status.status.brake_status = control.brake
         out_actuation_status.status.steer_status = -control.steer
 
+        # Decode CARLA blinker bits into Autoware turn-indicator / hazard reports.
+        left_on = bool(light_state & int(carla.VehicleLightState.LeftBlinker))
+        right_on = bool(light_state & int(carla.VehicleLightState.RightBlinker))
+
+        out_turn_indicators_state = TurnIndicatorsReport()
+        out_turn_indicators_state.stamp = out_vel_state.header.stamp
+        if left_on and right_on:
+            # Both blinkers on => hazard mode; turn indicator reports DISABLE.
+            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
+        elif left_on:
+            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_LEFT
+        elif right_on:
+            out_turn_indicators_state.report = TurnIndicatorsReport.ENABLE_RIGHT
+        else:
+            out_turn_indicators_state.report = TurnIndicatorsReport.DISABLE
+
+        out_hazard_lights_state = HazardLightsReport()
+        out_hazard_lights_state.stamp = out_vel_state.header.stamp
+        if left_on and right_on:
+            out_hazard_lights_state.report = HazardLightsReport.ENABLE
+        else:
+            out_hazard_lights_state.report = HazardLightsReport.DISABLE
+
         self.pub_actuation_status.publish(out_actuation_status)
         self.pub_vel_state.publish(out_vel_state)
         self.pub_steering_state.publish(out_steering_state)
         self.pub_ctrl_mode.publish(out_ctrl_mode)
         self.pub_gear_state.publish(out_gear_state)
+        self.pub_turn_indicators_state.publish(out_turn_indicators_state)
+        self.pub_hazard_lights_state.publish(out_hazard_lights_state)
         self.sensor_registry.update_sensor_timestamp("status", self.timestamp)
 
     def run_step(self, input_data, timestamp):
@@ -750,6 +839,9 @@ class carla_ros2_interface(object):
                 self.imu(data[1])
             else:
                 self.logger.debug(f"No publisher for sensor '{key}' (type={sensor_type})")
+
+        # Push turn indicator / hazard lights to CARLA before reading status back.
+        self.apply_light_state()
 
         # Publish ego vehicle status
         self.ego_status()
