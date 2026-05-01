@@ -28,10 +28,10 @@ This ros package enables communication between Autoware and CARLA for autonomous
 #### Map Setup
 
 1. Download the maps (y-axis inverted version) to an arbitrary location
-2. Create the map folder structure in `$HOME/autoware_map`:
-   - Rename `point_cloud/Town01.pcd` → `$HOME/autoware_map/Town01/pointcloud_map.pcd`
-   - Rename `vector_maps/lanelet2/Town01.osm` → `$HOME/autoware_map/Town01/lanelet2_map.osm`
-3. Create `$HOME/autoware_map/Town01/map_projector_info.yaml` with:
+2. Create the map folder structure in `$HOME/autoware_data/maps`:
+   - Rename `point_cloud/Town01.pcd` → `$HOME/autoware_data/maps/Town01/pointcloud_map.pcd`
+   - Rename `vector_maps/lanelet2/Town01.osm` → `$HOME/autoware_data/maps/Town01/lanelet2_map.osm`
+3. Create `$HOME/autoware_data/maps/Town01/map_projector_info.yaml` with:
 
    ```yaml
    projector_type: Local
@@ -57,7 +57,7 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
    ```bash
    ros2 launch autoware_launch e2e_simulator.launch.xml \
-       map_path:=$HOME/autoware_map/Town01 \
+       map_path:=$HOME/autoware_data/maps/Town01 \
        vehicle_model:=sample_vehicle \
        sensor_model:=carla_sensor_kit \
        simulator_type:=carla
@@ -67,7 +67,7 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
    ```bash
    ros2 launch autoware_launch e2e_simulator.launch.xml \
-       map_path:=$HOME/autoware_map/Town01 \
+       map_path:=$HOME/autoware_data/maps/Town01 \
        vehicle_model:=sample_vehicle \
        sensor_model:=carla_sensor_kit \
        simulator_type:=carla \
