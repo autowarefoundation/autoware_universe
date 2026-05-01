@@ -30,16 +30,16 @@ After these checks, the remaining trajectories, along with their original `gener
 
 ### Parameters
 
-| Parameter name                          | Type         | Default | Description                                                                   |
-| --------------------------------------- | ------------ | ------- | ----------------------------------------------------------------------------- |
-| `filter_names`                          | string array | []      | List of safety filter plugins to use (e.g., OutOfLaneFilter)                  |
-| `out_of_lane.time`                      | double       | 3.0     | Look-ahead time [s] during which the trajectory must stay inside a lane       |
-| `out_of_lane.min_value`                 | double       | 0.0     | Minimum distance [m] from lane boundary                                       |
-| `vehicle_constraint.max_speed`          | double       | 16.7    | Maximum allowed speed [m/s]                                                   |
-| `vehicle_constraint.max_acceleration`   | double       | 5.0     | Maximum allowed acceleration [m/s^2]                                          |
-| `vehicle_constraint.max_deceleration`   | double       | 5.0     | Maximum allowed deceleration; positive but represents deceleration [m/s^s]    |
-| `vehicle_constraint.max_steering_angle` | double       | 0.8     | Maximum allowed steering angle [rad]                                          |
-| `vehicle_constraint.max_steering_rate`  | double       | 0.3     | Maximum allowed steering rate [rad/s]                                         |
+| Parameter name                          | Type         | Default | Description                                                                |
+| --------------------------------------- | ------------ | ------- | -------------------------------------------------------------------------- |
+| `filter_names`                          | string array | []      | List of safety filter plugins to use (e.g., OutOfLaneFilter)               |
+| `out_of_lane.time`                      | double       | 3.0     | Look-ahead time [s] during which the trajectory must stay inside a lane    |
+| `out_of_lane.min_value`                 | double       | 0.0     | Minimum distance [m] from lane boundary                                    |
+| `vehicle_constraint.max_speed`          | double       | 16.7    | Maximum allowed speed [m/s]                                                |
+| `vehicle_constraint.max_acceleration`   | double       | 5.0     | Maximum allowed acceleration [m/s^2]                                       |
+| `vehicle_constraint.max_deceleration`   | double       | 5.0     | Maximum allowed deceleration; positive but represents deceleration [m/s^s] |
+| `vehicle_constraint.max_steering_angle` | double       | 0.8     | Maximum allowed steering angle [rad]                                       |
+| `vehicle_constraint.max_steering_rate`  | double       | 0.3     | Maximum allowed steering rate [rad/s]                                      |
 
 ## Future Work
 
