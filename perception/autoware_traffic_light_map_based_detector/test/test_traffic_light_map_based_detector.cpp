@@ -78,13 +78,17 @@ CameraInfo make_default_camera_info()
   return camera_info;
 }
 
-/// Camera at map origin, looking along +x in map.
+/// Camera at map origin, rotated around the map +z axis by `rotation_angle_deg`.
+/// At 0 deg, the camera looks along +x in map.
 /// Optical convention: z_opt=+x_map (forward), x_opt=-y_map (right), y_opt=-z_map (down).
-tf2::Transform make_default_camera_pose()
+tf2::Transform make_camera_pose(double rotation_angle_deg = 0.0)
 {
   tf2::Transform pose;
   pose.setOrigin(tf2::Vector3(0.0, 0.0, 0.0));
-  pose.setRotation(tf2::Quaternion(-0.5, 0.5, -0.5, 0.5));
+  const tf2::Quaternion base_rotation(-0.5, 0.5, -0.5, 0.5);
+  tf2::Quaternion z_rotation;
+  z_rotation.setRPY(0.0, 0.0, rotation_angle_deg * M_PI / 180.0);
+  pose.setRotation(z_rotation * base_rotation);
   return pose;
 }
 
@@ -223,7 +227,7 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithoutSetRouteUsesAllMapTrafficLig
   const auto config = make_default_config();
   const auto map = make_test_map();
   const auto camera_info = make_default_camera_info();
-  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_default_camera_pose());
+  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_camera_pose());
   TrafficLightMapBasedDetector detector(config, map);
 
   // Act
@@ -293,7 +297,7 @@ TEST(TrafficLightMapBasedDetectorTest, DetectProducesRoisWithExpectedPixelCoordi
   const auto config = make_default_config();
   const auto map = make_test_map();
   const auto camera_info = make_default_camera_info();
-  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_default_camera_pose());
+  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_camera_pose());
   TrafficLightMapBasedDetector detector(config, map);
 
   // Act
@@ -334,7 +338,7 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutSolidSubtypeTrafficLight)
   const auto config = make_default_config();
   const auto map = make_test_map("solid");
   const auto camera_info = make_default_camera_info();
-  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_default_camera_pose());
+  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_camera_pose());
   TrafficLightMapBasedDetector detector(config, map);
 
   // Act
@@ -352,7 +356,7 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutTrafficLightOutsideDistan
   config.max_detection_range = 5.0;
   const auto map = make_test_map();
   const auto camera_info = make_default_camera_info();
-  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_default_camera_pose());
+  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_camera_pose());
   TrafficLightMapBasedDetector detector(config, map);
 
   // Act
@@ -370,14 +374,7 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutTrafficLightOutsideAngleR
   const auto config = make_default_config();
   const auto map = make_test_map();
   const auto camera_info = make_default_camera_info();
-
-  tf2::Quaternion z_rotation;
-  z_rotation.setRPY(0.0, 0.0, M_PI_2);
-  const auto default_pose = make_default_camera_pose();
-  tf2::Transform rotated_pose;
-  rotated_pose.setOrigin(default_pose.getOrigin());
-  rotated_pose.setRotation(z_rotation * default_pose.getRotation());
-  const auto tf_samples = make_tf_samples(camera_info.header.stamp, rotated_pose);
+  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_camera_pose(90.0));
 
   TrafficLightMapBasedDetector detector(config, map);
 
@@ -409,7 +406,7 @@ TEST(TrafficLightMapBasedDetectorTest, SetRouteWithKnownLaneletIdSucceedsAndDete
   const auto config = make_default_config();
   const auto map = make_test_map();
   const auto camera_info = make_default_camera_info();
-  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_default_camera_pose());
+  const auto tf_samples = make_tf_samples(camera_info.header.stamp, make_camera_pose());
   const auto traffic_light_id = get_traffic_light_ids(map)[0];
   const auto route = make_route(get_road_lanelet_ids(map)[0]);
   TrafficLightMapBasedDetector detector(config, map);
