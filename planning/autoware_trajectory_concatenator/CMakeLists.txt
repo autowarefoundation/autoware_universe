@@ -13,7 +13,7 @@ include_directories(
 )
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/trajectory_concatenator_node.cpp
+  src/trajectory_concatenator.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -24,13 +24,6 @@ target_compile_options(${PROJECT_NAME} PUBLIC
   -Wno-error=deprecated-declarations
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::trajectory_concatenator::TrajectoryConcatenatorNode"
-  EXECUTABLE ${PROJECT_NAME}_node
-)
-
 ament_auto_package(
   INSTALL_TO_SHARE
-  config
-  launch
 )
