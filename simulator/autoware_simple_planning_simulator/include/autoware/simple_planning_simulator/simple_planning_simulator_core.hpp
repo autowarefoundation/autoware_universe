@@ -32,6 +32,8 @@
 #include "autoware_vehicle_msgs/msg/turn_indicators_command.hpp"
 #include "autoware_vehicle_msgs/msg/turn_indicators_report.hpp"
 #include "autoware_vehicle_msgs/msg/velocity_report.hpp"
+#include "autoware_vehicle_msgs/msg/actuation_command_stamped.hpp"
+#include "autoware_vehicle_msgs/msg/actuation_status_stamped.hpp"
 #include "autoware_vehicle_msgs/srv/control_mode_command.hpp"
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
@@ -42,8 +44,6 @@
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/imu.hpp"
-#include "tier4_vehicle_msgs/msg/actuation_command_stamped.hpp"
-#include "tier4_vehicle_msgs/msg/actuation_status_stamped.hpp"
 
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <tf2_ros/buffer.h>
@@ -71,6 +71,8 @@ using autoware_vehicle_msgs::msg::SteeringReport;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
 using autoware_vehicle_msgs::msg::VelocityReport;
+using autoware_vehicle_msgs::msg::ActuationCommandStamped;
+using autoware_vehicle_msgs::msg::ActuationStatusStamped;
 using autoware_vehicle_msgs::srv::ControlModeCommand;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using geometry_msgs::msg::Pose;
@@ -81,8 +83,6 @@ using geometry_msgs::msg::Twist;
 using geometry_msgs::msg::TwistStamped;
 using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::Imu;
-using tier4_vehicle_msgs::msg::ActuationCommandStamped;
-using tier4_vehicle_msgs::msg::ActuationStatusStamped;
 
 class DeltaTime
 {

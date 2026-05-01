@@ -18,7 +18,7 @@
 #include <Eigen/Core>
 
 #include "autoware_vehicle_msgs/msg/gear_command.hpp"
-#include "tier4_vehicle_msgs/msg/actuation_status_stamped.hpp"
+#include "autoware_vehicle_msgs/msg/actuation_status_stamped.hpp"
 
 #include <optional>
 
@@ -32,7 +32,7 @@ namespace autoware::simulator::simple_planning_simulator
 class SimModelInterface
 {
 protected:
-  using ActuationStatusStamped = tier4_vehicle_msgs::msg::ActuationStatusStamped;
+  using ActuationStatusStamped = autoware_vehicle_msgs::msg::ActuationStatusStamped;
 
   const int dim_x_;        //!< @brief dimension of state x
   const int dim_u_;        //!< @brief dimension of input u

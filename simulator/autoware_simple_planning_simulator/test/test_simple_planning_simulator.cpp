@@ -19,7 +19,7 @@
 #include <tf2/utils.hpp>
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-#include "tier4_vehicle_msgs/msg/actuation_command_stamped.hpp"
+#include "autoware_vehicle_msgs/msg/actuation_command_stamped.hpp"
 
 #include <iostream>
 #include <memory>
@@ -32,9 +32,9 @@ namespace autoware::simulator::simple_planning_simulator
 
 using autoware_control_msgs::msg::Control;
 using autoware_vehicle_msgs::msg::GearCommand;
+using autoware_vehicle_msgs::msg::ActuationCommandStamped;
 using geometry_msgs::msg::PoseWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
-using tier4_vehicle_msgs::msg::ActuationCommandStamped;
 
 std::string toStrInfo(const Odometry & o)
 {

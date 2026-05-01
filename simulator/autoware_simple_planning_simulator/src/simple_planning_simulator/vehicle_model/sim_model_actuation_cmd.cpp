@@ -324,14 +324,14 @@ void SimModelActuationCmd::updateStateWithGear(
   }
 }
 
-std::optional<tier4_vehicle_msgs::msg::ActuationStatusStamped>
+std::optional<autoware_vehicle_msgs::msg::ActuationStatusStamped>
 SimModelActuationCmd::getActuationStatus() const
 {
   if (!convert_accel_cmd_ && !convert_brake_cmd_ && !convert_steer_cmd_) {
     return std::nullopt;
   }
 
-  tier4_vehicle_msgs::msg::ActuationStatusStamped actuation_status;
+  autoware_vehicle_msgs::msg::ActuationStatusStamped actuation_status;
 
   const double acc_state = std::clamp(state_(IDX::ACCX), -vx_rate_lim_, vx_rate_lim_);
   const double vel_state = std::clamp(state_(IDX::VX), -vx_lim_, vx_lim_);
