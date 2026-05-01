@@ -312,6 +312,31 @@ TEST(TrafficLightMapBasedDetectorTest, DetectProducesRoisWithExpectedPixelCoordi
   EXPECT_EQ(result.expect_rois.rois[0].roi.height, 20u);
 }
 
+// Given two transform samples differing in yaw, the rough ROI width becomes
+// larger than the single-sample case.
+TEST(TrafficLightMapBasedDetectorTest, DetectWithYawVariedTransformSamplesProducesWiderRoughRoi)
+{
+  // Arrange
+  const auto config = make_default_config();
+  const auto map = make_test_map();
+  TrafficLightMapBasedDetector detector(config, map);
+
+  const auto camera_info = make_default_camera_info();
+  const std::vector<StampedTransform> tf_samples = {
+    {camera_info.header.stamp, make_camera_pose(0.0)},
+    {camera_info.header.stamp, make_camera_pose(5.0)}};
+
+  // Act
+  const auto result = detector.detect(tf_samples, camera_info);
+
+  // Assert
+  ASSERT_EQ(result.rough_rois.rois.size(), 1u);
+  EXPECT_NEAR(result.rough_rois.rois[0].roi.x_offset, 301, 1);
+  EXPECT_NEAR(result.rough_rois.rois[0].roi.y_offset, 140, 1);
+  EXPECT_NEAR(result.rough_rois.rois[0].roi.width, 72, 2);
+  EXPECT_NEAR(result.rough_rois.rois[0].roi.height, 39, 1);
+}
+
 TEST(TrafficLightMapBasedDetectorTest, DetectWithEmptyTransformSamplesReturnsEmpty)
 {
   // Arrange
