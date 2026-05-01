@@ -79,6 +79,7 @@ autoware_perception_msgs::msg::TrafficLightElement convertT4toAutoware(
  * @return 0 if traffic light is truncated, otherwise 1
  */
 int calVisibleScore(const FusionRecord & record);
+FusionRecord generateFailsafeRecord(FusionRecord base_record);
 
 }  // namespace utils
 }  // namespace autoware::traffic_light

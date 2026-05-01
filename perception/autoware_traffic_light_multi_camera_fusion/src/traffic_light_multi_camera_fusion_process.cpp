@@ -14,6 +14,7 @@
 
 #include "traffic_light_multi_camera_fusion_process.hpp"
 
+#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <unordered_map>
@@ -143,6 +144,18 @@ int calVisibleScore(const FusionRecord & record)
   } else {
     return 1;
   }
+}
+
+FusionRecord generateFailsafeRecord(FusionRecord base_record)
+{
+  // return unknown record for a fail safe
+  FusionRecord fail_safe_signal;
+  fail_safe_signal.header = base_record.header;
+  fail_safe_signal.cam_info = base_record.cam_info;
+  fail_safe_signal.roi = base_record.roi;
+  traffic_light_utils::setSignalUnknown(fail_safe_signal.signal, 0.0);
+
+  return fail_safe_signal;
 }
 
 }  // namespace utils
