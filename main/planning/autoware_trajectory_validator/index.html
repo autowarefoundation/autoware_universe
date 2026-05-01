@@ -22845,7 +22845,6 @@
 <ul>
 <li>Data validity: removes trajectories that contain NaNs, non‑finite numbers, inconsistent timestamps, or are too short.</li>
 <li>Lane adherence: removes trajectories that will exit all lanelets within the configured look‑ahead time.</li>
-<li>Collision risk: removes trajectories whose estimated time‑to‑collision with any predicted object falls below threshold in the look‑ahead time.</li>
 <li>Vehicle constraint: removes trajectories that violates vehicle constraints, such as maximum speed, acceleration, and deceleration.</li>
 </ul>
 <p>After these checks, the remaining trajectories, along with their original <code>generator_info</code>, are published.</p>
@@ -22908,7 +22907,7 @@
 <td><code>filter_names</code></td>
 <td>string array</td>
 <td>[]</td>
-<td>List of safety filter plugins to use (e.g., OutOfLaneFilter, CollisionFilter)</td>
+<td>List of safety filter plugins to use (e.g., OutOfLaneFilter)</td>
 </tr>
 <tr>
 <td><code>out_of_lane.time</code></td>
@@ -22921,18 +22920,6 @@
 <td>double</td>
 <td>0.0</td>
 <td>Minimum distance [m] from lane boundary</td>
-</tr>
-<tr>
-<td><code>collision.time</code></td>
-<td>double</td>
-<td>3.0</td>
-<td>Look-ahead time [s] for collision search</td>
-</tr>
-<tr>
-<td><code>collision.min_value</code></td>
-<td>double</td>
-<td>2.0</td>
-<td>Minimum acceptable time to collision [s]</td>
 </tr>
 <tr>
 <td><code>vehicle_constraint.max_speed</code></td>
