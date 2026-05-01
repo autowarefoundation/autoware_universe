@@ -15,7 +15,8 @@
   <depend>autoware_command_mode_types</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_system_msgs</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils_rclcpp</depend>
+  <depend>autoware_vehicle_msgs</depend>
   <depend>diagnostic_updater</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
