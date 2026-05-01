@@ -376,8 +376,7 @@ private:
    * @param [in] traj reference trajectory
    * @param [in] motion delay compensated target motion
    */
-  Motion keepBrakeBeforeStop(
-    const ControlData & control_data, const Motion & target_motion) const;
+  Motion keepBrakeBeforeStop(const ControlData & control_data, const Motion & target_motion) const;
 
   /**
    * @brief calculate predicted velocity after time delay based on past control commands

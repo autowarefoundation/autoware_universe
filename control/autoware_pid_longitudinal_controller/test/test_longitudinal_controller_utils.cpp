@@ -110,8 +110,8 @@ TEST(TestLongitudinalControllerUtils, calcStopDistance)
 
   current_pose.position.x = 9.0;
   EXPECT_NEAR(
-    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw), -6.0,
-    1e-2);
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw),
+    -6.0, 1e-2);
 }
 
 TEST(TestLongitudinalControllerUtils, calcStopDistanceUsesPoseToStopPointRelationship)
@@ -136,8 +136,8 @@ TEST(TestLongitudinalControllerUtils, calcStopDistanceUsesPoseToStopPointRelatio
   misaligned_quaternion.setRPY(0.0, 0.0, 1.0);
   current_pose.orientation = tf2::toMsg(misaligned_quaternion);
   EXPECT_NEAR(
-    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw), -3.5,
-    1e-2);
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw),
+    -3.5, 1e-2);
 
   current_pose.orientation.w = 1.0;
   current_pose.orientation.x = 0.0;
@@ -145,8 +145,8 @@ TEST(TestLongitudinalControllerUtils, calcStopDistanceUsesPoseToStopPointRelatio
   current_pose.orientation.z = 0.0;
   current_pose.position.y = 3.5;
   EXPECT_NEAR(
-    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw), -3.5,
-    1e-2);
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw),
+    -3.5, 1e-2);
 }
 
 TEST(TestLongitudinalControllerUtils, getPitchByPose)
