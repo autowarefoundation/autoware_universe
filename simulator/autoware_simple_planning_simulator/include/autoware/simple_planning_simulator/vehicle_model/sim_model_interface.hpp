@@ -17,8 +17,8 @@
 
 #include <Eigen/Core>
 
-#include "autoware_vehicle_msgs/msg/gear_command.hpp"
 #include "autoware_vehicle_msgs/msg/actuation_status_stamped.hpp"
+#include "autoware_vehicle_msgs/msg/gear_command.hpp"
 
 #include <optional>
 

@@ -22,6 +22,8 @@
 #include "autoware_control_msgs/msg/control.hpp"
 #include "autoware_map_msgs/msg/lanelet_map_bin.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
+#include "autoware_vehicle_msgs/msg/actuation_command_stamped.hpp"
+#include "autoware_vehicle_msgs/msg/actuation_status_stamped.hpp"
 #include "autoware_vehicle_msgs/msg/control_mode_report.hpp"
 #include "autoware_vehicle_msgs/msg/engage.hpp"
 #include "autoware_vehicle_msgs/msg/gear_command.hpp"
@@ -32,8 +34,6 @@
 #include "autoware_vehicle_msgs/msg/turn_indicators_command.hpp"
 #include "autoware_vehicle_msgs/msg/turn_indicators_report.hpp"
 #include "autoware_vehicle_msgs/msg/velocity_report.hpp"
-#include "autoware_vehicle_msgs/msg/actuation_command_stamped.hpp"
-#include "autoware_vehicle_msgs/msg/actuation_status_stamped.hpp"
 #include "autoware_vehicle_msgs/srv/control_mode_command.hpp"
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
@@ -61,6 +61,8 @@ namespace autoware::simulator::simple_planning_simulator
 using autoware_control_msgs::msg::Control;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_planning_msgs::msg::Trajectory;
+using autoware_vehicle_msgs::msg::ActuationCommandStamped;
+using autoware_vehicle_msgs::msg::ActuationStatusStamped;
 using autoware_vehicle_msgs::msg::ControlModeReport;
 using autoware_vehicle_msgs::msg::Engage;
 using autoware_vehicle_msgs::msg::GearCommand;
@@ -71,8 +73,6 @@ using autoware_vehicle_msgs::msg::SteeringReport;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
 using autoware_vehicle_msgs::msg::VelocityReport;
-using autoware_vehicle_msgs::msg::ActuationCommandStamped;
-using autoware_vehicle_msgs::msg::ActuationStatusStamped;
 using autoware_vehicle_msgs::srv::ControlModeCommand;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using geometry_msgs::msg::Pose;
