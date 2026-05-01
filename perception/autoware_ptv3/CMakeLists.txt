@@ -111,7 +111,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   target_include_directories(${PROJECT_NAME}_lib
     SYSTEM PUBLIC
     ${CUDA_INCLUDE_DIRS}
-    $(autoware_point_types_INCLUDE_DIRS)
+    ${autoware_point_types_INCLUDE_DIRS}
   )
 
   ament_auto_add_library(${PROJECT_NAME}_component SHARED
