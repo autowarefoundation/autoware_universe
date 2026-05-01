@@ -26,6 +26,7 @@
 #include <vector>
 
 using autoware::trajectory_modifier::TrajectoryModifierData;
+using autoware::trajectory_modifier::plugin::FrameInputs;
 using autoware::trajectory_modifier::plugin::StopPointFixer;
 using autoware::trajectory_modifier::plugin::TrajectoryPoints;
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -83,7 +84,7 @@ protected:
     current_odometry.twist.twist.linear.x = velocity;
     current_odometry.twist.twist.linear.y = 0.0;
     current_odometry.twist.twist.linear.z = 0.0;
-    data_->current_odometry = std::make_shared<nav_msgs::msg::Odometry>(current_odometry);
+    inputs_.current_odometry = std::make_shared<nav_msgs::msg::Odometry>(current_odometry);
   }
 
   TrajectoryPoint create_trajectory_point_with_time(
@@ -108,6 +109,7 @@ protected:
   std::unique_ptr<StopPointFixer> plugin_;
   trajectory_modifier_params::Params params_;
   std::shared_ptr<TrajectoryModifierData> data_;
+  FrameInputs inputs_;
 };
 
 // Test is_trajectory_modification_required method
@@ -121,7 +123,7 @@ TEST_F(StopPointFixerIntegrationTest, TrajectoryModificationNotRequiredWhenDisab
 
   set_odometry_data(0.0, 0.0, 0.05);  // Stationary, close to target
 
-  bool required = plugin_->is_trajectory_modification_required(trajectory);
+  bool required = plugin_->is_trajectory_modification_required(trajectory, inputs_);
   EXPECT_FALSE(required);
 }
 
@@ -131,7 +133,7 @@ TEST_F(StopPointFixerIntegrationTest, TrajectoryModificationNotRequiredForEmptyT
 
   set_odometry_data(0.0, 0.0, 0.05);
 
-  bool required = plugin_->is_trajectory_modification_required(empty_trajectory);
+  bool required = plugin_->is_trajectory_modification_required(empty_trajectory, inputs_);
   EXPECT_FALSE(required);
 }
 
@@ -142,7 +144,7 @@ TEST_F(StopPointFixerIntegrationTest, TrajectoryModificationNotRequiredWhenMovin
 
   set_odometry_data(0.0, 0.0, 0.5);  // Moving fast
 
-  bool required = plugin_->is_trajectory_modification_required(trajectory);
+  bool required = plugin_->is_trajectory_modification_required(trajectory, inputs_);
   EXPECT_FALSE(required);
 }
 
@@ -153,7 +155,7 @@ TEST_F(StopPointFixerIntegrationTest, TrajectoryModificationNotRequiredWhenFarFr
 
   set_odometry_data(0.0, 0.0, 0.05);  // Stationary
 
-  bool required = plugin_->is_trajectory_modification_required(trajectory);
+  bool required = plugin_->is_trajectory_modification_required(trajectory, inputs_);
   EXPECT_FALSE(required);  // Distance > default min_distance_threshold_m (1.0)
 }
 
@@ -165,7 +167,7 @@ TEST_F(StopPointFixerIntegrationTest, TrajectoryModificationRequiredWhenStationa
 
   set_odometry_data(0.0, 0.0, 0.05);  // Stationary
 
-  bool required = plugin_->is_trajectory_modification_required(trajectory);
+  bool required = plugin_->is_trajectory_modification_required(trajectory, inputs_);
   EXPECT_TRUE(required);  // Distance < default min_distance_threshold_m (1.0)
 }
 
@@ -176,7 +178,7 @@ TEST_F(StopPointFixerIntegrationTest, TrajectoryModificationBoundaryConditions)
 
   set_odometry_data(0.0, 0.0, 0.1);  // Exactly at velocity threshold
 
-  bool required = plugin_->is_trajectory_modification_required(trajectory);
+  bool required = plugin_->is_trajectory_modification_required(trajectory, inputs_);
   EXPECT_FALSE(required);  // Distance == threshold, velocity == threshold
 }
 
@@ -191,9 +193,9 @@ TEST_F(StopPointFixerIntegrationTest, ModifyTrajectoryWhenRequired)
   set_odometry_data(0.0, 0.0, 0.05);  // Stationary at origin
 
   // Verify modification is required first
-  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 
-  plugin_->modify_trajectory(trajectory);
+  plugin_->modify_trajectory(trajectory, inputs_);
 
   // Should replace with two stop points at ego position (minimum for Control)
   EXPECT_EQ(trajectory.size(), 2);
@@ -218,9 +220,9 @@ TEST_F(StopPointFixerIntegrationTest, ModifyTrajectoryWhenNotRequired)
   set_odometry_data(0.0, 0.0, 0.5);  // Moving
 
   // Verify modification is not required
-  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 
-  plugin_->modify_trajectory(trajectory);
+  plugin_->modify_trajectory(trajectory, inputs_);
 
   // Trajectory should remain unchanged
   EXPECT_EQ(trajectory.size(), original_trajectory.size());
@@ -251,7 +253,7 @@ TEST_F(StopPointFixerIntegrationTest, ParameterUpdateSuccess)
 
   set_odometry_data(0.0, 0.0, 0.15);  // Below new velocity threshold (stationary)
 
-  bool required = plugin_->is_trajectory_modification_required(trajectory);
+  bool required = plugin_->is_trajectory_modification_required(trajectory, inputs_);
   EXPECT_FALSE(required);  // Should use new thresholds - distance (2.5) > threshold (2.0)
 }
 
@@ -265,7 +267,7 @@ TEST_F(StopPointFixerIntegrationTest, MultipleTrajectoryPointsUsesLastPoint)
 
   set_odometry_data(0.0, 0.0, 0.05);  // Stationary at origin
 
-  bool required = plugin_->is_trajectory_modification_required(trajectory);
+  bool required = plugin_->is_trajectory_modification_required(trajectory, inputs_);
   EXPECT_TRUE(required);  // Should be true because last point is close
 }
 
@@ -282,9 +284,9 @@ TEST_F(StopPointFixerIntegrationTest, ThreeDimensionalVelocity)
   current_odometry.twist.twist.linear.x = 0.06;
   current_odometry.twist.twist.linear.y = 0.06;
   current_odometry.twist.twist.linear.z = 0.06;  // 3D velocity magnitude > 0.1
-  data_->current_odometry = std::make_shared<nav_msgs::msg::Odometry>(current_odometry);
+  inputs_.current_odometry = std::make_shared<nav_msgs::msg::Odometry>(current_odometry);
 
-  bool required = plugin_->is_trajectory_modification_required(trajectory);
+  bool required = plugin_->is_trajectory_modification_required(trajectory, inputs_);
   EXPECT_FALSE(required);  // Should detect vehicle as moving due to 3D velocity
 }
 
@@ -353,7 +355,7 @@ TEST_F(StopPointFixerIntegrationTest, ForceLongStopFlag_False_LongStopConditionD
 
   set_odometry_data(0.0, 0.0, 0.05);
 
-  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 }
 
 TEST_F(StopPointFixerIntegrationTest, ForceLongStopFlag_True_LongStopConditionTriggers)
@@ -370,7 +372,7 @@ TEST_F(StopPointFixerIntegrationTest, ForceLongStopFlag_True_LongStopConditionTr
 
   set_odometry_data(0.0, 0.0, 0.05);
 
-  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 }
 
 // Tests for force_stop_close_stopped_trajectories flag
@@ -387,7 +389,7 @@ TEST_F(StopPointFixerIntegrationTest, ForceCloseStopFlag_False_CloseStopConditio
 
   set_odometry_data(0.0, 0.0, 0.05);
 
-  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 }
 
 TEST_F(StopPointFixerIntegrationTest, ForceCloseStopFlag_True_CloseStopConditionTriggers)
@@ -405,7 +407,7 @@ TEST_F(StopPointFixerIntegrationTest, ForceCloseStopFlag_True_CloseStopCondition
 
   set_odometry_data(0.0, 0.0, params_.stop_point_fixer.velocity_threshold * 0.2);
 
-  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 }
 
 TEST_F(StopPointFixerIntegrationTest, BothFlags_False_NeitherConditionTriggers)
@@ -422,7 +424,7 @@ TEST_F(StopPointFixerIntegrationTest, BothFlags_False_NeitherConditionTriggers)
 
   set_odometry_data(0.0, 0.0, 0.05);
 
-  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 }
 
 // Velocity threshold boundary tests at runtime default (0.1 mps from set_up_params).
@@ -439,7 +441,7 @@ TEST_F(StopPointFixerIntegrationTest, RuntimeDefault_StationaryEgo_TriggersModif
 
   set_odometry_data(0.0, 0.0, 0.05);
 
-  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 }
 
 TEST_F(StopPointFixerIntegrationTest, RuntimeDefault_MovingEgoAboveThreshold_SuppressesModification)
@@ -453,7 +455,7 @@ TEST_F(StopPointFixerIntegrationTest, RuntimeDefault_MovingEgoAboveThreshold_Sup
 
   set_odometry_data(0.0, 0.0, 0.15);
 
-  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 }
 
 TEST_F(
@@ -471,7 +473,7 @@ TEST_F(
 
   set_odometry_data(0.0, 0.0, 0.15);
 
-  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory));
+  EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
 }
 
 // Decimal time tests for is_long_stop_trajectory.
@@ -550,13 +552,13 @@ TEST_F(StopPointFixerIntegrationTest, ParameterUpdate_LongStopFlagCanBeToggledAt
     params_.stop_point_fixer.force_stop_long_stopped_trajectories = false;
     params_.stop_point_fixer.force_stop_close_stopped_trajectories = false;
     plugin_->update_params(params_);
-    EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory));
+    EXPECT_FALSE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
   }
 
   {
     params_.stop_point_fixer.force_stop_long_stopped_trajectories = true;
     params_.stop_point_fixer.force_stop_close_stopped_trajectories = false;
     plugin_->update_params(params_);
-    EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory));
+    EXPECT_TRUE(plugin_->is_trajectory_modification_required(trajectory, inputs_));
   }
 }

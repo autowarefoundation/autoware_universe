@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_STRUCTS_HPP_
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_STRUCTS_HPP_
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
-#include <tl_expected/expected.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
@@ -25,14 +24,17 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <string>
-
 namespace autoware::trajectory_modifier
 {
+// Type aliases retained for callers that previously imported them via TrajectoryModifierData.
 using autoware_perception_msgs::msg::PredictedObjects;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::PointCloud2;
+
+// Long-lived resources shared with plugins via initialize(). Per-frame inputs
+// (odometry, acceleration, predicted_objects, obstacle_pointcloud) live in
+// plugin::FrameInputs and are passed as method arguments instead.
 struct TrajectoryModifierData
 {
   explicit TrajectoryModifierData(rclcpp::Node * node)
@@ -42,32 +44,9 @@ struct TrajectoryModifierData
   {
   }
 
-  Odometry::ConstSharedPtr current_odometry;
-  AccelWithCovarianceStamped::ConstSharedPtr current_acceleration;
-  PredictedObjects::ConstSharedPtr predicted_objects;
-  PointCloud2::ConstSharedPtr obstacle_pointcloud;
-
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
-
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
-
-  tl::expected<std::string, std::string> is_ready()
-  {
-    if (!current_odometry) {
-      return tl::make_unexpected("current_odometry is not set");
-    }
-    if (!current_acceleration) {
-      return tl::make_unexpected("current_acceleration is not set");
-    }
-    if (!predicted_objects) {
-      return "predicted_objects is not set";
-    }
-    if (!obstacle_pointcloud) {
-      return "obstacle_pointcloud is not set";
-    }
-    return "";
-  }
 };
 }  // namespace autoware::trajectory_modifier
 #endif  // AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_STRUCTS_HPP_

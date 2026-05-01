@@ -16,6 +16,7 @@
 #ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
+#include "autoware/trajectory_modifier/trajectory_modifier_plugins/frame_inputs.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
 
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
@@ -26,7 +27,6 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -64,8 +64,9 @@ public:
   }
 
   virtual ~TrajectoryModifierPluginBase() = default;
-  virtual bool modify_trajectory(TrajectoryPoints & traj_points) = 0;
-  virtual bool is_trajectory_modification_required(const TrajectoryPoints & traj_points) = 0;
+  virtual bool modify_trajectory(TrajectoryPoints & traj_points, const FrameInputs & inputs) = 0;
+  virtual bool is_trajectory_modification_required(
+    const TrajectoryPoints & traj_points, const FrameInputs & inputs) = 0;
   std::string get_name() const { return name_; }
   std::string get_short_name() const { return short_name_; }
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
