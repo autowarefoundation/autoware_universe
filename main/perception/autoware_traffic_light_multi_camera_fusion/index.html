@@ -22921,6 +22921,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#cross-camera-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross Camera Validation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross Camera Validation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#input-topics" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -23054,6 +23082,43 @@
 <li><strong>Score Accumulation:</strong> This evidence is <strong>added</strong> to the corresponding color's belief score.</li>
 <li><strong>Final Decision:</strong> After accumulating all evidence, the color with the highest final score is chosen as the definitive state for the group.</li>
 </ul>
+<h2 id="cross-camera-validation">Cross Camera Validation<a class="headerlink" href="#cross-camera-validation" title="Permanent link">#</a></h2>
+<p>This node includes an option to compare and validate detected traffic light signals within the same regulatory element.</p>
+<p>Setting <code>signal_consistency_check.enable</code> to true activates this validation. When enabled, the node compares traffic light signals across traffic light signals; if a conflict is detected, it uses a fail-safe signal instead of the conflicting input.</p>
+<p>If <code>signal_consistency_check.publish_partial_matched_signal</code> is set to true, the node will publish the signal that is common to all sources when conflicts occur.</p>
+<h3 id="example">Example<a class="headerlink" href="#example" title="Permanent link">#</a></h3>
+<p>Inputs:</p>
+<ul>
+<li>Traffic light A: {(RED, CIRCLE), (GREEN, LEFT_ARROW)} with confidence 0.99</li>
+<li>Traffic light B: {(RED, CIRCLE)} with confidence 0.8</li>
+</ul>
+<p>The validated output is shown in the following table:</p>
+<table>
+<thead>
+<tr>
+<th>signal_consistency_check</th>
+<th>publish_partial_matched_signal</th>
+<th>output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Disabled</td>
+<td>Disabled</td>
+<td><code>(RED, CIRCLE)</code>, <code>(GREEN, LEFT_ARROW)</code>: most probable signal</td>
+</tr>
+<tr>
+<td>Enabled</td>
+<td>Disabled</td>
+<td><code>(UNKNOWN, UNKNOWN)</code>: fail-safe signal</td>
+</tr>
+<tr>
+<td>Enabled</td>
+<td>Enabled</td>
+<td><code>(RED, CIRCLE)</code>: common signal</td>
+</tr>
+</tbody>
+</table>
 <h2 id="input-topics">Input topics<a class="headerlink" href="#input-topics" title="Permanent link">#</a></h2>
 <p>For every camera, the following three topics are subscribed:</p>
 <table>
@@ -23130,6 +23195,20 @@
 <td>prior_log_odds</td>
 <td>float</td>
 <td>The uniform prior log-odds to initialize the belief for any new traffic light state. 0.0 (log(1)) means a neutral (50%) initial belief. Positive values make all states initially more likely, negative values make them less likely.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>signal_consistency_check.enable</td>
+<td>boolean</td>
+<td>Enables the validation feature. If set to true, the system checks for consistency among detected traffic light signals associated with a specific regulatory element.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>signal_consistency_check.publish_partial_matched_signal</td>
+<td>boolean</td>
+<td>Determines whether to publish common signals among traffic lights associated with a regulatory element. If set to true, partially matched signals will be published. If set to false, a single mismatch among the traffic lights will output a fail-safe signal.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
