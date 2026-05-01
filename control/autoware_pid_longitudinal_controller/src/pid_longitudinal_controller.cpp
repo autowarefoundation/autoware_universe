@@ -470,10 +470,10 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
 
   return output;
 }
-std::optional<PidLongitudinalController::ExperimentalControlData>
+std::optional<PidLongitudinalController::ControlData>
 PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::Pose & current_pose)
 {
-  ExperimentalControlData control_data{};
+  ControlData control_data{};
 
   control_data.dt = getDt();
   control_data.current_motion.vel = m_current_kinematic_state.twist.twist.linear.x;
@@ -625,7 +625,7 @@ void PidLongitudinalController::changeControlState(
   m_control_state = control_state;
 }
 
-void PidLongitudinalController::updateControlState(const ExperimentalControlData & control_data)
+void PidLongitudinalController::updateControlState(const ControlData & control_data)
 {
   const double current_vel = control_data.current_motion.vel;
   const double stop_dist = control_data.stop_dist;
@@ -776,7 +776,7 @@ void PidLongitudinalController::updateControlState(const ExperimentalControlData
 }
 
 PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
-  const ExperimentalControlData & control_data)
+  const ControlData & control_data)
 {
   const auto target_point = control_data.interpolated_traj.compute(control_data.target_base);
 
@@ -892,7 +892,7 @@ autoware_control_msgs::msg::Longitudinal PidLongitudinalController::createCtrlCm
 }
 
 void PidLongitudinalController::publishDebugData(
-  const Motion & ctrl_cmd, const ExperimentalControlData & control_data)
+  const Motion & ctrl_cmd, const ControlData & control_data)
 {
   m_debug_values.setValues(DebugValues::TYPE::DT, control_data.dt);
   m_debug_values.setValues(DebugValues::TYPE::CALCULATED_ACC, control_data.current_motion.acc);
@@ -931,7 +931,7 @@ double PidLongitudinalController::getDt()
 }
 
 enum PidLongitudinalController::Shift PidLongitudinalController::getCurrentShift(
-  const ExperimentalControlData & control_data) const
+  const ControlData & control_data) const
 {
   constexpr double epsilon = 1e-5;
   const double target_vel =
@@ -985,7 +985,7 @@ double PidLongitudinalController::applySlopeCompensation(
 }
 
 PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop(
-  const ExperimentalControlData & control_data, const Motion & target_motion) const
+  const ControlData & control_data, const Motion & target_motion) const
 {
   const auto bases = control_data.interpolated_traj.get_underlying_bases();
 
@@ -1087,7 +1087,7 @@ PidLongitudinalController::StateAfterDelay PidLongitudinalController::predictedS
 }
 
 double PidLongitudinalController::applyVelocityFeedback(
-  const ExperimentalControlData & control_data)
+  const ControlData & control_data)
 {
   const double vel_sign = (control_data.shift == Shift::Forward)
                             ? 1.0
@@ -1153,7 +1153,7 @@ void PidLongitudinalController::updatePitchDebugValues(
   m_debug_values.setValues(DebugValues::TYPE::PITCH_RAW_TRAJ_DEG, traj_pitch * to_degrees);
 }
 
-void PidLongitudinalController::updateDebugVelAcc(const ExperimentalControlData & control_data)
+void PidLongitudinalController::updateDebugVelAcc(const ControlData & control_data)
 {
   const auto target_point = control_data.interpolated_traj.compute(control_data.target_base);
   const auto nearest_point = control_data.interpolated_traj.compute(control_data.nearest_base);

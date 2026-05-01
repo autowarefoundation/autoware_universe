@@ -85,7 +85,7 @@ private:
   };
   enum class Shift { Forward = 0, Reverse };
 
-  struct ExperimentalControlData
+  struct ControlData
   {
     TrajectoryExperimental interpolated_traj{};
     double nearest_base{0.0};
@@ -298,7 +298,7 @@ private:
    * @brief build control data from the experimental trajectory for the current ego pose
    * @param [in] current_pose current ego pose used for nearest-point search
    */
-  std::optional<ExperimentalControlData> getExperimentalControlData(
+  std::optional<ControlData> getExperimentalControlData(
     const geometry_msgs::msg::Pose & current_pose);
 
   /**
@@ -318,13 +318,13 @@ private:
    * @brief update control state according to the current situation
    * @param [in] control_data control data
    */
-  void updateControlState(const ExperimentalControlData & control_data);
+  void updateControlState(const ControlData & control_data);
 
   /**
    * @brief calculate control command based on the current control state
    * @param [in] control_data control data
    */
-  Motion calcCtrlCmd(const ExperimentalControlData & control_data);
+  Motion calcCtrlCmd(const ControlData & control_data);
 
   /**
    * @brief publish control command
@@ -339,7 +339,7 @@ private:
    * @param [in] ctrl_cmd calculated control command to control velocity
    * @param [in] control_data data for control calculation
    */
-  void publishDebugData(const Motion & ctrl_cmd, const ExperimentalControlData & control_data);
+  void publishDebugData(const Motion & ctrl_cmd, const ControlData & control_data);
 
   /**
    * @brief calculate time between current and previous one
@@ -355,7 +355,7 @@ private:
    * @brief calculate direction (forward or backward) that vehicle moves
    * @param [in] control_data data for control calculation
    */
-  enum Shift getCurrentShift(const ExperimentalControlData & control_data) const;
+  enum Shift getCurrentShift(const ControlData & control_data) const;
 
   /**
    * @brief store acceleration command before slope compensation
@@ -377,7 +377,7 @@ private:
    * @param [in] motion delay compensated target motion
    */
   Motion keepBrakeBeforeStop(
-    const ExperimentalControlData & control_data, const Motion & target_motion) const;
+    const ControlData & control_data, const Motion & target_motion) const;
 
   /**
    * @brief calculate predicted velocity after time delay based on past control commands
@@ -391,7 +391,7 @@ private:
    * @brief calculate velocity feedback with feed forward and pid controller
    * @param [in] control_data data for control calculation
    */
-  double applyVelocityFeedback(const ExperimentalControlData & control_data);
+  double applyVelocityFeedback(const ControlData & control_data);
 
   /**
    * @brief update variables for debugging about pitch
@@ -409,7 +409,7 @@ private:
    * @param [in] ctrl_cmd latest calculated control command
    * @param [in] control_data data for control calculation
    */
-  void updateDebugVelAcc(const ExperimentalControlData & control_data);
+  void updateDebugVelAcc(const ControlData & control_data);
 
   double getTimeUnderControl();
 };
