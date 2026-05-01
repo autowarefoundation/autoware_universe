@@ -15,12 +15,13 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 
+#include "autoware/trajectory_concatenator/trajectory_concatenator.hpp"
 #include "autoware/trajectory_validator/evaluation_context.hpp"
 #include "autoware/trajectory_validator/validation_stage_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
-#include <autoware_trajectory_validator/autoware_trajectory_validator_param.hpp>
+#include <autoware/trajectory_validator/parameters.hpp>
 #include <autoware_trajectory_validator/msg/metric_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report_array.hpp>
@@ -42,9 +43,8 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
-#include <algorithm>
-#include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -79,12 +79,15 @@ private:
    */
   void publishers();
 
+  void on_trajectories(const CandidateTrajectories::ConstSharedPtr msg);
+
+  void on_timer();
+
+  void execute_pipeline(const CandidateTrajectories & concatenated_trajectories);
   /**
    * @brief Gather the latest inputs required to run the filter plugins.
    */
   tl::expected<EvaluationContext, std::string> take_data();
-
-  void process(const CandidateTrajectories::ConstSharedPtr msg);
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
@@ -138,8 +141,7 @@ private:
     const std::unordered_map<std::string, double> & processing_time);
 
   // Parameters
-  validator::ParamListener listener_;
-  validator::Params params_;
+  TrajectoryValidatorParam params_;
 
   // Plugin infrastructure
   pluginlib::ClassLoader<plugin::ValidatorInterface> plugin_loader_;
@@ -158,6 +160,12 @@ private:
   rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
 
+  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_generative_;
+  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_backup_;
+
+  // Timer
+  rclcpp::TimerBase::SharedPtr timer_;
+
   // Publishers
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_validation_reports_;
@@ -170,6 +178,10 @@ private:
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   DiagnosticsInterface diagnostics_interface_{this, "trajectory_validator"};
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
+
+  // Concatenator state
+  std::unique_ptr<trajectory_concatenator::TrajectoryConcatenator> concatenator_ptr_;
+  std::mutex buffer_mutex_;
 };
 
 }  // namespace autoware::trajectory_validator

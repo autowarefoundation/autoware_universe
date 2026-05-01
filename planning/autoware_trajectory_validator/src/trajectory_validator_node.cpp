@@ -39,19 +39,20 @@ namespace autoware::trajectory_validator
 
 TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
 : Node{"trajectory_validator_node", options},
-  listener_{get_node_parameters_interface()},
-  params_(listener_.get_params()),
+  params_{get_node_parameters_interface()},
   plugin_loader_(
     "autoware_trajectory_validator", "autoware::trajectory_validator::plugin::ValidatorInterface"),
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
 {
-  const auto filters = params_.filter_names;
+  concatenator_ptr_ =
+    std::make_unique<trajectory_concatenator::TrajectoryConcatenator>(params_.concatenator_params);
+  const auto filters = params_.validator_params.filter_names;
   for (const auto & filter : filters) {
     load_metric(filter);
   }
 
   constexpr bool shadow_mode = true;
-  for (const auto & filter : params_.shadow_mode_filter_names) {
+  for (const auto & filter : params_.validator_params.shadow_mode_filter_names) {
     load_metric(filter, shadow_mode);
   }
 
@@ -61,6 +62,10 @@ TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
 
   subscribers();
   publishers();
+
+  timer_ = create_timer(
+    this, get_clock(), std::chrono::milliseconds(30),
+    std::bind(&TrajectoryValidator::on_timer, this));
 }
 
 void TrajectoryValidator::subscribers()
@@ -69,9 +74,13 @@ void TrajectoryValidator::subscribers()
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectoryValidator::map_callback, this, std::placeholders::_1));
 
-  sub_trajectories_ = create_subscription<CandidateTrajectories>(
-    "~/input/trajectories", 1,
-    std::bind(&TrajectoryValidator::process, this, std::placeholders::_1));
+  sub_trajectories_generative_ = create_subscription<CandidateTrajectories>(
+    "~/input/trajectories_generative", 1,
+    std::bind(&TrajectoryValidator::on_trajectories, this, std::placeholders::_1));
+
+  sub_trajectories_backup_ = create_subscription<CandidateTrajectories>(
+    "~/input/trajectories_backup", 1,
+    std::bind(&TrajectoryValidator::on_trajectories, this, std::placeholders::_1));
 }
 
 void TrajectoryValidator::publishers()
@@ -84,6 +93,13 @@ void TrajectoryValidator::publishers()
 
   pub_validation_reports_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
   pub_debug_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+}
+
+void TrajectoryValidator::on_trajectories(const CandidateTrajectories::ConstSharedPtr msg)
+{
+  // Passively update the buffer
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  concatenator_ptr_->add_candidate(*msg);
 }
 
 tl::expected<FilterContext, std::string> TrajectoryValidator::take_data()
@@ -119,29 +135,40 @@ tl::expected<FilterContext, std::string> TrajectoryValidator::take_data()
   return context;
 }
 
-void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr msg)
+void TrajectoryValidator::on_timer()
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  if (listener_.is_old(params_)) {
-    params_ = listener_.get_params();
-    for (const auto & plugin : plugins_) {
-      plugin->update_parameters(params_);
-    }
-    RCLCPP_INFO(get_logger(), "Dynamic parameters updated successfully.");
-  }
-
-  // 4. Instantiate and execute the stateless ValidationStage
-  ValidationStage validation_stage(plugins_);
-
+  // ==========================================
+  // 1. Data Synchronization & Parameters
+  // ==========================================
   auto context_opt = take_data();
   if (!context_opt) {
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "%s", context_opt.error().c_str());
     return;
   }
 
+  if (const auto is_params_updated = params_.update_parameters()) {
+    for (const auto & plugin : plugins_) {
+      plugin->update_parameters(params_.validator_params);
+    }
+    RCLCPP_INFO(get_logger(), "%s", is_params_updated->c_str());
+  }
+
+  // ==========================================
+  // 2. concatenated stage
+  // ==========================================
+  CandidateTrajectories concatenated_trajectories;
+  {
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    concatenated_trajectories = concatenator_ptr_->get_concatenated(now());
+  }
+
+  diagnostics_interface_.clear();
+
   const auto & context = context_opt.value();
-  const auto report = validation_stage.process(*msg, context);
+  ValidationStage validation_stage(plugins_);
+  const auto report = validation_stage.process(concatenated_trajectories, context);
 
   diagnostics_interface_.clear();
 
@@ -160,7 +187,7 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
 
   // 6. Publish outputs
   pub_trajectories_->publish(report.valid_trajectories);
-  update_diagnostic(*msg, report.num_feasible_trajectories);
+  update_diagnostic(concatenated_trajectories, report.num_feasible_trajectories);
 
   publish_validation_reports(report.validation_reports);
 
@@ -197,7 +224,7 @@ void TrajectoryValidator::load_metric(const std::string & name, const bool is_sh
 
     plugin->set_vehicle_info(vehicle_info_);
     plugin->set_shadow_mode(is_shadow_mode);
-    plugin->update_parameters(params_);
+    plugin->update_parameters(params_.validator_params);
     std::string category;
     size_t pos = name.find("::");
     if (pos != std::string::npos) {

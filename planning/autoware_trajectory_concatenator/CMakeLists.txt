@@ -20,10 +20,4 @@ target_link_libraries(${PROJECT_NAME}
   ${PROJECT_NAME}_param
 )
 
-target_compile_options(${PROJECT_NAME} PUBLIC
-  -Wno-error=deprecated-declarations
-)
-
-ament_auto_package(
-  INSTALL_TO_SHARE
-)
+ament_auto_package()

@@ -31,6 +31,7 @@
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_traffic_light_utils</depend>
+  <depend>autoware_trajectory_concatenator</depend>
   <depend>autoware_utils_debug</depend>
   <depend>autoware_utils_diagnostics</depend>
   <depend>autoware_utils_geometry</depend>
