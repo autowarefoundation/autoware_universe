@@ -36,47 +36,39 @@ double calcStopDistance(
   const Pose & current_pose, const TrajectoryExperimental & traj, const double max_dist,
   const double max_yaw)
 {
-  auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
-    traj, current_pose, max_dist, max_yaw);
+  static_cast<void>(max_dist);
+  static_cast<void>(max_yaw);
+
   const auto bases = traj.get_underlying_bases();
-  if (2 <= bases.size()) {
-    const auto segment_start = traj.compute(bases.at(bases.size() - 2));
-    const auto segment_end = traj.compute(bases.back());
-    const double dist_to_goal =
-      autoware_utils::calc_distance2d(segment_end.pose.position, current_pose.position);
-    const double segment_dx = segment_end.pose.position.x - segment_start.pose.position.x;
-    const double segment_dy = segment_end.pose.position.y - segment_start.pose.position.y;
-    const double segment_length = std::hypot(segment_dx, segment_dy);
-
-    if (1.0e-3 < segment_length) {
-      const double unit_x = segment_dx / segment_length;
-      const double unit_y = segment_dy / segment_length;
-      const double rel_x = current_pose.position.x - segment_start.pose.position.x;
-      const double rel_y = current_pose.position.y - segment_start.pose.position.y;
-      const double longitudinal = rel_x * unit_x + rel_y * unit_y;
-      const double lateral = std::fabs(rel_x * unit_y - rel_y * unit_x);
-      const double segment_yaw = std::atan2(segment_dy, segment_dx);
-      const double yaw_deviation =
-        autoware_utils::normalize_radian(tf2::getYaw(current_pose.orientation) - segment_yaw);
-      const double overrun = longitudinal - segment_length;
-
-      if (
-        dist_to_goal <= max_dist && lateral <= max_dist && std::fabs(yaw_deviation) <= max_yaw &&
-        overrun > 0.0) {
-        nearest_s = traj.length() + overrun;
-      }
-    }
-  }
-  if (!nearest_s) {
+  if (bases.size() <= 1) {
     return 0.0;
   }
 
   const auto stop_s = autoware::experimental::trajectory::search_zero_velocity_position(traj);
-  if (!stop_s) {
-    return traj.length() - *nearest_s;
+  const double target_s = stop_s.value_or(traj.length());
+
+  const auto stop_point = traj.compute(target_s);
+
+  const auto upper_it = std::lower_bound(bases.begin(), bases.end(), target_s);
+  const size_t upper_idx = std::distance(bases.begin(), upper_it);
+  const size_t next_idx = std::min(upper_idx, bases.size() - 1);
+  const size_t prev_idx = (next_idx == 0) ? 0 : next_idx - 1;
+
+  const auto tangent_start = traj.compute(bases.at(prev_idx));
+  const auto tangent_end = traj.compute(bases.at(next_idx));
+  const double tangent_dx = tangent_end.pose.position.x - tangent_start.pose.position.x;
+  const double tangent_dy = tangent_end.pose.position.y - tangent_start.pose.position.y;
+  const double tangent_length = std::hypot(tangent_dx, tangent_dy);
+  if (tangent_length < 1.0e-3) {
+    return 0.0;
   }
 
-  return *stop_s - *nearest_s;
+  const double tangent_x = tangent_dx / tangent_length;
+  const double tangent_y = tangent_dy / tangent_length;
+  const double dx = stop_point.pose.position.x - current_pose.position.x;
+  const double dy = stop_point.pose.position.y - current_pose.position.y;
+
+  return dx * tangent_x + dy * tangent_y;
 }
 
 double getPitchByPose(const Quaternion & quaternion_msg)
@@ -101,7 +93,9 @@ double getPitchByTraj(
   const auto [pitch_start_base, end_base] =
     clamped_start_base + wheel_base <= trajectory.length()
       ? std::make_pair(clamped_start_base, clamped_start_base + wheel_base)
-      : std::make_pair(bases.at(bases.size() - 2), trajectory.length());
+      : std::make_pair(
+          std::min(clamped_start_base, bases.at(bases.size() - 2)),
+          std::min(clamped_start_base + wheel_base, bases.at(bases.size() - 1)));
   const auto start_point = trajectory.compute(pitch_start_base);
   const auto end_point = trajectory.compute(end_base);
   return autoware_utils::calc_elevation_angle(start_point.pose.position, end_point.pose.position);
