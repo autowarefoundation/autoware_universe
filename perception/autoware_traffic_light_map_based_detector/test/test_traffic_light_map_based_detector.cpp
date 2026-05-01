@@ -314,6 +314,12 @@ TEST(TrafficLightMapBasedDetectorTest, DetectProducesRoisWithExpectedPixelCoordi
 
 // Given two transform samples differing in yaw, the rough ROI width becomes
 // larger than the single-sample case.
+//
+// detector.detect() receives a tf vector and computes rough ROIs per sample,
+// then merges them into a single bounding ROI. For yaw = 0° and 5°:
+//   0° → (x, y, w, h) ≒ (301, 140, 37, 39)
+//   5° → (x, y, w, h) ≒ (337, 140, 36, 39)
+// The merged width spans from x=301 to x=337+36, giving 337 + 36 - 301 = 72.
 TEST(TrafficLightMapBasedDetectorTest, DetectWithYawVariedTransformSamplesProducesWiderRoughRoi)
 {
   // Arrange
