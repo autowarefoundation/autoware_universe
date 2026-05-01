@@ -220,9 +220,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithoutSetRouteUsesAllMapTrafficLig
   // Arrange
   const auto config = make_default_config();
   const auto map = make_test_map();
+  TrafficLightMapBasedDetector detector(config, map);
+
   const auto camera_info = make_default_camera_info();
   const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
-  TrafficLightMapBasedDetector detector(config, map);
 
   // Act
   const auto result = detector.detect(tf_samples, camera_info);
@@ -290,9 +291,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectProducesRoisWithExpectedPixelCoordi
   // Arrange
   const auto config = make_default_config();
   const auto map = make_test_map();
+  TrafficLightMapBasedDetector detector(config, map);
+
   const auto camera_info = make_default_camera_info();
   const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
-  TrafficLightMapBasedDetector detector(config, map);
 
   // Act
   const auto result = detector.detect(tf_samples, camera_info);
@@ -315,8 +317,9 @@ TEST(TrafficLightMapBasedDetectorTest, DetectWithEmptyTransformSamplesReturnsEmp
   // Arrange
   const auto config = make_default_config();
   const auto map = make_test_map();
-  const auto camera_info = make_default_camera_info();
   TrafficLightMapBasedDetector detector(config, map);
+
+  const auto camera_info = make_default_camera_info();
 
   // Act
   const auto result = detector.detect({}, camera_info);
@@ -331,9 +334,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutSolidSubtypeTrafficLight)
   // Arrange: subtype "solid" represents static signage and must be excluded.
   const auto config = make_default_config();
   const auto map = make_test_map("solid");
+  TrafficLightMapBasedDetector detector(config, map);
+
   const auto camera_info = make_default_camera_info();
   const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
-  TrafficLightMapBasedDetector detector(config, map);
 
   // Act
   const auto result = detector.detect(tf_samples, camera_info);
@@ -349,9 +353,10 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutTrafficLightOutsideDistan
   auto config = make_default_config();
   config.max_detection_range = 5.0;
   const auto map = make_test_map();
+  TrafficLightMapBasedDetector detector(config, map);
+
   const auto camera_info = make_default_camera_info();
   const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
-  TrafficLightMapBasedDetector detector(config, map);
 
   // Act
   const auto result = detector.detect(tf_samples, camera_info);
@@ -367,10 +372,11 @@ TEST(TrafficLightMapBasedDetectorTest, DetectFiltersOutTrafficLightOutsideAngleR
   // from the traffic light yaw by pi/2, beyond the 40-deg car angle range.
   const auto config = make_default_config();
   const auto map = make_test_map();
+  TrafficLightMapBasedDetector detector(config, map);
+
   const auto camera_info = make_default_camera_info();
   const std::vector<StampedTransform> tf_samples = {
     {camera_info.header.stamp, make_camera_pose(90.0)}};
-  TrafficLightMapBasedDetector detector(config, map);
 
   // Act
   const auto result = detector.detect(tf_samples, camera_info);
@@ -399,11 +405,13 @@ TEST(TrafficLightMapBasedDetectorTest, SetRouteWithKnownLaneletIdSucceedsAndDete
   // Arrange
   const auto config = make_default_config();
   const auto map = make_test_map();
+  TrafficLightMapBasedDetector detector(config, map);
+
   const auto camera_info = make_default_camera_info();
   const std::vector<StampedTransform> tf_samples = {{camera_info.header.stamp, make_camera_pose()}};
+
   const auto traffic_light_id = get_traffic_light_ids(map)[0];
   const auto route = make_route(get_road_lanelet_ids(map)[0]);
-  TrafficLightMapBasedDetector detector(config, map);
 
   // Act
   const auto error = detector.setRoute(route);
