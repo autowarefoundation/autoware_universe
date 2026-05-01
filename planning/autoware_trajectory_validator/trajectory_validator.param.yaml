@@ -3,12 +3,10 @@
     filter_names:
       [
         "autoware::trajectory_validator::plugin::OutOfLaneFilter",
-        "autoware::trajectory_validator::plugin::CollisionFilter",
         "autoware::trajectory_validator::plugin::VehicleConstraintFilter",
       ]
     # available filters:
     #  "autoware::trajectory_validator::plugin::OutOfLaneFilter"
-    #  "autoware::trajectory_validator::plugin::CollisionFilter"
     #  "autoware::trajectory_validator::plugin::VehicleConstraintFilter"
 
     out_of_lane:
