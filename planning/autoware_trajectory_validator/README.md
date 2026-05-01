@@ -32,7 +32,7 @@ After these checks, the remaining trajectories, along with their original `gener
 
 | Parameter name                          | Type         | Default | Description                                                                   |
 | --------------------------------------- | ------------ | ------- | ----------------------------------------------------------------------------- |
-| `filter_names`                          | string array | []      | List of safety filter plugins to use (e.g., OutOfLaneFilter) |
+| `filter_names`                          | string array | []      | List of safety filter plugins to use (e.g., OutOfLaneFilter)                  |
 | `out_of_lane.time`                      | double       | 3.0     | Look-ahead time [s] during which the trajectory must stay inside a lane       |
 | `out_of_lane.min_value`                 | double       | 0.0     | Minimum distance [m] from lane boundary                                       |
 | `vehicle_constraint.max_speed`          | double       | 16.7    | Maximum allowed speed [m/s]                                                   |
