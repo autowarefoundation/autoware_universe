@@ -24,6 +24,7 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace autoware::motion::control::pid_longitudinal_controller
@@ -35,8 +36,37 @@ double calcStopDistance(
   const Pose & current_pose, const TrajectoryExperimental & traj, const double max_dist,
   const double max_yaw)
 {
-  const auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
+  auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
     traj, current_pose, max_dist, max_yaw);
+  const auto bases = traj.get_underlying_bases();
+  if (2 <= bases.size()) {
+    const auto segment_start = traj.compute(bases.at(bases.size() - 2));
+    const auto segment_end = traj.compute(bases.back());
+    const double dist_to_goal =
+      autoware_utils::calc_distance2d(segment_end.pose.position, current_pose.position);
+    const double segment_dx = segment_end.pose.position.x - segment_start.pose.position.x;
+    const double segment_dy = segment_end.pose.position.y - segment_start.pose.position.y;
+    const double segment_length = std::hypot(segment_dx, segment_dy);
+
+    if (1.0e-3 < segment_length) {
+      const double unit_x = segment_dx / segment_length;
+      const double unit_y = segment_dy / segment_length;
+      const double rel_x = current_pose.position.x - segment_start.pose.position.x;
+      const double rel_y = current_pose.position.y - segment_start.pose.position.y;
+      const double longitudinal = rel_x * unit_x + rel_y * unit_y;
+      const double lateral = std::fabs(rel_x * unit_y - rel_y * unit_x);
+      const double segment_yaw = std::atan2(segment_dy, segment_dx);
+      const double yaw_deviation =
+        autoware_utils::normalize_radian(tf2::getYaw(current_pose.orientation) - segment_yaw);
+      const double overrun = longitudinal - segment_length;
+
+      if (
+        dist_to_goal <= max_dist && lateral <= max_dist && std::fabs(yaw_deviation) <= max_yaw &&
+        overrun > 0.0) {
+        nearest_s = traj.length() + overrun;
+      }
+    }
+  }
   if (!nearest_s) {
     return 0.0;
   }

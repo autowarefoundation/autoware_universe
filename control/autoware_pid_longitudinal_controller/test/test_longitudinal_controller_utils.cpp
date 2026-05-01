@@ -15,6 +15,7 @@
 #include "autoware/interpolation/spherical_linear_interpolation.hpp"
 #include "autoware/pid_longitudinal_controller/longitudinal_controller_utils.hpp"
 #include "autoware/trajectory/interpolator/linear.hpp"
+#include "autoware/trajectory/utils/find_nearest.hpp"
 #include "gtest/gtest.h"
 
 #include <tf2/LinearMath/Quaternion.hpp>
@@ -99,6 +100,52 @@ TEST(TestLongitudinalControllerUtils, calcStopDistance)
      makeTrajectoryPoint(4.0, 0.0, 0.0, 1.0), makeTrajectoryPoint(5.0, 0.0, 0.0, 0.0)});
   EXPECT_NEAR(
     longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw), 3.0,
+    1e-2);
+
+  // Regression case: a small goal overrun should still report a negative stop distance.
+  current_pose.position.x = 6.5;
+  EXPECT_LT(
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw),
+    0.0);
+
+  current_pose.position.x = 9.0;
+  EXPECT_NEAR(
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw), 0.0,
+    1e-2);
+}
+
+TEST(TestLongitudinalControllerUtils, calcStopDistanceRejectsMisalignedOrFarOverrun)
+{
+  using geometry_msgs::msg::Pose;
+
+  Pose current_pose;
+  current_pose.position.x = 6.5;
+  current_pose.position.y = 0.0;
+  current_pose.position.z = 0.0;
+  current_pose.orientation.w = 1.0;
+
+  constexpr double max_dist = 3.0;
+  constexpr double max_yaw = 0.7;
+
+  const auto stopping_trajectory = makeContinuousTrajectory(
+    {makeTrajectoryPoint(0.0, 0.0, 0.0, 1.0), makeTrajectoryPoint(1.0, 0.0, 0.0, 1.0),
+     makeTrajectoryPoint(2.0, 0.0, 0.0, 1.0), makeTrajectoryPoint(3.0, 0.0, 0.0, 0.0),
+     makeTrajectoryPoint(4.0, 0.0, 0.0, 1.0), makeTrajectoryPoint(5.0, 0.0, 0.0, 0.0)});
+
+  tf2::Quaternion misaligned_quaternion;
+  misaligned_quaternion.setRPY(0.0, 0.0, 1.0);
+  current_pose.orientation = tf2::toMsg(misaligned_quaternion);
+  EXPECT_NEAR(
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw), 0.0,
+    1e-2);
+
+  current_pose.orientation.w = 1.0;
+  current_pose.orientation.x = 0.0;
+  current_pose.orientation.y = 0.0;
+  current_pose.orientation.z = 0.0;
+  current_pose.position.y = 3.5;
+  EXPECT_NEAR(
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw), 0.0,
     1e-2);
 }
 
