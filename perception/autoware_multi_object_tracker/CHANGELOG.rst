@@ -2,6 +2,386 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(autoware_multi_object_tracker): refactoring association algorithms (`#12477 <https://github.com/mitsudome-r/autoware_universe/issues/12477>`_)
+  * feat(multi_object_tracker): implement association manager and scoring modules
+  - Added AssociationManager class to handle online measurement-to-tracker associations and overlap merging.
+  - Introduced scoring modules for match scoring and overlap scoring, including methods for calculating association scores and determining overlap thresholds.
+  - Implemented new association algorithms: SensorPerspectiveAssociation for future enhancements and OverlapMerger for managing spatially redundant trackers.
+  - Updated CMakeLists.txt to include new source files and headers for the association and scoring functionalities.
+  This commit enhances the multi-object tracking capabilities by providing a structured approach to manage associations and overlaps, paving the way for improved tracking accuracy and efficiency.
+  * feat(multi_object_tracker): enhance association management with new interface and algorithms
+  - Introduced IAssociation interface for measurement-to-tracker association strategies.
+  - Updated AssociationManager to select associators based on input channel configuration.
+  - Implemented DataAssociation and SensorPerspectiveAssociation classes adhering to the new interface.
+  - Enhanced InputChannel struct to support associator type selection.
+  - Updated relevant source files to integrate new association logic and improve modularity.
+  These changes improve the flexibility and extensibility of the association algorithms used in multi-object tracking.
+  * feat(multi_object_tracker): refactor association components and rename classes for clarity
+  - Renamed OverlapMerger to TrackerMerger to better reflect its functionality in merging spatially redundant trackers.
+  - Updated AssociationManager to utilize TrackerMerger and BevAreaAssociation for improved association management.
+  - Enhanced documentation to clarify the two-layer association process: Detection-to-Tracker (D2T) and Tracker-to-Tracker (T2T).
+  - Adjusted configuration structures and parameters to align with the new naming conventions and improve clarity.
+  These changes enhance the modularity and readability of the multi-object tracking system, facilitating future enhancements and maintenance.
+  * refactor(multi_object_tracker): update overlap configuration to use TrackerMerger
+  - Replaced instances of OverlapMerger with TrackerMerger in the test_multi_object_tracker.cpp file to align with recent refactoring changes.
+  - This update ensures consistency in the configuration naming and improves clarity in the association management process.
+  These changes contribute to a more coherent structure in the multi-object tracking system.
+  * feat(multi_object_tracker): refactor association management to use BevAreaAssociation
+  * feat(multi_object_tracker): introduce AssociationInterface for measurement-to-tracker association
+  - Added AssociationInterface as an abstract base class for various association strategies.
+  - Updated existing association classes (BevAreaAssociation, SensorPerspectiveAssociation) to inherit from AssociationInterface, enhancing modularity and clarity.
+  - Refactored AssociationManager to utilize AssociationInterface for selecting association implementations based on input channel configuration.
+  These changes improve the flexibility and maintainability of the multi-object tracking system's association logic.
+  * feat(multi_object_tracker): refactor association components and introduce new algorithms
+  - Renamed and refactored association classes: OverlapMerger is now TrackerMerger, and new classes BevAssociation and PolarAssociation have been introduced for improved measurement-to-tracker association strategies.
+  - Updated AssociationManager to utilize the new TrackerOverlapManager for merging spatially overlapping trackers, enhancing the modularity and clarity of the association logic.
+  - Adjusted configuration structures to reflect the new naming conventions and improve clarity in the association management process.
+  These changes enhance the flexibility and maintainability of the multi-object tracking system, paving the way for future enhancements.
+  * refactor(multi_object_tracker): simplify AssociationManager by removing TrackerOverlapManager
+  - Removed TrackerOverlapManager from AssociationManager, streamlining the association process to focus solely on measurement-to-tracker associations.
+  - Updated constructor and associated methods to reflect this change, enhancing clarity and reducing complexity in the association logic.
+  - Adjusted TrackerProcessor to directly manage tracker merging through TrackerOverlapManager, maintaining functionality while improving modularity.
+  These changes contribute to a more efficient and maintainable multi-object tracking system.
+  * feat(multi_object_tracker): update scoring algorithms and refactor association logic
+  - Replaced match scoring and overlap scoring with new assignment scoring and redundancy check modules to enhance the association process.
+  - Introduced new scoring methods for calculating assignment scores and checking for spatial redundancy between trackers.
+  - Updated relevant source files and CMakeLists.txt to reflect these changes, improving modularity and clarity in the association logic.
+  These updates contribute to a more efficient and maintainable multi-object tracking system.
+  * update copyright year in association header and source files to 2026
+  * chore: rename TrackerLifecycleConfig to TrackerCreationConfig, remove deprecated tracker_lifetime parameter
+  * feat(multi_object_tracker): add associator_type parameter to input channels
+  * refactor(multi_object_tracker): consolidate object model types into a single header
+  - Replaced multiple includes of object_model/types.hpp with a unified include of types.hpp across various files to streamline dependencies.
+  - Introduced a new types.hpp file that consolidates type definitions previously scattered across different files, improving organization and maintainability.
+  - Updated CMakeLists.txt to reflect the new file structure.
+  * style(pre-commit): autofix
+  * style: standardize comment arrow notation in association files
+  - Updated comments in configurations.hpp, association_manager.hpp, and tracker_overlap_manager.cpp to use a consistent arrow notation (->) instead of the previous notation (→).
+  - This change enhances readability and maintains uniformity across the codebase.
+  * style: update comment formatting for consistency across multi_object_tracker files
+  - Changed comment notation from single-line to multi-line style for improved readability in configurations.hpp, association_base.hpp, multi_object_tracker_core.cpp, multi_object_tracker_core.hpp, and debugger.cpp.
+  - This update enhances uniformity in the codebase, making it easier to follow and maintain.
+  * feat(multi_object_tracker): introduce bev_assignment_scoring for improved assignment scoring
+  - Replaced the previous assignment scoring mechanism with a new `bev_assignment_scoring` module to enhance the calculation of assignment scores between trackers and measurements.
+  - Updated relevant files to reflect the new scoring method, including changes in CMakeLists.txt and associated header/source files.
+  - This update aims to improve the accuracy and efficiency of the multi-object tracking system.
+  * fix(association_manager): remove channel config size check
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* chore(autoware_multi_object_tracker): convert array based config to explicit keys (`#12379 <https://github.com/mitsudome-r/autoware_universe/issues/12379>`_)
+  * feat(multi_object_tracker): add input type configuration for detected and tracked objects
+  * feat(multi_object_tracker): refactor object classification handling and remove object_recognition_utils dependency
+  * Refactor object classification handling in multi-object tracker
+  - Introduced a new `Label` enum class in `object_model` to replace the previous usage of `ObjectClassification` from `autoware_perception_msgs`.
+  - Updated various structures and methods to utilize the new `Label` type, including `PreparationData`, `processMeasurement`, and `calculateScore`.
+  - Modified classification conversion functions to handle the new `Classification` struct and its associated methods.
+  - Adjusted the `uncertainty_processor` and `tracker` implementations to align with the new classification system.
+  - Updated test cases to reflect changes in classification handling and ensure compatibility with the new structure.
+  * feat(multi_object_tracker): update NUM_LABELS reference to object_model in association and core files
+  * Refactor data association configuration in multi-object tracker
+  - Updated the JSON schema for data association matrix to simplify the structure and improve clarity by replacing matrix properties with a more descriptive 'association' object.
+  - Enhanced the multi-object tracker node schema to include enumerations for tracker types across various vehicle classes, ensuring consistency and reducing errors in configuration.
+  - Refactored the multi_object_tracker_core to utilize layered association parameters, replacing the previous matrix-based approach with a more flexible mapping structure.
+  - Adjusted the initialization of association parameters in the multi_object_tracker_node to align with the new configuration structure, ensuring proper handling of tracker types and their associated parameters.
+  - Updated test cases to reflect changes in the association configuration, ensuring that the new structure is correctly validated and utilized in the tracking logic.
+  * feat(multi_object_tracker): refactor max squared distance handling and add label value retrieval
+  * feat(multi_object_tracker): refactor TrackerType usage and update related code for consistency
+  * feat(multi_object_tracker): unify tracker model configuration under initial_tracker and update related schema and code references
+  * refactor(multi_object_tracker): remove unused includes from core and processor files
+  * fix: standardize copyright notice formatting across multiple files
+  * Revert "feat(multi_object_tracker): add input type configuration for detected and tracked objects"
+  This reverts commit 44c79d6821f951adbe025f8b470b8b2d054fa1a0.
+  * refactor: remove author comments from header files in multi_object_tracker
+  * feat(multi_object_tracker): enhance pruning parameters with structured thresholds for tracked classes
+  * style(pre-commit): autofix
+  * refactor(multi_object_tracker): consolidate association parameters into a structured format
+  * style(pre-commit): autofix
+  * refactor(multi_object_tracker): streamline association parameters and improve clarity in processing
+  * refactor(multi_object_tracker): replace direct map access with optional wrapper for safer retrieval
+  * style(pre-commit): autofix
+  * refactor(multi_object_tracker): introduce configurations for association parameters and update retrieval method
+  * refactor(multi_object_tracker): add TrackedLabelThresholds struct and update method names for clarity
+  * style(pre-commit): autofix
+  * refactor(multi_object_tracker): rename label constants and improve map access for association parameters
+  * refactor(multi_object_tracker): enhance TrackerProcessorConfig with squared distance thresholds and optimize parameter processing
+  * style(pre-commit): autofix
+  * refactor(multi_object_tracker): remove redundant insertion of max_squared_dist in updateMaxSearchDistances
+  * refactor(multi_object_tracker): replace object_model::Label with classes::Label across the codebase
+  * refactor(multi_object_tracker): update label type to classes::Label in createNewTracker method
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(multi_object_tracker): apply autoware_agnocast_wrapper for CIE (`#12330 <https://github.com/mitsudome-r/autoware_universe/issues/12330>`_)
+  feat(autoware_multi_object_tracker): apply autoware_agnocast_wrapper for CIE
+* fix(autoware_multi_object_tracker): enhance EKF stability with symmetry enforcement and improved covariance handling (`#12347 <https://github.com/mitsudome-r/autoware_universe/issues/12347>`_)
+  * fix(ekf-stability): enhance EKF stability with symmetry enforcement and improved covariance handling
+  * fix(ekf-stability): improve EKF numerical stability with consistent variable naming and symmetry enforcement
+  * fix(ekf-stability): enhance EKF update method with finite checks and improved covariance handling
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(autoware_universe): use autoware_ament_auto_package in perception packages (`#12275 <https://github.com/mitsudome-r/autoware_universe/issues/12275>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* chore(autoware_multi_object_tracker): refactor association interface and flow (`#12235 <https://github.com/mitsudome-r/autoware_universe/issues/12235>`_)
+  * refactor(multi_object_tracker): enhance association logic with UUID support
+  - Updated the DataAssociation class to use UUIDs for tracking and measurement associations, improving clarity and efficiency.
+  - Introduced the AssociationResult structure to manage associations and unassigned entities more effectively.
+  - Refactored the TrackerProcessor and related components to utilize the new association logic, ensuring compatibility with the updated data structures.
+  - Adjusted debugging and testing utilities to reflect the changes in association handling.
+  This commit enhances the multi-object tracking system's ability to manage associations between trackers and measurements, leveraging unique identifiers for improved tracking accuracy.
+  * refactor(multi_object_tracker): replace UUID generation with atomic counter
+  - Updated the UUID generation logic in the toDynamicObject function to use an atomic counter for uniqueness, improving performance and avoiding reliance on external libraries.
+  - This change ensures that UUIDs are generated in a thread-safe manner, starting from 1 to prevent conflicts with the "not found" identifier.
+  This refactor enhances the efficiency and reliability of object tracking within the multi-object tracking system.
+  * refactor(multi_object_tracker): enhance association handling with new data structures
+  - Updated the DataAssociation class to utilize a new AssociationData structure for managing associations between trackers and measurements, improving clarity and efficiency.
+  - Removed the significant_shape_change_checker and integrated shape change tracking directly into the association logic.
+  - Refactored the assign method to process AssociationData, enhancing the handling of shape change information during assignments.
+  - Introduced formatScoreMatrix to convert AssociationData into a score matrix format, streamlining the association process.
+  This refactor improves the multi-object tracking system's ability to manage associations and shape changes, leading to more accurate tracking results.
+  * refactor(multi_object_tracker): remove IndexPairChecker class
+  - Deleted the IndexPairChecker class from the association module, as it is no longer needed for managing index pairs in the multi-object tracking system.
+  - This removal simplifies the codebase and eliminates redundancy in the association handling logic.
+  This change contributes to a cleaner and more maintainable code structure within the multi-object tracking framework.
+  * refactor(multi_object_tracker): streamline association handling by consolidating UUIDs
+  - Refactored the DataAssociation class to simplify the assign method by removing separate UUID parameters and utilizing the new AssociationData structure directly.
+  - Updated the AssociationData structure to include vectors for tracker and measurement UUIDs, enhancing clarity and reducing redundancy.
+  - Adjusted the TrackerProcessor to align with the new association logic, improving the overall efficiency of the association process.
+  This refactor enhances the maintainability and performance of the multi-object tracking system by optimizing how associations are managed.
+  * fix(multi_object_tracker): standardize copyright notice formatting
+  - Updated copyright notices in multiple files to use "TIER IV, Inc." instead of "Tier IV, Inc." for consistency.
+  - This change ensures uniformity in the copyright statements across the codebase.
+  This commit enhances the professionalism and clarity of the code documentation.
+  * feat(multi_object_tracker): add method to retrieve object index by UUID
+  - Introduced `getObjectIndexByUuid` method in `DynamicObjectList` to streamline the process of finding an object's index based on its UUID.
+  - Updated `TrackerObjectDebugger` and `TrackerProcessor` to utilize the new method, enhancing code clarity and reducing redundancy in UUID handling.
+  This addition improves the maintainability and efficiency of the multi-object tracking system by centralizing UUID index retrieval logic.
+  * refactor(multi_object_tracker): introduce AssociatedObjects structure for improved association handling
+  - Added the `AssociatedObjects` structure to encapsulate both detected objects and their association results, enhancing clarity in the association process.
+  - Updated the `TrackerProcessor`, `TrackerObjectDebugger`, and related components to utilize the new structure, streamlining method signatures and improving code readability.
+  - Refactored the association handling in various methods to work with `AssociatedObjects`, reducing redundancy and improving maintainability.
+  This change enhances the overall efficiency and clarity of the multi-object tracking system by consolidating related data into a single structure.
+  * refactor(multi_object_tracker): update trigger function to accept channel index
+  - Modified the `init` method in `MultiObjectTrackerInternalState` and `InputManager` to change the trigger function signature from `void()` to `void(size_t)`, allowing for channel index handling.
+  - Updated the `MultiObjectTracker` class to bind the new trigger function, enhancing the message handling process.
+  - Introduced `onMessage` method in `MultiObjectTracker` to process messages based on the channel index, improving the overall tracking logic.
+  This refactor enhances the flexibility and clarity of the multi-object tracking system by enabling more precise message handling based on input channel indices.
+  * refactor(multi_object_tracker): enhance object processing and association handling
+  - Updated the `process_objects` method to accept a pair of `DynamicObjectList` and `AssociationResult`, improving the clarity and efficiency of object processing.
+  - Refactored the `InputStream` class to introduce a `push` method for handling both objects and their associations, streamlining the message handling process.
+  - Modified the `MultiObjectTracker` class to utilize the new `onMeasurement` method, which processes incoming messages and manages associations more effectively.
+  These changes enhance the overall structure and performance of the multi-object tracking system by consolidating related data and improving method signatures.
+  * refactor(multi_object_tracker): improve code clarity and formatting
+  - Added missing includes for `<utility>` and `<algorithm>` in relevant source files to enhance functionality and maintainability.
+  - Streamlined the formatting of function calls in `multi_object_tracker_node.cpp` and `test_multi_object_tracker.cpp` for improved readability.
+  These changes contribute to a cleaner codebase and facilitate better understanding of the multi-object tracking system's implementation.
+  * refactor(multi_object_tracker): clean up includes and remove unused headers
+  - Removed unnecessary includes from `adaptive_threshold_cache.cpp`, `multi_object_tracker_core.hpp`, and `multi_object_tracker_node.hpp` to streamline the codebase.
+  - Added missing include for `<rclcpp/rclcpp.hpp>` in `association.cpp` to ensure proper functionality.
+  These changes improve code clarity and maintainability by eliminating redundant dependencies and ensuring all necessary headers are included.
+  * refactor(multi_object_tracker): introduce ObjectsWithAssociation structure for improved data handling
+  - Added the `ObjectsWithAssociation` structure to encapsulate both detected objects and their association results, enhancing clarity in the processing of multi-object tracking data.
+  - Updated the `process_objects` method and related functions to utilize the new structure, streamlining method signatures and improving code readability.
+  - Refactored the `InputStream` class to manage a deque of `ObjectsWithAssociation`, simplifying the handling of object associations.
+  These changes enhance the overall efficiency and maintainability of the multi-object tracking system by consolidating related data into a single structure.
+  * refactor(multi_object_tracker): enhance measurement and object processing logic
+  - Introduced new result structures (`MeasurementProcessingResult`, `ObjectProcessingResult`, `PublishingData`, and `OptionalPublishingData`) to encapsulate processing outcomes and streamline data handling.
+  - Refactored the `onMeasurement` and `processObjects` methods in `MultiObjectTracker` to utilize the new processing functions, improving clarity and efficiency in measurement handling.
+  - Updated the publishing logic to leverage the new data structures, ensuring better organization of tracked and merged objects.
+  These changes improve the overall structure and maintainability of the multi-object tracking system by consolidating related data and enhancing method signatures.
+  * refactor(multi_object_tracker): simplify publishing data structure and method signatures
+  - Removed unused fields from `PublishingData`, including `merged_objects`, `min_extrapolation_time`, and `object_time`, to streamline data handling.
+  - Updated the `prepare_publishing_data` function to accept a `[[maybe_unused]]` logger parameter, enhancing clarity in method signatures.
+  - Adjusted the `publish` method in `MultiObjectTracker` to reflect changes in the `prepare_publishing_data` function, improving code readability.
+  These changes contribute to a cleaner and more efficient multi-object tracking system by reducing unnecessary complexity in data structures and method parameters.
+  * refactor(multi_object_tracker): enhance internal state management and object processing
+  - Added `last_tracker_time` to `MultiObjectTrackerInternalState` to track the last measurement time, improving state management.
+  - Removed the `get_objects` function and integrated its logic directly into `process_objects_batch`, streamlining object retrieval and processing.
+  - Updated the `publish` method in `MultiObjectTracker` to use `last_tracker_time`, ensuring accurate timing for published data.
+  These changes improve the clarity and efficiency of the multi-object tracking system by consolidating state management and simplifying object processing logic.
+  * refactor(multi_object_tracker): rename and update object list types for clarity
+  - Renamed `ObjectsList` to `ObjectsWithAssociationList` to better reflect its purpose in managing associated objects.
+  - Updated method signatures in `InputManager` and related classes to utilize the new type, enhancing code readability and consistency.
+  - Adjusted object processing logic in `process_objects_batch` to align with the new naming convention, improving clarity in the handling of object associations.
+  These changes contribute to a more intuitive and maintainable multi-object tracking system by clarifying the role of object lists in the processing pipeline.
+  * refactor(multi_object_tracker): add ScopedTimeTrack for measurement timing
+  - Introduced a `ScopedTimeTrack` instance in the `onMeasurement` method to enhance timing tracking during measurements.
+  - This addition improves the ability to monitor and analyze measurement processing times, contributing to better performance insights in the multi-object tracking system.
+  * refactor(multi_object_tracker): update process_objects method signatures for consistency
+  - Modified the `process_objects\_` method to accept `objects_with_associations` instead of `objects_data`, enhancing clarity in parameter naming.
+  - Updated related method signatures in the header file to reflect the new parameter structure, improving code readability.
+  - Ensured that the internal state management and object processing logic align with the updated method signatures, streamlining the overall processing flow.
+  These changes contribute to a more intuitive and maintainable multi-object tracking system by clarifying the role of parameters in object processing.
+  * refactor(multi_object_tracker): reorganize and enhance function signatures for clarity
+  - Introduced new utility functions for parameter processing and object retrieval, improving code organization and readability.
+  - Renamed existing functions to include trailing underscores for consistency and clarity in their purpose.
+  - Consolidated the `process_objects\_` function to streamline object processing logic, enhancing maintainability and clarity in the multi-object tracking system.
+  These changes contribute to a more intuitive and structured codebase, facilitating easier navigation and understanding of the tracking logic.
+  * refactor(multi_object_tracker): enhance measurement processing with debugger integration
+  - Updated the `process_measurement` function to include a `TrackerDebugger` parameter, allowing for the collection of debug information during measurement processing.
+  - Removed the redundant debug information collection from the `process_objects\_` function, streamlining the object processing logic.
+  - Adjusted the `onMeasurement` method to align with the new function signature, ensuring consistent handling of debug data.
+  These changes improve the tracking system's debugging capabilities and maintain clarity in the measurement processing workflow.
+  * refactor(multi_object_tracker): introduce PreparationData structure for enhanced association processing
+  - Added a new `PreparationData` struct to encapsulate tracked objects, tracker labels, types, and inverse covariances, streamlining data handling during the association process.
+  - Refactored the `prepareAssociationData` method to utilize `PreparationData`, improving clarity and efficiency in preparing data for measurement processing.
+  - Updated the `processMeasurement` method to leverage pre-computed data from `PreparationData`, enhancing the overall performance of the association logic.
+  These changes contribute to a more organized and maintainable multi-object tracking system by consolidating related data and improving method signatures.
+  * refactor(multi_object_tracker): streamline association data handling in preparation phase
+  - Removed direct association data handling from `PreparationData`, simplifying its structure and focusing on essential tracking information.
+  - Refactored the `prepareAssociationData` method to initialize `AssociationData` separately, enhancing clarity in the association data preparation process.
+  - Improved the organization of UUIDs for trackers and measurements, ensuring a more efficient setup for association processing.
+  These changes contribute to a cleaner and more maintainable multi-object tracking system by clarifying the roles of data structures in the association workflow.
+  * refactor(multi_object_tracker): optimize assignment processing and shape change detection
+  - Introduced an entry map for efficient lookup of shape change information during assignment processing, reducing complexity in the assignment loop.
+  - Pre-allocated capacity for unassigned trackers and measurements to enhance performance.
+  - Streamlined the logic for filling unassigned trackers and measurements by utilizing direct and reverse assignment maps, improving overall efficiency.
+  These changes contribute to a more efficient and maintainable multi-object tracking system by optimizing the assignment and shape change detection processes.
+  * style(pre-commit): autofix
+  * refactor(multi_object_tracker): update MeasurementProcessingResult to track object presence
+  * refactor(multi_object_tracker): simplify optional publishing data structure and update related logic
+  * refactor(multi_object_tracker): streamline time handling in publishing data preparation
+  * feat(multi_object_tracker): implement UUID generation for objects and add tests
+  refactor(uuid): improve comment clarity in UUID initialization
+  * refactor(multi_object_tracker): enhance DynamicObjectList with UUID indexing
+  * style(pre-commit): autofix
+  * fix(multi_object_tracker): ensure non-negative min_extrapolation_time calculation
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* chore(autoware_multi_object_tracker): rename 'unknown tracker' to 'polygon tracker' (`#12205 <https://github.com/mitsudome-r/autoware_universe/issues/12205>`_)
+  * refactor(multi_object_tracker): introduce GeneralVehicle type and update tracker logic
+  - Added a new ObjectModelType `GeneralVehicle` to represent a broader category of vehicles, enhancing the object model's flexibility.
+  - Updated the initialization parameters for `GeneralVehicle`, including size limits and process noise settings, to improve tracking accuracy.
+  - Modified the TrackerType enum to reflect the new vehicle classification and adjusted the VehicleTracker logic to accommodate this change.
+  - Refactored the TrackerProcessor to utilize the new `GeneralVehicle` type, streamlining the tracker creation process.
+  This commit enhances the multi-object tracking system's capability to handle a wider range of vehicle types within the Autoware framework.
+  * refactor(multi_object_tracker): introduce PolygonTracker for enhanced object tracking
+  - Replaced the UnknownTracker with a new PolygonTracker class to improve tracking capabilities for polygon-shaped objects.
+  - Updated CMakeLists and header files to include the new PolygonTracker implementation.
+  - Modified the TrackerProcessor to instantiate PolygonTracker when an unknown object type is detected, ensuring better handling of diverse object shapes.
+  This commit enhances the multi-object tracking system's ability to manage various object geometries within the Autoware framework.
+  * refactor(multi_object_tracker): update tracker logic to replace UNKNOWN with POLYGON
+  - Removed author comments from header files for cleaner code.
+  - Updated the TrackerType enum to replace UNKNOWN with POLYGON, enhancing clarity in object classification.
+  - Modified the PolygonTracker and TrackerProcessor to ensure proper handling of polygon-shaped objects.
+  - Adjusted test configurations to reflect the new default tracker type for unknown objects.
+  This commit improves the multi-object tracking system's ability to accurately classify and manage polygon-shaped objects within the Autoware framework.
+  * fix(multi_object_tracker): change default tracker type to POLYGON
+  rebase fix
+  * feat(multi_object_tracker): add general vehicle tracker type to parameter processing
+  - Introduced a new tracker type "general_vehicle_tracker" to the TRACKER_TYPE_MAP for enhanced tracking capabilities.
+  - This addition allows for improved categorization and processing of different vehicle types within the multi-object tracking system.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(autoware_multi_object_tracker): organize callbacks and clarify node implementation (`#12172 <https://github.com/mitsudome-r/autoware_universe/issues/12172>`_)
+  * feat(multi_object_tracker): add core tracking functionality and refactor node implementation
+  - Introduced multi_object_tracker_core.cpp and multi_object_tracker_core.hpp to encapsulate core tracking logic.
+  - Updated CMakeLists.txt to include the new core source file.
+  - Refactored multi_object_tracker_node.cpp to utilize new parameter structure and improve clarity.
+  - Enhanced internal state management and processing logic for object tracking.
+  This commit lays the groundwork for improved object tracking capabilities within the Autoware framework.
+  * feat(multi_object_tracker): integrate input manager and odometry into tracking node
+  - Added InputManager and Odometry as unique pointers in MultiObjectTracker's internal state.
+  - Refactored MultiObjectTracker initialization to utilize the new state structure for managing input and odometry.
+  - Updated subscription handling for detected objects to improve input stream management.
+  - Enhanced logging and timing management within InputManager for better debugging and performance tracking.
+  This commit enhances the modularity and clarity of the multi-object tracking functionality within the Autoware framework.
+  * feat(multi_object_tracker): enhance parameter handling and tracker configuration
+  - Added comprehensive parameter declarations for various tracker types and their configurations within the MultiObjectTracker constructor.
+  - Introduced a mapping for tracker types to streamline the initialization process and improve clarity.
+  - Enhanced the handling of pruning thresholds and object velocity estimations to support more robust tracking capabilities.
+  This commit improves the configurability and maintainability of the multi-object tracking node in the Autoware framework.
+  * refactor(multi_object_tracker): enhance logging and time management in tracking components
+  - Replaced direct node references with logger and clock instances in the Odometry and TrackerDebugger classes for improved logging and time management.
+  - Updated the MultiObjectTracker to utilize the new debugger structure, enhancing the clarity and maintainability of the tracking process.
+  - Refactored the process_objects and get_output functions to accept debugger and time_keeper parameters, streamlining the debugging and timing functionalities.
+  This commit improves the modularity and robustness of the multi-object tracking system within the Autoware framework.
+  * feat(multi_object_tracker): implement initialization and refactor tracking state management
+  - Added an `init` method to `MultiObjectTrackerInternalState` for streamlined initialization of odometry, input manager, and processor components.
+  - Refactored the `MultiObjectTracker` constructor to utilize the new initialization method, enhancing clarity and maintainability.
+  - Updated header files to include necessary dependencies and improved organization of includes.
+  - Cleaned up formatting and comments for better readability.
+  This commit enhances the modularity and clarity of the multi-object tracking system within the Autoware framework.
+  * feat(multi_object_tracker): enhance parameter processing and configuration management
+  - Introduced a new `process_parameters` function to streamline the handling of MultiObjectTrackerParameters, including tracker type mappings and pruning thresholds.
+  - Refactored the MultiObjectTracker constructor to utilize the new parameter processing function, improving clarity and maintainability.
+  - Added error handling for matrix initialization to ensure valid configurations for association matrices.
+  - Updated header files to include necessary dependencies and improved organization of includes.
+  This commit enhances the configurability and robustness of the multi-object tracking system within the Autoware framework.
+  * refactor(multi_object_tracker): improve parameter declaration structure and readability
+  - Enhanced the organization of parameter declarations within the MultiObjectTracker constructor for better clarity.
+  - Streamlined the input channel configuration process by consolidating related logic, improving maintainability.
+  - Updated comments to reflect changes and improve overall code readability.
+  This commit enhances the clarity and maintainability of the multi-object tracking system within the Autoware framework.
+  * refactor(multi_object_tracker): enhance input channel configuration and initialization
+  - Changed the data type of the input channel index from `uint` to `uint8_t` for better memory efficiency.
+  - Rearranged the launch file to declare input channel arguments after the object input arguments for improved clarity.
+  - Updated the `InputManager` and `MultiObjectTracker` classes to accommodate the new input topics parameter, enhancing the initialization process.
+  - Refactored the input channel handling logic to streamline the configuration and improve maintainability.
+  This commit improves the structure and efficiency of the multi-object tracking system within the Autoware framework.
+  * refactor(multi_object_tracker): streamline input channel configuration and initialization
+  - Added `is_enabled` flag to `InputChannel` structure to manage channel activation.
+  - Removed `input_topics` from `MultiObjectTrackerParameters` to simplify configuration.
+  - Updated `InputManager` and `MultiObjectTracker` initialization to reflect changes in input channel handling.
+  - Enhanced subscription management by dynamically generating topic names based on channel indices.
+  This commit improves the clarity and maintainability of the multi-object tracking system within the Autoware framework.
+  * refactor(multi_object_tracker): optimize input channel topic generation
+  - Simplified the initialization of input channel topics by using `std::ostringstream` for dynamic string formatting.
+  - Improved readability of the input channel configuration by removing redundant code and enhancing clarity.
+  This commit enhances the maintainability and clarity of the multi-object tracking system within the Autoware framework.
+  * refactor(multi_object_tracker): simplify output handling and remove unused time tracking
+  - Removed the `TimeKeeper` dependency and associated time tracking logic from `process_objects` and `get_output` functions to streamline the code.
+  - Updated the `get_output` function signature to eliminate unnecessary parameters, enhancing clarity.
+  - Improved the handling of output data by directly passing the `PublishData` structure, simplifying the output generation process.
+  This commit enhances the maintainability and readability of the multi-object tracking system within the Autoware framework.
+  * feat(multi_object_tracker): add get_objects function for improved object retrieval
+  - Introduced a new `get_objects` function to encapsulate the logic for retrieving objects from the input manager, enhancing code clarity and reusability.
+  - Updated the `onTrigger` method in `MultiObjectTracker` to utilize the new `get_objects` function, simplifying the object retrieval process and improving error handling.
+  This commit enhances the maintainability and readability of the multi-object tracking system within the Autoware framework.
+  * refactor(multi_object_tracker): improve object retrieval and output handling
+  - Refactored the `get_output` function into `get_tracked_objects` and `get_merged_objects` for clearer separation of responsibilities in object retrieval.
+  - Removed the `PublishData` structure, simplifying the output handling process.
+  - Updated the `publish` method in `MultiObjectTracker` to utilize the new functions, enhancing code clarity and maintainability.
+  This commit enhances the modularity and readability of the multi-object tracking system within the Autoware framework.
+  * style(pre-commit): autofix
+  * refactor(debugger): initialize debug settings with default values
+  - Updated the DEBUG_SETTINGS struct to provide default values for all parameters, improving clarity and usability.
+  - This change ensures that debug settings are initialized consistently, reducing potential errors during runtime.
+  * refactor(multi_object_tracker): enhance parameter processing and association matrix initialization
+  - Improved the `process_parameters` function by adding comments for clarity and reorganizing the initialization of association matrices.
+  - Introduced a new type alias `ObjectsList` in the header file for better code readability.
+  - Ensured consistent handling of tracker maps and pruning thresholds within the processor configuration.
+  * refactor(multi_object_tracker): update existence probability handling and data structures
+  - Introduced a new `ExistenceProbability` struct to encapsulate channel index and probability, enhancing clarity and maintainability.
+  - Updated `DynamicObject` and `Tracker` classes to utilize the new struct for managing existence probabilities.
+  - Refactored methods for initializing, merging, and updating existence probabilities to accommodate the new data structure.
+  - Adjusted related components in the debugger and processor to ensure consistent handling of existence probabilities.
+  * refactor(multi_object_tracker): streamline input channel parameter initialization
+  - Replaced manual initialization of input channel parameters with a loop using `std::ostringstream` for dynamic string formatting.
+  - Enhanced code readability and maintainability by reducing redundancy in the parameter declaration process.
+  This change improves the clarity and efficiency of the input channel configuration within the multi-object tracking system.
+  * chore: change object transform failure warning to RCLCPP_WARN_THROTTLE
+  * refactor(multi_object_tracker): streamline tracker map initialization
+  add fallback of params.tracker_type_map.find(tracker_key)
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_multi_object_tracker): remove glog (`#12163 <https://github.com/mitsudome-r/autoware_universe/issues/12163>`_)
+  feat: remove glog
+* Contributors: Taekjin LEE, Tetsuhiro Kawaguchi, Vishal Chauhan, atsushi yano, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

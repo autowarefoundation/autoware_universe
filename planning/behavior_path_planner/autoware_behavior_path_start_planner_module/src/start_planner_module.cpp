@@ -21,8 +21,8 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
 #include <magic_enum.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -515,7 +515,8 @@ bool StartPlannerModule::isCurrentPoseOnEgoCenterline() const
   const Pose & current_pose = planner_data_->self_odometry->pose.pose;
   const lanelet::ConstLanelets current_lanes = utils::getCurrentLanes(planner_data_);
   const double lateral_distance_to_center_lane =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr)
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, current_pose, lanelet_map_ptr)
       .distance;
 
   return std::abs(lateral_distance_to_center_lane) < parameters_->th_distance_to_middle_of_the_road;
@@ -897,10 +898,8 @@ BehaviorModuleOutput StartPlannerModule::plan()
     const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
       planner_data_,
       planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
-    const double start_shift_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, status_.pull_out_path.start_pose).distance;
-    const double finish_shift_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, status_.pull_out_path.end_pose).distance;
+    const double start_shift_length = status_.pull_out_path.shift_length.start;
+    const double finish_shift_length = status_.pull_out_path.shift_length.end;
 
     planning_factor_interface_->add(
       start_distance, finish_distance, status_.pull_out_path.start_pose,
@@ -932,10 +931,9 @@ BehaviorModuleOutput StartPlannerModule::plan()
 
   const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
     planner_data_, planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
-  const double start_shift_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, backward_start_pose).distance;
-  const double finish_shift_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, backward_end_pose).distance;
+  const auto [start_shift_length, finish_shift_length] =
+    start_planner_utils::calc_start_and_end_shift_length(
+      pull_out_lanes, backward_start_pose, backward_end_pose);
 
   planning_factor_interface_->add(
     0.0, distance, backward_start_pose, backward_end_pose, planning_factor_direction,
@@ -1065,10 +1063,12 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
       planner_data_,
       planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
-    const double start_shift_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, status_.pull_out_path.start_pose).distance;
-    const double finish_shift_length =
-      lanelet::utils::getArcCoordinates(pull_out_lanes, status_.pull_out_path.end_pose).distance;
+    const double start_shift_length = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                                        pull_out_lanes, status_.pull_out_path.start_pose)
+                                        .distance;
+    const double finish_shift_length = autoware::experimental::lanelet2_utils::get_arc_coordinates(
+                                         pull_out_lanes, status_.pull_out_path.end_pose)
+                                         .distance;
     planning_factor_interface_->add(
       start_distance, finish_distance, status_.pull_out_path.start_pose,
       status_.pull_out_path.end_pose, planning_factor_direction,
@@ -1101,9 +1101,11 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
   const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
     planner_data_, planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
   const double start_shift_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, backward_start_pose).distance;
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, backward_start_pose)
+      .distance;
   const double finish_shift_length =
-    lanelet::utils::getArcCoordinates(pull_out_lanes, backward_end_pose).distance;
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(pull_out_lanes, backward_end_pose)
+      .distance;
 
   planning_factor_interface_->add(
     0.0, distance, backward_start_pose, backward_end_pose, planning_factor_direction,
@@ -1561,7 +1563,8 @@ PathWithLaneId StartPlannerModule::calcBackwardPathFromStartPose() const
 
   const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const auto arc_position_pose =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(pull_out_lanes, start_pose, lanelet_map_ptr);
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      pull_out_lanes, start_pose, lanelet_map_ptr);
 
   // common buffer distance for both front and back
   static constexpr double buffer = 30.0;
@@ -1607,7 +1610,8 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
   // the lane's rearmost point to prevent lane departure.
   const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const double current_arc_length =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(pull_out_lanes, start_pose, lanelet_map_ptr)
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      pull_out_lanes, start_pose, lanelet_map_ptr)
       .length;
   const double allowed_backward_distance = std::clamp(
     current_arc_length - planner_data_->parameters.base_link2rear, 0.0,
@@ -1624,9 +1628,10 @@ std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
           parameters_->collision_check_margin_from_front_object))
       continue;
 
-    const double backed_pose_arc_length = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-                                            pull_out_lanes, *backed_pose, lanelet_map_ptr)
-                                            .length;
+    const double backed_pose_arc_length =
+      autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+        pull_out_lanes, *backed_pose, lanelet_map_ptr)
+        .length;
     const double length_to_lane_end = std::accumulate(
       std::begin(pull_out_lanes), std::end(pull_out_lanes), 0.0,
       [](double acc, const auto & lane) { return acc + lanelet::geometry::length2d(lane); });
@@ -1700,9 +1705,11 @@ bool StartPlannerModule::hasReachedPullOutEnd() const
 
   const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const auto arclength_current =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr);
-  const auto arclength_pull_out_end = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    current_lanes, status_.pull_out_path.end_pose, lanelet_map_ptr);
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, current_pose, lanelet_map_ptr);
+  const auto arclength_pull_out_end =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, status_.pull_out_path.end_pose, lanelet_map_ptr);
 
   // offset to not finish the module before engage
   constexpr double offset = 0.1;
@@ -1771,7 +1778,8 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
 
   const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const double current_shift_length =
-    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr)
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, current_pose, lanelet_map_ptr)
       .distance;
 
   constexpr bool egos_lane_is_shifted = true;
@@ -1797,6 +1805,26 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
 
   const bool override_ego_stopped_check =
     !status_.has_departed || geometric_planner_has_not_finished_first_path;
+
+  const bool enable_in_centerline = std::invoke([&]() {
+    const auto is_shift_ok =
+      std::abs(status_.pull_out_path.shift_length.start - status_.pull_out_path.shift_length.end) <
+      parameters_->minimum_shift_length;
+    const auto is_parameterize_threshold_ok =
+      parameters_->th_distance_to_middle_of_the_road < parameters_->minimum_shift_length;
+    const auto is_need_blinker = !status_.first_engaged_and_driving_forward_time ||
+                                 needToPrepareBlinkerBeforeStartDrivingForward();
+    return is_shift_ok && !parameters_->enable_back && is_parameterize_threshold_ok &&
+           is_need_blinker;
+  });
+
+  if (enable_in_centerline) {
+    auto prev_turn_signal = getPreviousModuleOutput().turn_signal_info;
+    prev_turn_signal.turn_signal.command = parameters_->turn_signal_on_centerline_start == "LEFT"
+                                             ? TurnIndicatorsCommand::ENABLE_LEFT
+                                             : TurnIndicatorsCommand::ENABLE_RIGHT;
+    return prev_turn_signal;
+  }
 
   const auto [new_signal, is_ignore] = planner_data_->getBehaviorTurnSignalInfo(
     path, shift_start_idx, shift_end_idx, current_lanes, current_shift_length,
@@ -1960,8 +1988,9 @@ std::optional<PullOutStatus> StartPlannerModule::planFreespacePath(
     planner_data, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
 
-  const auto current_arc_coords = lanelet::utils::getArcCoordinatesOnEgoCenterline(
-    current_lanes, current_pose, route_handler->getLaneletMapPtr());
+  const auto current_arc_coords =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates_on_ego_centerline(
+      current_lanes, current_pose, route_handler->getLaneletMapPtr());
 
   const double s_start = std::max(0.0, current_arc_coords.length + end_pose_search_start_distance);
   const double s_end = current_arc_coords.length + end_pose_search_end_distance;

@@ -15,10 +15,9 @@
 #include "mission_planner.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/mission_planner_universe/service_utils.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -695,7 +694,8 @@ bool MissionPlanner::check_reroute_safety(
     target_route.segments.front().primitives.begin(),
     target_route.segments.front().primitives.end(), [&](const auto & primitive) {
       const auto lanelet = lanelet_map_ptr_->laneletLayer.get(primitive.id);
-      return lanelet::utils::isInLanelet(target_route.start_pose, lanelet);
+      return autoware::experimental::lanelet2_utils::is_in_lanelet(
+        target_route.start_pose, lanelet);
     });
   if (!ego_is_on_first_target_section) {
     RCLCPP_ERROR(
@@ -728,7 +728,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto & closest_lanelet = closest_lanelet_opt.value();
 
     const auto & centerline_2d = lanelet::utils::to2D(closest_lanelet.centerline());
-    const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
+    const auto lanelet_point = experimental::lanelet2_utils::from_ros(current_pose.position);
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
@@ -753,7 +753,7 @@ bool MissionPlanner::check_reroute_safety(
     const auto & closest_lanelet = closest_lanelet_opt.value();
 
     const auto & centerline_2d = lanelet::utils::to2D(closest_lanelet.centerline());
-    const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(current_pose.position);
+    const auto lanelet_point = experimental::lanelet2_utils::from_ros(current_pose.position);
     const auto arc_coordinates = lanelet::geometry::toArcCoordinates(
       centerline_2d, lanelet::utils::to2D(lanelet_point).basicPoint());
     const double dist_to_current_pose = arc_coordinates.length;
@@ -782,9 +782,9 @@ bool MissionPlanner::check_reroute_safety(
   const auto & target_goal = target_route.goal_pose;
   for (const auto & target_end_primitive : target_end_primitives) {
     const auto lanelet = lanelet_map_ptr_->laneletLayer.get(target_end_primitive.id);
-    if (lanelet::utils::isInLanelet(target_goal, lanelet)) {
+    if (autoware::experimental::lanelet2_utils::is_in_lanelet(target_goal, lanelet)) {
       const auto target_goal_position =
-        lanelet::utils::conversion::toLaneletPoint(target_goal.position);
+        experimental::lanelet2_utils::from_ros(target_goal.position);
       const double dist_to_goal = lanelet::geometry::toArcCoordinates(
                                     lanelet::utils::to2D(lanelet.centerline()),
                                     lanelet::utils::to2D(target_goal_position).basicPoint())

@@ -19,14 +19,14 @@ jobs:
       - name: Combine Repos Files
         uses: ./.github/actions/combine-repos-action
         with:
-          base_file: build_depends_humble.repos
+          base_file: build_depends_stable.repos
           overlay_file: build_depends_nightly.repos
           output_file: build_depends.repos
 ```
 
 In this example:
 
-- The action reads the `build_depends_humble.repos` file and the `build_depends_nightly.repos` file.
+- The action reads the `build_depends_stable.repos` file and the `build_depends_nightly.repos` file.
 - It merges them with overlay file taking precedence.
 - The resulting file is saved as `build_depends.repos` (or a custom filename if specified).
 

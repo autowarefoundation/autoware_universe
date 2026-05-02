@@ -14,6 +14,8 @@
 
 #include "autoware/tracking_object_merger/utils/utils.hpp"
 
+#include <autoware_utils_math/normalization.hpp>
+
 #include "autoware_perception_msgs/msg/shape.hpp"
 #include "autoware_perception_msgs/msg/tracked_object.hpp"
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
@@ -281,7 +283,7 @@ bool objectsHaveSameMotionDirections(const TrackedObject & main_obj, const Track
   // diff of motion yaw angle
   const auto motion_yaw_diff = std::fabs(main_motion_yaw - sub_motion_yaw);
   const auto normalized_motion_yaw_diff =
-    autoware_utils::normalize_radian(motion_yaw_diff);  // -pi ~ pi
+    autoware_utils_math::normalize_radian(motion_yaw_diff);  // -pi ~ pi
   // evaluate if motion yaw angle is same
   constexpr double yaw_threshold = M_PI / 4.0;  // 45 deg
   if (std::abs(normalized_motion_yaw_diff) < yaw_threshold) {

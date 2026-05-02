@@ -2,6 +2,57 @@
 Changelog for package autoware_diagnostic_graph_aggregator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* perf(system/autoware_diagnostic_graph_aggregator): use emplace/emplace_back to avoid temporary object creation (`#12239 <https://github.com/mitsudome-r/autoware_universe/issues/12239>`_)
+  Co-authored-by: Ryohsuke Mitsudome <43976834+mitsudome-r@users.noreply.github.com>
+* feat(diagnostic_graph_aggregator): add param for initial latch (`#11715 <https://github.com/mitsudome-r/autoware_universe/issues/11715>`_)
+* feat(autoware_diagnostic_graph_aggregator): adopt cie (`#12323 <https://github.com/mitsudome-r/autoware_universe/issues/12323>`_)
+  * feat: adopt cie
+  * style(pre-commit): autofix
+  * revert target_include directories
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+  * update launch (`#11 <https://github.com/mitsudome-r/autoware_universe/issues/11>`_)
+  * fix: revert register node
+  * fix: switch agnocast on launch file
+  * fix: duplication
+  * feat: change multithread
+  * Revert "feat: change multithread"
+  This reverts commit 84e086d34548c39ed2195acd6056514777ed1335.
+  * Revert "fix: duplication"
+  This reverts commit 71ec248b21244359fcb0f21d740ae0267d3d2ff9.
+  * Revert "fix: switch agnocast on launch file"
+  This reverts commit 427d55da47040dbfe4049f1d5d5fd7fcd61360fb.
+  * Revert "fix: revert register node"
+  This reverts commit b2c047f2b109ec1420fb842167e73226c0535db9.
+  * Revert "update launch (`#11 <https://github.com/mitsudome-r/autoware_universe/issues/11>`_)"
+  This reverts commit d28141c8287db16e63d1ed0e7dc5f192f2dc741c.
+  * fix: remove unnecessary lines
+  * fix: remove unnecessary lines
+  * fix: revert executor
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+* feat(fault_injection): modify the mechanism for changing Diagnostics (`#11810 <https://github.com/mitsudome-r/autoware_universe/issues/11810>`_)
+  * feat(fault_injection): modify the mechanism for changing Diagnostics
+  * feat(autoware_diagnostic_graph_aggregator): parameterization of input topics
+  * chore: modify QoS settings
+  * fix: fix config file for testing
+  * docs: update image
+  * style(pre-commit): autofix
+  * Update simulator/autoware_fault_injection/include/autoware/fault_injection/fault_injection_node.hpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * Update simulator/autoware_fault_injection/src/fault_injection_node/fault_injection_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * Update simulator/autoware_fault_injection/src/fault_injection_node/fault_injection_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+* Contributors: Keisuke Shima, Takagi, Isamu, Tetsuhiro Kawaguchi, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

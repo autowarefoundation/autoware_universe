@@ -2,6 +2,33 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_velocity_planner): remove unused lanelet2_extension header (`#12293 <https://github.com/mitsudome-r/autoware_universe/issues/12293>`_)
+  unused lanelet2_extension in bvp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(crosswalk): fix nearest stop pose usage in bvp's experimental module (`#12265 <https://github.com/mitsudome-r/autoware_universe/issues/12265>`_)
+  * fix crosswalk module to always choose nearest stop pose (11685)
+  * fix crosswalk module by updating previous stop pose before using it (11699)
+  * remove unnecessary part in arc-length based trajectory
+  ---------
+* fix(crosswalk): skip stop decision when remaining crosswalk width beside ego footprint is below threshold (`#12249 <https://github.com/mitsudome-r/autoware_universe/issues/12249>`_)
+  * fix(crosswalk): skip stop decision when remaining crosswalk width beside ego footprint is below threshold
+  * fix: for experimental module
+  ---------
+* fix(crosswalk): improve logic to detect stuck vehicle for experimental module (`#12248 <https://github.com/mitsudome-r/autoware_universe/issues/12248>`_)
+  * fix(crosswalk): improve logic to detect stuck vehicle
+  * fix: cppcheck error
+  ---------
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* fix(crosswalk): improve logic to detect stuck vehicle (`#12224 <https://github.com/mitsudome-r/autoware_universe/issues/12224>`_)
+  * fix(crosswalk): improve logic to detect stuck vehicle
+  * fix: ci error
+  ---------
+* chore: organize maintainer (`#12140 <https://github.com/mitsudome-r/autoware_universe/issues/12140>`_)
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

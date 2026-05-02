@@ -24,14 +24,14 @@ namespace autoware::manual_lane_change_handler
 
 ManualLaneChangeHandler::ManualLaneChangeHandler(const rclcpp::NodeOptions & options)
 : Node("manual_lane_change_handler", options),
-  plugin_loader_(
-    "autoware_mission_planner_universe", "autoware::mission_planner_universe::PlannerPlugin"),
   current_route_(nullptr),
   logger_(rclcpp::get_logger("ManualLaneChangeHandler"))
 {
-  planner_ = plugin_loader_.createSharedInstance(
-    "autoware::mission_planner_universe::lanelet2::DefaultPlanner");
-  planner_->initialize(this);
+  sub_map_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
+    "~/input/vector_map", rclcpp::QoS(10).transient_local(),
+    [this](const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg) {
+      route_handler_.setMap(*msg);
+    });
 
   sub_odometry_ = create_subscription<nav_msgs::msg::Odometry>(
     "~/input/odometry", rclcpp::QoS(1),
@@ -56,7 +56,7 @@ ManualLaneChangeHandler::ManualLaneChangeHandler(const rclcpp::NodeOptions & opt
 
 std::vector<autoware_planning_msgs::msg::LaneletPrimitive>
 ManualLaneChangeHandler::sort_primitives_left_to_right(
-  const route_handler::RouteHandler & route_handler,
+  const autoware::route_handler::RouteHandler & route_handler,
   autoware_planning_msgs::msg::LaneletPrimitive preferred_primitive,
   std::vector<autoware_planning_msgs::msg::LaneletPrimitive> primitives)
 {
@@ -100,12 +100,11 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
 {
   RCLCPP_INFO(logger_, "Received new route with %zu segments", msg->segments.size());
   auto route = *msg;
-  planner_->updateRoute(*msg);
+  route_handler_.setRoute(*msg);
 
-  const auto & route_handler = planner_->getRouteHandler();
   std::for_each(route.segments.begin(), route.segments.end(), [&](auto & segment) {
-    segment.primitives =
-      sort_primitives_left_to_right(route_handler, segment.preferred_primitive, segment.primitives);
+    segment.primitives = sort_primitives_left_to_right(
+      route_handler_, segment.preferred_primitive, segment.primitives);
   });
 
   if (!current_route_) {
@@ -128,7 +127,7 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
   }
 
   current_route_ = std::make_shared<LaneletRoute>(route);
-  planner_->updateRoute(*current_route_);
+  route_handler_.setRoute(*current_route_);
 }
 
 void ManualLaneChangeHandler::set_preferred_lane(
@@ -157,8 +156,8 @@ void ManualLaneChangeHandler::set_preferred_lane(
 
   lanelet::ConstLanelet closest_lanelet =
     get_lanelet_by_id(current_route_->segments.front().preferred_primitive.id);
-  const bool found_closest_lane = planner_->getRouteHandler().getClosestLaneletWithinRoute(
-    odometry_->pose.pose, &closest_lanelet);
+  const bool found_closest_lane =
+    route_handler_.getClosestLaneletWithinRoute(odometry_->pose.pose, &closest_lanelet);
 
   if (!found_closest_lane) {
     res->status.success = false;
@@ -292,9 +291,6 @@ LaneChangeRequestResult ManualLaneChangeHandler::process_lane_change_request(
     }
 
     std::size_t current_index = std::distance(current_segment.primitives.begin(), current_it);
-
-    const auto current_lanelet = get_lanelet_by_id(current_it->id);
-    std::string current_turning_dir = current_lanelet.attributeOr("turn_direction", "none");
 
     const auto next_lanelet = get_lanelet_by_id(next_it->id);
     std::string next_turning_dir = next_lanelet.attributeOr("turn_direction", "none");

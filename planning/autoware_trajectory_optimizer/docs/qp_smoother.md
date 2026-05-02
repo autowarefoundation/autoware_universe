@@ -95,14 +95,46 @@ weight
              speed
 ```
 
+## Stop Point Handling
+
+When `TrajectoryPointFixer` detects a deceleration-to-stop zone, it populates the shared
+`SemanticSpeedTracker` with the range of points covering the deceleration. The QP smoother
+uses this information in two ways:
+
+### Hard Position Constraint
+
+Each detected stop point is added as an equality constraint in the OSQP problem, pinning its
+position regardless of the smoothness weight:
+
+```text
+p[stop_idx] = p[stop_idx]^orig    (hard constraint)
+```
+
+This prevents the smoother from displacing the vehicle's intended stop position.
+
+### Velocity Profile Preservation
+
+After the geometric velocity recalculation and moving average, the planner's original velocity
+profile is restored for all points in detected stop approach ranges:
+
+```text
+v[i] = input_trajectory[i].v    (for i in stop approach range)
+v[stop_idx] = 0.0               (stop forced to zero unconditionally)
+```
+
+This ensures the downstream jerk smoother (`TrajectoryVelocityOptimizer`) receives the correct
+`v_ref` profile and can plan a kinematically feasible deceleration to zero.
+
 ## Post-Processing
 
-After QP optimization solves for smoothed positions, the following are recalculated:
+After QP optimization solves for smoothed positions, the following are applied in order:
 
 1. **Orientation**: Computed from path tangent between consecutive points
-2. **Velocity**: Derived from position differences and time step
-3. **Velocity smoothing**: 3-point moving average to reduce numerical noise
-4. **Acceleration**: Derived from velocity differences
+2. **Velocity**: Derived from position differences and time step (`v[i] = ds/dt`)
+3. **Velocity smoothing**: 3-point moving average to reduce numerical differentiation noise
+4. **Stop zone restoration**: Input velocities restored for detected stop approach ranges; stop
+   point forced to zero
+5. **Acceleration**: Derived from velocity differences
 
 ## Parameters
 
@@ -111,7 +143,6 @@ After QP optimization solves for smoothed positions, the following are recalcula
 - `weight_smoothness` (default: 10.0)
   - Controls smoothness penalty
   - Higher values → smoother but more deviation from original path
-
 - `weight_fidelity` (default: 1.0)
   - Baseline fidelity weight (used when velocity-based feature disabled)
   - Higher values → closer to original path
@@ -121,19 +152,15 @@ After QP optimization solves for smoothed positions, the following are recalcula
 - `use_velocity_based_fidelity` (default: true)
   - Master switch for velocity-dependent weighting
   - Set to `true` to enable feature
-
 - `velocity_threshold_mps` (default: 0.3)
   - Speed at which sigmoid transitions (midpoint)
   - Lower values → earlier transition to high fidelity
-
 - `sigmoid_sharpness` (default: 50.0)
   - Controls transition steepness
   - Range: [1, 100], higher = sharper step-like transition
-
 - `min_fidelity_weight` (default: 0.01)
   - Weight applied at very low speeds
   - Lower values → more aggressive smoothing when stopped/slow
-
 - `max_fidelity_weight` (default: 1.0)
   - Weight applied at high speeds
   - Higher values → stronger preservation of planner path
@@ -144,8 +171,7 @@ After QP optimization solves for smoothed positions, the following are recalcula
   - Number of points from trajectory start to fix as hard constraints
   - Recommended: 3 to preserve initial acceleration
   - Set to 0 to allow all points to be optimized (may cause initial state discontinuities)
-
-- `num_constrained_points_end` (default: 3)
+- `num_constrained_points_end` (default: 0)
   - Number of points from trajectory end to fix as hard constraints
   - Set to 0 for maximum smoothness at trajectory end
   - Increase if you need to preserve goal state and acceleration
@@ -154,37 +180,34 @@ After QP optimization solves for smoothed positions, the following are recalcula
 
 - `time_step_s` (default: 0.1)
   - Time discretization for velocity/acceleration calculations
-
 - `osqp_eps_abs` / `osqp_eps_rel` (default: 1e-4)
   - OSQP solver convergence tolerances
-
 - `osqp_max_iter` (default: 100)
   - Maximum solver iterations
-
 - `osqp_verbose` (default: false)
   - Enable OSQP debug output
 
-### Orientation Correction
+### Orientation Preservation
 
-- `fix_orientation` (default: true)
-  - Apply orientation correction post-solve
-
-- `orientation_correction_threshold_deg` (default: 5.0)
-  - Yaw threshold for correcting QP output orientation
+- `preserve_input_trajectory_orientation` (default: false)
+  - Copy orientations from the original input trajectory (nearest-neighbor match) instead of
+    deriving them from the smoothed path tangent
+- `max_distance_for_orientation_m` (default: 5.0)
+  - Maximum search distance for nearest-neighbor orientation matching [m]
 
 ## Usage Examples
 
-### Example 1: Enable Velocity-Based Fidelity
+### Example 1: Disable Velocity-Based Fidelity
 
-To enable velocity-dependent smoothing for stop-and-go scenarios:
+Velocity-based fidelity is enabled by default. To disable it and use a uniform fidelity weight:
 
 ```bash
-ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.use_velocity_based_fidelity true
+ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.use_velocity_based_fidelity false
 ```
 
 ### Example 2: Tune Velocity Threshold
 
-To make the transition occur at higher speeds (0.5 m/s instead of 0.2 m/s):
+To make the transition occur at higher speeds (0.5 m/s instead of 0.3 m/s):
 
 ```bash
 ros2 param set /planning/trajectory_optimizer trajectory_qp_smoother.velocity_threshold_mps 0.5
@@ -265,7 +288,9 @@ ros2 topic echo /planning/trajectory_optimizer/debug/processing_time_detail_ms
 ## Limitations
 
 1. **Path deviation**: Heavy smoothing can cause deviation from original path
-2. **Velocity discontinuities**: Velocity is recalculated, may differ from planner intent
+2. **Velocity outside stop zones differs from planner intent**: Velocity is recalculated from
+   smoothed geometry for normal trajectory segments; only detected stop approach zones preserve
+   the planner's velocity profile
 3. **Computational cost**: QP solve adds overhead compared to simpler smoothers
 4. **Parameter sensitivity**: Requires tuning for specific vehicle dynamics
 

@@ -82,9 +82,20 @@
               "default": 0.05,
               "minimum": 0,
               "description": "Minimum distance threshold for merging close proximity points [m]"
+            },
+            "stop_detection_velocity_threshold_mps": {
+              "type": "number",
+              "default": 0.3,
+              "minimum": 0,
+              "description": "Velocity threshold used by the stop-detection logic: points whose speed falls below this value while decelerating are treated as stop candidates by both the cluster-based and velocity-profile-based detectors [m/s]"
             }
           },
-          "required": ["resample_close_points", "min_dist_to_remove_m", "min_dist_to_resample_m"]
+          "required": [
+            "resample_close_points",
+            "min_dist_to_remove_m",
+            "min_dist_to_resample_m",
+            "stop_detection_velocity_threshold_mps"
+          ]
         },
         "trajectory_kinematic_feasibility": {
           "type": "object",
@@ -95,9 +106,16 @@
               "minimum": 0.1,
               "maximum": 2.0,
               "description": "Maximum yaw rate [rad/s]. Default: 0.7 rad/s (~40 deg/s) aligns with MPC controller. Typical range: 0.5-1.0 for autonomous vehicles."
+            },
+            "time_step_s": {
+              "type": "number",
+              "default": 0.1,
+              "minimum": 0.01,
+              "maximum": 1.0,
+              "description": "Time step for kinematic feasibility enforcement [s]. Default: 0.1 s."
             }
           },
-          "required": ["max_yaw_rate_rad_s"]
+          "required": ["max_yaw_rate_rad_s", "time_step_s"]
         },
         "trajectory_mpt_optimizer": {
           "type": "object",

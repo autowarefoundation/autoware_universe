@@ -15,6 +15,8 @@
 #include "autoware/bevfusion/bevfusion_node.hpp"
 #include "autoware/bevfusion/utils.hpp"
 
+#include <image_transport/image_transport.hpp>
+
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -39,7 +41,8 @@ void BEVFusionNode::validateParameters(
   }
 }
 
-void BEVFusionNode::initializeSensorFusionSubscribers(std::int64_t num_cameras)
+void BEVFusionNode::initializeSensorFusionSubscribers(
+  std::int64_t num_cameras, const ImagePreProcessingParams & image_pre_processing_params)
 {
   if (!sensor_fusion_) {
     return;
@@ -47,16 +50,34 @@ void BEVFusionNode::initializeSensorFusionSubscribers(std::int64_t num_cameras)
 
   image_subs_.resize(num_cameras);
   camera_info_subs_.resize(num_cameras);
-  image_msgs_.resize(num_cameras);
-  camera_info_msgs_.resize(num_cameras);
   lidar2camera_extrinsics_.resize(num_cameras);
+  camera_data_ptrs_.resize(num_cameras);
+  camera_matrices_ptrs_.resize(num_cameras);
+
+  auto resolve_topic_name = [this](const std::string & query) {
+    return this->get_node_topics_interface()->resolve_topic_name(query);
+  };
+  const std::string transport = use_compressed_images_ ? "compressed" : "raw";
 
   for (std::int64_t camera_id = 0; camera_id < num_cameras; ++camera_id) {
-    image_subs_[camera_id] = this->create_subscription<sensor_msgs::msg::Image>(
-      "~/input/image" + std::to_string(camera_id), rclcpp::SensorDataQoS{}.keep_last(1),
-      [this, camera_id](const sensor_msgs::msg::Image::ConstSharedPtr msg) {
-        this->imageCallback(msg, camera_id);
-      });
+    // First construct CameraMatrices, CameraMatrices is shared by multiple CameraData for the same
+    // camera_id
+    camera_matrices_ptrs_[camera_id] = std::make_shared<CameraMatrices>();
+
+    // Then construct CameraData
+    camera_data_ptrs_[camera_id] = std::make_unique<CameraData>(
+      this, static_cast<int>(camera_id), image_pre_processing_params,
+      camera_matrices_ptrs_[camera_id]);
+
+    // Explicitly resolve the topic name using the node name and namespace, please check
+    // https://github.com/ros-perception/image_transport_plugins/issues/155
+    const std::string base_topic = resolve_topic_name("~/input/image" + std::to_string(camera_id));
+    image_subs_[camera_id] = image_transport::create_subscription(
+      this, base_topic,
+      std::bind(
+        &BEVFusionNode::imageCallback, this, std::placeholders::_1,
+        static_cast<std::size_t>(camera_id)),
+      transport, rmw_qos_profile_sensor_data);
 
     camera_info_subs_[camera_id] = this->create_subscription<sensor_msgs::msg::CameraInfo>(
       "~/input/camera_info" + std::to_string(camera_id), rclcpp::SensorDataQoS{}.keep_last(1),
@@ -99,9 +120,15 @@ void BEVFusionNode::precomputeIntrinsicsExtrinsics()
   std::vector<sensor_msgs::msg::CameraInfo> camera_info_msgs;
   std::vector<Matrix4f> lidar2camera_extrinsics;
 
-  std::transform(
-    camera_info_msgs_.begin(), camera_info_msgs_.end(), std::back_inserter(camera_info_msgs),
-    [](const auto & opt) { return *opt; });
+  try {
+    std::transform(
+      camera_data_ptrs_.begin(), camera_data_ptrs_.end(), std::back_inserter(camera_info_msgs),
+      [](const auto & camera_data) { return camera_data->camera_info_value(); });
+  } catch (const std::runtime_error & e) {
+    RCLCPP_WARN_STREAM(
+      rclcpp::get_logger("bevfusion"), "Camera info is not available for some cameras!");
+    return;
+  }
 
   std::transform(
     lidar2camera_extrinsics_.begin(), lidar2camera_extrinsics_.end(),
@@ -113,12 +140,11 @@ void BEVFusionNode::precomputeIntrinsicsExtrinsics()
 
 void BEVFusionNode::computeCameraMasks(double lidar_stamp)
 {
-  camera_masks_.resize(camera_info_msgs_.size());
+  camera_masks_.resize(camera_data_ptrs_.size());
   for (std::size_t i = 0; i < camera_masks_.size(); ++i) {
+    auto camera_mask_timestamp = rclcpp::Time(camera_data_ptrs_[i]->image_msg()->header.stamp);
     camera_masks_[i] =
-      (lidar_stamp - rclcpp::Time(image_msgs_[i]->header.stamp).seconds()) < max_camera_lidar_delay_
-        ? 1.0
-        : 0.f;
+      (lidar_stamp - camera_mask_timestamp.seconds()) < max_camera_lidar_delay_ ? 1.0 : 0.f;
   }
 }
 
@@ -183,8 +209,8 @@ diagnostic_msgs::msg::DiagnosticStatus::_level_type BEVFusionNode::checkProcessi
 
     message.clear();
     message << "Processing time exceeds the acceptable limit of " << max_allowed_processing_time_ms_
-            << " ms by " << (last_processing_time_ms_.value() - max_allowed_processing_time_ms_)
-            << " ms.";
+            << " ms by "
+            << (last_processing_time_ms_.value_or(0.0) - max_allowed_processing_time_ms_) << " ms.";
 
     if (!last_in_time_processing_timestamp_) {
       last_in_time_processing_timestamp_ = timestamp_now;
@@ -203,6 +229,10 @@ diagnostic_msgs::msg::DiagnosticStatus::_level_type BEVFusionNode::checkConsecut
   const rclcpp::Time & timestamp_now,
   diagnostic_msgs::msg::DiagnosticStatus::_level_type current_level)
 {
+  // if the last in time processing timestamp is not set, return the current level
+  if (!last_in_time_processing_timestamp_) {
+    return current_level;
+  }
   const double delayed_state_duration =
     std::chrono::duration<double, std::milli>(
       std::chrono::nanoseconds(
@@ -234,7 +264,7 @@ void BEVFusionNode::diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusW
     addNoInferenceDiagnostics(stat, message);
   } else {
     diag_level = checkProcessingTimeStatus(stat, message, timestamp_now);
-    stat.add("processing_time_ms", last_processing_time_ms_.value());
+    stat.add("processing_time_ms", last_processing_time_ms_.value_or(0.0));
     diag_level = checkConsecutiveDelays(stat, message, timestamp_now, diag_level);
   }
 

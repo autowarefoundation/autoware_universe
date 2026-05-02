@@ -18,9 +18,9 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <autoware/interpolation/spline_interpolation.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <tf2/utils.hpp>
 
@@ -214,7 +214,7 @@ PathWithLaneId convertWayPointsToPathWithLaneId(
     // put the lane that contain waypoints in lane_ids.
     bool is_in_lanes = false;
     for (const auto & lane : lanelets) {
-      if (lanelet::utils::isInLanelet(point.point.pose, lane)) {
+      if (autoware::experimental::lanelet2_utils::is_in_lanelet(point.point.pose, lane)) {
         point.lane_ids.push_back(lane.id());
         is_in_lanes = true;
       }
@@ -526,7 +526,8 @@ BehaviorModuleOutput createGoalAroundPath(const std::shared_ptr<const PlannerDat
   }
 
   constexpr double backward_length = 1.0;
-  const auto arc_coord = lanelet::utils::getArcCoordinates({goal_lane}, goal_pose);
+  const auto arc_coord =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates({goal_lane}, goal_pose);
   const double s_start = std::max(arc_coord.length - backward_length, 0.0);
   const double s_end = arc_coord.length;
 

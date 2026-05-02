@@ -53,6 +53,9 @@ void EuclideanClusterNode::onPointCloud(
   // check for empty point cloud
   if (input_msg->data.empty() || input_msg->width == 0 || input_msg->height == 0) {
     RCLCPP_DEBUG(get_logger(), "Empty point cloud received, skipping processing");
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature output;
+    output.header = input_msg->header;
+    cluster_pub_->publish(output);
     return;
   }
 

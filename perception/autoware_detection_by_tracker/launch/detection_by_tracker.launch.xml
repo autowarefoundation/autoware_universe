@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <arg name="input/tracked_objects" default="/perception/object_recognition/tracking/objects"/>
   <arg name="input/initial_objects" default="/perception/object_recognition/detection/clustering/objects_with_feature"/>
   <arg name="output" default="objects"/>
   <arg name="detection_by_tracker_param_path" default="$(find-pkg-share autoware_detection_by_tracker)/config/detection_by_tracker.param.yaml"/>
   <node pkg="autoware_detection_by_tracker" exec="detection_by_tracker_node" name="detection_by_tracker_node" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/tracked_objects" to="$(var input/tracked_objects)"/>
     <remap from="~/input/initial_objects" to="$(var input/initial_objects)"/>
     <remap from="~/output" to="$(var output)"/>

@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__STEER_OFFSET_ESTIMATOR__STEER_OFFSET_ESTIMATOR_HPP_
 #define AUTOWARE__STEER_OFFSET_ESTIMATOR__STEER_OFFSET_ESTIMATOR_HPP_
 
+#include "autoware/steer_offset_estimator/structs.hpp"
+
 #include <rclcpp/rclcpp/time.hpp>
 #include <tl_expected/expected.hpp>
 
@@ -39,51 +41,6 @@ namespace autoware::steer_offset_estimator
 using autoware_vehicle_msgs::msg::SteeringReport;
 using geometry_msgs::msg::PoseStamped;
 using geometry_msgs::msg::TwistStamped;
-
-/**
- * @brief Result of steer offset estimation
- */
-struct SteerOffsetEstimationUpdated
-{
-  double offset{0.0};            ///< Estimated steering offset [rad]
-  double covariance{0.0};        ///< Estimation covariance
-  double velocity{0.0};          ///< Vehicle velocity [m/s]
-  double angular_velocity{0.0};  ///< Vehicle angular velocity [rad/s]
-  double steering_angle{0.0};    ///< Vehicle steering angle [rad]
-  double kalman_gain{0.0};       ///< Coefficient for covariance matrix
-  double residual{0.0};          ///< Residual [rad/s]
-};
-
-struct SteerOffsetEstimationNotUpdated
-{
-  std::string reason;
-};
-
-struct SteeringInfo
-{
-  rclcpp::Time stamp;
-  double steering;
-};
-
-/**
- * @brief Parameters for steer offset estimation
- */
-struct SteerOffsetEstimatorParameters
-{
-  double initial_covariance{1.0};             ///< Initial covariance value
-  double initial_offset{0.0};                 ///< Initial steering offset [rad]
-  double wheel_base{0.0};                     ///< Vehicle wheelbase [m]
-  double min_velocity{2.0};                   ///< Minimum valid velocity [m/s]
-  double max_steer{0.5};                      ///< Maximum valid steering angle [rad]
-  double max_steer_rate{0.5};                 ///< Maximum valid steering angle rate [rad/s]
-  double max_ang_velocity{0.5};               ///< Maximum valid angular velocity [rad/s]
-  double measurement_noise_covariance{0.01};  ///< Measurement noise covariance
-  double process_noise_covariance{0.01};      ///< Process noise covariance
-  double denominator_floor{1.0e-12};          ///< Denominator floor value
-  double covariance_floor{1.0e-12};           ///< Covariance floor value
-  double max_steer_buffer{1.0};               ///< Steering buffer duration [s]
-  double max_pose_lag{1.0};                   ///< Max valid pose age [s]
-};
 
 /**
  * @brief Steer offset estimator class

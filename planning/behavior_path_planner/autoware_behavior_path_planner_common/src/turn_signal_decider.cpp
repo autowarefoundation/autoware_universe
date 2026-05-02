@@ -16,13 +16,13 @@
 
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/hatched_road_markings.hpp>
 #include <autoware/motion_utils/constants.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -248,10 +248,13 @@ std::optional<TurnSignalInfo> TurnSignalDecider::getIntersectionTurnSignalInfo(
     } while (route_handler.getNextLaneletWithinRoute(current_lane, &current_lane) &&
              current_lane.attributeOr("turn_direction", std::string("none")) == lane_attribute);
 
-    if (!combined_lane_elems.empty()) {
+    const auto combined_lanelet_opt =
+      autoware::experimental::lanelet2_utils::combine_lanelets_shape(combined_lane_elems);
+    // confirmed by combined_lanelet_opt that combined_lane_elems is not empty
+    if (combined_lanelet_opt.has_value()) {
       // store combined lane and its front lane
       const auto & combined_and_first = std::pair<lanelet::ConstLanelet, lanelet::ConstLanelet>(
-        lanelet::utils::combineLaneletsShape(combined_lane_elems), combined_lane_elems.front());
+        *combined_lanelet_opt, combined_lane_elems.front());
       combined_and_front_vec.push_back(combined_and_first);
     }
   }
@@ -506,18 +509,17 @@ lanelet::ConstLanelet TurnSignalDecider::findEnableExitTurnSignalLanelet(
 Pose TurnSignalDecider::calculateLaneFrontPose(const lanelet::ConstLineString3d & centerline)
 {
   Pose front_pose;
-  front_pose.position = lanelet::utils::conversion::toGeomMsgPt(centerline.front());
+  front_pose.position = experimental::lanelet2_utils::to_ros(centerline.front());
   front_pose.orientation =
-    calc_orientation(front_pose.position, lanelet::utils::conversion::toGeomMsgPt(centerline[1]));
+    calc_orientation(front_pose.position, experimental::lanelet2_utils::to_ros(centerline[1]));
   return front_pose;
 }
 
 Pose TurnSignalDecider::calculateLaneBackPose(const lanelet::ConstLineString3d & centerline)
 {
   Pose back_pose;
-  back_pose.position = lanelet::utils::conversion::toGeomMsgPt(centerline.back());
-  const auto & prev_point =
-    lanelet::utils::conversion::toGeomMsgPt(centerline[centerline.size() - 2]);
+  back_pose.position = experimental::lanelet2_utils::to_ros(centerline.back());
+  const auto & prev_point = experimental::lanelet2_utils::to_ros(centerline[centerline.size() - 2]);
   back_pose.orientation = calc_orientation(prev_point, back_pose.position);
   return back_pose;
 }
@@ -810,7 +812,7 @@ geometry_msgs::msg::Pose TurnSignalDecider::get_required_end_point(
 {
   std::vector<geometry_msgs::msg::Pose> converted_centerline(centerline.size());
   for (size_t i = 0; i < centerline.size(); ++i) {
-    converted_centerline.at(i).position = lanelet::utils::conversion::toGeomMsgPt(centerline[i]);
+    converted_centerline.at(i).position = experimental::lanelet2_utils::to_ros(centerline[i]);
   }
   autoware::motion_utils::insertOrientation(converted_centerline, true);
 
@@ -1070,6 +1072,23 @@ std::pair<TurnSignalInfo, bool> TurnSignalDecider::getBehaviorTurnSignalInfo(
 
   return std::make_pair(turn_signal_info, false);
 }
+
+bool TurnSignalDecider::isNearEndOfShift(
+  const double start_shift_length, const double end_shift_length, const Point & ego_pos,
+  const lanelet::ConstLanelets & original_lanes, const double threshold) const
+{
+  using boost::geometry::within;
+  using lanelet::utils::to2D;
+
+  if (!isReturnShift(start_shift_length, end_shift_length, threshold)) {
+    return false;
+  }
+
+  return std::any_of(original_lanes.begin(), original_lanes.end(), [&ego_pos](const auto & lane) {
+    return within(
+      to2D(experimental::lanelet2_utils::from_ros(ego_pos)), lane.polygon2d().basicPolygon());
+  });
+};
 
 double TurnSignalDecider::calculateRoundaboutBackwardLength(
   const lanelet::ConstLanelet & current_lanelet, const RouteHandler & route_handler,

@@ -25,8 +25,6 @@
 
 #include <boost/optional.hpp>
 
-#include <glog/logging.h>
-
 #include <chrono>
 #include <memory>
 #include <string>
@@ -93,12 +91,6 @@ DecorativeTrackerMergerNode::DecorativeTrackerMergerNode(const rclcpp::NodeOptio
   tf_buffer_(get_clock()),
   tf_listener_(tf_buffer_)
 {
-  // glog for debug
-  if (!google::IsGoogleLoggingInitialized()) {
-    google::InitGoogleLogging("decorative_object_merger_node");
-    google::InstallFailureSignalHandler();
-  }
-
   // Subscriber
   sub_main_objects_ = create_subscription<TrackedObjects>(
     "input/main_object", rclcpp::QoS{1},
@@ -167,14 +159,14 @@ DecorativeTrackerMergerNode::DecorativeTrackerMergerNode(const rclcpp::NodeOptio
 
   // debug publisher
   processing_time_publisher_ =
-    std::make_unique<autoware_utils::DebugPublisher>(this, "decorative_object_merger_node");
-  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
+    std::make_unique<autoware_utils_debug::DebugPublisher>(this, "decorative_object_merger_node");
+  stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
   // diagnostics
-  diagnostics_interface_ptr_ = std::make_unique<autoware::universe_utils::DiagnosticsInterface>(
+  diagnostics_interface_ptr_ = std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
     this, "decorative_object_merger_node");
   stop_watch_ptr_->tic("delay_main_objects");
   stop_watch_ptr_->tic("duration_empty_main_objects");

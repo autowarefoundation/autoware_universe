@@ -109,6 +109,37 @@ The package uses the Generate Parameter Library for configuration. Parameters ar
 - **evaluation.score_weight**: Weight for each metric in final score calculation
 - **evaluation.time_decay_weight.s0-s5**: Temporal weights for metrics (s0=first metric, s1=second, etc.)
 
+## Simple Trajectory Ranker
+
+The `SimpleTrajectoryRanker` is a lightweight alternative to the main trajectory ranker. It ranks trajectory candidates based on a prioritized list of generator name prefixes rather than complex geometric or physical metrics.
+
+### Logic
+
+The node matches the generator name of each candidate trajectory (retrieved from `generator_info` using the `generator_id`) against a user-defined list of prefixes in `ranked_generator_name_prefixes`.
+
+### Scoring
+
+Scores are assigned based on the inverse of the rank of the matching prefix:
+
+- If there are $N$ ranked prefixes, a trajectory matching the first prefix gets a score of $N$.
+- A trajectory matching the second prefix gets a score of $N-1$, and so on.
+- Trajectories that do not match any prefix, or whose generator info is missing, are assigned a score of `0.0`.
+
+The output list is ordered by these scores (highest score first), followed by unranked trajectories which maintain their original relative order.
+
+### Input / Output
+
+| Topic                            | Type                                                              | Description                   |
+| -------------------------------- | ----------------------------------------------------------------- | ----------------------------- |
+| `~/input/candidate_trajectories` | `autoware_internal_planning_msgs/msg/CandidateTrajectories`       | Candidate trajectories        |
+| `~/output/scored_trajectories`   | `autoware_internal_planning_msgs/msg/ScoredCandidateTrajectories` | Scored candidate trajectories |
+
+### Parameters
+
+| Parameter                        | Type                       | Description                                              |
+| -------------------------------- | -------------------------- | -------------------------------------------------------- |
+| `ranked_generator_name_prefixes` | `std::vector<std::string>` | Ordered list of generator name prefixes for prioritizing |
+
 ## Usage
 
 ### Basic Launch

@@ -16,10 +16,10 @@
 
 #include "autoware/control_evaluator/metrics/metrics_utils.hpp"
 
-#include <autoware/boundary_departure_checker/conversion.hpp>
-#include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/deprecated/boundary_departure_checker/conversion.hpp>
+#include <autoware/deprecated/boundary_departure_checker/utils.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -223,7 +224,8 @@ void ControlEvaluatorNode::AddMetricMsg(
 void ControlEvaluatorNode::AddLaneletInfoMsg(const Pose & ego_pose)
 {
   const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
-  const auto arc_coordinates = lanelet::utils::getArcCoordinates(current_lanelets, ego_pose);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, ego_pose);
   const auto current_lane_opt =
     autoware::experimental::lanelet2_utils::get_closest_lanelet(current_lanelets, ego_pose);
   if (!current_lane_opt) {
@@ -313,14 +315,11 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
 
     auto is_overlapping{false};
     for (const auto & nearby_ls : nearby_uncrossable_lines) {
-      LineString2d boundary;
       const auto & basic_ls = nearby_ls.basicLineString();
-      boundary.reserve(basic_ls.size());
       for (size_t idx = 0; idx + 1 < basic_ls.size(); ++idx) {
         const auto segment = bdc_utils::to_segment_2d(basic_ls[idx], basic_ls[idx + 1]);
 
         is_overlapping = !boost::geometry::disjoint(current_fp, segment);
-
         if (is_overlapping) {
           nearest_left = 0.0;
           nearest_right = 0.0;
@@ -340,11 +339,33 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
       }
     }
   }
+
+  const auto update_non_positive_event_count =
+    [](const double distance, bool & armed, std::uint64_t & event_count) {
+      if (distance > 0.0) {
+        armed = true;
+      } else if (armed) {
+        ++event_count;
+        armed = false;
+      }
+    };
+  update_non_positive_event_count(
+    nearest_left, uncrossable_left_non_positive_armed_, uncrossable_left_non_positive_event_count_);
+  update_non_positive_event_count(
+    nearest_right, uncrossable_right_non_positive_armed_,
+    uncrossable_right_non_positive_event_count_);
+
   const Metric metric_left = Metric::left_uncrossable_boundary_distance;
+  const Metric metric_left_count = Metric::left_uncrossable_boundary_distance_count;
   AddMetricMsg(metric_left, nearest_left);
+  AddMetricMsg(
+    metric_left_count, static_cast<double>(uncrossable_left_non_positive_event_count_), true);
 
   const Metric metric_right = Metric::right_uncrossable_boundary_distance;
+  const Metric metric_right_count = Metric::right_uncrossable_boundary_distance_count;
   AddMetricMsg(metric_right, nearest_right);
+  AddMetricMsg(
+    metric_right_count, static_cast<double>(uncrossable_right_non_positive_event_count_), true);
 }
 
 void ControlEvaluatorNode::AddKinematicStateMetricMsg(

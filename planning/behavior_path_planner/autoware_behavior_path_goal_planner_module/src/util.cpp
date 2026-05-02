@@ -16,15 +16,14 @@
 
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
-#include "autoware/boundary_departure_checker/utils.hpp"
+#include "autoware/deprecated/boundary_departure_checker/utils.hpp"
 #include "autoware_lanelet2_extension/regulatory_elements/bus_stop_area.hpp"
 
 #include <Eigen/Core>
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
-#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <magic_enum.hpp>
@@ -223,9 +222,9 @@ static double getOffsetToLanesBoundary(
   // the boundary closer to ego. if left_side, take right boundary
   const auto & boundary3d = left_side ? closest_lanelet.rightBound() : closest_lanelet.leftBound();
   const auto boundary = lanelet::utils::to2D(boundary3d);
-  using lanelet::utils::conversion::toLaneletPoint;
+  using experimental::lanelet2_utils::from_ros;
   const auto arc_coords = lanelet::geometry::toArcCoordinates(
-    boundary, lanelet::utils::to2D(toLaneletPoint(target_pose.position)).basicPoint());
+    boundary, lanelet::utils::to2D(from_ros(target_pose.position)).basicPoint());
   return arc_coords.distance;
 }
 
@@ -251,16 +250,26 @@ lanelet::ConstLanelets generateBetweenEgoAndExpandedPullOverLanes(
 
   // ==========================================================================================
   // NOTE: the point which is on the right side of a directed line has negative distance
-  // getExpandedLanelet(1.0, -2.0) expands a lanelet by 1.0 to the left and by 2.0 to the right
+  // get_dirty_expanded_lanelet(1.0, -2.0) expands a lanelet by 1.0 to the left and by 2.0 to the
+  // right
   // ==========================================================================================
   const double ego_offset_to_closer_boundary =
     getOffsetToLanesBoundary(pull_over_lanes, ego_front_pose, left_side);
-  return left_side ? lanelet::utils::getExpandedLanelets(
-                       pull_over_lanes, outer_road_offset,
-                       ego_offset_to_closer_boundary - inner_road_offset)
-                   : lanelet::utils::getExpandedLanelets(
-                       pull_over_lanes, ego_offset_to_closer_boundary + inner_road_offset,
-                       -outer_road_offset);
+
+  std::optional<lanelet::ConstLanelets> expand_lanelets_opt;
+  if (left_side) {
+    expand_lanelets_opt = autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+      pull_over_lanes, outer_road_offset, ego_offset_to_closer_boundary - inner_road_offset);
+  } else {
+    expand_lanelets_opt = autoware::experimental::lanelet2_utils::get_dirty_expanded_lanelets(
+      pull_over_lanes, ego_offset_to_closer_boundary + inner_road_offset, -outer_road_offset);
+  }
+
+  if (expand_lanelets_opt.has_value()) {
+    return expand_lanelets_opt.value();
+  } else {
+    return pull_over_lanes;
+  }
 }
 
 std::optional<Polygon2d> generateObjectExtractionPolygon(
@@ -907,7 +916,7 @@ std::optional<Pose> calcRefinedGoal(
   Pose center_pose{};
   {
     // find position
-    const auto lanelet_point = lanelet::utils::conversion::toLaneletPoint(goal_pose.position);
+    const auto lanelet_point = experimental::lanelet2_utils::from_ros(goal_pose.position);
     const auto segment = autoware::experimental::lanelet2_utils::get_closest_segment(
       closest_pull_over_lanelet.centerline(), lanelet_point.basicPoint());
     const auto p1 = segment.front().basicPoint();
@@ -1012,7 +1021,7 @@ bool is_goal_reachable_on_path(
   }
   const bool goal_is_in_current_segment_lanes = std::any_of(
     goal_check_lanes.begin(), goal_check_lanes.end(), [&](const lanelet::ConstLanelet & lane) {
-      return lanelet::utils::isInLanelet(goal_pose, lane);
+      return autoware::experimental::lanelet2_utils::is_in_lanelet(goal_pose, lane);
     });
 
   // check that goal is in current neighbor shoulder lane
@@ -1020,7 +1029,9 @@ bool is_goal_reachable_on_path(
     for (const auto & lane : current_lanes) {
       const auto shoulder_lane = left_side_parking ? route_handler.getLeftShoulderLanelet(lane)
                                                    : route_handler.getRightShoulderLanelet(lane);
-      if (shoulder_lane && lanelet::utils::isInLanelet(goal_pose, *shoulder_lane)) {
+      if (
+        shoulder_lane &&
+        autoware::experimental::lanelet2_utils::is_in_lanelet(goal_pose, *shoulder_lane)) {
         return true;
       }
     }

@@ -2,6 +2,36 @@
 Changelog for package autoware_planning_validator_intersection_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_traffic_light_utils): rewrite hasTrafficLightCircleColor and hasTrafficLightShape into three functions to handle overseas color arrow traffic light (`#12481 <https://github.com/mitsudome-r/autoware_universe/issues/12481>`_)
+  * feat(autoware_traffic_light_utils): merge hasTrafficLightCirleColor and hasTrafficLightShape into a general function hasTrafficLightShapeColor to handle oversea color arrow traffic light
+  * feat(autoware_traffic_light_utils): merge hasTrafficLightCirleColor and hasTrafficLightShape into a general function hasTrafficLightShapeColor to handle oversea color arrow traffic light
+  * fix: modify default parameter for hasTrafficLightShapeColor
+  * fix: separate hasTrafficLightShapeColor into three functions
+  * chore(miscs): remove unused lanelet2 extension header (`#12081 <https://github.com/mitsudome-r/autoware_universe/issues/12081>`_)
+  chore(miscs): remove unused header include for lanelet2_extension
+  * fix: revert modification
+  * fix: revert modification
+  * style(pre-commit): autofix
+  * fix: change TrafficLightElement msg belonging
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix: bound int 32 range for rqt_reconfigure older than 1.1.4 (`#12349 <https://github.com/mitsudome-r/autoware_universe/issues/12349>`_)
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - planning component (`#12083 <https://github.com/mitsudome-r/autoware_universe/issues/12083>`_)
+  * replace getArcCoordinates in planning component
+  * replace getCenterlineWithOffset in planning component
+  * replace getRight/LeftBoundWithOffset in planning component
+  * replace getExpandedLanelet(s) in planning component
+  * replace combineLaneletsShape in planning component
+  * remove log for empty combine_lanelet_opt
+  * bind reference to optional value
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, Xiaoyu WANG, Yuxuan Liu, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

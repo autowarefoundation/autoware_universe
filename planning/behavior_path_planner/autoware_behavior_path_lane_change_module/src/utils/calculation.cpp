@@ -15,6 +15,8 @@
 
 #include <autoware/behavior_path_lane_change_module/utils/calculation.hpp>
 #include <autoware/behavior_path_planner_common/utils/utils.hpp>
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
@@ -116,7 +118,8 @@ double calc_dist_to_last_fit_width(
   if (lanelets.empty()) return 0.0;
 
   const auto lane_polygon = lanelets.back().polygon2d().basicPolygon();
-  const auto center_line = lanelet::utils::generateFineCenterline(lanelets.back(), 1.0);
+  const auto center_line =
+    autoware::experimental::lanelet2_utils::get_fine_centerline(lanelets.back(), 1.0);
 
   if (center_line.size() <= 1) return 0.0;
 
@@ -163,7 +166,7 @@ double calc_ego_dist_to_lanes_start(
     return std::numeric_limits<double>::max();
   }
 
-  const auto target_front_pt = lanelet::utils::conversion::toGeomMsgPt(target_bound.front());
+  const auto target_front_pt = experimental::lanelet2_utils::to_ros(target_bound.front());
   const auto ego_position = common_data_ptr->get_ego_pose().position;
 
   return motion_utils::calcSignedArcLength(path.points, ego_position, target_front_pt);
@@ -487,7 +490,8 @@ std::vector<PhaseMetrics> calc_prepare_phase_metrics(
     if (prepare_length > max_length_threshold || prepare_length < min_length_threshold) {
       RCLCPP_DEBUG(
         get_logger(),
-        "Skip: prepare length out of expected range. length: %.5f, threshold min: %.5f, max: %.5f",
+        "Skip: prepare length out of expected range. length: %.5f, threshold min: %.5f, max: "
+        "%.5f",
         prepare_length, min_length_threshold, max_length_threshold);
       return true;
     }

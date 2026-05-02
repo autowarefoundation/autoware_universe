@@ -136,8 +136,8 @@ class TestExternalVelocityLimitSelector(unittest.TestCase):
         clear_cmd = VelocityLimitClearCommand(command=True)
         self.pub_clear_limit_.publish(clear_cmd)
         self.wait_for_output()
-        # velocity limit is 0 before any limit is set
-        self.assertEqual(self.velocity_limit_output_.max_velocity, 0.0)
+        # velocity limit should be max_vel_param, before any external limit is set
+        self.assertEqual(self.velocity_limit_output_.max_velocity, 15.0)
 
         # Send velocity limits
         # new API velocity limit: higher than the node param -> limit is set to the param value

@@ -28,7 +28,6 @@
 
 namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils
 {
-using autoware::trajectory_optimizer::InitialMotion;
 using autoware::trajectory_optimizer::plugin::ContinuousJerkSmoother;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
@@ -84,11 +83,10 @@ void limit_lateral_acceleration(
 /**
  * @brief Filters velocity profile using jerk-constrained smoothing.
  *
- * Applies jerk-filtered velocity optimization using the ContinuousJerkSmoother.
- * This smoother is designed for continuous trajectories without stop points.
+ * The smoother detects zero-velocity stop points and optimizes only the continuous
+ * segment up to the first stop point, leaving subsequent points unchanged.
  *
  * @param input_trajectory The trajectory points to be filtered (modified in place)
- * @param initial_motion The initial speed and acceleration for motion
  * @param nearest_dist_threshold_m Distance threshold for trajectory matching
  * @param nearest_yaw_threshold_rad Yaw threshold for trajectory matching
  * @param smoother The continuous jerk smoother instance
@@ -98,10 +96,9 @@ void limit_lateral_acceleration(
  *        This allows enforcing lateral acceleration limits as hard constraints in the QP.
  */
 void filter_velocity(
-  TrajectoryPoints & input_trajectory, const InitialMotion & initial_motion,
-  const double nearest_dist_threshold_m, const double nearest_yaw_threshold_rad,
-  const std::shared_ptr<ContinuousJerkSmoother> & smoother, const Odometry & current_odometry,
-  const std::vector<double> & max_velocity_per_point = {});
+  TrajectoryPoints & input_trajectory, const double nearest_dist_threshold_m,
+  const double nearest_yaw_threshold_rad, const std::shared_ptr<ContinuousJerkSmoother> & smoother,
+  const Odometry & current_odometry, const std::vector<double> & max_velocity_per_point = {});
 
 }  // namespace autoware::trajectory_optimizer::plugin::trajectory_velocity_optimizer_utils
 
