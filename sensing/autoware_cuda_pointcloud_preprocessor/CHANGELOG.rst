@@ -2,6 +2,19 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(cuda_pointcloud_preprocessor): add missing initialization (`#12493 <https://github.com/mitsudome-r/autoware_universe/issues/12493>`_)
+* perf(pointcloud_preprocessor): use emplace/emplace_back to avoid temporary object creation (`#12227 <https://github.com/mitsudome-r/autoware_universe/issues/12227>`_)
+* feat(autoware_cuda_pointcloud_preprocessor): cuda 12.0 build compatibility (`#12194 <https://github.com/mitsudome-r/autoware_universe/issues/12194>`_)
+  * feat(autoware_cuda_pointcloud_preprocessor): CUDA 12.0+ build compatibility
+  * feat: restore Turing arch
+  ---------
+* docs(sensing): fix mkdocs macro rendering and links in sensing pages (`#12111 <https://github.com/mitsudome-r/autoware_universe/issues/12111>`_)
+  docs(sensing): fix mkdocs macro paths, links, and schema fields
+* Contributors: Amadeusz Szymko, Manato Hirabayashi, Max Schmeller, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

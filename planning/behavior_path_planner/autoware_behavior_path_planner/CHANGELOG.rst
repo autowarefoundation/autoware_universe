@@ -2,6 +2,82 @@
 Changelog for package autoware_behavior_path_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_path_planner): remove unused lanelet2_extension header (`#12292 <https://github.com/mitsudome-r/autoware_universe/issues/12292>`_)
+  unused lanelet2_extension in bpp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(behavior_path_planner): missing diag\_->publisher in early return (`#12214 <https://github.com/mitsudome-r/autoware_universe/issues/12214>`_)
+* chore: organize maintainer (`#12118 <https://github.com/mitsudome-r/autoware_universe/issues/12118>`_)
+* feat(behavior_path_planner): add function to check incoming message timeout (`#12075 <https://github.com/mitsudome-r/autoware_universe/issues/12075>`_)
+  * feat(behavior_path_planner): add message timeout detection with diagnostics
+  Replace null-pointer-only isDataReady() with timestamp-based timeout
+  checking using PollingSubscriber::latest_timestamp(). Each subscriber
+  is checked against configurable cyclic/persistent thresholds and the
+  result is published via DiagnosticsInterface for monitoring. Also
+  removes unused callback declarations from the header.
+  Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+  * doc(behavior_path_planner): add explanation of message timeout.
+  * doc(behavior_path_planner): add description about /diagnostics message.
+  * fix(behavior_path_planner): change acceleration timeout to cyclic
+  Acceleration messages are high-frequency like odometry, so they should
+  use cyclic_timeout instead of persistent_timeout.
+  Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+  * refactor(behavior_path_planner): change isDataReady to return 3-state status
+  Change isDataReady return type from bool to DataReadyStatus enum with
+  three states: SUCCESS, TIMEOUT, NOT_RECEIVED. Planning is now only
+  skipped when status is NOT_RECEIVED, allowing operation to continue
+  even when messages timeout (with diagnostic ERROR).
+  Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+  * doc(behavior_path_planner): update meaning of persistent_timeout.
+  * doc(behavior_path_planner): remove RCLCPP message.
+  * style(pre-commit): autofix
+  * chore(behavior_path_planner): replace magic number by std::optional
+  * style(pre-commit): autofix
+  * remove redundant parameter.
+  rename key name of diagnostic hash table
+  chore(behavior_path_planner): add comment
+  style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * (behavior_path_planner): updated README.md
+  * style(pre-commit): autofix
+  * refactor(behavior_path_planner): remove no_timeout threshold.
+  * chore(behavior_path_planner): update the method name
+  * style(pre-commit): autofix
+  * chore(behavior_path_planner): rename diagnostic name
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner/config/behavior_path_planner.param.yaml
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner/src/behavior_path_planner_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner/src/behavior_path_planner_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * chore(behavior_path_planner): remove unused variable
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner/include/autoware/behavior_path_planner/behavior_path_planner_node.hpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * style(pre-commit): autofix
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner/src/behavior_path_planner_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner/src/behavior_path_planner_node.cpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * chore(behavior_path_planner): remove default value of parameters
+  * style(pre-commit): autofix
+  * add in-line comment about early return
+  * style(pre-commit): autofix
+  * fixed spelling mistake.
+  * style(pre-commit): autofix
+  * fixed spelling mistake.
+  * style(pre-commit): autofix
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner/src/behavior_path_planner_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  ---------
+  Co-authored-by: Claude Opus 4.6 <noreply@anthropic.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, Takayuki AKAMINE, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

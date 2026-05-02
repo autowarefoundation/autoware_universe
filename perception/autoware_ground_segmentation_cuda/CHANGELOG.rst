@@ -2,6 +2,15 @@
 Changelog for package autoware_ground_segmentation_cuda
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_ground_segmentation_cuda): cuda 12.0 build compatibility (`#12182 <https://github.com/mitsudome-r/autoware_universe/issues/12182>`_)
+  * feat(autoware_ground_segmentation_cuda): CUDA 12.0+ build compatibility
+  * feat: restore Turing arch
+  ---------
+* Contributors: Amadeusz Szymko, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * chore: match all package versions

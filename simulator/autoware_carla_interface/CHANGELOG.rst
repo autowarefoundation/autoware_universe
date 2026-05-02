@@ -2,6 +2,159 @@
 Changelog for package autoware_carla_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(carla_interface): implement turn_indicators (`#12527 <https://github.com/mitsudome-r/autoware_universe/issues/12527>`_)
+  Implemented turn_indicators
+* feat: default artifact paths to ~/autoware_data/ml_models (`#12523 <https://github.com/mitsudome-r/autoware_universe/issues/12523>`_)
+  feat(launches,configs): default artifact paths to ~/autoware_data/ml_models
+  Roll every per-package `data_path` / `model_path` launch-arg default
+  from `$(env HOME)/autoware_data[/...]` to
+  `$(env HOME)/autoware_data/ml_models[/...]` so standalone universe
+  launches resolve artifacts under the new `~/autoware_data/ml_models/`
+  layout (`autowarefoundation/autoware#7068 <https://github.com/autowarefoundation/autoware/issues/7068>`_).
+  When invoked through autoware_launch the parent overrides cascade and
+  already pin the new root (`autowarefoundation/autoware_launch#1835 <https://github.com/autowarefoundation/autoware_launch/issues/1835>`_); this
+  commit closes the gap for users who launch a perception / localization /
+  sensing / planning component directly with `ros2 launch <pkg>`.
+  22 launch files updated (one-line default change each):
+  - e2e/autoware_tensorrt_vad/launch/vad_carla_tiny.launch.xml
+  - localization/yabloc/yabloc_pose_initializer/launch/yabloc_pose_initializer.launch.xml
+  - perception/autoware_bevfusion/launch/bevfusion.launch.xml
+  - perception/autoware_camera_streampetr/launch/streampetr.launch.xml
+  - perception/autoware_image_projection_based_fusion/launch/pointpainting_fusion.launch.xml
+  - perception/autoware_lidar_apollo_instance_segmentation/launch/lidar_apollo_instance_segmentation.launch.xml
+  - perception/autoware_lidar_centerpoint/launch/lidar_centerpoint.launch.xml
+  - perception/autoware_lidar_frnet/launch/lidar_frnet.launch.xml
+  - perception/autoware_lidar_transfusion/launch/lidar_transfusion.launch.xml
+  - perception/autoware_ptv3/launch/ptv3.launch.xml
+  - perception/autoware_shape_estimation/launch/shape_estimation.launch.xml
+  - perception/autoware_simpl_prediction/launch/simpl.launch.xml
+  - perception/autoware_tensorrt_bevdet/launch/tensorrt_bevdet.launch.xml
+  - perception/autoware_tensorrt_bevformer/launch/bevformer.launch.xml
+  - perception/autoware_tensorrt_yolox/launch/{yolox_traffic_light_detector,yolox_tiny,yolox_s_plus_opt}.launch.xml
+  - perception/autoware_traffic_light_classifier/launch/{car,pedestrian}_traffic_light_classifier.launch.xml
+  - perception/autoware_traffic_light_fine_detector/launch/traffic_light_fine_detector.launch.xml
+  - planning/autoware_diffusion_planner/launch/diffusion_planner.launch.xml
+  - sensing/autoware_calibration_status_classifier/launch/calibration_status_classifier.launch.xml
+  Drive-by README and test fixes:
+  - e2e/autoware_tensorrt_vad/{README.md,docs/design.md}: also migrate the
+  `$HOME/autoware_map/Town01` examples to `$HOME/autoware_data/maps/Town01`.
+  - localization/yabloc/{README.md,yabloc_pose_initializer/README.md}: also
+  migrate `$HOME/autoware_map/sample-map-rosbag` to
+  `$HOME/autoware_data/maps/demos/sample-map-rosbag`.
+  - control/autoware_smart_mpc_trajectory_follower/README.md: migrate the
+  `map_path:=$HOME/autoware_map/sample-map-planning` example to
+  `$HOME/autoware_data/maps/demos/sample-map-planning`.
+  - simulator/autoware_carla_interface/README.md: migrate every
+  `$HOME/autoware_map/Town01/...` reference to
+  `$HOME/autoware_data/maps/Town01/...`.
+  - perception/{autoware_bevfusion,autoware_image_projection_based_fusion,autoware_lidar_centerpoint,autoware_tensorrt_bevformer}/README.md: copy-paste examples updated to `~/autoware_data/ml_models/<pkg>`.
+  - perception/autoware_camera_streampetr/config/ml_package_camera_streampetr.param.yaml: header comment updated.
+  - planning/autoware_diffusion_planner/README.md: prerequisites snippet updated.
+  - sensing/autoware_calibration_status_classifier/test/{test_model_inference,test_calibration_status_classifier}.cpp: hardcoded fallback ONNX path updated.
+  Users on the legacy layout can pin the old root with
+  `data_path:=$HOME/autoware_data` (or the per-package equivalent) on the
+  command line.
+  Refs: https://github.com/autowarefoundation/autoware/issues/7068
+* fix(autoware_carla_interface): remove autoware_launch exec_depend to break circular dependency (`#12112 <https://github.com/mitsudome-r/autoware_universe/issues/12112>`_)
+  fix(autoware_carla_interface): break circular dependency with autoware_launch
+  Use an indirect variable reference for autoware_launch in the launch file
+  to prevent check-package-depends from auto-adding exec_depend, which
+  creates a circular dependency:
+  autoware_carla_interface -> autoware_launch -> autoware_carla_interface
+  The check-package-depends hook scans for find-pkg-share patterns and
+  auto-adds exec_depend entries. By using $(var launch_config_pkg) instead
+  of a literal package name, the hook's filter (skips names containing $)
+  prevents the auto-addition while runtime behavior remains identical.
+* feat: carla interface e2e planning (`#11706 <https://github.com/mitsudome-r/autoware_universe/issues/11706>`_)
+  * fix(autoware_carla_interface): correct config file installation paths
+  Fix setup.py to install sensor_mapping.yaml in config/ subdirectory
+  instead of root share directory. This ensures the package works correctly
+  in production/deployment scenarios where source files are not available.
+  - raw_vehicle_cmd_converter.param.yaml: installed to share root (correct)
+  - sensor_mapping.yaml: installed to share/config/ (matches expected path)
+  Without this fix, the package relies on fallback to source directory which
+  fails in Docker containers and binary package deployments.
+  * fix(autoware_carla_interface): complete sensor mapping example in README
+  Update camera sensor mapping example to include all required fields:
+  - Add topic_info field for camera_info topic
+  - Add qos_profile field for ROS2 QoS configuration
+  - Remove unnecessary quotes from YAML values
+  These fields are essential for proper camera sensor configuration and were
+  missing from the documentation example, potentially causing confusion for
+  users trying to configure custom sensors.
+  * docs(autoware_carla_interface): remove misleading LiDAR concatenation note
+  Remove the note about uncommenting LiDAR concatenation relay from Known Issues
+  section. The single LiDAR configuration may still require the concatenated topic
+  for coordinate transformation, which will be tested separately.
+  The relay in launch file remains commented out pending further testing.
+  * refactor(autoware_carla_interface): remove unnecessary lidar concatenation relay
+  Remove commented-out lidar concatenation relay from launch file. Testing confirms
+  that the main Autoware sensing pipeline already provides the concatenated pointcloud
+  topic through the mirror_cropped pipeline, making this relay redundant.
+  The /sensing/lidar/concatenated/pointcloud topic is successfully published by
+  the main sensing stack and consumed by localization and perception modules.
+  * feat(autoware_carla_interface): add E2E planning support and VAD integration
+  Add comprehensive end-to-end (E2E) planning infrastructure to enable
+  neural planners like VAD to directly control vehicles in CARLA simulation.
+  Key features:
+  - E2E planning components (velocity converter, state publisher, TF, controls)
+  - CARLA utility C++ nodes (state publisher, operation mode publisher)
+  - Multi-camera combiner for temporal synchronization
+  - Conditional E2E activation via use_e2e_planning flag
+  - Automatic CARLA map name derivation from map_path
+  - Mixed Python/C++ package architecture
+  Related to autoware_tensorrt_vad integration for end-to-end autonomous driving.
+  * chore(autoware_carla_interface): simplify CHANGELOG for 0.48.0
+  Simplify 0.48.0 CHANGELOG section to keep it concise for PR submission.
+  * refactor(autoware_carla_interface): remove E2E control stack from CARLA interface
+  Move E2E control stack (trajectory follower, shift decider, external cmd selector,
+  vehicle command gate) from autoware_carla_interface.launch.xml to e2e_simulator.launch.xml
+  for better modularity and separation of concerns.
+  The control stack is now managed by the main E2E simulator launch file.
+  * chore(autoware_carla_interface): remove E2E planning entry from CHANGELOG
+  * chore(autoware_carla_interface): remove unused exec dependencies
+  Remove autoware_external_cmd_selector and autoware_launch from exec_depend.
+  These packages are not used by autoware_carla_interface:
+  - autoware_external_cmd_selector is not referenced anywhere in the codebase
+  - autoware_launch is a top-level launcher that includes this package, not a dependency of it
+  * feat(autoware_carla_interface): add E2E planning support and VAD integration
+  Add comprehensive end-to-end (E2E) planning infrastructure to enable
+  neural planners like VAD to directly control vehicles in CARLA simulation.
+  Key features:
+  - E2E planning components (velocity converter, state publisher, TF, controls)
+  - CARLA utility C++ nodes (state publisher, operation mode publisher)
+  - Multi-camera combiner for temporal synchronization
+  - Conditional E2E activation via use_e2e_planning flag
+  - Automatic CARLA map name derivation from map_path
+  - Mixed Python/C++ package architecture
+  Related to autoware_tensorrt_vad integration for end-to-end autonomous driving.
+  * fix(autoware_carla_interface): enhance map loading and world initialization
+  Improve reliability and debugging of CARLA world initialization:
+  Launch configuration:
+  - Fix map path extraction to handle trailing slashes properly
+  - Add debug logging to display map path resolution
+  World initialization:
+  - Add 2-second synchronization delay after load_world() to ensure full map loading
+  - Verify world readiness by attempting tick() before accessing settings
+  - Handle tick() failure gracefully in asynchronous mode
+  These changes prevent race conditions when loading non-default maps that
+  require additional initialization time.
+  * refactor(autoware_carla_interface): reduce cyclomatic complexity in load_world
+  Extract spawn point parsing and traffic manager setup into separate
+  methods to improve code maintainability and reduce complexity.
+  - Add _parse_spawn_point() method to handle spawn point string parsing
+  - Add _setup_traffic_manager() method to configure traffic manager
+  - Reduce load_world() cyclomatic complexity from 12 to 3
+  * fix(autoware_carla_interface): format launch file to comply with prettier
+  * fix(autoware_carla_interface): add cspell ignore for trafficmanager
+  Fix CI spell-check failure by adding inline cspell ignore comment
+  for CARLA API method name `get_trafficmanager`.
+  ---------
+* Contributors: Max-Bin, Mete Fatih Cırıt, SakodaShintaro, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

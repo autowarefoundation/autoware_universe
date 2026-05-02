@@ -2,6 +2,38 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* refactor(autoware_universe): use autoware_ament_auto_package in perception utility packages (`#12281 <https://github.com/mitsudome-r/autoware_universe/issues/12281>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* revert: feat(compare_map_filter) apply agnocast publisher to `voxel_compare_map_filter` (`#12346 <https://github.com/mitsudome-r/autoware_universe/issues/12346>`_)
+  Revert "feat(compare_map_filter): apply agnocast publisher to `voxel_based_compare_map_filter` (`#12304 <https://github.com/mitsudome-r/autoware_universe/issues/12304>`_)"
+  This reverts commit d702d678392837529fad335c4fce38cfff95f64b.
+* feat(compare_map_filter): apply agnocast publisher to `voxel_based_compare_map_filter` (`#12304 <https://github.com/mitsudome-r/autoware_universe/issues/12304>`_)
+  * apply agnocast publisher to voxel_based_compare_map_filter
+  * style(pre-commit): autofix
+  * delete agnocastlib dependency
+  * add agnocast dependency to voxel_based_compare_map_filter.launch.xml
+  * add TODO coment
+  * style(pre-commit): autofix
+  * clang-format
+  * dummy change for ci
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(compare_map_segmentation): ignore Werror=array-bounds (`#12316 <https://github.com/mitsudome-r/autoware_universe/issues/12316>`_)
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* Contributors: Koichi Imai, Mete Fatih Cırıt, Taekjin LEE, Vishal Chauhan, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

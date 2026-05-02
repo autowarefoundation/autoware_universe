@@ -2,6 +2,22 @@
 Changelog for package autoware_trajectory_ranker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(trajectory_ranker): add simple ranker only based on generator name (`#11963 <https://github.com/mitsudome-r/autoware_universe/issues/11963>`_)
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - planning component (`#12083 <https://github.com/mitsudome-r/autoware_universe/issues/12083>`_)
+  * replace getArcCoordinates in planning component
+  * replace getCenterlineWithOffset in planning component
+  * replace getRight/LeftBoundWithOffset in planning component
+  * replace getExpandedLanelet(s) in planning component
+  * replace combineLaneletsShape in planning component
+  * remove log for empty combine_lanelet_opt
+  * bind reference to optional value
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Maxime CLEMENT, Sarun MUKDAPITAK, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

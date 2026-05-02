@@ -2,6 +2,17 @@
 Changelog for package tier4_state_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(tier4_system_rviz_plugin): update vel limit I/F from autoware_state_panel (`#12307 <https://github.com/mitsudome-r/autoware_universe/issues/12307>`_)
+  * fix(autoware_state_panel): update velocity limit publisher topic and add sender information
+  * update README
+  * partial revert: add removed timestamp
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Autumn60, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

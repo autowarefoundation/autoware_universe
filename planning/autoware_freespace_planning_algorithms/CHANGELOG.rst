@@ -2,6 +2,25 @@
 Changelog for package autoware_freespace_planning_algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_freespace_planning_algorithms): check collision at intermediate arc points during A* expansion (`#12403 <https://github.com/mitsudome-r/autoware_universe/issues/12403>`_)
+  When adapt_expansion_distance is enabled, A* nodes can be far apart and
+  setPath interpolates waypoints between them. These interpolated waypoints
+  were never collision-checked during search, only during post-hoc
+  verification via hasObstacleOnTrajectory. On arm64, floating-point
+  differences caused interpolated poses to clip obstacles that were missed
+  on x86_64, resulting in flaky test failures.
+  This adds intermediate collision checks along the arc in expandNodes,
+  using the same spacing as setPath interpolation. This ensures every
+  waypoint in the output trajectory was validated during search,
+  eliminating architecture-dependent inconsistencies.
+* fix(astar_search): non-monotonic trajectories fix. Ensure that points between nodes are added in the correct order (`#11789 <https://github.com/mitsudome-r/autoware_universe/issues/11789>`_)
+* style: update pre-commit (black 26.1.0, pre-commit-hooks-ros 0.10.2) (`#12195 <https://github.com/mitsudome-r/autoware_universe/issues/12195>`_)
+* chore: organize maintainer (`#12157 <https://github.com/mitsudome-r/autoware_universe/issues/12157>`_)
+* Contributors: Mete Fatih Cırıt, Satoshi OTA, Taeseung Sohn, github-actions, ralwing
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

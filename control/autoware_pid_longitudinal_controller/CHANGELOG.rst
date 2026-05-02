@@ -2,6 +2,23 @@
 Changelog for package autoware_pid_longitudinal_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* perf(control): use emplace/emplace_back to avoid temporary object creation (`#12236 <https://github.com/mitsudome-r/autoware_universe/issues/12236>`_)
+* feat(pid_longitudinal_controller): parameterize ff_scale limits (`#12415 <https://github.com/mitsudome-r/autoware_universe/issues/12415>`_)
+  parameterize ff_scale limits
+* fix(autoware_pid_longitudinal_controller): fix test for ROS 2 Jazzy (`#12373 <https://github.com/mitsudome-r/autoware_universe/issues/12373>`_)
+  fix(autoware_pid_longitudinal_controller): fix test
+* refactor(autoware_pid_longitudinal_controller): remove unused config params (`#12246 <https://github.com/mitsudome-r/autoware_universe/issues/12246>`_)
+  * refactor(autoware_pid_longitudinal_controller): remove unused config params
+  * fix(README): correct formatting of core parameters table
+  ---------
+* feat(pid_long): apply slope compensation for stopped acc (`#12007 <https://github.com/mitsudome-r/autoware_universe/issues/12007>`_)
+  add slope compensation for stopped acc
+* chore: organize maintainer (`#12149 <https://github.com/mitsudome-r/autoware_universe/issues/12149>`_)
+* Contributors: Autumn60, Go Sakayori, Ryohsuke Mitsudome, Satoshi OTA, Yuki TAKAGI, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

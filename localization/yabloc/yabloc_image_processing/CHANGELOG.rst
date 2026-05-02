@@ -2,6 +2,12 @@
 Changelog for package yabloc_image_processing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* perf(localization): use emplace/emplace_back to avoid temporary object creation (`#12232 <https://github.com/mitsudome-r/autoware_universe/issues/12232>`_)
+* Contributors: github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 

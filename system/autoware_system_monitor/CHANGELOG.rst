@@ -2,6 +2,15 @@
 Changelog for package autoware_system_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_system_monitor): change diagnostic logic for mem_monitor (`#11971 <https://github.com/mitsudome-r/autoware_universe/issues/11971>`_)
+  * feat(autoware_system_monitor): change diagnostic logic for mem_monitor (`#11971 <https://github.com/mitsudome-r/autoware_universe/issues/11971>`_)
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Takayuki AKAMINE, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

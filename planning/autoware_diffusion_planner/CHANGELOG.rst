@@ -2,6 +2,302 @@
 Changelog for package autoware_diffusion_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: default artifact paths to ~/autoware_data/ml_models (`#12523 <https://github.com/mitsudome-r/autoware_universe/issues/12523>`_)
+  feat(launches,configs): default artifact paths to ~/autoware_data/ml_models
+  Roll every per-package `data_path` / `model_path` launch-arg default
+  from `$(env HOME)/autoware_data[/...]` to
+  `$(env HOME)/autoware_data/ml_models[/...]` so standalone universe
+  launches resolve artifacts under the new `~/autoware_data/ml_models/`
+  layout (`autowarefoundation/autoware#7068 <https://github.com/autowarefoundation/autoware/issues/7068>`_).
+  When invoked through autoware_launch the parent overrides cascade and
+  already pin the new root (`autowarefoundation/autoware_launch#1835 <https://github.com/autowarefoundation/autoware_launch/issues/1835>`_); this
+  commit closes the gap for users who launch a perception / localization /
+  sensing / planning component directly with `ros2 launch <pkg>`.
+  22 launch files updated (one-line default change each):
+  - e2e/autoware_tensorrt_vad/launch/vad_carla_tiny.launch.xml
+  - localization/yabloc/yabloc_pose_initializer/launch/yabloc_pose_initializer.launch.xml
+  - perception/autoware_bevfusion/launch/bevfusion.launch.xml
+  - perception/autoware_camera_streampetr/launch/streampetr.launch.xml
+  - perception/autoware_image_projection_based_fusion/launch/pointpainting_fusion.launch.xml
+  - perception/autoware_lidar_apollo_instance_segmentation/launch/lidar_apollo_instance_segmentation.launch.xml
+  - perception/autoware_lidar_centerpoint/launch/lidar_centerpoint.launch.xml
+  - perception/autoware_lidar_frnet/launch/lidar_frnet.launch.xml
+  - perception/autoware_lidar_transfusion/launch/lidar_transfusion.launch.xml
+  - perception/autoware_ptv3/launch/ptv3.launch.xml
+  - perception/autoware_shape_estimation/launch/shape_estimation.launch.xml
+  - perception/autoware_simpl_prediction/launch/simpl.launch.xml
+  - perception/autoware_tensorrt_bevdet/launch/tensorrt_bevdet.launch.xml
+  - perception/autoware_tensorrt_bevformer/launch/bevformer.launch.xml
+  - perception/autoware_tensorrt_yolox/launch/{yolox_traffic_light_detector,yolox_tiny,yolox_s_plus_opt}.launch.xml
+  - perception/autoware_traffic_light_classifier/launch/{car,pedestrian}_traffic_light_classifier.launch.xml
+  - perception/autoware_traffic_light_fine_detector/launch/traffic_light_fine_detector.launch.xml
+  - planning/autoware_diffusion_planner/launch/diffusion_planner.launch.xml
+  - sensing/autoware_calibration_status_classifier/launch/calibration_status_classifier.launch.xml
+  Drive-by README and test fixes:
+  - e2e/autoware_tensorrt_vad/{README.md,docs/design.md}: also migrate the
+  `$HOME/autoware_map/Town01` examples to `$HOME/autoware_data/maps/Town01`.
+  - localization/yabloc/{README.md,yabloc_pose_initializer/README.md}: also
+  migrate `$HOME/autoware_map/sample-map-rosbag` to
+  `$HOME/autoware_data/maps/demos/sample-map-rosbag`.
+  - control/autoware_smart_mpc_trajectory_follower/README.md: migrate the
+  `map_path:=$HOME/autoware_map/sample-map-planning` example to
+  `$HOME/autoware_data/maps/demos/sample-map-planning`.
+  - simulator/autoware_carla_interface/README.md: migrate every
+  `$HOME/autoware_map/Town01/...` reference to
+  `$HOME/autoware_data/maps/Town01/...`.
+  - perception/{autoware_bevfusion,autoware_image_projection_based_fusion,autoware_lidar_centerpoint,autoware_tensorrt_bevformer}/README.md: copy-paste examples updated to `~/autoware_data/ml_models/<pkg>`.
+  - perception/autoware_camera_streampetr/config/ml_package_camera_streampetr.param.yaml: header comment updated.
+  - planning/autoware_diffusion_planner/README.md: prerequisites snippet updated.
+  - sensing/autoware_calibration_status_classifier/test/{test_model_inference,test_calibration_status_classifier}.cpp: hardcoded fallback ONNX path updated.
+  Users on the legacy layout can pin the old root with
+  `data_path:=$HOME/autoware_data` (or the per-package equivalent) on the
+  command line.
+  Refs: https://github.com/autowarefoundation/autoware/issues/7068
+* refactor(diffusion_planner,bevformer,vad): use launch arg paths (`#12521 <https://github.com/mitsudome-r/autoware_universe/issues/12521>`_)
+  refactor(autoware_diffusion_planner,autoware_tensorrt_bevformer,autoware_tensorrt_vad): use launch substitutions for artifact paths
+  Move the absolute $(env HOME)/autoware_data/<model> strings out of the
+  param YAMLs and have each YAML reference a launch substitution. The
+  launch arg defaults still resolve to the same paths, so behaviour is
+  unchanged; downstream consumers (autoware_launch) can now flip a single
+  data_path default to point at the upcoming ~/autoware_data/ml_models
+  layout.
+  - autoware_diffusion_planner: add a data_path arg in
+  diffusion_planner.launch.xml defaulting to
+  $(env HOME)/autoware_data/diffusion_planner; switch the param YAML to
+  $(var data_path). Drop the unused artifact_dir from the schema (left
+  over after the corresponding launch arg was removed) and align the
+  schema's onnx_model_path and args_path defaults with the YAML.
+  - autoware_tensorrt_bevformer: rewrite model_params.engine_file and
+  model_params.onnx_file defaults to use $(var data_path); the launch
+  already declares the arg.
+  - autoware_tensorrt_vad: rewrite model_param_path to use
+  $(var model_path); the launch already declares the arg.
+  Also fixes a stale v3.1 reference in the diffusion_planner README to
+  match the YAML default of v4.0.
+  Refs: https://github.com/autowarefoundation/autoware/issues/7068
+* docs(diffusion_planner): point artifact links at artifacts README (`#12506 <https://github.com/mitsudome-r/autoware_universe/issues/12506>`_)
+  docs(diffusion_planner): point artifact links at artifacts role README
+  setup-dev-env.sh is being removed on 2026-05-24 per
+  `autowarefoundation/autoware#7052 <https://github.com/autowarefoundation/autoware/issues/7052>`_, and the autoware-documentation
+  source-installation page is being updated alongside it. Both artifact
+  download references in this README pointed at those soon-to-be-deleted
+  entrypoints; redirect them to the canonical artifacts role README which
+  documents the install_dev_env --tags artifacts invocation.
+* feat(diffusion_planner): add planning factor interface (`#12387 <https://github.com/mitsudome-r/autoware_universe/issues/12387>`_)
+  * add planning factor interface to diffusion planner
+  * align default parameters
+  * refactor & add tests
+  * split functions
+  * fix
+  * fix test
+  ---------
+* feat(diffusion_planner): diffusion planner v4 (`#12348 <https://github.com/mitsudome-r/autoware_universe/issues/12348>`_)
+  * Implemented turn_indicator_hold_duration
+  * Fixed data_converter.cpp
+  * Updated `WEIGHT_MAJOR_VERSION` to 3
+  * Added ego_shape
+  * Fixed to use `ego_wheel_base`
+  * Fixed timestamp
+  * Removed `to_string`
+  * Fixed
+  * Fixed
+  * Fixed
+  * Fixed
+  * Fixed AgentData
+  * Fixed AgentData to map
+  * Fixed max_num_agent\_
+  * Removed unused functions
+  * Added `INPUT_T_WITH_CURRENT`
+  * Removed num_agent
+  * Removed unused functions
+  * Fixed flatten_histories_to_vector
+  * Fixed AgentData
+  * Fixed AgentData
+  * Removed pad_history
+  * Removed unused functions
+  * Fixed constructor
+  * Fixed
+  * Fixed
+  * Removed latest_time\_
+  * Fixed
+  * Fixed fixed_queue
+  * Removed autoware_label\_
+  * Removed `yaw\_`
+  * Removed unused functions
+  * Removed `_`
+  * Added const
+  * Removed `tracked_object`
+  * Fixed
+  * Removed `get_latest_state_position`
+  * Removed the default value
+  * Fixed
+  * Fixed
+  * Fixed
+  * Fixed tests
+  * Fixed a bug
+  * Fixed shift_x
+  * Fixed shift length
+  * Fixed the type of `ego_history\_` to `nav_msgs::msg::Odometry`
+  * Added timestamp to AgentState
+  * Removed FixedQueue
+  * Removed a comment
+  * Fixed time_from_start
+  * v3.0
+  * Fixed the description of `shift_x`
+  * Fixed the default value of `turn_indicator_keep_offset`
+  * Added comments to turn_indicator_manager.hpp
+  * Fixed `keep_offset` as a parameter
+  * Added `const`
+  * Added `static_cast`
+  * Added a comment
+  * Fixed types
+  * Removed redundant shift_x
+  * Implemented
+  * Fixed has_previous_output
+  * Fixed
+  * Fixed delay_step
+  * Added normalization
+  * Fixed
+  * Fixed
+  * Fixed copy steps
+  * Reduced `print`
+  * Fixed to use `pose_to_matrix4d`
+  * Fixed the root
+  * Fixed debug output
+  * Fixed output PREDICTION
+  * Fixed msg
+  * Fixed initialization of ego
+  * Fixed the standard point
+  * Added unit tests
+  * Fixed replicate_for_batch
+  * Fixed to use `create_ego_current_state`
+  * Added min_distance
+  * Fixed route
+  * Added LineStringType
+  * Fixed to 60
+  * Fixed delay_step
+  * feat(autoware_diffusion_planner): linestring resampling and visualization (`#2714 <https://github.com/mitsudome-r/autoware_universe/issues/2714>`_)
+  * Add roadborder publishing
+  * add resampling of linestrings to get better details
+  * Updated the publisher to publish both road borders and stop lines
+  * use tensor layout notation to get linestring type
+  * undo path changes in param / config file
+  * copilot reviews
+  ---------
+  * Fixed the default value of `publish_debug_linestrings` to `true`
+  * Fixed the version to 4.0
+  * Removed tools
+  * Removed `BUILD_TOOL`
+  * Fixed the year in the copyright text
+  * Potential fix for pull request finding
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+  * Fixed issues
+  * Fixed minors
+  * Added `#include <cmath>`
+  * Changed the default value of `publish_debug_linestrings`
+  * Updated README.md
+  ---------
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+* chore(planning): remove unused lanelet2_extension header (`#12294 <https://github.com/mitsudome-r/autoware_universe/issues/12294>`_)
+  * unused lanelet2_extension in planning component
+  * unused lanelet2_extension in planning component (2)
+  * unused lanelet2_extension in planning component (3)
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(diffusion_planner): optimize TRT inference pipeline (`#12241 <https://github.com/mitsudome-r/autoware_universe/issues/12241>`_)
+  * feat(diffusion_planner): optimize TRT inference pipeline
+  - Move setInputShape/setTensorAddress calls from per-infer to one-time
+  bindBuffers(), eliminating 34 redundant CUDA API calls per frame
+  - Use pinned host memory (cudaHostAlloc) for D2H output transfers
+  - Always set maxAuxStreams(0) to force single-stream execution, reducing
+  scratch memory from 384MB to 27MB regardless of CUDA Graph setting
+  - Add CUDA Graph support with graceful fallback for GPUs using TRT
+  Compiler Backend (e.g. Blackwell SM 12.0) where stream capture fails
+  - Switch default model to onnx-simplified variant for better TRT
+  optimization
+  - Add cuda_graph_enable ROS parameter (default: false)
+  - Add standalone engine benchmark tool (scripts/benchmark_engine.cpp)
+  and evaluation script for comparing legacy vs optimized inference
+  Benchmark on RTX PRO 6000 Blackwell (300 runs):
+  OLD engine (14759b0719): scratch=384MB, 5 aux streams, GPU=2672MiB
+  NEW engine (this PR):    scratch=27MB,  single-stream, GPU=2298MiB
+  Latency: 5.33ms -> 5.13ms (mean), GPU memory savings: 374 MiB
+  Depends-on: tensorrt_common getContext() PR
+  * docs(diffusion_planner): simplify benchmark README and fix model filenames
+  * style(pre-commit): autofix
+  * refactor(diffusion_planner): move benchmark scripts to Diffusion-Planner repo
+  Benchmark tool moved to tier4/Diffusion-Planner cpp_tools/benchmark/.
+  * refactor(diffusion_planner): remove CUDA graph optimization
+  CUDA graph capture fails on both Blackwell (SM 12.0) and 40-series GPUs
+  with current TensorRT, so remove all CUDA graph code from the PR.
+  The setMaxAuxStreams(0) optimization is kept as it independently reduces
+  GPU scratch memory (~384MB to ~27MB).
+  * feat(diffusion_planner): update model path to v3.1
+  Move from v3.0/diffusion_planner_simplified.onnx to v3.1/diffusion_planner.onnx.
+  Add v3.1 entry to model version history table.
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(diffusion_planner): remove `predict_neighbor_trajectory` (`#12237 <https://github.com/mitsudome-r/autoware_universe/issues/12237>`_)
+  Removed `predict_neighbor_trajectory`
+* feat(diffusion_planner): ego interpolation (`#12213 <https://github.com/mitsudome-r/autoware_universe/issues/12213>`_)
+  * Implemented interpolation
+  * Added `use_time_interpolation`
+  * Applied `pre-commit run -a`
+  * Added a test
+  * Replaced `autoware::universe_utils::calcInterpolatedPose` to `autoware_utils_geometry::calc_interpolated_pose`
+  ---------
+* fix(diffusion_planner): add `turn_indicator_batch_idx` (`#12175 <https://github.com/mitsudome-r/autoware_universe/issues/12175>`_)
+  Fixed `turn_indicator_batch_idx`
+* fix(diffusion_planner): add `VehicleSpec` (`#12174 <https://github.com/mitsudome-r/autoware_universe/issues/12174>`_)
+  Added `VehicleSpec`
+* fix(diffusion_planner): removed `result.predictions.clear();` (`#12171 <https://github.com/mitsudome-r/autoware_universe/issues/12171>`_)
+  Removed `result.predictions.clear();`
+* refactor(diffusion_planner): move postprocessing logic from node to core (`#12162 <https://github.com/mitsudome-r/autoware_universe/issues/12162>`_)
+  * Moved postprocessing logit from node to core
+  * Removed `get_previous_turn_indicator_report`
+  * Fixed a comment
+  * Removed unnecessary headers
+  * Added a TODO comment
+  * Added `std::string()`
+  * Wrapped `create_planner_output` with try/catch
+  ---------
+* refactor(diffusion_planner): separate core logic (`#12151 <https://github.com/mitsudome-r/autoware_universe/issues/12151>`_)
+  * Separated the core logic
+  * Removed unnecessary includes and using
+  * Fixed build
+  * Fixed an error message
+  * Fixed route_ptr
+  * Fixed route_ptr\_
+  * Fixed route_ptr\_
+  * Fixed
+  * Fixed load_model and header
+  * Fixed to 2026
+  * Fixed comments in planning/autoware_diffusion_planner/include/autoware/diffusion_planner/diffusion_planner_node.hpp
+  ---------
+* feat: enable traffic light debugging outputs for signal display (`#12135 <https://github.com/mitsudome-r/autoware_universe/issues/12135>`_)
+  * feat: enable traffic light debugging outputs for signal display
+  * fix: pre-commit
+  * feat: align const argument; fix not needed clear
+  * feat: add documentation for interface changes
+  * feat: add test for basic function
+  * feat: fix traffic light element error
+  ---------
+* fix(diffusion_planner): modify loading model (`#12125 <https://github.com/mitsudome-r/autoware_universe/issues/12125>`_)
+  * Added `load_model`
+  * Fixed to fail
+  * Fixed
+  * Removed `reject\_` from the result variable
+  * Update planning/autoware_diffusion_planner/include/autoware/diffusion_planner/diffusion_planner_node.hpp
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+  * Fixed the timing of checking `build_only`
+  ---------
+  Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+* Contributors: Kotakku, Max-Bin, Mete Fatih Cırıt, SakodaShintaro, Sarun MUKDAPITAK, Yuxuan Liu, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

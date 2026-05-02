@@ -2,6 +2,12 @@
 Changelog for package autoware_behavior_velocity_rtc_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* Contributors: github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 

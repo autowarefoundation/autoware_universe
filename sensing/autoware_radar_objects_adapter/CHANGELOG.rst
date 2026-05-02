@@ -2,6 +2,24 @@
 Changelog for package autoware_radar_objects_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_radar_objects_adapter): remove dependency on autoware_universe_utils in sensing (`#12407 <https://github.com/mitsudome-r/autoware_universe/issues/12407>`_)
+  * feat(autoware_radar_objects_adapter): replace autoware_universe_utils with autoware_utils
+  Replace dependency on autoware_universe_utils with autoware_utils
+  in sensing/autoware_radar_objects_adapter.
+  Related to `#12376 <https://github.com/mitsudome-r/autoware_universe/issues/12376>`_
+  * fix: rename createQuaternionFromYaw to create_quaternion_from_yaw
+  * fix(autoware_radar_objects_adapter): use autoware_utils_geometry
+  ---------
+  Co-authored-by: github-actions <github-actions@github.com>
+* feat(radar_objects_adapter): apply autoware_agnocast_wrapper for CIE (`#12326 <https://github.com/mitsudome-r/autoware_universe/issues/12326>`_)
+  feat(autoware_radar_objects_adapter): apply autoware_agnocast_wrapper for CIE
+* docs(sensing): fix mkdocs macro rendering and links in sensing pages (`#12111 <https://github.com/mitsudome-r/autoware_universe/issues/12111>`_)
+  docs(sensing): fix mkdocs macro paths, links, and schema fields
+* Contributors: Max Schmeller, Vishal Chauhan, atsushi yano, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

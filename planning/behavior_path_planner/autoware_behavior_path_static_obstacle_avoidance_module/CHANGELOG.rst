@@ -2,6 +2,59 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_path_planner): remove unused lanelet2_extension header (`#12292 <https://github.com/mitsudome-r/autoware_universe/issues/12292>`_)
+  unused lanelet2_extension in bpp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(static_obstacle_avoidance): implement 'stop_on_approval' policy for candidate path turn signals and add hold duration parameter (`#12264 <https://github.com/mitsudome-r/autoware_universe/issues/12264>`_)
+  * feat(static_obstacle_avoidance): implement 'stop_on_approval' policy for candidate path turn signals and add hold duration parameter
+  * feat: add return value documentation for point insertion functions
+  ---------
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* fix(autoware_behavior_path_static_obstacle_avoidance_module): correctly transition to SUCCEEDED after ego passes all shift lines (`#12199 <https://github.com/mitsudome-r/autoware_universe/issues/12199>`_)
+* feat(static_obstacle_avoidance): add turn signal policy for candidate paths and refactor turn signal computation (`#12144 <https://github.com/mitsudome-r/autoware_universe/issues/12144>`_)
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - bpp packages (`#12085 <https://github.com/mitsudome-r/autoware_universe/issues/12085>`_)
+  * replace getArcCoordinates in bpp packages
+  * replace getArcCoordinates usage in bpp packages (2)
+  * replace getArcCoordinates in bpp package (3)
+  (autoware_behavior_path_goal_planner_module)
+  * replace getArcCoordinates in bpp package(4)
+  (autoware_behavior_path_start_planner_module)
+  * replace getLateralDistanceToClosestLanelet in bpp package
+  * replace getExpandedLanelet(s) in bpp package
+  * replace combineLaneletsShape in bpp packages
+  * fix wrong condition in bpp
+  * style(pre-commit): autofix
+  * remove directly dereference opt for combine_lanelet
+  * remove log if lanelet is empty
+  * bind reference to optional value for combine_lanelets_shape
+  * remove log and simply return outside else in get_dirty_expanded_lanelets opt
+  * remove .has_value in lane_change_module for consistency
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12119 <https://github.com/mitsudome-r/autoware_universe/issues/12119>`_)
+  * chore: organize maintainer
+  * fix: ci error
+  ---------
+* refactor(planning): replace toGeomMsg/toLaneletPoint to autoware_lanelet2_utils in static avoidance (`#12090 <https://github.com/mitsudome-r/autoware_universe/issues/12090>`_)
+  refactor(behavior_path_planner): deprecate toLaneletPoint/toGeomPt in static_avoidance
+* refactor(planning): replace toGeomMsg/toLaneletPoint to autoware_lanelet2_utils in bpp_common (`#12091 <https://github.com/mitsudome-r/autoware_universe/issues/12091>`_)
+  * refactor(behavior_path_planner): deprecate toLaneletPoint/toGeomPt in bpp_common package
+  * fix
+  ---------
+* feat(static_obstacle_avoidance): enable avoidance from obstacle stop distance (`#12105 <https://github.com/mitsudome-r/autoware_universe/issues/12105>`_)
+  * feat(static_obstacle_avoidance): enable avoidance from obstacle stop distance
+  * feat(static_obstacle_avoidance): add close distance avoidance policy
+  - Introduced a new parameter for handling close vehicle avoidance behavior in the static obstacle avoidance module.
+  - Updated related structures and methods to accommodate the new policy, allowing for "auto", "manual", or "ignore" options.
+  - Enhanced decision-making logic for vehicle behavior when encountering close distance obstacles.
+  * align style
+  ---------
+* Contributors: Mamoru Sobue, Sarun MUKDAPITAK, Satoshi OTA, Yukinari Hisaki, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

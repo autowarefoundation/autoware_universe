@@ -2,6 +2,12 @@
 Changelog for package autoware_image_object_locator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(perception): replace autoware_universe_utils with specific autoware_utils sub-packages (`#12425 <https://github.com/mitsudome-r/autoware_universe/issues/12425>`_)
+* Contributors: Vishal Chauhan, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -2,6 +2,25 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* refactor(autoware_ground_segmentation/launch, autoware_probabilistic_occupancy_grid_map/launch): use launch substitution instead of get_package_share_directory (`#12392 <https://github.com/mitsudome-r/autoware_universe/issues/12392>`_)
+  * refactor: use launch substitution instead of get_package_share_directory
+  * use existing file for default
+  ---------
+* refactor(autoware_universe): use autoware_ament_auto_package in perception utility packages (`#12281 <https://github.com/mitsudome-r/autoware_universe/issues/12281>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* feat(autoware_probabilistic_occupancy_grid_map): cuda 12.0 build compatibility (`#12187 <https://github.com/mitsudome-r/autoware_universe/issues/12187>`_)
+  * feat(autoware_probabilistic_occupancy_grid_map): CUDA 12.0+ build compatibility
+  * feat: restore Turing arch
+  ---------
+* fix(autoware_probabilistic_occupancy_grid_map): remove dead operation (`#12159 <https://github.com/mitsudome-r/autoware_universe/issues/12159>`_)
+  fix: remove dead operation
+* Contributors: Amadeusz Szymko, Taekjin LEE, Taeseung Sohn, Vishal Chauhan, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

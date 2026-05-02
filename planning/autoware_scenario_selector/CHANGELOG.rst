@@ -2,6 +2,20 @@
 Changelog for package autoware_scenario_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_universe): use autoware_ament_auto_package in planning packages (`#12291 <https://github.com/mitsudome-r/autoware_universe/issues/12291>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* chore(planning): remove unused lanelet2_extension header (`#12294 <https://github.com/mitsudome-r/autoware_universe/issues/12294>`_)
+  * unused lanelet2_extension in planning component
+  * unused lanelet2_extension in planning component (2)
+  * unused lanelet2_extension in planning component (3)
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_scenario_selector): apply autoware_agnocast_wrapper for CIE (`#12334 <https://github.com/mitsudome-r/autoware_universe/issues/12334>`_)
+* Contributors: Sarun MUKDAPITAK, Vishal Chauhan, atsushi yano, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

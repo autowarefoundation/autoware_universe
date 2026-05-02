@@ -2,6 +2,9 @@
 Changelog for package autoware_evaluation_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+
 0.50.0 (2026-02-14)
 -------------------
 * chore: match all package versions

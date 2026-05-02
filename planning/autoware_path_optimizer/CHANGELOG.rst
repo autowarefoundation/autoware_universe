@@ -2,6 +2,87 @@
 Changelog for package autoware_path_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_path_optimizer): fixed an issue with cropping the ref_trajectory and its corresponding spline (`#12391 <https://github.com/mitsudome-r/autoware_universe/issues/12391>`_)
+  * fix
+  * changes for review
+  ---------
+* fix(autoware_path_optimizer): fixed an issue with early return and A/B switching to use acados or not (`#12385 <https://github.com/mitsudome-r/autoware_universe/issues/12385>`_)
+  fix
+* feat(autoware_path_optimizer): reintroducing acados MPT along with changes to linking to acados (`#12300 <https://github.com/mitsudome-r/autoware_universe/issues/12300>`_)
+  * Revert "feat(autoware_path_optimizer): reverts new path optimizer due to failing builds (`#12298 <https://github.com/mitsudome-r/autoware_universe/issues/12298>`_)"
+  This reverts commit 7302e8ce79eef35b51971bbbfff28c1b40cf529e.
+  * fix to CMakeLists to propagate acados links downstream
+  * added words to spell-check
+  * committing generated files
+  * added words to cspell
+  * fix
+  * style(pre-commit): autofix
+  * update to previous placeholder
+  * Change link to public
+  * update to cspell
+  * update to cspell
+  * Revert "committing generated files"
+  This reverts commit 6496b40e552af440e57c17695fd8464155c57200.
+  * Revert "update to previous placeholder"
+  This reverts commit 82615801655f6abe49182a5fc38a0db5ec0d87f1.
+  * final
+  * build to output tree
+  * copyright
+  * fix for copyright
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_path_optimizer): reverts new path optimizer due to failing builds (`#12298 <https://github.com/mitsudome-r/autoware_universe/issues/12298>`_)
+  Revert "feat(autoware_path_optimizer): new path optimizer (`#11479 <https://github.com/mitsudome-r/autoware_universe/issues/11479>`_)"
+  This reverts commit f775ea6f8e6434531057d5703ef03f391d354d54.
+* feat(autoware_path_optimizer): new path optimizer (`#11479 <https://github.com/mitsudome-r/autoware_universe/issues/11479>`_)
+  * acados MPT
+  * fix
+  * fix
+  * changed name of variable
+  * fix
+  * match build_depends*.repos to autoware*.repos structure
+  * fix
+  * fix
+  * fix
+  * Apply suggestions from code review
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * Update planning/autoware_path_optimizer/src/acados_mpc/CMakeLists.txt
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * target_link_directories
+  * just link acados public
+  * revert unrelated changes
+  * chore: update CODEOWNERS (`#12216 <https://github.com/mitsudome-r/autoware_universe/issues/12216>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  * fix
+  * fixes for ament
+  * changes for CI
+  * fix for clang
+  * spell-check
+  * changed stub
+  * removed guards
+  * fix for build CI
+  * changes for build-test-differential
+  * changes for build-test-differential
+  * fix
+  ---------
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  Co-authored-by: awf-autoware-bot[bot] <94889083+awf-autoware-bot[bot]@users.noreply.github.com>
+  Co-authored-by: github-actions <github-actions@github.com>
+  Co-authored-by: Taiki Yamada <129915538+TaikiYamada4@users.noreply.github.com>
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* Contributors: Arjun Jagdish Ram, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

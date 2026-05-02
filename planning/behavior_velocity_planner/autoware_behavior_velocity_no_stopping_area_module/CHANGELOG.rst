@@ -2,6 +2,22 @@
 Changelog for package autoware_behavior_velocity_no_stopping_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_trajectory): define set stopline in Trajectory class (`#12008 <https://github.com/mitsudome-r/autoware_universe/issues/12008>`_)
+  * replace usage with set_stopline function
+  * replace additiona usage with set_stopline function
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* feat(behavior_velocity_no_stopping_area_module): use Trajectory instead of PathWithLaneId (`#11584 <https://github.com/mitsudome-r/autoware_universe/issues/11584>`_)
+  * use Trajectory instead of PathWithLaneId
+  * move is_stoppable() to PassJudge member
+  * handle case where either one is empty
+  ---------
+* Contributors: Mitsuhiro Sakamoto, Sarun MUKDAPITAK, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 
