@@ -119,6 +119,11 @@ void ShapeEstimationNode::callback(
     const auto label = get_label(object.classification);
     const auto is_vehicle = label_is_vehicle(label);
     const auto & feature = feature_object.feature;
+
+    if (feature.cluster.data.empty()) {
+      continue;
+    }
+    
     // convert ros to pcl
     pcl::PointCloud<pcl::PointXYZ>::Ptr cluster(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(feature.cluster, *cluster);
