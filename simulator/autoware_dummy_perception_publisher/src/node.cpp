@@ -35,6 +35,7 @@
 
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -78,6 +79,12 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   // parameters for vehicle centric point cloud generation
   angle_increment_ = this->declare_parameter("angle_increment", 0.25 * M_PI / 180.0);
 
+  // parameters for initial object spawning
+  enable_object_spawning_ = this->declare_parameter("enable_object_spawning", true);
+  num_initial_objects_ = this->declare_parameter("num_initial_objects", 3);
+  min_spawn_radius_ = this->declare_parameter("min_spawn_radius", 10.0);
+  spawn_timer_period_s_ = this->declare_parameter("spawn_timer_period", 20.0);
+
   if (use_fixed_random_seed) {
     random_generator_.seed(random_seed);
   } else {
@@ -102,6 +109,13 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   timer_ = rclcpp::create_timer(
     this, get_clock(), 100ms, std::bind(&DummyPerceptionPublisherNode::timerCallback, this));
 
+  // Create spawn timer with adjustable period (convert seconds to milliseconds)
+  if (enable_object_spawning_) {
+    spawn_timer_ = rclcpp::create_timer(
+      this, get_clock(), std::chrono::milliseconds(static_cast<int>(spawn_timer_period_s_ * 1000)),
+        std::bind(&DummyPerceptionPublisherNode::spawnInitialRandomObjectsCallback, this));
+  }
+  
   // Initialize movement plugins directly in the vector
   movement_plugins_.push_back(std::make_shared<pluginlib::StraightLineObjectMovementPlugin>(this));
   movement_plugins_.push_back(std::make_shared<pluginlib::PredictedObjectMovementPlugin>(this));
@@ -126,6 +140,115 @@ DummyPerceptionPublisherNode::convertPointCloudXYZtoXYZIRC(
   }
 
   return cloud_xyzirc;
+}
+
+
+void DummyPerceptionPublisherNode::spawnInitialRandomObjects(
+  const tf2::Transform & tf_base_link2map)
+{
+  using autoware_perception_msgs::msg::ObjectClassification;
+  using autoware_perception_msgs::msg::Shape;
+
+  /* Object type table: label, length (m), width (m), height (m), max_vel (m/s), min_vel (m/s) */
+  struct ObjectType
+  {
+    uint8_t label;
+    double length;
+    double width;
+    double height;
+    float max_velocity;
+    float min_velocity;
+  };
+  const std::array<ObjectType, 3> object_types = {{
+    {ObjectClassification::CAR, 4.5, 2.0, 1.8, 15.0f, 0.0f},
+    {ObjectClassification::PEDESTRIAN, 0.5, 0.5, 1.7, 2.0f, 0.0f},
+    {ObjectClassification::BICYCLE, 1.8, 0.6, 1.8, 6.0f, 0.0f},
+  }};
+
+  std::uniform_int_distribution<size_t> type_dist(0, object_types.size() - 1);
+  std::uniform_real_distribution<double> angle_dist(0.0, 2.0 * M_PI);
+  std::uniform_real_distribution<double> radius_dist(min_spawn_radius_, visible_range_);
+  std::uniform_real_distribution<double> yaw_dist(-M_PI, M_PI);
+
+  const tf2::Transform tf_map2base_link = tf_base_link2map.inverse();
+
+  for (int i = 0; i < num_initial_objects_; ++i) {
+    const auto & type = object_types[type_dist(random_generator_)];
+
+    // Sample a random position and heading in base_link frame, then convert to map frame
+    const double spawn_angle = angle_dist(random_generator_);
+    const double spawn_radius = radius_dist(random_generator_);
+    const double object_yaw = yaw_dist(random_generator_);
+
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, object_yaw);
+    const tf2::Transform tf_base_link2object(
+      q, tf2::Vector3(
+           spawn_radius * std::cos(spawn_angle), spawn_radius * std::sin(spawn_angle), 0.0));
+    const tf2::Transform tf_map2object = tf_map2base_link * tf_base_link2object;
+
+    DummyObject object;
+    object.header.stamp = this->now();
+    object.header.frame_id = "map";
+    object.id = autoware_utils_uuid::generate_uuid();
+    object.action = DummyObject::ADD;
+
+    tf2::toMsg(tf_map2object, object.initial_state.pose_covariance.pose);
+
+    // Place the object center at half its height above the ground plane
+    if (use_base_link_z_) {
+      object.initial_state.pose_covariance.pose.position.z += 0.5 * type.height;
+    }
+
+    object.classification.label = type.label;
+    object.classification.probability = 1.0f;
+
+    object.shape.type = Shape::BOUNDING_BOX;
+    object.shape.dimensions.x = type.length;
+    object.shape.dimensions.y = type.width;
+    object.shape.dimensions.z = type.height;
+
+    std::uniform_real_distribution<float> vel_dist(type.min_velocity, type.max_velocity);
+    object.initial_state.twist_covariance.twist.linear.x = vel_dist(random_generator_);
+    object.max_velocity = type.max_velocity;
+    object.min_velocity = type.min_velocity;
+
+    for (auto & plugin : movement_plugins_) {
+      if (plugin->set_dummy_object(object)) {
+        break;
+      }
+    }
+  }
+
+  RCLCPP_INFO(
+    get_logger(), "Spawned %d initial random dummy objects within %.0f m.", num_initial_objects_,
+    visible_range_);
+}
+
+void DummyPerceptionPublisherNode::spawnInitialRandomObjectsCallback()
+{
+  // Check if we can get the transform
+  std::string error;
+  if (!tf_buffer_.canTransform("base_link", /*src*/ "map", tf2::TimePointZero, &error)) {
+    RCLCPP_DEBUG_THROTTLE(get_logger(), *get_clock(), 5000, "map->base_link is not available");
+    return;
+  }
+
+  tf2::Transform tf_base_link2map;
+  try {
+    TransformStamped ros_base_link2map;
+    ros_base_link2map = tf_buffer_.lookupTransform(
+      /*target*/ "base_link", /*src*/ "map", this->now(),
+      rclcpp::Duration::from_seconds(0.5));
+    tf2::fromMsg(ros_base_link2map.transform, tf_base_link2map);
+  } catch (tf2::TransformException & ex) {
+    RCLCPP_DEBUG_THROTTLE(get_logger(), *get_clock(), 5000, "Failed to lookup transform: %s",
+                          ex.what());
+    return;
+  }
+
+  // Spawn objects on each timer call
+  spawnInitialRandomObjects(tf_base_link2map);
 }
 
 void DummyPerceptionPublisherNode::timerCallback()

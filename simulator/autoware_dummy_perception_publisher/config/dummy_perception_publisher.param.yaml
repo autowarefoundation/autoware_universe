@@ -10,6 +10,12 @@
     object_centric_pointcloud: false
     angle_increment: 0.004363323  # 0.25 * PI / 180.0
 
+    # Object spawning parameters
+    enable_object_spawning: true          # enable or disable object spawning
+    num_initial_objects: 5                 # number of objects to spawn on each timer call
+    min_spawn_radius: 10.0                 # minimum spawn distance from vehicle in meters
+    spawn_timer_period: 20.0               # timer period for spawning objects in seconds
+
 
     # Prediction parameters
     min_predicted_path_keep_duration: 3.0     # seconds - minimum time to keep using same prediction

@@ -103,19 +103,26 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
+  rclcpp::TimerBase::SharedPtr spawn_timer_;
 
   double visible_range_;
   double detection_successful_rate_;
   bool enable_ray_tracing_;
   bool use_base_link_z_;
+  bool enable_object_spawning_;
   std::unique_ptr<PointCloudCreator> pointcloud_creator_;
   // dummy object movement plugins
   std::vector<std::shared_ptr<pluginlib::DummyObjectMovementBasePlugin>> movement_plugins_;
   double angle_increment_;
   std::mt19937 random_generator_;
+  int num_initial_objects_;
+  double min_spawn_radius_;
+  double spawn_timer_period_s_;
 
   void timerCallback();
+  void spawnInitialRandomObjectsCallback();
   void objectCallback(const DummyObject::ConstSharedPtr msg);
+  void spawnInitialRandomObjects(const tf2::Transform & tf_base_link2map);
 
   pcl::PointCloud<autoware::point_types::PointXYZIRC> convertPointCloudXYZtoXYZIRC(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr & input_cloud) const;
