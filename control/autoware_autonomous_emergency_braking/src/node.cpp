@@ -292,6 +292,12 @@ void AEB::onImu(const Imu::ConstSharedPtr input_msg)
 void AEB::onPointCloud(const PointCloud2::ConstSharedPtr input_msg)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  if( input_msg->width == 0 || input_msg->height == 0) {
+    RCLCPP_INFO_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "[AEB]: Received empty point cloud");
+    return;
+  }
+
   PointCloud::Ptr pointcloud_ptr(new PointCloud);
   pcl::fromROSMsg(*input_msg, *pointcloud_ptr);
 
