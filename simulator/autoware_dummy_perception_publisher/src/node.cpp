@@ -113,9 +113,9 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   if (enable_object_spawning_) {
     spawn_timer_ = rclcpp::create_timer(
       this, get_clock(), std::chrono::milliseconds(static_cast<int>(spawn_timer_period_s_ * 1000)),
-        std::bind(&DummyPerceptionPublisherNode::spawnInitialRandomObjectsCallback, this));
+      std::bind(&DummyPerceptionPublisherNode::spawnInitialRandomObjectsCallback, this));
   }
-  
+
   // Initialize movement plugins directly in the vector
   movement_plugins_.push_back(std::make_shared<pluginlib::StraightLineObjectMovementPlugin>(this));
   movement_plugins_.push_back(std::make_shared<pluginlib::PredictedObjectMovementPlugin>(this));
@@ -141,7 +141,6 @@ DummyPerceptionPublisherNode::convertPointCloudXYZtoXYZIRC(
 
   return cloud_xyzirc;
 }
-
 
 void DummyPerceptionPublisherNode::spawnInitialRandomObjects(
   const tf2::Transform & tf_base_link2map)
@@ -238,12 +237,11 @@ void DummyPerceptionPublisherNode::spawnInitialRandomObjectsCallback()
   try {
     TransformStamped ros_base_link2map;
     ros_base_link2map = tf_buffer_.lookupTransform(
-      /*target*/ "base_link", /*src*/ "map", this->now(),
-      rclcpp::Duration::from_seconds(0.5));
+      /*target*/ "base_link", /*src*/ "map", this->now(), rclcpp::Duration::from_seconds(0.5));
     tf2::fromMsg(ros_base_link2map.transform, tf_base_link2map);
   } catch (tf2::TransformException & ex) {
-    RCLCPP_DEBUG_THROTTLE(get_logger(), *get_clock(), 5000, "Failed to lookup transform: %s",
-                          ex.what());
+    RCLCPP_DEBUG_THROTTLE(
+      get_logger(), *get_clock(), 5000, "Failed to lookup transform: %s", ex.what());
     return;
   }
 

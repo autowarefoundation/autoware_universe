@@ -123,7 +123,7 @@ void ShapeEstimationNode::callback(
     if (feature.cluster.data.empty()) {
       continue;
     }
-    
+
     // convert ros to pcl
     pcl::PointCloud<pcl::PointXYZ>::Ptr cluster(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(feature.cluster, *cluster);
