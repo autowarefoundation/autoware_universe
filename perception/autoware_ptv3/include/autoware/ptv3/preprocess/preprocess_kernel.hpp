@@ -35,7 +35,7 @@ public:
   std::size_t generateFeatures(
     const void * input_data, CloudFormat input_format, unsigned int num_points,
     float * voxel_features, std::int64_t * voxel_coords, std::int64_t * voxel_hashes,
-    void * compact_points, float * source_features, void * cropped_source_points,
+    void * compact_points, float * reconstruction_features, void * cropped_source_points,
     std::int64_t * inverse_map, std::size_t * num_cropped_points);
 
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }

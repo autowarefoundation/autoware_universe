@@ -278,7 +278,7 @@ __global__ void computeGridCoordsAndSerializationKernel(
 std::size_t PreprocessCuda::generateFeatures(
   const void * input_data, CloudFormat input_format, unsigned int num_points,
   float * voxel_features, std::int64_t * voxel_coords, std::int64_t * voxel_hashes,
-  void * compact_points, float * source_features, void * cropped_source_points,
+  void * compact_points, float * reconstruction_features, void * cropped_source_points,
   std::int64_t * inverse_map, std::size_t * output_num_cropped_points)
 {
   auto policy = thrust::cuda::par.on(stream_);
@@ -342,9 +342,12 @@ std::size_t PreprocessCuda::generateFeatures(
       throw std::runtime_error("Unsupported input point cloud format.");
   }
 
-  if (config_.source_reconstruction_ == SourceReconstruction::FULL && source_features != nullptr) {
+  // FULL reconstruction preserves original input order, so copy features before range crop.
+  if (
+    config_.source_reconstruction_ == SourceReconstruction::FULL &&
+    reconstruction_features != nullptr) {
     cudaMemcpyAsync(
-      source_features, points_d_.get(),
+      reconstruction_features, points_d_.get(),
       num_points * config_.num_point_feature_size_ * sizeof(float), cudaMemcpyDeviceToDevice,
       stream_);
   }
@@ -374,11 +377,13 @@ std::size_t PreprocessCuda::generateFeatures(
     reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), crop_indices_d_.get(),
     reinterpret_cast<float4 *>(cropped_points_d_.get()), num_points);
 
+  // PARTIAL reconstruction publishes only in-range points, so compact features after range crop.
   if (
-    config_.source_reconstruction_ == SourceReconstruction::PARTIAL && source_features != nullptr) {
+    config_.source_reconstruction_ == SourceReconstruction::PARTIAL &&
+    reconstruction_features != nullptr) {
     extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
       reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), crop_indices_d_.get(),
-      reinterpret_cast<float4 *>(source_features), num_points);
+      reinterpret_cast<float4 *>(reconstruction_features), num_points);
   }
 
   switch (input_format) {
