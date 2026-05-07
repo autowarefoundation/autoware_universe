@@ -202,6 +202,13 @@ void PTv3TRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
   network_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
     trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
     std::vector<std::string>{config_.plugins_path_});
+  
+  auto trt_builder_config = network_trt_ptr_->getBuilderConfig();
+  if (trt_builder_config == nullptr) {
+    throw std::runtime_error("Failed to get builder config from TRT engine." + config_.plugins_path_);
+  }
+
+  trt_builder_config->setMaxAuxStreams(1);
 
   if (!network_trt_ptr_->setup(std::move(profile_dims_ptr), std::move(network_io_ptr))) {
     throw std::runtime_error("Failed to setup TRT engine." + config_.plugins_path_);
