@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/argsort_ops/argsort.hpp"
+#include "autoware/scatter_ops/segment_csr.h"
 #include "autoware/unique_ops/unique.hpp"
 
 #include <gtest/gtest.h>
@@ -20,10 +21,13 @@
 #include <cuda_runtime_api.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <stdexcept>
+#include <tuple>
 #include <vector>
 
 namespace
@@ -165,6 +169,58 @@ UniqueReference makeUniqueReference(const std::vector<std::int64_t> & input)
   return reference;
 }
 
+std::vector<float> makeSegmentReferenceMean(
+  const std::vector<float> & src, const std::size_t rows, const std::size_t cols,
+  const std::vector<std::int64_t> & indptr)
+{
+  std::vector<float> out((indptr.size() - 1U) * cols, 0.0F);
+  for (std::size_t segment = 0; segment + 1U < indptr.size(); ++segment) {
+    const auto start = static_cast<std::size_t>(indptr[segment]);
+    const auto end = static_cast<std::size_t>(indptr[segment + 1U]);
+    const auto count = std::max<std::size_t>(end - start, 1U);
+    for (std::size_t col = 0; col < cols; ++col) {
+      float accum = 0.0F;
+      for (std::size_t row = start; row < end; ++row) {
+        accum += src[row * cols + col];
+      }
+      out[segment * cols + col] = accum / static_cast<float>(count);
+    }
+  }
+  (void)rows;
+  return out;
+}
+
+std::vector<float> makeSegmentReferenceMax(
+  const std::vector<float> & src, const std::size_t rows, const std::size_t cols,
+  const std::vector<std::int64_t> & indptr)
+{
+  std::vector<float> out((indptr.size() - 1U) * cols, 0.0F);
+  for (std::size_t segment = 0; segment + 1U < indptr.size(); ++segment) {
+    const auto start = static_cast<std::size_t>(indptr[segment]);
+    const auto end = static_cast<std::size_t>(indptr[segment + 1U]);
+    for (std::size_t col = 0; col < cols; ++col) {
+      float best = 0.0F;
+      if (start < end) {
+        best = -std::numeric_limits<float>::infinity();
+        for (std::size_t row = start; row < end; ++row) {
+          best = std::max(best, src[row * cols + col]);
+        }
+      }
+      out[segment * cols + col] = best;
+    }
+  }
+  (void)rows;
+  return out;
+}
+
+void expectFloatVectorsEqual(const std::vector<float> & actual, const std::vector<float> & expected)
+{
+  ASSERT_EQ(actual.size(), expected.size());
+  for (std::size_t index = 0; index < actual.size(); ++index) {
+    EXPECT_FLOAT_EQ(actual[index], expected[index]) << "index=" << index;
+  }
+}
+
 TEST(ReferenceKernelsTest, ArgsortMatchesCpuReference)
 {
   if (getCudaDeviceCount() == 0) {
@@ -221,6 +277,72 @@ TEST(ReferenceKernelsTest, UniqueMatchesCpuReference)
   EXPECT_EQ(unique_values, reference.unique_values);
   EXPECT_EQ(inverse_indices, reference.inverse_indices);
   EXPECT_EQ(counts, reference.counts);
+}
+
+TEST(ReferenceKernelsTest, SegmentCsrMeanMatchesCpuReference)
+{
+  if (getCudaDeviceCount() == 0) {
+    GTEST_SKIP() << "CUDA device not available";
+  }
+
+  const std::size_t rows = 6U;
+  const std::size_t cols = 2U;
+  const std::vector<float> src{
+    1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F};
+  const std::vector<std::int64_t> indptr{0, 2, 5, 6};
+  const auto reference = makeSegmentReferenceMean(src, rows, cols, indptr);
+
+  CudaStreamGuard stream;
+  DeviceBuffer<float> src_d(src.size());
+  DeviceBuffer<std::int64_t> indptr_d(indptr.size());
+  DeviceBuffer<float> out_d(reference.size());
+
+  copyToDevice(src_d.get(), src);
+  copyToDevice(indptr_d.get(), indptr);
+
+  ASSERT_EQ(
+    (
+      segment_csr_launch<float, MEAN>(
+        src_d.get(), static_cast<std::int32_t>(rows), static_cast<std::int32_t>(cols),
+        indptr_d.get(), static_cast<std::int32_t>(indptr.size()),
+        std::make_tuple(out_d.get(), static_cast<std::int64_t *>(nullptr)), stream.get())),
+    0);
+  ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
+
+  expectFloatVectorsEqual(copyToHost(out_d.get(), reference.size()), reference);
+}
+
+TEST(ReferenceKernelsTest, SegmentCsrMaxMatchesCpuReference)
+{
+  if (getCudaDeviceCount() == 0) {
+    GTEST_SKIP() << "CUDA device not available";
+  }
+
+  const std::size_t rows = 6U;
+  const std::size_t cols = 2U;
+  const std::vector<float> src{
+    1.0F, 6.0F, 3.0F, 4.0F, 5.0F, 9.0F, 7.0F, 8.0F, 2.0F, 10.0F, 11.0F, 12.0F};
+  const std::vector<std::int64_t> indptr{0, 2, 5, 6};
+  const auto reference = makeSegmentReferenceMax(src, rows, cols, indptr);
+
+  CudaStreamGuard stream;
+  DeviceBuffer<float> src_d(src.size());
+  DeviceBuffer<std::int64_t> indptr_d(indptr.size());
+  DeviceBuffer<float> out_d(reference.size());
+
+  copyToDevice(src_d.get(), src);
+  copyToDevice(indptr_d.get(), indptr);
+
+  ASSERT_EQ(
+    (
+      segment_csr_launch<float, MAX>(
+        src_d.get(), static_cast<std::int32_t>(rows), static_cast<std::int32_t>(cols),
+        indptr_d.get(), static_cast<std::int32_t>(indptr.size()),
+        std::make_tuple(out_d.get(), static_cast<std::int64_t *>(nullptr)), stream.get())),
+    0);
+  ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
+
+  expectFloatVectorsEqual(copyToHost(out_d.get(), reference.size()), reference);
 }
 
 }  // namespace

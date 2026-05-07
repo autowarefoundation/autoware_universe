@@ -27,7 +27,6 @@
 #include <exception>
 #include <string>
 #include <tuple>
-#include <vector>
 namespace nvinfer1::plugin
 {
 
@@ -178,9 +177,9 @@ std::int32_t SegmentCSRPlugin::enqueue(
   void const * const * inputs, void * const * outputs, [[maybe_unused]] void * workspace,
   cudaStream_t stream) noexcept
 {
-  std::vector<int32_t> src_size{
-    static_cast<int32_t>(input_desc[0].dims.d[0]), static_cast<int32_t>(input_desc[0].dims.d[1])};
-  std::vector<int32_t> indptr_size{static_cast<int32_t>(input_desc[1].dims.d[0])};
+  const auto num_rows = static_cast<int32_t>(input_desc[0].dims.d[0]);
+  const auto num_cols = static_cast<int32_t>(input_desc[0].dims.d[1]);
+  const auto indptr_size = static_cast<int32_t>(input_desc[1].dims.d[0]);
 
   std::int32_t result = 0;
 
@@ -192,8 +191,8 @@ std::int32_t SegmentCSRPlugin::enqueue(
       std::make_tuple(static_cast<float *>(outputs[0]), nullptr);
 
     AT_DISPATCH_REDUCTION_TYPES(reduce_, [&] {
-      result =
-        segment_csr_launch<float, REDUCE>(src_ptr, src_size, indptr_ptr, indptr_size, out, stream);
+      result = segment_csr_launch<float, REDUCE>(
+        src_ptr, num_rows, num_cols, indptr_ptr, indptr_size, out, stream);
     });
   } else if (input_desc[0].type == nvinfer1::DataType::kHALF) {
     const half * src_ptr = reinterpret_cast<const half *>(inputs[0]);
@@ -203,8 +202,8 @@ std::int32_t SegmentCSRPlugin::enqueue(
       std::make_tuple(static_cast<half *>(outputs[0]), nullptr);
 
     AT_DISPATCH_REDUCTION_TYPES(reduce_, [&] {
-      result =
-        segment_csr_launch<half, REDUCE>(src_ptr, src_size, indptr_ptr, indptr_size, out, stream);
+      result = segment_csr_launch<half, REDUCE>(
+        src_ptr, num_rows, num_cols, indptr_ptr, indptr_size, out, stream);
     });
   }
 

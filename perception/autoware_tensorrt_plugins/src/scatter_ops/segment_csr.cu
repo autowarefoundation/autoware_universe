@@ -23,23 +23,16 @@
 #include "autoware/scatter_ops/segment_csr.h"
 #include "autoware/scatter_ops/utils.cuh"
 
-#include <numeric>
 #include <string>
 #include <tuple>
-#include <vector>
 
 #define THREADS 256
 #define BLOCKS(TB, N) (TB * N + THREADS - 1) / THREADS
 #define FULL_MASK 0xffffffff
-#define SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, R)                                             \
-  template int32_t segment_csr_launch<T, R>(                                                  \
-    const T * src, const std::vector<int32_t> & src_size, const int64_t * indptr,             \
-    const std::vector<int32_t> & indptr_size, std::tuple<T *, int64_t *> out,                 \
-    cudaStream_t stream);                                                                     \
-  template int32_t segment_csr_launch<T, R>(                                                  \
-    const T * src, const std::vector<int32_t> & src_size, const int64_t * indptr,             \
-    const std::vector<int32_t> & indptr_size, const T * base, std::tuple<T *, int64_t *> out, \
-    cudaStream_t stream);
+#define SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, R)                             \
+  template int32_t segment_csr_launch<T, R>(                                  \
+    const T * src, int32_t num_rows, int32_t num_cols, const int64_t * indptr, \
+    int32_t indptr_size, std::tuple<T *, int64_t *> out, cudaStream_t stream);
 #define SEGMENT_CSR_LAUNCH_INSTANTIATION(T)                   \
   SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, ReductionType::SUM)  \
   SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, ReductionType::MEAN) \
@@ -50,8 +43,8 @@
 
 template <typename scalar_t, ReductionType REDUCE, int TB>
 __global__ void segment_csr_kernel(
-  const scalar_t * src, const int64_t * indptr, const int64_t * indptr_size, int32_t indptr_dim,
-  scalar_t * out, int64_t * arg_out, size_t N, size_t E)
+  const scalar_t * src, const int64_t * indptr, scalar_t * out, int64_t * arg_out,
+  size_t num_segments)
 {
   // Each warp processes exactly `32/TB` rows and aggregates all row values
   // via a parallel reduction.
@@ -59,18 +52,16 @@ __global__ void segment_csr_kernel(
   int thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
   int row_idx = thread_idx / TB;
   int lane_idx = thread_idx & (TB - 1);
-  if (row_idx >= N) return;
+  if (row_idx >= num_segments) return;
 
-  int offset = indptr_to_offset(indptr_size, indptr_dim, row_idx);
-  int64_t row_start = __ldg(indptr + offset);
-  int64_t row_end = __ldg(indptr + offset + 1);
+  int64_t row_start = __ldg(indptr + row_idx);
+  int64_t row_end = __ldg(indptr + row_idx + 1);
 
   scalar_t val = Reducer<scalar_t, REDUCE>::init();
-  int64_t arg, arg_tmp;
+  int64_t arg{0}, arg_tmp{0};
 
-  offset = (row_idx / (indptr_size[indptr_dim - 1] - 1)) * E;
   for (int64_t src_idx = row_start + lane_idx; src_idx < row_end; src_idx += TB)
-    Reducer<scalar_t, REDUCE>::update(&val, src[offset + src_idx], &arg, src_idx);
+    Reducer<scalar_t, REDUCE>::update(&val, src[src_idx], &arg, src_idx);
 
 #pragma unroll
   for (int i = TB / 2; i > 0; i /= 2) {
@@ -90,28 +81,26 @@ __global__ void segment_csr_kernel(
 
 template <typename scalar_t, ReductionType REDUCE>
 __global__ void segment_csr_broadcast_kernel(
-  const scalar_t * src, const int64_t * indptr, const int64_t * indptr_size, int32_t indptr_dim,
-  scalar_t * out, int64_t * arg_out, size_t N, size_t K, size_t E)
+  const scalar_t * src, const int64_t * indptr, scalar_t * out, int64_t * arg_out,
+  size_t num_segments, size_t num_cols)
 {
   // Each thread processes exactly one row. It turned out that is more
   // efficient than using shared memory due to avoiding synchronization
   // barriers.
 
   int thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
-  int row_idx = thread_idx / K;
-  int lane_idx = thread_idx % K;
-  if (thread_idx >= N * K) return;
+  int row_idx = thread_idx / num_cols;
+  int lane_idx = thread_idx % num_cols;
+  if (thread_idx >= num_segments * num_cols) return;
 
-  int offset = indptr_to_offset(indptr_size, indptr_dim, row_idx);
-  int64_t row_start = __ldg(indptr + offset);
-  int64_t row_end = __ldg(indptr + offset + 1);
+  int64_t row_start = __ldg(indptr + row_idx);
+  int64_t row_end = __ldg(indptr + row_idx + 1);
 
   scalar_t val = Reducer<scalar_t, REDUCE>::init();
-  int64_t arg;
+  int64_t arg{0};
 
-  offset = (row_idx / (indptr_size[indptr_dim - 1] - 1)) * E * K;
   for (int64_t src_idx = row_start; src_idx < row_end; src_idx++)
-    Reducer<scalar_t, REDUCE>::update(&val, src[offset + K * src_idx + lane_idx], &arg, src_idx);
+    Reducer<scalar_t, REDUCE>::update(&val, src[num_cols * src_idx + lane_idx], &arg, src_idx);
 
   if (arg_out != nullptr)
     Reducer<scalar_t, REDUCE>::write(
@@ -124,71 +113,29 @@ __global__ void segment_csr_broadcast_kernel(
 //! \todo expand index
 template <typename scalar_t, ReductionType REDUCE>
 int32_t segment_csr_launch(
-  const scalar_t * src, const std::vector<int32_t> & src_size, const int64_t * indptr,
-  const std::vector<int32_t> & indptr_size, const scalar_t * base,
-  std::tuple<scalar_t *, int64_t *> out, cudaStream_t stream)
+  const scalar_t * src, int32_t num_rows, int32_t num_cols, const int64_t * indptr,
+  int32_t indptr_size, std::tuple<scalar_t *, int64_t *> out, cudaStream_t stream)
 {
-  if (src_size.size() < indptr_size.size()) return -1;
+  if (num_rows < 0 || num_cols < 0 || indptr_size < 0) return -1;
 
-  if (!std::equal(indptr_size.begin(), indptr_size.end() - 1, src_size.begin())) return -1;
-
-  auto dim = indptr_size.size() - 1;
-
-  auto _mul = [](int a, int b) { return a * b; };
-  auto src_numel = std::accumulate(src_size.begin(), src_size.end(), 1, _mul);
-  auto indptr_numel = std::accumulate(indptr_size.begin(), indptr_size.end(), 1, _mul);
-  auto out_numel = src_numel / src_size[dim] * std::max<int32_t>(indptr_size[dim] - 1, 0);
-
-  cudaMemcpyAsync(
-    std::get<0>(out), base, sizeof(scalar_t) * out_numel, cudaMemcpyDeviceToDevice, stream);
-
+  auto num_segments = std::max<int32_t>(indptr_size - 1, 0);
+  auto out_numel = static_cast<size_t>(num_segments) * static_cast<size_t>(num_cols);
   if ((REDUCE == ReductionType::MIN || REDUCE == ReductionType::MAX) && std::get<1>(out) != nullptr)
     fill_kernel<int64_t>
-      <<<BLOCKS(1, out_numel), THREADS, 0, stream>>>(std::get<1>(out), out_numel, src_size[dim]);
+      <<<BLOCKS(1, out_numel), THREADS, 0, stream>>>(std::get<1>(out), out_numel, num_rows);
 
-  if (src_numel == 0) return 0;
+  if (num_segments == 0 || num_cols == 0) return 0;
 
-  auto N = max(indptr_size[dim] - 1, 0) * (indptr_numel / indptr_size[dim]);
-  auto K = out_numel / N;
-  auto E = src_size[dim];
-  int64_t * indptr_size_dev;
-  cudaMallocAsync(&indptr_size_dev, sizeof(int64_t) * indptr_size.size(), stream);
-  cudaMemcpyAsync(
-    indptr_size_dev, indptr_size.data(), sizeof(int64_t) * indptr_size.size(),
-    cudaMemcpyHostToDevice, stream);
+  fill_kernel<scalar_t><<<BLOCKS(1, out_numel), THREADS, 0, stream>>>(
+    std::get<0>(out), out_numel, static_cast<scalar_t>(0));
 
-  if (K == 1)
-    segment_csr_kernel<scalar_t, REDUCE, 1><<<BLOCKS(32, N), THREADS, 0, stream>>>(
-      src, indptr, indptr_size_dev, indptr_size.size(), std::get<0>(out), std::get<1>(out), N, E);
+  if (num_cols == 1)
+    segment_csr_kernel<scalar_t, REDUCE, 1><<<BLOCKS(32, num_segments), THREADS, 0, stream>>>(
+      src, indptr, std::get<0>(out), std::get<1>(out), num_segments);
   else
-    segment_csr_broadcast_kernel<scalar_t, REDUCE><<<BLOCKS(1, N * K), THREADS, 0, stream>>>(
-      src, indptr, indptr_size_dev, indptr_size.size(), std::get<0>(out), std::get<1>(out), N, K,
-      E);
-
-  cudaFreeAsync(indptr_size_dev, stream);
-  return 0;
-}
-
-template <typename scalar_t, ReductionType REDUCE>
-int32_t segment_csr_launch(
-  const scalar_t * src, const std::vector<int32_t> & src_size, const int64_t * indptr,
-  const std::vector<int32_t> & indptr_size, std::tuple<scalar_t *, int64_t *> out,
-  cudaStream_t stream)
-{
-  auto dim = indptr_size.size() - 1;
-  auto src_numel =
-    std::accumulate(src_size.begin(), src_size.end(), 1, [](int a, int b) { return a * b; });
-  auto out_numel = src_numel / src_size[dim] * std::max<int32_t>(indptr_size[dim] - 1, 0);
-
-  scalar_t * base;
-  cudaMallocAsync(&base, sizeof(scalar_t) * out_numel, stream);
-  fill_kernel<scalar_t><<<BLOCKS(1, out_numel), THREADS, 0, stream>>>(base, out_numel, (scalar_t)0);
-
-  auto status =
-    segment_csr_launch<scalar_t, REDUCE>(src, src_size, indptr, indptr_size, base, out, stream);
-  if (status != 0) return status;
-
-  cudaFreeAsync(base, stream);
+    segment_csr_broadcast_kernel<scalar_t, REDUCE>
+      <<<BLOCKS(1, num_segments * num_cols), THREADS, 0, stream>>>(
+        src, indptr, std::get<0>(out), std::get<1>(out), num_segments, num_cols);
   return 0;
 }
 
