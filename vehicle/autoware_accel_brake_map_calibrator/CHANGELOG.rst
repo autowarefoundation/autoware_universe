@@ -2,6 +2,12 @@
 Changelog for package autoware_accel_brake_map_calibrator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* style: update pre-commit (black 26.1.0, pre-commit-hooks-ros 0.10.2) (`#12195 <https://github.com/mitsudome-r/autoware_universe/issues/12195>`_)
+* Contributors: Taeseung Sohn, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

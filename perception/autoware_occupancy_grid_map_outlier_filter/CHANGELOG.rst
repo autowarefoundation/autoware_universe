@@ -2,6 +2,19 @@
 Changelog for package autoware_occupancy_grid_map_outlier_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): remove unused lanelet2_extension header (`#12295 <https://github.com/mitsudome-r/autoware_universe/issues/12295>`_)
+  unused lanelet2_extension in perception component
+* chore(occpancy_grid_outlier_filter): change obstacle_segmentation/pointcloud QoS (`#12103 <https://github.com/mitsudome-r/autoware_universe/issues/12103>`_)
+  * chore(occpancy_grid_outlier_filter): change obstacle_segmentation/pointcloud qos.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Yukihiro Saito <yukky.saito@gmail.com>
+* Contributors: Sarun MUKDAPITAK, Takayuki AKAMINE, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

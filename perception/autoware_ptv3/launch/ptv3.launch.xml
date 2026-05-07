@@ -5,7 +5,7 @@
   <arg name="output/pointcloud/visualization" default="~/visualization"/>
   <arg name="output/pointcloud/filtered" default="~/filtered"/>
 
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
   <arg name="model_name" default="ptv3"/>
   <arg name="model_path" default="$(var data_path)/ptv3"/>
   <arg name="model_param_path" default="$(find-pkg-share autoware_ptv3)/config/$(var model_name).param.yaml"/>

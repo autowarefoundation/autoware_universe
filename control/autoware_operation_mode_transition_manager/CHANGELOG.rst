@@ -2,6 +2,12 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore: organize maintainer (`#12150 <https://github.com/mitsudome-r/autoware_universe/issues/12150>`_)
+* Contributors: Satoshi OTA, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

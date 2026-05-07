@@ -2,6 +2,28 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* refactor(autoware_universe): use autoware_ament_auto_package in perception utility packages (`#12281 <https://github.com/mitsudome-r/autoware_universe/issues/12281>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* feat(voxel_grid_based_euclidean_cluster): use CallbackIsolatedAgnocastExecutor for voxel_grid_based_euclidean_cluster (`#12361 <https://github.com/mitsudome-r/autoware_universe/issues/12361>`_)
+  * apply cie to voxel_grid_based_euclidean_cluster
+  * update to launch.py
+  * set use_multithread=true
+  * fix launch
+  ---------
+* feat(euclidean_cluster): apply agnocast publisher to `/clusters` topic (`#12341 <https://github.com/mitsudome-r/autoware_universe/issues/12341>`_)
+  apply agnocast publisher to /clusters topic
+* fix(autoware_euclidean_cluster): ensure continuous publishing even with empty input (`#12257 <https://github.com/mitsudome-r/autoware_universe/issues/12257>`_)
+  * fix(autoware_euclidean_cluster): ensure continuous publishing even with empty input
+  * fix
+  ---------
+  Co-authored-by: Takahisa Ishikawa <interimadd@gmail.com>
+* Contributors: ISP akm, Koichi Imai, Taekjin LEE, Vishal Chauhan, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
