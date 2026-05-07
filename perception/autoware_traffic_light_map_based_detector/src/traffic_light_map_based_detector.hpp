@@ -127,16 +127,13 @@ private:
    * @param pinhole_camera_model  pinhole model calculated from camera_info
    * @param traffic_light         lanelet traffic light object
    * @param config                offset configuration
-   * @param roi                   computed result
-   * @return true                 the computation succeeded
-   * @return false                the computation failed
+   * @return                      the projected ROI, or std::nullopt if the projection fails
    */
-  bool get_traffic_light_roi(
+  std::optional<tier4_perception_msgs::msg::TrafficLightRoi> project_traffic_light_to_roi(
     const tf2::Transform & tf_map2camera,
     const image_geometry::PinholeCameraModel & pinhole_camera_model,
     const lanelet::ConstLineString3d traffic_light,
-    const TrafficLightMapBasedDetectorConfig & config,
-    tier4_perception_msgs::msg::TrafficLightRoi & roi) const;
+    const TrafficLightMapBasedDetectorConfig & config) const;
 
   /**
    * @brief Compute the bounding ROI from multiple transforms
@@ -145,16 +142,14 @@ private:
    * @param pinhole_camera_model  pinhole model calculated from camera_info
    * @param traffic_light         lanelet traffic light object
    * @param config                offset configuration
-   * @param out_roi               computed result
-   * @return true                 the computation succeeded
-   * @return false                the computation failed
+   * @return                      the bounding ROI, or std::nullopt if no sample yields a valid
+   *                              projection
    */
-  bool get_traffic_light_roi(
+  std::optional<tier4_perception_msgs::msg::TrafficLightRoi> get_traffic_light_roi(
     const std::vector<StampedTransform> & tf_map2camera_samples,
     const image_geometry::PinholeCameraModel & pinhole_camera_model,
     const lanelet::ConstLineString3d traffic_light,
-    const TrafficLightMapBasedDetectorConfig & config,
-    tier4_perception_msgs::msg::TrafficLightRoi & out_roi) const;
+    const TrafficLightMapBasedDetectorConfig & config) const;
 
   /**
    * @brief Create visualization markers for visible traffic lights
