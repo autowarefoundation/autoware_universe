@@ -171,7 +171,7 @@ SimplePlanningSimulator::SimplePlanningSimulator(const rclcpp::NodeOptions & opt
   pub_imu_ = create_publisher<Imu>("output/imu", QoS{1});
   pub_tf_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", QoS{1});
   pub_actuation_status_ =
-    create_publisher<ActuationStatusStamped>("output/actuation_status", QoS{1});
+    create_publisher<ActuationReportStamped>("output/actuation_status", QoS{1});
   if (enable_pub_steer_) {
     pub_steer_ = create_publisher<SteeringReport>("output/steering", QoS{1});
   }

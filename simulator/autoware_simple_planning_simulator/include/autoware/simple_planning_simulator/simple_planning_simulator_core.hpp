@@ -23,7 +23,7 @@
 #include "autoware_map_msgs/msg/lanelet_map_bin.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_vehicle_msgs/msg/actuation_command_stamped.hpp"
-#include "autoware_vehicle_msgs/msg/actuation_status_stamped.hpp"
+#include "autoware_vehicle_msgs/msg/actuation_report_stamped.hpp"
 #include "autoware_vehicle_msgs/msg/control_mode_report.hpp"
 #include "autoware_vehicle_msgs/msg/engage.hpp"
 #include "autoware_vehicle_msgs/msg/gear_command.hpp"
@@ -62,7 +62,7 @@ using autoware_control_msgs::msg::Control;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_vehicle_msgs::msg::ActuationCommandStamped;
-using autoware_vehicle_msgs::msg::ActuationStatusStamped;
+using autoware_vehicle_msgs::msg::ActuationReportStamped;
 using autoware_vehicle_msgs::msg::ControlModeReport;
 using autoware_vehicle_msgs::msg::Engage;
 using autoware_vehicle_msgs::msg::GearCommand;
@@ -135,7 +135,7 @@ private:
   rclcpp::Publisher<HazardLightsReport>::SharedPtr pub_hazard_lights_report_;
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr pub_tf_;
   rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pub_current_pose_;
-  rclcpp::Publisher<ActuationStatusStamped>::SharedPtr pub_actuation_status_;
+  rclcpp::Publisher<ActuationReportStamped>::SharedPtr pub_actuation_status_;
 
   rclcpp::Subscription<GearCommand>::SharedPtr sub_gear_cmd_;
   rclcpp::Subscription<GearCommand>::SharedPtr sub_manual_gear_cmd_;
