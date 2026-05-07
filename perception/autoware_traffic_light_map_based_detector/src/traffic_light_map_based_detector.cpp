@@ -199,10 +199,8 @@ DetectionResult TrafficLightMapBasedDetector::detect(
   image_geometry::PinholeCameraModel pinhole_camera_model;
   pinhole_camera_model.fromCameraInfo(camera_info);
 
-  std::vector<lanelet::ConstLineString3d> visible_traffic_lights;
-  get_visible_traffic_lights(
-    select_target_traffic_lights(), tf_map2camera_samples, pinhole_camera_model,
-    visible_traffic_lights);
+  const auto visible_traffic_lights = get_visible_traffic_lights(
+    select_target_traffic_lights(), tf_map2camera_samples, pinhole_camera_model);
 
   const tf2::Transform tf_map2camera_closest =
     find_closest_transform(tf_map2camera_samples, camera_info.header.stamp);
@@ -229,12 +227,12 @@ DetectionResult TrafficLightMapBasedDetector::detect(
   return result;
 }
 
-void TrafficLightMapBasedDetector::get_visible_traffic_lights(
+std::vector<lanelet::ConstLineString3d> TrafficLightMapBasedDetector::get_visible_traffic_lights(
   const TrafficLightSet & all_traffic_lights,
   const std::vector<StampedTransform> & tf_map2camera_samples,
-  const image_geometry::PinholeCameraModel & pinhole_camera_model,
-  std::vector<lanelet::ConstLineString3d> & visible_traffic_lights) const
+  const image_geometry::PinholeCameraModel & pinhole_camera_model) const
 {
+  std::vector<lanelet::ConstLineString3d> visible_traffic_lights;
   for (const auto & traffic_light : all_traffic_lights) {
     if (
       traffic_light.hasAttribute("subtype") == false ||
@@ -286,6 +284,7 @@ void TrafficLightMapBasedDetector::get_visible_traffic_lights(
       break;
     }
   }
+  return visible_traffic_lights;
 }
 
 bool TrafficLightMapBasedDetector::get_traffic_light_roi(

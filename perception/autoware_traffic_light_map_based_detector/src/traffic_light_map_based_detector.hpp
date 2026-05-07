@@ -113,13 +113,12 @@ private:
    * @param all_traffic_lights      all the traffic lights in the route or in the map
    * @param tf_map2camera_samples   the stamped transformation samples from map to camera
    * @param pinhole_camera_model    pinhole model calculated from camera_info
-   * @param visible_traffic_lights  the visible traffic lights output
+   * @return                        the visible traffic lights
    */
-  void get_visible_traffic_lights(
+  std::vector<lanelet::ConstLineString3d> get_visible_traffic_lights(
     const TrafficLightSet & all_traffic_lights,
     const std::vector<StampedTransform> & tf_map2camera_samples,
-    const image_geometry::PinholeCameraModel & pinhole_camera_model,
-    std::vector<lanelet::ConstLineString3d> & visible_traffic_lights) const;
+    const image_geometry::PinholeCameraModel & pinhole_camera_model) const;
 
   /**
    * @brief Compute the traffic light ROI from a single transform
