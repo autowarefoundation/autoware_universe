@@ -18,22 +18,17 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
-#include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/trajectory/interpolator/akima_spline.hpp>
 #include <autoware/trajectory/interpolator/interpolator.hpp>
-#include <autoware/trajectory/pose.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
-#include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
-#include <range/v3/view.hpp>
 #include <rclcpp/logging.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -140,7 +135,8 @@ void ObstacleStop::update_params(const TrajectoryModifierParams & params)
   }
 }
 
-bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & traj_points)
+bool ObstacleStop::is_trajectory_modification_required(
+  const TrajectoryPoints & traj_points, const InputData & input)
 {
   debug_data_ = DebugData();
   safety_factors_ = SafetyFactorArray{};
@@ -155,21 +151,22 @@ bool ObstacleStop::is_trajectory_modification_required(const TrajectoryPoints & 
       "ObstacleStop::get_trajectory_shape", *get_time_keeper());
 
     debug_data_.trajectory_shape = get_trajectory_shape(
-      traj_points, data_->current_odometry->pose.pose, data_->vehicle_info,
-      data_->current_odometry->twist.twist.linear.x,
-      data_->current_acceleration->accel.accel.linear.x, params_.nominal_stopping_decel,
+      traj_points, input.current_odometry->pose.pose, context_->vehicle_info,
+      input.current_odometry->twist.twist.linear.x,
+      input.current_acceleration->accel.accel.linear.x, params_.nominal_stopping_decel,
       params_.stopping_jerk, params_.stop_margin, params_.lateral_margin);
   }
 
-  check_obstacles(traj_points);
+  check_obstacles(traj_points, input);
 
   debug_data_.active_collision_point =
     nearest_collision_point_ ? nearest_collision_point_->point : geometry_msgs::msg::Point();
+  debug_data_.ego_z = input.current_odometry->pose.pose.position.z;
 
   return nearest_collision_point_ != std::nullopt;
 }
 
-bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points)
+bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points, const InputData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::modify_trajectory", *get_time_keeper());
 
@@ -179,23 +176,23 @@ bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points)
   utils::obstacle_stop::trim_trajectory_and_remove_duplicates(trajectory);
   if (trajectory.empty()) return false;
 
-  if (!is_trajectory_modification_required(trajectory)) return false;
+  if (!is_trajectory_modification_required(trajectory, input)) return false;
 
   if (!nearest_collision_point_) return false;
 
   traj_points = std::move(trajectory);
 
-  return set_stop_point(traj_points);
+  return set_stop_point(traj_points, input);
 }
 
-bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
+bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::set_stop_point", *get_time_keeper());
   const auto target_stop_point_arc_length = std::invoke([&]() -> double {
-    const auto stop_margin = params_.stop_margin + data_->vehicle_info.max_longitudinal_offset_m;
+    const auto stop_margin = params_.stop_margin + context_->vehicle_info.max_longitudinal_offset_m;
     auto min_stopping_distance = motion_utils::calculate_stop_distance(
-      data_->current_odometry->twist.twist.linear.x,
-      data_->current_acceleration->accel.accel.linear.x, params_.maximum_stopping_decel,
+      input.current_odometry->twist.twist.linear.x,
+      input.current_acceleration->accel.accel.linear.x, params_.maximum_stopping_decel,
       params_.stopping_jerk, 0.0);
     if (!min_stopping_distance) min_stopping_distance = 0.0;
     return std::clamp(
@@ -240,7 +237,7 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
   }
 
   const auto & stop_pose = traj_points.back().pose;
-  const auto & ego_pose = data_->current_odometry->pose.pose;
+  const auto & ego_pose = input.current_odometry->pose.pose;
   planning_factor_interface_->add(
     traj_points, ego_pose, stop_pose, PlanningFactor::STOP, safety_factors_);
 
@@ -385,11 +382,11 @@ bool ObstacleStop::apply_stopping(
   return true;
 }
 
-void ObstacleStop::check_obstacles(const TrajectoryPoints & traj_points)
+void ObstacleStop::check_obstacles(const TrajectoryPoints & traj_points, const InputData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::check_obstacles", *get_time_keeper());
-  const auto collision_point_objects = check_predicted_objects(traj_points);
-  const auto collision_point_pcd = check_pointcloud(traj_points);
+  const auto collision_point_objects = check_predicted_objects(traj_points, input);
+  const auto collision_point_pcd = check_pointcloud(traj_points, input);
 
   auto get_safety_factor = [&](
                              const geometry_msgs::msg::Point & point,
@@ -438,14 +435,13 @@ void ObstacleStop::check_obstacles(const TrajectoryPoints & traj_points)
 }
 
 std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
-  const TrajectoryPoints & traj_points)
+  const TrajectoryPoints & traj_points, const InputData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "ObstacleStop::check_predicted_objects", *get_time_keeper());
-  if (
-    !params_.use_objects || !data_->predicted_objects || data_->predicted_objects->objects.empty())
+  if (!params_.use_objects || !input.predicted_objects || input.predicted_objects->objects.empty())
     return std::nullopt;
-  auto predicted_objects = *data_->predicted_objects;
+  auto predicted_objects = *input.predicted_objects;
 
   object_filter_->filter_objects(predicted_objects);
 
@@ -460,8 +456,8 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
         colliding_object);
     }
     return get_nearest_object_collision(
-      traj_points, debug_data_.trajectory_shape, data_->vehicle_info, active_objects,
-      object_decel_map_, data_->current_odometry->twist.twist.linear.x,
+      traj_points, debug_data_.trajectory_shape, context_->vehicle_info, active_objects,
+      object_decel_map_, input.current_odometry->twist.twist.linear.x,
       params_.nominal_stopping_decel, params_.rss_params.reaction_time,
       params_.rss_params.safety_margin, params_.rss_params.min_vel_th, debug_data_.target_polygons,
       colliding_object);
@@ -472,30 +468,31 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
   return collision_point;
 }
 
-std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoints & traj_points)
+std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
+  const TrajectoryPoints & traj_points, const InputData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::check_pointcloud", *get_time_keeper());
   if (
-    !params_.use_pointcloud || !data_->obstacle_pointcloud ||
-    data_->obstacle_pointcloud->data.empty()) {
+    !params_.use_pointcloud || !input.obstacle_pointcloud ||
+    input.obstacle_pointcloud->data.empty()) {
     return std::nullopt;
   }
 
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
-  pcl::fromROSMsg(*data_->obstacle_pointcloud, *filtered_pointcloud);
+  pcl::fromROSMsg(*input.obstacle_pointcloud, *filtered_pointcloud);
   {
     autoware_utils_debug::ScopedTimeTrack stt(
       "ObstacleStop::filter_pointcloud", *get_time_keeper());
     const auto & bounding_box = debug_data_.trajectory_shape.bounding_box;
     const auto rel_min_corner = autoware_utils_geometry::inverse_transform_point(
-      bounding_box.min_corner().to_3d(), data_->current_odometry->pose.pose);
+      bounding_box.min_corner().to_3d(), input.current_odometry->pose.pose);
     const auto rel_max_corner = autoware_utils_geometry::inverse_transform_point(
-      bounding_box.max_corner().to_3d(), data_->current_odometry->pose.pose);
+      bounding_box.max_corner().to_3d(), input.current_odometry->pose.pose);
     constexpr double buffer = 1.0;
     const auto [min_x, max_x] = std::minmax(rel_min_corner.x(), rel_max_corner.x());
     const auto [min_y, max_y] = std::minmax(rel_min_corner.y(), rel_max_corner.y());
     const auto min_z = params_.pointcloud.min_height;
-    const auto max_z = data_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer;
+    const auto max_z = context_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer;
     pointcloud_filter_->filter_pointcloud(
       filtered_pointcloud, min_x - buffer, max_x + buffer, min_y - buffer, max_y + buffer, min_z,
       max_z);
@@ -512,8 +509,8 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
   if (!clustered_points->empty()) {
     geometry_msgs::msg::TransformStamped transform_stamped;
     try {
-      transform_stamped = data_->tf_buffer.lookupTransform(
-        "map", data_->obstacle_pointcloud->header.frame_id, tf2::TimePointZero);
+      transform_stamped = context_->tf_buffer.lookupTransform(
+        "map", input.obstacle_pointcloud->header.frame_id, tf2::TimePointZero);
     } catch (tf2::TransformException & e) {
       RCLCPP_WARN(get_node_ptr()->get_logger(), "no transform found for pointcloud: %s", e.what());
       return std::nullopt;
@@ -526,15 +523,15 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
   {
     const auto cluster_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
     pcl::toROSMsg(*clustered_points, *cluster_pointcloud);
-    cluster_pointcloud->header.stamp = data_->obstacle_pointcloud->header.stamp;
+    cluster_pointcloud->header.stamp = input.obstacle_pointcloud->header.stamp;
     cluster_pointcloud->header.frame_id = "map";
     debug_data_.cluster_points = cluster_pointcloud;
   }
 
-  if (data_->predicted_objects && !data_->predicted_objects->objects.empty()) {
+  if (input.predicted_objects && !input.predicted_objects->objects.empty()) {
     autoware_utils_debug::ScopedTimeTrack stt(
       "ObstacleStop::filter_pointcloud_by_object", *get_time_keeper());
-    pointcloud_filter_->filter_pointcloud_by_object(clustered_points, *data_->predicted_objects);
+    pointcloud_filter_->filter_pointcloud_by_object(clustered_points, *input.predicted_objects);
   }
 
   PointCloud::Ptr active_points(new PointCloud);
@@ -556,7 +553,7 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
   if (debug_data_.cluster_points) pub_clustered_pointcloud_->publish(*debug_data_.cluster_points);
 
   MarkerArray marker_array;
-  const auto ego_z = data_->current_odometry->pose.pose.position.z;
+  const auto ego_z = debug_data_.ego_z;
   const auto white = autoware_utils::create_marker_color(1.0, 1.0, 1.0, 1.0);
   const auto yellow = autoware_utils::create_marker_color(1.0, 1.0, 0.0, 1.0);
   const auto magenta = autoware_utils::create_marker_color(1.0, 0.0, 1.0, 1.0);

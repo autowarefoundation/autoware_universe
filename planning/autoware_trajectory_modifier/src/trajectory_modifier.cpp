@@ -14,7 +14,6 @@
 
 #include "autoware/trajectory_modifier/trajectory_modifier.hpp"
 
-#include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
@@ -33,7 +32,7 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   plugin_loader_(
     "autoware_trajectory_modifier",
     "autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase"),
-  data_{std::make_shared<TrajectoryModifierData>(this)}
+  context_{std::make_shared<TrajectoryModifierContext>(this)}
 {
   trajectories_sub_ = create_subscription<CandidateTrajectories>(
     "~/input/candidate_trajectories", 1,
@@ -70,15 +69,20 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
     return;
   }
 
-  set_data();
-  const auto is_ready = data_->is_ready();
-  if (!is_ready) {
-    RCLCPP_ERROR(get_logger(), "Data is not ready: %s", is_ready.error().c_str());
+  const auto input = make_input_data();
+  if (!input.current_odometry) {
+    RCLCPP_ERROR(get_logger(), "Data is not ready: current_odometry is not set");
     return;
   }
-
-  if (!is_ready.value().empty()) {
-    RCLCPP_WARN(get_logger(), "Missing data: %s", is_ready.value().c_str());
+  if (!input.current_acceleration) {
+    RCLCPP_ERROR(get_logger(), "Data is not ready: current_acceleration is not set");
+    return;
+  }
+  if (!input.predicted_objects) {
+    RCLCPP_WARN(get_logger(), "Missing data: predicted_objects is not set");
+  }
+  if (!input.obstacle_pointcloud) {
+    RCLCPP_WARN(get_logger(), "Missing data: obstacle_pointcloud is not set");
   }
 
   CandidateTrajectories output_trajectories = *msg;
@@ -91,7 +95,7 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
   std::string modified_plugins_str;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     for (auto & modifier : plugins_) {
-      if (!modifier->modify_trajectory(trajectory.points)) continue;
+      if (!modifier->modify_trajectory(trajectory.points, input)) continue;
       modifier->publish_planning_factor();
       const auto ns = "trajectory_" + std::to_string(trajectory_count);
       modifier->publish_debug_data(ns);
@@ -113,12 +117,14 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
     "processing_time_ms", processing_time_ms);
 }
 
-void TrajectoryModifier::set_data()
+plugin::InputData TrajectoryModifier::make_input_data()
 {
-  data_->current_odometry = sub_current_odometry_.take_data();
-  data_->current_acceleration = sub_current_acceleration_.take_data();
-  data_->predicted_objects = sub_objects_.take_data();
-  data_->obstacle_pointcloud = sub_pointcloud_.take_data();
+  plugin::InputData input;
+  input.current_odometry = sub_current_odometry_.take_data();
+  input.current_acceleration = sub_current_acceleration_.take_data();
+  input.predicted_objects = sub_objects_.take_data();
+  input.obstacle_pointcloud = sub_pointcloud_.take_data();
+  return input;
 }
 
 void TrajectoryModifier::load_plugin(const std::string & name)
@@ -134,7 +140,7 @@ void TrajectoryModifier::load_plugin(const std::string & name)
 
   if (plugin_loader_.isClassAvailable(name)) {
     const auto plugin = plugin_loader_.createSharedInstance(name);
-    plugin->initialize(name, this, time_keeper_, data_, params_);
+    plugin->initialize(name, this, time_keeper_, context_, params_);
     // register
     plugins_.push_back(plugin);
     RCLCPP_INFO(this->get_logger(), "The modifier plugin '%s' has been loaded", name.c_str());
