@@ -25,7 +25,8 @@ rclcpp_components_register_node(traffic_light_roi_visualizer
 )
 
 ament_auto_add_library(traffic_light_map_visualizer SHARED
-  src/traffic_light_map_visualizer/node.cpp
+  src/traffic_light_map_visualizer/traffic_light_visualizer_node.cpp
+  src/traffic_light_map_visualizer/traffic_light_visualizer.cpp
 )
 
 rclcpp_components_register_node(traffic_light_map_visualizer
