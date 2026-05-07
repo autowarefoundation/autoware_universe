@@ -106,10 +106,6 @@ __global__ void reconstructFullKernel(
     return;
   }
 
-  for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
-    output_probs[idx * num_classes + class_idx] = 0.0f;
-  }
-
   if (crop_mask[idx] == 0) {
     output_labels[idx] = 255;
     return;
