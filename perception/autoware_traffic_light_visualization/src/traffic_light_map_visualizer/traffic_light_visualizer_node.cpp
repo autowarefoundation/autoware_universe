@@ -36,7 +36,7 @@ TrafficLightMapVisualizerNode::TrafficLightMapVisualizerNode(
     std::bind(&TrafficLightMapVisualizerNode::detected_traffic_lights_callback, this, _1));
   lanelet_map_sub_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&TrafficLightMapVisualizerNode::bin_map_callback, this, _1));
+    std::bind(&TrafficLightMapVisualizerNode::lanelet_map_callback, this, _1));
 }
 
 void TrafficLightMapVisualizerNode::detected_traffic_lights_callback(
@@ -51,11 +51,11 @@ void TrafficLightMapVisualizerNode::detected_traffic_lights_callback(
   traffic_light_marker_pub_->publish(output_msg);
 }
 
-void TrafficLightMapVisualizerNode::bin_map_callback(
-  const LaneletMapBin::ConstSharedPtr input_map_msg)
+void TrafficLightMapVisualizerNode::lanelet_map_callback(
+  const LaneletMapBin::ConstSharedPtr lanelet_map_msg)
 {
   lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
-    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_map_msg));
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*lanelet_map_msg));
 
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map);
   auto map_traffic_lights = lanelet::utils::query::autowareTrafficLights(all_lanelets);

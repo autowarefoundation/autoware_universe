@@ -38,7 +38,7 @@ private:
 
   void detected_traffic_lights_callback(
     const TrafficLightGroupArray::ConstSharedPtr detected_traffic_lights);
-  void bin_map_callback(const LaneletMapBin::ConstSharedPtr input_map_msg);
+  void lanelet_map_callback(const LaneletMapBin::ConstSharedPtr lanelet_map_msg);
 
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr traffic_light_marker_pub_;
   rclcpp::Subscription<TrafficLightGroupArray>::SharedPtr detected_traffic_lights_sub_;
