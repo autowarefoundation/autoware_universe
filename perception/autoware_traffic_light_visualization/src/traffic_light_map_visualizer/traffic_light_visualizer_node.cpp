@@ -31,15 +31,15 @@ TrafficLightMapVisualizerNode::TrafficLightMapVisualizerNode(
 
   traffic_light_marker_pub_ =
     create_publisher<visualization_msgs::msg::MarkerArray>("~/output/traffic_light", 1);
-  traffic_light_state_sub_ = create_subscription<TrafficLightGroupArray>(
+  detected_traffic_lights_sub_ = create_subscription<TrafficLightGroupArray>(
     "~/input/tl_state", 1,
-    std::bind(&TrafficLightMapVisualizerNode::traffic_lights_callback, this, _1));
+    std::bind(&TrafficLightMapVisualizerNode::detected_traffic_lights_callback, this, _1));
   lanelet_map_sub_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrafficLightMapVisualizerNode::bin_map_callback, this, _1));
 }
 
-void TrafficLightMapVisualizerNode::traffic_lights_callback(
+void TrafficLightMapVisualizerNode::detected_traffic_lights_callback(
   const TrafficLightGroupArray::ConstSharedPtr detected_traffic_lights)
 {
   if (!visualizer_) {

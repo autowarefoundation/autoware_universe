@@ -36,12 +36,12 @@ private:
   using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
   using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 
-  void traffic_lights_callback(
+  void detected_traffic_lights_callback(
     const TrafficLightGroupArray::ConstSharedPtr detected_traffic_lights);
   void bin_map_callback(const LaneletMapBin::ConstSharedPtr input_map_msg);
 
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr traffic_light_marker_pub_;
-  rclcpp::Subscription<TrafficLightGroupArray>::SharedPtr traffic_light_state_sub_;
+  rclcpp::Subscription<TrafficLightGroupArray>::SharedPtr detected_traffic_lights_sub_;
   rclcpp::Subscription<LaneletMapBin>::SharedPtr lanelet_map_sub_;
 
   std::optional<TrafficLightVisualizer> visualizer_;
