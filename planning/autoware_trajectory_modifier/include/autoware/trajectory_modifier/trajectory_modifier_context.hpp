@@ -26,15 +26,11 @@
 
 namespace autoware::trajectory_modifier
 {
-// Type aliases retained for callers that previously imported them via TrajectoryModifierContext.
 using autoware_perception_msgs::msg::PredictedObjects;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::PointCloud2;
 
-// Long-lived resources shared with plugins via initialize(). Per-frame inputs
-// (odometry, acceleration, predicted_objects, obstacle_pointcloud) live in
-// plugin::InputData and are passed as method arguments instead.
 struct TrajectoryModifierContext
 {
   explicit TrajectoryModifierContext(rclcpp::Node * node)

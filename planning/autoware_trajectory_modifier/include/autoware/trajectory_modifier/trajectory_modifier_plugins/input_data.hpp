@@ -24,9 +24,6 @@
 
 namespace autoware::trajectory_modifier::plugin
 {
-
-// Per-frame inputs handed to plugins by the host node every cycle. Passed by const-ref so
-// plugins cannot mutate the data and so the call site shows what each plugin reads.
 struct InputData
 {
   nav_msgs::msg::Odometry::ConstSharedPtr current_odometry = nullptr;
