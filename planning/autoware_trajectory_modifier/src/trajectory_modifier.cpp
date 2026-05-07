@@ -70,19 +70,19 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
     return;
   }
 
-  const auto inputs = make_input_data();
-  if (!inputs.current_odometry) {
+  const auto input = make_input_data();
+  if (!input.current_odometry) {
     RCLCPP_ERROR(get_logger(), "Data is not ready: current_odometry is not set");
     return;
   }
-  if (!inputs.current_acceleration) {
+  if (!input.current_acceleration) {
     RCLCPP_ERROR(get_logger(), "Data is not ready: current_acceleration is not set");
     return;
   }
-  if (!inputs.predicted_objects) {
+  if (!input.predicted_objects) {
     RCLCPP_WARN(get_logger(), "Missing data: predicted_objects is not set");
   }
-  if (!inputs.obstacle_pointcloud) {
+  if (!input.obstacle_pointcloud) {
     RCLCPP_WARN(get_logger(), "Missing data: obstacle_pointcloud is not set");
   }
 
@@ -96,7 +96,7 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
   std::string modified_plugins_str;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     for (auto & modifier : plugins_) {
-      if (!modifier->modify_trajectory(trajectory.points, inputs)) continue;
+      if (!modifier->modify_trajectory(trajectory.points, input)) continue;
       modifier->publish_planning_factor();
       const auto ns = "trajectory_" + std::to_string(trajectory_count);
       modifier->publish_debug_data(ns);
@@ -120,12 +120,12 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
 
 plugin::InputData TrajectoryModifier::make_input_data()
 {
-  plugin::InputData inputs;
-  inputs.current_odometry = sub_current_odometry_.take_data();
-  inputs.current_acceleration = sub_current_acceleration_.take_data();
-  inputs.predicted_objects = sub_objects_.take_data();
-  inputs.obstacle_pointcloud = sub_pointcloud_.take_data();
-  return inputs;
+  plugin::InputData input;
+  input.current_odometry = sub_current_odometry_.take_data();
+  input.current_acceleration = sub_current_acceleration_.take_data();
+  input.predicted_objects = sub_objects_.take_data();
+  input.obstacle_pointcloud = sub_pointcloud_.take_data();
+  return input;
 }
 
 void TrajectoryModifier::load_plugin(const std::string & name)

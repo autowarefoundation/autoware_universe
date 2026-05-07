@@ -64,9 +64,9 @@ public:
   }
 
   virtual ~TrajectoryModifierPluginBase() = default;
-  virtual bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & inputs) = 0;
+  virtual bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) = 0;
   virtual bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const InputData & inputs) = 0;
+    const TrajectoryPoints & traj_points, const InputData & input) = 0;
   std::string get_name() const { return name_; }
   std::string get_short_name() const { return short_name_; }
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }

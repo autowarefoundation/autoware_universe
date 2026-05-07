@@ -47,10 +47,10 @@ class ObstacleStop : public TrajectoryModifierPluginBase
 public:
   ObstacleStop() = default;
 
-  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & inputs) override;
+  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
 
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const InputData & inputs) override;
+    const TrajectoryPoints & traj_points, const InputData & input) override;
 
   void update_params(const TrajectoryModifierParams & params) override;
 
@@ -82,13 +82,13 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
 
-  void check_obstacles(const TrajectoryPoints & traj_points, const InputData & inputs);
+  void check_obstacles(const TrajectoryPoints & traj_points, const InputData & input);
   std::optional<CollisionPoint> check_predicted_objects(
-    const TrajectoryPoints & traj_points, const InputData & inputs);
+    const TrajectoryPoints & traj_points, const InputData & input);
   std::optional<CollisionPoint> check_pointcloud(
-    const TrajectoryPoints & traj_points, const InputData & inputs);
+    const TrajectoryPoints & traj_points, const InputData & input);
 
-  bool set_stop_point(TrajectoryPoints & traj_points, const InputData & inputs);
+  bool set_stop_point(TrajectoryPoints & traj_points, const InputData & input);
 
   bool apply_stopping(
     TrajectoryPoints & traj_points, const double target_stop_point_arc_length) const;
