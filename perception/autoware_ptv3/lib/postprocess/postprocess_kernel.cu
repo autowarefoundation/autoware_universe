@@ -77,9 +77,10 @@ __global__ void createSegmentationPointcloudKernel(
 }
 
 __global__ void reconstructPartialKernel(
-  const std::int64_t * __restrict__ inverse_map, const std::int64_t * __restrict__ voxel_labels, const float * __restrict__ voxel_probs,
-  std::int64_t * __restrict__ output_labels, float * __restrict__ output_probs, std::size_t num_classes,
-  std::size_t num_cropped_points, std::size_t num_voxels)
+  const std::int64_t * __restrict__ inverse_map, const std::int64_t * __restrict__ voxel_labels,
+  const float * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
+  float * __restrict__ output_probs, std::size_t num_classes, std::size_t num_cropped_points,
+  std::size_t num_voxels)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_cropped_points) {
