@@ -176,7 +176,8 @@ __global__ void write_unique_offset_sentinel(
 }
 
 __global__ void write_unique_counts(
-  const std::int64_t * unique_offsets, const std::int64_t * num_unique, std::int64_t * unique_counts)
+  const std::int64_t * unique_offsets, const std::int64_t * num_unique,
+  std::int64_t * unique_counts)
 {
   const auto index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (index >= static_cast<std::size_t>(*num_unique)) {
@@ -191,15 +192,13 @@ __global__ void write_unique_counts(
 cudaError_t unique(
   const std::int64_t * input, std::int64_t * unique, std::int64_t * inverse_indices,
   std::int64_t * unique_counts, std::int64_t * num_unique, void * workspace,
-  std::size_t num_input_elements, std::size_t unique_workspace_size, cudaStream_t stream)
+  std::size_t num_input_elements, std::size_t unique_temp_storage_size, cudaStream_t stream)
 {
-  (void)unique_workspace_size;
   if (num_input_elements == 0U) {
     return cudaMemsetAsync(num_unique, 0, sizeof(std::int64_t), stream);
   }
 
-  const auto temp_storage_size = get_unique_temp_storage_size(num_input_elements);
-  const auto scratch_offset = align_up(temp_storage_size, alignof(std::int64_t));
+  const auto scratch_offset = align_up(unique_temp_storage_size, alignof(std::int64_t));
   auto * scratch = reinterpret_cast<char *>(workspace) + scratch_offset;
 
   auto * input_positions = reinterpret_cast<std::int64_t *>(scratch);
@@ -217,7 +216,7 @@ cudaError_t unique(
   }
 
   status = cub::DeviceRadixSort::SortPairs(
-    workspace, temp_storage_size, input, sorted_input, input_positions, unique_offsets,
+    workspace, unique_temp_storage_size, input, sorted_input, input_positions, unique_offsets,
     num_input_elements, 0, 64, stream);
   if (status != cudaSuccess) {
     return status;
@@ -231,7 +230,7 @@ cudaError_t unique(
   }
 
   status = cub::DeviceScan::InclusiveSum(
-    workspace, temp_storage_size, run_ids, run_ids, num_input_elements, stream);
+    workspace, unique_temp_storage_size, run_ids, run_ids, num_input_elements, stream);
   if (status != cudaSuccess) {
     return status;
   }
@@ -244,14 +243,13 @@ cudaError_t unique(
   }
 
   status = cub::DeviceSelect::UniqueByKey(
-    workspace, temp_storage_size, sorted_input, input_positions, unique, unique_offsets,
+    workspace, unique_temp_storage_size, sorted_input, input_positions, unique, unique_offsets,
     num_unique, num_input_elements, stream);
   if (status != cudaSuccess) {
     return status;
   }
 
-  write_unique_offset_sentinel<<<1, 1, 0, stream>>>(
-    unique_offsets, num_unique, num_input_elements);
+  write_unique_offset_sentinel<<<1, 1, 0, stream>>>(unique_offsets, num_unique, num_input_elements);
   status = cudaGetLastError();
   if (status != cudaSuccess) {
     return status;

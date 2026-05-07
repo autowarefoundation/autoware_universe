@@ -38,6 +38,7 @@ class UniquePlugin : public IPluginV3,
 {
 public:
   explicit UniquePlugin(const std::string & name) noexcept;
+  UniquePlugin(const std::string & name, std::int64_t max_num_elements) noexcept;
 
   ~UniquePlugin() override = default;
 
@@ -97,9 +98,11 @@ public:
 
 private:
   void initFieldsToSerialize();
+  void updateMaxNumElements(std::int64_t max_num_elements);
 
   std::string layer_name_;
-  std::size_t workspace_size_{0};
+  std::size_t max_temp_storage_size_{0};
+  std::int64_t max_num_elements_{0};
   std::vector<nvinfer1::PluginField> data_to_serialize_;
   nvinfer1::PluginFieldCollection fc_to_serialize_;
 };

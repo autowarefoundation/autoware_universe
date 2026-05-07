@@ -16,9 +16,8 @@
 #include "autoware/scatter_ops/segment_csr.h"
 #include "autoware/unique_ops/unique.hpp"
 
-#include <gtest/gtest.h>
-
 #include <cuda_runtime_api.h>
+#include <gtest/gtest.h>
 
 #include <algorithm>
 #include <cmath>
@@ -107,8 +106,8 @@ template <typename T>
 std::vector<T> copyToHost(const T * device_ptr, const std::size_t element_count)
 {
   std::vector<T> host_values(element_count);
-  const cudaError_t status = cudaMemcpy(
-    host_values.data(), device_ptr, sizeof(T) * element_count, cudaMemcpyDeviceToHost);
+  const cudaError_t status =
+    cudaMemcpy(host_values.data(), device_ptr, sizeof(T) * element_count, cudaMemcpyDeviceToHost);
   if (status != cudaSuccess) {
     throw std::runtime_error(cudaGetErrorString(status));
   }
@@ -269,7 +268,7 @@ TEST(ReferenceKernelsTest, UniqueMatchesCpuReference)
   ASSERT_EQ(
     unique(
       input_d.get(), unique_d.get(), inverse_d.get(), counts_d.get(), num_unique_d.get(),
-      workspace_d.get(), input.size(), get_unique_workspace_size(input.size()), stream.get()),
+      workspace_d.get(), input.size(), get_unique_temp_storage_size(input.size()), stream.get()),
     cudaSuccess);
   ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
 
@@ -291,8 +290,8 @@ TEST(ReferenceKernelsTest, SegmentCsrMeanMatchesCpuReference)
 
   const std::size_t rows = 6U;
   const std::size_t cols = 2U;
-  const std::vector<float> src{
-    1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F};
+  const std::vector<float> src{1.0F, 2.0F, 3.0F, 4.0F,  5.0F,  6.0F,
+                               7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F};
   const std::vector<std::int64_t> indptr{0, 2, 5, 6};
   const auto reference = makeSegmentReferenceMean(src, rows, cols, indptr);
 
@@ -305,11 +304,10 @@ TEST(ReferenceKernelsTest, SegmentCsrMeanMatchesCpuReference)
   copyToDevice(indptr_d.get(), indptr);
 
   ASSERT_EQ(
-    (
-      segment_csr_launch<float, MEAN>(
-        src_d.get(), static_cast<std::int32_t>(rows), static_cast<std::int32_t>(cols),
-        indptr_d.get(), static_cast<std::int32_t>(indptr.size()),
-        std::make_tuple(out_d.get(), static_cast<std::int64_t *>(nullptr)), stream.get())),
+    (segment_csr_launch<float, MEAN>(
+      src_d.get(), static_cast<std::int32_t>(rows), static_cast<std::int32_t>(cols), indptr_d.get(),
+      static_cast<std::int32_t>(indptr.size()),
+      std::make_tuple(out_d.get(), static_cast<std::int64_t *>(nullptr)), stream.get())),
     0);
   ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
 
@@ -324,8 +322,8 @@ TEST(ReferenceKernelsTest, SegmentCsrMaxMatchesCpuReference)
 
   const std::size_t rows = 6U;
   const std::size_t cols = 2U;
-  const std::vector<float> src{
-    1.0F, 6.0F, 3.0F, 4.0F, 5.0F, 9.0F, 7.0F, 8.0F, 2.0F, 10.0F, 11.0F, 12.0F};
+  const std::vector<float> src{1.0F, 6.0F, 3.0F, 4.0F,  5.0F,  9.0F,
+                               7.0F, 8.0F, 2.0F, 10.0F, 11.0F, 12.0F};
   const std::vector<std::int64_t> indptr{0, 2, 5, 6};
   const auto reference = makeSegmentReferenceMax(src, rows, cols, indptr);
 
@@ -338,11 +336,10 @@ TEST(ReferenceKernelsTest, SegmentCsrMaxMatchesCpuReference)
   copyToDevice(indptr_d.get(), indptr);
 
   ASSERT_EQ(
-    (
-      segment_csr_launch<float, MAX>(
-        src_d.get(), static_cast<std::int32_t>(rows), static_cast<std::int32_t>(cols),
-        indptr_d.get(), static_cast<std::int32_t>(indptr.size()),
-        std::make_tuple(out_d.get(), static_cast<std::int64_t *>(nullptr)), stream.get())),
+    (segment_csr_launch<float, MAX>(
+      src_d.get(), static_cast<std::int32_t>(rows), static_cast<std::int32_t>(cols), indptr_d.get(),
+      static_cast<std::int32_t>(indptr.size()),
+      std::make_tuple(out_d.get(), static_cast<std::int64_t *>(nullptr)), stream.get())),
     0);
   ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
 

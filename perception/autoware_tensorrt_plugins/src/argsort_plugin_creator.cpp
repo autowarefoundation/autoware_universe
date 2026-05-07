@@ -19,6 +19,8 @@
 
 #include <NvInferRuntimePlugin.h>
 
+#include <cstdint>
+#include <exception>
 #include <string>
 
 namespace nvinfer1::plugin
@@ -39,10 +41,32 @@ nvinfer1::PluginFieldCollection const * ArgsortPluginCreator::getFieldNames() no
 }
 
 IPluginV3 * ArgsortPluginCreator::createPlugin(
-  char const * name, [[maybe_unused]] PluginFieldCollection const * fc,
-  [[maybe_unused]] TensorRTPhase phase) noexcept
+  char const * name, PluginFieldCollection const * fc, TensorRTPhase phase) noexcept
 {
-  return new (std::nothrow) ArgsortPlugin(std::string(name));
+  try {
+    PLUGIN_VALIDATE(fc != nullptr);
+
+    if (phase == TensorRTPhase::kBUILD) {
+      PLUGIN_VALIDATE(fc->nbFields == 0);
+      return new (std::nothrow) ArgsortPlugin(std::string(name));
+    }
+
+    if (phase == TensorRTPhase::kRUNTIME) {
+      nvinfer1::PluginField const * fields{fc->fields};
+      PLUGIN_VALIDATE(fc->nbFields == 1);
+      PLUGIN_VALIDATE(fields[0].name != nullptr);
+      PLUGIN_VALIDATE(std::string(fields[0].name) == "max_num_elements");
+      PLUGIN_VALIDATE(fields[0].type == nvinfer1::PluginFieldType::kINT64);
+      PLUGIN_VALIDATE(fields[0].length == 1);
+
+      return new (std::nothrow)
+        ArgsortPlugin(std::string(name), *static_cast<std::int64_t const *>(fields[0].data));
+    }
+  } catch (std::exception const & e) {
+    caughtError(e);
+  }
+
+  return nullptr;
 }
 
 }  // namespace nvinfer1::plugin

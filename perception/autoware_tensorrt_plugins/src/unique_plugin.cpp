@@ -20,6 +20,7 @@
 #include <NvInferRuntime.h>
 #include <NvInferRuntimePlugin.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <exception>
 #include <string>
@@ -28,14 +29,51 @@
 namespace nvinfer1::plugin
 {
 
+namespace
+{
+
+std::size_t alignUp(const std::size_t size, const std::size_t alignment)
+{
+  return ((size + alignment - 1U) / alignment) * alignment;
+}
+
+std::size_t getTotalWorkspaceSize(
+  const std::size_t temp_storage_size, const std::size_t max_num_elements)
+{
+  return alignUp(temp_storage_size, alignof(std::int64_t)) +
+         (3U * max_num_elements + 1U) * sizeof(std::int64_t) +
+         max_num_elements * sizeof(std::int32_t);
+}
+
+}  // namespace
+
 UniquePlugin::UniquePlugin(const std::string & name) noexcept : layer_name_(name)
 {
   initFieldsToSerialize();
 }
 
+UniquePlugin::UniquePlugin(const std::string & name, const std::int64_t max_num_elements) noexcept
+: layer_name_(name)
+{
+  updateMaxNumElements(max_num_elements);
+  initFieldsToSerialize();
+}
+
+void UniquePlugin::updateMaxNumElements(const std::int64_t max_num_elements)
+{
+  PLUGIN_ASSERT(max_num_elements >= 0);
+
+  max_num_elements_ = std::max(max_num_elements_, max_num_elements);
+  max_temp_storage_size_ = std::max(
+    max_temp_storage_size_,
+    get_unique_temp_storage_size(static_cast<std::size_t>(max_num_elements_)));
+}
+
 void UniquePlugin::initFieldsToSerialize()
 {
   data_to_serialize_.clear();
+  data_to_serialize_.emplace_back(
+    "max_num_elements", &max_num_elements_, PluginFieldType::kINT64, 1);
   fc_to_serialize_.nbFields = data_to_serialize_.size();
   fc_to_serialize_.fields = data_to_serialize_.data();
 }
@@ -60,7 +98,7 @@ IPluginCapability * UniquePlugin::getCapabilityInterface(PluginCapabilityType ty
 IPluginV3 * UniquePlugin::clone() noexcept
 {
   try {
-    IPluginV3 * const plugin{new UniquePlugin{layer_name_}};
+    IPluginV3 * const plugin{new UniquePlugin{layer_name_, max_num_elements_}};
     return plugin;
   } catch (std::exception const & e) {
     caughtError(e);
@@ -105,6 +143,7 @@ std::int32_t UniquePlugin::configurePlugin(
   PLUGIN_ASSERT(out[1].desc.type == in[0].desc.type);
   PLUGIN_ASSERT(out[2].desc.type == in[0].desc.type);
   PLUGIN_ASSERT(out[3].desc.type == in[0].desc.type);
+  updateMaxNumElements(in[0].max.d[0]);
 
   return 0;
 }
@@ -164,11 +203,16 @@ std::int32_t UniquePlugin::enqueue(
   cudaStream_t stream) noexcept
 {
   std::int64_t num_elements = input_desc[0].dims.d[0];
-  const auto workspace_size = get_unique_workspace_size(static_cast<std::size_t>(num_elements));
+  PLUGIN_ASSERT(num_elements <= max_num_elements_);
+  const auto temp_storage_size =
+    max_temp_storage_size_ == 0U
+      ? get_unique_temp_storage_size(static_cast<std::size_t>(num_elements))
+      : max_temp_storage_size_;
   return unique(
     reinterpret_cast<const std::int64_t *>(inputs[0]), reinterpret_cast<std::int64_t *>(outputs[0]),
     reinterpret_cast<std::int64_t *>(outputs[1]), reinterpret_cast<std::int64_t *>(outputs[2]),
-    reinterpret_cast<std::int64_t *>(outputs[3]), workspace, num_elements, workspace_size, stream);
+    reinterpret_cast<std::int64_t *>(outputs[3]), workspace, num_elements, temp_storage_size,
+    stream);
 }
 
 std::int32_t UniquePlugin::onShapeChange(
@@ -194,7 +238,13 @@ std::size_t UniquePlugin::getWorkspaceSize(
   [[maybe_unused]] DynamicPluginTensorDesc const * outputs,
   [[maybe_unused]] std::int32_t num_outputs) const noexcept
 {
-  return get_unique_workspace_size(inputs[0].max.d[0]);
+  const auto max_num_elements =
+    std::max(max_num_elements_, static_cast<std::int64_t>(inputs[0].max.d[0]));
+  const auto temp_storage_size =
+    max_temp_storage_size_ == 0U
+      ? get_unique_temp_storage_size(static_cast<std::size_t>(max_num_elements))
+      : max_temp_storage_size_;
+  return getTotalWorkspaceSize(temp_storage_size, static_cast<std::size_t>(max_num_elements));
 }
 
 }  // namespace nvinfer1::plugin
