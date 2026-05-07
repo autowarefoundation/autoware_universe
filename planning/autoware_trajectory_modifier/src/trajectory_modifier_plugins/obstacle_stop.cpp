@@ -18,22 +18,17 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
-#include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/trajectory/interpolator/akima_spline.hpp>
 #include <autoware/trajectory/interpolator/interpolator.hpp>
-#include <autoware/trajectory/pose.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
-#include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
-#include <range/v3/view.hpp>
 #include <rclcpp/logging.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <memory>
 #include <string>
 #include <utility>

@@ -16,21 +16,11 @@
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_CONTEXT_HPP_
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
 namespace autoware::trajectory_modifier
 {
-using autoware_perception_msgs::msg::PredictedObjects;
-using geometry_msgs::msg::AccelWithCovarianceStamped;
-using nav_msgs::msg::Odometry;
-using sensor_msgs::msg::PointCloud2;
-
 struct TrajectoryModifierContext
 {
   explicit TrajectoryModifierContext(rclcpp::Node * node)

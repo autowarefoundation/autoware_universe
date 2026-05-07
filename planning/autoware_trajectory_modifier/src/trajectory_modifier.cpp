@@ -14,7 +14,6 @@
 
 #include "autoware/trajectory_modifier/trajectory_modifier.hpp"
 
-#include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
