@@ -100,6 +100,14 @@ private:
   void set_map(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
 
   /**
+   * @brief Select the traffic light set to use as detection targets
+   *
+   * Returns the route-restricted set when a route has been provided, otherwise
+   * falls back to all traffic lights in the map.
+   */
+  const TrafficLightSet & select_target_traffic_lights() const;
+
+  /**
    * @brief Filter traffic lights that are visible from the camera
    *
    * @param all_traffic_lights      all the traffic lights in the route or in the map

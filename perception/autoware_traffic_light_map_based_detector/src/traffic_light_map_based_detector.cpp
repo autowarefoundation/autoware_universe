@@ -163,6 +163,27 @@ const tf2::Transform & find_closest_transform(
   return closest_iter->transform;
 }
 
+const TrafficLightMapBasedDetector::TrafficLightSet &
+TrafficLightMapBasedDetector::select_target_traffic_lights() const
+{
+  if (route_traffic_lights_ptr_ != nullptr) {
+    return *route_traffic_lights_ptr_;
+  }
+  return *all_traffic_lights_ptr_;
+}
+
+TrafficLightMapBasedDetectorConfig make_expect_roi_config(
+  const TrafficLightMapBasedDetectorConfig & base_config)
+{
+  TrafficLightMapBasedDetectorConfig expect_roi_config = base_config;
+  expect_roi_config.max_vibration_depth = 0;
+  expect_roi_config.max_vibration_height = 0;
+  expect_roi_config.max_vibration_width = 0;
+  expect_roi_config.max_vibration_yaw = 0;
+  expect_roi_config.max_vibration_pitch = 0;
+  return expect_roi_config;
+}
+
 DetectionResult TrafficLightMapBasedDetector::detect(
   const std::vector<StampedTransform> & tf_map2camera_samples,
   const sensor_msgs::msg::CameraInfo & camera_info) const
@@ -178,27 +199,14 @@ DetectionResult TrafficLightMapBasedDetector::detect(
   image_geometry::PinholeCameraModel pinhole_camera_model;
   pinhole_camera_model.fromCameraInfo(camera_info);
 
-  // Use route traffic lights if available, otherwise all traffic lights
   std::vector<lanelet::ConstLineString3d> visible_traffic_lights;
-  if (route_traffic_lights_ptr_ != nullptr) {
-    get_visible_traffic_lights(
-      *route_traffic_lights_ptr_, tf_map2camera_samples, pinhole_camera_model,
-      visible_traffic_lights);
-  } else {
-    get_visible_traffic_lights(
-      *all_traffic_lights_ptr_, tf_map2camera_samples, pinhole_camera_model,
-      visible_traffic_lights);
-  }
+  get_visible_traffic_lights(
+    select_target_traffic_lights(), tf_map2camera_samples, pinhole_camera_model,
+    visible_traffic_lights);
 
-  // set all offset to zero when calculating the expect roi
   const tf2::Transform tf_map2camera_closest =
     find_closest_transform(tf_map2camera_samples, camera_info.header.stamp);
-  TrafficLightMapBasedDetectorConfig expect_roi_config = config_;
-  expect_roi_config.max_vibration_depth = 0;
-  expect_roi_config.max_vibration_height = 0;
-  expect_roi_config.max_vibration_width = 0;
-  expect_roi_config.max_vibration_yaw = 0;
-  expect_roi_config.max_vibration_pitch = 0;
+  const auto expect_roi_config = make_expect_roi_config(config_);
 
   for (const auto & traffic_light : visible_traffic_lights) {
     tier4_perception_msgs::msg::TrafficLightRoi rough_roi, expect_roi;
