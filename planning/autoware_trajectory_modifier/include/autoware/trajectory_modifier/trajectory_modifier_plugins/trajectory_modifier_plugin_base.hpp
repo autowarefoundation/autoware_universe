@@ -16,8 +16,8 @@
 #ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
+#include "autoware/trajectory_modifier/trajectory_modifier_context.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/input_data.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
 
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
@@ -47,7 +47,7 @@ public:
   void initialize(
     std::string name, rclcpp::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const std::shared_ptr<TrajectoryModifierData> & data,
+    const std::shared_ptr<TrajectoryModifierContext> & context,
     [[maybe_unused]] const TrajectoryModifierParams & params)
   {
     short_name_ = std::invoke([&name]() {
@@ -57,7 +57,7 @@ public:
     name_ = std::move(name);
     node_ptr_ = node_ptr;
     time_keeper_ = time_keeper;
-    data_ = data;
+    context_ = context;
     RCLCPP_DEBUG(
       node_ptr_->get_logger(), "instantiated TrajectoryModifierPluginBase: %s", name_.c_str());
     on_initialize(params);
@@ -93,7 +93,7 @@ protected:
   virtual void on_initialize(const TrajectoryModifierParams & params) = 0;
   std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface_;
-  std::shared_ptr<TrajectoryModifierData> data_;
+  std::shared_ptr<TrajectoryModifierContext> context_;
   bool enabled_{true};
   double trajectory_time_step_{0.1};
 

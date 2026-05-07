@@ -33,7 +33,7 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   plugin_loader_(
     "autoware_trajectory_modifier",
     "autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase"),
-  data_{std::make_shared<TrajectoryModifierData>(this)}
+  context_{std::make_shared<TrajectoryModifierContext>(this)}
 {
   trajectories_sub_ = create_subscription<CandidateTrajectories>(
     "~/input/candidate_trajectories", 1,
@@ -141,7 +141,7 @@ void TrajectoryModifier::load_plugin(const std::string & name)
 
   if (plugin_loader_.isClassAvailable(name)) {
     const auto plugin = plugin_loader_.createSharedInstance(name);
-    plugin->initialize(name, this, time_keeper_, data_, params_);
+    plugin->initialize(name, this, time_keeper_, context_, params_);
     // register
     plugins_.push_back(plugin);
     RCLCPP_INFO(this->get_logger(), "The modifier plugin '%s' has been loaded", name.c_str());

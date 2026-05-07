@@ -156,7 +156,7 @@ bool ObstacleStop::is_trajectory_modification_required(
       "ObstacleStop::get_trajectory_shape", *get_time_keeper());
 
     debug_data_.trajectory_shape = get_trajectory_shape(
-      traj_points, inputs.current_odometry->pose.pose, data_->vehicle_info,
+      traj_points, inputs.current_odometry->pose.pose, context_->vehicle_info,
       inputs.current_odometry->twist.twist.linear.x,
       inputs.current_acceleration->accel.accel.linear.x, params_.nominal_stopping_decel,
       params_.stopping_jerk, params_.stop_margin, params_.lateral_margin);
@@ -194,7 +194,7 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputDat
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::set_stop_point", *get_time_keeper());
   const auto target_stop_point_arc_length = std::invoke([&]() -> double {
-    const auto stop_margin = params_.stop_margin + data_->vehicle_info.max_longitudinal_offset_m;
+    const auto stop_margin = params_.stop_margin + context_->vehicle_info.max_longitudinal_offset_m;
     auto min_stopping_distance = motion_utils::calculate_stop_distance(
       inputs.current_odometry->twist.twist.linear.x,
       inputs.current_acceleration->accel.accel.linear.x, params_.maximum_stopping_decel,
@@ -462,7 +462,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
         colliding_object);
     }
     return get_nearest_object_collision(
-      traj_points, debug_data_.trajectory_shape, data_->vehicle_info, active_objects,
+      traj_points, debug_data_.trajectory_shape, context_->vehicle_info, active_objects,
       object_decel_map_, inputs.current_odometry->twist.twist.linear.x,
       params_.nominal_stopping_decel, params_.rss_params.reaction_time,
       params_.rss_params.safety_margin, params_.rss_params.min_vel_th, debug_data_.target_polygons,
@@ -498,7 +498,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
     const auto [min_x, max_x] = std::minmax(rel_min_corner.x(), rel_max_corner.x());
     const auto [min_y, max_y] = std::minmax(rel_min_corner.y(), rel_max_corner.y());
     const auto min_z = params_.pointcloud.min_height;
-    const auto max_z = data_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer;
+    const auto max_z = context_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer;
     pointcloud_filter_->filter_pointcloud(
       filtered_pointcloud, min_x - buffer, max_x + buffer, min_y - buffer, max_y + buffer, min_z,
       max_z);
@@ -515,7 +515,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
   if (!clustered_points->empty()) {
     geometry_msgs::msg::TransformStamped transform_stamped;
     try {
-      transform_stamped = data_->tf_buffer.lookupTransform(
+      transform_stamped = context_->tf_buffer.lookupTransform(
         "map", inputs.obstacle_pointcloud->header.frame_id, tf2::TimePointZero);
     } catch (tf2::TransformException & e) {
       RCLCPP_WARN(get_node_ptr()->get_logger(), "no transform found for pointcloud: %s", e.what());

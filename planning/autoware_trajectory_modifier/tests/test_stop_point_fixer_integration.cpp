@@ -25,7 +25,7 @@
 #include <memory>
 #include <vector>
 
-using autoware::trajectory_modifier::TrajectoryModifierData;
+using autoware::trajectory_modifier::TrajectoryModifierContext;
 using autoware::trajectory_modifier::plugin::InputData;
 using autoware::trajectory_modifier::plugin::StopPointFixer;
 using autoware::trajectory_modifier::plugin::TrajectoryPoints;
@@ -46,12 +46,12 @@ protected:
 
     node_ = std::make_shared<rclcpp::Node>("test_node", node_options);
     time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>();
-    data_ = std::make_shared<TrajectoryModifierData>(node_.get());
+    context_ = std::make_shared<TrajectoryModifierContext>(node_.get());
     params_.use_stop_point_fixer = true;
     params_.stop_point_fixer.velocity_threshold = 0.1;
     params_.stop_point_fixer.min_distance_threshold = 1.0;
     plugin_ = std::make_unique<StopPointFixer>();
-    plugin_->initialize("test_stop_point_fixer", node_.get(), time_keeper_, data_, params_);
+    plugin_->initialize("test_stop_point_fixer", node_.get(), time_keeper_, context_, params_);
   }
 
   void TearDown() override
@@ -108,7 +108,7 @@ protected:
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<StopPointFixer> plugin_;
   trajectory_modifier_params::Params params_;
-  std::shared_ptr<TrajectoryModifierData> data_;
+  std::shared_ptr<TrajectoryModifierContext> context_;
   InputData inputs_;
 };
 

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_STRUCTS_HPP_
-#define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_STRUCTS_HPP_
+#ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_CONTEXT_HPP_
+#define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_CONTEXT_HPP_
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -26,7 +26,7 @@
 
 namespace autoware::trajectory_modifier
 {
-// Type aliases retained for callers that previously imported them via TrajectoryModifierData.
+// Type aliases retained for callers that previously imported them via TrajectoryModifierContext.
 using autoware_perception_msgs::msg::PredictedObjects;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
@@ -35,9 +35,9 @@ using sensor_msgs::msg::PointCloud2;
 // Long-lived resources shared with plugins via initialize(). Per-frame inputs
 // (odometry, acceleration, predicted_objects, obstacle_pointcloud) live in
 // plugin::InputData and are passed as method arguments instead.
-struct TrajectoryModifierData
+struct TrajectoryModifierContext
 {
-  explicit TrajectoryModifierData(rclcpp::Node * node)
+  explicit TrajectoryModifierContext(rclcpp::Node * node)
   : vehicle_info(autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo()),
     tf_buffer{node->get_clock()},
     tf_listener{tf_buffer}
@@ -49,4 +49,4 @@ struct TrajectoryModifierData
   tf2_ros::TransformListener tf_listener;
 };
 }  // namespace autoware::trajectory_modifier
-#endif  // AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_STRUCTS_HPP_
+#endif  // AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_CONTEXT_HPP_
