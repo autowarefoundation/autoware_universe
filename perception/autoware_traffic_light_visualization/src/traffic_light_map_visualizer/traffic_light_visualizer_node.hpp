@@ -27,15 +27,15 @@
 
 namespace autoware::traffic_light
 {
-using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
-using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
-
 class TrafficLightMapVisualizerNode : public rclcpp::Node
 {
 public:
   explicit TrafficLightMapVisualizerNode(const rclcpp::NodeOptions & node_options);
 
 private:
+  using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
+  using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
+
   void traffic_lights_callback(
     const TrafficLightGroupArray::ConstSharedPtr detected_traffic_lights);
   void bin_map_callback(const LaneletMapBin::ConstSharedPtr input_map_msg);
