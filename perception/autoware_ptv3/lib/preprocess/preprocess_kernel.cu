@@ -282,39 +282,6 @@ std::size_t PreprocessCuda::generateFeatures(
   std::int64_t * inverse_map, std::size_t * output_num_cropped_points)
 {
   auto policy = thrust::cuda::par.on(stream_);
-  const auto point_feature_capacity =
-    config_.cloud_capacity_ * config_.num_point_feature_size_ * sizeof(float);
-
-  cudaMemsetAsync(points_d_.get(), 0, point_feature_capacity, stream_);
-  cudaMemsetAsync(cropped_points_d_.get(), 0, point_feature_capacity, stream_);
-  cudaMemsetAsync(
-    cropped_input_points_d_.get(), 0, config_.cloud_capacity_ * sizeof(CloudPointTypeXYZIRCAEDT),
-    stream_);
-  cudaMemsetAsync(crop_mask_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint32_t), stream_);
-  cudaMemsetAsync(
-    crop_indices_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint32_t), stream_);
-
-  if (config_.use_64bit_hash_) {
-    cudaMemsetAsync(hashes64_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint64_t), stream_);
-    cudaMemsetAsync(
-      sorted_hashes64_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint64_t), stream_);
-    cudaMemsetAsync(
-      sorted_hash_indexes64_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint64_t), stream_);
-    cudaMemsetAsync(
-      unique_mask64_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint64_t), stream_);
-    cudaMemsetAsync(
-      unique_indices64_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint64_t), stream_);
-  } else {
-    cudaMemsetAsync(hashes32_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint32_t), stream_);
-    cudaMemsetAsync(
-      sorted_hashes32_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint32_t), stream_);
-    cudaMemsetAsync(
-      sorted_hash_indexes32_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint32_t), stream_);
-    cudaMemsetAsync(
-      unique_mask32_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint32_t), stream_);
-    cudaMemsetAsync(
-      unique_indices32_d_.get(), 0, config_.cloud_capacity_ * sizeof(std::uint32_t), stream_);
-  }
 
   const auto num_blocks = divup(num_points, config_.threads_per_block_);
   switch (input_format) {
