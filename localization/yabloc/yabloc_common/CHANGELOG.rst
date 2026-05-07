@@ -2,6 +2,12 @@
 Changelog for package yabloc_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(yabloc_common): avoid maybe-uninitialized build error on NVIDIA DRIVE AGX Thor (`#12229 <https://github.com/mitsudome-r/autoware_universe/issues/12229>`_)
+* Contributors: Ryuta Kambe, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

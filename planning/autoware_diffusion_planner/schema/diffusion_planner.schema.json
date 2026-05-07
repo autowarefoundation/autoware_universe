@@ -11,19 +11,14 @@
           "default": "$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so",
           "description": "Path to libautoware_tensorrt_plugins.so file for the diffusion planner"
         },
-        "artifact_dir": {
-          "type": "string",
-          "default": "$(env HOME)/autoware_data/diffusion_planner",
-          "description": "Path to the Artifact(onnx model, etc.) directory"
-        },
         "onnx_model_path": {
           "type": "string",
-          "default": "$(var artifact_dir)/diffusion_planner.onnx",
+          "default": "$(var data_path)/v4.0/diffusion_planner.onnx",
           "description": "Path to the ONNX model file for the diffusion planner"
         },
         "args_path": {
           "type": "string",
-          "default": "$(var artifact_dir)/diffusion_planner.param.json",
+          "default": "$(var data_path)/v4.0/diffusion_planner.param.json",
           "description": "Path to model argument/configuration file"
         },
         "planning_frequency_hz": {
