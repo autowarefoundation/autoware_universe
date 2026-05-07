@@ -216,7 +216,7 @@ system/autoware_duplicated_node_checker/** junya.sasaki@tier4.jp mamoru.sobue@ti
 system/autoware_hazard_status_converter/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 system/autoware_mrm_comfortable_stop_operator/** junya.sasaki@tier4.jp makoto.kurihara@tier4.jp tomohito.ando@tier4.jp
 system/autoware_mrm_emergency_stop_operator/** junya.sasaki@tier4.jp makoto.kurihara@tier4.jp tomohito.ando@tier4.jp
-system/autoware_mrm_handler/** junya.sasaki@tier4.jp makoto.kurihara@tier4.jp ryuta.kambe@tier4.jp tetsuhiro.kawaguchi@tier4.jp
+system/autoware_mrm_handler/** junya.sasaki@tier4.jp makoto.kurihara@tier4.jp tetsuhiro.kawaguchi@tier4.jp
 system/autoware_pipeline_latency_monitor/** kyoichi.sugahara@tier4.jp maxime.clement@tier4.jp satoshi.ota@tier4.jp taekjin.lee@tier4.jp takeshi.iwanari@tier4.jp yoshi.ri@tier4.jp
 system/autoware_processing_time_checker/** kosuke.takeuchi@tier4.jp takayuki.murooka@tier4.jp
 system/autoware_system_monitor/** fumihito.ito@tier4.jp junya.sasaki@tier4.jp masaki.nishikawa@tier4.jp tetsuhiro.kawaguchi@tier4.jp

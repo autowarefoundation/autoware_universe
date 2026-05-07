@@ -2,6 +2,19 @@
 Changelog for package autoware_lane_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* fix(lane_departure_checker): let route topic be  transient local (`#12344 <https://github.com/mitsudome-r/autoware_universe/issues/12344>`_)
+  let route topic be  transient local
+* refactor(lane_departure_checker): remove unused config params (`#12244 <https://github.com/mitsudome-r/autoware_universe/issues/12244>`_)
+  * refactor(autoware_lane_departure_checker): remove unused config parameters
+  * fix(README): correct formatting of core parameters table
+  ---------
+* Contributors: Autumn60, Kem (TiankuiXian), Zulfaqar Azmi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
