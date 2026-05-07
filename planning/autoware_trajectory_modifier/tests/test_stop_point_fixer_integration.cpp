@@ -26,7 +26,7 @@
 #include <vector>
 
 using autoware::trajectory_modifier::TrajectoryModifierData;
-using autoware::trajectory_modifier::plugin::FrameInputs;
+using autoware::trajectory_modifier::plugin::InputData;
 using autoware::trajectory_modifier::plugin::StopPointFixer;
 using autoware::trajectory_modifier::plugin::TrajectoryPoints;
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -109,7 +109,7 @@ protected:
   std::unique_ptr<StopPointFixer> plugin_;
   trajectory_modifier_params::Params params_;
   std::shared_ptr<TrajectoryModifierData> data_;
-  FrameInputs inputs_;
+  InputData inputs_;
 };
 
 // Test is_trajectory_modification_required method

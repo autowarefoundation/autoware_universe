@@ -59,7 +59,7 @@ bool StopPointFixer::is_long_stop_trajectory(const TrajectoryPoints & traj_point
 }
 
 bool StopPointFixer::is_stop_point_close_to_ego(
-  const TrajectoryPoints & traj_points, const FrameInputs & inputs) const
+  const TrajectoryPoints & traj_points, const InputData & inputs) const
 {
   if (!params_.force_stop_close_stopped_trajectories) {
     return false;
@@ -69,7 +69,7 @@ bool StopPointFixer::is_stop_point_close_to_ego(
 }
 
 bool StopPointFixer::is_trajectory_modification_required(
-  const TrajectoryPoints & traj_points, const FrameInputs & inputs)
+  const TrajectoryPoints & traj_points, const InputData & inputs)
 {
   if (!enabled_ || traj_points.empty()) {
     return false;
@@ -83,7 +83,7 @@ bool StopPointFixer::is_trajectory_modification_required(
   return is_stop_point_close_to_ego(traj_points, inputs) || is_long_stop_trajectory(traj_points);
 }
 
-bool StopPointFixer::modify_trajectory(TrajectoryPoints & traj_points, const FrameInputs & inputs)
+bool StopPointFixer::modify_trajectory(TrajectoryPoints & traj_points, const InputData & inputs)
 {
   if (!is_trajectory_modification_required(traj_points, inputs)) return false;
 

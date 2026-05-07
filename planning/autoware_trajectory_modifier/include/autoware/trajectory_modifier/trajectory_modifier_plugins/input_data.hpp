@@ -13,9 +13,9 @@
 // limitations under the License.
 
 // NOLINTNEXTLINE
-#ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__FRAME_INPUTS_HPP_
+#ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__INPUT_DATA_HPP_
 // NOLINTNEXTLINE
-#define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__FRAME_INPUTS_HPP_
+#define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__INPUT_DATA_HPP_
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
@@ -27,7 +27,7 @@ namespace autoware::trajectory_modifier::plugin
 
 // Per-frame inputs handed to plugins by the host node every cycle. Passed by const-ref so
 // plugins cannot mutate the data and so the call site shows what each plugin reads.
-struct FrameInputs
+struct InputData
 {
   nav_msgs::msg::Odometry::ConstSharedPtr current_odometry = nullptr;
   geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr current_acceleration = nullptr;
@@ -38,4 +38,4 @@ struct FrameInputs
 }  // namespace autoware::trajectory_modifier::plugin
 
 // NOLINTNEXTLINE
-#endif  // AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__FRAME_INPUTS_HPP_
+#endif  // AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__INPUT_DATA_HPP_

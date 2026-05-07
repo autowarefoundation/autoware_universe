@@ -34,7 +34,7 @@ using sensor_msgs::msg::PointCloud2;
 
 // Long-lived resources shared with plugins via initialize(). Per-frame inputs
 // (odometry, acceleration, predicted_objects, obstacle_pointcloud) live in
-// plugin::FrameInputs and are passed as method arguments instead.
+// plugin::InputData and are passed as method arguments instead.
 struct TrajectoryModifierData
 {
   explicit TrajectoryModifierData(rclcpp::Node * node)

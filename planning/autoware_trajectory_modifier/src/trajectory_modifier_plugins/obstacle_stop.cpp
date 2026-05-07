@@ -141,7 +141,7 @@ void ObstacleStop::update_params(const TrajectoryModifierParams & params)
 }
 
 bool ObstacleStop::is_trajectory_modification_required(
-  const TrajectoryPoints & traj_points, const FrameInputs & inputs)
+  const TrajectoryPoints & traj_points, const InputData & inputs)
 {
   debug_data_ = DebugData();
   safety_factors_ = SafetyFactorArray{};
@@ -171,7 +171,7 @@ bool ObstacleStop::is_trajectory_modification_required(
   return nearest_collision_point_ != std::nullopt;
 }
 
-bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points, const FrameInputs & inputs)
+bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points, const InputData & inputs)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::modify_trajectory", *get_time_keeper());
 
@@ -190,7 +190,7 @@ bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points, const Frame
   return set_stop_point(traj_points, inputs);
 }
 
-bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const FrameInputs & inputs)
+bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputData & inputs)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::set_stop_point", *get_time_keeper());
   const auto target_stop_point_arc_length = std::invoke([&]() -> double {
@@ -387,7 +387,7 @@ bool ObstacleStop::apply_stopping(
   return true;
 }
 
-void ObstacleStop::check_obstacles(const TrajectoryPoints & traj_points, const FrameInputs & inputs)
+void ObstacleStop::check_obstacles(const TrajectoryPoints & traj_points, const InputData & inputs)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::check_obstacles", *get_time_keeper());
   const auto collision_point_objects = check_predicted_objects(traj_points, inputs);
@@ -440,7 +440,7 @@ void ObstacleStop::check_obstacles(const TrajectoryPoints & traj_points, const F
 }
 
 std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
-  const TrajectoryPoints & traj_points, const FrameInputs & inputs)
+  const TrajectoryPoints & traj_points, const InputData & inputs)
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "ObstacleStop::check_predicted_objects", *get_time_keeper());
@@ -475,7 +475,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 }
 
 std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
-  const TrajectoryPoints & traj_points, const FrameInputs & inputs)
+  const TrajectoryPoints & traj_points, const InputData & inputs)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::check_pointcloud", *get_time_keeper());
   if (

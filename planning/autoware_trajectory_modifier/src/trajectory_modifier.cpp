@@ -70,7 +70,7 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
     return;
   }
 
-  const auto inputs = make_frame_inputs();
+  const auto inputs = make_input_data();
   if (!inputs.current_odometry) {
     RCLCPP_ERROR(get_logger(), "Data is not ready: current_odometry is not set");
     return;
@@ -118,9 +118,9 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
     "processing_time_ms", processing_time_ms);
 }
 
-plugin::FrameInputs TrajectoryModifier::make_frame_inputs()
+plugin::InputData TrajectoryModifier::make_input_data()
 {
-  plugin::FrameInputs inputs;
+  plugin::InputData inputs;
   inputs.current_odometry = sub_current_odometry_.take_data();
   inputs.current_acceleration = sub_current_acceleration_.take_data();
   inputs.predicted_objects = sub_objects_.take_data();
