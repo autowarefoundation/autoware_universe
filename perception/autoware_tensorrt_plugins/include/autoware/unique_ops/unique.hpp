@@ -24,6 +24,7 @@ std::int64_t unique(
   std::int64_t * unique_counts, void * workspace, std::size_t num_input_elements,
   std::size_t workspace_size, cudaStream_t stream);
 
+std::size_t get_unique_temp_storage_size(std::size_t num_elements);
 std::size_t get_unique_workspace_size(std::size_t num_elements);
 
 #endif  // AUTOWARE__UNIQUE_OPS__UNIQUE_HPP_
