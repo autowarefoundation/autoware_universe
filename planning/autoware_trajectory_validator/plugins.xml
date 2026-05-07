@@ -6,12 +6,6 @@
       Filters trajectories that go out of lane boundaries
     </description>
   </class>
-  <class type="safety::CollisionFilter"
-    base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
-    <description>
-      Filters trajectories based on Time To Collision (TTC) with predicted objects
-    </description>
-  </class>
   <class type="safety::VehicleConstraintFilter"
     base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
     <description>

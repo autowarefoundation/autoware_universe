@@ -2,6 +2,35 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(map_based_prediction): apply autoware_agnocast_wrapper for CIE (`#12332 <https://github.com/mitsudome-r/autoware_universe/issues/12332>`_)
+  * feat(autoware_map_based_prediction): apply autoware_agnocast_wrapper for CIE
+  * fix(autoware_map_based_prediction): fix alphabetical order in package.xml
+  ---------
+* chore(perception): remove unused lanelet2_extension header (`#12295 <https://github.com/mitsudome-r/autoware_universe/issues/12295>`_)
+  unused lanelet2_extension in perception component
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* feat(autoware_map_based_prediction): remove glog (`#12167 <https://github.com/mitsudome-r/autoware_universe/issues/12167>`_)
+  feat: remove glog
+* feat(map_based_prediction): apply the custom find-nearest function (`#12128 <https://github.com/mitsudome-r/autoware_universe/issues/12128>`_)
+  * feat: apply the custom find-nearest function
+  * chore: update comment
+  ---------
+* refactor(map_based_prediction): rename ObjectData and CrosswalkUserData (`#11767 <https://github.com/mitsudome-r/autoware_universe/issues/11767>`_)
+  refactor: rename ObjectData and CrosswalkUserData
+* Contributors: Kotaro Uetake, Sarun MUKDAPITAK, Taekjin LEE, Tetsuhiro Kawaguchi, atsushi yano, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

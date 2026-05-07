@@ -2,6 +2,15 @@
 Changelog for package autoware_motion_velocity_boundary_departure_prevention_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* fix(boundary_departure): replaced duplicated function with motion_utils::calculate_stop_distance (`#12337 <https://github.com/mitsudome-r/autoware_universe/issues/12337>`_)
+* perf(planning): use emplace/emplace_back to avoid temporary object creation (`#12231 <https://github.com/mitsudome-r/autoware_universe/issues/12231>`_)
+* Contributors: Zulfaqar Azmi, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

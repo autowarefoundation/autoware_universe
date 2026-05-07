@@ -2,6 +2,55 @@
 Changelog for package autoware_landmark_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(lidar_marker_localizer): extend lidar-marker localization to enhance flexibility and debugging capabilities (`#11574 <https://github.com/mitsudome-r/autoware_universe/issues/11574>`_)
+  * feat: parse landmarks only in target id list
+  * feat: Add a y-axis condition to marker selection around the vehicle
+  * feat: correct z axis of self pose
+  * feat: reference a certain ring
+  * feat: make detect_landmarks function templated
+  for using PointType in both PointXYZIRC and PointXYZIRADRT
+  * feat: make detect_landmarks ring loop robust to empty pointclouds
+  - Add check to skip empty ring pointclouds in detect_landmarks
+  - Prevent unnecessary processing and possible errors when a ring has no points
+  * feat: make save_intensity function for csv output
+  - Enable generic processing for multiple point cloud types
+  - Prepare for future multi-LiDAR marker localization support
+  * refactor: fix member function declarations and add const qualifiers
+  * feat: add debug outputs for marker detection process
+  * feat: make queue sizes for output pose configurable
+  * doc: Add a y-axis condition to marker selection around the vehicle
+  * doc: add marker_height_from_ground to lidar_marker_localizer.schema.json
+  * feat: add "lidar-marker" pose estimator to pose_estimator_airbiter
+  # Conflicts:
+  #	launch/tier4_localization_launch/launch/localization.launch.xml
+  #	launch/tier4_localization_launch/launch/pose_twist_estimator/lidar_marker_localizer.launch.xml
+  #	launch/tier4_localization_launch/launch/pose_twist_estimator/pose_twist_estimator.launch.xml
+  * feat: make initial ring id range  configurable
+  * doc: update for ndt_lidar-maker mode
+  * doc: update for new features in lidar-marker localizer
+  * doc: fix indent
+  To indicate the contributor's affiliation
+  * refactor: update autoware_utils dependency
+  * style(pre-commit): autofix
+  * doc: update schema.json
+  * style(pre-commit): autofix
+  * fix: debug topics table and wrong condition to output
+  * style(pre-commit): autofix
+  * fix: diagnostics_interface dependency
+  * chore: remove codes commented out
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(localization, evaluator): remove unused lanelet2_extension header (`#12297 <https://github.com/mitsudome-r/autoware_universe/issues/12297>`_)
+  * unused lanelet2_extension in localization component
+  * unused lanelet2_extension in evaluator component
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Motz, Sarun MUKDAPITAK, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

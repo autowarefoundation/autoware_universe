@@ -2,6 +2,24 @@
 Changelog for package autoware_planning_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(planning_validator_container): apply autoware_agnocast_wrapper for CIE (`#12335 <https://github.com/mitsudome-r/autoware_universe/issues/12335>`_)
+  * feat(autoware_planning_validator): apply autoware_agnocast_wrapper for CIE
+  * fix(autoware_planning_validator): use exec_depend for launch-only dependency
+  * fix(autoware_planning_validator): set LD_PRELOAD only when use_agnocast is true
+  * feat(autoware_planning_validator): use inline ENABLE_AGNOCAST switch instead of agnocast_env.launch.xml
+  Replace agnocast_env.launch.xml include with inline container switching
+  logic and remove LD_PRELOAD setting, consistent with other launch files.
+  * feat(autoware_planning_validator): use conditional agnocast_components dependency
+  Replace autoware_agnocast_wrapper exec_depend with conditional
+  agnocast_components dependency (ENABLE_AGNOCAST == 1).
+  ---------
+* feat(autoware_planning_validator): remove glog component (`#12225 <https://github.com/mitsudome-r/autoware_universe/issues/12225>`_)
+  feat: remove glog component
+* Contributors: Tetsuhiro Kawaguchi, atsushi yano, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

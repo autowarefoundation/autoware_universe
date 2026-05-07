@@ -2,6 +2,27 @@
 Changelog for package autoware_detected_object_validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(autoware_detected_object_validation): use CallbackIsolatedAgnocastExecutor for obstacle_pointcloud_based_validator (`#12371 <https://github.com/mitsudome-r/autoware_universe/issues/12371>`_)
+* feat(object_lanelet_filter): apply autoware_agnocast_wrapper for CIE (`#12329 <https://github.com/mitsudome-r/autoware_universe/issues/12329>`_)
+  * feat(autoware_detected_object_validation): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_detected_object_validation): apply CIE to TrackedObjectLaneletFilterNode
+  Apply CallbackIsolatedAgnocastExecutor to TrackedObjectLaneletFilterNode
+  using autoware_agnocast_wrapper_register_node macro.
+  * fix(autoware_detected_object_validation): fix alphabetical order in package.xml
+  * feat(autoware_detected_object_validation): apply autoware_agnocast_wrapper to ObstaclePointCloudBasedValidator
+  ---------
+* chore(perception): remove unused lanelet2_extension header (`#12295 <https://github.com/mitsudome-r/autoware_universe/issues/12295>`_)
+  unused lanelet2_extension in perception component
+* refactor(autoware_universe): use autoware_ament_auto_package in perception packages (`#12275 <https://github.com/mitsudome-r/autoware_universe/issues/12275>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* fix(autoware_detected_object_validation): suppress maybe-uninitialized warning on NVIDIA DRIVE AGX Thor (`#12228 <https://github.com/mitsudome-r/autoware_universe/issues/12228>`_)
+* Contributors: Ryuta Kambe, Sarun MUKDAPITAK, Taekjin LEE, Vishal Chauhan, atsushi yano, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
