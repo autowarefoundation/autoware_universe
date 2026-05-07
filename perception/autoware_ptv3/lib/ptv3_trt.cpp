@@ -69,9 +69,9 @@ void PTv3TRT::setPublishFilteredPointcloud(
 
 void PTv3TRT::allocateMessages()
 {
-  const bool reconstruct_source = config_.source_reconstruction_ != SourceReconstruction::NONE;
-  const auto output_capacity =
-    reconstruct_source ? config_.cloud_capacity_ : config_.max_num_voxels_;
+  const auto output_capacity = config_.source_reconstruction_ != SourceReconstruction::NONE
+                                 ? config_.cloud_capacity_
+                                 : config_.max_num_voxels_;
   if (segmented_points_msg_ptr_ == nullptr) {
     segmented_points_msg_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
     segmented_points_msg_ptr_->height = 1;
@@ -130,10 +130,11 @@ void PTv3TRT::initPtr()
     config_.max_num_voxels_ * config_.class_names_.size());
   compact_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
     config_.max_num_voxels_ * sizeof(CloudPointTypeXYZIRCAEDT));
-  const bool reconstruct_source = config_.source_reconstruction_ != SourceReconstruction::NONE;
-  if (reconstruct_source) {
+  if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
     cropped_source_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
       config_.cloud_capacity_ * sizeof(CloudPointTypeXYZIRCAEDT));
+  }
+  if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
     reconstructed_features_d_ = autoware::cuda_utils::make_unique<float[]>(
       config_.cloud_capacity_ * config_.num_point_feature_size_);
     inverse_map_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
@@ -369,15 +370,15 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
   allocateMessages();
 
   const auto num_points = msg_ptr->height * msg_ptr->width;
-  num_source_points_ = static_cast<std::int64_t>(num_points);
-  current_input_data_ = msg_ptr->data.get();
+  if (config_.source_reconstruction_ == SourceReconstruction::FULL) {
+    num_source_points_ = static_cast<std::int64_t>(num_points);
+    current_input_data_ = msg_ptr->data.get();
+  }
 
   if (num_points == 0) {
     RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping segmentation.");
     return false;
   }
-
-  const bool reconstruct_source = config_.source_reconstruction_ != SourceReconstruction::NONE;
 
   clear_async(feat_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 4, stream_);
   clear_async(grid_coord_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 3, stream_);
@@ -390,11 +391,13 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
   clear_async(
     compact_points_d_.get(),
     static_cast<std::size_t>(config_.max_num_voxels_) * sizeof(CloudPointTypeXYZIRCAEDT), stream_);
-  if (reconstruct_source) {
+  if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
     clear_async(
       cropped_source_points_d_.get(),
       static_cast<std::size_t>(config_.cloud_capacity_) * sizeof(CloudPointTypeXYZIRCAEDT),
       stream_);
+  }
+  if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
     clear_async(
       reconstructed_features_d_.get(),
       static_cast<std::size_t>(config_.cloud_capacity_) * config_.num_point_feature_size_, stream_);
@@ -410,10 +413,15 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
   num_voxels_ = pre_ptr_->generateFeatures(
     msg_ptr->data.get(), input_format_, num_points, feat_d_.get(), grid_coord_d_.get(),
     serialized_code_d_.get(), compact_points_d_.get(),
-    reconstruct_source ? reconstructed_features_d_.get() : nullptr,
-    reconstruct_source ? cropped_source_points_d_.get() : nullptr,
-    reconstruct_source ? inverse_map_d_.get() : nullptr, &num_cropped_points);
-  num_cropped_points_ = static_cast<std::int64_t>(num_cropped_points);
+    config_.source_reconstruction_ != SourceReconstruction::NONE ? reconstructed_features_d_.get()
+                                                                 : nullptr,
+    config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? cropped_source_points_d_.get()
+                                                                    : nullptr,
+    config_.source_reconstruction_ != SourceReconstruction::NONE ? inverse_map_d_.get() : nullptr,
+    &num_cropped_points);
+  if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
+    num_cropped_points_ = static_cast<std::int64_t>(num_cropped_points);
+  }
 
   if (num_voxels_ < config_.min_num_voxels_) {
     RCLCPP_ERROR_STREAM(
@@ -456,36 +464,37 @@ bool PTv3TRT::postProcess(
   bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud)
 {
   // Segmentation pointcloud
-  const bool partial_reconstruction =
-    config_.source_reconstruction_ == SourceReconstruction::PARTIAL;
-  const bool full_reconstruction = config_.source_reconstruction_ == SourceReconstruction::FULL;
-  if (partial_reconstruction) {
+  if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
     post_ptr_->reconstructPartial(
       inverse_map_d_.get(), pred_labels_d_.get(), pred_probs_d_.get(),
       reconstructed_labels_d_.get(), reconstructed_probs_d_.get(), config_.class_names_.size(),
       num_cropped_points_, num_voxels_);
   }
-  if (full_reconstruction) {
+  if (config_.source_reconstruction_ == SourceReconstruction::FULL) {
     post_ptr_->reconstructFull(
       pre_ptr_->cropMask(), pre_ptr_->cropIndices(), inverse_map_d_.get(), pred_labels_d_.get(),
       pred_probs_d_.get(), reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
       config_.class_names_.size(), num_source_points_, num_voxels_);
   }
 
-  const auto source_features =
-    partial_reconstruction || full_reconstruction ? reconstructed_features_d_.get() : feat_d_.get();
-  const auto source_labels = partial_reconstruction || full_reconstruction
+  const auto source_features = config_.source_reconstruction_ != SourceReconstruction::NONE
+                                 ? reconstructed_features_d_.get()
+                                 : feat_d_.get();
+  const auto source_labels = config_.source_reconstruction_ != SourceReconstruction::NONE
                                ? reconstructed_labels_d_.get()
                                : pred_labels_d_.get();
-  const auto source_probs = partial_reconstruction || full_reconstruction
+  const auto source_probs = config_.source_reconstruction_ != SourceReconstruction::NONE
                               ? reconstructed_probs_d_.get()
                               : pred_probs_d_.get();
-  const auto source_points = full_reconstruction      ? current_input_data_
-                             : partial_reconstruction ? cropped_source_points_d_.get()
-                                                      : compact_points_d_.get();
-  const auto num_source_output_points = full_reconstruction      ? num_source_points_
-                                        : partial_reconstruction ? num_cropped_points_
-                                                                 : num_voxels_;
+  const auto source_points = config_.source_reconstruction_ == SourceReconstruction::FULL
+                               ? current_input_data_
+                             : config_.source_reconstruction_ == SourceReconstruction::PARTIAL
+                               ? cropped_source_points_d_.get()
+                               : compact_points_d_.get();
+  const auto num_source_output_points =
+    config_.source_reconstruction_ == SourceReconstruction::FULL      ? num_source_points_
+    : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? num_cropped_points_
+                                                                      : num_voxels_;
 
   if (should_publish_segmented_pointcloud) {
     post_ptr_->createSegmentationPointcloud(
