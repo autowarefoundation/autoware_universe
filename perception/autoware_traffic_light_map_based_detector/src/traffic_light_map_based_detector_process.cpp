@@ -57,7 +57,8 @@ bool is_in_distance_range(
   return sq_dist < (max_distance_range * max_distance_range);
 }
 
-bool is_in_angle_range(const double & tl_yaw, const double & camera_yaw, const double max_angle_range)
+bool is_in_angle_range(
+  const double & tl_yaw, const double & camera_yaw, const double max_angle_range)
 {
   Eigen::Vector2d vec1, vec2;
   vec1 << std::cos(tl_yaw), std::sin(tl_yaw);

@@ -57,7 +57,8 @@ TEST(IsInDistanceRangeTest, InRange)
   const tf2::Vector3 v1(1.0, 1.0, 3.0);
   const tf2::Vector3 v2(4.0, 5.0, 6.0);
   const double max_distance_range = 6.0;
-  const bool result = autoware::traffic_light::utils::is_in_distance_range(v1, v2, max_distance_range);
+  const bool result =
+    autoware::traffic_light::utils::is_in_distance_range(v1, v2, max_distance_range);
   EXPECT_TRUE(result);
 }
 
@@ -66,7 +67,8 @@ TEST(IsInDistanceRangeTest, OutOfRange)
   const tf2::Vector3 v1(1.0, 1.0, 3.0);
   const tf2::Vector3 v2(4.0, 5.0, 6.0);
   const double max_distance_range = 5.0;
-  const bool result = autoware::traffic_light::utils::is_in_distance_range(v1, v2, max_distance_range);
+  const bool result =
+    autoware::traffic_light::utils::is_in_distance_range(v1, v2, max_distance_range);
   EXPECT_FALSE(result);
 }
 
@@ -85,7 +87,8 @@ TEST(IsInAngleRangeTest, OutOfRange)
   const double tl_yaw = M_PI / 2;
   const double camera_yaw = M_PI;
   const double max_angle_range = M_PI / 4;
-  bool result = autoware::traffic_light::utils::is_in_angle_range(tl_yaw, camera_yaw, max_angle_range);
+  bool result =
+    autoware::traffic_light::utils::is_in_angle_range(tl_yaw, camera_yaw, max_angle_range);
   EXPECT_FALSE(result);
 }
 
@@ -94,7 +97,8 @@ TEST(IsInAngleRangeTest, InRangeBoundary)
   const double tl_yaw = M_PI - M_PI / 16;
   const double camera_yaw = -M_PI + M_PI / 16;
   const double max_angle_range = M_PI / 4;
-  bool result = autoware::traffic_light::utils::is_in_angle_range(tl_yaw, camera_yaw, max_angle_range);
+  bool result =
+    autoware::traffic_light::utils::is_in_angle_range(tl_yaw, camera_yaw, max_angle_range);
   EXPECT_TRUE(result);
 }
 

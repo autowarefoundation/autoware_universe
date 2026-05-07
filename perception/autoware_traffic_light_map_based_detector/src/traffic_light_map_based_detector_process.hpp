@@ -48,7 +48,8 @@ void round_in_image_frame(const uint32_t & width, const uint32_t & height, cv::P
 bool is_in_distance_range(
   const tf2::Vector3 & p1, const tf2::Vector3 & p2, const double max_distance_range);
 
-bool is_in_angle_range(const double & tl_yaw, const double & camera_yaw, const double max_angle_range);
+bool is_in_angle_range(
+  const double & tl_yaw, const double & camera_yaw, const double max_angle_range);
 
 bool is_in_image_frame(
   const image_geometry::PinholeCameraModel & pinhole_camera_model, const tf2::Vector3 & point);

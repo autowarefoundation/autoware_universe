@@ -307,7 +307,8 @@ bool TrafficLightMapBasedDetector::get_traffic_light_roi(
     }
     // enlarged target position in camera coordinate
     {
-      cv::Point2d point2d = utils::calc_raw_image_point_from_point_3d(pinhole_camera_model, point3d);
+      cv::Point2d point2d =
+        utils::calc_raw_image_point_from_point_3d(pinhole_camera_model, point3d);
       utils::round_in_image_frame(
         pinhole_camera_model.cameraInfo().width, pinhole_camera_model.cameraInfo().height, point2d);
       roi.roi.x_offset = point2d.x;
@@ -329,7 +330,8 @@ bool TrafficLightMapBasedDetector::get_traffic_light_roi(
     }
     // enlarged target position in camera coordinate
     {
-      cv::Point2d point2d = utils::calc_raw_image_point_from_point_3d(pinhole_camera_model, point3d);
+      cv::Point2d point2d =
+        utils::calc_raw_image_point_from_point_3d(pinhole_camera_model, point3d);
       utils::round_in_image_frame(
         pinhole_camera_model.cameraInfo().width, pinhole_camera_model.cameraInfo().height, point2d);
       roi.roi.width = point2d.x - roi.roi.x_offset;
