@@ -40,6 +40,16 @@ GetIndicesPairsPlugin::GetIndicesPairsPlugin(
 : layer_name_{name}, params_{params}
 {
   initFieldsToSerialize();
+  PLUGIN_ASSERT(
+    cudaMallocHost(reinterpret_cast<void **>(&num_act_out_host_), sizeof(std::int32_t)) ==
+    cudaSuccess);
+}
+
+GetIndicesPairsPlugin::~GetIndicesPairsPlugin()
+{
+  if (num_act_out_host_ != nullptr) {
+    cudaFreeHost(num_act_out_host_);
+  }
 }
 
 void GetIndicesPairsPlugin::initFieldsToSerialize()
@@ -290,11 +300,10 @@ std::int32_t GetIndicesPairsPlugin::enqueue(
   }
 
   std::int32_t * num_act_out_data = static_cast<std::int32_t *>(outputs[3]);
+  *num_act_out_host_ = num_act_out_real;
 
   cudaError_t const status = cudaMemcpyAsync(
-    num_act_out_data, &num_act_out_real, sizeof(std::int32_t), cudaMemcpyHostToDevice, stream);
-
-  cudaStreamSynchronize(stream);
+    num_act_out_data, num_act_out_host_, sizeof(std::int32_t), cudaMemcpyHostToDevice, stream);
 
   return status;
 }

@@ -188,13 +188,14 @@ __global__ void write_unique_counts(
 
 }  // namespace
 
-std::int64_t unique(
+cudaError_t unique(
   const std::int64_t * input, std::int64_t * unique, std::int64_t * inverse_indices,
-  std::int64_t * unique_counts, void * workspace, std::size_t num_input_elements,
-  std::size_t unique_workspace_size, cudaStream_t stream)
+  std::int64_t * unique_counts, std::int64_t * num_unique, void * workspace,
+  std::size_t num_input_elements, std::size_t unique_workspace_size, cudaStream_t stream)
 {
+  (void)unique_workspace_size;
   if (num_input_elements == 0U) {
-    return 0;
+    return cudaMemsetAsync(num_unique, 0, sizeof(std::int64_t), stream);
   }
 
   const auto temp_storage_size = get_unique_temp_storage_size(num_input_elements);
@@ -204,38 +205,61 @@ std::int64_t unique(
   auto * input_positions = reinterpret_cast<std::int64_t *>(scratch);
   auto * sorted_input = input_positions + num_input_elements;
   auto * unique_offsets = sorted_input + num_input_elements;
-  auto * num_unique_d = unique_offsets + num_input_elements + 1U;
-  auto * run_ids = reinterpret_cast<std::int32_t *>(num_unique_d + 1U);
+  auto * run_ids = reinterpret_cast<std::int32_t *>(unique_offsets + num_input_elements + 1U);
 
   const auto num_blocks =
     static_cast<unsigned int>((num_input_elements + kThreadsPerBlock - 1U) / kThreadsPerBlock);
 
   fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream>>>(input_positions, num_input_elements);
-  cub::DeviceRadixSort::SortPairs(
+  cudaError_t status = cudaGetLastError();
+  if (status != cudaSuccess) {
+    return status;
+  }
+
+  status = cub::DeviceRadixSort::SortPairs(
     workspace, temp_storage_size, input, sorted_input, input_positions, unique_offsets,
     num_input_elements, 0, 64, stream);
+  if (status != cudaSuccess) {
+    return status;
+  }
 
   mark_run_starts<<<num_blocks, kThreadsPerBlock, 0, stream>>>(
     sorted_input, run_ids, num_input_elements);
-  cub::DeviceScan::InclusiveSum(
+  status = cudaGetLastError();
+  if (status != cudaSuccess) {
+    return status;
+  }
+
+  status = cub::DeviceScan::InclusiveSum(
     workspace, temp_storage_size, run_ids, run_ids, num_input_elements, stream);
+  if (status != cudaSuccess) {
+    return status;
+  }
 
   scatter_inverse_indices<<<num_blocks, kThreadsPerBlock, 0, stream>>>(
     unique_offsets, run_ids, inverse_indices, num_input_elements);
+  status = cudaGetLastError();
+  if (status != cudaSuccess) {
+    return status;
+  }
 
-  cub::DeviceSelect::UniqueByKey(
+  status = cub::DeviceSelect::UniqueByKey(
     workspace, temp_storage_size, sorted_input, input_positions, unique, unique_offsets,
-    num_unique_d, num_input_elements, stream);
+    num_unique, num_input_elements, stream);
+  if (status != cudaSuccess) {
+    return status;
+  }
 
   write_unique_offset_sentinel<<<1, 1, 0, stream>>>(
-    unique_offsets, num_unique_d, num_input_elements);
-  write_unique_counts<<<num_blocks, kThreadsPerBlock, 0, stream>>>(
-    unique_offsets, num_unique_d, unique_counts);
+    unique_offsets, num_unique, num_input_elements);
+  status = cudaGetLastError();
+  if (status != cudaSuccess) {
+    return status;
+  }
 
-  std::int64_t num_out = 0;
-  cudaMemcpyAsync(&num_out, num_unique_d, sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream);
-  cudaStreamSynchronize(stream);
-  return num_out;
+  write_unique_counts<<<num_blocks, kThreadsPerBlock, 0, stream>>>(
+    unique_offsets, num_unique, unique_counts);
+  return cudaGetLastError();
 }
 
 std::size_t get_unique_temp_storage_size(std::size_t num_elements)
@@ -247,6 +271,6 @@ std::size_t get_unique_workspace_size(std::size_t num_elements)
 {
   const auto temp_size = query_unique_temp_storage_size(num_elements);
   const auto scratch_offset = align_up(temp_size, alignof(std::int64_t));
-  return scratch_offset + (3 * num_elements + 2U) * sizeof(std::int64_t) +
+  return scratch_offset + (3 * num_elements + 1U) * sizeof(std::int64_t) +
          num_elements * sizeof(std::int32_t);
 }
