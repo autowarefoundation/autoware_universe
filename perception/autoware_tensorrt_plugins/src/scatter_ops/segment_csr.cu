@@ -29,8 +29,8 @@
 #define THREADS 256
 #define BLOCKS(TB, N) (TB * N + THREADS - 1) / THREADS
 #define FULL_MASK 0xffffffff
-#define SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, R)                             \
-  template int32_t segment_csr_launch<T, R>(                                  \
+#define SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, R)                              \
+  template int32_t segment_csr_launch<T, R>(                                   \
     const T * src, int32_t num_rows, int32_t num_cols, const int64_t * indptr, \
     int32_t indptr_size, std::tuple<T *, int64_t *> out, cudaStream_t stream);
 #define SEGMENT_CSR_LAUNCH_INSTANTIATION(T)                   \
