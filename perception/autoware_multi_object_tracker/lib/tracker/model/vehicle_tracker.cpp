@@ -367,11 +367,12 @@ bool VehicleTracker::conditionedUpdate(
   const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
   const types::InputChannel & channel_info)
 {
-  // For cluster measurements (trust_extension=false), the bounding box orientation is in baselink
-  // frame. Re-project the polygon footprint onto the tracker's current heading so that
+  // For cluster measurements, the bounding box orientation is in baselink frame.
+  // Re-project the polygon footprint onto the tracker's current heading so that
   // determineUpdateStrategy receives correctly-oriented edge centers.
   const types::DynamicObject & meas_for_strategy =
-    (!channel_info.trust_extension && !measurement.shape.footprint.points.empty())
+    ((measurement.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) &&
+     !measurement.shape.footprint.points.empty())
       ? alignClusterToTrackerOrientation(measurement, motion_model_.getYawState())
       : measurement;
 
