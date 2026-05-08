@@ -139,15 +139,9 @@ bool VehicleTracker::measureWithPose(
 {
   // Shape update is only valid when the channel guarantees reliable size information
   // AND the measurement is a bounding box.
-  // - Polygon (UNKNOWN-label cluster): shape.type != BOUNDING_BOX, dims = (0,0)
-  // - Known-label cluster converted to bbox: trust_extension=false (baselink-frame bbox,
-  // unreliable)
+  // Use the measurement length only when its shape is trustworthy.
   const bool is_bbox = (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   const bool can_update_shape = channel_info.trust_extension && is_bbox;
-
-  // Use the measurement length only when its shape is trustworthy.
-  // Untrusted inputs (polygon or trust_extension=false) have unreliable or zero dimensions;
-  // using them would corrupt the EKF wheel-position states and gradually shrink tracked length.
   constexpr double min_length = 1.0;
   const double length = can_update_shape ? std::max(object.shape.dimensions.x, min_length)
                                          : std::max(motion_model_.getLength(), min_length);
@@ -333,7 +327,7 @@ types::DynamicObject VehicleTracker::alignClusterToTrackerOrientation(
   double lat_max = std::numeric_limits<double>::lowest();
 
   for (const auto & pt : pts) {
-    // cluster local → map-relative offset
+    // cluster local -> map-relative offset
     const double mx = pt.x * c_cl - pt.y * s_cl;
     const double my = pt.x * s_cl + pt.y * c_cl;
     // project onto tracker heading (longitudinal) and lateral axes

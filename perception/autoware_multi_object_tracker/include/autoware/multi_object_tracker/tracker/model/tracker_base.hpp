@@ -199,10 +199,6 @@ protected:
   // NORMAL      — standard Kalman update (with optional shape-filter history accumulation)
   // TRY_EXTENSION — attempt extension update via shape filter; fall back to CONDITIONED if unstable
   // CONDITIONED — edge-aligned / weak conditioned update; shape management is bypassed entirely
-  //
-  // Default: no shape change → NORMAL; shape change + trusted bbox → TRY_EXTENSION; else
-  // CONDITIONED VehicleTracker overrides to return CONDITIONED for clusters and shape changes
-  // because the bicycle model owns the shape and cluster bbox orientation is unreliable.
   virtual UpdatePath selectUpdatePath(bool trust_extension, bool has_significant_shape_change) const
   {
     (void)trust_extension;

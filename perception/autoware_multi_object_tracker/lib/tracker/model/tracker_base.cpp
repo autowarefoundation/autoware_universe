@@ -200,20 +200,12 @@ bool Tracker::updateWithMeasurement(
   }
   setOrientationAvailability(object_.kinematics.orientation_availability);
 
-  // Shape update rule: shape is updated only when trust_extension=true AND shape is a bounding box.
-  //   - Polygon cluster (UNKNOWN label): shape.type=POLYGON — no reliable size info
-  //   - Known-label cluster converted to bbox: trust_extension=false (baselink-frame, unreliable)
-  //   Both cases skip shape update and preserve tracked dimensions.
-  const bool is_trusted_bbox =
-    channel_info.trust_extension &&
-    (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
-
   // Select update path: NORMAL / TRY_EXTENSION / CONDITIONED
   const UpdatePath path =
     selectUpdatePath(channel_info.trust_extension, has_significant_shape_change);
 
   if (path == UpdatePath::NORMAL) {
-    if (is_trusted_bbox) unstable_shape_filter_.processNormalMeasurement(object);
+    unstable_shape_filter_.processNormalMeasurement(object);
     measure(object, measurement_time, channel_info);
     object_.trust_extension = object.trust_extension;
 

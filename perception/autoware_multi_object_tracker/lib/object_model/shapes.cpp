@@ -225,16 +225,14 @@ bool convertConvexHullToBoundingBox(
   output_object = input_object;
   output_object.pose.position.x += dx;
   output_object.pose.position.y += dy;
-  // pose.position.z is already set by the converter (e.g. pclToConvexHull) as the vertical
-  // center and is not recomputed here.
 
   output_object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
   output_object.shape.dimensions.x = max_x - min_x;
   output_object.shape.dimensions.y = max_y - min_y;
-  // Vertical extent is defined by the upstream converter via pose.position.z (center) and
-  // shape.dimensions.z (height). Footprint points are 2D (z=0), so deriving height from
+
+  //// pose.position.z and shape.dimensions.z (height)
+  // Footprint points are 2D (z=0), so deriving height from
   // them would always give zero. Preserve the input value unchanged.
-  output_object.shape.dimensions.z = input_object.shape.dimensions.z;
 
   // adjust footprint points in local coordinates - use references to avoid copies
   for (auto & point : output_object.shape.footprint.points) {

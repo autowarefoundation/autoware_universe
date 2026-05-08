@@ -108,9 +108,7 @@ private:
   geometry_msgs::msg::Point calculateAnchorPoint(
     const EdgeAlignment & alignment, const types::DynamicObject & measurement) const;
 
-  // Re-project a cluster's polygon footprint onto the tracker's current heading so that
-  // conditionedUpdate receives a correctly-oriented bounding box for edge alignment.
-  // Only called when channel_info.trust_extension == false (cluster measurement).
+  // Re-project a cluster's polygon footprint onto the tracker's current heading
   types::DynamicObject alignClusterToTrackerOrientation(
     const types::DynamicObject & cluster, double tracker_yaw) const;
 };
