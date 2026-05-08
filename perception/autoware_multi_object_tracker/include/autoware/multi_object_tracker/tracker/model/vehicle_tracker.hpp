@@ -79,8 +79,8 @@ public:
     return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
   }
 
-  const double ALIGNMENT_RATIO_THRESHOLD = 0.09;    // 9% of length as alignment tolerance
-  const double ALIGNMENT_ABSOLUTE_THRESHOLD = 3.0;  // [m] minimum tolerance for large vehicles
+  const double ALIGNMENT_RATIO_THRESHOLD = 0.2;     // 20% of the larger object's length
+  const double ALIGNMENT_ABSOLUTE_THRESHOLD = 1.0;  // [m] minimum tolerance for small objects
   UpdateStrategy determineUpdateStrategy(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction) const;
 
