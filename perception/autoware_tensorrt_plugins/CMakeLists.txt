@@ -162,6 +162,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
       target_include_directories(reference_kernels_test PRIVATE
         include
         test
+        ${autoware_cuda_utils_INCLUDE_DIRS}
         ${CUDA_INCLUDE_DIRS}
       )
       target_compile_definitions(reference_kernels_test PRIVATE _GLIBCXX_USE_CXX11_ABI=1)

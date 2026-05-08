@@ -84,16 +84,6 @@ private:
   std::size_t element_count_{0U};
 };
 
-inline int get_cuda_device_count()
-{
-  int device_count = 0;
-  const cudaError_t status = cudaGetDeviceCount(&device_count);
-  if (status != cudaSuccess) {
-    throw std::runtime_error(cudaGetErrorString(status));
-  }
-  return device_count;
-}
-
 template <typename T>
 void copy_to_device(T * device_ptr, const std::vector<T> & host_values)
 {

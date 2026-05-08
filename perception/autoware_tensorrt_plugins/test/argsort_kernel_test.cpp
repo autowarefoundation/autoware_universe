@@ -15,6 +15,8 @@
 #include "autoware/argsort_ops/argsort.hpp"
 #include "test_utils.hpp"
 
+#include <autoware/cuda_utils/cuda_gtest_utils.hpp>
+
 #include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
 
@@ -30,7 +32,6 @@ using autoware::tensorrt_plugins::test::copy_to_device;
 using autoware::tensorrt_plugins::test::copy_to_host;
 using autoware::tensorrt_plugins::test::CudaStreamGuard;
 using autoware::tensorrt_plugins::test::DeviceBuffer;
-using autoware::tensorrt_plugins::test::get_cuda_device_count;
 
 std::size_t get_argsort_total_workspace_size(const std::size_t num_elements)
 {
@@ -56,9 +57,7 @@ std::vector<std::int64_t> make_argsort_reference(const std::vector<std::int64_t>
 
 TEST(ReferenceKernelsTest, ArgsortMatchesCpuReference)
 {
-  if (get_cuda_device_count() == 0) {
-    GTEST_SKIP() << "CUDA device not available";
-  }
+  SKIP_TEST_IF_CUDA_UNAVAILABLE();
 
   const std::vector<std::int64_t> input{7, 3, 7, 5, 3, 3, 9, 5, 11, 7};
   const auto reference = make_argsort_reference(input);
