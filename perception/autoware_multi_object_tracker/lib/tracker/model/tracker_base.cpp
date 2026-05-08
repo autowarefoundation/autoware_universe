@@ -200,45 +200,47 @@ bool Tracker::updateWithMeasurement(
   }
   setOrientationAvailability(object_.kinematics.orientation_availability);
 
-  // Update strategies:
-  // 1. Normal update: Update position and shape by Kalman filter
-  // 2. Extension update: Apply the new stable shape and update position
-  // 3. Conditioned update: Ignore the noisy shape info and partially update position with below 3
-  // conditions
-  //    - FRONT_WHEEL_UPDATE: Update anchor point of front wheel
-  //    - REAR_WHEEL_UPDATE: Update anchor point of rear wheel
-  //    - WEAK_UPDATE: Update tending to predicted position
+  // Shape update rule: shape is updated only when trust_extension=true AND shape is a bounding box.
+  //   - Polygon cluster (UNKNOWN label): shape.type=POLYGON — no reliable size info
+  //   - Known-label cluster converted to bbox: trust_extension=false (baselink-frame, unreliable)
+  //   Both cases skip shape update and preserve tracked dimensions.
+  const bool is_trusted_bbox =
+    channel_info.trust_extension &&
+    (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
 
-  if (!has_significant_shape_change) {
-    unstable_shape_filter_.processNormalMeasurement(object);
-    // 1. Normal update
+  // Select update path: NORMAL / TRY_EXTENSION / CONDITIONED
+  const UpdatePath path =
+    selectUpdatePath(channel_info, has_significant_shape_change, is_trusted_bbox);
+
+  if (path == UpdatePath::NORMAL) {
+    if (is_trusted_bbox) unstable_shape_filter_.processNormalMeasurement(object);
     measure(object, measurement_time, channel_info);
     object_.trust_extension = object.trust_extension;
 
-  } else {
+  } else if (path == UpdatePath::TRY_EXTENSION) {
     unstable_shape_filter_.processNoisyMeasurement(object);
     if (unstable_shape_filter_.isStable()) {
-      // 2. Extension update
-      autoware_perception_msgs::msg::Shape smoothed_shape = unstable_shape_filter_.getShape();
-
+      // Extension update: apply stabilized shape and update with smoothed measurement
+      const auto smoothed_shape = unstable_shape_filter_.getShape();
       setObjectShape(smoothed_shape);
-
       auto smoothed_object = object;
       smoothed_object.shape = smoothed_shape;
       measure(smoothed_object, measurement_time, channel_info);
       object_.trust_extension = smoothed_object.trust_extension;
-
       unstable_shape_filter_.clear();
-
     } else {
-      // 3. Conditioned update
+      // Filter not yet stable — fall back to conditioned update
       const auto tracker_shape = object_.shape;
-
       types::DynamicObject predicted_object;
       getTrackedObject(measurement_time, predicted_object);
-
       conditionedUpdate(object, predicted_object, tracker_shape, measurement_time, channel_info);
     }
+
+  } else {  // UpdatePath::CONDITIONED
+    const auto tracker_shape = object_.shape;
+    types::DynamicObject predicted_object;
+    getTrackedObject(measurement_time, predicted_object);
+    conditionedUpdate(object, predicted_object, tracker_shape, measurement_time, channel_info);
   }
 
   // Update object status
@@ -653,6 +655,14 @@ double Tracker::getPositionCovarianceDeterminant() const
     return std::numeric_limits<double>::max();
   }
   return determinant;
+}
+
+UpdatePath Tracker::selectUpdatePath(
+  const types::InputChannel & /*channel_info*/, bool has_significant_shape_change,
+  bool is_trusted_bbox) const
+{
+  if (!has_significant_shape_change) return UpdatePath::NORMAL;
+  return is_trusted_bbox ? UpdatePath::TRY_EXTENSION : UpdatePath::CONDITIONED;
 }
 
 bool Tracker::conditionedUpdate(

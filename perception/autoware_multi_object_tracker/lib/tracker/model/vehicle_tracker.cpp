@@ -31,6 +31,7 @@
 #include <bits/stdc++.h>
 
 #include <algorithm>
+#include <limits>
 
 namespace autoware::multi_object_tracker
 {
@@ -136,14 +137,27 @@ bool VehicleTracker::predict(const rclcpp::Time & time)
 bool VehicleTracker::measureWithPose(
   const types::DynamicObject & object, const types::InputChannel & channel_info)
 {
-  // get measurement yaw angle to update
-  bool is_yaw_available =
+  // Shape update is only valid when the channel guarantees reliable size information
+  // AND the measurement is a bounding box.
+  // - Polygon (UNKNOWN-label cluster): shape.type != BOUNDING_BOX, dims = (0,0)
+  // - Known-label cluster converted to bbox: trust_extension=false (baselink-frame bbox,
+  // unreliable)
+  const bool is_bbox = (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
+  const bool can_update_shape = channel_info.trust_extension && is_bbox;
+
+  // Use the measurement length only when its shape is trustworthy.
+  // Untrusted inputs (polygon or trust_extension=false) have unreliable or zero dimensions;
+  // using them would corrupt the EKF wheel-position states and gradually shrink tracked length.
+  constexpr double min_length = 1.0;
+  const double length = can_update_shape ? std::max(object.shape.dimensions.x, min_length)
+                                         : std::max(motion_model_.getLength(), min_length);
+
+  const bool is_yaw_available =
     object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE &&
     channel_info.trust_orientation;
+  const bool is_velocity_available = object.kinematics.has_twist;
 
-  bool is_velocity_available = object.kinematics.has_twist;
-
-  // update
+  // Update kinematics via EKF
   bool is_updated = false;
   {
     const double & x = object.pose.position.x;
@@ -151,24 +165,17 @@ bool VehicleTracker::measureWithPose(
     const double & yaw = tf2::getYaw(object.pose.orientation);
     const double & vel_x = object.twist.linear.x;
     const double & vel_y = object.twist.linear.y;
-    constexpr double min_length = 1.0;  // minimum length to avoid division by zero
-    const double length = std::max(object.shape.dimensions.x, min_length);
 
     if (is_yaw_available && is_velocity_available) {
-      // update with yaw angle and velocity
       is_updated = motion_model_.updateStatePoseHeadVel(
         x, y, yaw, object.pose_covariance, vel_x, vel_y, object.twist_covariance, length);
     } else if (is_yaw_available && !is_velocity_available) {
-      // update with yaw angle, but without velocity
       is_updated = motion_model_.updateStatePoseHead(x, y, yaw, object.pose_covariance, length);
     } else if (!is_yaw_available && is_velocity_available) {
-      // update without yaw angle, but with velocity
       is_updated = motion_model_.updateStatePoseVel(
         x, y, object.pose_covariance, yaw, vel_x, vel_y, object.twist_covariance, length);
     } else {
-      // update without yaw angle and velocity
-      is_updated = motion_model_.updateStatePose(
-        x, y, object.pose_covariance, length);  // update without yaw angle and velocity
+      is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance, length);
     }
     motion_model_.limitStates();
   }
@@ -180,8 +187,7 @@ bool VehicleTracker::measureWithPose(
       (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
   }
 
-  if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    // do not update shape if the input is not a bounding box
+  if (!can_update_shape) {
     return false;
   }
 
@@ -206,10 +212,7 @@ bool VehicleTracker::measureWithPose(
     object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
   }
 
-  // set maximum and minimum size
   limitObjectExtension(object_model_);
-
-  // set shape type, which is bounding box
   object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
   object_.area = types::getArea(object.shape);
 
@@ -310,13 +313,70 @@ bool VehicleTracker::getTrackedObject(
   return true;
 }
 
+types::DynamicObject VehicleTracker::alignClusterToTrackerOrientation(
+  const types::DynamicObject & cluster, const double tracker_yaw) const
+{
+  const auto & pts = cluster.shape.footprint.points;
+  if (pts.empty()) return cluster;
+
+  // footprint.points are in the cluster's local frame (baselink orientation).
+  // Transform each point to a map-relative offset, then project onto the tracker's axes.
+  const double cluster_yaw = tf2::getYaw(cluster.pose.orientation);
+  const double c_cl = std::cos(cluster_yaw);
+  const double s_cl = std::sin(cluster_yaw);
+  const double c_tr = std::cos(tracker_yaw);
+  const double s_tr = std::sin(tracker_yaw);
+
+  double long_min = std::numeric_limits<double>::max();
+  double long_max = std::numeric_limits<double>::lowest();
+  double lat_min = std::numeric_limits<double>::max();
+  double lat_max = std::numeric_limits<double>::lowest();
+
+  for (const auto & pt : pts) {
+    // cluster local → map-relative offset
+    const double mx = pt.x * c_cl - pt.y * s_cl;
+    const double my = pt.x * s_cl + pt.y * c_cl;
+    // project onto tracker heading (longitudinal) and lateral axes
+    const double along = mx * c_tr + my * s_tr;
+    const double lat = -mx * s_tr + my * c_tr;
+    long_min = std::min(long_min, along);
+    long_max = std::max(long_max, along);
+    lat_min = std::min(lat_min, lat);
+    lat_max = std::max(lat_max, lat);
+  }
+
+  const double long_center = (long_min + long_max) * 0.5;
+  const double lat_center = (lat_min + lat_max) * 0.5;
+
+  types::DynamicObject aligned = cluster;
+  aligned.pose.position.x = cluster.pose.position.x + long_center * c_tr - lat_center * s_tr;
+  aligned.pose.position.y = cluster.pose.position.y + long_center * s_tr + lat_center * c_tr;
+
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, tracker_yaw);
+  aligned.pose.orientation = tf2::toMsg(q);
+
+  aligned.shape.dimensions.x = long_max - long_min;
+  aligned.shape.dimensions.y = lat_max - lat_min;
+
+  return aligned;
+}
+
 bool VehicleTracker::conditionedUpdate(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction,
   const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
   const types::InputChannel & channel_info)
 {
+  // For cluster measurements (trust_extension=false), the bounding box orientation is in baselink
+  // frame. Re-project the polygon footprint onto the tracker's current heading so that
+  // determineUpdateStrategy receives correctly-oriented edge centers.
+  const types::DynamicObject & meas_for_strategy =
+    (!channel_info.trust_extension && !measurement.shape.footprint.points.empty())
+      ? alignClusterToTrackerOrientation(measurement, motion_model_.getYawState())
+      : measurement;
+
   // Determine update strategy
-  UpdateStrategy strategy = determineUpdateStrategy(measurement, prediction);
+  UpdateStrategy strategy = determineUpdateStrategy(meas_for_strategy, prediction);
 
   // Handle weak update strategy (no edge alignment - use weak update with pseudo measurement)
   if (strategy.type == UpdateStrategyType::WEAK_UPDATE) {
@@ -366,10 +426,13 @@ UpdateStrategy VehicleTracker::determineUpdateStrategy(
   // 2. Calculate alignment distances between measurement and prediction edges
   const EdgeAlignment alignment = findAlignedEdges(meas_edges, prediction);
 
-  // 3. Check if any edge is well-aligned (within threshold ratio of vehicle length)
+  // 3. Check if any edge is well-aligned.
+  // Use ratio-based threshold floored by an absolute minimum so large vehicles don't lose
+  // alignment on a small position lag from deceleration (e.g. 9% of 12.6m = 1.13m is too tight).
   const double predicted_length = prediction.shape.dimensions.x;
-  const bool is_edge_aligned =
-    (alignment.min_alignment_distance / predicted_length) < ALIGNMENT_RATIO_THRESHOLD;
+  const double alignment_threshold =
+    std::max(ALIGNMENT_RATIO_THRESHOLD * predicted_length, ALIGNMENT_ABSOLUTE_THRESHOLD);
+  const bool is_edge_aligned = alignment.min_alignment_distance < alignment_threshold;
 
   // 4. If no edge is aligned, use weak update strategy
   if (!is_edge_aligned) {

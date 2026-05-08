@@ -197,10 +197,8 @@ bool convertConvexHullToBoundingBox(
   // Pre-allocate boundary values using first point
   float max_x = points[0].x;
   float max_y = points[0].y;
-  float max_z = points[0].z;
   float min_x = points[0].x;
   float min_y = points[0].y;
-  float min_z = points[0].z;
 
   // Start from second point since we used first point for initialization
   for (size_t i = 1; i < points.size(); ++i) {
@@ -208,10 +206,8 @@ bool convertConvexHullToBoundingBox(
     // Use direct comparison instead of std::max/min
     if (point.x > max_x) max_x = point.x;
     if (point.y > max_y) max_y = point.y;
-    if (point.z > max_z) max_z = point.z;
     if (point.x < min_x) min_x = point.x;
     if (point.y < min_y) min_y = point.y;
-    if (point.z < min_z) min_z = point.z;
   }
 
   // calc new center in local coordinates - avoid division by 2.0 twice
@@ -229,11 +225,16 @@ bool convertConvexHullToBoundingBox(
   output_object = input_object;
   output_object.pose.position.x += dx;
   output_object.pose.position.y += dy;
+  // pose.position.z is already set by the converter (e.g. pclToConvexHull) as the vertical
+  // center and is not recomputed here.
 
   output_object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
   output_object.shape.dimensions.x = max_x - min_x;
   output_object.shape.dimensions.y = max_y - min_y;
-  output_object.shape.dimensions.z = max_z - min_z;
+  // Vertical extent is defined by the upstream converter via pose.position.z (center) and
+  // shape.dimensions.z (height). Footprint points are 2D (z=0), so deriving height from
+  // them would always give zero. Preserve the input value unchanged.
+  output_object.shape.dimensions.z = input_object.shape.dimensions.z;
 
   // adjust footprint points in local coordinates - use references to avoid copies
   for (auto & point : output_object.shape.footprint.points) {
