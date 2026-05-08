@@ -365,8 +365,7 @@ bool VehicleTracker::conditionedUpdate(
   // Re-project the polygon footprint onto the tracker's current heading so that
   // determineUpdateStrategy receives correctly-oriented edge centers.
   const types::DynamicObject & meas_for_strategy =
-    ((measurement.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) &&
-     !measurement.shape.footprint.points.empty())
+    !measurement.shape.footprint.points.empty()
       ? alignClusterToTrackerOrientation(measurement, motion_model_.getYawState())
       : measurement;
 

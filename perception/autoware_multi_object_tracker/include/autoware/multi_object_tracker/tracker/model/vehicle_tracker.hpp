@@ -71,7 +71,6 @@ public:
 
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
 
-  // Bicycle model owns shape; extension update is never safe.
   // Clusters (trust_extension=false) have unreliable bbox orientation — always use conditioned.
   UpdatePath selectUpdatePath(
     bool trust_extension, bool has_significant_shape_change) const override
