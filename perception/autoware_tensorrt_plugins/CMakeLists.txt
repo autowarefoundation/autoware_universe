@@ -151,7 +151,8 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     find_package(ament_cmake_gtest REQUIRED)
 
     ament_add_gtest(reference_kernels_test
-      test/reference_kernels_test.cpp
+      test/argsort_kernel_test.cpp
+      test/unique_kernel_test.cpp
     )
     if(TARGET reference_kernels_test)
       target_link_libraries(reference_kernels_test
@@ -160,6 +161,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
       )
       target_include_directories(reference_kernels_test PRIVATE
         include
+        test
         ${CUDA_INCLUDE_DIRS}
       )
       target_compile_definitions(reference_kernels_test PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
