@@ -200,8 +200,8 @@ protected:
   // TRY_EXTENSION — attempt extension update via shape filter; fall back to CONDITIONED if unstable
   // CONDITIONED — edge-aligned / weak conditioned update; shape management is bypassed entirely
   //
-  // Default: no shape change → NORMAL; shape change + trusted bbox → TRY_EXTENSION; else CONDITIONED
-  // VehicleTracker overrides to return CONDITIONED for clusters and shape changes
+  // Default: no shape change → NORMAL; shape change + trusted bbox → TRY_EXTENSION; else
+  // CONDITIONED VehicleTracker overrides to return CONDITIONED for clusters and shape changes
   // because the bicycle model owns the shape and cluster bbox orientation is unreliable.
   virtual UpdatePath selectUpdatePath(
     const types::InputChannel & channel_info, bool has_significant_shape_change,
