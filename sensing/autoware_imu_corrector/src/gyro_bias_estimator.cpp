@@ -278,6 +278,12 @@ void GyroBiasEstimator::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr
     ekf_angle_.p_angle_(0, 0) = std::min(
       std::max(ekf_angle_.p_angle_(0, 0), ekf_angle_.min_covariance_angle_),
       ekf_angle_.max_variance_p_angle_);
+    ekf_angle_.p_angle_(0, 1) = std::min(
+      std::max(ekf_angle_.p_angle_(0, 1), -ekf_angle_.max_variance_p_angle_),
+      ekf_angle_.max_variance_p_angle_);
+    ekf_angle_.p_angle_(1, 0) = std::min(
+      std::max(ekf_angle_.p_angle_(1, 0), -ekf_angle_.max_variance_p_angle_),
+      ekf_angle_.max_variance_p_angle_);
     ekf_angle_.p_angle_(1, 1) = std::min(
       std::max(ekf_angle_.p_angle_(1, 1), ekf_angle_.min_covariance_angle_),
       ekf_angle_.max_variance_p_angle_);
