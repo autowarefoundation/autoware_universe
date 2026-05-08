@@ -74,12 +74,10 @@ public:
   // Bicycle model owns shape; extension update is never safe.
   // Clusters (trust_extension=false) have unreliable bbox orientation — always use conditioned.
   UpdatePath selectUpdatePath(
-    const types::InputChannel & channel_info, bool has_significant_shape_change,
-    bool /*is_trusted_bbox*/) const override
+    bool trust_extension, bool has_significant_shape_change) const override
   {
-    if (!channel_info.trust_extension || has_significant_shape_change)
-      return UpdatePath::CONDITIONED;
-    return UpdatePath::NORMAL;
+    if (!trust_extension) return UpdatePath::CONDITIONED;
+    return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
   }
 
   const double ALIGNMENT_RATIO_THRESHOLD = 0.09;    // 9% of length as alignment tolerance

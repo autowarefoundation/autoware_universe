@@ -56,12 +56,10 @@ public:
 
   // Same policy as VehicleTracker: bicycle model owns shape; clusters use conditioned update.
   UpdatePath selectUpdatePath(
-    const types::InputChannel & channel_info, bool has_significant_shape_change,
-    bool /*is_trusted_bbox*/) const override
+    bool trust_extension, bool has_significant_shape_change) const override
   {
-    if (!channel_info.trust_extension || has_significant_shape_change)
-      return UpdatePath::CONDITIONED;
-    return UpdatePath::NORMAL;
+    if (!trust_extension) return UpdatePath::CONDITIONED;
+    return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
   }
 };
 

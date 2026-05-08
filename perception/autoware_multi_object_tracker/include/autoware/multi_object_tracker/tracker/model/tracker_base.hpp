@@ -203,9 +203,12 @@ protected:
   // Default: no shape change → NORMAL; shape change + trusted bbox → TRY_EXTENSION; else
   // CONDITIONED VehicleTracker overrides to return CONDITIONED for clusters and shape changes
   // because the bicycle model owns the shape and cluster bbox orientation is unreliable.
-  virtual UpdatePath selectUpdatePath(
-    const types::InputChannel & channel_info, bool has_significant_shape_change,
-    bool is_trusted_bbox) const;
+  virtual UpdatePath selectUpdatePath(bool trust_extension, bool has_significant_shape_change) const
+  {
+    (void)trust_extension;
+    (void)has_significant_shape_change;
+    return UpdatePath::NORMAL;
+  }
 
 public:
   virtual bool getTrackedObject(

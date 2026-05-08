@@ -210,7 +210,7 @@ bool Tracker::updateWithMeasurement(
 
   // Select update path: NORMAL / TRY_EXTENSION / CONDITIONED
   const UpdatePath path =
-    selectUpdatePath(channel_info, has_significant_shape_change, is_trusted_bbox);
+    selectUpdatePath(channel_info.trust_extension, has_significant_shape_change);
 
   if (path == UpdatePath::NORMAL) {
     if (is_trusted_bbox) unstable_shape_filter_.processNormalMeasurement(object);
@@ -655,14 +655,6 @@ double Tracker::getPositionCovarianceDeterminant() const
     return std::numeric_limits<double>::max();
   }
   return determinant;
-}
-
-UpdatePath Tracker::selectUpdatePath(
-  const types::InputChannel & /*channel_info*/, bool has_significant_shape_change,
-  bool is_trusted_bbox) const
-{
-  if (!has_significant_shape_change) return UpdatePath::NORMAL;
-  return is_trusted_bbox ? UpdatePath::TRY_EXTENSION : UpdatePath::CONDITIONED;
 }
 
 bool Tracker::conditionedUpdate(
