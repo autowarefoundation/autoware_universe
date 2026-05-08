@@ -102,6 +102,8 @@
 #include <cub/cub.cuh>
 
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
 #include <cstdint>
 
 namespace
@@ -114,7 +116,37 @@ std::size_t align_up(const std::size_t size, const std::size_t alignment)
   return ((size + alignment - 1U) / alignment) * alignment;
 }
 
-std::size_t query_unique_temp_storage_size(const std::size_t num_elements)
+struct UniqueWorkspaceLayout
+{
+  void * cub_temp_storage;
+  std::size_t cub_temp_storage_size;
+
+  // One int64 scratch block, then one int32 scratch block:
+  //
+  // workspace
+  // +-----------------------------+ 0
+  // | CUB temp storage            | cub_temp_storage_size bytes
+  // +-----------------------------+ align_up(cub_temp_storage_size, alignof(int64))
+  // | input_positions             | num_input_elements int64
+  // | sorted_input                | num_input_elements int64
+  // | sorted_input_positions      | num_input_elements + 1 int64
+  // | num_unique                  | 1 int32
+  // | run_ids                     | num_input_elements int32
+  // +-----------------------------+
+  //
+  // `sorted_input_positions` is reused as `unique_offsets_inout` after inverse indices are
+  // scattered.
+  // Its extra slot stores a sentinel end offset at index `num_input_elements`. Using the fixed last
+  // slot keeps the sentinel outside CUB's compact `[0, num_unique)` output range and separate from
+  // the `num_unique` scalar.
+  std::int64_t * input_positions;
+  std::int64_t * sorted_input;
+  std::int64_t * sorted_input_positions;
+  std::int32_t * num_unique;
+  std::int32_t * run_ids;
+};
+
+std::size_t query_unique_temp_storage_size(const std::size_t num_elements_in)
 {
   std::size_t sort_temp_size = 0;
   std::size_t scan_temp_size = 0;
@@ -125,129 +157,160 @@ std::size_t query_unique_temp_storage_size(const std::size_t num_elements)
 
   cub::DeviceRadixSort::SortPairs(
     nullptr, sort_temp_size, int64_nullptr, int64_nullptr, int64_nullptr, int64_nullptr,
-    num_elements, 0, 64, nullptr);
+    num_elements_in, 0, 64, nullptr);
   cub::DeviceScan::InclusiveSum(
-    nullptr, scan_temp_size, int32_nullptr, int32_nullptr, num_elements, nullptr);
+    nullptr, scan_temp_size, int32_nullptr, int32_nullptr, num_elements_in, nullptr);
   cub::DeviceSelect::UniqueByKey(
     nullptr, unique_temp_size, int64_nullptr, int64_nullptr, int64_nullptr, int64_nullptr,
-    int64_nullptr, num_elements, nullptr);
+    int32_nullptr, num_elements_in, nullptr);
 
   return std::max(sort_temp_size, std::max(scan_temp_size, unique_temp_size));
 }
 
-__global__ void mark_run_starts(
-  const std::int64_t * sorted_input, std::int32_t * run_ids, const std::size_t num_input_elements)
+UniqueWorkspaceLayout make_unique_workspace_layout(
+  void * workspace_inout, const std::size_t num_input_elements_in,
+  const std::size_t cub_temp_storage_size_in)
 {
-  const auto index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (index >= num_input_elements) {
-    return;
-  }
+  const auto scratch_offset = align_up(cub_temp_storage_size_in, alignof(std::int64_t));
+  auto * scratch = reinterpret_cast<char *>(workspace_inout) + scratch_offset;
 
-  run_ids[index] = (index == 0U || sorted_input[index] != sorted_input[index - 1U]) ? 1 : 0;
+  auto * input_positions = reinterpret_cast<std::int64_t *>(scratch);
+  auto * sorted_input = input_positions + num_input_elements_in;
+  auto * sorted_input_positions = sorted_input + num_input_elements_in;
+  auto * num_unique =
+    reinterpret_cast<std::int32_t *>(sorted_input_positions + num_input_elements_in + 1U);
+  auto * run_ids = reinterpret_cast<std::int32_t *>(num_unique + 1U);
+
+  return UniqueWorkspaceLayout{workspace_inout, cub_temp_storage_size_in, input_positions,
+                               sorted_input,    sorted_input_positions,   num_unique,
+                               run_ids};
 }
 
-__global__ void fill_iota(std::int64_t * output, const std::size_t num_input_elements)
+__global__ void mark_run_starts(
+  const std::int64_t * sorted_input_in, std::int32_t * run_ids_out,
+  const std::size_t num_input_elements_in)
 {
   const auto index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (index >= num_input_elements) {
+  if (index >= num_input_elements_in) {
     return;
   }
 
-  output[index] = static_cast<std::int64_t>(index);
+  run_ids_out[index] =
+    (index == 0U || sorted_input_in[index] != sorted_input_in[index - 1U]) ? 1 : 0;
+}
+
+__global__ void fill_iota(std::int64_t * output_out, const std::size_t num_input_elements_in)
+{
+  const auto index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (index >= num_input_elements_in) {
+    return;
+  }
+
+  output_out[index] = static_cast<std::int64_t>(index);
 }
 
 __global__ void scatter_inverse_indices(
-  const std::int64_t * sorted_idx, const std::int32_t * run_ids, std::int64_t * inverse_indices,
-  const std::size_t num_input_elements)
+  const std::int64_t * sorted_idx_in, const std::int32_t * run_ids_in,
+  std::int64_t * inverse_indices_out, const std::size_t num_input_elements_in)
 {
   const auto index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (index >= num_input_elements) {
+  if (index >= num_input_elements_in) {
     return;
   }
 
-  inverse_indices[sorted_idx[index]] = static_cast<std::int64_t>(run_ids[index] - 1);
+  inverse_indices_out[sorted_idx_in[index]] = static_cast<std::int64_t>(run_ids_in[index] - 1);
 }
 
 __global__ void write_unique_offset_sentinel(
-  std::int64_t * unique_offsets, const std::int64_t * num_unique,
-  const std::size_t num_input_elements)
+  std::int64_t * unique_offsets_inout, const std::size_t num_input_elements_in)
 {
-  unique_offsets[*num_unique] = static_cast<std::int64_t>(num_input_elements);
+  unique_offsets_inout[num_input_elements_in] = static_cast<std::int64_t>(num_input_elements_in);
 }
 
 __global__ void write_unique_counts(
-  const std::int64_t * unique_offsets, const std::int64_t * num_unique,
-  std::int64_t * unique_counts)
+  const std::int64_t * unique_offsets_in, const std::int32_t * num_unique_in,
+  std::int64_t * unique_counts_out, const std::size_t num_input_elements_in)
 {
   const auto index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (index >= static_cast<std::size_t>(*num_unique)) {
+  if (index >= static_cast<std::size_t>(*num_unique_in)) {
     return;
   }
 
-  unique_counts[index] = unique_offsets[index + 1U] - unique_offsets[index];
+  const auto next_offset_index =
+    (index + 1U == static_cast<std::size_t>(*num_unique_in)) ? num_input_elements_in : index + 1U;
+  unique_counts_out[index] = unique_offsets_in[next_offset_index] - unique_offsets_in[index];
 }
 
 }  // namespace
 
 std::int64_t unique(
-  const std::int64_t * input, std::int64_t * unique, std::int64_t * inverse_indices,
-  std::int64_t * unique_counts, void * workspace, std::size_t num_input_elements,
-  std::size_t unique_workspace_size, cudaStream_t stream)
+  const std::int64_t * input_in, std::int64_t * unique_values_out,
+  std::int64_t * inverse_indices_out, std::int64_t * unique_counts_out, void * workspace_inout,
+  std::size_t num_input_elements_in, std::size_t workspace_size_in, cudaStream_t stream_in)
 {
-  if (num_input_elements == 0U) {
+  if (num_input_elements_in == 0U) {
     return 0;
   }
 
-  const auto temp_storage_size = get_unique_temp_storage_size(num_input_elements);
-  const auto scratch_offset = align_up(temp_storage_size, alignof(std::int64_t));
-  auto * scratch = reinterpret_cast<char *>(workspace) + scratch_offset;
+  assert(workspace_size_in >= get_unique_workspace_size(num_input_elements_in));
+  (void)workspace_size_in;
 
-  auto * input_positions = reinterpret_cast<std::int64_t *>(scratch);
-  auto * sorted_input = input_positions + num_input_elements;
-  auto * unique_offsets = sorted_input + num_input_elements;
-  auto * num_unique_d = unique_offsets + num_input_elements + 1U;
-  auto * run_ids = reinterpret_cast<std::int32_t *>(num_unique_d + 1U);
+  const auto cub_temp_storage_size = get_unique_temp_storage_size(num_input_elements_in);
+  auto layout =
+    make_unique_workspace_layout(workspace_inout, num_input_elements_in, cub_temp_storage_size);
 
   const auto num_blocks =
-    static_cast<unsigned int>((num_input_elements + kThreadsPerBlock - 1U) / kThreadsPerBlock);
+    static_cast<unsigned int>((num_input_elements_in + kThreadsPerBlock - 1U) / kThreadsPerBlock);
 
-  fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream>>>(input_positions, num_input_elements);
+  // 1. Sort values while carrying their original input positions.
+  fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
+    layout.input_positions, num_input_elements_in);
   cub::DeviceRadixSort::SortPairs(
-    workspace, temp_storage_size, input, sorted_input, input_positions, unique_offsets,
-    num_input_elements, 0, 64, stream);
+    layout.cub_temp_storage, layout.cub_temp_storage_size, input_in, layout.sorted_input,
+    layout.input_positions, layout.sorted_input_positions, num_input_elements_in, 0, 64, stream_in);
 
-  mark_run_starts<<<num_blocks, kThreadsPerBlock, 0, stream>>>(
-    sorted_input, run_ids, num_input_elements);
+  // 2. Convert sorted run starts into sorted-position -> unique-index ids.
+  mark_run_starts<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
+    layout.sorted_input, layout.run_ids, num_input_elements_in);
   cub::DeviceScan::InclusiveSum(
-    workspace, temp_storage_size, run_ids, run_ids, num_input_elements, stream);
+    layout.cub_temp_storage, layout.cub_temp_storage_size, layout.run_ids, layout.run_ids,
+    num_input_elements_in, stream_in);
 
-  scatter_inverse_indices<<<num_blocks, kThreadsPerBlock, 0, stream>>>(
-    unique_offsets, run_ids, inverse_indices, num_input_elements);
+  // 3. Scatter unique ids back to original input order.
+  scatter_inverse_indices<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
+    layout.sorted_input_positions, layout.run_ids, inverse_indices_out, num_input_elements_in);
 
+  // 4. Compact sorted runs into unique values and each run's start offset.
+  auto * unique_offsets_inout = layout.sorted_input_positions;
   cub::DeviceSelect::UniqueByKey(
-    workspace, temp_storage_size, sorted_input, input_positions, unique, unique_offsets,
-    num_unique_d, num_input_elements, stream);
+    layout.cub_temp_storage, layout.cub_temp_storage_size, layout.sorted_input,
+    layout.input_positions, unique_values_out, unique_offsets_inout, layout.num_unique,
+    num_input_elements_in, stream_in);
 
-  write_unique_offset_sentinel<<<1, 1, 0, stream>>>(
-    unique_offsets, num_unique_d, num_input_elements);
-  write_unique_counts<<<num_blocks, kThreadsPerBlock, 0, stream>>>(
-    unique_offsets, num_unique_d, unique_counts);
+  // 5. Turn run start offsets into counts.
+  // CUB writes each run's start offset, but not the final end offset. Store the sentinel at the
+  // fixed extra slot so the final count can use the input length as its end boundary without
+  // overwriting compact offsets or the selected-count scalar.
+  write_unique_offset_sentinel<<<1, 1, 0, stream_in>>>(unique_offsets_inout, num_input_elements_in);
+  write_unique_counts<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
+    unique_offsets_inout, layout.num_unique, unique_counts_out, num_input_elements_in);
 
-  std::int64_t num_out = 0;
-  cudaMemcpyAsync(&num_out, num_unique_d, sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream);
-  cudaStreamSynchronize(stream);
-  return num_out;
+  std::int32_t num_out = 0;
+  cudaMemcpyAsync(
+    &num_out, layout.num_unique, sizeof(std::int32_t), cudaMemcpyDeviceToHost, stream_in);
+  cudaStreamSynchronize(stream_in);
+  return static_cast<std::int64_t>(num_out);
 }
 
-std::size_t get_unique_temp_storage_size(std::size_t num_elements)
+std::size_t get_unique_temp_storage_size(std::size_t num_elements_in)
 {
-  return query_unique_temp_storage_size(num_elements);
+  return query_unique_temp_storage_size(num_elements_in);
 }
 
-std::size_t get_unique_workspace_size(std::size_t num_elements)
+std::size_t get_unique_workspace_size(std::size_t num_elements_in)
 {
-  const auto temp_size = query_unique_temp_storage_size(num_elements);
+  const auto temp_size = query_unique_temp_storage_size(num_elements_in);
   const auto scratch_offset = align_up(temp_size, alignof(std::int64_t));
-  return scratch_offset + (3 * num_elements + 2U) * sizeof(std::int64_t) +
-         num_elements * sizeof(std::int32_t);
+  return scratch_offset + (3 * num_elements_in + 1U) * sizeof(std::int64_t) +
+         (num_elements_in + 1U) * sizeof(std::int32_t);
 }
