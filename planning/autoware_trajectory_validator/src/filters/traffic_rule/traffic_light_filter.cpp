@@ -109,12 +109,14 @@ TrafficLightFilter::get_stop_lines(
   std::vector<lanelet::BasicLineString2d> amber_stop_lines;
   for (const auto & [stop_line, signal] :
        collect_stop_lines(lanelet_map, traffic_lights.traffic_light_groups)) {
-    if (traffic_light_utils::hasTrafficLightCircleColor(
-          signal.elements, tier4_perception_msgs::msg::TrafficLightElement::RED)) {
+    if (traffic_light_utils::hasTrafficLightShapeAndColor(
+          signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+          autoware_perception_msgs::msg::TrafficLightElement::RED)) {
       red_stop_lines.push_back(stop_line);
     }
-    if (traffic_light_utils::hasTrafficLightCircleColor(
-          signal.elements, tier4_perception_msgs::msg::TrafficLightElement::AMBER)) {
+    if (traffic_light_utils::hasTrafficLightShapeAndColor(
+          signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+          autoware_perception_msgs::msg::TrafficLightElement::AMBER)) {
       amber_stop_lines.push_back(stop_line);
     }
   }

@@ -1,5 +1,5 @@
 # This is just an example file, the actual model param file comes with the model onnx files
-# and is stored in the artifacts directory (~/autoware_data/camera_streampetr by default).
+# and is stored in the artifacts directory (~/autoware_data/ml_models/camera_streampetr by default).
 
 /**:
   ros__parameters:

@@ -3,7 +3,7 @@ repositories:
   core/autoware_msgs:
     type: git
     url: https://github.com/autowarefoundation/autoware_msgs.git
-    version: 1.11.0
+    version: 1.12.0
   # TODO (isamu-takagi): Use a released version when autoware_universe uses a released version.
   core/autoware_adapi_msgs:
     type: git
@@ -28,7 +28,11 @@ repositories:
   core/autoware_core:
     type: git
     url: https://github.com/autowarefoundation/autoware_core.git
-    version: 1.7.2
+    version: 1.8.0
+  core/autoware_system_designer:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_system_designer.git
+    version: v0.3.2
   # universe
   universe/external/tier4_autoware_msgs:
     type: git

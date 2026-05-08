@@ -23,7 +23,7 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware/trajectory/utils/closest.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
