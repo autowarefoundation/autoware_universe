@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "autoware/unique_ops/unique.hpp"
-
 #include "test_utils.hpp"
 
 #include <cuda_runtime_api.h>
@@ -22,19 +21,18 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <map>
 #include <vector>
-#include <iostream>
 
 namespace
 {
 
+using autoware::tensorrt_plugins::test::copy_to_device;
+using autoware::tensorrt_plugins::test::copy_to_host;
 using autoware::tensorrt_plugins::test::CudaStreamGuard;
 using autoware::tensorrt_plugins::test::DeviceBuffer;
 using autoware::tensorrt_plugins::test::get_cuda_device_count;
-using autoware::tensorrt_plugins::test::copy_to_device;
-using autoware::tensorrt_plugins::test::copy_to_host;
-
 
 struct UniqueReference
 {
