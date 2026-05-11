@@ -193,15 +193,6 @@ void SideShiftModule::updateData()
     return;
   }
 
-  // special for avoidance: take behind distance upt ot shift-start-point if it exist.
-  const auto longest_dist_to_shift_line = [&]() {
-    double max_dist = 0.0;
-    for (const auto & pnt : path_shifter_.getShiftLines()) {
-      max_dist = std::max(max_dist, autoware_utils::calc_distance2d(getEgoPose(), pnt.start));
-    }
-    return max_dist;
-  }();
-
   const auto reference_pose = prev_output_.shift_length.empty()
                                 ? planner_data_->self_odometry->pose.pose
                                 : utils::getUnshiftedEgoPose(getEgoPose(), prev_output_);
