@@ -53,7 +53,7 @@ This package has two clustering methods: `euclidean_cluster` and `voxel_grid_bas
 | `min_cluster_size`                  | int    | minimum number of points required to keep a cluster                                           |
 | `max_cluster_size`                  | int    | maximum number of points allowed in a cluster                                                 |
 | `tolerance`                         | float  | Euclidean clustering tolerance                                                                |
-| `min_probability`                   | float  | minimum point probability to keep a point                                                     |
+| `min_probability`                   | float  | minimum point probability to keep a point when the input has a `probability` field            |
 | `class_names.<original_class_name>` | string | mapped label keyed by original class name; YAML declaration order is used as input `class_id` |
 | `use_shape_estimation_corrector`    | bool   | pass clusters through the standard shape estimation corrector                                 |
 | `use_shape_estimation_filter`       | bool   | pass estimated boxes through the standard shape estimation filter                             |
@@ -105,4 +105,6 @@ The `use_height` option of `voxel_grid_based_euclidean_cluster` isn't implemente
 
 `label_based_euclidean_cluster` reads `class_names.<original_class_name>` in YAML declaration order and uses that order as `class_id`. Classes mapped to `car`, `bus`, `truck`, `motorcycle`, `bicycle`, or `pedestrian` are kept, and classes mapped to `ignore` are skipped.
 
-The node requires `probability` in the input pointcloud. Messages without that field are skipped.
+If the input pointcloud has no `probability` field, the node skips probability filtering and treats each point as probability `1.0`.
+
+If the input pointcloud has no `class_id` field, the node clusters all points together as `UNKNOWN` and runs shape estimation with the `UNKNOWN` label.

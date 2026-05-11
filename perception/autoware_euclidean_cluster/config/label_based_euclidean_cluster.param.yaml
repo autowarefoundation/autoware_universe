@@ -19,23 +19,23 @@
       vegetation: ignore
       car: car
       bus: bus
-      emergency_vehicle: ignore
-      train: ignore
+      emergency_vehicle: car
+      train: unknown
       truck: truck
-      tractor_unit: ignore
-      semi_trailer: ignore
-      construction_vehicle: ignore
-      forklift: ignore
-      kart: ignore
+      tractor_unit: trailer
+      semi_trailer: trailer
+      construction_vehicle: truck
+      forklift: car
+      kart: car
       motorcycle: motorcycle
       bicycle: bicycle
       pedestrian: pedestrian
-      personal_mobility: ignore
-      animal: ignore
-      pushable_pullable: ignore
-      traffic_cone: ignore
-      debris: ignore
-      stroller: ignore
+      personal_mobility: pedestrian
+      animal: animal
+      pushable_pullable: unknown
+      traffic_cone: unknown
+      debris: unknown
+      stroller: pedestrian
       other_stuff: ignore
       noise+ghost_point: ignore
 
@@ -43,3 +43,5 @@
     use_shape_estimation_corrector: false
     use_shape_estimation_filter: false
     use_boost_bbox_optimizer: false
+    # 0: ALL_POLYGON, 1: LABEL_DEPEND
+    shape_policy: 0
