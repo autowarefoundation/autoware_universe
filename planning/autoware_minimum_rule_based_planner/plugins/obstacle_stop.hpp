@@ -21,6 +21,7 @@
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <memory>
@@ -29,11 +30,16 @@
 
 namespace autoware::minimum_rule_based_planner::plugin
 {
+using autoware_internal_debug_msgs::msg::StringStamped;
+using autoware_internal_planning_msgs::msg::SafetyFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils_geometry::MultiPolygon2d;
 using autoware_utils_geometry::Polygon2d;
 using trajectory_modifier::utils::obstacle_stop::CollisionPoint;
 using trajectory_modifier::utils::obstacle_stop::DebugData;
+using trajectory_modifier::utils::obstacle_stop::ObjectDecelMap;
+using trajectory_modifier::utils::obstacle_stop::ObjectType;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
@@ -62,6 +68,8 @@ public:
         p.voxel_grid_filter.min_size, p.clustering.tolerance, p.clustering.min_size,
         p.clustering.max_size);
     }
+
+    update_object_decel_map();
   }
   const MinimumRuleBasedPlannerParams::ObstacleStop & get_params() const { return params_; }
 
@@ -81,11 +89,32 @@ private:
 
   std::optional<CollisionPoint> nearest_collision_point_;
 
+  SafetyFactorArray safety_factors_;
+
   DebugData debug_data_;
 
   std::unique_ptr<trajectory_modifier::utils::obstacle_stop::PointCloudFilter> pointcloud_filter_;
 
   std::unique_ptr<trajectory_modifier::utils::obstacle_stop::ObjectFilter> object_filter_;
+
+  ObjectDecelMap object_decel_map_;
+
+  rclcpp::Publisher<MarkerArray>::SharedPtr debug_viz_pub_;
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
+  rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_text_;
+
+  void update_object_decel_map()
+  {
+    const auto & p = params_.rss_params;
+    object_decel_map_ = {
+      {ObjectType::CAR, p.object_decel.car},
+      {ObjectType::TRUCK, p.object_decel.truck},
+      {ObjectType::BUS, p.object_decel.bus},
+      {ObjectType::TRAILER, p.object_decel.trailer},
+      {ObjectType::MOTORCYCLE, p.object_decel.motorcycle},
+      {ObjectType::BICYCLE, p.object_decel.bicycle},
+      {ObjectType::PEDESTRIAN, p.object_decel.pedestrian}};
+  }
 
   bool is_obstacle_detected(const TrajectoryPoints & traj_points);
 
@@ -99,6 +128,9 @@ private:
   std::optional<CollisionPoint> get_nearest_collision_point() const;
 
   void set_stop_point(TrajectoryPoints & traj_points);
+
+  void publish_debug_string(bool is_safe) const;
+  void publish_debug_data(const std::string & ns) const;
 };
 
 }  // namespace autoware::minimum_rule_based_planner::plugin

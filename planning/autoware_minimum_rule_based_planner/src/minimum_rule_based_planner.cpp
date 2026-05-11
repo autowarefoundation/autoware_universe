@@ -69,10 +69,10 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
+  params_ = param_listener_->get_params();
+
   load_optimizer_plugins();
   load_modifier_plugins();
-
-  params_ = param_listener_->get_params();
 
   path_planner_ =
     std::make_unique<PathPlanner>(get_logger(), get_clock(), time_keeper_, params_, vehicle_info_);

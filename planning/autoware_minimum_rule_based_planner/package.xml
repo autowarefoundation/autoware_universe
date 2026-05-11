@@ -17,6 +17,7 @@
 
   <build_depend>generate_parameter_library</build_depend>
 
+  <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>

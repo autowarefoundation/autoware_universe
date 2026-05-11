@@ -138,6 +138,10 @@ minimum_rule_based_planner:
       type: double
       default_value: 0.5
       description: lateral margin for obstacle stop [m]
+    longitudinal_margin:
+      type: double
+      default_value: 10.0
+      description: longitudinal margin applied to each trajectory-point footprint; also acts as a floor on the detection corridor length to prevent chatter as ego decelerates [m]
     objects:
       object_types:
         type: string_array
@@ -147,6 +151,60 @@ minimum_rule_based_planner:
         type: double
         default_value: 1.0
         description: maximum velocity threshold for target object [m/s]
+      stopped_velocity_th:
+        type: double
+        default_value: 0.25
+        description: velocity threshold for target object to be considered as stopped [m/s]
+    rss_params:
+      enable:
+        type: bool
+        default_value: true
+        description: enable the use of RSS parameters for obstacle stop
+      object_decel:
+        car:
+          type: double
+          default_value: 1.5
+          description: deceleration for car type objects [m/s^2]
+        truck:
+          type: double
+          default_value: 1.5
+          description: deceleration for truck type objects [m/s^2]
+        bus:
+          type: double
+          default_value: 1.5
+          description: deceleration for bus type objects [m/s^2]
+        trailer:
+          type: double
+          default_value: 1.5
+          description: deceleration for trailer type objects [m/s^2]
+        motorcycle:
+          type: double
+          default_value: 3.0
+          description: deceleration for motorcycle type objects [m/s^2]
+        bicycle:
+          type: double
+          default_value: 5.0
+          description: deceleration for bicycle type objects [m/s^2]
+        pedestrian:
+          type: double
+          default_value: 5.0
+          description: deceleration for pedestrian type objects [m/s^2]
+      ego_decel:
+        type: double
+        default_value: 4.0
+        description: deceleration for ego vehicle used in RSS calculation [m/s^2]
+      reaction_time:
+        type: double
+        default_value: 0.2
+        description: reaction time used in RSS calculation [s]
+      safety_margin:
+        type: double
+        default_value: 2.0
+        description: safety margin used in RSS calculation [m]
+      lookahead_horizon:
+        type: double
+        default_value: 1.5
+        description: lookahead horizon used in RSS calculation [s]
     pointcloud:
       height_buffer:
         type: double

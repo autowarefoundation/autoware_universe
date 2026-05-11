@@ -210,6 +210,12 @@
               "default": 0.5,
               "minimum": 0.0
             },
+            "longitudinal_margin": {
+              "type": "number",
+              "description": "Longitudinal margin applied to each trajectory-point footprint; also acts as a floor on the detection corridor length to prevent chatter as ego decelerates [m]",
+              "default": 10.0,
+              "minimum": 0.0
+            },
             "objects": {
               "type": "object",
               "properties": {
@@ -234,6 +240,97 @@
                   "type": "number",
                   "description": "Max velocity threshold [m/s]",
                   "default": 1.0,
+                  "minimum": 0.0
+                },
+                "stopped_velocity_th": {
+                  "type": "number",
+                  "description": "Velocity threshold for target object to be considered as stopped [m/s]",
+                  "default": 0.25,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "rss_params": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable RSS-based stop logic",
+                  "default": true
+                },
+                "object_decel": {
+                  "type": "object",
+                  "properties": {
+                    "car": {
+                      "type": "number",
+                      "description": "Deceleration for car type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "truck": {
+                      "type": "number",
+                      "description": "Deceleration for truck type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "bus": {
+                      "type": "number",
+                      "description": "Deceleration for bus type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "trailer": {
+                      "type": "number",
+                      "description": "Deceleration for trailer type objects [m/s^2]",
+                      "default": 1.5,
+                      "minimum": 0.0
+                    },
+                    "motorcycle": {
+                      "type": "number",
+                      "description": "Deceleration for motorcycle type objects [m/s^2]",
+                      "default": 3.0,
+                      "minimum": 0.0
+                    },
+                    "bicycle": {
+                      "type": "number",
+                      "description": "Deceleration for bicycle type objects [m/s^2]",
+                      "default": 5.0,
+                      "minimum": 0.0
+                    },
+                    "pedestrian": {
+                      "type": "number",
+                      "description": "Deceleration for pedestrian type objects [m/s^2]",
+                      "default": 5.0,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "ego_decel": {
+                  "type": "number",
+                  "description": "Deceleration for ego vehicle used in RSS calculation [m/s^2]",
+                  "default": 4.0,
+                  "minimum": 0.0
+                },
+                "reaction_time": {
+                  "type": "number",
+                  "description": "Reaction time used in RSS calculation [s]",
+                  "default": 0.2,
+                  "minimum": 0.0
+                },
+                "safety_margin": {
+                  "type": "number",
+                  "description": "Safety margin used in RSS calculation [m]",
+                  "default": 2.0,
+                  "minimum": 0.0
+                },
+                "lookahead_horizon": {
+                  "type": "number",
+                  "description": "Lookahead horizon used in RSS calculation [s]",
+                  "default": 1.5,
                   "minimum": 0.0
                 }
               },

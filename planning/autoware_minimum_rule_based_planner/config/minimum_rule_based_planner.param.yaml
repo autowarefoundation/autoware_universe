@@ -42,10 +42,27 @@
       on_time_buffer: 0.5 # [s]
       off_time_buffer: 1.0 # [s]
       lateral_margin: 0.5     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
+      longitudinal_margin: 10.0 # longitudinal margin applied to each trajectory-point footprint [m]
 
       objects:
         object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "unknown"] # object types to consider for obstacle stop
-        max_velocity_th: 1.0      # maximum velocity threshold for target object [m/s]
+        max_velocity_th: 1.0     # maximum velocity threshold for target object [m/s]
+        stopped_velocity_th: 0.25 # velocity threshold for target object to be considered as stopped [m/s]
+
+      rss_params:
+        enable: true
+        object_decel:
+          car: 1.5
+          truck: 1.5
+          bus: 1.5
+          trailer: 1.5
+          motorcycle: 3.0
+          bicycle: 5.0
+          pedestrian: 5.0
+        ego_decel: 4.0           # [m/s^2]
+        reaction_time: 0.2       # [s]
+        safety_margin: 2.0       # [m]
+        lookahead_horizon: 1.5   # [s]
 
       pointcloud:
         height_buffer: 0.5  # height buffer to add above ego height [m]
