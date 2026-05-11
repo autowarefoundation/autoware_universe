@@ -77,8 +77,8 @@ double calcStopDistance(
 
     const double projected_x = segment_start.pose.position.x + projected_longitudinal * unit_x;
     const double projected_y = segment_start.pose.position.y + projected_longitudinal * unit_y;
-    const double distance = std::hypot(
-      current_pose.position.x - projected_x, current_pose.position.y - projected_y);
+    const double distance =
+      std::hypot(current_pose.position.x - projected_x, current_pose.position.y - projected_y);
     if (distance >= min_distance) {
       continue;
     }

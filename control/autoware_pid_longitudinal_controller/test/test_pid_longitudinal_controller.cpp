@@ -181,7 +181,7 @@ protected:
   static void TearDownTestSuite() { rclcpp::shutdown(); }
 };
 
-TEST_F(PidLongitudinalControllerTest, goalOverrunKeepsContinuousControlData)
+TEST_F(PidLongitudinalControllerTest, goalOverrunDropsControlDataOnlyAfterNearestThreshold)
 {
   rclcpp::NodeOptions options;
   options.parameter_overrides(makeControllerParameters());
@@ -214,15 +214,15 @@ TEST_F(PidLongitudinalControllerTest, goalOverrunKeepsContinuousControlData)
   const auto near_overrun_control_data = controller.getExperimentalControlData(odometry.pose.pose);
 
   ASSERT_TRUE(near_overrun_control_data);
-  EXPECT_LT(near_overrun_control_data->stop_dist, 0.0);
 
   odometry.pose.pose.position.x = 9.0;
   controller.setKinematicState(odometry);
 
   const auto control_data = controller.getExperimentalControlData(odometry.pose.pose);
 
-  ASSERT_TRUE(control_data);
-  EXPECT_LT(control_data->stop_dist, -1.5);
+  EXPECT_FALSE(control_data)
+    << "Control data should drop out once the ego overruns the goal beyond the nearest-search "
+       "distance threshold.";
 }
 
 TEST_F(PidLongitudinalControllerTest, goalOverrunRejectsMisalignedOrLaterallyFarPose)

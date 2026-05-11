@@ -480,7 +480,7 @@ PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::
   control_data.current_motion.acc = m_current_accel.accel.accel.linear.x;
   control_data.interpolated_traj = m_trajectory_experimental;
 
-  auto current_s = autoware::experimental::trajectory::find_first_nearest_index(
+  const auto current_s = autoware::experimental::trajectory::find_first_nearest_index(
     control_data.interpolated_traj, current_pose, m_ego_nearest_dist_threshold,
     m_ego_nearest_yaw_threshold);
   if (!current_s) {
@@ -1057,8 +1057,7 @@ PidLongitudinalController::StateAfterDelay PidLongitudinalController::predictedS
   return StateAfterDelay{pred_vel, pred_acc, running_distance};
 }
 
-double PidLongitudinalController::applyVelocityFeedback(
-  const ControlData & control_data)
+double PidLongitudinalController::applyVelocityFeedback(const ControlData & control_data)
 {
   const double vel_sign = (control_data.shift == Shift::Forward)
                             ? 1.0
