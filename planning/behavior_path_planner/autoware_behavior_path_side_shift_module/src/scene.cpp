@@ -208,10 +208,6 @@ void SideShiftModule::updateData()
   if (getPreviousModuleOutput().reference_path.points.empty()) {
     return;
   }
-  const auto centerline_path = utils::calcCenterLinePath(
-    planner_data_, reference_pose, longest_dist_to_shift_line,
-    getPreviousModuleOutput().reference_path);
-
   constexpr double resample_interval = 1.0;
   const auto backward_extened_path = extendBackwardLength(getPreviousModuleOutput().path);
   reference_path_ = utils::resamplePathWithSpline(backward_extened_path, resample_interval);
