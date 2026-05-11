@@ -2,6 +2,35 @@
 Changelog for package autoware_behavior_path_side_shift_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_behavior_path_side_shift): stabilize side shift path (`#12473 <https://github.com/mitsudome-r/autoware_universe/issues/12473>`_)
+  * stabilize side shift path
+  * change comment
+  ---------
+* fix: revert "fix(behavior_path_side_shift): preserve shifted path shap to prevent chattering (`#12278 <https://github.com/mitsudome-r/autoware_universe/issues/12278>`_)" (`#12377 <https://github.com/mitsudome-r/autoware_universe/issues/12377>`_)
+  Revert "fix(behavior_path_side_shift): preserve shifted path shape to prevent chattering (`#12278 <https://github.com/mitsudome-r/autoware_universe/issues/12278>`_)"
+  This reverts commit 1b4472c60fed4f83b1a1a9de1705af0465bec2b5.
+* fix(behavior_path_side_shift): preserve shifted path shape to prevent chattering (`#12278 <https://github.com/mitsudome-r/autoware_universe/issues/12278>`_)
+  * fix(behavior_path_side_shift): preserve shifted path shape to prevent chattering
+  The side shift path was regenerated every planning cycle via path_shifter\_.generate(), which depends on the reference path resampled from the upstream module output. When upstream output fluctuated (e.g., due to object detection chattering), the shifted path shape changed every cycle even without a new shift request.
+  This commit adds keepPrevPathShape() to retain the previously generated shifted path shape when no new shift line is inserted via replaceShiftLine(). The method trims already-traversed points behind the ego position and appends new forward points from the freshly generated path to extend coverage.
+  * Revert "fix(behavior_path_side_shift): preserve shifted path shape to prevent chattering"
+  This reverts commit 5f6bf02b963e3357a7bc72fe880c5fc6a86ea7e3.
+  * fix(behavior_path_side_shift_module): prevent path chattering by conditional path generation
+  * refactor(behavior_path_side_shift): move replaceShiftLine before path generation
+  Moved  closer to  for better readability, based on PR review. Added a flag check to preserve the original condition.
+  ---------
+* chore(behavior_path_planner): remove unused lanelet2_extension header (`#12292 <https://github.com/mitsudome-r/autoware_universe/issues/12292>`_)
+  unused lanelet2_extension in bpp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12120 <https://github.com/mitsudome-r/autoware_universe/issues/12120>`_)
+  * chore: organize maintainer
+  * fix: ci error
+  ---------
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, Taiki Yamada, Uta Kawakami, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

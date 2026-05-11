@@ -2,6 +2,24 @@
 Changelog for package autoware_planning_validator_rear_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix: bound int 32 range for rqt_reconfigure older than 1.1.4 (`#12349 <https://github.com/mitsudome-r/autoware_universe/issues/12349>`_)
+* feat(lanelet2_extension): replace ported lanelet2_extension utilities functions (final) (`#12173 <https://github.com/mitsudome-r/autoware_universe/issues/12173>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - planning component (`#12083 <https://github.com/mitsudome-r/autoware_universe/issues/12083>`_)
+  * replace getArcCoordinates in planning component
+  * replace getCenterlineWithOffset in planning component
+  * replace getRight/LeftBoundWithOffset in planning component
+  * replace getExpandedLanelet(s) in planning component
+  * replace combineLaneletsShape in planning component
+  * remove log for empty combine_lanelet_opt
+  * bind reference to optional value
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, Yuxuan Liu, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

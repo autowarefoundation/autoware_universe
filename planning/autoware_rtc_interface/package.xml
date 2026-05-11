@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_rtc_interface</name>
-  <version>0.50.0</version>
+  <version>0.51.0</version>
   <description>The autoware_rtc_interface package</description>
 
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>

@@ -124,6 +124,7 @@ struct DebugData
   std::vector<geometry_msgs::msg::Point> target_pcd_points;
   geometry_msgs::msg::Point active_collision_point;
   std::optional<PredictedObject> colliding_object;
+  double ego_z = 0.0;  // cached for marker placement during publish_debug_data
 };
 
 void trim_trajectory_and_remove_duplicates(TrajectoryPoints & trajectory_points);
