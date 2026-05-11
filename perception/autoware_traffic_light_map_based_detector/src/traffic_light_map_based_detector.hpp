@@ -89,7 +89,7 @@ public:
     const TrafficLightMapBasedDetectorConfig & config,
     const autoware_map_msgs::msg::LaneletMapBin & map_msg);
 
-  std::optional<SetRouteError> setRoute(
+  std::optional<SetRouteError> set_route(
     const autoware_planning_msgs::msg::LaneletRoute & route_msg);
 
   DetectionResult detect(
@@ -97,7 +97,7 @@ public:
     const sensor_msgs::msg::CameraInfo & camera_info) const;
 
 private:
-  void setMap(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
+  void set_map(const autoware_map_msgs::msg::LaneletMapBin & map_msg);
 
   /**
    * @brief Filter traffic lights that are visible from the camera
@@ -107,7 +107,7 @@ private:
    * @param pinhole_camera_model    pinhole model calculated from camera_info
    * @param visible_traffic_lights  the visible traffic lights output
    */
-  void getVisibleTrafficLights(
+  void get_visible_traffic_lights(
     const TrafficLightSet & all_traffic_lights,
     const std::vector<StampedTransform> & tf_map2camera_samples,
     const image_geometry::PinholeCameraModel & pinhole_camera_model,
@@ -124,7 +124,7 @@ private:
    * @return true                 the computation succeeded
    * @return false                the computation failed
    */
-  bool getTrafficLightRoi(
+  bool get_traffic_light_roi(
     const tf2::Transform & tf_map2camera,
     const image_geometry::PinholeCameraModel & pinhole_camera_model,
     const lanelet::ConstLineString3d traffic_light,
@@ -142,7 +142,7 @@ private:
    * @return true                 the computation succeeded
    * @return false                the computation failed
    */
-  bool getTrafficLightRoi(
+  bool get_traffic_light_roi(
     const std::vector<StampedTransform> & tf_map2camera_samples,
     const image_geometry::PinholeCameraModel & pinhole_camera_model,
     const lanelet::ConstLineString3d traffic_light,
@@ -157,7 +157,7 @@ private:
    * @param visible_traffic_lights  the visible traffic light object vector
    * @return visualization marker array
    */
-  static visualization_msgs::msg::MarkerArray createTrafficLightMarkers(
+  static visualization_msgs::msg::MarkerArray create_traffic_light_markers(
     const tf2::Transform & tf_map2camera, const std_msgs::msg::Header & camera_header,
     const std::vector<lanelet::ConstLineString3d> & visible_traffic_lights);
 
