@@ -97,10 +97,11 @@ __global__ void reconstructPartialKernel(
 }
 
 __global__ void reconstructFullKernel(
-  const std::uint32_t * crop_mask, const std::uint32_t * crop_indices,
-  const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
-  std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
-  std::size_t num_points, std::size_t num_voxels)
+  const std::uint32_t * __restrict__ crop_mask, const std::uint32_t * __restrict__ crop_indices,
+  const std::int64_t * __restrict__ inverse_map, const std::int64_t * __restrict__ voxel_labels,
+  const float * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
+  float * __restrict__ output_probs, std::size_t num_classes, std::size_t num_points,
+  std::size_t num_voxels)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
