@@ -82,18 +82,20 @@ __global__ void reconstructPartialKernel(
   float * __restrict__ output_probs, std::size_t num_classes, std::size_t num_cropped_points,
   std::size_t num_voxels)
 {
-  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_cropped_points) {
-    return;
+  const auto point_idx = blockIdx.x * blockDim.y + threadIdx.y;
+  const auto class_idx = blockIdx.y * blockDim.x + threadIdx.x;
+
+  if (point_idx >= num_cropped_points || class_idx >= num_classes) return;
+
+  const auto voxel_idx = inverse_map[point_idx];
+  const bool has_valid_voxel = voxel_idx >= 0 && static_cast<std::size_t>(voxel_idx) < num_voxels;
+  if (class_idx == 0) {
+    output_labels[point_idx] = has_valid_voxel ? voxel_labels[voxel_idx] : 255;
   }
 
-  const auto voxel_idx = inverse_map[idx];
-  const bool has_valid_voxel = voxel_idx >= 0 && static_cast<std::size_t>(voxel_idx) < num_voxels;
-  output_labels[idx] = has_valid_voxel ? voxel_labels[voxel_idx] : 255;
-  for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
-    output_probs[idx * num_classes + class_idx] =
-      has_valid_voxel ? voxel_probs[voxel_idx * num_classes + class_idx] : 0.0f;
-  }
+  output_probs[point_idx * num_classes + class_idx] =
+    has_valid_voxel ? voxel_probs[static_cast<std::size_t>(voxel_idx) * num_classes + class_idx]
+                    : 0.0f;
 }
 
 __global__ void reconstructFullKernel(
@@ -103,27 +105,30 @@ __global__ void reconstructFullKernel(
   float * __restrict__ output_probs, std::size_t num_classes, std::size_t num_points,
   std::size_t num_voxels)
 {
-  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_points) {
+  const auto point_idx = blockIdx.x * blockDim.y + threadIdx.y;
+  const auto class_idx = blockIdx.y * blockDim.x + threadIdx.x;
+
+  if (point_idx >= num_points || class_idx >= num_classes) return;
+
+  const auto mask = crop_mask[point_idx];
+  if (mask == 0) {
+    if (class_idx == 0) output_labels[point_idx] = 255;
     return;
   }
 
-  if (crop_mask[idx] == 0) {
-    output_labels[idx] = 255;
-    return;
-  }
-
-  const auto cropped_idx = crop_indices[idx] - 1;
+  const auto cropped_idx = crop_indices[point_idx] - 1;
   const auto voxel_idx = inverse_map[cropped_idx];
   if (voxel_idx < 0 || static_cast<std::size_t>(voxel_idx) >= num_voxels) {
-    output_labels[idx] = 255;
+    if (class_idx == 0) output_labels[point_idx] = 255;
     return;
   }
 
-  output_labels[idx] = voxel_labels[voxel_idx];
-  for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
-    output_probs[idx * num_classes + class_idx] = voxel_probs[voxel_idx * num_classes + class_idx];
+  if (class_idx == 0) {
+    output_labels[point_idx] = voxel_labels[voxel_idx];
   }
+
+  output_probs[point_idx * num_classes + class_idx] =
+    voxel_probs[static_cast<std::size_t>(voxel_idx) * num_classes + class_idx];
 }
 
 template <typename OutputPointT>
@@ -306,9 +311,10 @@ void PostprocessCuda::reconstructPartial(
   std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
   std::size_t num_cropped_points, std::size_t num_voxels)
 {
-  auto num_blocks = divup(num_cropped_points, config_.threads_per_block_);
+  auto block = dim3(32, 8);
+  auto grid = dim3(divup(num_cropped_points, block.y), divup(num_classes, block.x));
 
-  reconstructPartialKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+  reconstructPartialKernel<<<grid, block, 0, stream_>>>(
     inverse_map, voxel_labels, voxel_probs, output_labels, output_probs, num_classes,
     num_cropped_points, num_voxels);
 
@@ -321,9 +327,10 @@ void PostprocessCuda::reconstructFull(
   std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
   std::size_t num_points, std::size_t num_voxels)
 {
-  auto num_blocks = divup(num_points, config_.threads_per_block_);
+  auto block = dim3(32, 8);
+  auto grid = dim3(divup(num_points, block.y), divup(num_classes, block.x));
 
-  reconstructFullKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+  reconstructFullKernel<<<grid, block, 0, stream_>>>(
     crop_mask, crop_indices, inverse_map, voxel_labels, voxel_probs, output_labels, output_probs,
     num_classes, num_points, num_voxels);
 
