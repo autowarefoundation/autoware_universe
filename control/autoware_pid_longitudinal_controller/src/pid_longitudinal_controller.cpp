@@ -480,11 +480,55 @@ PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::
   control_data.current_motion.acc = m_current_accel.accel.accel.linear.x;
   control_data.interpolated_traj = m_trajectory_experimental;
 
-  const auto current_s = autoware::experimental::trajectory::find_first_nearest_index(
-    control_data.interpolated_traj, current_pose, m_ego_nearest_dist_threshold,
-    m_ego_nearest_yaw_threshold);
+  const auto bases = control_data.interpolated_traj.get_underlying_bases();
+  std::optional<double> current_s;
+  double min_distance = std::numeric_limits<double>::max();
+  for (size_t i = 0; i + 1 < bases.size(); ++i) {
+    const auto segment_start = control_data.interpolated_traj.compute(bases.at(i));
+    const auto segment_end = control_data.interpolated_traj.compute(bases.at(i + 1));
+    const double segment_dx = segment_end.pose.position.x - segment_start.pose.position.x;
+    const double segment_dy = segment_end.pose.position.y - segment_start.pose.position.y;
+    const double segment_length = std::hypot(segment_dx, segment_dy);
+    if (segment_length <= 1.0e-3) {
+      continue;
+    }
+
+    const double unit_x = segment_dx / segment_length;
+    const double unit_y = segment_dy / segment_length;
+    const double rel_x = current_pose.position.x - segment_start.pose.position.x;
+    const double rel_y = current_pose.position.y - segment_start.pose.position.y;
+    const double longitudinal = rel_x * unit_x + rel_y * unit_y;
+    const double lateral = std::fabs(rel_x * unit_y - rel_y * unit_x);
+    const double segment_yaw = std::atan2(segment_dy, segment_dx);
+    const double yaw_deviation =
+      autoware_utils::normalize_radian(tf2::getYaw(current_pose.orientation) - segment_yaw);
+    if (
+      lateral > m_ego_nearest_dist_threshold ||
+      std::fabs(yaw_deviation) > m_ego_nearest_yaw_threshold) {
+      continue;
+    }
+
+    double projected_longitudinal = longitudinal;
+    if (i != 0) {
+      projected_longitudinal = std::max(projected_longitudinal, 0.0);
+    }
+    if (i + 1 != bases.size() - 1) {
+      projected_longitudinal = std::min(projected_longitudinal, segment_length);
+    }
+
+    const double projected_x = segment_start.pose.position.x + projected_longitudinal * unit_x;
+    const double projected_y = segment_start.pose.position.y + projected_longitudinal * unit_y;
+    const double distance = std::hypot(
+      current_pose.position.x - projected_x, current_pose.position.y - projected_y);
+    if (distance >= min_distance) {
+      continue;
+    }
+
+    min_distance = distance;
+    current_s = bases.at(i) + projected_longitudinal;
+  }
   if (!current_s) {
-    RCLCPP_WARN(logger_, "failed nearest search for experimental trajectory");
+    RCLCPP_WARN(logger_, "failed to project ego pose onto experimental trajectory");
     return std::nullopt;
   }
 
