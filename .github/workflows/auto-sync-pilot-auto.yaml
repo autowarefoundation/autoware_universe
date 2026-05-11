@@ -1,0 +1,63 @@
+name: sync-version-to-pilot-auto
+
+on:
+  push:
+    branches:
+      - feat/v0.64/e2e # Target branch in universe repo
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app_id: ${{ secrets.INTERNAL_APP_ID }}
+          private_key: ${{ secrets.INTERNAL_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout universe
+        uses: actions/checkout@v4
+        with:
+          path: universe-repo # Checkout into a subfolder to keep things clean
+
+      - name: Get current commit SHA and author
+        id: vars
+        run: |
+          cd universe-repo
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "author=$(git log -1 --pretty=format:'%an')" >> $GITHUB_OUTPUT
+
+      - name: Checkout pilot-auto.x2
+        uses: actions/checkout@v4
+        with:
+          repository: tier4/pilot-auto.x2
+          token: ${{ steps.generate-token.outputs.token }}
+          path: pilot-auto-repo
+          ref: feat/v4.4/e2e # The target branch in pilot-auto.x2
+
+      - name: Update autoware.repos
+        env:
+          REPO_KEY: autoware/universe
+          NEW_SHA: ${{ steps.vars.outputs.sha }}
+        run: |
+          cd pilot-auto-repo
+          # Use the verified sed command
+          sed -i "/${REPO_KEY//\//\\\/}:/,/version:/ s/\(version:[[:space:]]*\).*/\1$NEW_SHA/" autoware.repos
+
+      - name: Create Pull Request in pilot-auto.x2
+        uses: peter-evans/create-pull-request@v5
+        with:
+          path: pilot-auto-repo
+          token: ${{ steps.generate-token.outputs.token }}
+          branch: sync-universe-${{ steps.vars.outputs.sha }}
+          title: "chore: update autoware/universe to ${{ steps.vars.outputs.sha }}"
+          body: |
+            Auto-generated PR to sync autoware/universe version from merged changes in universe repository.
+
+            cc: @${{ github.actor }} (commit author: ${{ steps.vars.outputs.author }})
+          base: feat/v4.4/e2e
+          commit-message: "chore: update autoware/universe version"
+          delete-branch: true
+          reviewers: ${{ github.actor }}

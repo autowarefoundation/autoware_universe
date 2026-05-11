@@ -1,0 +1,93 @@
+name: Auto-add labels for child branch PRs
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+    # Skip if the PR author is a bot
+    if: ${{ !contains(github.event.pull_request.user.login, 'bot') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Read branch meta
+        id: meta
+        run: |
+          if [ ! -f .github/branch-meta.yaml ]; then
+            echo "No branch-meta.yaml found, skipping labeling"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          BASE_BRANCH=$(yq '.base_branch' .github/branch-meta.yaml)
+          PRODUCT_NAME=$(yq '.product_name' .github/branch-meta.yaml)
+          echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
+          echo "product_name=$PRODUCT_NAME" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: Generate token
+        if: steps.meta.outputs.skip != 'true'
+        id: generate-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Create and add labels
+        if: steps.meta.outputs.skip != 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            const baseBranch = '${{ steps.meta.outputs.base_branch }}';
+            const productName = '${{ steps.meta.outputs.product_name }}';
+            const labels = [baseBranch, productName];
+
+            // Wait 10 seconds to avoid conflict with other labelers
+            // Reference: https://github.com/actions/labeler/issues/763
+            console.log('Waiting for 10 seconds to avoid labeler conflicts...');
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            console.log('Wait completed');
+
+            // Create labels if they don't exist
+            for (const label of labels) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label
+                });
+                console.log(`Label '${label}' already exists`);
+              } catch (error) {
+                if (error.status === 404) {
+                  console.log(`Label '${label}' does not exist. Creating it...`);
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label,
+                    color: label.startsWith('beta/') ? '0E8A16' : '1D76DB',
+                    description: label.startsWith('beta/') ? `Base branch: ${label}` : `Product: ${label}`
+                  });
+                  console.log(`Label '${label}' created successfully`);
+                } else {
+                  console.log(`Error checking label '${label}':`, error);
+                  throw error;
+                }
+              }
+            }
+
+            // Add labels to PR
+            await github.rest.issues.addLabels({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: labels
+            });
+            console.log(`Labels added to PR: ${labels.join(', ')}`);

@@ -1,13 +1,18 @@
-# This file is automatically synced from:
-# https://github.com/autowarefoundation/sync-file-templates
-# To make changes, update the source repository and follow the guidelines in its README.
+# Originally from https://github.com/autowarefoundation/sync-file-templates
+# Customized: only PRs whose base branch name contains "e2e", and not opened by bots
+# (GitHub user.type Bot, or login/display name containing "bot"; contains() is case-insensitive.)
 
 name: comment-on-pr
 on:
-  pull_request_target:
+  pull_request:
+    types: [opened]
+    branches:
+      # Base branch must contain "e2e" (e.g. tier4-e2e, release/e2e-foo)
+      - "**e2e**"
 
 jobs:
   comment-on-pr:
+    if: github.event.pull_request.user.type != 'Bot' && !contains(github.event.pull_request.user.login, 'bot') && !contains(github.event.pull_request.user.name, 'bot')
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
@@ -19,11 +24,15 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           message: |
-            Thank you for contributing to the Autoware project!
+            @${{ github.event.pull_request.user.login }} Thank you for contributing to TIER IV E2E branch! Edit the checklist below and check the boxes as you complete the items.
 
-            🚧 If your pull request is in progress, [switch it to draft mode](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/changing-the-stage-of-a-pull-request#converting-a-pull-request-to-a-draft).
+            # Things to check before merging
+            Please check the following points before merging:
+            - [ ] Write a brief description of this PR that can be understood by **coding-agents**.
+            - [ ] Contact the branch manager on when the PR will be tested on vehicle.
+            - [ ] Recommend to use **Squash and Merge** to merge the PR.
+            - [ ] Report in #team-product-dev channel on the contents of the PR. @ branch manager.
 
-            Please ensure:
-            - You've checked our [contribution guidelines](https://autowarefoundation.github.io/autoware-documentation/main/contributing/).
-            - Your PR follows our [pull request guidelines](https://autowarefoundation.github.io/autoware-documentation/main/contributing/pull-request-guidelines/).
-            - All required CI checks pass before [marking the PR ready for review](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/changing-the-stage-of-a-pull-request#marking-a-pull-request-as-ready-for-review).
+            # After merging
+            Please check the following points after merging:
+            - [ ] Wait for the automatic hash synchronization, which will automatically create a PR to update the hash, you should check the [PR](https://github.com/tier4/pilot-auto.x2/pulls) and merge it.
