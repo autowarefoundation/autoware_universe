@@ -70,8 +70,13 @@ bool VoxelBasedApproximateDynamicMapLoader::is_close_to_map(
     map_cell_voxel_grid = current_voxel_grid_array_.at(map_grid_index)->map_cell_voxel_grid;
   }
 
-  const int index = map_cell_voxel_grid.getCentroidIndexAt(
-    map_cell_voxel_grid.getGridCoordinates(point.x, point.y, point.z));
+  const Eigen::Vector3i grid_coordinates =
+    map_cell_voxel_grid.getGridCoordinates(point.x, point.y, point.z);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+  const int index = map_cell_voxel_grid.getCentroidIndexAt(grid_coordinates);
+#pragma GCC diagnostic pop
+
   return (index != -1);
 }
 
