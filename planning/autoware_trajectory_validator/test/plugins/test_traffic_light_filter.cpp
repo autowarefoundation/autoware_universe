@@ -59,7 +59,15 @@ protected:
     node_->declare_parameter("traffic_light.checked_trajectory_length.deceleration_limit", 999.9);
     node_->declare_parameter("traffic_light.checked_trajectory_length.jerk_limit", 999.9);
 
-    filter_->set_parameters(*node_);
+    validator::Params params;
+    params.traffic_light.deceleration_limit = 2.8;
+    params.traffic_light.jerk_limit = 5.0;
+    params.traffic_light.delay_response_time = 0.5;
+    params.traffic_light.crossing_time_limit = 2.75;
+    params.traffic_light.treat_amber_light_as_red_light = false;
+    params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+    params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+    filter_->update_parameters(params);
 
     context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
     // Set high velocity/acceleration to always check the whole trajectory
@@ -201,8 +209,9 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedLightIntersection)
   // Trajectory crossing stop line (0 -> 10)
   auto points = create_trajectory(0.0, 10.0);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
-    << "Should return false when crossing red light stop line";
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible) << "Should return false when crossing red light stop line";
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithGreenLight)
@@ -249,8 +258,9 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithFrontOverhang)
   vehicle_info.max_longitudinal_offset_m = 2.0;
   filter_->set_vehicle_info(vehicle_info);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
-    << "Should return false when crossing red light stop line";
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible) << "Should return false when crossing red light stop line";
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
@@ -269,8 +279,9 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
 
   auto points = create_trajectory(0.0, 30.0, 5.0);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
-    << "Should return false if amber light can be stopped";
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible) << "Should return false if amber light can be stopped";
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberLightCannotStop)
@@ -312,17 +323,18 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStopAndCannotPass)
   // This is a scenario where ego can stop and cannot pass.
 
   // Let's adjust params to create the desired scenario.
-  node_->set_parameter(
-    rclcpp::Parameter("traffic_light.deceleration_limit", -0.5));  // Very weak braking
-  node_->set_parameter(rclcpp::Parameter("traffic_light.delay_response_time", 1.0));
-  node_->set_parameter(rclcpp::Parameter("traffic_light.crossing_time_limit", 1.0));  // Short amber
-  node_->set_parameter(rclcpp::Parameter("traffic_light.treat_amber_light_as_red_light", false));
-  filter_->set_parameters(*node_);
+  validator::Params params;
+  params.traffic_light.deceleration_limit = -0.5;  // Very weak braking
+  params.traffic_light.delay_response_time = 1.0;
+  params.traffic_light.crossing_time_limit = 1.0;  // Short amber
+  params.traffic_light.treat_amber_light_as_red_light = false;
+  filter_->update_parameters(params);
 
   auto points = create_trajectory(0.0, 200.0, 10.0);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
-    << "Should return false if ego can stop but cannot pass";
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible) << "Should return false if ego can stop but cannot pass";
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
@@ -333,17 +345,20 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
   create_and_set_map(light_id, stop_x);
   set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
 
-  node_->set_parameter(rclcpp::Parameter("traffic_light.deceleration_limit", 2.8));
-  node_->set_parameter(rclcpp::Parameter("traffic_light.delay_response_time", 0.5));
-  node_->set_parameter(rclcpp::Parameter("traffic_light.crossing_time_limit", 2.75));
-  node_->set_parameter(rclcpp::Parameter("traffic_light.treat_amber_light_as_red_light", true));
-  filter_->set_parameters(*node_);
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_amber_light_as_red_light = true;
+  filter_->update_parameters(params);
 
   // Even if it's NOT stoppable (ego at 0m, velocity 10m/s, stop at 5m),
   // it should be rejected because it's treated as red.
   auto points = create_trajectory(0.0, 10.0, 10.0);
 
-  EXPECT_FALSE(filter_->is_feasible(points, context_))
+  const auto res = filter_->is_feasible(points, context_);
+  ASSERT_TRUE(res.has_value());
+  EXPECT_FALSE(res->is_feasible)
     << "Should return false for amber light when treat_amber_light_as_red_light is true";
 }
 

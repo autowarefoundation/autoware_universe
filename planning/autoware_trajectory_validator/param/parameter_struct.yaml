@@ -1,8 +1,14 @@
 validator:
   filter_names:
     type: string_array
-    default_value: []
+    default_value: [""]
     description: metrics.
+    read_only: true
+
+  shadow_mode_filter_names:
+    type: string_array
+    default_value: [""]
+    description: List of filter names that run in which results are logged but do not affect trajectory feasibility.
     read_only: false
 
   out_of_lane:
@@ -15,18 +21,6 @@ validator:
       type: double
       default_value: 0.0
       description: Minimum distance to lane boundary
-      read_only: false
-
-  collision:
-    time:
-      type: double
-      default_value: 3.0
-      description: The time range to check
-      read_only: false
-    min_value:
-      type: double
-      default_value: 2.0
-      description: Minimum acceptable time to collision
       read_only: false
 
   vehicle_constraint:
@@ -81,6 +75,11 @@ validator:
       type: bool
       default_value: true
       description: when true, amber lights are handled like red lights
+      read_only: false
+    stop_overshoot_margin:
+      type: double
+      default_value: 0.5
+      description: Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible (m)
       read_only: false
     checked_trajectory_length:
       deceleration_limit:

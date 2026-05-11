@@ -16,17 +16,17 @@
 #define AUTOWARE__BEVFUSION__BEVFUSION_NODE_HPP_
 
 #include "autoware/bevfusion/bevfusion_trt.hpp"
+#include "autoware/bevfusion/camera/camera_data.hpp"
 #include "autoware/bevfusion/detection_class_remapper.hpp"
 #include "autoware/bevfusion/postprocess/non_maximum_suppression.hpp"
 #include "autoware/bevfusion/preprocess/pointcloud_densification.hpp"
 #include "autoware/bevfusion/visibility_control.hpp"
 
 #include <Eigen/Core>
-#include <autoware/universe_utils/system/stop_watch.hpp>
-#include <autoware_utils/ros/debug_publisher.hpp>
-#include <autoware_utils/ros/diagnostics_interface.hpp>
-#include <autoware_utils/ros/published_time_publisher.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
+#include <autoware_utils_debug/published_time_publisher.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <cuda_blackboard/cuda_adaptation.hpp>
 #include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
@@ -67,7 +67,8 @@ private:
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // Helper methods for constructor
-  void initializeSensorFusionSubscribers(std::int64_t num_cameras);
+  void initializeSensorFusionSubscribers(
+    std::int64_t num_cameras, const ImagePreProcessingParams & image_pre_processing_params);
   void validateParameters(
     const std::vector<float> & point_cloud_range, const std::vector<float> & voxel_size);
 
@@ -100,6 +101,11 @@ private:
   std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::ConstSharedPtr> camera_info_subs_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_{
     nullptr};
+  // unique_ptr to avoid copying the actual camera data in memory since there's gpu buffer in the
+  // camera data
+  std::vector<std::unique_ptr<CameraData>> camera_data_ptrs_;
+  // One CameraMatrices object can be shared by several CameraData
+  std::vector<std::shared_ptr<CameraMatrices>> camera_matrices_ptrs_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
@@ -109,9 +115,7 @@ private:
   std::optional<std::string> lidar_frame_;
   float max_camera_lidar_delay_;
 
-  std::vector<sensor_msgs::msg::Image::ConstSharedPtr> image_msgs_;
   std::vector<float> camera_masks_;
-  std::vector<std::optional<sensor_msgs::msg::CameraInfo>> camera_info_msgs_;
   std::vector<std::optional<Matrix4f>> lidar2camera_extrinsics_;
 
   bool sensor_fusion_{false};
@@ -132,12 +136,13 @@ private:
   NonMaximumSuppression iou_bev_nms_;
 
   std::unique_ptr<BEVFusionTRT> detector_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_detector_trt_;
+  std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_detector_trt_;
 
   // debugger
-  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_pub_{nullptr};
+  std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
+    nullptr};
+  std::unique_ptr<autoware_utils_debug::DebugPublisher> debug_publisher_ptr_{nullptr};
+  std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_pub_{nullptr};
 };
 }  // namespace autoware::bevfusion
 

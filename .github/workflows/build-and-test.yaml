@@ -15,21 +15,21 @@ jobs:
         include:
           # ROS distribution specific configurations
           - rosdistro: humble
-            container: ghcr.io/autowarefoundation/autoware:universe-devel
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-humble
 
           - rosdistro: jazzy
-            container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
+            container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-jazzy
 
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
       rosdistro: ${{ matrix.rosdistro }}
       container: ${{ matrix.container }}
-      container-suffix: -cuda
       runner: "['self-hosted', 'Linux', 'X64']"
       concurrency-group: build-and-test-${{ matrix.rosdistro }}-${{ github.ref }}
       cancel-in-progress: false
       pull-ccache: false
       push-ccache: true
-      codecov-flag: total-${{ matrix.rosdistro }}-cuda
+      upload-coverage: ${{ matrix.rosdistro == 'jazzy' }}
+      codecov-flag: full-suite
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}

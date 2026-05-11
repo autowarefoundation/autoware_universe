@@ -137,9 +137,11 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   }
 
   // Subscriber setup
-  pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "input", rclcpp::SensorDataQoS(),
-    std::bind(&BlockageDiagComponent::update_diagnostics, this, std::placeholders::_1));
+  // cppcheck-suppress unknownMacro
+  pointcloud_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    sensor_msgs::msg::PointCloud2, "input", rclcpp::SensorDataQoS(),
+    std::bind(&BlockageDiagComponent::update_diagnostics, this, std::placeholders::_1),
+    AUTOWARE_SUBSCRIPTION_OPTIONS{});
 
   // Diagnostic updater setup
   updater_.setHardwareID("blockage_diag");
@@ -248,7 +250,8 @@ void BlockageDiagComponent::publish_blockage_debug_info(
 }
 
 void BlockageDiagComponent::update_diagnostics(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input)
+  // cppcheck-suppress unknownMacro
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) input)
 {
   try {
     validate_pointcloud_fields(*input);

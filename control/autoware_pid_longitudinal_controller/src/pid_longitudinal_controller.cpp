@@ -112,6 +112,8 @@ PidLongitudinalController::PidLongitudinalController(
 
     m_time_threshold_before_pid_integrate =
       node.declare_parameter<double>("time_threshold_before_pid_integration");  // [s]
+    m_ff_scale_min = node.declare_parameter<double>("ff_scale_min");
+    m_ff_scale_max = node.declare_parameter<double>("ff_scale_max");
 
     m_enable_brake_keeping_before_stop =
       node.declare_parameter<bool>("enable_brake_keeping_before_stop");         // [-]
@@ -321,6 +323,8 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
 
     update_param("current_vel_threshold_pid_integration", m_current_vel_threshold_pid_integrate);
     update_param("time_threshold_before_pid_integration", m_time_threshold_before_pid_integrate);
+    update_param("ff_scale_min", m_ff_scale_min);
+    update_param("ff_scale_max", m_ff_scale_max);
   }
 
   // stopping state
@@ -917,7 +921,7 @@ autoware_control_msgs::msg::Longitudinal PidLongitudinalController::createCtrlCm
   cmd.acceleration = static_cast<decltype(cmd.acceleration)>(ctrl_cmd.acc);
 
   // store current velocity history
-  m_vel_hist.push_back({clock_->now(), current_vel});
+  m_vel_hist.emplace_back(clock_->now(), current_vel);
   while (m_vel_hist.size() >
          static_cast<size_t>(m_delay_compensation_time / m_longitudinal_ctrl_period)) {
     m_vel_hist.erase(m_vel_hist.begin());
@@ -1159,10 +1163,9 @@ double PidLongitudinalController::applyVelocityFeedback(const ControlData & cont
   // Details: For accurate control, the feedforward should be calculated in the arclength coordinate
   // system, not in the time coordinate system. Otherwise, even if FF is applied, the vehicle speed
   // deviation will be bigger.
-  constexpr double ff_scale_max = 2.0;  // for safety
-  constexpr double ff_scale_min = 0.5;  // for safety
   const double ff_scale = std::clamp(
-    std::abs(current_vel) / std::max(std::abs(target_motion.vel), 0.1), ff_scale_min, ff_scale_max);
+    std::abs(current_vel) / std::max(std::abs(target_motion.vel), 0.1), m_ff_scale_min,
+    m_ff_scale_max);
   const double ff_acc =
     control_data.interpolated_traj.points.at(control_data.target_idx).acceleration_mps2 * ff_scale;
 

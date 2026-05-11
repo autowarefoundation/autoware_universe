@@ -17,46 +17,35 @@
 
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 
-#include <memory>
-#include <string>
-#include <vector>
-
 namespace autoware::trajectory_modifier::plugin
 {
 
 class StopPointFixer : public TrajectoryModifierPluginBase
 {
 public:
-  StopPointFixer(
-    const std::string & name, rclcpp::Node * node_ptr,
-    const std::shared_ptr<autoware_utils_debug::TimeKeeper> & time_keeper,
-    const TrajectoryModifierParams & params);
+  StopPointFixer() = default;
 
-  void modify_trajectory(
-    TrajectoryPoints & traj_points, const TrajectoryModifierParams & params,
-    const TrajectoryModifierData & data) override;
-  void set_up_params() override;
-  rcl_interfaces::msg::SetParametersResult on_parameter(
-    const std::vector<rclcpp::Parameter> & parameters) override;
+  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
 
   bool is_long_stop_trajectory(const TrajectoryPoints & traj_points) const;
   bool is_stop_point_close_to_ego(
-    const TrajectoryPoints & traj_points, const TrajectoryModifierData & data) const;
-  bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points, const TrajectoryModifierParams & params,
-    const TrajectoryModifierData & data) const override;
+    const TrajectoryPoints & traj_points, const InputData & input) const;
+  [[nodiscard]] bool is_trajectory_modification_required(
+    const TrajectoryPoints & traj_points, const InputData & input) override;
+
+  void update_params(const TrajectoryModifierParams & params) override
+  {
+    params_ = params.stop_point_fixer;
+    enabled_ = params.use_stop_point_fixer;
+  }
+
+  const TrajectoryModifierParams::StopPointFixer & get_params() const { return params_; }
+
+protected:
+  void on_initialize(const TrajectoryModifierParams & params) override;
 
 private:
-  struct Parameters
-  {
-    bool force_stop_long_stopped_trajectories{true};
-    bool force_stop_close_stopped_trajectories{true};
-    double velocity_threshold_mps{0.25};
-    double min_distance_threshold_m{1.0};
-    double min_stop_duration_s{0.5};
-  };
-
-  Parameters params_;
+  TrajectoryModifierParams::StopPointFixer params_;
 };
 
 }  // namespace autoware::trajectory_modifier::plugin

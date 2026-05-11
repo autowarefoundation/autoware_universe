@@ -22,6 +22,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_validator::plugin::safety
@@ -60,33 +61,18 @@ autoware_internal_planning_msgs::msg::PathWithLaneId convert_to_path_with_lane_i
 }
 }  // namespace
 
-OutOfLaneFilter::OutOfLaneFilter() : ValidatorInterface("OutOfLaneFilter")
+OutOfLaneFilter::OutOfLaneFilter() : ValidatorInterface("out_of_lane_filter")
 {
   // BoundaryDepartureChecker will be initialized when vehicle_info is set
 }
 
-void OutOfLaneFilter::set_parameters(rclcpp::Node & node)
+void OutOfLaneFilter::update_parameters(const validator::Params & params)
 {
-  using autoware_utils_rclcpp::get_or_declare_parameter;
-  params_.max_check_time = get_or_declare_parameter<double>(node, "out_of_lane.time");
-  params_.min_value = get_or_declare_parameter<double>(node, "out_of_lane.min_value");
-
-  // Initialize boundary departure checker if vehicle_info is available
-  if (!boundary_departure_checker_ && vehicle_info_ptr_) {
-    autoware::boundary_departure_checker::Param bdc_param{};
-    boundary_departure_checker_ =
-      std::make_unique<autoware::boundary_departure_checker::BoundaryDepartureChecker>(
-        bdc_param, *vehicle_info_ptr_);
-  }
+  params_.max_check_time = params.out_of_lane.time;
+  params_.min_value = params.out_of_lane.min_value;
 }
 
-void OutOfLaneFilter::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
-{
-  autoware_utils_rclcpp::update_param(parameters, "out_of_lane.time", params_.max_check_time);
-  autoware_utils_rclcpp::update_param(parameters, "out_of_lane.min_value", params_.min_value);
-}
-
-tl::expected<void, std::string> OutOfLaneFilter::is_feasible(
+OutOfLaneFilter::result_t OutOfLaneFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   // Check required context data
@@ -102,11 +88,18 @@ tl::expected<void, std::string> OutOfLaneFilter::is_feasible(
   const bool will_leave_lane =
     boundary_departure_checker_->checkPathWillLeaveLane(context.lanelet_map, path);
 
-  // Return false if the path will leave the lane
-  if (will_leave_lane) {
-    return tl::make_unexpected("Trajectory goes out of lane boundaries");
-  }
-  return {};
+  // Set metrics as ERROR if the path will leave the lane
+  std::vector<MetricReport> metrics{
+    autoware_trajectory_validator::build<MetricReport>()
+      .validator_name(get_name())
+      .validator_category(category())
+      .metric_name("check_out_of_lane")
+      .metric_value(0.0)
+      .level(will_leave_lane ? MetricReport::ERROR : MetricReport::OK)};
+
+  const auto is_feasible = !will_leave_lane;
+
+  return ValidationResult{is_feasible, std::move(metrics)};
 }
 
 }  // namespace autoware::trajectory_validator::plugin::safety

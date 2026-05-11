@@ -11,19 +11,14 @@
           "default": "$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so",
           "description": "Path to libautoware_tensorrt_plugins.so file for the diffusion planner"
         },
-        "artifact_dir": {
-          "type": "string",
-          "default": "$(env HOME)/autoware_data/diffusion_planner",
-          "description": "Path to the Artifact(onnx model, etc.) directory"
-        },
         "onnx_model_path": {
           "type": "string",
-          "default": "$(var artifact_dir)/diffusion_planner.onnx",
+          "default": "$(var data_path)/v4.0/diffusion_planner.onnx",
           "description": "Path to the ONNX model file for the diffusion planner"
         },
         "args_path": {
           "type": "string",
-          "default": "$(var artifact_dir)/diffusion_planner.param.json",
+          "default": "$(var data_path)/v4.0/diffusion_planner.param.json",
           "description": "Path to model argument/configuration file"
         },
         "planning_frequency_hz": {
@@ -111,6 +106,43 @@
           "default": false,
           "description": "Whether to interpolate ego past trajectory at regular time intervals"
         },
+        "planning_factor": {
+          "type": "object",
+          "properties": {
+            "enable_stop": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable stop planning factor"
+            },
+            "enable_slowdown": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable slowdown planning factor"
+            },
+            "stop_velocity_threshold": {
+              "type": "number",
+              "default": 0.1,
+              "description": "Velocity threshold to detect a stop [m/s]"
+            },
+            "stop_keep_duration_threshold": {
+              "type": "number",
+              "default": 1.0,
+              "description": "Duration threshold to validate a stop [s]"
+            },
+            "slowdown_accel_threshold": {
+              "type": "number",
+              "default": -0.3,
+              "description": "Acceleration threshold to detect a slowdown [m/s^2]"
+            }
+          },
+          "required": [
+            "enable_stop",
+            "enable_slowdown",
+            "stop_velocity_threshold",
+            "stop_keep_duration_threshold",
+            "slowdown_accel_threshold"
+          ]
+        },
         "debug_params": {
           "type": "object",
           "properties": {
@@ -144,6 +176,7 @@
         "stopping_threshold",
         "turn_indicator_keep_offset",
         "turn_indicator_hold_duration",
+        "planning_factor",
         "debug_params"
       ]
     }

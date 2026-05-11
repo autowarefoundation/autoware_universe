@@ -15,8 +15,11 @@
 #ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 #define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 
+#include "signal_validator.hpp"
 #include "traffic_light_multi_camera_fusion_process.hpp"
+#include "types.hpp"
 
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -45,10 +48,6 @@ namespace autoware::traffic_light
 {
 namespace mf = message_filters;
 
-using StateKey = std::vector<std::pair<
-  tier4_perception_msgs::msg::TrafficLightElement::_color_type,
-  tier4_perception_msgs::msg::TrafficLightElement::_shape_type>>;
-
 inline bool isUnknown(const StateKey & state_key)
 {
   return state_key.size() == 1 &&
@@ -76,6 +75,12 @@ struct GroupFusionInfo
 {
   std::map<StateKey, double> accumulated_log_odds;
   std::map<StateKey, utils::FusionRecord> best_record_for_state;
+};
+
+struct ConflictInfo
+{
+  tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type id;
+  ConflictType conflict_type;
 };
 
 using GroupFusionInfoMap =
@@ -145,12 +150,15 @@ private:
   void updateBestRecord(
     std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
     double confidence, const utils::FusionRecord & record);
+
   /**
    * @brief Determines the best state for each group based on accumulated evidence.
    */
   void determineBestGroupState(
     const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map);
+
+  void publishDiagnostics(rclcpp::Time stamp);
 
   using ExactSyncPolicy = mf::sync_policies::ExactTime<CamInfoType, RoiArrayType, SignalArrayType>;
   using ExactSync = mf::Synchronizer<ExactSyncPolicy>;
@@ -186,6 +194,13 @@ private:
    * @brief The prior log-odds for a traffic light state.
    */
   double prior_log_odds_;
+  bool use_signal_consistency_check_;
+  bool publish_partial_matched_signal_;
+
+  std::unique_ptr<SignalValidator> signal_validator_;
+  std::vector<ConflictInfo> conflicted_regulatory_element_status_{};
+
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 };
 }  // namespace autoware::traffic_light
 #endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
