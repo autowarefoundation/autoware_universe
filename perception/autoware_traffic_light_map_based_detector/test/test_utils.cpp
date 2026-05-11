@@ -22,83 +22,87 @@
 
 #include <vector>
 
-TEST(roundInImageFrame, no_round)
+TEST(RoundInImageFrameTest, NoRound)
 {
   const uint32_t width = 1440;
   const uint32_t height = 1080;
   cv::Point2d point2d(1.0, 2.0);
-  autoware::traffic_light::utils::roundInImageFrame(width, height, point2d);
+  autoware::traffic_light::utils::round_in_image_frame(width, height, point2d);
   EXPECT_EQ(point2d.x, 1.0);
   EXPECT_EQ(point2d.y, 2.0);
 }
 
-TEST(roundInImageFrame, out_of_range_bottom_right)
+TEST(RoundInImageFrameTest, OutOfRangeBottomRight)
 {
   const uint32_t width = 1440;
   const uint32_t height = 1080;
   cv::Point2d point2d(1500.0, 1100.0);
-  autoware::traffic_light::utils::roundInImageFrame(width, height, point2d);
+  autoware::traffic_light::utils::round_in_image_frame(width, height, point2d);
   EXPECT_EQ(point2d.x, 1439.0);
   EXPECT_EQ(point2d.y, 1079.0);
 }
 
-TEST(roundInImageFrame, out_of_range_top_left)
+TEST(RoundInImageFrameTest, OutOfRangeTopLeft)
 {
   const uint32_t width = 1440;
   const uint32_t height = 1080;
   cv::Point2d point2d(-1.5, -2.5);
-  autoware::traffic_light::utils::roundInImageFrame(width, height, point2d);
+  autoware::traffic_light::utils::round_in_image_frame(width, height, point2d);
   EXPECT_EQ(point2d.x, 0.0);
   EXPECT_EQ(point2d.y, 0.0);
 }
 
-TEST(isInDistanceRange, in_range)
+TEST(IsInDistanceRangeTest, InRange)
 {
   const tf2::Vector3 v1(1.0, 1.0, 3.0);
   const tf2::Vector3 v2(4.0, 5.0, 6.0);
   const double max_distance_range = 6.0;
-  const bool result = autoware::traffic_light::utils::isInDistanceRange(v1, v2, max_distance_range);
+  const bool result =
+    autoware::traffic_light::utils::is_in_distance_range(v1, v2, max_distance_range);
   EXPECT_TRUE(result);
 }
 
-TEST(isInDistanceRange, out_of_range)
+TEST(IsInDistanceRangeTest, OutOfRange)
 {
   const tf2::Vector3 v1(1.0, 1.0, 3.0);
   const tf2::Vector3 v2(4.0, 5.0, 6.0);
   const double max_distance_range = 5.0;
-  const bool result = autoware::traffic_light::utils::isInDistanceRange(v1, v2, max_distance_range);
+  const bool result =
+    autoware::traffic_light::utils::is_in_distance_range(v1, v2, max_distance_range);
   EXPECT_FALSE(result);
 }
 
-TEST(isInAngleRange, in_range)
+TEST(IsInAngleRangeTest, InRange)
 {
   const double tl_yaw = M_PI / 2;
   const double camera_yaw = M_PI;
   const double max_angle_range = M_PI;
   const bool result =
-    autoware::traffic_light::utils::isInAngleRange(tl_yaw, camera_yaw, max_angle_range);
+    autoware::traffic_light::utils::is_in_angle_range(tl_yaw, camera_yaw, max_angle_range);
   EXPECT_TRUE(result);
 }
 
-TEST(isInAngleRange, out_of_range)
+TEST(IsInAngleRangeTest, OutOfRange)
 {
   const double tl_yaw = M_PI / 2;
   const double camera_yaw = M_PI;
   const double max_angle_range = M_PI / 4;
-  bool result = autoware::traffic_light::utils::isInAngleRange(tl_yaw, camera_yaw, max_angle_range);
+  bool result =
+    autoware::traffic_light::utils::is_in_angle_range(tl_yaw, camera_yaw, max_angle_range);
   EXPECT_FALSE(result);
 }
 
-TEST(isInAngleRange, in_range_boundary)
+TEST(IsInAngleRangeTest, InRangeBoundary)
 {
   const double tl_yaw = M_PI - M_PI / 16;
   const double camera_yaw = -M_PI + M_PI / 16;
   const double max_angle_range = M_PI / 4;
-  bool result = autoware::traffic_light::utils::isInAngleRange(tl_yaw, camera_yaw, max_angle_range);
+  bool result =
+    autoware::traffic_light::utils::is_in_angle_range(tl_yaw, camera_yaw, max_angle_range);
   EXPECT_TRUE(result);
 }
 
-TEST(getVibrationMargin, calculate)
+TEST(GetVibrationMarginTest, Calculate)
 {
   const tf2::Vector3 position(10.0, 20.0, 100.0);
   const double margin_pitch = 0.01745329251;  // 1 degree in radians
@@ -107,7 +111,7 @@ TEST(getVibrationMargin, calculate)
   const double margin_width = 0.4;
   const double margin_depth = 0.5;
 
-  const tf2::Vector3 result = autoware::traffic_light::utils::getVibrationMargin(
+  const tf2::Vector3 result = autoware::traffic_light::utils::get_vibration_margin(
     position.z(), margin_pitch, margin_yaw, margin_height, margin_width, margin_depth);
 
   EXPECT_FLOAT_EQ(result.x(), 1.945240643);
@@ -115,7 +119,7 @@ TEST(getVibrationMargin, calculate)
   EXPECT_FLOAT_EQ(result.z(), 0.25);
 }
 
-TEST(computeBoundingRoi, select)
+TEST(ComputeBoundingRoiTest, Select)
 {
   const uint32_t width = 1440;
   const uint32_t height = 1080;
@@ -146,7 +150,7 @@ TEST(computeBoundingRoi, select)
     rois.push_back(roi);
   }
 
-  autoware::traffic_light::utils::computeBoundingRoi(width, height, rois, max_roi);
+  autoware::traffic_light::utils::compute_bounding_roi(width, height, rois, max_roi);
   EXPECT_EQ(max_roi.roi.x_offset, 0);
   EXPECT_EQ(max_roi.roi.y_offset, 0);
   const uint32_t expected_width = 10 + 160 - 0;
@@ -155,12 +159,12 @@ TEST(computeBoundingRoi, select)
   EXPECT_EQ(max_roi.roi.height, expected_height);
 }
 
-TEST(getCameraYaw, calculate)
+TEST(GetCameraYawTest, Calculate)
 {
   tf2::Quaternion q;
   q.setRPY(M_PI / 2.0, 0.0, 0.0);
   const tf2::Transform tf_map2camera(q, tf2::Vector3(1.0, 2.0, 3.0));
-  const double result = autoware::traffic_light::utils::getCameraYaw(tf_map2camera);
+  const double result = autoware::traffic_light::utils::get_camera_yaw(tf_map2camera);
   const double expected_yaw = -M_PI / 2.0;
   EXPECT_FLOAT_EQ(result, expected_yaw);
 }
