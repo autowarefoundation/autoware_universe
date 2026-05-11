@@ -16,7 +16,7 @@
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <autoware_lanelet2_extension/visualization/visualization.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 
@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -150,7 +151,7 @@ std::optional<SetRouteError> TrafficLightMapBasedDetector::set_route(
   return std::nullopt;
 }
 
-const tf2::Transform & find_closest_transform(
+const StampedTransform & find_closest_transform(
   const std::vector<StampedTransform> & samples, const rclcpp::Time & target_time)
 {
   const auto closest_iter = std::min_element(
@@ -160,7 +161,28 @@ const tf2::Transform & find_closest_transform(
       const auto diff_rhs = std::abs((rhs.stamp - target_time).nanoseconds());
       return diff_lhs < diff_rhs;
     });
-  return closest_iter->transform;
+  return *closest_iter;
+}
+
+const TrafficLightMapBasedDetector::TrafficLightSet &
+TrafficLightMapBasedDetector::select_target_traffic_lights() const
+{
+  if (route_traffic_lights_ptr_ != nullptr) {
+    return *route_traffic_lights_ptr_;
+  }
+  return *all_traffic_lights_ptr_;
+}
+
+TrafficLightMapBasedDetectorConfig make_expect_roi_config(
+  const TrafficLightMapBasedDetectorConfig & base_config)
+{
+  TrafficLightMapBasedDetectorConfig expect_roi_config = base_config;
+  expect_roi_config.max_vibration_depth = 0;
+  expect_roi_config.max_vibration_height = 0;
+  expect_roi_config.max_vibration_width = 0;
+  expect_roi_config.max_vibration_yaw = 0;
+  expect_roi_config.max_vibration_pitch = 0;
+  return expect_roi_config;
 }
 
 DetectionResult TrafficLightMapBasedDetector::detect(
@@ -178,55 +200,40 @@ DetectionResult TrafficLightMapBasedDetector::detect(
   image_geometry::PinholeCameraModel pinhole_camera_model;
   pinhole_camera_model.fromCameraInfo(camera_info);
 
-  // Use route traffic lights if available, otherwise all traffic lights
-  std::vector<lanelet::ConstLineString3d> visible_traffic_lights;
-  if (route_traffic_lights_ptr_ != nullptr) {
-    get_visible_traffic_lights(
-      *route_traffic_lights_ptr_, tf_map2camera_samples, pinhole_camera_model,
-      visible_traffic_lights);
-  } else {
-    get_visible_traffic_lights(
-      *all_traffic_lights_ptr_, tf_map2camera_samples, pinhole_camera_model,
-      visible_traffic_lights);
-  }
+  const auto visible_traffic_lights = get_visible_traffic_lights(
+    select_target_traffic_lights(), tf_map2camera_samples, pinhole_camera_model);
 
-  // set all offset to zero when calculating the expect roi
-  const tf2::Transform tf_map2camera_closest =
+  const StampedTransform tf_map2camera_closest =
     find_closest_transform(tf_map2camera_samples, camera_info.header.stamp);
-  TrafficLightMapBasedDetectorConfig expect_roi_config = config_;
-  expect_roi_config.max_vibration_depth = 0;
-  expect_roi_config.max_vibration_height = 0;
-  expect_roi_config.max_vibration_width = 0;
-  expect_roi_config.max_vibration_yaw = 0;
-  expect_roi_config.max_vibration_pitch = 0;
+  const auto expect_roi_config = make_expect_roi_config(config_);
 
   for (const auto & traffic_light : visible_traffic_lights) {
-    tier4_perception_msgs::msg::TrafficLightRoi rough_roi, expect_roi;
-    if (!get_traffic_light_roi(
-          tf_map2camera_closest, pinhole_camera_model, traffic_light, expect_roi_config,
-          expect_roi)) {
+    const auto expect_roi = get_traffic_light_roi(
+      {tf_map2camera_closest}, pinhole_camera_model, traffic_light, expect_roi_config);
+    if (!expect_roi) {
       continue;
     }
-    if (!get_traffic_light_roi(
-          tf_map2camera_samples, pinhole_camera_model, traffic_light, config_, rough_roi)) {
+    const auto rough_roi =
+      get_traffic_light_roi(tf_map2camera_samples, pinhole_camera_model, traffic_light, config_);
+    if (!rough_roi) {
       continue;
     }
-    result.rough_rois.rois.push_back(rough_roi);
-    result.expect_rois.rois.push_back(expect_roi);
+    result.rough_rois.rois.push_back(*rough_roi);
+    result.expect_rois.rois.push_back(*expect_roi);
   }
 
-  result.markers =
-    create_traffic_light_markers(tf_map2camera_closest, camera_info.header, visible_traffic_lights);
+  result.markers = create_traffic_light_markers(
+    tf_map2camera_closest.transform, camera_info.header, visible_traffic_lights);
 
   return result;
 }
 
-void TrafficLightMapBasedDetector::get_visible_traffic_lights(
+std::vector<lanelet::ConstLineString3d> TrafficLightMapBasedDetector::get_visible_traffic_lights(
   const TrafficLightSet & all_traffic_lights,
   const std::vector<StampedTransform> & tf_map2camera_samples,
-  const image_geometry::PinholeCameraModel & pinhole_camera_model,
-  std::vector<lanelet::ConstLineString3d> & visible_traffic_lights) const
+  const image_geometry::PinholeCameraModel & pinhole_camera_model) const
 {
+  std::vector<lanelet::ConstLineString3d> visible_traffic_lights;
   for (const auto & traffic_light : all_traffic_lights) {
     if (
       traffic_light.hasAttribute("subtype") == false ||
@@ -278,14 +285,17 @@ void TrafficLightMapBasedDetector::get_visible_traffic_lights(
       break;
     }
   }
+  return visible_traffic_lights;
 }
 
-bool TrafficLightMapBasedDetector::get_traffic_light_roi(
+std::optional<tier4_perception_msgs::msg::TrafficLightRoi>
+TrafficLightMapBasedDetector::project_traffic_light_to_roi(
   const tf2::Transform & tf_map2camera,
   const image_geometry::PinholeCameraModel & pinhole_camera_model,
-  const lanelet::ConstLineString3d traffic_light, const TrafficLightMapBasedDetectorConfig & config,
-  tier4_perception_msgs::msg::TrafficLightRoi & roi) const
+  const lanelet::ConstLineString3d traffic_light,
+  const TrafficLightMapBasedDetectorConfig & config) const
 {
+  tier4_perception_msgs::msg::TrafficLightRoi roi;
   roi.traffic_light_id = traffic_light.id();
   if (pedestrian_traffic_light_id_.find(traffic_light.id()) != pedestrian_traffic_light_id_.end()) {
     roi.traffic_light_type = tier4_perception_msgs::msg::TrafficLightRoi::PEDESTRIAN_TRAFFIC_LIGHT;
@@ -303,7 +313,7 @@ bool TrafficLightMapBasedDetector::get_traffic_light_roi(
       config.max_vibration_height, config.max_vibration_width, config.max_vibration_depth);
     tf2::Vector3 point3d = top_left_camera_optical - margin;
     if (point3d.z() <= 0.0) {
-      return false;
+      return std::nullopt;
     }
     // enlarged target position in camera coordinate
     {
@@ -326,7 +336,7 @@ bool TrafficLightMapBasedDetector::get_traffic_light_roi(
       config.max_vibration_height, config.max_vibration_width, config.max_vibration_depth);
     tf2::Vector3 point3d = bottom_right_camera_optical + margin;
     if (point3d.z() <= 0.0) {
-      return false;
+      return std::nullopt;
     }
     // enlarged target position in camera coordinate
     {
@@ -339,34 +349,35 @@ bool TrafficLightMapBasedDetector::get_traffic_light_roi(
     }
 
     if (roi.roi.width < 1 || roi.roi.height < 1) {
-      return false;
+      return std::nullopt;
     }
   }
-  return true;
+  return roi;
 }
 
-bool TrafficLightMapBasedDetector::get_traffic_light_roi(
+std::optional<tier4_perception_msgs::msg::TrafficLightRoi>
+TrafficLightMapBasedDetector::get_traffic_light_roi(
   const std::vector<StampedTransform> & tf_map2camera_samples,
   const image_geometry::PinholeCameraModel & pinhole_camera_model,
-  const lanelet::ConstLineString3d traffic_light, const TrafficLightMapBasedDetectorConfig & config,
-  tier4_perception_msgs::msg::TrafficLightRoi & out_roi) const
+  const lanelet::ConstLineString3d traffic_light,
+  const TrafficLightMapBasedDetectorConfig & config) const
 {
   std::vector<tier4_perception_msgs::msg::TrafficLightRoi> rois;
   for (const auto & sample : tf_map2camera_samples) {
-    const auto & tf_map2camera = sample.transform;
-    tier4_perception_msgs::msg::TrafficLightRoi roi;
-    if (get_traffic_light_roi(tf_map2camera, pinhole_camera_model, traffic_light, config, roi)) {
-      rois.push_back(roi);
+    if (
+      auto projected = project_traffic_light_to_roi(
+        sample.transform, pinhole_camera_model, traffic_light, config)) {
+      rois.push_back(*projected);
     }
   }
   if (rois.empty()) {
-    return false;
+    return std::nullopt;
   }
-  out_roi = rois.front();
+  tier4_perception_msgs::msg::TrafficLightRoi out_roi = rois.front();
   utils::compute_bounding_roi(
     pinhole_camera_model.cameraInfo().width, pinhole_camera_model.cameraInfo().height, rois,
     out_roi);
-  return true;
+  return out_roi;
 }
 
 visualization_msgs::msg::MarkerArray TrafficLightMapBasedDetector::create_traffic_light_markers(
