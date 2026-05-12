@@ -342,11 +342,10 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject)
 {
   // Arrange
   constexpr double object_x = 20.0;
-  constexpr double initial_velocity = 8.0;
-  auto trajectory = create_straight_trajectory(30.0, initial_velocity);
+  auto trajectory = create_straight_trajectory(30.0, 8.0);
   const auto car_blocking_path = make_blocking_car(object_x, 0.0);
-  const auto input = create_input_data(
-    make_odometry(0.0, 0.0, initial_velocity), make_acceleration(0.0), car_blocking_path);
+  const auto input =
+    create_input_data(make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), car_blocking_path);
 
   // Act: obstacle tracker requires `on_time_buffer` of continuous observation
   //      before becoming active
@@ -356,18 +355,19 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject)
 
   // Assert
   ASSERT_TRUE(modified);
-  EXPECT_LT(
-    trajectory.back().longitudinal_velocity_mps, trajectory.front().longitudinal_velocity_mps);
+  EXPECT_NEAR(trajectory.back().longitudinal_velocity_mps, 0.0F, 0.1F);
   EXPECT_LT(trajectory.back().pose.position.x, object_x);
 }
 
 TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluster)
 {
   // Arrange
+  constexpr double cluster_center_x = 15.0;
   auto trajectory = create_straight_trajectory(30.0, 8.0);
+  const auto pointcloud_blocking_path =
+    make_blocking_pointcloud_cluster(cluster_center_x, 0.0, 0.7);
   const auto input = create_input_data(
-    make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), nullptr,
-    make_blocking_pointcloud_cluster(15.0, 0.0, 0.7));
+    make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), nullptr, pointcloud_blocking_path);
 
   // Act: obstacle tracker requires `on_time_buffer` of continuous observation
   //      before becoming active
@@ -377,6 +377,6 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluste
 
   // Assert
   ASSERT_TRUE(modified);
-  EXPECT_LT(
-    trajectory.back().longitudinal_velocity_mps, trajectory.front().longitudinal_velocity_mps);
+  EXPECT_NEAR(trajectory.back().longitudinal_velocity_mps, 0.0F, 0.1F);
+  EXPECT_LT(trajectory.back().pose.position.x, cluster_center_x);
 }
