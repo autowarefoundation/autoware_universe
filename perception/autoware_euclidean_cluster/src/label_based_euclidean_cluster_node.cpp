@@ -143,6 +143,9 @@ std::optional<std::uint8_t> to_object_label(const std::string & mapped_label)
   if (mapped_label == "unknown") {
     return ObjectClassification::UNKNOWN;
   }
+  if (mapped_label == "trailer") {
+    return ObjectClassification::TRAILER;
+  }
   return std::nullopt;
 }
 
