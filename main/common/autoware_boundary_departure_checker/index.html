@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/common/tier4_api_utils/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/common/autoware_boundary_departure_checker/">
       
       
-        <link rel="prev" href="../autoware_universe_utils/third_party_licenses/opencv-license/">
+        <link rel="prev" href="../">
       
       
-        <link rel="next" href="../../control/autoware_autonomous_emergency_braking/">
+        <link rel="next" href="../autoware_component_interface_specs_universe/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>tier4_api_utils - Autoware Universe Documentation</title>
+        <title>Boundary Departure Checker - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#tier4_api_utils" class="md-skip">
+        <a href="#boundary-departure-checker" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              tier4_api_utils
+              Boundary Departure Checker
             
           </span>
         </div>
@@ -1174,7 +1174,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../autoware_boundary_departure_checker" class="md-nav__link">
+      <a href="." class="md-nav__link">
         
   
   
@@ -1929,7 +1929,7 @@
   
   
     <li class="md-nav__item">
-      <a href="." class="md-nav__link">
+      <a href="../tier4_api_utils" class="md-nav__link">
         
   
   
@@ -22754,6 +22754,108 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-input-and-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Input and Output
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Input and Output">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-what-the-module-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. What the Module Does
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-process-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Process Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-possible-scenarios-and-expected-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Possible Scenarios and Expected Behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -22772,9 +22874,221 @@
   
 
 
-<div><h1 id="tier4_api_utils">tier4_api_utils<a class="headerlink" href="#tier4_api_utils" title="Permanent link">#</a></h1>
-<p>This is an old implementation of a class that logs when calling a service.
-Please use <a href="../autoware_component_interface_utils/">component_interface_utils</a> instead.</p></div>
+<div><h1 id="boundary-departure-checker">Boundary Departure Checker<a class="headerlink" href="#boundary-departure-checker" title="Permanent link">#</a></h1>
+<h2 id="1-introduction">1. Introduction<a class="headerlink" href="#1-introduction" title="Permanent link">#</a></h2>
+<p>The Boundary Departure Checker is a trajectory validation module designed to prevent the autonomous vehicle from crossing uncrossable road boundaries. It continuously evaluates the ego vehicle's predicted path and outputs a departure severity status to the planning system to ensure safe lane following.</p>
+<h2 id="2-input-and-output">2. Input and Output<a class="headerlink" href="#2-input-and-output" title="Permanent link">#</a></h2>
+<h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Vehicle Information (<code>vehicle_info</code>):</strong> Used to generate geometric footprints and filter boundaries based on the vehicle's elevation.</li>
+<li><strong>Kinematic State (<code>/localization/kinematic_state</code>):</strong> Provides ego vehicle velocity, used to calculate the minimum physical braking distance.</li>
+<li><strong>Acceleration (<code>/localization/acceleration</code>):</strong> Used alongside velocity to calculate the minimum braking distance.</li>
+<li><strong>Candidate Trajectories (<code>/planning/generator/concatenated/candidate_trajectories</code>):</strong> The predicted paths to be evaluated, requiring accurate time-from-start values.</li>
+<li><strong>Vector Map (<code>/map/vector_map</code>):</strong> The Lanelet2 map used to extract uncrossable boundary locations, such as <code>road_border</code>.</li>
+</ul>
+<h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>Status:</strong> The departure severity classification (<code>NONE</code>, <code>APPROACHING_DEPARTURE</code>, or <code>CRITICAL_DEPARTURE</code>).</li>
+<li><strong>Score:</strong> A numerical value used for trajectory cost evaluation.</li>
+<li><strong>Processing Time:</strong> Execution time in milliseconds for system monitoring.</li>
+<li><strong>Debug Markers:</strong> Visualizations for the ego footprint, boundaries, and geometric projections.</li>
+</ul>
+<h2 id="3-what-the-module-does">3. What the Module Does<a class="headerlink" href="#3-what-the-module-does" title="Permanent link">#</a></h2>
+<p>The module evaluates whether the ego vehicle's predicted trajectory will safely stay within the road boundaries. It splits the vehicle's footprint into distinct left and right sides to evaluate the environment asymmetrically. By computing the geometric intersection between the vehicle's predicted footprint and mapped uncrossable boundaries, it classifies the trajectory's safety based on physical braking limits and predefined time thresholds. It also applies time-based hysteresis to prevent status flickering caused by noisy trajectory predictions.</p>
+<h2 id="4-parameters">4. Parameters<a class="headerlink" href="#4-parameters" title="Permanent link">#</a></h2>
+<p>The module uses a structured parameter configuration to define thresholds, footprint margins, and buffer times. Below is a high-level representation of the parameter schema:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boundary_types_to_detect</td>
+<td>array</td>
+<td>Linestring boundary tags to be treated as uncrossable.</td>
+<td>['road_border']</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>max_lateral_rtree_queries</td>
+<td>integer</td>
+<td>Maximum number of lateral R-tree queries.</td>
+<td>5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>lateral_margin_m</td>
+<td>float</td>
+<td>Lateral margin threshold [m].</td>
+<td>0.01</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>longitudinal_margin_m</td>
+<td>float</td>
+<td>Longitudinal safety buffer margin [m].</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>max_deceleration_mps2</td>
+<td>float</td>
+<td>Maximum deceleration [m/s^2].</td>
+<td>-4.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>max_jerk_mps3</td>
+<td>float</td>
+<td>Maximum jerk [m/s^3].</td>
+<td>-5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>brake_delay_s</td>
+<td>float</td>
+<td>Brake system reaction delay [s].</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>time_to_departure_cutoff_s</td>
+<td>float</td>
+<td>Look-ahead time limit for departure evaluation [s].</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>on_time_buffer_s</td>
+<td>float</td>
+<td>Continuous detection time required to trigger a departure alert [s].</td>
+<td>0.15</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>off_time_buffer_s</td>
+<td>float</td>
+<td>Continuous safe detection time required to clear a departure alert [s].</td>
+<td>0.15</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>enable_developer_marker</td>
+<td>boolean</td>
+<td>Enable advanced debug markers for developers.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-process-overview">5. Process Overview<a class="headerlink" href="#5-process-overview" title="Permanent link">#</a></h2>
+<ol>
+<li><strong>Footprint Generation:</strong> The module generates geometric footprints for the ego vehicle at every point along the candidate trajectory. It expands the footprint size using margins to account for localization uncertainty.</li>
+<li><strong>Boundary Extraction and Filtering:</strong> Uncrossable boundaries (e.g., <code>road_border</code>) are extracted from the Lanelet2 map and stored in a spatial R-tree. Boundaries significantly above or below the vehicle's Z-axis height are filtered out to prevent false positives from overpasses.</li>
+<li><strong>Distance Calculation:</strong> The system calculates the shortest lateral distance from the left and right footprint segments to the nearest filtered boundary.</li>
+<li><strong>Severity Evaluation:</strong> A minimum physical braking distance is dynamically calculated using current speed, acceleration, maximum allowed deceleration, jerk, and brake delay. The departure severity is assigned as follows:<ul>
+<li><strong>NONE:</strong> The footprint lateral distance is greater than the critical lateral margin.</li>
+<li><strong>APPROACHING:</strong> A departure is detected, but it is farther than the braking distance AND the time to departure is greater than the cutoff threshold.</li>
+<li><strong>CRITICAL:</strong> A departure is detected within the braking distance OR before the cutoff time expires.</li>
+</ul>
+</li>
+<li><strong>Hysteresis Logic:</strong> To ensure stability, an <strong>ON-Time buffer</strong> suppresses the <code>CRITICAL</code> state until the departure is continuously detected for a set duration. If a collision is imminent, this buffer is bypassed. An <strong>OFF-Time buffer</strong> ensures the status does not revert to <code>NONE</code> until the trajectory is continuously evaluated as safe.</li>
+</ol>
+<h2 id="6-possible-scenarios-and-expected-behavior">6. Possible Scenarios and Expected Behavior<a class="headerlink" href="#6-possible-scenarios-and-expected-behavior" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>Scenario 1:</strong> The ego vehicle's footprint overlaps with a map boundary that does not have the <code>road_border</code> tag (or other defined uncrossable tags).<ul>
+<li><strong>Expected Behavior:</strong> Evaluated as safe (<code>NONE</code>).</li>
+</ul>
+</li>
+<li><strong>Scenario 2:</strong> The ego vehicle's footprint does not overlap the defined lateral gap to the <code>road_border</code>.<ul>
+<li><strong>Expected Behavior:</strong> Evaluated as safe (<code>NONE</code>).</li>
+</ul>
+</li>
+<li><strong>Scenario 3:</strong> The footprint overlaps the lateral gap to the <code>road_border</code>, AND the arc length to the overlap is less than the minimum braking distance, AND the time to reach it is less than the cutoff time.<ul>
+<li><strong>Expected Behavior:</strong> Evaluated as a departure (<code>CRITICAL_DEPARTURE</code>).</li>
+</ul>
+</li>
+<li><strong>Scenario 4:</strong> The footprint overlaps the lateral gap, and the time to reach the overlap is less than the cutoff time, even if the arc length is greater than the minimum braking distance.<ul>
+<li><strong>Expected Behavior:</strong> Evaluated as a departure (<code>CRITICAL_DEPARTURE</code>).</li>
+</ul>
+</li>
+<li><strong>Scenario 5:</strong> The footprint overlaps the lateral gap, and the arc length to the overlap is less than the minimum braking distance, even if the time to reach the overlap exceeds the cutoff time.<ul>
+<li><strong>Expected Behavior:</strong> Evaluated as a departure (<code>CRITICAL_DEPARTURE</code>).</li>
+</ul>
+</li>
+<li><strong>Scenario 6:</strong> The footprint overlaps the lateral gap, the longitudinal distance to the overlap is greater than the minimum braking distance, and the time to reach it is greater than the cutoff time.<ul>
+<li><strong>Expected Behavior:</strong> Evaluated as approaching departure (<code>APPROACHING_DEPARTURE</code>)</li>
+</ul>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Condition / Description</th>
+<th>Lateral Overlap?</th>
+<th>Lon &gt; Braking Dist?</th>
+<th>Time &gt; Cutoff?</th>
+<th>Expected Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1: Wrong Tag</strong></td>
+<td>Boundary lacks <code>road_border</code> tag</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td><strong>NONE</strong></td>
+</tr>
+<tr>
+<td><strong>2: Safe Lateral</strong></td>
+<td>Vehicle stays within lateral gap</td>
+<td>No</td>
+<td>N/A</td>
+<td>N/A</td>
+<td><strong>NONE</strong></td>
+</tr>
+<tr>
+<td><strong>3: Imminent</strong></td>
+<td>Too close and too fast</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td><strong>CRITICAL</strong></td>
+</tr>
+<tr>
+<td><strong>4: Late Warning</strong></td>
+<td>Low time buffer to crossing</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><strong>No</strong></td>
+<td><strong>CRITICAL</strong></td>
+</tr>
+<tr>
+<td><strong>5: High Speed</strong></td>
+<td>Insufficient braking distance</td>
+<td>Yes</td>
+<td><strong>No</strong></td>
+<td>Yes</td>
+<td><strong>CRITICAL</strong></td>
+</tr>
+<tr>
+<td><strong>6: Approaching</strong></td>
+<td>Within margin, but buffers are safe</td>
+<td>Yes</td>
+<td><strong>Yes</strong></td>
+<td><strong>Yes</strong></td>
+<td><strong>APPROACHING</strong></td>
+</tr>
+</tbody>
+</table></div>
 
 
 
@@ -22810,7 +23124,7 @@ Please use <a href="../autoware_component_interface_utils/">component_interface_
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_universe_utils/third_party_licenses/opencv-license/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Opencv license">
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Common">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -22820,20 +23134,20 @@ Please use <a href="../autoware_component_interface_utils/">component_interface_
                 Previous
               </span>
               <div class="md-ellipsis">
-                Opencv license
+                Common
               </div>
             </div>
           </a>
         
         
           
-          <a href="../../control/autoware_autonomous_emergency_braking/" class="md-footer__link md-footer__link--next" aria-label="Next: Autonomous Emergency Braking (AEB)">
+          <a href="../autoware_component_interface_specs_universe/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_component_interface_specs_universe">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Autonomous Emergency Braking (AEB)
+                autoware_component_interface_specs_universe
               </div>
             </div>
             <div class="md-footer__button md-icon">
