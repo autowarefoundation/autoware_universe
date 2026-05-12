@@ -38,11 +38,16 @@ void trim_trajectory_and_remove_duplicates(TrajectoryPoints & trajectory_points)
   if (trajectory_points.empty()) return;
   const auto zero_velocity_index =
     autoware::motion_utils::searchZeroVelocityIndex(trajectory_points);
-  if (zero_velocity_index && zero_velocity_index.value() < trajectory_points.size() - 1) {
+  const bool found_zero_vel =
+    zero_velocity_index && zero_velocity_index.value() < trajectory_points.size() - 1;
+  if (found_zero_vel) {
     trajectory_points.erase(
       trajectory_points.begin() + zero_velocity_index.value() + 1, trajectory_points.end());
   }
   trajectory_points = autoware::motion_utils::removeOverlapPoints(trajectory_points);
+  if (found_zero_vel)
+    trajectory_points.back().longitudinal_velocity_mps =
+      0.0;  // set zero velocity at the end of the trajectory
 }
 
 double get_detection_length(
@@ -68,7 +73,7 @@ TrajectoryPoints extend_trajectory(
 
   const auto & last_p = trajectory_points.back();
   const auto yaw_last = tf2::getYaw(last_p.pose.orientation);
-  constexpr double lookback_distance = 1.0;  // [m]
+  constexpr double lookback_distance = 2.0;  // [m]
   const auto lookback_pose = motion_utils::calcLongitudinalOffsetPose(
     trajectory_points, trajectory_points.size() - 1, -1.0 * lookback_distance);
 
@@ -233,21 +238,17 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
 }
 
 std::optional<CollisionPoint> get_nearest_object_collision(
-  const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
-  const PredictedObjects & objects, MultiPolygon2d & target_polygons,
+  const TrajectoryPoints & trajectory_points, const PredictedObjects & target_objects,
   PredictedObject & colliding_object)
 {
-  if (objects.objects.empty() || trajectory_points.size() < 2) return std::nullopt;
+  if (target_objects.objects.empty() || trajectory_points.size() < 2) return std::nullopt;
 
   auto min_arc_length = std::numeric_limits<double>::max();
   geometry_msgs::msg::Point nearest_collision_point;
   bool found_collision = false;
-  for (const auto & object : objects.objects) {
+  for (const auto & object : target_objects.objects) {
     const auto object_pose = object.kinematics.initial_pose_with_covariance.pose;
     const auto object_polygon = autoware_utils::to_polygon2d(object_pose, object.shape);
-    if (boost::geometry::disjoint(object_polygon, trajectory_shape.polygon)) {
-      continue;
-    }
     found_collision = true;
     for (const auto & point : object_polygon.outer()) {
       geometry_msgs::msg::Point p = geometry_msgs::msg::Point().set__x(point.x()).set__y(point.y());
@@ -258,24 +259,29 @@ std::optional<CollisionPoint> get_nearest_object_collision(
         colliding_object = object;
       }
     }
-    target_polygons.emplace_back(object_polygon);
   }
 
   if (!found_collision) return std::nullopt;
   return CollisionPoint(nearest_collision_point, min_arc_length);
 }
 
+geometry_msgs::msg::Pose get_predicted_obj_pose_at_time(
+  const PredictedObject & object, const double t)
+{
+  if (object.kinematics.predicted_paths.empty())
+    return object.kinematics.initial_pose_with_covariance.pose;
+  const auto & pred_path = object.kinematics.predicted_paths.front();
+  if (pred_path.path.empty()) return object.kinematics.initial_pose_with_covariance.pose;
+  const auto dt = std::max(rclcpp::Duration(pred_path.time_step).seconds(), 1e-3);
+  size_t pred_pose_index = (t + 1e-6) / dt;
+  pred_pose_index = std::min(pred_pose_index, pred_path.path.size() - 1);
+  return pred_path.path.at(pred_pose_index);
+}
+
 ObjectState get_object_state_at_time(
   const TrajectoryPoints & trajectory_points, const PredictedObject & object, const double t)
 {
-  const auto predicted_obj_pose = std::invoke([&]() -> geometry_msgs::msg::Pose {
-    if (object.kinematics.predicted_paths.empty())
-      return object.kinematics.initial_pose_with_covariance.pose;
-    const auto & pred_path = object.kinematics.predicted_paths.front();
-    size_t pred_pose_index = t / rclcpp::Duration(pred_path.time_step).seconds();
-    pred_pose_index = std::min(pred_pose_index, pred_path.path.size() - 1);
-    return pred_path.path.at(pred_pose_index);
-  });
+  const auto predicted_obj_pose = get_predicted_obj_pose_at_time(object, t);
 
   const auto nearest_seg =
     motion_utils::findNearestSegmentIndex(trajectory_points, predicted_obj_pose.position);
@@ -283,10 +289,10 @@ ObjectState get_object_state_at_time(
   const auto p2 = trajectory_points.at(nearest_seg + 1).pose.position;
   auto lon_vel = std::invoke([&]() -> double {
     const auto traj_dir = Eigen::Vector2d(p2.x - p1.x, p2.y - p1.y).normalized();
-    const auto obj_yaw = tf2::getYaw(predicted_obj_pose.orientation);
-    const auto obj_dir = Eigen::Vector2d(std::cos(obj_yaw), std::sin(obj_yaw));
-    const auto obj_lon_vel = object.kinematics.initial_twist_with_covariance.twist.linear.x;
-    return std::max(0.0, obj_lon_vel * obj_dir.dot(traj_dir));
+    const Eigen::Rotation2Dd obj_rot(tf2::getYaw(predicted_obj_pose.orientation));
+    const auto obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
+    const auto obj_vel_vector = obj_rot * Eigen::Vector2d(obj_vel.x, obj_vel.y);
+    return std::max(0.0, obj_vel_vector.dot(traj_dir));
   });
 
   const auto obj_polygon = autoware_utils::to_polygon2d(predicted_obj_pose, object.shape);
@@ -321,13 +327,13 @@ double get_safe_distance(
 }
 
 std::optional<CollisionPoint> get_nearest_object_collision(
-  const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const PredictedObjects & objects,
-  const ObjectDecelMap & object_decel_map, const double ego_decel, const double reaction_time,
-  const double safety_margin, const double stopped_vel_th, const double lookahead_horizon,
-  MultiPolygon2d & target_polygons, PredictedObject & colliding_object)
+  const TrajectoryPoints & trajectory_points,
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
+  const PredictedObjects & target_objects, const ObjectDecelMap & object_decel_map,
+  const double ego_decel, const double reaction_time, const double safety_margin,
+  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object)
 {
-  if (objects.objects.empty() || trajectory_points.size() < 2) return std::nullopt;
+  if (target_objects.objects.empty() || trajectory_points.size() < 2) return std::nullopt;
 
   const auto ego_front_offset = vehicle_info.max_longitudinal_offset_m;
 
@@ -345,17 +351,6 @@ std::optional<CollisionPoint> get_nearest_object_collision(
     const auto relative_arc_length = std::max(0.0, obj_arc_length - ego_front_arc_length);
     return relative_arc_length - safe_dist > 1e-3;
   };
-
-  PredictedObjects target_objects;
-  for (const auto & object : objects.objects) {
-    const auto object_pose = object.kinematics.initial_pose_with_covariance.pose;
-    const auto object_polygon = autoware_utils::to_polygon2d(object_pose, object.shape);
-    if (boost::geometry::disjoint(object_polygon, trajectory_shape.polygon)) {
-      continue;
-    }
-    target_objects.objects.push_back(object);
-    target_polygons.emplace_back(object_polygon);
-  }
 
   auto min_obj_arc_length = std::numeric_limits<double>::max();
   geometry_msgs::msg::Point nearest_collision_point;
@@ -467,6 +462,59 @@ void PointCloudFilter::filter_pointcloud_by_object(
         }),
       pointcloud->end());
   }
+}
+
+void ObjectFilter::filter_by_target_area(
+  PredictedObjects & objects, const TrajectoryPoints & trajectory_points,
+  const MultiPolygon2d & target_area, MultiPolygon2d & target_polygons)
+{
+  constexpr double time_buffer = 1.0;
+  auto time_to_obj_current_pos =
+    [&](const auto & object_pose, const size_t nearest_seg_idx) -> double {
+    const auto t_to_nearest_seg =
+      rclcpp::Duration(trajectory_points.at(nearest_seg_idx).time_from_start).seconds();
+    if (nearest_seg_idx < trajectory_points.size() - 2) return t_to_nearest_seg - time_buffer;
+    const auto lon_offset_dist =
+      motion_utils::calcSignedArcLength(trajectory_points, nearest_seg_idx, object_pose.position);
+    const auto nearest_seg_vel = trajectory_points.at(nearest_seg_idx).longitudinal_velocity_mps;
+    const auto t_to_obj = t_to_nearest_seg + lon_offset_dist / nearest_seg_vel;
+    return t_to_obj - time_buffer;
+  };
+
+  auto is_exiting = [&](const auto & object) -> bool {
+    const auto & object_pose = object.kinematics.initial_pose_with_covariance.pose;
+    const auto obj_rot = Eigen::Rotation2Dd(tf2::getYaw(object_pose.orientation));
+    const auto obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
+    const auto obj_vel_vector = (obj_rot * Eigen::Vector2d(obj_vel.x, obj_vel.y));
+    if (obj_vel_vector.norm() < stopped_velocity_th_) return false;  // object is stopped
+    const auto nearest_seg =
+      motion_utils::findNearestSegmentIndex(trajectory_points, object_pose.position);
+    const auto p1 = trajectory_points.at(nearest_seg).pose.position;
+    const auto p2 = trajectory_points.at(nearest_seg + 1).pose.position;
+    const auto traj_dir = Eigen::Vector2d(p2.x - p1.x, p2.y - p1.y).normalized();
+    const auto traj_lat_dir = Eigen::Vector2d(traj_dir.y(), -traj_dir.x());
+    const auto obj_lon_vel = std::abs(obj_vel_vector.dot(traj_dir));
+    const auto obj_lat_vel = std::abs(obj_vel_vector.dot(traj_lat_dir));
+    if (obj_lat_vel < max_lateral_velocity_th_ && obj_lat_vel < obj_lon_vel) return false;
+    if (object.kinematics.predicted_paths.empty()) return true;
+    const auto t_to_obj_current_pos = time_to_obj_current_pos(object_pose, nearest_seg);
+    const auto obj_pred_pose = get_predicted_obj_pose_at_time(object, t_to_obj_current_pos);
+    const auto obj_pred_polygon = autoware_utils::to_polygon2d(obj_pred_pose, object.shape);
+    return boost::geometry::disjoint(obj_pred_polygon, target_area);
+  };
+
+  objects.objects.erase(
+    std::remove_if(
+      objects.objects.begin(), objects.objects.end(),
+      [&](const auto & object) {
+        const auto object_pose = object.kinematics.initial_pose_with_covariance.pose;
+        const auto object_polygon = autoware_utils::to_polygon2d(object_pose, object.shape);
+        if (boost::geometry::disjoint(object_polygon, target_area)) return true;
+        if (is_exiting(object)) return true;
+        target_polygons.emplace_back(object_polygon);
+        return false;
+      }),
+    objects.objects.end());
 }
 
 void ObstacleTracker::update_objects(
