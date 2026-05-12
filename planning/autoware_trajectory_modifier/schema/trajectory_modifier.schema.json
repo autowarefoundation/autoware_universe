@@ -118,6 +118,12 @@
               "default": 0.5,
               "minimum": 0.0
             },
+            "duplicate_check_threshold": {
+              "type": "number",
+              "description": "Threshold to check if the stop point is already in the trajectory [m]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
             "arrived_distance_threshold": {
               "type": "number",
               "description": "Threshold to check if the ego vehicle has arrived at the stop point [m]",
@@ -197,6 +203,12 @@
                   "type": "number",
                   "description": "Velocity threshold for target object to be considered as stopped [m/s]",
                   "default": 0.25,
+                  "minimum": 0.0
+                },
+                "max_lateral_velocity_th": {
+                  "type": "number",
+                  "description": "Maximum lateral velocity threshold for target object to be considered for obstacle stop [m/s]",
+                  "default": 1.0,
                   "minimum": 0.0
                 }
               },
