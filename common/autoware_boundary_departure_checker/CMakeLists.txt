@@ -36,13 +36,6 @@ if(BUILD_TESTING)
     utils
     uncrossable_boundary_checker
   )
-  target_include_directories(test_${PROJECT_NAME} PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/test>
-  )
-  target_compile_definitions(test_${PROJECT_NAME} PRIVATE
-    TEST_PACKAGE_NAME="${PROJECT_NAME}"
-  )
 endif()
 
 ament_auto_package()

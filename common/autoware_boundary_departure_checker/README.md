@@ -54,3 +54,14 @@ The module uses a structured parameter configuration to define thresholds, footp
   - **Expected Behavior:** Evaluated as a departure (`CRITICAL_DEPARTURE`).
 - **Scenario 5:** The footprint overlaps the lateral gap, and the arc length to the overlap is less than the minimum braking distance, even if the time to reach the overlap exceeds the cutoff time.
   - **Expected Behavior:** Evaluated as a departure (`CRITICAL_DEPARTURE`).
+- **Scenario 6:** The footprint overlaps the lateral gap, the longitudinal distance to the overlap is greater than the minimum braking distance, and the time to reach it is greater than the cutoff time.
+  - **Expected Behavior:** Evaluated as approaching departure (`APPROACHING_DEPARTURE`)
+
+| Scenario            | Condition / Description             | Lateral Overlap? | Lon > Braking Dist? | Time > Cutoff? | Expected Result |
+| ------------------- | ----------------------------------- | ---------------- | ------------------- | -------------- | --------------- |
+| **1: Wrong Tag**    | Boundary lacks `road_border` tag    | N/A              | N/A                 | N/A            | **NONE**        |
+| **2: Safe Lateral** | Vehicle stays within lateral gap    | No               | N/A                 | N/A            | **NONE**        |
+| **3: Imminent**     | Too close and too fast              | Yes              | No                  | No             | **CRITICAL**    |
+| **4: Late Warning** | Low time buffer to crossing         | Yes              | Yes                 | **No**         | **CRITICAL**    |
+| **5: High Speed**   | Insufficient braking distance       | Yes              | **No**              | Yes            | **CRITICAL**    |
+| **6: Approaching**  | Within margin, but buffers are safe | Yes              | **Yes**             | **Yes**        | **APPROACHING** |
