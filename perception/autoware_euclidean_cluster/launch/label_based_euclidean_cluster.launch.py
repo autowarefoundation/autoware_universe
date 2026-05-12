@@ -41,7 +41,10 @@ def launch_setup(context, *args, **kwargs):
             ("input", LaunchConfiguration("input_pointcloud")),
             ("output", LaunchConfiguration("output_objects")),
         ],
-        parameters=[load_composable_node_param("param_path")],
+        parameters=[
+            load_composable_node_param("param_path"),
+            {"shape_policy": LaunchConfiguration("shape_policy")},
+        ],
     )
 
     container = ComposableNodeContainer(
@@ -78,6 +81,7 @@ def generate_launch_description():
             add_launch_arg("output_objects", "objects"),
             add_launch_arg("use_pointcloud_container", "false"),
             add_launch_arg("pointcloud_container_name", "pointcloud_container"),
+            add_launch_arg("shape_policy"),
             add_launch_arg(
                 "param_path",
                 [
