@@ -21,6 +21,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_validator
@@ -59,7 +60,7 @@ protected:
 
     traj_pub_ =
       test_node_->create_publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
-        "/trajectory_validator_node/input/trajectories", 1);
+        "/trajectory_validator_node/input/trajectories_generative", 1);
 
     output_sub_ =
       test_node_->create_subscription<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
@@ -88,10 +89,10 @@ protected:
 
   void publish_context()
   {
+    const auto now = node_under_test_->now();
+
     auto map_msg = autoware::test_utils::makeMapBinMsg("autoware_test_utils", "lanelet2_map.osm");
     map_pub_->publish(map_msg);
-
-    const auto now = node_under_test_->now();
 
     nav_msgs::msg::Odometry odom;
     odom.header.stamp = now;
@@ -109,20 +110,25 @@ protected:
     obj_pub_->publish(objects);
 
     autoware_perception_msgs::msg::TrafficLightGroupArray tl_signals;
+
     tl_pub_->publish(tl_signals);
   }
 
-  static void add_trajectory(CandidateTrajectories & msg, std::string name, double start_vel)
+  static void add_trajectory(
+    CandidateTrajectories & msg, std::string name, float start_vel, const rclcpp::Time & stamp)
   {
     CandidateTrajectory traj;
+    traj.header.stamp = stamp;  // Set trajectory-specific stamp
+
     autoware_internal_planning_msgs::msg::GeneratorInfo info;
-    info.generator_name.data = name;
+    info.generator_name.data = std::move(name);
     info.generator_id = autoware_utils_uuid::generate_uuid();
 
     traj.generator_id = info.generator_id;
 
     TrajectoryPoint p1;
     p1.longitudinal_velocity_mps = start_vel;
+    p1.time_from_start = rclcpp::Duration::from_seconds(0.0);  // Ensure time is set
     traj.points.push_back(p1);
 
     msg.candidate_trajectories.push_back(traj);
@@ -151,15 +157,18 @@ TEST_F(TrajectoryValidatorNodeTest, FiltersTrajectoriesViaPlugin)
   publish_context();
   spin_until([] { return false; }, std::chrono::milliseconds(100));
 
+  const auto now = node_under_test_->now();
   autoware_internal_planning_msgs::msg::CandidateTrajectories msg;
 
-  add_trajectory(msg, "SafePlanner", 10.0);
-  add_trajectory(msg, "RejectedPlanner", -999.0);
+  add_trajectory(msg, "SafePlanner", 10.0, now);
+  add_trajectory(msg, "RejectedPlanner", -999.0, now);
 
   traj_pub_->publish(msg);
 
-  ASSERT_TRUE(
-    spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(1000)));
+  // Increase timeout if necessary to account for the node's 30ms timer
+  ASSERT_TRUE(spin_until(
+    [this] { return last_output_ != nullptr && !last_output_->candidate_trajectories.empty(); },
+    std::chrono::milliseconds(1000)));
 
   EXPECT_EQ(last_output_->candidate_trajectories.size(), 1u);
   ASSERT_EQ(last_output_->generator_info.size(), 1u);
@@ -171,8 +180,9 @@ TEST_F(TrajectoryValidatorNodeTest, HandlesPluginRejection)
   publish_context();
   spin_until([] { return false; }, std::chrono::milliseconds(100));
 
+  const auto now = node_under_test_->now();
   autoware_internal_planning_msgs::msg::CandidateTrajectories msg;
-  add_trajectory(msg, "FailingPlanner", -999.0);
+  add_trajectory(msg, "FailingPlanner", -999.0, now);
 
   traj_pub_->publish(msg);
 
