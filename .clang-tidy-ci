@@ -29,6 +29,5 @@ ExtraArgs:
   - -Wno-unknown-warning-option
   - -Wno-deprecated-declarations
   - -Wno-delete-non-abstract-non-virtual-dtor
-  - -Wno-unused-private-field
   - -Wno-unused-but-set-variable
   - -Wno-deprecated-builtins
