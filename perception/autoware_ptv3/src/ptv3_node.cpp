@@ -59,6 +59,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     this->declare_parameter<std::vector<std::string>>("filter.classes", descriptor);
   const auto filter_output_format =
     this->declare_parameter<std::string>("filter.output_format", descriptor);
+  const auto source_reconstruction =
+    this->declare_parameter<std::string>("source_reconstruction", descriptor);
 
   if (point_cloud_range.size() != 6) {
     throw std::runtime_error("The size of point_cloud_range != 6");
@@ -69,7 +71,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
 
   PTv3Config config(
     plugins_path, cloud_capacity, voxels_num, point_cloud_range, voxel_size, class_names, palette,
-    filter_class_probability_threshold, filter_classes, filter_output_format);
+    filter_class_probability_threshold, filter_classes, filter_output_format,
+    source_reconstruction);
 
   auto trt_config =
     tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 33U);

@@ -35,11 +35,22 @@ public:
 
   void createVisualizationPointcloud(
     const float * input_features, const std::int64_t * pred_labels, float * output_points,
-    std::size_t num_points);
+    std::size_t num_classes, std::size_t num_points);
 
   void createSegmentationPointcloud(
     const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
     std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points);
+
+  void reconstructPartial(
+    const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
+    std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
+    std::size_t num_cropped_points, std::size_t num_voxels);
+
+  void reconstructFull(
+    const std::uint32_t * crop_mask, const std::uint32_t * crop_indices,
+    const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
+    std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
+    std::size_t num_points, std::size_t num_voxels);
 
   std::size_t createFilteredPointcloud(
     const void * compact_input_points, CloudFormat input_format, CloudFormat output_format,

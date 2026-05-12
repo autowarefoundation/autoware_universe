@@ -100,8 +100,16 @@ protected:
 
   // Preprocess outputs
   std::int64_t num_voxels_{0};
+  std::int64_t num_cropped_points_{0};        // only for partial
+  std::int64_t num_source_points_{0};         // only for full
+  const void * current_input_data_{nullptr};  // only for full
 
   CudaUniquePtr<std::uint8_t[]> compact_points_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> cropped_source_points_d_{nullptr};  // only for partial
+  CudaUniquePtr<float[]> reconstructed_features_d_{nullptr};        // only for partial and full
+  CudaUniquePtr<std::int64_t[]> inverse_map_d_{nullptr};            // only for partial and full
+  CudaUniquePtr<std::int64_t[]> reconstructed_labels_d_{nullptr};   // only for partial and full
+  CudaUniquePtr<float[]> reconstructed_probs_d_{nullptr};           // only for partial and full
   CudaUniquePtr<std::int64_t[]> grid_coord_d_{nullptr};
   CudaUniquePtr<float[]> feat_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
