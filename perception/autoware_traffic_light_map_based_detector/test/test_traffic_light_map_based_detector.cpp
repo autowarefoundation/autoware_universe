@@ -425,7 +425,7 @@ TEST(TrafficLightMapBasedDetectorTest, SetRouteWithUnknownLaneletIdReturnsError)
   TrafficLightMapBasedDetector detector(config, map);
 
   // Act
-  const auto error = detector.setRoute(make_route(99999999));
+  const auto error = detector.set_route(make_route(99999999));
 
   // Assert
   ASSERT_TRUE(error.has_value());
@@ -445,7 +445,7 @@ TEST(TrafficLightMapBasedDetectorTest, SetRouteWithKnownLaneletIdSucceedsAndDete
   const auto route = make_route(get_road_lanelet_ids(map)[0]);
 
   // Act
-  const auto error = detector.setRoute(route);
+  const auto error = detector.set_route(route);
   const auto result = detector.detect(tf_samples, camera_info);
 
   // Assert
