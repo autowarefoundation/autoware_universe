@@ -19,6 +19,8 @@
 #include <autoware_trajectory_validator/autoware_trajectory_validator_param.hpp>
 #include <rclcpp/node_interfaces/node_parameters_interface.hpp>
 
+#include <string>
+
 namespace autoware::trajectory_validator
 {
 struct TrajectoryValidatorParam

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_trajectory_validator)
 
 find_package(autoware_cmake REQUIRED)
-find_package(autoware_trajectory_concatenator REQUIRED)
 autoware_package()
 pluginlib_export_plugin_description_file(autoware_trajectory_validator plugins.xml)
 
@@ -23,10 +22,6 @@ ament_auto_add_library(${trajectory_validator_lib_target} SHARED
 
 target_link_libraries(${trajectory_validator_lib_target}
   ${PROJECT_NAME}_param
-)
-
-ament_target_dependencies(${trajectory_validator_lib_target}
-  autoware_trajectory_concatenator
 )
 
 target_compile_options(${trajectory_validator_lib_target} PUBLIC
