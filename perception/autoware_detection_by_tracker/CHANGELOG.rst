@@ -2,6 +2,22 @@
 Changelog for package autoware_detection_by_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(detection_by_tracker): use CallbackIsolatedAgnocastExecutor for detection_by_tracker_node (`#12360 <https://github.com/mitsudome-r/autoware_universe/issues/12360>`_)
+  apply cie to detection_by_tracker
+* feat(autoware_detection_by_tracker): replace with agnocast sub detection by tracker (`#12314 <https://github.com/mitsudome-r/autoware_universe/issues/12314>`_)
+  * feat: replace executor
+  * feat: replace sub
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Koichi Imai <45482193+Koichi98@users.noreply.github.com>
+* Contributors: Koichi Imai, Taekjin LEE, Tetsuhiro Kawaguchi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

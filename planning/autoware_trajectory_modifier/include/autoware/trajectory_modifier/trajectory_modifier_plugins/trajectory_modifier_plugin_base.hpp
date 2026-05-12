@@ -16,7 +16,8 @@
 #ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
 // NOLINTNEXTLINE
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_PLUGINS__TRAJECTORY_MODIFIER_PLUGIN_BASE_HPP_
-#include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
+#include "autoware/trajectory_modifier/trajectory_modifier_context.hpp"
+#include "autoware/trajectory_modifier/trajectory_modifier_plugins/input_data.hpp"
 
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
@@ -26,7 +27,6 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -47,7 +47,7 @@ public:
   void initialize(
     std::string name, rclcpp::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const std::shared_ptr<TrajectoryModifierData> & data,
+    const std::shared_ptr<TrajectoryModifierContext> & context,
     [[maybe_unused]] const TrajectoryModifierParams & params)
   {
     short_name_ = std::invoke([&name]() {
@@ -57,15 +57,16 @@ public:
     name_ = std::move(name);
     node_ptr_ = node_ptr;
     time_keeper_ = time_keeper;
-    data_ = data;
+    context_ = context;
     RCLCPP_DEBUG(
       node_ptr_->get_logger(), "instantiated TrajectoryModifierPluginBase: %s", name_.c_str());
     on_initialize(params);
   }
 
   virtual ~TrajectoryModifierPluginBase() = default;
-  virtual bool modify_trajectory(TrajectoryPoints & traj_points) = 0;
-  virtual bool is_trajectory_modification_required(const TrajectoryPoints & traj_points) = 0;
+  virtual bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) = 0;
+  virtual bool is_trajectory_modification_required(
+    const TrajectoryPoints & traj_points, const InputData & input) = 0;
   std::string get_name() const { return name_; }
   std::string get_short_name() const { return short_name_; }
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
@@ -92,7 +93,7 @@ protected:
   virtual void on_initialize(const TrajectoryModifierParams & params) = 0;
   std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface_;
-  std::shared_ptr<TrajectoryModifierData> data_;
+  std::shared_ptr<TrajectoryModifierContext> context_;
   bool enabled_{true};
   double trajectory_time_step_{0.1};
 

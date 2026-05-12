@@ -2,6 +2,33 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(`autoware_default_adapi_universe`): add timeout diagnostics to adapi manual control for heartbeat monitoring with new ADAPI (>= 1.9.0) (`#11554 <https://github.com/mitsudome-r/autoware_universe/issues/11554>`_)
+  * feat: add timeout diagnostics for new ADAPI (>=1.9.0) adaptation
+  * fix: missing parameters for timeout diagnostics
+  * cosmetic: fix comment
+  * style(pre-commit): autofix
+  * bug: fix wrong parameter configuration
+  * The parameters are used only by local and remote modes
+  * fix: by pre-commit as following output
+  ```
+  system/autoware_default_adapi_universe/src/manual_control.cpp:52:  Add #include <memory> for make_unique<>  [build/include_what_you_use] [4]
+  Done processing system/autoware_default_adapi_universe/src/manual_control.cpp
+  Total errors found: 1
+  system/autoware_default_adapi_universe/src/manual_control.hpp:104:  Add #include <memory> for unique_ptr<>  [build/include_what_you_use] [4]
+  Done processing system/autoware_default_adapi_universe/src/manual_control.hpp
+  Total errors found: 1
+  ```
+  * style(pre-commit): autofix
+  * bug: fix wrong update logic for last received time
+  * fix: by pre-commit
+  * bug: fix a missing dependency
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Junya Sasaki, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

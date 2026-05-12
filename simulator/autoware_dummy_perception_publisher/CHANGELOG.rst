@@ -2,6 +2,18 @@
 Changelog for package autoware_dummy_perception_publisher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_dummy_perception_publisher): publish detected objects instead of cluster, remove shape estimation from planning simulator (`#12382 <https://github.com/mitsudome-r/autoware_universe/issues/12382>`_)
+  * feat(dummy_perception_publisher): update detected objects message type and clean up dependencies
+  * feat(dummy_perception_publisher): remove object recognition and ground truth parameters; publish ground truth only when subscribers exist
+  * feat(dummy_perception_publisher): update detected objects message type and adjust launch remappings
+  * feat(dummy_perception_publisher): add DummyPerceptionPublisher node configuration
+  * feat(dummy_perception_publisher): rename object to dummy_objects and update detected_objects publisher
+  ---------
+* Contributors: Taekjin LEE, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

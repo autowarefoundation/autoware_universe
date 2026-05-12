@@ -2,6 +2,16 @@
 Changelog for package autoware_traffic_light_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(common, visualization): remove unused lanelet2_extension header (`#12296 <https://github.com/mitsudome-r/autoware_universe/issues/12296>`_)
+  * unused lanelet2_extension in common component
+  * unused lanelet2_extension in visualization component
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 
