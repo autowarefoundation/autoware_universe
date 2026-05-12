@@ -42,6 +42,7 @@ void AutomaticPoseInitializer::on_timer()
       const auto req = std::make_shared<Initialize::Service::Request>();
       cli_initialize_->call(req);
     } catch (const autoware::component_interface_utils::ServiceException & error) {
+      (void)error;
     }
   }
   timer_->reset();
