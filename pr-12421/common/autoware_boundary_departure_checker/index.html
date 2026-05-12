@@ -23022,7 +23022,73 @@
 <li><strong>Expected Behavior:</strong> Evaluated as a departure (<code>CRITICAL_DEPARTURE</code>).</li>
 </ul>
 </li>
-</ul></div>
+<li><strong>Scenario 6:</strong> The footprint overlaps the lateral gap, the longitudinal distance to the overlap is greater than the minimum braking distance, and the time to reach it is greater than the cutoff time.<ul>
+<li><strong>Expected Behavior:</strong> Evaluated as approaching departure (<code>APPROACHING_DEPARTURE</code>)</li>
+</ul>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Condition / Description</th>
+<th>Lateral Overlap?</th>
+<th>Lon &gt; Braking Dist?</th>
+<th>Time &gt; Cutoff?</th>
+<th>Expected Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1: Wrong Tag</strong></td>
+<td>Boundary lacks <code>road_border</code> tag</td>
+<td>N/A</td>
+<td>N/A</td>
+<td>N/A</td>
+<td><strong>NONE</strong></td>
+</tr>
+<tr>
+<td><strong>2: Safe Lateral</strong></td>
+<td>Vehicle stays within lateral gap</td>
+<td>No</td>
+<td>N/A</td>
+<td>N/A</td>
+<td><strong>NONE</strong></td>
+</tr>
+<tr>
+<td><strong>3: Imminent</strong></td>
+<td>Too close and too fast</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td><strong>CRITICAL</strong></td>
+</tr>
+<tr>
+<td><strong>4: Late Warning</strong></td>
+<td>Low time buffer to crossing</td>
+<td>Yes</td>
+<td>Yes</td>
+<td><strong>No</strong></td>
+<td><strong>CRITICAL</strong></td>
+</tr>
+<tr>
+<td><strong>5: High Speed</strong></td>
+<td>Insufficient braking distance</td>
+<td>Yes</td>
+<td><strong>No</strong></td>
+<td>Yes</td>
+<td><strong>CRITICAL</strong></td>
+</tr>
+<tr>
+<td><strong>6: Approaching</strong></td>
+<td>Within margin, but buffers are safe</td>
+<td>Yes</td>
+<td><strong>Yes</strong></td>
+<td><strong>Yes</strong></td>
+<td><strong>APPROACHING</strong></td>
+</tr>
+</tbody>
+</table></div>
 
 
 
