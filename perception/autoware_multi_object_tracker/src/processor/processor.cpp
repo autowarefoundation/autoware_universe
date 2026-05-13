@@ -47,10 +47,11 @@ TrackerProcessor::TrackerProcessor(
     std::make_unique<TrackerOverlapManager>(tracker_overlap_manager_config);
 }
 
-void TrackerProcessor::predict(
-  const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose)
+void TrackerProcessor::predictTrackers(
+  const rclcpp::Time & time,
+  const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose_stamped)
 {
-  ego_pose_ = ego_pose;
+  ego_pose_ = ego_pose_stamped;
 
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -191,7 +192,7 @@ void TrackerProcessor::prune(const rclcpp::Time & time)
   }
 
   removeOldTracker(time);
-  tracker_overlap_manager_->merge(list_tracker_, time, adaptive_threshold_cache_, ego_pose_);
+  tracker_overlap_manager_->merge(list_tracker_, time, adaptive_threshold_cache_, egoPose());
 
   last_prune_time_ = time;
 }
@@ -202,7 +203,7 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   for (auto itr = list_tracker_.begin(); itr != list_tracker_.end(); ++itr) {
-    if ((*itr)->isExpired(time, adaptive_threshold_cache_, ego_pose_)) {
+    if ((*itr)->isExpired(time, adaptive_threshold_cache_, egoPose())) {
       auto erase_itr = itr;
       --itr;
       list_tracker_.erase(erase_itr);
@@ -219,7 +220,7 @@ void TrackerProcessor::getTrackedObjects(
   tracked_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
-    if (!tracker->isConfident(adaptive_threshold_cache_, ego_pose_, std::nullopt)) continue;
+    if (!tracker->isConfident(adaptive_threshold_cache_, egoPose(), std::nullopt)) continue;
     constexpr bool to_publish = true;
     if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
       tracked_object.existence_probability = tracker->getTotalExistenceProbability();
@@ -239,7 +240,7 @@ void TrackerProcessor::getTentativeObjects(
   tentative_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
-    if (tracker->isConfident(adaptive_threshold_cache_, ego_pose_, std::nullopt)) continue;
+    if (tracker->isConfident(adaptive_threshold_cache_, egoPose(), std::nullopt)) continue;
     constexpr bool to_publish = false;
     if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
       tentative_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));

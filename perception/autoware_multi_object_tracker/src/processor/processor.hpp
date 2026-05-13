@@ -26,6 +26,7 @@
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include <list>
 #include <memory>
@@ -46,7 +47,9 @@ public:
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
 
   // Tracker processes
-  void predict(const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose);
+  void predictTrackers(
+    const rclcpp::Time & time,
+    const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose_stamped);
   types::AssociationResult associate(const types::DynamicObjectList & detected_objects) const;
   void update(const types::AssociatedObjects & associated_objects);
   void spawn(const types::AssociatedObjects & associated_objects);
@@ -80,8 +83,14 @@ private:
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-  std::optional<geometry_msgs::msg::Pose> ego_pose_;
+  std::optional<geometry_msgs::msg::PoseStamped> ego_pose_;
   AdaptiveThresholdCache adaptive_threshold_cache_;
+
+  std::optional<geometry_msgs::msg::Pose> egoPose() const
+  {
+    if (!ego_pose_) return std::nullopt;
+    return ego_pose_->pose;
+  }
 };
 
 }  // namespace autoware::multi_object_tracker

@@ -251,19 +251,22 @@ void process_objects_(
   const rclcpp::Time measurement_time =
     objects_with_associations.getTimestamp(current_time.get_clock_type());
 
-  std::optional<geometry_msgs::msg::Pose> ego_pose;
+  std::optional<geometry_msgs::msg::PoseStamped> ego_pose_stamped;
   if (const auto odometry_info = state.odometry->getOdometryFromTf(measurement_time)) {
-    ego_pose = odometry_info->pose.pose;
+    geometry_msgs::msg::PoseStamped ps;
+    ps.header.stamp = measurement_time;
+    ps.pose = odometry_info->pose.pose;
+    ego_pose_stamped = ps;
   }
 
-  if (!ego_pose) {
+  if (!ego_pose_stamped) {
     RCLCPP_WARN(
       logger, "No odometry information available at the measurement time: %.9f",
       measurement_time.seconds());
   }
 
   /// 1. Predict trackers to measurement time
-  state.processor->predict(measurement_time, ego_pose);
+  state.processor->predictTrackers(measurement_time, ego_pose_stamped);
 
   /// 2. Object association
   const types::AssociatedObjects associated_objects{

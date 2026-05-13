@@ -22,8 +22,9 @@
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <rclcpp/time.hpp>
 
-#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include <list>
 #include <memory>
@@ -49,16 +50,22 @@ public:
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
-  void setEgoPose(const std::optional<geometry_msgs::msg::Pose> & ego_pose);
+  void setEgoPose(const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose);
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
 private:
   /// Select the D2T association implementation for the given channel index.
-  AssociationBase & getAssociationForChannel(uint channel_index) const;
+  /// polar_viable: false forces BEV fallback regardless of channel config.
+  AssociationBase & getAssociationForChannel(uint channel_index, bool polar_viable) const;
+
+  /// Returns true when ego_pose_ is present and fresh enough relative to measurement_time.
+  bool isPolarViable(const rclcpp::Time & measurement_time) const;
 
   std::vector<types::InputChannel> channels_config_;
   std::unique_ptr<BevAssociation> bev_association_;
   std::unique_ptr<PolarAssociation> polar_association_;
+
+  std::optional<geometry_msgs::msg::PoseStamped> ego_pose_;
 };
 
 }  // namespace autoware::multi_object_tracker
