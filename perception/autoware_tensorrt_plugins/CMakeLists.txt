@@ -147,6 +147,28 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
       spconv::spconv
   )
 
+  if(BUILD_TESTING)
+    find_package(ament_cmake_gtest REQUIRED)
+
+    ament_add_gtest(reference_kernels_test
+      test/argsort_kernel_test.cpp
+      test/unique_kernel_test.cpp
+    )
+    if(TARGET reference_kernels_test)
+      target_link_libraries(reference_kernels_test
+        CUDA::cudart
+        cuda_ops
+      )
+      target_include_directories(reference_kernels_test PRIVATE
+        include
+        test
+        ${autoware_cuda_utils_INCLUDE_DIRS}
+        ${CUDA_INCLUDE_DIRS}
+      )
+      target_compile_definitions(reference_kernels_test PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
+    endif()
+  endif()
+
   install(
     TARGETS ${PROJECT_NAME}
     DESTINATION share/${PROJECT_NAME}/plugins
