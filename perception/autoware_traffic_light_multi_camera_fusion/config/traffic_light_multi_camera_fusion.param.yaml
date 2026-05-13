@@ -3,3 +3,6 @@
     message_lifespan: 0.09
     approximate_sync: false
     prior_log_odds: 0.0
+    signal_consistency_check:
+      enable: false
+      publish_partial_matched_signal: false

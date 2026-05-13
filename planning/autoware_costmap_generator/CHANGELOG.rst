@@ -2,6 +2,15 @@
 Changelog for package autoware_costmap_generator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(planning): deprecate toLaneletPoint/toGeomPt in costmap_generator, miscs (`#12089 <https://github.com/mitsudome-r/autoware_universe/issues/12089>`_)
+  * refactor(planning): deprecate toLaneletPoint/toGeomPt in costmap_generator, miscs
+  * fix
+  ---------
+* Contributors: Mamoru Sobue, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

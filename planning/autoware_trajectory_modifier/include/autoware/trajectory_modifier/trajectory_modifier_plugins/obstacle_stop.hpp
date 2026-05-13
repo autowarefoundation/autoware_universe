@@ -19,7 +19,6 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/obstacle_stop_utils.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
 
-#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <visualization_msgs/msg/marker_array.hpp>
@@ -33,8 +32,10 @@ namespace autoware::trajectory_modifier::plugin
 {
 using autoware_internal_planning_msgs::msg::SafetyFactor;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
+using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_utils_geometry::MultiPolygon2d;
 using autoware_utils_geometry::Polygon2d;
+using sensor_msgs::msg::PointCloud2;
 using utils::obstacle_stop::CollisionPoint;
 using utils::obstacle_stop::DebugData;
 using visualization_msgs::msg::Marker;
@@ -45,10 +46,10 @@ class ObstacleStop : public TrajectoryModifierPluginBase
 public:
   ObstacleStop() = default;
 
-  bool modify_trajectory(TrajectoryPoints & traj_points) override;
+  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
 
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points) override;
+    const TrajectoryPoints & traj_points, const InputData & input) override;
 
   void update_params(const TrajectoryModifierParams & params) override;
 
@@ -80,11 +81,13 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_clustered_pointcloud_;
 
-  void check_obstacles(const TrajectoryPoints & traj_points);
-  std::optional<CollisionPoint> check_predicted_objects(const TrajectoryPoints & traj_points);
-  std::optional<CollisionPoint> check_pointcloud(const TrajectoryPoints & traj_points);
+  void check_obstacles(const TrajectoryPoints & traj_points, const InputData & input);
+  std::optional<CollisionPoint> check_predicted_objects(
+    const TrajectoryPoints & traj_points, const InputData & input);
+  std::optional<CollisionPoint> check_pointcloud(
+    const TrajectoryPoints & traj_points, const InputData & input);
 
-  bool set_stop_point(TrajectoryPoints & traj_points);
+  bool set_stop_point(TrajectoryPoints & traj_points, const InputData & input);
 
   bool apply_stopping(
     TrajectoryPoints & traj_points, const double target_stop_point_arc_length) const;

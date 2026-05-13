@@ -26,11 +26,12 @@ struct OutputSegmentationPointType
   float z;
   std::uint8_t class_id;
   float probability;
+  float entropy;
 } __attribute__((packed));
 
 __global__ void createVisualizationPointcloudKernel(
   const float4 * input_features, const float * colors, const std::int64_t * labels,
-  float4 * output_points, std::size_t num_points)
+  float4 * output_points, std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -38,7 +39,8 @@ __global__ void createVisualizationPointcloudKernel(
   }
 
   const auto label = labels[idx];
-  const auto color = colors[label];
+  const auto color =
+    label >= 0 && static_cast<std::size_t>(label) < num_classes ? colors[label] : 0.0f;
 
   output_points[idx] =
     make_float4(input_features[idx].x, input_features[idx].y, input_features[idx].z, color);
@@ -55,11 +57,78 @@ __global__ void createSegmentationPointcloudKernel(
 
   const auto input_point = input_features[idx];
   const auto label = labels[idx];
+  const bool has_valid_label = label >= 0 && static_cast<std::size_t>(label) < num_classes;
+  float entropy = 0.0f;
+  for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
+    const auto probability = pred_probs[idx * num_classes + class_idx];
+    if (probability > 0.0f) {
+      entropy -= probability * logf(probability);
+    }
+  }
+  if (num_classes > 1) {
+    entropy /= logf(static_cast<float>(num_classes));
+  }
   output_points[idx].x = input_point.x;
   output_points[idx].y = input_point.y;
   output_points[idx].z = input_point.z;
-  output_points[idx].class_id = static_cast<std::uint8_t>(label);
-  output_points[idx].probability = pred_probs[idx * num_classes + label];
+  output_points[idx].class_id = has_valid_label ? static_cast<std::uint8_t>(label) : 255U;
+  output_points[idx].probability = has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
+  output_points[idx].entropy = entropy;
+}
+
+__global__ void reconstructPartialKernel(
+  const std::int64_t * __restrict__ inverse_map, const std::int64_t * __restrict__ voxel_labels,
+  const float * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
+  float * __restrict__ output_probs, std::size_t num_classes, std::size_t num_cropped_points,
+  std::size_t num_voxels)
+{
+  const auto point_idx = blockIdx.x * blockDim.y + threadIdx.y;
+  const auto class_idx = blockIdx.y * blockDim.x + threadIdx.x;
+
+  if (point_idx >= num_cropped_points || class_idx >= num_classes) return;
+
+  const auto voxel_idx = inverse_map[point_idx];
+  const bool has_valid_voxel = voxel_idx >= 0 && static_cast<std::size_t>(voxel_idx) < num_voxels;
+  if (class_idx == 0) {
+    output_labels[point_idx] = has_valid_voxel ? voxel_labels[voxel_idx] : 255;
+  }
+
+  output_probs[point_idx * num_classes + class_idx] =
+    has_valid_voxel ? voxel_probs[static_cast<std::size_t>(voxel_idx) * num_classes + class_idx]
+                    : 0.0f;
+}
+
+__global__ void reconstructFullKernel(
+  const std::uint32_t * __restrict__ crop_mask, const std::uint32_t * __restrict__ crop_indices,
+  const std::int64_t * __restrict__ inverse_map, const std::int64_t * __restrict__ voxel_labels,
+  const float * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
+  float * __restrict__ output_probs, std::size_t num_classes, std::size_t num_points,
+  std::size_t num_voxels)
+{
+  const auto point_idx = blockIdx.x * blockDim.y + threadIdx.y;
+  const auto class_idx = blockIdx.y * blockDim.x + threadIdx.x;
+
+  if (point_idx >= num_points || class_idx >= num_classes) return;
+
+  const auto mask = crop_mask[point_idx];
+  if (mask == 0) {
+    if (class_idx == 0) output_labels[point_idx] = 255;
+    return;
+  }
+
+  const auto cropped_idx = crop_indices[point_idx] - 1;
+  const auto voxel_idx = inverse_map[cropped_idx];
+  if (voxel_idx < 0 || static_cast<std::size_t>(voxel_idx) >= num_voxels) {
+    if (class_idx == 0) output_labels[point_idx] = 255;
+    return;
+  }
+
+  if (class_idx == 0) {
+    output_labels[point_idx] = voxel_labels[voxel_idx];
+  }
+
+  output_probs[point_idx * num_classes + class_idx] =
+    voxel_probs[static_cast<std::size_t>(voxel_idx) * num_classes + class_idx];
 }
 
 template <typename OutputPointT>
@@ -213,13 +282,13 @@ PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
 
 void PostprocessCuda::createVisualizationPointcloud(
   const float * input_features, const std::int64_t * labels, float * output_points,
-  std::size_t num_points)
+  std::size_t num_classes, std::size_t num_points)
 {
   auto num_blocks = divup(num_points, config_.threads_per_block_);
 
   createVisualizationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<const float4 *>(input_features), color_map_d_.get(), labels,
-    reinterpret_cast<float4 *>(output_points), num_points);
+    reinterpret_cast<float4 *>(output_points), num_classes, num_points);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
@@ -233,6 +302,37 @@ void PostprocessCuda::createSegmentationPointcloud(
   createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
     reinterpret_cast<OutputSegmentationPointType *>(output_points), num_classes, num_points);
+
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+}
+
+void PostprocessCuda::reconstructPartial(
+  const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
+  std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
+  std::size_t num_cropped_points, std::size_t num_voxels)
+{
+  auto block = dim3(32, 8);
+  auto grid = dim3(divup(num_cropped_points, block.y), divup(num_classes, block.x));
+
+  reconstructPartialKernel<<<grid, block, 0, stream_>>>(
+    inverse_map, voxel_labels, voxel_probs, output_labels, output_probs, num_classes,
+    num_cropped_points, num_voxels);
+
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+}
+
+void PostprocessCuda::reconstructFull(
+  const std::uint32_t * crop_mask, const std::uint32_t * crop_indices,
+  const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
+  std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
+  std::size_t num_points, std::size_t num_voxels)
+{
+  auto block = dim3(32, 8);
+  auto grid = dim3(divup(num_points, block.y), divup(num_classes, block.x));
+
+  reconstructFullKernel<<<grid, block, 0, stream_>>>(
+    crop_mask, crop_indices, inverse_map, voxel_labels, voxel_probs, output_labels, output_probs,
+    num_classes, num_points, num_voxels);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
