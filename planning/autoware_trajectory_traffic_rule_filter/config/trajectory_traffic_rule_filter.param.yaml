@@ -1,3 +1,0 @@
-/**:
-  ros__parameters:
-    filter_names: ["autoware::trajectory_traffic_rule_filter::plugin::TrafficLightFilter"]
