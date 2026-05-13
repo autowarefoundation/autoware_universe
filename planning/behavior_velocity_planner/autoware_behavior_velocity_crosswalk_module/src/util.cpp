@@ -123,8 +123,6 @@ getPathEndPointsOnCrosswalk(
   auto crossed_s_values =
     autoware::experimental::trajectory::crossed_with_polygon(ego_path, polygon);
 
-  std::sort(crossed_s_values.begin(), crossed_s_values.end());
-
   if (crossed_s_values.empty()) {
     return std::nullopt;
   }

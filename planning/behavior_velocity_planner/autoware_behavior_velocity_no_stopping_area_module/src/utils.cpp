@@ -276,8 +276,6 @@ std::optional<LineString2d> generate_stop_line(
       continue;
     }
 
-    std::sort(collision_points.begin(), collision_points.end());
-
     // interpolate for intersect point
     std::vector<lanelet::ConstPoint3d> ls_points = {};
     for (auto & pt : path.points) {
