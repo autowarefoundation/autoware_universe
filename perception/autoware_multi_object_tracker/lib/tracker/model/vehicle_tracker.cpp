@@ -311,9 +311,8 @@ std::optional<types::DynamicObject> VehicleTracker::alignClusterToTrackerOrienta
   const types::DynamicObject & cluster, const double tracker_yaw) const
 {
   // Only re-project polygon (cluster) measurements; bounding boxes are already axis-aligned.
-  const bool is_cluster =
-    cluster.shape.type == autoware_perception_msgs::msg::Shape::POLYGON &&
-    !cluster.shape.footprint.points.empty();
+  const bool is_cluster = cluster.shape.type == autoware_perception_msgs::msg::Shape::POLYGON &&
+                          !cluster.shape.footprint.points.empty();
   if (!is_cluster) return std::nullopt;
 
   const auto & pts = cluster.shape.footprint.points;
@@ -368,8 +367,7 @@ bool VehicleTracker::conditionedUpdate(
 {
   // For cluster measurements, re-project the footprint onto the tracker heading before strategy
   // selection. nullopt is returned when there are no footprint points.
-  const auto aligned =
-    alignClusterToTrackerOrientation(measurement, motion_model_.getYawState());
+  const auto aligned = alignClusterToTrackerOrientation(measurement, motion_model_.getYawState());
   const types::DynamicObject & meas = aligned ? *aligned : measurement;
 
   // Determine update strategy
