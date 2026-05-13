@@ -269,16 +269,16 @@ void process_objects_(
   const rclcpp::Time measurement_time =
     objects_with_associations.getTimestamp(current_time.get_clock_type());
 
+  // Get ego pose
   const auto ego_pose_stamped = getEgoPoseAt(measurement_time, state);
-
   if (!ego_pose_stamped) {
     RCLCPP_WARN(
       logger, "No odometry information available at the measurement time: %.9f",
       measurement_time.seconds());
   }
+  state.processor->updateEgoPose(ego_pose_stamped);
 
   /// 1. Update ego pose and predict trackers to measurement time
-  state.processor->updateEgoPose(ego_pose_stamped);
   state.processor->predictTrackers(measurement_time);
 
   /// 2. Object association
