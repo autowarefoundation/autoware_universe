@@ -36,7 +36,7 @@ def launch_setup(context, *args, **kwargs):
         package="autoware_euclidean_cluster",
         namespace=ns,
         plugin="autoware::euclidean_cluster::LabelBasedEuclideanClusterNode",
-        name=AnonName("label_based_euclidean_cluster"),
+        name="label_based_euclidean_cluster",
         remappings=[
             ("input", LaunchConfiguration("input_pointcloud")),
             ("output", LaunchConfiguration("output_objects")),
