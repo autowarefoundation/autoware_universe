@@ -14,7 +14,9 @@
 
 #pragma once
 
-#include "autoware/euclidean_cluster/euclidean_cluster.hpp"
+
+#include "autoware/euclidean_cluster/euclidean_cluster_interface.hpp"
+#include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
 #include <autoware/shape_estimation/shape_estimator.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
@@ -61,7 +63,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_;
 
-  std::shared_ptr<EuclideanCluster> cluster_;
+  std::shared_ptr<EuclideanClusterInterface> cluster_;
   std::unique_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;

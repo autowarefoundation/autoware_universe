@@ -26,7 +26,9 @@
 #include <sensor_msgs/msg/point_field.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
+
 #include <pcl/common/common.h>
+#include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -324,19 +326,29 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
     throw std::runtime_error("No supported classes were configured for clustering");
   }
 
-  {
-    // Initialize the euclidean cluster
-    const auto use_height =
-      autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_height");
-    const auto min_cluster_size = static_cast<int>(
-      autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_cluster_size"));
-    const auto max_cluster_size = static_cast<int>(
-      autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_cluster_size"));
-    const auto tolerance = static_cast<float>(
-      autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "tolerance"));
-    cluster_ =
-      std::make_shared<EuclideanCluster>(use_height, min_cluster_size, max_cluster_size, tolerance);
-  }
+  // Initialize the voxel grid based euclidean cluster
+  const auto use_height =
+    autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_height");
+  const auto min_cluster_size = static_cast<int>(
+    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_cluster_size"));
+  const auto max_cluster_size = static_cast<int>(
+    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_cluster_size"));
+  const auto tolerance = static_cast<float>(
+    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "tolerance"));
+  const auto voxel_leaf_size = static_cast<float>(
+    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "voxel_leaf_size"));
+  const auto min_points_number_per_voxel = static_cast<int>(
+    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_points_number_per_voxel"));
+  const auto min_voxel_cluster_size_for_filtering = static_cast<int>(
+    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_voxel_cluster_size_for_filtering"));
+  const auto max_points_per_voxel_in_large_cluster = static_cast<int>(
+    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_points_per_voxel_in_large_cluster"));
+  const auto max_voxel_cluster_for_output = static_cast<int>(
+    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_voxel_cluster_for_output"));
+  cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
+    use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
+    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
 
   {
     // Initialize the shape estimator
