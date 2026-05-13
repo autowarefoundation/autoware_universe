@@ -2,6 +2,22 @@
 Changelog for package autoware_traffic_light_visualization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* test(autoware_traffic_light_visualization): add characterization test for TrafficLightMapVisualizerNode (`#12487 <https://github.com/mitsudome-r/autoware_universe/issues/12487>`_)
+  * test(autoware_traffic_light_visualization): add characterization tests for TrafficLightMapVisualizerNode
+  Add characterization tests to capture the current behavior of
+  TrafficLightMapVisualizerNode before refactoring. These tests serve as
+  a safety net to ensure behavior is preserved during upcoming logic
+  separation and code cleanup.
+  * test(autoware_traffic_light_visualization): clarify map layout diagram with XZ side view
+  ---------
+* chore(traffic_light_recognition): add maintainer (`#12221 <https://github.com/mitsudome-r/autoware_universe/issues/12221>`_)
+  add maintainer
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* Contributors: Masaki Baba, Takayuki AKAMINE, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

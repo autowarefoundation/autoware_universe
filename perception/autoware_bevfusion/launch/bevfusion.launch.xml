@@ -2,7 +2,7 @@
 <launch>
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
   <arg name="output/objects" default="objects"/>
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
   <arg name="model_name" default="bevfusion_lidar">
     <choice value="bevfusion_lidar"/>
     <choice value="bevfusion_camera_lidar"/>

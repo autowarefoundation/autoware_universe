@@ -2,6 +2,14 @@
 Changelog for package autoware_behavior_velocity_template_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_velocity_planner): remove unused lanelet2_extension header (`#12293 <https://github.com/mitsudome-r/autoware_universe/issues/12293>`_)
+  unused lanelet2_extension in bvp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Sarun MUKDAPITAK, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

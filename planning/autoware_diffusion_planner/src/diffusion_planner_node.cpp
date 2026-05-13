@@ -50,6 +50,9 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
     "~/output/debug/traffic_signal", 1);
   debug_processing_time_detail_pub_ = this->create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms", 1);
+  debug_processing_time_pub_ =
+    this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/debug/processing_time_ms", 1);
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
 
   set_up_params();
@@ -270,6 +273,8 @@ void DiffusionPlanner::on_timer()
 {
   // Timer callback function
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+  stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
+  stop_watch_ptr_->tic("processing_time");
 
   diagnostics_inference_->clear();
 
@@ -391,6 +396,10 @@ void DiffusionPlanner::on_timer()
 
   // Publish diagnostics
   diagnostics_inference_->publish(frame_time);
+  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
+  processing_time_msg.stamp = get_clock()->now();
+  processing_time_msg.data = stop_watch_ptr_->toc("processing_time", true);
+  debug_processing_time_pub_->publish(processing_time_msg);
 }
 
 void DiffusionPlanner::publish_planning_factor(const Trajectory & trajectory)

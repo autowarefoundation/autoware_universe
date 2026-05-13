@@ -28,6 +28,12 @@
 namespace autoware::ptv3
 {
 
+enum class SourceReconstruction {
+  NONE,
+  PARTIAL,
+  FULL,
+};
+
 class PTv3Config
 {
 public:
@@ -36,7 +42,8 @@ public:
     const std::vector<std::int64_t> & voxels_num, const std::vector<float> & point_cloud_range,
     const std::vector<float> & voxel_size, const std::vector<std::string> & class_names,
     const std::vector<std::int64_t> & palette, const float filter_class_probability_threshold,
-    const std::vector<std::string> & filter_classes, const std::string & filter_output_format)
+    const std::vector<std::string> & filter_classes, const std::string & filter_output_format,
+    const std::string & source_reconstruction)
   {
     plugins_path_ = plugins_path;
 
@@ -91,6 +98,21 @@ public:
     filter_class_probability_threshold_ = filter_class_probability_threshold;
     filter_class_indices_ = make_filter_class_indices(class_names_, filter_classes);
     filter_output_format_ = filter_output_format;
+    source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
+  }
+
+  static SourceReconstruction parse_source_reconstruction(const std::string & value)
+  {
+    if (value == "none") {
+      return SourceReconstruction::NONE;
+    }
+    if (value == "partial") {
+      return SourceReconstruction::PARTIAL;
+    }
+    if (value == "full") {
+      return SourceReconstruction::FULL;
+    }
+    throw std::runtime_error("source_reconstruction must be one of: 'none', 'partial', or 'full'.");
   }
 
   static std::vector<std::uint32_t> make_filter_class_indices(
@@ -155,6 +177,7 @@ public:
   float filter_class_probability_threshold_{};
   std::vector<std::uint32_t> filter_class_indices_;
   std::string filter_output_format_;
+  SourceReconstruction source_reconstruction_{SourceReconstruction::NONE};
 
   // Common network parameters
   std::int64_t cloud_capacity_{};

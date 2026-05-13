@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_trajectory_validator</name>
-  <version>0.50.0</version>
+  <version>0.51.0</version>
   <description>The autoware_trajectory_validator package</description>
 
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
@@ -32,6 +32,7 @@
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_utils_debug</depend>
+  <depend>autoware_utils_diagnostics</depend>
   <depend>autoware_utils_geometry</depend>
   <depend>autoware_utils_rclcpp</depend>
   <depend>autoware_vehicle_info_utils</depend>

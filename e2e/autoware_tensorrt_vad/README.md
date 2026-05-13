@@ -36,7 +36,7 @@ This module replaces traditional localization, perception, and planning modules 
 Parameters can be set via configuration files:
 
 - Deployment configuration (node and interface parameters): `config/vad_carla_tiny.param.yaml`
-- Model architecture parameters: `vad-carla-tiny.param.json` (downloaded with model to `~/autoware_data/vad/v0.1/`)
+- Model architecture parameters: `vad-carla-tiny.param.json` (downloaded with model to `~/autoware_data/ml_models/vad/v0.1/`)
 
 ---
 
@@ -99,7 +99,7 @@ Then launch the E2E VAD system:
 
 ```bash
 ros2 launch autoware_launch e2e_simulator.launch.xml \
-  map_path:=$HOME/autoware_map/Town01 \
+  map_path:=$HOME/autoware_data/maps/Town01 \
   vehicle_model:=sample_vehicle \
   sensor_model:=carla_sensor_kit \
   simulator_type:=carla \
@@ -117,7 +117,7 @@ The VAD model files are automatically downloaded when setting up the Autoware de
 To download the latest models, simply run the provided setup script:
 [How to set up a development environment](https://autowarefoundation.github.io/autoware-documentation/main/installation/autoware/source-installation/#how-to-set-up-a-development-environment)
 
-The models will be downloaded to `~/autoware_data/vad/` by default.
+The models will be downloaded to `~/autoware_data/ml_models/vad/` by default.
 
 **Manual Download** (if needed):
 Models are hosted at: <https://awf.ml.dev.web.auto/planning/models/tensorrt_vad/carla_tiny/v0.1/>

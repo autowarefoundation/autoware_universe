@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 
+#include "autoware/trajectory_validator/evaluation_context.hpp"
+#include "autoware/trajectory_validator/validation_stage_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
@@ -64,50 +66,24 @@ using nav_msgs::msg::Odometry;
 class TrajectoryValidator : public rclcpp::Node
 {
 public:
-  struct PluginEvaluation
-  {
-    std::string plugin_name;
-    bool is_feasible{true};
-    bool is_shadow_mode{false};
-    std::string reason;
-  };
-
-  struct EvaluationTable
-  {
-    std::string generator_id;
-    std::unordered_map<std::string, std::vector<PluginEvaluation>> evaluations;
-
-    /**
-     * @brief Returns true if any evaluation is feasible or in shadow mode.
-     */
-    bool all_acceptable() const
-    {
-      return all_evaluations([](const auto & e) { return e.is_feasible || e.is_shadow_mode; });
-    }
-
-    /**
-     * @brief Returns true if all evaluations are feasible.
-     */
-    bool all_feasible() const
-    {
-      return all_evaluations([](const auto & e) { return e.is_feasible; });
-    }
-
-  private:
-    /**
-     * @brief Returns true if all evaluations satisfy the given predicate.
-     */
-    bool all_evaluations(const std::function<bool(const PluginEvaluation &)> & pred) const
-    {
-      return std::all_of(evaluations.begin(), evaluations.end(), [&](const auto & pair) {
-        return std::all_of(pair.second.begin(), pair.second.end(), pred);
-      });
-    }
-  };
-
   explicit TrajectoryValidator(const rclcpp::NodeOptions & node_options);
 
 private:
+  /**
+   * @brief Initialise the node's subscribers.
+   */
+  void subscribers();
+
+  /**
+   * @brief Initialise the node's publishers.
+   */
+  void publishers();
+
+  /**
+   * @brief Gather the latest inputs required to run the filter plugins.
+   */
+  tl::expected<EvaluationContext, std::string> take_data();
+
   void process(const CandidateTrajectories::ConstSharedPtr msg);
 
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
@@ -128,14 +104,48 @@ private:
    */
   void publish_validation_reports(const std::vector<ValidationReport> & reports);
 
+  /**
+   * @brief Publish the union of all debug information.
+   */
+  void publish_debug(
+    const std::vector<EvaluationTable> & evaluation_tables,
+    const std::unordered_map<std::string, double> & processing_time,
+    const geometry_msgs::msg::Pose & marker_pose);
+
+  /**
+   * @brief Publish each plugin's debug markers.
+   */
+  void publish_plugins_debug_markers() const;
+
+  /**
+   * @brief Publish each plugin's filtering report in a single string stamped marker.
+   */
+  void publish_plugins_report_text(
+    const std::vector<EvaluationTable> & evaluation_tables,
+    const geometry_msgs::msg::Pose & marker_pose);
+
+  /**
+   * @brief Publish each plugin's processing time as scalar value.
+   * @param processing_time Map of plugin name -> elapsed time in [ms].
+   */
+  void publish_processing_time(const std::unordered_map<std::string, double> & processing_time);
+
+  /**
+   * @brief Publish each plugin's processing time in a single string stamped marker.
+   * @param processing_time Map of plugin name -> elapsed time in [ms].
+   */
+  void publish_processing_time_text(
+    const std::unordered_map<std::string, double> & processing_time);
+
+  // Parameters
   validator::ParamListener listener_;
   validator::Params params_;
 
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
-    debug_processing_time_detail_pub_;
-  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
+  // Plugin infrastructure
+  pluginlib::ClassLoader<plugin::ValidatorInterface> plugin_loader_;
+  std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins_;
 
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
+  // Subscribers
   autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry> sub_odometry_{
     this, "~/input/odometry"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects> sub_objects_{
@@ -145,20 +155,21 @@ private:
   autoware_utils_rclcpp::InterProcessPollingSubscriber<
     autoware_perception_msgs::msg::TrafficLightGroupArray>
     sub_traffic_lights_{this, "~/input/traffic_signals"};
-
+  rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
 
+  // Publishers
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_validation_reports_;
+  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
+    pub_processing_time_detail_;
+  std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_debug_;
 
+  // Internal state
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
-
-  pluginlib::ClassLoader<plugin::ValidatorInterface> plugin_loader_;
-  std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins_;
-  std::vector<EvaluationTable> evaluation_tables_;
-
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   DiagnosticsInterface diagnostics_interface_{this, "trajectory_validator"};
+  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 
 }  // namespace autoware::trajectory_validator
