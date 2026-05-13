@@ -30,6 +30,9 @@
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <tf2/utils.hpp>
 
+#include <geometry_msgs/msg/point.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/difference.hpp>
 #include <boost/geometry/algorithms/is_empty.hpp>
@@ -38,9 +41,6 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/BoundingBox.h>
 #include <lanelet2_core/geometry/Lanelet.h>
-
-#include <geometry_msgs/msg/point.hpp>
-#include <visualization_msgs/msg/marker.hpp>
 
 #include <limits>
 #include <vector>
@@ -128,8 +128,7 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
   visualization_msgs::msg::MarkerArray area_markers;
   int area_id = 0;
 
-  const std_msgs::msg::ColorRGBA cl_end =
-    autoware_utils::create_marker_color(0.2, 0.2, 0.4, 0.05);
+  const std_msgs::msg::ColorRGBA cl_end = autoware_utils::create_marker_color(0.2, 0.2, 0.4, 0.05);
   const std_msgs::msg::ColorRGBA cl_goal =
     autoware_utils::create_marker_color(0.2, 0.4, 0.4, goal_lanelet_transparency);
 
@@ -147,8 +146,9 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
         m.scale.x = 0.08;
         const bool is_preferred = route_section.preferred_primitive.id == prim.id;
 <<<<<<< HEAD
-        m.color = is_preferred ? autoware_utils::create_marker_color(0.2, 0.5, 0.5, goal_lanelet_transparency)
-                               : autoware_utils::create_marker_color(0.4, 0.9, 0.5, 0.75);
+        m.color = is_preferred
+                    ? autoware_utils::create_marker_color(0.2, 0.5, 0.5, goal_lanelet_transparency)
+                    : autoware_utils::create_marker_color(0.4, 0.9, 0.5, 0.75);
 =======
         m.color = is_preferred ? cl_goal : cl_end;
 >>>>>>> ae645f875 (feat(mission_planner): visualize route area segments as LINE_STRIP in RViz)
@@ -441,13 +441,13 @@ PlannerPlugin::LaneletRoute DefaultPlanner::plan(const RoutePoints & points)
     }
     RCLCPP_INFO(
       logger,
-      "[DefaultPlanner] Route segments for message: total=%zu (lane_segments=%zu, area_segments=%zu)",
+      "[DefaultPlanner] Route segments for message: total=%zu (lane_segments=%zu, "
+      "area_segments=%zu)",
       route_sections.size(), n_lane_seg, n_area_seg);
     for (size_t si = 0; si < route_sections.size(); ++si) {
       const auto & seg = route_sections[si];
       RCLCPP_DEBUG(
-        logger,
-        "[DefaultPlanner]   segment[%zu] preferred id=%ld type=%s primitives=%zu", si,
+        logger, "[DefaultPlanner]   segment[%zu] preferred id=%ld type=%s primitives=%zu", si,
         seg.preferred_primitive.id, seg.preferred_primitive.primitive_type.c_str(),
         seg.primitives.size());
     }
