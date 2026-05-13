@@ -157,8 +157,7 @@ std::int64_t unique(
     sorted_input;
 
   cudaMemcpyAsync(
-    range_ptr + num_out * sizeof(int64_t), &num_input_elements, sizeof(std::int64_t),
-    cudaMemcpyHostToDevice, stream);
+    range_ptr + num_out, &num_input_elements, sizeof(std::int64_t), cudaMemcpyHostToDevice, stream);
 
   thrust::adjacent_difference(policy, range_ptr + 1, range_ptr + num_out + 1, unique_counts);
 
