@@ -19,6 +19,7 @@
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -87,10 +88,9 @@ std::optional<geometry_msgs::msg::Pose> calculate_pose_ahead_of_collision(
        l -= precision) {
     const auto interpolated_pose =
       motion_utils::calcInterpolatedPose(ego_data.trajectory_points, l);
-    const auto interpolated_footprint = project_to_pose(footprint, interpolated_pose);
-    if (!boost::geometry::disjoint(interpolated_footprint, point_to_avoid.out_overlaps)) {
+    if (autoware::experimental::trajectory::crossed_with_footprint(
+          interpolated_pose, point_to_avoid.out_overlaps, footprint))
       return interpolated_pose;
-    }
   }
   return std::nullopt;
 }
