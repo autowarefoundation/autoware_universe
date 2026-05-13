@@ -16,8 +16,8 @@
 
 #include "autoware/control_evaluator/metrics/metrics_utils.hpp"
 
-#include <autoware/boundary_departure_checker/conversion.hpp>
-#include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/deprecated/boundary_departure_checker/conversion.hpp>
+#include <autoware/deprecated/boundary_departure_checker/utils.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
