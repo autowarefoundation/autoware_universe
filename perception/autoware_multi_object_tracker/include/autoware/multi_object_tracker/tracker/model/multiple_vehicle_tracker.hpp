@@ -53,6 +53,14 @@ public:
   void setOrientationAvailability(
     const types::OrientationAvailability & orientation_availability) override;
   virtual ~MultipleVehicleTracker() {}
+
+  // Same policy as VehicleTracker: bicycle model owns shape; clusters use conditioned update.
+  UpdatePath selectUpdatePath(
+    bool trust_extension, bool has_significant_shape_change) const override
+  {
+    if (!trust_extension) return UpdatePath::CONDITIONED;
+    return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
+  }
 };
 
 }  // namespace autoware::multi_object_tracker

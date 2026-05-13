@@ -48,7 +48,8 @@ protected:
     const char * home_env = std::getenv("HOME");
     std::filesystem::path home_path = home_env ? home_env : "/";
     std::filesystem::path onnx_path =
-      home_path / "autoware_data/calibration_status_classifier/calibration_status_classifier.onnx";
+      home_path /
+      "autoware_data/ml_models/calibration_status_classifier/calibration_status_classifier.onnx";
     if (!std::filesystem::exists(onnx_path)) {
       GTEST_SKIP() << "ONNX model file not found: " << onnx_path;
     }
