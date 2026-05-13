@@ -47,12 +47,15 @@ TrackerProcessor::TrackerProcessor(
     std::make_unique<TrackerOverlapManager>(tracker_overlap_manager_config);
 }
 
-void TrackerProcessor::predictTrackers(
-  const rclcpp::Time & time,
+void TrackerProcessor::updateEgoPose(
   const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose_stamped)
 {
   ego_pose_ = ego_pose_stamped;
+  association_manager_->setEgoPose(ego_pose_stamped);
+}
 
+void TrackerProcessor::predictTrackers(const rclcpp::Time & time)
+{
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
@@ -67,7 +70,6 @@ types::AssociationResult TrackerProcessor::associate(
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  association_manager_->setEgoPose(ego_pose_);
   return association_manager_->associate(detected_objects, list_tracker_);
 }
 
