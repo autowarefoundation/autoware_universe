@@ -31,23 +31,24 @@ inline double getMahalanobisDistanceFast(double dx, double dy, const InverseCova
 }
 }  // namespace
 
-double calculateBevAssignmentScore(
+ScoringResult calculateBevAssignmentScore(
   const types::DynamicObject & tracked_object, const classes::Label tracker_label,
   const types::TrackerType tracker_type,
   const AssociatorConfig::TrackerAssociationParameters & association_params,
   const types::DynamicObject & measurement_object, const classes::Label measurement_label,
-  const InverseCovariance2D & inv_cov, const double unknown_association_giou_threshold,
-  bool & has_significant_shape_change)
+  const InverseCovariance2D & inv_cov, const double unknown_association_giou_threshold)
 {
+  ScoringResult result{INVALID_SCORE, false};
+
   // When both tracker and measurement are unknown, use generalized IoU only
   if (tracker_label == classes::Label::UNKNOWN && measurement_label == classes::Label::UNKNOWN) {
     const double generalized_iou = shapes::get2dGeneralizedIoU(tracked_object, measurement_object);
     if (generalized_iou < unknown_association_giou_threshold) {
-      return INVALID_SCORE;
+      return result;
     }
-    // Rescale score to [0, 1]
-    return (generalized_iou - unknown_association_giou_threshold) /
-           (1.0 - unknown_association_giou_threshold);
+    result.score = (generalized_iou - unknown_association_giou_threshold) /
+                   (1.0 - unknown_association_giou_threshold);
+    return result;
   }
 
   const double max_dist_sq = association_params.max_dist_sq;
@@ -56,7 +57,7 @@ double calculateBevAssignmentScore(
   const double dist_sq = dx * dx + dy * dy;
 
   // Distance gate
-  if (dist_sq > max_dist_sq) return INVALID_SCORE;
+  if (dist_sq > max_dist_sq) return result;
 
   // Gates for non-vehicle objects
   const double area_meas = measurement_object.area;
@@ -65,13 +66,13 @@ double calculateBevAssignmentScore(
     // Area gate
     const double max_area = association_params.max_area;
     const double min_area = association_params.min_area;
-    if (area_meas < min_area || area_meas > max_area) return INVALID_SCORE;
+    if (area_meas < min_area || area_meas > max_area) return result;
 
     // Mahalanobis distance gate
     const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
     // Empirical value: 99.6% confidence level for chi-square with 2 DOF
     constexpr double mahalanobis_dist_threshold = 11.62;
-    if (mahalanobis_dist >= mahalanobis_dist_threshold) return INVALID_SCORE;
+    if (mahalanobis_dist >= mahalanobis_dist_threshold) return result;
   }
 
   const double min_iou = association_params.min_iou;
@@ -88,19 +89,19 @@ double calculateBevAssignmentScore(
   } else {
     iou_score = shapes::get2dGeneralizedIoU(measurement_object, tracked_object);
   }
-  if (iou_score < min_iou) return INVALID_SCORE;
+  if (iou_score < min_iou) return result;
 
   // Check if shape changes too much for vehicle labels
   if (iou_score < CHECK_GIOU_THRESHOLD && is_vehicle_tracker) {
     const double area_trk = tracked_object.area;
     const double area_ratio = std::max(area_trk, area_meas) / std::min(area_trk, area_meas);
     if (area_ratio > AREA_RATIO_THRESHOLD) {
-      has_significant_shape_change = true;
+      result.has_significant_shape_change = true;
     }
   }
 
-  // Rescale score to [0, 1]
-  return (iou_score - min_iou) / (1.0 - min_iou);
+  result.score = (iou_score - min_iou) / (1.0 - min_iou);
+  return result;
 }
 
 }  // namespace autoware::multi_object_tracker

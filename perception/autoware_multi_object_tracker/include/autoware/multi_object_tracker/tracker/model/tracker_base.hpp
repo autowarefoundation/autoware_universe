@@ -42,6 +42,8 @@
 namespace autoware::multi_object_tracker
 {
 
+enum class UpdatePath { NORMAL, TRY_EXTENSION, CONDITIONED };
+
 class Tracker
 {
 private:
@@ -192,6 +194,17 @@ protected:
     const types::DynamicObject & measurement, const types::DynamicObject & prediction,
     const autoware_perception_msgs::msg::Shape & tracker_shape,
     const rclcpp::Time & measurement_time, const types::InputChannel & channel_info);
+
+  // Selects the update path for a given measurement.
+  // NORMAL      — standard Kalman update (with optional shape-filter history accumulation)
+  // TRY_EXTENSION — attempt extension update via shape filter; fall back to CONDITIONED if unstable
+  // CONDITIONED — edge-aligned / weak conditioned update; shape management is bypassed entirely
+  virtual UpdatePath selectUpdatePath(bool trust_extension, bool has_significant_shape_change) const
+  {
+    (void)trust_extension;
+    (void)has_significant_shape_change;
+    return UpdatePath::NORMAL;
+  }
 
 public:
   virtual bool getTrackedObject(

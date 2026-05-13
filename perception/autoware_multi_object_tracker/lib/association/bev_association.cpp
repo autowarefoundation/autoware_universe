@@ -178,36 +178,27 @@ PreparationData BevAssociation::prepareAssociationData(
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
   PreparationData prep_data;
+  prep_data.trackers.reserve(trackers.size());
 
-  prep_data.tracked_objects.reserve(trackers.size());
-  prep_data.tracker_labels.reserve(trackers.size());
-  prep_data.tracker_types.reserve(trackers.size());
+  std::vector<ValueType> rtree_points;
+  rtree_.clear();
+  rtree_points.reserve(trackers.size());
 
-  {
-    size_t tracker_idx = 0;
-    std::vector<ValueType> rtree_points;
-    rtree_.clear();
-    rtree_points.reserve(trackers.size());
-    for (const auto & tracker : trackers) {
-      types::DynamicObject tracked_object;
-      tracker->getTrackedObject(measurements.header.stamp, tracked_object);
+  size_t tracker_idx = 0;
+  for (const auto & tracker : trackers) {
+    TrackerBevEntry entry;
+    tracker->getTrackedObject(measurements.header.stamp, entry.object);
+    entry.label = tracker->getHighestProbLabel();
+    entry.type = tracker->getTrackerType();
+    entry.inv_cov = precomputeInverseCovarianceFromPose(entry.object.pose_covariance);
 
-      Point p(tracked_object.pose.position.x, tracked_object.pose.position.y);
-      rtree_points.emplace_back(p, tracker_idx);
+    Point p(entry.object.pose.position.x, entry.object.pose.position.y);
+    rtree_points.emplace_back(p, tracker_idx);
 
-      prep_data.tracked_objects.emplace_back(std::move(tracked_object));
-      prep_data.tracker_labels.emplace_back(tracker->getHighestProbLabel());
-      prep_data.tracker_types.emplace_back(tracker->getTrackerType());
-      ++tracker_idx;
-    }
-    rtree_.insert(rtree_points.begin(), rtree_points.end());
+    prep_data.trackers.emplace_back(std::move(entry));
+    ++tracker_idx;
   }
-
-  prep_data.tracker_inverse_covariances.reserve(prep_data.tracked_objects.size());
-  for (const auto & tracked_object : prep_data.tracked_objects) {
-    prep_data.tracker_inverse_covariances.emplace_back(
-      precomputeInverseCovarianceFromPose(tracked_object.pose_covariance));
-  }
+  rtree_.insert(rtree_points.begin(), rtree_points.end());
 
   return prep_data;
 }
@@ -231,7 +222,7 @@ void BevAssociation::processMeasurement(
   Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);
 
   std::vector<ValueType> nearby_trackers;
-  nearby_trackers.reserve(std::min(size_t{100}, prep_data.tracked_objects.size()));
+  nearby_trackers.reserve(std::min(size_t{100}, prep_data.trackers.size()));
 
   const double max_dist = std::sqrt(max_squared_dist);
   const Box query_box(
@@ -241,23 +232,21 @@ void BevAssociation::processMeasurement(
 
   for (const auto & tracker_value : nearby_trackers) {
     const size_t tracker_idx = tracker_value.second;
-    const auto tracker_type = prep_data.tracker_types[tracker_idx];
+    const auto & tracker_entry = prep_data.trackers[tracker_idx];
 
-    const auto association_params_opt = get_map_value_if_exists(tracker_params_map, tracker_type);
+    const auto association_params_opt =
+      get_map_value_if_exists(tracker_params_map, tracker_entry.type);
     if (!association_params_opt) continue;
 
-    const auto & tracked_object = prep_data.tracked_objects[tracker_idx];
-    const auto tracker_label = prep_data.tracker_labels[tracker_idx];
+    const auto result = calculateBevAssignmentScore(
+      tracker_entry.object, tracker_entry.label, tracker_entry.type, association_params_opt->get(),
+      measurement_object, measurement_label, tracker_entry.inv_cov,
+      config_.unknown_association_giou_threshold);
 
-    bool has_significant_shape_change = false;
-    const double score = calculateBevAssignmentScore(
-      tracked_object, tracker_label, tracker_type, association_params_opt->get(),
-      measurement_object, measurement_label, prep_data.tracker_inverse_covariances[tracker_idx],
-      config_.unknown_association_giou_threshold, has_significant_shape_change);
-
-    if (score > INVALID_SCORE) {
+    if (result.score > INVALID_SCORE) {
       association_data.entries.emplace_back(
-        types::AssociationEntry{tracker_idx, measurement_idx, score, has_significant_shape_change});
+        types::AssociationEntry{
+          tracker_idx, measurement_idx, result.score, result.has_significant_shape_change});
     }
   }
 }
