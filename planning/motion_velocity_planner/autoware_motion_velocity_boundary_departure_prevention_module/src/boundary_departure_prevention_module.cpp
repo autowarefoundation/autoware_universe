@@ -684,11 +684,11 @@ std::pair<int8_t, std::string> BoundaryDeparturePreventionModule::get_diagnostic
       const auto & th_trigger = node_param_.bdc_param.th_trigger;
       const auto braking_start_vel =
         std::clamp(curr_vel, th_trigger.th_vel_mps.min, th_trigger.th_vel_mps.max);
-      const auto braking_dist =
-        boundary_departure_checker::utils::calc_judge_line_dist_with_jerk_limit(
-          braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
-          th_trigger.brake_delay_s);
-      return (pt.ego_dist_on_ref_traj - ego_dist_on_traj) <= braking_dist;
+      const auto braking_dist_opt = motion_utils::calculate_stop_distance(
+        braking_start_vel, 0.0, th_trigger.th_acc_mps2.min, th_trigger.th_jerk_mps3.max,
+        th_trigger.brake_delay_s);
+      return (pt.ego_dist_on_ref_traj - ego_dist_on_traj) <=
+             braking_dist_opt.value_or(std::numeric_limits<double>::min());
     };
 
     const auto critical_departure_points = output_.abnormalities_data.critical_departure_points;

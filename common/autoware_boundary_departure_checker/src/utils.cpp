@@ -17,7 +17,6 @@
 #include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/data_structs.hpp"
 #include "autoware/boundary_departure_checker/parameters.hpp"
-#include "autoware/boundary_departure_checker/steering_abnormality_utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
@@ -35,7 +34,7 @@
 #include <cstddef>
 #include <limits>
 #include <string>
-#include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -100,6 +99,36 @@ std::vector<SegmentWithIdx> create_local_segments(const lanelet::ConstLineString
       bg::return_envelope<Segment2d>(segment), IdxForRTreeSegment(linestring.id(), i, i + 1));
   }
   return local_segments;
+}
+
+bool is_valid_footprints(
+  const autoware::boundary_departure_checker::FootprintMap<
+    autoware::boundary_departure_checker::Side<
+      autoware::boundary_departure_checker::ProjectionsToBound>> & projections_to_bound,
+  const std::vector<autoware::boundary_departure_checker::FootprintType> & footprint_type_order,
+  const autoware::boundary_departure_checker::SideKey side_key)
+{
+  if (footprint_type_order.empty()) {
+    return false;
+  }
+
+  const auto is_empty = std::any_of(
+    footprint_type_order.begin(), footprint_type_order.end(),
+    [&projections_to_bound, &side_key](const auto footprint_type) {
+      return projections_to_bound[footprint_type][side_key].empty();
+    });
+
+  if (is_empty) {
+    return false;
+  }
+
+  const auto & fr_proj_to_bound = projections_to_bound[footprint_type_order.front()][side_key];
+  const auto check_size = [&](const auto footprint_type) {
+    return fr_proj_to_bound.size() != projections_to_bound[footprint_type][side_key].size();
+  };
+
+  return !std::any_of(
+    std::next(footprint_type_order.begin()), footprint_type_order.end(), check_size);
 }
 }  // namespace
 
@@ -420,8 +449,8 @@ UncrossableBoundRTree build_uncrossable_boundaries_rtree(
   return {segments.begin(), segments.end()};
 }
 
-tl::expected<std::tuple<Point2d, Point2d, double>, std::string> point_to_segment_projection(
-  const Point2d & p, const Segment2d & segment, const bool swap_points)
+tl::expected<std::pair<Point2d, double>, std::string> point_to_segment_projection(
+  const Point2d & p, const Segment2d & segment)
 {
   const auto & p1 = segment.first;
   const auto & p2 = segment.second;
@@ -429,26 +458,16 @@ tl::expected<std::tuple<Point2d, Point2d, double>, std::string> point_to_segment
   const Point2d p2_vec = {p2.x() - p1.x(), p2.y() - p1.y()};
   const Point2d p_vec = {p.x() - p1.x(), p.y() - p1.y()};
 
-  const auto result = [&swap_points](
-                        const Point2d & orig,
-                        const Point2d & proj) -> std::tuple<Point2d, Point2d, double> {
-    return swap_points ? std::make_tuple(proj, orig, boost::geometry::distance(proj, orig))
-                       : std::make_tuple(orig, proj, boost::geometry::distance(orig, proj));
-  };
-
   const auto c1 = boost::geometry::dot_product(p_vec, p2_vec);
   if (c1 < 0.0) return tl::make_unexpected("Point before segment start");
-  if (c1 == 0.0) return result(p, p1);
 
   const auto c2 = boost::geometry::dot_product(p2_vec, p2_vec);
   if (c1 > c2) return tl::make_unexpected("Point after segment end");
 
-  if (c1 == c2) return result(p, p2);
-
   const auto projection = p1 + (p2_vec * c1 / c2);
   const auto projection_point = Point2d{projection.x(), projection.y()};
 
-  return result(p, projection_point);
+  return std::make_pair(projection_point, boost::geometry::distance(p, projection_point));
 }
 
 tl::expected<ProjectionToBound, std::string> segment_to_segment_nearest_projection(
@@ -467,29 +486,28 @@ tl::expected<ProjectionToBound, std::string> segment_to_segment_nearest_projecti
 
   ProjectionsToBound projections;
   projections.reserve(4);
-  constexpr bool swap_result = true;
-  if (const auto projection_opt = point_to_segment_projection(ego_f, lane_seg, swap_result)) {
-    const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
+  if (const auto projection_opt = point_to_segment_projection(ego_f, lane_seg)) {
+    const auto & [proj, dist] = *projection_opt;
+    constexpr auto lon_offset = 0.0;
+    projections.emplace_back(ego_f, proj, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
-  if (const auto projection_opt = point_to_segment_projection(ego_b, lane_seg, swap_result)) {
-    const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
+  if (const auto projection_opt = point_to_segment_projection(ego_b, lane_seg)) {
+    const auto & [proj, dist] = *projection_opt;
+    const auto lon_offset = boost::geometry::distance(ego_b, ego_f);
+    projections.emplace_back(ego_b, proj, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
-  if (const auto projection_opt = point_to_segment_projection(lane_pt1, ego_seg, !swap_result)) {
-    const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
+  if (const auto projection_opt = point_to_segment_projection(lane_pt1, ego_seg)) {
+    const auto & [proj, dist] = *projection_opt;
+    const auto lon_offset = boost::geometry::distance(proj, ego_f);
+    projections.emplace_back(proj, lane_pt1, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
-  if (const auto projection_opt = point_to_segment_projection(lane_pt2, ego_seg, !swap_result)) {
-    const auto & [pt_ego, pt_lane, dist] = *projection_opt;
-    const auto lon_offset = boost::geometry::distance(pt_ego, ego_f);
-    projections.emplace_back(pt_ego, pt_lane, lane_seg, dist, lon_offset, ego_sides_idx);
+  if (const auto projection_opt = point_to_segment_projection(lane_pt2, ego_seg)) {
+    const auto & [proj, dist] = *projection_opt;
+    const auto lon_offset = boost::geometry::distance(proj, ego_f);
+    projections.emplace_back(proj, lane_pt2, lane_seg, dist, lon_offset, ego_sides_idx);
   }
 
   if (projections.empty())
@@ -552,12 +570,18 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
   const EgoSides & ego_sides_from_footprints)
 {
   Side<ProjectionsToBound> side;
+  std::unordered_map<SideKey, bool> has_passed_border;
   for (const auto & side_key : g_side_keys) {
     side[side_key].reserve(ego_sides_from_footprints.size());
+    has_passed_border[side_key] = false;
   }
 
   auto s = 0.0;
   for (size_t i = 0; i < ego_pred_traj.size(); ++i) {
+    if (i > 0) {
+      s += autoware_utils_geometry::calc_distance2d(ego_pred_traj[i - 1], ego_pred_traj[i]);
+    }
+
     const auto & fp = ego_sides_from_footprints[i];
 
     const auto & ego_lb = fp.left.second;
@@ -567,12 +591,40 @@ Side<ProjectionsToBound> get_closest_boundary_segments_from_side(
 
     for (const auto & side_key : g_side_keys) {
       auto closest_bound = find_closest_segment(fp[side_key], rear_seg, i, boundaries[side_key]);
+
+      // Assign negative sign if the boundary has been crossed
+      if (
+        closest_bound.lat_dist > 0.0 &&
+        closest_bound.lat_dist < std::numeric_limits<double>::max() &&
+        has_passed_border[side_key]) {
+        const auto & ego_front = fp[side_key].first;
+        const auto & ego_rear = fp[side_key].second;
+
+        // Forward vector of the ego side segment
+        const double v_fwd_x = ego_front.x() - ego_rear.x();
+        const double v_fwd_y = ego_front.y() - ego_rear.y();
+
+        // Lateral vector pointing from ego to the boundary
+        const double v_lat_x = closest_bound.pt_on_bound.x() - closest_bound.pt_on_ego.x();
+        const double v_lat_y = closest_bound.pt_on_bound.y() - closest_bound.pt_on_ego.y();
+
+        // 2D Cross Product (Z-component)
+        const double cross_prod = v_fwd_x * v_lat_y - v_fwd_y * v_lat_x;
+
+        // If cross_prod < 0, boundary is to the RIGHT. If > 0, boundary is to the LEFT.
+        const bool crossed_left = (side_key == SideKey::LEFT && cross_prod < 0.0);
+        const bool crossed_right = (side_key == SideKey::RIGHT && cross_prod > 0.0);
+        if (crossed_left || crossed_right) {
+          closest_bound.lat_dist = -closest_bound.lat_dist;
+        }
+      }
+
       closest_bound.time_from_start = rclcpp::Duration(ego_pred_traj[i].time_from_start).seconds();
       closest_bound.lon_dist_on_pred_traj = s - closest_bound.lon_offset;
       side[side_key].push_back(closest_bound);
-    }
-    if (i > 1) {
-      s += autoware_utils_geometry::calc_distance2d(ego_pred_traj[i - 1], ego_pred_traj[i]);
+      if (closest_bound.lat_dist < 0.01 && !has_passed_border[side_key]) {
+        has_passed_border[side_key] = true;
+      }
     }
   }
 
@@ -684,39 +736,6 @@ TrajectoryPoints trim_pred_path(const TrajectoryPoints & ego_pred_traj, const do
   return trimmed_traj;
 }
 
-// copied form core/mvp_common. will removed once this function is moved to motion_utils
-double calc_judge_line_dist_with_jerk_limit(
-  const double velocity, const double acceleration, const double max_stop_acceleration,
-  const double max_stop_jerk, const double delay_response_time)
-{
-  if (velocity <= 0.0) {
-    return 0.0;
-  }
-
-  const double t1 = delay_response_time;
-  const double x1 = velocity * t1;
-
-  const double v2 = velocity + (std::pow(max_stop_acceleration, 2) - std::pow(acceleration, 2)) /
-                                 (2.0 * max_stop_jerk);
-
-  if (v2 <= 0.0) {
-    const double t2 = -1.0 *
-                      (max_stop_acceleration +
-                       std::sqrt(acceleration * acceleration - 2.0 * max_stop_jerk * velocity)) /
-                      max_stop_jerk;
-    const double x2 =
-      velocity * t2 + acceleration * std::pow(t2, 2) / 2.0 + max_stop_jerk * std::pow(t2, 3) / 6.0;
-    return std::max(0.0, x1 + x2);
-  }
-
-  const double t2 = (max_stop_acceleration - acceleration) / max_stop_jerk;
-  const double x2 =
-    velocity * t2 + acceleration * std::pow(t2, 2) / 2.0 + max_stop_jerk * std::pow(t2, 3) / 6.0;
-
-  const double x3 = -1.0 * std::pow(v2, 2) / (2.0 * max_stop_acceleration);
-  return std::max(0.0, x1 + x2 + x3);
-}
-
 std::optional<double> calc_signed_lateral_distance_to_boundary(
   const lanelet::ConstLineString3d & boundary, const Pose & reference_pose)
 {
@@ -782,5 +801,195 @@ std::optional<std::pair<double, double>> is_point_shifted(
     return std::make_pair(dist_m, yaw_diff_rad);
   }
   return std::nullopt;
+}
+
+std::optional<ProjectionsToBound> get_closest_projections_for_side(
+  const FootprintMap<Side<ProjectionsToBound>> & projections_to_bound, const Param & param,
+  const double min_braking_dist, const double max_braking_dist, const SideKey side_key)
+{
+  const auto & footprint_type_order = param.footprint_types_to_check;
+
+  if (!is_valid_footprints(projections_to_bound, footprint_type_order, side_key)) {
+    return std::nullopt;
+  }
+
+  const auto & fr_proj_to_bound = projections_to_bound[footprint_type_order.front()][side_key];
+
+  ProjectionsToBound min_to_bound;
+  const auto fp_size = fr_proj_to_bound.size();
+  min_to_bound.reserve(fp_size);
+
+  for (size_t idx = 0; idx < fp_size; ++idx) {
+    std::vector<ProjectionToBound> candidate_projections;
+    candidate_projections.reserve(footprint_type_order.size());
+
+    for (const auto footprint_type : footprint_type_order) {
+      auto candidate = projections_to_bound[footprint_type][side_key][idx];
+      if (candidate.ego_sides_idx != idx) continue;
+
+      candidate.footprint_type_opt = footprint_type;
+      candidate_projections.push_back(candidate);
+    }
+
+    std::optional<double> previous_longitudinal_distance =
+      min_to_bound.empty() ? std::nullopt
+                           : std::make_optional(min_to_bound.back().lon_dist_on_pred_traj);
+
+    auto closest_projection = get_closest_projection_by_departure_severity(
+      candidate_projections, param, min_braking_dist, max_braking_dist, side_key,
+      previous_longitudinal_distance);
+
+    if (closest_projection) {
+      min_to_bound.push_back(*closest_projection);
+      if (closest_projection->is_critical_departure()) {
+        break;
+      }
+    }
+  }
+
+  if (!min_to_bound.empty() && min_to_bound.back().is_critical_departure()) {
+    const double arc_length_to_departure =
+      min_to_bound.back().lon_dist_on_pred_traj - min_to_bound.back().lon_offset;
+    constexpr double longitudinal_buffer_m = 1.0;
+
+    auto earliest_critical_it = min_to_bound.end() - 1;
+
+    for (auto itr = min_to_bound.rbegin(); itr != min_to_bound.rend(); ++itr) {
+      if (itr->footprint_type_opt == FootprintType::NORMAL) {
+        const double dist_to_departure = arc_length_to_departure - itr->lon_dist_on_pred_traj;
+
+        if (dist_to_departure <= longitudinal_buffer_m) {
+          itr->departure_type_opt = DepartureType::CRITICAL_DEPARTURE;
+          earliest_critical_it = itr.base() - 1;
+        } else if (dist_to_departure <= max_braking_dist + longitudinal_buffer_m) {
+          itr->departure_type_opt = DepartureType::APPROACHING_DEPARTURE;
+        }
+      }
+    }
+
+    // Erase the physical departure points, keeping ONLY the newly buffered critical point
+    if (earliest_critical_it != min_to_bound.end() - 1) {
+      min_to_bound.erase(earliest_critical_it + 1, min_to_bound.end());
+    }
+  }
+
+  // NEW STEP 3: Sweep up! Remove any points that are still NONE
+  // (These are the safe points we temporarily kept to ensure the backward loop had physical
+  // indices)
+  min_to_bound.erase(
+    std::remove_if(
+      min_to_bound.begin(), min_to_bound.end(),
+      [](const ProjectionToBound & p) { return p.departure_type_opt == DepartureType::NONE; }),
+    min_to_bound.end());
+
+  return min_to_bound;
+}
+
+std::optional<ProjectionToBound> get_closest_projection_by_departure_severity(
+  const std::vector<ProjectionToBound> & candidate_projections, const Param & param,
+  const double min_braking_dist, const double max_braking_dist, const SideKey side_key,
+  const std::optional<double> previous_longitudinal_distance)
+{
+  std::optional<ProjectionToBound> best_projection;
+  std::optional<ProjectionToBound> fallback_normal;  // Store the skeleton!
+
+  const double th_dist_critical = param.th_trigger.th_dist_to_boundary_m[side_key].min;
+  const double th_dist_near = param.th_trigger.th_dist_to_boundary_m[side_key].max;
+
+  for (auto candidate : candidate_projections) {
+    if (!candidate.footprint_type_opt) continue;
+
+    // Save the NORMAL footprint to act as our physical skeleton
+    if (candidate.footprint_type_opt.value() == FootprintType::NORMAL) {
+      fallback_normal = candidate;
+    }
+
+    candidate.departure_type_opt = assign_departure_type(
+      candidate.lon_dist_on_pred_traj, candidate.lon_offset, min_braking_dist, max_braking_dist,
+      param.th_cutoff_time_departure_s, candidate.time_from_start, candidate.lat_dist, th_dist_near,
+      th_dist_critical, candidate.footprint_type_opt.value());
+
+    if (candidate.departure_type_opt.value() == DepartureType::NONE) {
+      continue;
+    }
+
+    if (!best_projection) {
+      best_projection = candidate;
+    } else {
+      const auto cand_severity = candidate.departure_type_opt.value();
+      const auto best_severity = best_projection->departure_type_opt.value();
+
+      if (cand_severity > best_severity) {
+        best_projection = candidate;
+      } else if (cand_severity == best_severity) {
+        if (candidate.lat_dist < best_projection->lat_dist) {
+          best_projection = candidate;
+        }
+      }
+    }
+
+    if (best_projection->is_critical_departure()) {
+      break;
+    }
+  }
+
+  // If no threats were found, return the safe NORMAL skeleton as NONE!
+  if (!best_projection) {
+    if (fallback_normal) {
+      fallback_normal->departure_type_opt = DepartureType::NONE;
+      best_projection = fallback_normal;
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  // Downsampling logic (Bypassed if CRITICAL)
+  if (
+    previous_longitudinal_distance && !best_projection->is_critical_departure() &&
+    std::abs(*previous_longitudinal_distance - best_projection->lon_dist_on_pred_traj) <=
+      param.th_point_merge_distance_m) {
+    return std::nullopt;
+  }
+
+  return best_projection;
+}
+
+DepartureType assign_departure_type(
+  const double longitudinal_distance_to_departure_point,
+  const double longitudinal_offset_to_departure_point, const double minimum_braking_distance,
+  const double maximum_braking_distance, const double cutoff_time, const double time_from_start,
+  const double lat_dist, const double th_lat_near, const double th_lat_critical,
+  const FootprintType footprint_type)
+{
+  if (lat_dist > th_lat_near) {
+    return DepartureType::NONE;
+  }
+
+  const double dist_to_departure_point_with_offset =
+    longitudinal_distance_to_departure_point -
+    longitudinal_offset_to_departure_point;  // shorter distance
+
+  if (footprint_type == FootprintType::NORMAL && lat_dist <= th_lat_critical) {
+    if (
+      dist_to_departure_point_with_offset > minimum_braking_distance &&
+      time_from_start > cutoff_time) {
+      return DepartureType::APPROACHING_DEPARTURE;
+    }
+    // Set CRITICAL if:
+    // - Short Dist & Short Time: boundary crossing is less than braking distance and we will hit it
+    // in less than cutoff time.
+    // - Long Dist but Short Time: At 100 km/h, the boundary crossing is 30 meters away, but ego
+    // will hit the crossing in less than cutoff time.
+    // - Long time, but dist less than braking: Creeping forward in a parking lot at 2 km/h, and it
+    // takes it will 4 seconds to reach it, however, the boundary less than minimum braking
+    // distance.
+    return DepartureType::CRITICAL_DEPARTURE;
+  }
+
+  if (dist_to_departure_point_with_offset < maximum_braking_distance) {
+    return DepartureType::NEAR_BOUNDARY;
+  }
+
+  return DepartureType::NONE;
 }
 }  // namespace autoware::boundary_departure_checker::utils
