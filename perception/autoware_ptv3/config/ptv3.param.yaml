@@ -5,6 +5,7 @@
     # network
     trt_precision: fp16
     cloud_capacity: 2000000
+    source_reconstruction: full
     onnx_path: "$(var model_path)/ptv3.onnx"
     engine_path: "$(var model_path)/ptv3.engine"
     filter:
