@@ -307,11 +307,16 @@ bool VehicleTracker::getTrackedObject(
   return true;
 }
 
-types::DynamicObject VehicleTracker::alignClusterToTrackerOrientation(
+std::optional<types::DynamicObject> VehicleTracker::alignClusterToTrackerOrientation(
   const types::DynamicObject & cluster, const double tracker_yaw) const
 {
+  // Only re-project polygon (cluster) measurements; bounding boxes are already axis-aligned.
+  const bool is_cluster =
+    cluster.shape.type == autoware_perception_msgs::msg::Shape::POLYGON &&
+    !cluster.shape.footprint.points.empty();
+  if (!is_cluster) return std::nullopt;
+
   const auto & pts = cluster.shape.footprint.points;
-  if (pts.empty()) return cluster;
 
   // footprint.points are in the cluster's local frame (baselink orientation).
   // Transform each point to a map-relative offset, then project onto the tracker's axes.
@@ -361,16 +366,14 @@ bool VehicleTracker::conditionedUpdate(
   const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
   const types::InputChannel & channel_info)
 {
-  // For cluster measurements, the bounding box orientation is in baselink frame.
-  // Re-project the polygon footprint onto the tracker's current heading so that
-  // determineUpdateStrategy receives correctly-oriented edge centers.
-  const types::DynamicObject & meas_for_strategy =
-    !measurement.shape.footprint.points.empty()
-      ? alignClusterToTrackerOrientation(measurement, motion_model_.getYawState())
-      : measurement;
+  // For cluster measurements, re-project the footprint onto the tracker heading before strategy
+  // selection. nullopt is returned when there are no footprint points.
+  const auto aligned =
+    alignClusterToTrackerOrientation(measurement, motion_model_.getYawState());
+  const types::DynamicObject & meas = aligned ? *aligned : measurement;
 
   // Determine update strategy
-  UpdateStrategy strategy = determineUpdateStrategy(meas_for_strategy, prediction);
+  UpdateStrategy strategy = determineUpdateStrategy(meas, prediction);
 
   // Handle weak update strategy (no edge alignment - use weak update with pseudo measurement)
   if (strategy.type == UpdateStrategyType::WEAK_UPDATE) {

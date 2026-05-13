@@ -20,6 +20,8 @@
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
+#include <optional>
+
 namespace autoware::multi_object_tracker
 {
 
@@ -107,8 +109,9 @@ private:
   geometry_msgs::msg::Point calculateAnchorPoint(
     const EdgeAlignment & alignment, const types::DynamicObject & measurement) const;
 
-  // Re-project a cluster's polygon footprint onto the tracker's current heading
-  types::DynamicObject alignClusterToTrackerOrientation(
+  // Re-project a cluster's polygon footprint onto the tracker's current heading.
+  // Returns std::nullopt when the cluster has no footprint points.
+  std::optional<types::DynamicObject> alignClusterToTrackerOrientation(
     const types::DynamicObject & cluster, double tracker_yaw) const;
 };
 
