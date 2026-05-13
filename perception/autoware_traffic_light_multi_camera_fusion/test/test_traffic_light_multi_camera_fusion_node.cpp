@@ -318,6 +318,29 @@ TEST_F(MultiCameraFusionIntegrationTest, TwoCamerasOneRegulatoryElementOutputsGr
     group.elements.front().shape, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE);
 }
 
+// Two cameras observe different traffic lights in the same regulatory element with
+// conflicting colors and different confidences. With consistency check disabled,
+// the node selects the color from the higher-confidence observation.
+TEST_F(MultiCameraFusionIntegrationTest, HigherConfidenceColorWinsAmongConflictingObservations)
+{
+  // Arrange
+  initialize_fusion_node(FusionNodeOptions{});
+  publish_map(create_map());
+
+  // Act
+  publish_camera_detection(0, LEFT_TRAFFIC_LIGHT_ID, TrafficLightElement::RED, 0.6f);
+  publish_camera_detection(1, RIGHT_TRAFFIC_LIGHT_ID, TrafficLightElement::GREEN, 0.9f);
+
+  // Assert
+  ASSERT_TRUE(wait_for_message());
+  ASSERT_EQ(received_message_->traffic_light_groups.size(), 1u);
+  const auto & group = received_message_->traffic_light_groups.front();
+  EXPECT_EQ(group.traffic_light_group_id, REGULATORY_ELEMENT_ID);
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(
+    group.elements.front().color, autoware_perception_msgs::msg::TrafficLightElement::GREEN);
+}
+
 // Two cameras observe the same regulatory element with conflicting colors (RED vs GREEN).
 // With consistency check enabled and partial-match publishing disabled, the node detects
 // a CONFLICT between the two state keys and emits a fail-safe UNKNOWN group.
