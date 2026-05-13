@@ -58,8 +58,7 @@ void SideShiftModuleManager::updateModuleParams(
   const std::string ns = "side_shift.";
   int drivable_area_check_mode = static_cast<int>(p->drivable_area_check_mode);
   if (update_param<int>(parameters, ns + "drivable_area_check_mode", drivable_area_check_mode)) {
-    p->drivable_area_check_mode =
-      static_cast<DrivableAreaCheckMode>(drivable_area_check_mode);
+    p->drivable_area_check_mode = static_cast<DrivableAreaCheckMode>(drivable_area_check_mode);
   }
   update_param<double>(parameters, ns + "min_drivable_area_margin", p->min_drivable_area_margin);
   update_param<double>(
