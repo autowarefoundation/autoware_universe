@@ -23,15 +23,49 @@
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
 
+#include <array>
+#include <cstddef>
+#include <fstream>
 #include <functional>
+#include <iomanip>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace autoware::diffusion_planner
 {
 using diagnostic_msgs::msg::DiagnosticStatus;
+
+namespace
+{
+std::string compute_file_hash_hex(const std::string & path)
+{
+  constexpr std::size_t HASH_READ_BUFFER_BYTES = 64 * 1024;
+  std::ifstream ifs(path, std::ios::binary);
+  if (!ifs) {
+    return "<failed to open>";
+  }
+  std::array<char, HASH_READ_BUFFER_BYTES> buffer{};
+  std::size_t combined = 0;
+  std::hash<std::string_view> hasher;
+  while (ifs) {
+    ifs.read(buffer.data(), buffer.size());
+    const std::streamsize n = ifs.gcount();
+    if (n <= 0) {
+      break;
+    }
+    const std::size_t chunk = hasher(std::string_view(buffer.data(), static_cast<std::size_t>(n)));
+    // boost::hash_combine: 0x9e3779b97f4a7c15 is 2^64 / golden ratio.
+    combined ^= chunk + 0x9e3779b97f4a7c15ULL + (combined << 6) + (combined >> 2);
+  }
+  std::ostringstream oss;
+  oss << std::hex << std::setw(sizeof(std::size_t) * 2) << std::setfill('0') << combined;
+  return oss.str();
+}
+}  // namespace
 
 DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
 : Node("diffusion_planner", options), generator_uuid_(autoware_utils_uuid::generate_uuid())
@@ -154,6 +188,13 @@ void DiffusionPlanner::load_model()
   core_->load_model();
   diagnostics_inference_->update_level_and_message(DiagnosticStatus::OK, "Model loaded");
   diagnostics_inference_->publish(get_clock()->now());
+
+  RCLCPP_INFO_STREAM(
+    get_logger(), "Loaded model_path=" << params_.model_path << " (hash="
+                                       << compute_file_hash_hex(params_.model_path) << ")");
+  RCLCPP_INFO_STREAM(
+    get_logger(), "Loaded args_path=" << params_.args_path << " (hash="
+                                      << compute_file_hash_hex(params_.args_path) << ")");
 }
 
 SetParametersResult DiffusionPlanner::on_parameter(
