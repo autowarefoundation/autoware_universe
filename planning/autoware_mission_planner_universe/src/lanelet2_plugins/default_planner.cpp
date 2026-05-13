@@ -145,13 +145,7 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
         m.type = visualization_msgs::msg::Marker::LINE_STRIP;
         m.scale.x = 0.08;
         const bool is_preferred = route_section.preferred_primitive.id == prim.id;
-<<<<<<< HEAD
-        m.color = is_preferred
-                    ? autoware_utils::create_marker_color(0.2, 0.5, 0.5, goal_lanelet_transparency)
-                    : autoware_utils::create_marker_color(0.4, 0.9, 0.5, 0.75);
-=======
         m.color = is_preferred ? cl_goal : cl_end;
->>>>>>> ae645f875 (feat(mission_planner): visualize route area segments as LINE_STRIP in RViz)
         for (const auto & ls : area.outerBound()) {
           for (const auto & pt : ls) {
             geometry_msgs::msg::Point p;

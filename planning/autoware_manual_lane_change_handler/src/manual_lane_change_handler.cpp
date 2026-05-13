@@ -107,16 +107,11 @@ void ManualLaneChangeHandler::route_callback(const LaneletRoute::ConstSharedPtr 
   route_handler_.setRoute(*msg);
 
   std::for_each(route.segments.begin(), route.segments.end(), [&](auto & segment) {
-<<<<<<< HEAD
-    segment.primitives = sort_primitives_left_to_right(
-      route_handler_, segment.preferred_primitive, segment.primitives);
-=======
     if (segment.preferred_primitive.primitive_type == "area") {
       return;
     }
     segment.primitives =
-      sort_primitives_left_to_right(route_handler, segment.preferred_primitive, segment.primitives);
->>>>>>> ea1746328 (fix(manual_lane_change_handler): guard lane-only APIs when route has areas)
+      sort_primitives_left_to_right(route_handler_, segment.preferred_primitive, segment.primitives);
   });
 
   if (!current_route_) {
