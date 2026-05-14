@@ -82,14 +82,8 @@ private:
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-  std::optional<geometry_msgs::msg::PoseStamped> ego_pose_;
+  std::optional<geometry_msgs::msg::Pose> ego_pose_;
   AdaptiveThresholdCache adaptive_threshold_cache_;
-
-  std::optional<geometry_msgs::msg::Pose> egoPose() const
-  {
-    if (!ego_pose_) return std::nullopt;
-    return ego_pose_->pose;
-  }
 };
 
 }  // namespace autoware::multi_object_tracker
