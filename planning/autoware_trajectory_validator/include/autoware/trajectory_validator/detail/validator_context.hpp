@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_CONTEXT_HPP_
-#define AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_CONTEXT_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__VALIDATOR_CONTEXT_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__VALIDATOR_CONTEXT_HPP_
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
@@ -43,4 +43,4 @@ struct ValidatorContext
 using FilterContext = ValidatorContext;
 }  // namespace autoware::trajectory_validator
 
-#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_CONTEXT_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__VALIDATOR_CONTEXT_HPP_

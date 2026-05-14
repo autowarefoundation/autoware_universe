@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_REPORT_HPP_
-#define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_REPORT_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__TRAJECTORY_VALIDATOR_REPORT_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__TRAJECTORY_VALIDATOR_REPORT_HPP_
 
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
 
@@ -74,4 +74,4 @@ struct TrajectoryValidatorReport
 
 }  // namespace autoware::trajectory_validator
 
-#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_REPORT_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__TRAJECTORY_VALIDATOR_REPORT_HPP_
