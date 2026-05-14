@@ -44,8 +44,8 @@ TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
     "autoware_trajectory_validator", "autoware::trajectory_validator::plugin::ValidatorInterface"),
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
 {
-  concatenator_ptr_ =
-    std::make_unique<trajectory_concatenator::TrajectoryConcatenator>(params_.concatenator_params);
+  concatenator_ptr_ = std::make_unique<trajectory_concatenator::TrajectoryConcatenatorInterface>(
+    *this, get_node_parameters_interface());
   const auto filters = params_.validator_params.filter_names;
   for (const auto & filter : filters) {
     load_metric(filter);
@@ -97,8 +97,6 @@ void TrajectoryValidator::publishers()
 
 void TrajectoryValidator::on_trajectories(const CandidateTrajectories::ConstSharedPtr msg)
 {
-  // Passively update the buffer
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
   concatenator_ptr_->add_candidate(*msg);
 }
 
@@ -158,11 +156,7 @@ void TrajectoryValidator::on_timer()
   // ==========================================
   // 2. concatenated stage
   // ==========================================
-  CandidateTrajectories concatenated_trajectories;
-  {
-    std::lock_guard<std::mutex> lock(buffer_mutex_);
-    concatenated_trajectories = concatenator_ptr_->get_concatenated(now());
-  }
+  CandidateTrajectories concatenated_trajectories = concatenator_ptr_->get_concatenated();
 
   diagnostics_interface_.clear();
 

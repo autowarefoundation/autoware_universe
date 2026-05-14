@@ -8,12 +8,8 @@ generate_parameter_library(${PROJECT_NAME}_param
   param/parameter_struct.yaml
 )
 
-include_directories(
-  SYSTEM
-)
-
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/trajectory_concatenator.cpp
+  src/detail/trajectory_concatenator.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}

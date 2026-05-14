@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 
-#include "autoware/trajectory_concatenator/trajectory_concatenator.hpp"
+#include "autoware/trajectory_concatenator/trajectory_concatenator_interface.hpp"
 #include "autoware/trajectory_validator/evaluation_context.hpp"
 #include "autoware/trajectory_validator/validation_stage_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
@@ -180,8 +180,7 @@ private:
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
   // Concatenator state
-  std::unique_ptr<trajectory_concatenator::TrajectoryConcatenator> concatenator_ptr_;
-  std::mutex buffer_mutex_;
+  std::unique_ptr<trajectory_concatenator::TrajectoryConcatenatorInterface> concatenator_ptr_;
 };
 
 }  // namespace autoware::trajectory_validator

@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_HPP_
-#define AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_HPP_
+#ifndef AUTOWARE__TRAJECTORY_CONCATENATOR__DETAIL__TRAJECTORY_CONCATENATOR_HPP_
+#define AUTOWARE__TRAJECTORY_CONCATENATOR__DETAIL__TRAJECTORY_CONCATENATOR_HPP_
 
 #include <autoware_trajectory_concatenator/autoware_trajectory_concatenator_param.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
@@ -50,12 +51,16 @@ public:
 
   [[nodiscard]] CandidateTrajectories get_concatenated(
     const builtin_interfaces::msg::Time & current_time);
+  double take_processing_time();
 
 private:
   concatenator::Params params_;
   std::unordered_map<std::string, CandidateTrajectories> buffer_;
+
+  autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch_;
+  double processing_time_ms_;
 };
 
 }  // namespace autoware::trajectory_concatenator
 
-#endif  // AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_HPP_
+#endif  // AUTOWARE__TRAJECTORY_CONCATENATOR__DETAIL__TRAJECTORY_CONCATENATOR_HPP_
