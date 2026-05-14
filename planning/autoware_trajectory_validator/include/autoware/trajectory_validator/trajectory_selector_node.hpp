@@ -85,7 +85,6 @@ private:
 
   // Normal Subscribers
   rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
-  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_generative_;
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_backup_;
 
@@ -93,7 +92,7 @@ private:
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     pub_processing_time_detail_;
-  mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 
 }  // namespace autoware::trajectory_selector

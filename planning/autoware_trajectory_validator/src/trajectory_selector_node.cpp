@@ -123,6 +123,8 @@ void TrajectorySelectorNode::on_timer()
 
   auto validated_trajectories =
     validator_ptr_->validate_trajectories(concatenated_trajectories, context_opt.value());
+
+  pub_trajectories_->publish(validated_trajectories);
 }
 
 }  // namespace autoware::trajectory_selector
