@@ -56,6 +56,7 @@ struct AssociatorConfig
   LabelToTrackerAssociationParametersMap association_params_map;
 
   double unknown_association_giou_threshold;
+  double score_threshold = 0.01;
 };
 
 //// Helper: per-label threshold table

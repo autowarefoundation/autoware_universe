@@ -22,6 +22,7 @@
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <rclcpp/clock.hpp>
 #include <rclcpp/time.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -43,7 +44,8 @@ class AssociationManager
 {
 public:
   AssociationManager(
-    const AssociatorConfig & bev_config, const std::vector<types::InputChannel> & channels_config);
+    const AssociatorConfig & associator_config,
+    const std::vector<types::InputChannel> & channels_config);
 
   /// Match measurements to trackers using the channel's designated association.
   types::AssociationResult associate(
@@ -66,6 +68,7 @@ private:
   std::unique_ptr<PolarAssociation> polar_association_;
 
   std::optional<geometry_msgs::msg::PoseStamped> ego_pose_;
+  rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 };
 
 }  // namespace autoware::multi_object_tracker

@@ -24,6 +24,7 @@
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <rclcpp/clock.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
 
@@ -66,10 +67,9 @@ private:
     polar_scoring::PolarFootprint footprint;
   };
 
-  // Per-tracker precomputed data for a single association round
-  struct PolarPreparationData
+  struct EgoContext
   {
-    std::vector<TrackerPolarEntry> trackers;
+    double x, y, z, yaw;
   };
 
   AssociatorConfig config_;
@@ -77,18 +77,18 @@ private:
   std::unique_ptr<gnn_solver::GnnSolverInterface> gnn_solver_ptr_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::optional<geometry_msgs::msg::Pose> ego_pose_;
+  rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 
   AzimuthBinIndex azimuth_bin_index_;
 
-  PolarPreparationData prepareAssociationData(
+  std::vector<TrackerPolarEntry> prepareAssociationData(
     const types::DynamicObjectList & measurements,
-    const std::list<std::shared_ptr<Tracker>> & trackers, double ego_x, double ego_y, double ego_z,
-    double ego_yaw);
+    const std::list<std::shared_ptr<Tracker>> & trackers, const EgoContext & ego);
 
   void processMeasurement(
     const types::DynamicObject & measurement_object, size_t measurement_idx,
-    classes::Label measurement_label, const PolarPreparationData & prep_data, double ego_x,
-    double ego_y, double ego_z, double ego_yaw, types::AssociationData & association_data);
+    classes::Label measurement_label, const std::vector<TrackerPolarEntry> & tracker_entries,
+    const EgoContext & ego, types::AssociationData & association_data);
 
   types::AssociationData calcAssociationData(
     const types::DynamicObjectList & measurements,

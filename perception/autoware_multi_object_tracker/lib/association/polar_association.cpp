@@ -24,7 +24,6 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <cmath>
-#include <iterator>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -49,7 +48,7 @@ using autoware_utils_debug::ScopedTimeTrack;
 //// Construction & configuration
 
 PolarAssociation::PolarAssociation(const AssociatorConfig & config)
-: config_(config), score_threshold_(0.01)
+: config_(config), score_threshold_(config.score_threshold)
 {
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
 }
@@ -79,13 +78,12 @@ types::AssociationResult PolarAssociation::associate(
 
 //// Data preparation
 
-PolarAssociation::PolarPreparationData PolarAssociation::prepareAssociationData(
+std::vector<PolarAssociation::TrackerPolarEntry> PolarAssociation::prepareAssociationData(
   const types::DynamicObjectList & measurements,
-  const std::list<std::shared_ptr<Tracker>> & trackers, const double ego_x, const double ego_y,
-  const double ego_z, const double ego_yaw)
+  const std::list<std::shared_ptr<Tracker>> & trackers, const EgoContext & ego)
 {
-  PolarPreparationData prep_data;
-  prep_data.trackers.reserve(trackers.size());
+  std::vector<TrackerPolarEntry> tracker_entries;
+  tracker_entries.reserve(trackers.size());
 
   size_t tracker_idx = 0;
   azimuth_bin_index_.clear();
@@ -96,23 +94,22 @@ PolarAssociation::PolarPreparationData PolarAssociation::prepareAssociationData(
     entry.label = tracker->getHighestProbLabel();
     entry.type = tracker->getTrackerType();
     entry.footprint =
-      polar_scoring::computePolarFootprint(entry.object, ego_x, ego_y, ego_z, ego_yaw);
+      polar_scoring::computePolarFootprint(entry.object, ego.x, ego.y, ego.z, ego.yaw);
 
     azimuth_bin_index_.add(entry.footprint.azimuth, tracker_idx, entry.footprint.r_min);
-    prep_data.trackers.emplace_back(std::move(entry));
+    tracker_entries.emplace_back(std::move(entry));
     ++tracker_idx;
   }
 
-  return prep_data;
+  return tracker_entries;
 }
 
 //// Per-measurement scoring
 
 void PolarAssociation::processMeasurement(
   const types::DynamicObject & measurement_object, const size_t measurement_idx,
-  const classes::Label measurement_label, const PolarPreparationData & prep_data,
-  const double ego_x, const double ego_y, const double ego_z, const double ego_yaw,
-  types::AssociationData & association_data)
+  const classes::Label measurement_label, const std::vector<TrackerPolarEntry> & tracker_entries,
+  const EgoContext & ego, types::AssociationData & association_data)
 {
   const auto tracker_params_map_opt =
     get_map_value_if_exists(config_.association_params_map, measurement_label);
@@ -121,11 +118,11 @@ void PolarAssociation::processMeasurement(
 
   // Compute measurement polar footprint and query azimuth bins for candidate trackers
   const auto meas_fp =
-    polar_scoring::computePolarFootprint(measurement_object, ego_x, ego_y, ego_z, ego_yaw);
+    polar_scoring::computePolarFootprint(measurement_object, ego.x, ego.y, ego.z, ego.yaw);
   const auto candidate_indices = azimuth_bin_index_.find(meas_fp.azimuth, meas_fp.r_min);
 
   for (const size_t tracker_idx : candidate_indices) {
-    const auto & tracker_entry = prep_data.trackers[tracker_idx];
+    const auto & tracker_entry = tracker_entries[tracker_idx];
 
     const auto association_params_opt =
       get_map_value_if_exists(tracker_params_map, tracker_entry.type);
@@ -161,20 +158,18 @@ types::AssociationData PolarAssociation::calcAssociationData(
 
   if (measurements.objects.empty() || trackers.empty() || !ego_pose_) {
     if (!ego_pose_) {
-      static rclcpp::Clock steady_clock{RCL_STEADY_TIME};
       RCLCPP_WARN_THROTTLE(
-        rclcpp::get_logger("polar_association"), steady_clock, 5000,
+        rclcpp::get_logger("polar_association"), steady_clock_, 5000,
         "PolarAssociation: ego_pose not set, returning empty association");
     }
     return types::AssociationData{};
   }
 
-  const double ego_x = ego_pose_->position.x;
-  const double ego_y = ego_pose_->position.y;
-  const double ego_z = ego_pose_->position.z;
-  const double ego_yaw = tf2::getYaw(ego_pose_->orientation);
+  const EgoContext ego{
+    ego_pose_->position.x, ego_pose_->position.y, ego_pose_->position.z,
+    tf2::getYaw(ego_pose_->orientation)};
 
-  auto prep_data = prepareAssociationData(measurements, trackers, ego_x, ego_y, ego_z, ego_yaw);
+  const auto tracker_entries = prepareAssociationData(measurements, trackers, ego);
 
   types::AssociationData association_data;
   association_data.tracker_uuids.reserve(trackers.size());
@@ -187,13 +182,12 @@ types::AssociationData PolarAssociation::calcAssociationData(
     association_data.tracker_uuids.emplace_back(tracker->getUUID());
   }
 
-  for (auto it = measurements.objects.begin(); it != measurements.objects.end(); ++it) {
-    const size_t measurement_idx = std::distance(measurements.objects.begin(), it);
-    const auto measurement_label = classes::getHighestProbLabel(it->classification);
-
+  for (size_t measurement_idx = 0; measurement_idx < measurements.objects.size();
+       ++measurement_idx) {
+    const auto & obj = measurements.objects[measurement_idx];
+    const auto measurement_label = classes::getHighestProbLabel(obj.classification);
     processMeasurement(
-      *it, measurement_idx, measurement_label, prep_data, ego_x, ego_y, ego_z, ego_yaw,
-      association_data);
+      obj, measurement_idx, measurement_label, tracker_entries, ego, association_data);
   }
 
   return association_data;
@@ -215,15 +209,6 @@ void PolarAssociation::assign(
   // Solve the linear assignment problem
   gnn_solver_ptr_->maximizeLinearAssignment(score, &direct_assignment, &reverse_assignment);
 
-  // Build a lookup map for entries with significant shape change
-  std::unordered_map<int, std::unordered_map<int, const types::AssociationEntry *>> entry_map;
-  for (const auto & entry : data.entries) {
-    if (entry.has_significant_shape_change && entry.score >= score_threshold_) {
-      entry_map[static_cast<int>(entry.tracker_idx)][static_cast<int>(entry.measurement_idx)] =
-        &entry;
-    }
-  }
-
   association_result.unassigned_trackers.reserve(data.tracker_uuids.size());
   association_result.unassigned_measurements.reserve(data.measurement_uuids.size());
 
@@ -232,11 +217,13 @@ void PolarAssociation::assign(
       association_result.add(
         data.tracker_uuids[tracker_idx], data.measurement_uuids[measurement_idx]);
 
-      auto tracker_it = entry_map.find(tracker_idx);
-      if (tracker_it != entry_map.end()) {
-        auto measurement_it = tracker_it->second.find(measurement_idx);
-        if (measurement_it != tracker_it->second.end()) {
+      for (const auto & entry : data.entries) {
+        if (
+          static_cast<int>(entry.tracker_idx) == tracker_idx &&
+          static_cast<int>(entry.measurement_idx) == measurement_idx &&
+          entry.has_significant_shape_change && entry.score >= score_threshold_) {
           association_result.trackers_with_shape_change.insert(data.tracker_uuids[tracker_idx]);
+          break;
         }
       }
     }

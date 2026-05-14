@@ -34,10 +34,11 @@ constexpr double kMaxEgoPoseAgeSec = 0.08;
 }  // namespace
 
 AssociationManager::AssociationManager(
-  const AssociatorConfig & bev_config, const std::vector<types::InputChannel> & channels_config)
+  const AssociatorConfig & associator_config,
+  const std::vector<types::InputChannel> & channels_config)
 : channels_config_(channels_config),
-  bev_association_(std::make_unique<BevAssociation>(bev_config)),
-  polar_association_(std::make_unique<PolarAssociation>(bev_config))
+  bev_association_(std::make_unique<BevAssociation>(associator_config)),
+  polar_association_(std::make_unique<PolarAssociation>(associator_config))
 {
 }
 
@@ -76,11 +77,10 @@ types::AssociationResult AssociationManager::associate(
   const bool channel_wants_polar =
     channels_config_[measurements.channel_index].associator_type == types::AssociationType::POLAR;
   if (channel_wants_polar && !polar_viable) {
-    static rclcpp::Clock steady_clock{RCL_STEADY_TIME};
     const double dt = ego_pose_ ? (meas_time - rclcpp::Time{ego_pose_->header.stamp}).seconds()
                                 : std::numeric_limits<double>::infinity();
     RCLCPP_WARN_THROTTLE(
-      rclcpp::get_logger("association_manager"), steady_clock, 5000,
+      rclcpp::get_logger("association_manager"), steady_clock_, 5000,
       "AssociationManager: polar channel falling back to BEV — ego pose dt=%.3f s (threshold=%.3f "
       "s)",
       dt, kMaxEgoPoseAgeSec);
