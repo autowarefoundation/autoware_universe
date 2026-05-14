@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
-#define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_INTERFACE_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_INTERFACE_HPP_
 
-#include "autoware/trajectory_concatenator/trajectory_concatenator_interface.hpp"
+#include "autoware/trajectory_validator/detail/trajectory_validator.hpp"
 #include "autoware/trajectory_validator/evaluation_context.hpp"
-#include "autoware/trajectory_validator/validation_stage_report.hpp"
+#include "autoware/trajectory_validator/trajectory_validator_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
@@ -63,41 +63,25 @@ using autoware_utils_diagnostics::DiagnosticsInterface;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
-class TrajectoryValidator : public rclcpp::Node
+class TrajectoryValidatorInterface
 {
 public:
-  explicit TrajectoryValidator(const rclcpp::NodeOptions & node_options);
+  TrajectoryValidatorInterface(
+    rclcpp::Node & node,
+    rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface,
+    vehicle_info_utils::VehicleInfo vehicle_info,
+    std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
+
+  CandidateTrajectories validate_trajectories(
+    const CandidateTrajectories & input_trajectories, const EvaluationContext & context);
 
 private:
-  /**
-   * @brief Initialise the node's subscribers.
-   */
-  void subscribers();
-
-  /**
-   * @brief Initialise the node's publishers.
-   */
   void publishers();
 
-  void on_trajectories(const CandidateTrajectories::ConstSharedPtr msg);
-
-  void on_timer();
-
-  void execute_pipeline(const CandidateTrajectories & concatenated_trajectories);
-  /**
-   * @brief Gather the latest inputs required to run the filter plugins.
-   */
-  tl::expected<EvaluationContext, std::string> take_data();
-
-  void map_callback(const LaneletMapBin::ConstSharedPtr msg);
+  void update_parameters();
 
   void load_metric(const std::string & name, const bool is_shadow_mode = false);
 
-  /**
-   * @brief Unloads a metric plugin
-   * @param name Metric plugin name to unload
-   */
-  void unload_metric(const std::string & name);
   void update_diagnostic(
     const CandidateTrajectories & input_trajectories, const size_t num_feasible_trajectories);
 
@@ -126,8 +110,8 @@ private:
   void publish_plugins_report_text(
     const std::vector<EvaluationTable> & evaluation_tables,
     const geometry_msgs::msg::Pose & marker_pose);
-
   /**
+
    * @brief Publish each plugin's processing time as scalar value.
    * @param processing_time Map of plugin name -> elapsed time in [ms].
    */
@@ -140,49 +124,27 @@ private:
   void publish_processing_time_text(
     const std::unordered_map<std::string, double> & processing_time);
 
-  // Parameters
-  TrajectoryValidatorParam params_;
+  rclcpp::Node * node_ptr_{nullptr};
+  std::string interface_name_{"trajectory_validator"};
+  rclcpp::Logger logger_;
+  validator::ParamListener validator_params_listener_;
+  validator::Params validator_params_;
+  vehicle_info_utils::VehicleInfo vehicle_info_;
+  std::unique_ptr<TrajectoryValidator> validator_ptr_;
 
   // Plugin infrastructure
   pluginlib::ClassLoader<plugin::ValidatorInterface> plugin_loader_;
   std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins_;
 
-  // Subscribers
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry> sub_odometry_{
-    this, "~/input/odometry"};
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects> sub_objects_{
-    this, "~/input/objects"};
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
-    sub_acceleration_{this, "~/input/acceleration"};
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<
-    autoware_perception_msgs::msg::TrafficLightGroupArray>
-    sub_traffic_lights_{this, "~/input/traffic_signals"};
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
-  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
-
-  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_generative_;
-  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_backup_;
-
-  // Timer
-  rclcpp::TimerBase::SharedPtr timer_;
-
   // Publishers
-  rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_validation_reports_;
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
-    pub_processing_time_detail_;
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_debug_;
 
   // Internal state
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
-  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
-  DiagnosticsInterface diagnostics_interface_{this, "trajectory_validator"};
+  std::unique_ptr<DiagnosticsInterface> diagnostics_interface_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
-
-  // Concatenator state
-  std::unique_ptr<trajectory_concatenator::TrajectoryConcatenatorInterface> concatenator_ptr_;
 };
 
 }  // namespace autoware::trajectory_validator
 
-#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_INTERFACE_HPP_

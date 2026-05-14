@@ -16,8 +16,9 @@ include_directories(
 )
 
 ament_auto_add_library(${trajectory_validator_lib_target} SHARED
-  src/trajectory_validator_node.cpp
-  src/validation_stage.cpp
+  src/trajectory_selector_node.cpp
+  src/trajectory_validator_interface.cpp
+  src/detail/trajectory_validator.cpp
 )
 
 target_link_libraries(${trajectory_validator_lib_target}
@@ -29,7 +30,7 @@ target_compile_options(${trajectory_validator_lib_target} PUBLIC
 )
 
 rclcpp_components_register_node(${trajectory_validator_lib_target}
-  PLUGIN "autoware::trajectory_validator::TrajectoryValidator"
+  PLUGIN "autoware::trajectory_selector::TrajectorySelectorNode"
   EXECUTABLE ${PROJECT_NAME}_node
 )
 

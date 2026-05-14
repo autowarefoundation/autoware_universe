@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATION_STAGE_HPP_
-#define AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATION_STAGE_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__TRAJECTORY_VALIDATOR_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__TRAJECTORY_VALIDATOR_HPP_
 
 #include "autoware/trajectory_validator/evaluation_context.hpp"
-#include "autoware/trajectory_validator/validation_stage_report.hpp"
+#include "autoware/trajectory_validator/trajectory_validator_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
+#include "autoware_trajectory_validator/autoware_trajectory_validator_param.hpp"
 
 #include <memory>
 #include <utility>
@@ -25,23 +26,31 @@
 
 namespace autoware::trajectory_validator
 {
+using autoware::vehicle_info_utils::VehicleInfo;
 
-class ValidationStage
+class TrajectoryValidator
 {
 public:
-  explicit ValidationStage(std::vector<std::shared_ptr<plugin::ValidatorInterface>> validators)
-  : validators_(std::move(validators))
+  explicit TrajectoryValidator(std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins)
+  : plugins_(std::move(plugins))
   {
   }
 
-  [[nodiscard]] ValidationStageReport process(
+  void update_parameters(const validator::Params & params) const
+  {
+    for (const auto & plugin : plugins_) {
+      plugin->update_parameters(params);
+    }
+  }
+
+  [[nodiscard]] TrajectoryValidatorReport process(
     const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
     const EvaluationContext & context) const;
 
 private:
-  std::vector<std::shared_ptr<plugin::ValidatorInterface>> validators_;
+  std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins_;
 };
 
 }  // namespace autoware::trajectory_validator
 
-#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATION_STAGE_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__TRAJECTORY_VALIDATOR_HPP_

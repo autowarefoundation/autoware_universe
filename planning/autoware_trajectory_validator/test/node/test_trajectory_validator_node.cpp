@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_validator/trajectory_validator_node.hpp"
+#include "autoware/trajectory_validator/trajectory_selector_node.hpp"
 
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
@@ -44,27 +44,30 @@ protected:
 
     autoware::test_utils::updateNodeOptions(node_options_, {vehicle_info_param_path});
 
-    node_under_test_ = std::make_shared<TrajectoryValidator>(node_options_);
+    // Update the class being instantiated
+    node_under_test_ =
+      std::make_shared<autoware::trajectory_selector::TrajectorySelectorNode>(node_options_);
     test_node_ = std::make_shared<rclcpp::Node>("test_helper_node");
 
+    // Replace "trajectory_validator_node" with "trajectory_selector_node" in all topics
     map_pub_ = test_node_->create_publisher<autoware_map_msgs::msg::LaneletMapBin>(
-      "/trajectory_validator_node/input/lanelet2_map", rclcpp::QoS{1}.transient_local());
+      "/trajectory_selector_node/input/lanelet2_map", rclcpp::QoS{1}.transient_local());
     odom_pub_ = test_node_->create_publisher<nav_msgs::msg::Odometry>(
-      "/trajectory_validator_node/input/odometry", 1);
+      "/trajectory_selector_node/input/odometry", 1);
     accel_pub_ = test_node_->create_publisher<geometry_msgs::msg::AccelWithCovarianceStamped>(
-      "/trajectory_validator_node/input/acceleration", 1);
+      "/trajectory_selector_node/input/acceleration", 1);
     obj_pub_ = test_node_->create_publisher<autoware_perception_msgs::msg::PredictedObjects>(
-      "/trajectory_validator_node/input/objects", 1);
+      "/trajectory_selector_node/input/objects", 1);
     tl_pub_ = test_node_->create_publisher<autoware_perception_msgs::msg::TrafficLightGroupArray>(
-      "/trajectory_validator_node/input/traffic_signals", 1);
+      "/trajectory_selector_node/input/traffic_signals", 1);
 
     traj_pub_ =
       test_node_->create_publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
-        "/trajectory_validator_node/input/trajectories_generative", 1);
+        "/trajectory_selector_node/input/trajectories_generative", 1);
 
     output_sub_ =
       test_node_->create_subscription<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
-        "/trajectory_validator_node/output/trajectories", 1,
+        "/trajectory_selector_node/output/trajectories", 1,
         [this](
           const autoware_internal_planning_msgs::msg::CandidateTrajectories::ConstSharedPtr msg) {
           last_output_ = msg;
@@ -137,7 +140,7 @@ protected:
 
   rclcpp::NodeOptions node_options_;
   rclcpp::Node::SharedPtr test_node_;
-  std::shared_ptr<TrajectoryValidator> node_under_test_;
+  std::shared_ptr<trajectory_selector::TrajectorySelectorNode> node_under_test_;
 
   rclcpp::Publisher<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
