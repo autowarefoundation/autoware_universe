@@ -52,7 +52,7 @@ class TrajectorySelectorNode : public rclcpp::Node
 public:
   /**
    * @brief Constructs the node, declares parameters, and initialises all components.
-   * @param node_options ROS2 node options.
+   * @param node_options Node options.
    */
   explicit TrajectorySelectorNode(const rclcpp::NodeOptions & node_options);
 

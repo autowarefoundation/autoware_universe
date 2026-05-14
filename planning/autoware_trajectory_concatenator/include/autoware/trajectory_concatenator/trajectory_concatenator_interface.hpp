@@ -29,14 +29,14 @@
 namespace autoware::trajectory_concatenator
 {
 /**
- * @brief ROS2 adapter for TrajectoryConcatenator: handles parameter updates and thread safety.
+ * @brief Adapter for TrajectoryConcatenator: handles parameter updates and thread safety.
  */
 class TrajectoryConcatenatorInterface
 {
 public:
   /**
    * @brief Constructs the interface and initialises the concatenator with declared parameters.
-   * @param node ROS2 node used for parameter declaration and logging.
+   * @param node Node used for parameter declaration and logging.
    * @param node_parameters_interface Parameter interface for declaring and reading parameters.
    */
   TrajectoryConcatenatorInterface(

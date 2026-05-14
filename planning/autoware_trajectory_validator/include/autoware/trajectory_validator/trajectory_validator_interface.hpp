@@ -59,7 +59,7 @@ using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
 /**
- * @brief ROS2 adapter for TrajectoryValidator: manages plugin loading, parameter updates,
+ * @brief Adapter for TrajectoryValidator: manages plugin loading, parameter updates,
  * diagnostics, and debug publishing.
  */
 class TrajectoryValidatorInterface
@@ -67,7 +67,7 @@ class TrajectoryValidatorInterface
 public:
   /**
    * @brief Loads plugins declared in the parameter lists and initialises all publishers.
-   * @param node ROS2 node used for publisher creation and logging.
+   * @param node Node used for publisher creation and logging.
    * @param node_parameters_interface Parameter interface for declaring and reading parameters.
    * @param vehicle_info Ego vehicle dimensions forwarded to each plugin.
    * @param time_keeper Shared time keeper for processing time tracking.
