@@ -50,9 +50,10 @@ TrajectoryValidatorInterface::TrajectoryValidatorInterface(
   time_keeper_(std::move(time_keeper))
 {
   if (!time_keeper_) {
-    throw std::runtime_error("UncrossableBoundariesRTree: Map is NULL");
+    throw std::runtime_error("TimeKeeper is required for TrajectoryValidatorInterface");
   }
 
+  validator_params_ = validator_params_listener_.get_params();
   const auto filters = validator_params_.filter_names;
   for (const auto & filter : filters) {
     load_metric(filter);
