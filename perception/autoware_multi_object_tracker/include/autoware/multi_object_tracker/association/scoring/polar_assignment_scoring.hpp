@@ -79,7 +79,7 @@ constexpr double AREA_RATIO_THRESHOLD = 2.0;
 // Non-vehicle W_n = 0.05: adds a 0.04 tie-breaker for overlapping pedestrians at different
 // ranges where azimuth×height IoU alone cannot distinguish the correct association.
 constexpr double DEPTH_PROXIMITY_SCALE = 4.0;               // [m]; was 3.0
-constexpr double DEPTH_PROXIMITY_WEIGHT = 0.15;              // vehicle blend weight; was 0.02
+constexpr double DEPTH_PROXIMITY_WEIGHT = 0.15;             // vehicle blend weight; was 0.02
 constexpr double DEPTH_PROXIMITY_WEIGHT_NONVEHICLE = 0.05;  // non-vehicle blend weight
 
 /// Compute polar footprint of an object relative to ego position and heading.

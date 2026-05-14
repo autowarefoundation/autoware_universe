@@ -23,6 +23,7 @@
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <list>
 #include <memory>
@@ -142,7 +143,7 @@ void PolarAssociation::processMeasurement(
     // constant-velocity model keeps position error below 0.5–1.5 m for nominal maneuvers.
     // The size scaling absorbs post-occlusion coasting drift for large vehicles without
     // inflating the gate for small objects where false associations are most damaging.
-    constexpr double kDepthGateBase = 2.0;      // [m] minimum gate regardless of object size
+    constexpr double kDepthGateBase = 2.0;       // [m] minimum gate regardless of object size
     constexpr double kDepthGateAreaRate = 0.25;  // [m/sqrt(m²)] size-scaling coefficient
     const double depth_gate =
       kDepthGateBase + kDepthGateAreaRate * std::sqrt(std::max(0.0, tracker_entry.object.area));

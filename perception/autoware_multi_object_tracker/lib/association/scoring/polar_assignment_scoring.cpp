@@ -46,10 +46,9 @@ double azimuthIntersectionSpan(const AzimuthInterval & a, const AzimuthInterval 
 // Iterates all (2D polygon corners) × (z_min, z_max) to cover all 3D box corners.
 // Accepts pre-computed polygon and z-range to avoid redundant to_polygon2d / getObjectZRange calls.
 double computeClosestCorner3d(
-  const types::DynamicObject & object,
-  const autoware_utils_geometry::Polygon2d & polygon,
-  const double z_min, const double z_max,
-  const double ego_x, const double ego_y, const double ego_z)
+  const types::DynamicObject & object, const autoware_utils_geometry::Polygon2d & polygon,
+  const double z_min, const double z_max, const double ego_x, const double ego_y,
+  const double ego_z)
 {
   const auto & pts = polygon.outer();
 
@@ -84,7 +83,8 @@ PolarFootprint computePolarFootprint(
   // Height range from object shape
   const auto [z_min, z_max] = shapes::getObjectZRange(object);
 
-  const double r_min_3d = computeClosestCorner3d(object, polygon, z_min, z_max, ego_x, ego_y, ego_z);
+  const double r_min_3d =
+    computeClosestCorner3d(object, polygon, z_min, z_max, ego_x, ego_y, ego_z);
 
   if (points.size() < 2) {
     // Degenerate polygon: use object center as a single point
