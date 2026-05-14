@@ -46,11 +46,9 @@ public:
   }
 
   /// Register @p tracker_idx to every bin its @p interval covers.
-  /// The +1 guard covers spans that are a near-exact multiple of kBinWidth.
   void add(const polar_scoring::AzimuthInterval & interval, size_t tracker_idx, double r_min)
   {
-    const int n =
-      std::min(static_cast<int>(std::ceil(2.0 * interval.half_span / kBinWidth)) + 1, kNumBins);
+    const int n = numBinsForInterval(interval.half_span);
     const int start = angleToBin(interval.center - interval.half_span);
     const AzimuthBinEntry entry{tracker_idx, static_cast<float>(r_min)};
     for (int i = 0; i < n; ++i) {
@@ -63,10 +61,7 @@ public:
   std::vector<size_t> find(
     const polar_scoring::AzimuthInterval & interval, double r_min_query) const
   {
-    // Same formula as add(): +1 guard covers intervals whose span is a near-exact
-    // multiple of kBinWidth and would otherwise land on a bin boundary.
-    const int n =
-      std::min(static_cast<int>(std::ceil(2.0 * interval.half_span / kBinWidth)) + 1, kNumBins);
+    const int n = numBinsForInterval(interval.half_span);
     const int start = angleToBin(interval.center - interval.half_span);
 
     std::vector<size_t> candidates;
@@ -118,6 +113,14 @@ private:
     const double r_gap = std::abs(r_query - r_cand);
     const double sigma = kSigmaBase + kSigmaRate * std::max(r_query, r_cand);
     return r_gap <= kGateFactor * sigma;
+  }
+
+  /// Number of bins covered by an interval of the given half-span.
+  /// The +1 guard prevents a span that is a near-exact multiple of kBinWidth
+  /// from missing the boundary bin due to floating-point truncation.
+  static int numBinsForInterval(double half_span)
+  {
+    return std::min(static_cast<int>(std::ceil(2.0 * half_span / kBinWidth)) + 1, kNumBins);
   }
 
   /// Map any angle [rad] to a bin index in [0, kNumBins).
