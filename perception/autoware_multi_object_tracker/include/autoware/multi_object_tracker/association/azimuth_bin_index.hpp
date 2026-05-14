@@ -46,7 +46,7 @@ public:
   }
 
   /// Register @p tracker_idx to every bin its @p interval covers.
-  /// The +1 guard ensures boundary trackers are always findable by find().
+  /// The +1 guard covers spans that are a near-exact multiple of kBinWidth.
   void add(const polar_scoring::AzimuthInterval & interval, size_t tracker_idx, double r_min)
   {
     const int n =
@@ -63,8 +63,10 @@ public:
   std::vector<size_t> find(
     const polar_scoring::AzimuthInterval & interval, double r_min_query) const
   {
-    // Exact bin count — no +1, relying on add()'s guard for boundary coverage.
-    const int n = std::max(1, static_cast<int>(std::ceil(2.0 * interval.half_span / kBinWidth)));
+    // Same formula as add(): +1 guard covers intervals whose span is a near-exact
+    // multiple of kBinWidth and would otherwise land on a bin boundary.
+    const int n =
+      std::min(static_cast<int>(std::ceil(2.0 * interval.half_span / kBinWidth)) + 1, kNumBins);
     const int start = angleToBin(interval.center - interval.half_span);
 
     std::vector<size_t> candidates;

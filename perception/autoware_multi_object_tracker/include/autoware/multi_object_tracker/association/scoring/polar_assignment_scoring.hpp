@@ -46,7 +46,7 @@ struct PolarFootprint
   double z_max;     // maximum height [m]
 };
 
-/// Normalize angle to (-pi, pi].
+/// Normalize angle to [-pi, pi].
 inline double normalizeAngle(double angle)
 {
   return std::remainder(angle, 2.0 * M_PI);
