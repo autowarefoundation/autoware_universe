@@ -27,6 +27,7 @@
 namespace autoware::trajectory_validator
 {
 
+/** @brief Feasibility result of a single plugin for a single trajectory. */
 struct PluginEvaluation
 {
   std::string plugin_name;
@@ -35,11 +36,13 @@ struct PluginEvaluation
   std::string reason;
 };
 
+/** @brief Aggregated plugin evaluations for a single generator's trajectory. */
 struct EvaluationTable
 {
   std::string generator_id;
   std::vector<PluginEvaluation> plugin_evaluations;
 
+  /** @brief Returns true if every plugin passed or is in shadow mode. */
   [[nodiscard]] bool all_acceptable() const
   {
     return std::all_of(plugin_evaluations.begin(), plugin_evaluations.end(), [](const auto & e) {
@@ -47,6 +50,7 @@ struct EvaluationTable
     });
   }
 
+  /** @brief Returns true if every plugin passed, ignoring shadow mode. */
   [[nodiscard]] bool all_feasible() const
   {
     return std::all_of(plugin_evaluations.begin(), plugin_evaluations.end(), [](const auto & e) {
@@ -55,13 +59,7 @@ struct EvaluationTable
   }
 };
 
-/**
- * @brief Final opaque result structure returned by the validation stage.
- * CONTRACT FOR ROS NODE ADAPTER:
- * The Node MUST iterate over `evaluation_tables` post-process to:
- * 1. Emit `RCLCPP_WARN_THROTTLE` for any `!evaluation.is_feasible`.
- * 2. Update the `diagnostics_interface_` per plugin using the final evaluation states.
- */
+/** @brief Result returned by TrajectoryValidator::process. */
 struct TrajectoryValidatorReport
 {
   autoware_internal_planning_msgs::msg::CandidateTrajectories valid_trajectories;

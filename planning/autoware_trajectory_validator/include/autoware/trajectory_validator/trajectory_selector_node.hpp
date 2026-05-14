@@ -43,28 +43,43 @@ using autoware_perception_msgs::msg::PredictedObjects;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
+/**
+ * @brief Concatenates candidate trajectories from multiple planners, validates them, and
+ * publishes the surviving set.
+ */
 class TrajectorySelectorNode : public rclcpp::Node
 {
 public:
+  /**
+   * @brief Constructs the node, declares parameters, and initialises all components.
+   * @param node_options ROS2 node options.
+   */
   explicit TrajectorySelectorNode(const rclcpp::NodeOptions & node_options);
 
 private:
-  /**
-   * @brief Initialise the node's subscribers.
-   */
+  /** @brief Creates all subscriptions. */
   void subscribers();
 
-  /**
-   * @brief Initialise the node's publishers.
-   */
+  /** @brief Creates all publishers and initialises the time keeper. */
   void publishers();
 
+  /**
+   * @brief Converts and stores the received lanelet map.
+   * @param msg Binary lanelet map message.
+   */
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
+  /**
+   * @brief Forwards incoming candidate trajectories to the concatenator.
+   * @param msg Incoming candidate trajectories message.
+   */
   void on_trajectories(const CandidateTrajectories::ConstSharedPtr msg);
 
+  /** @brief Concatenates buffered trajectories, validates them, and publishes the result. */
   void on_timer();
 
+  /** @brief Collects the latest sensor data needed for validation; returns an error string if any
+   * mandatory input is unavailable. */
   tl::expected<trajectory_validator::FilterContext, std::string> take_validator_data();
 
   std::unique_ptr<trajectory_concatenator::TrajectoryConcatenatorInterface> concatenator_ptr_;

@@ -28,14 +28,25 @@ namespace autoware::trajectory_validator
 {
 using autoware::vehicle_info_utils::VehicleInfo;
 
+/**
+ * @brief Runs a set of validator plugins against each candidate trajectory.
+ */
 class TrajectoryValidator
 {
 public:
+  /**
+   * @brief Constructs the validator with the given plugin set.
+   * @param plugins Validator plugins to run against each trajectory.
+   */
   explicit TrajectoryValidator(std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins)
   : plugins_(std::move(plugins))
   {
   }
 
+  /**
+   * @brief Forwards updated parameters to all plugins.
+   * @param params Latest parameter values.
+   */
   void update_parameters(const validator::Params & params) const
   {
     for (const auto & plugin : plugins_) {
@@ -43,6 +54,11 @@ public:
     }
   }
 
+  /**
+   * @brief Evaluates all plugins against every trajectory and returns a validation report.
+   * @param input_trajectories Candidate trajectories to validate.
+   * @param context Current world state snapshot.
+   */
   [[nodiscard]] TrajectoryValidatorReport process(
     const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
     const ValidatorContext & context) const;

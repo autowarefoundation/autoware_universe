@@ -27,10 +27,7 @@
 namespace autoware::trajectory_validator
 {
 
-/**
- * @brief A read-only snapshot of the world state for a single validation stage execution.
- * Callees receive it by `const &` and must not mutate fields.
- */
+/** @brief World state snapshot passed to each validator plugin. */
 struct ValidatorContext
 {
   nav_msgs::msg::Odometry::ConstSharedPtr odometry;

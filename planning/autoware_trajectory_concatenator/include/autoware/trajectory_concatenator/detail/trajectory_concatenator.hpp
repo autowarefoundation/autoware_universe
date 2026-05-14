@@ -31,26 +31,37 @@ namespace autoware::trajectory_concatenator
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 
 /**
- * @brief Stateful aggregator of trajectories from multiple generators.
- * Uses a most-recent-per-generator buffer with time-based stale pruning.
- * * * Pure C++ Library: This class is completely independent of rclcpp.
- * * Thread-safety: Not thread-safe. Must be protected by a mutex by the caller.
- * * ARCHITECTURAL NOTE ON LATENCY:
- * Because this stage is designed to be flushed via a fixed-rate timer (e.g., 30ms),
- * it introduces an average ~15ms (max 30ms) latency floor to the pipeline. Consequently,
- * all downstream outputs (including debug markers) are quantized to this timer's rate.
+ * @brief Aggregates candidate trajectories from multiple generators into a single set.
  */
 class TrajectoryConcatenator
 {
 public:
+  /**
+   * @brief Constructs the concatenator with the given parameters.
+   * @param params Initial concatenator parameters.
+   */
   explicit TrajectoryConcatenator(concatenator::Params params) : params_(std::move(params)) {}
 
+  /**
+   * @brief Replaces the current parameters.
+   * @param params New parameter values.
+   */
   void update_parameters(const concatenator::Params & params) { params_ = params; }
 
+  /**
+   * @brief Stores the latest trajectories from the message's generator.
+   * @param msg Candidate trajectories message from a single generator.
+   */
   void add_candidate(const CandidateTrajectories & msg);
 
+  /**
+   * @brief Returns the merged set of all non-stale generator trajectories.
+   * @param current_time Current ROS time used to filter out stale entries.
+   */
   [[nodiscard]] CandidateTrajectories get_concatenated(
     const builtin_interfaces::msg::Time & current_time);
+
+  /** @brief Returns and resets the elapsed processing time in milliseconds. */
   double take_processing_time();
 
 private:

@@ -58,63 +58,94 @@ using autoware_utils_diagnostics::DiagnosticsInterface;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
+/**
+ * @brief ROS2 adapter for TrajectoryValidator: manages plugin loading, parameter updates,
+ * diagnostics, and debug publishing.
+ */
 class TrajectoryValidatorInterface
 {
 public:
+  /**
+   * @brief Loads plugins declared in the parameter lists and initialises all publishers.
+   * @param node ROS2 node used for publisher creation and logging.
+   * @param node_parameters_interface Parameter interface for declaring and reading parameters.
+   * @param vehicle_info Ego vehicle dimensions forwarded to each plugin.
+   * @param time_keeper Shared time keeper for processing time tracking.
+   */
   TrajectoryValidatorInterface(
     rclcpp::Node & node,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface,
     vehicle_info_utils::VehicleInfo vehicle_info,
     std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper);
 
+  /**
+   * @brief Runs all plugins against the input trajectories and returns the feasible subset.
+   * @param input_trajectories Candidate trajectories to validate.
+   * @param context Current world state snapshot.
+   */
   CandidateTrajectories validate_trajectories(
     const CandidateTrajectories & input_trajectories, const ValidatorContext & context);
 
 private:
+  /** @brief Creates the debug publisher. */
   void publishers();
 
+  /** @brief Reloads parameters from the parameter server if they have changed. */
   void update_parameters();
 
+  /**
+   * @brief Loads a single plugin by class name and configures it.
+   * @param name Plugin class name to load.
+   * @param is_shadow_mode If true, plugin results are logged but not enforced.
+   */
   void load_metric(const std::string & name, const bool is_shadow_mode = false);
 
+  /**
+   * @brief Updates the diagnostics status based on the number of feasible trajectories.
+   * @param input_trajectories Original input trajectories (used for total count).
+   * @param num_feasible_trajectories Number of trajectories that passed all plugins.
+   */
   void update_diagnostic(
     const CandidateTrajectories & input_trajectories, const size_t num_feasible_trajectories);
 
   /**
-   * @brief Publishes validation reports
-   * @param reports Validation reports to publish
+   * @brief Publishes the validation report array.
+   * @param reports Per-trajectory validation reports to publish.
    */
   void publish_validation_reports(const std::vector<ValidationReport> & reports);
 
   /**
-   * @brief Publish the union of all debug information.
+   * @brief Publishes all debug outputs: markers, report text, and processing times.
+   * @param evaluation_tables Per-trajectory plugin evaluation results.
+   * @param processing_time Per-plugin elapsed time in milliseconds.
+   * @param marker_pose Pose used to position text markers in RViz.
    */
   void publish_debug(
     const std::vector<EvaluationTable> & evaluation_tables,
     const std::unordered_map<std::string, double> & processing_time,
     const geometry_msgs::msg::Pose & marker_pose);
 
-  /**
-   * @brief Publish each plugin's debug markers.
-   */
+  /** @brief Publishes each plugin's accumulated debug markers. */
   void publish_plugins_debug_markers() const;
 
   /**
-   * @brief Publish each plugin's filtering report in a single string stamped marker.
+   * @brief Publishes a text marker summarising how many trajectories each plugin filtered.
+   * @param evaluation_tables Per-trajectory plugin evaluation results.
+   * @param marker_pose Pose used to position the text marker in RViz.
    */
   void publish_plugins_report_text(
     const std::vector<EvaluationTable> & evaluation_tables,
     const geometry_msgs::msg::Pose & marker_pose);
-  /**
 
-   * @brief Publish each plugin's processing time as scalar value.
-   * @param processing_time Map of plugin name -> elapsed time in [ms].
+  /**
+   * @brief Publishes each plugin's processing time as a scalar stamped value.
+   * @param processing_time Per-plugin elapsed time in milliseconds.
    */
   void publish_processing_time(const std::unordered_map<std::string, double> & processing_time);
 
   /**
-   * @brief Publish each plugin's processing time in a single string stamped marker.
-   * @param processing_time Map of plugin name -> elapsed time in [ms].
+   * @brief Publishes all plugin processing times as a single text marker.
+   * @param processing_time Per-plugin elapsed time in milliseconds.
    */
   void publish_processing_time_text(
     const std::unordered_map<std::string, double> & processing_time);

@@ -28,9 +28,17 @@
 
 namespace autoware::trajectory_concatenator
 {
+/**
+ * @brief ROS2 adapter for TrajectoryConcatenator: handles parameter updates and thread safety.
+ */
 class TrajectoryConcatenatorInterface
 {
 public:
+  /**
+   * @brief Constructs the interface and initialises the concatenator with declared parameters.
+   * @param node ROS2 node used for parameter declaration and logging.
+   * @param node_parameters_interface Parameter interface for declaring and reading parameters.
+   */
   TrajectoryConcatenatorInterface(
     rclcpp::Node & node,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface)
@@ -42,6 +50,7 @@ public:
   {
   }
 
+  /** @brief Reloads parameters from the parameter server if they have changed. */
   void update_parameters()
   {
     if (concatenator_params_listener_.is_old(concatenator_params_)) {
@@ -51,6 +60,10 @@ public:
     }
   }
 
+  /**
+   * @brief Adds a set of candidate trajectories to the buffer.
+   * @param candidate_trajectories Candidate trajectories from a single generator.
+   */
   void add_candidate(
     const autoware_internal_planning_msgs::msg::CandidateTrajectories & candidate_trajectories)
   {
@@ -58,6 +71,7 @@ public:
     concatenator_ptr_->add_candidate(candidate_trajectories);
   }
 
+  /** @brief Returns the merged set of all non-stale generator trajectories. */
   [[nodiscard]] autoware_internal_planning_msgs::msg::CandidateTrajectories get_concatenated()
   {
     update_parameters();
@@ -67,6 +81,8 @@ public:
     return concatenator_ptr_->get_concatenated(time_now);
   };
 
+  /** @brief Returns the interface name and elapsed processing time in milliseconds, then resets it.
+   */
   [[nodiscard]] std::pair<std::string, double> take_processing_time()
   {
     std::lock_guard<std::mutex> lock(concatenator_mutex_);
