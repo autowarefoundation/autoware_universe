@@ -33,7 +33,7 @@ TrajectorySelectorNode::TrajectorySelectorNode(const rclcpp::NodeOptions & node_
     autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo(), time_keeper_);
 
   constexpr int64_t timer_period_ms = 100;
-  timer_ = create_timer(
+  timer_ = rclcpp::create_timer(
     this, get_clock(), std::chrono::milliseconds(timer_period_ms),
     std::bind(&TrajectorySelectorNode::on_timer, this));
 }
@@ -115,9 +115,15 @@ void TrajectorySelectorNode::on_timer()
 
   auto concatenated_trajectories = concatenator_ptr_->get_concatenated();
 
+  if (concatenated_trajectories.candidate_trajectories.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 1000, "No concatenated trajectories received yet");
+    return;
+  }
+
   auto context_opt = take_validator_data();
   if (!context_opt) {
-    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "%s", context_opt.error().c_str());
+    RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 2000, "%s", context_opt.error().c_str());
     return;
   }
 
