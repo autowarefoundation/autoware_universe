@@ -84,6 +84,10 @@ void TrajectoryValidator::publishers()
 
   pub_validation_reports_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
   pub_debug_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      this, "trajectory_validator");
 }
 
 tl::expected<FilterContext, std::string> TrajectoryValidator::take_data()
@@ -116,6 +120,8 @@ tl::expected<FilterContext, std::string> TrajectoryValidator::take_data()
     return tl::make_unexpected("Lanelet map does not contain any lanelets");
   }
 
+  context.route = sub_route_.take_data();
+
   return context;
 }
 
@@ -141,7 +147,7 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
   }
 
   const auto & context = context_opt.value();
-  const auto report = validation_stage.process(*msg, context);
+  auto report = validation_stage.process(*msg, context);
 
   diagnostics_interface_.clear();
 
@@ -158,10 +164,21 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
     }
   }
 
+  if (params_.pseudo_emergency_stop.enable) {
+    // NOTE(odashima): this fallback is ad-hoc and for evaluation only.
+    autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;
+    stop_watch.tic("handle_pseudo_emergency_stop");
+    pseudo_emergency_stop_handler_->handle(
+      *msg, report.valid_trajectories, report.evaluation_tables, context, params_);
+    report.processing_time_ms["handle_pseudo_emergency_stop"] =
+      stop_watch.toc("handle_pseudo_emergency_stop");
+  }
+
   // 6. Publish outputs
+
   pub_trajectories_->publish(report.valid_trajectories);
   update_diagnostic(*msg, report.num_feasible_trajectories);
-
+  publish_planning_factor(report.planning_factors);
   publish_validation_reports(report.validation_reports);
 
   // Wire up the debug publishers using the opaque report data
@@ -383,6 +400,39 @@ void TrajectoryValidator::publish_processing_time_text(
 
   pub_debug_->publish<autoware_internal_debug_msgs::msg::StringStamped>(
     "processing_time_text", fmt::to_string(out));
+}
+
+void TrajectoryValidator::add_planning_factors(
+  const autoware_internal_planning_msgs::msg::PlanningFactorArray & planning_factors)
+{
+  for (const auto & factor : planning_factors.factors) {
+    if (factor.control_points.empty()) {
+      continue;
+    }
+
+    const auto & control_point = factor.control_points.front();
+    if (factor.control_points.size() == 1) {
+      planning_factor_interface_->add(
+        control_point.distance, control_point.pose, factor.behavior, factor.safety_factors,
+        factor.is_driving_forward, control_point.velocity, control_point.shift_length,
+        factor.detail);
+      continue;
+    }
+
+    const auto & end_control_point = factor.control_points.back();
+    planning_factor_interface_->add(
+      control_point.distance, end_control_point.distance, control_point.pose,
+      end_control_point.pose, factor.behavior, factor.safety_factors, factor.is_driving_forward,
+      control_point.velocity, end_control_point.velocity, control_point.shift_length,
+      end_control_point.shift_length, factor.detail);
+  }
+}
+
+void TrajectoryValidator::publish_planning_factor(
+  const autoware_internal_planning_msgs::msg::PlanningFactorArray & planning_factors)
+{
+  add_planning_factors(planning_factors);
+  planning_factor_interface_->publish();
 }
 }  // namespace autoware::trajectory_validator
 

@@ -16,10 +16,12 @@
 #define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_NODE_HPP_
 
 #include "autoware/trajectory_validator/evaluation_context.hpp"
+#include "autoware/trajectory_validator/pseudo_emergency_stop_handler.hpp"
 #include "autoware/trajectory_validator/validation_stage_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware_trajectory_validator/autoware_trajectory_validator_param.hpp>
 #include <autoware_trajectory_validator/msg/metric_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
@@ -137,6 +139,12 @@ private:
   void publish_processing_time_text(
     const std::unordered_map<std::string, double> & processing_time);
 
+  void add_planning_factors(
+    const autoware_internal_planning_msgs::msg::PlanningFactorArray & planning_factors);
+
+  void publish_planning_factor(
+    const autoware_internal_planning_msgs::msg::PlanningFactorArray & planning_factors);
+
   // Parameters
   validator::ParamListener listener_;
   validator::Params params_;
@@ -157,6 +165,9 @@ private:
     sub_traffic_lights_{this, "~/input/traffic_signals"};
   rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
   rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_;
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<
+    autoware_planning_msgs::msg::LaneletRoute, autoware_utils_rclcpp::polling_policy::Latest>
+    sub_route_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
 
   // Publishers
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
@@ -164,6 +175,10 @@ private:
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     pub_processing_time_detail_;
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_debug_;
+  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_;
+  // Emergency-stop fallback (evaluation use only).
+  std::unique_ptr<PseudoEmergencyStopHandler> pseudo_emergency_stop_handler_;
 
   // Internal state
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;

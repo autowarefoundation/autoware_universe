@@ -92,3 +92,30 @@ validator:
         default_value: 2.0
         description: jerk limit to calculate the stop distance used as trajectory length limit
         read_only: false
+
+  pseudo_emergency_stop:
+    enable:
+      type: bool
+      default_value: false
+      description: When true, the emergency-stop fallback is active. When false, all emergency-stop handling is skipped. Evaluation use only.
+      read_only: false
+    deceleration_mps2:
+      type: double
+      default_value: -6.0
+      description: Target longitudinal deceleration (m/s^2, negative) used to build the emergency-stop velocity profile. Evaluation use only.
+      read_only: false
+    jerk_mps3:
+      type: double
+      default_value: -20.0
+      description: Longitudinal jerk (m/s^3, negative) used to ramp the deceleration when building the emergency-stop velocity profile. Evaluation use only.
+      read_only: false
+    recovery_policy:
+      type: string
+      default_value: until_stopped
+      description: Recovery policy after the emergency-stop is triggered. until_stopped keeps decelerating until the ego velocity falls below recovery_velocity_threshold_mps. immediate releases the deceleration as soon as the trigger condition disappears. Evaluation use only.
+      read_only: false
+    recovery_velocity_threshold_mps:
+      type: double
+      default_value: 0.1
+      description: Ego velocity threshold (m/s) under which the latched emergency-stop state is released when recovery_policy is until_stopped. Evaluation use only.
+      read_only: false

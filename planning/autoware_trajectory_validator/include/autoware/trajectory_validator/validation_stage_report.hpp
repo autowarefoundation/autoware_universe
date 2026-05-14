@@ -18,6 +18,7 @@
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 
 #include <algorithm>
 #include <string>
@@ -26,7 +27,6 @@
 
 namespace autoware::trajectory_validator
 {
-
 struct PluginEvaluation
 {
   std::string plugin_name;
@@ -67,6 +67,7 @@ struct ValidationStageReport
   autoware_internal_planning_msgs::msg::CandidateTrajectories valid_trajectories;
   std::vector<EvaluationTable> evaluation_tables;
   std::vector<autoware_trajectory_validator::msg::ValidationReport> validation_reports;
+  autoware_internal_planning_msgs::msg::PlanningFactorArray planning_factors;
   size_t num_feasible_trajectories{0};
 
   std::unordered_map<std::string, double> processing_time_ms;

@@ -76,6 +76,12 @@ OutOfLaneFilter::result_t OutOfLaneFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
   // Check required context data
+  if (vehicle_info_ptr_ && !boundary_departure_checker_) {
+    boundary_departure_checker_ =
+      std::make_unique<boundary_departure_checker::BoundaryDepartureChecker>(
+        boundary_departure_checker::Param(), *vehicle_info_ptr_);
+  }
+
   if (
     !context.lanelet_map || !context.odometry || traj_points.empty() ||
     !boundary_departure_checker_) {

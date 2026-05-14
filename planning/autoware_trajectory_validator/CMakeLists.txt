@@ -18,6 +18,7 @@ include_directories(
 ament_auto_add_library(${trajectory_validator_lib_target} SHARED
   src/trajectory_validator_node.cpp
   src/validation_stage.cpp
+  src/pseudo_emergency_stop_handler.cpp
 )
 
 target_link_libraries(${trajectory_validator_lib_target}

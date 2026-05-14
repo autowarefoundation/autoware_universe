@@ -68,11 +68,22 @@ ValidationStageReport ValidationStage::process(
           evaluation.reason = "Found failed metrics";
         }
         combined_metrics.insert(combined_metrics.end(), val.metrics.begin(), val.metrics.end());
+        std::move(
+          val.planning_factors.factors.begin(), val.planning_factors.factors.end(),
+          std::back_inserter(report.planning_factors.factors));
       }
 
+      combined_metrics.push_back(
+        autoware_trajectory_validator::build<autoware_trajectory_validator::msg::MetricReport>()
+          .validator_name(plugin->get_name())
+          .validator_category(plugin->category())
+          .metric_name("trajectory_feasibility")
+          .metric_value(evaluation.is_feasible ? 1.0 : 0.0)
+          .level(
+            evaluation.is_feasible ? autoware_trajectory_validator::msg::MetricReport::OK
+                                   : autoware_trajectory_validator::msg::MetricReport::ERROR));
       report.processing_time_ms[evaluation.plugin_name] += stop_watch.toc(evaluation.plugin_name);
 
-      // Populate flat list and categorized map
       table.plugin_evaluations.push_back(evaluation);
     }
 

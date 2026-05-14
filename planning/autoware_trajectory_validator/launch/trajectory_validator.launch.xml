@@ -8,9 +8,13 @@
   <arg name="input_objects" default="~/input/objects"/>
   <arg name="input_acceleration" default="~/input/acceleration"/>
   <arg name="input_traffic_signals" default="~/input/traffic_signals"/>
+  <arg name="input_route" default="/planning/mission_planning/route"/>
+
+  <arg name="enable_pseudo_emergency_stop" default="false"/>
 
   <node pkg="autoware_trajectory_validator" exec="autoware_trajectory_validator_node" name="trajectory_validator_node" output="screen">
     <param from="$(var trajectory_validator_param_path)" allow_substs="true"/>
+    <param name="pseudo_emergency_stop.enable" value="$(var enable_pseudo_emergency_stop)"/>
     <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
     <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
     <remap from="~/input/lanelet2_map" to="$(var input_vector_map)"/>
@@ -18,5 +22,6 @@
     <remap from="~/input/objects" to="$(var input_objects)"/>
     <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
     <remap from="~/input/traffic_signals" to="$(var input_traffic_signals)"/>
+    <remap from="~/input/route" to="$(var input_route)"/>
   </node>
 </launch>
