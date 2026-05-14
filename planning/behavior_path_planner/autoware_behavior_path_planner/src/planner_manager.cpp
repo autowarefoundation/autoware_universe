@@ -281,7 +281,9 @@ void PlannerManager::updateCurrentRouteLanelet(
       *current_route_lanelet_ = constrained;
       return;
     }
-    resetCurrentRouteLanelet(data);
+    if (!is_any_approved_module_running) {
+      resetCurrentRouteLanelet(data);
+    }
   };
 
   constexpr double extra_margin = 10.0;
