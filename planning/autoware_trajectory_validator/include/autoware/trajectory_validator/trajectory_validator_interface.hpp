@@ -137,7 +137,6 @@ private:
   std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins_;
 
   // Publishers
-  std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_validation_reports_;
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_debug_;
 
   // Internal state

@@ -125,8 +125,6 @@ void TrajectoryValidatorInterface::update_parameters()
 
 void TrajectoryValidatorInterface::publishers()
 {
-  pub_validation_reports_ =
-    std::make_shared<autoware_utils_debug::DebugPublisher>(node_ptr_, "~/debug");
   pub_debug_ = std::make_shared<autoware_utils_debug::DebugPublisher>(node_ptr_, "~/debug");
 }
 
@@ -137,8 +135,6 @@ CandidateTrajectories TrajectoryValidatorInterface::validate_trajectories(
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   update_parameters();
-
-  diagnostics_interface_ptr_->clear();
 
   const auto report = validator_ptr_->process(input_trajectories, context);
 
@@ -192,7 +188,7 @@ void TrajectoryValidatorInterface::publish_validation_reports(
   const std::vector<ValidationReport> & reports)
 {
   auto msg = autoware_trajectory_validator::build<ValidationReportArray>().reports(reports);
-  pub_validation_reports_->publish<ValidationReportArray>("validation_reports", msg);
+  pub_debug_->publish<ValidationReportArray>("validation_reports", msg);
 }
 
 void TrajectoryValidatorInterface::publish_debug(
