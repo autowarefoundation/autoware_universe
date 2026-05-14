@@ -184,16 +184,19 @@ ScoringResult calculatePolarAssignmentScore(
     }
   }
 
-  // For vehicle trackers, blend IoU score with graded closest-point proximity.
-  // This rewards cluster measurements whose nearest visible surface closely matches the
-  // tracker's nearest surface — the primary observable for partial LiDAR returns.
+  // Blend IoU score with graded closest-point proximity.
+  // The depth proximity term rewards measurements whose nearest visible surface closely matches
+  // the tracker's nearest surface — the primary LiDAR observable for partial returns.
+  // Vehicles use a higher weight (0.15) because partial-face returns make depth the dominant
+  // physical cue; non-vehicles use a lighter tie-breaker (0.05).
+  const double depth_diff = std::abs(meas_fp.r_min_3d - tracker_fp.r_min_3d);
+  const double depth_proximity = std::max(0.0, 1.0 - depth_diff / DEPTH_PROXIMITY_SCALE);
   if (is_vehicle) {
-    const double depth_diff = std::abs(meas_fp.r_min_3d - tracker_fp.r_min_3d);
-    const double depth_proximity = std::max(0.0, 1.0 - depth_diff / DEPTH_PROXIMITY_SCALE);
     result.score =
       iou_score * (1.0 - DEPTH_PROXIMITY_WEIGHT) + depth_proximity * DEPTH_PROXIMITY_WEIGHT;
   } else {
-    result.score = iou_score;
+    result.score = iou_score * (1.0 - DEPTH_PROXIMITY_WEIGHT_NONVEHICLE) +
+                   depth_proximity * DEPTH_PROXIMITY_WEIGHT_NONVEHICLE;
   }
 
   return result;

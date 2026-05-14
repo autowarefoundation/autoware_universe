@@ -232,9 +232,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Set the unknown-unknown association GIoU threshold
   params_.associator_config.unknown_association_giou_threshold =
     declare_parameter<double>("unknown_association_giou_threshold");
-  // Configurable physics threshold for polar depth gate
-  params_.associator_config.depth_gate_threshold_m =
-    declare_parameter<double>("associator.depth_gate_threshold_m");
 
   // process parameters
   core::process_parameters(params_);

@@ -83,11 +83,30 @@ public:
   }
 
 private:
-  // Sigma formula mirrors radialCompatibility() in polar_assignment_scoring.cpp.
-  static constexpr double kSigmaBase = 2.0;   // [m]
-  static constexpr double kSigmaRate = 0.03;  // [m/m]
-  // Gate factor: -ln(0.05) ≈ 3.0.  Skip when exp(-gap/sigma) < 0.05,
-  // i.e., gap > 3σ.  Always above the 2 m hard gate, so no true match is lost.
+  // Radial pre-filter constants (Step 1 of 3 in polar association).
+  //
+  // Purpose: fast candidate pruning — never eliminate a true match, only skip trackers
+  // that are so far away in range that a score > 0 is impossible.  All precision work
+  // is left to the size-scaled hard gate (Step 2) and the scoring blend (Step 3).
+  //
+  // Gate formula:  pass when |r_gap| <= kGateFactor * sigma
+  //   sigma [m] = kSigmaBase + kSigmaRate * max(r_query, r_cand)
+  //
+  // Effective gate radii at typical LiDAR ranges:
+  //   r = 10 m:  sigma = 2.3 m,  gate =  6.9 m
+  //   r = 30 m:  sigma = 2.9 m,  gate =  8.7 m
+  //   r = 50 m:  sigma = 3.5 m,  gate = 10.5 m
+  //   r = 100 m: sigma = 5.0 m,  gate = 15.0 m
+  //
+  // At 10 Hz (100 ms cycle), max radial displacement before the tracker's CV prediction
+  // is evaluated: pedestrian ~0.15 m, car (urban) ~1.5 m, truck (highway) ~2.5 m.
+  // All are far below even the 10 m close-range gate, so the prepass never rejects
+  // a physically reachable match.  The gate is intentionally generous; tightening it
+  // would reduce CPU time marginally but risk false negatives on fast post-occlusion
+  // re-acquisitions where the tracker has coasted.
+  static constexpr double kSigmaBase = 2.0;   // [m] base uncertainty
+  static constexpr double kSigmaRate = 0.03;  // [m/m] range-proportional growth
+  // kGateFactor = 3.0 ≈ -ln(0.05): keeps candidates with exp(-gap/sigma) >= 0.05.
   static constexpr double kGateFactor = 3.0;
 
   std::array<std::vector<AzimuthBinEntry>, kNumBins> bins_;

@@ -123,11 +123,31 @@ void PolarAssociation::processMeasurement(
     if (!association_params_opt) continue;
     const auto & association_params = association_params_opt->get();
 
-    // Depth gate: the cluster's closest 3D corner must be near the tracker's closest 3D corner.
-    // LiDAR can only detect the nearest visible surface of a solid object, so a cluster at the
-    // far side or interior of a tracker's bounding box is physically impossible.
+    // Depth gate (Step 2): LiDAR can only return the nearest visible surface of a solid object,
+    // so the cluster's closest 3D corner must be near the tracker's closest 3D corner.
+    //
+    // The gate scales with the tracker's footprint area to tolerate nearest-corner geometry
+    // shifts that occur when a large vehicle's visible face changes (e.g., a truck turning 15°
+    // so the front face replaces the side as the nearest surface):
+    //
+    //   gate [m] = kDepthGateBase + kDepthGateAreaRate * sqrt(tracker_area_m2)
+    //
+    // Object-size assumptions and resulting gate values (10 Hz, good CV prediction):
+    //   Pedestrian  area ~0.25 m²  →  gate = 2.0 + 0.25*0.50 = 2.1 m
+    //   Car         area ~9 m²     →  gate = 2.0 + 0.25*3.00 = 2.75 m
+    //   Truck       area ~20 m²    →  gate = 2.0 + 0.25*4.47 = 3.1 m
+    //   Bus         area ~30 m²    →  gate = 2.0 + 0.25*5.48 = 3.4 m
+    //
+    // Dominant error source is prediction inaccuracy, not raw displacement: at 10 Hz a good
+    // constant-velocity model keeps position error below 0.5–1.5 m for nominal maneuvers.
+    // The size scaling absorbs post-occlusion coasting drift for large vehicles without
+    // inflating the gate for small objects where false associations are most damaging.
+    constexpr double kDepthGateBase = 2.0;      // [m] minimum gate regardless of object size
+    constexpr double kDepthGateAreaRate = 0.25;  // [m/sqrt(m²)] size-scaling coefficient
+    const double depth_gate =
+      kDepthGateBase + kDepthGateAreaRate * std::sqrt(std::max(0.0, tracker_entry.object.area));
     const double depth_gap = std::abs(meas_fp.r_min_3d - tracker_entry.footprint.r_min_3d);
-    if (depth_gap > config_.depth_gate_threshold_m) continue;
+    if (depth_gap > depth_gate) continue;
 
     const auto result = polar_scoring::calculatePolarAssignmentScore(
       meas_fp, tracker_entry.footprint, measurement_object, tracker_entry.object,

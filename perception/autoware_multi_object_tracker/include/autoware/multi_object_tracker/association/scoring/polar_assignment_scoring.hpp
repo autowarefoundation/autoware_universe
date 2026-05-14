@@ -56,10 +56,31 @@ inline double normalizeAngle(double angle)
 constexpr double PERSPECTIVE_IOU_SHAPE_CHECK_THRESHOLD = 0.7;
 // Area ratio above which the shape change is considered significant
 constexpr double AREA_RATIO_THRESHOLD = 2.0;
-// Scale [m] for graded closest-point proximity in vehicle tracker scoring
-constexpr double DEPTH_PROXIMITY_SCALE = 3.0;
-// Weight of closest-point proximity in the combined score for vehicle trackers
-constexpr double DEPTH_PROXIMITY_WEIGHT = 0.02;
+
+// Graded nearest-surface proximity blended into the combined assignment score (Step 3).
+//
+//   depth_proximity = max(0, 1 - |Δr_min_3d| / DEPTH_PROXIMITY_SCALE)
+//   vehicle score   = iou_score*(1-W_v) + depth_proximity*W_v
+//   non-veh score   = iou_score*(1-W_n) + depth_proximity*W_n
+//
+// DEPTH_PROXIMITY_SCALE = 4.0 m: aligned with the largest size-scaled hard gate (bus ~3.4 m),
+// so proximity reaches ~0.15 at the gate edge and never goes negative within the gate.
+//
+// Estimated depth_proximity at 10 Hz (100 ms cycle) with good constant-velocity prediction:
+//   Δr_min_3d ~0.1–0.3 m (pedestrian nominal):  proximity ~0.93–0.98
+//   Δr_min_3d ~0.3–1.0 m (car, urban speed):    proximity ~0.75–0.93
+//   Δr_min_3d ~1.0–2.0 m (car, moderate error): proximity ~0.50–0.75
+//   Δr_min_3d ~2.5–3.4 m (truck/bus gate edge): proximity ~0.15–0.38
+//
+// Vehicle W_v = 0.15: max score swing = 0.15*(1-0.15) = 0.13 — decisive for two candidates
+// with similar perspective IoU (e.g., cars in a convoy sharing the same azimuth bin).
+// Previous weight 0.02 gave a swing of 0.013 — effectively a no-op.
+//
+// Non-vehicle W_n = 0.05: adds a 0.04 tie-breaker for overlapping pedestrians at different
+// ranges where azimuth×height IoU alone cannot distinguish the correct association.
+constexpr double DEPTH_PROXIMITY_SCALE = 4.0;               // [m]; was 3.0
+constexpr double DEPTH_PROXIMITY_WEIGHT = 0.15;              // vehicle blend weight; was 0.02
+constexpr double DEPTH_PROXIMITY_WEIGHT_NONVEHICLE = 0.05;  // non-vehicle blend weight
 
 /// Compute polar footprint of an object relative to ego position and heading.
 /// Object pose and shape are in the map frame; the result is in ego-centric polar coordinates.

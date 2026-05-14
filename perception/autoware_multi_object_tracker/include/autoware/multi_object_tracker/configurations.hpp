@@ -57,8 +57,7 @@ struct AssociatorConfig
 
   double unknown_association_giou_threshold;
   double score_threshold = 0.01;
-  double ego_pose_max_age_sec = 0.08;   // max staleness of ego pose before polar is disabled [s]
-  double depth_gate_threshold_m = 2.0;  // max 3D gap between nearest cluster/tracker corners [m]
+  double ego_pose_max_age_sec = 0.21;  // max staleness of ego pose before polar is disabled [s]
 };
 
 //// Helper: per-label threshold table
