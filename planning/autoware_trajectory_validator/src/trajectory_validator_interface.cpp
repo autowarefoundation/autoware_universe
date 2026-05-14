@@ -131,7 +131,7 @@ void TrajectoryValidatorInterface::publishers()
 
 CandidateTrajectories TrajectoryValidatorInterface::validate_trajectories(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
-  const EvaluationContext & context)
+  const ValidatorContext & context)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 

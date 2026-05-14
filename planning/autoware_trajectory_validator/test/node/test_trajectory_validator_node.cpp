@@ -216,8 +216,8 @@ TEST_F(TrajectoryValidatorNodeTest, NoPublishWhenOdometryMissing)
   add_trajectory(msg, "AnyPlanner", 10.0, now);
   traj_pub_->publish(msg);
 
-  const bool received = spin_until(
-    [this] { return last_output_ != nullptr; }, std::chrono::milliseconds(500));
+  const bool received =
+    spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(500));
   EXPECT_FALSE(received) << "Node must not publish when odometry is unavailable";
 }
 
@@ -241,8 +241,8 @@ TEST_F(TrajectoryValidatorNodeTest, NoPublishWhenAccelerationMissing)
   add_trajectory(msg, "AnyPlanner", 10.0, now);
   traj_pub_->publish(msg);
 
-  const bool received = spin_until(
-    [this] { return last_output_ != nullptr; }, std::chrono::milliseconds(500));
+  const bool received =
+    spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(500));
   EXPECT_FALSE(received) << "Node must not publish when acceleration is unavailable";
 }
 
@@ -266,8 +266,8 @@ TEST_F(TrajectoryValidatorNodeTest, NoPublishWhenObjectsMissing)
   add_trajectory(msg, "AnyPlanner", 10.0, now);
   traj_pub_->publish(msg);
 
-  const bool received = spin_until(
-    [this] { return last_output_ != nullptr; }, std::chrono::milliseconds(500));
+  const bool received =
+    spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(500));
   EXPECT_FALSE(received) << "Node must not publish when predicted objects are unavailable";
 }
 }  // namespace autoware::trajectory_validator

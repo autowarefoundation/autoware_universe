@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_SELECTOR_NODE_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_SELECTOR_NODE_HPP_
 
-#include "autoware/trajectory_validator/filter_context.hpp"
 #include "autoware/trajectory_validator/trajectory_validator_interface.hpp"
+#include "autoware/trajectory_validator/detail/validator_context.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/trajectory_concatenator/trajectory_concatenator_interface.hpp>

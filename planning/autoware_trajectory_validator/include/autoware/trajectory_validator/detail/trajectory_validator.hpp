@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__TRAJECTORY_VALIDATOR_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__TRAJECTORY_VALIDATOR_HPP_
 
-#include "autoware/trajectory_validator/evaluation_context.hpp"
-#include "autoware/trajectory_validator/trajectory_validator_report.hpp"
+#include "autoware/trajectory_validator/detail/trajectory_validator_report.hpp"
+#include "autoware/trajectory_validator/detail/validator_context.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 #include "autoware_trajectory_validator/autoware_trajectory_validator_param.hpp"
 
@@ -45,7 +45,7 @@ public:
 
   [[nodiscard]] TrajectoryValidatorReport process(
     const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
-    const EvaluationContext & context) const;
+    const ValidatorContext & context) const;
 
 private:
   std::vector<std::shared_ptr<plugin::ValidatorInterface>> plugins_;

@@ -27,7 +27,7 @@ namespace autoware::trajectory_validator
 {
 TrajectoryValidatorReport TrajectoryValidator::process(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
-  const EvaluationContext & context) const
+  const ValidatorContext & context) const
 {
   TrajectoryValidatorReport report;
   autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;
