@@ -35,12 +35,6 @@ namespace autoware::multi_object_tracker
 namespace
 {
 constexpr double INVALID_SCORE = 0.0;
-
-// Depth gate: maximum allowed gap between the closest 3D corners of measurement and tracker [m].
-// Enforces the LiDAR physics constraint that a cluster must originate from the closest visible
-// surface of an object, not from its interior or far side.
-constexpr double DEPTH_GATE_THRESHOLD = 2.0;
-
 }  // namespace
 
 using autoware_utils_debug::ScopedTimeTrack;
@@ -133,7 +127,7 @@ void PolarAssociation::processMeasurement(
     // LiDAR can only detect the nearest visible surface of a solid object, so a cluster at the
     // far side or interior of a tracker's bounding box is physically impossible.
     const double depth_gap = std::abs(meas_fp.r_min_3d - tracker_entry.footprint.r_min_3d);
-    if (depth_gap > DEPTH_GATE_THRESHOLD) continue;
+    if (depth_gap > config_.depth_gate_threshold_m) continue;
 
     const auto result = polar_scoring::calculatePolarAssignmentScore(
       meas_fp, tracker_entry.footprint, measurement_object, tracker_entry.object,

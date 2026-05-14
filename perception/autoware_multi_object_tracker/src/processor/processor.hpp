@@ -71,18 +71,20 @@ private:
   const TrackerCreationConfig creation_config_;
   const std::vector<types::InputChannel> & channels_config_;
 
+  std::optional<geometry_msgs::msg::PoseStamped> ego_pose_;
+
   std::unique_ptr<AssociationManager> association_manager_;
   std::unique_ptr<TrackerOverlapManager> tracker_overlap_manager_;
 
   mutable rclcpp::Time last_prune_time_;
 
   std::list<std::shared_ptr<Tracker>> list_tracker_;
+  std::optional<geometry_msgs::msg::Pose> getEgoPose() const;
   void removeOldTracker(const rclcpp::Time & time);
   std::shared_ptr<Tracker> createNewTracker(
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-  std::optional<geometry_msgs::msg::Pose> ego_pose_;
   AdaptiveThresholdCache adaptive_threshold_cache_;
 };
 

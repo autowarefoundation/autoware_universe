@@ -27,16 +27,11 @@
 namespace autoware::multi_object_tracker
 {
 
-namespace
-{
-// Maximum age of the ego pose relative to the measurement timestamp
-constexpr double kMaxEgoPoseAgeSec = 0.08;
-}  // namespace
-
 AssociationManager::AssociationManager(
   const AssociatorConfig & associator_config,
   const std::vector<types::InputChannel> & channels_config)
 : channels_config_(channels_config),
+  ego_pose_max_age_sec_(associator_config.ego_pose_max_age_sec),
   bev_association_(std::make_unique<BevAssociation>(associator_config)),
   polar_association_(std::make_unique<PolarAssociation>(associator_config))
 {
@@ -53,37 +48,36 @@ AssociationBase & AssociationManager::getAssociationForChannel(
   return *bev_association_;
 }
 
-bool AssociationManager::isPolarViable(const rclcpp::Time & measurement_time) const
+bool AssociationManager::isPolarViable(
+  const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose,
+  const rclcpp::Time & measurement_time) const
 {
-  if (!ego_pose_.has_value()) return false;
-  const rclcpp::Time ego_time{ego_pose_->header.stamp};
+  if (!ego_pose.has_value()) return false;
+  const rclcpp::Time ego_time{ego_pose->header.stamp};
   const double dt = std::abs((measurement_time - ego_time).seconds());
-  return dt <= kMaxEgoPoseAgeSec;
-}
-
-void AssociationManager::setEgoPose(const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose)
-{
-  ego_pose_ = ego_pose;
-  polar_association_->setEgoPose(ego_pose ? std::make_optional(ego_pose->pose) : std::nullopt);
+  return dt <= ego_pose_max_age_sec_;
 }
 
 types::AssociationResult AssociationManager::associate(
   const types::DynamicObjectList & measurements,
-  const std::list<std::shared_ptr<Tracker>> & trackers)
+  const std::list<std::shared_ptr<Tracker>> & trackers,
+  const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose)
 {
+  polar_association_->setEgoPose(ego_pose ? std::make_optional(ego_pose->pose) : std::nullopt);
+
   const rclcpp::Time meas_time{measurements.header.stamp};
-  const bool polar_viable = isPolarViable(meas_time);
+  const bool polar_viable = isPolarViable(ego_pose, meas_time);
 
   const bool channel_wants_polar =
     channels_config_[measurements.channel_index].associator_type == types::AssociationType::POLAR;
   if (channel_wants_polar && !polar_viable) {
-    const double dt = ego_pose_ ? (meas_time - rclcpp::Time{ego_pose_->header.stamp}).seconds()
-                                : std::numeric_limits<double>::infinity();
+    const double dt = ego_pose ? (meas_time - rclcpp::Time{ego_pose->header.stamp}).seconds()
+                               : std::numeric_limits<double>::infinity();
     RCLCPP_WARN_THROTTLE(
       rclcpp::get_logger("association_manager"), steady_clock_, 5000,
       "AssociationManager: polar channel falling back to BEV — ego pose dt=%.3f s (threshold=%.3f "
       "s)",
-      dt, kMaxEgoPoseAgeSec);
+      dt, ego_pose_max_age_sec_);
   }
 
   return getAssociationForChannel(measurements.channel_index, polar_viable)
