@@ -140,8 +140,7 @@ CandidateTrajectories TrajectoryValidatorInterface::validate_trajectories(
 
   diagnostics_interface_ptr_->clear();
 
-  TrajectoryValidator validator(plugins_);
-  const auto report = validator.process(input_trajectories, context);
+  const auto report = validator_ptr_->process(input_trajectories, context);
 
   diagnostics_interface_ptr_->clear();
 
