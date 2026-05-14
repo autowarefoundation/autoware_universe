@@ -38,8 +38,9 @@ namespace autoware::multi_object_tracker
 {
 
 /// Polar-coordinate association algorithm.
-/// Converts measurement and tracker bounding boxes to polar coordinates centered at the ego
-/// vehicle (base_link origin in map frame), then scores overlap based on azimuth interval IoU.
+/// Projects bounding boxes to ego-centric polar coordinates and scores pairs using 2D perspective
+/// IoU in (azimuth × height) space, hard-gated by a min-IoU threshold and blended with a graded
+/// nearest-surface depth proximity term.
 
 class PolarAssociation : public AssociationBase
 {
