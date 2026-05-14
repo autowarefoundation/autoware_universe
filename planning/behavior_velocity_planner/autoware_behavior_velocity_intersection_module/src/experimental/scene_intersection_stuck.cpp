@@ -152,14 +152,14 @@ std::optional<StuckStop> IntersectionModule::isStuckStatus(
         const bool is_stuck_stopline_feasible =
           can_smoothly_stop_at(path, closest_idx, stuck_stopline_idx_opt.value(), planner_data);
         if (is_stuck_stopline_feasible) {
-          stopline_idx = stuck_stopline_idx_opt.value();
+          stopline_idx = stuck_stopline_idx_opt;
         }
       }
       if (!stopline_idx) {
         if (
           default_stopline_idx_opt &&
           can_smoothly_stop_at(path, closest_idx, default_stopline_idx_opt.value(), planner_data)) {
-          stopline_idx = default_stopline_idx_opt.value();
+          stopline_idx = default_stopline_idx_opt;
         } else if (can_smoothly_stop_at(
                      path, closest_idx, first_attention_stopline_idx, planner_data)) {
           stopline_idx = first_attention_stopline_idx;
@@ -331,7 +331,7 @@ std::optional<YieldStuckStop> IntersectionModule::isYieldStuckStatus(
       const bool is_stuck_stopline_feasible =
         can_smoothly_stop_at(path, closest_idx, stuck_stopline_idx_opt.value(), planner_data);
       if (is_stuck_stopline_feasible) {
-        stopline_idx = stuck_stopline_idx_opt.value();
+        stopline_idx = stuck_stopline_idx_opt;
       }
     }
     if (!stopline_idx) {
