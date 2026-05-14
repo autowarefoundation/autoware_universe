@@ -16,6 +16,7 @@
 
 #include "autoware/trajectory_validator/detail/trajectory_validator.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 #include <autoware_utils_visualization/marker_helper.hpp>
@@ -105,7 +106,7 @@ void TrajectoryValidatorInterface::load_metric(const std::string & name, const b
 
     plugins_.push_back(plugin);
 
-    RCLCPP_INFO_STREAM(logger_, "The scene plugin '" << name << "' is loaded and initialized.");
+    RCLCPP_INFO_STREAM(logger_, "The validator plugin '" << name << "' is loaded and initialized.");
   } catch (const pluginlib::CreateClassException & e) {
     RCLCPP_ERROR_STREAM(logger_, "createSharedInstance failed for '" << name << "': " << e.what());
   } catch (const std::exception & e) {
@@ -153,7 +154,6 @@ CandidateTrajectories TrajectoryValidatorInterface::validate_trajectories(
     }
   }
 
-  // 6. Publish outputs
   update_diagnostic(input_trajectories, report.num_feasible_trajectories);
 
   publish_validation_reports(report.validation_reports);
@@ -223,7 +223,6 @@ void TrajectoryValidatorInterface::publish_plugins_report_text(
 
   std::unordered_map<std::string, int> used_filters;
   for (const auto & eval : evaluation_tables) {
-    // Walk the flat list instead of the categorized map to simplify the code
     for (const auto & plugin_eval : eval.plugin_evaluations) {
       if (!plugin_eval.is_feasible) {
         used_filters[plugin_eval.plugin_name]++;

@@ -11,9 +11,6 @@ generate_parameter_library(${PROJECT_NAME}_param
 
 set(trajectory_validator_lib_target ${PROJECT_NAME}_lib)
 
-include_directories(
-  SYSTEM
-)
 
 ament_auto_add_library(${trajectory_validator_lib_target} SHARED
   src/trajectory_selector_node.cpp

@@ -20,7 +20,6 @@
 #include "autoware/trajectory_validator/trajectory_validator_report.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
-#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/trajectory_validator/parameters.hpp>
 #include <autoware_trajectory_validator/msg/metric_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
@@ -28,7 +27,6 @@
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
-#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -38,13 +36,11 @@
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
-#include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
-#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>

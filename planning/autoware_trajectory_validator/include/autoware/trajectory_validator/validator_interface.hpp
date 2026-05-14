@@ -110,5 +110,4 @@ protected:
 };
 }  // namespace autoware::trajectory_validator::plugin
 
-// NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_INTERFACE_HPP_
