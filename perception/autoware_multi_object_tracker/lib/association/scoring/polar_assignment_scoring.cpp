@@ -197,8 +197,8 @@ ScoringResult calculatePolarAssignmentScore(
     result.score =
       iou_score * (1.0 - DEPTH_PROXIMITY_WEIGHT) + depth_proximity * DEPTH_PROXIMITY_WEIGHT;
   } else {
-    result.score = iou_score * (1.0 - DEPTH_PROXIMITY_WEIGHT_NONVEHICLE) +
-                   depth_proximity * DEPTH_PROXIMITY_WEIGHT_NONVEHICLE;
+    result.score = iou_score * (1.0 - DEPTH_PROXIMITY_WEIGHT_NON_VEHICLE) +
+                   depth_proximity * DEPTH_PROXIMITY_WEIGHT_NON_VEHICLE;
   }
 
   return result;

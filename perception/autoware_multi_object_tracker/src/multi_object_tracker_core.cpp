@@ -244,7 +244,13 @@ MeasurementProcessingResult process_measurement(
   // Update ego pose to the measurement timestamp so association uses a fresh pose
   const rclcpp::Time measurement_time =
     rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
-  state.processor->updateEgoPose(getEgoPoseAt(measurement_time, state));
+  const auto ego_pose = getEgoPoseAt(measurement_time, state);
+  if (!ego_pose) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("multi_object_tracker"),
+      "Failed to get ego pose at measurement timestamp. Proceeding without ego pose.");
+  }
+  state.processor->updateEgoPose(ego_pose);
 
   const auto association_result = state.processor->associate(*objects);
   state.input_manager->push(channel_index, *objects, association_result);
