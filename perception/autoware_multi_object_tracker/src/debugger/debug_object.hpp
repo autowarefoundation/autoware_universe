@@ -28,7 +28,7 @@
 
 #include <boost/functional/hash.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_hash.hpp>
 
 #include <list>
 #include <memory>
@@ -73,11 +73,10 @@ private:
   std::string frame_id_;
   const std::vector<types::InputChannel> channels_config_;
 
-  visualization_msgs::msg::MarkerArray markers_;
   rclcpp::Time message_time_;
 
-  std::vector<ObjectData> object_data_list_;
-  std::list<int32_t> unused_marker_ids_;
+  std::unordered_map<boost::uuids::uuid, std::vector<ObjectData>, boost::hash<boost::uuids::uuid>>
+    object_data_map_;
   std::vector<std::vector<ObjectData>> object_data_groups_;
 
 public:
