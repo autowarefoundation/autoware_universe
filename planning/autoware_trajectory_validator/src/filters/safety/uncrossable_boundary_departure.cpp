@@ -24,8 +24,8 @@ namespace autoware::trajectory_validator::plugin::safety
 UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter::is_feasible(
   const TrajectoryPoints & traj_points, const FilterContext & context)
 {
-  if (const auto has_invalid_input = is_invalid_input(context)) {
-    return tl::make_unexpected(*has_invalid_input);
+  if (const auto validate_context = validate_filter_context(context); !validate_context) {
+    return tl::make_unexpected(validate_context.error());
   }
 
   if (!checker_) {
@@ -78,18 +78,18 @@ void UncrossableBoundaryDepartureFilter::update_parameters(const validator::Para
   }
 }
 
-std::optional<std::string> UncrossableBoundaryDepartureFilter::is_invalid_input(
+tl::expected<void, std::string> UncrossableBoundaryDepartureFilter::validate_filter_context(
   const FilterContext & context) const
 {
   if (!context.lanelet_map || context.lanelet_map->lineStringLayer.empty()) {
-    return "Lanelet map is not available in the context.";
+    return tl::make_unexpected("Lanelet map is not available in the context.");
   }
 
   if (!vehicle_info_ptr_) {
-    return "Vehicle info is not set.";
+    return tl::make_unexpected("Vehicle info is not set.");
   }
 
-  return std::nullopt;
+  return {};
 }
 }  // namespace autoware::trajectory_validator::plugin::safety
 

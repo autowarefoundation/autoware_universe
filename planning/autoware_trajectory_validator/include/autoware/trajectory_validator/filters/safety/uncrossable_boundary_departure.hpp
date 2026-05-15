@@ -39,7 +39,7 @@ private:
   std::unique_ptr<boundary_departure_checker::UncrossableBoundaryChecker> checker_;
   boundary_departure_checker::UncrossableBoundaryDepartureParam params_;
 
-  [[nodiscard]] std::optional<std::string> is_invalid_input(const FilterContext & context) const;
+  tl::expected<void, std::string> validate_filter_context(const FilterContext & context) const;
 };
 }  // namespace autoware::trajectory_validator::plugin::safety
 
