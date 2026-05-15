@@ -65,7 +65,8 @@ bool ObstacleStop::is_obstacle_detected(const TrajectoryPoints & traj_points)
 {
   debug_data_ = DebugData();
   debug_data_.trajectory_shape = get_trajectory_shape(
-    traj_points, data_->odometry_ptr->pose.pose, vehicle_info_, params_.lateral_margin_m);
+    traj_points, data_->odometry_ptr->pose.pose, vehicle_info_, std::numeric_limits<double>::max(),
+    params_.lateral_margin_m);
   const auto collision_point_pcd = check_pointcloud(traj_points);
   update_collision_points_buffer(collision_points_buffer_.pcd, traj_points, collision_point_pcd);
   const auto collision_point_objects = check_predicted_objects(traj_points);
