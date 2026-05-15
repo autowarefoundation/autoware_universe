@@ -43,17 +43,6 @@ trajectory_optimizer::TrajectoryOptimizerData make_optimizer_data(
   }
   return data;
 }
-
-trajectory_modifier::TrajectoryModifierData make_modifier_data(
-  const MinimumRuleBasedPlannerNode::InputData & input_data)
-{
-  trajectory_modifier::TrajectoryModifierData data;
-  data.current_odometry = *input_data.odometry_ptr;
-  if (input_data.acceleration_ptr) {
-    data.current_acceleration = *input_data.acceleration_ptr;
-  }
-  return data;
-}
 }  // namespace
 
 MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptions & options)
@@ -62,7 +51,8 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
   vehicle_info_(vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()),
   modifier_plugin_loader_(
     "autoware_trajectory_modifier",
-    "autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase")
+    "autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase"),
+  modifier_data_(std::make_shared<TrajectoryModifierData>(this))
 {
   param_listener_ =
     std::make_shared<::minimum_rule_based_planner::ParamListener>(get_node_parameters_interface());
@@ -177,7 +167,7 @@ void MinimumRuleBasedPlannerNode::load_plugin(const std::string & name)
   }
   if (modifier_plugin_loader_.isClassAvailable(name)) {
     const auto plugin = modifier_plugin_loader_.createSharedInstance(name);
-    plugin->initialize(name, this, time_keeper_, modifier_params_);
+    plugin->initialize(name, this, time_keeper_, modifier_data_, modifier_params_);
 
     // Convert "autoware::...::ObstacleStop" to "obstacle_stop"
     const auto short_name = [](const std::string & plugin_name) {
@@ -219,6 +209,14 @@ void MinimumRuleBasedPlannerNode::unload_plugin(const std::string & name)
     modifier_plugins_.erase(it, modifier_plugins_.end());
     RCLCPP_INFO(this->get_logger(), "The scene plugin '%s' has been unloaded", name.c_str());
   }
+}
+
+void MinimumRuleBasedPlannerNode::set_modifier_data(
+  const MinimumRuleBasedPlannerNode::InputData & input_data)
+{
+  modifier_data_->current_odometry = input_data.odometry_ptr;
+  modifier_data_->current_acceleration = input_data.acceleration_ptr;
+  modifier_data_->predicted_objects = input_data.predicted_objects_ptr;
 }
 
 void MinimumRuleBasedPlannerNode::on_timer()
@@ -313,10 +311,10 @@ void MinimumRuleBasedPlannerNode::on_timer()
 
   // 6. Apply trajectory modifiers
   {
-    const auto modifier_data = make_modifier_data(input_data);
+    set_modifier_data(input_data);
     for (auto & modifier : modifier_plugins_) {
       autoware_utils_debug::ScopedTimeTrack st(modifier->get_name(), *time_keeper_);
-      modifier->modify_trajectory(smoothed_path.points, modifier_data);
+      modifier->modify_trajectory(smoothed_path.points);
       modifier->publish_planning_factor();
       if (params.debug.enable_modifier_trajectory) {
         publish_debug_trajectory(

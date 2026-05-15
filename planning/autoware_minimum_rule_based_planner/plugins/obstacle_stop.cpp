@@ -29,15 +29,12 @@ void ObstacleStop::on_initialize([[maybe_unused]] const TrajectoryModifierParams
 }
 
 bool ObstacleStop::is_trajectory_modification_required(
-  [[maybe_unused]] const TrajectoryPoints & traj_points,
-  [[maybe_unused]] const TrajectoryModifierData & data) const
+  [[maybe_unused]] const TrajectoryPoints & traj_points)
 {
   return false;
 }
 
-void ObstacleStop::modify_trajectory(
-  [[maybe_unused]] TrajectoryPoints & traj_points,
-  [[maybe_unused]] const TrajectoryModifierData & data)
+void ObstacleStop::modify_trajectory([[maybe_unused]] TrajectoryPoints & traj_points)
 {
   // TODO(odashima): implement logic
 }

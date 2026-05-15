@@ -35,6 +35,7 @@
 
 namespace autoware::minimum_rule_based_planner
 {
+using TrajectoryModifierData = trajectory_modifier::TrajectoryModifierData;
 
 class MinimumRuleBasedPlannerNode : public rclcpp::Node
 {
@@ -112,6 +113,8 @@ private:
   void load_plugin(const std::string & name);
   void unload_plugin(const std::string & name);
 
+  void set_modifier_data(const MinimumRuleBasedPlannerNode::InputData & input_data);
+
   bool initialized_modifiers_{false};
   ModifierPluginLoader modifier_plugin_loader_;
   std::vector<std::shared_ptr<trajectory_modifier::plugin::TrajectoryModifierPluginBase>>
@@ -119,6 +122,8 @@ private:
   trajectory_modifier_params::Params modifier_params_;
   std::map<std::string, rclcpp::Publisher<Trajectory>::SharedPtr>
     pub_debug_modifier_module_trajectories_;
+
+  std::shared_ptr<TrajectoryModifierData> modifier_data_;
   /** @} */
 
 private:
