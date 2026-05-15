@@ -100,6 +100,9 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
   metrics_accumulator_.blinker_accumulator.parameters.window_duration_s =
     declare_parameter<double>("blinker_change_count.window_duration_s");
 
+  metrics_accumulator_.trajectory_validation_accumulator.parameters.count_warn_as_error =
+    declare_parameter<bool>("trajectory_validation.count_warn_as_error", false);
+
   // Parameters for node
   output_metrics_ = declare_parameter<bool>("output_metrics");
   ego_frame_str_ = declare_parameter<std::string>("ego_frame");
@@ -378,6 +381,10 @@ void PlanningEvaluatorNode::onTimer()
       onPlanningFactors(planning_factors, module_name);
     }
   }
+  {
+    const auto reports = validation_reports_sub_.take_data();
+    onValidationReports(reports);
+  }
   // Publish metrics
   auto metrics_out = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(metrics_pub_);
   *metrics_out = metrics_msg_;
@@ -553,6 +560,18 @@ void PlanningEvaluatorNode::onPlanningFactors(
   }
   if (metrics_for_publish_.count(Metric::abnormal_stop_decision) != 0) {
     metrics_accumulator_.addMetricMsg(Metric::abnormal_stop_decision, metrics_msg_, module_name);
+  }
+}
+
+void PlanningEvaluatorNode::onValidationReports(
+  const ValidationReportArray::ConstSharedPtr reports_msg)
+{
+  if (!reports_msg) {
+    return;
+  }
+  metrics_accumulator_.trajectory_validation_accumulator.update(*reports_msg);
+  if (metrics_for_publish_.count(Metric::trajectory_validation) != 0) {
+    metrics_accumulator_.addMetricMsg(Metric::trajectory_validation, metrics_msg_);
   }
 }
 
