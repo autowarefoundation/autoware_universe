@@ -28,7 +28,6 @@
 #include <optional>
 #include <utility>
 #include <vector>
-#include <utility>
 
 namespace autoware::motion::control::pid_longitudinal_controller
 {
