@@ -25,6 +25,7 @@
 #include "tf2_ros/transform_listener.h"
 
 #include <autoware/route_handler/route_handler.hpp>
+#include <autoware_trajectory_validator/msg/validation_report_array.hpp>
 #include <autoware_utils/math/accumulator.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -70,6 +71,7 @@ using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 using autoware_planning_msgs::msg::LaneletRoute;
+using autoware_trajectory_validator::msg::ValidationReportArray;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 /**
  * @brief Node for planning evaluation
@@ -132,6 +134,11 @@ public:
    */
   void onPlanningFactors(
     const PlanningFactorArray::ConstSharedPtr planning_factors, const std::string & module_name);
+
+  /**
+   * @brief validation reports from trajectory_validator (remapped ~/input/validation_reports)
+   */
+  void onValidationReports(const ValidationReportArray::ConstSharedPtr reports_msg);
 
   /**
    * @brief add the given metric statistic
@@ -200,6 +207,8 @@ private:
     this, "~/input/steering_status"};
   autoware_utils::InterProcessPollingSubscriber<TurnIndicatorsReport> blinker_sub_{
     this, "~/input/turn_indicators_status"};
+  autoware_utils::InterProcessPollingSubscriber<ValidationReportArray> validation_reports_sub_{
+    this, "~/input/validation_reports"};
 
   std::unordered_map<
     std::string, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>>

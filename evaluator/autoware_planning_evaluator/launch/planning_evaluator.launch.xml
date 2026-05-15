@@ -11,6 +11,7 @@
   <arg name="input/route_topic" default="/planning/mission_planning/route"/>
   <arg name="input/turn_indicators_status" default="/vehicle/status/turn_indicators_status"/>
   <arg name="input/steering_status" default="/vehicle/status/steering_status"/>
+  <arg name="input/validation_reports" default="/planning/trajectory_selector/trajectory_validator_node/debug/validation_reports"/>
 
   <!-- planning evaluator -->
   <group>
@@ -28,6 +29,7 @@
       <remap from="~/input/vector_map" to="$(var input/map_topic)"/>
       <remap from="~/input/turn_indicators_status" to="$(var input/turn_indicators_status)"/>
       <remap from="~/input/steering_status" to="$(var input/steering_status)"/>
+      <remap from="~/input/validation_reports" to="$(var input/validation_reports)"/>
     </node>
   </group>
 </launch>

@@ -30,6 +30,7 @@
       - abnormal_stop_decision
       - blinker_change_count
       - steer_change_count
+      - trajectory_validation
 
     metrics_for_output:
       - curvature
@@ -59,6 +60,7 @@
       - abnormal_stop_decision
       - blinker_change_count
       - steer_change_count
+      - trajectory_validation
 
     trajectory:
       min_point_dist_m: 0.1 # [m] minimum distance between two successive points to use for angle calculation
@@ -118,3 +120,7 @@
     steer_change_count:
       window_duration_s: 5.0 # [s] window duration of counting steer change for publishing
       steer_rate_margin: 0.2 # [rad/s] margin of steer_rate around 0 to count as steer change
+
+    trajectory_validation:
+      # If true, WARN counts as error for report-level and each MetricReport; if false, only ERROR.
+      count_warn_as_error: false

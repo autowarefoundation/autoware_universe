@@ -58,7 +58,7 @@ void MetricsAccumulator::setPlanningFactors(
   planning_factor_accumulator.update(module_name, planning_factors, ego_odometry_);
 }
 
-void MetricsAccumulator::addMetricMsg(const Metric & metric, MetricArrayMsg & metrics_msg) const
+void MetricsAccumulator::addMetricMsg(const Metric & metric, MetricArrayMsg & metrics_msg)
 {
   switch (metric) {
     case Metric::blinker_change_count:
@@ -66,6 +66,9 @@ void MetricsAccumulator::addMetricMsg(const Metric & metric, MetricArrayMsg & me
       return;
     case Metric::steer_change_count:
       steer_accumulator.addMetricMsg(metric, metrics_msg);
+      return;
+    case Metric::trajectory_validation:
+      trajectory_validation_accumulator.addMetricMsg(metric, metrics_msg);
       return;
     default:
       return;
@@ -96,6 +99,9 @@ json MetricsAccumulator::getOutputJson(const OutputMetric & output_metric)
     case OutputMetric::stop_decision:
     case OutputMetric::abnormal_stop_decision:
       return planning_factor_accumulator.getOutputJson(output_metric);
+
+    case OutputMetric::trajectory_validation:
+      return trajectory_validation_accumulator.getOutputJson(output_metric);
 
     default:
       if (common_accumulators.find(output_metric) == common_accumulators.end()) {
