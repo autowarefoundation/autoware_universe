@@ -26,21 +26,25 @@
 
 namespace autoware::minimum_rule_based_planner::plugin
 {
-using autoware::trajectory_modifier::utils::obstacle_stop::cluster_pointcloud;
 using autoware::trajectory_modifier::utils::obstacle_stop::filter_objects_by_type;
 using autoware::trajectory_modifier::utils::obstacle_stop::filter_objects_by_velocity;
-using autoware::trajectory_modifier::utils::obstacle_stop::filter_pointcloud_by_range;
-using autoware::trajectory_modifier::utils::obstacle_stop::filter_pointcloud_by_voxel_grid;
 using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_object_collision;
 using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_pcd_collision;
-using autoware::trajectory_modifier::utils::obstacle_stop::get_trajectory_polygon;
+using autoware::trajectory_modifier::utils::obstacle_stop::get_trajectory_shape;
 using autoware::trajectory_modifier::utils::obstacle_stop::PointCloud;
 
 void ObstacleStop::on_initialize([[maybe_unused]] const MinimumRuleBasedPlannerParams & params)
 {
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      get_node_ptr(), "obstacle_stop");
+      get_node_ptr(), "planner_obstacle_stop");
+
+  pointcloud_filter_ =
+    std::make_unique<trajectory_modifier::utils::obstacle_stop::PointCloudFilter>(
+      params_.pointcloud.voxel_grid_filter.x, params_.pointcloud.voxel_grid_filter.y,
+      params_.pointcloud.voxel_grid_filter.z, params_.pointcloud.voxel_grid_filter.min_size,
+      params_.pointcloud.clustering.tolerance, params_.pointcloud.clustering.min_size,
+      params_.pointcloud.clustering.max_size);
 }
 
 void ObstacleStop::run(TrajectoryPoints & traj_points)
@@ -60,12 +64,11 @@ void ObstacleStop::run(TrajectoryPoints & traj_points)
 bool ObstacleStop::is_obstacle_detected(const TrajectoryPoints & traj_points)
 {
   debug_data_ = DebugData();
-  debug_data_.trajectory_polygon = get_trajectory_polygon(
+  debug_data_.trajectory_shape = get_trajectory_shape(
     traj_points, data_->odometry_ptr->pose.pose, vehicle_info_, params_.lateral_margin_m);
-  const auto collision_point_pcd = check_pointcloud(traj_points, debug_data_.trajectory_polygon);
+  const auto collision_point_pcd = check_pointcloud(traj_points);
   update_collision_points_buffer(collision_points_buffer_.pcd, traj_points, collision_point_pcd);
-  const auto collision_point_objects =
-    check_predicted_objects(traj_points, debug_data_.trajectory_polygon);
+  const auto collision_point_objects = check_predicted_objects(traj_points);
   update_collision_points_buffer(
     collision_points_buffer_.objects, traj_points, collision_point_objects);
 
@@ -97,7 +100,7 @@ void ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
 }
 
 std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
-  const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon)
+  const TrajectoryPoints & traj_points)
 {
   if (!params_.use_objects) return std::nullopt;
 
@@ -108,12 +111,15 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
   filter_objects_by_type(predicted_objects, params_.objects.object_types);
   filter_objects_by_velocity(predicted_objects, params_.objects.max_velocity_th);
 
-  return get_nearest_object_collision(
-    traj_points, trajectory_polygon, predicted_objects, debug_data_.target_polygons);
+  autoware_perception_msgs::msg::PredictedObject colliding_object;
+  auto collision_point = get_nearest_object_collision(
+    traj_points, debug_data_.trajectory_shape.polygon, predicted_objects,
+    debug_data_.target_polygons, colliding_object);
+  if (collision_point) debug_data_.colliding_object = colliding_object;
+  return collision_point;
 }
 
-std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
-  const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon)
+std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoints & traj_points)
 {
   if (!params_.use_pointcloud) return std::nullopt;
 
@@ -125,10 +131,22 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   pcl::fromROSMsg(*pointcloud, *filtered_pointcloud);
 
-  const auto & p = params_.pointcloud;
+  {
+    const auto & bounding_box = debug_data_.trajectory_shape.bounding_box;
+    const auto rel_min_point = autoware_utils::inverse_transform_point(
+      bounding_box.min_corner().to_3d(), data_->odometry_ptr->pose.pose);
+    const auto rel_max_point = autoware_utils::inverse_transform_point(
+      bounding_box.max_corner().to_3d(), data_->odometry_ptr->pose.pose);
+    const auto min_z = params_.pointcloud.min_height;
+    const auto max_z = vehicle_info_.vehicle_height_m + params_.pointcloud.height_buffer;
+    pointcloud_filter_->filter_pointcloud(
+      filtered_pointcloud, rel_min_point.x(), rel_max_point.x(), rel_min_point.y(),
+      rel_max_point.y(), min_z, max_z);
+  }
 
-  const auto max_height = vehicle_info_.vehicle_height_m + params_.pointcloud.height_buffer;
-  filter_pointcloud_by_range(filtered_pointcloud, p.detection_range, p.min_height, max_height);
+  PointCloud::Ptr clustered_points(new PointCloud);
+  pointcloud_filter_->cluster_pointcloud(
+    filtered_pointcloud, clustered_points, params_.pointcloud.clustering.min_height);
 
   {
     geometry_msgs::msg::TransformStamped transform_stamped;
@@ -144,23 +162,6 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
     autoware_utils::transform_pointcloud(*filtered_pointcloud, *filtered_pointcloud, isometry);
   }
 
-  const auto & p_voxel = p.voxel_grid_filter;
-  filter_pointcloud_by_voxel_grid(
-    filtered_pointcloud, p_voxel.x, p_voxel.y, p_voxel.z, p_voxel.min_size);
-  {
-    const auto voxel_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
-    pcl::toROSMsg(*filtered_pointcloud, *voxel_pointcloud);
-    voxel_pointcloud->header.stamp = pointcloud->header.stamp;
-    voxel_pointcloud->header.frame_id = "map";
-    debug_data_.voxel_points = voxel_pointcloud;
-  }
-
-  const auto & p_cluster = p.clustering;
-  const auto height_offset = data_->odometry_ptr->pose.pose.position.z;
-  PointCloud::Ptr clustered_points(new PointCloud);
-  cluster_pointcloud(
-    filtered_pointcloud, clustered_points, p_cluster.min_size, p_cluster.max_size,
-    p_cluster.tolerance, p_cluster.min_height, height_offset);
   {
     const auto cluster_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
     pcl::toROSMsg(*clustered_points, *cluster_pointcloud);
@@ -169,8 +170,14 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
     debug_data_.cluster_points = cluster_pointcloud;
   }
 
+  if (data_->predicted_objects_ptr && !data_->predicted_objects_ptr->objects.empty()) {
+    pointcloud_filter_->filter_pointcloud_by_object(
+      clustered_points, *data_->predicted_objects_ptr);
+  }
+
   return get_nearest_pcd_collision(
-    traj_points, trajectory_polygon, clustered_points, debug_data_.target_pcd_points);
+    traj_points, debug_data_.trajectory_shape.polygon, clustered_points,
+    debug_data_.target_pcd_points);
 }
 
 void ObstacleStop::update_collision_points_buffer(

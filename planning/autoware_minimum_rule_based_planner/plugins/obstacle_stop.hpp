@@ -70,12 +70,12 @@ private:
 
   DebugData debug_data_;
 
+  std::unique_ptr<trajectory_modifier::utils::obstacle_stop::PointCloudFilter> pointcloud_filter_;
+
   bool is_obstacle_detected(const TrajectoryPoints & traj_points);
 
-  std::optional<CollisionPoint> check_predicted_objects(
-    const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon);
-  std::optional<CollisionPoint> check_pointcloud(
-    const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon);
+  std::optional<CollisionPoint> check_predicted_objects(const TrajectoryPoints & traj_points);
+  std::optional<CollisionPoint> check_pointcloud(const TrajectoryPoints & traj_points);
 
   void update_collision_points_buffer(
     std::vector<CollisionPoint> & collision_points_buffer, const TrajectoryPoints & traj_points,
