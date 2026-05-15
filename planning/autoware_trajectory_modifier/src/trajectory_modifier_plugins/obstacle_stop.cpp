@@ -82,7 +82,8 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
   {
     const auto & p = params_.objects;
     object_filter_ = std::make_unique<utils::obstacle_stop::ObjectFilter>(
-      p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th);
+      p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th,
+      p.safety_buffer);
   }
 
   {
@@ -128,7 +129,8 @@ void ObstacleStop::update_params(const TrajectoryModifierParams & params)
   {
     const auto & p = params_.objects;
     object_filter_->set_params(
-      p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th);
+      p.object_types, p.max_velocity_th, p.stopped_velocity_th, p.max_lateral_velocity_th,
+      p.safety_buffer);
   }
 
   {

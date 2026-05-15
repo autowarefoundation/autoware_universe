@@ -250,13 +250,16 @@ struct ObjectFilter
    * @param max_velocity_th Remove objects with longitudinal twist.x above this [m/s].
    * @param stopped_velocity_th Used when filtering by target area for "moving" vs stopped.
    * @param max_lateral_velocity_th Lateral speed threshold for the exiting-object heuristic [m/s].
+   * @param safety_buffer Safety buffer to expand object shape [m].
    */
   ObjectFilter(
     const std::vector<std::string> & object_type_strings, const double max_velocity_th,
-    const double stopped_velocity_th, const double max_lateral_velocity_th)
+    const double stopped_velocity_th, const double max_lateral_velocity_th,
+    const double safety_buffer)
   : max_velocity_th_(max_velocity_th),
     stopped_velocity_th_(stopped_velocity_th),
-    max_lateral_velocity_th_(max_lateral_velocity_th)
+    max_lateral_velocity_th_(max_lateral_velocity_th),
+    safety_buffer_(safety_buffer)
   {
     for (const auto & object_type_string : object_type_strings) {
       if (string_to_object_type.count(object_type_string) == 0) continue;
@@ -303,7 +306,8 @@ struct ObjectFilter
    */
   void set_params(
     const std::vector<std::string> & object_type_strings, const double max_velocity_th,
-    const double stopped_velocity_th, const double max_lateral_velocity_th)
+    const double stopped_velocity_th, const double max_lateral_velocity_th,
+    const double safety_buffer)
   {
     object_types_.clear();
     for (const auto & object_type_string : object_type_strings) {
@@ -313,6 +317,7 @@ struct ObjectFilter
     max_velocity_th_ = max_velocity_th;
     stopped_velocity_th_ = stopped_velocity_th;
     max_lateral_velocity_th_ = max_lateral_velocity_th;
+    safety_buffer_ = safety_buffer;
   }
 
 private:
@@ -320,6 +325,7 @@ private:
   double max_velocity_th_;
   double stopped_velocity_th_;
   double max_lateral_velocity_th_;
+  double safety_buffer_;
 };
 
 /// PCL-based downsampling, cropping, clustering, and object masking for obstacle point clouds.
