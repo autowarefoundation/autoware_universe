@@ -21,9 +21,16 @@ rclcpp_components_register_node(${PROJECT_NAME}
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_cmake_ros REQUIRED)
   ament_auto_add_gtest(${PROJECT_NAME}_test
     test/test_utils.cpp
     test/test_signal_validator.cpp
+  )
+  ament_add_ros_isolated_gtest(${PROJECT_NAME}_node_test
+    test/test_traffic_light_multi_camera_fusion_node.cpp
+  )
+  target_link_libraries(${PROJECT_NAME}_node_test
+    ${PROJECT_NAME}
   )
 endif()
 

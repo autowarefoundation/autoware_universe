@@ -25,6 +25,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/primitives/Area.h>
 #include <lanelet2_core/primitives/LaneletSequence.h>
 
 #include <vector>
@@ -59,6 +60,9 @@ bool is_in_parking_lot(
   const lanelet::ConstPolygons3d & parking_lots, const lanelet::ConstPoint3d & point);
 double project_goal_to_map(
   const lanelet::ConstLanelet & lanelet_component, const lanelet::ConstPoint3d & goal_point);
+/** @brief Use the nearest vertex on the area outer boundary (2D) for goal height. */
+double project_goal_to_area(
+  const lanelet::ConstArea & area, const lanelet::ConstPoint3d & goal_point);
 geometry_msgs::msg::Pose get_closest_centerline_pose(
   const lanelet::ConstLanelets & road_lanelets, const geometry_msgs::msg::Pose & point,
   autoware::vehicle_info_utils::VehicleInfo vehicle_info);

@@ -2,6 +2,40 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_pointcloud_preprocessor/launch): use launch substitution instead of get_package_share_directory (`#12395 <https://github.com/mitsudome-r/autoware_universe/issues/12395>`_)
+  refactor: use launch substitution instead of get_package_share_directory
+* feat(blockage_diag): apply agnocast subscription to `blockage_diag` (`#12393 <https://github.com/mitsudome-r/autoware_universe/issues/12393>`_)
+  * apply agnocast subscription to blockage_diag
+  * style(pre-commit): autofix
+  * apply agnocast to polar_voxel_outlier_filter
+  * style(pre-commit): autofix
+  * suppress unknownMacro warning for AGNOCAST macro
+  * fixed cpplint,cppcheck and removed unnecessary comments
+  * delete deprecated comments and restore target_include_directories
+  * suppress cppcheck
+  * suppress cppcheck
+  * suppress cppcheck
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* perf(pointcloud_preprocessor): use emplace/emplace_back to avoid temporary object creation (`#12227 <https://github.com/mitsudome-r/autoware_universe/issues/12227>`_)
+* refactor(autoware_pointcloud_preprocessor): fix debug messages about setting parameters (`#12066 <https://github.com/mitsudome-r/autoware_universe/issues/12066>`_)
+  * refactor(autoware_pointcloud_preprocessor): fix debug messages about setting parameters
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(pointcloud_preprocessor): cancel STALE immediately (`#12198 <https://github.com/mitsudome-r/autoware_universe/issues/12198>`_)
+  Typically, the STALE state in diagnostics represents that the
+  diagnostics have not been updated. In accordance with this, this modification
+  moves the hysteresis state from STALE once a non-stale state is observed.
+* chore(autoware_pointcloud_preprocessor): add `GLOBAL_SECONDS` increment for test so that future pre-commit works (`#12074 <https://github.com/mitsudome-r/autoware_universe/issues/12074>`_)
+  add GLOBAL_SECONDS increment
+* docs(sensing): fix mkdocs macro rendering and links in sensing pages (`#12111 <https://github.com/mitsudome-r/autoware_universe/issues/12111>`_)
+  docs(sensing): fix mkdocs macro paths, links, and schema fields
+* Contributors: Koichi Imai, Manato Hirabayashi, Max Schmeller, Maxim Smolskiy, Taeseung Sohn, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

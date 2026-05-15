@@ -23,6 +23,8 @@
 #include <boost/geometry.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
+#include <lanelet2_core/geometry/Point.h>
+#include <lanelet2_core/primitives/Area.h>
 
 #include <limits>
 #include <vector>
@@ -125,6 +127,24 @@ double project_goal_to_map(
     autoware::experimental::lanelet2_utils::get_fine_centerline(lanelet_component);
   lanelet::BasicPoint3d project = lanelet::geometry::project(center_line, goal_point.basicPoint());
   return project.z();
+}
+
+double project_goal_to_area(
+  const lanelet::ConstArea & area, const lanelet::ConstPoint3d & goal_point)
+{
+  double min_d2 = std::numeric_limits<double>::max();
+  double best_z = goal_point.z();
+  const auto g2 = lanelet::utils::to2D(goal_point);
+  for (const auto & ls : area.outerBound()) {
+    for (const auto & pt : ls) {
+      const double d2 = lanelet::geometry::distance2d(g2, lanelet::utils::to2D(pt));
+      if (d2 < min_d2) {
+        min_d2 = d2;
+        best_z = pt.z();
+      }
+    }
+  }
+  return best_z;
 }
 
 geometry_msgs::msg::Pose get_closest_centerline_pose(
