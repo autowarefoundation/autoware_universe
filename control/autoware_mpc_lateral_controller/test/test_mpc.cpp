@@ -160,7 +160,8 @@ protected:
     mpc.m_steer_rate_lim_map_by_velocity.emplace_back(0.0, steer_rate_lim);
     mpc.m_ctrl_period = ctrl_period;
     mpc.m_use_steer_prediction = use_steer_prediction;
-    // dummy trajectories below have no time_from_start; use spatial mode (temporal mode is covered in test_mpc_utils.cpp)
+    // dummy trajectories below have no time_from_start; use spatial mode (temporal mode is covered
+    // in test_mpc_utils.cpp)
     mpc.m_use_temporal_trajectory = false;
 
     mpc.initializeLowPassFilters(steering_lpf_cutoff_hz, error_deriv_lpf_cutoff_hz);
