@@ -19,9 +19,9 @@
 #include "autoware/planning_evaluator/metric_accumulators/common_accumulator.hpp"
 #include "autoware/planning_evaluator/metric_accumulators/planning_factor_accumulator.hpp"
 #include "autoware/planning_evaluator/metric_accumulators/steer_accumulator.hpp"
+#include "autoware/planning_evaluator/metric_accumulators/trajectory_validation_accumulator.hpp"
 #include "autoware/planning_evaluator/metrics/metric.hpp"
 #include "autoware/planning_evaluator/metrics/output_metric.hpp"
-#include "metrics/metric.hpp"
 
 #include <autoware_utils/math/accumulator.hpp>
 #include <nlohmann/json.hpp>
@@ -57,7 +57,7 @@ public:
   void setPlanningFactors(
     const std::string & module_name, const PlanningFactorArray & planning_factors);
 
-  void addMetricMsg(const Metric & metric, MetricArrayMsg & metrics_msg) const;
+  void addMetricMsg(const Metric & metric, MetricArrayMsg & metrics_msg);
 
   void addMetricMsg(
     const Metric & metric, MetricArrayMsg & metrics_msg, const std::string & module_name);
@@ -65,6 +65,7 @@ public:
   json getOutputJson(const OutputMetric & output_metric);
 
   PlanningFactorAccumulator planning_factor_accumulator;
+  TrajectoryValidationAccumulator trajectory_validation_accumulator;
   BlinkerAccumulator blinker_accumulator;
   SteerAccumulator steer_accumulator;
   std::unordered_map<OutputMetric, CommonAccumulator> common_accumulators;

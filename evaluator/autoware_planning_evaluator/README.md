@@ -49,7 +49,8 @@ These files also provide string conversions and human-readable descriptions for 
 6. [Planning Factor Metrics](#planning-factor-metrics)
 7. [Steering Metrics](#steering-metrics)
 8. [Blinker Metrics](#blinker-metrics)
-9. [Other Information](#other-information)
+9. [Trajectory validation metrics](#trajectory-validation-metrics)
+10. [Other Information](#other-information)
 
 ## Detailed Metrics
 
@@ -288,6 +289,28 @@ Metrics are calculated and publish only when the node receives a steering report
     - `/count_in_duration/min`, `/count_in_duration/max`, `/count_in_duration/mean`: the statistics of the published keep_duration.
     - `/count`: total number of changes.
 
+### Trajectory validation metrics
+
+Accumulates validation results from `autoware_trajectory_validator` (`ValidationReportArray`).
+
+Metrics are calculated and published only when the node receives a message on `~/input/validation_reports`.
+
+#### Implemented metrics
+
+- **`trajectory_validation`**: Error span statistics for each candidate trajectory and for each metric row reported by validators.
+  - **Scopes** (prefixed by `trajectory_validation/` in published names):
+    - `/{generator_name}`: whole-trajectory result from `ValidationReport.level`.
+    - `/{generator_name}/{validator_name}/{metric_name}`: per-row result from each `MetricReport` (names matching `check_*_<object-uuid>` patterns may be excluded; see implementation).
+  - Parameters:
+    - `trajectory_validation.count_warn_as_error`: if `true`, both WARN and ERROR count as error; if `false`, only ERROR.
+  - Sub-metrics to publish (value-based):
+    - `/{scope}/error_duration`: current accumulated duration of the active error span for that scope (seconds).
+    - `/{scope}/error_count`: number of error episodes (transitions into error) for that scope.
+  - Sub-metrics to output:
+    - `/{scope}/error_duration/min`, `/{scope}/error_duration/max`, `/{scope}/error_duration/mean`: statistics over completed error-span durations.
+    - `/{scope}/error_duration/total`: sum of all completed error-span durations (seconds).
+    - `/{scope}/error_count`: total error episodes.
+
 ### Other Information
 
 Additional useful information related to planning:
@@ -322,6 +345,7 @@ Additional useful information related to planning:
 | `~/input/acceleration`           | `geometry_msgs::msg::AccelWithCovarianceStamped`            | Current acceleration of the vehicle               |
 | `~/input/steering_status`        | `autoware_vehicle_msgs::msg::SteeringReport`                | Current steering of the vehicle                   |
 | `~/input/turn_indicators_status` | `autoware_vehicle_msgs::msg::TurnIndicatorsReport`          | Current blinker status of the vehicle             |
+| `~/input/validation_reports`     | `autoware_trajectory_validator::msg::ValidationReportArray` | Trajectory validation reports                     |
 | `{topic_prefix}/{module_name}`   | `autoware_internal_planning_msgs::msg::PlanningFactorArray` | Planning factors of each module to evaluate       |
 
 ### Outputs
