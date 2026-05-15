@@ -28,10 +28,13 @@
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_vehicle_msgs/msg/steering_report.hpp"
 #include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
 #include <deque>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -45,6 +48,7 @@ using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_vehicle_msgs::msg::SteeringReport;
 using geometry_msgs::msg::Pose;
+using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::Odometry;
 
 using Eigen::MatrixXd;
@@ -156,6 +160,14 @@ struct MPCData
   // Pose (position and orientation) of the nearest point in the trajectory.
   Pose nearest_pose{};
 
+  // Temporal tracking debug values.
+  double temporal_predicted_time{std::numeric_limits<double>::quiet_NaN()};
+  double temporal_observed_time{std::numeric_limits<double>::quiet_NaN()};
+  double temporal_fused_time{std::numeric_limits<double>::quiet_NaN()};
+  double temporal_window_min{std::numeric_limits<double>::quiet_NaN()};
+  double temporal_window_max{std::numeric_limits<double>::quiet_NaN()};
+  bool temporal_observation_used{false};
+
   // Current steering angle.
   double steer{};
 
@@ -226,9 +238,14 @@ private:
   double m_yaw_error_prev = 0.0;       // Previous heading error for derivative calculation.
 
   bool m_is_forward_shift = true;  // Flag indicating if the shift is in the forward direction.
+  std::optional<double> m_prev_nearest_time{};            // Stabilized nearest trajectory time.
+  std::optional<rclcpp::Time> m_prev_trajectory_stamp{};  // Last received trajectory stamp.
 
   rclcpp::Publisher<Trajectory>::SharedPtr m_debug_frenet_predicted_trajectory_pub;
   rclcpp::Publisher<Trajectory>::SharedPtr m_debug_resampled_reference_trajectory_pub;
+  rclcpp::Publisher<PoseStamped>::SharedPtr m_debug_nearest_pose_pub;
+  rclcpp::Publisher<Trajectory>::SharedPtr m_debug_nearest_segment_pub;
+  rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr m_debug_nearest_info_pub;
   /**
    * @brief Get variables for MPC calculation.
    * @param trajectory The reference trajectory.
@@ -392,6 +409,15 @@ private:
     const Odometry & current_kinematics) const;
 
   /**
+   * @brief Publish nearest-point debug information for RViz and log analysis.
+   * @param traj The current reference trajectory.
+   * @param self_pose The current ego pose.
+   * @param mpc_data The nearest-point related MPC data.
+   */
+  void publishNearestDebug(
+    const MPCTrajectory & traj, const Pose & self_pose, const MPCData & mpc_data) const;
+
+  /**
    * @brief calculate steering rate limit along with the target trajectory
    * @param reference_trajectory The reference trajectory.
    * @param current_velocity current velocity of ego.
@@ -436,6 +462,9 @@ public:
 
   bool m_use_delayed_initial_state =
     true;  // Flag to use x0_delayed as initial state for predicted trajectory
+
+  bool m_use_temporal_trajectory =
+    true;  // Flag to use temporal trajectory mode (true: use timestamps, false: spatial)
 
   bool m_publish_debug_trajectories = false;  // Flag to publish predicted trajectory and
                                               // resampled reference trajectory for debug purpose

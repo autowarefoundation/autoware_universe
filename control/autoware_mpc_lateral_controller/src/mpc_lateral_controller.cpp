@@ -26,9 +26,11 @@
 #include <tf2/utils.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <deque>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -144,6 +146,22 @@ MpcLateralController::MpcLateralController(
   m_mpc->ego_nearest_yaw_threshold = m_ego_nearest_yaw_threshold;
 
   m_mpc->m_use_delayed_initial_state = dp_bool("use_delayed_initial_state");
+
+  // trajectory_reference_mode is declared at controller_node level
+  // If not available, declare it with default value for standalone usage
+  const auto trajectory_reference_mode =
+    node.has_parameter("trajectory_reference_mode")
+      ? node.get_parameter("trajectory_reference_mode").as_string()
+      : node.declare_parameter<std::string>("trajectory_reference_mode", "spatial");
+
+  if (trajectory_reference_mode == "temporal") {
+    m_mpc->m_use_temporal_trajectory = true;
+  } else if (trajectory_reference_mode == "spatial") {
+    m_mpc->m_use_temporal_trajectory = false;
+  } else {
+    throw std::invalid_argument(
+      "Invalid trajectory_reference_mode. Expected \"spatial\" or \"temporal\".");
+  }
 
   m_mpc->m_publish_debug_trajectories = dp_bool("publish_debug_trajectories");
 
@@ -685,6 +703,7 @@ bool MpcLateralController::isTrajectoryShapeChanged() const
 
 bool MpcLateralController::isValidTrajectory(const Trajectory & traj) const
 {
+  double prev_time_from_start = -std::numeric_limits<double>::infinity();
   for (const auto & p : traj.points) {
     if (
       !isfinite(p.pose.position.x) || !isfinite(p.pose.position.y) ||
@@ -694,6 +713,14 @@ bool MpcLateralController::isValidTrajectory(const Trajectory & traj) const
       !isfinite(p.heading_rate_rps) || !isfinite(p.front_wheel_angle_rad) ||
       !isfinite(p.rear_wheel_angle_rad)) {
       return false;
+    }
+
+    if (m_mpc->m_use_temporal_trajectory) {
+      const double t = rclcpp::Duration(p.time_from_start).seconds();
+      if (!std::isfinite(t) || t <= prev_time_from_start) {
+        return false;
+      }
+      prev_time_from_start = t;
     }
   }
   return true;

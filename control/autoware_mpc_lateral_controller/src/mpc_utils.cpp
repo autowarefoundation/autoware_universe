@@ -40,6 +40,28 @@ double calcLongitudinalOffset(
 
   return segment_vec.dot(target_vec) / segment_vec.norm();
 }
+
+bool isTemporalShortSegment(
+  const double ds, const double dt, const double vx, const bool use_short_segment_protection)
+{
+  if (!use_short_segment_protection) {
+    return ds < 1.0e-3;
+  }
+
+  constexpr double min_distance_threshold = 2.0e-2;
+  constexpr double stop_like_velocity_threshold = 1.0e-1;
+  constexpr double min_velocity_floor = 1.0e-1;
+  constexpr double expected_distance_ratio = 0.5;
+  constexpr double min_time_step = 1.0e-3;
+
+  if (ds < min_distance_threshold && std::fabs(vx) < stop_like_velocity_threshold) {
+    return true;
+  }
+
+  const double bounded_dt = std::max(dt, min_time_step);
+  const double expected_distance = std::max(std::fabs(vx), min_velocity_floor) * bounded_dt;
+  return ds < expected_distance_ratio * expected_distance;
+}
 }  // namespace
 
 namespace MPCUtils
@@ -191,7 +213,8 @@ bool linearInterpMPCTrajectory(
   return true;
 }
 
-void calcTrajectoryYawFromXY(MPCTrajectory & traj, const bool is_forward_shift)
+void calcTrajectoryYawFromXY(
+  MPCTrajectory & traj, const bool is_forward_shift, const bool use_input_yaw_for_short_segment)
 {
   if (traj.yaw.size() < 3) {  // at least 3 points are required to calculate yaw
     return;
@@ -201,30 +224,168 @@ void calcTrajectoryYawFromXY(MPCTrajectory & traj, const bool is_forward_shift)
     return;
   }
 
+  const auto input_yaw = traj.yaw;
+
   // interpolate yaw
   for (int i = 1; i < static_cast<int>(traj.yaw.size()) - 1; ++i) {
     const double dx = traj.x.at(i + 1) - traj.x.at(i - 1);
     const double dy = traj.y.at(i + 1) - traj.y.at(i - 1);
+    const auto curr_idx = static_cast<size_t>(i);
+    const double prev_dist = calcDistance2d(traj, curr_idx, curr_idx - 1);
+    const double next_dist = calcDistance2d(traj, curr_idx + 1, curr_idx);
+    const double prev_dt = traj.relative_time.at(curr_idx) - traj.relative_time.at(curr_idx - 1);
+    const double next_dt = traj.relative_time.at(curr_idx + 1) - traj.relative_time.at(curr_idx);
+    const double prev_vx = 0.5 * (traj.vx.at(curr_idx - 1) + traj.vx.at(curr_idx));
+    const double next_vx = 0.5 * (traj.vx.at(curr_idx) + traj.vx.at(curr_idx + 1));
+    if (
+      std::hypot(dx, dy) < 1.0e-3 ||
+      isTemporalShortSegment(prev_dist, prev_dt, prev_vx, use_input_yaw_for_short_segment) ||
+      isTemporalShortSegment(next_dist, next_dt, next_vx, use_input_yaw_for_short_segment)) {
+      traj.yaw.at(i) = use_input_yaw_for_short_segment ? input_yaw.at(i) : traj.yaw.at(i - 1);
+      continue;
+    }
     traj.yaw.at(i) = is_forward_shift ? std::atan2(dy, dx) : std::atan2(dy, dx) + M_PI;
   }
   if (traj.yaw.size() > 1) {
-    traj.yaw.at(0) = traj.yaw.at(1);
-    traj.yaw.back() = traj.yaw.at(traj.yaw.size() - 2);
+    const double dx0 = traj.x.at(1) - traj.x.at(0);
+    const double dy0 = traj.y.at(1) - traj.y.at(0);
+    const double ds0 = calcDistance2d(traj, 1, 0);
+    const double dt0 = traj.relative_time.at(1) - traj.relative_time.at(0);
+    const double vx0 = 0.5 * (traj.vx.at(0) + traj.vx.at(1));
+    if (
+      std::hypot(dx0, dy0) >= 1.0e-3 &&
+      !isTemporalShortSegment(ds0, dt0, vx0, use_input_yaw_for_short_segment)) {
+      traj.yaw.at(0) = is_forward_shift ? std::atan2(dy0, dx0) : std::atan2(dy0, dx0) + M_PI;
+    } else {
+      traj.yaw.at(0) = use_input_yaw_for_short_segment ? input_yaw.at(0) : traj.yaw.at(1);
+    }
+
+    const size_t last = traj.yaw.size() - 1;
+    const double dxn = traj.x.at(last) - traj.x.at(last - 1);
+    const double dyn = traj.y.at(last) - traj.y.at(last - 1);
+    const double dsn = calcDistance2d(traj, last, last - 1);
+    const double dtn = traj.relative_time.at(last) - traj.relative_time.at(last - 1);
+    const double vxn = 0.5 * (traj.vx.at(last - 1) + traj.vx.at(last));
+    if (
+      std::hypot(dxn, dyn) >= 1.0e-3 &&
+      !isTemporalShortSegment(dsn, dtn, vxn, use_input_yaw_for_short_segment)) {
+      traj.yaw.back() = is_forward_shift ? std::atan2(dyn, dxn) : std::atan2(dyn, dxn) + M_PI;
+    } else {
+      traj.yaw.back() =
+        use_input_yaw_for_short_segment ? input_yaw.at(last) : traj.yaw.at(last - 1);
+    }
   }
 }
 
 void calcTrajectoryCurvature(
   const int curvature_smoothing_num_traj, const int curvature_smoothing_num_ref_steer,
-  MPCTrajectory & traj)
+  MPCTrajectory & traj, const bool use_short_segment_protection)
 {
-  traj.k = calcTrajectoryCurvature(curvature_smoothing_num_traj, traj);
-  traj.smooth_k = calcTrajectoryCurvature(curvature_smoothing_num_ref_steer, traj);
+  traj.k =
+    calcTrajectoryCurvature(curvature_smoothing_num_traj, traj, use_short_segment_protection);
+  traj.smooth_k =
+    calcTrajectoryCurvature(curvature_smoothing_num_ref_steer, traj, use_short_segment_protection);
+}
+
+void calcTrajectoryCurvatureBySpatialResample(
+  const int curvature_smoothing_num_traj, const int curvature_smoothing_num_ref_steer,
+  const double resample_interval_dist, MPCTrajectory & traj)
+{
+  if (traj.size() < 3) {
+    return;
+  }
+
+  // 1. Compute arc length of original temporal trajectory
+  std::vector<double> orig_arclength;
+  calcMPCTrajectoryArcLength(traj, orig_arclength);
+  const double total_length = orig_arclength.back();
+  if (total_length < 1e-6) {
+    return;
+  }
+
+  // 2. Remove spatially duplicate points (stopped vehicle).
+  //    Spline requires strictly increasing arc length.
+  constexpr double dedup_eps = 1e-3;
+  std::vector<double> unique_arclength;
+  std::vector<double> unique_x;
+  std::vector<double> unique_y;
+  unique_arclength.push_back(orig_arclength.front());
+  unique_x.push_back(traj.x.front());
+  unique_y.push_back(traj.y.front());
+  for (size_t i = 1; i < orig_arclength.size(); ++i) {
+    if (orig_arclength[i] - unique_arclength.back() > dedup_eps) {
+      unique_arclength.push_back(orig_arclength[i]);
+      unique_x.push_back(traj.x[i]);
+      unique_y.push_back(traj.y[i]);
+    }
+  }
+  if (unique_arclength.size() < 3) {
+    return;
+  }
+
+  // 3. Generate equally-spaced arc length points
+  std::vector<double> resampled_arclength;
+  for (double s = 0.0; s < total_length; s += resample_interval_dist) {
+    resampled_arclength.push_back(s);
+  }
+  if (resampled_arclength.back() < total_length - 1e-6) {
+    resampled_arclength.push_back(total_length);
+  }
+  if (resampled_arclength.size() < 3) {
+    return;
+  }
+
+  // 4. Spatially resample x, y using spline interpolation on deduplicated points
+  MPCTrajectory spatial_traj;
+  spatial_traj.x = autoware::interpolation::spline(unique_arclength, unique_x, resampled_arclength);
+  spatial_traj.y = autoware::interpolation::spline(unique_arclength, unique_y, resampled_arclength);
+  const auto n = resampled_arclength.size();
+  spatial_traj.z.resize(n, 0.0);
+  spatial_traj.yaw.resize(n, 0.0);
+  spatial_traj.vx.resize(n, 0.0);
+  spatial_traj.k.resize(n, 0.0);
+  spatial_traj.smooth_k.resize(n, 0.0);
+  spatial_traj.relative_time.resize(n, 0.0);
+
+  // 5. Calculate curvature on the spatially uniform trajectory
+  const auto k_spatial = calcTrajectoryCurvature(curvature_smoothing_num_traj, spatial_traj, false);
+  const auto smooth_k_spatial =
+    calcTrajectoryCurvature(curvature_smoothing_num_ref_steer, spatial_traj, false);
+
+  // 6. Map curvature back to original temporal trajectory.
+  //    Use lerp on unique (strictly increasing) arc lengths.
+  //    Duplicate-arclength points (stopped) get curvature = 0.
+  const auto k_at_unique =
+    autoware::interpolation::lerp(resampled_arclength, k_spatial, unique_arclength);
+  const auto smooth_k_at_unique =
+    autoware::interpolation::lerp(resampled_arclength, smooth_k_spatial, unique_arclength);
+
+  traj.k.assign(traj.size(), 0.0);
+  traj.smooth_k.assign(traj.size(), 0.0);
+  size_t unique_idx = 0;
+  for (size_t i = 0; i < traj.size(); ++i) {
+    // Find matching unique point
+    while (unique_idx + 1 < unique_arclength.size() &&
+           unique_arclength[unique_idx + 1] <= orig_arclength[i] + dedup_eps) {
+      ++unique_idx;
+    }
+    // Only assign curvature if this point has a unique spatial position
+    if (i == 0 || orig_arclength[i] - orig_arclength[i - 1] > dedup_eps) {
+      traj.k[i] = k_at_unique[unique_idx];
+      traj.smooth_k[i] = smooth_k_at_unique[unique_idx];
+    }
+    // else: remains 0.0 (stopped / duplicate point)
+  }
 }
 
 std::vector<double> calcTrajectoryCurvature(
-  const int curvature_smoothing_num, const MPCTrajectory & traj)
+  const int curvature_smoothing_num, const MPCTrajectory & traj,
+  const bool use_short_segment_protection)
 {
   std::vector<double> curvature_vec(traj.x.size());
+  if (traj.x.size() < 3) {
+    return curvature_vec;
+  }
 
   /* calculate curvature by circle fitting from three points */
   geometry_msgs::msg::Point p1, p2, p3;
@@ -235,6 +396,22 @@ std::vector<double> calcTrajectoryCurvature(
     const size_t curr_idx = i;
     const size_t prev_idx = curr_idx - L;
     const size_t next_idx = curr_idx + L;
+    const double dist_prev = calcDistance2d(traj, curr_idx, prev_idx);
+    const double dist_next = calcDistance2d(traj, next_idx, curr_idx);
+    const double dist_span = calcDistance2d(traj, next_idx, prev_idx);
+    const double dt_prev = traj.relative_time.at(curr_idx) - traj.relative_time.at(prev_idx);
+    const double dt_next = traj.relative_time.at(next_idx) - traj.relative_time.at(curr_idx);
+    const double dt_span = traj.relative_time.at(next_idx) - traj.relative_time.at(prev_idx);
+    const double vx_prev = 0.5 * (traj.vx.at(prev_idx) + traj.vx.at(curr_idx));
+    const double vx_next = 0.5 * (traj.vx.at(curr_idx) + traj.vx.at(next_idx));
+    const double vx_span = 0.5 * (traj.vx.at(prev_idx) + traj.vx.at(next_idx));
+    if (
+      isTemporalShortSegment(dist_prev, dt_prev, vx_prev, use_short_segment_protection) ||
+      isTemporalShortSegment(dist_next, dt_next, vx_next, use_short_segment_protection) ||
+      isTemporalShortSegment(dist_span, dt_span, vx_span, use_short_segment_protection)) {
+      curvature_vec.at(curr_idx) = curr_idx > 0 ? curvature_vec.at(curr_idx - 1) : 0.0;
+      continue;
+    }
     p1.x = traj.x.at(prev_idx);
     p2.x = traj.x.at(curr_idx);
     p3.x = traj.x.at(next_idx);
@@ -245,7 +422,7 @@ std::vector<double> calcTrajectoryCurvature(
       curvature_vec.at(curr_idx) = autoware_utils::calc_curvature(p1, p2, p3);
     } catch (...) {
       std::cerr << "[MPC] 2 points are too close to calculate curvature." << std::endl;
-      curvature_vec.at(curr_idx) = 0.0;
+      curvature_vec.at(curr_idx) = curr_idx > 0 ? curvature_vec.at(curr_idx - 1) : 0.0;
     }
   }
 
@@ -258,7 +435,7 @@ std::vector<double> calcTrajectoryCurvature(
   return curvature_vec;
 }
 
-MPCTrajectory convertToMPCTrajectory(const Trajectory & input)
+MPCTrajectory convertToMPCTrajectory(const Trajectory & input, const bool use_temporal_trajectory)
 {
   MPCTrajectory output;
   for (const TrajectoryPoint & p : input.points) {
@@ -268,10 +445,18 @@ MPCTrajectory convertToMPCTrajectory(const Trajectory & input)
     const double yaw = tf2::getYaw(p.pose.orientation);
     const double vx = p.longitudinal_velocity_mps;
     const double k = 0.0;
-    const double t = 0.0;
+
+    // Time handling: temporal (use timestamps) vs spatial (calculate from distance/velocity)
+    const double t = use_temporal_trajectory
+                       ? rclcpp::Duration(p.time_from_start).seconds()
+                       : 0.0;  // Will be recalculated by calcMPCTrajectoryTime()
     output.push_back(x, y, z, yaw, vx, k, k, t);
   }
-  calcMPCTrajectoryTime(output);
+
+  if (!use_temporal_trajectory) {
+    calcMPCTrajectoryTime(output);
+  }
+
   return output;
 }
 
@@ -316,7 +501,7 @@ bool calcMPCTrajectoryTime(MPCTrajectory & traj)
 
 void dynamicSmoothingVelocity(
   const size_t start_seg_idx, const double start_vel, const double acc_lim, const double tau,
-  MPCTrajectory & traj)
+  MPCTrajectory & traj, const bool use_temporal_trajectory)
 {
   double curr_v = start_vel;
   // set current velocity in both start and end point of the segment
@@ -327,19 +512,32 @@ void dynamicSmoothingVelocity(
 
   for (size_t i = start_seg_idx + 2; i < traj.size(); ++i) {
     const double ds = calcDistance2d(traj, i, i - 1);
-    const double dt = ds / std::max(std::fabs(curr_v), std::numeric_limits<double>::epsilon());
+    const double dt = [&]() {
+      if (use_temporal_trajectory) {
+        const double time_dt = traj.relative_time.at(i) - traj.relative_time.at(i - 1);
+        constexpr double min_time_dt = 1.0e-4;
+        return std::max(time_dt, min_time_dt);
+      }
+      return ds / std::max(std::fabs(curr_v), std::numeric_limits<double>::epsilon());
+    }();
     const double a = tau / std::max(tau + dt, std::numeric_limits<double>::epsilon());
     const double updated_v = a * curr_v + (1.0 - a) * traj.vx.at(i);
     const double dv = std::max(-acc_lim * dt, std::min(acc_lim * dt, updated_v - curr_v));
     curr_v = curr_v + dv;
     traj.vx.at(i) = curr_v;
   }
-  calcMPCTrajectoryTime(traj);
+
+  if (!use_temporal_trajectory) {
+    // Spatial mode: recalculate time after velocity changes
+    calcMPCTrajectoryTime(traj);
+  }
+  // Temporal mode keeps timestamps and updates velocity using time delta.
 }
 
 bool calcNearestPoseInterp(
   const MPCTrajectory & traj, const Pose & self_pose, Pose * nearest_pose, size_t * nearest_index,
-  double * nearest_time, const double max_dist, const double max_yaw)
+  double * nearest_time, const double max_dist, const double max_yaw, const bool use_time_window,
+  const double min_time_window_sec, const double max_time_window_sec)
 {
   if (traj.empty() || !nearest_pose || !nearest_index || !nearest_time) {
     return false;
@@ -355,6 +553,42 @@ bool calcNearestPoseInterp(
 
   *nearest_index = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     autoware_traj.points, self_pose, max_dist, max_yaw);
+  if (use_time_window) {
+    const double min_time_sec = std::min(min_time_window_sec, max_time_window_sec);
+    const double max_time_sec = std::max(min_time_window_sec, max_time_window_sec);
+    std::vector<size_t> candidates;
+    candidates.reserve(traj.size());
+    for (size_t i = 0; i < traj.size(); ++i) {
+      const double t = traj.relative_time.at(i);
+      if (min_time_sec <= t && t <= max_time_sec) {
+        candidates.push_back(i);
+      }
+    }
+    if (!candidates.empty()) {
+      const double self_yaw = tf2::getYaw(self_pose.orientation);
+      size_t best_relaxed_idx = candidates.front();
+      double best_relaxed_dist2 = std::numeric_limits<double>::max();
+      size_t best_strict_idx = candidates.front();
+      double best_strict_dist2 = std::numeric_limits<double>::max();
+      bool has_strict_candidate = false;
+      for (const auto idx : candidates) {
+        const double dx = traj.x.at(idx) - self_pose.position.x;
+        const double dy = traj.y.at(idx) - self_pose.position.y;
+        const double dist2 = dx * dx + dy * dy;
+        if (dist2 < best_relaxed_dist2) {
+          best_relaxed_dist2 = dist2;
+          best_relaxed_idx = idx;
+        }
+        const double yaw_error = std::fabs(normalize_radian(self_yaw - traj.yaw.at(idx)));
+        if (std::sqrt(dist2) <= max_dist && yaw_error <= max_yaw && dist2 < best_strict_dist2) {
+          best_strict_dist2 = dist2;
+          best_strict_idx = idx;
+          has_strict_candidate = true;
+        }
+      }
+      *nearest_index = has_strict_candidate ? best_strict_idx : best_relaxed_idx;
+    }
+  }
   const size_t traj_size = traj.size();
 
   if (traj.size() == 1) {
