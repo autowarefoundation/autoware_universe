@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <library path="autoware_minimum_rule_based_planner_plugins">
   <class type="autoware::minimum_rule_based_planner::plugin::ObstacleStop"
-         base_class_type="autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase">
+         base_class_type="autoware::minimum_rule_based_planner::plugin::PluginInterface">
     <description>
       Obstacle stop plugin for minimum rule based planner
     </description>

@@ -17,6 +17,10 @@ ament_auto_add_library(${PROJECT_NAME}_lib SHARED
   src/velocity_smoother.cpp
 )
 
+target_include_directories(${PROJECT_NAME}_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/plugins>
+)
+
 target_include_directories(${PROJECT_NAME}_lib SYSTEM PUBLIC
   ${EIGEN3_INCLUDE_DIR}
 )
@@ -34,7 +38,7 @@ rclcpp_components_register_node(${PROJECT_NAME}_lib
   EXECUTABLE ${PROJECT_NAME}_node
 )
 
-pluginlib_export_plugin_description_file(autoware_trajectory_modifier plugins.xml)
+pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 
 ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   plugins/obstacle_stop.cpp

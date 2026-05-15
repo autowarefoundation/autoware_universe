@@ -1,0 +1,485 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Minimum Rule Based Planner",
+  "type": "object",
+  "definitions": {
+    "minimum_rule_based_planner": {
+      "type": "object",
+      "properties": {
+        "planning_frequency_hz": {
+          "type": "number",
+          "description": "Planning loop frequency [Hz]",
+          "default": 10.0,
+          "minimum": 0.0
+        },
+        "path_planning": {
+          "type": "object",
+          "properties": {
+            "path_length": {
+              "type": "object",
+              "properties": {
+                "backward": {
+                  "type": "number",
+                  "description": "Path length behind ego [m]",
+                  "default": 5.0,
+                  "minimum": 0.0
+                },
+                "forward": {
+                  "type": "number",
+                  "description": "Path length ahead of ego [m]",
+                  "default": 300.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "smooth_goal_connection": {
+              "type": "object",
+              "properties": {
+                "search_radius_range": {
+                  "type": "number",
+                  "description": "Search radius for goal connection [m]",
+                  "default": 7.5,
+                  "minimum": 0.0
+                },
+                "pre_goal_offset": {
+                  "type": "number",
+                  "description": "Offset before goal for smooth connection [m]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "ego_nearest_lanelet": {
+              "type": "object",
+              "properties": {
+                "dist_threshold": {
+                  "type": "number",
+                  "description": "Distance threshold for ego nearest lanelet [m]",
+                  "default": 3.0,
+                  "minimum": 0.0
+                },
+                "yaw_threshold": {
+                  "type": "number",
+                  "description": "Yaw threshold for ego nearest lanelet [rad]",
+                  "default": 0.174533,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "path_shift": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable path shifting to ego pose",
+                  "default": true
+                },
+                "minimum_shift_length": {
+                  "type": "number",
+                  "description": "Lateral offset threshold to trigger shift [m]",
+                  "default": 0.5,
+                  "minimum": 0.0
+                },
+                "minimum_shift_yaw": {
+                  "type": "number",
+                  "description": "Yaw deviation threshold to trigger shift [rad]",
+                  "default": 0.349,
+                  "minimum": 0.0
+                },
+                "minimum_shift_distance": {
+                  "type": "number",
+                  "description": "Floor for shift distance [m]",
+                  "default": 5.0,
+                  "minimum": 0.0
+                },
+                "min_speed_for_curvature": {
+                  "type": "number",
+                  "description": "Lower bound on speed for curvature computation [m/s]",
+                  "default": 2.77,
+                  "minimum": 0.0
+                },
+                "lateral_accel_limit": {
+                  "type": "number",
+                  "description": "Lateral acceleration limit for shift [m/s^2]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "waypoint_group": {
+              "type": "object",
+              "properties": {
+                "separation_threshold": {
+                  "type": "number",
+                  "description": "Max distance between waypoints in same group [m]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                },
+                "interval_margin_ratio": {
+                  "type": "number",
+                  "description": "IRatio to expand group interval by lateral distance",
+                  "default": 10.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "output": {
+              "type": "object",
+              "properties": {
+                "delta_arc_length": {
+                  "type": "number",
+                  "description": "Resampling interval for path-to-trajectory conversion [m]",
+                  "default": 0.5,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "obstacle_stop": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "description": "Enable obstacle stop [m]",
+              "default": true
+            },
+            "use_objects": {
+              "type": "boolean",
+              "description": "Enable object detection [m]",
+              "default": true
+            },
+            "use_pointcloud": {
+              "type": "boolean",
+              "description": "Enable pointcloud detection [m]",
+              "default": true
+            },
+            "stop_margin_m": {
+              "type": "number",
+              "description": "Stop margin [m]",
+              "default": 6.0,
+              "minimum": 0.0
+            },
+            "on_time_buffer": {
+              "type": "number",
+              "description": "On time buffer [s]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "off_time_buffer": {
+              "type": "number",
+              "description": "Off time buffer [s]",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "lateral_margin_m": {
+              "type": "number",
+              "description": "Lateral margin [m]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "objects": {
+              "type": "object",
+              "properties": {
+                "object_types": {
+                  "type": "array",
+                  "description": "Object types",
+                  "default": [
+                    "car",
+                    "truck",
+                    "bus",
+                    "trailer",
+                    "motorcycle",
+                    "bicycle",
+                    "pedestrian",
+                    "unknown"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "max_velocity_th": {
+                  "type": "number",
+                  "description": "Max velocity threshold [m/s]",
+                  "default": 1.0,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "pointcloud": {
+              "type": "object",
+              "properties": {
+                "height_buffer": {
+                  "type": "number",
+                  "description": "Height buffer [m]",
+                  "default": 0.5,
+                  "minimum": 0.0
+                },
+                "min_height": {
+                  "type": "number",
+                  "description": "Min height [m]",
+                  "default": 0.2,
+                  "minimum": 0.0
+                },
+                "detection_range": {
+                  "type": "number",
+                  "description": "Detection range [m]",
+                  "default": 100.0,
+                  "minimum": 0.0
+                },
+                "voxel_grid_filter": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X [m]",
+                      "default": 0.2,
+                      "minimum": 0.0
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y [m]",
+                      "default": 0.2,
+                      "minimum": 0.0
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z [m]",
+                      "default": 0.2,
+                      "minimum": 0.0
+                    },
+                    "min_size": {
+                      "type": "number",
+                      "description": "Min size",
+                      "default": 3,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "clustering": {
+                  "type": "object",
+                  "properties": {
+                    "tolerance": {
+                      "type": "number",
+                      "description": "Tolerance [m]",
+                      "default": 0.5,
+                      "minimum": 0.0
+                    },
+                    "min_height": {
+                      "type": "number",
+                      "description": "Min height [m]",
+                      "default": 0.5,
+                      "minimum": 0.0
+                    },
+                    "min_size": {
+                      "type": "number",
+                      "description": "Min size",
+                      "default": 10,
+                      "minimum": 0.0
+                    },
+                    "max_size": {
+                      "type": "number",
+                      "description": "Max size",
+                      "default": 10000,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "velocity_smoother": {
+          "type": "object",
+          "properties": {
+            "nearest_dist_threshold_m": {
+              "type": "number",
+              "description": "Nearest distance threshold [m]",
+              "default": 1.5,
+              "minimum": 0.0
+            },
+            "nearest_yaw_threshold_deg": {
+              "type": "number",
+              "description": "Nearest yaw threshold [deg]",
+              "default": 60.0,
+              "minimum": 0.0
+            },
+            "target_pull_out_speed_mps": {
+              "type": "number",
+              "description": "Target pull out speed [m/s]",
+              "default": 0.25,
+              "minimum": 0.0
+            },
+            "target_pull_out_acc_mps2": {
+              "type": "number",
+              "description": "Target pull out acceleration [m/s^2]",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "max_speed_mps": {
+              "type": "number",
+              "description": "Max speed [m/s]",
+              "default": 13.88,
+              "minimum": 0.0
+            },
+            "max_lateral_accel_mps2": {
+              "type": "number",
+              "description": "Max lateral acceleration [m/s^2]",
+              "default": 1.5,
+              "minimum": 0.0
+            },
+            "set_engage_speed": {
+              "type": "boolean",
+              "description": "Set engage speed at start",
+              "default": true
+            },
+            "limit_speed": {
+              "type": "boolean",
+              "description": "Apply max speed limit",
+              "default": true
+            },
+            "limit_lateral_acceleration": {
+              "type": "boolean",
+              "description": "Apply max lateral acceleration limit",
+              "default": false
+            },
+            "smooth_velocities": {
+              "type": "boolean",
+              "description": "Apply jerk-filtered velocity smoothing",
+              "default": true
+            },
+            "stop_dist_to_prohibit_engage": {
+              "type": "number",
+              "description": "Stop distance to prohibit engage [m]",
+              "default": 0.5,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "post_resample": {
+          "type": "object",
+          "properties": {
+            "max_trajectory_length": {
+              "type": "number",
+              "description": "Max trajectory length for post-optimization resampling [m]",
+              "default": 300.0,
+              "minimum": 0.0
+            },
+            "min_trajectory_length": {
+              "type": "number",
+              "description": "Minimum trajectory length for post-optimization resampling [m]",
+              "default": 30.0,
+              "minimum": 0.0
+            },
+            "resample_time": {
+              "type": "number",
+              "description": "Resample total time [s]",
+              "default": 10.0,
+              "minimum": 0.0
+            },
+            "dense_resample_dt": {
+              "type": "number",
+              "description": "Dense sampling time interval [s]",
+              "default": 0.1,
+              "minimum": 0.0
+            },
+            "dense_min_interval_distance": {
+              "type": "number",
+              "description": "Dense sampling min interval [m]",
+              "default": 0.1,
+              "minimum": 0.0
+            },
+            "sparse_resample_dt": {
+              "type": "number",
+              "description": "Sparse sampling time interval [s]",
+              "default": 0.1,
+              "minimum": 0.0
+            },
+            "sparse_min_interval_distance": {
+              "type": "number",
+              "description": "Sparse sampling min interval [m]",
+              "default": 1.0,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "debug": {
+          "type": "object",
+          "properties": {
+            "enable_path": {
+              "type": "boolean",
+              "description": "Enable path debugging",
+              "default": true
+            },
+            "enable_shifted_trajectory": {
+              "type": "boolean",
+              "description": "Enable shifted trajectory debugging",
+              "default": true
+            },
+            "enable_optimizer_trajectory": {
+              "type": "boolean",
+              "description": "Enable optimizer trajectory debugging",
+              "default": true
+            },
+            "enable_modifier_trajectory": {
+              "type": "boolean",
+              "description": "Enable modifier trajectory debugging",
+              "default": true
+            },
+            "enable_output_trajectory": {
+              "type": "boolean",
+              "description": "Enable output trajectory debugging",
+              "default": true
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/minimum_rule_based_planner"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

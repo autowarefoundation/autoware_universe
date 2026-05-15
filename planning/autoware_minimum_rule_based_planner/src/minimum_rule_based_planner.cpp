@@ -50,9 +50,9 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
   generator_uuid_(autoware_utils_uuid::generate_uuid()),
   vehicle_info_(vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()),
   modifier_plugin_loader_(
-    "autoware_trajectory_modifier",
-    "autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase"),
-  modifier_data_(std::make_shared<TrajectoryModifierData>(this))
+    "autoware_minimum_rule_based_planner",
+    "autoware::minimum_rule_based_planner::plugin::PluginInterface"),
+  modifier_data_(std::make_shared<plugin::ModifierData>(this))
 {
   param_listener_ =
     std::make_shared<::minimum_rule_based_planner::ParamListener>(get_node_parameters_interface());
@@ -72,12 +72,12 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
   load_optimizer_plugins();
   load_modifier_plugins();
 
-  const auto params = param_listener_->get_params();
+  params_ = param_listener_->get_params();
 
   path_planner_ =
-    std::make_unique<PathPlanner>(get_logger(), get_clock(), time_keeper_, params, vehicle_info_);
+    std::make_unique<PathPlanner>(get_logger(), get_clock(), time_keeper_, params_, vehicle_info_);
   timer_ = rclcpp::create_timer(
-    this, get_clock(), rclcpp::Rate(params.planning_frequency_hz).period(),
+    this, get_clock(), rclcpp::Rate(params_.planning_frequency_hz).period(),
     std::bind(&MinimumRuleBasedPlannerNode::on_timer, this));
 
   RCLCPP_INFO(get_logger(), "Minimum Rule Based Planner Node has been started.");
@@ -167,7 +167,7 @@ void MinimumRuleBasedPlannerNode::load_plugin(const std::string & name)
   }
   if (modifier_plugin_loader_.isClassAvailable(name)) {
     const auto plugin = modifier_plugin_loader_.createSharedInstance(name);
-    plugin->initialize(name, this, time_keeper_, modifier_data_, modifier_params_);
+    plugin->initialize(name, this, time_keeper_, modifier_data_, vehicle_info_, params_);
 
     // Convert "autoware::...::ObstacleStop" to "obstacle_stop"
     const auto short_name = [](const std::string & plugin_name) {
@@ -214,15 +214,15 @@ void MinimumRuleBasedPlannerNode::unload_plugin(const std::string & name)
 void MinimumRuleBasedPlannerNode::set_modifier_data(
   const MinimumRuleBasedPlannerNode::InputData & input_data)
 {
-  modifier_data_->current_odometry = input_data.odometry_ptr;
-  modifier_data_->current_acceleration = input_data.acceleration_ptr;
-  modifier_data_->predicted_objects = input_data.predicted_objects_ptr;
+  modifier_data_->odometry_ptr = input_data.odometry_ptr;
+  modifier_data_->acceleration_ptr = input_data.acceleration_ptr;
+  modifier_data_->predicted_objects_ptr = input_data.predicted_objects_ptr;
+  modifier_data_->obstacle_pointcloud_ptr = input_data.obstacle_pointcloud_ptr;
 }
 
 void MinimumRuleBasedPlannerNode::on_timer()
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-  const auto params = param_listener_->get_params();
 
   auto publish_debug_trajectory =
     [](const auto & publisher_map, const auto & plugin, const TrajectoryPoints & points) {
@@ -241,8 +241,9 @@ void MinimumRuleBasedPlannerNode::on_timer()
     return;
   }
 
-  // Update PathPlanner params each cycle
-  path_planner_->update_params(params);
+  if (param_listener_->is_old(params_)) {
+    update_params();
+  }
 
   // 2. Get path
   const auto path = [&]() -> std::optional<PathWithLaneId> {
@@ -260,25 +261,25 @@ void MinimumRuleBasedPlannerNode::on_timer()
 
   // 3. Convert path to trajectory
   auto traj_from_path =
-    path_planner_->convert_path_to_trajectory(*path, params.path_planning.output.delta_arc_length);
+    path_planner_->convert_path_to_trajectory(*path, params_.path_planning.output.delta_arc_length);
 
   // 4. Shift trajectory to ego position
-  if (params.path_planning.path_shift.enable) {
+  if (params_.path_planning.path_shift.enable) {
     autoware_utils_debug::ScopedTimeTrack st("shift_trajectory_to_ego", *time_keeper_);
     TrajectoryShiftParams shift_params;
-    shift_params.minimum_shift_length = params.path_planning.path_shift.minimum_shift_length;
-    shift_params.minimum_shift_yaw = params.path_planning.path_shift.minimum_shift_yaw;
-    shift_params.minimum_shift_distance = params.path_planning.path_shift.minimum_shift_distance;
-    shift_params.min_speed_for_curvature = params.path_planning.path_shift.min_speed_for_curvature;
-    shift_params.lateral_accel_limit = params.path_planning.path_shift.lateral_accel_limit;
+    shift_params.minimum_shift_length = params_.path_planning.path_shift.minimum_shift_length;
+    shift_params.minimum_shift_yaw = params_.path_planning.path_shift.minimum_shift_yaw;
+    shift_params.minimum_shift_distance = params_.path_planning.path_shift.minimum_shift_distance;
+    shift_params.min_speed_for_curvature = params_.path_planning.path_shift.min_speed_for_curvature;
+    shift_params.lateral_accel_limit = params_.path_planning.path_shift.lateral_accel_limit;
 
     const double ego_velocity = input_data.odometry_ptr->twist.twist.linear.x;
     const double ego_yaw_rate = input_data.odometry_ptr->twist.twist.angular.z;
     traj_from_path = path_planner_->shift_trajectory_to_ego(
       traj_from_path, input_data.odometry_ptr->pose.pose, ego_velocity, ego_yaw_rate, shift_params,
-      params.path_planning.output.delta_arc_length);
+      params_.path_planning.output.delta_arc_length);
 
-    if (params.debug.enable_shifted_trajectory) {
+    if (params_.debug.enable_shifted_trajectory) {
       Trajectory shifted_traj;
       shifted_traj.header = path->header;
       shifted_traj.points = traj_from_path.points;
@@ -298,7 +299,7 @@ void MinimumRuleBasedPlannerNode::on_timer()
     if (path_smoother_) {
       autoware_utils_debug::ScopedTimeTrack st(path_smoother_->get_name(), *time_keeper_);
       path_smoother_->optimize_trajectory(trajectory_points, optimizer_params, optimizer_data);
-      if (params.debug.enable_optimizer_trajectory) {
+      if (params_.debug.enable_optimizer_trajectory) {
         publish_debug_trajectory(
           pub_debug_optimizer_module_trajectories_, path_smoother_, trajectory_points);
       }
@@ -314,9 +315,9 @@ void MinimumRuleBasedPlannerNode::on_timer()
     set_modifier_data(input_data);
     for (auto & modifier : modifier_plugins_) {
       autoware_utils_debug::ScopedTimeTrack st(modifier->get_name(), *time_keeper_);
-      modifier->modify_trajectory(smoothed_path.points);
+      modifier->run(smoothed_path.points);
       modifier->publish_planning_factor();
-      if (params.debug.enable_modifier_trajectory) {
+      if (params_.debug.enable_modifier_trajectory) {
         publish_debug_trajectory(
           pub_debug_modifier_module_trajectories_, modifier, smoothed_path.points);
       }
@@ -336,23 +337,23 @@ void MinimumRuleBasedPlannerNode::on_timer()
     // Post-optimization resample
     {
       autoware::velocity_smoother::resampling::ResampleParam post_resample_param;
-      post_resample_param.max_trajectory_length = params.post_resample.max_trajectory_length;
-      post_resample_param.min_trajectory_length = params.post_resample.min_trajectory_length;
-      post_resample_param.resample_time = params.post_resample.resample_time;
-      post_resample_param.dense_resample_dt = params.post_resample.dense_resample_dt;
+      post_resample_param.max_trajectory_length = params_.post_resample.max_trajectory_length;
+      post_resample_param.min_trajectory_length = params_.post_resample.min_trajectory_length;
+      post_resample_param.resample_time = params_.post_resample.resample_time;
+      post_resample_param.dense_resample_dt = params_.post_resample.dense_resample_dt;
       post_resample_param.dense_min_interval_distance =
-        params.post_resample.dense_min_interval_distance;
-      post_resample_param.sparse_resample_dt = params.post_resample.sparse_resample_dt;
+        params_.post_resample.dense_min_interval_distance;
+      post_resample_param.sparse_resample_dt = params_.post_resample.sparse_resample_dt;
       post_resample_param.sparse_min_interval_distance =
-        params.post_resample.sparse_min_interval_distance;
+        params_.post_resample.sparse_min_interval_distance;
 
       const auto & ego_pose = input_data.odometry_ptr->pose.pose;
       const double v_current = input_data.odometry_ptr->twist.twist.linear.x;
 
       trajectory_points = autoware::velocity_smoother::resampling::resampleTrajectory(
         trajectory_points, v_current, ego_pose,
-        params.path_planning.ego_nearest_lanelet.dist_threshold,
-        params.path_planning.ego_nearest_lanelet.yaw_threshold, post_resample_param, false);
+        params_.path_planning.ego_nearest_lanelet.dist_threshold,
+        params_.path_planning.ego_nearest_lanelet.yaw_threshold, post_resample_param, false);
 
       if (!trajectory_points.empty()) {
         trajectory_points.back().longitudinal_velocity_mps = 0.0;
@@ -386,10 +387,10 @@ void MinimumRuleBasedPlannerNode::on_timer()
   }
 
   // 9. Publish debug information if enabled
-  if (params.debug.enable_path) {
+  if (params_.debug.enable_path) {
     pub_debug_path_->publish(*path);
   }
-  if (params.debug.enable_output_trajectory) {
+  if (params_.debug.enable_output_trajectory) {
     pub_debug_trajectory_->publish(smoothed_traj);
   }
 }
@@ -428,6 +429,11 @@ MinimumRuleBasedPlannerNode::InputData MinimumRuleBasedPlannerNode::take_data()
   }
   input_data.predicted_objects_ptr = predicted_objects_ptr_;
 
+  if (const auto msg = pointcloud_subscriber_.take_data()) {
+    obstacle_pointcloud_ptr_ = msg;
+  }
+  input_data.obstacle_pointcloud_ptr = obstacle_pointcloud_ptr_;
+
   if (const auto msg = test_path_with_lane_id_subscriber_.take_data()) {
     test_path_with_lane_id_ptr = msg;
   }
@@ -462,6 +468,16 @@ bool MinimumRuleBasedPlannerNode::is_data_ready(const InputData & input_data)
     return false;
   }
   return true;
+}
+
+void MinimumRuleBasedPlannerNode::update_params()
+{
+  params_ = param_listener_->get_params();
+  path_planner_->update_params(params_);
+
+  for (auto & modifier : modifier_plugins_) {
+    modifier->update_params(params_);
+  }
 }
 
 }  // namespace autoware::minimum_rule_based_planner

@@ -21,6 +21,7 @@
   <arg name="input_odometry" default="~/input/odometry"/>
   <arg name="input_acceleration" default="~/input/acceleration"/>
   <arg name="input_objects" default="~/input/objects"/>
+  <arg name="input_pointcloud" default="~/input/pointcloud"/>
   <arg name="output_candidate_trajectories" default="~/output/candidate_trajectories"/>
 
   <!-- Modifier plugins -->
@@ -51,6 +52,7 @@
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
     <remap from="~/input/acceleration" to="$(var input_acceleration)"/>
     <remap from="~/input/objects" to="$(var input_objects)"/>
+    <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
     <remap from="~/output/candidate_trajectories" to="$(var output_candidate_trajectories)"/>
   </node>
 </launch>

@@ -97,6 +97,92 @@ minimum_rule_based_planner:
         validation:
           gt<>: [0.0]
 
+  obstacle_stop:
+    enable:
+      type: bool
+      default_value: true
+      description: enable obstacle stop
+    use_objects:
+      type: bool
+      default_value: true
+      description: use objects for obstacle stop
+    use_pointcloud:
+      type: bool
+      default_value: true
+      description: use pointcloud for obstacle stop
+    stop_margin_m:
+      type: double
+      default_value: 6.0
+      description: stop margin for obstacle stop [m]
+    on_time_buffer:
+      type: double
+      default_value: 0.5
+      description: time buffer before obstacle stop [s]
+    off_time_buffer:
+      type: double
+      default_value: 1.0
+      description: time buffer after obstacle stop [s]
+    lateral_margin_m:
+      type: double
+      default_value: 0.5
+      description: lateral margin for obstacle stop [m]
+    objects:
+      object_types:
+        type: string_array
+        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, unknown]
+        description: object types to consider for obstacle stop
+      max_velocity_th:
+        type: double
+        default_value: 1.0
+        description: maximum velocity threshold for target object [m/s]
+    pointcloud:
+      height_buffer:
+        type: double
+        default_value: 0.5
+        description: height buffer to add above ego height [m]
+      min_height:
+        type: double
+        default_value: 0.2
+        description: minimum height of pointcloud [m]
+      detection_range:
+        type: double
+        default_value: 100.0
+        description: detection range [m]
+      voxel_grid_filter:
+        x:
+          type: double
+          default_value: 0.2
+          description: x size of voxel grid filter [m]
+        y:
+          type: double
+          default_value: 0.2
+          description: y size of voxel grid filter [m]
+        z:
+          type: double
+          default_value: 0.2
+          description: z size of voxel grid filter [m]
+        min_size:
+          type: int
+          default_value: 3
+          description: minimum size of voxel grid filter
+      clustering:
+        tolerance:
+          type: double
+          default_value: 0.5
+          description: tolerance for clustering [m]
+        min_height:
+          type: double
+          default_value: 0.5
+          description: minimum height for clustering [m]
+        min_size:
+          type: int
+          default_value: 10
+          description: minimum size for clustering
+        max_size:
+          type: int
+          default_value: 10000
+          description: maximum size for clustering
+
   debug:
     enable_path:
       type: bool

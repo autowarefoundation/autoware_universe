@@ -16,9 +16,9 @@
 #define TYPE_ALIAS_HPP_
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_optimizer_plugin_base.hpp"
+#include "plugin_interface.hpp"
 
 #include <autoware/trajectory/path_point_with_lane_id.hpp>
-#include <autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
 #include <autoware_minimum_rule_based_planner/minimum_rule_based_planner_parameters.hpp>
 #include <pluginlib/class_loader.hpp>
@@ -32,6 +32,7 @@
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <vector>
@@ -49,6 +50,7 @@ using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+using sensor_msgs::msg::PointCloud2;
 using unique_identifier_msgs::msg::UUID;
 using Params = ::minimum_rule_based_planner::Params;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
@@ -62,7 +64,7 @@ using OptimizerPluginInterface =
 using OptimizerPluginLoader = pluginlib::ClassLoader<OptimizerPluginInterface>;
 
 using ModifierPluginLoader =
-  pluginlib::ClassLoader<trajectory_modifier::plugin::TrajectoryModifierPluginBase>;
+  pluginlib::ClassLoader<minimum_rule_based_planner::plugin::PluginInterface>;
 
 }  // namespace autoware::minimum_rule_based_planner
 
