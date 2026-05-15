@@ -9,7 +9,7 @@ repositories:
   core/autoware_core:
     type: git
     url: https://github.com/tier4/autoware_core.git
-    version: beta/v0.64
+    version: feat/v0.64/e2e
   core/autoware_cmake:
     type: git
     url: https://github.com/autowarefoundation/autoware_cmake.git

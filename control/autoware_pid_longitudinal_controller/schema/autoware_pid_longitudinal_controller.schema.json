@@ -146,6 +146,16 @@
           "description": "How much time without the vehicle moving must past to enable PID error integration. [s]",
           "default": "2.0"
         },
+        "ff_scale_min": {
+          "type": "number",
+          "description": "minimum clamp value for feedforward scaling",
+          "default": "0.5"
+        },
+        "ff_scale_max": {
+          "type": "number",
+          "description": "maximum clamp value for feedforward scaling",
+          "default": "2.0"
+        },
         "enable_brake_keeping_before_stop": {
           "type": "boolean",
           "description": "flag to keep a certain acceleration during DRIVE state before the ego stops. See [Brake keeping]",
