@@ -110,10 +110,22 @@ minimum_rule_based_planner:
       type: bool
       default_value: true
       description: use pointcloud for obstacle stop
-    stop_margin_m:
+    stop_margin:
       type: double
       default_value: 6.0
       description: stop margin for obstacle stop [m]
+    nominal_stopping_decel:
+      type: double
+      default_value: 1.0
+      description: nominal stopping deceleration [m/s^2]
+    maximum_stopping_decel:
+      type: double
+      default_value: 4.0
+      description: maximum stopping deceleration [m/s^2]
+    stopping_jerk:
+      type: double
+      default_value: 3.0
+      description: stopping jerk [m/s^3]
     on_time_buffer:
       type: double
       default_value: 0.5
@@ -122,7 +134,7 @@ minimum_rule_based_planner:
       type: double
       default_value: 1.0
       description: time buffer after obstacle stop [s]
-    lateral_margin_m:
+    lateral_margin:
       type: double
       default_value: 0.5
       description: lateral margin for obstacle stop [m]

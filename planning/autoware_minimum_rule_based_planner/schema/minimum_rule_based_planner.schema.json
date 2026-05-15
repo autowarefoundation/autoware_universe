@@ -168,10 +168,28 @@
               "description": "Enable pointcloud detection [m]",
               "default": true
             },
-            "stop_margin_m": {
+            "stop_margin": {
               "type": "number",
               "description": "Stop margin [m]",
               "default": 6.0,
+              "minimum": 0.0
+            },
+            "nominal_stopping_decel": {
+              "type": "number",
+              "description": "Nominal stopping deceleration [m/s^2]",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "maximum_stopping_decel": {
+              "type": "number",
+              "description": "Maximum stopping deceleration [m/s^2]",
+              "default": 4.0,
+              "minimum": 0.0
+            },
+            "stopping_jerk": {
+              "type": "number",
+              "description": "Stopping jerk [m/s^3]",
+              "default": 3.0,
               "minimum": 0.0
             },
             "on_time_buffer": {
@@ -186,7 +204,7 @@
               "default": 1.0,
               "minimum": 0.0
             },
-            "lateral_margin_m": {
+            "lateral_margin": {
               "type": "number",
               "description": "Lateral margin [m]",
               "default": 0.5,

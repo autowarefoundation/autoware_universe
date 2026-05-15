@@ -35,10 +35,13 @@
       enable: true
       use_objects: true
       use_pointcloud: true
-      stop_margin_m: 6.0
+      stop_margin: 6.0
+      nominal_stopping_decel: 1.0 # [m/s^2]
+      maximum_stopping_decel: 4.0 # [m/s^2]
+      stopping_jerk: 3.0 # [m/s^3]
       on_time_buffer: 0.5 # [s]
       off_time_buffer: 1.0 # [s]
-      lateral_margin_m: 0.5     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
+      lateral_margin: 0.5     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
 
       objects:
         object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "unknown"] # object types to consider for obstacle stop

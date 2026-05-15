@@ -65,8 +65,10 @@ bool ObstacleStop::is_obstacle_detected(const TrajectoryPoints & traj_points)
 {
   debug_data_ = DebugData();
   debug_data_.trajectory_shape = get_trajectory_shape(
-    traj_points, data_->odometry_ptr->pose.pose, vehicle_info_, std::numeric_limits<double>::max(),
-    params_.lateral_margin_m);
+    traj_points, data_->odometry_ptr->pose.pose, vehicle_info_,
+    data_->odometry_ptr->twist.twist.linear.x, data_->acceleration_ptr->accel.accel.linear.x,
+    params_.nominal_stopping_decel, params_.stopping_jerk, params_.stop_margin,
+    params_.lateral_margin);
   const auto collision_point_pcd = check_pointcloud(traj_points);
   update_collision_points_buffer(collision_points_buffer_.pcd, traj_points, collision_point_pcd);
   const auto collision_point_objects = check_predicted_objects(traj_points);
@@ -82,7 +84,7 @@ bool ObstacleStop::is_obstacle_detected(const TrajectoryPoints & traj_points)
 
 void ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
 {
-  const auto stop_margin = params_.stop_margin_m + vehicle_info_.max_longitudinal_offset_m;
+  const auto stop_margin = params_.stop_margin + vehicle_info_.max_longitudinal_offset_m;
   const auto target_stop_point_arc_length =
     std::max(nearest_collision_point_->arc_length - stop_margin, 0.0);
 
@@ -114,8 +116,8 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
   auto collision_point = get_nearest_object_collision(
-    traj_points, debug_data_.trajectory_shape.polygon, predicted_objects,
-    debug_data_.target_polygons, colliding_object);
+    traj_points, debug_data_.trajectory_shape, predicted_objects, debug_data_.target_polygons,
+    colliding_object);
   if (collision_point) debug_data_.colliding_object = colliding_object;
   return collision_point;
 }
@@ -177,8 +179,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
   }
 
   return get_nearest_pcd_collision(
-    traj_points, debug_data_.trajectory_shape.polygon, clustered_points,
-    debug_data_.target_pcd_points);
+    traj_points, debug_data_.trajectory_shape, clustered_points, debug_data_.target_pcd_points);
 }
 
 void ObstacleStop::update_collision_points_buffer(
