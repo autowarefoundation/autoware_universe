@@ -26,8 +26,6 @@
 
 namespace autoware::minimum_rule_based_planner::plugin
 {
-using autoware::trajectory_modifier::utils::obstacle_stop::filter_objects_by_type;
-using autoware::trajectory_modifier::utils::obstacle_stop::filter_objects_by_velocity;
 using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_object_collision;
 using autoware::trajectory_modifier::utils::obstacle_stop::get_nearest_pcd_collision;
 using autoware::trajectory_modifier::utils::obstacle_stop::get_trajectory_shape;
@@ -45,6 +43,9 @@ void ObstacleStop::on_initialize([[maybe_unused]] const MinimumRuleBasedPlannerP
       params_.pointcloud.voxel_grid_filter.z, params_.pointcloud.voxel_grid_filter.min_size,
       params_.pointcloud.clustering.tolerance, params_.pointcloud.clustering.min_size,
       params_.pointcloud.clustering.max_size);
+
+  object_filter_ = std::make_unique<trajectory_modifier::utils::obstacle_stop::ObjectFilter>(
+    params_.objects.object_types, params_.objects.max_velocity_th);
 }
 
 void ObstacleStop::run(TrajectoryPoints & traj_points)
@@ -111,8 +112,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
     return std::nullopt;
   auto predicted_objects = *data_->predicted_objects_ptr;
 
-  filter_objects_by_type(predicted_objects, params_.objects.object_types);
-  filter_objects_by_velocity(predicted_objects, params_.objects.max_velocity_th);
+  object_filter_->filter_objects(predicted_objects);
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
   auto collision_point = get_nearest_object_collision(

@@ -49,6 +49,19 @@ public:
   void update_params(const MinimumRuleBasedPlannerParams & params) override
   {
     params_ = params.obstacle_stop;
+
+    {
+      const auto & p = params_.objects;
+      object_filter_->set_params(p.object_types, p.max_velocity_th);
+    }
+
+    {
+      const auto & p = params_.pointcloud;
+      pointcloud_filter_->set_params(
+        p.voxel_grid_filter.x, p.voxel_grid_filter.y, p.voxel_grid_filter.z,
+        p.voxel_grid_filter.min_size, p.clustering.tolerance, p.clustering.min_size,
+        p.clustering.max_size);
+    }
   }
   const MinimumRuleBasedPlannerParams::ObstacleStop & get_params() const { return params_; }
 
@@ -71,6 +84,8 @@ private:
   DebugData debug_data_;
 
   std::unique_ptr<trajectory_modifier::utils::obstacle_stop::PointCloudFilter> pointcloud_filter_;
+
+  std::unique_ptr<trajectory_modifier::utils::obstacle_stop::ObjectFilter> object_filter_;
 
   bool is_obstacle_detected(const TrajectoryPoints & traj_points);
 
