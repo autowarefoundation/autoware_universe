@@ -69,7 +69,7 @@ private:
   std::unordered_map<std::string, CandidateTrajectories> buffer_;
 
   autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch_;
-  double processing_time_ms_;
+  double processing_time_ms_{0.0};
 };
 
 }  // namespace autoware::trajectory_concatenator
