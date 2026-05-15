@@ -201,7 +201,13 @@ trajectory_modifier_params:
         validation:
           bounds<>: [0.0, 10.0]
         read_only: false
-
+      safety_buffer:
+        type: double
+        default_value: 0.0
+        description: Safety buffer to expand object shape [m]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
     pointcloud:
       height_buffer:
         type: double

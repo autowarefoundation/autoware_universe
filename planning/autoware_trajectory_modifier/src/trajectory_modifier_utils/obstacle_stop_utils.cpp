@@ -481,6 +481,11 @@ void ObjectFilter::filter_by_target_area(
     return t_to_obj - time_buffer;
   };
 
+  auto get_object_polygon = [&](const auto & pose, const auto & shape) {
+    const auto polygon = autoware_utils::to_polygon2d(pose, shape);
+    return autoware_utils::expand_polygon(polygon, safety_buffer_);
+  };
+
   auto is_exiting = [&](const auto & object) -> bool {
     const auto & object_pose = object.kinematics.initial_pose_with_covariance.pose;
     const auto obj_rot = Eigen::Rotation2Dd(tf2::getYaw(object_pose.orientation));
@@ -499,7 +504,7 @@ void ObjectFilter::filter_by_target_area(
     if (object.kinematics.predicted_paths.empty()) return true;
     const auto t_to_obj_current_pos = time_to_obj_current_pos(object_pose, nearest_seg);
     const auto obj_pred_pose = get_predicted_obj_pose_at_time(object, t_to_obj_current_pos);
-    const auto obj_pred_polygon = autoware_utils::to_polygon2d(obj_pred_pose, object.shape);
+    const auto obj_pred_polygon = get_object_polygon(obj_pred_pose, object.shape);
     return boost::geometry::disjoint(obj_pred_polygon, target_area);
   };
 
@@ -508,7 +513,7 @@ void ObjectFilter::filter_by_target_area(
       objects.objects.begin(), objects.objects.end(),
       [&](const auto & object) {
         const auto object_pose = object.kinematics.initial_pose_with_covariance.pose;
-        const auto object_polygon = autoware_utils::to_polygon2d(object_pose, object.shape);
+        const auto object_polygon = get_object_polygon(object_pose, object.shape);
         if (boost::geometry::disjoint(object_polygon, target_area)) return true;
         if (is_exiting(object)) return true;
         target_polygons.emplace_back(object_polygon);
