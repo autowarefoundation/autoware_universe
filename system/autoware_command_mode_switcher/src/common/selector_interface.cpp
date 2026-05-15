@@ -85,6 +85,8 @@ void NetworkGateInterface::on_election_status(const ElectionStatus & msg)
       case ElectionStatus::PATH_NOT_FOUND:
       case ElectionStatus::SELF_INTERRUPTION:
         return std::nullopt;
+      default:
+        break;
     }
     switch (path) {
       case ElectionStatus::MAIN_ECU_TO_MAIN_VCU:

@@ -402,6 +402,8 @@ void DummyPerceptionPublisherNode::objectCallback(
       }
       break;
     }
+    default:
+      break;
   }
 }
 

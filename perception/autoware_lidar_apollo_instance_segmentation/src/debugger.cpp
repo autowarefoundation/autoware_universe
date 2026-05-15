@@ -84,6 +84,8 @@ void Debugger::publishColoredPointCloud(
         blue = 255;
         break;
       }
+      default:
+        break;
     }
 
     for (const auto & point : object_pointcloud) {

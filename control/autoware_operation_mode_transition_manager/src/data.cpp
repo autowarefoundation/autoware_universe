@@ -50,8 +50,9 @@ std::optional<OperationMode> toEnum(const ChangeOperationMode::Request & request
       return OperationMode::LOCAL;
     case ServiceMode::REMOTE:
       return OperationMode::REMOTE;
+    default:
+      return std::nullopt;
   }
-  return std::nullopt;
 }
 
 OperationModeValue toMsg(const OperationMode mode)
