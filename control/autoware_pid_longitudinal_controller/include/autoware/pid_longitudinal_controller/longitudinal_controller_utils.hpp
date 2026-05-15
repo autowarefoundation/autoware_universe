@@ -85,4 +85,3 @@ double applyDiffLimitFilter(
 }  // namespace autoware::motion::control::pid_longitudinal_controller
 
 #endif  // AUTOWARE__PID_LONGITUDINAL_CONTROLLER__LONGITUDINAL_CONTROLLER_UTILS_HPP_
-#include "autoware/motion/control/pid_longitudinal_controller/longitudinal_controller_utils.hpp"
