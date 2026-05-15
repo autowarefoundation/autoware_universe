@@ -81,24 +81,6 @@ TrafficLightGroupArray make_detection(std::vector<TrafficLightGroup> groups)
   return array;
 }
 
-std::set<int32_t> collect_marker_ids(const std::vector<Marker> & markers)
-{
-  std::set<int32_t> ids;
-  for (const auto & m : markers) {
-    ids.insert(m.id);
-  }
-  return ids;
-}
-
-std::map<int32_t, const Marker *> index_markers_by_id(const std::vector<Marker> & markers)
-{
-  std::map<int32_t, const Marker *> by_id;
-  for (const auto & m : markers) {
-    by_id[m.id] = &m;
-  }
-  return by_id;
-}
-
 }  // namespace
 
 TEST(TrafficLightVisualizer, EmptyBulbsProducesEmptyMarkers)
@@ -240,6 +222,9 @@ TEST(TrafficLightVisualizer, DetectionColorWithoutMapBulbIsIgnored)
 
 TEST(TrafficLightVisualizer, TwoGroupsBothMatchedProduceFourMarkers)
 {
+  // Setup convention: bulb id N is placed at x = N.0. The id-to-x correlation
+  // makes the position assertions below readable and guards against position
+  // aliasing (e.g. copying bulbs[0].position to all markers).
   BulbsByGroupId map_data;
   map_data.emplace(
     test_group_id, std::vector<Bulb>{
@@ -260,13 +245,16 @@ TEST(TrafficLightVisualizer, TwoGroupsBothMatchedProduceFourMarkers)
   auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
 
   ASSERT_EQ(markers.size(), 4u);
-  EXPECT_EQ(collect_marker_ids(markers), (std::set<int32_t>{1, 2, 3, 4}));
 
-  // Each marker carries its own bulb's position (guards against e.g. copying
-  // bulbs[0].position to all markers).
-  const auto by_id = index_markers_by_id(markers);
-  EXPECT_DOUBLE_EQ(by_id.at(1)->pose.position.x, 1.0);
-  EXPECT_DOUBLE_EQ(by_id.at(2)->pose.position.x, 2.0);
-  EXPECT_DOUBLE_EQ(by_id.at(3)->pose.position.x, 3.0);
-  EXPECT_DOUBLE_EQ(by_id.at(4)->pose.position.x, 4.0);
+  std::set<int32_t> marker_ids;
+  std::map<int32_t, const Marker *> markers_by_bulb_id;
+  for (const auto & marker : markers) {
+    marker_ids.insert(marker.id);
+    markers_by_bulb_id[marker.id] = &marker;
+  }
+  EXPECT_EQ(marker_ids, (std::set<int32_t>{1, 2, 3, 4}));
+  EXPECT_DOUBLE_EQ(markers_by_bulb_id.at(1)->pose.position.x, 1.0);
+  EXPECT_DOUBLE_EQ(markers_by_bulb_id.at(2)->pose.position.x, 2.0);
+  EXPECT_DOUBLE_EQ(markers_by_bulb_id.at(3)->pose.position.x, 3.0);
+  EXPECT_DOUBLE_EQ(markers_by_bulb_id.at(4)->pose.position.x, 4.0);
 }
