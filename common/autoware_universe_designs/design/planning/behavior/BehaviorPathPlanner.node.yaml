@@ -48,21 +48,41 @@ publishers:
 param_files:
   - name: behavior_path_planner_param
     default: config/behavior_path_planner.param.yaml
+  - name: scene_module_manager_param
+    default: config/scene_module_manager.param.yaml
+  - name: drivable_area_expansion_param
+    default: config/drivable_area_expansion.param.yaml
   - name: lane_change_param
     default: config/lane_change.param.yaml
   - name: goal_planner_param
     default: config/goal_planner.param.yaml
+  - name: start_planner_param
+    default: config/start_planner.param.yaml
   - name: avoidance_param
     default: config/avoidance.param.yaml
+  - name: avoidance_by_lane_change_param
+    default: config/avoidance_by_lane_change.param.yaml
+  - name: bidirectional_traffic_param
+    default: config/bidirectional_traffic.param.yaml
+  - name: dynamic_obstacle_avoidance_param
+    default: config/dynamic_obstacle_avoidance.param.yaml
+  - name: sampling_planner_param
+    default: config/sampling_planner.param.yaml
+  - name: side_shift_param
+    default: config/side_shift.param.yaml
 
 param_values:
   - name: launch_modules
     type: string_array
     default:
-      - autoware::behavior_path_planner::LaneChangeRightModuleManager
+      - autoware::behavior_path_planner::StaticObstacleAvoidanceModuleManager 
+      - autoware::behavior_path_planner::SideShiftModuleManager 
+      - autoware::behavior_path_planner::BidirectionalTrafficModuleManager 
+      - autoware::behavior_path_planner::StartPlannerModuleManager 
+      - autoware::behavior_path_planner::GoalPlannerModuleManager 
+      - autoware::behavior_path_planner::LaneChangeRightModuleManager 
       - autoware::behavior_path_planner::LaneChangeLeftModuleManager
-      - autoware::behavior_path_planner::StaticObstacleAvoidanceModuleManager
-      - autoware::behavior_path_planner::GoalPlannerModuleManager
+      - autoware::behavior_path_planner::AvoidanceByLaneChangeModuleManager
 
 # processes
 processes:

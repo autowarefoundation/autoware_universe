@@ -40,14 +40,32 @@ publishers:
 param_files:
   - name: common_param
     default: $(find-pkg-share autoware_core_planning)/config/common.param.yaml
+  - name: behavior_velocity_planner_common_param
+    default: config/behavior_velocity_planner_common.param.yaml
   - name: behavior_velocity_planner_param
     default: config/behavior_velocity_planner.param.yaml
   - name: crosswalk_module_param
-    default: config/crosswalk_module.param.yaml
+    default: config/crosswalk.param.yaml
+  - name: walkway_module_param
+    default: config/walkway.param.yaml
   - name: traffic_light_module_param
-    default: config/traffic_light_module.param.yaml
+    default: config/traffic_light.param.yaml
   - name: intersection_module_param
-    default: config/intersection_module.param.yaml
+    default: config/intersection.param.yaml
+  - name: roundabout_module_param
+    default: config/roundabout.param.yaml
+  - name: blind_spot_module_param
+    default: config/blind_spot.param.yaml
+  - name: detection_area_module_param
+    default: config/detection_area.param.yaml
+  - name: no_stopping_area_module_param
+    default: config/no_stopping_area.param.yaml
+  - name: stop_line_module_param
+    default: config/stop_line.param.yaml
+  - name: virtual_traffic_light_module_param
+    default: config/virtual_traffic_light.param.yaml
+  - name: occlusion_spot_module_param
+    default: config/occlusion_spot.param.yaml
 
 param_values:
   - name: launch_modules
@@ -57,15 +75,11 @@ param_values:
       - autoware::behavior_velocity_planner::experimental::WalkwayModulePlugin
       - autoware::behavior_velocity_planner::experimental::TrafficLightModulePlugin
       - autoware::behavior_velocity_planner::experimental::IntersectionModulePlugin
-      - autoware::behavior_velocity_planner::experimental::RoundaboutModulePlugin
       - autoware::behavior_velocity_planner::experimental::BlindSpotModulePlugin
       - autoware::behavior_velocity_planner::experimental::DetectionAreaModulePlugin
       - autoware::behavior_velocity_planner::experimental::VirtualTrafficLightModulePlugin
       - autoware::behavior_velocity_planner::experimental::NoStoppingAreaModulePlugin
       - autoware::behavior_velocity_planner::experimental::StopLineModulePlugin
-      - autoware::behavior_velocity_planner::experimental::OcclusionSpotModulePlugin
-      - autoware::behavior_velocity_planner::experimental::SpeedBumpModulePlugin
-      - autoware::behavior_velocity_planner::experimental::NoDrivableLaneModulePlugin
   - name: enable_all_modules_auto_mode
     type: bool
     default: false
