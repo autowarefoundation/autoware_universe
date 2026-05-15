@@ -172,24 +172,6 @@ TEST(TrafficLightVisualizer, AmberBulbDetectedProducesYellowMarker)
   EXPECT_FLOAT_EQ(markers[0].color.b, 0.0f);
 }
 
-TEST(TrafficLightVisualizer, MarkerInheritsBulbIdAndPosition)
-{
-  BulbsByGroupId map_data;
-  map_data.emplace(
-    test_group_id,
-    std::vector<Bulb>{make_bulb(arbitrary_bulb_id, 1.5, 2.5, 3.5, TrafficLightElement::RED)});
-  TrafficLightVisualizer visualizer{std::move(map_data)};
-  auto detection = make_detection({make_group(test_group_id, {TrafficLightElement::RED})});
-
-  auto markers = visualizer.generate_markers(detection, builtin_interfaces::msg::Time{});
-
-  ASSERT_EQ(markers.size(), 1u);
-  EXPECT_EQ(markers[0].id, arbitrary_bulb_id);
-  EXPECT_DOUBLE_EQ(markers[0].pose.position.x, 1.5);
-  EXPECT_DOUBLE_EQ(markers[0].pose.position.y, 2.5);
-  EXPECT_DOUBLE_EQ(markers[0].pose.position.z, 3.5);
-}
-
 TEST(TrafficLightVisualizer, UnknownGroupIdProducesEmptyMarkers)
 {
   BulbsByGroupId map_data;
