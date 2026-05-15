@@ -75,12 +75,12 @@ param_values:
   - name: launch_modules
     type: string_array
     default:
-      - autoware::behavior_path_planner::StaticObstacleAvoidanceModuleManager 
-      - autoware::behavior_path_planner::SideShiftModuleManager 
-      - autoware::behavior_path_planner::BidirectionalTrafficModuleManager 
-      - autoware::behavior_path_planner::StartPlannerModuleManager 
-      - autoware::behavior_path_planner::GoalPlannerModuleManager 
-      - autoware::behavior_path_planner::LaneChangeRightModuleManager 
+      - autoware::behavior_path_planner::StaticObstacleAvoidanceModuleManager
+      - autoware::behavior_path_planner::SideShiftModuleManager
+      - autoware::behavior_path_planner::BidirectionalTrafficModuleManager
+      - autoware::behavior_path_planner::StartPlannerModuleManager
+      - autoware::behavior_path_planner::GoalPlannerModuleManager
+      - autoware::behavior_path_planner::LaneChangeRightModuleManager
       - autoware::behavior_path_planner::LaneChangeLeftModuleManager
       - autoware::behavior_path_planner::AvoidanceByLaneChangeModuleManager
 
