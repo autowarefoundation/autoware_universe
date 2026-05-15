@@ -5,6 +5,7 @@
 
     shadow_mode_filter_names:
       [
+        "safety::UncrossableBoundaryDepartureFilter",
         "safety::OutOfLaneFilter",
         "safety::VehicleConstraintFilter",
         "traffic_rule::TrafficLightFilter",
