@@ -9,7 +9,7 @@ package:
 
 launch:
   plugin: autoware::behavior_path_planner::BehaviorPathPlannerNode
-  executable: behavior_path_planner_node
+  executable: autoware_behavior_path_planner_node
 
 # interfaces
 subscribers:

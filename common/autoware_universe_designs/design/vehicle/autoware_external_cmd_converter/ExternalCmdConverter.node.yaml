@@ -15,7 +15,7 @@ launch:
 # interfaces
 subscribers:
   - name: pedals_cmd
-    message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+    message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
   - name: steering_cmd
     message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
   - name: gear_cmd

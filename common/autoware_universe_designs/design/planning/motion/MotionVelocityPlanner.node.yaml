@@ -65,6 +65,13 @@ param_values:
     default:
       - autoware::motion_velocity_planner::ObstacleStopModule
       - autoware::motion_velocity_planner::ObstacleSlowDownModule
+      - autoware::motion_velocity_planner::ObstacleCruiseModule
+      - autoware::motion_velocity_planner::OutOfLaneModule
+      - autoware::motion_velocity_planner::ObstacleVelocityLimiterModule
+      - autoware::motion_velocity_planner::DynamicObstacleStopModule
+      - autoware::motion_velocity_planner::RunOutModule
+      - autoware::motion_velocity_planner::experimental::BoundaryDeparturePreventionModule
+      - autoware::motion_velocity_planner::RoadUserStopModule
 
 # processes
 processes:

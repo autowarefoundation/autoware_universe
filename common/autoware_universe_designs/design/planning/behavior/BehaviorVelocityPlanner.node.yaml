@@ -50,17 +50,28 @@ param_files:
     default: config/intersection_module.param.yaml
 
 param_values:
-  - name: is_simulation
-    type: bool
-    default: false
   - name: launch_modules
     type: string_array
     default:
       - autoware::behavior_velocity_planner::experimental::CrosswalkModulePlugin
+      - autoware::behavior_velocity_planner::experimental::WalkwayModulePlugin
       - autoware::behavior_velocity_planner::experimental::TrafficLightModulePlugin
       - autoware::behavior_velocity_planner::experimental::IntersectionModulePlugin
+      - autoware::behavior_velocity_planner::experimental::RoundaboutModulePlugin
       - autoware::behavior_velocity_planner::experimental::BlindSpotModulePlugin
       - autoware::behavior_velocity_planner::experimental::DetectionAreaModulePlugin
+      - autoware::behavior_velocity_planner::experimental::VirtualTrafficLightModulePlugin
+      - autoware::behavior_velocity_planner::experimental::NoStoppingAreaModulePlugin
+      - autoware::behavior_velocity_planner::experimental::StopLineModulePlugin
+      - autoware::behavior_velocity_planner::experimental::OcclusionSpotModulePlugin
+      - autoware::behavior_velocity_planner::experimental::SpeedBumpModulePlugin
+      - autoware::behavior_velocity_planner::experimental::NoDrivableLaneModulePlugin
+  - name: enable_all_modules_auto_mode
+    type: bool
+    default: false
+  - name: is_simulation
+    type: bool
+    default: false
 
 # processes
 processes:
