@@ -99,6 +99,8 @@ void ObstacleStop::set_stop_point(TrajectoryPoints & traj_points)
 std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
   const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon)
 {
+  if (!params_.use_objects) return std::nullopt;
+
   if (!data_->predicted_objects_ptr || data_->predicted_objects_ptr->objects.empty())
     return std::nullopt;
   auto predicted_objects = *data_->predicted_objects_ptr;
@@ -112,6 +114,8 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
   const TrajectoryPoints & traj_points, const MultiPolygon2d & trajectory_polygon)
 {
+  if (!params_.use_pointcloud) return std::nullopt;
+
   if (!data_->obstacle_pointcloud_ptr || data_->obstacle_pointcloud_ptr->data.empty())
     return std::nullopt;
 
