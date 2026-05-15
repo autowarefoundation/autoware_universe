@@ -1,0 +1,712 @@
+// Copyright 2026 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware/traffic_light_arbiter/traffic_light_arbiter.hpp"
+
+#include <autoware/lanelet2_utils/conversion.hpp>
+#include <rclcpp/executors/single_threaded_executor.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+
+#include <gtest/gtest.h>
+#include <lanelet2_core/Attribute.h>
+#include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+#include <lanelet2_core/primitives/Lanelet.h>
+#include <lanelet2_core/primitives/LineString.h>
+#include <lanelet2_core/primitives/LineStringOrPolygon.h>
+#include <lanelet2_core/primitives/Point.h>
+
+#include <chrono>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
+namespace
+{
+
+using autoware::traffic_light::TrafficLightArbiter;
+using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
+using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
+using TrafficLightGroup = autoware_perception_msgs::msg::TrafficLightGroup;
+using TrafficLightElement = autoware_perception_msgs::msg::TrafficLightElement;
+using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
+using namespace lanelet;  // NOLINT(build/namespaces)
+using utils::getId;
+
+constexpr const char * kMapTopic = "/traffic_light_arbiter/sub/vector_map";
+constexpr const char * kPerceptionTopic = "/traffic_light_arbiter/sub/perception_traffic_signals";
+constexpr const char * kExternalTopic = "/traffic_light_arbiter/sub/external_traffic_signals";
+constexpr const char * kOutputTopic = "/traffic_light_arbiter/pub/traffic_signals";
+
+constexpr float kConfidenceEpsilon = 1e-5f;
+
+// Traffic-light regulatory-element IDs that are installed on the test map.
+// Kept explicit (rather than auto-allocated) so that values appearing in
+// published TrafficLightGroupArray messages and warning logs stay readable.
+namespace map_ids
+{
+constexpr lanelet::Id vehicle_signal_a = 1001;
+constexpr lanelet::Id vehicle_signal_b = 1002;
+constexpr lanelet::Id vehicle_signal_c = 1003;
+constexpr lanelet::Id pedestrian_signal = 2001;
+}  // namespace map_ids
+
+// Intentionally not installed on the map; used by tests as the "off-map id"
+// probe to exercise the WARN+skip branch in arbitrateAndPublish.
+constexpr lanelet::Id kOffMapProbeId = 9999;
+
+Point3d makePoint(lanelet::Id id, double x, double y, double z = 0.0)
+{
+  return Point3d(id, x, y, z);
+}
+
+Lanelet makeLanelet(double y_left, double y_right, const std::string & subtype)
+{
+  LineString3d left(getId(), {makePoint(getId(), 0.0, y_left), makePoint(getId(), 10.0, y_left)});
+  LineString3d right(
+    getId(), {makePoint(getId(), 0.0, y_right), makePoint(getId(), 10.0, y_right)});
+  Lanelet new_lanelet(getId(), left, right);
+  new_lanelet.attributes()[AttributeName::Subtype] = subtype;
+  new_lanelet.attributes()[AttributeName::Type] = AttributeValueString::Lanelet;
+  return new_lanelet;
+}
+
+LineString3d makeTrafficLightBulb()
+{
+  // The exact position does not affect arbiter logic; we pick the lanelet
+  // midpoint (x = 5.0 within the 0..10 span) at z = 5.0 above the ground.
+  constexpr double kBulbX = 5.0;
+  constexpr double kBulbZ = 5.0;
+  LineString3d bulb(
+    getId(), {makePoint(getId(), kBulbX, 0.0, kBulbZ), makePoint(getId(), kBulbX, 1.0, kBulbZ)});
+  bulb.attributes()[AttributeName::Type] = AttributeValueString::TrafficLight;
+  return bulb;
+}
+
+// Builds the minimal map required to drive every code path under test:
+// three road lanelets each carrying one Traffic Light, plus one crosswalk
+// lanelet carrying the pedestrian Traffic Light.
+//
+// Test map summary (top-down view).
+// Each lanelet spans x = 0..10 along the travel direction; +y is the left side.
+//
+//   left bound  right bound   Lanelet      Traffic Light id
+//   ----------  -----------   ----------   --------------------------
+//        12          11       crosswalk    2001 (pedestrian_signal)
+//         8           5       road3        1003 (vehicle_signal_c)
+//         4           1       road2        1002 (vehicle_signal_b)
+//         0          -3       road1        1001 (vehicle_signal_a)
+//
+// Probe id intentionally absent from the map: 9999 (kOffMapProbeId)
+LaneletMapBin buildMinimalMapBin()
+{
+  Lanelet road1 = makeLanelet(0.0, -3.0, AttributeValueString::Road);
+  Lanelet road2 = makeLanelet(4.0, 1.0, AttributeValueString::Road);
+  Lanelet road3 = makeLanelet(8.0, 5.0, AttributeValueString::Road);
+  Lanelet crosswalk = makeLanelet(12.0, 11.0, AttributeValueString::Crosswalk);
+
+  road1.addRegulatoryElement(
+    TrafficLight::make(
+      map_ids::vehicle_signal_a, {}, LineStringsOrPolygons3d{makeTrafficLightBulb()}));
+  road2.addRegulatoryElement(
+    TrafficLight::make(
+      map_ids::vehicle_signal_b, {}, LineStringsOrPolygons3d{makeTrafficLightBulb()}));
+  road3.addRegulatoryElement(
+    TrafficLight::make(
+      map_ids::vehicle_signal_c, {}, LineStringsOrPolygons3d{makeTrafficLightBulb()}));
+  crosswalk.addRegulatoryElement(
+    TrafficLight::make(
+      map_ids::pedestrian_signal, {}, LineStringsOrPolygons3d{makeTrafficLightBulb()}));
+
+  const LaneletMapConstPtr map{
+    utils::createMap(Lanelets{road1, road2, road3, crosswalk}).release()};
+  auto bin = ::autoware::experimental::lanelet2_utils::to_autoware_map_msgs(map);
+  bin.header.frame_id = "base_link";
+  return bin;
+}
+
+// Default parameters mirror config/traffic_light_arbiter.param.yaml. We
+// re-declare them here instead of reading the YAML so the test is fully
+// self-contained and unaffected by production config changes. Only the
+// two parameters that any test actually toggles are exposed as arguments.
+std::shared_ptr<TrafficLightArbiter> makeArbiter(
+  bool enable_signal_matching = false, const std::string & source_priority = "confidence")
+{
+  rclcpp::NodeOptions options;
+  options.parameter_overrides({
+    rclcpp::Parameter("external_delay_tolerance", 5.0),
+    rclcpp::Parameter("external_time_tolerance", 5.0),
+    rclcpp::Parameter("perception_time_tolerance", 1.0),
+    rclcpp::Parameter("source_priority", source_priority),
+    rclcpp::Parameter("enable_signal_matching", enable_signal_matching),
+  });
+  return std::make_shared<TrafficLightArbiter>(options);
+}
+
+TrafficLightElement makeTrafficLightElement(uint8_t color, uint8_t shape, float confidence)
+{
+  TrafficLightElement element;
+  element.color = color;
+  element.shape = shape;
+  element.status = TrafficLightElement::SOLID_ON;
+  element.confidence = confidence;
+  return element;
+}
+
+PredictedTrafficLightState makeTrafficLightPrediction(
+  const builtin_interfaces::msg::Time & stamp, uint8_t color, uint8_t shape,
+  const std::string & source)
+{
+  // The arbiter passes predictions through without inspecting any field
+  // value, so the numbers below only need to form a syntactically complete
+  // PredictedTrafficLightState.
+  constexpr int32_t kPredictionOffsetSec = 10;
+  constexpr float kFullCertainty = 1.0f;
+
+  PredictedTrafficLightState prediction;
+  prediction.predicted_stamp = stamp;
+  prediction.predicted_stamp.sec += kPredictionOffsetSec;
+  prediction.simultaneous_elements.push_back(makeTrafficLightElement(color, shape, kFullCertainty));
+  prediction.reliability = kFullCertainty;
+  prediction.information_source = source;
+  return prediction;
+}
+
+TrafficLightGroup makeTrafficLightGroup(
+  lanelet::Id id, std::vector<TrafficLightElement> elements,
+  std::vector<PredictedTrafficLightState> predictions = {})
+{
+  TrafficLightGroup group;
+  group.traffic_light_group_id = id;
+  group.elements = std::move(elements);
+  group.predictions = std::move(predictions);
+  return group;
+}
+
+builtin_interfaces::msg::Time offsetTime(const rclcpp::Time & base, double seconds)
+{
+  return (base + rclcpp::Duration::from_seconds(seconds));
+}
+
+const TrafficLightGroup * findTrafficLightGroup(const TrafficLightGroupArray & msg, lanelet::Id id)
+{
+  for (const auto & group : msg.traffic_light_groups) {
+    if (group.traffic_light_group_id == id) {
+      return &group;
+    }
+  }
+  return nullptr;
+}
+
+const TrafficLightElement * findTrafficLightElement(const TrafficLightGroup & group, uint8_t shape)
+{
+  for (const auto & element : group.elements) {
+    if (element.shape == shape) {
+      return &element;
+    }
+  }
+  return nullptr;
+}
+
+class ArbiterCharacteristic : public ::testing::Test
+{
+protected:
+  static void SetUpTestSuite()
+  {
+    if (!rclcpp::ok()) {
+      rclcpp::init(0, nullptr);
+    }
+  }
+  static void TearDownTestSuite()
+  {
+    if (rclcpp::ok()) {
+      rclcpp::shutdown();
+    }
+  }
+
+  void SetUp() override
+  {
+    // Reserve known signal ids so utils::getId() never returns
+    // values that collide with map_ids::* or kOffMapProbeId. Calling
+    // registerId(9999) advances the global counter to >= 10000, which is
+    // safely above every fixed signal id we use.
+    utils::registerId(kOffMapProbeId);
+
+    map_bin_ = buildMinimalMapBin();
+
+    pub_node_ = std::make_shared<rclcpp::Node>("arbiter_characteristic_test_pub");
+    sub_node_ = std::make_shared<rclcpp::Node>("arbiter_characteristic_test_sub");
+
+    map_pub_ =
+      pub_node_->create_publisher<LaneletMapBin>(kMapTopic, rclcpp::QoS(1).transient_local());
+    perception_pub_ =
+      pub_node_->create_publisher<TrafficLightGroupArray>(kPerceptionTopic, rclcpp::QoS(1));
+    external_pub_ =
+      pub_node_->create_publisher<TrafficLightGroupArray>(kExternalTopic, rclcpp::QoS(1));
+
+    output_sub_ = sub_node_->create_subscription<TrafficLightGroupArray>(
+      kOutputTopic, rclcpp::QoS(1), [this](const TrafficLightGroupArray::ConstSharedPtr msg) {
+        latest_output_ = *msg;
+        ++publish_count_;
+      });
+  }
+
+  void TearDown() override
+  {
+    if (executor_) {
+      executor_->cancel();
+    }
+    executor_.reset();
+    arbiter_.reset();
+    output_sub_.reset();
+    map_pub_.reset();
+    perception_pub_.reset();
+    external_pub_.reset();
+    sub_node_.reset();
+    pub_node_.reset();
+  }
+
+  void startArbiter(
+    bool enable_signal_matching = false, const std::string & source_priority = "confidence")
+  {
+    arbiter_ = makeArbiter(enable_signal_matching, source_priority);
+    executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+    executor_->add_node(arbiter_);
+    executor_->add_node(pub_node_);
+    executor_->add_node(sub_node_);
+    // Allow discovery to settle before any publish so transient_local replay works.
+    spinFor(std::chrono::milliseconds(200));
+  }
+
+  void publishMap()
+  {
+    map_pub_->publish(map_bin_);
+    spinFor(std::chrono::milliseconds(200));
+  }
+  void publishPerception(const TrafficLightGroupArray & msg)
+  {
+    perception_pub_->publish(msg);
+    spinFor(std::chrono::milliseconds(150));
+  }
+  void publishExternal(const TrafficLightGroupArray & msg)
+  {
+    external_pub_->publish(msg);
+    spinFor(std::chrono::milliseconds(150));
+  }
+
+  void spinFor(std::chrono::milliseconds duration)
+  {
+    const auto deadline = std::chrono::steady_clock::now() + duration;
+    while (std::chrono::steady_clock::now() < deadline) {
+      executor_->spin_some();
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+  }
+
+  rclcpp::Time arbiterNow() const { return arbiter_->now(); }
+
+  LaneletMapBin map_bin_;
+
+  rclcpp::Node::SharedPtr pub_node_;
+  rclcpp::Node::SharedPtr sub_node_;
+  std::shared_ptr<TrafficLightArbiter> arbiter_;
+  std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
+
+  rclcpp::Publisher<LaneletMapBin>::SharedPtr map_pub_;
+  rclcpp::Publisher<TrafficLightGroupArray>::SharedPtr perception_pub_;
+  rclcpp::Publisher<TrafficLightGroupArray>::SharedPtr external_pub_;
+  rclcpp::Subscription<TrafficLightGroupArray>::SharedPtr output_sub_;
+
+  TrafficLightGroupArray latest_output_;
+  std::size_t publish_count_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// A. Longest path - Signal Matching mode (enable_signal_matching=true).
+//
+// Exercises every branch of SignalMatchValidator::validateSignals in one run:
+//   - vehicle id with matching color/shape       -> use perception as-is
+//   - vehicle id with mismatching color          -> UNKNOWN for that shape
+//   - vehicle id with mismatching element count  -> UNKNOWN over union of shapes
+//   - vehicle id seen only by external           -> UNKNOWN
+//   - signal id not on the map                   -> dropped (WARN path)
+// ---------------------------------------------------------------------------
+TEST_F(ArbiterCharacteristic, signalMatchingLongestPath)
+{
+  // Arrange
+  startArbiter(true);
+  publishMap();
+  const auto t0 = arbiterNow();
+
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.6f)},
+    {makeTrafficLightPrediction(
+      external_traffic_signal.stamp, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE,
+      PredictedTrafficLightState::INFORMATION_SOURCE_V2I)}));
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_b,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.8f)}));
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_c,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.8f)}));
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    kOffMapProbeId,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.7f)},
+    {makeTrafficLightPrediction(
+      perception_traffic_signal.stamp, TrafficLightElement::RED, TrafficLightElement::CIRCLE,
+      PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)}));
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_b,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_c,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.8f),
+     makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW, 0.6f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  ASSERT_GE(publish_count_, 1u);
+  EXPECT_EQ(findTrafficLightGroup(latest_output_, kOffMapProbeId), nullptr);
+
+  // matching id: perception passes through unchanged, predictions merged from both sources.
+  {
+    const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_a);
+    ASSERT_NE(g, nullptr);
+    ASSERT_EQ(g->elements.size(), 1u);
+    EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED);
+    EXPECT_NEAR(g->elements[0].confidence, 0.7f, kConfidenceEpsilon);
+    EXPECT_EQ(g->predictions.size(), 2u);
+  }
+  // color mismatch -> UNKNOWN over the single shared shape
+  {
+    const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_b);
+    ASSERT_NE(g, nullptr);
+    ASSERT_EQ(g->elements.size(), 1u);
+    EXPECT_EQ(g->elements[0].color, TrafficLightElement::UNKNOWN);
+    EXPECT_EQ(g->elements[0].shape, TrafficLightElement::CIRCLE);
+  }
+  // element-count mismatch -> UNKNOWN over union of shapes
+  {
+    const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_c);
+    ASSERT_NE(g, nullptr);
+    ASSERT_EQ(g->elements.size(), 2u);
+    EXPECT_NE(findTrafficLightElement(*g, TrafficLightElement::CIRCLE), nullptr);
+    EXPECT_NE(findTrafficLightElement(*g, TrafficLightElement::RIGHT_ARROW), nullptr);
+    for (const auto & e : g->elements) {
+      EXPECT_EQ(e.color, TrafficLightElement::UNKNOWN);
+    }
+  }
+}
+
+// Pedestrian path bypasses element matching; with source_priority=external
+// the external value must win even though perception has higher confidence.
+TEST_F(ArbiterCharacteristic, signalMatchingPedestrianFallbackUsesSourcePriority)
+{
+  // Arrange
+  startArbiter(true, "external");
+  publishMap();
+  const auto t0 = arbiterNow();
+
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::pedestrian_signal,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.1f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::pedestrian_signal,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  const auto * g = findTrafficLightGroup(latest_output_, map_ids::pedestrian_signal);
+  ASSERT_NE(g, nullptr);
+  ASSERT_EQ(g->elements.size(), 1u);
+  EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED);
+  EXPECT_NEAR(g->elements[0].confidence, 0.1f, kConfidenceEpsilon);
+}
+
+// ---------------------------------------------------------------------------
+// B. Longest path - Priority-based mode (enable_signal_matching=false).
+// ---------------------------------------------------------------------------
+TEST_F(ArbiterCharacteristic, priorityBasedConfidenceLongestPath)
+{
+  // Arrange
+  startArbiter();
+  publishMap();
+  const auto t0 = arbiterNow();
+
+  TrafficLightGroupArray stale_external_traffic_signal;
+  stale_external_traffic_signal.stamp = offsetTime(t0, -4.0);
+  stale_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.4f)}));
+
+  TrafficLightGroupArray recent_external_traffic_signal;
+  recent_external_traffic_signal.stamp = offsetTime(t0, -0.5);
+  recent_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
+  recent_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_b,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.5f),
+     makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW, 0.3f)}));
+  recent_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    kOffMapProbeId,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.2);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_c,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.8f)}));
+
+  // Act
+  publishExternal(stale_external_traffic_signal);
+  publishExternal(recent_external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  EXPECT_EQ(findTrafficLightGroup(latest_output_, kOffMapProbeId), nullptr);
+  // Both sources agree on shape; CONFIDENCE picks perception (0.9 > 0.7).
+  {
+    const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_a);
+    ASSERT_NE(g, nullptr);
+    ASSERT_EQ(g->elements.size(), 1u);
+    EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
+    EXPECT_NEAR(g->elements[0].confidence, 0.9f, kConfidenceEpsilon);
+  }
+  // External contributes two shapes alone; both survive shape-wise selection.
+  {
+    const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_b);
+    ASSERT_NE(g, nullptr);
+    ASSERT_EQ(g->elements.size(), 2u);
+    EXPECT_NE(findTrafficLightElement(*g, TrafficLightElement::CIRCLE), nullptr);
+    EXPECT_NE(findTrafficLightElement(*g, TrafficLightElement::RIGHT_ARROW), nullptr);
+  }
+  // Perception-only id flows through unmodified.
+  {
+    const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_c);
+    ASSERT_NE(g, nullptr);
+    ASSERT_EQ(g->elements.size(), 1u);
+    EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
+    EXPECT_NEAR(g->elements[0].confidence, 0.8f, kConfidenceEpsilon);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// C. Branch coverage that the longest paths cannot reach.
+// ---------------------------------------------------------------------------
+
+TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
+{
+  // Arrange (intentionally no publishMap())
+  startArbiter();
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = arbiterNow();
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
+
+  // Act
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  EXPECT_EQ(publish_count_, 0u)
+    << "arbitrateAndPublish should early-return when no map has been received";
+}
+
+TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
+{
+  // Arrange
+  startArbiter(false, "perception");
+  publishMap();
+  const auto t0 = arbiterNow();
+
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.99f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.10f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_a);
+  ASSERT_NE(g, nullptr);
+  ASSERT_EQ(g->elements.size(), 1u);
+  EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_NEAR(g->elements[0].confidence, 0.10f, kConfidenceEpsilon);
+}
+
+TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
+{
+  // Arrange: establish a perception baseline so we can detect any extra publish.
+  startArbiter();
+  publishMap();
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = arbiterNow();
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.8f)}));
+  publishPerception(perception_traffic_signal);
+  const auto baseline_count = publish_count_;
+  ASSERT_GE(baseline_count, 1u);
+
+  // external_delay_tolerance defaults to 5.0s; 20s in the past is well past it.
+  TrafficLightGroupArray stale_external_traffic_signal;
+  stale_external_traffic_signal.stamp = offsetTime(arbiterNow(), -20.0);
+  stale_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
+
+  // Act
+  publishExternal(stale_external_traffic_signal);
+
+  // Assert
+  EXPECT_EQ(publish_count_, baseline_count)
+    << "Stale external message must be dropped before arbitrateAndPublish runs";
+  const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_a);
+  ASSERT_NE(g, nullptr);
+  EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED)
+    << "Last publish must reflect perception";
+}
+
+TEST_F(ArbiterCharacteristic, signalMatchingIgnoresConfidenceInEquivalence)
+{
+  // Arrange
+  startArbiter(true);
+  publishMap();
+  const auto t0 = arbiterNow();
+
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.10f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.90f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_a);
+  ASSERT_NE(g, nullptr);
+  ASSERT_EQ(g->elements.size(), 1u);
+  EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED);
+  EXPECT_NEAR(g->elements[0].confidence, 0.90f, kConfidenceEpsilon);
+}
+
+TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
+{
+  // Arrange: seed an external entry that should be purged by the perception
+  // arrival's cleanupExpiredExternalSignals (perception is +6s newer).
+  startArbiter();
+  publishMap();
+  const auto t0 = arbiterNow();
+
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.05);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.5f)}));
+  publishExternal(external_traffic_signal);
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, 6.0);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
+
+  // Act
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_a);
+  ASSERT_NE(g, nullptr);
+  ASSERT_EQ(g->elements.size(), 1u);
+  EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_NEAR(g->elements[0].confidence, 0.7f, kConfidenceEpsilon);
+}
+
+TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
+{
+  // Arrange
+  startArbiter();
+  publishMap();
+  const auto t0 = arbiterNow();
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = t0;
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.8f)},
+    {makeTrafficLightPrediction(
+      t0, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE,
+      PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)}));
+
+  // Act
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_a);
+  ASSERT_NE(g, nullptr);
+  ASSERT_EQ(g->predictions.size(), 1u);
+  EXPECT_EQ(
+    g->predictions[0].information_source,
+    PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION);
+}
+
+}  // namespace
