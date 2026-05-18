@@ -22,9 +22,12 @@
 #include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
+
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 
 #include <map>
 #include <memory>
@@ -72,6 +75,9 @@ private:
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    debug_processing_time_pub_;
+  std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   minimum_rule_based_planner::Params params_;
   /** @} */
 

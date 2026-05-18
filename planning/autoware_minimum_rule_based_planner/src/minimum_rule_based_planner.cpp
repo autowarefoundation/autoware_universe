@@ -66,6 +66,9 @@ MinimumRuleBasedPlannerNode::MinimumRuleBasedPlannerNode(const rclcpp::NodeOptio
   debug_processing_time_detail_pub_ =
     this->create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
       "~/debug/processing_time_detail_ms", 1);
+  debug_processing_time_pub_ =
+    this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/debug/processing_time_ms", 1);
   time_keeper_ =
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 
@@ -223,6 +226,8 @@ void MinimumRuleBasedPlannerNode::set_modifier_data(
 void MinimumRuleBasedPlannerNode::on_timer()
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+  stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
+  stop_watch_ptr_->tic("processing_time");
 
   auto publish_debug_trajectory =
     [](const auto & publisher_map, const auto & plugin, const TrajectoryPoints & points) {
@@ -394,6 +399,12 @@ void MinimumRuleBasedPlannerNode::on_timer()
   if (params_.debug.enable_output_trajectory) {
     pub_debug_trajectory_->publish(smoothed_traj);
   }
+
+  // Publish processing time
+  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
+  processing_time_msg.stamp = get_clock()->now();
+  processing_time_msg.data = stop_watch_ptr_->toc("processing_time", true);
+  debug_processing_time_pub_->publish(processing_time_msg);
 }
 
 MinimumRuleBasedPlannerNode::InputData MinimumRuleBasedPlannerNode::take_data()

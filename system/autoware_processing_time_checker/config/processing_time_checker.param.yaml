@@ -54,6 +54,13 @@
       - /planning/scenario_planning/velocity_smoother/debug/processing_time_ms
       - /simulation/shape_estimation/debug/processing_time_ms
 
-    # E2E metrics
+      # E2E metrics
       - /planning/trajectory_generator/neural_network_based_planner/diffusion_planner_node/debug/processing_time_ms
+      - /planning/trajectory_generator/neural_network_based_planner/trajectory_modifier/debug/processing_time_ms
       - /planning/trajectory_generator/neural_network_based_planner/trajectory_optimizer_node/debug/processing_time_ms
+      - /planning/trajectory_generator/minimum_rule_based_planner/minimum_rule_based_planner_node/debug/processing_time_ms
+      - /planning/trajectory_selector/trajectory_validator_node/debug/collision_check_filter/processing_time_ms
+      - /planning/trajectory_selector/trajectory_validator_node/debug/vehicle_constraint_filter/processing_time_ms
+      - /planning/trajectory_selector/trajectory_validator_node/debug/uncrossable_boundary_departure_filter/processing_time_ms
+      - /planning/trajectory_selector/trajectory_validator_node/debug/traffic_light_filter/processing_time_ms
+      - /planning/trajectory_selector/trajectory_validator_node/debug/processing_time_ms

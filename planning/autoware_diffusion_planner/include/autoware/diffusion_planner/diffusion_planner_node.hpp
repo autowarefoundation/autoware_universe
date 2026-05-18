@@ -184,7 +184,7 @@ private:
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    debug_processing_time_pub_;
+    debug_processing_time_pub_{nullptr};
   rclcpp::Publisher<Trajectory>::SharedPtr pub_trajectory_{nullptr};
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_{nullptr};
   rclcpp::Publisher<PredictedObjects>::SharedPtr pub_objects_{nullptr};

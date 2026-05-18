@@ -396,6 +396,8 @@ void DiffusionPlanner::on_timer()
 
   // Publish diagnostics
   diagnostics_inference_->publish(frame_time);
+
+  // Publish processing time
   autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
   processing_time_msg.stamp = get_clock()->now();
   processing_time_msg.data = stop_watch_ptr_->toc("processing_time", true);
