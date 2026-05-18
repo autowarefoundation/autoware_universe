@@ -1,8 +1,8 @@
 /**:
   ros__parameters:
     plugin_names:
-      - "autoware::trajectory_modifier::plugin::ObstacleStop"
       - "autoware::trajectory_modifier::plugin::StopPointFixer"
+      - "autoware::trajectory_modifier::plugin::ObstacleStop"
     use_stop_point_fixer: true
     use_obstacle_stop: true
     trajectory_time_step: 0.1 # [s]
