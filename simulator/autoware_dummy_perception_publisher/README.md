@@ -20,7 +20,7 @@ The node uses a plugin-based architecture to handle different types of object mo
 All movement plugins inherit from `DummyObjectMovementBasePlugin` which provides:
 
 - Object management (add, delete operations)
-- Associated action type handling
+- Associated movement model handling
 - Common interface for object movement
 
 #### Object Action Handling
