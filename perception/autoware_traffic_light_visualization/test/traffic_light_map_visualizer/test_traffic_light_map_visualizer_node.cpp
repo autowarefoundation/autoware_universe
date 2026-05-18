@@ -201,3 +201,17 @@ TEST_F(TestTrafficLightMapVisualizerNodeSmoke, MapAndDetectionProduceMarkers)
 
   EXPECT_GT(received_markers_->markers.size(), 0u);
 }
+
+// Smoke: detection arriving before the map is silently dropped, guarded by the
+// `if (!visualizer_) return;` check in detected_traffic_lights_callback. This
+// path is only reachable at the node level; unit and characterization tests
+// always supply the map first.
+TEST_F(TestTrafficLightMapVisualizerNodeSmoke, DetectionBeforeMapProducesNoMarkers)
+{
+  // Publish detection without ever publishing the map. The group id is
+  // arbitrary because the callback returns before looking it up.
+  traffic_light_pub_->publish(make_all_colors_detection(/*arbitrary*/ 1));
+  spin_some();
+
+  EXPECT_EQ(received_markers_, nullptr);
+}
