@@ -223,13 +223,6 @@ trajectory_modifier_params:
         validation:
           bounds<>: [0.0, 10.0]
         read_only: false
-      detection_range:
-        type: double
-        default_value: 50.0
-        description: Detection range [m]
-        validation:
-          bounds<>: [0.0, 200.0]
-        read_only: false
       voxel_grid_filter:
         x:
           type: double
