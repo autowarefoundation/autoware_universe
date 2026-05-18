@@ -23,6 +23,8 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <rclcpp/exceptions/exceptions.hpp>
 
+#include <thrust/iterator/transform_iterator.h>
+
 #include <cstdint>
 #include <limits>
 #include <locale>
@@ -592,11 +594,6 @@ CudaPolarVoxelNoiseFilter::FilterReturn CudaPolarVoxelNoiseFilter::filter(
       autoware::cuda_utils::make_unique<size_t>(num_total_voxels, stream_, mem_pool_);
     is_primary_flags = autoware::cuda_utils::make_unique<bool>(num_points, stream_, mem_pool_);
 
-    // Ensure buffers are zeroed (crucial for atomicAdd)
-    cudaMemsetAsync(total_counts.get(), 0, num_total_voxels * sizeof(size_t), stream_);
-    cudaMemsetAsync(intensity_sums.get(), 0, num_total_voxels * sizeof(float), stream_);
-    cudaMemsetAsync(secondary_counts.get(), 0, num_total_voxels * sizeof(size_t), stream_);
-
     const size_t return_type_offset = get_offset(input_cloud->fields, "return_type");
     const size_t intensity_offset = get_offset(input_cloud->fields, "intensity");
 
@@ -661,13 +658,14 @@ void CudaPolarVoxelNoiseFilter::set_return_types(
 
   auto num_candidates = types.size();
   using return_type_t = decltype(ReturnTypeCandidates::return_types);
+  using return_type_elem_t = std::remove_pointer_t<return_type_t>;
   return_type_t return_type = nullptr;
 
   CHECK_CUDA_ERROR(cudaMallocFromPoolAsync(
-    &return_type, num_candidates * sizeof(return_type_t), mem_pool_, stream_));
+    &return_type, num_candidates * sizeof(return_type_elem_t), mem_pool_, stream_));
 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    return_type, types.data(), num_candidates * sizeof(return_type_t), cudaMemcpyHostToDevice,
+    return_type, types.data(), num_candidates * sizeof(return_type_elem_t), cudaMemcpyHostToDevice,
     stream_));
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
@@ -691,8 +689,8 @@ CudaPolarVoxelNoiseFilter::calculate_voxel_index(
 
     // Because `operator<=` for cuda::std::optional considers nullopt is less than any valid value,
     // this conversion helps searching minimum valid value from the array of cuda::std::optional
-    cub::TransformInputIterator<int, NulloptToMax, ::cuda::std::optional<int> *>
-      transformed_in_null_to_max(polar_voxel_index, NulloptToMax{});
+    auto transformed_in_null_to_max =
+      thrust::make_transform_iterator(polar_voxel_index, NulloptToMax{});
 
     // Take Minimum value
     reduce_and_copy_to_host(
@@ -703,8 +701,8 @@ CudaPolarVoxelNoiseFilter::calculate_voxel_index(
     // cuda::std::optional does not have ::Lowest() member, which is required for
     // cub::DeviceReduce::Max. Here, cuda::std::optional is wrapped to transform into its contained
     // value (if nullopt, then return numeric_limits::lowest) to make cub::DeviceReduce::Max work
-    cub::TransformInputIterator<int, NulloptToLowest, ::cuda::std::optional<int> *>
-      transformed_in_null_to_lowest(polar_voxel_index, NulloptToLowest{});
+    auto transformed_in_null_to_lowest =
+      thrust::make_transform_iterator(polar_voxel_index, NulloptToLowest{});
 
     // Take maximum value
     reduce_and_copy_to_host(

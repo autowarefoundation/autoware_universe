@@ -288,9 +288,16 @@ rcl_interfaces::msg::SetParametersResult CudaPolarVoxelNoiseFilterNode::param_ca
         for (auto v : arr) primary_return_types_.push_back(static_cast<int>(v));
         cuda_polar_voxel_noise_filter_->set_primary_return_types(primary_return_types_);
       }}},
-    {"publish_noise_cloud", {nullptr, [this](const rclcpp::Parameter & p) {
-                               filter_params_.publish_noise_cloud = p.as_bool();
-                             }}}};
+    {"publish_noise_cloud",
+     {nullptr, [this](const rclcpp::Parameter & p) {
+        filter_params_.publish_noise_cloud = p.as_bool();
+        if (filter_params_.publish_noise_cloud && !noise_cloud_pub_) {
+          noise_cloud_pub_ = std::make_unique<
+            cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
+            *this, "~/debug/pointcloud_noise");
+          RCLCPP_INFO(get_logger(), "Noise cloud publisher created by parameter update");
+        }
+      }}}};
 
   for (const auto & param : params) {
     auto it = param_ops.find(param.get_name());
