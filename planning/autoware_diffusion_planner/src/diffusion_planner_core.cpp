@@ -208,8 +208,15 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   }
   // Agent data on ego reference frame
   {
-    const auto neighbor_agents_past = flatten_histories_to_vector(
+    auto neighbor_agents_past = flatten_histories_to_vector(
       frame_context.ego_centric_neighbor_histories, MAX_NUM_NEIGHBORS, INPUT_T + 1);
+    // Inflate width of vehicle-label neighbors.
+    const auto width_offset = static_cast<float>(params_.neighbor_vehicle_width_offset_m);
+    for (size_t i = 0; i + AGENT_STATE_DIM <= neighbor_agents_past.size(); i += AGENT_STATE_DIM) {
+      if (neighbor_agents_past[i + static_cast<size_t>(NeighborStateIdx::IS_VEHICLE)] > 0.5f) {
+        neighbor_agents_past[i + static_cast<size_t>(NeighborStateIdx::WIDTH)] += width_offset;
+      }
+    }
     input_data_map["neighbor_agents_past"] =
       utils::replicate_for_batch(neighbor_agents_past, params_.batch_size);
   }

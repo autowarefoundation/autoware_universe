@@ -17,6 +17,7 @@
     delay_step: 0
     line_string_max_step_m: 5.0
     use_time_interpolation: false
+    neighbor_vehicle_width_offset_m: 0.0
     planning_factor:
       enable_stop: true
       enable_slowdown: false
