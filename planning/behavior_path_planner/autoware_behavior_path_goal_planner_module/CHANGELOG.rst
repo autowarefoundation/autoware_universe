@@ -2,6 +2,44 @@
 Changelog for package autoware_behavior_path_goal_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* fix(goal_planner): prevent crash when output path is empty (`#12284 <https://github.com/mitsudome-r/autoware_universe/issues/12284>`_)
+* chore(behavior_path_planner): remove unused lanelet2_extension header (`#12292 <https://github.com/mitsudome-r/autoware_universe/issues/12292>`_)
+  unused lanelet2_extension in bpp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(lanelet2_extension): replace ported lanelet2_extension utilities functions (final) (`#12173 <https://github.com/mitsudome-r/autoware_universe/issues/12173>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* fix(goal_planner): fix node dead issue (`#12177 <https://github.com/mitsudome-r/autoware_universe/issues/12177>`_)
+  fix issue
+* refactor(planning): replace toGeomMsg/toLaneletPoint to autoware_lanelet2_utils in lane_change/goal_planner (`#12080 <https://github.com/mitsudome-r/autoware_universe/issues/12080>`_)
+  refactor(behavior_path_planner): deprecate toLaneletPoint/toGeomPt in lane_change/goal_planner
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - bpp packages (`#12085 <https://github.com/mitsudome-r/autoware_universe/issues/12085>`_)
+  * replace getArcCoordinates in bpp packages
+  * replace getArcCoordinates usage in bpp packages (2)
+  * replace getArcCoordinates in bpp package (3)
+  (autoware_behavior_path_goal_planner_module)
+  * replace getArcCoordinates in bpp package(4)
+  (autoware_behavior_path_start_planner_module)
+  * replace getLateralDistanceToClosestLanelet in bpp package
+  * replace getExpandedLanelet(s) in bpp package
+  * replace combineLaneletsShape in bpp packages
+  * fix wrong condition in bpp
+  * style(pre-commit): autofix
+  * remove directly dereference opt for combine_lanelet
+  * remove log if lanelet is empty
+  * bind reference to optional value for combine_lanelets_shape
+  * remove log and simply return outside else in get_dirty_expanded_lanelets opt
+  * remove .has_value in lane_change_module for consistency
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12122 <https://github.com/mitsudome-r/autoware_universe/issues/12122>`_)
+* Contributors: Kotakku, Mamoru Sobue, Sarun MUKDAPITAK, Satoshi OTA, Shumpei Wakabayashi, Zulfaqar Azmi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

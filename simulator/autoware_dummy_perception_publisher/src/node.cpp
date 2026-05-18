@@ -401,6 +401,13 @@ void DummyPerceptionPublisherNode::objectCallback(
       }
       break;
     }
+    default: {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000,
+        "Received SimulatedObject with unknown action value %u; ignoring.",
+        static_cast<unsigned>(msg->action));
+      break;
+    }
   }
 }
 

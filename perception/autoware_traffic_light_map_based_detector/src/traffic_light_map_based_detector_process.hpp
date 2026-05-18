@@ -37,35 +37,36 @@ namespace autoware::traffic_light
 namespace utils
 {
 
-cv::Point2d calcRawImagePointFromPoint3D(
+cv::Point2d calc_raw_image_point_from_point_3d(
   const image_geometry::PinholeCameraModel & pinhole_camera_model, const cv::Point3d & point3d);
 
-cv::Point2d calcRawImagePointFromPoint3D(
+cv::Point2d calc_raw_image_point_from_point_3d(
   const image_geometry::PinholeCameraModel & pinhole_camera_model, const tf2::Vector3 & point3d);
 
-void roundInImageFrame(const uint32_t & width, const uint32_t & height, cv::Point2d & point);
+void round_in_image_frame(const uint32_t & width, const uint32_t & height, cv::Point2d & point);
 
-bool isInDistanceRange(
+bool is_in_distance_range(
   const tf2::Vector3 & p1, const tf2::Vector3 & p2, const double max_distance_range);
 
-bool isInAngleRange(const double & tl_yaw, const double & camera_yaw, const double max_angle_range);
+bool is_in_angle_range(
+  const double & tl_yaw, const double & camera_yaw, const double max_angle_range);
 
-bool isInImageFrame(
+bool is_in_image_frame(
   const image_geometry::PinholeCameraModel & pinhole_camera_model, const tf2::Vector3 & point);
 
 // Calculated in the camera optical frame but yaw and pitch are in the camera frame
-tf2::Vector3 getVibrationMargin(
+tf2::Vector3 get_vibration_margin(
   const double depth, const double margin_pitch, const double margin_yaw,
   const double margin_height, const double margin_width, const double margin_depth);
 
-void computeBoundingRoi(
+void compute_bounding_roi(
   const uint32_t & width, const uint32_t & height,
   const std::vector<tier4_perception_msgs::msg::TrafficLightRoi> & rois,
   tier4_perception_msgs::msg::TrafficLightRoi & max_roi);
 
-double getTrafficLightYaw(const lanelet::ConstLineString3d & traffic_light);
+double get_traffic_light_yaw(const lanelet::ConstLineString3d & traffic_light);
 
-double getCameraYaw(const tf2::Transform & tf_map2camera);
+double get_camera_yaw(const tf2::Transform & tf_map2camera);
 
 }  // namespace utils
 }  // namespace autoware::traffic_light

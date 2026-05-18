@@ -2,6 +2,21 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(autoware_simple_object_merger): apply autoware_agnocast_wrapper for CIE (`#12327 <https://github.com/mitsudome-r/autoware_universe/issues/12327>`_)
+  * feat(autoware_simple_object_merger): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_simple_object_merger): apply CIE to SimpleDetectedObjectMergerNode
+  Apply autoware_agnocast_wrapper_register_node to SimpleDetectedObjectMergerNode
+  in addition to the existing SimpleTrackedObjectMergerNode.
+  ---------
+* refactor(autoware_universe): use autoware_ament_auto_package in perception packages (`#12275 <https://github.com/mitsudome-r/autoware_universe/issues/12275>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* Contributors: Taekjin LEE, Vishal Chauhan, atsushi yano, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

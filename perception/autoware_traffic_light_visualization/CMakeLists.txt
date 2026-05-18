@@ -25,7 +25,8 @@ rclcpp_components_register_node(traffic_light_roi_visualizer
 )
 
 ament_auto_add_library(traffic_light_map_visualizer SHARED
-  src/traffic_light_map_visualizer/node.cpp
+  src/traffic_light_map_visualizer/traffic_light_visualizer_node.cpp
+  src/traffic_light_map_visualizer/traffic_light_visualizer.cpp
 )
 
 rclcpp_components_register_node(traffic_light_map_visualizer
@@ -51,6 +52,22 @@ if(BUILD_TESTING)
     autoware_map_msgs
     autoware_perception_msgs
     rclcpp
+    visualization_msgs
+  )
+
+  ament_add_gtest(test_traffic_light_map_visualizer_core
+    test/test_traffic_light_map_visualizer_core.cpp
+  )
+  target_include_directories(test_traffic_light_map_visualizer_core PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_traffic_light_map_visualizer_core
+    traffic_light_map_visualizer
+  )
+  ament_target_dependencies(test_traffic_light_map_visualizer_core
+    autoware_lanelet2_extension
+    autoware_perception_msgs
+    geometry_msgs
     visualization_msgs
   )
 endif()

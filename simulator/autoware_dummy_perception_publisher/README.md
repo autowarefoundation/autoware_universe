@@ -20,7 +20,7 @@ The node uses a plugin-based architecture to handle different types of object mo
 All movement plugins inherit from `DummyObjectMovementBasePlugin` which provides:
 
 - Object management (add, delete operations)
-- Associated action type handling
+- Associated movement model handling
 - Common interface for object movement
 
 #### Object Action Handling
@@ -28,7 +28,7 @@ All movement plugins inherit from `DummyObjectMovementBasePlugin` which provides
 - **ADD**: New objects are created and they move in a straight line, acceleration and deceleration parameters can be used.
 - **MODIFY**: Handled directly by the node, bypassing plugin movement logic. Immediately replaces the object's position information across all plugins.
 - **DELETE**: The specified object is removed from all plugins.
-- **DELETEALL**: Clears all objects from all plugins.
+- **DELETE_ALL**: Clears all objects from all plugins.
 
 The requested operation is selected via the `action` field in `autoware_simulation_msgs::msg::SimulatedObject`.
 
@@ -83,6 +83,7 @@ The plugin uses `CommonParameters` for both vehicle and pedestrian object types.
 | `max_remapping_distance`     | double | maximum distance (meters) for remapping validation        |
 | `max_speed_difference_ratio` | double | maximum speed difference ratio tolerance                  |
 | `min_speed_ratio`            | double | minimum speed ratio relative to dummy object speed        |
-| `max_speed_ratio`            | double | maximum speed ratio relative to dummy object speed        |
+| `min_speed_ratio`            | double | minimum speed ratio relative to simulated object speed        |
+| `max_speed_ratio`            | double | maximum speed ratio relative to simulated object speed        |
 | `speed_check_threshold`      | double | speed threshold (m/s) above which speed checks apply      |
 | `path_selection_strategy`    | string | path selection strategy: "highest_confidence" or "random" |
