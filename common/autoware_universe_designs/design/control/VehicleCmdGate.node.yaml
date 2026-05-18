@@ -44,8 +44,11 @@ subscribers:
     message_type: autoware_vehicle_msgs/msg/GearCommand
     remap_target: input/external/gear_cmd
   - name: external_emergency_stop_heartbeat
-    message_type: tier4_external_api_msgs/msg/Heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
     remap_target: input/external_emergency_stop_heartbeat
+  - name: gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+    remap_target: input/gate_mode
   - name: emergency_control_cmd
     message_type: autoware_control_msgs/msg/Control
     remap_target: input/emergency/control_cmd
@@ -58,24 +61,23 @@ subscribers:
   - name: emergency_gear_cmd
     message_type: autoware_vehicle_msgs/msg/GearCommand
     remap_target: input/emergency/gear_cmd
-  - name: gate_mode
-    message_type: tier4_control_msgs/msg/GateMode
-    remap_target: input/gate_mode
   - name: mrm_state
     message_type: autoware_adapi_v1_msgs/msg/MrmState
     remap_target: input/mrm_state
   - name: kinematics
     message_type: nav_msgs/msg/Odometry
-    global: /localization/kinematic_state
+    remap_target: kinematics
   - name: acceleration
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
     remap_target: input/acceleration
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
     remap_target: input/engage
-    global: /autoware/engage
 
 publishers:
+  - name: vehicle_cmd_emergency
+    message_type: tier4_vehicle_msgs/msg/VehicleEmergencyStamped
+    remap_target: output/vehicle_cmd_emergency
   - name: control_cmd
     message_type: autoware_control_msgs/msg/Control
     remap_target: output/control_cmd
@@ -94,12 +96,42 @@ publishers:
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
     remap_target: output/engage
+    global: /api/autoware/get/engage
+  - name: external_emergency
+    message_type: tier4_external_api_msgs/msg/Emergency
+    remap_target: output/external_emergency
+    global: /api/autoware/get/emergency
   - name: operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
     remap_target: output/operation_mode
-  - name: vehicle_cmd_emergency
-    message_type: autoware_vehicle_msgs/msg/VehicleEmergencyStamped
-    remap_target: output/vehicle_cmd_emergency
+  - name: is_paused
+    message_type: tier4_control_msgs/msg/IsPaused
+  - name: is_start_requested
+    message_type: tier4_control_msgs/msg/IsStartRequested
+  - name: is_stopped
+    message_type: tier4_control_msgs/msg/IsStopped
+  - name: is_filter_activated
+    message_type: autoware_vehicle_cmd_gate/msg/IsFilterActivated
+
+servers:
+  - name: engage_service
+    message_type: tier4_external_api_msgs/srv/Engage
+    remap_target: ~/service/engage
+    global: /api/autoware/set/engage
+  - name: external_emergency_service
+    message_type: tier4_external_api_msgs/srv/SetEmergency
+    remap_target: ~/service/external_emergency
+    global: /api/autoware/set/emergency
+  - name: external_emergency_stop
+    message_type: std_srvs/srv/Trigger
+    remap_target: ~/service/external_emergency_stop
+  - name: clear_external_emergency_stop
+    message_type: std_srvs/srv/Trigger
+    remap_target: ~/service/clear_external_emergency_stop
+  - name: set_pause
+    message_type: tier4_control_msgs/srv/SetPause
+  - name: set_stop
+    message_type: tier4_control_msgs/srv/SetStop
 
 # parameters
 param_files:
