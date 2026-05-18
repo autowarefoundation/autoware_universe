@@ -51,7 +51,9 @@ void ObstacleStop::on_initialize(const MinimumRuleBasedPlannerParams & params)
       params_.pointcloud.clustering.max_size);
 
   object_filter_ = std::make_unique<trajectory_modifier::utils::obstacle_stop::ObjectFilter>(
-    params_.objects.object_types, params_.objects.max_velocity_th);
+    params_.objects.object_types, params_.objects.max_velocity_th,
+    params_.objects.stopped_velocity_th, params_.objects.max_lateral_velocity_th,
+    params_.objects.safety_buffer);
 
   pub_clustered_pointcloud_ =
     get_node_ptr()->create_publisher<PointCloud2>("~/obstacle_stop/debug/cluster_points", 1);
@@ -153,19 +155,20 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
   auto predicted_objects = *data_->predicted_objects_ptr;
 
   object_filter_->filter_objects(predicted_objects);
+  object_filter_->filter_by_target_area(
+    predicted_objects, traj_points, debug_data_.trajectory_shape.polygon,
+    debug_data_.target_polygons);
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
   auto collision_point = std::invoke([&]() -> std::optional<CollisionPoint> {
     if (!params_.rss_params.enable) {
-      return get_nearest_object_collision(
-        traj_points, debug_data_.trajectory_shape, predicted_objects, debug_data_.target_polygons,
-        colliding_object);
+      return get_nearest_object_collision(traj_points, predicted_objects, colliding_object);
     }
     return get_nearest_object_collision(
-      traj_points, debug_data_.trajectory_shape, vehicle_info_, predicted_objects,
-      object_decel_map_, params_.rss_params.ego_decel, params_.rss_params.reaction_time,
+      traj_points, vehicle_info_, predicted_objects, object_decel_map_,
+      params_.rss_params.ego_decel, params_.rss_params.reaction_time,
       params_.rss_params.safety_margin, params_.objects.stopped_velocity_th,
-      params_.rss_params.lookahead_horizon, debug_data_.target_polygons, colliding_object);
+      params_.rss_params.lookahead_horizon, colliding_object);
   });
   if (collision_point) debug_data_.colliding_object = colliding_object;
   return collision_point;
@@ -185,9 +188,9 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(const TrajectoryPoi
 
   {
     const auto & bounding_box = debug_data_.trajectory_shape.bounding_box;
-    const auto rel_min_point = autoware_utils::inverse_transform_point(
+    const auto rel_min_point = autoware_utils_geometry::inverse_transform_point(
       bounding_box.min_corner().to_3d(), data_->odometry_ptr->pose.pose);
-    const auto rel_max_point = autoware_utils::inverse_transform_point(
+    const auto rel_max_point = autoware_utils_geometry::inverse_transform_point(
       bounding_box.max_corner().to_3d(), data_->odometry_ptr->pose.pose);
     const auto min_z = params_.pointcloud.min_height;
     const auto max_z = vehicle_info_.vehicle_height_m + params_.pointcloud.height_buffer;
@@ -370,7 +373,7 @@ void ObstacleStop::publish_debug_data(const std::string & ns) const
     marker.lifetime = rclcpp::Duration::from_seconds(0.2);
 
     for (const auto & p : polygon.outer()) {
-      marker.points.push_back(autoware_utils::create_point(p.x(), p.y(), ego_z));
+      marker.points.push_back(autoware_utils_geometry::create_point(p.x(), p.y(), ego_z));
     }
     if (!marker.points.empty()) {
       marker.points.push_back(marker.points.front());
