@@ -125,9 +125,9 @@ ActuationCommandStamped actuationCmdGen(
 {
   ActuationCommandStamped cmd;
   cmd.header.stamp = t;
-  cmd.actuation.accel_cmd = actuation_cmd.accel;
-  cmd.actuation.brake_cmd = actuation_cmd.brake;
-  cmd.actuation.steer_cmd = actuation_cmd.steer;
+  cmd.actuation_command.accel_cmd = actuation_cmd.accel;
+  cmd.actuation_command.brake_cmd = actuation_cmd.brake;
+  cmd.actuation_command.steer_cmd = actuation_cmd.steer;
   return cmd;
 }
 

@@ -339,12 +339,12 @@ SimModelActuationCmd::getActuationStatus() const
   if (convert_accel_cmd_) {
     const auto throttle = accel_map_.getThrottle(acc_state, vel_state);
     if (throttle.has_value()) {
-      actuation_status.status.accel_report = throttle.value();
+      actuation_status.actuation_report.accel_report = throttle.value();
     }
   }
 
   if (convert_brake_cmd_) {
-    actuation_status.status.brake_report = brake_map_.getBrake(acc_state, vel_state);
+    actuation_status.actuation_report.brake_report = brake_map_.getBrake(acc_state, vel_state);
   }
 
   return actuation_status;
