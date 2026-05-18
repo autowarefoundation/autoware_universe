@@ -1,0 +1,7 @@
+<library path="autoware_trajectory_dummy_concatenator_rviz_plugin">
+  <class
+    type="autoware::trajectory_dummy_concatenator_rviz_plugin::DiffusionPlannerOverridePanel"
+    base_class_type="rviz_common::Panel">
+    <description>Panel to toggle DiffusionPlanner trajectory override in the dummy concatenator. When ON, only MinimumRuleBasedPlanner trajectories are published.</description>
+  </class>
+</library>
