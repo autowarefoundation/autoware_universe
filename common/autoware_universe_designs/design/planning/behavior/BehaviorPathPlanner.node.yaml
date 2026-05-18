@@ -19,6 +19,7 @@ subscribers:
     message_type: autoware_map_msgs/msg/LaneletMapBin
   - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
+    remap_target: ~/input/perception
   - name: occupancy_grid_map
     message_type: nav_msgs/msg/OccupancyGrid
   - name: costmap
@@ -39,6 +40,7 @@ subscribers:
 publishers:
   - name: path_with_lane_id
     message_type: autoware_internal_planning_msgs/msg/PathWithLaneId
+    remap_target: ~/output/path
   - name: turn_indicators_cmd
     message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
   - name: hazard_lights_cmd
@@ -47,6 +49,7 @@ publishers:
     message_type: autoware_planning_msgs/msg/PoseWithUuidStamped
   - name: reroute_availability
     message_type: tier4_planning_msgs/msg/RerouteAvailability
+    remap_target: ~/output/is_reroute_available
 
 # parameters
 param_files:
