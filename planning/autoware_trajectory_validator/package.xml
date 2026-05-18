@@ -23,6 +23,7 @@
 
   <exec_depend>rosidl_default_runtime</exec_depend>
 
+  <depend>autoware_boundary_departure_checker</depend>
   <depend>autoware_deprecated_boundary_departure_checker</depend>
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_lanelet2_utils</depend>

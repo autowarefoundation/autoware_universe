@@ -5,6 +5,7 @@
 
     shadow_mode_filter_names:
       [
+        "safety::UncrossableBoundaryDepartureFilter",
         "safety::OutOfLaneFilter",
         "safety::VehicleConstraintFilter",
         "traffic_rule::TrafficLightFilter",
@@ -30,3 +31,15 @@
       checked_trajectory_length:  # maximum length of the planned trajectory that is scanned for traffic light stop lines.
         deceleration_limit: 2.0  # [m/s^2] deceleration limit to calculate the stop distance used as trajectory length limit
         jerk_limit: 2.0  # [m/s^3] jerk limit to calculate the stop distance used as trajectory length limit
+
+    boundary_departure:
+      boundary_types: ["road_border"]
+      brake_delay_s: 1.0
+      enable_developer_marker: false
+      lateral_margin_m: 0.01
+      longitudinal_margin_m: 1.0
+      max_deceleration_mps2: -4.0
+      max_jerk_mps3: -5.0
+      off_time_buffer_s: 0.10
+      on_time_buffer_s: 0.20
+      time_to_departure_cutoff_s: 2.0
