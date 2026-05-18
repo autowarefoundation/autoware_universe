@@ -28,7 +28,7 @@ All movement plugins inherit from `DummyObjectMovementBasePlugin` which provides
 - **ADD**: New objects are created and they move in a straight line, acceleration and deceleration parameters can be used.
 - **MODIFY**: Handled directly by the node, bypassing plugin movement logic. Immediately replaces the object's position information across all plugins.
 - **DELETE**: The specified object is removed from all plugins.
-- **DELETEALL**: Clears all objects from all plugins.
+- **DELETE_ALL**: Clears all objects from all plugins.
 
 The requested operation is selected via the `action` field in `autoware_simulation_msgs::msg::SimulatedObject`.
 
