@@ -19,7 +19,6 @@
 #include "path_planner.hpp"
 #include "velocity_smoother.hpp"
 
-#include <autoware/trajectory_modifier/trajectory_modifier_structs.hpp>
 #include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
@@ -35,8 +34,6 @@
 
 namespace autoware::minimum_rule_based_planner
 {
-using TrajectoryModifierData = trajectory_modifier::TrajectoryModifierData;
-
 class MinimumRuleBasedPlannerNode : public rclcpp::Node
 {
 public:
