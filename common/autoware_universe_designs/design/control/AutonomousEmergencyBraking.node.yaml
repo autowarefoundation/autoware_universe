@@ -23,9 +23,8 @@ subscribers:
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-  - name: autoware_state
+  - name: autoware/state
     message_type: autoware_system_msgs/msg/AutowareState
-    global: /autoware/state
 
 publishers:
   - name: debug_marker

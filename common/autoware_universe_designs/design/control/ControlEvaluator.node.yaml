@@ -25,11 +25,29 @@ subscribers:
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: behavior_path
-    message_type: autoware_planning_msgs/msg/Path
+    message_type: autoware_internal_planning_msgs/msg/PathWithLaneId
   - name: steering_status
     message_type: autoware_vehicle_msgs/msg/SteeringReport
   - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: blind_spot
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: crosswalk
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: detection_area
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: intersection
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: no_stopping_area
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: stop_line
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: traffic_light
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: virtual_traffic_light
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: walkway
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
 
 publishers:
   - name: metrics

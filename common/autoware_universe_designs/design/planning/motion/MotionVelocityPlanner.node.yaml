@@ -17,20 +17,26 @@ subscribers:
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
-  - name: vehicle_odometry
+  - name: odometry
     message_type: nav_msgs/msg/Odometry
   - name: accel
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
-  - name: dynamic_objects
+  - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: no_ground_pointcloud
     message_type: sensor_msgs/msg/PointCloud2
   - name: traffic_signals
     message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
-  - name: virtual_traffic_light_states
-    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
-  - name: occupancy_grid
+  - name: occupancy_grid_map
     message_type: nav_msgs/msg/OccupancyGrid
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+  - name: predicted_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
 
 publishers:
   - name: trajectory

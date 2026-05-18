@@ -13,10 +13,10 @@ launch:
 
 # interfaces
 subscribers:
-  - name: control_cmd
+  - name: trajectory_follower_control_cmd
     message_type: autoware_control_msgs/msg/Control
     remap_target: input/control_cmd
-  - name: state
+  - name: autoware/state
     message_type: autoware_system_msgs/msg/AutowareState
     remap_target: input/state
   - name: current_gear
@@ -39,6 +39,6 @@ param_values: []
 processes:
   - name: decide_shift
     trigger_conditions:
-      - on_input: control_cmd
+      - on_input: trajectory_follower_control_cmd
     outcomes:
       - to_output: gear_cmd

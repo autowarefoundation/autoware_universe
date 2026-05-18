@@ -17,11 +17,11 @@ subscribers:
     message_type: autoware_control_msgs/msg/Control
   - name: kinematics
     message_type: nav_msgs/msg/Odometry
-  - name: operational_mode_state
+  - name: operation_mode_state
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
   - name: measured_acceleration
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
-  - name: reference_trajectory
+  - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory

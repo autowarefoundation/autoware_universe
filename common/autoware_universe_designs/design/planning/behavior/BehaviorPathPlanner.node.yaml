@@ -17,7 +17,7 @@ subscribers:
     message_type: autoware_planning_msgs/msg/LaneletRoute
   - name: vector_map
     message_type: autoware_map_msgs/msg/LaneletMapBin
-  - name: perception
+  - name: objects
     message_type: autoware_perception_msgs/msg/PredictedObjects
   - name: occupancy_grid_map
     message_type: nav_msgs/msg/OccupancyGrid
@@ -31,9 +31,13 @@ subscribers:
     message_type: geometry_msgs/msg/AccelWithCovarianceStamped
   - name: scenario
     message_type: autoware_internal_planning_msgs/msg/Scenario
+  - name: external_velocity_limit_mps
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
 
 publishers:
-  - name: path
+  - name: path_with_lane_id
     message_type: autoware_internal_planning_msgs/msg/PathWithLaneId
   - name: turn_indicators_cmd
     message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
@@ -41,7 +45,7 @@ publishers:
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
   - name: modified_goal
     message_type: autoware_planning_msgs/msg/PoseWithUuidStamped
-  - name: is_reroute_available
+  - name: reroute_availability
     message_type: tier4_planning_msgs/msg/RerouteAvailability
 
 # parameters
@@ -91,4 +95,4 @@ processes:
       - on_input: route
       - on_input: odometry
     outcomes:
-      - to_output: path
+      - to_output: path_with_lane_id

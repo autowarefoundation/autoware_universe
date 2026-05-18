@@ -23,6 +23,8 @@ subscribers:
     message_type: autoware_planning_msgs/msg/Trajectory
   - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
+  - name: api_operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
 
 publishers:
   - name: diagnostic
