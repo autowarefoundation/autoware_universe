@@ -16,20 +16,27 @@ launch:
 subscribers:
   - name: pedals_cmd
     message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
+    remap_target: in/pedals_cmd
   - name: steering_cmd
     message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
+    remap_target: in/steering_cmd
   - name: gear_cmd
     message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: in/gear_cmd
   - name: heartbeat
     message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
+    remap_target: in/heartbeat
   - name: current_gate_mode
     message_type: tier4_control_msgs/msg/GateMode
+    remap_target: in/current_gate_mode
   - name: odometry
     message_type: nav_msgs/msg/Odometry
+    remap_target: in/odometry
 
 publishers:
   - name: control_cmd
     message_type: autoware_control_msgs/msg/Control
+    remap_target: out/control_cmd
 
 # parameters
 param_files:
