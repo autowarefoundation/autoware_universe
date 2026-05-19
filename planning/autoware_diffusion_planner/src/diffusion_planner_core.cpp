@@ -211,11 +211,13 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
     auto neighbor_agents_past = flatten_histories_to_vector(
       frame_context.ego_centric_neighbor_histories, MAX_NUM_NEIGHBORS, INPUT_T + 1);
     // Inflate width of vehicle-label neighbors to enforce extra clearance.
-    const auto extra_margin = static_cast<float>(params_.neighbor_vehicle_extra_margin_m);
-    if (extra_margin > 0.0f) {
+    const auto extended_width_margin =
+      static_cast<float>(params_.neighbor_vehicle_extended_width_margin_m);
+    if (extended_width_margin > 0.0f) {
       for (size_t i = 0; i + AGENT_STATE_DIM <= neighbor_agents_past.size(); i += AGENT_STATE_DIM) {
         if (neighbor_agents_past[i + static_cast<size_t>(NeighborStateIdx::IS_VEHICLE)] > 0.5f) {
-          neighbor_agents_past[i + static_cast<size_t>(NeighborStateIdx::WIDTH)] += extra_margin;
+          neighbor_agents_past[i + static_cast<size_t>(NeighborStateIdx::WIDTH)] +=
+            extended_width_margin;
         }
       }
     }

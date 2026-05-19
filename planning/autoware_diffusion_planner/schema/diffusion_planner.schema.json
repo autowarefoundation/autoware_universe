@@ -106,7 +106,7 @@
           "default": false,
           "description": "Whether to interpolate ego past trajectory at regular time intervals"
         },
-        "neighbor_vehicle_extra_margin_m": {
+        "neighbor_vehicle_extended_width_margin_m": {
           "type": "number",
           "default": 0.0,
           "minimum": 0.0,
@@ -189,7 +189,7 @@
         "delay_step",
         "line_string_max_step_m",
         "use_time_interpolation",
-        "neighbor_vehicle_extra_margin_m",
+        "neighbor_vehicle_extended_width_margin_m",
         "planning_factor",
         "debug_params"
       ]
