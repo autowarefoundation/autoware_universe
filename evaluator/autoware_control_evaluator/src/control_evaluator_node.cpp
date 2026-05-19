@@ -464,8 +464,11 @@ void ControlEvaluatorNode::AddLateralDeviationCenterlineMetricMsg(const Pose & e
   const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
   const auto arc_coordinates =
     autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, ego_pose);
-  const auto metric_value = arc_coordinates.distance;
+  const double metric_value = arc_coordinates.distance;
+  const double metric_value_abs = std::abs(metric_value);
+
   AddMetricMsg(Metric::lateral_deviation_centerline, metric_value);
+  AddMetricMsg(Metric::lateral_deviation_centerline_abs, metric_value_abs);
 }
 
 void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)

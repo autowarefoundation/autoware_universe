@@ -142,6 +142,7 @@ private:
     Metric::lateral_deviation,
     Metric::lateral_deviation_abs,
     Metric::lateral_deviation_centerline,
+    Metric::lateral_deviation_centerline_abs,
     Metric::yaw_deviation,
     Metric::yaw_deviation_abs,
     Metric::goal_longitudinal_deviation,

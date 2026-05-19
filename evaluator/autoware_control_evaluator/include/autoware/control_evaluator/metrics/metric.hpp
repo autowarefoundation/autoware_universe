@@ -33,6 +33,7 @@ enum class Metric {
   lateral_deviation,
   lateral_deviation_abs,
   lateral_deviation_centerline,
+  lateral_deviation_centerline_abs,
   yaw_deviation,
   yaw_deviation_abs,
   goal_longitudinal_deviation,
@@ -66,6 +67,7 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"lateral_deviation", Metric::lateral_deviation},
   {"lateral_deviation_abs", Metric::lateral_deviation_abs},
   {"lateral_deviation_centerline", Metric::lateral_deviation_centerline},
+  {"lateral_deviation_centerline_abs", Metric::lateral_deviation_centerline_abs},
   {"yaw_deviation", Metric::yaw_deviation},
   {"yaw_deviation_abs", Metric::yaw_deviation_abs},
   {"goal_longitudinal_deviation", Metric::goal_longitudinal_deviation},
@@ -98,6 +100,7 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::lateral_deviation, "lateral_deviation"},
   {Metric::lateral_deviation_abs, "lateral_deviation_abs"},
   {Metric::lateral_deviation_centerline, "lateral_deviation_centerline"},
+  {Metric::lateral_deviation_centerline_abs, "lateral_deviation_centerline_abs"},
   {Metric::yaw_deviation, "yaw_deviation"},
   {Metric::yaw_deviation_abs, "yaw_deviation_abs"},
   {Metric::goal_longitudinal_deviation, "goal_longitudinal_deviation"},
@@ -135,6 +138,8 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::lateral_deviation_centerline,
    "Lateral deviation from the centerline[m], positive value means the ego is on the left side of "
    "the centerline"},
+  {Metric::lateral_deviation_centerline_abs,
+   "Absolute lateral deviation from the centerline[m]"},
   {Metric::yaw_deviation,
    "Yaw deviation from the reference trajectory[rad], positive value means the ego is "
    "counterclockwise from the reference trajectory"},
