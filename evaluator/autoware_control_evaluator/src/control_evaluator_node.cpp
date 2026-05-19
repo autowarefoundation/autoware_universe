@@ -459,6 +459,15 @@ void ControlEvaluatorNode::AddYawDeviationMetricMsg(const Trajectory & traj, con
   AddMetricMsg(Metric::yaw_deviation_abs, metric_value_abs);
 }
 
+void ControlEvaluatorNode::AddLateralDeviationCenterlineMetricMsg(const Pose & ego_pose)
+{
+  const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, ego_pose);
+  const auto metric_value = arc_coordinates.distance;
+  AddMetricMsg(Metric::lateral_deviation_centerline, metric_value);
+}
+
 void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 {
   const Pose ego_pose = odom.pose.pose;
@@ -637,6 +646,7 @@ void ControlEvaluatorNode::onTimer()
     if (route_handler_.isHandlerReady()) {
       // add goal deviation metrics
       AddLaneletInfoMsg(ego_pose);
+      AddLateralDeviationCenterlineMetricMsg(ego_pose);
       AddGoalDeviationMetricMsg(*odom);
 
       // add boundary distance metrics
