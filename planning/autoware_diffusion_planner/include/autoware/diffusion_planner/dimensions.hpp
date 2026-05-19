@@ -18,6 +18,7 @@
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
