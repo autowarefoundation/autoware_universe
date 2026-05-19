@@ -106,10 +106,11 @@
           "default": false,
           "description": "Whether to interpolate ego past trajectory at regular time intervals"
         },
-        "neighbor_vehicle_width_offset_m": {
+        "neighbor_vehicle_extra_margin_m": {
           "type": "number",
           "default": 0.0,
-          "description": "Offset added to the width of VEHICLE-label neighbor agents before inference [m]"
+          "minimum": 0.0,
+          "description": "Extra margin added to the width of VEHICLE-label neighbor agents before inference, used to encourage larger clearance [m]"
         },
         "planning_factor": {
           "type": "object",
@@ -188,7 +189,7 @@
         "delay_step",
         "line_string_max_step_m",
         "use_time_interpolation",
-        "neighbor_vehicle_width_offset_m",
+        "neighbor_vehicle_extra_margin_m",
         "planning_factor",
         "debug_params"
       ]
