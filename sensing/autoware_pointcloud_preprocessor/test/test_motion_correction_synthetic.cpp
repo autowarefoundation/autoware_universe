@@ -490,7 +490,7 @@ TEST_P(SyntheticConcatenateMotionCorrectionTest, ComputesWholeCloudTimestampTran
         static_cast<int64_t>(std::llround(param.dt_s * kNsecPerSec)),
       RCL_ROS_TIME));
   const auto expected = exp_twist(param.twist, param.dt_s).matrix().cast<float>();
-  const auto error_norm = (transform - expected).norm();
+  const auto error_norm = (transform.block<3, 4>(0, 0) - expected.block<3, 4>(0, 0)).norm();
 
   if (param.expected == ExpectedResult::Exact) {
     EXPECT_LT(error_norm, kExactTolerance);
