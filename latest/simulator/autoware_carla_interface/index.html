@@ -23146,10 +23146,16 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release</code></p
 <td>Name of the sensor kit package to use for sensor configuration. Should be the *_description package containing config/sensor_kit_calibration.yaml</td>
 </tr>
 <tr>
+<td><code>use_light_weight_sensor_mapping</code></td>
+<td>bool</td>
+<td>False</td>
+<td>If True, uses <code>sensor_mapping_light_weight.yaml</code> instead of the default <code>sensor_mapping.yaml</code> to reduce simulator load. See <a href="#2-sensor-mapping-carla-specific">Sensor Mapping (CARLA-specific)</a> for details.</td>
+</tr>
+<tr>
 <td><code>sensor_mapping_file</code></td>
 <td>string</td>
 <td>"$(find-pkg-share autoware_carla_interface)/config/sensor_mapping.yaml"</td>
-<td>Path to sensor mapping YAML configuration file</td>
+<td>Path to sensor mapping YAML configuration file. When <code>use_light_weight_sensor_mapping</code> is True, this defaults to <code>config/sensor_mapping_light_weight.yaml</code>.</td>
 </tr>
 <tr>
 <td><code>config_file</code></td>
@@ -23199,6 +23205,23 @@ sensor_mappings:
       image_size_y: 900
       fov: 70.0</code></p>
 <p>For CARLA sensor parameters, see <a href="https://carla.readthedocs.io/en/latest/ref_sensors/">CARLA Sensor Reference</a>.</p>
+<h5 id="light-weight-sensor-mapping">Light-Weight Sensor Mapping<a class="headerlink" href="#light-weight-sensor-mapping" title="Permanent link">#</a></h5>
+<p>For machines with limited GPU/CPU resources, an alternative <code>config/sensor_mapping_light_weight.yaml</code> is provided to reduce simulator load. Compared to the default mapping, it:</p>
+<ul>
+<li>Uses a <strong>single front camera</strong> (<code>CAM_FRONT</code>) instead of the 6-camera 360-degree setup, with a wider FOV (120°) and lower resolution (1080x720) to roughly cover the area in front of the vehicle.</li>
+<li>Lowers sensor frequencies (e.g., LiDAR/camera at 10 Hz instead of 11 Hz).</li>
+<li>Keeps the same LiDAR, IMU, and GNSS configuration as the default mapping.</li>
+</ul>
+<p>When enabled via <code>use_light_weight_sensor_mapping:=True</code>, the launch file also skips the <code>image_transport</code> republish nodes for the disabled cameras and the <code>multi_camera_combiner</code> node automatically.</p>
+<p>Example usage:</p>
+<p><code>bash
+ros2 launch autoware_launch e2e_simulator.launch.xml \
+    map_path:=$HOME/autoware_map/Town01 \
+    vehicle_model:=sample_vehicle \
+    sensor_model:=carla_sensor_kit \
+    simulator_type:=carla \
+    use_light_weight_sensor_mapping:=True</code></p>
+<p>Note that with this configuration, features that depend on the surround cameras (such as the multi-camera RViz view) are unavailable.</p>
 <h3 id="world-loading">World Loading<a class="headerlink" href="#world-loading" title="Permanent link">#</a></h3>
 <p>The <code>carla_ros.py</code> sets up the CARLA world:</p>
 <ol>
