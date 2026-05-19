@@ -75,7 +75,7 @@ subscribers:
     remap_target: input/engage
 
 publishers:
-  - name: vehicle_cmd_emergency
+  - name: emergency_cmd
     message_type: tier4_vehicle_msgs/msg/VehicleEmergencyStamped
     remap_target: output/vehicle_cmd_emergency
   - name: control_cmd

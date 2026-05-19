@@ -13,42 +13,30 @@ launch:
 
 # interfaces
 subscribers:
-  - name: local_pedals_cmd
+  - name: local/pedals_cmd
     message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
-    remap_target: input/local/pedals_cmd
-  - name: local_steering_cmd
+  - name: local/steering_cmd
     message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
-    remap_target: input/local/steering_cmd
-  - name: local_gear_cmd
+  - name: local/gear_cmd
     message_type: autoware_vehicle_msgs/msg/GearCommand
-    remap_target: input/local/gear_cmd
-  - name: local_turn_indicators_cmd
+  - name: local/turn_indicators_cmd
     message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
-    remap_target: input/local/turn_indicators_cmd
-  - name: local_hazard_lights_cmd
+  - name: local/hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
-    remap_target: input/local/hazard_lights_cmd
-  - name: local_heartbeat
+  - name: local/heartbeat
     message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
-    remap_target: input/local/heartbeat
-  - name: remote_pedals_cmd
+  - name: remote/pedals_cmd
     message_type: autoware_adapi_v1_msgs/msg/PedalsCommand
-    remap_target: input/remote/pedals_cmd
-  - name: remote_steering_cmd
+  - name: remote/steering_cmd
     message_type: autoware_adapi_v1_msgs/msg/SteeringCommand
-    remap_target: input/remote/steering_cmd
-  - name: remote_gear_cmd
+  - name: remote/gear_cmd
     message_type: autoware_vehicle_msgs/msg/GearCommand
-    remap_target: input/remote/gear_cmd
-  - name: remote_turn_indicators_cmd
+  - name: remote/turn_indicators_cmd
     message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
-    remap_target: input/remote/turn_indicators_cmd
-  - name: remote_hazard_lights_cmd
+  - name: remote/hazard_lights_cmd
     message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
-    remap_target: input/remote/hazard_lights_cmd
-  - name: remote_heartbeat
+  - name: remote/heartbeat
     message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
-    remap_target: input/remote/heartbeat
 
 publishers:
   - name: pedals_cmd
@@ -66,6 +54,10 @@ publishers:
   - name: current_selector_mode
     message_type: tier4_control_msgs/msg/ExternalCommandSelectorMode
 
+servers:
+  - name: select_external_command
+    message_type: tier4_control_msgs/srv/ExternalCommandSelect
+
 # parameters
 param_files:
   - name: external_cmd_selector_param
@@ -77,8 +69,8 @@ param_values: []
 processes:
   - name: select_command
     trigger_conditions:
-      - on_input: local_heartbeat
-      - on_input: remote_heartbeat
+      - on_input: local/heartbeat
+      - on_input: remote/heartbeat
       - periodic: 10.0
     outcomes:
       - to_output: pedals_cmd
