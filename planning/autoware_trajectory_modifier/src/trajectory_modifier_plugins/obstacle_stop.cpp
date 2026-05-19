@@ -18,6 +18,7 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
 
 #include <autoware/motion_utils/distance/distance.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/trajectory/interpolator/akima_spline.hpp>
 #include <autoware/trajectory/interpolator/interpolator.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
@@ -259,8 +260,10 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputDat
 
   const auto & stop_pose = traj_points.back().pose;
   const auto & ego_pose = input.current_odometry->pose.pose;
-  planning_factor_interface_->add(
-    traj_points, ego_pose, stop_pose, PlanningFactor::STOP, safety_factors_);
+  auto distance =
+    motion_utils::calcSignedArcLength(traj_points, ego_pose.position, stop_pose.position);
+  if (std::isnan(distance)) distance = 0.0;
+  planning_factor_interface_->add(distance, stop_pose, PlanningFactor::STOP, safety_factors_);
 
   RCLCPP_WARN_THROTTLE(
     get_node_ptr()->get_logger(), *get_clock(), 1000,
