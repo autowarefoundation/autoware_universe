@@ -48,20 +48,20 @@ namespace autoware::traffic_light
 {
 namespace mf = message_filters;
 
-inline bool isUnknown(const StateKey & state_key)
+inline bool is_unknown(const StateKey & state_key)
 {
   return state_key.size() == 1 &&
          state_key[0].first == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
 }
 
-inline bool compareStateKeyLogOdds(
+inline bool compare_state_key_log_odds(
   const std::pair<StateKey, double> & key1, const std::pair<StateKey, double> & key2)
 {
   // Ordering rule:
   // 1. Unknown StateKey is always lower priority
   // 2. Otherwise, smaller log-odds comes first
-  const bool key1_is_unknown = isUnknown(key1.first);
-  const bool key2_is_unknown = isUnknown(key2.first);
+  const bool key1_is_unknown = is_unknown(key1.first);
+  const bool key2_is_unknown = is_unknown(key2.first);
   if (key1_is_unknown && !key2_is_unknown) {
     return true;
   }
@@ -103,18 +103,18 @@ public:
   explicit MultiCameraFusion(const rclcpp::NodeOptions & node_options);
 
 private:
-  void trafficSignalRoiCallback(
+  void traffic_signal_roi_callback(
     const CamInfoType::ConstSharedPtr cam_info_msg, const RoiArrayType::ConstSharedPtr roi_msg,
     const SignalArrayType::ConstSharedPtr signal_msg);
 
-  void mapCallback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
+  void map_callback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
 
-  void multiCameraFusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
+  void multi_camera_fusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
 
-  void convertOutputMsg(
+  void convert_output_msg(
     const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out);
 
-  void groupFusion(
+  void group_fusion(
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map);
 
@@ -122,43 +122,43 @@ private:
    * @brief Accumulates log-odds evidence for each traffic light group from individual fused
    * records.
    */
-  GroupFusionInfoMap accumulateGroupEvidence(
+  GroupFusionInfoMap accumulate_group_evidence(
     const std::map<IdType, utils::FusionRecord> & fused_record_map);
 
   /**
    * @brief Processes a single fused record and updates the group_fusion_info_map.
    */
-  void processFusedRecord(
+  void process_fused_record(
     GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record);
 
   /**
    * @brief Updates the map for a single (element, regulatory_id) combination.
    */
-  void updateGroupInfoForElement(
+  void update_group_info_for_element(
     GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
     const utils::FusionRecord & record);
 
   /**
    * @brief Handles the log-odds accumulation logic.
    */
-  void updateLogOdds(
+  void update_log_odds(
     std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence);
 
   /**
    * @brief Handles the logic for tracking the best record for a given state.
    */
-  void updateBestRecord(
+  void update_best_record(
     std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
     double confidence, const utils::FusionRecord & record);
 
   /**
    * @brief Determines the best state for each group based on accumulated evidence.
    */
-  void determineBestGroupState(
+  void determine_best_group_state(
     const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map);
 
-  void publishDiagnostics(rclcpp::Time stamp);
+  void publish_diagnostics(rclcpp::Time stamp);
 
   using ExactSyncPolicy = mf::sync_policies::ExactTime<CamInfoType, RoiArrayType, SignalArrayType>;
   using ExactSync = mf::Synchronizer<ExactSyncPolicy>;
