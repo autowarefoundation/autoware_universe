@@ -444,7 +444,7 @@ class SyntheticDistortionCorrectionTest : public SyntheticMotionCorrectionTest,
 {
 };
 
-TEST_P(SyntheticDistortionCorrectionTest, UndistortsSyntheticStaticWorld)
+TEST_P(SyntheticDistortionCorrectionTest, CorrectsSyntheticStaticWorld)
 {
   const auto param = GetParam();
   SCOPED_TRACE(param);
