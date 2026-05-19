@@ -118,7 +118,10 @@ std::size_t align_up(const std::size_t size, const std::size_t alignment)
 
 struct UniqueWorkspaceLayout
 {
+  /// Scratch storage reused by the largest CUB primitive in this implementation.
   void * cub_temp_storage;
+
+  /// Number of bytes reserved for `cub_temp_storage`.
   std::size_t cub_temp_storage_size;
 
   // One int64 scratch block, then one int32 scratch block:
@@ -134,17 +137,24 @@ struct UniqueWorkspaceLayout
   // | num_unique                  | 1 int32
   // | run_ids                     | num_input_elements int32
   // +-----------------------------+
-  //
-  // `sorted_input_positions` is reused as `unique_offsets_inout` after inverse indices are
-  // scattered.
-  // `unique_offsets_end` stores the sentinel end offset in the next int64 slot. This keeps the
-  // sentinel outside CUB's compact `[0, num_unique)` output range and separate from the
-  // `num_unique` scalar.
+
+  /// Original input positions used as values for the initial value/index sort.
   std::int64_t * input_positions;
+
+  /// Sorted copy of the input values.
   std::int64_t * sorted_input;
+
+  /// Original input positions ordered by `sorted_input`; later reused for compact run start
+  /// offsets.
   std::int64_t * sorted_input_positions;
+
+  /// Sentinel end offset used to compute the final unique count.
   std::int64_t * unique_offsets_end;
+
+  /// Device scalar storing the number of unique values selected by CUB.
   std::int32_t * num_unique;
+
+  /// Per-sorted-element inclusive run ids used to scatter inverse indices.
   std::int32_t * run_ids;
 };
 
