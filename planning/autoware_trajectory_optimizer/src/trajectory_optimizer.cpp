@@ -175,14 +175,6 @@ void TrajectoryOptimizer::set_up_params()
   params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");
 }
 
-void TrajectoryOptimizer::publish_processing_time_ms(const double processing_time_ms)
-{
-  autoware_internal_debug_msgs::msg::Float64Stamped msg;
-  msg.stamp = get_clock()->now();
-  msg.data = processing_time_ms;
-  debug_processing_time_pub_->publish(msg);
-}
-
 void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::ConstSharedPtr msg)
 {
   stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
