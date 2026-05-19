@@ -138,8 +138,7 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::lateral_deviation_centerline,
    "Lateral deviation from the centerline[m], positive value means the ego is on the left side of "
    "the centerline"},
-  {Metric::lateral_deviation_centerline_abs,
-   "Absolute lateral deviation from the centerline[m]"},
+  {Metric::lateral_deviation_centerline_abs, "Absolute lateral deviation from the centerline[m]"},
   {Metric::yaw_deviation,
    "Yaw deviation from the reference trajectory[rad], positive value means the ego is "
    "counterclockwise from the reference trajectory"},
