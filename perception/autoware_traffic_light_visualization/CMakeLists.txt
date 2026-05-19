@@ -54,6 +54,22 @@ if(BUILD_TESTING)
     rclcpp
     visualization_msgs
   )
+
+  ament_add_gtest(test_traffic_light_map_visualizer_core
+    test/test_traffic_light_map_visualizer_core.cpp
+  )
+  target_include_directories(test_traffic_light_map_visualizer_core PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_traffic_light_map_visualizer_core
+    traffic_light_map_visualizer
+  )
+  ament_target_dependencies(test_traffic_light_map_visualizer_core
+    autoware_lanelet2_extension
+    autoware_perception_msgs
+    geometry_msgs
+    visualization_msgs
+  )
 endif()
 
 # Copy the assets directory to the installation directory

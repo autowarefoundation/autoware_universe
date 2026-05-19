@@ -260,6 +260,32 @@ void PlannerManager::updateCurrentRouteLanelet(
   const auto & pose = data->self_odometry->pose.pose;
   const auto p = data->parameters;
 
+  const bool skip_global_route_snap =
+    data->operation_mode && data->operation_mode->mode == OperationModeState::AUTONOMOUS &&
+    data->operation_mode->is_autoware_control_enabled;
+
+  const auto snap_to_global_route_if_ego_out = [&]() {
+    if (skip_global_route_snap) {
+      return;
+    }
+    if (!current_route_lanelet_->has_value()) {
+      return;
+    }
+    if (!utils::isEgoOutOfRoute(
+          pose, current_route_lanelet_->value(), data->prev_modified_goal, route_handler)) {
+      return;
+    }
+    lanelet::ConstLanelet constrained{};
+    if (route_handler->getClosestLaneletWithConstrainsWithinRoute(
+          pose, &constrained, p.ego_nearest_dist_threshold, p.ego_nearest_yaw_threshold)) {
+      *current_route_lanelet_ = constrained;
+      return;
+    }
+    if (!is_any_approved_module_running) {
+      resetCurrentRouteLanelet(data);
+    }
+  };
+
   constexpr double extra_margin = 10.0;
   const auto backward_length =
     std::max(p.backward_path_length, p.backward_path_length + extra_margin);
@@ -270,6 +296,7 @@ void PlannerManager::updateCurrentRouteLanelet(
         pose, current_route_lanelet_->value(), &closest_lane, p.ego_nearest_dist_threshold,
         p.ego_nearest_yaw_threshold)) {
     *current_route_lanelet_ = closest_lane;
+    snap_to_global_route_if_ego_out();
     return;
   }
 
@@ -281,10 +308,12 @@ void PlannerManager::updateCurrentRouteLanelet(
   if (opt.has_value()) {
     closest_lane = *opt;
     *current_route_lanelet_ = closest_lane;
+    snap_to_global_route_if_ego_out();
   } else if (const auto opt_constraint =
                experimental::lanelet2_utils::get_closest_lanelet(lanelet_sequence, pose);
              opt_constraint) {
     *current_route_lanelet_ = opt_constraint.value();
+    snap_to_global_route_if_ego_out();
   } else if (!is_any_approved_module_running) {
     resetCurrentRouteLanelet(data);
   }
@@ -903,8 +932,9 @@ SlotOutput SubPlannerManager::runApprovedModules(
   if (std::any_of(approved_module_ptrs_.begin(), approved_module_ptrs_.end(), [](const auto & m) {
         return m->getCurrentStatus() == ModuleStatus::SUCCESS &&
                m->isCurrentRouteLaneletToBeReset();
-      }))
+      })) {
     resetCurrentRouteLanelet(data);
+  }
 
   // remove success module immediately.
   for (auto success_itr = std::find_if(
