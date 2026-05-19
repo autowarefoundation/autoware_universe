@@ -129,19 +129,21 @@ struct UniqueWorkspaceLayout
   // +-----------------------------+ align_up(cub_temp_storage_size, alignof(int64))
   // | input_positions             | num_input_elements int64
   // | sorted_input                | num_input_elements int64
-  // | sorted_input_positions      | num_input_elements + 1 int64
+  // | sorted_input_positions      | num_input_elements int64
+  // | unique_offsets_end          | 1 int64
   // | num_unique                  | 1 int32
   // | run_ids                     | num_input_elements int32
   // +-----------------------------+
   //
   // `sorted_input_positions` is reused as `unique_offsets_inout` after inverse indices are
   // scattered.
-  // Its extra slot stores a sentinel end offset at index `num_input_elements`. Using the fixed last
-  // slot keeps the sentinel outside CUB's compact `[0, num_unique)` output range and separate from
-  // the `num_unique` scalar.
+  // `unique_offsets_end` stores the sentinel end offset in the next int64 slot. This keeps the
+  // sentinel outside CUB's compact `[0, num_unique)` output range and separate from the
+  // `num_unique` scalar.
   std::int64_t * input_positions;
   std::int64_t * sorted_input;
   std::int64_t * sorted_input_positions;
+  std::int64_t * unique_offsets_end;
   std::int32_t * num_unique;
   std::int32_t * run_ids;
 };
@@ -177,13 +179,13 @@ UniqueWorkspaceLayout make_unique_workspace_layout(
   auto * input_positions = reinterpret_cast<std::int64_t *>(scratch);
   auto * sorted_input = input_positions + num_input_elements_in;
   auto * sorted_input_positions = sorted_input + num_input_elements_in;
-  auto * num_unique =
-    reinterpret_cast<std::int32_t *>(sorted_input_positions + num_input_elements_in + 1U);
+  auto * unique_offsets_end = sorted_input_positions + num_input_elements_in;
+  auto * num_unique = reinterpret_cast<std::int32_t *>(unique_offsets_end + 1U);
   auto * run_ids = reinterpret_cast<std::int32_t *>(num_unique + 1U);
 
-  return UniqueWorkspaceLayout{workspace_inout, cub_temp_storage_size_in, input_positions,
-                               sorted_input,    sorted_input_positions,   num_unique,
-                               run_ids};
+  return UniqueWorkspaceLayout{
+    workspace_inout,        cub_temp_storage_size_in, input_positions, sorted_input,
+    sorted_input_positions, unique_offsets_end,       num_unique,      run_ids};
 }
 
 __global__ void mark_run_starts(
@@ -222,23 +224,24 @@ __global__ void scatter_inverse_indices(
 }
 
 __global__ void write_unique_offset_sentinel(
-  std::int64_t * unique_offsets_inout, const std::size_t num_input_elements_in)
+  std::int64_t * unique_offsets_end_out, const std::size_t num_input_elements_in)
 {
-  unique_offsets_inout[num_input_elements_in] = static_cast<std::int64_t>(num_input_elements_in);
+  *unique_offsets_end_out = static_cast<std::int64_t>(num_input_elements_in);
 }
 
 __global__ void write_unique_counts(
   const std::int64_t * unique_offsets_in, const std::int32_t * num_unique_in,
-  std::int64_t * unique_counts_out, const std::size_t num_input_elements_in)
+  const std::int64_t * unique_offsets_end_in, std::int64_t * unique_counts_out)
 {
   const auto index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   if (index >= static_cast<std::size_t>(*num_unique_in)) {
     return;
   }
 
-  const auto next_offset_index =
-    (index + 1U == static_cast<std::size_t>(*num_unique_in)) ? num_input_elements_in : index + 1U;
-  unique_counts_out[index] = unique_offsets_in[next_offset_index] - unique_offsets_in[index];
+  const auto next_offset = (index + 1U == static_cast<std::size_t>(*num_unique_in))
+                             ? *unique_offsets_end_in
+                             : unique_offsets_in[index + 1U];
+  unique_counts_out[index] = next_offset - unique_offsets_in[index];
 }
 
 }  // namespace
@@ -288,12 +291,13 @@ std::int64_t unique(
     num_input_elements_in, stream_in);
 
   // 5. Turn run start offsets into counts.
-  // CUB writes each run's start offset, but not the final end offset. Store the sentinel at the
-  // fixed extra slot so the final count can use the input length as its end boundary without
+  // CUB writes each run's start offset, but not the final end offset. Store the sentinel in the
+  // fixed extra int64 slot so the final count can use the input length as its end boundary without
   // overwriting compact offsets or the selected-count scalar.
-  write_unique_offset_sentinel<<<1, 1, 0, stream_in>>>(unique_offsets_inout, num_input_elements_in);
+  write_unique_offset_sentinel<<<1, 1, 0, stream_in>>>(
+    layout.unique_offsets_end, num_input_elements_in);
   write_unique_counts<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
-    unique_offsets_inout, layout.num_unique, unique_counts_out, num_input_elements_in);
+    unique_offsets_inout, layout.num_unique, layout.unique_offsets_end, unique_counts_out);
 
   std::int32_t num_out = 0;
   cudaMemcpyAsync(
