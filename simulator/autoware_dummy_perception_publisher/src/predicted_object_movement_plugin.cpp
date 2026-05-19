@@ -98,10 +98,15 @@ PredictedObjectMovementPlugin::collect_dummy_object_positions(
     // Otherwise calculate current position using straight-line model
     auto info_it = dummy_predicted_info_map.find(dummy_uuid_str);
 
-    dummy_positions[dummy_uuid_str] =
-      (info_it != dummy_predicted_info_map.end() && info_it->second.last_known_position.has_value())
-        ? info_it->second.last_known_position.value()
-        : utils::MovementUtils::calculate_straight_line_position(dummy_obj, current_time).position;
+    const auto last_known_position = info_it != dummy_predicted_info_map.end()
+                                       ? info_it->second.last_known_position
+                                       : std::nullopt;
+    if (last_known_position) {
+      dummy_positions[dummy_uuid_str] = *last_known_position;
+    } else {
+      dummy_positions[dummy_uuid_str] =
+        utils::MovementUtils::calculate_straight_line_position(dummy_obj, current_time).position;
+    }
 
     if (info_it == dummy_predicted_info_map.end() || info_it->second.predicted_uuid.empty()) {
       unmapped_dummy_uuids.push_back(dummy_uuid_str);
@@ -248,10 +253,14 @@ void PredictedObjectMovementPlugin::create_remapping_for_disappeared_objects(
     }
     auto info_it = dummy_predicted_info_map.find(dummy_uuid);
 
-    remapping_position =
-      (info_it != dummy_predicted_info_map.end() && info_it->second.last_known_position.has_value())
-        ? info_it->second.last_known_position.value()
-        : current_pos_it->second;
+    const auto last_known_position = info_it != dummy_predicted_info_map.end()
+                                       ? info_it->second.last_known_position
+                                       : std::nullopt;
+    if (last_known_position) {
+      remapping_position = *last_known_position;
+    } else {
+      remapping_position = current_pos_it->second;
+    }
     // Find closest available predicted object for remapping
     auto best_match = find_best_predicted_object_match(
       dummy_uuid, remapping_position, available_predicted_uuids, predicted_positions,
@@ -426,15 +435,17 @@ bool PredictedObjectMovementPlugin::is_valid_remapping_candidate(
   Point comparison_position = expected_position;
   auto & dummy_predicted_info_map = predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
   auto info_it = dummy_predicted_info_map.find(dummy_uuid_str);
-  if (
-    info_it == dummy_predicted_info_map.end() ||
-    !info_it->second.last_used_prediction.has_value()) {
+  if (info_it == dummy_predicted_info_map.end()) {
+    return true;  // No last prediction, allow the match
+  }
+
+  const auto & last_used_prediction = info_it->second.last_used_prediction;
+  if (!last_used_prediction) {
     return true;  // No last prediction, allow the match
   }
 
   // Calculate where the dummy object should be based on its last known trajectory
-  const auto & last_trajectory =
-    info_it->second.last_used_prediction.value().kinematics.predicted_paths.at(0);
+  const auto & last_trajectory = last_used_prediction->kinematics.predicted_paths.at(0);
   const auto expected_pos = calculate_expected_position(last_trajectory, dummy_uuid_str);
   if (expected_pos.has_value()) {
     comparison_position = expected_pos.value();
@@ -498,14 +509,16 @@ std::optional<geometry_msgs::msg::Point> PredictedObjectMovementPlugin::calculat
   const auto current_time = node_ptr->now();
   auto & dummy_predicted_info_map = predicted_dummy_objects_tracking_info_.dummy_predicted_info_map;
   auto info_it = dummy_predicted_info_map.find(dummy_uuid_str);
-  if (
-    info_it == dummy_predicted_info_map.end() ||
-    !info_it->second.last_used_prediction_time.has_value()) {
+  if (info_it == dummy_predicted_info_map.end()) {
     return std::nullopt;
   }
 
-  const double elapsed_time =
-    (current_time - info_it->second.last_used_prediction_time.value()).seconds();
+  const auto & last_used_prediction_time = info_it->second.last_used_prediction_time;
+  if (!last_used_prediction_time) {
+    return std::nullopt;
+  }
+
+  const double elapsed_time = (current_time - *last_used_prediction_time).seconds();
 
   // Calculate distance traveled based on elapsed time and dummy object speed
   const double speed = dummy_object.initial_state.twist_covariance.twist.linear.x;
@@ -620,19 +633,17 @@ PredictedObjectMovementPlugin::find_matching_predicted_object(
     info_it = dummy_predicted_info_map.find(obj_uuid_str);
   }
 
-  if (
-    info_it->second.last_used_prediction.has_value() &&
-    info_it->second.prediction_update_timestamp.has_value()) {
-    const double time_since_last_update =
-      (current_time - info_it->second.prediction_update_timestamp.value()).seconds();
+  const auto & last_used_prediction = info_it->second.last_used_prediction;
+  const auto & prediction_update_timestamp = info_it->second.prediction_update_timestamp;
+  if (last_used_prediction && prediction_update_timestamp) {
+    const double time_since_last_update = (current_time - *prediction_update_timestamp).seconds();
 
     // If less than min_predicted_path_keep_duration has passed since last update, keep using the
     // same prediction
     if (time_since_last_update < predicted_object_params_.min_predicted_path_keep_duration) {
-      if (info_it->second.last_used_prediction_time.has_value()) {
-        return std::make_pair(
-          info_it->second.last_used_prediction.value(),
-          info_it->second.last_used_prediction_time.value());
+      const auto & last_used_prediction_time = info_it->second.last_used_prediction_time;
+      if (last_used_prediction_time) {
+        return std::make_pair(*last_used_prediction, *last_used_prediction_time);
       }
     }
   }
