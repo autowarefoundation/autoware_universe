@@ -194,6 +194,7 @@ compute_time_interval_for_passing_line(
     if (!entry_time) {
       continue;
     }
+    const double entry_time_value = entry_time.value_or(0.0);
 
     // search backward
     std::optional<double> exit_time{};
@@ -201,7 +202,7 @@ compute_time_interval_for_passing_line(
          ranges::views::enumerate(precise_predicted_path.path | ranges::views::reverse)) {
       const auto object_poly = autoware_utils_geometry::to_polygon2d(pose, shape);
       const double time = horizon - i * new_time_step;
-      if (entry_time && time < entry_time.value()) {
+      if (time < entry_time_value) {
         break;
       }
       if (boost::geometry::intersects(object_poly, line2_2d)) {
@@ -212,8 +213,10 @@ compute_time_interval_for_passing_line(
     if (!exit_time) {
       continue;
     }
+    const double exit_time_value = exit_time.value_or(0.0);
+
     // in case the object is completely inside conflict_area, it is regarded entry_time = 0.0
-    passage_time_intervals.emplace_back(entry_time.value(), exit_time.value(), predicted_path);
+    passage_time_intervals.emplace_back(entry_time_value, exit_time_value, predicted_path);
   }
   return passage_time_intervals;
 }
