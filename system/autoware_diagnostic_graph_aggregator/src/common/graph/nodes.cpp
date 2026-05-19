@@ -51,10 +51,12 @@ DiagNodeStruct NodeUnit::create_struct()
 
 DiagNodeStatus NodeUnit::create_status()
 {
-  status_.level = latch_->level();
+  status_.level = level();
+  status_.output_level = latch_->level();
   status_.input_level = latch_->input_level();  // Note: Equals logic level.
   status_.latch_level = latch_->latch_level();
   status_.is_dependent = dependency();
+  status_.is_overridden = override_.has_value();
   return status_;
 }
 
@@ -68,6 +70,11 @@ void NodeUnit::set_initializing(bool initializing)
   latch_->set_initializing(initializing);
 }
 
+void NodeUnit::set_override(const std::optional<DiagnosticLevel> & level)
+{
+  override_ = level;
+}
+
 void NodeUnit::reset()
 {
   latch_->reset();
@@ -75,7 +82,7 @@ void NodeUnit::reset()
 
 DiagnosticLevel NodeUnit::level() const
 {
-  return latch_->level();
+  return override_ ? override_.value() : latch_->level();
 }
 
 std::vector<LinkPort *> NodeUnit::ports() const

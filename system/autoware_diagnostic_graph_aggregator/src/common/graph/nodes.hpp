@@ -23,6 +23,7 @@
 #include <rclcpp/time.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,7 @@ public:
   std::string type() const;
   bool dependency() const;
   void set_initializing(bool initializing);
+  void set_override(const std::optional<DiagnosticLevel> & level);
   void reset();
   void update(const rclcpp::Time & stamp);
 
@@ -53,6 +55,7 @@ private:
   DiagNodeStatus status_;
   std::unique_ptr<Logic> logic_;
   std::unique_ptr<LatchLevel> latch_;
+  std::optional<DiagnosticLevel> override_;
   LinkItem * dependency_;
 };
 
