@@ -19,7 +19,7 @@
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
-#include <tier4_simulation_msgs/msg/dummy_object.hpp>
+#include <autoware_simulation_msgs/msg/simulated_object.hpp>
 
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -27,10 +27,10 @@ namespace autoware::dummy_perception_publisher
 {
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::TrackedObject;
+using autoware_simulation_msgs::msg::SimulatedObject;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::TwistWithCovariance;
-using tier4_simulation_msgs::msg::DummyObject;
 
 struct ObjectInfo
 {
@@ -52,7 +52,7 @@ struct ObjectInfo
   // convert to TrackedObject
   // (todo) currently need object input to get id and header information, but it should be removed
   [[nodiscard]] autoware_perception_msgs::msg::TrackedObject toTrackedObject(
-    const DummyObject & object) const;
+    const SimulatedObject & object) const;
 };
 }  // namespace autoware::dummy_perception_publisher
 

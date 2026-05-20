@@ -101,9 +101,9 @@ void UnknownInitialPoseTool::onInitialize()
   updateTopic();
 }
 
-DummyObject UnknownInitialPoseTool::createObjectMsg() const
+SimulatedObject UnknownInitialPoseTool::createObjectMsg() const
 {
-  DummyObject object{};
+  SimulatedObject object{};
   std::string fixed_frame = context_->getFixedFrame().toStdString();
 
   // header

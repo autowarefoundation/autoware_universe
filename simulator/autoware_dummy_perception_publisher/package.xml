@@ -21,6 +21,7 @@
 
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_point_types</depend>
+  <depend>autoware_simulation_msgs</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils_geometry</depend>
   <depend>autoware_utils_rclcpp</depend>
@@ -33,7 +34,6 @@
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
-  <depend>tier4_simulation_msgs</depend>
   <depend>unique_identifier_msgs</depend>
 
   <export>

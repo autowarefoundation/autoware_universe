@@ -267,7 +267,7 @@ void InteractiveObjectTool::updateTopic()
 {
   rclcpp::Node::SharedPtr raw_node = context_->getRosNodeAbstraction().lock()->get_raw_node();
   dummy_object_info_pub_ =
-    raw_node->create_publisher<DummyObject>(topic_property_->getStdString(), 1);
+    raw_node->create_publisher<SimulatedObject>(topic_property_->getStdString(), 1);
   clock_ = raw_node->get_clock();
   move_tool_.initialize(context_);
   property_frame_->setFrameManager(context_->getFrameManager());
@@ -295,7 +295,9 @@ void InteractiveObjectTool::onPoseSet(double x, double y, double theta)
   output_msg.initial_state.accel_covariance.accel.linear.z = 0.0;
   output_msg.max_velocity = max_velocity_->getFloat();
   output_msg.min_velocity = min_velocity_->getFloat();
-  output_msg.action = predicted_property_->getBool() ? DummyObject::PREDICT : DummyObject::ADD;
+  output_msg.action = SimulatedObject::ADD;
+  output_msg.movement_model = predicted_property_->getBool() ? SimulatedObject::PREDICTED_PATH
+                                                             : SimulatedObject::STRAIGHT_LINE;
 
   dummy_object_info_pub_->publish(output_msg);
 }
@@ -307,7 +309,7 @@ void InteractiveObjectTool::publishObjectMsg(
   output_msg.action = action;
   output_msg.id.uuid = uuid;
 
-  if (action == DummyObject::DELETE) {
+  if (action == SimulatedObject::DELETE) {
     dummy_object_info_pub_->publish(output_msg);
     return;
   }
@@ -321,6 +323,8 @@ void InteractiveObjectTool::publishObjectMsg(
 
   tf2::toMsg(object_tf.get(), output_msg.initial_state.pose_covariance.pose);
   output_msg.initial_state.twist_covariance.twist = object_twist.get();
+  output_msg.movement_model = predicted_property_->getBool() ? SimulatedObject::PREDICTED_PATH
+                                                             : SimulatedObject::STRAIGHT_LINE;
 
   dummy_object_info_pub_->publish(output_msg);
 }
@@ -336,10 +340,10 @@ int InteractiveObjectTool::processMouseEvent(rviz_common::ViewportMouseEvent & e
     if (point) {
       if (event.shift()) {
         const auto uuid = objects_.create(point.value());
-        publishObjectMsg(uuid.get(), DummyObject::ADD);
+        publishObjectMsg(uuid.get(), SimulatedObject::ADD);
       } else if (event.alt()) {
         const auto uuid = objects_.remove(point.value());
-        publishObjectMsg(uuid.get(), DummyObject::DELETE);
+        publishObjectMsg(uuid.get(), SimulatedObject::DELETE);
       } else {
         objects_.select(point.value());
       }
@@ -349,7 +353,7 @@ int InteractiveObjectTool::processMouseEvent(rviz_common::ViewportMouseEvent & e
 
   if (event.rightUp()) {
     const auto uuid = objects_.reset();
-    publishObjectMsg(uuid.get(), DummyObject::MODIFY);
+    publishObjectMsg(uuid.get(), SimulatedObject::MODIFY);
     return 0;
   }
 
@@ -357,7 +361,7 @@ int InteractiveObjectTool::processMouseEvent(rviz_common::ViewportMouseEvent & e
     const auto point = get_point_from_mouse(event);
     if (point) {
       const auto uuid = objects_.update(point.value());
-      publishObjectMsg(uuid.get(), DummyObject::MODIFY);
+      publishObjectMsg(uuid.get(), SimulatedObject::MODIFY);
     }
     return 0;
   }
@@ -372,7 +376,8 @@ int InteractiveObjectTool::processKeyEvent(QKeyEvent * event, rviz_common::Rende
     if (objects_.getTargetObject()) {
       const auto uuid = objects_.getTargetUuid();
       if (uuid.has_value()) {
-        publishObjectMsg(uuid.value(), DummyObject::PREDICT);
+        predicted_property_->setBool(true);
+        publishObjectMsg(uuid.value(), SimulatedObject::MODIFY);
       }
     }
     return 0;
