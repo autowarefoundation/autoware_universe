@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,10 +19,6 @@
 #include "traffic_light_multi_camera_fusion_process.hpp"
 #include "types.hpp"
 
-#include <autoware_utils/ros/diagnostics_interface.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
@@ -32,21 +28,16 @@
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
 #include <lanelet2_core/Forward.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/sync_policies/exact_time.h>
-#include <message_filters/synchronizer.h>
 
-#include <list>
 #include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
 {
-namespace mf = message_filters;
 
 inline bool is_unknown(const StateKey & state_key)
 {
@@ -86,7 +77,32 @@ struct ConflictInfo
 using GroupFusionInfoMap =
   std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, GroupFusionInfo>;
 
-class MultiCameraFusion : public rclcpp::Node
+struct MultiCameraFusionConfig
+{
+  /*
+  For every input message input_m, if the timestamp difference between input_m and the latest
+  message is smaller than message_lifespan, then input_m would be used for the fusion. Otherwise,
+  it would be discarded.
+  */
+  double message_lifespan{1.0};
+  /**
+   * @brief The prior log-odds for a traffic light state.
+   */
+  double prior_log_odds{0.0};
+  bool use_signal_consistency_check{false};
+  bool publish_partial_matched_signal{false};
+  lanelet::LaneletMapPtr lanelet_map_ptr{nullptr};
+};
+
+struct MultiCameraFusionResult
+{
+  autoware_perception_msgs::msg::TrafficLightGroupArray traffic_light_groups;
+  std::vector<ConflictInfo> conflicted_regulatory_element_status;
+  // Diagnostic messages forwarded to the Node for logging (Error-as-Value).
+  std::vector<std::string> warnings;
+};
+
+class MultiCameraFusion
 {
 public:
   using CamInfoType = sensor_msgs::msg::CameraInfo;
@@ -98,17 +114,13 @@ public:
   using NewSignalType = autoware_perception_msgs::msg::TrafficLightGroup;
   using NewSignalArrayType = autoware_perception_msgs::msg::TrafficLightGroupArray;
 
-  using RecordArrayType = std::pair<RoiArrayType, SignalArrayType>;
+  explicit MultiCameraFusion(const MultiCameraFusionConfig & config);
+  MultiCameraFusion() = default;
 
-  explicit MultiCameraFusion(const rclcpp::NodeOptions & node_options);
+  MultiCameraFusionResult fuse(
+    const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals);
 
 private:
-  void traffic_signal_roi_callback(
-    const CamInfoType::ConstSharedPtr cam_info_msg, const RoiArrayType::ConstSharedPtr roi_msg,
-    const SignalArrayType::ConstSharedPtr signal_msg);
-
-  void map_callback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
-
   void multi_camera_fusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
 
   void convert_output_msg(
@@ -116,20 +128,23 @@ private:
 
   void group_fusion(
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
-    std::map<IdType, utils::FusionRecord> & grouped_record_map);
+    std::map<IdType, utils::FusionRecord> & grouped_record_map,
+    std::vector<std::string> & warnings);
 
   /**
    * @brief Accumulates log-odds evidence for each traffic light group from individual fused
    * records.
    */
   GroupFusionInfoMap accumulate_group_evidence(
-    const std::map<IdType, utils::FusionRecord> & fused_record_map);
+    const std::map<IdType, utils::FusionRecord> & fused_record_map,
+    std::vector<std::string> & warnings);
 
   /**
    * @brief Processes a single fused record and updates the group_fusion_info_map.
    */
   void process_fused_record(
-    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record);
+    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record,
+    std::vector<std::string> & warnings);
 
   /**
    * @brief Updates the map for a single (element, regulatory_id) combination.
@@ -158,22 +173,7 @@ private:
     const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map);
 
-  void publish_diagnostics(rclcpp::Time stamp);
-
-  using ExactSyncPolicy = mf::sync_policies::ExactTime<CamInfoType, RoiArrayType, SignalArrayType>;
-  using ExactSync = mf::Synchronizer<ExactSyncPolicy>;
-  using ApproximateSyncPolicy =
-    mf::sync_policies::ApproximateTime<CamInfoType, RoiArrayType, SignalArrayType>;
-  using ApproximateSync = mf::Synchronizer<ApproximateSyncPolicy>;
-
-  std::vector<std::unique_ptr<mf::Subscriber<SignalArrayType>>> signal_subs_;
-  std::vector<std::unique_ptr<mf::Subscriber<RoiArrayType>>> roi_subs_;
-  std::vector<std::unique_ptr<mf::Subscriber<CamInfoType>>> cam_info_subs_;
-  std::vector<std::unique_ptr<ExactSync>> exact_sync_subs_;
-  std::vector<std::unique_ptr<ApproximateSync>> approximate_sync_subs_;
-  rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_sub_;
-
-  rclcpp::Publisher<NewSignalArrayType>::SharedPtr signal_pub_;
+  MultiCameraFusionConfig config_{};
   /*
   Mapping from traffic light instance id to regulatory element id (group id)
   */
@@ -183,24 +183,11 @@ private:
   Use multiset in case multiple cameras publish images at the exact same time.
   */
   std::multiset<utils::FusionRecordArr> record_arr_set_;
-  bool is_approximate_sync_;
-  /*
-  For every input message input_m, if the timestamp difference between input_m and the latest
-  message is smaller than message_lifespan_, then input_m would be used for the fusion. Otherwise,
-  it would be discarded.
-  */
-  double message_lifespan_;
-  /**
-   * @brief The prior log-odds for a traffic light state.
-   */
-  double prior_log_odds_;
-  bool use_signal_consistency_check_;
-  bool publish_partial_matched_signal_;
 
   std::unique_ptr<SignalValidator> signal_validator_;
   std::vector<ConflictInfo> conflicted_regulatory_element_status_{};
-
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 };
+
 }  // namespace autoware::traffic_light
+
 #endif  // MULTI_CAMERA_FUSION_HPP_

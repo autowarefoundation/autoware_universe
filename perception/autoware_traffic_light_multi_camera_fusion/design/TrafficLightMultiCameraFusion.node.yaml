@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::traffic_light::MultiCameraFusion
+  plugin: autoware::traffic_light::MultiCameraFusionNode
   executable: traffic_light_multi_camera_fusion_node
   node_output: screen
 

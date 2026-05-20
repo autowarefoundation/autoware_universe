@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
 
 #include "multi_camera_fusion.hpp"
 
-#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
+#include <rclcpp/time.hpp>
 
 #include <algorithm>
-#include <functional>
+#include <cmath>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -68,96 +68,13 @@ inline StateKey get_best_state_key(const std::map<StateKey, double> & accumulate
   return best_state_key;
 }
 
-}  // namespace
-
-MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
-: Node("traffic_light_multi_camera_fusion", node_options)
+std::map<lanelet::Id, std::vector<lanelet::Id>> build_traffic_light_id_to_regulatory_ele_id(
+  const lanelet::LaneletMapPtr & lanelet_map_ptr)
 {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-
-  std::vector<std::string> camera_namespaces =
-    this->declare_parameter<std::vector<std::string>>("camera_namespaces");
-  is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
-  message_lifespan_ = this->declare_parameter<double>("message_lifespan");
-  prior_log_odds_ = this->declare_parameter<double>("prior_log_odds");
-
-  use_signal_consistency_check_ = this->declare_parameter<bool>("signal_consistency_check.enable");
-  publish_partial_matched_signal_ =
-    this->declare_parameter<bool>("signal_consistency_check.publish_partial_matched_signal");
-
-  for (const std::string & camera_ns : camera_namespaces) {
-    std::string signal_topic = camera_ns + "/classification/traffic_signals";
-    std::string roi_topic = camera_ns + "/detection/rois";
-    std::string cam_info_topic = camera_ns + "/camera_info";
-    roi_subs_.emplace_back(
-      new mf::Subscriber<RoiArrayType>(this, roi_topic, rclcpp::QoS{1}.get_rmw_qos_profile()));
-    signal_subs_.emplace_back(new mf::Subscriber<SignalArrayType>(
-      this, signal_topic, rclcpp::QoS{1}.get_rmw_qos_profile()));
-    cam_info_subs_.emplace_back(new mf::Subscriber<CamInfoType>(
-      this, cam_info_topic, rclcpp::SensorDataQoS().get_rmw_qos_profile()));
-    if (is_approximate_sync_ == false) {
-      exact_sync_subs_.emplace_back(new ExactSync(
-        ExactSyncPolicy(10), *(cam_info_subs_.back()), *(roi_subs_.back()),
-        *(signal_subs_.back())));
-      exact_sync_subs_.back()->registerCallback(
-        std::bind(&MultiCameraFusion::traffic_signal_roi_callback, this, _1, _2, _3));
-    } else {
-      approximate_sync_subs_.emplace_back(new ApproximateSync(
-        ApproximateSyncPolicy(10), *(cam_info_subs_.back()), *(roi_subs_.back()),
-        *(signal_subs_.back())));
-      approximate_sync_subs_.back()->registerCallback(
-        std::bind(&MultiCameraFusion::traffic_signal_roi_callback, this, _1, _2, _3));
-    }
+  std::map<lanelet::Id, std::vector<lanelet::Id>> traffic_light_id_to_regulatory_ele_id;
+  if (!lanelet_map_ptr) {
+    return traffic_light_id_to_regulatory_ele_id;
   }
-
-  map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
-    "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
-    [this](const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg) {
-      this->map_callback(msg);
-    });
-  signal_pub_ = create_publisher<NewSignalArrayType>("~/output/traffic_signals", rclcpp::QoS{1});
-
-  diagnostics_interface_ptr_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "traffic light conflict status");
-
-  if (use_signal_consistency_check_) {
-    signal_validator_ = std::make_unique<SignalValidator>();
-  }
-}
-
-void MultiCameraFusion::traffic_signal_roi_callback(
-  const CamInfoType::ConstSharedPtr cam_info_msg, const RoiArrayType::ConstSharedPtr roi_msg,
-  const SignalArrayType::ConstSharedPtr signal_msg)
-{
-  rclcpp::Time stamp(roi_msg->header.stamp);
-  /*
-  Insert the received record array to the table.
-  Attention should be payed that this record array might not have the newest timestamp
-  */
-  record_arr_set_.insert(
-    utils::FusionRecordArr{cam_info_msg->header, *cam_info_msg, *roi_msg, *signal_msg});
-
-  std::map<IdType, utils::FusionRecord> fused_record_map, grouped_record_map;
-  multi_camera_fusion(fused_record_map);
-  group_fusion(fused_record_map, grouped_record_map);
-
-  NewSignalArrayType msg_out;
-  convert_output_msg(grouped_record_map, msg_out);
-  msg_out.stamp = cam_info_msg->header.stamp;
-  signal_pub_->publish(msg_out);
-
-  if (conflicted_regulatory_element_status_.size() > 0) {
-    publish_diagnostics(stamp);
-  }
-}
-
-void MultiCameraFusion::map_callback(
-  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg)
-{
-  lanelet::LaneletMapPtr lanelet_map_ptr = autoware::experimental::lanelet2_utils::remove_const(
-    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*input_msg));
   lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr);
   std::vector<lanelet::AutowareTrafficLightConstPtr> all_lanelet_traffic_lights =
     lanelet::utils::query::autowareTrafficLights(all_lanelets);
@@ -167,9 +84,45 @@ void MultiCameraFusion::map_callback(
 
     auto lights = tl->trafficLights();
     for (const auto & light : lights) {
-      traffic_light_id_to_regulatory_ele_id_[light.id()].emplace_back(tl->id());
+      traffic_light_id_to_regulatory_ele_id[light.id()].emplace_back(tl->id());
     }
   }
+  return traffic_light_id_to_regulatory_ele_id;
+}
+
+}  // namespace
+
+MultiCameraFusion::MultiCameraFusion(const MultiCameraFusionConfig & config)
+: config_(config),
+  traffic_light_id_to_regulatory_ele_id_(
+    build_traffic_light_id_to_regulatory_ele_id(config.lanelet_map_ptr))
+{
+  if (config_.use_signal_consistency_check) {
+    signal_validator_ = std::make_unique<SignalValidator>();
+  }
+}
+
+MultiCameraFusionResult MultiCameraFusion::fuse(
+  const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals)
+{
+  /*
+  Insert the received record array to the table.
+  Attention should be payed that this record array might not have the newest timestamp
+  */
+  record_arr_set_.insert(utils::FusionRecordArr{cam_info.header, cam_info, rois, signals});
+
+  MultiCameraFusionResult result;
+  std::map<IdType, utils::FusionRecord> fused_record_map, grouped_record_map;
+  multi_camera_fusion(fused_record_map);
+  group_fusion(fused_record_map, grouped_record_map, result.warnings);
+
+  NewSignalArrayType msg_out;
+  convert_output_msg(grouped_record_map, msg_out);
+  msg_out.stamp = cam_info.header.stamp;
+  result.traffic_light_groups = msg_out;
+
+  result.conflicted_regulatory_element_status = conflicted_regulatory_element_status_;
+  return result;
 }
 
 void MultiCameraFusion::convert_output_msg(
@@ -192,13 +145,6 @@ void MultiCameraFusion::multi_camera_fusion(
   std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
   fused_record_map.clear();
-  /*
-  this should not happen. Just in case
-  */
-  if (record_arr_set_.empty()) {
-    RCLCPP_ERROR(get_logger(), "record_arr_set_ is empty! This should not happen");
-    return;
-  }
   const rclcpp::Time & newest_stamp(record_arr_set_.rbegin()->header.stamp);
   for (auto it = record_arr_set_.begin(); it != record_arr_set_.end();) {
     /*
@@ -207,7 +153,7 @@ void MultiCameraFusion::multi_camera_fusion(
     */
     if (
       (newest_stamp - rclcpp::Time(it->header.stamp)) >
-      rclcpp::Duration::from_seconds(message_lifespan_)) {
+      rclcpp::Duration::from_seconds(config_.message_lifespan)) {
       it = record_arr_set_.erase(it);
     } else {
       /*
@@ -243,24 +189,25 @@ void MultiCameraFusion::multi_camera_fusion(
 
 void MultiCameraFusion::group_fusion(
   const std::map<IdType, utils::FusionRecord> & fused_record_map,
-  std::map<IdType, utils::FusionRecord> & grouped_record_map)
+  std::map<IdType, utils::FusionRecord> & grouped_record_map, std::vector<std::string> & warnings)
 {
   grouped_record_map.clear();
 
   // Stage 1: Accumulate evidence from all fused records
   const std::map<IdType, GroupFusionInfo> group_fusion_info_map =
-    accumulate_group_evidence(fused_record_map);
+    accumulate_group_evidence(fused_record_map, warnings);
 
   // Stage 2: Determine the best state for each group from the accumulated evidence
   determine_best_group_state(group_fusion_info_map, grouped_record_map);
 }
 
 GroupFusionInfoMap MultiCameraFusion::accumulate_group_evidence(
-  const std::map<IdType, utils::FusionRecord> & fused_record_map)
+  const std::map<IdType, utils::FusionRecord> & fused_record_map,
+  std::vector<std::string> & warnings)
 {
   GroupFusionInfoMap group_fusion_info_map;
   for (const auto & p : fused_record_map) {
-    process_fused_record(group_fusion_info_map, p.second);
+    process_fused_record(group_fusion_info_map, p.second, warnings);
   }
   return group_fusion_info_map;
 }
@@ -270,15 +217,17 @@ GroupFusionInfoMap MultiCameraFusion::accumulate_group_evidence(
  * (This function contains the logic from the outer loop)
  */
 void MultiCameraFusion::process_fused_record(
-  GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record)
+  GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record,
+  std::vector<std::string> & warnings)
 {
   const IdType roi_id = record.roi.traffic_light_id;
 
   // Guard Clause 1: Check if traffic light ID is in the map
   const auto it = traffic_light_id_to_regulatory_ele_id_.find(roi_id);
   if (it == traffic_light_id_to_regulatory_ele_id_.end()) {
-    RCLCPP_WARN_STREAM(
-      get_logger(), "Found Traffic Light Id = " << roi_id << " which is not defined in Map");
+    std::ostringstream warning_stream;
+    warning_stream << "Found Traffic Light Id = " << roi_id << " which is not defined in Map";
+    warnings.emplace_back(warning_stream.str());
     return;
   }
 
@@ -329,7 +278,7 @@ void MultiCameraFusion::update_log_odds(
   const double evidence_log_odds = probability_to_log_odds(confidence);
 
   // Accumulate evidence
-  log_odds_map[state_key] += evidence_log_odds - prior_log_odds_;
+  log_odds_map[state_key] += evidence_log_odds - config_.prior_log_odds;
 }
 
 /**
@@ -371,7 +320,7 @@ void MultiCameraFusion::determine_best_group_state(
       continue;
     }
 
-    if (!use_signal_consistency_check_ || group_info.accumulated_log_odds.size() == 1) {
+    if (!config_.use_signal_consistency_check || group_info.accumulated_log_odds.size() == 1) {
       // use the most probable one (the highest logarithmic odds) as the base
       const StateKey best_state_key = get_best_state_key(group_info.accumulated_log_odds);
       grouped_record_map[reg_ele_id] = group_info.best_record_for_state.at(best_state_key);
@@ -398,7 +347,7 @@ void MultiCameraFusion::determine_best_group_state(
         // we immediately exit the loop
         break;
       } else {  // partial conflict
-        if (publish_partial_matched_signal_) {
+        if (config_.publish_partial_matched_signal) {
           continue;
         } else {
           break;
@@ -407,7 +356,8 @@ void MultiCameraFusion::determine_best_group_state(
     }
 
     if (
-      conflict_result.conflict_type == ConflictType::CONFLICT || !publish_partial_matched_signal_) {
+      conflict_result.conflict_type == ConflictType::CONFLICT ||
+      !config_.publish_partial_matched_signal) {
       // use a fail-safe record as a fallback for this regulatory element.
 
       // use the most probable one (the highest logarithmic odds) as the base
@@ -449,26 +399,4 @@ void MultiCameraFusion::determine_best_group_state(
   }
 }
 
-void MultiCameraFusion::publish_diagnostics(rclcpp::Time stamp)
-{
-  diagnostics_interface_ptr_->clear();
-
-  // publish only conflicted RE status
-  for (const auto & conflicted_re : conflicted_regulatory_element_status_) {
-    diagnostics_interface_ptr_->add_key_value(
-      std::to_string(static_cast<int64_t>(conflicted_re.id)),
-      static_cast<int>(conflicted_re.conflict_type));
-  }
-
-  diagnostics_interface_ptr_->update_level_and_message(
-    diagnostic_msgs::msg::DiagnosticStatus::WARN,
-    "Detected traffic light signal conflict in the fusion process.");
-
-  diagnostics_interface_ptr_->publish(stamp);
-  conflicted_regulatory_element_status_.clear();
-}
-
 }  // namespace autoware::traffic_light
-
-#include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::traffic_light::MultiCameraFusion)
