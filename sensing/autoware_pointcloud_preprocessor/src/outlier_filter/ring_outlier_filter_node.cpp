@@ -227,8 +227,8 @@ void RingOutlierFilterComponent::faster_filter(
           output_ptr->y = input_ptr->y;
           output_ptr->z = input_ptr->z;
         }
-        const float & intensity =
-          *reinterpret_cast<const float *>(&input->data[indices[i] + input_intensity_offset]);
+        const std::uint8_t & intensity = *reinterpret_cast<const std::uint8_t *>(
+          &input->data[indices[i] + input_intensity_offset]);
         output_ptr->intensity = intensity;
 
         const std::uint8_t & return_type = *reinterpret_cast<const std::uint8_t *>(

@@ -82,6 +82,7 @@ public:
     const Metric & metric, const double & metric_value, const bool & accumulate_metric = true);
   void AddLateralDeviationMetricMsg(const Trajectory & traj, const Point & ego_point);
   void AddYawDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose);
+  void AddLateralDeviationCenterlineMetricMsg(const Pose & ego_pose);
   void AddGoalDeviationMetricMsg(const Odometry & odom);
   void AddObjectMetricMsg(const Odometry & odom, const PredictedObjects & objects);
   void AddBoundaryDistanceMetricMsg(const PathWithLaneId & behavior_path, const Pose & ego_pose);
@@ -140,6 +141,8 @@ private:
     Metric::jerk,
     Metric::lateral_deviation,
     Metric::lateral_deviation_abs,
+    Metric::lateral_deviation_centerline,
+    Metric::lateral_deviation_centerline_abs,
     Metric::yaw_deviation,
     Metric::yaw_deviation_abs,
     Metric::goal_longitudinal_deviation,
