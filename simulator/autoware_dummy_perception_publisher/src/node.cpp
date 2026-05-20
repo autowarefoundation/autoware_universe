@@ -48,11 +48,11 @@ namespace autoware::dummy_perception_publisher
 
 using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
+using autoware_simulation_msgs::msg::SimulatedObject;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::PoseStamped;
 using geometry_msgs::msg::Transform;
 using geometry_msgs::msg::TransformStamped;
-using tier4_simulation_msgs::msg::DummyObject;
 
 DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
 : Node("dummy_perception_publisher"), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
@@ -91,7 +91,7 @@ DummyPerceptionPublisherNode::DummyPerceptionPublisherNode()
   detected_object_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "output/dynamic_object", qos);
   pointcloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("output/points_raw", qos);
-  object_sub_ = this->create_subscription<tier4_simulation_msgs::msg::DummyObject>(
+  object_sub_ = this->create_subscription<autoware_simulation_msgs::msg::SimulatedObject>(
     "input/object", 100,
     std::bind(&DummyPerceptionPublisherNode::objectCallback, this, std::placeholders::_1));
 
@@ -166,7 +166,7 @@ void DummyPerceptionPublisherNode::timerCallback()
   static std::uniform_real_distribution<> detection_successful_random(0.0, 1.0);
 
   // merge objects and get object infos
-  std::vector<DummyObject> all_objects;
+  std::vector<SimulatedObject> all_objects;
   std::vector<ObjectInfo> obj_infos;
 
   for (const auto & plugin : movement_plugins_) {
@@ -295,9 +295,9 @@ void DummyPerceptionPublisherNode::timerCallback()
 }
 
 void DummyPerceptionPublisherNode::objectCallback(
-  const tier4_simulation_msgs::msg::DummyObject::ConstSharedPtr msg)
+  const autoware_simulation_msgs::msg::SimulatedObject::ConstSharedPtr msg)
 {
-  auto create_dummy_object = [&]() -> std::optional<DummyObject> {
+  auto create_simulated_object = [&]() -> std::optional<SimulatedObject> {
     tf2::Transform tf_input2map;
     tf2::Transform tf_input2object_origin;
     tf2::Transform tf_map2object_origin;
@@ -313,7 +313,7 @@ void DummyPerceptionPublisherNode::objectCallback(
     }
     tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
     tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
-    DummyObject object;
+    SimulatedObject object;
     object = *msg;
     tf2::toMsg(tf_map2object_origin, object.initial_state.pose_covariance.pose);
 
@@ -333,7 +333,7 @@ void DummyPerceptionPublisherNode::objectCallback(
     return object;
   };
 
-  auto get_modified_object_position = [&]() -> std::optional<DummyObject> {
+  auto get_modified_object_position = [&]() -> std::optional<SimulatedObject> {
     tf2::Transform tf_input2map;
     tf2::Transform tf_input2object_origin;
     tf2::Transform tf_map2object_origin;
@@ -349,7 +349,7 @@ void DummyPerceptionPublisherNode::objectCallback(
     }
     tf2::fromMsg(msg->initial_state.pose_covariance.pose, tf_input2object_origin);
     tf_map2object_origin = tf_input2map.inverse() * tf_input2object_origin;
-    DummyObject modified_object = *msg;
+    SimulatedObject modified_object = *msg;
     tf2::toMsg(tf_map2object_origin, modified_object.initial_state.pose_covariance.pose);
     if (!use_base_link_z_) {
       return modified_object;
@@ -368,26 +368,25 @@ void DummyPerceptionPublisherNode::objectCallback(
   };
 
   switch (msg->action) {
-    case tier4_simulation_msgs::msg::DummyObject::PREDICT:
-    case tier4_simulation_msgs::msg::DummyObject::ADD: {
-      auto object = create_dummy_object();
+    case autoware_simulation_msgs::msg::SimulatedObject::ADD: {
+      auto object = create_simulated_object();
       if (!object) {
         break;
       }
       for (auto & plugin : movement_plugins_) {
-        if (plugin->set_dummy_object(*object)) {
+        if (plugin->set_simulated_object(*object)) {
           break;
         }
       }
       break;
     }
-    case tier4_simulation_msgs::msg::DummyObject::DELETE: {
+    case autoware_simulation_msgs::msg::SimulatedObject::DELETE: {
       for (auto & plugin : movement_plugins_) {
         plugin->delete_object(msg->id);
       }
       break;
     }
-    case tier4_simulation_msgs::msg::DummyObject::MODIFY: {
+    case autoware_simulation_msgs::msg::SimulatedObject::MODIFY: {
       auto modified_object = get_modified_object_position();
       if (modified_object) {
         for (auto & plugin : movement_plugins_) {
@@ -396,10 +395,17 @@ void DummyPerceptionPublisherNode::objectCallback(
       }
       break;
     }
-    case tier4_simulation_msgs::msg::DummyObject::DELETEALL: {
+    case autoware_simulation_msgs::msg::SimulatedObject::DELETE_ALL: {
       for (auto & plugin : movement_plugins_) {
         plugin->clear_objects();
       }
+      break;
+    }
+    default: {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 5000,
+        "Received SimulatedObject with unknown action value %u; ignoring.",
+        static_cast<unsigned>(msg->action));
       break;
     }
   }

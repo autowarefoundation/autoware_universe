@@ -19,14 +19,14 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_simulation_msgs/msg/dummy_object.hpp>
+#include <autoware_simulation_msgs/msg/simulated_object.hpp>
 
 #include <algorithm>
 #include <vector>
 
 namespace autoware::dummy_perception_publisher::pluginlib
 {
-using tier4_simulation_msgs::msg::DummyObject;
+using autoware_simulation_msgs::msg::SimulatedObject;
 
 class DummyObjectMovementBasePlugin
 {
@@ -37,20 +37,20 @@ protected:
   [[nodiscard]] rclcpp::Node * get_node() const { return node_ptr_; }
 
 public:
-  std::vector<DummyObject> objects_;
-  uint8_t associated_action_type_{tier4_simulation_msgs::msg::DummyObject::ADD};
+  std::vector<SimulatedObject> objects_;
+  uint8_t associated_movement_model_{autoware_simulation_msgs::msg::SimulatedObject::STRAIGHT_LINE};
 
   explicit DummyObjectMovementBasePlugin(rclcpp::Node * node) : node_ptr_(node) {}
   virtual ~DummyObjectMovementBasePlugin() = default;
   virtual void initialize() = 0;
   virtual std::vector<ObjectInfo> move_objects() = 0;
-  [[nodiscard]] std::vector<DummyObject> get_objects() const { return objects_; }
+  [[nodiscard]] std::vector<SimulatedObject> get_objects() const { return objects_; }
   void clear_objects() { objects_.clear(); }
-  void modify_object(const DummyObject & object)
+  void modify_object(const SimulatedObject & object)
   {
     auto obj_it = std::find_if(
       objects_.begin(), objects_.end(),
-      [&object](const DummyObject & obj) { return obj.id.uuid == object.id.uuid; });
+      [&object](const SimulatedObject & obj) { return obj.id.uuid == object.id.uuid; });
     if (obj_it != objects_.end()) {
       *obj_it = object;
     }
@@ -64,16 +64,19 @@ public:
       }
     }
   }
-  bool set_dummy_object(const DummyObject & object)
+  bool set_simulated_object(const SimulatedObject & object)
   {
-    // Check if the action type matches
-    if (object.action != associated_action_type_) {
+    // Check if the movement model matches
+    if (object.movement_model != associated_movement_model_) {
       return false;
     }
     objects_.push_back(object);
     return true;
   }
-  void set_associated_action_type(uint8_t action_type) { associated_action_type_ = action_type; }
+  void set_associated_movement_model(uint8_t movement_model)
+  {
+    associated_movement_model_ = movement_model;
+  }
 };
 
 }  // namespace autoware::dummy_perception_publisher::pluginlib

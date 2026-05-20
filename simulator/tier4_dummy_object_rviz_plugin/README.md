@@ -15,9 +15,9 @@ The DeleteAllObjectsTool deletes the dummy cars, pedestrians, and obstacles disp
 
 ### Output
 
-| Name                                                 | Type                                      | Description                                     |
-| ---------------------------------------------------- | ----------------------------------------- | ----------------------------------------------- |
-| `/simulation/dummy_perception_publisher/object_info` | `tier4_simulation_msgs::msg::DummyObject` | The topic on which to publish dummy object info |
+| Name                                                 | Type                                             | Description                                     |
+| ---------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------- |
+| `/simulation/dummy_perception_publisher/object_info` | `autoware_simulation_msgs::msg::SimulatedObject` | The topic on which to publish dummy object info |
 
 ## Parameter
 
