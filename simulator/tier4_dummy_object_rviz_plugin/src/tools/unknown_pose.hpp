@@ -50,14 +50,14 @@ namespace rviz_plugins
 
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::Shape;
-using tier4_simulation_msgs::msg::DummyObject;
+using autoware_simulation_msgs::msg::SimulatedObject;
 
 class UnknownInitialPoseTool : public InteractiveObjectTool
 {
 public:
   UnknownInitialPoseTool();
   void onInitialize() override;
-  [[nodiscard]] DummyObject createObjectMsg() const override;
+  [[nodiscard]] SimulatedObject createObjectMsg() const override;
 };
 
 }  // namespace rviz_plugins

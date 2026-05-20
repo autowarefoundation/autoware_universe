@@ -41,7 +41,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircle_RedCircle)
   StateKey input_a = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
   StateKey input_b = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -58,7 +58,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircle_GreenCircle)
   StateKey input_a = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
   StateKey input_b = {{TrafficLightElement::GREEN, TrafficLightElement::CIRCLE}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::CONFLICT;
@@ -76,7 +76,7 @@ TEST_F(SignalValidatorCheckConflict, GreenCircle_RedCircle)
   StateKey input_a = {{TrafficLightElement::GREEN, TrafficLightElement::CIRCLE}};
   StateKey input_b = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::CONFLICT;
@@ -97,7 +97,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircleGreenLeftarrow_RedCircleGreenLefta
     {TrafficLightElement::RED, TrafficLightElement::CIRCLE},
     {TrafficLightElement::GREEN, TrafficLightElement::LEFT_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -126,7 +126,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircleMultipleMatchedArrows_RedCircleMul
     {TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW},
     {TrafficLightElement::GREEN, TrafficLightElement::DOWN_LEFT_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -154,7 +154,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircleGreenLeftarrow_GreenCircleGreenLef
     {TrafficLightElement::GREEN, TrafficLightElement::LEFT_ARROW},
   };
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -178,7 +178,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircleGreenLeftarrow_RedCircleRedLeftarr
     {TrafficLightElement::RED, TrafficLightElement::LEFT_ARROW},
   };
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -199,7 +199,7 @@ TEST_F(SignalValidatorCheckConflict, GreenLeftarrowRedCircle_RedCircle)
     {TrafficLightElement::RED, TrafficLightElement::CIRCLE},
   };
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -220,7 +220,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircle_GreenLeftarrowRedCircle)
     {TrafficLightElement::GREEN, TrafficLightElement::LEFT_ARROW},
     {TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -247,7 +247,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircleMultipleArrows_RedCircleMultipleAr
     {TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW},
     {TrafficLightElement::GREEN, TrafficLightElement::DOWN_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -271,7 +271,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircleGreendownarrow_GreenUparrow)
     {TrafficLightElement::GREEN, TrafficLightElement::DOWN_ARROW}};
   StateKey input_b = {{TrafficLightElement::GREEN, TrafficLightElement::UP_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::CONFLICT;
@@ -291,7 +291,7 @@ TEST_F(SignalValidatorCheckConflict, WhiteCross_WhiteCross)
   StateKey input_a = {{TrafficLightElement::WHITE, TrafficLightElement::CROSS}};
   StateKey input_b = {{TrafficLightElement::WHITE, TrafficLightElement::CROSS}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -308,7 +308,7 @@ TEST_F(SignalValidatorCheckConflict, WhiteCross_WhiteCIRCLE)
   StateKey input_a = {{TrafficLightElement::WHITE, TrafficLightElement::CROSS}};
   StateKey input_b = {{TrafficLightElement::WHITE, TrafficLightElement::CIRCLE}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::CONFLICT;
@@ -327,7 +327,7 @@ TEST_F(SignalValidatorCheckConflict, AmberCross_AmberCrossGreenUparrow)
     {TrafficLightElement::AMBER, TrafficLightElement::CROSS},
     {TrafficLightElement::GREEN, TrafficLightElement::UP_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -348,7 +348,7 @@ TEST_F(SignalValidatorCheckConflict, AllMismatch)
     {TrafficLightElement::GREEN, TrafficLightElement::LEFT_ARROW},
   };
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   StateKey expected_common_state_key = {};
 
@@ -366,7 +366,7 @@ TEST_F(SignalValidatorCheckConflict, GreenUparrow_GreenUparrow)
   StateKey input_a = {{TrafficLightElement::GREEN, TrafficLightElement::UP_ARROW}};
   StateKey input_b = {{TrafficLightElement::GREEN, TrafficLightElement::UP_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -388,7 +388,7 @@ TEST_F(SignalValidatorCheckConflict, GreenUparrowGreenRightarrow_GreenUparrowGre
     {TrafficLightElement::GREEN, TrafficLightElement::UP_ARROW},
     {TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -407,7 +407,7 @@ TEST_F(SignalValidatorCheckConflict, RedUparrow_GreenUparrow)
   StateKey input_a = {{TrafficLightElement::RED, TrafficLightElement::UP_ARROW}};
   StateKey input_b = {{TrafficLightElement::GREEN, TrafficLightElement::UP_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::CONFLICT;
@@ -424,7 +424,7 @@ TEST_F(SignalValidatorCheckConflict, RedUparrow_RedDownleftarrow)
   StateKey input_a = {{TrafficLightElement::RED, TrafficLightElement::UP_ARROW}};
   StateKey input_b = {{TrafficLightElement::RED, TrafficLightElement::DOWN_LEFT_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::CONFLICT;
@@ -443,7 +443,7 @@ TEST_F(SignalValidatorCheckConflict, RedUparrowRedDownleftarrow_RedDownleftarrow
     {TrafficLightElement::RED, TrafficLightElement::DOWN_LEFT_ARROW}};
   StateKey input_b = {{TrafficLightElement::RED, TrafficLightElement::DOWN_LEFT_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -463,7 +463,7 @@ TEST_F(SignalValidatorCheckConflict, RedDownleftarrow_RedUparrowRedDownleftarrow
     {TrafficLightElement::RED, TrafficLightElement::UP_ARROW},
     {TrafficLightElement::RED, TrafficLightElement::DOWN_LEFT_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -484,7 +484,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircle_Unknown)
   StateKey input_a = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
   StateKey input_b = {{TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -501,7 +501,7 @@ TEST_F(SignalValidatorCheckConflict, RedUparrow_Unknown)
   StateKey input_a = {{TrafficLightElement::RED, TrafficLightElement::UP_ARROW}};
   StateKey input_b = {{TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -518,7 +518,7 @@ TEST_F(SignalValidatorCheckConflict, Unknown_Unknown)
   StateKey input_a = {{TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN}};
   StateKey input_b = {{TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -536,7 +536,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircle_NoDetection)
   StateKey input_a = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
   StateKey input_b = {};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -553,7 +553,7 @@ TEST_F(SignalValidatorCheckConflict, NoDetection_RedCircle)
   StateKey input_a = {};
   StateKey input_b = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -570,7 +570,7 @@ TEST_F(SignalValidatorCheckConflict, RedUparrow_NoDetection)
   StateKey input_a = {{TrafficLightElement::RED, TrafficLightElement::UP_ARROW}};
   StateKey input_b = {};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -589,7 +589,7 @@ TEST_F(SignalValidatorCheckConflict, Unknown_NoDetection)
 
   // unknown and missing inputs will be treated as same,
   // but the returned state key depend on the input order
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -609,7 +609,7 @@ TEST_F(SignalValidatorCheckConflict, NoDetection_Unknown)
 
   // unknown and missing inputs will be treated as same,
   // but the returned state key depend on the input order
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -631,7 +631,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircleRedCircle_RedCircle)
     {TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
   StateKey input_b = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -650,7 +650,7 @@ TEST_F(SignalValidatorCheckConflict, RedCircleGreenCircle_RedCircle)
     {TrafficLightElement::GREEN, TrafficLightElement::CIRCLE}};
   StateKey input_b = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -674,7 +674,7 @@ TEST_F(
     {TrafficLightElement::GREEN, TrafficLightElement::DOWN_RIGHT_ARROW},
     {TrafficLightElement::GREEN, TrafficLightElement::DOWN_RIGHT_ARROW}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::PARTIAL_CONFLICT;
@@ -696,7 +696,7 @@ TEST_F(SignalValidatorCheckConflict, EmptyInputs_1)
   StateKey input_a = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
   StateKey input_b = {};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -713,7 +713,7 @@ TEST_F(SignalValidatorCheckConflict, EmptyInputs_2)
   StateKey input_a = {};
   StateKey input_b = {{TrafficLightElement::RED, TrafficLightElement::CIRCLE}};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
@@ -729,7 +729,7 @@ TEST_F(SignalValidatorCheckConflict, EmptyInputs_3)
   StateKey input_a = {};
   StateKey input_b = {};
 
-  ConflictStatus result = validator.checkConflict(input_a, input_b);
+  ConflictStatus result = validator.check_conflict(input_a, input_b);
 
   // output expectations
   ConflictType expected_conflict_type = ConflictType::NO_CONFLICT;
