@@ -32,7 +32,7 @@ namespace autoware::traffic_light
 namespace
 {
 
-double probabilityToLogOdds(double prob)
+double probability_to_log_odds(double prob)
 {
   /**
    * @brief Converts a probability value to log-odds.
@@ -58,10 +58,10 @@ double probabilityToLogOdds(double prob)
 /**
  * @brief get the state key that has best log-odds.
  */
-inline StateKey getBestStatekey(const std::map<StateKey, double> & accumulated_log_odds)
+inline StateKey get_best_state_key(const std::map<StateKey, double> & accumulated_log_odds)
 {
   auto best_element = std::max_element(
-    accumulated_log_odds.begin(), accumulated_log_odds.end(), compareStateKeyLogOdds);
+    accumulated_log_odds.begin(), accumulated_log_odds.end(), compare_state_key_log_odds);
 
   StateKey best_state_key = best_element->first;
 
@@ -102,20 +102,20 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
         ExactSyncPolicy(10), *(cam_info_subs_.back()), *(roi_subs_.back()),
         *(signal_subs_.back())));
       exact_sync_subs_.back()->registerCallback(
-        std::bind(&MultiCameraFusion::trafficSignalRoiCallback, this, _1, _2, _3));
+        std::bind(&MultiCameraFusion::traffic_signal_roi_callback, this, _1, _2, _3));
     } else {
       approximate_sync_subs_.emplace_back(new ApproximateSync(
         ApproximateSyncPolicy(10), *(cam_info_subs_.back()), *(roi_subs_.back()),
         *(signal_subs_.back())));
       approximate_sync_subs_.back()->registerCallback(
-        std::bind(&MultiCameraFusion::trafficSignalRoiCallback, this, _1, _2, _3));
+        std::bind(&MultiCameraFusion::traffic_signal_roi_callback, this, _1, _2, _3));
     }
   }
 
   map_sub_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
     [this](const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg) {
-      this->mapCallback(msg);
+      this->map_callback(msg);
     });
   signal_pub_ = create_publisher<NewSignalArrayType>("~/output/traffic_signals", rclcpp::QoS{1});
 
@@ -127,7 +127,7 @@ MultiCameraFusion::MultiCameraFusion(const rclcpp::NodeOptions & node_options)
   }
 }
 
-void MultiCameraFusion::trafficSignalRoiCallback(
+void MultiCameraFusion::traffic_signal_roi_callback(
   const CamInfoType::ConstSharedPtr cam_info_msg, const RoiArrayType::ConstSharedPtr roi_msg,
   const SignalArrayType::ConstSharedPtr signal_msg)
 {
@@ -140,20 +140,20 @@ void MultiCameraFusion::trafficSignalRoiCallback(
     utils::FusionRecordArr{cam_info_msg->header, *cam_info_msg, *roi_msg, *signal_msg});
 
   std::map<IdType, utils::FusionRecord> fused_record_map, grouped_record_map;
-  multiCameraFusion(fused_record_map);
-  groupFusion(fused_record_map, grouped_record_map);
+  multi_camera_fusion(fused_record_map);
+  group_fusion(fused_record_map, grouped_record_map);
 
   NewSignalArrayType msg_out;
-  convertOutputMsg(grouped_record_map, msg_out);
+  convert_output_msg(grouped_record_map, msg_out);
   msg_out.stamp = cam_info_msg->header.stamp;
   signal_pub_->publish(msg_out);
 
   if (conflicted_regulatory_element_status_.size() > 0) {
-    publishDiagnostics(stamp);
+    publish_diagnostics(stamp);
   }
 }
 
-void MultiCameraFusion::mapCallback(
+void MultiCameraFusion::map_callback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg)
 {
   lanelet::LaneletMapPtr lanelet_map_ptr = autoware::experimental::lanelet2_utils::remove_const(
@@ -172,7 +172,7 @@ void MultiCameraFusion::mapCallback(
   }
 }
 
-void MultiCameraFusion::convertOutputMsg(
+void MultiCameraFusion::convert_output_msg(
   const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out)
 {
   msg_out.traffic_light_groups.clear();
@@ -182,13 +182,14 @@ void MultiCameraFusion::convertOutputMsg(
     NewSignalType signal_out;
     signal_out.traffic_light_group_id = reg_ele_id;
     for (const auto & ele : signal.elements) {
-      signal_out.elements.push_back(utils::convertT4toAutoware(ele));
+      signal_out.elements.push_back(utils::convert_t4_to_autoware(ele));
     }
     msg_out.traffic_light_groups.push_back(signal_out);
   }
 }
 
-void MultiCameraFusion::multiCameraFusion(std::map<IdType, utils::FusionRecord> & fused_record_map)
+void MultiCameraFusion::multi_camera_fusion(
+  std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
   fused_record_map.clear();
   /*
@@ -231,7 +232,7 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, utils::FusionRecord> 
         */
         if (
           fused_record_map.find(roi.traffic_light_id) == fused_record_map.end() ||
-          utils::compareRecord(record, fused_record_map[roi.traffic_light_id]) >= 0) {
+          utils::compare_record(record, fused_record_map[roi.traffic_light_id]) >= 0) {
           fused_record_map[roi.traffic_light_id] = record;
         }
       }
@@ -240,7 +241,7 @@ void MultiCameraFusion::multiCameraFusion(std::map<IdType, utils::FusionRecord> 
   }
 }
 
-void MultiCameraFusion::groupFusion(
+void MultiCameraFusion::group_fusion(
   const std::map<IdType, utils::FusionRecord> & fused_record_map,
   std::map<IdType, utils::FusionRecord> & grouped_record_map)
 {
@@ -248,18 +249,18 @@ void MultiCameraFusion::groupFusion(
 
   // Stage 1: Accumulate evidence from all fused records
   const std::map<IdType, GroupFusionInfo> group_fusion_info_map =
-    accumulateGroupEvidence(fused_record_map);
+    accumulate_group_evidence(fused_record_map);
 
   // Stage 2: Determine the best state for each group from the accumulated evidence
-  determineBestGroupState(group_fusion_info_map, grouped_record_map);
+  determine_best_group_state(group_fusion_info_map, grouped_record_map);
 }
 
-GroupFusionInfoMap MultiCameraFusion::accumulateGroupEvidence(
+GroupFusionInfoMap MultiCameraFusion::accumulate_group_evidence(
   const std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
   GroupFusionInfoMap group_fusion_info_map;
   for (const auto & p : fused_record_map) {
-    processFusedRecord(group_fusion_info_map, p.second);
+    process_fused_record(group_fusion_info_map, p.second);
   }
   return group_fusion_info_map;
 }
@@ -268,7 +269,7 @@ GroupFusionInfoMap MultiCameraFusion::accumulateGroupEvidence(
  * @brief Processes a single fused record and updates the group_fusion_info_map.
  * (This function contains the logic from the outer loop)
  */
-void MultiCameraFusion::processFusedRecord(
+void MultiCameraFusion::process_fused_record(
   GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record)
 {
   const IdType roi_id = record.roi.traffic_light_id;
@@ -291,14 +292,14 @@ void MultiCameraFusion::processFusedRecord(
   // Loop over all regulatory IDs associated with this traffic light
   for (const auto & reg_ele_id : reg_ele_id_vec) {
     // Delegate the innermost logic to another helper
-    updateGroupInfoForElement(group_fusion_info_map, reg_ele_id, record);
+    update_group_info_for_element(group_fusion_info_map, reg_ele_id, record);
   }
 }
 
 /**
  * @brief Updates the map for a single (element, regulatory_id) combination.
  */
-void MultiCameraFusion::updateGroupInfoForElement(
+void MultiCameraFusion::update_group_info_for_element(
   GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
   const utils::FusionRecord & record)
 {
@@ -306,26 +307,26 @@ void MultiCameraFusion::updateGroupInfoForElement(
   for (const auto & element : record.signal.elements) {
     state_key.emplace_back(std::make_pair(element.color, element.shape));
   }
-  const double confidence = utils::getMinConfidence(record.signal);
+  const double confidence = utils::get_min_confidence(record.signal);
   auto & group_info = group_fusion_info_map[reg_ele_id];
 
   // Update Log-Odds
-  updateLogOdds(group_info.accumulated_log_odds, state_key, confidence);
+  update_log_odds(group_info.accumulated_log_odds, state_key, confidence);
 
   // Update Best Record
-  updateBestRecord(group_info.best_record_for_state, state_key, confidence, record);
+  update_best_record(group_info.best_record_for_state, state_key, confidence, record);
 }
 
 /**
  * @brief Handles the log-odds accumulation logic.
  */
-void MultiCameraFusion::updateLogOdds(
+void MultiCameraFusion::update_log_odds(
   std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence)
 {
   // try_emplace ensures we only add the 0.0 prior (from a 0.5 probability) once.
   log_odds_map.try_emplace(state_key, 0.0);
 
-  const double evidence_log_odds = probabilityToLogOdds(confidence);
+  const double evidence_log_odds = probability_to_log_odds(confidence);
 
   // Accumulate evidence
   log_odds_map[state_key] += evidence_log_odds - prior_log_odds_;
@@ -334,7 +335,7 @@ void MultiCameraFusion::updateLogOdds(
 /**
  * @brief Handles the logic for tracking the best record for a given state.
  */
-void MultiCameraFusion::updateBestRecord(
+void MultiCameraFusion::update_best_record(
   std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
   double confidence, const utils::FusionRecord & record)
 {
@@ -351,12 +352,12 @@ void MultiCameraFusion::updateBestRecord(
     return;
   }
 
-  if (confidence > utils::getMinConfidence(existing_record.signal)) {
+  if (confidence > utils::get_min_confidence(existing_record.signal)) {
     best_record_map[state_key] = record;
   }
 }
 
-void MultiCameraFusion::determineBestGroupState(
+void MultiCameraFusion::determine_best_group_state(
   const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
   std::map<IdType, utils::FusionRecord> & grouped_record_map)
 {
@@ -372,7 +373,7 @@ void MultiCameraFusion::determineBestGroupState(
 
     if (!use_signal_consistency_check_ || group_info.accumulated_log_odds.size() == 1) {
       // use the most probable one (the highest logarithmic odds) as the base
-      const StateKey best_state_key = getBestStatekey(group_info.accumulated_log_odds);
+      const StateKey best_state_key = get_best_state_key(group_info.accumulated_log_odds);
       grouped_record_map[reg_ele_id] = group_info.best_record_for_state.at(best_state_key);
 
       continue;
@@ -389,7 +390,7 @@ void MultiCameraFusion::determineBestGroupState(
     // check if conflicts exist among the signals within the same regulatory element id
     for (++log_odds_it; log_odds_it != group_info.accumulated_log_odds.end(); ++log_odds_it) {
       const StateKey & competitor_state = (*log_odds_it).first;
-      conflict_result = signal_validator_->checkConflict(running_state, competitor_state);
+      conflict_result = signal_validator_->check_conflict(running_state, competitor_state);
       running_state = conflict_result.common_state_key;
 
       if (conflict_result.conflict_type == ConflictType::CONFLICT) {
@@ -410,23 +411,23 @@ void MultiCameraFusion::determineBestGroupState(
       // use a fail-safe record as a fallback for this regulatory element.
 
       // use the most probable one (the highest logarithmic odds) as the base
-      const StateKey best_state_key = getBestStatekey(group_info.accumulated_log_odds);
+      const StateKey best_state_key = get_best_state_key(group_info.accumulated_log_odds);
 
       // set the best record that signal is overwritten with fail-safe record
       grouped_record_map[reg_ele_id] =
-        utils::generateFailsafeRecord(group_info.best_record_for_state.at(best_state_key));
+        utils::generate_failsafe_record(group_info.best_record_for_state.at(best_state_key));
     } else {
       // partially conflicted and allowed to publish the matched signals
 
       // rebuild the record based on the matched signals
       // copy the base data from the best original record, but replace the elements
-      const StateKey best_state_key = getBestStatekey(group_info.accumulated_log_odds);
+      const StateKey best_state_key = get_best_state_key(group_info.accumulated_log_odds);
       utils::FusionRecord merged_record = group_info.best_record_for_state.at(best_state_key);
 
       merged_record.signal.elements.clear();
 
       const double min_confidence =
-        utils::getMinConfidence(group_info.best_record_for_state.at(best_state_key).signal);
+        utils::get_min_confidence(group_info.best_record_for_state.at(best_state_key).signal);
       for (const auto & elem : running_state) {
         tier4_perception_msgs::msg::TrafficLightElement new_elem;
         new_elem.color = elem.first;
@@ -448,7 +449,7 @@ void MultiCameraFusion::determineBestGroupState(
   }
 }
 
-void MultiCameraFusion::publishDiagnostics(rclcpp::Time stamp)
+void MultiCameraFusion::publish_diagnostics(rclcpp::Time stamp)
 {
   diagnostics_interface_ptr_->clear();
 
