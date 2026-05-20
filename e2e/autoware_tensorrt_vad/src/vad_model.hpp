@@ -112,12 +112,7 @@ public:
   [[nodiscard]] std::optional<VadOutputData> infer(const VadInputData & vad_input_data)
   {
     // Change head name based on whether it's the first frame
-    std::string head_name;
-    if (is_first_frame_) {
-      head_name = "head_no_prev";
-    } else {
-      head_name = "head";
-    }
+    const std::string head_name = is_first_frame_ ? "head_no_prev" : "head";
 
     // Load to bindings
     load_inputs(vad_input_data, head_name);
@@ -125,17 +120,31 @@ public:
     // Enqueue backbone and head
     enqueue(head_name);
 
-    // Save prev_bev
-    saved_prev_bev_ = save_prev_bev(head_name);
-
     // Convert output to VadOutputData
     VadOutputData output = postprocess(head_name, vad_input_data.command);
 
-    // If it's the first frame, release "head_no_prev" and load "head"
     if (is_first_frame_) {
-      release_network("head_no_prev");
+      // Transition from "head_no_prev" to "head" with persistent ping-pong buffers.
+      // Capture head_no_prev's BEV output ptr before its bindings get cleared.
+      void * hnp_bev_ptr = nets_["head_no_prev"]->bindings["out.bev_embed"]->ptr;
+      bev_nbytes_ = nets_["head_no_prev"]->bindings["out.bev_embed"]->nbytes();
+
+      // Build "head" engine bindings (this cudaMalloc's prev_bev and out.bev_embed buffers).
       load_head();
+
+      // Reuse the two auto-allocated buffers as ping-pong (no extra cudaMalloc).
+      bev_buf_a_ = nets_["head"]->bindings["prev_bev"]->ptr;
+      bev_buf_b_ = nets_["head"]->bindings["out.bev_embed"]->ptr;
+
+      // One-time D->D copy: seed buffer A with the first-frame BEV from head_no_prev.
+      cudaMemcpyAsync(bev_buf_a_, hnp_bev_ptr, bev_nbytes_, cudaMemcpyDeviceToDevice, stream_);
+
+      release_network("head_no_prev");
+      prev_is_a_ = true;  // buffer A holds the latest BEV, used as prev_bev next frame
       is_first_frame_ = false;
+    } else {
+      // Steady state: the buffer we just wrote to becomes next frame's prev_bev input.
+      prev_is_a_ = !prev_is_a_;
     }
 
     return output;
@@ -145,8 +154,13 @@ public:
   cudaStream_t stream_;
   std::unordered_map<std::string, std::shared_ptr<Net>> nets_;
 
-  // Storage for previous BEV features
-  std::shared_ptr<Tensor> saved_prev_bev_;
+  // Ping-pong buffers for prev_bev (input) and out.bev_embed (output) of the "head" engine.
+  // Each frame they swap roles via setTensorAddress; the engine writes a fresh BEV to one
+  // buffer while reading the previous BEV from the other, eliminating per-frame D->D copies.
+  void * bev_buf_a_{nullptr};
+  void * bev_buf_b_{nullptr};
+  bool prev_is_a_{true};
+  size_t bev_nbytes_{0};
   bool is_first_frame_;
 
   // Configuration information storage
@@ -216,7 +230,13 @@ private:
     nets_[head_name]->bindings["img_metas.0[can_bus]"]->load(vad_input_data.can_bus, stream_);
 
     if (head_name == "head") {
-      nets_["head"]->bindings["prev_bev"] = saved_prev_bev_;
+      // Ping-pong: route TensorRT bindings to the buffer holding the latest BEV (prev_bev)
+      // and the buffer that will receive the new BEV (out.bev_embed). Without this, TRT
+      // would keep reading whichever buffer it was bound to at engine setup time.
+      void * prev_ptr = prev_is_a_ ? bev_buf_a_ : bev_buf_b_;
+      void * out_ptr = prev_is_a_ ? bev_buf_b_ : bev_buf_a_;
+      nets_["head"]->trt_common->setTensorAddress("prev_bev", prev_ptr);
+      nets_["head"]->trt_common->setTensorAddress("out.bev_embed", out_ptr);
     }
   }
 
@@ -225,15 +245,6 @@ private:
     nets_["backbone"]->enqueue(stream_);
     nets_[head_name]->enqueue(stream_);
     cudaStreamSynchronize(stream_);
-  }
-
-  std::shared_ptr<Tensor> save_prev_bev(const std::string & head_name)
-  {
-    auto bev_embed = nets_[head_name]->bindings["out.bev_embed"];
-    auto prev_bev = std::make_shared<Tensor>("prev_bev", bev_embed->dim, bev_embed->dtype, logger_);
-    cudaMemcpyAsync(
-      prev_bev->ptr, bev_embed->ptr, bev_embed->nbytes(), cudaMemcpyDeviceToDevice, stream_);
-    return prev_bev;
   }
 
   void release_network(const std::string & network_name)
