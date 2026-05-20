@@ -558,7 +558,8 @@ void VirtualTrafficLightModule::insertStopVelocityAtStopLine(
     0.0 /*shift distance*/, "");
 
   // Set data for visualization
-  module_data_.stop_head_pose_at_stop_line = calcHeadPose(stop_pose, module_data_.leading_bumper_longitudinal_offset_m);
+  module_data_.stop_head_pose_at_stop_line =
+    calcHeadPose(stop_pose, module_data_.leading_bumper_longitudinal_offset_m);
 }
 
 void VirtualTrafficLightModule::insertStopVelocityAtEndLine(
@@ -592,7 +593,8 @@ void VirtualTrafficLightModule::insertStopVelocityAtEndLine(
     0.0 /*shift distance*/, "");
 
   // Set data for visualization
-  module_data_.stop_head_pose_at_end_line = calcHeadPose(stop_pose, module_data_.leading_bumper_longitudinal_offset_m);
+  module_data_.stop_head_pose_at_end_line =
+    calcHeadPose(stop_pose, module_data_.leading_bumper_longitudinal_offset_m);
 }
 
 std::optional<tier4_v2x_msgs::msg::InfrastructureCommand>

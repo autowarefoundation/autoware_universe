@@ -428,9 +428,9 @@ bool VirtualTrafficLightModule::isBeforeStartLine(
 {
   // Since the module is registered, a collision should be detected usually.
   // Therefore if no collision found, vehicle's path is fully after the line.
-  const auto arc_length =
-    calcArcLengthFromCollision(
-      path, end_line_s, map_data_.start_line, planner_data, module_data_.leading_bumper_longitudinal_offset_m);
+  const auto arc_length = calcArcLengthFromCollision(
+    path, end_line_s, map_data_.start_line, planner_data,
+    module_data_.leading_bumper_longitudinal_offset_m);
   return arc_length && *arc_length > 0;
 }
 
@@ -439,9 +439,9 @@ bool VirtualTrafficLightModule::isBeforeStopLine(
 {
   // Since the module is registered, a collision should be detected usually.
   // Therefore if no collision found, vehicle's path is fully after the line.
-  const auto arc_length =
-    calcArcLengthFromCollision(
-      path, end_line_s, *map_data_.stop_line, planner_data, module_data_.leading_bumper_longitudinal_offset_m);
+  const auto arc_length = calcArcLengthFromCollision(
+    path, end_line_s, *map_data_.stop_line, planner_data,
+    module_data_.leading_bumper_longitudinal_offset_m);
   return arc_length && *arc_length > -planner_param_.dead_line_margin;
 }
 
@@ -455,18 +455,18 @@ bool VirtualTrafficLightModule::isAfterAnyEndLine(
 
   // If the goal is set before the end line, collision will not be detected.
   // Therefore if there is no collision, the ego vehicle is assumed to be before the end line.
-  const auto arc_length =
-    calcArcLengthFromCollision(
-      path, end_line_s, map_data_.end_lines, planner_data, module_data_.leading_bumper_longitudinal_offset_m);
+  const auto arc_length = calcArcLengthFromCollision(
+    path, end_line_s, map_data_.end_lines, planner_data,
+    module_data_.leading_bumper_longitudinal_offset_m);
   return arc_length && *arc_length < -planner_param_.dead_line_margin;
 }
 
 bool VirtualTrafficLightModule::isNearAnyEndLine(
   const Trajectory & path, const double end_line_s, const PlannerData & planner_data) const
 {
-  const auto arc_length =
-    calcArcLengthFromCollision(
-      path, end_line_s, map_data_.end_lines, planner_data, module_data_.leading_bumper_longitudinal_offset_m);
+  const auto arc_length = calcArcLengthFromCollision(
+    path, end_line_s, map_data_.end_lines, planner_data,
+    module_data_.leading_bumper_longitudinal_offset_m);
   return arc_length && std::abs(*arc_length) < planner_param_.near_line_distance;
 }
 
@@ -520,8 +520,8 @@ void VirtualTrafficLightModule::insertStopVelocityAtStopLine(
     0.0 /*shift distance*/, "");
 
   // Set data for visualization
-  module_data_.stop_head_pose_at_stop_line =
-    autoware_utils::calc_offset_pose(stop_pose, module_data_.leading_bumper_longitudinal_offset_m, 0.0, 0.0);
+  module_data_.stop_head_pose_at_stop_line = autoware_utils::calc_offset_pose(
+    stop_pose, module_data_.leading_bumper_longitudinal_offset_m, 0.0, 0.0);
 }
 
 void VirtualTrafficLightModule::insertStopVelocityAtEndLine(
@@ -554,8 +554,8 @@ void VirtualTrafficLightModule::insertStopVelocityAtEndLine(
     0.0 /*shift distance*/, "");
 
   // Set data for visualization
-  module_data_.stop_head_pose_at_end_line =
-    autoware_utils::calc_offset_pose(stop_pose, module_data_.leading_bumper_longitudinal_offset_m, 0.0, 0.0);
+  module_data_.stop_head_pose_at_end_line = autoware_utils::calc_offset_pose(
+    stop_pose, module_data_.leading_bumper_longitudinal_offset_m, 0.0, 0.0);
 }
 
 std::optional<tier4_v2x_msgs::msg::InfrastructureCommand>
