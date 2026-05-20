@@ -114,8 +114,12 @@ public:
     // Change head name based on whether it's the first frame
     const std::string head_name = is_first_frame_ ? "head_no_prev" : "head";
 
-    // Load to bindings
-    load_inputs(vad_input_data, head_name);
+    // Load to bindings. If preprocessing fails the head bindings (including the ping-pong
+    // setTensorAddress) are not refreshed, so we must skip enqueue/postprocess and leave
+    // prev_is_a_ untouched to keep the software ping-pong state in sync with TRT.
+    if (!load_inputs(vad_input_data, head_name)) {
+      return std::nullopt;
+    }
 
     // Enqueue backbone and head
     enqueue(head_name);
@@ -210,8 +214,11 @@ private:
     return nets;
   }
 
-  // Helper functions used in infer function
-  void load_inputs(const VadInputData & vad_input_data, const std::string & head_name)
+  // Helper functions used in infer function. Returns false if any input preparation step
+  // failed; the caller must then abort inference for this frame and leave the ping-pong
+  // selector (prev_is_a_) unchanged, otherwise the software state would drift away from
+  // the TensorRT binding state.
+  [[nodiscard]] bool load_inputs(const VadInputData & vad_input_data, const std::string & head_name)
   {
     // Use MultiCameraPreprocessor to process camera images
     cudaError_t preprocess_result = preprocessor_->preprocess_images(
@@ -221,7 +228,7 @@ private:
     if (preprocess_result != cudaSuccess) {
       logger_->error(
         "CUDA preprocessing failed: " + std::string(cudaGetErrorString(preprocess_result)));
-      return;
+      return false;
     }
 
     nets_[head_name]->bindings["img_metas.0[shift]"]->load(vad_input_data.shift, stream_);
@@ -238,6 +245,7 @@ private:
       nets_["head"]->trt_common->setTensorAddress("prev_bev", prev_ptr);
       nets_["head"]->trt_common->setTensorAddress("out.bev_embed", out_ptr);
     }
+    return true;
   }
 
   void enqueue(const std::string & head_name)
