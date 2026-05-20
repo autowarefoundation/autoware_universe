@@ -38,8 +38,14 @@ ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
   src/filters/safety/uncrossable_boundary_departure.cpp
   src/filters/safety/out_of_lane_filter.cpp
   src/filters/safety/vehicle_constraint_filter.cpp
+    src/filters/safety/collision_check_filter/collision_check_filter.cpp
+  src/filters/safety/collision_check_filter/reporter.cpp
+  src/filters/safety/collision_check_filter/assessment.cpp
+  src/filters/safety/collision_check_filter/trajectory_utils.cpp
   src/filters/traffic_rule/traffic_light_filter.cpp
 )
+
+set_target_properties(autoware_trajectory_validator_plugins PROPERTIES CXX_VISIBILITY_PRESET default)
 
 target_link_libraries(autoware_trajectory_validator_plugins
   ${trajectory_validator_lib_target}
@@ -80,6 +86,48 @@ if(BUILD_TESTING)
     test/plugins/test_vehicle_constraint_filter.cpp
   )
   target_link_libraries(test_vehicle_constraint_filter
+    autoware_trajectory_validator_plugins
+  )
+
+  ament_add_gtest(test_pose_constant_curvature_predictor
+    test/plugins/collision_check_filter/test_pose_constant_curvature_predictor.cpp
+  )
+  target_link_libraries(test_pose_constant_curvature_predictor
+    autoware_trajectory_validator_plugins
+  )
+
+  ament_add_gtest(test_time_distance
+    test/plugins/collision_check_filter/test_time_distance.cpp
+  )
+  target_link_libraries(test_time_distance
+    autoware_trajectory_validator_plugins
+  )
+
+  ament_add_gtest(test_geometry
+    test/plugins/collision_check_filter/test_geometry.cpp
+  )
+  target_link_libraries(test_geometry
+    autoware_trajectory_validator_plugins
+  )
+
+  # ament_add_gtest(test_collision_check_filter
+  #   test/collision_check_filter/test_collision_check_filter.cpp
+  # )
+  # target_link_libraries(test_collision_check_filter
+  #   autoware_trajectory_validator_plugins
+  # )
+
+  # ament_add_gtest(test_reporter
+  #   test/collision_check_filter/test_reporter.cpp
+  # )
+  # target_link_libraries(test_reporter
+  #   autoware_trajectory_validator_plugins
+  # )
+
+  ament_add_gtest(test_trajectory_utilities
+    test/plugins/collision_check_filter/test_trajectory_utilities.cpp
+  )
+  target_link_libraries(test_trajectory_utilities
     autoware_trajectory_validator_plugins
   )
 

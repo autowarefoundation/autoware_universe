@@ -50,6 +50,179 @@ validator:
       description: Maximum allowed steering rate (rad/s)
       read_only: false
 
+  collision_check:
+    global_setting:
+      time_resolution:
+        type: double
+        default_value: 0.1
+        description: sampling interval used in collision check trajectory generation
+        read_only: false
+    drac:
+      enable_assessment:
+        base:
+          &drac_ea {
+            type: bool,
+            default_value: true,
+            description: DRAC enable_assessment per class,
+            read_only: false,
+          }
+        unknown: *drac_ea
+        car: *drac_ea
+        truck: *drac_ea
+        bus: *drac_ea
+        trailer: *drac_ea
+        motorcycle: *drac_ea
+        bicycle: *drac_ea
+        pedestrian: *drac_ea
+        animal: *drac_ea
+        hazard: *drac_ea
+        over_drivable: *drac_ea
+        under_drivable: *drac_ea
+      assessment_trajectories:
+        map_based:
+          type: bool
+          default_value: true
+          description: Use map based predicted path trajectories for DRAC assessment
+          read_only: false
+        constant_curvature:
+          type: bool
+          default_value: true
+          description: Use constant curvature trajectories for DRAC assessment
+          read_only: false
+        diffusion_based:
+          type: bool
+          default_value: true
+          description: Use diffusion based trajectories for DRAC assessment
+          read_only: false
+      ego_total_braking_delay:
+        type: double
+        default_value: 0.4
+        description: Total ego braking delay for DRAC assessment
+        read_only: false
+      warn_threshold:
+        ego_acceleration:
+          type: double
+          default_value: -3.0
+          description: Ego acceleration threshold for DRAC warning (m/s^2, negative)
+          read_only: false
+      error_threshold:
+        ego_acceleration:
+          type: double
+          default_value: -5.0
+          description: Ego acceleration threshold for DRAC error (m/s^2, negative)
+          read_only: false
+    pet_collision:
+      enable_assessment:
+        base:
+          &pet_ea {
+            type: bool,
+            default_value: true,
+            description: PET enable_assessment per class,
+            read_only: false,
+          }
+        unknown: *pet_ea
+        car: *pet_ea
+        truck: *pet_ea
+        bus: *pet_ea
+        trailer: *pet_ea
+        motorcycle: *pet_ea
+        bicycle: *pet_ea
+        pedestrian: *pet_ea
+        animal: *pet_ea
+        hazard: *pet_ea
+        over_drivable: *pet_ea
+        under_drivable: *pet_ea
+      assessment_trajectories:
+        map_based:
+          type: bool
+          default_value: true
+          description: Use map based predicted path trajectories for PET assessment
+          read_only: false
+        constant_curvature:
+          type: bool
+          default_value: true
+          description: Use constant curvature trajectories for PET assessment
+          read_only: false
+        diffusion_based:
+          type: bool
+          default_value: true
+          description: Use diffusion based trajectories for PET assessment
+          read_only: false
+      ego_total_braking_delay:
+        type: double
+        default_value: 0.4
+        description: Total ego braking delay for PET assessment
+        read_only: false
+      ego_assumed_acceleration:
+        type: double
+        default_value: -5.0
+        description: Assumed ego acceleration for PET assessment (m/s^2, negative)
+        read_only: false
+      warn_threshold:
+        ego_first_passing_time_gap:
+          type: double
+          default_value: 1.0
+          description: Allowed time gap when ego passes first for PET warning
+          read_only: false
+        object_first_passing_time_gap:
+          type: double
+          default_value: 1.0
+          description: Allowed time gap when object passes first for PET warning
+          read_only: false
+      error_threshold:
+        ego_first_passing_time_gap:
+          type: double
+          default_value: 0.3
+          description: Allowed time gap when ego passes first for PET error
+          read_only: false
+        object_first_passing_time_gap:
+          type: double
+          default_value: 0.6
+          description: Allowed time gap when object passes first for PET error
+          read_only: false
+    rss:
+      enable_assessment:
+        base:
+          &rss_ea {
+            type: bool,
+            default_value: true,
+            description: RSS enable_assessment per class,
+            read_only: false,
+          }
+        unknown: *rss_ea
+        car: *rss_ea
+        truck: *rss_ea
+        bus: *rss_ea
+        trailer: *rss_ea
+        motorcycle: *rss_ea
+        bicycle: *rss_ea
+        pedestrian: *rss_ea
+        animal: *rss_ea
+        hazard: *rss_ea
+        over_drivable: *rss_ea
+        under_drivable: *rss_ea
+      stop_distance_margin:
+        type: double
+        default_value: 2.0
+        description: required remaining distance to the object when ego stops
+        read_only: false
+      ego_total_braking_delay:
+        type: double
+        default_value: 0.4
+        description: Total ego braking delay for RSS calculation
+        read_only: false
+      object_assumed_acceleration:
+        type: double
+        default_value: -1.0
+        description: Assumed object acceleration for RSS calculation (m/s^2, negative)
+        read_only: false
+      error_threshold:
+        ego_acceleration:
+          type: double
+          default_value: -4.0
+          description: Ego acceleration threshold to determine RSS collision (m/s^2, negative)
+          read_only: false
+
   traffic_light:
     deceleration_limit:
       type: double

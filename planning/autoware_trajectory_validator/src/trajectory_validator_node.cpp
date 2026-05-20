@@ -100,6 +100,7 @@ tl::expected<FilterContext, std::string> TrajectoryValidator::take_data()
   }
 
   context.predicted_objects = sub_objects_.take_data();
+  context.neural_network_predicted_objects = sub_neural_network_objects_.take_data();
   if (!context.predicted_objects) {
     return tl::make_unexpected("Failed to take predicted objects data");
   }

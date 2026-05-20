@@ -15,6 +15,48 @@
       time: 2.0
       min_value: 0.0
 
+    collision_check:
+      global_setting:
+        time_resolution: 0.1
+      drac:
+        enable_assessment:
+          # default value is true.
+          unknown: false
+        assessment_trajectories:
+          map_based: true
+          constant_curvature: true
+          diffusion_based: true
+        ego_total_braking_delay: 0.4
+        warn_threshold:
+          ego_acceleration: -2.0
+        error_threshold:
+          ego_acceleration: -4.0
+      pet_collision:
+        enable_assessment:
+          # default value is true.
+          unknown: false
+        assessment_trajectories:
+          map_based: true
+          constant_curvature: true
+          diffusion_based: true
+        ego_total_braking_delay: 0.4
+        ego_assumed_acceleration: -4.0
+        warn_threshold:
+          ego_first_passing_time_gap: 1.0
+          object_first_passing_time_gap: 1.0
+        error_threshold:
+          ego_first_passing_time_gap: 0.6
+          object_first_passing_time_gap: 0.3
+      rss:
+        enable_assessment:
+          # default value is true.
+          unknown: false
+        stop_distance_margin: 2.0
+        ego_total_braking_delay: 0.4
+        object_assumed_acceleration: -4.0
+        error_threshold:
+          ego_acceleration: -4.0
+
     vehicle_constraint:
       max_speed: 16.7 # m/s
       max_acceleration: 5.0 # m/s^2

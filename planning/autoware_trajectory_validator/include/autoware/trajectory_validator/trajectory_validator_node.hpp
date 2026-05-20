@@ -158,6 +158,8 @@ private:
     this, "~/input/odometry"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects> sub_objects_{
     this, "~/input/objects"};
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects>
+    sub_neural_network_objects_{this, "~/input/diffusion/objects"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
     sub_acceleration_{this, "~/input/acceleration"};
   autoware_utils_rclcpp::InterProcessPollingSubscriber<
