@@ -9,7 +9,7 @@ include_directories(
 )
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/traffic_light_multi_camera_fusion_node.cpp
+  src/multi_camera_fusion.cpp
   src/traffic_light_multi_camera_fusion_process.cpp
   src/signal_validator.cpp
 )

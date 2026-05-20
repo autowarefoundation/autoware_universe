@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "traffic_light_multi_camera_fusion_node.hpp"
+#include "multi_camera_fusion.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>

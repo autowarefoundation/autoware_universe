@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
-#define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
+#ifndef MULTI_CAMERA_FUSION_HPP_
+#define MULTI_CAMERA_FUSION_HPP_
 
 #include "signal_validator.hpp"
 #include "traffic_light_multi_camera_fusion_process.hpp"
@@ -203,4 +203,4 @@ private:
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 };
 }  // namespace autoware::traffic_light
-#endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
+#endif  // MULTI_CAMERA_FUSION_HPP_
