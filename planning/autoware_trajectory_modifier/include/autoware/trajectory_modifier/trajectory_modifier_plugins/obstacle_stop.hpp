@@ -64,6 +64,7 @@ protected:
 
 private:
   TrajectoryModifierParams::ObstacleStop params_;
+  TrajectoryModifierParams::StoppingConstraints stopping_params_;
 
   std::optional<CollisionPoint> nearest_collision_point_;
 

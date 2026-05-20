@@ -11,7 +11,8 @@
           "description": "List of trajectory modifier plugins to load",
           "default": [
             "autoware::trajectory_modifier::plugin::ObstacleStop",
-            "autoware::trajectory_modifier::plugin::StopPointFixer"
+            "autoware::trajectory_modifier::plugin::StopPointFixer",
+            "autoware::trajectory_modifier::plugin::VelocityModifier"
           ],
           "items": {
             "type": "string"
@@ -25,6 +26,11 @@
         "use_obstacle_stop": {
           "type": "boolean",
           "description": "Enable the obstacle stop modifier plugin",
+          "default": true
+        },
+        "use_velocity_modifier": {
+          "type": "boolean",
+          "description": "Enable the velocity modifier plugin",
           "default": true
         },
         "trajectory_time_step": {
@@ -68,6 +74,31 @@
           "required": [],
           "additionalProperties": false
         },
+        "stopping_constraints": {
+          "type": "object",
+          "properties": {
+            "nominal_deceleration": {
+              "type": "number",
+              "description": "Nominal deceleration during stopping [m/s^2]",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "maximum_deceleration": {
+              "type": "number",
+              "description": "Maximum deceleration during stopping [m/s^2]",
+              "default": 4.0,
+              "minimum": 0.0
+            },
+            "jerk_limit": {
+              "type": "number",
+              "description": "Jerk limit during stopping [m/s^3]",
+              "default": 3.0,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
         "obstacle_stop": {
           "type": "object",
           "properties": {
@@ -96,21 +127,6 @@
               "description": "Distance to maintain from an obstacle when stopped [m]",
               "default": 6.0,
               "minimum": 0.0
-            },
-            "nominal_stopping_decel": {
-              "type": "number",
-              "description": "Nominal deceleration during stopping [m/s^2]",
-              "default": 1.0
-            },
-            "maximum_stopping_decel": {
-              "type": "number",
-              "description": "Maximum deceleration during stopping [m/s^2]",
-              "default": 4.0
-            },
-            "stopping_jerk": {
-              "type": "number",
-              "description": "Jerk during stopping [m/s^3]",
-              "default": 3.0
             },
             "lateral_margin": {
               "type": "number",

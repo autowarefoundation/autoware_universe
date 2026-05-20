@@ -12,4 +12,10 @@
       Modifies the trajectory to avoid obstacles by stopping
     </description>
   </class>
+  <class type="autoware::trajectory_modifier::plugin::VelocityModifier"
+         base_class_type="autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase">
+    <description>
+      Modifies the velocity of a trajectory to smooth the motion
+    </description>
+  </class>
 </library>

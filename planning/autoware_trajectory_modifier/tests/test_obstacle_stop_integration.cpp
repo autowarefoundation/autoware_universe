@@ -30,6 +30,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <limits>
 #include <memory>
 #include <string>
 #include <thread>
@@ -205,10 +206,10 @@ protected:
 
   void TearDown() override
   {
+    rclcpp::shutdown();
     plugin_.reset();
     context_.reset();
     node_.reset();
-    rclcpp::shutdown();
   }
 
   void set_up_default_params()
@@ -217,15 +218,16 @@ protected:
     params_.use_stop_point_fixer = false;
     params_.trajectory_time_step = 0.1;
 
+    params_.stopping_constraints.nominal_deceleration = 1.0;
+    params_.stopping_constraints.maximum_deceleration = 4.0;
+    params_.stopping_constraints.jerk_limit = 3.0;
+
     auto & p = params_.obstacle_stop;
     p.use_objects = true;
     p.use_pointcloud = true;
     p.enable_stop_for_objects = true;
     p.enable_stop_for_pointcloud = true;
     p.stop_margin = 6.0;
-    p.nominal_stopping_decel = 1.0;
-    p.maximum_stopping_decel = 4.0;
-    p.stopping_jerk = 3.0;
     p.lateral_margin = 0.5;
     p.arrived_distance_threshold = 0.5;
 
@@ -356,8 +358,14 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject)
 
   // Assert
   ASSERT_TRUE(modified);
-  EXPECT_NEAR(trajectory.back().longitudinal_velocity_mps, 0.0F, 0.1F);
+  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
   EXPECT_LT(trajectory.back().pose.position.x, object_x);
+
+  const auto obj_length = car_blocking_path->objects.at(0).shape.dimensions.x;
+  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
+  const auto expected_stop_margin =
+    params_.obstacle_stop.stop_margin + ego_front_offset + obj_length / 2.0;
+  EXPECT_NEAR(object_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
 }
 
 TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluster)
@@ -378,6 +386,21 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluste
 
   // Assert
   ASSERT_TRUE(modified);
-  EXPECT_NEAR(trajectory.back().longitudinal_velocity_mps, 0.0F, 0.1F);
+  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
   EXPECT_LT(trajectory.back().pose.position.x, cluster_center_x);
+
+  const auto min_pcd_x = [&pointcloud_blocking_path]() {
+    sensor_msgs::PointCloud2ConstIterator<float> iter_x(*pointcloud_blocking_path, "x");
+    auto min_x = std::numeric_limits<float>::max();
+    for (; iter_x != iter_x.end(); ++iter_x) {
+      if (*iter_x < min_x) {
+        min_x = *iter_x;
+      }
+    }
+    return min_x;
+  }();
+
+  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
+  const auto expected_stop_margin = params_.obstacle_stop.stop_margin + ego_front_offset;
+  EXPECT_NEAR(min_pcd_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
 }
