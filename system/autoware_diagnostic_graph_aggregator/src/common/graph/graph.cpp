@@ -52,6 +52,9 @@ Graph::Graph(
   nodes_ = raws(alloc_nodes_);
   diags_ = raws(alloc_diags_);
 
+  for (const auto & node : nodes_) {
+    node_dict_[node->path()] = node;
+  }
   for (const auto & diag : diags_) {
     diag_dict_[diag->name()] = diag;
   }
@@ -130,6 +133,14 @@ DiagnosticArray Graph::create_unknown_msg(const rclcpp::Time & stamp) const
 void Graph::set_initializing(bool initializing)
 {
   for (const auto & node : nodes_) node->set_initializing(initializing);
+}
+
+void Graph::set_override(const std::string & path, std::optional<DiagnosticLevel> level)
+{
+  const auto iter = node_dict_.find(path);
+  if (iter != node_dict_.end()) {
+    iter->second->set_override(level);
+  }
 }
 
 void Graph::reset()

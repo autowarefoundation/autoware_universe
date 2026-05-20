@@ -51,12 +51,10 @@ DiagNodeStruct NodeUnit::create_struct()
 
 DiagNodeStatus NodeUnit::create_status()
 {
-  status_.level = level();
-  status_.output_level = latch_->level();
+  status_.level = latch_->level();
   status_.input_level = latch_->input_level();  // Note: Equals logic level.
   status_.latch_level = latch_->latch_level();
   status_.is_dependent = dependency();
-  status_.is_overridden = override_.has_value();
   return status_;
 }
 
@@ -82,7 +80,7 @@ void NodeUnit::reset()
 
 DiagnosticLevel NodeUnit::level() const
 {
-  return override_ ? override_.value() : latch_->level();
+  return latch_->level();
 }
 
 std::vector<LinkPort *> NodeUnit::ports() const
@@ -102,7 +100,7 @@ std::string NodeUnit::type() const
 
 void NodeUnit::update(const rclcpp::Time & stamp)
 {
-  latch_->update(stamp, logic_->level());
+  latch_->update(stamp, override_ ? *override_ : logic_->level());
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator

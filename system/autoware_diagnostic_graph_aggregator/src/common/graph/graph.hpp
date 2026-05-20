@@ -22,6 +22,7 @@
 #include <rclcpp/time.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -46,6 +47,7 @@ public:
   DiagnosticArray create_unknown_msg(const rclcpp::Time & stamp) const;
 
   void set_initializing(bool initializing);
+  void set_override(const std::string & path, std::optional<DiagnosticLevel> level);
   void reset();
   std::vector<NodeUnit *> nodes() const { return nodes_; }
   std::vector<DiagUnit *> diags() const { return diags_; }
@@ -57,6 +59,7 @@ private:
   std::vector<std::unique_ptr<LinkPort>> alloc_ports_;
   std::vector<NodeUnit *> nodes_;
   std::vector<DiagUnit *> diags_;
+  std::unordered_map<std::string, NodeUnit *> node_dict_;
   std::unordered_map<std::string, DiagUnit *> diag_dict_;
   std::unordered_map<std::string, DiagnosticStatus> unknown_diags_;
 };
