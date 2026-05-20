@@ -32,6 +32,7 @@
 
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 #include <utility>
@@ -56,6 +57,8 @@ constexpr const char * kOutputTopic = "/traffic_light_arbiter/pub/traffic_signal
 
 constexpr float kConfidenceEpsilon = 1e-5f;
 
+// --- Signal IDs --------------------------------------------------------
+
 // Traffic-light regulatory-element IDs that are installed on the test map.
 // Kept explicit (rather than auto-allocated) so that values appearing in
 // published TrafficLightGroupArray messages and warning logs stay readable.
@@ -70,6 +73,8 @@ constexpr lanelet::Id pedestrian_signal = 2001;
 // Intentionally not installed on the map; used by tests as the "off-map id"
 // probe to exercise the WARN+skip branch in arbitrateAndPublish.
 constexpr lanelet::Id kOffMapProbeId = 9999;
+
+// --- Map construction --------------------------------------------------
 
 Point3d makePoint(lanelet::Id id, double x, double y, double z = 0.0)
 {
@@ -141,6 +146,8 @@ LaneletMapBin buildMinimalMapBin()
   return bin;
 }
 
+// --- Node construction -------------------------------------------------
+
 // Default parameters mirror config/traffic_light_arbiter.param.yaml. We
 // re-declare them here instead of reading the YAML so the test is fully
 // self-contained and unaffected by production config changes. Only the
@@ -158,6 +165,8 @@ std::shared_ptr<TrafficLightArbiter> makeArbiter(
   });
   return std::make_shared<TrafficLightArbiter>(options);
 }
+
+// --- Input message builders --------------------------------------------
 
 TrafficLightElement makeTrafficLightElement(uint8_t color, uint8_t shape, float confidence)
 {
@@ -199,10 +208,14 @@ TrafficLightGroup makeTrafficLightGroup(
   return group;
 }
 
+// --- Timestamp utility -------------------------------------------------
+
 builtin_interfaces::msg::Time offsetTime(const rclcpp::Time & base, double seconds)
 {
   return (base + rclcpp::Duration::from_seconds(seconds));
 }
+
+// --- Output inspection helpers -----------------------------------------
 
 const TrafficLightGroup * findTrafficLightGroup(const TrafficLightGroupArray & msg, lanelet::Id id)
 {
@@ -224,6 +237,8 @@ const TrafficLightElement * findTrafficLightElement(const TrafficLightGroup & gr
   return nullptr;
 }
 
+// --- Test fixture ------------------------------------------------------
+
 class ArbiterCharacteristic : public ::testing::Test
 {
 protected:
@@ -232,6 +247,16 @@ protected:
     if (!rclcpp::ok()) {
       rclcpp::init(0, nullptr);
     }
+
+    // Reserve the highest signal id so utils::getId() never returns values
+    // that collide with map_ids::* or kOffMapProbeId. Calling registerId(9999)
+    // advances the global counter to >= 10000, which is safely above every
+    // fixed signal id we use. This is process-wide global state, so doing it
+    // once per suite is enough.
+    utils::registerId(kOffMapProbeId);
+
+    // map_bin_ is immutable across tests, so build it once for the suite.
+    map_bin_ = buildMinimalMapBin();
   }
   static void TearDownTestSuite()
   {
@@ -242,25 +267,16 @@ protected:
 
   void SetUp() override
   {
-    // Reserve known signal ids so utils::getId() never returns
-    // values that collide with map_ids::* or kOffMapProbeId. Calling
-    // registerId(9999) advances the global counter to >= 10000, which is
-    // safely above every fixed signal id we use.
-    utils::registerId(kOffMapProbeId);
-
-    map_bin_ = buildMinimalMapBin();
-
-    pub_node_ = std::make_shared<rclcpp::Node>("arbiter_characteristic_test_pub");
-    sub_node_ = std::make_shared<rclcpp::Node>("arbiter_characteristic_test_sub");
+    test_node_ = std::make_shared<rclcpp::Node>("arbiter_characteristic_test");
 
     map_pub_ =
-      pub_node_->create_publisher<LaneletMapBin>(kMapTopic, rclcpp::QoS(1).transient_local());
+      test_node_->create_publisher<LaneletMapBin>(kMapTopic, rclcpp::QoS(1).transient_local());
     perception_pub_ =
-      pub_node_->create_publisher<TrafficLightGroupArray>(kPerceptionTopic, rclcpp::QoS(1));
+      test_node_->create_publisher<TrafficLightGroupArray>(kPerceptionTopic, rclcpp::QoS(1));
     external_pub_ =
-      pub_node_->create_publisher<TrafficLightGroupArray>(kExternalTopic, rclcpp::QoS(1));
+      test_node_->create_publisher<TrafficLightGroupArray>(kExternalTopic, rclcpp::QoS(1));
 
-    output_sub_ = sub_node_->create_subscription<TrafficLightGroupArray>(
+    output_sub_ = test_node_->create_subscription<TrafficLightGroupArray>(
       kOutputTopic, rclcpp::QoS(1), [this](const TrafficLightGroupArray::ConstSharedPtr msg) {
         latest_output_ = *msg;
         ++publish_count_;
@@ -278,8 +294,7 @@ protected:
     map_pub_.reset();
     perception_pub_.reset();
     external_pub_.reset();
-    sub_node_.reset();
-    pub_node_.reset();
+    test_node_.reset();
   }
 
   void startArbiter(
@@ -288,16 +303,15 @@ protected:
     arbiter_ = makeArbiter(enable_signal_matching, source_priority);
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(arbiter_);
-    executor_->add_node(pub_node_);
-    executor_->add_node(sub_node_);
+    executor_->add_node(test_node_);
     // Allow discovery to settle before any publish so transient_local replay works.
     spinFor(std::chrono::milliseconds(200));
   }
 
   void publishMap()
   {
-    map_pub_->publish(map_bin_);
-    spinFor(std::chrono::milliseconds(200));
+    map_pub_->publish(*map_bin_);
+    spinFor(std::chrono::milliseconds(150));
   }
   void publishPerception(const TrafficLightGroupArray & msg)
   {
@@ -321,10 +335,12 @@ protected:
 
   rclcpp::Time arbiterNow() const { return arbiter_->now(); }
 
-  LaneletMapBin map_bin_;
+  // Wrapped in std::optional because LaneletMapBin (a generated ROS msg)
+  // has no usable default constructor that can be invoked at static storage
+  // duration; we initialise it during SetUpTestSuite().
+  inline static std::optional<LaneletMapBin> map_bin_;
 
-  rclcpp::Node::SharedPtr pub_node_;
-  rclcpp::Node::SharedPtr sub_node_;
+  rclcpp::Node::SharedPtr test_node_;
   std::shared_ptr<TrafficLightArbiter> arbiter_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
 
@@ -349,6 +365,26 @@ protected:
 // ---------------------------------------------------------------------------
 TEST_F(ArbiterCharacteristic, signalMatchingLongestPath)
 {
+  // Scenario inputs and expectations:
+  //
+  //   id                external                          perception                      expected
+  //   outcome
+  //   ----------------  --------------------------------  ------------------------------
+  //   ---------------------------- vehicle_signal_a  RED/CIRCLE/0.6 + V2I prediction RED/CIRCLE/0.7
+  //   + INTERNAL pred  match -> perception passes,
+  //                                                                                       predictions
+  //                                                                                       merged (2
+  //                                                                                       total)
+  //   vehicle_signal_b  GREEN/CIRCLE/0.8                  RED/CIRCLE/0.9                  color
+  //   mismatch -> UNKNOWN vehicle_signal_c  RED/CIRCLE/0.8                    RED/CIRCLE +
+  //   GREEN/RIGHT_ARROW  element-count mismatch ->
+  //                                                                                       UNKNOWN
+  //                                                                                       over
+  //                                                                                       shape
+  //                                                                                       union
+  //   kOffMapProbeId    RED/CIRCLE/0.9                    (none)                          dropped
+  //   (WARN+skip)
+
   // Arrange
   startArbiter(true);
   publishMap();
@@ -459,11 +495,78 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianFallbackUsesSourcePriority
   EXPECT_NEAR(g->elements[0].confidence, 0.1f, kConfidenceEpsilon);
 }
 
+// In Signal Matching mode, a non-pedestrian id that arrives on only one side
+// must be reported as UNKNOWN: the color/shape data is hidden, only the shape
+// mask of the present side survives. Both directions (perception-only and
+// external-only) exercise distinct branches in SignalMatchValidator.
+TEST_F(ArbiterCharacteristic, signalMatchingSingleSourceNonPedestrianYieldsUnknown)
+{
+  // Scenario inputs and expectations:
+  //
+  //   id                external           perception        expected outcome
+  //   ----------------  -----------------  ----------------  -----------------------------
+  //   vehicle_signal_a  (none)             RED/CIRCLE/0.7    perception-only -> UNKNOWN/CIRCLE
+  //   vehicle_signal_b  GREEN/CIRCLE/0.8   (none)            external-only   -> UNKNOWN/CIRCLE
+
+  // Arrange
+  startArbiter(true);
+  publishMap();
+  const auto t0 = arbiterNow();
+
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_b,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.8f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.7f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  {
+    const auto * group = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_a);
+    ASSERT_NE(group, nullptr);
+    ASSERT_EQ(group->elements.size(), 1u);
+    EXPECT_EQ(group->elements[0].color, TrafficLightElement::UNKNOWN);
+    EXPECT_EQ(group->elements[0].shape, TrafficLightElement::CIRCLE);
+  }
+  {
+    const auto * group = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_b);
+    ASSERT_NE(group, nullptr);
+    ASSERT_EQ(group->elements.size(), 1u);
+    EXPECT_EQ(group->elements[0].color, TrafficLightElement::UNKNOWN);
+    EXPECT_EQ(group->elements[0].shape, TrafficLightElement::CIRCLE);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // B. Longest path - Priority-based mode (enable_signal_matching=false).
 // ---------------------------------------------------------------------------
 TEST_F(ArbiterCharacteristic, priorityBasedConfidenceLongestPath)
 {
+  // Scenario inputs and expectations:
+  //   - Publish order: stale external (-4.0s) -> recent external (-0.5s) -> perception (-0.2s).
+  //   - The stale external entry must be cleaned up before arbitration runs.
+  //
+  //   id                recent external                     perception              expected
+  //   outcome
+  //   ----------------  ----------------------------------  ---------------------
+  //   --------------------------- vehicle_signal_a  GREEN/CIRCLE/0.7 GREEN/CIRCLE/0.9 CONFIDENCE
+  //   picks perception
+  //                                                                                 (0.9 > 0.7)
+  //   vehicle_signal_b  RED/CIRCLE/0.5 + GREEN/RIGHT_ARROW  (none)                  external only,
+  //   both shapes
+  //                                                                                 pass through
+  //   vehicle_signal_c  (none)                              GREEN/CIRCLE/0.8        perception
+  //   only, passes kOffMapProbeId    RED/CIRCLE/0.9                      (none) dropped (WARN+skip)
+
   // Arrange
   startArbiter();
   publishMap();
@@ -581,6 +684,41 @@ TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
   ASSERT_NE(g, nullptr);
   ASSERT_EQ(g->elements.size(), 1u);
   EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_NEAR(g->elements[0].confidence, 0.10f, kConfidenceEpsilon);
+}
+
+// Symmetric counterpart of priorityFlagOverridesHigherConfidence: with
+// source_priority=external, the external value wins over a higher-confidence
+// perception value. This pins the EXTERNAL branch in arbitrateAndPublish
+// ([traffic_light_arbiter.cpp]: source_priority_ == EXTERNAL).
+TEST_F(ArbiterCharacteristic, priorityFlagFromExternalOverridesHigherConfidence)
+{
+  // Arrange
+  startArbiter(false, "external");
+  publishMap();
+  const auto t0 = arbiterNow();
+
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.10f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.99f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  const auto * g = findTrafficLightGroup(latest_output_, map_ids::vehicle_signal_a);
+  ASSERT_NE(g, nullptr);
+  ASSERT_EQ(g->elements.size(), 1u);
+  EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED);
   EXPECT_NEAR(g->elements[0].confidence, 0.10f, kConfidenceEpsilon);
 }
 
