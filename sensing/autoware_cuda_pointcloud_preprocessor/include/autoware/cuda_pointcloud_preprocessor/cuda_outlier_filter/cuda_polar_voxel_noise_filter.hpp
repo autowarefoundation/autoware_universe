@@ -47,7 +47,6 @@ struct CudaPolarVoxelNoiseFilterParameters
   bool use_return_type_classification;
   bool filter_secondary_returns;
   int secondary_noise_threshold;
-  int intensity_threshold;
   bool publish_noise_cloud;
 };
 

@@ -53,7 +53,6 @@ CudaPolarVoxelNoiseFilterNode::CudaPolarVoxelNoiseFilterNode(
       declare_parameter<bool>("use_return_type_classification");
     filter_params_.filter_secondary_returns = declare_parameter<bool>("filter_secondary_returns");
     filter_params_.secondary_noise_threshold = declare_parameter<int>("secondary_noise_threshold");
-    filter_params_.intensity_threshold = declare_parameter<uint8_t>("intensity_threshold");
     filter_params_.publish_noise_cloud = declare_parameter<bool>("publish_noise_cloud");
 
     // rclcpp always returns integer array as std::vector<int64_t>
@@ -193,17 +192,6 @@ bool CudaPolarVoxelNoiseFilterNode::validate_non_negative_int(
   return true;
 }
 
-bool CudaPolarVoxelNoiseFilterNode::validate_intensity_threshold(
-  const rclcpp::Parameter & param, std::string & reason)
-{
-  int val = param.as_int();
-  if (val < 0 || val > 255) {
-    reason = "intensity_threshold must be between 0 and 255";
-    return false;
-  }
-  return true;
-}
-
 bool CudaPolarVoxelNoiseFilterNode::validate_primary_return_types(
   const rclcpp::Parameter & param, std::string & reason)
 {
@@ -261,9 +249,6 @@ rcl_interfaces::msg::SetParametersResult CudaPolarVoxelNoiseFilterNode::param_ca
     {"max_radius_m",
      {validate_positive_double,
       [this](const rclcpp::Parameter & p) { filter_params_.max_radius_m = p.as_double(); }}},
-    {"intensity_threshold",
-     {validate_intensity_threshold,
-      [this](const rclcpp::Parameter & p) { filter_params_.intensity_threshold = p.as_int(); }}},
     {"use_return_type_classification",
      {nullptr,
       [this](const rclcpp::Parameter & p) {

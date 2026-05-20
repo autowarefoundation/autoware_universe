@@ -7,7 +7,6 @@
     voxel_points_threshold: 4                    # Minimum points required per voxel
     min_radius_m: 0.5                            # Minimum radius to consider (meters)
     max_radius_m: 200.0                          # Maximum radius to consider (meters)
-    intensity_threshold: 1                       # Maximum intensity threshold for secondary returns (primary returns are not affected)
     avg_intensity_threshold: 0.01                       # Maximum intensity threshold for secondary returns (primary returns are not affected)
 
     # Return type classification parameters

@@ -171,8 +171,6 @@ protected:
     const PointCloud2 & input, const ValidPointsMask & valid_points_mask, PointCloud2 & output);
   void publish_noise_cloud(
     const PointCloud2 & input, const ValidPointsMask & valid_points_mask) const;
-  void publish_diagnostics(
-    const VoxelStatsMap & voxel_stats_map, const ValidPointsMask & valid_points_mask);
 
   // Point processing helper methods
   void process_polar_points(const PointCloud2 & input, PointVoxelInfoVector & point_voxel_info);
@@ -228,7 +226,6 @@ protected:
   bool use_return_type_classification_{};
   bool enable_secondary_return_filtering_{};
   int secondary_noise_threshold_{};
-  int intensity_threshold_{};
   double avg_intensity_threshold_{};
   std::vector<int> primary_return_types_;
   bool publish_noise_cloud_{};
@@ -268,7 +265,6 @@ private:
   static bool validate_non_negative_double(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_positive_int(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_non_negative_int(const rclcpp::Parameter & param, std::string & reason);
-  static bool validate_intensity_threshold(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_primary_return_types(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_normalized(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_zero_to_two_pi(const rclcpp::Parameter & param, std::string & reason);

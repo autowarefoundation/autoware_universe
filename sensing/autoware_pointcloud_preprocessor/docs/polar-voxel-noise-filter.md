@@ -223,8 +223,11 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 - **Radius range filtering**: Points outside `[min_radius_m, max_radius_m]` are excluded
 - **Indices unsupported**: Input indices are ignored
 - **Angular domain assumptions**:
-  - azimuth range domain is `[0, 2π]` after normalization handling
-  - elevation range domain is `[-π/2, π/2]`
+  - **PointXYZIRC azimuth**: Computed from `atan2(y, x)`, so the domain is `[-π, π]`; this filter
+    does not normalize it to `[0, 2π]` before voxelization
+  - **PointXYZIRCAEDT azimuth/elevation**: Uses the polar coordinates provided by the input
+    message as-is
+  - **Elevation domain**: Expected to be `[-π/2, π/2]`
 
 ## Error detection and handling
 

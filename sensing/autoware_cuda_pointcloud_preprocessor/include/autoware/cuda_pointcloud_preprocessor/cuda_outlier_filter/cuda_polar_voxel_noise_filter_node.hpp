@@ -60,7 +60,6 @@ protected:
   static bool validate_non_negative_double(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_positive_int(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_non_negative_int(const rclcpp::Parameter & param, std::string & reason);
-  static bool validate_intensity_threshold(const rclcpp::Parameter & param, std::string & reason);
   static bool validate_primary_return_types(const rclcpp::Parameter & param, std::string & reason);
 
 private:

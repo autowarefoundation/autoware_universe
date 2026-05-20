@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -80,7 +80,6 @@ PolarVoxelNoiseFilterComponent::PolarVoxelNoiseFilterComponent(const rclcpp::Nod
     RCLCPP_DEBUG(get_logger(), "primary_return_types_ value: %d", static_cast<int>(val));
   }
 
-  intensity_threshold_ = declare_parameter<uint8_t>("intensity_threshold");
   avg_intensity_threshold_ = declare_parameter<double>("avg_intensity_threshold");
 
   // Create noise cloud publisher if enabled
@@ -442,8 +441,6 @@ void PolarVoxelNoiseFilterComponent::update_parameter(const rclcpp::Parameter & 
      [this](const auto & p) { voxel_points_threshold_ = static_cast<int>(p.as_int()); }},
     {"secondary_noise_threshold",
      [this](const auto & p) { secondary_noise_threshold_ = static_cast<int>(p.as_int()); }},
-    {"intensity_threshold",
-     [this](const auto & p) { intensity_threshold_ = static_cast<int>(p.as_int()); }},
     {"avg_intensity_threshold",
      [this](const auto & p) { avg_intensity_threshold_ = p.as_double(); }},
     {"min_radius_m", [this](const auto & p) { min_radius_m_ = p.as_double(); }},
@@ -582,17 +579,6 @@ bool PolarVoxelNoiseFilterComponent::validate_non_negative_int(
   return true;
 }
 
-bool PolarVoxelNoiseFilterComponent::validate_intensity_threshold(
-  const rclcpp::Parameter & param, std::string & reason)
-{
-  int val = param.as_int();
-  if (val < 0 || val > 255) {
-    reason = "intensity_threshold must be between 0 and 255";
-    return false;
-  }
-  return true;
-}
-
 bool PolarVoxelNoiseFilterComponent::validate_primary_return_types(
   const rclcpp::Parameter & param, std::string & reason)
 {
@@ -674,9 +660,6 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelNoiseFilterComponent::param_c
     {"max_radius_m",
      {validate_positive_double,
       [this](const rclcpp::Parameter & p) { max_radius_m_ = p.as_double(); }}},
-    {"intensity_threshold",
-     {validate_intensity_threshold,
-      [this](const rclcpp::Parameter & p) { intensity_threshold_ = p.as_int(); }}},
     {"use_return_type_classification",
      {nullptr,
       [this](const rclcpp::Parameter & p) { use_return_type_classification_ = p.as_bool(); }}},

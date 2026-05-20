@@ -70,13 +70,6 @@
           },
           "default": "[1, 6, 8, 10]"
         },
-        "intensity_threshold": {
-          "type": "integer",
-          "description": "Maximum intensity threshold for secondary returns.",
-          "default": "1",
-          "minimum": 0,
-          "maximum": 255
-        },
         "avg_intensity_threshold": {
           "type": "number",
           "description": "Maximum average intensity threshold for secondary returns.",
@@ -100,7 +93,6 @@
         "filter_secondary_returns",
         "secondary_noise_threshold",
         "primary_return_types",
-        "intensity_threshold",
         "avg_intensity_threshold",
         "publish_noise_cloud"
       ],
