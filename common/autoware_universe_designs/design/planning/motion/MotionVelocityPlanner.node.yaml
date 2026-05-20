@@ -31,6 +31,7 @@ subscribers:
     message_type: nav_msgs/msg/OccupancyGrid
   - name: route
     message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: /planning/mission_planning/route
   - name: operation_mode_state
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
   - name: control_cmd

@@ -31,6 +31,8 @@ subscribers:
   - name: gate_operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
     remap_target: gate_operation_mode
+  - name: engage
+    message_type: autoware_vehicle_msgs/msg/Engage
 
 publishers:
   - name: operation_mode

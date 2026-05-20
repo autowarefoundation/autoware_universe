@@ -72,6 +72,7 @@ subscribers:
     remap_target: input/acceleration
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
+    global: /autoware/engage
     remap_target: input/engage
 
 publishers:
@@ -95,8 +96,8 @@ publishers:
     remap_target: output/gate_mode
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
-    remap_target: output/engage
     global: /api/autoware/get/engage
+    remap_target: output/engage
   - name: external_emergency
     message_type: tier4_external_api_msgs/msg/Emergency
     remap_target: output/external_emergency
