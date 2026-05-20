@@ -19,8 +19,6 @@
 
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/trajectory/interpolator/akima_spline.hpp>
-#include <autoware/trajectory/interpolator/interpolator.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils/transform/transforms.hpp>
@@ -43,10 +41,6 @@ using utils::obstacle_stop::get_trajectory_shape;
 using utils::obstacle_stop::PointCloud;
 using utils::obstacle_stop::PointCloud2;
 
-using autoware::experimental::trajectory::interpolator::AkimaSpline;
-using InterpolationTrajectory =
-  autoware::experimental::trajectory::Trajectory<autoware_planning_msgs::msg::TrajectoryPoint>;
-
 void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
 {
   const auto node_ptr = get_node_ptr();
@@ -63,13 +57,14 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
   pub_debug_text_ = node_ptr->create_publisher<StringStamped>("~/obstacle_stop/debug/text", 1);
 
   params_ = params.obstacle_stop;
+  stopping_params_ = params.stopping_constraints;
   enabled_ = params.use_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
 
   {
     auto & p = params_.rss_params;
-    p.ego_decel =
-      std::clamp(p.ego_decel, params_.nominal_stopping_decel, params_.maximum_stopping_decel);
+    p.ego_decel = std::clamp(
+      p.ego_decel, stopping_params_.nominal_deceleration, stopping_params_.maximum_deceleration);
   }
 
   {
@@ -110,13 +105,14 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
 void ObstacleStop::update_params(const TrajectoryModifierParams & params)
 {
   params_ = params.obstacle_stop;
+  stopping_params_ = params.stopping_constraints;
   enabled_ = params.use_obstacle_stop;
   trajectory_time_step_ = params.trajectory_time_step;
 
   {
     auto & p = params_.rss_params;
-    p.ego_decel =
-      std::clamp(p.ego_decel, params_.nominal_stopping_decel, params_.maximum_stopping_decel);
+    p.ego_decel = std::clamp(
+      p.ego_decel, stopping_params_.nominal_deceleration, stopping_params_.maximum_deceleration);
   }
 
   {
@@ -172,8 +168,8 @@ bool ObstacleStop::is_trajectory_modification_required(
     debug_data_.trajectory_shape = get_trajectory_shape(
       traj_points, input.current_odometry->pose.pose, context_->vehicle_info,
       input.current_odometry->twist.twist.linear.x,
-      input.current_acceleration->accel.accel.linear.x, params_.nominal_stopping_decel,
-      params_.stopping_jerk, params_.stop_margin, params_.lateral_margin);
+      input.current_acceleration->accel.accel.linear.x, stopping_params_.nominal_deceleration,
+      stopping_params_.jerk_limit, params_.stop_margin, params_.lateral_margin);
   }
 
   check_obstacles(traj_points, input);
@@ -215,8 +211,8 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputDat
     const auto stop_margin = params_.stop_margin + context_->vehicle_info.max_longitudinal_offset_m;
     auto min_stopping_distance = motion_utils::calculate_stop_distance(
       input.current_odometry->twist.twist.linear.x,
-      input.current_acceleration->accel.accel.linear.x, params_.maximum_stopping_decel,
-      params_.stopping_jerk, 0.0);
+      input.current_acceleration->accel.accel.linear.x, stopping_params_.maximum_deceleration,
+      stopping_params_.jerk_limit, 0.0);
     if (!min_stopping_distance) min_stopping_distance = 0.0;
     return std::clamp(
       nearest_collision_point_->arc_length - stop_margin, min_stopping_distance.value(),
@@ -271,39 +267,6 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputDat
   return true;
 }
 
-size_t update_velocities(TrajectoryPoints & trajectory, const double jerk, const double decel)
-{
-  if (trajectory.size() < 2) return 0;
-
-  auto get_vel_accel = [&](
-                         const auto & point, const auto & ref_point) -> std::pair<double, double> {
-    const auto v_ref = ref_point.longitudinal_velocity_mps;
-    const auto a_ref = std::abs(ref_point.acceleration_mps2);
-
-    const auto ds =
-      autoware_utils_geometry::calc_distance2d(point.pose.position, ref_point.pose.position);
-    const auto da = jerk * (ds / std::max<double>(v_ref, 0.1));
-    const auto a_curr = std::min(a_ref + da, decel);
-    const auto a_avg = (a_ref + a_curr) / 2.0;
-    const auto v_curr = std::sqrt(std::max(0.0, v_ref * v_ref + 2.0 * a_avg * ds));
-    return {v_curr, -1.0 * a_curr};
-  };
-
-  const auto stop_index = trajectory.size() - 1;
-  auto vel_update_start_index = stop_index;
-  for (int i = static_cast<int>(stop_index) - 1; i > 0; --i) {
-    auto & curr = trajectory.at(i);
-    auto & next = trajectory.at(i + 1);
-    const auto [v_curr, a_curr] = get_vel_accel(curr, next);
-
-    if (v_curr >= curr.longitudinal_velocity_mps) break;
-    curr.longitudinal_velocity_mps = static_cast<float>(v_curr);
-    curr.acceleration_mps2 = static_cast<float>(a_curr);
-    vel_update_start_index = i;
-  }
-  return vel_update_start_index;
-}
-
 size_t insert_stop_point(
   TrajectoryPoints & trajectory, const double target_stop_point_arc_length,
   const double traj_length)
@@ -337,71 +300,12 @@ bool ObstacleStop::apply_stopping(
 {
   if (target_stop_point_arc_length < 1e-3) return false;
 
-  auto trajectory = traj_points;
-
   const auto stop_index = insert_stop_point(
-    trajectory, target_stop_point_arc_length, debug_data_.trajectory_shape.trajectory_length);
+    traj_points, target_stop_point_arc_length, debug_data_.trajectory_shape.trajectory_length);
 
-  trajectory.erase(trajectory.begin() + stop_index + 1, trajectory.end());
-  trajectory.back().longitudinal_velocity_mps = 0.0;
-  trajectory.back().acceleration_mps2 = 0.0;
-
-  constexpr double min_v_ref = 1.0;
-  const auto v_ref = std::max<double>(min_v_ref, trajectory.front().longitudinal_velocity_mps);
-  const auto required_decel = std::abs(v_ref * v_ref / (2.0 * target_stop_point_arc_length));
-  const auto jerk = std::abs(params_.stopping_jerk);
-  const auto decel = std::clamp(
-    required_decel, std::abs(params_.nominal_stopping_decel),
-    std::abs(params_.maximum_stopping_decel));
-
-  const auto vel_update_start_index = update_velocities(trajectory, jerk, decel);
-  const auto interpolate_start_index = vel_update_start_index > 0 ? vel_update_start_index - 1 : 0;
-
-  auto trajectory_interpolation_util =
-    InterpolationTrajectory::Builder{}
-      .set_xy_interpolator<AkimaSpline>()  // Set interpolator for x-y plane
-      .set_longitudinal_velocity_interpolator<AkimaSpline>()
-      .build(trajectory);
-  if (!trajectory_interpolation_util) {
-    RCLCPP_WARN_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
-      "[TM ObstacleStop] Failed to build interpolation trajectory");
-    return false;
-  }
-
-  const auto dt = trajectory_time_step_;
-
-  if (dt < 1e-3) {
-    RCLCPP_ERROR_THROTTLE(
-      get_node_ptr()->get_logger(), *get_clock(), 1000,
-      "[TM ObstacleStop] Invalid trajectory time step: %f, unable to interpolate trajectory", dt);
-    traj_points = std::move(trajectory);
-    return true;
-  }
-
-  const auto s_max = trajectory_interpolation_util->length();
-  const auto interpolate_start_arc_length =
-    trajectory_interpolation_util->get_underlying_bases().at(interpolate_start_index);
-  trajectory_interpolation_util->align_orientation_with_trajectory_direction();
-  traj_points.erase(traj_points.begin() + interpolate_start_index + 1, traj_points.end());
-  double s_curr{interpolate_start_arc_length};
-  while (s_curr <= s_max) {
-    const auto v_curr = traj_points.back().longitudinal_velocity_mps;
-    const auto a_curr = traj_points.back().acceleration_mps2;
-    const auto t_curr = rclcpp::Duration(traj_points.back().time_from_start);
-    if (v_curr < 1e-3) break;
-
-    double ds = v_curr * dt + 0.5 * a_curr * dt * dt;
-    if (ds < 1e-3) break;
-
-    s_curr += ds;
-    const auto s_clamped = std::min(s_curr, s_max);
-
-    auto p = trajectory_interpolation_util->compute(s_clamped);
-    p.acceleration_mps2 = (p.longitudinal_velocity_mps - v_curr) / static_cast<float>(dt);
-    p.time_from_start = t_curr + rclcpp::Duration::from_seconds(dt);
-    traj_points.push_back(p);
-  }
+  traj_points.erase(traj_points.begin() + stop_index + 1, traj_points.end());
+  traj_points.back().longitudinal_velocity_mps = 0.0;
+  traj_points.back().acceleration_mps2 = 0.0;
 
   return true;
 }
