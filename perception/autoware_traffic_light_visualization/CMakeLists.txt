@@ -37,16 +37,16 @@ rclcpp_components_register_node(traffic_light_map_visualizer
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
-  ament_add_gtest(test_traffic_light_map_visualizer_core
-    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer_core.cpp
+  ament_add_gtest(test_traffic_light_map_visualizer
+    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer.cpp
   )
-  target_include_directories(test_traffic_light_map_visualizer_core PRIVATE
+  target_include_directories(test_traffic_light_map_visualizer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
   )
-  target_link_libraries(test_traffic_light_map_visualizer_core
+  target_link_libraries(test_traffic_light_map_visualizer
     traffic_light_map_visualizer
   )
-  ament_target_dependencies(test_traffic_light_map_visualizer_core
+  ament_target_dependencies(test_traffic_light_map_visualizer
     autoware_lanelet2_extension
     autoware_perception_msgs
     geometry_msgs
