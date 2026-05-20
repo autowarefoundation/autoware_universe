@@ -96,12 +96,10 @@ publishers:
     remap_target: output/gate_mode
   - name: engage
     message_type: autoware_vehicle_msgs/msg/Engage
-    global: /api/autoware/get/engage
     remap_target: output/engage
   - name: external_emergency
     message_type: tier4_external_api_msgs/msg/Emergency
     remap_target: output/external_emergency
-    global: /api/autoware/get/emergency
   - name: operation_mode
     message_type: autoware_adapi_v1_msgs/msg/OperationModeState
     remap_target: output/operation_mode
@@ -118,11 +116,9 @@ servers:
   - name: engage_service
     message_type: tier4_external_api_msgs/srv/Engage
     remap_target: ~/service/engage
-    global: /api/autoware/set/engage
   - name: external_emergency_service
     message_type: tier4_external_api_msgs/srv/SetEmergency
     remap_target: ~/service/external_emergency
-    global: /api/autoware/set/emergency
   - name: external_emergency_stop
     message_type: std_srvs/srv/Trigger
     remap_target: ~/service/external_emergency_stop
