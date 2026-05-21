@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LANELET2_MAP_PROVIDER_NODE_HPP_
-#define LANELET2_MAP_PROVIDER_NODE_HPP_
+#ifndef DYNAMIC_LANELET2_MAP_PROVIDER_NODE_HPP_
+#define DYNAMIC_LANELET2_MAP_PROVIDER_NODE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -26,15 +26,15 @@
 #include <string>
 #include <vector>
 
-namespace autoware::dynamic_lanelet_map_provider
+namespace autoware::dynamic_lanelet2_map_provider
 {
 
-class Lanelet2MapProviderNode : public rclcpp::Node
+class DynamicLanelet2MapProviderNode : public rclcpp::Node
 {
 public:
   using LaneletMapCellMetaData = autoware_map_msgs::msg::LaneletMapCellMetaData;
 
-  explicit Lanelet2MapProviderNode(const rclcpp::NodeOptions & options);
+  explicit DynamicLanelet2MapProviderNode(const rclcpp::NodeOptions & options);
 
   /// @brief AABB-vs-circle overlap test.
   /// Clamps the circle center to the cell's bounding box and checks if the
@@ -70,11 +70,11 @@ private:
 
   rclcpp::Subscription<Odometry>::SharedPtr sub_odometry_;
   rclcpp::Subscription<LaneletMapMetaData>::SharedPtr sub_map_metadata_;
-  rclcpp::Publisher<LaneletMapBin>::SharedPtr pub_submap_;
+  rclcpp::Publisher<LaneletMapBin>::SharedPtr pub_local_map_;
   rclcpp::Client<GetSelectedLanelet2Map>::SharedPtr client_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
-}  // namespace autoware::dynamic_lanelet_map_provider
+}  // namespace autoware::dynamic_lanelet2_map_provider
 
-#endif  // LANELET2_MAP_PROVIDER_NODE_HPP_
+#endif  // DYNAMIC_LANELET2_MAP_PROVIDER_NODE_HPP_

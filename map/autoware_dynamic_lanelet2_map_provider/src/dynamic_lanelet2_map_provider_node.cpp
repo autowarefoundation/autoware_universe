@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lanelet2_map_provider_node.hpp"
+#include "dynamic_lanelet2_map_provider_node.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
 
-namespace autoware::dynamic_lanelet_map_provider
+namespace autoware::dynamic_lanelet2_map_provider
 {
 
-Lanelet2MapProviderNode::Lanelet2MapProviderNode(const rclcpp::NodeOptions & options)
+DynamicLanelet2MapProviderNode::DynamicLanelet2MapProviderNode(const rclcpp::NodeOptions & options)
 : Node("lanelet2_map_provider", options)
 {
   map_radius_ = declare_parameter<double>("map_radius");
@@ -42,8 +42,8 @@ Lanelet2MapProviderNode::Lanelet2MapProviderNode(const rclcpp::NodeOptions & opt
     "input/lanelet2_map_metadata", rclcpp::QoS{1}.transient_local(),
     [this](const LaneletMapMetaData::ConstSharedPtr msg) { on_map_metadata(msg); }, sub_opts);
 
-  pub_submap_ =
-    create_publisher<LaneletMapBin>("output/lanelet2_submap", rclcpp::QoS{1}.transient_local());
+  pub_local_map_ =
+    create_publisher<LaneletMapBin>("output/lanelet2_map_local", rclcpp::QoS{1}.transient_local());
 
   client_ = create_client<GetSelectedLanelet2Map>(
     "service/get_selected_lanelet2_map", rmw_qos_profile_services_default, cb_group_client_);
@@ -51,19 +51,19 @@ Lanelet2MapProviderNode::Lanelet2MapProviderNode(const rclcpp::NodeOptions & opt
   timer_ = create_wall_timer(std::chrono::seconds(1), [this] { on_timer(); }, cb_group_timer_);
 }
 
-void Lanelet2MapProviderNode::on_odometry(const Odometry::ConstSharedPtr msg)
+void DynamicLanelet2MapProviderNode::on_odometry(const Odometry::ConstSharedPtr msg)
 {
   latest_odometry_ = *msg;
 }
 
-void Lanelet2MapProviderNode::on_map_metadata(const LaneletMapMetaData::ConstSharedPtr msg)
+void DynamicLanelet2MapProviderNode::on_map_metadata(const LaneletMapMetaData::ConstSharedPtr msg)
 {
   map_metadata_ = *msg;
   RCLCPP_INFO(
     get_logger(), "Received lanelet2 map metadata with %zu cells.", msg->metadata_list.size());
 }
 
-void Lanelet2MapProviderNode::on_timer()
+void DynamicLanelet2MapProviderNode::on_timer()
 {
   if (!latest_odometry_ || !map_metadata_ || request_in_flight_) {
     return;
@@ -105,14 +105,14 @@ void Lanelet2MapProviderNode::on_timer()
         RCLCPP_ERROR(get_logger(), "GetSelectedLanelet2Map returned an empty map.");
         return;
       }
-      pub_submap_->publish(response->lanelet2_cells);
+      pub_local_map_->publish(response->lanelet2_cells);
       RCLCPP_DEBUG(
-        get_logger(), "Published lanelet2 submap (%zu bytes).",
+        get_logger(), "Published lanelet2 local map (%zu bytes).",
         response->lanelet2_cells.data.size());
     });
 }
 
-bool Lanelet2MapProviderNode::cell_overlaps_circle(
+bool DynamicLanelet2MapProviderNode::cell_overlaps_circle(
   const LaneletMapCellMetaData & cell, const double cx, const double cy, const double radius)
 {
   const double px = std::clamp(cx, cell.min_x, cell.max_x);
@@ -120,7 +120,7 @@ bool Lanelet2MapProviderNode::cell_overlaps_circle(
   return std::hypot(cx - px, cy - py) <= radius;
 }
 
-std::vector<std::string> Lanelet2MapProviderNode::select_cells(
+std::vector<std::string> DynamicLanelet2MapProviderNode::select_cells(
   const double cx, const double cy, const double radius) const
 {
   std::vector<std::string> ids;
@@ -132,7 +132,7 @@ std::vector<std::string> Lanelet2MapProviderNode::select_cells(
   return ids;
 }
 
-}  // namespace autoware::dynamic_lanelet_map_provider
+}  // namespace autoware::dynamic_lanelet2_map_provider
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::dynamic_lanelet_map_provider::Lanelet2MapProviderNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::dynamic_lanelet2_map_provider::DynamicLanelet2MapProviderNode)

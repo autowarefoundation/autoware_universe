@@ -1,10 +1,10 @@
-# autoware_dynamic_lanelet_map_provider
+# autoware_dynamic_lanelet2_map_provider
 
 ## Purpose
 
-`autoware_dynamic_lanelet_map_provider` publishes a dynamic lanelet2 submap around the ego vehicle.
+`autoware_dynamic_lanelet2_map_provider` publishes a dynamic lanelet2 local map around the ego vehicle.
 
-The node subscribes to lanelet2 map metadata and ego odometry, selects map cells that overlap a radius around the ego position, requests those cells through `GetSelectedLanelet2Map`, and publishes the resulting lanelet2 submap.
+The node subscribes to lanelet2 map metadata and ego odometry, selects map cells that overlap a radius around the ego position, requests those cells through `GetSelectedLanelet2Map`, and publishes the resulting lanelet2 local map.
 
 ## Inner-workings / Algorithms
 
@@ -20,7 +20,7 @@ The node subscribes to lanelet2 map metadata and ego odometry, selects map cells
    - each metadata cell has `[min_x, min_y, max_x, max_y]`
    - a cell is selected when its rectangle overlaps a circle centered at ego with radius `map_radius`
 5. Calls `service/get_selected_lanelet2_map` with selected `cell_ids`.
-6. Publishes non-empty response map on `output/lanelet2_submap` (transient local).
+6. Publishes non-empty response map on `output/lanelet2_map_local` (transient local).
 
 ## Inputs / Outputs
 
@@ -28,7 +28,7 @@ The node subscribes to lanelet2 map metadata and ego odometry, selects map cells
 
 | Name                                | Type                                             | Description                                                |
 | ----------------------------------- | ------------------------------------------------ | ---------------------------------------------------------- |
-| `input/odometry`                    | `nav_msgs::msg::Odometry`                        | Ego odometry used as the submap center.                    |
+| `input/odometry`                    | `nav_msgs::msg::Odometry`                        | Ego odometry used as the local map center.                 |
 | `input/lanelet2_map_metadata`       | `autoware_map_msgs::msg::LaneletMapMetaData`     | Metadata of available lanelet2 map cells (AABB list).      |
 | `service/get_selected_lanelet2_map` | `autoware_map_msgs::srv::GetSelectedLanelet2Map` | Service used to fetch lanelet2 map cells for selected IDs. |
 
@@ -36,17 +36,13 @@ The node subscribes to lanelet2 map metadata and ego odometry, selects map cells
 
 | Name                     | Type                                    | Description                                     |
 | ------------------------ | --------------------------------------- | ----------------------------------------------- |
-| `output/lanelet2_submap` | `autoware_map_msgs::msg::LaneletMapBin` | Dynamic lanelet2 submap around the ego vehicle. |
+| `output/lanelet2_map_local` | `autoware_map_msgs::msg::LaneletMapBin` | Dynamic lanelet2 local map around the ego vehicle. |
 
 ## Parameters
 
 ### Node Parameters
 
-None.
-
-### Core Parameters
-
-{{ json_to_markdown("map/autoware_dynamic_lanelet_map_provider/schema/lanelet2_map_provider.schema.json") }}
+{{ json_to_markdown("map/autoware_dynamic_lanelet2_map_provider/schema/lanelet2_map_provider.schema.json") }}
 
 ## Launch Arguments
 
@@ -54,15 +50,15 @@ The launch file `launch/lanelet2_map_provider.launch.xml` supports the following
 
 | Name                                | Default                                                                                           | Description                                           |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `param_path`                        | `$(find-pkg-share autoware_dynamic_lanelet_map_provider)/config/lanelet2_map_provider.param.yaml` | Parameter file path.                                  |
+| `param_path`                        | `$(find-pkg-share autoware_dynamic_lanelet2_map_provider)/config/lanelet2_map_provider.param.yaml` | Parameter file path.                                  |
 | `input_odometry`                    | `/localization/kinematic_state`                                                                   | Remap target for `input/odometry`.                    |
 | `input_lanelet2_map_metadata`       | `/map/output/lanelet2_map_metadata`                                                               | Remap target for `input/lanelet2_map_metadata`.       |
-| `output_lanelet2_submap`            | `output/lanelet2_submap`                                                                          | Remap target for `output/lanelet2_submap`.            |
+| `output_lanelet2_map_local`         | `output/lanelet2_map_local`                                                                       | Remap target for `output/lanelet2_map_local`.         |
 | `service_get_selected_lanelet2_map` | `/map/service/get_selected_lanelet2_map`                                                          | Remap target for `service/get_selected_lanelet2_map`. |
 
 ## Assumptions / Known limits
 
 - The node requires both odometry and lanelet2 metadata before the first update.
-- Submap refresh is distance-triggered and evaluated by a 1 Hz timer, so updates are not continuous.
+- Local map refresh is distance-triggered and evaluated by a 1 Hz timer, so updates are not continuous.
 - If the map service is unavailable, the node only warns and retries on subsequent timer ticks.
 - If the service returns an empty map payload, the node reports an error and does not publish.
