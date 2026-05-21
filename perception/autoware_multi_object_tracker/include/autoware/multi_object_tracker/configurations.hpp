@@ -56,6 +56,8 @@ struct AssociatorConfig
   LabelToTrackerAssociationParametersMap association_params_map;
 
   double unknown_association_giou_threshold;
+  double score_threshold = 0.01;
+  double ego_pose_max_age_sec = 0.21;  // max staleness of ego pose before polar is disabled [s]
 };
 
 //// Helper: per-label threshold table

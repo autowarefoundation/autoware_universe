@@ -47,7 +47,7 @@ struct MeasurementWithIndex
 };
 
 BevAssociation::BevAssociation(const AssociatorConfig & config)
-: config_(config), score_threshold_(0.01)
+: config_(config), score_threshold_(config.score_threshold)
 {
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
   updateMaxSearchDistances();

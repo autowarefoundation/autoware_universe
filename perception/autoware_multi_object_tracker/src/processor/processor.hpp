@@ -26,6 +26,7 @@
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include <list>
 #include <memory>
@@ -46,7 +47,8 @@ public:
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
 
   // Tracker processes
-  void predict(const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose);
+  void updateEgoPose(const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose_stamped);
+  void predictTrackers(const rclcpp::Time & time);
   types::AssociationResult associate(const types::DynamicObjectList & detected_objects) const;
   void update(const types::AssociatedObjects & associated_objects);
   void spawn(const types::AssociatedObjects & associated_objects);
@@ -69,18 +71,20 @@ private:
   const TrackerCreationConfig creation_config_;
   const std::vector<types::InputChannel> & channels_config_;
 
+  std::optional<geometry_msgs::msg::PoseStamped> ego_pose_;
+
   std::unique_ptr<AssociationManager> association_manager_;
   std::unique_ptr<TrackerOverlapManager> tracker_overlap_manager_;
 
   mutable rclcpp::Time last_prune_time_;
 
   std::list<std::shared_ptr<Tracker>> list_tracker_;
+  std::optional<geometry_msgs::msg::Pose> getEgoPose() const;
   void removeOldTracker(const rclcpp::Time & time);
   std::shared_ptr<Tracker> createNewTracker(
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-  std::optional<geometry_msgs::msg::Pose> ego_pose_;
   AdaptiveThresholdCache adaptive_threshold_cache_;
 };
 

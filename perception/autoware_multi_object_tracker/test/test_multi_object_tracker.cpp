@@ -115,7 +115,7 @@ FunctionTimings runIterationsAssociation(
 
     // Individual function timing
     timings.predict.times.push_back(
-      measureTimeMs([&]() { processor->predict(current_time, std::nullopt); }));
+      measureTimeMs([&]() { processor->predictTrackers(current_time); }));
     timings.associate.times.push_back(
       measureTimeMs([&]() { association_result = processor->associate(detections); }));
     timings.update.times.push_back(measureTimeMs([&]() {
@@ -183,7 +183,7 @@ FunctionTimings runIterations(
 
     // Individual function timing
     timings.predict.times.push_back(
-      measureTimeMs([&]() { processor->predict(current_time, std::nullopt); }));
+      measureTimeMs([&]() { processor->predictTrackers(current_time); }));
     timings.associate.times.push_back(
       measureTimeMs([&]() { association_result = processor->associate(detections); }));
     timings.update.times.push_back(measureTimeMs([&]() {
@@ -324,7 +324,7 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
         pose_cov = tf2::transformCovariance(pose_cov, tf_target2objects);
       }
       // Process through tracker
-      processor->predict(msg->header.stamp, std::nullopt);
+      processor->predictTrackers(msg->header.stamp);
 
       const auto association_result = processor->associate(dynamic_objects);
       const autoware::multi_object_tracker::types::AssociatedObjects associated_objects{

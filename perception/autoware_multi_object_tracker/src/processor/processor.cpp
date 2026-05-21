@@ -19,7 +19,10 @@
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
+#include <tf2/transform_datatypes.hpp>
+
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -47,11 +50,19 @@ TrackerProcessor::TrackerProcessor(
     std::make_unique<TrackerOverlapManager>(tracker_overlap_manager_config);
 }
 
-void TrackerProcessor::predict(
-  const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose)
+std::optional<geometry_msgs::msg::Pose> TrackerProcessor::getEgoPose() const
 {
-  ego_pose_ = ego_pose;
+  return ego_pose_ ? std::make_optional(ego_pose_->pose) : std::nullopt;
+}
 
+void TrackerProcessor::updateEgoPose(
+  const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose_stamped)
+{
+  ego_pose_ = ego_pose_stamped;
+}
+
+void TrackerProcessor::predictTrackers(const rclcpp::Time & time)
+{
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
@@ -66,7 +77,7 @@ types::AssociationResult TrackerProcessor::associate(
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  return association_manager_->associate(detected_objects, list_tracker_);
+  return association_manager_->associate(detected_objects, list_tracker_, ego_pose_);
 }
 
 void TrackerProcessor::update(const types::AssociatedObjects & associated_objects)
@@ -190,7 +201,7 @@ void TrackerProcessor::prune(const rclcpp::Time & time)
   }
 
   removeOldTracker(time);
-  tracker_overlap_manager_->merge(list_tracker_, time, adaptive_threshold_cache_, ego_pose_);
+  tracker_overlap_manager_->merge(list_tracker_, time, adaptive_threshold_cache_, getEgoPose());
 
   last_prune_time_ = time;
 }
@@ -201,7 +212,7 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   for (auto itr = list_tracker_.begin(); itr != list_tracker_.end(); ++itr) {
-    if ((*itr)->isExpired(time, adaptive_threshold_cache_, ego_pose_)) {
+    if ((*itr)->isExpired(time, adaptive_threshold_cache_, getEgoPose())) {
       auto erase_itr = itr;
       --itr;
       list_tracker_.erase(erase_itr);
@@ -218,7 +229,7 @@ void TrackerProcessor::getTrackedObjects(
   tracked_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
-    if (!tracker->isConfident(adaptive_threshold_cache_, ego_pose_, std::nullopt)) continue;
+    if (!tracker->isConfident(adaptive_threshold_cache_, getEgoPose(), std::nullopt)) continue;
     constexpr bool to_publish = true;
     if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
       tracked_object.existence_probability = tracker->getTotalExistenceProbability();
@@ -238,7 +249,7 @@ void TrackerProcessor::getTentativeObjects(
   tentative_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
-    if (tracker->isConfident(adaptive_threshold_cache_, ego_pose_, std::nullopt)) continue;
+    if (tracker->isConfident(adaptive_threshold_cache_, getEgoPose(), std::nullopt)) continue;
     constexpr bool to_publish = false;
     if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
       tentative_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
@@ -264,37 +275,15 @@ void TrackerProcessor::getMergedObjects(
     }
   }
 
-  // Transform from world frame to ego frame
-  const double tf_x = tf_base_to_world.translation.x;
-  const double tf_y = tf_base_to_world.translation.y;
-  const double tf_z = tf_base_to_world.translation.z;
-
-  const auto & tf_q = tf_base_to_world.rotation;
-  const double tf_qw = tf_q.w;
-  const double tf_qx = -tf_q.x;
-  const double tf_qy = -tf_q.y;
-  const double tf_qz = -tf_q.z;
+  // Transform poses from world frame to ego frame using the inverse of tf_base_to_world
+  tf2::Transform tf2_base_to_world;
+  tf2::fromMsg(tf_base_to_world, tf2_base_to_world);
+  geometry_msgs::msg::TransformStamped ts;
+  ts.transform = tf2::toMsg(tf2_base_to_world.inverse());
 
   for (auto & obj : merged_objects.objects) {
-    auto & pose = obj.kinematics.pose_with_covariance.pose;
-
-    const double dx = pose.position.x - tf_x;
-    const double dy = pose.position.y - tf_y;
-    const double dz = pose.position.z - tf_z;
-
-    const double cross_x = tf_qy * dz - tf_qz * dy + tf_qw * dx;
-    const double cross_y = tf_qz * dx - tf_qx * dz + tf_qw * dy;
-    const double cross_z = tf_qx * dy - tf_qy * dx + tf_qw * dz;
-
-    pose.position.x = dx + 2.0 * (tf_qy * cross_z - tf_qz * cross_y);
-    pose.position.y = dy + 2.0 * (tf_qz * cross_x - tf_qx * cross_z);
-    pose.position.z = dz + 2.0 * (tf_qx * cross_y - tf_qy * cross_x);
-
-    const auto & obj_q = pose.orientation;
-    pose.orientation.w = tf_qw * obj_q.w - tf_qx * obj_q.x - tf_qy * obj_q.y - tf_qz * obj_q.z;
-    pose.orientation.x = tf_qw * obj_q.x + tf_qx * obj_q.w + tf_qy * obj_q.z - tf_qz * obj_q.y;
-    pose.orientation.y = tf_qw * obj_q.y - tf_qx * obj_q.z + tf_qy * obj_q.w + tf_qz * obj_q.x;
-    pose.orientation.z = tf_qw * obj_q.z + tf_qx * obj_q.y - tf_qy * obj_q.x + tf_qz * obj_q.w;
+    tf2::doTransform(
+      obj.kinematics.pose_with_covariance.pose, obj.kinematics.pose_with_covariance.pose, ts);
   }
 }
 
