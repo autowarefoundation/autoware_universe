@@ -95,10 +95,12 @@ CudaPolarVoxelNoiseFilterNode::CudaPolarVoxelNoiseFilterNode(
   {
     filter_params_.radial_resolution_m = declare_parameter<double>(
       "radial_resolution", make_positive_double_descriptor("radial_resolution"));
-    filter_params_.azimuth_resolution_rad = adjust_resolution_to_circle(declare_parameter<double>(
-      "azimuth_resolution", make_positive_double_descriptor("azimuth_resolution")));
-    filter_params_.elevation_resolution_rad = adjust_resolution_to_circle(declare_parameter<double>(
-      "elevation_resolution", make_positive_double_descriptor("elevation_resolution")));
+    filter_params_.azimuth_resolution_rad = adjust_resolution_to_circle(
+      declare_parameter<double>(
+        "azimuth_resolution", make_positive_double_descriptor("azimuth_resolution")));
+    filter_params_.elevation_resolution_rad = adjust_resolution_to_circle(
+      declare_parameter<double>(
+        "elevation_resolution", make_positive_double_descriptor("elevation_resolution")));
     filter_params_.voxel_points_threshold = declare_parameter<int>(
       "voxel_points_threshold", make_positive_int_descriptor("voxel_points_threshold"));
     filter_params_.avg_intensity_threshold = declare_parameter<double>(
