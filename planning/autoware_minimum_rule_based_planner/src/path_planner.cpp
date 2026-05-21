@@ -805,7 +805,7 @@ PathPointTrajectory refine_path_for_goal(
 
   if (!intervals.empty()) {
     auto cropped = autoware::experimental::trajectory::crop(cropped_path, 0, intervals.back().end);
-    goal_connected_trajectory_points = cropped.restore(2);
+    goal_connected_trajectory_points = cropped.restore();
   } else if (cropped_path.length() > pre_goal_offset) {
     // If distance from start to goal is smaller than refine_goal_search_radius_range and start is
     // farther from goal than pre_goal, we just connect start, pre_goal, and goal.
