@@ -14,6 +14,8 @@
 
 #include "dynamic_lanelet2_map_provider_node.hpp"
 
+#include <autoware/qos_utils/qos_compatibility.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -28,6 +30,7 @@ DynamicLanelet2MapProviderNode::DynamicLanelet2MapProviderNode(const rclcpp::Nod
   map_radius_ = declare_parameter<double>("map_radius");
   update_distance_threshold_ = declare_parameter<double>("update_distance_threshold");
 
+  const auto service_qos = AUTOWARE_DEFAULT_SERVICES_QOS_PROFILE();
   cb_group_timer_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   cb_group_client_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
@@ -46,7 +49,7 @@ DynamicLanelet2MapProviderNode::DynamicLanelet2MapProviderNode(const rclcpp::Nod
     create_publisher<LaneletMapBin>("output/lanelet2_map_local", rclcpp::QoS{1}.transient_local());
 
   client_ = create_client<GetSelectedLanelet2Map>(
-    "service/get_selected_lanelet2_map", rmw_qos_profile_services_default, cb_group_client_);
+    "service/get_selected_lanelet2_map", service_qos, cb_group_client_);
 
   timer_ = create_wall_timer(std::chrono::seconds(1), [this] { on_timer(); }, cb_group_timer_);
 }
