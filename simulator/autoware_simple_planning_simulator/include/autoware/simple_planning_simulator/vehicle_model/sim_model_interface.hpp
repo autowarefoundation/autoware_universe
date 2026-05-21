@@ -17,8 +17,8 @@
 
 #include <Eigen/Core>
 
+#include "autoware_vehicle_msgs/msg/actuation_report_stamped.hpp"
 #include "autoware_vehicle_msgs/msg/gear_command.hpp"
-#include "tier4_vehicle_msgs/msg/actuation_status_stamped.hpp"
 
 #include <optional>
 
@@ -32,7 +32,7 @@ namespace autoware::simulator::simple_planning_simulator
 class SimModelInterface
 {
 protected:
-  using ActuationStatusStamped = tier4_vehicle_msgs::msg::ActuationStatusStamped;
+  using ActuationReportStamped = autoware_vehicle_msgs::msg::ActuationReportStamped;
 
   const int dim_x_;        //!< @brief dimension of state x
   const int dim_u_;        //!< @brief dimension of input u
@@ -170,7 +170,7 @@ public:
   /*
    * @brief get actuation status
    */
-  virtual std::optional<ActuationStatusStamped> getActuationStatus() const { return std::nullopt; }
+  virtual std::optional<ActuationReportStamped> getActuationStatus() const { return std::nullopt; }
 
   /**
    * @brief calculate derivative of states with vehicle model

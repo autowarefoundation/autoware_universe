@@ -324,14 +324,14 @@ void SimModelActuationCmd::updateStateWithGear(
   }
 }
 
-std::optional<tier4_vehicle_msgs::msg::ActuationStatusStamped>
+std::optional<autoware_vehicle_msgs::msg::ActuationReportStamped>
 SimModelActuationCmd::getActuationStatus() const
 {
   if (!convert_accel_cmd_ && !convert_brake_cmd_ && !convert_steer_cmd_) {
     return std::nullopt;
   }
 
-  tier4_vehicle_msgs::msg::ActuationStatusStamped actuation_status;
+  autoware_vehicle_msgs::msg::ActuationReportStamped actuation_status;
 
   const double acc_state = std::clamp(state_(IDX::ACCX), -vx_rate_lim_, vx_rate_lim_);
   const double vel_state = std::clamp(state_(IDX::VX), -vx_lim_, vx_lim_);
@@ -339,12 +339,12 @@ SimModelActuationCmd::getActuationStatus() const
   if (convert_accel_cmd_) {
     const auto throttle = accel_map_.getThrottle(acc_state, vel_state);
     if (throttle.has_value()) {
-      actuation_status.status.accel_status = throttle.value();
+      actuation_status.actuation_report.accel_report = throttle.value();
     }
   }
 
   if (convert_brake_cmd_) {
-    actuation_status.status.brake_status = brake_map_.getBrake(acc_state, vel_state);
+    actuation_status.actuation_report.brake_report = brake_map_.getBrake(acc_state, vel_state);
   }
 
   return actuation_status;

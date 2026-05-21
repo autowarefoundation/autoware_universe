@@ -144,7 +144,7 @@ public:
   /*
    * @brief get actuation status
    */
-  std::optional<ActuationStatusStamped> getActuationStatus() const override;
+  std::optional<ActuationReportStamped> getActuationStatus() const override;
 
   /**
    * @brief is publish actuation status enabled
