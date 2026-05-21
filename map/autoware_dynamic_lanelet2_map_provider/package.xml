@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>autoware_dynamic_lanelet_map_provider</name>
+  <name>autoware_dynamic_lanelet2_map_provider</name>
   <version>1.0.0</version>
-  <description>Publishes a dynamic lanelet2 submap around the ego vehicle by calling the GetSelectedLanelet2Map service.</description>
+  <description>Publishes a dynamic lanelet2 local map around the ego vehicle by calling the GetSelectedLanelet2Map service.</description>
   <maintainer email="ryohsuke.mitsudome@tier4.jp">Ryohsuke Mitsudome</maintainer>
 
   <license>Apache License 2.0</license>

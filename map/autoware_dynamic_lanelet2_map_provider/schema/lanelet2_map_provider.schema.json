@@ -14,7 +14,7 @@
         },
         "update_distance_threshold": {
           "type": "number",
-          "description": "Minimum distance [m] the ego must travel before the submap is re-requested.",
+          "description": "Minimum distance [m] the ego must travel before the local map is re-requested.",
           "default": 50.0,
           "minimum": 0.0
         }

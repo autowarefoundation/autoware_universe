@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 3.14)
-project(autoware_dynamic_lanelet_map_provider)
+project(autoware_dynamic_lanelet2_map_provider)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
-ament_auto_add_library(lanelet2_map_provider_node SHARED
-  src/lanelet2_map_provider_node.cpp
+ament_auto_add_library(dynamic_lanelet2_map_provider SHARED
+  src/dynamic_lanelet2_map_provider_node.cpp
 )
 
-rclcpp_components_register_node(lanelet2_map_provider_node
-  PLUGIN "autoware::dynamic_lanelet_map_provider::Lanelet2MapProviderNode"
-  EXECUTABLE autoware_lanelet2_map_provider
+rclcpp_components_register_node(dynamic_lanelet2_map_provider
+  PLUGIN "autoware::dynamic_lanelet2_map_provider::DynamicLanelet2MapProviderNode"
+  EXECUTABLE autoware_dynamic_lanelet2_map_provider_node
 )
 
 if(BUILD_TESTING)
@@ -26,7 +26,7 @@ if(BUILD_TESTING)
     ament_target_dependencies(${test_name} ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS})
   endfunction()
 
-  add_testcase(test/test_lanelet2_map_provider_node.cpp)
+  add_testcase(test/test_dynamic_lanelet2_map_provider_node.cpp)
 endif()
 
 autoware_ament_auto_package(INSTALL_TO_SHARE
