@@ -38,7 +38,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
   ament_add_gtest(test_traffic_light_map_visualizer
-    test/test_traffic_light_map_visualizer.cpp
+    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer.cpp
   )
   target_include_directories(test_traffic_light_map_visualizer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -56,7 +56,7 @@ if(BUILD_TESTING)
   )
 
   ament_add_gtest(test_traffic_light_map_visualizer_core
-    test/test_traffic_light_map_visualizer_core.cpp
+    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer_core.cpp
   )
   target_include_directories(test_traffic_light_map_visualizer_core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -68,6 +68,38 @@ if(BUILD_TESTING)
     autoware_lanelet2_extension
     autoware_perception_msgs
     geometry_msgs
+    visualization_msgs
+  )
+
+  ament_add_gtest(test_extract_bulbs
+    test/traffic_light_map_visualizer/test_extract_bulbs.cpp
+  )
+  target_include_directories(test_extract_bulbs PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_extract_bulbs
+    traffic_light_map_visualizer
+  )
+  ament_target_dependencies(test_extract_bulbs
+    autoware_lanelet2_extension
+    autoware_perception_msgs
+  )
+
+  ament_add_gtest(test_traffic_light_map_visualizer_node
+    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer_node.cpp
+  )
+  target_include_directories(test_traffic_light_map_visualizer_node PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_traffic_light_map_visualizer_node
+    traffic_light_map_visualizer
+  )
+  ament_target_dependencies(test_traffic_light_map_visualizer_node
+    autoware_lanelet2_extension
+    autoware_lanelet2_utils
+    autoware_map_msgs
+    autoware_perception_msgs
+    rclcpp
     visualization_msgs
   )
 endif()
