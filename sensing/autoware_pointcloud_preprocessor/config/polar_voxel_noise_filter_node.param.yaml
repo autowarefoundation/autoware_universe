@@ -1,19 +1,19 @@
 /**:
   ros__parameters:
     # Core filtering parameters
-    radial_resolution_m: 0.5                     # Resolution in radial direction (meters)
-    azimuth_resolution_rad: 0.08               # Resolution in azimuth direction (radians)
-    elevation_resolution_rad: 0.05             # Resolution in elevation direction (radians)
-    voxel_points_threshold: 4                    # Minimum points required per voxel
-    min_radius_m: 0.5                            # Minimum radius to consider (meters)
-    max_radius_m: 200.0                          # Maximum radius to consider (meters)
-    avg_intensity_threshold: 0.01                       # Maximum intensity threshold for secondary returns (primary returns are not affected)
+    radial_resolution_m: 0.5
+    azimuth_resolution_rad: 0.08
+    elevation_resolution_rad: 0.05
+    voxel_points_threshold: 4
+    min_radius_m: 0.5
+    max_radius_m: 200.0
+    avg_intensity_threshold: 0.01
 
     # Return type classification parameters
-    use_return_type_classification: true         # Whether to use return type classification
-    filter_secondary_returns: true              # Whether to filter secondary returns (keep only primary when true)
-    secondary_noise_threshold: 4                 # Threshold for classifying primary vs secondary returns
-    primary_return_types: [1, 6, 8, 10]          # Return types considered as primary returns (all others are secondary)
+    use_return_type_classification: true
+    filter_secondary_returns: true
+    secondary_noise_threshold: 4
+    primary_return_types: [1, 6, 8, 10]
 
     # Performance and debug control
-    publish_noise_cloud: false                    # Generate and publish noise cloud for debugging (true for development)
+    publish_noise_cloud: false

@@ -14,7 +14,9 @@
 
   <node pkg="autoware_cuda_pointcloud_preprocessor" exec="cuda_polar_voxel_noise_filter_node" name="cuda_polar_voxel_noise_filter" output="screen" unless="$(var debug)">
     <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda/dummy"/>
     <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
+    <remap from="~/output/pointcloud/cuda" to="$(var output/pointcloud)/cuda/dummy"/>
     <param from="$(var polar_voxel_noise_filter_param_file)"/>
     <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>
@@ -28,7 +30,9 @@
     if="$(var debug)"
   >
     <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda/dummy"/>
     <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
+    <remap from="~/output/pointcloud/cuda" to="$(var output/pointcloud)/cuda/dummy"/>
     <param from="$(var polar_voxel_noise_filter_param_file)"/>
     <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>

@@ -14,8 +14,8 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_outlier_filter/cuda_polar_voxel_noise_filter_node.hpp"
 
-#include "autoware/pointcloud_preprocessor/filter.hpp"  // for get_param
-#include "autoware/pointcloud_preprocessor/utility/memory.hpp"  // for autoware::pointcloud_preprocessor::utils
+#include "autoware/pointcloud_preprocessor/filter.hpp"
+#include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <cmath>
 #include <stdexcept>
@@ -111,29 +111,46 @@ void CudaPolarVoxelNoiseFilterNode::pointcloud_callback(
   validate_filter_inputs(msg);
 
   // Check if the input point cloud has PointXYZIRCAEDT layout (with pre-computed polar coordinates)
-  bool has_polar_coords =
-    autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzircaedt(*msg);
-  bool has_return_type =
-    autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzirc(*msg);
+
+  std::call_once(input_format_once_flag_, [this, &msg]() {
+    const bool has_polar_coords =
+      autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzircaedt(
+        *msg);
+    const bool has_return_type =
+      autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzirc(*msg);
+
+    if (has_polar_coords) {
+      input_format_ = InputPointCloudFormat::PointXYZIRCAEDT;
+      RCLCPP_INFO(
+        get_logger(), "Processing PointXYZIRCAEDT format with pre-computed polar coordinates");
+      return;
+    }
+
+    if (has_return_type) {
+      input_format_ = InputPointCloudFormat::PointXYZIRC;
+      RCLCPP_INFO(
+        get_logger(), "Processing PointXYZIRC format, computing azimuth and elevation");
+      return;
+    }
+
+    throw std::runtime_error(
+      "Unsupported input point cloud format");
+  });
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> filtered_cloud;
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> noise_cloud;
   CudaPolarVoxelNoiseFilter::FilterReturn filter_return{};
 
-  if (has_polar_coords) {
-    RCLCPP_DEBUG_ONCE(
-      get_logger(), "Processing PointXYZIRCAEDT format with pre-computed polar coordinates");
+  if (input_format_ == InputPointCloudFormat::PointXYZIRCAEDT) {
     filter_return = cuda_polar_voxel_noise_filter_->filter(
       msg, filter_params_, CudaPolarVoxelNoiseFilter::PolarDataType::PreComputed);
-  } else if (has_return_type) {
-    RCLCPP_DEBUG_ONCE(
-      get_logger(), "Processing PointXYZIRC format, computing azimuth and elevation");
+  } else if (input_format_ == InputPointCloudFormat::PointXYZIRC) {
     filter_return = cuda_polar_voxel_noise_filter_->filter(
       msg, filter_params_, CudaPolarVoxelNoiseFilter::PolarDataType::DeriveFromCartesian);
   } else {
     RCLCPP_ERROR(
       get_logger(),
-      "PointXYZ format has not been supported by "
+      "Unknown point cloud format, not supported by "
       "autoware_cuda_pointcloud_preprocessor::cuda_polar_voxel_noise_filter yet.");
   }
 

@@ -63,9 +63,17 @@ protected:
   static bool validate_primary_return_types(const rclcpp::Parameter & param, std::string & reason);
 
 private:
+  enum class InputPointCloudFormat
+  {
+    PointXYZIRC,
+    PointXYZIRCAEDT
+  };
+
   CudaPolarVoxelNoiseFilterParameters filter_params_;
   std::vector<int> primary_return_types_;  // Return types considered as primary returns
   std::mutex param_mutex_;
+  std::once_flag input_format_once_flag_;
+  std::optional<InputPointCloudFormat> input_format_;
 
   // CUDA sub
   std::shared_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
