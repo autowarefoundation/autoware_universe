@@ -71,7 +71,7 @@ std::optional<geometry_msgs::msg::PoseStamped> getEgoPoseAt(
 {
   if (const auto odometry_info = state.odometry->getOdometryFromTf(time)) {
     geometry_msgs::msg::PoseStamped ps;
-    ps.header.stamp = time;
+    ps.header.stamp = odometry_info->header.stamp;
     ps.pose = odometry_info->pose.pose;
     return ps;
   }
