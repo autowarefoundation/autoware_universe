@@ -1,5 +1,11 @@
 <?xml version="1.0"?>
 <library path="autoware_trajectory_validator_plugins">
+  <class type="safety::UncrossableBoundaryDepartureFilter"
+    base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
+    <description>
+      Filters trajectories that cross uncrossable boundaries
+    </description>
+  </class>
   <class type="safety::OutOfLaneFilter"
     base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
     <description>

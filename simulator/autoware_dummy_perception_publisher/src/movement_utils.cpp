@@ -31,12 +31,12 @@
 
 namespace autoware::dummy_perception_publisher::utils
 {
+using autoware_simulation_msgs::msg::SimulatedObject;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Transform;
-using tier4_simulation_msgs::msg::DummyObject;
 
 geometry_msgs::msg::Pose MovementUtils::calculate_straight_line_position(
-  const DummyObject & object, const rclcpp::Time & current_time)
+  const SimulatedObject & object, const rclcpp::Time & current_time)
 {
   const auto & initial_pose = object.initial_state.pose_covariance.pose;
   const double initial_vel = std::clamp(
@@ -95,7 +95,7 @@ void MovementUtils::stop_at_zero_velocity(
   }
 }
 
-ObjectInfo MovementUtils::create_basic_object_info(const DummyObject & object)
+ObjectInfo MovementUtils::create_basic_object_info(const SimulatedObject & object)
 {
   ObjectInfo obj_info;
 
@@ -118,7 +118,7 @@ ObjectInfo MovementUtils::create_basic_object_info(const DummyObject & object)
 }
 
 void MovementUtils::update_object_info_with_movement(
-  ObjectInfo & obj_info, const DummyObject & object, const Pose & current_pose,
+  ObjectInfo & obj_info, const SimulatedObject & object, const Pose & current_pose,
   const rclcpp::Time & current_time)
 {
   // Calculate tf from map to moved_object
@@ -151,7 +151,7 @@ void MovementUtils::update_object_info_with_movement(
 }
 
 geometry_msgs::msg::Pose MovementUtils::calculate_trajectory_based_position(
-  const DummyObject & object,
+  const SimulatedObject & object,
   const autoware_perception_msgs::msg::PredictedObject & predicted_object,
   const rclcpp::Time & predicted_time, const rclcpp::Time & current_time)
 {
@@ -165,7 +165,7 @@ geometry_msgs::msg::Pose MovementUtils::calculate_trajectory_based_position(
   // Calculate elapsed time from predicted object timestamp to current time
   const double elapsed_time = (current_time - predicted_time).seconds();
 
-  // Calculate distance traveled based on elapsed time and dummy object speed
+  // Calculate distance traveled based on elapsed time and simulated object speed
   const double speed = object.initial_state.twist_covariance.twist.linear.x;
   const double distance_traveled = speed * elapsed_time;
 

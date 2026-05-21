@@ -29,7 +29,9 @@ publishers:
 # parameters
 param_files: []
 
-param_values: []
+param_values:
+  - name: run_convex_hull_conversion
+    default: false
 
 # processes
 processes:
