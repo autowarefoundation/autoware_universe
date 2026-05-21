@@ -55,11 +55,7 @@ protected:
   bool has_field(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input, const std::string & field_name);
 
-  // Parameter validation helpers (static, private)
-  static bool validate_positive_double(const rclcpp::Parameter & param, std::string & reason);
-  static bool validate_non_negative_double(const rclcpp::Parameter & param, std::string & reason);
-  static bool validate_positive_int(const rclcpp::Parameter & param, std::string & reason);
-  static bool validate_non_negative_int(const rclcpp::Parameter & param, std::string & reason);
+  // Parameter validation helper (static, private)
   static bool validate_primary_return_types(const rclcpp::Parameter & param, std::string & reason);
 
 private:

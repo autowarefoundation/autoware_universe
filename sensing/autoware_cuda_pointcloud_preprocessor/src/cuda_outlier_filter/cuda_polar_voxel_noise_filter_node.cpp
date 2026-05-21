@@ -18,6 +18,7 @@
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace autoware::cuda_pointcloud_preprocessor
@@ -32,6 +33,58 @@ inline double adjust_resolution_to_circle(double requested_resolution)
   if (bins < 1) bins = 1;
   return two_pi / bins;
 }
+
+rcl_interfaces::msg::ParameterDescriptor make_positive_double_descriptor(
+  const std::string & param_name)
+{
+  rcl_interfaces::msg::ParameterDescriptor descriptor;
+  descriptor.description = param_name + " must be positive";
+  rcl_interfaces::msg::FloatingPointRange range;
+  range.from_value = 1e-9;
+  range.to_value = std::numeric_limits<double>::max();
+  range.step = 0.0;
+  descriptor.floating_point_range.push_back(range);
+  return descriptor;
+}
+
+rcl_interfaces::msg::ParameterDescriptor make_non_negative_double_descriptor(
+  const std::string & param_name)
+{
+  rcl_interfaces::msg::ParameterDescriptor descriptor;
+  descriptor.description = param_name + " must be non-negative";
+  rcl_interfaces::msg::FloatingPointRange range;
+  range.from_value = 0.0;
+  range.to_value = std::numeric_limits<double>::max();
+  range.step = 0.0;
+  descriptor.floating_point_range.push_back(range);
+  return descriptor;
+}
+
+rcl_interfaces::msg::ParameterDescriptor make_positive_int_descriptor(
+  const std::string & param_name)
+{
+  rcl_interfaces::msg::ParameterDescriptor descriptor;
+  descriptor.description = param_name + " must be at least 1";
+  rcl_interfaces::msg::IntegerRange range;
+  range.from_value = 1;
+  range.to_value = std::numeric_limits<int64_t>::max();
+  range.step = 1;
+  descriptor.integer_range.push_back(range);
+  return descriptor;
+}
+
+rcl_interfaces::msg::ParameterDescriptor make_non_negative_int_descriptor(
+  const std::string & param_name)
+{
+  rcl_interfaces::msg::ParameterDescriptor descriptor;
+  descriptor.description = param_name + " must be non-negative";
+  rcl_interfaces::msg::IntegerRange range;
+  range.from_value = 0;
+  range.to_value = std::numeric_limits<int64_t>::max();
+  range.step = 1;
+  descriptor.integer_range.push_back(range);
+  return descriptor;
+}
 }  // namespace
 
 CudaPolarVoxelNoiseFilterNode::CudaPolarVoxelNoiseFilterNode(
@@ -40,19 +93,25 @@ CudaPolarVoxelNoiseFilterNode::CudaPolarVoxelNoiseFilterNode(
 {
   // set initial parameters
   {
-    filter_params_.radial_resolution_m = declare_parameter<double>("radial_resolution_m");
-    filter_params_.azimuth_resolution_rad =
-      adjust_resolution_to_circle(declare_parameter<double>("azimuth_resolution_rad"));
-    filter_params_.elevation_resolution_rad =
-      adjust_resolution_to_circle(declare_parameter<double>("elevation_resolution_rad"));
-    filter_params_.voxel_points_threshold = declare_parameter<int>("voxel_points_threshold");
-    filter_params_.avg_intensity_threshold = declare_parameter<double>("avg_intensity_threshold");
-    filter_params_.min_radius_m = declare_parameter<double>("min_radius_m");
-    filter_params_.max_radius_m = declare_parameter<double>("max_radius_m");
+    filter_params_.radial_resolution_m = declare_parameter<double>(
+      "radial_resolution", make_positive_double_descriptor("radial_resolution"));
+    filter_params_.azimuth_resolution_rad = adjust_resolution_to_circle(declare_parameter<double>(
+      "azimuth_resolution", make_positive_double_descriptor("azimuth_resolution")));
+    filter_params_.elevation_resolution_rad = adjust_resolution_to_circle(declare_parameter<double>(
+      "elevation_resolution", make_positive_double_descriptor("elevation_resolution")));
+    filter_params_.voxel_points_threshold = declare_parameter<int>(
+      "voxel_points_threshold", make_positive_int_descriptor("voxel_points_threshold"));
+    filter_params_.avg_intensity_threshold = declare_parameter<double>(
+      "avg_intensity_threshold", make_non_negative_double_descriptor("avg_intensity_threshold"));
+    filter_params_.min_radius_m =
+      declare_parameter<double>("min_radius", make_non_negative_double_descriptor("min_radius"));
+    filter_params_.max_radius_m =
+      declare_parameter<double>("max_radius", make_positive_double_descriptor("max_radius"));
     filter_params_.use_return_type_classification =
       declare_parameter<bool>("use_return_type_classification");
     filter_params_.filter_secondary_returns = declare_parameter<bool>("filter_secondary_returns");
-    filter_params_.secondary_noise_threshold = declare_parameter<int>("secondary_noise_threshold");
+    filter_params_.secondary_noise_threshold = declare_parameter<int>(
+      "secondary_noise_threshold", make_non_negative_int_descriptor("secondary_noise_threshold"));
     filter_params_.publish_noise_cloud = declare_parameter<bool>("publish_noise_cloud");
 
     // rclcpp always returns integer array as std::vector<int64_t>
@@ -167,46 +226,6 @@ void CudaPolarVoxelNoiseFilterNode::pointcloud_callback(
   }
 }
 
-bool CudaPolarVoxelNoiseFilterNode::validate_positive_double(
-  const rclcpp::Parameter & param, std::string & reason)
-{
-  if (param.as_double() <= 0.0) {
-    reason = param.get_name() + " must be positive";
-    return false;
-  }
-  return true;
-}
-
-bool CudaPolarVoxelNoiseFilterNode::validate_non_negative_double(
-  const rclcpp::Parameter & param, std::string & reason)
-{
-  if (param.as_double() < 0.0) {
-    reason = param.get_name() + " must be non-negative";
-    return false;
-  }
-  return true;
-}
-
-bool CudaPolarVoxelNoiseFilterNode::validate_positive_int(
-  const rclcpp::Parameter & param, std::string & reason)
-{
-  if (param.as_int() < 1) {
-    reason = param.get_name() + " must be at least 1";
-    return false;
-  }
-  return true;
-}
-
-bool CudaPolarVoxelNoiseFilterNode::validate_non_negative_int(
-  const rclcpp::Parameter & param, std::string & reason)
-{
-  if (param.as_int() < 0) {
-    reason = param.get_name() + " must be non-negative";
-    return false;
-  }
-  return true;
-}
-
 bool CudaPolarVoxelNoiseFilterNode::validate_primary_return_types(
   const rclcpp::Parameter & param, std::string & reason)
 {
@@ -237,32 +256,32 @@ rcl_interfaces::msg::SetParametersResult CudaPolarVoxelNoiseFilterNode::param_ca
   };
 
   static const std::unordered_map<std::string, ParamOps> param_ops = {
-    {"radial_resolution_m",
-     {validate_positive_double,
+    {"radial_resolution",
+     {nullptr,
       [this](const rclcpp::Parameter & p) { filter_params_.radial_resolution_m = p.as_double(); }}},
-    {"azimuth_resolution_rad",
-     {validate_positive_double,
+    {"azimuth_resolution",
+     {nullptr,
       [this](const rclcpp::Parameter & p) {
         filter_params_.azimuth_resolution_rad = adjust_resolution_to_circle(p.as_double());
       }}},
-    {"elevation_resolution_rad",
-     {validate_positive_double,
+    {"elevation_resolution",
+     {nullptr,
       [this](const rclcpp::Parameter & p) {
         filter_params_.elevation_resolution_rad = adjust_resolution_to_circle(p.as_double());
       }}},
     {"voxel_points_threshold",
-     {validate_positive_int,
+     {nullptr,
       [this](const rclcpp::Parameter & p) { filter_params_.voxel_points_threshold = p.as_int(); }}},
     {"avg_intensity_threshold",
-     {validate_non_negative_double,
+     {nullptr,
       [this](const rclcpp::Parameter & p) {
         filter_params_.avg_intensity_threshold = p.as_double();
       }}},
-    {"min_radius_m",
-     {validate_non_negative_double,
+    {"min_radius",
+     {nullptr,
       [this](const rclcpp::Parameter & p) { filter_params_.min_radius_m = p.as_double(); }}},
-    {"max_radius_m",
-     {validate_positive_double,
+    {"max_radius",
+     {nullptr,
       [this](const rclcpp::Parameter & p) { filter_params_.max_radius_m = p.as_double(); }}},
     {"use_return_type_classification",
      {nullptr,
@@ -275,7 +294,7 @@ rcl_interfaces::msg::SetParametersResult CudaPolarVoxelNoiseFilterNode::param_ca
         filter_params_.filter_secondary_returns = p.as_bool();
       }}},
     {"secondary_noise_threshold",
-     {validate_non_negative_int,
+     {nullptr,
       [this](const rclcpp::Parameter & p) {
         filter_params_.secondary_noise_threshold = p.as_int();
       }}},

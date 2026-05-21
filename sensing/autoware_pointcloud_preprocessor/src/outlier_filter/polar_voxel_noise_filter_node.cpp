@@ -58,14 +58,14 @@ PolarVoxelNoiseFilterComponent::PolarVoxelNoiseFilterComponent(const rclcpp::Nod
   elevation_domain_max(M_PI / 2.0)  //,
 // updater_(this)
 {
-  radial_resolution_m_ = declare_parameter<double>("radial_resolution_m");
+  radial_resolution_m_ = declare_parameter<double>("radial_resolution");
   azimuth_resolution_rad_ =
-    adjust_resolution_to_circle(declare_parameter<double>("azimuth_resolution_rad"));
+    adjust_resolution_to_circle(declare_parameter<double>("azimuth_resolution"));
   elevation_resolution_rad_ =
-    adjust_resolution_to_circle(declare_parameter<double>("elevation_resolution_rad"));
+    adjust_resolution_to_circle(declare_parameter<double>("elevation_resolution"));
   voxel_points_threshold_ = static_cast<int>(declare_parameter<int64_t>("voxel_points_threshold"));
-  min_radius_m_ = declare_parameter<double>("min_radius_m");
-  max_radius_m_ = declare_parameter<double>("max_radius_m");
+  min_radius_m_ = declare_parameter<double>("min_radius");
+  max_radius_m_ = declare_parameter<double>("max_radius");
   use_return_type_classification_ = declare_parameter<bool>("use_return_type_classification");
   enable_secondary_return_filtering_ = declare_parameter<bool>("filter_secondary_returns");
   secondary_noise_threshold_ =
@@ -428,12 +428,12 @@ void PolarVoxelNoiseFilterComponent::update_parameter(const rclcpp::Parameter & 
 
   // Static map of parameter names to their update functions
   static const std::unordered_map<std::string, ParameterUpdater> parameter_updaters = {
-    {"radial_resolution_m", [this](const auto & p) { radial_resolution_m_ = p.as_double(); }},
-    {"azimuth_resolution_rad",
+    {"radial_resolution", [this](const auto & p) { radial_resolution_m_ = p.as_double(); }},
+    {"azimuth_resolution",
      [this](const auto & p) {
        azimuth_resolution_rad_ = adjust_resolution_to_circle(p.as_double());
      }},
-    {"elevation_resolution_rad",
+    {"elevation_resolution",
      [this](const auto & p) {
        elevation_resolution_rad_ = adjust_resolution_to_circle(p.as_double());
      }},
@@ -443,8 +443,8 @@ void PolarVoxelNoiseFilterComponent::update_parameter(const rclcpp::Parameter & 
      [this](const auto & p) { secondary_noise_threshold_ = static_cast<int>(p.as_int()); }},
     {"avg_intensity_threshold",
      [this](const auto & p) { avg_intensity_threshold_ = p.as_double(); }},
-    {"min_radius_m", [this](const auto & p) { min_radius_m_ = p.as_double(); }},
-    {"max_radius_m", [this](const auto & p) { max_radius_m_ = p.as_double(); }},
+    {"min_radius", [this](const auto & p) { min_radius_m_ = p.as_double(); }},
+    {"max_radius", [this](const auto & p) { max_radius_m_ = p.as_double(); }},
     {"use_return_type_classification",
      [this](const auto & p) { use_return_type_classification_ = p.as_bool(); }},
     {"filter_secondary_returns",
@@ -642,22 +642,22 @@ rcl_interfaces::msg::SetParametersResult PolarVoxelNoiseFilterComponent::param_c
   };
 
   static const std::unordered_map<std::string, ParamOps> param_ops = {
-    {"radial_resolution_m",
+    {"radial_resolution",
      {validate_positive_double,
       [this](const rclcpp::Parameter & p) { radial_resolution_m_ = p.as_double(); }}},
-    {"azimuth_resolution_rad",
+    {"azimuth_resolution",
      {validate_positive_double,
       [this](const rclcpp::Parameter & p) { azimuth_resolution_rad_ = p.as_double(); }}},
-    {"elevation_resolution_rad",
+    {"elevation_resolution",
      {validate_positive_double,
       [this](const rclcpp::Parameter & p) { elevation_resolution_rad_ = p.as_double(); }}},
     {"voxel_points_threshold",
      {validate_positive_int,
       [this](const rclcpp::Parameter & p) { voxel_points_threshold_ = p.as_int(); }}},
-    {"min_radius_m",
+    {"min_radius",
      {validate_non_negative_double,
       [this](const rclcpp::Parameter & p) { min_radius_m_ = p.as_double(); }}},
-    {"max_radius_m",
+    {"max_radius",
      {validate_positive_double,
       [this](const rclcpp::Parameter & p) { max_radius_m_ = p.as_double(); }}},
     {"use_return_type_classification",

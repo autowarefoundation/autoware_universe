@@ -106,9 +106,9 @@ Uses pre-computed polar coordinates directly from the point fields:
 
 Each point is assigned to a voxel based on:
 
-- **Radius Index**: `floor(radius / radial_resolution_m)`
-- **Azimuth Index**: `floor(azimuth / azimuth_resolution_rad)`
-- **Elevation Index**: `floor(elevation / elevation_resolution_rad)`
+- **Radius Index**: `floor(radius / radial_resolution)`
+- **Azimuth Index**: `floor(azimuth / azimuth_resolution)`
+- **Elevation Index**: `floor(elevation / elevation_resolution)`
 
 ### Return Type Classification
 
@@ -220,7 +220,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 - **Return-type-aware mode**: Requires `return_type` field
 - **Supported formats**: PointXYZIRC and PointXYZIRCAEDT only
 - **Finite coordinates required**: NaN and Inf values are ignored
-- **Radius range filtering**: Points outside `[min_radius_m, max_radius_m]` are excluded
+- **Radius range filtering**: Points outside `[min_radius, max_radius]` are excluded
 - **Indices unsupported**: Input indices are ignored
 - **Angular domain assumptions**:
   - **PointXYZIRC azimuth**: Computed from `atan2(y, x)`, so the domain is `[-π, π]`; this filter

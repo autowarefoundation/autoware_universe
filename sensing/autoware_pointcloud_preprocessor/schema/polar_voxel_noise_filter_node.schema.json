@@ -6,20 +6,20 @@
     "polar_voxel_noise_filter": {
       "type": "object",
       "properties": {
-        "radial_resolution_m": {
+        "radial_resolution": {
           "type": "number",
           "description": "Resolution in radial direction [m].",
           "default": "0.5",
           "minimum": 0
         },
-        "azimuth_resolution_rad": {
+        "azimuth_resolution": {
           "type": "number",
           "description": "Resolution in azimuth direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole azimuth range.",
           "default": "0.08",
           "minimum": 0,
           "maximum": 6.283185307179586
         },
-        "elevation_resolution_rad": {
+        "elevation_resolution": {
           "type": "number",
           "description": "Resolution in elevation direction [rad]. The supplied value is modified to ensure consistent voxel sizes across the whole elevation range.",
           "default": "0.05",
@@ -32,13 +32,13 @@
           "default": "4",
           "minimum": 1
         },
-        "min_radius_m": {
+        "min_radius": {
           "type": "number",
           "description": "Minimum radius to consider [m].",
           "default": "0.5",
           "minimum": 0
         },
-        "max_radius_m": {
+        "max_radius": {
           "type": "number",
           "description": "Maximum radius to consider [m].",
           "default": "200.0",
@@ -83,12 +83,12 @@
         }
       },
       "required": [
-        "radial_resolution_m",
-        "azimuth_resolution_rad",
-        "elevation_resolution_rad",
+        "radial_resolution",
+        "azimuth_resolution",
+        "elevation_resolution",
         "voxel_points_threshold",
-        "min_radius_m",
-        "max_radius_m",
+        "min_radius",
+        "max_radius",
         "use_return_type_classification",
         "filter_secondary_returns",
         "secondary_noise_threshold",
