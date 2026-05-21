@@ -124,8 +124,12 @@ TEST(PolarVoxelNoiseFilterTest, SimpleMode_RemovesLowIntensitySparseVoxel)
   // Voxel A (radius=1): 5 points, avg intensity=20 -> valid
   // Voxel B (radius=3): 1 point, avg intensity=0 -> noise
   const auto input = make_test_cloud(
-    {{1.0f, 0.0f, 0.0f, 20, 1}, {1.0f, 0.0f, 0.0f, 20, 2}, {1.0f, 0.0f, 0.0f, 20, 1},
-      {1.0f, 0.0f, 0.0f, 20, 1}, {1.0f, 0.0f, 0.0f, 20, 1}, {3.0f, 0.0f, 0.0f, 0, 2}});
+    {{1.0f, 0.0f, 0.0f, 20, 1},
+     {1.0f, 0.0f, 0.0f, 20, 2},
+     {1.0f, 0.0f, 0.0f, 20, 1},
+     {1.0f, 0.0f, 0.0f, 20, 1},
+     {1.0f, 0.0f, 0.0f, 20, 1},
+     {3.0f, 0.0f, 0.0f, 0, 2}});
   auto input_ptr = std::make_shared<sensor_msgs::msg::PointCloud2>(input);
 
   sensor_msgs::msg::PointCloud2 output;
@@ -148,14 +152,16 @@ TEST(PolarVoxelNoiseFilterTest, ReturnTypeMode_FilterSecondaryReturnsKeepsOnlyPr
   // Single voxel with 1 primary + 3 secondary.
   // Voxel remains valid, but output should keep only primary when secondary filtering is enabled.
   const auto input = make_test_cloud(
-    {{1.0f, 0.0f, 0.0f, 20, 1}, {1.0f, 0.0f, 0.0f, 20, 2}, {1.0f, 0.0f, 0.0f, 20, 2},
+    {{1.0f, 0.0f, 0.0f, 20, 1},
+     {1.0f, 0.0f, 0.0f, 20, 2},
+     {1.0f, 0.0f, 0.0f, 20, 2},
      {1.0f, 0.0f, 0.0f, 20, 2}});
   auto input_ptr = std::make_shared<sensor_msgs::msg::PointCloud2>(input);
 
   sensor_msgs::msg::PointCloud2 output;
   node.filter(input_ptr, nullptr, output);
 
-  EXPECT_EQ(output.width, 1u);  // expect only one point to remain
+  EXPECT_EQ(output.width, 1u);     // expect only one point to remain
   EXPECT_EQ(output.data[13], 1u);  // checking that it was a primary point return_type
 }
 
@@ -174,4 +180,3 @@ int main(int argc, char ** argv)
   rclcpp::shutdown();
   return ret;
 }
-
