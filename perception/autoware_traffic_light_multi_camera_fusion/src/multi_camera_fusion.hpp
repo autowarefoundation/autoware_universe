@@ -123,7 +123,7 @@ public:
 private:
   void multi_camera_fusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
 
-  void convert_output_msg(
+  static void convert_output_msg(
     const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out);
 
   void group_fusion(
@@ -151,18 +151,18 @@ private:
    */
   void update_group_info_for_element(
     GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
-    const utils::FusionRecord & record);
+    const utils::FusionRecord & record) const;
 
   /**
    * @brief Handles the log-odds accumulation logic.
    */
   void update_log_odds(
-    std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence);
+    std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence) const;
 
   /**
    * @brief Handles the logic for tracking the best record for a given state.
    */
-  void update_best_record(
+  static void update_best_record(
     std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
     double confidence, const utils::FusionRecord & record);
 

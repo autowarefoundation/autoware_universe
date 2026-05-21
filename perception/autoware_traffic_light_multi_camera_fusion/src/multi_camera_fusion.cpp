@@ -250,7 +250,7 @@ void MultiCameraFusion::process_fused_record(
  */
 void MultiCameraFusion::update_group_info_for_element(
   GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
-  const utils::FusionRecord & record)
+  const utils::FusionRecord & record) const
 {
   StateKey state_key;
   for (const auto & element : record.signal.elements) {
@@ -270,7 +270,7 @@ void MultiCameraFusion::update_group_info_for_element(
  * @brief Handles the log-odds accumulation logic.
  */
 void MultiCameraFusion::update_log_odds(
-  std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence)
+  std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence) const
 {
   // try_emplace ensures we only add the 0.0 prior (from a 0.5 probability) once.
   log_odds_map.try_emplace(state_key, 0.0);
