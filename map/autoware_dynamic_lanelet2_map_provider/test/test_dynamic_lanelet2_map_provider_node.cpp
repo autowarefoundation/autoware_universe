@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/lanelet2_map_provider_node.hpp"
+#include "../src/dynamic_lanelet2_map_provider_node.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-using autoware::dynamic_lanelet_map_provider::Lanelet2MapProviderNode;
+using autoware::dynamic_lanelet2_map_provider::DynamicLanelet2MapProviderNode;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_map_msgs::msg::LaneletMapCellMetaData;
 using autoware_map_msgs::msg::LaneletMapMetaData;
@@ -40,12 +40,12 @@ using nav_msgs::msg::Odometry;
 // subclass that exposes the static helper).
 // ---------------------------------------------------------------------------
 
-class Lanelet2MapProviderNodeTestable : public Lanelet2MapProviderNode
+class DynamicLanelet2MapProviderNodeTestable : public DynamicLanelet2MapProviderNode
 {
 public:
-  using Lanelet2MapProviderNode::cell_overlaps_circle;
-  explicit Lanelet2MapProviderNodeTestable(const rclcpp::NodeOptions & opts)
-  : Lanelet2MapProviderNode(opts)
+  using DynamicLanelet2MapProviderNode::cell_overlaps_circle;
+  explicit DynamicLanelet2MapProviderNodeTestable(const rclcpp::NodeOptions & opts)
+  : DynamicLanelet2MapProviderNode(opts)
   {
   }
 };
@@ -71,7 +71,7 @@ protected:
 
 TEST_F(TestCellOverlapsCircle, CenterInsideCellAlwaysOverlaps)
 {
-  EXPECT_TRUE(Lanelet2MapProviderNode::cell_overlaps_circle(cell, 0.0, 0.0, 1.0));
+  EXPECT_TRUE(DynamicLanelet2MapProviderNode::cell_overlaps_circle(cell, 0.0, 0.0, 1.0));
 }
 
 TEST_F(TestCellOverlapsCircle, CornerJustInsideRadius)
@@ -80,7 +80,7 @@ TEST_F(TestCellOverlapsCircle, CornerJustInsideRadius)
   const double r = 5.0;
   const double offset = r - 0.01;  // just inside
   EXPECT_TRUE(
-    Lanelet2MapProviderNode::cell_overlaps_circle(
+    DynamicLanelet2MapProviderNode::cell_overlaps_circle(
       cell, 10.0 + offset * 0.707, 10.0 + offset * 0.707, r));
 }
 
@@ -89,27 +89,27 @@ TEST_F(TestCellOverlapsCircle, CornerJustOutsideRadius)
   const double r = 5.0;
   const double offset = r + 0.01;  // just outside
   EXPECT_FALSE(
-    Lanelet2MapProviderNode::cell_overlaps_circle(
+    DynamicLanelet2MapProviderNode::cell_overlaps_circle(
       cell, 10.0 + offset * 0.707, 10.0 + offset * 0.707, r));
 }
 
 TEST_F(TestCellOverlapsCircle, CircleOutsideCellNoOverlap)
 {
   // Circle far away in X direction.
-  EXPECT_FALSE(Lanelet2MapProviderNode::cell_overlaps_circle(cell, 100.0, 0.0, 5.0));
+  EXPECT_FALSE(DynamicLanelet2MapProviderNode::cell_overlaps_circle(cell, 100.0, 0.0, 5.0));
 }
 
 TEST_F(TestCellOverlapsCircle, CircleEdgeTouchesCell)
 {
   // Circle touching the right edge of the cell exactly.
-  EXPECT_TRUE(Lanelet2MapProviderNode::cell_overlaps_circle(cell, 15.0, 0.0, 5.0));
+  EXPECT_TRUE(DynamicLanelet2MapProviderNode::cell_overlaps_circle(cell, 15.0, 0.0, 5.0));
 }
 
 // ---------------------------------------------------------------------------
 // Integration test: node construction, metadata subscription, service stub.
 // ---------------------------------------------------------------------------
 
-class TestLanelet2MapProviderNode : public ::testing::Test
+class TestDynamicLanelet2MapProviderNode : public ::testing::Test
 {
 protected:
   void SetUp() override
@@ -119,23 +119,23 @@ protected:
     rclcpp::NodeOptions opts;
     opts.append_parameter_override("map_radius", 150.0);
     opts.append_parameter_override("update_distance_threshold", 50.0);
-    node_ = std::make_shared<Lanelet2MapProviderNodeTestable>(opts);
+    node_ = std::make_shared<DynamicLanelet2MapProviderNodeTestable>(opts);
 
     helper_ = std::make_shared<rclcpp::Node>("test_helper");
   }
 
   void TearDown() override { rclcpp::shutdown(); }
 
-  std::shared_ptr<Lanelet2MapProviderNodeTestable> node_;
+  std::shared_ptr<DynamicLanelet2MapProviderNodeTestable> node_;
   std::shared_ptr<rclcpp::Node> helper_;
 };
 
-TEST_F(TestLanelet2MapProviderNode, NodeConstructsWithoutError)
+TEST_F(TestDynamicLanelet2MapProviderNode, NodeConstructsWithoutError)
 {
   SUCCEED();
 }
 
-TEST_F(TestLanelet2MapProviderNode, SubmapPublishedAfterServiceResponse)
+TEST_F(TestDynamicLanelet2MapProviderNode, LocalMapPublishedAfterServiceResponse)
 {
   // Publish fake map metadata.
   auto meta_pub = helper_->create_publisher<LaneletMapMetaData>(
@@ -163,21 +163,21 @@ TEST_F(TestLanelet2MapProviderNode, SubmapPublishedAfterServiceResponse)
       res->lanelet2_cells.data = {0x01};  // arbitrary non-empty payload
     });
 
-  bool submap_received = false;
+  bool local_map_received = false;
   auto sub = helper_->create_subscription<LaneletMapBin>(
-    "output/lanelet2_submap", rclcpp::QoS{1}.transient_local(),
-    [&submap_received](const LaneletMapBin::SharedPtr) { submap_received = true; });
+    "output/lanelet2_map_local", rclcpp::QoS{1}.transient_local(),
+    [&local_map_received](const LaneletMapBin::SharedPtr) { local_map_received = true; });
 
   rclcpp::executors::MultiThreadedExecutor exec;
   exec.add_node(node_);
   exec.add_node(helper_);
 
   const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-  while (!submap_received && std::chrono::steady_clock::now() < deadline) {
+  while (!local_map_received && std::chrono::steady_clock::now() < deadline) {
     exec.spin_some(std::chrono::milliseconds(50));
   }
 
-  EXPECT_TRUE(submap_received) << "output/lanelet2_submap was not published within 5 s";
+  EXPECT_TRUE(local_map_received) << "output/lanelet2_map_local was not published within 5 s";
 }
 
 int main(int argc, char ** argv)
