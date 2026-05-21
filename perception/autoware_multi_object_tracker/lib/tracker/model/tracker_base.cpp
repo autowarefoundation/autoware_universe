@@ -200,45 +200,39 @@ bool Tracker::updateWithMeasurement(
   }
   setOrientationAvailability(object_.kinematics.orientation_availability);
 
-  // Update strategies:
-  // 1. Normal update: Update position and shape by Kalman filter
-  // 2. Extension update: Apply the new stable shape and update position
-  // 3. Conditioned update: Ignore the noisy shape info and partially update position with below 3
-  // conditions
-  //    - FRONT_WHEEL_UPDATE: Update anchor point of front wheel
-  //    - REAR_WHEEL_UPDATE: Update anchor point of rear wheel
-  //    - WEAK_UPDATE: Update tending to predicted position
+  // Select update path: NORMAL / TRY_EXTENSION / CONDITIONED
+  const UpdatePath path =
+    selectUpdatePath(channel_info.trust_extension, has_significant_shape_change);
 
-  if (!has_significant_shape_change) {
+  if (path == UpdatePath::NORMAL) {
     unstable_shape_filter_.processNormalMeasurement(object);
-    // 1. Normal update
     measure(object, measurement_time, channel_info);
     object_.trust_extension = object.trust_extension;
 
-  } else {
+  } else if (path == UpdatePath::TRY_EXTENSION) {
     unstable_shape_filter_.processNoisyMeasurement(object);
     if (unstable_shape_filter_.isStable()) {
-      // 2. Extension update
-      autoware_perception_msgs::msg::Shape smoothed_shape = unstable_shape_filter_.getShape();
-
+      // Extension update: apply stabilized shape and update with smoothed measurement
+      const auto smoothed_shape = unstable_shape_filter_.getShape();
       setObjectShape(smoothed_shape);
-
       auto smoothed_object = object;
       smoothed_object.shape = smoothed_shape;
       measure(smoothed_object, measurement_time, channel_info);
       object_.trust_extension = smoothed_object.trust_extension;
-
       unstable_shape_filter_.clear();
-
     } else {
-      // 3. Conditioned update
+      // Filter not yet stable — fall back to conditioned update
       const auto tracker_shape = object_.shape;
-
       types::DynamicObject predicted_object;
       getTrackedObject(measurement_time, predicted_object);
-
       conditionedUpdate(object, predicted_object, tracker_shape, measurement_time, channel_info);
     }
+
+  } else {  // UpdatePath::CONDITIONED
+    const auto tracker_shape = object_.shape;
+    types::DynamicObject predicted_object;
+    getTrackedObject(measurement_time, predicted_object);
+    conditionedUpdate(object, predicted_object, tracker_shape, measurement_time, channel_info);
   }
 
   // Update object status
