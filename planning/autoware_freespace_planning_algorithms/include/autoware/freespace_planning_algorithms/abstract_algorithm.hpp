@@ -66,53 +66,6 @@ geometry_msgs::msg::Pose global2local(
 geometry_msgs::msg::Pose local2global(
   const nav_msgs::msg::OccupancyGrid & costmap, const geometry_msgs::msg::Pose & pose_local);
 
-struct VehicleShape
-{
-  double length;  // X [m]
-  double width;   // Y [m]
-  double base_length;
-  double max_steering;
-  double base2back;  // base_link to rear [m]
-  double min_dimension;
-  double max_dimension;
-
-  VehicleShape() = default;
-
-  VehicleShape(
-    double length, double width, double base_length, double max_steering, double base2back)
-  : length(length),
-    width(width),
-    base_length(base_length),
-    max_steering(max_steering),
-    base2back(base2back)
-  {
-    setMinMaxDimension();
-  }
-
-  explicit VehicleShape(
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double margin = 0.0)
-  : length(vehicle_info.vehicle_length_m + margin),
-    width(vehicle_info.vehicle_width_m + margin),
-    base_length(vehicle_info.wheel_base_m),
-    max_steering(vehicle_info.max_steer_angle_rad),
-    base2back(vehicle_info.rear_overhang_m + margin / 2.0)
-  {
-    setMinMaxDimension();
-  }
-
-  void setMinMaxDimension()
-  {
-    const auto base2front = length - base2back;
-    if (base2back <= base2front) {
-      min_dimension = std::min(0.5 * width, base2back);
-      max_dimension = std::hypot(base2front, 0.5 * width);
-    } else {
-      min_dimension = std::min(0.5 * width, base2front);
-      max_dimension = std::hypot(base2back, 0.5 * width);
-    }
-  }
-};
-
 struct PlannerCommonParam
 {
   // base configs
@@ -158,26 +111,13 @@ class AbstractPlanningAlgorithm
 public:
   AbstractPlanningAlgorithm(
     const PlannerCommonParam & planner_common_param, const rclcpp::Clock::SharedPtr & clock,
-    const VehicleShape & collision_vehicle_shape)
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
   : planner_common_param_(planner_common_param),
-    collision_vehicle_shape_(collision_vehicle_shape),
+    collision_vehicle_info_(vehicle_info),
     clock_(clock)
   {
     planner_common_param_.turning_steps = std::max(planner_common_param_.turning_steps, 1);
-    collision_vehicle_shape_.max_steering *= planner_common_param_.max_turning_ratio;
-    is_collision_table_initialized = false;
-  }
-
-  AbstractPlanningAlgorithm(
-    const PlannerCommonParam & planner_common_param,
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
-    const rclcpp::Clock::SharedPtr & clock, const double margin = 0.0)
-  : planner_common_param_(planner_common_param),
-    collision_vehicle_shape_(vehicle_info, margin),
-    clock_(clock)
-  {
-    planner_common_param_.turning_steps = std::max(planner_common_param_.turning_steps, 1);
-    collision_vehicle_shape_.max_steering *= planner_common_param_.max_turning_ratio;
+    collision_vehicle_info_.max_steer_angle_rad *= planner_common_param_.max_turning_ratio;
   }
 
   virtual void setMap(const nav_msgs::msg::OccupancyGrid & costmap);
@@ -262,9 +202,9 @@ protected:
   inline double getVehicleBaseToFrameDistance(const double angle) const
   {
     const double normalized_angle = std::abs(normalize_radian(angle));
-    const double w = 0.5 * collision_vehicle_shape_.width;
-    const double l_b = collision_vehicle_shape_.base2back;
-    const double l_f = collision_vehicle_shape_.length - l_b;
+    const double w = 0.5 * collision_vehicle_info_.vehicle_width_m;
+    const double l_b = collision_vehicle_info_.rear_overhang_m;
+    const double l_f = collision_vehicle_info_.vehicle_length_m - l_b;
 
     if (normalized_angle < atan(w / l_f)) return l_f / cos(normalized_angle);
     if (normalized_angle < M_PI_2) return w / sin(normalized_angle);
@@ -273,7 +213,7 @@ protected:
   }
 
   PlannerCommonParam planner_common_param_;
-  VehicleShape collision_vehicle_shape_;
+  vehicle_info_utils::VehicleInfo collision_vehicle_info_;
 
   // Pointer to the parent Node
   rclcpp::Clock::SharedPtr clock_;

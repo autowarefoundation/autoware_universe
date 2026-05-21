@@ -62,53 +62,56 @@ Pose calcRelativePose(const Pose & base_pose, const Pose & pose)
 }
 
 AstarSearch::AstarSearch(
-  const PlannerCommonParam & planner_common_param, const VehicleShape & collision_vehicle_shape,
-  const AstarParam & astar_param)
+  const PlannerCommonParam & planner_common_param,
+  const vehicle_info_utils::VehicleInfo & collision_vehicle_info, const AstarParam & astar_param)
 : AbstractPlanningAlgorithm(
-    planner_common_param, std::make_shared<rclcpp::Clock>(RCL_ROS_TIME), collision_vehicle_shape),
+    planner_common_param, std::make_shared<rclcpp::Clock>(RCL_ROS_TIME), collision_vehicle_info),
   astar_param_(astar_param),
   goal_node_(nullptr),
   use_reeds_shepp_(true)
 {
   steering_resolution_ =
-    collision_vehicle_shape_.max_steering / planner_common_param_.turning_steps;
+    collision_vehicle_info_.max_steer_angle_rad / planner_common_param_.turning_steps;
   heading_resolution_ = 2.0 * M_PI / planner_common_param_.theta_size;
 
   const double avg_steering =
-    steering_resolution_ + (collision_vehicle_shape_.max_steering - steering_resolution_) / 2.0;
+    steering_resolution_ +
+    (collision_vehicle_info_.max_steer_angle_rad - steering_resolution_) / 2.0;
   avg_turning_radius_ =
-    kinematic_bicycle_model::getTurningRadius(collision_vehicle_shape_.base_length, avg_steering);
+    kinematic_bicycle_model::getTurningRadius(collision_vehicle_info_.wheel_base_m, avg_steering);
 
   is_backward_search_ = astar_param_.search_method == "backward";
 
   min_expansion_dist_ = astar_param_.expansion_distance;
-  max_expansion_dist_ = collision_vehicle_shape_.base_length * base_length_max_expansion_factor_;
+  max_expansion_dist_ = collision_vehicle_info_.wheel_base_m * base_length_max_expansion_factor_;
 
   near_goal_dist_ =
     std::max(astar_param.near_goal_distance, planner_common_param.longitudinal_goal_range);
 }
 
 AstarSearch::AstarSearch(
-  const PlannerCommonParam & planner_common_param, const VehicleShape & collision_vehicle_shape,
-  const AstarParam & astar_param, const rclcpp::Clock::SharedPtr & clock)
-: AbstractPlanningAlgorithm(planner_common_param, clock, collision_vehicle_shape),
+  const PlannerCommonParam & planner_common_param,
+  const vehicle_info_utils::VehicleInfo & collision_vehicle_info, const AstarParam & astar_param,
+  const rclcpp::Clock::SharedPtr & clock)
+: AbstractPlanningAlgorithm(planner_common_param, clock, collision_vehicle_info),
   astar_param_(astar_param),
   goal_node_(nullptr),
   use_reeds_shepp_(true)
 {
   steering_resolution_ =
-    collision_vehicle_shape_.max_steering / planner_common_param_.turning_steps;
+    collision_vehicle_info_.max_steer_angle_rad / planner_common_param_.turning_steps;
   heading_resolution_ = 2.0 * M_PI / planner_common_param_.theta_size;
 
   const double avg_steering =
-    steering_resolution_ + (collision_vehicle_shape_.max_steering - steering_resolution_) / 2.0;
+    steering_resolution_ +
+    (collision_vehicle_info_.max_steer_angle_rad - steering_resolution_) / 2.0;
   avg_turning_radius_ =
-    kinematic_bicycle_model::getTurningRadius(collision_vehicle_shape_.base_length, avg_steering);
+    kinematic_bicycle_model::getTurningRadius(collision_vehicle_info_.wheel_base_m, avg_steering);
 
   is_backward_search_ = astar_param_.search_method == "backward";
 
   min_expansion_dist_ = astar_param_.expansion_distance;
-  max_expansion_dist_ = collision_vehicle_shape_.base_length * base_length_max_expansion_factor_;
+  max_expansion_dist_ = collision_vehicle_info_.wheel_base_m * base_length_max_expansion_factor_;
 
   near_goal_dist_ =
     std::max(astar_param.near_goal_distance, planner_common_param.longitudinal_goal_range);
@@ -121,7 +124,7 @@ void AstarSearch::setMap(const nav_msgs::msg::OccupancyGrid & costmap)
   // ensure minimum expansion distance is larger then grid cell diagonal length
   min_expansion_dist_ = std::max(astar_param_.expansion_distance, 1.5 * costmap_.info.resolution);
   max_expansion_dist_ = std::max(
-    collision_vehicle_shape_.base_length * base_length_max_expansion_factor_, min_expansion_dist_);
+    collision_vehicle_info_.wheel_base_m * base_length_max_expansion_factor_, min_expansion_dist_);
 }
 
 void AstarSearch::resetData()
@@ -242,7 +245,8 @@ void AstarSearch::setCollisionFreeDistanceMap()
         const IndexXY n_index{x, y};
         const double offset = std::abs(offset_x) + std::abs(offset_y);
         if (isOutOfRange(n_index) || isObs(n_index) || offset < 1) continue;
-        if (getObstacleEDT(n_index).distance < 0.5 * collision_vehicle_shape_.width) continue;
+        if (getObstacleEDT(n_index).distance < 0.5 * collision_vehicle_info_.vehicle_width_m)
+          continue;
         const int n_id = indexToId(n_index);
         const double dist = current.second + (sqrt(offset) * costmap_.info.resolution);
         if (closed[n_id] || col_free_distance_map_[n_id] < dist) continue;
@@ -330,7 +334,7 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
 
     const double steering = static_cast<double>(steering_index) * steering_resolution_;
     const auto next_pose = kinematic_bicycle_model::getPose(
-      current_pose, collision_vehicle_shape_.base_length, steering, distance);
+      current_pose, collision_vehicle_info_.wheel_base_m, steering, distance);
     const auto next_index = pose2index(costmap_, next_pose, planner_common_param_.theta_size);
 
     if (isOutOfRange(next_index) || isObs(next_index)) continue;
@@ -346,7 +350,7 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
       for (int j = 1; j < n; ++j) {
         const double intermediate_dist = (abs_distance * j / n) * direction;
         const auto intermediate_pose = kinematic_bicycle_model::getPose(
-          current_pose, collision_vehicle_shape_.base_length, steering, intermediate_dist);
+          current_pose, collision_vehicle_info_.wheel_base_m, steering, intermediate_dist);
         if (detectCollision(intermediate_pose)) {
           has_intermediate_collision = true;
           break;
@@ -417,7 +421,8 @@ double AstarSearch::getDirectionChangeCost(const double dir_distance) const
 
 double AstarSearch::getObsDistanceCost(const IndexXYT & index, const EDTData & obs_edt) const
 {
-  if (obs_edt.distance > collision_vehicle_shape_.max_dimension + cost_free_obs_dist) {
+  const auto [max_dimension, min_dimension] = collision_vehicle_info_.calcMaxMinDimension();
+  if (obs_edt.distance > max_dimension + cost_free_obs_dist) {
     return 0.0;
   }
   const double yaw = index.theta * (2.0 * M_PI / planner_common_param_.theta_size);
@@ -466,7 +471,7 @@ void AstarSearch::setPath(const AstarNode & goal_node)
         ((distance_2d * i) / n) * (node.is_back == is_backward_search_ ? 1.0 : -1.0);
       const double steering = node.steering_index * steering_resolution_;
       const auto local_pose = kinematic_bicycle_model::getPose(
-        parent_pose, collision_vehicle_shape_.base_length, steering, dist);
+        parent_pose, collision_vehicle_info_.wheel_base_m, steering, dist);
       pose.pose = local2global(costmap_, local_pose);
       waypoints.push_back({pose, node.is_back});
     }
