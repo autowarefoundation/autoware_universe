@@ -42,15 +42,15 @@ FreespacePullOver::FreespacePullOver(rclcpp::Node & node, const GoalPlannerParam
       : true  // no option for disabling back in rrtstar
   }
 {
-  autoware::freespace_planning_algorithms::VehicleShape vehicle_shape(
-    vehicle_info_, parameters.vehicle_shape_margin);
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info =
+    autoware::vehicle_info_utils::extendVehicleInfo(vehicle_info_, parameters.vehicle_shape_margin);
   if (parameters.freespace_parking_algorithm == "astar") {
     planner_ = std::make_unique<AstarSearch>(
-      parameters.freespace_parking_common_parameters, vehicle_shape, parameters.astar_parameters,
+      parameters.freespace_parking_common_parameters, vehicle_info, parameters.astar_parameters,
       node.get_clock());
   } else if (parameters.freespace_parking_algorithm == "rrtstar") {
     planner_ = std::make_unique<RRTStar>(
-      parameters.freespace_parking_common_parameters, vehicle_shape, parameters.rrt_star_parameters,
+      parameters.freespace_parking_common_parameters, vehicle_info, parameters.rrt_star_parameters,
       node.get_clock());
   }
 }

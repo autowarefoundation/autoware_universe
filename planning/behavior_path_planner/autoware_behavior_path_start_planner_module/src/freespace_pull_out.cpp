@@ -20,6 +20,7 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 
 #include <autoware/lanelet2_utils/geometry.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -31,17 +32,17 @@ namespace autoware::behavior_path_planner
 FreespacePullOut::FreespacePullOut(rclcpp::Node & node, const StartPlannerParameters & parameters)
 : PullOutPlannerBase{node, parameters}, velocity_{parameters.freespace_planner_velocity}
 {
-  autoware::freespace_planning_algorithms::VehicleShape vehicle_shape(
-    vehicle_info_, parameters.vehicle_shape_margin);
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info =
+    autoware::vehicle_info_utils::extendVehicleInfo(vehicle_info_, parameters.vehicle_shape_margin);
   if (parameters.freespace_planner_algorithm == "astar") {
     use_back_ = parameters.astar_parameters.use_back;
     planner_ = std::make_unique<AstarSearch>(
-      parameters.freespace_planner_common_parameters, vehicle_shape, parameters.astar_parameters,
+      parameters.freespace_planner_common_parameters, vehicle_info, parameters.astar_parameters,
       node.get_clock());
   } else if (parameters.freespace_planner_algorithm == "rrtstar") {
     use_back_ = true;  // no option for disabling back in rrtstar
     planner_ = std::make_unique<RRTStar>(
-      parameters.freespace_planner_common_parameters, vehicle_shape, parameters.rrt_star_parameters,
+      parameters.freespace_planner_common_parameters, vehicle_info, parameters.rrt_star_parameters,
       node.get_clock());
   }
 }
