@@ -63,11 +63,7 @@ protected:
   static bool validate_primary_return_types(const rclcpp::Parameter & param, std::string & reason);
 
 private:
-  enum class InputPointCloudFormat
-  {
-    PointXYZIRC,
-    PointXYZIRCAEDT
-  };
+  enum class InputPointCloudFormat { PointXYZIRC, PointXYZIRCAEDT };
 
   CudaPolarVoxelNoiseFilterParameters filter_params_;
   std::vector<int> primary_return_types_;  // Return types considered as primary returns

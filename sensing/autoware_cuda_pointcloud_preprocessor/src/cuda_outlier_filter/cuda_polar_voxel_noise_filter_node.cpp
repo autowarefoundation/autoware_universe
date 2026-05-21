@@ -128,13 +128,11 @@ void CudaPolarVoxelNoiseFilterNode::pointcloud_callback(
 
     if (has_return_type) {
       input_format_ = InputPointCloudFormat::PointXYZIRC;
-      RCLCPP_INFO(
-        get_logger(), "Processing PointXYZIRC format, computing azimuth and elevation");
+      RCLCPP_INFO(get_logger(), "Processing PointXYZIRC format, computing azimuth and elevation");
       return;
     }
 
-    throw std::runtime_error(
-      "Unsupported input point cloud format");
+    throw std::runtime_error("Unsupported input point cloud format");
   });
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> filtered_cloud;
