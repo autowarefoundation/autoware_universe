@@ -32,7 +32,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -98,8 +97,10 @@ struct MultiCameraFusionResult
 {
   autoware_perception_msgs::msg::TrafficLightGroupArray traffic_light_groups;
   std::vector<ConflictInfo> conflicted_regulatory_element_status;
-  // Diagnostic messages forwarded to the Node for logging (Error-as-Value).
-  std::vector<std::string> warnings;
+  // Traffic light IDs that were observed by a camera but are not registered in the loaded map.
+  // The Node logs a warning for each entry.
+  std::vector<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type>
+    unmapped_traffic_light_ids;
 };
 
 class MultiCameraFusion
@@ -129,7 +130,7 @@ private:
   void group_fusion(
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map,
-    std::vector<std::string> & warnings);
+    std::vector<IdType> & unmapped_traffic_light_ids);
 
   /**
    * @brief Accumulates log-odds evidence for each traffic light group from individual fused
@@ -137,14 +138,14 @@ private:
    */
   GroupFusionInfoMap accumulate_group_evidence(
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
-    std::vector<std::string> & warnings);
+    std::vector<IdType> & unmapped_traffic_light_ids);
 
   /**
    * @brief Processes a single fused record and updates the group_fusion_info_map.
    */
   void process_fused_record(
     GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record,
-    std::vector<std::string> & warnings);
+    std::vector<IdType> & unmapped_traffic_light_ids);
 
   /**
    * @brief Updates the map for a single (element, regulatory_id) combination.

@@ -21,8 +21,6 @@
 #include <cmath>
 #include <map>
 #include <memory>
-#include <sstream>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -114,7 +112,7 @@ MultiCameraFusionResult MultiCameraFusion::fuse(
   MultiCameraFusionResult result;
   std::map<IdType, utils::FusionRecord> fused_record_map, grouped_record_map;
   multi_camera_fusion(fused_record_map);
-  group_fusion(fused_record_map, grouped_record_map, result.warnings);
+  group_fusion(fused_record_map, grouped_record_map, result.unmapped_traffic_light_ids);
 
   NewSignalArrayType msg_out;
   convert_output_msg(grouped_record_map, msg_out);
@@ -189,13 +187,14 @@ void MultiCameraFusion::multi_camera_fusion(
 
 void MultiCameraFusion::group_fusion(
   const std::map<IdType, utils::FusionRecord> & fused_record_map,
-  std::map<IdType, utils::FusionRecord> & grouped_record_map, std::vector<std::string> & warnings)
+  std::map<IdType, utils::FusionRecord> & grouped_record_map,
+  std::vector<IdType> & unmapped_traffic_light_ids)
 {
   grouped_record_map.clear();
 
   // Stage 1: Accumulate evidence from all fused records
   const std::map<IdType, GroupFusionInfo> group_fusion_info_map =
-    accumulate_group_evidence(fused_record_map, warnings);
+    accumulate_group_evidence(fused_record_map, unmapped_traffic_light_ids);
 
   // Stage 2: Determine the best state for each group from the accumulated evidence
   determine_best_group_state(group_fusion_info_map, grouped_record_map);
@@ -203,11 +202,11 @@ void MultiCameraFusion::group_fusion(
 
 GroupFusionInfoMap MultiCameraFusion::accumulate_group_evidence(
   const std::map<IdType, utils::FusionRecord> & fused_record_map,
-  std::vector<std::string> & warnings)
+  std::vector<IdType> & unmapped_traffic_light_ids)
 {
   GroupFusionInfoMap group_fusion_info_map;
   for (const auto & p : fused_record_map) {
-    process_fused_record(group_fusion_info_map, p.second, warnings);
+    process_fused_record(group_fusion_info_map, p.second, unmapped_traffic_light_ids);
   }
   return group_fusion_info_map;
 }
@@ -218,16 +217,14 @@ GroupFusionInfoMap MultiCameraFusion::accumulate_group_evidence(
  */
 void MultiCameraFusion::process_fused_record(
   GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record,
-  std::vector<std::string> & warnings)
+  std::vector<IdType> & unmapped_traffic_light_ids)
 {
   const IdType roi_id = record.roi.traffic_light_id;
 
   // Guard Clause 1: Check if traffic light ID is in the map
   const auto it = traffic_light_id_to_regulatory_ele_id_.find(roi_id);
   if (it == traffic_light_id_to_regulatory_ele_id_.end()) {
-    std::ostringstream warning_stream;
-    warning_stream << "Found Traffic Light Id = " << roi_id << " which is not defined in Map";
-    warnings.emplace_back(warning_stream.str());
+    unmapped_traffic_light_ids.emplace_back(roi_id);
     return;
   }
 

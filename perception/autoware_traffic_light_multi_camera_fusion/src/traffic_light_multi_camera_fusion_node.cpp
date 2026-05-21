@@ -88,8 +88,9 @@ void MultiCameraFusionNode::traffic_signal_roi_callback(
   rclcpp::Time stamp(roi_msg->header.stamp);
 
   const MultiCameraFusionResult result = fusion_.fuse(*cam_info_msg, *roi_msg, *signal_msg);
-  for (const auto & warning : result.warnings) {
-    RCLCPP_WARN_STREAM(get_logger(), warning);
+  for (const auto & unmapped_id : result.unmapped_traffic_light_ids) {
+    RCLCPP_WARN_STREAM(
+      get_logger(), "Found Traffic Light Id = " << unmapped_id << " which is not defined in Map");
   }
   signal_pub_->publish(result.traffic_light_groups);
 
