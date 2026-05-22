@@ -133,7 +133,7 @@ void AggregatorNode::on_set_override(
     response->status.message = "override not allowed";
     return;
   }
-  if (request->level == 255) {
+  if (request->level == SetOverride::Request::CLEAR) {
     const auto success = graph_->set_override(request->path, std::nullopt);
     response->status.success = success;
     response->status.message = success ? "" : "path not found";
