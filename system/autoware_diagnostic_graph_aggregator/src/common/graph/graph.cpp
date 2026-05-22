@@ -135,12 +135,14 @@ void Graph::set_initializing(bool initializing)
   for (const auto & node : nodes_) node->set_initializing(initializing);
 }
 
-void Graph::set_override(const std::string & path, std::optional<DiagnosticLevel> level)
+bool Graph::set_override(const std::string & path, std::optional<DiagnosticLevel> level)
 {
   const auto iter = node_dict_.find(path);
-  if (iter != node_dict_.end()) {
-    iter->second->set_override(level);
+  if (iter == node_dict_.end()) {
+    return false;
   }
+  iter->second->set_override(level);
+  return true;
 }
 
 void Graph::reset()
