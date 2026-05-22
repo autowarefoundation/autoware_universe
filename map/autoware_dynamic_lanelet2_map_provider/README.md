@@ -50,11 +50,11 @@ The launch file `launch/lanelet2_map_provider.launch.xml` supports the following
 
 | Name                                | Default                                                                                            | Description                                           |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `param_path`                        | `$(find-pkg-share autoware_dynamic_lanelet2_map_provider)/config/lanelet2_map_provider.param.yaml` | Parameter file path.                                  |
+| `dynamic_lanelet2_map_provider_param_path` | `$(find-pkg-share autoware_dynamic_lanelet2_map_provider)/config/lanelet2_map_provider.param.yaml` | Parameter file path.                                  |
 | `input_odometry`                    | `/localization/kinematic_state`                                                                    | Remap target for `input/odometry`.                    |
-| `input_lanelet2_map_metadata`       | `/map/output/lanelet2_map_metadata`                                                                | Remap target for `input/lanelet2_map_metadata`.       |
-| `output_lanelet2_map_local`         | `output/lanelet2_map_local`                                                                        | Remap target for `output/lanelet2_map_local`.         |
-| `service_get_selected_lanelet2_map` | `/map/service/get_selected_lanelet2_map`                                                           | Remap target for `service/get_selected_lanelet2_map`. |
+| `input_lanelet2_map_metadata`       | `/map/vector_map_metadata`                                                                         | Remap target for `input/lanelet2_map_metadata`.       |
+| `output_lanelet2_map_local`         | `/map/vector_map_local`                                                                            | Remap target for `output/lanelet2_map_local`.         |
+| `service_get_selected_lanelet2_map` | `/map/get_selected_vector_map`                                                                     | Remap target for `service/get_selected_lanelet2_map`. |
 
 ## Assumptions / Known limits
 
