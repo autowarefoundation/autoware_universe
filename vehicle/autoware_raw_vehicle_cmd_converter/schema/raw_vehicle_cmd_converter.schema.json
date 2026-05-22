@@ -185,6 +185,21 @@
           "type": "boolean",
           "default": "false",
           "description": "flag to enable feature that compensates control commands according to vehicle dynamics."
+        },
+        "vehicle_adaptor": {
+          "type": "object",
+          "properties": {
+            "k_us": {
+              "type": "number",
+              "default": "0.0",
+              "description": "Understeer coefficient K_us [rad/(m/s^2)]. Feedforward correction is added to the commanded steering angle"
+            },
+            "steer_max_correction": {
+              "type": "number",
+              "default": "0.05",
+              "description": "Magnitude clamp on the feedforward steering correction [rad]."
+            }
+          }
         }
       },
       "required": [

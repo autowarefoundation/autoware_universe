@@ -24,7 +24,8 @@ namespace autoware::raw_vehicle_cmd_converter
 {
 RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
   const rclcpp::NodeOptions & node_options)
-: Node("autoware_raw_vehicle_cmd_converter_node", node_options)
+: Node("autoware_raw_vehicle_cmd_converter_node", node_options),
+  vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
 {
   using std::placeholders::_1;
   /* parameters for accel/brake map */
@@ -88,20 +89,21 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
     }
   }
 
-  // NOTE: The steering status can be published from the vehicle side or converted in this node.
+  // NOTE: The steering status can be published from the vehicle side or
+  // converted in this node.
   convert_actuation_to_steering_status_ =
     declare_parameter<bool>("convert_actuation_to_steering_status", false);
   if (convert_actuation_to_steering_status_) {
     pub_steering_status_ = create_publisher<Steering>("~/output/steering_status", 1);
   } else {
-    // NOTE: Polling subscriber requires specifying the topic name at declaration,
-    // so use a normal callback subscriber.
+    // NOTE: Polling subscriber requires specifying the topic name at
+    // declaration, so use a normal callback subscriber.
     sub_steering_ = create_subscription<Steering>(
       "~/input/steering", 1, std::bind(&RawVehicleCommandConverterNode::onSteering, this, _1));
   }
 
-  // NOTE: some vehicles do not publish actuation status. To handle this, subscribe only when the
-  // option is specified.
+  // NOTE: some vehicles do not publish actuation status. To handle this,
+  // subscribe only when the option is specified.
   const bool use_vgr =
     convert_steer_cmd_method_.has_value() && convert_steer_cmd_method_.value() == "vgr";
   need_to_subscribe_actuation_status_ = convert_actuation_to_steering_status_ || use_vgr;
@@ -123,6 +125,10 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
   if (use_vehicle_adaptor_) {
     pub_compensated_control_cmd_ = create_publisher<Control>(
       "/vehicle/raw_vehicle_cmd_converter/debug/compensated_control_cmd", 1);
+    const auto k_us = declare_parameter<double>("vehicle_adaptor.k_us", 0.0);
+    const auto max_correction =
+      declare_parameter<double>("vehicle_adaptor.steer_max_correction", 0.05);
+    vehicle_adaptor_.set_understeer_ff_params(k_us, max_correction, vehicle_info_.wheel_base_m);
   }
 
   logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);

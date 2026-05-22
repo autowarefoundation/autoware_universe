@@ -37,13 +37,17 @@ class VehicleAdaptor
 public:
   VehicleAdaptor() = default;
   Control compensate(
-    const Control & input_control_cmd, [[maybe_unused]] const Odometry & odometry,
+    const Control & input_control_cmd, const Odometry & odometry,
     [[maybe_unused]] const AccelWithCovarianceStamped & accel,
-    [[maybe_unused]] const double steering,
-    [[maybe_unused]] const OperationModeState & operation_mode,
+    [[maybe_unused]] const double steering, const OperationModeState & operation_mode,
     [[maybe_unused]] const ControlHorizon & control_horizon);
 
+  void set_understeer_ff_params(double k_us, double max_correction, double wheelbase);
+
 private:
+  double k_us_{0.0};
+  double max_correction_{0.05};
+  double wheelbase_{1.0};
 };
 }  // namespace autoware::raw_vehicle_cmd_converter
 
