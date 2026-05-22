@@ -57,6 +57,7 @@ using autoware_internal_planning_msgs::msg::CandidateTrajectories;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_trajectory_validator::msg::MetricReport;
 using autoware_trajectory_validator::msg::ValidationReport;

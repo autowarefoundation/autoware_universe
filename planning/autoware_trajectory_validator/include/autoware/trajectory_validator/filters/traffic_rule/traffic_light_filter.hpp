@@ -15,12 +15,15 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__TRAFFIC_RULE__TRAFFIC_LIGHT_FILTER_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__TRAFFIC_RULE__TRAFFIC_LIGHT_FILTER_HPP_
 
+#include "autoware/trajectory_validator/filters/traffic_rule/traffic_light_compliance_checker.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
+
+#include <autoware_planning_msgs/msg/lanelet_route.hpp>
 
 #include <lanelet2_core/Forward.h>
 
+#include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_validator::plugin::traffic_rule
@@ -34,24 +37,10 @@ public:
 
   void update_parameters(const validator::Params & params) final;
 
-  /// @brief return true if ego can safely pass an amber traffic light
-  /// @note made public for testing purposes
-  [[nodiscard]] bool can_pass_amber_light(
-    const double distance_to_stop_line, const double current_velocity,
-    const double current_acceleration, const double time_to_cross_stop_line) const;
+  void set_vehicle_info(const VehicleInfo & vehicle_info) final;
 
 private:
-  /// @brief return the red and amber stop lines related to the given traffic light groups
-  [[nodiscard]] std::pair<
-    std::vector<lanelet::BasicLineString2d>, std::vector<lanelet::BasicLineString2d>>
-  get_stop_lines(
-    const lanelet::LaneletMap & lanelet_map,
-    const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_lights) const;
-  /// @brief return true if there is a stop point and it is within margin distance of the stop line
-  [[nodiscard]] bool is_stop_point_within_margin_from_stop_line(
-    const std::optional<TrajectoryPoint> & stop_point,
-    const lanelet::BasicLineString2d & stop_line) const;
-
+  std::unique_ptr<traffic_light_filter::TrafficLightComplianceChecker> checker_;
   validator::Params::TrafficLight params_;
 };
 
