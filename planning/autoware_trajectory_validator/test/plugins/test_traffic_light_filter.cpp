@@ -70,14 +70,13 @@ protected:
     filter_->update_parameters(params);
 
     context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
-    // Set high velocity/acceleration to always check the whole trajectory
-    // (checked_trajectory_length feature)
-    nav_msgs::msg::Odometry odometry;
-    geometry_msgs::msg::AccelWithCovarianceStamped accel;
-    odometry.twist.twist.linear.x = 999.9f;
-    accel.accel.accel.linear.x = 999.9f;
-    context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
-    context_.acceleration = std::make_shared<geometry_msgs::msg::AccelWithCovarianceStamped>(accel);
+    context_.route = std::make_shared<autoware_planning_msgs::msg::LaneletRoute>();
+    auto acceleration = std::make_shared<geometry_msgs::msg::AccelWithCovarianceStamped>();
+    acceleration->accel.accel.linear.x = 0.0f;
+    context_.acceleration = acceleration;
+    auto odometry = std::make_shared<nav_msgs::msg::Odometry>();
+    odometry->twist.twist.linear.x = 5.0f;
+    context_.odometry = odometry;
   }
 
   // Helper to create a simple straight lanelet map with a traffic light
@@ -111,6 +110,13 @@ protected:
 
     // 6. Create and Set Map
     context_.lanelet_map = lanelet::utils::createMap({lanelet});
+
+    // 7. Create and Set Route
+    auto route = std::make_shared<autoware_planning_msgs::msg::LaneletRoute>();
+    autoware_planning_msgs::msg::LaneletSegment segment;
+    segment.preferred_primitive.id = lanelet.id();
+    route->segments.push_back(segment);
+    context_.route = route;
   }
 
   // Helper to set traffic light signal
@@ -196,6 +202,14 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutSignals)
     << "Should not be feasible without traffic light signals (cannot verify whether a trajectory "
        "crosses a traffic "
        "light)";
+}
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutRoute)
+{
+  auto points = create_trajectory(0.0, 1.0);
+  create_and_set_map(0, 0);
+  context_.route = nullptr;
+  EXPECT_FALSE(filter_->is_feasible(points, context_).has_value())
+    << "Should not be feasible without a route";
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedLightIntersection)

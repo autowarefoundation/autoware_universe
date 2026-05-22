@@ -29,6 +29,7 @@ ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
   src/filters/safety/uncrossable_boundary_departure.cpp
   src/filters/safety/vehicle_constraint_filter.cpp
   src/filters/traffic_rule/traffic_light_filter.cpp
+  src/filters/traffic_rule/traffic_light_compliance_checker.cpp
 )
 
 target_link_libraries(autoware_trajectory_validator_plugins
