@@ -73,8 +73,9 @@ void DeleteAllObjectsTool::onInitialize()
 void DeleteAllObjectsTool::updateTopic()
 {
   rclcpp::Node::SharedPtr raw_node = context_->getRosNodeAbstraction().lock()->get_raw_node();
-  dummy_object_info_pub_ = raw_node->create_publisher<tier4_simulation_msgs::msg::DummyObject>(
-    topic_property_->getStdString(), 1);
+  dummy_object_info_pub_ =
+    raw_node->create_publisher<autoware_simulation_msgs::msg::SimulatedObject>(
+      topic_property_->getStdString(), 1);
   clock_ = raw_node->get_clock();
 }
 
@@ -82,7 +83,7 @@ void DeleteAllObjectsTool::updateTopic()
 void DeleteAllObjectsTool::onPoseSet(
   [[maybe_unused]] double x, [[maybe_unused]] double y, [[maybe_unused]] double theta)
 {
-  tier4_simulation_msgs::msg::DummyObject output_msg;
+  autoware_simulation_msgs::msg::SimulatedObject output_msg;
   std::string fixed_frame = context_->getFixedFrame().toStdString();
 
   // header
@@ -90,7 +91,7 @@ void DeleteAllObjectsTool::onPoseSet(
   output_msg.header.stamp = clock_->now();
 
   // action
-  output_msg.action = tier4_simulation_msgs::msg::DummyObject::DELETEALL;
+  output_msg.action = autoware_simulation_msgs::msg::SimulatedObject::DELETE_ALL;
 
   dummy_object_info_pub_->publish(output_msg);
 }
