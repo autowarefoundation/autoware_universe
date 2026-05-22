@@ -24,8 +24,6 @@ namespace autoware::raw_vehicle_cmd_converter
 // at non-zero lateral acceleration. Pulling δ/L out and treating tan(δ) ≈ δ,
 // this becomes a multiplicative factor on the gear ratio:
 //   N(v, δ_w) = N_mech(v, δ_w) · (1 + K_us · v² / L)
-// Using it on both command (tire→wheel) and report (wheel→tire) paths keeps
-// the conversion symmetric, unlike a one-sided feedforward compensator.
 class VGRWithUndersteer
 {
 public:
