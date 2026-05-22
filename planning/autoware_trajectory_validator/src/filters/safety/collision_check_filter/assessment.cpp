@@ -422,7 +422,7 @@ TrajectoryData generate_rss_ego_trajectory(
     traj_points, context, ego_time_horizon_for_rss, time_resolution, vehicle_info);
 }
 
-RssDetail assess_required_deceleration(
+RssDetail assess_required_acceleration(
   const TrajectoryData & ego_trajectory, const geometry_msgs::msg::Twist & ego_twist,
   const autoware_perception_msgs::msg::PredictedObject & object, const RssParams & rss_params,
   const builtin_interfaces::msg::Time & stamp)
@@ -448,7 +448,7 @@ RssDetail assess_required_deceleration(
                                          ? std::numeric_limits<double>::infinity()
                                          : ego_long_vel * ego_long_vel * 0.5 / safe_distance;
 
-  return RssDetail{TrajectoryIdentification{object, stamp}, required_deceleration};
+  return RssDetail{TrajectoryIdentification{object, stamp}, -required_deceleration};
 }
 
 RssArtifact assess(
@@ -470,7 +470,7 @@ RssArtifact assess(
     if (!rss_params.enable_assessment) {
       continue;
     }
-    const auto rss_detail = assess_required_deceleration(
+    const auto rss_detail = assess_required_acceleration(
       ego_trajectory, context.odometry->twist.twist, object, rss_params,
       context.predicted_objects->header.stamp);
     const auto risk_level =
