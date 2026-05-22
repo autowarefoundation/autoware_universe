@@ -54,8 +54,7 @@ cudaError_t argsort(
   const auto num_blocks =
     static_cast<unsigned int>((num_elements + kThreadsPerBlock - 1U) / kThreadsPerBlock);
   fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream>>>(input_idx_d, num_elements);
-  cudaError_t status = cudaGetLastError();
-  if (status != cudaSuccess) {
+  if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
     return status;
   }
 

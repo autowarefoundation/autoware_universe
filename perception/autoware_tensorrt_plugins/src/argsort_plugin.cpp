@@ -151,9 +151,14 @@ std::int32_t ArgsortPlugin::enqueue(
   auto num_elements = static_cast<std::size_t>(input_desc[0].dims.d[0]);
   const auto workspace_size = get_argsort_workspace_size(num_elements);
 
-  return argsort(
+  if (const auto status = PLUGIN_CUDA_CHECK(argsort(
     reinterpret_cast<std::int64_t const *>(inputs[0]), reinterpret_cast<std::int64_t *>(outputs[0]),
-    workspace, num_elements, workspace_size, stream);
+    workspace, num_elements, workspace_size, stream));
+      status != cudaSuccess) {
+    return -1;
+  }
+
+  return 0;
 }
 
 std::int32_t ArgsortPlugin::onShapeChange(

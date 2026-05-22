@@ -254,15 +254,22 @@ __global__ void write_unique_counts(
   unique_counts_out[index] = next_offset - unique_offsets_in[index];
 }
 
+__global__ void write_num_unique_elements(
+  const std::int32_t * num_unique_in, std::int64_t * num_unique_elements_out)
+{
+  *num_unique_elements_out = static_cast<std::int64_t>(*num_unique_in);
+}
+
 }  // namespace
 
-std::int64_t unique(
+cudaError_t unique(
   const std::int64_t * input_in, std::int64_t * unique_values_out,
-  std::int64_t * inverse_indices_out, std::int64_t * unique_counts_out, void * workspace_inout,
+  std::int64_t * inverse_indices_out, std::int64_t * unique_counts_out,
+  std::int64_t * num_unique_elements_out, void * workspace_inout,
   std::size_t num_input_elements_in, std::size_t workspace_size_in, cudaStream_t stream_in)
 {
   if (num_input_elements_in == 0U) {
-    return 0;
+    return cudaMemsetAsync(num_unique_elements_out, 0, sizeof(std::int64_t), stream_in);
   }
 
   assert(workspace_size_in >= get_unique_workspace_size(num_input_elements_in));
@@ -278,27 +285,46 @@ std::int64_t unique(
   // 1. Sort values while carrying their original input positions.
   fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
     layout.input_positions, num_input_elements_in);
-  cub::DeviceRadixSort::SortPairs(
+  if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
+    return status;
+  }
+  if (const auto status = cub::DeviceRadixSort::SortPairs(
     layout.cub_temp_storage, layout.cub_temp_storage_size, input_in, layout.sorted_input,
-    layout.input_positions, layout.sorted_input_positions, num_input_elements_in, 0, 64, stream_in);
+    layout.input_positions, layout.sorted_input_positions, num_input_elements_in, 0, 64,
+    stream_in);
+      status != cudaSuccess) {
+    return status;
+  }
 
   // 2. Convert sorted run starts into sorted-position -> unique-index ids.
   mark_run_starts<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
     layout.sorted_input, layout.run_ids, num_input_elements_in);
-  cub::DeviceScan::InclusiveSum(
+  if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
+    return status;
+  }
+  if (const auto status = cub::DeviceScan::InclusiveSum(
     layout.cub_temp_storage, layout.cub_temp_storage_size, layout.run_ids, layout.run_ids,
     num_input_elements_in, stream_in);
+      status != cudaSuccess) {
+    return status;
+  }
 
   // 3. Scatter unique ids back to original input order.
   scatter_inverse_indices<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
     layout.sorted_input_positions, layout.run_ids, inverse_indices_out, num_input_elements_in);
+  if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
+    return status;
+  }
 
   // 4. Compact sorted runs into unique values and each run's start offset.
   auto * unique_offsets_inout = layout.sorted_input_positions;
-  cub::DeviceSelect::UniqueByKey(
+  if (const auto status = cub::DeviceSelect::UniqueByKey(
     layout.cub_temp_storage, layout.cub_temp_storage_size, layout.sorted_input,
     layout.input_positions, unique_values_out, unique_offsets_inout, layout.num_unique,
     num_input_elements_in, stream_in);
+      status != cudaSuccess) {
+    return status;
+  }
 
   // 5. Turn run start offsets into counts.
   // CUB writes each run's start offset, but not the final end offset. Store the sentinel in the
@@ -306,14 +332,17 @@ std::int64_t unique(
   // overwriting compact offsets or the selected-count scalar.
   write_unique_offset_sentinel<<<1, 1, 0, stream_in>>>(
     layout.unique_offsets_end, num_input_elements_in);
+  if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
+    return status;
+  }
   write_unique_counts<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
     unique_offsets_inout, layout.num_unique, layout.unique_offsets_end, unique_counts_out);
+  if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
+    return status;
+  }
 
-  std::int32_t num_out = 0;
-  cudaMemcpyAsync(
-    &num_out, layout.num_unique, sizeof(std::int32_t), cudaMemcpyDeviceToHost, stream_in);
-  cudaStreamSynchronize(stream_in);
-  return static_cast<std::int64_t>(num_out);
+  write_num_unique_elements<<<1, 1, 0, stream_in>>>(layout.num_unique, num_unique_elements_out);
+  return cudaPeekAtLastError();
 }
 
 std::size_t get_unique_temp_storage_size(std::size_t num_elements_in)

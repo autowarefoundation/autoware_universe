@@ -20,28 +20,35 @@
 #include <cstddef>
 #include <cstdint>
 
-/// Computes sorted unique int64 values, inverse indices, and counts on `stream_in`.
+/// Computes sorted unique int64 values, inverse indices, counts, and the number of uniques on
+/// `stream_in`.
 ///
 /// Input contract:
 /// - `input_in` points to `num_input_elements_in` int64 values.
 /// - `unique_values_out`, `inverse_indices_out`, and `unique_counts_out` each point to at least
-///   `num_input_elements_in` int64 values. The true `unique_counts_out` length is the returned
-///   value, but the buffer must allow the worst case where every input is unique.
+///   `num_input_elements_in` int64 values. The true `unique_counts_out` length is written to
+///   `num_unique_elements_out`, but the buffer must allow the worst case where every input is
+///   unique.
+/// - `num_unique_elements_out` points to one int64 device scalar.
 /// - `workspace_inout` points to at least `workspace_size_in` bytes.
 /// - `workspace_size_in` must be no smaller than
 ///   `get_unique_workspace_size(num_input_elements_in)`.
-/// - All pointers are device pointers except the scalar return value.
+/// - All pointers are device pointers.
 ///
 /// Output contract:
-/// - Returns `num_unique`, the number of unique values found.
-/// - `unique_values_out[0:num_unique]` contains the input values in ascending order, with
-///   duplicates removed.
+/// - Returns `cudaSuccess` if all work was enqueued successfully; otherwise returns the first CUDA
+///   error encountered.
+/// - `unique_values_out[0:*num_unique_elements_out]` contains the input values in ascending order,
+///   with duplicates removed.
 /// - `inverse_indices_out[0:num_input_elements_in]` maps each original input element to its
 ///   `unique_values_out` index.
-/// - `unique_counts_out[0:num_unique]` contains the occurrence count for each unique value.
-std::int64_t unique(
+/// - `unique_counts_out[0:*num_unique_elements_out]` contains the occurrence count for each unique
+///   value.
+/// - `*num_unique_elements_out` contains the number of unique values found.
+cudaError_t unique(
   const std::int64_t * input_in, std::int64_t * unique_values_out,
-  std::int64_t * inverse_indices_out, std::int64_t * unique_counts_out, void * workspace_inout,
+  std::int64_t * inverse_indices_out, std::int64_t * unique_counts_out,
+  std::int64_t * num_unique_elements_out, void * workspace_inout,
   std::size_t num_input_elements_in, std::size_t workspace_size_in, cudaStream_t stream_in);
 
 /// Bytes of CUB temporary storage required by the largest CUB primitive used by `unique`.

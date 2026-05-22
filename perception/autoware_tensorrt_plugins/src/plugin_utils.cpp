@@ -35,6 +35,19 @@ void logWarning(char const * msg)
   getLogger()->log(nvinfer1::ILogger::Severity::kWARNING, msg);
 }
 
+cudaError_t reportCudaStatus(
+  cudaError_t status, char const * msg, char const * file, std::int32_t line)
+{
+  if (status != cudaSuccess) {
+    std::ostringstream stream;
+    stream << "CUDA call failed: " << msg << std::endl
+           << file << ':' << line << std::endl
+           << cudaGetErrorName(status) << ": " << cudaGetErrorString(status) << std::endl;
+    getLogger()->log(nvinfer1::ILogger::Severity::kERROR, stream.str().c_str());
+  }
+  return status;
+}
+
 void reportAssertion(bool success, char const * msg, char const * file, std::int32_t line)
 {
   if (!success) {
