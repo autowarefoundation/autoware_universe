@@ -159,7 +159,7 @@
           "type": "string",
           "description": "method for converting steer command",
           "default": "vgr",
-          "enum": ["vgr", "steer_map"]
+          "enum": ["vgr", "vgr_with_understeer", "steer_map"]
         },
         "vgr_coef_a": {
           "type": "number",
@@ -176,6 +176,11 @@
           "default": "0.042",
           "description": "coefficient c for variable gear ratio"
         },
+        "understeer_gradient": {
+          "type": "number",
+          "default": "0.0",
+          "description": "Understeer gradient [rad·s²/m]"
+        },
         "convert_actuation_to_steering_status": {
           "type": "boolean",
           "default": "true",
@@ -184,22 +189,7 @@
         "use_vehicle_adaptor": {
           "type": "boolean",
           "default": "false",
-          "description": "flag to enable feature that compensates control commands according to vehicle dynamics."
-        },
-        "vehicle_adaptor": {
-          "type": "object",
-          "properties": {
-            "k_us": {
-              "type": "number",
-              "default": "0.0",
-              "description": "Understeer coefficient K_us [rad/(m/s^2)]. Feedforward correction is added to the commanded steering angle"
-            },
-            "steer_max_correction": {
-              "type": "number",
-              "default": "0.05",
-              "description": "Magnitude clamp on the feedforward steering correction [rad]."
-            }
-          }
+          "description": "flag to enable VehicleAdaptor::compensate on the control command (currently a passthrough scaffold)."
         }
       },
       "required": [

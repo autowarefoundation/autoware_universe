@@ -60,6 +60,13 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
       const double b = declare_parameter<double>("vgr_coef_b");
       const double c = declare_parameter<double>("vgr_coef_c");
       vgr_.setCoefficients(a, b, c);
+    } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer") {
+      const double a = declare_parameter<double>("vgr_coef_a");
+      const double b = declare_parameter<double>("vgr_coef_b");
+      const double c = declare_parameter<double>("vgr_coef_c");
+      const double k_us = declare_parameter<double>("understeer_gradient");
+      vgr_with_us_.setCoefficients(a, b, c);
+      vgr_with_us_.setUndersteerParams(k_us, vehicle_info_.wheel_base_m);
     } else if (convert_steer_cmd_method_.value() == "steer_map") {
       const auto csv_path_steer_map = declare_parameter<std::string>("csv_path_steer_map");
       if (!steer_map_.readSteerMapFromCSV(csv_path_steer_map, true)) {
@@ -104,8 +111,9 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
 
   // NOTE: some vehicles do not publish actuation status. To handle this,
   // subscribe only when the option is specified.
-  const bool use_vgr =
-    convert_steer_cmd_method_.has_value() && convert_steer_cmd_method_.value() == "vgr";
+  const bool use_vgr = convert_steer_cmd_method_.has_value() &&
+                       (convert_steer_cmd_method_.value() == "vgr" ||
+                        convert_steer_cmd_method_.value() == "vgr_with_understeer");
   need_to_subscribe_actuation_status_ = convert_actuation_to_steering_status_ || use_vgr;
   if (need_to_subscribe_actuation_status_) {
     sub_actuation_status_ = create_subscription<ActuationStatusStamped>(
@@ -125,10 +133,6 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
   if (use_vehicle_adaptor_) {
     pub_compensated_control_cmd_ = create_publisher<Control>(
       "/vehicle/raw_vehicle_cmd_converter/debug/compensated_control_cmd", 1);
-    const auto k_us = declare_parameter<double>("vehicle_adaptor.k_us", 0.0);
-    const auto max_correction =
-      declare_parameter<double>("vehicle_adaptor.steer_max_correction", 0.05);
-    vehicle_adaptor_.set_understeer_ff_params(k_us, max_correction, vehicle_info_.wheel_base_m);
   }
 
   logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
@@ -204,6 +208,11 @@ void RawVehicleCommandConverterNode::publishActuationCmd()
     // and the actuation_status is also the steering wheel angle.
     const double current_steer_wheel = actuation_status_ptr_->status.steer_status;
     const double adaptive_gear_ratio = vgr_.calculateVariableGearRatio(vel, current_steer_wheel);
+    desired_steer_cmd = steer * adaptive_gear_ratio;
+  } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer") {
+    const double current_steer_wheel = actuation_status_ptr_->status.steer_status;
+    const double adaptive_gear_ratio =
+      vgr_with_us_.calculateVariableGearRatio(vel, current_steer_wheel);
     desired_steer_cmd = steer * adaptive_gear_ratio;
   } else if (convert_steer_cmd_method_.value() == "steer_map") {
     desired_steer_cmd = calculateSteerFromMap(vel, steer, steer_rate);
@@ -320,6 +329,13 @@ void RawVehicleCommandConverterNode::onActuationStatus(
   if (current_odometry_) {
     if (convert_steer_cmd_method_.value() == "vgr") {
       current_steer_ptr_ = std::make_unique<double>(vgr_.calculateSteeringTireState(
+        current_odometry_->twist.twist.linear.x, actuation_status_ptr_->status.steer_status));
+      Steering steering_msg{};
+      steering_msg.stamp = this->now();
+      steering_msg.steering_tire_angle = *current_steer_ptr_;
+      pub_steering_status_->publish(steering_msg);
+    } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer") {
+      current_steer_ptr_ = std::make_unique<double>(vgr_with_us_.calculateSteeringTireState(
         current_odometry_->twist.twist.linear.x, actuation_status_ptr_->status.steer_status));
       Steering steering_msg{};
       steering_msg.stamp = this->now();
