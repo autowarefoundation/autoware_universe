@@ -1,11 +1,11 @@
 <launch>
   <arg name="dynamic_lanelet2_map_provider_param_path" default="$(find-pkg-share autoware_dynamic_lanelet2_map_provider)/config/lanelet2_map_provider.param.yaml"/>
   <arg name="input_odometry" default="/localization/kinematic_state"/>
-  <arg name="input_lanelet2_map_metadata" default="/map/output/lanelet2_map_metadata"/>
-  <arg name="output_lanelet2_map_local" default="output/lanelet2_map_local"/>
-  <arg name="service_get_selected_lanelet2_map" default="/map/service/get_selected_lanelet2_map"/>
+  <arg name="input_lanelet2_map_metadata" default="/map/vector_map_metadata"/>
+  <arg name="output_lanelet2_map_local" default="/map/vector_map_local"/>
+  <arg name="service_get_selected_lanelet2_map" default="/map/get_selected_vector_map"/>
 
-  <node pkg="autoware_dynamic_lanelet2_map_provider" exec="autoware_dynamic_lanelet2_map_provider" name="lanelet2_map_provider" output="both">
+  <node pkg="autoware_dynamic_lanelet2_map_provider" exec="autoware_dynamic_lanelet2_map_provider_node" name="lanelet2_map_provider" output="both">
     <param from="$(var dynamic_lanelet2_map_provider_param_path)"/>
     <remap from="input/odometry" to="$(var input_odometry)"/>
     <remap from="input/lanelet2_map_metadata" to="$(var input_lanelet2_map_metadata)"/>
@@ -15,6 +15,6 @@
 
   <node pkg="autoware_lanelet2_map_visualizer" exec="autoware_lanelet2_map_visualizer" name="lanelet2_map_visualization" output="both">
     <remap from="input/lanelet2_map" to="$(var output_lanelet2_map_local)"/>
-    <remap from="output/lanelet2_map_marker" to="output/lanelet2_map_local_marker"/>
+    <remap from="output/lanelet2_map_marker" to="/map/vector_map_marker_local"/>
   </node>
 </launch>
