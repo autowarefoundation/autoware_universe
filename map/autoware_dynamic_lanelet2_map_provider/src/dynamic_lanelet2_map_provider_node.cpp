@@ -97,19 +97,27 @@ void DynamicLanelet2MapProviderNode::on_timer()
   request->cell_ids = cell_ids;
 
   request_in_flight_ = true;
-  last_update_x_ = cx;
-  last_update_y_ = cy;
-  first_update_ = false;
 
   client_->async_send_request(
-    request, [this](rclcpp::Client<GetSelectedLanelet2Map>::SharedFuture future) {
+    request, [this, cx, cy](rclcpp::Client<GetSelectedLanelet2Map>::SharedFuture future) {
       request_in_flight_ = false;
-      const auto response = future.get();
+
+      GetSelectedLanelet2Map::Response::SharedPtr response;
+      try {
+        response = future.get();
+      } catch (const std::exception & e) {
+        RCLCPP_ERROR(get_logger(), "GetSelectedLanelet2Map request failed: %s", e.what());
+        return;
+      }
+
       if (response->lanelet2_cells.data.empty()) {
         RCLCPP_ERROR(get_logger(), "GetSelectedLanelet2Map returned an empty map.");
         return;
       }
       pub_local_map_->publish(response->lanelet2_cells);
+      last_update_x_ = cx;
+      last_update_y_ = cy;
+      first_update_ = false;
       RCLCPP_DEBUG(
         get_logger(), "Published lanelet2 local map (%zu bytes).",
         response->lanelet2_cells.data.size());
