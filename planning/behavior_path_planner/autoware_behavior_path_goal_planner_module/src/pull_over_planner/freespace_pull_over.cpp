@@ -22,6 +22,7 @@
 
 #include <autoware/freespace_planning_algorithms/astar_search.hpp>
 #include <autoware/freespace_planning_algorithms/rrtstar.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info.hpp>
 
 #include <memory>
 #include <vector>

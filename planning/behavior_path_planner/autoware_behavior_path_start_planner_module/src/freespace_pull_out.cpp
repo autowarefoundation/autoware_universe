@@ -20,7 +20,7 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 
 #include <autoware/lanelet2_utils/geometry.hpp>
-#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info.hpp>
 
 #include <algorithm>
 #include <limits>
