@@ -349,12 +349,12 @@ __global__ void classify_point_and_sum_stats_kernel(
   if (vox_idx < 0 || vox_idx >= num_voxels) return;
 
   // Get raw data
-  auto return_type = get_element_value<TReturnType>(data, pt_idx, step, return_type_offset);
   auto intensity = get_element_value<TIntensity>(data, pt_idx, step, intensity_offset);
 
   // All points considered primary
   bool is_primary = true;
   if (use_return_type_classification) {
+    auto return_type = get_element_value<TReturnType>(data, pt_idx, step, return_type_offset);
     is_primary = false;
     for (size_t i = 0; i < primary_return_type.num_candidates; i++) {
       if (primary_return_type.return_types[i] == return_type) {
@@ -598,7 +598,8 @@ CudaPolarVoxelNoiseFilter::FilterReturn CudaPolarVoxelNoiseFilter::filter(
       autoware::cuda_utils::make_unique<size_t>(num_total_voxels, stream_, mem_pool_);
     is_primary_flags = autoware::cuda_utils::make_unique<bool>(num_points, stream_, mem_pool_);
 
-    const size_t return_type_offset = get_offset(input_cloud->fields, "return_type");
+    const size_t return_type_offset =
+      params.use_return_type_classification ? get_offset(input_cloud->fields, "return_type") : 0U;
     const size_t intensity_offset = get_offset(input_cloud->fields, "intensity");
 
     dim3 grid_dim_points((num_points + block_dim.x - 1) / block_dim.x);

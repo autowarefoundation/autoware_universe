@@ -171,12 +171,21 @@ void PolarVoxelNoiseFilterComponent::process_polar_points(
   sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(input, "azimuth");
   sensor_msgs::PointCloud2ConstIterator<float> iter_elevation(input, "elevation");
   sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_intensity(input, "intensity");
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
-
-  for (; iter_distance != iter_distance.end();
-       ++iter_distance, ++iter_azimuth, ++iter_elevation, ++iter_intensity, ++iter_return_type) {
-    point_voxel_info.emplace_back(process_polar_point(
-      *iter_distance, *iter_azimuth, *iter_elevation, *iter_intensity, *iter_return_type));
+  if (use_return_type_classification_) {
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
+    for (; iter_distance != iter_distance.end();
+         ++iter_distance, ++iter_azimuth, ++iter_elevation, ++iter_intensity, ++iter_return_type) {
+      point_voxel_info.emplace_back(process_polar_point(
+        *iter_distance, *iter_azimuth, *iter_elevation, *iter_intensity, *iter_return_type));
+    }
+  } else {
+    // Simple mode ignores return type, so this is only a placeholder value.
+    for (; iter_distance != iter_distance.end();
+         ++iter_distance, ++iter_azimuth, ++iter_elevation, ++iter_intensity) {
+      point_voxel_info.emplace_back(process_polar_point(
+        *iter_distance, *iter_azimuth, *iter_elevation, *iter_intensity,
+        primary_return_types_.empty() ? 0U : static_cast<uint8_t>(primary_return_types_.front())));
+    }
   }
 }
 
@@ -188,12 +197,20 @@ void PolarVoxelNoiseFilterComponent::process_cartesian_points(
   sensor_msgs::PointCloud2ConstIterator<float> iter_y(input, "y");
   sensor_msgs::PointCloud2ConstIterator<float> iter_z(input, "z");
   sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_intensity(input, "intensity");
-  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
-
-  for (; iter_x != iter_x.end();
-       ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_return_type) {
-    point_voxel_info.emplace_back(
-      process_cartesian_point(*iter_x, *iter_y, *iter_z, *iter_intensity, *iter_return_type));
+  if (use_return_type_classification_) {
+    sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(input, "return_type");
+    for (; iter_x != iter_x.end();
+         ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_return_type) {
+      point_voxel_info.emplace_back(
+        process_cartesian_point(*iter_x, *iter_y, *iter_z, *iter_intensity, *iter_return_type));
+    }
+  } else {
+    // Simple mode ignores return type, so this is only a placeholder value.
+    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_intensity) {
+      point_voxel_info.emplace_back(process_cartesian_point(
+        *iter_x, *iter_y, *iter_z, *iter_intensity,
+        primary_return_types_.empty() ? 0U : static_cast<uint8_t>(primary_return_types_.front())));
+    }
   }
 }
 
