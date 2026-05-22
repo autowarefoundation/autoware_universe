@@ -20,7 +20,7 @@
 
 #include <unordered_map>
 
-TEST(isUnknown, normal)
+TEST(is_unknown, normal)
 {
   tier4_perception_msgs::msg::TrafficLight signal;
   tier4_perception_msgs::msg::TrafficLightElement element;
@@ -29,7 +29,7 @@ TEST(isUnknown, normal)
     element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
     signal.elements.push_back(element);
   }
-  EXPECT_TRUE(autoware::traffic_light::utils::isUnknown(signal));
+  EXPECT_TRUE(autoware::traffic_light::utils::is_unknown(signal));
 
   {
     signal.elements.clear();
@@ -37,7 +37,7 @@ TEST(isUnknown, normal)
     element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
     signal.elements.push_back(element);
   }
-  EXPECT_FALSE(autoware::traffic_light::utils::isUnknown(signal));
+  EXPECT_FALSE(autoware::traffic_light::utils::is_unknown(signal));
 }
 
 TEST(at_or, normal)
@@ -54,7 +54,7 @@ namespace same_camera
 {
 
 // first condition
-TEST(compareRecord, timestamp_check)
+TEST(compare_record, timestamp_check)
 {
   // r1 is newer
   autoware::traffic_light::utils::FusionRecord r1;
@@ -105,7 +105,7 @@ TEST(compareRecord, timestamp_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
 
   // r2 is newer
   {
@@ -154,11 +154,11 @@ TEST(compareRecord, timestamp_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
 }
 
 // second condition
-TEST(compareRecord, unknown_check)
+TEST(compare_record, unknown_check)
 {
   // r1 is unknown
   autoware::traffic_light::utils::FusionRecord r1;
@@ -209,7 +209,7 @@ TEST(compareRecord, unknown_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
 
   // r2 is unknown
   {
@@ -258,7 +258,7 @@ TEST(compareRecord, unknown_check)
     element.confidence = 0.0;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
 
   // both of r1 and r2 is unknown
   {
@@ -307,11 +307,11 @@ TEST(compareRecord, unknown_check)
     element.confidence = 0.0;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 0);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 0);
 }
 
 // third condition
-TEST(compareRecord, visible_check)
+TEST(compare_record, visible_check)
 {
   // r1 is better visible on top left
   autoware::traffic_light::utils::FusionRecord r1;
@@ -363,7 +363,7 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
 
   // r1 is better visible on bottom left
   {
@@ -413,7 +413,7 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
 
   // r2 is better visible on top left
   {
@@ -463,7 +463,7 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
 
   // r2 is better visible on bottom left
   {
@@ -514,11 +514,11 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
 }
 
 // fourth condition
-TEST(compareRecord, confidence_check)
+TEST(compare_record, confidence_check)
 {
   // r1 is higher confidence
   autoware::traffic_light::utils::FusionRecord r1;
@@ -569,7 +569,7 @@ TEST(compareRecord, confidence_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
 
   // r2 is higher confidence
   {
@@ -618,7 +618,7 @@ TEST(compareRecord, confidence_check)
     element.confidence = 0.95;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
 }
 
 }  // namespace same_camera
@@ -629,7 +629,7 @@ namespace different_camera
 // first condition is nothing in different camera
 
 // second condition
-TEST(compareRecord, unknown_check)
+TEST(compare_record, unknown_check)
 {
   // r1 is unknown
   autoware::traffic_light::utils::FusionRecord r1;
@@ -680,7 +680,7 @@ TEST(compareRecord, unknown_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
 
   // r2 is unknown
   {
@@ -729,7 +729,7 @@ TEST(compareRecord, unknown_check)
     element.confidence = 0.0;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
 
   // both of r1 and r2 is unknown
   {
@@ -778,11 +778,11 @@ TEST(compareRecord, unknown_check)
     element.confidence = 0.0;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 0);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 0);
 }
 
 // third condition
-TEST(compareRecord, visible_check)
+TEST(compare_record, visible_check)
 {
   // r1 is better visible on top left
   autoware::traffic_light::utils::FusionRecord r1;
@@ -834,7 +834,7 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
 
   // r1 is better visible on bottom left
   {
@@ -884,7 +884,7 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
 
   // r2 is better visible on top left
   {
@@ -934,7 +934,7 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
 
   // r2 is better visible on bottom left
   {
@@ -985,11 +985,11 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
 }
 
 // fourth condition
-TEST(compareRecord, confidence_check)
+TEST(compare_record, confidence_check)
 {
   // r1 is higher confidence
   autoware::traffic_light::utils::FusionRecord r1;
@@ -1040,7 +1040,7 @@ TEST(compareRecord, confidence_check)
     element.confidence = 0.8;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
 
   // r2 is higher confidence
   {
@@ -1089,12 +1089,12 @@ TEST(compareRecord, confidence_check)
     element.confidence = 0.95;
     r2.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
+  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
 }
 
 }  // namespace different_camera
 
-TEST(calVisibleScore, normal)
+TEST(cal_visible_score, normal)
 {
   // visible
   autoware::traffic_light::utils::FusionRecord r1;
@@ -1121,7 +1121,7 @@ TEST(calVisibleScore, normal)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::calVisibleScore(r1), 1);
+  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 1);
 
   // invisible by left top
   {
@@ -1148,7 +1148,7 @@ TEST(calVisibleScore, normal)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::calVisibleScore(r1), 0);
+  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 0);
 
   // invisible by right top
   {
@@ -1175,7 +1175,7 @@ TEST(calVisibleScore, normal)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::calVisibleScore(r1), 0);
+  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 0);
 
   // invisible by left bottom
   {
@@ -1202,7 +1202,7 @@ TEST(calVisibleScore, normal)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::calVisibleScore(r1), 0);
+  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 0);
 
   // invisible by right bottom
   {
@@ -1229,7 +1229,7 @@ TEST(calVisibleScore, normal)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  EXPECT_EQ(autoware::traffic_light::utils::calVisibleScore(r1), 0);
+  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 0);
 }
 
 int main(int argc, char ** argv)
