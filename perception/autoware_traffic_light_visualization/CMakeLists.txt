@@ -48,24 +48,6 @@ if(BUILD_TESTING)
   )
   ament_target_dependencies(test_traffic_light_map_visualizer
     autoware_lanelet2_extension
-    autoware_lanelet2_utils
-    autoware_map_msgs
-    autoware_perception_msgs
-    rclcpp
-    visualization_msgs
-  )
-
-  ament_add_gtest(test_traffic_light_map_visualizer_core
-    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer_core.cpp
-  )
-  target_include_directories(test_traffic_light_map_visualizer_core PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-  )
-  target_link_libraries(test_traffic_light_map_visualizer_core
-    traffic_light_map_visualizer
-  )
-  ament_target_dependencies(test_traffic_light_map_visualizer_core
-    autoware_lanelet2_extension
     autoware_perception_msgs
     geometry_msgs
     visualization_msgs
