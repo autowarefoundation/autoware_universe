@@ -22920,7 +22920,7 @@
 <p>All movement plugins inherit from <code>DummyObjectMovementBasePlugin</code> which provides:</p>
 <ul>
 <li>Object management (add, delete operations)</li>
-<li>Associated action type handling</li>
+<li>Associated movement model handling</li>
 <li>Common interface for object movement</li>
 </ul>
 <h4 id="object-action-handling">Object Action Handling<a class="headerlink" href="#object-action-handling" title="Permanent link">#</a></h4>
@@ -22928,9 +22928,9 @@
 <li><strong>ADD</strong>: New objects are created and they move in a straight line, acceleration and deceleration parameters can be used.</li>
 <li><strong>MODIFY</strong>: Handled directly by the node, bypassing plugin movement logic. Immediately replaces the object's position information across all plugins.</li>
 <li><strong>DELETE</strong>: The specified object is removed from all plugins.</li>
-<li><strong>DELETEALL</strong>: Clears all objects from all plugins.</li>
-<li><strong>PREDICT</strong>: New objects are created, they move in a straight line for a set time and then the predictions extracted from the perception module are used to dictate where the objects will move to. NOTE: for ease of calculation, acceleration is not taken into account when calculating the object's position, only its initial speed.</li>
+<li><strong>DELETE_ALL</strong>: Clears all objects from all plugins.</li>
 </ul>
+<p>The requested operation is selected via the <code>action</code> field in <code>autoware_simulation_msgs::msg::SimulatedObject</code>.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -22949,7 +22949,7 @@
 </tr>
 <tr>
 <td><code>input/object</code></td>
-<td><code>tier4_simulation_msgs::msg::DummyObject</code></td>
+<td><code>autoware_simulation_msgs::msg::SimulatedObject</code></td>
 <td>dummy detection objects</td>
 </tr>
 <tr>
@@ -23101,9 +23101,14 @@
 <td>minimum speed ratio relative to dummy object speed</td>
 </tr>
 <tr>
+<td><code>min_speed_ratio</code></td>
+<td>double</td>
+<td>minimum speed ratio relative to simulated object speed</td>
+</tr>
+<tr>
 <td><code>max_speed_ratio</code></td>
 <td>double</td>
-<td>maximum speed ratio relative to dummy object speed</td>
+<td>maximum speed ratio relative to simulated object speed</td>
 </tr>
 <tr>
 <td><code>speed_check_threshold</code></td>
