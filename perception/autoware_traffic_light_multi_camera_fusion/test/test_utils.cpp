@@ -20,7 +20,7 @@
 
 #include <unordered_map>
 
-TEST(is_unknown, normal)
+TEST(IsUnknown, Normal)
 {
   tier4_perception_msgs::msg::TrafficLight signal;
   tier4_perception_msgs::msg::TrafficLightElement element;
@@ -40,7 +40,7 @@ TEST(is_unknown, normal)
   EXPECT_FALSE(autoware::traffic_light::utils::is_unknown(signal));
 }
 
-TEST(at_or, normal)
+TEST(AtOr, Normal)
 {
   std::unordered_map<int, int> map;
   map[1] = 2;
@@ -54,7 +54,7 @@ namespace same_camera
 {
 
 // first condition
-TEST(compare_record, timestamp_check)
+TEST(CompareRecord, TimestampCheck)
 {
   // r1 is newer
   autoware::traffic_light::utils::FusionRecord r1;
@@ -158,7 +158,7 @@ TEST(compare_record, timestamp_check)
 }
 
 // second condition
-TEST(compare_record, unknown_check)
+TEST(CompareRecord, UnknownCheck)
 {
   // r1 is unknown
   autoware::traffic_light::utils::FusionRecord r1;
@@ -311,7 +311,7 @@ TEST(compare_record, unknown_check)
 }
 
 // third condition
-TEST(compare_record, visible_check)
+TEST(CompareRecord, VisibleCheck)
 {
   // r1 is better visible on top left
   autoware::traffic_light::utils::FusionRecord r1;
@@ -518,7 +518,7 @@ TEST(compare_record, visible_check)
 }
 
 // fourth condition
-TEST(compare_record, confidence_check)
+TEST(CompareRecord, ConfidenceCheck)
 {
   // r1 is higher confidence
   autoware::traffic_light::utils::FusionRecord r1;
@@ -629,7 +629,7 @@ namespace different_camera
 // first condition is nothing in different camera
 
 // second condition
-TEST(compare_record, unknown_check)
+TEST(CompareRecord, UnknownCheck)
 {
   // r1 is unknown
   autoware::traffic_light::utils::FusionRecord r1;
@@ -782,7 +782,7 @@ TEST(compare_record, unknown_check)
 }
 
 // third condition
-TEST(compare_record, visible_check)
+TEST(CompareRecord, VisibleCheck)
 {
   // r1 is better visible on top left
   autoware::traffic_light::utils::FusionRecord r1;
@@ -989,7 +989,7 @@ TEST(compare_record, visible_check)
 }
 
 // fourth condition
-TEST(compare_record, confidence_check)
+TEST(CompareRecord, ConfidenceCheck)
 {
   // r1 is higher confidence
   autoware::traffic_light::utils::FusionRecord r1;
@@ -1094,7 +1094,7 @@ TEST(compare_record, confidence_check)
 
 }  // namespace different_camera
 
-TEST(cal_visible_score, normal)
+TEST(CalVisibleScore, Normal)
 {
   // visible
   autoware::traffic_light::utils::FusionRecord r1;

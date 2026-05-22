@@ -15,9 +15,7 @@
 #ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 #define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 
-#include "signal_validator.hpp"
-#include "traffic_light_multi_camera_fusion_process.hpp"
-#include "types.hpp"
+#include "multi_camera_fusion.hpp"
 
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -31,16 +29,12 @@
 #include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
-#include <lanelet2_core/Forward.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
 
-#include <list>
-#include <map>
 #include <memory>
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -48,45 +42,7 @@ namespace autoware::traffic_light
 {
 namespace mf = message_filters;
 
-inline bool is_unknown(const StateKey & state_key)
-{
-  return state_key.size() == 1 &&
-         state_key[0].first == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-}
-
-inline bool compare_state_key_log_odds(
-  const std::pair<StateKey, double> & key1, const std::pair<StateKey, double> & key2)
-{
-  // Ordering rule:
-  // 1. Unknown StateKey is always lower priority
-  // 2. Otherwise, smaller log-odds comes first
-  const bool key1_is_unknown = is_unknown(key1.first);
-  const bool key2_is_unknown = is_unknown(key2.first);
-  if (key1_is_unknown && !key2_is_unknown) {
-    return true;
-  }
-  if (!key1_is_unknown && key2_is_unknown) {
-    return false;
-  }
-  return key1.second < key2.second;
-}
-
-struct GroupFusionInfo
-{
-  std::map<StateKey, double> accumulated_log_odds;
-  std::map<StateKey, utils::FusionRecord> best_record_for_state;
-};
-
-struct ConflictInfo
-{
-  tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type id;
-  ConflictType conflict_type;
-};
-
-using GroupFusionInfoMap =
-  std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, GroupFusionInfo>;
-
-class MultiCameraFusion : public rclcpp::Node
+class MultiCameraFusionNode : public rclcpp::Node
 {
 public:
   using CamInfoType = sensor_msgs::msg::CameraInfo;
@@ -100,7 +56,7 @@ public:
 
   using RecordArrayType = std::pair<RoiArrayType, SignalArrayType>;
 
-  explicit MultiCameraFusion(const rclcpp::NodeOptions & node_options);
+  explicit MultiCameraFusionNode(const rclcpp::NodeOptions & node_options);
 
 private:
   void traffic_signal_roi_callback(
@@ -109,56 +65,8 @@ private:
 
   void map_callback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_msg);
 
-  void multi_camera_fusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
-
-  void convert_output_msg(
-    const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out);
-
-  void group_fusion(
-    const std::map<IdType, utils::FusionRecord> & fused_record_map,
-    std::map<IdType, utils::FusionRecord> & grouped_record_map);
-
-  /**
-   * @brief Accumulates log-odds evidence for each traffic light group from individual fused
-   * records.
-   */
-  GroupFusionInfoMap accumulate_group_evidence(
-    const std::map<IdType, utils::FusionRecord> & fused_record_map);
-
-  /**
-   * @brief Processes a single fused record and updates the group_fusion_info_map.
-   */
-  void process_fused_record(
-    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record);
-
-  /**
-   * @brief Updates the map for a single (element, regulatory_id) combination.
-   */
-  void update_group_info_for_element(
-    GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
-    const utils::FusionRecord & record);
-
-  /**
-   * @brief Handles the log-odds accumulation logic.
-   */
-  void update_log_odds(
-    std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence);
-
-  /**
-   * @brief Handles the logic for tracking the best record for a given state.
-   */
-  void update_best_record(
-    std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
-    double confidence, const utils::FusionRecord & record);
-
-  /**
-   * @brief Determines the best state for each group based on accumulated evidence.
-   */
-  void determine_best_group_state(
-    const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
-    std::map<IdType, utils::FusionRecord> & grouped_record_map);
-
-  void publish_diagnostics(rclcpp::Time stamp);
+  void publish_diagnostics(
+    const std::vector<ConflictInfo> & conflicted_regulatory_element_status, rclcpp::Time stamp);
 
   using ExactSyncPolicy = mf::sync_policies::ExactTime<CamInfoType, RoiArrayType, SignalArrayType>;
   using ExactSync = mf::Synchronizer<ExactSyncPolicy>;
@@ -174,31 +82,9 @@ private:
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_sub_;
 
   rclcpp::Publisher<NewSignalArrayType>::SharedPtr signal_pub_;
-  /*
-  Mapping from traffic light instance id to regulatory element id (group id)
-  */
-  std::map<lanelet::Id, std::vector<lanelet::Id>> traffic_light_id_to_regulatory_ele_id_;
-  /*
-  Store record arrays in increasing timestamp order.
-  Use multiset in case multiple cameras publish images at the exact same time.
-  */
-  std::multiset<utils::FusionRecordArr> record_arr_set_;
-  bool is_approximate_sync_;
-  /*
-  For every input message input_m, if the timestamp difference between input_m and the latest
-  message is smaller than message_lifespan_, then input_m would be used for the fusion. Otherwise,
-  it would be discarded.
-  */
-  double message_lifespan_;
-  /**
-   * @brief The prior log-odds for a traffic light state.
-   */
-  double prior_log_odds_;
-  bool use_signal_consistency_check_;
-  bool publish_partial_matched_signal_;
 
-  std::unique_ptr<SignalValidator> signal_validator_;
-  std::vector<ConflictInfo> conflicted_regulatory_element_status_{};
+  MultiCameraFusionConfig fusion_config_{};
+  MultiCameraFusion fusion_{};
 
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 };
