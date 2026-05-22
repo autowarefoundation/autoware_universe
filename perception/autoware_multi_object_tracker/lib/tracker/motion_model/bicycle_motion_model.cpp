@@ -274,7 +274,7 @@ bool BicycleMotionModel::updateStatePoseRear(
   C(2, IDX::X2) = 1.0;
   C(3, IDX::Y2) = 1.0;
 
-  constexpr double uncertainty_multiplier = 4.0;  // additional uncertainty for unmeasured position
+  constexpr double uncertainty_multiplier = 9.0;  // additional uncertainty for unmeasured position
   Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
