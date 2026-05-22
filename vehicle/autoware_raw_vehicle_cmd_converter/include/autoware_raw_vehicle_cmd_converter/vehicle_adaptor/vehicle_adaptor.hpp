@@ -42,6 +42,8 @@ public:
     [[maybe_unused]] const double steering,
     [[maybe_unused]] const OperationModeState & operation_mode,
     [[maybe_unused]] const ControlHorizon & control_horizon);
+
+private:
 };
 }  // namespace autoware::raw_vehicle_cmd_converter
 
