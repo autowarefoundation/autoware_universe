@@ -55,6 +55,7 @@ DiagNodeStatus NodeUnit::create_status()
   status_.input_level = latch_->input_level();  // Note: Equals logic level.
   status_.latch_level = latch_->latch_level();
   status_.is_dependent = dependency();
+  status_.is_overridden = override_.has_value();
   return status_;
 }
 
