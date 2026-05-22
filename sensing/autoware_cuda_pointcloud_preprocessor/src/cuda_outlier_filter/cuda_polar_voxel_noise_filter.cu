@@ -332,7 +332,7 @@ template <typename TReturnType, typename TIntensity>
 __global__ void classify_point_and_sum_stats_kernel(
   const uint8_t * __restrict__ data, const size_t num_points, const int num_voxels,
   const size_t step, const size_t return_type_offset, const size_t intensity_offset,
-  const ReturnTypeCandidates primary_return_type,
+  const bool use_return_type_classification, const ReturnTypeCandidates primary_return_type,
   const ::cuda::std::optional<int> * __restrict__ point_indices,
   const int * __restrict__ voxel_indices, size_t * __restrict__ total_counts,
   float * __restrict__ intensity_sums, size_t * __restrict__ secondary_counts,
@@ -352,12 +352,15 @@ __global__ void classify_point_and_sum_stats_kernel(
   auto return_type = get_element_value<TReturnType>(data, pt_idx, step, return_type_offset);
   auto intensity = get_element_value<TIntensity>(data, pt_idx, step, intensity_offset);
 
-  // Determine if primary
-  bool is_primary = false;
-  for (size_t i = 0; i < primary_return_type.num_candidates; i++) {
-    if (primary_return_type.return_types[i] == return_type) {
-      is_primary = true;
-      break;
+  // All points considered primary
+  bool is_primary = true;
+  if (use_return_type_classification) {
+    is_primary = false;
+    for (size_t i = 0; i < primary_return_type.num_candidates; i++) {
+      if (primary_return_type.return_types[i] == return_type) {
+        is_primary = true;
+        break;
+      }
     }
   }
 
@@ -367,7 +370,7 @@ __global__ void classify_point_and_sum_stats_kernel(
   atomic_add_size_t(&(total_counts[vox_idx]), 1);
   atomicAdd(&(intensity_sums[vox_idx]), static_cast<float>(intensity));
 
-  if (!is_primary) {
+  if (use_return_type_classification && !is_primary) {
     atomic_add_size_t(&(secondary_counts[vox_idx]), 1);
   }
 }
@@ -406,7 +409,7 @@ __global__ void point_validity_check_kernel(
   const ::cuda::std::optional<int> * __restrict__ point_indices,
   const int * __restrict__ voxel_indices, const bool * __restrict__ is_primary_flags,
   const size_t num_points, const int num_voxels, const bool filter_secondary_returns,
-  bool * __restrict__ valid_points_mask)
+  const bool use_return_type_classification, bool * __restrict__ valid_points_mask)
 {
   const auto array_index = blockIdx.x * blockDim.x + threadIdx.x;
   if (array_index >= num_points) return;
@@ -425,7 +428,8 @@ __global__ void point_validity_check_kernel(
   const bool voxel_is_valid = voxel_valid_mask[vox_idx];
   const bool point_is_primary = is_primary_flags[pt_idx];
 
-  valid_points_mask[pt_idx] = voxel_is_valid && (!filter_secondary_returns || point_is_primary);
+  const bool should_filter_secondary = use_return_type_classification && filter_secondary_returns;
+  valid_points_mask[pt_idx] = voxel_is_valid && (!should_filter_secondary || point_is_primary);
 }
 
 __global__ void copy_valid_points_kernel(
@@ -601,9 +605,9 @@ CudaPolarVoxelNoiseFilter::FilterReturn CudaPolarVoxelNoiseFilter::filter(
     classify_point_and_sum_stats_kernel<uint8_t, uint8_t>
       <<<grid_dim_points, block_dim, 0, stream_>>>(
         input_cloud->data.get(), num_points, num_total_voxels, input_cloud->point_step,
-        return_type_offset, intensity_offset, primary_return_type_dev_.value(), point_indices.get(),
-        voxel_indices.get(), total_counts.get(), intensity_sums.get(), secondary_counts.get(),
-        is_primary_flags.get());
+        return_type_offset, intensity_offset, params.use_return_type_classification,
+        primary_return_type_dev_.value(), point_indices.get(), voxel_indices.get(),
+        total_counts.get(), intensity_sums.get(), secondary_counts.get(), is_primary_flags.get());
   }
 
   // Evaluate voxel validity with CPU-equivalent criteria, then build per-point mask
@@ -621,7 +625,8 @@ CudaPolarVoxelNoiseFilter::FilterReturn CudaPolarVoxelNoiseFilter::filter(
     dim3 grid_dim_pts((num_points + block_dim.x - 1) / block_dim.x);
     point_validity_check_kernel<<<grid_dim_pts, block_dim, 0, stream_>>>(
       voxel_valid_mask.get(), point_indices.get(), voxel_indices.get(), is_primary_flags.get(),
-      num_points, num_total_voxels, params.filter_secondary_returns, valid_points_mask.get());
+      num_points, num_total_voxels, params.filter_secondary_returns,
+      params.use_return_type_classification, valid_points_mask.get());
   }
 
   // Create filtered output

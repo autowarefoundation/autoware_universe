@@ -340,6 +340,10 @@ if(BUILD_TESTING)
     test/test_polar_voxel_outlier_filter_node.cpp
   )
 
+  ament_add_gtest(test_polar_voxel_noise_filter_node
+    test/test_polar_voxel_noise_filter_node.cpp
+  )
+
   ament_add_gtest(test_blockage_diag
     test/blockage_diag/test_blockage_diag.cpp
   )
@@ -370,6 +374,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
   target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag_node pointcloud_preprocessor_filter)
   target_link_libraries(test_pointcloud2_to_depth_image pointcloud_preprocessor_filter)
