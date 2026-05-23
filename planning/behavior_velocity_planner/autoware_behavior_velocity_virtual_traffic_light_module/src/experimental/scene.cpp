@@ -97,6 +97,7 @@ bool isDrivingForward(
   const geometry_msgs::msg::Pose & ego_pose, const double ego_nearest_dist_threshold,
   const double ego_nearest_yaw_threshold)
 {
+  std::cout << "[Debug2 VirtualTrafficLightModule] isDrivingForward checking..." << std::endl;
   if (path_points.size() < 2) {
     return true;
   }
@@ -112,13 +113,14 @@ bool isDrivingForward(
   if (ego_vel > velocity_threshold) {
     return true;
   }
-
+  std::cout << "[Debug2 VirtualTrafficLightModule] ego_vel failed, checking with motion_utils..." << std::endl;
   const auto opt = autoware::motion_utils::isDrivingForward(path_points);
   return opt.value_or(true);
 }
 
 double calcLeadingBumperLongitudinalOffset(
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const bool is_driving_forward)
+  [[maybe_unused]]  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, 
+  [[maybe_unused]]  const bool is_driving_forward)
 {
   return is_driving_forward ? vehicle_info.max_longitudinal_offset_m
                             : std::abs(vehicle_info.min_longitudinal_offset_m);
@@ -273,8 +275,11 @@ bool VirtualTrafficLightModule::modifyPathVelocity(
   module_data_.is_driving_forward = isDrivingForward(
     path_points, planner_data.current_odometry->pose, planner_data.ego_nearest_dist_threshold,
     planner_data.ego_nearest_yaw_threshold);
+  std::cout << "[Debug2 VirtualTrafficLightModule] is_driving_forward: " << module_data_.is_driving_forward << std::endl;
+
   module_data_.leading_bumper_longitudinal_offset_m = calcLeadingBumperLongitudinalOffset(
     planner_data.vehicle_info_, module_data_.is_driving_forward);
+  std::cout << "[Debug2 VirtualTrafficLightModule] leading_bumper_longitudinal_offset_m: " << module_data_.leading_bumper_longitudinal_offset_m << std::endl;
 
   // Calculate path index of end line
   // NOTE: In order to deal with u-turn or self-crossing path, only start/stop lines before the end
