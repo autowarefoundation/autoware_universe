@@ -15,7 +15,7 @@
 #ifndef NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
 #define NETWORKS__POSTPROCESS__OBJECT_POSTPROCESS_HPP_
 
-#include "data_types.hpp"
+#include "data_types_core.hpp"
 #include "networks/postprocess/object_postprocess_kernel.hpp"
 #include "ros_vad_logger.hpp"
 

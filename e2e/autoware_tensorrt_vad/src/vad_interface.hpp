@@ -16,7 +16,8 @@
 #define VAD_INTERFACE_HPP_
 
 #include "coordinate_transformer.hpp"
-#include "data_types.hpp"
+#include "data_types_core.hpp"
+#include "data_types_ros.hpp"
 #include "input_converter/bev_shift_converter.hpp"
 #include "input_converter/can_bus_converter.hpp"
 #include "input_converter/image_converter.hpp"
