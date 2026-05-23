@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Simple Planning Simulator Node",
+  "type": "object",
+  "definitions": {
+    "simple_planning_simulator": {
+      "type": "object",
+      "properties": {
+        "simulated_frame_id": {
+          "type": "string",
+          "description": "set to the child_frame_id in output tf",
+          "default": "base_link"
+        },
+        "origin_frame_id": {
+          "type": "string",
+          "description": "set to the frame_id in output tf",
+          "default": "map"
+        },
+        "vehicle_model_type": {
+          "type": "string",
+          "description": "Vehicle Model Parameters setting.",
+          "default": "DELAY_STEER_ACC_GEARED",
+          "enum": [
+            "IDEAL_STEER_VEL",
+            "IDEAL_STEER_ACC",
+            "IDEAL_STEER_ACC_GEARED",
+            "DELAY_STEER_VEL",
+            "DELAY_STEER_ACC",
+            "DELAY_STEER_ACC_GEARED"
+          ]
+        },
+        "initialize_source": {
+          "type": "string",
+          "description": "If 'ORIGIN', the initial pose is set at (0,0,0). If 'INITIAL_POSE_TOPIC', node will wait until the 'input/initialpose' topic is published.",
+          "default": "INITIAL_POSE_TOPIC",
+          "enum": ["ORIGIN", "INITIAL_POSE_TOPIC"]
+        },
+        "initial_engage_state": {
+          "type": "boolean",
+          "description": "initial engage state setting",
+          "default": "true"
+        },
+        "enable_road_slope_simulation": {
+          "type": "boolean",
+          "description": "Enable road slope simulation or not.",
+          "default": "false"
+        },
+        "timer_sampling_time_ms": {
+          "type": "integer",
+          "description": "Setting timer for sampling time [ms].",
+          "default": "25",
+          "exclusiveMinimum": 0
+        },
+        "add_measurement_noise": {
+          "type": "boolean",
+          "description": "If true, the Gaussian noise is added to the simulated results.",
+          "default": "false"
+        },
+        "pos_noise_stddev": {
+          "type": "number",
+          "description": "Standard deviation for position noise",
+          "default": "1e-2",
+          "minimum": 0.0
+        },
+        "vel_noise_stddev": {
+          "type": "number",
+          "description": "Standard deviation for longitudinal velocity noise",
+          "default": "1e-2",
+          "minimum": 0.0
+        },
+        "rpy_noise_stddev": {
+          "type": "number",
+          "description": "Standard deviation for Euler angle noise",
+          "default": "1e-4",
+          "minimum": 0.0
+        },
+        "steer_noise_stddev": {
+          "type": "number",
+          "description": "Standard deviation for steering angle noise",
+          "default": "1e-4",
+          "minimum": 0.0
+        },
+        "vel_lim": {
+          "type": "number",
+          "description": "limit of velocity [m/s]",
+          "default": "30.0",
+          "exclusiveMinimum": 0.0
+        },
+        "vel_rate_lim": {
+          "type": "number",
+          "description": "limit of velocity change rate [m/ss]",
+          "default": "30.0",
+          "minimum": 0.0
+        },
+        "steer_lim": {
+          "type": "number",
+          "description": "limit of steering angle [rad]",
+          "default": "0.6"
+        },
+        "steer_rate_lim": {
+          "type": "number",
+          "description": "limit of steering angle change rate [rad/s]",
+          "default": "6.28",
+          "minimum": 0.0
+        },
+        "acc_time_delay": {
+          "type": "number",
+          "description": "dead time for the acceleration input [s]",
+          "default": "0.1",
+          "minimum": 0.0
+        },
+        "acc_time_constant": {
+          "type": "number",
+          "description": "time constant of the 1st-order acceleration dynamics [s]",
+          "default": "0.1",
+          "minimum": 0.0
+        },
+        "vel_time_delay": {
+          "type": "number",
+          "description": "dead time for the velocity input [s]",
+          "default": "0.25",
+          "minimum": 0.0
+        },
+        "vel_time_constant": {
+          "type": "number",
+          "description": "time constant of the 1st-order velocity dynamics [s]",
+          "default": "0.5",
+          "minimum": 0.0
+        },
+        "steer_time_delay": {
+          "type": "number",
+          "description": "dead time for the steering input [s]",
+          "default": "0.1",
+          "minimum": 0.0
+        },
+        "steer_time_constant": {
+          "type": "number",
+          "description": "time constant of the 1st-order steering dynamics [s]",
+          "default": "0.1",
+          "minimum": 0.0
+        },
+        "x_stddev": {
+          "type": "number",
+          "description": "x standard deviation for dummy covariance in map coordinate",
+          "default": "0.0001",
+          "minimum": 0.0
+        },
+        "y_stddev": {
+          "type": "number",
+          "description": "y standard deviation for dummy covariance in map coordinate",
+          "default": "0.0001",
+          "minimum": 0.0
+        }
+      },
+      "required": [
+        "simulated_frame_id",
+        "origin_frame_id",
+        "vehicle_model_type",
+        "initialize_source",
+        "initial_engage_state",
+        "enable_road_slope_simulation",
+        "timer_sampling_time_ms",
+        "add_measurement_noise",
+        "pos_noise_stddev",
+        "vel_noise_stddev",
+        "rpy_noise_stddev",
+        "steer_noise_stddev",
+        "vel_lim",
+        "vel_rate_lim",
+        "steer_lim",
+        "steer_rate_lim",
+        "acc_time_delay",
+        "acc_time_constant",
+        "vel_time_delay",
+        "vel_time_constant",
+        "steer_time_delay",
+        "steer_time_constant",
+        "x_stddev",
+        "y_stddev"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/simple_planning_simulator"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
