@@ -533,7 +533,6 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   const double & vel_long = X_t(IDX::U);
   const double & vel_lat = X_t(IDX::V);
 
-  const double yaw = std::atan2(y2 - y1, x2 - x1);
   const double wheel_base = std::hypot(x2 - x1, y2 - y1);
   const double sin_yaw = (y2 - y1) / wheel_base;
   const double cos_yaw = (x2 - x1) / wheel_base;
@@ -608,18 +607,21 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   const double q_cov_long2 = q_cov_long + motion_params_.q_cov_length * dt2;
   const double q_cov_lat2 = q_cov_lat + q_stddev_head * q_stddev_head;
 
+  const double sin_yaw_sq = sin_yaw * sin_yaw;
+  const double cos_yaw_sq = cos_yaw * cos_yaw;
+  const double sin_cos_yaw = sin_yaw * cos_yaw;
+
   StateMat Q;
   Q.setZero();
-  const double sin_2yaw = std::sin(2.0 * yaw);
-  Q(IDX::X1, IDX::X1) = (q_cov_long * cos_yaw * cos_yaw + q_cov_lat * sin_yaw * sin_yaw);
-  Q(IDX::X1, IDX::Y1) = (0.5f * (q_cov_long - q_cov_lat) * sin_2yaw);
+  Q(IDX::X1, IDX::X1) = (q_cov_long * cos_yaw_sq + q_cov_lat * sin_yaw_sq);
+  Q(IDX::X1, IDX::Y1) = ((q_cov_long - q_cov_lat) * sin_cos_yaw);
   Q(IDX::Y1, IDX::X1) = Q(IDX::X1, IDX::Y1);
-  Q(IDX::Y1, IDX::Y1) = (q_cov_long * sin_yaw * sin_yaw + q_cov_lat * cos_yaw * cos_yaw);
+  Q(IDX::Y1, IDX::Y1) = (q_cov_long * sin_yaw_sq + q_cov_lat * cos_yaw_sq);
 
-  Q(IDX::X2, IDX::X2) = (q_cov_long2 * cos_yaw * cos_yaw + q_cov_lat2 * sin_yaw * sin_yaw);
-  Q(IDX::X2, IDX::Y2) = (0.5f * (q_cov_long2 - q_cov_lat2) * sin_2yaw);
+  Q(IDX::X2, IDX::X2) = (q_cov_long2 * cos_yaw_sq + q_cov_lat2 * sin_yaw_sq);
+  Q(IDX::X2, IDX::Y2) = ((q_cov_long2 - q_cov_lat2) * sin_cos_yaw);
   Q(IDX::Y2, IDX::X2) = Q(IDX::X2, IDX::Y2);
-  Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw * sin_yaw + q_cov_lat2 * cos_yaw * cos_yaw);
+  Q(IDX::Y2, IDX::Y2) = (q_cov_long2 * sin_yaw_sq + q_cov_lat2 * cos_yaw_sq);
 
   // covariance between X1 and X2, Y1 and Y2, shares the same covariance of rear axle
   constexpr double cross_coefficient =
@@ -663,6 +665,9 @@ bool BicycleMotionModel::getPredictedState(
   const double wheel_base_inv_sq = wheel_base_inv * wheel_base_inv;
   const double sin_yaw = (X(IDX::Y2) - X(IDX::Y1)) * wheel_base_inv;
   const double cos_yaw = (X(IDX::X2) - X(IDX::X1)) * wheel_base_inv;
+  const double sin_yaw_sq = sin_yaw * sin_yaw;
+  const double cos_yaw_sq = cos_yaw * cos_yaw;
+  const double sin_cos_yaw = sin_yaw * cos_yaw;
 
   // set position
   pose.position.x = (X(IDX::X1) * motion_params_.lf_ratio + X(IDX::X2) * motion_params_.lr_ratio) *
@@ -693,9 +698,15 @@ bool BicycleMotionModel::getPredictedState(
   pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X1, IDX::Y1);
   pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y1, IDX::X1);
   pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y1, IDX::Y1);
+  // Jacobian: d(yaw)/d[X1,Y1,X2,Y2] = (1/L)*[sin_yaw, -cos_yaw, -sin_yaw, cos_yaw]
+  // YAW_YAW = J * P_sub * J^T (full 4x4 block, P symmetric so off-diag terms double)
   pose_cov[XYZRPY_COV_IDX::YAW_YAW] =
-    (P(IDX::X2, IDX::X2) * sin_yaw * sin_yaw + P(IDX::Y2, IDX::Y2) * cos_yaw * cos_yaw) *
-    wheel_base_inv_sq;
+    wheel_base_inv_sq *
+    (sin_yaw_sq * P(IDX::X1, IDX::X1) - 2.0 * sin_cos_yaw * P(IDX::X1, IDX::Y1) -
+     2.0 * sin_yaw_sq * P(IDX::X1, IDX::X2) + 2.0 * sin_cos_yaw * P(IDX::X1, IDX::Y2) +
+     cos_yaw_sq * P(IDX::Y1, IDX::Y1) + 2.0 * sin_cos_yaw * P(IDX::Y1, IDX::X2) -
+     2.0 * cos_yaw_sq * P(IDX::Y1, IDX::Y2) + sin_yaw_sq * P(IDX::X2, IDX::X2) -
+     2.0 * sin_cos_yaw * P(IDX::X2, IDX::Y2) + cos_yaw_sq * P(IDX::Y2, IDX::Y2));
   pose_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
   pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
   pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;
