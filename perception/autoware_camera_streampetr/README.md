@@ -108,6 +108,18 @@ The `autoware_camera_streampetr` node has various parameters for configuration:
 - `post_process_params.confidence_threshold`: Confidence threshold for detections
 - `post_process_params.yaw_norm_thresholds`: Yaw normalization thresholds
 
+#### Ego mask (CUDA preprocess)
+
+Polygon ego masking runs on the GPU **before undistortion** (same semantics as filling regions on distorted `image_raw`). No separate `ego_mask` ROS node is required.
+
+- `ego_mask.enabled`: Enable CUDA ego masking (default: `false`)
+- `ego_mask.fill_value_bgr`: BGR fill inside polygons, 0–255 (default: `[0, 0, 0]`)
+- `ego_mask.roi_polygons_yaml`: One path per model ROI index (`~/input/camera0` …). Empty string disables masking for that ROI.
+
+Example polygon files: `config/camera9_polygons.yaml`, `config/camera10_polygons.yaml`.
+
+**X2 five-camera layout** (`tensorrt_stream_petr.x2.launch.xml`): ROI 2 → camera10 (left strip), ROI 4 → camera9 (right strip). All cameras use `image_raw`; masking is applied inside this node for ROIs 2 and 4 only.
+
 #### Node Parameters
 
 - `max_camera_time_diff`: Maximum allowed time difference between cameras (seconds)

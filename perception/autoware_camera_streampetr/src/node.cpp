@@ -14,6 +14,7 @@
 
 #include "autoware/camera_streampetr/node.hpp"
 
+#include "autoware/camera_streampetr/network/camera_ego_mask.hpp"
 #include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 
 #include <Eigen/Dense>
@@ -165,10 +166,28 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   // Publishers
   pub_objects_ = this->create_publisher<DetectedObjects>("~/output/objects", rclcpp::QoS{1});
 
+  EgoMaskParams ego_mask_params;
+  ego_mask_params.enabled = declare_parameter<bool>("ego_mask.enabled", false);
+  const auto fill_value_bgr =
+    declare_parameter<std::vector<double>>("ego_mask.fill_value_bgr", {0.0, 0.0, 0.0});
+  for (std::size_t i = 0; i < 3; ++i) {
+    const double v = i < fill_value_bgr.size() ? fill_value_bgr[i] : 0.0;
+    ego_mask_params.fill_bgr[i] = static_cast<std::uint8_t>(std::clamp(v, 0.0, 255.0));
+  }
+  ego_mask_params.roi_polygons_yaml = declare_parameter<std::vector<std::string>>(
+    "ego_mask.roi_polygons_yaml", std::vector<std::string>());
+
+  if (ego_mask_params.enabled) {
+    RCLCPP_INFO(
+      rclcpp::get_logger(logger_name_.c_str()),
+      "CUDA ego mask enabled for StreamPETR preprocess (%zu ROI yaml entries)",
+      ego_mask_params.roi_polygons_yaml.size());
+  }
+
   // Data store
   data_store_ = std::make_unique<CameraDataStore>(
     this, rois_number_, roi_height, roi_width, anchor_camera_id_,
-    declare_parameter<bool>("is_distorted_image"));
+    declare_parameter<bool>("is_distorted_image"), ego_mask_params);
 
   if (debug_mode_) {
     using autoware_utils::DebugPublisher;

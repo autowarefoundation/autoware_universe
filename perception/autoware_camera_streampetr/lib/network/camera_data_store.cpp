@@ -14,6 +14,7 @@
 
 #include "autoware/camera_streampetr/network/camera_data_store.hpp"
 
+#include "autoware/camera_streampetr/network/camera_ego_mask.hpp"
 #include "autoware/camera_streampetr/network/preprocess.hpp"
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
@@ -104,7 +105,7 @@ static void updateIntrinsics(float * K_4x4, const Eigen::Matrix3f & ida_mat)
 
 CameraDataStore::CameraDataStore(
   rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-  const int anchor_camera_id, const bool is_distorted_image)
+  const int anchor_camera_id, const bool is_distorted_image, const EgoMaskParams & ego_mask_params)
 : rois_number_(rois_number),
   image_height_(image_height),
   image_width_(image_width),
@@ -141,6 +142,12 @@ CameraDataStore::CameraDataStore(
   undistort_map_y_gpu_.resize(rois_number, nullptr);
   undistortion_maps_computed_.resize(rois_number, false);
 
+  ego_mask_roi_configs_ = loadEgoMaskRoiConfigs(ego_mask_params, rois_number_);
+  ego_mask_gpu_.resize(rois_number_, nullptr);
+  ego_mask_width_.resize(rois_number_, 0);
+  ego_mask_height_.resize(rois_number_, 0);
+  ego_mask_built_.resize(rois_number_, false);
+
   is_frozen_ = false;
   active_updates_ = 0;
 }
@@ -164,6 +171,26 @@ void CameraDataStore::update_camera_image(
   }
 
   auto start_time = std::chrono::high_resolution_clock::now();
+
+  if (ego_mask_roi_configs_[camera_id].has_value() && !ego_mask_built_[camera_id]) {
+    const int width = static_cast<int>(input_camera_image_msg->width);
+    const int height = static_cast<int>(input_camera_image_msg->height);
+    if (width > 0 && height > 0) {
+      const auto raster =
+        buildEgoMaskRaster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
+      if (!raster.empty()) {
+        ego_mask_gpu_[camera_id] = std::make_shared<Tensor>(
+          "ego_mask", nvinfer1::Dims{2, {height, width}}, nvinfer1::DataType::kUINT8);
+        cudaMemcpyAsync(
+          ego_mask_gpu_[camera_id]->ptr, raster.data(), ego_mask_gpu_[camera_id]->nbytes(),
+          cudaMemcpyHostToDevice, streams_[camera_id]);
+        cudaStreamSynchronize(streams_[camera_id]);
+        ego_mask_width_[camera_id] = width;
+        ego_mask_height_[camera_id] = height;
+        ego_mask_built_[camera_id] = true;
+      }
+    }
+  }
 
   // Calculate image processing parameters
   auto params = calculate_image_processing_params(camera_id, input_camera_image_msg);
@@ -275,6 +302,20 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
     input_tensor->ptr, input_camera_image_msg->data.data(), input_tensor->nbytes(),
     cudaMemcpyHostToDevice, streams_[camera_id]);
 
+  if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
+    const auto & cfg = ego_mask_roi_configs_[camera_id].value();
+    auto err_mask = applyEgoMask_launch(
+      static_cast<std::uint8_t *>(input_tensor->ptr),
+      static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), original_height,
+      original_width, cfg.fill_bgr[0], cfg.fill_bgr[1], cfg.fill_bgr[2], streams_[camera_id]);
+    if (err_mask != cudaSuccess) {
+      RCLCPP_ERROR(
+        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
+        cudaGetErrorString(err_mask));
+      return nullptr;
+    }
+  }
+
   // Allocate GPU memory for undistorted image (same size as input - full resolution)
   auto image_input_tensor = std::make_unique<Tensor>(
     "camera_img", nvinfer1::Dims{3, {original_height, original_width, 3}},
@@ -310,6 +351,21 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_regular_image(
     image_input_tensor->ptr, input_camera_image_msg->data.data(), image_input_tensor->nbytes(),
     cudaMemcpyHostToDevice, streams_.at(camera_id));
 
+  if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
+    const auto & cfg = ego_mask_roi_configs_[camera_id].value();
+    auto err_mask = applyEgoMask_launch(
+      static_cast<std::uint8_t *>(image_input_tensor->ptr),
+      static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), params.original_height,
+      params.original_width, cfg.fill_bgr[0], cfg.fill_bgr[1], cfg.fill_bgr[2],
+      streams_.at(camera_id));
+    if (err_mask != cudaSuccess) {
+      RCLCPP_ERROR(
+        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
+        cudaGetErrorString(err_mask));
+      return nullptr;
+    }
+  }
+
   return image_input_tensor;
 }
 
@@ -335,6 +391,52 @@ void CameraDataStore::update_camera_info(
   if (is_distorted_image_ && input_camera_info_msg) {
     compute_undistortion_maps(camera_id);
   }
+
+  if (ego_mask_roi_configs_[camera_id].has_value() && input_camera_info_msg) {
+    build_ego_mask_gpu(camera_id);
+  }
+}
+
+void CameraDataStore::build_ego_mask_gpu(const int camera_id)
+{
+  const auto & camera_info = camera_info_list_[camera_id];
+  if (!camera_info || !ego_mask_roi_configs_[camera_id]) {
+    return;
+  }
+
+  const int width = static_cast<int>(camera_info->width);
+  const int height = static_cast<int>(camera_info->height);
+  if (width <= 0 || height <= 0) {
+    return;
+  }
+
+  if (
+    ego_mask_built_[camera_id] && ego_mask_width_[camera_id] == width &&
+    ego_mask_height_[camera_id] == height) {
+    return;
+  }
+
+  const auto raster =
+    buildEgoMaskRaster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
+  if (raster.empty()) {
+    RCLCPP_WARN(logger_, "Empty ego mask raster for camera %d", camera_id);
+    return;
+  }
+
+  ego_mask_gpu_[camera_id] = std::make_shared<Tensor>(
+    "ego_mask", nvinfer1::Dims{2, {height, width}}, nvinfer1::DataType::kUINT8);
+
+  cudaMemcpyAsync(
+    ego_mask_gpu_[camera_id]->ptr, raster.data(), ego_mask_gpu_[camera_id]->nbytes(),
+    cudaMemcpyHostToDevice, streams_[camera_id]);
+  cudaStreamSynchronize(streams_[camera_id]);
+
+  ego_mask_width_[camera_id] = width;
+  ego_mask_height_[camera_id] = height;
+  ego_mask_built_[camera_id] = true;
+
+  RCLCPP_INFO(
+    logger_, "Ego mask GPU buffer built for camera %d (%dx%d)", camera_id, width, height);
 }
 
 bool CameraDataStore::check_if_all_camera_info_received() const

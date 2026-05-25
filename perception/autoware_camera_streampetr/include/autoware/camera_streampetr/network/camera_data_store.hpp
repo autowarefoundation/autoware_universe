@@ -16,6 +16,7 @@
 #define AUTOWARE__CAMERA_STREAMPETR__NETWORK__CAMERA_DATA_STORE_HPP_
 
 #include "autoware/camera_streampetr/cuda_utils.hpp"
+#include "autoware/camera_streampetr/network/camera_ego_mask.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -42,7 +43,7 @@ class CameraDataStore
 public:
   CameraDataStore(
     rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-    const int anchor_camera_id, const bool is_distorted_image);
+    const int anchor_camera_id, const bool is_distorted_image, const EgoMaskParams & ego_mask_params);
   ~CameraDataStore();
   void update_camera_image(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg);
@@ -90,6 +91,7 @@ private:
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg,
     const std::chrono::high_resolution_clock::time_point & start_time);
   void compute_undistortion_maps(const int camera_id);
+  void build_ego_mask_gpu(const int camera_id);
 
   const size_t rois_number_;
   const int image_height_;
@@ -112,6 +114,12 @@ private:
   std::vector<std::shared_ptr<Tensor>> undistort_map_x_gpu_;
   std::vector<std::shared_ptr<Tensor>> undistort_map_y_gpu_;
   std::vector<bool> undistortion_maps_computed_;
+
+  std::vector<std::optional<EgoMaskRoiConfig>> ego_mask_roi_configs_;
+  std::vector<std::shared_ptr<Tensor>> ego_mask_gpu_;
+  std::vector<int> ego_mask_width_;
+  std::vector<int> ego_mask_height_;
+  std::vector<bool> ego_mask_built_;
 
   // multithreading variables
   mutable std::mutex freeze_mutex_;
