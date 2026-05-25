@@ -67,6 +67,7 @@ void BicycleMotionModel::setMotionParams(
 
   motion_params_.wheel_pos_ratio =
     (motion_params_.lf_ratio + motion_params_.lr_ratio) / motion_params_.lr_ratio;
+  motion_params_.wheel_pos_ratio_sq = motion_params_.wheel_pos_ratio * motion_params_.wheel_pos_ratio;
   motion_params_.wheel_gamma_front =
     (0.5 - motion_params_.lf_ratio) / (motion_params_.lf_ratio + motion_params_.lr_ratio);
   motion_params_.wheel_gamma_rear =
@@ -106,7 +107,7 @@ bool BicycleMotionModel::initialize(
   P(IDX::Y2, IDX::X2) = pose_cov[XYZRPY_COV_IDX::Y_X];
   P(IDX::Y2, IDX::Y2) = pose_cov[XYZRPY_COV_IDX::Y_Y];
   P(IDX::U, IDX::U) = vel_long_cov;
-  P(IDX::V, IDX::V) = vel_lat_cov * motion_params_.wheel_pos_ratio;
+  P(IDX::V, IDX::V) = vel_lat_cov * motion_params_.wheel_pos_ratio_sq;
 
   return MotionModel::initialize(time, X, P);
 }
@@ -239,7 +240,7 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X];
   R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y];
   R(4, 4) = twist_cov[XYZRPY_COV_IDX::X_X];
-  R(5, 5) = twist_cov[XYZRPY_COV_IDX::Y_Y] * motion_params_.wheel_pos_ratio;
+  R(5, 5) = twist_cov[XYZRPY_COV_IDX::Y_Y] * motion_params_.wheel_pos_ratio_sq;
 
   return ekf_.update(Y, C, R);
 }
@@ -659,6 +660,8 @@ bool BicycleMotionModel::getPredictedState(
   const double wheel_base = std::hypot(X(IDX::X2) - X(IDX::X1), X(IDX::Y2) - X(IDX::Y1));
   const double wheel_base_inv = 1.0 / wheel_base;
   const double wheel_base_inv_sq = wheel_base_inv * wheel_base_inv;
+  const double sin_yaw = (X(IDX::Y2) - X(IDX::Y1)) * wheel_base_inv;
+  const double cos_yaw = (X(IDX::X2) - X(IDX::X1)) * wheel_base_inv;
 
   // set position
   pose.position.x = (X(IDX::X1) * motion_params_.lf_ratio + X(IDX::X2) * motion_params_.lr_ratio) *
@@ -689,18 +692,16 @@ bool BicycleMotionModel::getPredictedState(
   pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X1, IDX::Y1);
   pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y1, IDX::X1);
   pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y1, IDX::Y1);
-  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::X2, IDX::X2) * cos(yaw) * wheel_base_inv_sq +
-                                      P(IDX::Y2, IDX::Y2) * sin(yaw) * wheel_base_inv_sq;
+  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = (P(IDX::X2, IDX::X2) * sin_yaw * sin_yaw +
+                                       P(IDX::Y2, IDX::Y2) * cos_yaw * cos_yaw) * wheel_base_inv_sq;
   pose_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
   pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
   pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;
 
   // set twist covariance
   twist_cov[XYZRPY_COV_IDX::X_X] = P(IDX::U, IDX::U);
-  twist_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::V, IDX::V);
-  twist_cov[XYZRPY_COV_IDX::YAW_YAW] =
-    P(IDX::V, IDX::V) * wheel_base_inv_sq /
-    (motion_params_.wheel_pos_ratio * motion_params_.wheel_pos_ratio);
+  twist_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::V, IDX::V) / motion_params_.wheel_pos_ratio_sq;
+  twist_cov[XYZRPY_COV_IDX::YAW_YAW] = P(IDX::V, IDX::V) * wheel_base_inv_sq;
   twist_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
   twist_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
   twist_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;
