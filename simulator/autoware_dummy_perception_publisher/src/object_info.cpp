@@ -17,10 +17,10 @@
 namespace autoware::dummy_perception_publisher
 {
 using autoware_perception_msgs::msg::TrackedObject;
-using tier4_simulation_msgs::msg::DummyObject;
+using autoware_simulation_msgs::msg::SimulatedObject;
 
 // Implementation of toTrackedObject method
-TrackedObject ObjectInfo::toTrackedObject(const DummyObject & object) const
+TrackedObject ObjectInfo::toTrackedObject(const SimulatedObject & object) const
 {
   TrackedObject tracked_object;
   tracked_object.kinematics.pose_with_covariance = pose_covariance_;

@@ -64,6 +64,21 @@ void MultiObjectTrackerInternalState::init(
   last_tracker_time = node.now();
 }
 
+namespace
+{
+std::optional<geometry_msgs::msg::PoseStamped> getEgoPoseAt(
+  const rclcpp::Time & time, const MultiObjectTrackerInternalState & state)
+{
+  if (const auto odometry_info = state.odometry->getOdometryFromTf(time)) {
+    geometry_msgs::msg::PoseStamped ps;
+    ps.header.stamp = odometry_info->header.stamp;
+    ps.pose = odometry_info->pose.pose;
+    return ps;
+  }
+  return std::nullopt;
+}
+}  // namespace
+
 namespace core
 {
 
@@ -226,13 +241,22 @@ MeasurementProcessingResult process_measurement(
     return result;
   }
 
+  // Update ego pose to the measurement timestamp so association uses a fresh pose
+  const rclcpp::Time measurement_time =
+    rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
+  const auto ego_pose = getEgoPoseAt(measurement_time, state);
+  if (!ego_pose) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("multi_object_tracker"),
+      "Failed to get ego pose at measurement timestamp. Proceeding without ego pose.");
+  }
+  state.processor->updateEgoPose(ego_pose);
+
   const auto association_result = state.processor->associate(*objects);
   state.input_manager->push(channel_index, *objects, association_result);
 
   result.has_objects = true;
   result.should_process = (channel_index == state.input_manager->getTargetChannelIdx());
-
-  const auto measurement_time = rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
 
   // Collect debug information - tracker list, existence probabilities, association results
   const types::AssociatedObjects associated_objects{*objects, association_result};
@@ -251,19 +275,17 @@ void process_objects_(
   const rclcpp::Time measurement_time =
     objects_with_associations.getTimestamp(current_time.get_clock_type());
 
-  std::optional<geometry_msgs::msg::Pose> ego_pose;
-  if (const auto odometry_info = state.odometry->getOdometryFromTf(measurement_time)) {
-    ego_pose = odometry_info->pose.pose;
-  }
-
-  if (!ego_pose) {
+  // Get ego pose
+  const auto ego_pose_stamped = getEgoPoseAt(measurement_time, state);
+  if (!ego_pose_stamped) {
     RCLCPP_WARN(
       logger, "No odometry information available at the measurement time: %.9f",
       measurement_time.seconds());
   }
+  state.processor->updateEgoPose(ego_pose_stamped);
 
-  /// 1. Predict trackers to measurement time
-  state.processor->predict(measurement_time, ego_pose);
+  /// 1. Update ego pose and predict trackers to measurement time
+  state.processor->predictTrackers(measurement_time);
 
   /// 2. Object association
   const types::AssociatedObjects associated_objects{
