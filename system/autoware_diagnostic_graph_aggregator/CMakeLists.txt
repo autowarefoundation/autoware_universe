@@ -5,6 +5,8 @@ find_package(autoware_cmake REQUIRED)
 find_package(yaml-cpp REQUIRED)
 autoware_package()
 
+option(ENABLE_DIAG_GRAPH_OVERRIDE_SERVICE "Enable set_override ROS service" OFF)
+
 ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/common/config/entity.cpp"
   "src/common/config/errors.cpp"
@@ -34,6 +36,9 @@ ament_auto_add_library(converter SHARED
 )
 target_include_directories(${PROJECT_NAME} PRIVATE "src/common")
 target_include_directories(aggregator PRIVATE "src/common")
+if(ENABLE_DIAG_GRAPH_OVERRIDE_SERVICE)
+  target_compile_definitions(aggregator PRIVATE ENABLE_DIAG_GRAPH_OVERRIDE_SERVICE)
+endif()
 target_link_libraries(${PROJECT_NAME} yaml-cpp)
 target_link_libraries(aggregator yaml-cpp)
 

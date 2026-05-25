@@ -21,13 +21,22 @@
 #include <string>
 #include <unordered_map>
 
+namespace build_config
+{
+inline constexpr bool enable_diag_graph_override_service =
+#ifdef ENABLE_DIAG_GRAPH_OVERRIDE_SERVICE
+  true
+#else
+  false
+#endif
+  ;
+}  // namespace build_config
+
 namespace autoware::diagnostic_graph_aggregator
 {
 
 AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggregator", options)
 {
-  allow_override_ = declare_parameter<bool>("allow_override");
-
   const auto stamp = now();
 
   // Init diagnostics graph.
@@ -73,10 +82,13 @@ AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggr
       "~/set_initializing",
       std::bind(
         &AggregatorNode::on_set_initializing, this, std::placeholders::_1, std::placeholders::_2));
-    srv_set_override_ = create_service<SetOverride>(
-      "~/set_override",
-      std::bind(
-        &AggregatorNode::on_set_override, this, std::placeholders::_1, std::placeholders::_2));
+    if constexpr (build_config::enable_diag_graph_override_service) {
+      allow_override_ = declare_parameter<bool>("allow_override");
+      srv_set_override_ = create_service<SetOverride>(
+        "~/set_override",
+        std::bind(
+          &AggregatorNode::on_set_override, this, std::placeholders::_1, std::placeholders::_2));
+    }
 
     const auto rate = rclcpp::Rate(declare_parameter<double>("rate"));
     timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });

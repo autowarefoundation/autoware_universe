@@ -40,7 +40,7 @@ public:
 private:
   std::unique_ptr<Graph> graph_;
   std::unique_ptr<CommandModeMapping> availability_;
-  bool allow_override_;
+  bool allow_override_ = false;
 
   using ResetDiagGraph = tier4_system_msgs::srv::ResetDiagGraph;
   using SetInitializing = std_srvs::srv::SetBool;
