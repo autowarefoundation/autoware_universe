@@ -10,12 +10,13 @@ include_directories(
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_multi_camera_fusion_node.cpp
+  src/multi_camera_fusion.cpp
   src/traffic_light_multi_camera_fusion_process.cpp
   src/signal_validator.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::traffic_light::MultiCameraFusion"
+  PLUGIN "autoware::traffic_light::MultiCameraFusionNode"
   EXECUTABLE traffic_light_multi_camera_fusion_node
 )
 
