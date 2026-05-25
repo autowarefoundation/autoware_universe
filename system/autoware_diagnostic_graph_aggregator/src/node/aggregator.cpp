@@ -134,15 +134,15 @@ void AggregatorNode::on_set_override(
     return;
   }
   if (request->level == SetOverride::Request::CLEAR) {
-    const auto success = graph_->set_override(request->path, std::nullopt);
-    response->status.success = success;
-    response->status.message = success ? "" : "path not found";
+    const auto error = graph_->set_override(request->path, std::nullopt);
+    response->status.success = error.empty();
+    response->status.message = error;
     return;
   }
   if (request->level <= DiagnosticStatus::ERROR) {
-    const auto success = graph_->set_override(request->path, request->level);
-    response->status.success = success;
-    response->status.message = success ? "" : "path not found";
+    const auto error = graph_->set_override(request->path, request->level);
+    response->status.success = error.empty();
+    response->status.message = error;
     return;
   }
   response->status.success = false;

@@ -47,8 +47,8 @@ public:
   DiagnosticArray create_unknown_msg(const rclcpp::Time & stamp) const;
 
   void set_initializing(bool initializing);
-  bool set_override(const std::string & path, std::optional<DiagnosticLevel> level);
   void reset();
+  std::string set_override(const std::string & path, std::optional<DiagnosticLevel> level);
   std::vector<NodeUnit *> nodes() const { return nodes_; }
   std::vector<DiagUnit *> diags() const { return diags_; }
 

@@ -38,6 +38,8 @@ NodeUnit::NodeUnit(Parser & parser)
   struct_.path = parser.yaml().optional("path").text("");
   struct_.type = parser.type();
   status_.level = DiagnosticStatus::STALE;
+
+  allow_override_ = parser.yaml().optional("allow_override").flag(false);
 }
 
 NodeUnit::~NodeUnit()
@@ -69,9 +71,13 @@ void NodeUnit::set_initializing(bool initializing)
   latch_->set_initializing(initializing);
 }
 
-void NodeUnit::set_override(const std::optional<DiagnosticLevel> & level)
+bool NodeUnit::set_override(const std::optional<DiagnosticLevel> & level)
 {
+  if (!allow_override_) {
+    return false;
+  }
   override_ = level;
+  return true;
 }
 
 void NodeUnit::reset()
