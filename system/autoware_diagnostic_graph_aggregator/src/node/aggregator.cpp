@@ -26,7 +26,7 @@ namespace autoware::diagnostic_graph_aggregator
 
 AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggregator", options)
 {
-  allow_override_ = declare_parameter<bool>("allow_override");
+  allow_override_ = declare_parameter<bool>("allow_override_for_debugging");
 
   const auto stamp = now();
 

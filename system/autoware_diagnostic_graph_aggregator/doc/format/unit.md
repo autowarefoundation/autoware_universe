@@ -11,6 +11,7 @@ Any derived object can be used where a unit object is required.
 | `type`              | `string` | yes      | The string indicating the type of derived object.                        |
 | `dependent`         | `string` | no       | The path of the dependent unit.                                          |
 | `latch`             | `float`  | no       | The latch seconds for this unit.                                         |
+| `allow_override`    | `true`   | no       | Allow override. This is only effective if the related parameter is true. |
 | `$derived argument` | `any`    | no       | Additional arguments for constructing the derived object of given `type` |
 
 ## Derived object types
