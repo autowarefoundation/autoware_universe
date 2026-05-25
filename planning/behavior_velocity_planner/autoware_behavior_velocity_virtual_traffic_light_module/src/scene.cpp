@@ -196,13 +196,13 @@ bool VirtualTrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
 
   // Copy data
   module_data_.path = *path;
-  const auto is_driving_forward = 
+  const auto is_driving_forward =
     autoware::motion_utils::isDrivingForward(module_data_.path.points);
   module_data_.is_driving_forward = is_driving_forward.value_or(true);
 
   module_data_.leading_bumper_longitudinal_offset_m = calcLeadingBumperLongitudinalOffset(
     planner_data_->vehicle_info_, module_data_.is_driving_forward);
-  
+
   module_data_.head_pose = calcHeadPose(
     planner_data_->current_odometry->pose, module_data_.leading_bumper_longitudinal_offset_m);
   // Calculate path index of end line
