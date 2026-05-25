@@ -367,8 +367,8 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "ObstacleStop::check_predicted_objects", *get_time_keeper());
-  if (!params_.use_objects || !input.predicted_objects || input.predicted_objects->objects.empty())
-    return std::nullopt;
+  if (!params_.use_objects || !input.predicted_objects) return std::nullopt;
+
   debug_data_.filtered_objects = *input.predicted_objects;
 
   object_filter_->filter_objects(debug_data_.filtered_objects);
@@ -401,11 +401,7 @@ std::optional<CollisionPoint> ObstacleStop::check_pointcloud(
   const TrajectoryPoints & traj_points, const InputData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::check_pointcloud", *get_time_keeper());
-  if (
-    !params_.use_pointcloud || !input.obstacle_pointcloud ||
-    input.obstacle_pointcloud->data.empty()) {
-    return std::nullopt;
-  }
+  if (!params_.use_pointcloud || !input.obstacle_pointcloud) return std::nullopt;
 
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   pcl::fromROSMsg(*input.obstacle_pointcloud, *filtered_pointcloud);
