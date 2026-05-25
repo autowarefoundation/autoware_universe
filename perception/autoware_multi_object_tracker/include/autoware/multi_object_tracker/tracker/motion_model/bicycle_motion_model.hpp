@@ -59,8 +59,7 @@ private:
     double wheel_pos_ratio =
       (lf_ratio + lr_ratio) /
       lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
-    double wheel_pos_ratio_sq =
-      wheel_pos_ratio * wheel_pos_ratio;  // [-] square of wheel_pos_ratio
+    double wheel_pos_ratio_sq = wheel_pos_ratio * wheel_pos_ratio;  // [-] square of wheel_pos_ratio
     double wheel_gamma_front =
       (0.5 - lf_ratio) / (lf_ratio + lr_ratio);  // [-] protrusion from front wheel position ratio
     double wheel_gamma_rear =

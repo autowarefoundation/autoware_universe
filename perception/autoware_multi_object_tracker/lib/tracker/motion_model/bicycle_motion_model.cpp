@@ -67,7 +67,8 @@ void BicycleMotionModel::setMotionParams(
 
   motion_params_.wheel_pos_ratio =
     (motion_params_.lf_ratio + motion_params_.lr_ratio) / motion_params_.lr_ratio;
-  motion_params_.wheel_pos_ratio_sq = motion_params_.wheel_pos_ratio * motion_params_.wheel_pos_ratio;
+  motion_params_.wheel_pos_ratio_sq =
+    motion_params_.wheel_pos_ratio * motion_params_.wheel_pos_ratio;
   motion_params_.wheel_gamma_front =
     (0.5 - motion_params_.lf_ratio) / (motion_params_.lf_ratio + motion_params_.lr_ratio);
   motion_params_.wheel_gamma_rear =
@@ -692,8 +693,9 @@ bool BicycleMotionModel::getPredictedState(
   pose_cov[XYZRPY_COV_IDX::X_Y] = P(IDX::X1, IDX::Y1);
   pose_cov[XYZRPY_COV_IDX::Y_X] = P(IDX::Y1, IDX::X1);
   pose_cov[XYZRPY_COV_IDX::Y_Y] = P(IDX::Y1, IDX::Y1);
-  pose_cov[XYZRPY_COV_IDX::YAW_YAW] = (P(IDX::X2, IDX::X2) * sin_yaw * sin_yaw +
-                                       P(IDX::Y2, IDX::Y2) * cos_yaw * cos_yaw) * wheel_base_inv_sq;
+  pose_cov[XYZRPY_COV_IDX::YAW_YAW] =
+    (P(IDX::X2, IDX::X2) * sin_yaw * sin_yaw + P(IDX::Y2, IDX::Y2) * cos_yaw * cos_yaw) *
+    wheel_base_inv_sq;
   pose_cov[XYZRPY_COV_IDX::Z_Z] = default_cov;
   pose_cov[XYZRPY_COV_IDX::ROLL_ROLL] = default_cov;
   pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = default_cov;
