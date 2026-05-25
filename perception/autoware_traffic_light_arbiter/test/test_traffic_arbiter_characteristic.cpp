@@ -173,7 +173,10 @@ std::shared_ptr<TrafficLightArbiter> makeArbiter(
 
 // --- Input message builders --------------------------------------------
 
-TrafficLightElement makeTrafficLightElement(uint8_t color, uint8_t shape, float confidence)
+// Confidence defaults to 1.0f: most tests don't care about the value (the
+// arbiter only consults it under the CONFIDENCE branch), so omitting the
+// argument signals "this number is irrelevant to the assertion".
+TrafficLightElement makeTrafficLightElement(uint8_t color, uint8_t shape, float confidence = 1.0f)
 {
   TrafficLightElement element;
   element.color = color;
@@ -313,9 +316,11 @@ protected:
     spinFor(std::chrono::milliseconds(200));
   }
 
-  void publishMap()
+  void publishMap() { publishMap(*map_bin_); }
+
+  void publishMap(const LaneletMapBin & bin)
   {
-    map_pub_->publish(*map_bin_);
+    map_pub_->publish(bin);
     spinFor(std::chrono::milliseconds(150));
   }
   void publishPerception(const TrafficLightGroupArray & msg)
@@ -337,8 +342,6 @@ protected:
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
   }
-
-  rclcpp::Time arbiterNow() const { return arbiter_->now(); }
 
   // Wrapped in std::optional because LaneletMapBin (a generated ROS msg)
   // has no usable default constructor that can be invoked at static storage
@@ -374,77 +377,83 @@ protected:
 };
 
 // ---------------------------------------------------------------------------
-// A. Longest path - Signal Matching mode (enable_signal_matching=true).
+// A. Signal Matching mode - arbitration rules across source agreement.
 //
-// Exercises every branch of SignalMatchValidator::validateSignals in one run:
-//   - vehicle id with matching color/shape       -> use perception as-is
-//   - vehicle id with mismatching color          -> UNKNOWN for that shape
-//   - vehicle id with mismatching element count  -> UNKNOWN over union of shapes
-//   - vehicle id seen only by external           -> UNKNOWN
-//   - signal id not on the map                   -> dropped (WARN path)
+// Pins the full Signal Matching behavior spec: the arbiter degrades
+// gracefully as the agreement between sources weakens, falling back to
+// UNKNOWN when the signals disagree and dropping ids that are not on the
+// map. The longest path through SignalMatchValidator (4 ids in a single
+// publish) is traversed in one test:
+//   - matched (color & shape agree) -> perception passes through
+//   - color mismatch                -> UNKNOWN over the shared shape
+//   - element-count mismatch        -> UNKNOWN over the shape union
+//   - off-map id                    -> dropped (WARN+skip)
 // ---------------------------------------------------------------------------
 TEST_F(ArbiterCharacteristic, signalMatchingLongestPath)
 {
-  // Scenario inputs and expectations:
+  // Scenario inputs and expectations (confidence is omitted everywhere
+  // because Signal Matching never reads it; the 1.0f default applies):
   //
   // vehicle_signal_a:
-  //   external:   RED/CIRCLE/0.6 + V2I prediction
-  //   perception: RED/CIRCLE/0.7 + INTERNAL prediction
+  //   external:   RED/CIRCLE + V2I prediction
+  //   perception: RED/CIRCLE + INTERNAL prediction
   //   expected:   matched -> perception passes through; both predictions merged (2 total)
   //
   // vehicle_signal_b:
-  //   external:   GREEN/CIRCLE/0.8
-  //   perception: RED/CIRCLE/0.9
+  //   external:   GREEN/CIRCLE
+  //   perception: RED/CIRCLE
   //   expected:   color mismatch -> UNKNOWN
   //
   // vehicle_signal_c:
-  //   external:   RED/CIRCLE/0.8
-  //   perception: RED/CIRCLE/0.8 + GREEN/RIGHT_ARROW/0.6
+  //   external:   RED/CIRCLE
+  //   perception: RED/CIRCLE + GREEN/RIGHT_ARROW
   //   expected:   element-count mismatch -> UNKNOWN over shape union
   //
   // kOffMapProbeId:
-  //   external:   RED/CIRCLE/0.9
+  //   external:   RED/CIRCLE
   //   perception: (none)
   //   expected:   dropped (WARN+skip)
 
   // Arrange
   startArbiter(true);
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
+  // Message from external source like a V2I unit.
   TrafficLightGroupArray external_traffic_signal;
   external_traffic_signal.stamp = offsetTime(t0, -0.10);
   external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.6f)},
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
     {makeTrafficLightPrediction(
       external_traffic_signal.stamp, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE,
       PredictedTrafficLightState::INFORMATION_SOURCE_V2I)}));
   external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_b,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.8f)}));
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
   external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_c,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.8f)}));
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
   external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     kOffMapProbeId,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
+  // Message from internal source like a perception module.
   TrafficLightGroupArray perception_traffic_signal;
   perception_traffic_signal.stamp = offsetTime(t0, -0.05);
   perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.7f)},
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
     {makeTrafficLightPrediction(
       perception_traffic_signal.stamp, TrafficLightElement::RED, TrafficLightElement::CIRCLE,
       PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)}));
   perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_b,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
   perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_c,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.8f),
-     makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW, 0.6f)}));
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE),
+     makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW)}));
 
   // Act
   publishExternal(external_traffic_signal);
@@ -452,39 +461,39 @@ TEST_F(ArbiterCharacteristic, signalMatchingLongestPath)
 
   // Assert
   ASSERT_GE(arbiter_publish_count_, 1u);
-  EXPECT_EQ(findTrafficLightGroup(latest_arbitrated_traffic_signal_, kOffMapProbeId), nullptr);
 
-  // matching id: perception passes through unchanged, predictions merged from both sources.
+  // vehicle_signal_a: matched -> perception passes through, predictions merged.
   {
-    const auto * g =
+    const auto * group =
       findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-    ASSERT_NE(g, nullptr);
-    ASSERT_EQ(g->elements.size(), 1u);
-    EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED);
-    EXPECT_NEAR(g->elements[0].confidence, 0.7f, kConfidenceEpsilon);
-    EXPECT_EQ(g->predictions.size(), 2u);
+    ASSERT_NE(group, nullptr);
+    ASSERT_EQ(group->elements.size(), 1u);
+    EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
+    EXPECT_EQ(group->predictions.size(), 2u);
   }
-  // color mismatch -> UNKNOWN over the single shared shape
+  // vehicle_signal_b: color mismatch -> UNKNOWN over the shared shape.
   {
-    const auto * g =
+    const auto * group =
       findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
-    ASSERT_NE(g, nullptr);
-    ASSERT_EQ(g->elements.size(), 1u);
-    EXPECT_EQ(g->elements[0].color, TrafficLightElement::UNKNOWN);
-    EXPECT_EQ(g->elements[0].shape, TrafficLightElement::CIRCLE);
+    ASSERT_NE(group, nullptr);
+    ASSERT_EQ(group->elements.size(), 1u);
+    EXPECT_EQ(group->elements[0].color, TrafficLightElement::UNKNOWN);
+    EXPECT_EQ(group->elements[0].shape, TrafficLightElement::CIRCLE);
   }
-  // element-count mismatch -> UNKNOWN over union of shapes
+  // vehicle_signal_c: element-count mismatch -> UNKNOWN over shape union.
   {
-    const auto * g =
+    const auto * group =
       findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_c);
-    ASSERT_NE(g, nullptr);
-    ASSERT_EQ(g->elements.size(), 2u);
-    EXPECT_NE(findTrafficLightElement(*g, TrafficLightElement::CIRCLE), nullptr);
-    EXPECT_NE(findTrafficLightElement(*g, TrafficLightElement::RIGHT_ARROW), nullptr);
-    for (const auto & e : g->elements) {
-      EXPECT_EQ(e.color, TrafficLightElement::UNKNOWN);
+    ASSERT_NE(group, nullptr);
+    ASSERT_EQ(group->elements.size(), 2u);
+    EXPECT_NE(findTrafficLightElement(*group, TrafficLightElement::CIRCLE), nullptr);
+    EXPECT_NE(findTrafficLightElement(*group, TrafficLightElement::RIGHT_ARROW), nullptr);
+    for (const auto & element : group->elements) {
+      EXPECT_EQ(element.color, TrafficLightElement::UNKNOWN);
     }
   }
+  // kOffMapProbeId: not on the map -> dropped (WARN+skip).
+  EXPECT_EQ(findTrafficLightGroup(latest_arbitrated_traffic_signal_, kOffMapProbeId), nullptr);
 }
 
 // Pedestrian path bypasses element matching; with source_priority=external
@@ -494,8 +503,10 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianFallbackUsesSourcePriority
   // Arrange
   startArbiter(true, "external");
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
+  // The confidence contrast (low external vs high perception) makes the
+  // priority override explicit: the lower-confidence external wins.
   TrafficLightGroupArray external_traffic_signal;
   external_traffic_signal.stamp = offsetTime(t0, -0.10);
   external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
@@ -512,13 +523,12 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianFallbackUsesSourcePriority
   publishExternal(external_traffic_signal);
   publishPerception(perception_traffic_signal);
 
-  // Assert
-  const auto * g =
+  // Assert: external priority wins despite its lower confidence.
+  const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::pedestrian_signal);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->elements.size(), 1u);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED);
-  EXPECT_NEAR(g->elements[0].confidence, 0.1f, kConfidenceEpsilon);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
 }
 
 // Symmetric counterpart of the external-priority pedestrian test: with
@@ -530,10 +540,12 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianPerceptionPriority)
   // Arrange
   startArbiter(true, "perception");
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
   TrafficLightGroupArray external_traffic_signal;
   external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  // The confidence contrast (high external vs low perception) makes the
+  // priority override explicit: the lower-confidence perception still wins.
   external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::pedestrian_signal,
     {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.99f)}));
@@ -548,13 +560,12 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianPerceptionPriority)
   publishExternal(external_traffic_signal);
   publishPerception(perception_traffic_signal);
 
-  // Assert: perception priority wins despite lower confidence
-  const auto * g =
+  // Assert: perception priority wins despite its lower confidence.
+  const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::pedestrian_signal);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->elements.size(), 1u);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
-  EXPECT_NEAR(g->elements[0].confidence, 0.10f, kConfidenceEpsilon);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
 }
 
 // Pedestrian + CONFIDENCE: get_highest_confidence_signal walks each shape and
@@ -565,7 +576,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianConfidenceMode)
   // Arrange
   startArbiter(true, "confidence");
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
   TrafficLightGroupArray external_traffic_signal;
   external_traffic_signal.stamp = offsetTime(t0, -0.10);
@@ -584,12 +595,12 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianConfidenceMode)
   publishPerception(perception_traffic_signal);
 
   // Assert: CONFIDENCE picks the higher-confidence element (perception 0.9)
-  const auto * g =
+  const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::pedestrian_signal);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->elements.size(), 1u);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED);
-  EXPECT_NEAR(g->elements[0].confidence, 0.9f, kConfidenceEpsilon);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
+  EXPECT_NEAR(group->elements[0].confidence, 0.9f, kConfidenceEpsilon);
 }
 
 // Pedestrian id with a single source: get_highest_confidence_signal early-
@@ -602,24 +613,23 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianSingleSourcePasses)
   // happens BEFORE the priority switch is consulted.
   startArbiter(true, "external");
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
   TrafficLightGroupArray perception_traffic_signal;
   perception_traffic_signal.stamp = offsetTime(t0, -0.05);
   perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::pedestrian_signal,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Act (no external publish)
   publishPerception(perception_traffic_signal);
 
   // Assert: perception passes through unchanged (no UNKNOWN translation)
-  const auto * g =
+  const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::pedestrian_signal);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->elements.size(), 1u);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
-  EXPECT_NEAR(g->elements[0].confidence, 0.7f, kConfidenceEpsilon);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
 }
 
 // In Signal Matching mode, a non-pedestrian id that arrives on only one side
@@ -630,27 +640,27 @@ TEST_F(ArbiterCharacteristic, signalMatchingSingleSourceNonPedestrianYieldsUnkno
 {
   // Scenario inputs and expectations:
   //
-  //   id                external           perception        expected outcome
-  //   ----------------  -----------------  ----------------  -----------------------------
-  //   vehicle_signal_a  (none)             RED/CIRCLE/0.7    perception-only -> UNKNOWN/CIRCLE
-  //   vehicle_signal_b  GREEN/CIRCLE/0.8   (none)            external-only   -> UNKNOWN/CIRCLE
+  //   id                external      perception   expected outcome
+  //   ----------------  ------------  -----------  -----------------------------
+  //   vehicle_signal_a  (none)        RED/CIRCLE   perception-only -> UNKNOWN/CIRCLE
+  //   vehicle_signal_b  GREEN/CIRCLE  (none)       external-only   -> UNKNOWN/CIRCLE
 
   // Arrange
   startArbiter(true);
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
   TrafficLightGroupArray external_traffic_signal;
   external_traffic_signal.stamp = offsetTime(t0, -0.10);
   external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_b,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.8f)}));
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   TrafficLightGroupArray perception_traffic_signal;
   perception_traffic_signal.stamp = offsetTime(t0, -0.05);
   perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.7f)}));
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
   // Act
   publishExternal(external_traffic_signal);
@@ -675,261 +685,16 @@ TEST_F(ArbiterCharacteristic, signalMatchingSingleSourceNonPedestrianYieldsUnkno
   }
 }
 
-// ---------------------------------------------------------------------------
-// B. Longest path - Priority-based mode (enable_signal_matching=false).
-// ---------------------------------------------------------------------------
-TEST_F(ArbiterCharacteristic, priorityBasedConfidenceLongestPath)
-{
-  // Scenario inputs and expectations:
-  //   - Publish order: stale external (-4.0s) -> recent external (-0.5s) -> perception (-0.2s).
-  //   - The stale external entry must be cleaned up before arbitration runs.
-  //
-  // vehicle_signal_a:
-  //   recent external: GREEN/CIRCLE/0.7
-  //   perception:      GREEN/CIRCLE/0.9
-  //   expected:        CONFIDENCE picks perception (0.9 > 0.7)
-  //
-  // vehicle_signal_b:
-  //   recent external: RED/CIRCLE/0.5 + GREEN/RIGHT_ARROW
-  //   perception:      (none)
-  //   expected:        external only, both shapes pass through
-  //
-  // vehicle_signal_c:
-  //   recent external: (none)
-  //   perception:      GREEN/CIRCLE/0.8
-  //   expected:        perception only, passes
-  //
-  // kOffMapProbeId:
-  //   recent external: RED/CIRCLE/0.9
-  //   perception:      (none)
-  //   expected:        dropped (WARN+skip)
-
-  // Arrange
-  startArbiter();
-  publishMap();
-  const auto t0 = arbiterNow();
-
-  TrafficLightGroupArray stale_external_traffic_signal;
-  stale_external_traffic_signal.stamp = offsetTime(t0, -4.0);
-  stale_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.4f)}));
-
-  TrafficLightGroupArray recent_external_traffic_signal;
-  recent_external_traffic_signal.stamp = offsetTime(t0, -0.5);
-  recent_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
-  recent_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_b,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.5f),
-     makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW, 0.3f)}));
-  recent_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    kOffMapProbeId,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = offsetTime(t0, -0.2);
-  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
-  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_c,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.8f)}));
-
-  // Act
-  publishExternal(stale_external_traffic_signal);
-  publishExternal(recent_external_traffic_signal);
-  publishPerception(perception_traffic_signal);
-
-  // Assert
-  EXPECT_EQ(findTrafficLightGroup(latest_arbitrated_traffic_signal_, kOffMapProbeId), nullptr);
-  // Both sources agree on shape; CONFIDENCE picks perception (0.9 > 0.7).
-  {
-    const auto * g =
-      findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-    ASSERT_NE(g, nullptr);
-    ASSERT_EQ(g->elements.size(), 1u);
-    EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
-    EXPECT_NEAR(g->elements[0].confidence, 0.9f, kConfidenceEpsilon);
-  }
-  // External contributes two shapes alone; both survive shape-wise selection.
-  {
-    const auto * g =
-      findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
-    ASSERT_NE(g, nullptr);
-    ASSERT_EQ(g->elements.size(), 2u);
-    EXPECT_NE(findTrafficLightElement(*g, TrafficLightElement::CIRCLE), nullptr);
-    EXPECT_NE(findTrafficLightElement(*g, TrafficLightElement::RIGHT_ARROW), nullptr);
-  }
-  // Perception-only id flows through unmodified.
-  {
-    const auto * g =
-      findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_c);
-    ASSERT_NE(g, nullptr);
-    ASSERT_EQ(g->elements.size(), 1u);
-    EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
-    EXPECT_NEAR(g->elements[0].confidence, 0.8f, kConfidenceEpsilon);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// C. Branch coverage that the longest paths cannot reach.
-// ---------------------------------------------------------------------------
-
-TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
-{
-  // Arrange (intentionally no publishMap())
-  startArbiter();
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = arbiterNow();
-  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
-
-  // Act
-  publishPerception(perception_traffic_signal);
-
-  // Assert
-  EXPECT_EQ(arbiter_publish_count_, 0u)
-    << "arbitrateAndPublish should early-return when no map has been received";
-}
-
-// A non-null but signal-free map should yield an empty TrafficLightGroupArray
-// (stamp set, no groups). Exercises the
-// "map_regulatory_elements_set_->empty()" branch in arbitrateAndPublish.
-TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
-{
-  // Arrange: replace the default minimal map with a signal-free one.
-  startArbiter();
-  const auto empty_map_bin = buildEmptyMapBin();
-  map_pub_->publish(empty_map_bin);
-  spinFor(std::chrono::milliseconds(150));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = arbiterNow();
-  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
-
-  // Act
-  publishPerception(perception_traffic_signal);
-
-  // Assert: arbiter publishes, but the output contains no groups.
-  ASSERT_GE(arbiter_publish_count_, 1u);
-  EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 0u);
-}
-
-TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
-{
-  // Arrange
-  startArbiter(false, "perception");
-  publishMap();
-  const auto t0 = arbiterNow();
-
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = offsetTime(t0, -0.10);
-  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.99f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
-  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.10f)}));
-
-  // Act
-  publishExternal(external_traffic_signal);
-  publishPerception(perception_traffic_signal);
-
-  // Assert
-  const auto * g =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->elements.size(), 1u);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
-  EXPECT_NEAR(g->elements[0].confidence, 0.10f, kConfidenceEpsilon);
-}
-
-// Symmetric counterpart of priorityFlagOverridesHigherConfidence: with
-// source_priority=external, the external value wins over a higher-confidence
-// perception value. This pins the EXTERNAL branch in arbitrateAndPublish
-// ([traffic_light_arbiter.cpp]: source_priority_ == EXTERNAL).
-TEST_F(ArbiterCharacteristic, priorityFlagFromExternalOverridesHigherConfidence)
-{
-  // Arrange
-  startArbiter(false, "external");
-  publishMap();
-  const auto t0 = arbiterNow();
-
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = offsetTime(t0, -0.10);
-  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.10f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
-  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.99f)}));
-
-  // Act
-  publishExternal(external_traffic_signal);
-  publishPerception(perception_traffic_signal);
-
-  // Assert
-  const auto * g =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->elements.size(), 1u);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED);
-  EXPECT_NEAR(g->elements[0].confidence, 0.10f, kConfidenceEpsilon);
-}
-
-TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
-{
-  // Arrange: establish a perception baseline so we can detect any extra publish.
-  startArbiter();
-  publishMap();
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = arbiterNow();
-  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.8f)}));
-  publishPerception(perception_traffic_signal);
-  const auto baseline_count = arbiter_publish_count_;
-  ASSERT_GE(baseline_count, 1u);
-
-  // external_delay_tolerance defaults to 5.0s; 20s in the past is well past it.
-  TrafficLightGroupArray stale_external_traffic_signal;
-  stale_external_traffic_signal.stamp = offsetTime(arbiterNow(), -20.0);
-  stale_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
-    map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
-
-  // Act
-  publishExternal(stale_external_traffic_signal);
-
-  // Assert
-  EXPECT_EQ(arbiter_publish_count_, baseline_count)
-    << "Stale external message must be dropped before arbitrateAndPublish runs";
-  const auto * g =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(g, nullptr);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED)
-    << "Last publish must reflect perception";
-}
-
+// Signal Matching does not consult the confidence field when checking
+// equivalence. Two elements with identical color/shape but very different
+// confidence values are treated as a match, and perception's value
+// (confidence included) propagates verbatim.
 TEST_F(ArbiterCharacteristic, signalMatchingIgnoresConfidenceInEquivalence)
 {
   // Arrange
   startArbiter(true);
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
   TrafficLightGroupArray external_traffic_signal;
   external_traffic_signal.stamp = offsetTime(t0, -0.10);
@@ -948,12 +713,352 @@ TEST_F(ArbiterCharacteristic, signalMatchingIgnoresConfidenceInEquivalence)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  const auto * g =
+  const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->elements.size(), 1u);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::RED);
-  EXPECT_NEAR(g->elements[0].confidence, 0.90f, kConfidenceEpsilon);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
+  EXPECT_NEAR(group->elements[0].confidence, 0.90f, kConfidenceEpsilon);
+}
+
+// ---------------------------------------------------------------------------
+// B. Priority-based mode - per-shape element selection driven by
+//    source_priority and confidence.
+//
+// Pins the arbitration spec when Signal Matching is off: for each
+// regulatory-element id the arbiter walks every shape independently and
+// resolves the chosen element through a two-stage comparison
+// (priority flag first, confidence tiebreaker second). The longest path
+// combines single-side passthrough and shape-wise CONFIDENCE selection in
+// a single test:
+//   - both sources agree on shape         -> CONFIDENCE picks higher value
+//   - only one source contributes a shape -> passes through unchanged
+//   - off-map id                          -> dropped (WARN+skip)
+// ---------------------------------------------------------------------------
+TEST_F(ArbiterCharacteristic, priorityBasedConfidenceLongestPath)
+{
+  // Scenario inputs and expectations:
+  //   - Publish order: external (-0.5s) -> perception (-0.2s).
+  //
+  // vehicle_signal_a:
+  //   external:   GREEN/CIRCLE/0.7
+  //   perception: GREEN/CIRCLE/0.9
+  //   expected:   CONFIDENCE picks perception (0.9 > 0.7)
+  //
+  // vehicle_signal_b:
+  //   external:   RED/CIRCLE/0.5 + GREEN/RIGHT_ARROW
+  //   perception: (none)
+  //   expected:   external only, both shapes pass through
+  //
+  // vehicle_signal_c:
+  //   external:   (none)
+  //   perception: GREEN/CIRCLE/0.8
+  //   expected:   perception only, passes
+  //
+  // kOffMapProbeId:
+  //   external:   RED/CIRCLE/0.9
+  //   perception: (none)
+  //   expected:   dropped (WARN+skip)
+
+  // Arrange
+  startArbiter();
+  publishMap();
+  const auto t0 = arbiter_->now();
+
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.5);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_b,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.5f),
+     makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW, 0.3f)}));
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    kOffMapProbeId,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.2);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_c,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.8f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+
+  // vehicle_signal_a: both sources agree on shape; CONFIDENCE picks perception (0.9 > 0.7).
+  {
+    const auto * group =
+      findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
+    ASSERT_NE(group, nullptr);
+    ASSERT_EQ(group->elements.size(), 1u);
+    EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
+    EXPECT_NEAR(group->elements[0].confidence, 0.9f, kConfidenceEpsilon);
+  }
+  // vehicle_signal_b: external only with two shapes; both survive shape-wise selection.
+  {
+    const auto * group =
+      findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
+    ASSERT_NE(group, nullptr);
+    ASSERT_EQ(group->elements.size(), 2u);
+    EXPECT_NE(findTrafficLightElement(*group, TrafficLightElement::CIRCLE), nullptr);
+    EXPECT_NE(findTrafficLightElement(*group, TrafficLightElement::RIGHT_ARROW), nullptr);
+  }
+  // vehicle_signal_c: perception only, flows through unmodified.
+  {
+    const auto * group =
+      findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_c);
+    ASSERT_NE(group, nullptr);
+    ASSERT_EQ(group->elements.size(), 1u);
+    EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
+    EXPECT_NEAR(group->elements[0].confidence, 0.8f, kConfidenceEpsilon);
+  }
+  // kOffMapProbeId: not on the map -> dropped (WARN+skip).
+  EXPECT_EQ(findTrafficLightGroup(latest_arbitrated_traffic_signal_, kOffMapProbeId), nullptr);
+}
+
+// ---------------------------------------------------------------------------
+// C. Focused specifications - boundary conditions, input validation, and
+//    isolated arbitration rules.
+//
+// Each test pins a single contract that the longest-path tests above do not
+// exercise: map availability, parameter validation, time tolerances,
+// priority overrides, equivalence semantics, and prediction passthrough.
+// ---------------------------------------------------------------------------
+
+TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
+{
+  // Arrange (intentionally no publishMap())
+  startArbiter();
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = arbiter_->now();
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
+
+  // Act
+  publishPerception(perception_traffic_signal);
+
+  // Assert
+  EXPECT_EQ(arbiter_publish_count_, 0u)
+    << "arbitrateAndPublish should early-return when no map has been received";
+}
+
+// A non-null but signal-free map should yield an empty TrafficLightGroupArray
+// (stamp set, no groups). Exercises the
+// "map_regulatory_elements_set_->empty()" branch in arbitrateAndPublish.
+TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
+{
+  // Arrange: replace the default minimal map with a signal-free one.
+  startArbiter();
+  publishMap(buildEmptyMapBin());
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = arbiter_->now();
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
+
+  // Act
+  publishPerception(perception_traffic_signal);
+
+  // Assert: arbiter publishes, but the output contains no groups.
+  ASSERT_GE(arbiter_publish_count_, 1u);
+  EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 0u);
+}
+
+// Pins the input-validation contract: an unknown source_priority string
+// must not crash the node and must not silently change behavior; the
+// arbiter must fall back to CONFIDENCE. We verify the fallback by feeding
+// the typical CONFIDENCE scenario (high-confidence perception wins) and
+// confirming perception is selected.
+TEST_F(ArbiterCharacteristic, unknownSourcePriorityFallsBackToConfidence)
+{
+  // Arrange: pass a value not in {"external", "perception", "confidence"}.
+  startArbiter(false, "invalid_value");
+  publishMap();
+  const auto t0 = arbiter_->now();
+
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert: CONFIDENCE behavior - the higher-confidence perception wins.
+  const auto * group =
+    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_NEAR(group->elements[0].confidence, 0.9f, kConfidenceEpsilon);
+}
+
+TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
+{
+  // Arrange
+  startArbiter(false, "perception");
+  publishMap();
+  const auto t0 = arbiter_->now();
+
+  // The confidence contrast (high external vs low perception) makes the
+  // priority override explicit: the lower-confidence perception still wins.
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.99f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.10f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert: perception priority wins despite its lower confidence.
+  const auto * group =
+    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
+}
+
+// Symmetric counterpart of priorityFlagOverridesHigherConfidence: with
+// source_priority=external, the external value wins over a higher-confidence
+// perception value. This pins the EXTERNAL branch in arbitrateAndPublish
+// ([traffic_light_arbiter.cpp]: source_priority_ == EXTERNAL).
+TEST_F(ArbiterCharacteristic, priorityFlagFromExternalOverridesHigherConfidence)
+{
+  // Arrange
+  startArbiter(false, "external");
+  publishMap();
+  const auto t0 = arbiter_->now();
+
+  // The confidence contrast (low external vs high perception) makes the
+  // priority override explicit: the lower-confidence external still wins.
+  TrafficLightGroupArray external_traffic_signal;
+  external_traffic_signal.stamp = offsetTime(t0, -0.10);
+  external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.10f)}));
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = offsetTime(t0, -0.05);
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.99f)}));
+
+  // Act
+  publishExternal(external_traffic_signal);
+  publishPerception(perception_traffic_signal);
+
+  // Assert: external priority wins despite its lower confidence.
+  const auto * group =
+    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
+}
+
+// Successive external publishes that carry different ids accumulate in the
+// arbiter's external_traffic_lights_ map; each arrival triggers a new
+// arbitrate run that publishes every currently-stored external signal.
+TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
+{
+  // Arrange
+  startArbiter();
+  publishMap();
+  const auto t0 = arbiter_->now();
+
+  // Act 1: publish the first external signal (id vehicle_signal_a).
+  TrafficLightGroupArray first_external_traffic_signal;
+  first_external_traffic_signal.stamp = offsetTime(t0, -1.0);
+  first_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
+  publishExternal(first_external_traffic_signal);
+
+  // Assert 1: only vehicle_signal_a is visible after the first publish.
+  ASSERT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 1u);
+  EXPECT_EQ(
+    latest_arbitrated_traffic_signal_.traffic_light_groups[0].traffic_light_group_id,
+    map_ids::vehicle_signal_a);
+
+  // Act 2: publish a second external signal carrying a different id.
+  TrafficLightGroupArray second_external_traffic_signal;
+  second_external_traffic_signal.stamp = offsetTime(t0, -0.5);
+  second_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_b,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
+  publishExternal(second_external_traffic_signal);
+
+  // Assert 2: both vehicle_signal_a and vehicle_signal_b appear in the output.
+  EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 2u);
+  const auto * group_a =
+    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
+  const auto * group_b =
+    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
+  ASSERT_NE(group_a, nullptr);
+  ASSERT_NE(group_b, nullptr);
+  EXPECT_EQ(group_a->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_EQ(group_b->elements[0].color, TrafficLightElement::RED);
+}
+
+TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
+{
+  // Arrange: establish a perception baseline so we can detect any extra publish.
+  startArbiter();
+  publishMap();
+
+  TrafficLightGroupArray perception_traffic_signal;
+  perception_traffic_signal.stamp = arbiter_->now();
+  perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
+  publishPerception(perception_traffic_signal);
+  const auto baseline_count = arbiter_publish_count_;
+  ASSERT_GE(baseline_count, 1u);
+
+  // external_delay_tolerance defaults to 5.0s; 20s in the past is well past it.
+  TrafficLightGroupArray stale_external_traffic_signal;
+  stale_external_traffic_signal.stamp = offsetTime(arbiter_->now(), -20.0);
+  stale_external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
+    map_ids::vehicle_signal_a,
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
+
+  // Act
+  publishExternal(stale_external_traffic_signal);
+
+  // Assert
+  EXPECT_EQ(arbiter_publish_count_, baseline_count)
+    << "Stale external message must be dropped before arbitrateAndPublish runs";
+  const auto * group =
+    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
+  ASSERT_NE(group, nullptr);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED)
+    << "Last publish must reflect perception";
 }
 
 TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
@@ -962,31 +1067,30 @@ TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
   // arrival's cleanupExpiredExternalSignals (perception is +6s newer).
   startArbiter();
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
   TrafficLightGroupArray external_traffic_signal;
   external_traffic_signal.stamp = offsetTime(t0, -0.05);
   external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.5f)}));
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
   publishExternal(external_traffic_signal);
 
   TrafficLightGroupArray perception_traffic_signal;
   perception_traffic_signal.stamp = offsetTime(t0, 6.0);
   perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Act
   publishPerception(perception_traffic_signal);
 
   // Assert
-  const auto * g =
+  const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->elements.size(), 1u);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
-  EXPECT_NEAR(g->elements[0].confidence, 0.7f, kConfidenceEpsilon);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
 }
 
 // onExternalMsg compares its own stamp to latest_perception_msg_.stamp; if
@@ -997,14 +1101,14 @@ TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
   // Arrange
   startArbiter();
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
   // Seed a perception value at t0.
   TrafficLightGroupArray perception_traffic_signal;
   perception_traffic_signal.stamp = t0;
   perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
   publishPerception(perception_traffic_signal);
 
   // External arrives 2.0s after perception (> perception_time_tolerance=1.0,
@@ -1013,18 +1117,17 @@ TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
   external_traffic_signal.stamp = offsetTime(t0, 2.0);
   external_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.5f)}));
+    {makeTrafficLightElement(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Act
   publishExternal(external_traffic_signal);
 
   // Assert: stale perception was wiped, output reflects only external.
-  const auto * g =
+  const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->elements.size(), 1u);
-  EXPECT_EQ(g->elements[0].color, TrafficLightElement::GREEN);
-  EXPECT_NEAR(g->elements[0].confidence, 0.5f, kConfidenceEpsilon);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->elements.size(), 1u);
+  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
 }
 
 TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
@@ -1032,13 +1135,13 @@ TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
   // Arrange
   startArbiter();
   publishMap();
-  const auto t0 = arbiterNow();
+  const auto t0 = arbiter_->now();
 
   TrafficLightGroupArray perception_traffic_signal;
   perception_traffic_signal.stamp = t0;
   perception_traffic_signal.traffic_light_groups.push_back(makeTrafficLightGroup(
     map_ids::vehicle_signal_a,
-    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.8f)},
+    {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
     {makeTrafficLightPrediction(
       t0, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE,
       PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)}));
@@ -1047,12 +1150,12 @@ TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  const auto * g =
+  const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(g, nullptr);
-  ASSERT_EQ(g->predictions.size(), 1u);
+  ASSERT_NE(group, nullptr);
+  ASSERT_EQ(group->predictions.size(), 1u);
   EXPECT_EQ(
-    g->predictions[0].information_source,
+    group->predictions[0].information_source,
     PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION);
 }
 
