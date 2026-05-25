@@ -28,32 +28,6 @@ namespace autoware::behavior_velocity_planner
 {
 namespace
 {
-/// Uses path velocity at ego when available; falls back to motion_utils geometry (path start).
-bool isDrivingForward(
-  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & path_points,
-  const geometry_msgs::msg::Pose & ego_pose, const double ego_nearest_dist_threshold,
-  const double ego_nearest_yaw_threshold)
-{
-  if (path_points.size() < 2) {
-    return true;
-  }
-
-  const size_t ego_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    path_points, ego_pose, ego_nearest_dist_threshold, ego_nearest_yaw_threshold);
-
-  constexpr double velocity_threshold = 1e-3;
-  const double ego_vel = path_points.at(ego_idx).point.longitudinal_velocity_mps;
-  if (ego_vel < -velocity_threshold) {
-    return false;
-  }
-  if (ego_vel > velocity_threshold) {
-    return true;
-  }
-
-  const auto opt = autoware::motion_utils::isDrivingForward(path_points);
-  return opt.value_or(true);
-}
-
 double calcLeadingBumperLongitudinalOffset(
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const bool is_driving_forward)
 {
@@ -222,23 +196,18 @@ bool VirtualTrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
 
   // Copy data
   module_data_.path = *path;
-  module_data_.is_driving_forward = isDrivingForward(
-    module_data_.path.points, planner_data_->current_odometry->pose,
-    planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
-  std::cout << "[Debug VirtualTrafficLightModule] is_driving_forward: "
-            << module_data_.is_driving_forward << std::endl;
+  const auto is_driving_forward = 
+    autoware::motion_utils::isDrivingForward(module_data_.path.points);
+  module_data_.is_driving_forward = is_driving_forward.value_or(true);
 
   module_data_.leading_bumper_longitudinal_offset_m = calcLeadingBumperLongitudinalOffset(
     planner_data_->vehicle_info_, module_data_.is_driving_forward);
-
-  std::cout << "[Debug VirtualTrafficLightModule] leading_bumper_longitudinal_offset_m: "
-            << module_data_.leading_bumper_longitudinal_offset_m << std::endl;
+  
   module_data_.head_pose = calcHeadPose(
     planner_data_->current_odometry->pose, module_data_.leading_bumper_longitudinal_offset_m);
-  // std::cout << "[Debug VirtualTrafficLightModule] head_pose: " << module_data_.head_pose <<
-  // std::endl; Calculate path index of end line NOTE: In order to deal with u-turn or self-crossing
-  // path, only start/stop lines before the end line are used when whether the ego is before/after
-  // the start/stop/end lines is calculated.
+  // Calculate path index of end line
+  // NOTE: In order to deal with u-turn or self-crossing path, only start/stop lines before the end
+  // line are used when whether the ego is before/after the start/stop/end lines is calculated.
   const auto opt_end_line_result = getPathIndexOfFirstEndLine();
   if (!opt_end_line_result) {
     return true;
