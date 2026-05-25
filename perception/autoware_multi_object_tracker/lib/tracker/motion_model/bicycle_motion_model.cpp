@@ -440,13 +440,14 @@ bool BicycleMotionModel::limitStates()
   }
 
   // maximum lateral velocity by lateral acceleration limitations
-  // a_lat = vel_long * (V / wheel_base)  ->  V_limit = a_lat_max * wheel_base / |vel_long|
-  // vel_long is floored at vel_long_min to avoid div-by-zero and enforce a cap at low/zero speed
+  // a_lat = vel_long * vel_lat / wheel_base
+  // vel_lat_limit = a_lat_max * wheel_base / vel_long  (vel_long floored at vel_long_min)
   {
     const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
     constexpr double acc_lat_max = 9.81 * 0.5;  // [m/s^2] maximum lateral acceleration (0.5g)
-    constexpr double vel_long_min = 1.0;         // [m/s] speed floor: prevents singularity and caps lat vel at low speed
-    constexpr double vel_lat_abs_max = 5.0;      // [m/s] hard absolute cap on lateral velocity
+    constexpr double vel_long_min =
+      1.0;  // [m/s] speed floor: prevents singularity and caps lat vel at low speed
+    constexpr double vel_lat_abs_max = 5.0;  // [m/s] hard absolute cap on lateral velocity
     const double vel_long_eff = std::max(std::abs(X_t(IDX::U)), vel_long_min);
     const double vel_lat_limit = acc_lat_max * wheel_base / vel_long_eff;
     const double vel_lat_limit_adjusted =
