@@ -53,7 +53,6 @@ private:
     double wheel_base_ratio_inv =
       1 / (lf_ratio + lr_ratio);  // [-] inverse of the sum of lf_ratio and lr_ratio
     double max_vel = 27.8;        // [m/s] maximum velocity, 100km/h
-    double max_slip = 0.5236;     // [rad] maximum slip angle, 30deg
     double max_reverse_vel =
       -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
     double wheel_pos_ratio =
