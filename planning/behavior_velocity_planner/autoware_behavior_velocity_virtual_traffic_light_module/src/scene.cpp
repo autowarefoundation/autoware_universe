@@ -225,18 +225,20 @@ bool VirtualTrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
   module_data_.is_driving_forward = isDrivingForward(
     module_data_.path.points, planner_data_->current_odometry->pose,
     planner_data_->ego_nearest_dist_threshold, planner_data_->ego_nearest_yaw_threshold);
-  std::cout << "[Debug VirtualTrafficLightModule] is_driving_forward: " << module_data_.is_driving_forward << std::endl;
-  
+  std::cout << "[Debug VirtualTrafficLightModule] is_driving_forward: "
+            << module_data_.is_driving_forward << std::endl;
+
   module_data_.leading_bumper_longitudinal_offset_m = calcLeadingBumperLongitudinalOffset(
     planner_data_->vehicle_info_, module_data_.is_driving_forward);
-  
-  std::cout << "[Debug VirtualTrafficLightModule] leading_bumper_longitudinal_offset_m: " << module_data_.leading_bumper_longitudinal_offset_m << std::endl;
-    module_data_.head_pose = calcHeadPose(
+
+  std::cout << "[Debug VirtualTrafficLightModule] leading_bumper_longitudinal_offset_m: "
+            << module_data_.leading_bumper_longitudinal_offset_m << std::endl;
+  module_data_.head_pose = calcHeadPose(
     planner_data_->current_odometry->pose, module_data_.leading_bumper_longitudinal_offset_m);
-  // std::cout << "[Debug VirtualTrafficLightModule] head_pose: " << module_data_.head_pose << std::endl;
-  // Calculate path index of end line
-  // NOTE: In order to deal with u-turn or self-crossing path, only start/stop lines before the end
-  // line are used when whether the ego is before/after the start/stop/end lines is calculated.
+  // std::cout << "[Debug VirtualTrafficLightModule] head_pose: " << module_data_.head_pose <<
+  // std::endl; Calculate path index of end line NOTE: In order to deal with u-turn or self-crossing
+  // path, only start/stop lines before the end line are used when whether the ego is before/after
+  // the start/stop/end lines is calculated.
   const auto opt_end_line_result = getPathIndexOfFirstEndLine();
   if (!opt_end_line_result) {
     return true;

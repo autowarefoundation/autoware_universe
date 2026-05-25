@@ -92,8 +92,7 @@ bool hasRightOfWay(const tier4_v2x_msgs::msg::VirtualTrafficLightState & state)
 }
 
 double calcLeadingBumperLongitudinalOffset(
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, 
-  const bool is_driving_forward)
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const bool is_driving_forward)
 {
   return is_driving_forward ? vehicle_info.max_longitudinal_offset_m
                             : std::abs(vehicle_info.min_longitudinal_offset_m);
@@ -245,13 +244,13 @@ bool VirtualTrafficLightModule::modifyPathVelocity(
   setInfrastructureCommand({});
 
   const auto path_points = path.restore();
-  const auto is_driving_forward = 
+  const auto is_driving_forward =
     autoware::motion_utils::isDrivingForward(module_data_.path.points);
   module_data_.is_driving_forward = is_driving_forward.value_or(true);
-  
+
   module_data_.leading_bumper_longitudinal_offset_m = calcLeadingBumperLongitudinalOffset(
     planner_data.vehicle_info_, module_data_.is_driving_forward);
-  
+
   // Calculate path index of end line
   // NOTE: In order to deal with u-turn or self-crossing path, only start/stop lines before the end
   // line are used when whether the ego is before/after the start/stop/end lines is calculated.
