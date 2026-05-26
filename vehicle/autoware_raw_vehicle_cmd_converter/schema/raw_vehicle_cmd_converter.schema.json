@@ -159,7 +159,7 @@
           "type": "string",
           "description": "method for converting steer command",
           "default": "vgr",
-          "enum": ["vgr", "steer_map"]
+          "enum": ["vgr", "vgr_with_understeer_compensation", "steer_map"]
         },
         "vgr_coef_a": {
           "type": "number",
@@ -176,6 +176,11 @@
           "default": "0.042",
           "description": "coefficient c for variable gear ratio"
         },
+        "understeer_gradient": {
+          "type": "number",
+          "default": "0.0",
+          "description": "Understeer gradient [rad·s²/m]"
+        },
         "convert_actuation_to_steering_status": {
           "type": "boolean",
           "default": "true",
@@ -184,7 +189,7 @@
         "use_vehicle_adaptor": {
           "type": "boolean",
           "default": "false",
-          "description": "flag to enable feature that compensates control commands according to vehicle dynamics."
+          "description": "flag to enable VehicleAdaptor::compensate on the control command (currently a passthrough scaffold)."
         }
       },
       "required": [

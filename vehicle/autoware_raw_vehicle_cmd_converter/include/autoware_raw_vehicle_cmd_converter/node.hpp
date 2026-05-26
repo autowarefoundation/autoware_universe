@@ -21,8 +21,10 @@
 #include "autoware_raw_vehicle_cmd_converter/steer_map.hpp"
 #include "autoware_raw_vehicle_cmd_converter/vehicle_adaptor/vehicle_adaptor.hpp"
 #include "autoware_raw_vehicle_cmd_converter/vgr.hpp"
+#include "autoware_raw_vehicle_cmd_converter/vgr_with_understeer_compensation.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
+#include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -114,7 +116,9 @@ public:
   BrakeMap brake_map_;
   SteerMap steer_map_;
   VGR vgr_;
+  VGRWithUndersteerCompensation vgr_with_us_;
   VehicleAdaptor vehicle_adaptor_;
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   // TODO(tanaka): consider accel/brake pid too
   PIDController steer_pid_;
   bool ff_map_initialized_;
