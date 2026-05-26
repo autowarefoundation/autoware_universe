@@ -236,6 +236,14 @@ void expect_single_fused_color_and_shape(
   EXPECT_EQ(group.elements.front().shape, expected_shape);
 }
 
+void expect_single_conflict_status(
+  const MultiCameraFusionResult & result, ConflictType expected_conflict_type)
+{
+  ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
+  EXPECT_EQ(
+    result.conflicted_regulatory_element_status.front().conflict_type, expected_conflict_type);
+}
+
 }  // namespace
 
 TEST(MultiCameraFusionFuse, SingleCameraSingleLightOutputsGroupWithMappedRegulatoryId)
@@ -423,9 +431,7 @@ TEST(MultiCameraFusionFuse, ConsistencyCheckWithConflictingColorsOutputsUnknownF
   // Assert
   expect_single_fused_color_and_shape(
     result, TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN);
-  ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
-  EXPECT_EQ(
-    result.conflicted_regulatory_element_status.front().conflict_type, ConflictType::CONFLICT);
+  expect_single_conflict_status(result, ConflictType::CONFLICT);
 }
 
 TEST(MultiCameraFusionFuse, TruncatedRoiHasLowerPriorityThanCenteredRoi)
@@ -557,10 +563,7 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommo
   // Assert
   expect_single_fused_color_and_shape(
     result, TrafficLightElement::RED, TrafficLightElement::CIRCLE);
-  ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
-  EXPECT_EQ(
-    result.conflicted_regulatory_element_status.front().conflict_type,
-    ConflictType::PARTIAL_CONFLICT);
+  expect_single_conflict_status(result, ConflictType::PARTIAL_CONFLICT);
 }
 
 TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchDisabledPublishesFailsafe)
@@ -595,8 +598,5 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchDisabledPublishesFail
   // Assert
   expect_single_fused_color_and_shape(
     result, TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN);
-  ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
-  EXPECT_EQ(
-    result.conflicted_regulatory_element_status.front().conflict_type,
-    ConflictType::PARTIAL_CONFLICT);
+  expect_single_conflict_status(result, ConflictType::PARTIAL_CONFLICT);
 }
