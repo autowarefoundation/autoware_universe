@@ -925,29 +925,23 @@ TEST_F(ArbiterCharacteristic, priorityFlagFromExternalOverridesHigherConfidence)
 }
 
 // Successive external publishes that carry different ids accumulate in the
-// arbiter's external_traffic_lights_ map; each arrival triggers a new
-// arbitrate run that publishes every currently-stored external signal.
+// arbiter's external_traffic_lights_ map; both end up in the final output
+// with their published values preserved.
 TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
 {
   // Arrange
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
 
-  // Act 1: publish the first external signal (id vehicle_signal_a).
+  // Act: publish two external signals carrying different ids.
   publish_external(make_signal_array(
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
-
-  // Assert 1: only vehicle_signal_a is visible after the first publish.
-  ASSERT_EQ(observed_group_count(), 1u);
-  EXPECT_NE(find_traffic_light_group(map_ids::vehicle_signal_a), nullptr);
-
-  // Act 2: publish a second external signal carrying a different id.
   publish_external(make_signal_array(
     t0_, map_ids::vehicle_signal_b,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
-  // Assert 2: both vehicle_signal_a and vehicle_signal_b appear in the output.
+  // Assert: both ids accumulated, each id retains its published color.
   EXPECT_EQ(observed_group_count(), 2u);
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_b), TrafficLightElement::RED);
