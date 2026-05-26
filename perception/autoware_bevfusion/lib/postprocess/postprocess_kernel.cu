@@ -125,9 +125,9 @@ PostprocessCuda::PostprocessCuda(const BEVFusionConfig & config, cudaStream_t st
 : config_(config), stream_(stream)
 {
   // Allocate memory for score thresholds on device using cuda::make_unique
-  score_thresholds_d_ptr_ = cuda::make_unique<float[]>(config_.score_thresholds_.size());
+  score_thresholds_d_ptr_ = CudaUniquePtr<float[]>(config_.score_thresholds_.size());
   distance_bin_upper_limits_d_ptr_ =
-    cuda::make_unique<float[]>(config_.distance_bin_upper_limits_.size());
+    CudaUniquePtr<float[]>(config_.distance_bin_upper_limits_.size());
 
   // Move from host to device
   CHECK_CUDA_ERROR(cudaMemcpyAsync(

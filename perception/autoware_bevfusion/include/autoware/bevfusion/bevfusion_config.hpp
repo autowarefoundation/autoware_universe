@@ -231,7 +231,7 @@ public:
 
   // Head parameters
   std::int64_t num_proposals_{};
-  const std::size_t num_classes_{5};
+  std::size_t num_classes_{5};
 
   // Post processing parameters
 
