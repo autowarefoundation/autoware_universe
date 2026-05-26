@@ -964,9 +964,9 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
-  // Act: stamp is well past external_delay_tolerance in the past.
+  // Act: stamp is past external_delay_tolerance in the past.
   publish_external(make_signal_array(
-    offset_time(t0_, -(kDefaultExternalDelayTolerance + 15.0)), map_ids::vehicle_signal_a,
+    offset_time(t0_, -(kDefaultExternalDelayTolerance + 1.0)), map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Assert: the stale GREEN never propagates; the published color stays RED.
