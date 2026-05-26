@@ -47,15 +47,15 @@ flowchart TD
     style LoadHead fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
 
     %% Links to source code files
-    click Start "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_node.hpp" "VadNode header file"
-    click VadInputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "VadInputData definition"
-    click LoadInputs "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
-    click Enqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
-    click SavePrevBev "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
-    click Postprocess "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
-    click ReleaseNetwork "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
-    click LoadHead "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
-    click VadOutputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/data_types.hpp" "VadOutputData definition"
+    click Start "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_node.hpp" "VadNode header file"
+    click VadInputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "VadInputData definition"
+    click LoadInputs "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
+    click Enqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
+    click SavePrevBev "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
+    click Postprocess "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
+    click ReleaseNetwork "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
+    click LoadHead "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
+    click VadOutputDataBox "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/data_types.hpp" "VadOutputData definition"
 ```
 
 ### Function Roles
@@ -179,15 +179,15 @@ flowchart TD
 
     %% Links to source code files
     click CudaMalloc "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
-    click BuildEngine "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
-    click NetEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
-    click NetSetInputTensor "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
-    click NetConstructor "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
+    click BuildEngine "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
+    click NetEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
+    click NetSetInputTensor "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
+    click NetConstructor "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
     click EnqueueV3 "https://github.com/autowarefoundation/autoware_universe/blob/main/perception/autoware_tensorrt_common/src/tensorrt_common.cpp" "enqueueV3 implementation"
-    click VadModelInit "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
-    click VadModelEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
-    click InitTensorRT "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
-    click SetupIO "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/net.hpp" "Net class implementation"
+    click VadModelInit "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
+    click VadModelEnqueue "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
+    click InitTensorRT "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
+    click SetupIO "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/net.hpp" "Net class implementation"
     click TensorClass "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/tensor.cpp" "Tensor class implementation"
 ```
 
@@ -283,10 +283,10 @@ flowchart TD
     style VadModel fill:#e8f5e8,stroke:#388e3c,stroke-width:2px,color:#000000
 
     %% Links to source code files
-    click VadModel "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/vad_model.hpp" "VadModel implementation"
-    click MultiCamera "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/preprocess/multi_camera_preprocess.hpp" "MultiCameraPreprocessor"
-    click ObjectPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/postprocess/object_postprocess.hpp" "ObjectPostprocessor"
-    click MapPost "https://github.com/autowarefoundation/autoware_universe/tree/main/planning/autoware_tensorrt_v../src/networks/postprocess/map_postprocess.hpp" "MapPostprocessor"
+    click VadModel "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/vad_model.hpp" "VadModel implementation"
+    click MultiCamera "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/preprocess/multi_camera_preprocess.hpp" "MultiCameraPreprocessor"
+    click ObjectPost "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/postprocess/object_postprocess.hpp" "ObjectPostprocessor"
+    click MapPost "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/src/networks/postprocess/map_postprocess.hpp" "MapPostprocessor"
     click LaunchResize "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Resize kernel implementation"
     click LaunchNormalize "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/preprocess/multi_camera_preprocess_kernel.cu" "Normalize kernel implementation"
     click LaunchObject "https://github.com/autowarefoundation/autoware_universe/tree/main/e2e/autoware_tensorrt_vad/lib/networks/postprocess/object_postprocess_kernel.cu" "Object postprocess kernel implementation"

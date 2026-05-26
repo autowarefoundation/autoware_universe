@@ -164,7 +164,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   // clang-format on
   detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_bevfusion_config, densification_param, config);
   diagnostics_detector_trt_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "bevfusion_trt");
+    std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(this, "bevfusion_trt");
 
   cloud_sub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
@@ -176,11 +176,11 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
 
   initializeSensorFusionSubscribers(config.num_cameras_, image_pre_processing_params);
 
-  published_time_pub_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_pub_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
 
   {
-    using autoware_utils::DebugPublisher;
-    using autoware_utils::StopWatch;
+    using autoware_utils_debug::DebugPublisher;
+    using autoware_utils_system::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, this->get_name());
     stop_watch_ptr_->tic("cyclic");

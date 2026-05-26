@@ -22,7 +22,7 @@
   <!-- ========================================
        Model and Plugin Paths
        ======================================== -->
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="Root directory for data and models"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="Root directory for data and models"/>
   <arg name="model_path" default="$(var data_path)/vad" description="VAD ONNX models and TensorRT engines directory"/>
   <arg name="plugins_path" default="$(find-pkg-share autoware_tensorrt_plugins)" description="Custom TensorRT plugins library"/>
 

@@ -1,0 +1,204 @@
+// Copyright 2024 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware/multi_object_tracker/types.hpp"
+
+#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/uuid.hpp"
+
+#include <cmath>
+#include <vector>
+
+namespace autoware::multi_object_tracker
+{
+
+namespace types
+{
+
+OrientationAvailability convertOrientationAvailabilityFromMsg(int8_t msg_availability)
+{
+  using autoware_perception_msgs::msg::DetectedObjectKinematics;
+  switch (msg_availability) {
+    case DetectedObjectKinematics::UNAVAILABLE:
+      return OrientationAvailability::UNAVAILABLE;
+    case DetectedObjectKinematics::SIGN_UNKNOWN:
+      return OrientationAvailability::SIGN_UNKNOWN;
+    case DetectedObjectKinematics::AVAILABLE:
+      return OrientationAvailability::AVAILABLE;
+    default:
+      return OrientationAvailability::UNAVAILABLE;
+  }
+}
+
+int8_t convertOrientationAvailabilityToMsg(OrientationAvailability availability)
+{
+  using autoware_perception_msgs::msg::DetectedObjectKinematics;
+  switch (availability) {
+    case OrientationAvailability::UNAVAILABLE:
+      return DetectedObjectKinematics::UNAVAILABLE;
+    case OrientationAvailability::SIGN_UNKNOWN:
+      return DetectedObjectKinematics::SIGN_UNKNOWN;
+    case OrientationAvailability::AVAILABLE:
+      return DetectedObjectKinematics::AVAILABLE;
+    default:
+      return DetectedObjectKinematics::UNAVAILABLE;
+  }
+}
+
+DynamicObject toDynamicObject(
+  const autoware_perception_msgs::msg::DetectedObject & det_object, const uint channel_index)
+{
+  DynamicObject dynamic_object;
+
+  // Always generate UUID for consistency (shared generator across the package).
+  dynamic_object.uuid = object_model::generate_uuid();
+
+  // initialize existence_probabilities, using channel information
+  dynamic_object.channel_index = channel_index;
+  if (det_object.existence_probability < 1e-6) {
+    // given existence probability is too low, may the value is not set
+    dynamic_object.existence_probability = default_existence_probability;
+  } else if (det_object.existence_probability > 0.999) {
+    // given existence probability is too high, may the value is not set
+    dynamic_object.existence_probability = 0.999;
+  } else {
+    dynamic_object.existence_probability = det_object.existence_probability;
+  }
+  dynamic_object.existence_probabilities.push_back(
+    {channel_index, dynamic_object.existence_probability});
+
+  dynamic_object.classification = classes::toClassifications(det_object.classification);
+
+  dynamic_object.pose = det_object.kinematics.pose_with_covariance.pose;
+  dynamic_object.pose_covariance = det_object.kinematics.pose_with_covariance.covariance;
+  dynamic_object.twist = det_object.kinematics.twist_with_covariance.twist;
+  dynamic_object.twist_covariance = det_object.kinematics.twist_with_covariance.covariance;
+
+  dynamic_object.kinematics.has_position_covariance = det_object.kinematics.has_position_covariance;
+  dynamic_object.kinematics.orientation_availability =
+    convertOrientationAvailabilityFromMsg(det_object.kinematics.orientation_availability);
+  dynamic_object.kinematics.has_twist = det_object.kinematics.has_twist;
+  dynamic_object.kinematics.has_twist_covariance = det_object.kinematics.has_twist_covariance;
+
+  // shape
+  dynamic_object.shape = det_object.shape;
+  dynamic_object.area = getArea(det_object.shape);
+
+  return dynamic_object;
+}
+
+DynamicObjectList toDynamicObjectList(
+  const autoware_perception_msgs::msg::DetectedObjects & det_objects, const uint channel_index)
+{
+  DynamicObjectList dynamic_objects;
+  dynamic_objects.header = det_objects.header;
+  dynamic_objects.channel_index = channel_index;
+  dynamic_objects.objects.reserve(det_objects.objects.size());
+  for (const auto & det_object : det_objects.objects) {
+    dynamic_objects.objects.emplace_back(toDynamicObject(det_object, channel_index));
+  }
+  dynamic_objects.buildUuidIndex();
+  return dynamic_objects;
+}
+
+void DynamicObjectList::buildUuidIndex() const
+{
+  uuid_to_index_.clear();
+  uuid_to_index_.reserve(objects.size());
+  for (size_t i = 0; i < objects.size(); ++i) {
+    uuid_to_index_.emplace(objects[i].uuid, i);
+  }
+}
+
+std::optional<size_t> DynamicObjectList::getObjectIndexByUuid(
+  const unique_identifier_msgs::msg::UUID & uuid) const
+{
+  if (uuid_to_index_.size() != objects.size()) {
+    buildUuidIndex();
+  }
+  const auto it = uuid_to_index_.find(uuid);
+  if (it != uuid_to_index_.end()) {
+    return it->second;
+  }
+  return std::nullopt;
+}
+
+autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object)
+{
+  autoware_perception_msgs::msg::TrackedObject tracked_object;
+  tracked_object.object_id = dyn_object.uuid;
+  tracked_object.existence_probability = dyn_object.existence_probability;
+  tracked_object.classification = classes::toClassificationMsgs(dyn_object.classification);
+
+  tracked_object.kinematics.pose_with_covariance.pose = dyn_object.pose;
+  tracked_object.kinematics.pose_with_covariance.covariance = dyn_object.pose_covariance;
+  tracked_object.kinematics.twist_with_covariance.twist = dyn_object.twist;
+  tracked_object.kinematics.twist_with_covariance.covariance = dyn_object.twist_covariance;
+
+  tracked_object.kinematics.orientation_availability =
+    convertOrientationAvailabilityToMsg(dyn_object.kinematics.orientation_availability);
+
+  tracked_object.kinematics.is_stationary = false;
+
+  tracked_object.shape = dyn_object.shape;
+
+  return tracked_object;
+}
+
+autoware_perception_msgs::msg::DetectedObject toDetectedObjectMsg(const DynamicObject & dyn_object)
+{
+  autoware_perception_msgs::msg::DetectedObject detected_object;
+  detected_object.existence_probability = dyn_object.existence_probability;
+  detected_object.classification = classes::toClassificationMsgs(dyn_object.classification);
+
+  detected_object.kinematics.pose_with_covariance.pose = dyn_object.pose;
+  detected_object.kinematics.pose_with_covariance.covariance = dyn_object.pose_covariance;
+  detected_object.kinematics.twist_with_covariance.twist = dyn_object.twist;
+  detected_object.kinematics.twist_with_covariance.covariance = dyn_object.twist_covariance;
+
+  detected_object.kinematics.orientation_availability =
+    convertOrientationAvailabilityToMsg(dyn_object.kinematics.orientation_availability);
+  detected_object.kinematics.has_position_covariance = true;
+  detected_object.kinematics.has_twist = true;
+  detected_object.kinematics.has_twist_covariance = true;
+
+  detected_object.shape = dyn_object.shape;
+
+  return detected_object;
+}
+
+double getArea(const autoware_perception_msgs::msg::Shape & shape)
+{
+  switch (shape.type) {
+    case autoware_perception_msgs::msg::Shape::BOUNDING_BOX:
+      return shape.dimensions.x * shape.dimensions.y;
+    case autoware_perception_msgs::msg::Shape::CYLINDER:
+      return shape.dimensions.x * shape.dimensions.x * M_PI * 0.25;
+    case autoware_perception_msgs::msg::Shape::POLYGON: {
+      double area = 0.0;
+      for (size_t i = 0; i < shape.footprint.points.size(); ++i) {
+        size_t j = (i + 1) % shape.footprint.points.size();
+        area += 0.5 * (shape.footprint.points.at(i).x * shape.footprint.points.at(j).y -
+                       shape.footprint.points.at(j).x * shape.footprint.points.at(i).y);
+      }
+      return area;
+    }
+    default:
+      return 0.0;
+  }
+}
+
+}  // namespace types
+
+}  // namespace autoware::multi_object_tracker

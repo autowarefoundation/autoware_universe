@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_trajectory_concatenator</name>
-  <version>0.50.0</version>
+  <version>0.51.0</version>
   <description>The autoware_trajectory_concatenator package</description>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
   <maintainer email="go.sakayori@tier4.jp">Go Sakayori</maintainer>
@@ -19,8 +19,8 @@
 
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_planning_msgs</depend>
-  <depend>autoware_universe_utils</depend>
   <depend>autoware_utils_debug</depend>
+  <depend>autoware_utils_rclcpp</depend>
   <depend>autoware_utils_uuid</depend>
   <depend>generate_parameter_library</depend>
   <depend>rclcpp</depend>

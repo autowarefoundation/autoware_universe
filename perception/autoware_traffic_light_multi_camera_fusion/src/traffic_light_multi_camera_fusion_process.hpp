@@ -53,7 +53,7 @@ struct FusionRecordArr
   }
 };
 
-inline bool isUnknown(const tier4_perception_msgs::msg::TrafficLight & signal)
+inline bool is_unknown(const tier4_perception_msgs::msg::TrafficLight & signal)
 {
   return signal.elements.size() == 1 &&
          signal.elements[0].color == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN &&
@@ -66,9 +66,10 @@ V at_or(const std::unordered_map<K, V> & map, const K & key, const V & value)
   return map.count(key) ? map.at(key) : value;
 }
 
-int compareRecord(const FusionRecord & r1, const FusionRecord & r2);
+double get_min_confidence(const tier4_perception_msgs::msg::TrafficLight & signal);
+int compare_record(const FusionRecord & r1, const FusionRecord & r2);
 
-autoware_perception_msgs::msg::TrafficLightElement convertT4toAutoware(
+autoware_perception_msgs::msg::TrafficLightElement convert_t4_to_autoware(
   const tier4_perception_msgs::msg::TrafficLightElement & input);
 
 /**
@@ -78,7 +79,8 @@ autoware_perception_msgs::msg::TrafficLightElement convertT4toAutoware(
  * @param record    fusion record
  * @return 0 if traffic light is truncated, otherwise 1
  */
-int calVisibleScore(const FusionRecord & record);
+int cal_visible_score(const FusionRecord & record);
+FusionRecord generate_failsafe_record(FusionRecord base_record);
 
 }  // namespace utils
 }  // namespace autoware::traffic_light

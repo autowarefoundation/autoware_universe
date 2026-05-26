@@ -2,6 +2,12 @@
 Changelog for package autoware_behavior_path_bidirectional_traffic_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(planning): replace autoware_universe_utils with specific autoware_utils sub-packagesr (`#12443 <https://github.com/mitsudome-r/autoware_universe/issues/12443>`_)
+* Contributors: Vishal Chauhan, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

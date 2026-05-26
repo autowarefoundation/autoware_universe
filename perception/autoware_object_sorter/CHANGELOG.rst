@@ -2,6 +2,17 @@
 Changelog for package autoware_object_sorter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(tracked_object_sorter): apply autoware_agnocast_wrapper for CIE (`#12333 <https://github.com/mitsudome-r/autoware_universe/issues/12333>`_)
+  * feat(autoware_object_sorter): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_object_sorter): apply CIE to DetectedObjectSorterNode as well
+  ---------
+* Contributors: Taekjin LEE, atsushi yano, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

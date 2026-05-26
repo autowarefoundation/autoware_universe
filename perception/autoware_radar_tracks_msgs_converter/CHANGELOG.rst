@@ -2,6 +2,20 @@
 Changelog for package autoware_radar_tracks_msgs_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(radar_tracks_msgs_converter): enhance thread safety and data handling (`#12132 <https://github.com/mitsudome-r/autoware_universe/issues/12132>`_)
+  * fix(radar_tracks_msgs_converter): enhance thread safety and data handling
+  * Added mutex protection to shared data access in radar_tracks_msgs_converter_node.
+  * Updated methods to use local copies of radar and odometry data for thread-safe operations.
+  * Modified function signatures to accept radar and odometry data as parameters for better encapsulation.
+  This change improves the robustness of the radar tracks message converter by ensuring that data is accessed safely in a multi-threaded environment.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Yoshi Ri, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

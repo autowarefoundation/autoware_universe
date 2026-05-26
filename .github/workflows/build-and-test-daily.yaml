@@ -25,20 +25,22 @@ jobs:
             arch: arm64
 
         include:
-          # ROS distribution specific configurations
+          # Container per (rosdistro, cuda) combination
           - rosdistro: humble
-            container-base: ghcr.io/autowarefoundation/autoware:universe-devel
-
+            cuda: true
+            container-base: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-humble
           - rosdistro: jazzy
-            container-base: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
+            cuda: true
+            container-base: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-jazzy
+          - rosdistro: jazzy
+            cuda: false
+            container-base: ghcr.io/autowarefoundation/autoware:universe-dependencies-jazzy
 
           # CUDA variant configurations
           - cuda: true
-            container-suffix: -cuda
             cache-suffix: cuda
 
           - cuda: false
-            container-suffix: ""
             cache-suffix: nocuda
 
           # Architecture specific configurations
@@ -54,7 +56,6 @@ jobs:
     with:
       rosdistro: ${{ matrix.rosdistro }}
       container: ${{ matrix.container-base }}
-      container-suffix: ${{ matrix.container-suffix }}
       runner: ${{ matrix.runner }}
       build-pre-command: ${{ matrix.build-pre-command }}
       arch: ${{ matrix.arch }}

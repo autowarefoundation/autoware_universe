@@ -124,7 +124,7 @@ PipelineLatencyMonitorNode::PipelineLatencyMonitorNode(const rclcpp::NodeOptions
 
   // Create debug publisher
   debug_publisher_ =
-    std::make_unique<autoware::universe_utils::DebugPublisher>(this, "pipeline_latency_monitor");
+    std::make_unique<autoware_utils_debug::DebugPublisher>(this, "pipeline_latency_monitor");
 
   // Setup diagnostic updater
   diagnostic_updater_.setHardwareID("pipeline_latency_monitor");

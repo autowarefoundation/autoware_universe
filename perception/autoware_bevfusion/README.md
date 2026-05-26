@@ -69,7 +69,7 @@ This node assumes that the input pointcloud follows the `PointXYZIRC` layout def
 ## Trained Models
 
 You can download the onnx and config files in the following links.
-The files need to be placed inside `$(env HOME)/autoware_data/bevfusion`
+The files need to be placed inside `$(env HOME)/autoware_data/ml_models/bevfusion`
 
 - lidar-only model:
   - [onnx](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/bevfusion_lidar.onnx)

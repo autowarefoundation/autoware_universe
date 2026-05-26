@@ -14,10 +14,12 @@
 
 #include "autoware/trajectory_validator/trajectory_validator_node.hpp"
 
-#include "autoware/trajectory_validator/filter_context.hpp"
+#include "autoware/trajectory_validator/validation_stage.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
+#include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
+#include <autoware_utils_visualization/marker_helper.hpp>
 
 #include <autoware_internal_planning_msgs/msg/detail/candidate_trajectory__struct.hpp>
 
@@ -29,37 +31,8 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
-
-namespace
-{
-// for error diagnostic. Will be removed once node is combined.
-std::unordered_map<std::string, std::string> get_generator_uuid_to_name_map(
-  const autoware_internal_planning_msgs::msg::CandidateTrajectories & candidate_trajectories)
-{
-  std::unordered_map<std::string, std::string> uuid_to_name;
-  uuid_to_name.reserve(candidate_trajectories.generator_info.size());
-  for (const auto & info : candidate_trajectories.generator_info) {
-    uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
-  }
-  return uuid_to_name;
-}
-
-bool has_trajectory_from_generator(
-  const std::unordered_map<std::string, std::string> & uuid_to_generator_name_map,
-  const autoware_internal_planning_msgs::msg::CandidateTrajectories & trajectories,
-  const std::string & generator_name_prefix)
-{
-  return std::any_of(
-    trajectories.candidate_trajectories.cbegin(), trajectories.candidate_trajectories.cend(),
-    [&](const autoware_internal_planning_msgs::msg::CandidateTrajectory & trajectory) {
-      const auto generator_id_str = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
-      const auto generator_name_it = uuid_to_generator_name_map.find(generator_id_str);
-      return generator_name_it != uuid_to_generator_name_map.end() &&
-             generator_name_it->second.rfind(generator_name_prefix, 0) == 0;
-    });
-}
-}  // namespace
 
 namespace autoware::trajectory_validator
 {
@@ -82,6 +55,16 @@ TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
     load_metric(filter, shadow_mode);
   }
 
+  std::sort(plugins_.begin(), plugins_.end(), [](const auto & plugin1, const auto & plugin2) {
+    return plugin1->get_name() < plugin2->get_name();
+  });
+
+  subscribers();
+  publishers();
+}
+
+void TrajectoryValidator::subscribers()
+{
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectoryValidator::map_callback, this, std::placeholders::_1));
@@ -89,95 +72,100 @@ TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
   sub_trajectories_ = create_subscription<CandidateTrajectories>(
     "~/input/trajectories", 1,
     std::bind(&TrajectoryValidator::process, this, std::placeholders::_1));
+}
 
+void TrajectoryValidator::publishers()
+{
   pub_trajectories_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
 
-  debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
-    "~/debug/processing_time_detail_ms/feasible_trajectory_filter", 1);
-  time_keeper_ =
-    std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
+  pub_processing_time_detail_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
+    "~/debug/processing_time_detail_ms/trajectory_validator_node", 1);
+  time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(pub_processing_time_detail_);
+
+  pub_validation_reports_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+  pub_debug_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
+}
+
+tl::expected<FilterContext, std::string> TrajectoryValidator::take_data()
+{
+  FilterContext context;
+
+  context.odometry = sub_odometry_.take_data();
+  if (!context.odometry) {
+    return tl::make_unexpected("Failed to take odometry data");
+  }
+
+  context.predicted_objects = sub_objects_.take_data();
+  if (!context.predicted_objects) {
+    return tl::make_unexpected("Failed to take predicted objects data");
+  }
+
+  context.acceleration = sub_acceleration_.take_data();
+  if (!context.acceleration) {
+    return tl::make_unexpected("Failed to take acceleration data");
+  }
+
+  context.traffic_light_signals = sub_traffic_lights_.take_data();
+
+  context.lanelet_map = lanelet_map_ptr_;
+  if (!context.lanelet_map) {
+    return tl::make_unexpected("Lanelet map is not available");
+  }
+
+  if (context.lanelet_map->laneletLayer.empty()) {
+    return tl::make_unexpected("Lanelet map does not contain any lanelets");
+  }
+
+  return context;
 }
 
 void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  // Prepare context for filters
-  FilterContext context;
-
-  context.odometry = sub_odometry_.take_data();
-  if (!context.odometry) {
-    return;
-  }
-
-  context.predicted_objects = sub_objects_.take_data();
-  if (!context.predicted_objects) {
-    return;
-  }
-
-  context.acceleration = sub_acceleration_.take_data();
-  if (!context.acceleration) {
-    return;
-  }
-
-  context.traffic_light_signals = sub_traffic_lights_.take_data();
-  if (!context.traffic_light_signals) {
-    return;
-  }
-
-  context.lanelet_map = lanelet_map_ptr_;
-  if (!context.lanelet_map) {
-    return;
-  }
-
   if (listener_.is_old(params_)) {
     params_ = listener_.get_params();
-
     for (const auto & plugin : plugins_) {
       plugin->update_parameters(params_);
     }
     RCLCPP_INFO(get_logger(), "Dynamic parameters updated successfully.");
   }
 
+  // 4. Instantiate and execute the stateless ValidationStage
+  ValidationStage validation_stage(plugins_);
+
+  auto context_opt = take_data();
+  if (!context_opt) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "%s", context_opt.error().c_str());
+    return;
+  }
+
+  const auto & context = context_opt.value();
+  const auto report = validation_stage.process(*msg, context);
+
   diagnostics_interface_.clear();
 
-  // Create output message for filtered trajectories
-  auto filtered_msg = std::make_unique<CandidateTrajectories>();
-
-  // Process and filter trajectories
-  for (const auto & trajectory : msg->candidate_trajectories) {
-    // Apply each filter to the trajectory
-    bool is_feasible = true;
-    for (const auto & plugin : plugins_) {
-      if (const auto res = plugin->is_feasible(trajectory.points, context); !res) {
+  for (const auto & table : report.evaluation_tables) {
+    for (const auto & eval : table.plugin_evaluations) {
+      if (!eval.is_feasible) {
         RCLCPP_WARN_THROTTLE(
-          get_logger(), *get_clock(), 1000, "Not feasible: %s", res.error().c_str());
-        diagnostics_interface_.add_key_value(plugin->get_name(), res.error());
-
-        if (plugin->is_shadow_mode()) {
-          continue;
-        }
-
-        is_feasible = false;
+          get_logger(), *get_clock(), 1000, "[%s] %s", eval.plugin_name.c_str(),
+          eval.reason.c_str());
       }
-    }
-
-    if (is_feasible) filtered_msg->candidate_trajectories.push_back(trajectory);
-  }
-
-  // Also filter generator_info to match kept trajectories
-  for (const auto & traj : filtered_msg->candidate_trajectories) {
-    auto it = std::find_if(
-      msg->generator_info.begin(), msg->generator_info.end(),
-      [&](const auto & info) { return traj.generator_id.uuid == info.generator_id.uuid; });
-
-    if (it != msg->generator_info.end()) {
-      filtered_msg->generator_info.push_back(*it);
+      // Exact original behavior: last trajectory's result overwrites previous ones
+      diagnostics_interface_.add_key_value(
+        eval.plugin_name, std::string(eval.is_feasible ? "OK" : "NG"));
     }
   }
 
-  update_diagnostic(*msg, *filtered_msg);
-  pub_trajectories_->publish(*filtered_msg);
+  // 6. Publish outputs
+  pub_trajectories_->publish(report.valid_trajectories);
+  update_diagnostic(*msg, report.num_feasible_trajectories);
+
+  publish_validation_reports(report.validation_reports);
+
+  // Wire up the debug publishers using the opaque report data
+  publish_debug(report.evaluation_tables, report.processing_time_ms, context.odometry->pose.pose);
 }
 
 void TrajectoryValidator::map_callback(const LaneletMapBin::ConstSharedPtr msg)
@@ -195,6 +183,11 @@ void TrajectoryValidator::load_metric(const std::string & name, const bool is_sh
   try {
     auto plugin = plugin_loader_.createSharedInstance(name);
 
+    if (!plugin) {
+      RCLCPP_ERROR_STREAM(get_logger(), "Failed to create plugin instance for '" << name << "'.");
+      return;
+    }
+
     for (const auto & p : plugins_) {
       if (plugin->get_name() == p->get_name()) {
         RCLCPP_WARN_STREAM(get_logger(), "The plugin '" << name << "' is already loaded.");
@@ -205,6 +198,12 @@ void TrajectoryValidator::load_metric(const std::string & name, const bool is_sh
     plugin->set_vehicle_info(vehicle_info_);
     plugin->set_shadow_mode(is_shadow_mode);
     plugin->update_parameters(params_);
+    std::string category;
+    size_t pos = name.find("::");
+    if (pos != std::string::npos) {
+      category = name.substr(0, pos);
+    }
+    plugin->set_category(category);
 
     plugins_.push_back(plugin);
 
@@ -237,28 +236,153 @@ void TrajectoryValidator::unload_metric(const std::string & name)
 }
 
 void TrajectoryValidator::update_diagnostic(
-  const CandidateTrajectories & input_trajectories,
-  const CandidateTrajectories & filtered_trajectories)
+  const CandidateTrajectories & input_trajectories, const size_t num_feasible_trajectories)
 {
-  const auto uuid_to_name_map = get_generator_uuid_to_name_map(input_trajectories);
-  const auto input_has_diffusion_trajectories =
-    has_trajectory_from_generator(uuid_to_name_map, input_trajectories, "Diffusion");
-  const auto filtered_has_diffusion_trajectories =
-    has_trajectory_from_generator(uuid_to_name_map, filtered_trajectories, "Diffusion");
-  if (
-    !input_trajectories.candidate_trajectories.empty() &&
-    filtered_trajectories.candidate_trajectories.empty()) {
+  if (input_trajectories.candidate_trajectories.size() == num_feasible_trajectories) {
+    // All trajectories are feasible
+    diagnostics_interface_.update_level_and_message(diagnostic_msgs::msg::DiagnosticStatus::OK, "");
+  } else if (num_feasible_trajectories == 0) {
+    // No feasible trajectories found
     diagnostics_interface_.update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No feasible trajectories found");
-  } else if (input_has_diffusion_trajectories && !filtered_has_diffusion_trajectories) {
-    diagnostics_interface_.update_level_and_message(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN,
-      "All diffusion planner trajectories are infeasible");
   } else {
-    diagnostics_interface_.update_level_and_message(diagnostic_msgs::msg::DiagnosticStatus::OK, "");
+    // At least one trajectory is infeasible
+    diagnostics_interface_.update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "At least one trajectory is infeasible");
   }
 
   diagnostics_interface_.publish(this->get_clock()->now());
+}
+
+void TrajectoryValidator::publish_validation_reports(const std::vector<ValidationReport> & reports)
+{
+  auto msg = autoware_trajectory_validator::build<ValidationReportArray>().reports(reports);
+  pub_validation_reports_->publish<ValidationReportArray>("validation_reports", msg);
+}
+
+void TrajectoryValidator::publish_debug(
+  const std::vector<EvaluationTable> & evaluation_tables,
+  const std::unordered_map<std::string, double> & processing_time,
+  const geometry_msgs::msg::Pose & marker_pose)
+{
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  publish_plugins_debug_markers();
+  publish_plugins_report_text(evaluation_tables, marker_pose);
+  publish_processing_time(processing_time);
+  publish_processing_time_text(processing_time);
+}
+
+void TrajectoryValidator::publish_plugins_debug_markers() const
+{
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  for (const auto & plugin : plugins_) {
+    auto plugin_markers = plugin->take_debug_markers();
+    pub_debug_->publish<visualization_msgs::msg::MarkerArray>(
+      "markers/" + plugin->get_name(), plugin_markers);
+  }
+}
+
+void TrajectoryValidator::publish_plugins_report_text(
+  const std::vector<EvaluationTable> & evaluation_tables,
+  const geometry_msgs::msg::Pose & marker_pose)
+{
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  std::unordered_map<std::string, int> used_filters;
+  for (const auto & eval : evaluation_tables) {
+    // Walk the flat list instead of the categorized map to simplify the code
+    for (const auto & plugin_eval : eval.plugin_evaluations) {
+      if (!plugin_eval.is_feasible) {
+        used_filters[plugin_eval.plugin_name]++;
+      }
+    }
+  }
+
+  fmt::memory_buffer out;
+  auto out_it = std::back_inserter(out);
+
+  fmt::format_to(out_it, "{:^50}\n", "--- Trajectory Validator Filtering Result ---");
+
+  int skip_counter = 0;
+  for (const auto & plugin : plugins_) {
+    if (!plugin) continue;
+
+    const auto & name = plugin->get_name();
+    const auto it = used_filters.find(name);
+
+    if (it != used_filters.end()) {
+      fmt::format_to(out_it, "- {}: {} path(s) filtered\n", name, it->second);
+    } else {
+      ++skip_counter;
+    }
+  }
+
+  for (int i = 0; i < skip_counter; ++i) {
+    fmt::format_to(out_it, "\n");
+  }
+
+  fmt::format_to(out_it, "-----------------------------------");
+
+  auto plugin_report_text = autoware_utils_visualization::create_default_marker(
+    "map", get_clock()->now(), "plugin_report", 0,
+    visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
+    autoware_utils_visualization::create_marker_scale(0.0, 0.0, 0.4),
+    autoware_utils_visualization::create_marker_color(1., 1., 1., 0.999));
+
+  plugin_report_text.pose = marker_pose;
+  plugin_report_text.pose.position.z += vehicle_info_.vehicle_height_m;
+  plugin_report_text.text = fmt::to_string(out);
+
+  visualization_msgs::msg::MarkerArray plugin_report_text_marker;
+  plugin_report_text_marker.markers.push_back(plugin_report_text);
+  pub_debug_->publish<visualization_msgs::msg::MarkerArray>(
+    "plugin_report_text", plugin_report_text_marker);
+}
+
+void TrajectoryValidator::publish_processing_time(
+  const std::unordered_map<std::string, double> & processing_time)
+{
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  for (const auto & [key, value] : processing_time) {
+    if (key == "Total") {
+      pub_debug_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+        "processing_time_ms", value);
+      continue;
+    }
+    pub_debug_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      key + "/processing_time_ms", value);
+  }
+}
+
+void TrajectoryValidator::publish_processing_time_text(
+  const std::unordered_map<std::string, double> & processing_time)
+{
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  fmt::memory_buffer out;
+  auto time_report = std::back_inserter(out);
+  fmt::format_to(time_report, "\n--- Trajectory Validator Processing Time Report ---\n");
+
+  const auto get_time = [&](const auto & key) {
+    auto it = processing_time.find(key);
+    return (it != processing_time.end()) ? it->second : 0.0;
+  };
+
+  fmt::format_to(time_report, "Total: {:.2f} ms\n", get_time("Total"));
+
+  for (const auto & plugin : plugins_) {
+    if (!plugin) continue;
+
+    const auto & plugin_name = plugin->get_name();
+
+    fmt::format_to(time_report, "- {}: {:.2f} ms\n", plugin_name, get_time(plugin_name));
+  }
+
+  pub_debug_->publish<autoware_internal_debug_msgs::msg::StringStamped>(
+    "processing_time_text", fmt::to_string(out));
 }
 }  // namespace autoware::trajectory_validator
 
