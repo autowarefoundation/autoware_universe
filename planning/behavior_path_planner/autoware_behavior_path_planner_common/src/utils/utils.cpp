@@ -1796,9 +1796,7 @@ std::optional<double> calc_point_dist_to_closest_lane_boundary(
     return std::nullopt;
   }
 
-  const auto local_footprint = vehicle_info.createFootprint();
-  const auto vehicle_footprint = autoware_utils::transform_vector(
-    local_footprint, autoware_utils::pose2transform(ego_baselink_pose));
+  const auto vehicle_footprint = vehicle_info.createFootprint(0.0, ego_baselink_pose);
 
   const auto fp_corner_idx = (direction == "left")
                                ? vehicle_info_utils::VehicleInfo::FrontLeftIndex
