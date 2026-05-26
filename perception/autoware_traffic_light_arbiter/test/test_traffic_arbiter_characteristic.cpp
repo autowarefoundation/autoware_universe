@@ -305,8 +305,7 @@ protected:
     test_node_.reset();
   }
 
-  void startArbiter(
-    bool enable_signal_matching = false, const std::string & source_priority = "confidence")
+  void startArbiter(bool enable_signal_matching, const std::string & source_priority)
   {
     arbiter_ = makeArbiter(enable_signal_matching, source_priority);
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
@@ -415,7 +414,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingLongestPath)
   //   expected:   dropped (WARN+skip)
 
   // Arrange
-  startArbiter(true);
+  startArbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -501,7 +500,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingLongestPath)
 TEST_F(ArbiterCharacteristic, signalMatchingPedestrianFallbackUsesSourcePriority)
 {
   // Arrange
-  startArbiter(true, "external");
+  startArbiter(true, "external");  // signal matching mode, "external" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -538,7 +537,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianFallbackUsesSourcePriority
 TEST_F(ArbiterCharacteristic, signalMatchingPedestrianPerceptionPriority)
 {
   // Arrange
-  startArbiter(true, "perception");
+  startArbiter(true, "perception");  // signal matching mode, "perception" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -574,7 +573,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianPerceptionPriority)
 TEST_F(ArbiterCharacteristic, signalMatchingPedestrianConfidenceMode)
 {
   // Arrange
-  startArbiter(true, "confidence");
+  startArbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -611,7 +610,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianSingleSourcePasses)
 {
   // Arrange: external_priority is set to demonstrate that absent-side handling
   // happens BEFORE the priority switch is consulted.
-  startArbiter(true, "external");
+  startArbiter(true, "external");  // signal matching mode, "external" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -646,7 +645,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingSingleSourceNonPedestrianYieldsUnkno
   //   vehicle_signal_b  GREEN/CIRCLE  (none)       external-only   -> UNKNOWN/CIRCLE
 
   // Arrange
-  startArbiter(true);
+  startArbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -692,7 +691,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingSingleSourceNonPedestrianYieldsUnkno
 TEST_F(ArbiterCharacteristic, signalMatchingIgnoresConfidenceInEquivalence)
 {
   // Arrange
-  startArbiter(true);
+  startArbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -761,7 +760,7 @@ TEST_F(ArbiterCharacteristic, priorityBasedConfidenceLongestPath)
   //   expected:   dropped (WARN+skip)
 
   // Arrange
-  startArbiter();
+  startArbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -836,7 +835,7 @@ TEST_F(ArbiterCharacteristic, priorityBasedConfidenceLongestPath)
 TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
 {
   // Arrange (intentionally no publishMap())
-  startArbiter();
+  startArbiter(false, "confidence");  // priority-based mode, "confidence" priority
 
   TrafficLightGroupArray perception_traffic_signal;
   perception_traffic_signal.stamp = arbiter_->now();
@@ -858,7 +857,7 @@ TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
 TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
 {
   // Arrange: replace the default minimal map with a signal-free one.
-  startArbiter();
+  startArbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publishMap(buildEmptyMapBin());
 
   TrafficLightGroupArray perception_traffic_signal;
@@ -883,7 +882,7 @@ TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
 TEST_F(ArbiterCharacteristic, unknownSourcePriorityFallsBackToConfidence)
 {
   // Arrange: pass a value not in {"external", "perception", "confidence"}.
-  startArbiter(false, "invalid_value");
+  startArbiter(false, "invalid_value");  // priority-based mode, "invalid_value" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -915,7 +914,7 @@ TEST_F(ArbiterCharacteristic, unknownSourcePriorityFallsBackToConfidence)
 TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
 {
   // Arrange
-  startArbiter(false, "perception");
+  startArbiter(false, "perception");  // priority-based mode, "perception" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -952,7 +951,7 @@ TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
 TEST_F(ArbiterCharacteristic, priorityFlagFromExternalOverridesHigherConfidence)
 {
   // Arrange
-  startArbiter(false, "external");
+  startArbiter(false, "external");  // priority-based mode, "external" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -988,7 +987,7 @@ TEST_F(ArbiterCharacteristic, priorityFlagFromExternalOverridesHigherConfidence)
 TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
 {
   // Arrange
-  startArbiter();
+  startArbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -1029,7 +1028,7 @@ TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
 TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
 {
   // Arrange: establish a perception baseline so we can detect any extra publish.
-  startArbiter();
+  startArbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publishMap();
 
   TrafficLightGroupArray perception_traffic_signal;
@@ -1065,7 +1064,7 @@ TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
 {
   // Arrange: seed an external entry that should be purged by the perception
   // arrival's cleanupExpiredExternalSignals (perception is +6s newer).
-  startArbiter();
+  startArbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -1099,7 +1098,7 @@ TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
 TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
 {
   // Arrange
-  startArbiter();
+  startArbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
@@ -1133,7 +1132,7 @@ TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
 TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
 {
   // Arrange
-  startArbiter();
+  startArbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publishMap();
   const auto t0 = arbiter_->now();
 
