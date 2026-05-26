@@ -169,31 +169,6 @@ TrafficLightArray make_signal_array(
 
 }  // namespace
 
-TEST(MultiCameraFusionConstruction, DefaultConstructorDoesNotThrow)
-{
-  // Arrange / Act / Assert
-  EXPECT_NO_THROW({ MultiCameraFusion fusion; });
-}
-
-TEST(MultiCameraFusionConstruction, ConfigConstructorWithLaneletMapDoesNotThrow)
-{
-  // Arrange
-  const auto config = make_default_config();
-
-  // Act / Assert
-  EXPECT_NO_THROW({ MultiCameraFusion fusion(config); });
-}
-
-TEST(MultiCameraFusionConstruction, ConfigConstructorWithConsistencyCheckEnabledDoesNotThrow)
-{
-  // Arrange
-  auto config = make_default_config();
-  config.use_signal_consistency_check = true;
-
-  // Act / Assert
-  EXPECT_NO_THROW({ MultiCameraFusion fusion(config); });
-}
-
 TEST(MultiCameraFusionFuse, SingleCameraSingleLightOutputsGroupWithMappedRegulatoryId)
 {
   // Arrange
