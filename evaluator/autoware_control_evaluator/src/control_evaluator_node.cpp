@@ -259,9 +259,7 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
   const PathWithLaneId & behavior_path, const Pose & ego_pose)
 {
   const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
-  const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-  const auto current_vehicle_footprint = autoware_utils::transform_vector(
-    local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
+  const auto current_vehicle_footprint = vehicle_info_.createFootprint(0.0, ego_pose);
 
   if (behavior_path.left_bound.size() >= 1) {
     LineString2d left_boundary;
@@ -308,9 +306,7 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
       route_handler_.getLaneletMapPtr(), ego_pose, search_distance)) {
     const auto & nearby_uncrossable_lines = *nearby_uncrossable_lines_opt;
 
-    const auto transformed_pose = autoware_utils::pose2transform(ego_pose);
-    const auto local_fp = vehicle_info_.createFootprint();
-    const auto current_fp = autoware_utils::transform_vector(local_fp, transformed_pose);
+    const auto current_fp = vehicle_info_.createFootprint(0.0, ego_pose);
     const auto side = bdc_utils::get_footprint_sides(current_fp, false, false);
 
     auto is_overlapping{false};
@@ -572,9 +568,8 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
   }
 
   const auto ego_polygon = [&]() -> autoware_utils::Polygon2d {
-    const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info_.createFootprint();
-    const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
-      local_ego_footprint, autoware_utils::pose2transform(odom.pose.pose));
+    const autoware_utils::LinearRing2d ego_footprint =
+      vehicle_info_.createFootprint(0.0, odom.pose.pose);
 
     autoware_utils::Polygon2d ego_polygon;
     ego_polygon.outer() = ego_footprint;
