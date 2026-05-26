@@ -404,10 +404,6 @@ protected:
     return element ? element->color : UINT8_MAX;
   }
 
-  // arbiter_publish_count_ is incremented by the output subscription
-  // callback and read by tests where content alone cannot prove whether
-  // a publish happened.
-
   // Wrapped in std::optional because LaneletMapBin (a generated ROS msg)
   // has no usable default constructor that can be invoked at static storage
   // duration; we initialise it during SetUpTestSuite().
