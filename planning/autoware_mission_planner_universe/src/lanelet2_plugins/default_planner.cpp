@@ -323,9 +323,7 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
     closest_lanelet_to_goal, vehicle_info_.max_longitudinal_offset_m, false, route_handler_);
   lanelets_near_goal.insert(lanelets_near_goal.end(), next_lanelets.begin(), next_lanelets.end());
 
-  const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-  autoware_utils::LinearRing2d goal_footprint =
-    autoware_utils::transform_vector(local_vehicle_footprint, autoware_utils::pose2transform(goal));
+  const autoware_utils::LinearRing2d goal_footprint = vehicle_info_.createFootprint(0.0, goal);
   pub_goal_footprint_marker_->publish(visualize_debug_footprint(goal_footprint));
   const auto polygon_footprint = convert_linear_ring_to_polygon(goal_footprint);
 
