@@ -291,7 +291,7 @@ protected:
     test_node_.reset();
   }
 
-  // --- Arrange -----------------------------------------------------------
+  // --- Arrange helpers ---------------------------------------------------
   void start_arbiter(bool enable_signal_matching, const std::string & source_priority)
   {
     rclcpp::NodeOptions options;
@@ -317,7 +317,7 @@ protected:
     map_pub_->publish(bin);
     spin_for();
   }
-  // --- Act ---------------------------------------------------------------
+  // --- Act helpers -------------------------------------------------------
   void publish_perception(const TrafficLightGroupArray & msg)
   {
     perception_pub_->publish(msg);
@@ -338,7 +338,7 @@ protected:
     }
   }
 
-  // --- Assert ------------------------------------------------------------
+  // --- Assert helpers ----------------------------------------------------
   // Look up a TrafficLightGroup or TrafficLightElement in the latest
   // arbitrated output. Returns nullptr when not present.
   const TrafficLightGroup * find_traffic_light_group(lanelet::Id id) const
@@ -642,18 +642,12 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianSingleSourcePasses)
 // external-only) exercise distinct branches in SignalMatchValidator.
 TEST_F(ArbiterCharacteristic, signalMatchingSingleSourceNonPedestrianYieldsUnknown)
 {
-  // Scenario inputs and expectations:
-  //
-  //   id                external      perception   expected outcome
-  //   ----------------  ------------  -----------  -----------------------------
-  //   vehicle_signal_a  (none)        RED/CIRCLE   perception-only -> UNKNOWN/CIRCLE
-  //   vehicle_signal_b  GREEN/CIRCLE  (none)       external-only   -> UNKNOWN/CIRCLE
-
   // Arrange
   start_arbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publish_map();
 
-  // Act: each side carries a different id, so each id has only one source.
+  // Act: each side carries a different id, so each id has only one source
+  // (vehicle_signal_a is perception-only, vehicle_signal_b is external-only).
   publish_external(make_signal_array(
     t0_, map_ids::vehicle_signal_b,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
