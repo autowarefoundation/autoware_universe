@@ -404,25 +404,10 @@ protected:
     return group ? group->predictions.size() : SIZE_MAX;
   }
 
-  // Publish-count specs: a handful of contracts cannot be expressed by
-  // observing the published content alone, because they hinge on whether
-  // the arbiter emitted any message at all. For those, we count callbacks
-  // on the output subscription. Tests whose spec can be expressed as
-  // "the next publish contains X (and not the value that would have been
-  // emitted if the spec were violated)" should compare content via
-  // observed_* instead — content checks are stronger because they verify
-  // the user-visible behavior.
-
-  // Spec: the arbiter has not emitted any TrafficLightGroupArray yet.
-  // Content-only checks cannot distinguish "subscriber never received
-  // anything" from "subscriber received a default-constructed payload",
-  // so the count is the only direct test of the early-return contract.
-  void expect_no_publish() { EXPECT_EQ(arbiter_publish_count_, 0u); }
-
-  // Spec: the arbiter has emitted at least one TrafficLightGroupArray.
-  // Used when the published content is expected to be empty so a
-  // content-based check cannot tell "no publish" from "empty publish".
-  void expect_publish_happened() { ASSERT_GE(arbiter_publish_count_, 1u); }
+  // arbiter_publish_count_ (incremented by the output subscription callback)
+  // is read in two specific tests where content alone cannot express the
+  // contract: see perceptionBeforeMapProducesNoOutput and
+  // emptyMapProducesEmptyOutput for the rationale at each call site.
 
   // Wrapped in std::optional because LaneletMapBin (a generated ROS msg)
   // has no usable default constructor that can be invoked at static storage
@@ -818,8 +803,10 @@ TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
-  // Assert: arbitrateAndPublish should early-return when no map has been received.
-  expect_no_publish();
+  // Assert: arbitrateAndPublish should early-return when no map has been
+  // received. Content alone cannot prove this (a default-constructed
+  // message looks identical to no publish at all), so we read the counter.
+  EXPECT_EQ(arbiter_publish_count_, 0u);
 }
 
 // A non-null but signal-free map should yield an empty TrafficLightGroupArray
@@ -836,8 +823,10 @@ TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
-  // Assert: arbiter publishes, but the output contains no groups.
-  expect_publish_happened();
+  // Assert: arbiter publishes, but the output contains no groups. The
+  // counter read distinguishes "publish happened with zero groups" (the
+  // spec) from "no publish at all" (which would also leave groups empty).
+  ASSERT_GE(arbiter_publish_count_, 1u);
   EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 0u);
 }
 
