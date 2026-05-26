@@ -47,7 +47,7 @@
           "default": 1.0,
           "description": "Time threshold for checking obstacles along the trajectory."
         },
-        "vehicle_shape_margin_m": {
+        "vehicle_info_margin_m": {
           "type": "number",
           "default": 1.0,
           "description": "Margin around the vehicle shape for planning."
@@ -227,7 +227,7 @@
         "th_stopped_velocity_mps",
         "th_course_out_distance_m",
         "th_obstacle_time_sec",
-        "vehicle_shape_margin_m",
+        "vehicle_info_margin_m",
         "replan_when_obstacle_found",
         "replan_when_course_out",
         "time_limit",

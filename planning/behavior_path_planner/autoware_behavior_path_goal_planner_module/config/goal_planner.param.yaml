@@ -98,7 +98,7 @@
           enable_freespace_parking: true
           freespace_parking_algorithm: "astar"  # options: astar, rrtstar
           velocity: 1.0
-          vehicle_shape_margin: 1.0
+          vehicle_info_margin: 1.0
           time_limit: 3000.0
           max_turning_ratio: 0.5
           turning_steps: 1

@@ -180,7 +180,7 @@ StartPlannerParameters StartPlannerParameters::init(rclcpp::Node & node)
     p.end_pose_search_interval =
       get_or_declare_parameter<double>(node, ns + "end_pose_search_interval");
     p.freespace_planner_velocity = get_or_declare_parameter<double>(node, ns + "velocity");
-    p.vehicle_shape_margin = get_or_declare_parameter<double>(node, ns + "vehicle_shape_margin");
+    p.vehicle_info_margin = get_or_declare_parameter<double>(node, ns + "vehicle_info_margin");
     p.freespace_planner_common_parameters.time_limit =
       get_or_declare_parameter<double>(node, ns + "time_limit");
     p.freespace_planner_common_parameters.max_turning_ratio =

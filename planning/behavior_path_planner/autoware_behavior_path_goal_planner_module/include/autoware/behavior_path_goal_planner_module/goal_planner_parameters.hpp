@@ -118,7 +118,7 @@ struct GoalPlannerParameters
   bool enable_freespace_parking{false};
   std::string freespace_parking_algorithm;
   double freespace_parking_velocity{0.0};
-  double vehicle_shape_margin{0.0};
+  double vehicle_info_margin{0.0};
   PlannerCommonParam freespace_parking_common_parameters{};
   AstarParam astar_parameters{};
   RRTStarParam rrt_star_parameters{};

@@ -188,7 +188,7 @@ void StartPlannerModuleManager::updateModuleParams(
       parameters, ns + "end_pose_search_end_distance", p->end_pose_search_end_distance);
     update_param<double>(parameters, ns + "end_pose_search_interval", p->end_pose_search_interval);
     update_param<double>(parameters, ns + "velocity", p->freespace_planner_velocity);
-    update_param<double>(parameters, ns + "vehicle_shape_margin", p->vehicle_shape_margin);
+    update_param<double>(parameters, ns + "vehicle_info_margin", p->vehicle_info_margin);
     update_param<double>(
       parameters, ns + "time_limit", p->freespace_planner_common_parameters.time_limit);
     update_param<double>(

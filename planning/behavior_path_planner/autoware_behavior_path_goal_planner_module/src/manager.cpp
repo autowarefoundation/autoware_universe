@@ -215,7 +215,7 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
     p.freespace_parking_algorithm =
       node->declare_parameter<std::string>(ns + "freespace_parking_algorithm");
     p.freespace_parking_velocity = node->declare_parameter<double>(ns + "velocity");
-    p.vehicle_shape_margin = node->declare_parameter<double>(ns + "vehicle_shape_margin");
+    p.vehicle_info_margin = node->declare_parameter<double>(ns + "vehicle_info_margin");
     p.freespace_parking_common_parameters.time_limit =
       node->declare_parameter<double>(ns + "time_limit");
     p.freespace_parking_common_parameters.max_turning_ratio =
@@ -626,7 +626,7 @@ void GoalPlannerModuleManager::updateModuleParams(
       parameters, ns + "freespace_parking_algorithm", p->freespace_parking_algorithm);
     update_param<double>(parameters, ns + "velocity", p->freespace_parking_velocity);
 
-    update_param<double>(parameters, ns + "vehicle_shape_margin", p->vehicle_shape_margin);
+    update_param<double>(parameters, ns + "vehicle_info_margin", p->vehicle_info_margin);
     update_param<double>(
       parameters, ns + "time_limit", p->freespace_parking_common_parameters.time_limit);
     update_param<double>(
