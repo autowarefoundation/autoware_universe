@@ -104,12 +104,6 @@
           },
           "description": "A thresholds array of direction vectors norm, all of objects with vector norm less than this threshold are ignored.",
           "default": [0.3, 0.3, 0.3, 0.3, 0.0]
-        },
-        "score_threshold": {
-          "type": "number",
-          "description": "A threshold value of confidence score, all of objects with score less than this threshold are ignored.",
-          "default": 0.2,
-          "minimum": 0.0
         }
       },
       "required": [
