@@ -74,8 +74,6 @@ __global__ void generateBoxes3D_kernel(
     return;
   }
 
-  // If the score is less than the class score threshold, then we set the score to 0, and stop
-  // processing
   const float x =
     bbox_pred_output[0 * num_proposals + point_idx] * out_size_factor * voxel_size_x + min_x_range;
   const float y =
@@ -103,7 +101,6 @@ __global__ void generateBoxes3D_kernel(
   // Index = distance_bucket_index * class_size + label since row = num of distance buckets and
   // column = num of classes
   const float class_score_threshold = score_thresholds[distance_bucket_index * class_size + label];
-
   // If the score is less than the class score threshold, then we set the score to 0, and stop
   // processing
   if (det_boxes3d[point_idx].score < class_score_threshold) {
