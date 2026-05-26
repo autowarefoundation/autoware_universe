@@ -16,8 +16,15 @@
 
 #include "assessment.hpp"
 
+#include <fmt/core.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <limits>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -69,23 +76,45 @@ std::vector<MetricReport> CollisionCheckFilter::generate_metric_reports(
           .level(convert_metrics_level(risk)));
     };
 
-  const double drac_val = drac_artifact.required_acceleration.has_value()
-                            ? drac_artifact.required_acceleration.value()
-                            : std::numeric_limits<double>::quiet_NaN();
-  add_report("DRAC", drac_val, drac_artifact.risk);
+  static constexpr std::array<const char *, 3> kCanonicalTrajectoryTypes = {
+    "map_based_predicted_path",
+    "constant_curvature_path",
+    "diffusion_based_trajectory",
+  };
 
-  const auto pet_val = [&pet_artifact]() {
-    double min_abs_pet = std::numeric_limits<double>::quiet_NaN();
-    for (const auto & evaluation : pet_artifact.object_evaluations) {
-      const double pet = evaluation.detail.pet;
-      if (std::isnan(min_abs_pet) || std::abs(pet) < std::abs(min_abs_pet)) {
-        min_abs_pet = pet;
+  // DRAC
+  for (const auto * type : kCanonicalTrajectoryTypes) {
+    bool has_finding = false;
+    for (const auto & evaluation : drac_artifact.object_evaluations) {
+      if (evaluation.detail.object_identification.trajectory_type.find(type) != std::string::npos) {
+        has_finding = true;
+        break;
       }
     }
-    return min_abs_pet;
-  }();
-  add_report("PET", pet_val, pet_artifact.risk);
+    const double drac_val = has_finding && drac_artifact.required_acceleration.has_value()
+                              ? drac_artifact.required_acceleration.value()
+                              : std::numeric_limits<double>::quiet_NaN();
+    const RiskLevel drac_risk = has_finding ? drac_artifact.risk : RiskLevel::SAFE;
+    add_report(fmt::format("DRAC_{}", type), drac_val, drac_risk);
+  }
 
+  // PET
+  for (const auto * type : kCanonicalTrajectoryTypes) {
+    double pet_val = std::numeric_limits<double>::quiet_NaN();
+    RiskLevel pet_risk = RiskLevel::SAFE;
+    for (const auto & evaluation : pet_artifact.object_evaluations) {
+      if (evaluation.detail.object_identification.trajectory_type.find(type) == std::string::npos) {
+        continue;
+      }
+      if (std::isnan(pet_val) || std::abs(evaluation.detail.pet) < std::abs(pet_val)) {
+        pet_val = evaluation.detail.pet;
+        pet_risk = evaluation.risk;
+      }
+    }
+    add_report(fmt::format("PET_{}", type), pet_val, pet_risk);
+  }
+
+  // RSS
   const auto rss_val = [&rss_artifact]() {
     double min_rss = 0.0;
     for (const auto & evaluation : rss_artifact.object_evaluations) {

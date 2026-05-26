@@ -32,7 +32,7 @@ public:
   result_t is_feasible(
     const TrajectoryPoints & traj_points, const FilterContext & context) override;
 
-  void update_parameters(const validator::Params & params) final;
+  void update_parameters(const validator::Params & node_params) final;
 
 private:
   GlobalParams global_params_;
