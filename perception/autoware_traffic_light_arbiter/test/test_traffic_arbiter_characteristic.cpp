@@ -235,6 +235,7 @@ builtin_interfaces::msg::Time offset_time(const rclcpp::Time & base, double seco
 class ArbiterCharacteristic : public ::testing::Test
 {
 protected:
+  // --- Lifecycle ---------------------------------------------------------
   static void SetUpTestSuite()
   {
     if (!rclcpp::ok()) {
@@ -290,6 +291,7 @@ protected:
     test_node_.reset();
   }
 
+  // --- Arrange -----------------------------------------------------------
   void start_arbiter(bool enable_signal_matching, const std::string & source_priority)
   {
     rclcpp::NodeOptions options;
@@ -315,6 +317,7 @@ protected:
     map_pub_->publish(bin);
     spin_for();
   }
+  // --- Act ---------------------------------------------------------------
   void publish_perception(const TrafficLightGroupArray & msg)
   {
     perception_pub_->publish(msg);
@@ -335,6 +338,7 @@ protected:
     }
   }
 
+  // --- Assert ------------------------------------------------------------
   // Look up a TrafficLightGroup or TrafficLightElement in the latest
   // arbitrated output. Returns nullptr when not present.
   const TrafficLightGroup * find_traffic_light_group(lanelet::Id id) const
