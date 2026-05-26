@@ -467,10 +467,8 @@ protected:
   // tests that derive from this class.
   static constexpr float kConfidenceEpsilon = 1e-5f;
 
-  // Default tolerance parameters declared on the arbiter (mirrors
-  // config/traffic_light_arbiter.param.yaml). Time-tolerance tests pick
-  // offsets relative to these so the relationship is explicit at the
-  // call site (e.g., offset_time(t0_, -(kDefaultExternalDelayTolerance + 15.0))).
+  // Default tolerance values declared on the arbiter (mirrors
+  // config/traffic_light_arbiter.param.yaml).
   static constexpr double kDefaultExternalDelayTolerance = 5.0;
   static constexpr double kDefaultExternalTimeTolerance = 5.0;
   static constexpr double kDefaultPerceptionTimeTolerance = 1.0;
