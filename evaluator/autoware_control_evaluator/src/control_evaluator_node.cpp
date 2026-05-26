@@ -309,30 +309,31 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
     const auto current_fp = vehicle_info_.createFootprint(0.0, ego_pose);
     const auto side = bdc_utils::get_footprint_sides(current_fp, false, false);
 
-    auto is_overlapping{false};
     for (const auto & nearby_ls : nearby_uncrossable_lines) {
       const auto & basic_ls = nearby_ls.basicLineString();
       for (size_t idx = 0; idx + 1 < basic_ls.size(); ++idx) {
         const auto segment = bdc_utils::to_segment_2d(basic_ls[idx], basic_ls[idx + 1]);
 
-        is_overlapping = !boost::geometry::disjoint(current_fp, segment);
-        if (is_overlapping) {
-          nearest_left = 0.0;
-          nearest_right = 0.0;
-          break;
-        }
-
         const auto dist_to_left = boost::geometry::distance(segment, side.left);
         const auto dist_to_right = boost::geometry::distance(segment, side.right);
-        if (dist_to_left < dist_to_right) {
-          nearest_left = std::min(dist_to_left, nearest_left);
-        } else {
-          nearest_right = std::min(dist_to_right, nearest_right);
+
+        // Update the nearest distance to the boundary.
+        bool left_touched = dist_to_left <= 0.0;
+        bool right_touched = dist_to_right <= 0.0;
+        if (left_touched) nearest_left = 0.0;
+        if (right_touched) nearest_right = 0.0;
+
+        if (!left_touched && !right_touched) {
+          if (dist_to_left < dist_to_right) {
+            nearest_left = std::min(dist_to_left, nearest_left);
+          } else {
+            nearest_right = std::min(dist_to_right, nearest_right);
+          }
         }
+
+        if (nearest_left == 0.0 && nearest_right == 0.0) break;
       }
-      if (is_overlapping) {
-        break;
-      }
+      if (nearest_left == 0.0 && nearest_right == 0.0) break;
     }
   }
 
