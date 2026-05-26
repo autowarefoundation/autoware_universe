@@ -85,6 +85,8 @@ void TrajectoryValidator::publishers()
   pub_validation_reports_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
   pub_debug_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
 
+  pseudo_emergency_stop_handler_ = std::make_unique<PseudoEmergencyStopHandler>(*this);
+
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
       this, "trajectory_validator");
@@ -111,6 +113,7 @@ tl::expected<FilterContext, std::string> TrajectoryValidator::take_data()
   }
 
   context.traffic_light_signals = sub_traffic_lights_.take_data();
+  context.route = sub_route_.take_data();
 
   context.lanelet_map = lanelet_map_ptr_;
   if (!context.lanelet_map) {

@@ -20,13 +20,15 @@ After these checks, the remaining trajectories, along with their original `gener
 
 ### Topics
 
-| Direction | Topic name              | Message type                                            | Description                                   |
-| --------- | ----------------------- | ------------------------------------------------------- | --------------------------------------------- |
-| Subscribe | `~/input/trajectories`  | `autoware_internal_planning_msgs/CandidateTrajectories` | Candidate trajectories                        |
-| Subscribe | `~/input/lanelet2_map`  | `autoware_map_msgs/msg/LaneletMapBin`                   | HD map                                        |
-| Subscribe | `~/input/odometry`      | `nav_msgs/msg/Odometry`                                 | Current ego pose                              |
-| Subscribe | `~/input/objects`       | `autoware_perception_msgs/msg/PredictedObjects`         | Obstacles for collision checking              |
-| Publish   | `~/output/trajectories` | `autoware_internal_planning_msgs/CandidateTrajectories` | Trajectories that pass all feasibility checks |
+| Direction | Topic name                | Message type                                            | Description                                                                         |
+| --------- | ------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Subscribe | `~/input/trajectories`    | `autoware_internal_planning_msgs/CandidateTrajectories` | Candidate trajectories                                                              |
+| Subscribe | `~/input/lanelet2_map`    | `autoware_map_msgs/msg/LaneletMapBin`                   | HD map                                                                              |
+| Subscribe | `~/input/odometry`        | `nav_msgs/msg/Odometry`                                 | Current ego pose                                                                    |
+| Subscribe | `~/input/objects`         | `autoware_perception_msgs/msg/PredictedObjects`         | Obstacles for collision checking                                                    |
+| Subscribe | `~/input/route`           | `autoware_planning_msgs/msg/LaneletRoute`               | Route with the lanelets followed by ego (only required by the `TrafficLightFilter`) |
+| Subscribe | `~/input/traffic_signals` | `autoware_perception_msgs/msg/TrafficLightGroupArray`   | Traffic signals (only required by the `TrafficLightFilter`)                         |
+| Publish   | `~/output/trajectories`   | `autoware_internal_planning_msgs/CandidateTrajectories` | Trajectories that pass all feasibility checks                                       |
 
 ### Parameters
 
