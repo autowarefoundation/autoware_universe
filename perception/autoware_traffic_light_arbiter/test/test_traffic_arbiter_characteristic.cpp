@@ -187,9 +187,14 @@ TrafficLightElement make_traffic_light_element(
   return element;
 }
 
+// Build a PredictedTrafficLightState with the given stamp. Color, shape,
+// and source default to placeholder values because most tests only assert
+// presence or count of predictions; tests that pin a specific source
+// (e.g., predictionsFromSingleSidePropagate) pass it explicitly.
 PredictedTrafficLightState make_traffic_light_prediction(
-  const builtin_interfaces::msg::Time & stamp, uint8_t color, uint8_t shape,
-  const std::string & source)
+  const builtin_interfaces::msg::Time & stamp, uint8_t color = TrafficLightElement::UNKNOWN,
+  uint8_t shape = TrafficLightElement::CIRCLE,
+  const std::string & source = PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)
 {
   // The arbiter passes predictions through without inspecting any field
   // value, so the numbers below only need to form a syntactically complete
@@ -458,18 +463,14 @@ TEST_F(ArbiterCharacteristic, signalMatchingMatchedPassesThrough)
   external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
     map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
-    {make_traffic_light_prediction(
-      external_traffic_signal.stamp, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE,
-      PredictedTrafficLightState::INFORMATION_SOURCE_V2I)}));
+    {make_traffic_light_prediction(external_traffic_signal.stamp)}));
 
   TrafficLightGroupArray perception_traffic_signal;
   perception_traffic_signal.stamp = t0_;
   perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
     map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
-    {make_traffic_light_prediction(
-      perception_traffic_signal.stamp, TrafficLightElement::RED, TrafficLightElement::CIRCLE,
-      PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)}));
+    {make_traffic_light_prediction(perception_traffic_signal.stamp)}));
 
   // Act
   publish_external(external_traffic_signal);
