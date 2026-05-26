@@ -317,6 +317,7 @@ protected:
     map_pub_->publish(bin);
     spin_for();
   }
+
   // --- Act helpers -------------------------------------------------------
   void publish_perception(const TrafficLightGroupArray & msg)
   {
@@ -788,6 +789,8 @@ TEST_F(ArbiterCharacteristic, priorityBasedOffMapIdDropped)
 //    input validation, priority overrides, predictions.
 // ---------------------------------------------------------------------------
 
+// Before the vector_map arrives, arbitrateAndPublish early-returns and no
+// TrafficLightGroupArray is emitted.
 TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
 {
   // Arrange (intentionally no publish_map())
@@ -847,6 +850,9 @@ TEST_F(ArbiterCharacteristic, unknownSourcePriorityFallsBackToConfidence)
   EXPECT_NEAR(observed_confidence(map_ids::vehicle_signal_a), 0.9f, kConfidenceEpsilon);
 }
 
+// With source_priority=perception, the perception value wins even when its
+// confidence is much lower than external's. Pins the PERCEPTION priority
+// branch in arbitrateAndPublish.
 TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
 {
   // Arrange
@@ -911,6 +917,9 @@ TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_b), TrafficLightElement::RED);
 }
 
+// An external message whose stamp is older than external_delay_tolerance
+// is dropped before reaching arbitrateAndPublish, so the last published
+// content stays as the earlier perception value.
 TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
 {
   // Arrange: seed a perception value (RED). If the stale external below were
@@ -931,6 +940,9 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::RED);
 }
 
+// When perception arrives past external_time_tolerance after a stored
+// external entry, cleanupExpiredExternalSignals purges that entry so the
+// upcoming publish reflects only perception.
 TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
 {
   // Arrange: seed an external entry that should be purged by the perception
@@ -976,6 +988,8 @@ TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
 }
 
+// Predictions sent on only one side propagate to the arbitrated output
+// with their information_source preserved.
 TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
 {
   // Arrange
