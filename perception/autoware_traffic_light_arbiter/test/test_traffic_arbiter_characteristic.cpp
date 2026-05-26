@@ -153,24 +153,6 @@ LaneletMapBin build_empty_map_bin()
 
 // --- Node construction -------------------------------------------------
 
-// Default parameters mirror config/traffic_light_arbiter.param.yaml. We
-// re-declare them here instead of reading the YAML so the test is fully
-// self-contained and unaffected by production config changes. Only the
-// two parameters that any test actually toggles are exposed as arguments.
-std::shared_ptr<TrafficLightArbiter> make_arbiter(
-  bool enable_signal_matching = false, const std::string & source_priority = "confidence")
-{
-  rclcpp::NodeOptions options;
-  options.parameter_overrides({
-    rclcpp::Parameter("external_delay_tolerance", 5.0),
-    rclcpp::Parameter("external_time_tolerance", 5.0),
-    rclcpp::Parameter("perception_time_tolerance", 1.0),
-    rclcpp::Parameter("source_priority", source_priority),
-    rclcpp::Parameter("enable_signal_matching", enable_signal_matching),
-  });
-  return std::make_shared<TrafficLightArbiter>(options);
-}
-
 // --- Input message builders --------------------------------------------
 
 // Confidence defaults to 1.0f: most tests don't care about the value (the
@@ -321,7 +303,20 @@ protected:
 
   void start_arbiter(bool enable_signal_matching, const std::string & source_priority)
   {
-    arbiter_ = make_arbiter(enable_signal_matching, source_priority);
+    // Default tolerances mirror config/traffic_light_arbiter.param.yaml.
+    // We re-declare them here so the test is self-contained and unaffected
+    // by production config changes; only the two parameters that any test
+    // actually toggles (enable_signal_matching, source_priority) are
+    // exposed as start_arbiter() arguments.
+    rclcpp::NodeOptions options;
+    options.parameter_overrides({
+      rclcpp::Parameter("external_delay_tolerance", kDefaultExternalDelayTolerance),
+      rclcpp::Parameter("external_time_tolerance", kDefaultExternalTimeTolerance),
+      rclcpp::Parameter("perception_time_tolerance", kDefaultPerceptionTimeTolerance),
+      rclcpp::Parameter("source_priority", source_priority),
+      rclcpp::Parameter("enable_signal_matching", enable_signal_matching),
+    });
+    arbiter_ = std::make_shared<TrafficLightArbiter>(options);
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(arbiter_);
     executor_->add_node(test_node_);
@@ -404,6 +399,14 @@ protected:
     return group ? group->predictions.size() : SIZE_MAX;
   }
 
+  // Whole-output query: how many TrafficLightGroups the arbiter published
+  // in its latest message. Used by tests that pin the cardinality of the
+  // output (empty publish on empty map, accumulation across publishes).
+  std::size_t observed_group_count() const
+  {
+    return latest_arbitrated_traffic_signal_.traffic_light_groups.size();
+  }
+
   // Multi-element variants: pick the element whose shape matches and read
   // its color. Used by tests that pin a shape-union output (e.g.
   // element-count mismatch yielding UNKNOWN over CIRCLE+RIGHT_ARROW).
@@ -465,6 +468,14 @@ protected:
   // EXPECT_NEAR. Kept inside the fixture because it is only meaningful for
   // tests that derive from this class.
   static constexpr float kConfidenceEpsilon = 1e-5f;
+
+  // Default tolerance parameters declared on the arbiter (mirrors
+  // config/traffic_light_arbiter.param.yaml). Time-tolerance tests pick
+  // offsets relative to these so the relationship is explicit at the
+  // call site (e.g., offset_time(t0_, -(kDefaultExternalDelayTolerance + 15.0))).
+  static constexpr double kDefaultExternalDelayTolerance = 5.0;
+  static constexpr double kDefaultExternalTimeTolerance = 5.0;
+  static constexpr double kDefaultPerceptionTimeTolerance = 1.0;
 };
 
 // ---------------------------------------------------------------------------
@@ -846,7 +857,7 @@ TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
   // counter read distinguishes "publish happened with zero groups" (the
   // spec) from "no publish at all" (which would also leave groups empty).
   ASSERT_GE(arbiter_publish_count_, 1u);
-  EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 0u);
+  EXPECT_EQ(observed_group_count(), 0u);
 }
 
 // Pins the input-validation contract: an unknown source_priority string
@@ -930,10 +941,8 @@ TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Assert 1: only vehicle_signal_a is visible after the first publish.
-  ASSERT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 1u);
-  EXPECT_EQ(
-    latest_arbitrated_traffic_signal_.traffic_light_groups[0].traffic_light_group_id,
-    map_ids::vehicle_signal_a);
+  ASSERT_EQ(observed_group_count(), 1u);
+  EXPECT_NE(find_traffic_light_group(map_ids::vehicle_signal_a), nullptr);
 
   // Act 2: publish a second external signal carrying a different id.
   publish_external(make_signal_array(
@@ -941,7 +950,7 @@ TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
   // Assert 2: both vehicle_signal_a and vehicle_signal_b appear in the output.
-  EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 2u);
+  EXPECT_EQ(observed_group_count(), 2u);
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_b), TrafficLightElement::RED);
 }
@@ -957,9 +966,9 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
-  // Act: external_delay_tolerance defaults to 5.0s; 20s in the past is well past it.
+  // Act: stamp is well past external_delay_tolerance in the past.
   publish_external(make_signal_array(
-    offset_time(t0_, -20.0), map_ids::vehicle_signal_a,
+    offset_time(t0_, -(kDefaultExternalDelayTolerance + 15.0)), map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Assert: the stale GREEN never propagates; the published color stays RED.
@@ -969,7 +978,8 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
 TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
 {
   // Arrange: seed an external entry that should be purged by the perception
-  // arrival's cleanupExpiredExternalSignals (perception is +6s newer).
+  // arrival's cleanupExpiredExternalSignals (perception is past
+  // external_time_tolerance newer than the stored external).
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
   publish_external(make_signal_array(
@@ -978,7 +988,7 @@ TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
 
   // Act
   publish_perception(make_signal_array(
-    offset_time(t0_, 6.0), map_ids::vehicle_signal_a,
+    offset_time(t0_, kDefaultExternalTimeTolerance + 1.0), map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Assert
@@ -986,8 +996,8 @@ TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
 }
 
 // onExternalMsg compares its own stamp to latest_perception_msg_.stamp; if
-// the gap exceeds perception_time_tolerance (default 1.0s) it clears the
-// stored perception groups so the upcoming publish reflects only external.
+// the gap exceeds perception_time_tolerance it clears the stored perception
+// groups so the upcoming publish reflects only external.
 TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
 {
   // Arrange
@@ -999,10 +1009,11 @@ TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
-  // Act: external arrives 2.0s after perception (> perception_time_tolerance=1.0,
-  // < external_delay_tolerance=5.0 so it is itself accepted).
+  // Act: external arrives past perception_time_tolerance after perception
+  // (so latest perception is cleared) but within external_delay_tolerance
+  // so external itself is accepted.
   publish_external(make_signal_array(
-    offset_time(t0_, 2.0), map_ids::vehicle_signal_a,
+    offset_time(t0_, kDefaultPerceptionTimeTolerance + 1.0), map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Assert: stale perception was wiped, output reflects only external.
