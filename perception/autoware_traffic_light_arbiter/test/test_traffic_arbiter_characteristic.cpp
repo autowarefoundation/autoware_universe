@@ -341,6 +341,31 @@ protected:
     }
   }
 
+  // Return the first element's color/shape/confidence for the given id in
+  // the latest arbitrated output. When the id is absent or has no
+  // elements, return a sentinel value (UINT8_MAX / -1.0f) that is never
+  // valid, so EXPECT_EQ at the call site fails loudly.
+  uint8_t observedColor(lanelet::Id signal_id) const
+  {
+    const auto * group = findTrafficLightGroup(latest_arbitrated_traffic_signal_, signal_id);
+    return (group && !group->elements.empty()) ? group->elements[0].color : UINT8_MAX;
+  }
+  uint8_t observedShape(lanelet::Id signal_id) const
+  {
+    const auto * group = findTrafficLightGroup(latest_arbitrated_traffic_signal_, signal_id);
+    return (group && !group->elements.empty()) ? group->elements[0].shape : UINT8_MAX;
+  }
+  float observedConfidence(lanelet::Id signal_id) const
+  {
+    const auto * group = findTrafficLightGroup(latest_arbitrated_traffic_signal_, signal_id);
+    return (group && !group->elements.empty()) ? group->elements[0].confidence : -1.0f;
+  }
+  std::size_t observedPredictionCount(lanelet::Id signal_id) const
+  {
+    const auto * group = findTrafficLightGroup(latest_arbitrated_traffic_signal_, signal_id);
+    return group ? group->predictions.size() : SIZE_MAX;
+  }
+
   // Wrapped in std::optional because LaneletMapBin (a generated ROS msg)
   // has no usable default constructor that can be invoked at static storage
   // duration; we initialise it during SetUpTestSuite().
@@ -410,12 +435,8 @@ TEST_F(ArbiterCharacteristic, signalMatchingMatchedPassesThrough)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
-  EXPECT_EQ(group->predictions.size(), 2u);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::RED);
+  EXPECT_EQ(observedPredictionCount(map_ids::vehicle_signal_a), 2u);
 }
 
 // Color mismatch: external GREEN/CIRCLE vs perception RED/CIRCLE.
@@ -444,12 +465,8 @@ TEST_F(ArbiterCharacteristic, signalMatchingColorMismatchProducesUnknown)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(group->elements[0].shape, TrafficLightElement::CIRCLE);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_b), TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(observedShape(map_ids::vehicle_signal_b), TrafficLightElement::CIRCLE);
 }
 
 // Element-count mismatch: external has only CIRCLE while perception has
@@ -553,11 +570,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianFallbackUsesSourcePriority
   publishPerception(perception_traffic_signal);
 
   // Assert: external priority wins despite its lower confidence.
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::pedestrian_signal);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
+  EXPECT_EQ(observedColor(map_ids::pedestrian_signal), TrafficLightElement::RED);
 }
 
 // Symmetric counterpart of the external-priority pedestrian test: with
@@ -590,11 +603,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianPerceptionPriority)
   publishPerception(perception_traffic_signal);
 
   // Assert: perception priority wins despite its lower confidence.
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::pedestrian_signal);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_EQ(observedColor(map_ids::pedestrian_signal), TrafficLightElement::GREEN);
 }
 
 // Pedestrian + CONFIDENCE: get_highest_confidence_signal walks each shape and
@@ -624,12 +633,8 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianConfidenceMode)
   publishPerception(perception_traffic_signal);
 
   // Assert: CONFIDENCE picks the higher-confidence element (perception 0.9)
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::pedestrian_signal);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
-  EXPECT_NEAR(group->elements[0].confidence, 0.9f, kConfidenceEpsilon);
+  EXPECT_EQ(observedColor(map_ids::pedestrian_signal), TrafficLightElement::RED);
+  EXPECT_NEAR(observedConfidence(map_ids::pedestrian_signal), 0.9f, kConfidenceEpsilon);
 }
 
 // Pedestrian id with a single source: get_highest_confidence_signal early-
@@ -654,11 +659,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianSingleSourcePasses)
   publishPerception(perception_traffic_signal);
 
   // Assert: perception passes through unchanged (no UNKNOWN translation)
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::pedestrian_signal);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_EQ(observedColor(map_ids::pedestrian_signal), TrafficLightElement::GREEN);
 }
 
 // In Signal Matching mode, a non-pedestrian id that arrives on only one side
@@ -696,22 +697,10 @@ TEST_F(ArbiterCharacteristic, signalMatchingSingleSourceNonPedestrianYieldsUnkno
   publishPerception(perception_traffic_signal);
 
   // Assert
-  {
-    const auto * group =
-      findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-    ASSERT_NE(group, nullptr);
-    ASSERT_EQ(group->elements.size(), 1u);
-    EXPECT_EQ(group->elements[0].color, TrafficLightElement::UNKNOWN);
-    EXPECT_EQ(group->elements[0].shape, TrafficLightElement::CIRCLE);
-  }
-  {
-    const auto * group =
-      findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
-    ASSERT_NE(group, nullptr);
-    ASSERT_EQ(group->elements.size(), 1u);
-    EXPECT_EQ(group->elements[0].color, TrafficLightElement::UNKNOWN);
-    EXPECT_EQ(group->elements[0].shape, TrafficLightElement::CIRCLE);
-  }
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(observedShape(map_ids::vehicle_signal_a), TrafficLightElement::CIRCLE);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_b), TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(observedShape(map_ids::vehicle_signal_b), TrafficLightElement::CIRCLE);
 }
 
 // Signal Matching does not consult the confidence field when checking
@@ -742,12 +731,8 @@ TEST_F(ArbiterCharacteristic, signalMatchingIgnoresConfidenceInEquivalence)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
-  EXPECT_NEAR(group->elements[0].confidence, 0.90f, kConfidenceEpsilon);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::RED);
+  EXPECT_NEAR(observedConfidence(map_ids::vehicle_signal_a), 0.90f, kConfidenceEpsilon);
 }
 
 // ---------------------------------------------------------------------------
@@ -780,12 +765,8 @@ TEST_F(ArbiterCharacteristic, priorityBasedConfidencePicksHigherValue)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
-  EXPECT_NEAR(group->elements[0].confidence, 0.9f, kConfidenceEpsilon);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
+  EXPECT_NEAR(observedConfidence(map_ids::vehicle_signal_a), 0.9f, kConfidenceEpsilon);
 }
 
 // Only external contributes an id (perception silent). Both shapes survive
@@ -853,12 +834,8 @@ TEST_F(ArbiterCharacteristic, priorityBasedPerceptionOnlyPassesThrough)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_c);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
-  EXPECT_NEAR(group->elements[0].confidence, 0.8f, kConfidenceEpsilon);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_c), TrafficLightElement::GREEN);
+  EXPECT_NEAR(observedConfidence(map_ids::vehicle_signal_c), 0.8f, kConfidenceEpsilon);
 }
 
 // An id not in the vector map is silently dropped (WARN log only) by
@@ -970,12 +947,8 @@ TEST_F(ArbiterCharacteristic, unknownSourcePriorityFallsBackToConfidence)
   publishPerception(perception_traffic_signal);
 
   // Assert: CONFIDENCE behavior - the higher-confidence perception wins.
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
-  EXPECT_NEAR(group->elements[0].confidence, 0.9f, kConfidenceEpsilon);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
+  EXPECT_NEAR(observedConfidence(map_ids::vehicle_signal_a), 0.9f, kConfidenceEpsilon);
 }
 
 TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
@@ -1004,11 +977,7 @@ TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
   publishPerception(perception_traffic_signal);
 
   // Assert: perception priority wins despite its lower confidence.
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
 }
 
 // Symmetric counterpart of priorityFlagOverridesHigherConfidence: with
@@ -1041,11 +1010,7 @@ TEST_F(ArbiterCharacteristic, priorityFlagFromExternalOverridesHigherConfidence)
   publishPerception(perception_traffic_signal);
 
   // Assert: external priority wins despite its lower confidence.
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::RED);
 }
 
 // Successive external publishes that carry different ids accumulate in the
@@ -1082,14 +1047,8 @@ TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
 
   // Assert 2: both vehicle_signal_a and vehicle_signal_b appear in the output.
   EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 2u);
-  const auto * group_a =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  const auto * group_b =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
-  ASSERT_NE(group_a, nullptr);
-  ASSERT_NE(group_b, nullptr);
-  EXPECT_EQ(group_a->elements[0].color, TrafficLightElement::GREEN);
-  EXPECT_EQ(group_b->elements[0].color, TrafficLightElement::RED);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_b), TrafficLightElement::RED);
 }
 
 TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
@@ -1119,10 +1078,7 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
   // Assert
   EXPECT_EQ(arbiter_publish_count_, baseline_count)
     << "Stale external message must be dropped before arbitrateAndPublish runs";
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::RED)
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::RED)
     << "Last publish must reflect perception";
 }
 
@@ -1151,11 +1107,7 @@ TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
 }
 
 // onExternalMsg compares its own stamp to latest_perception_msg_.stamp; if
@@ -1188,11 +1140,7 @@ TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
   publishExternal(external_traffic_signal);
 
   // Assert: stale perception was wiped, output reflects only external.
-  const auto * group =
-    findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 1u);
-  EXPECT_EQ(group->elements[0].color, TrafficLightElement::GREEN);
+  EXPECT_EQ(observedColor(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
 }
 
 TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
@@ -1215,10 +1163,9 @@ TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
   publishPerception(perception_traffic_signal);
 
   // Assert
+  ASSERT_EQ(observedPredictionCount(map_ids::vehicle_signal_a), 1u);
   const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->predictions.size(), 1u);
   EXPECT_EQ(
     group->predictions[0].information_source,
     PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION);
