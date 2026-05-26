@@ -142,6 +142,24 @@ TrafficLightRoiArray make_roi_array(
   return roi_array;
 }
 
+// ROI placed against the top-left image boundary so cal_visible_score returns 0.
+TrafficLightRoiArray make_truncated_roi_array(
+  const rclcpp::Time & stamp, const std::string & frame_id, lanelet::Id traffic_light_id)
+{
+  TrafficLightRoi roi;
+  roi.traffic_light_id = traffic_light_id;
+  roi.roi.x_offset = 0;
+  roi.roi.y_offset = 0;
+  roi.roi.width = ROI_WIDTH;
+  roi.roi.height = ROI_HEIGHT;
+
+  TrafficLightRoiArray roi_array;
+  roi_array.header.stamp = stamp;
+  roi_array.header.frame_id = frame_id;
+  roi_array.rois.push_back(roi);
+  return roi_array;
+}
+
 TrafficLight make_signal(lanelet::Id traffic_light_id, uint8_t color, float confidence)
 {
   T4Element element;
@@ -149,6 +167,21 @@ TrafficLight make_signal(lanelet::Id traffic_light_id, uint8_t color, float conf
   element.shape = T4Element::CIRCLE;
   element.status = T4Element::SOLID_ON;
   element.confidence = confidence;
+
+  TrafficLight signal;
+  signal.traffic_light_id = traffic_light_id;
+  signal.elements.push_back(element);
+  return signal;
+}
+
+// Matches utils::is_unknown: a single element whose color and shape are both UNKNOWN.
+TrafficLight make_unknown_signal(lanelet::Id traffic_light_id)
+{
+  T4Element element;
+  element.color = T4Element::UNKNOWN;
+  element.shape = T4Element::UNKNOWN;
+  element.status = T4Element::SOLID_ON;
+  element.confidence = 0.0f;
 
   TrafficLight signal;
   signal.traffic_light_id = traffic_light_id;
@@ -413,4 +446,197 @@ TEST(MultiCameraFusionFuse, ConsistencyCheckWithConflictingColorsOutputsUnknownF
   ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
   EXPECT_EQ(
     result.conflicted_regulatory_element_status.front().conflict_type, ConflictType::CONFLICT);
+}
+
+TEST(MultiCameraFusionFuse, TruncatedRoiHasLowerPriorityThanCenteredRoi)
+{
+  // Arrange
+  // Two cameras observe the same traffic_light_id. camera0 reports a truncated ROI
+  // (visible_score=0) with the higher confidence; camera1 reports a centered ROI
+  // (visible_score=1) with the lower confidence. compare_record's visibility check ranks above the
+  // confidence check, so camera1's record is selected and the fused output is RED.
+  MultiCameraFusion fusion(make_default_config());
+  const rclcpp::Time stamp(100, 0);
+  const auto truncated_camera_info = make_camera_info(stamp, "camera0");
+  const auto truncated_rois = make_truncated_roi_array(stamp, "camera0", LEFT_TRAFFIC_LIGHT_ID);
+  const auto truncated_signals =
+    make_signal_array(stamp, "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  const auto centered_input =
+    make_fusion_input(stamp, "camera1", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.6f));
+
+  // Act
+  fusion.fuse(truncated_camera_info, truncated_rois, truncated_signals);
+  const auto result =
+    fusion.fuse(centered_input.camera_info, centered_input.roi_array, centered_input.signal_array);
+
+  // Assert
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
+}
+
+TEST(MultiCameraFusionFuse, UnknownSignalLosesToValidSignalForSameTrafficLightId)
+{
+  // Arrange
+  // Two cameras observe the same traffic_light_id. camera0 reports an UNKNOWN signal;
+  // camera1 reports GREEN. compare_record's unknown check drops the unknown record, so the
+  // fused output reflects camera1.
+  MultiCameraFusion fusion(make_default_config());
+  const rclcpp::Time stamp(100, 0);
+  const auto unknown_input =
+    make_fusion_input(stamp, "camera0", make_unknown_signal(LEFT_TRAFFIC_LIGHT_ID));
+  const auto valid_input =
+    make_fusion_input(stamp, "camera1", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.8f));
+
+  // Act
+  fusion.fuse(unknown_input.camera_info, unknown_input.roi_array, unknown_input.signal_array);
+  const auto result =
+    fusion.fuse(valid_input.camera_info, valid_input.roi_array, valid_input.signal_array);
+
+  // Assert
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(group.elements.front().color, TrafficLightElement::GREEN);
+}
+
+TEST(MultiCameraFusionFuse, NewerTimestampWinsForSameFrameIdAndTrafficLightId)
+{
+  // Arrange
+  // The same camera publishes two observations of the same traffic_light_id within the lifespan.
+  // compare_record's first priority (same frame_id with timestamps differing by >= 1 ms) prefers
+  // the newer record regardless of confidence, so the later RED supersedes the earlier GREEN.
+  MultiCameraFusion fusion(make_default_config());
+  const std::string frame_id = "camera0";
+  const auto earlier_input = make_fusion_input(
+    rclcpp::Time(100, 0), frame_id, make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  const auto later_input = make_fusion_input(
+    rclcpp::Time(100, 500000000), frame_id,
+    make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.4f));
+
+  // Act
+  fusion.fuse(earlier_input.camera_info, earlier_input.roi_array, earlier_input.signal_array);
+  const auto result =
+    fusion.fuse(later_input.camera_info, later_input.roi_array, later_input.signal_array);
+
+  // Assert
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
+}
+
+TEST(MultiCameraFusionFuse, HigherConfidenceWinsWhenVisibleScoreTiesForSameTrafficLightId)
+{
+  // Arrange
+  // Two cameras observe the same traffic_light_id with centered ROIs (visible_score=1 each).
+  // compare_record falls through to its last priority — the confidence comparison — and selects
+  // the higher-confidence RED over the lower-confidence GREEN.
+  MultiCameraFusion fusion(make_default_config());
+  const rclcpp::Time stamp(100, 0);
+  const auto low_confidence_input =
+    make_fusion_input(stamp, "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.5f));
+  const auto high_confidence_input =
+    make_fusion_input(stamp, "camera1", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
+
+  // Act
+  fusion.fuse(
+    low_confidence_input.camera_info, low_confidence_input.roi_array,
+    low_confidence_input.signal_array);
+  const auto result = fusion.fuse(
+    high_confidence_input.camera_info, high_confidence_input.roi_array,
+    high_confidence_input.signal_array);
+
+  // Assert
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
+}
+
+TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommonState)
+{
+  // Arrange
+  // Two traffic lights in the same regulatory element report partially-overlapping states:
+  //   LEFT  -> [(RED, CIRCLE)]
+  //   RIGHT -> [(RED, CIRCLE), (RED, LEFT_ARROW)]
+  // With consistency_check enabled and partial-match publishing enabled, the merged output keeps
+  // only the common (RED, CIRCLE) element and the conflict is reported as PARTIAL_CONFLICT.
+  auto config = make_default_config();
+  config.use_signal_consistency_check = true;
+  config.publish_partial_matched_signal = true;
+  MultiCameraFusion fusion(config);
+  const rclcpp::Time stamp(100, 0);
+  const auto input_camera0 =
+    make_fusion_input(stamp, "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
+
+  TrafficLight compound_signal = make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f);
+  {
+    T4Element arrow_element;
+    arrow_element.color = T4Element::RED;
+    arrow_element.shape = T4Element::LEFT_ARROW;
+    arrow_element.status = T4Element::SOLID_ON;
+    arrow_element.confidence = 0.9f;
+    compound_signal.elements.push_back(arrow_element);
+  }
+  const auto input_camera1 = make_fusion_input(stamp, "camera1", compound_signal);
+
+  // Act
+  fusion.fuse(input_camera0.camera_info, input_camera0.roi_array, input_camera0.signal_array);
+  const auto result =
+    fusion.fuse(input_camera1.camera_info, input_camera1.roi_array, input_camera1.signal_array);
+
+  // Assert
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
+  EXPECT_EQ(group.elements.front().shape, TrafficLightElement::CIRCLE);
+  ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
+  EXPECT_EQ(
+    result.conflicted_regulatory_element_status.front().conflict_type,
+    ConflictType::PARTIAL_CONFLICT);
+}
+
+TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchDisabledPublishesFailsafe)
+{
+  // Arrange
+  // Same partial-overlap setup as the previous test, but with partial-match publishing disabled.
+  // The fused output is replaced with a fail-safe UNKNOWN element, and the conflict is still
+  // reported as PARTIAL_CONFLICT (not CONFLICT).
+  auto config = make_default_config();
+  config.use_signal_consistency_check = true;
+  config.publish_partial_matched_signal = false;
+  MultiCameraFusion fusion(config);
+  const rclcpp::Time stamp(100, 0);
+  const auto input_camera0 =
+    make_fusion_input(stamp, "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
+
+  TrafficLight compound_signal = make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f);
+  {
+    T4Element arrow_element;
+    arrow_element.color = T4Element::RED;
+    arrow_element.shape = T4Element::LEFT_ARROW;
+    arrow_element.status = T4Element::SOLID_ON;
+    arrow_element.confidence = 0.9f;
+    compound_signal.elements.push_back(arrow_element);
+  }
+  const auto input_camera1 = make_fusion_input(stamp, "camera1", compound_signal);
+
+  // Act
+  fusion.fuse(input_camera0.camera_info, input_camera0.roi_array, input_camera0.signal_array);
+  const auto result =
+    fusion.fuse(input_camera1.camera_info, input_camera1.roi_array, input_camera1.signal_array);
+
+  // Assert
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(group.elements.front().color, TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(group.elements.front().shape, TrafficLightElement::UNKNOWN);
+  ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
+  EXPECT_EQ(
+    result.conflicted_regulatory_element_status.front().conflict_type,
+    ConflictType::PARTIAL_CONFLICT);
 }
