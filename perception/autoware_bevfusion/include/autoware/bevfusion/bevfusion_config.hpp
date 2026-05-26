@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__BEVFUSION__BEVFUSION_CONFIG_HPP_
 #define AUTOWARE__BEVFUSION__BEVFUSION_CONFIG_HPP_
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
