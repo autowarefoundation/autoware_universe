@@ -410,7 +410,6 @@ TEST_F(ArbiterCharacteristic, signalMatchingMatchedPassesThrough)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  ASSERT_GE(arbiter_publish_count_, 1u);
   const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
   ASSERT_NE(group, nullptr);
@@ -445,7 +444,6 @@ TEST_F(ArbiterCharacteristic, signalMatchingColorMismatchProducesUnknown)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  ASSERT_GE(arbiter_publish_count_, 1u);
   const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
   ASSERT_NE(group, nullptr);
@@ -481,7 +479,6 @@ TEST_F(ArbiterCharacteristic, signalMatchingElementCountMismatchProducesUnknown)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  ASSERT_GE(arbiter_publish_count_, 1u);
   const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_c);
   ASSERT_NE(group, nullptr);
@@ -523,7 +520,6 @@ TEST_F(ArbiterCharacteristic, signalMatchingOffMapIdDropped)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  ASSERT_GE(arbiter_publish_count_, 1u);
   EXPECT_EQ(findTrafficLightGroup(latest_arbitrated_traffic_signal_, kOffMapProbeId), nullptr);
   EXPECT_NE(
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a), nullptr);
@@ -784,7 +780,6 @@ TEST_F(ArbiterCharacteristic, priorityBasedConfidencePicksHigherValue)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  ASSERT_GE(arbiter_publish_count_, 1u);
   const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
   ASSERT_NE(group, nullptr);
@@ -822,7 +817,6 @@ TEST_F(ArbiterCharacteristic, priorityBasedExternalOnlyPassesThrough)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  ASSERT_GE(arbiter_publish_count_, 1u);
   const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
   ASSERT_NE(group, nullptr);
@@ -859,7 +853,6 @@ TEST_F(ArbiterCharacteristic, priorityBasedPerceptionOnlyPassesThrough)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  ASSERT_GE(arbiter_publish_count_, 1u);
   const auto * group =
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_c);
   ASSERT_NE(group, nullptr);
@@ -894,7 +887,6 @@ TEST_F(ArbiterCharacteristic, priorityBasedOffMapIdDropped)
   publishPerception(perception_traffic_signal);
 
   // Assert
-  ASSERT_GE(arbiter_publish_count_, 1u);
   EXPECT_EQ(findTrafficLightGroup(latest_arbitrated_traffic_signal_, kOffMapProbeId), nullptr);
   EXPECT_NE(
     findTrafficLightGroup(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a), nullptr);
@@ -943,6 +935,8 @@ TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
   publishPerception(perception_traffic_signal);
 
   // Assert: arbiter publishes, but the output contains no groups.
+  // The publish-count check distinguishes "no publish happened" from
+  // "publish happened with an empty array" — both leave groups empty.
   ASSERT_GE(arbiter_publish_count_, 1u);
   EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 0u);
 }
