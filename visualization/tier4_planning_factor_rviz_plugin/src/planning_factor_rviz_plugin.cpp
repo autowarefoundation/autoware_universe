@@ -237,8 +237,6 @@ void PlanningFactorRvizPlugin::processMessage(
         for (const auto & control_point : factor.control_points) {
           // Planning factors already carry driving direction. Use the matching bumper offset so
           // STOP walls align with the effective leading edge in reverse as well as forward.
-          std::cout << "[Debug PlanningFactorRvizPlugin] is_driving_forward: "
-                    << factor.is_driving_forward << std::endl;
           const double longitudinal_offset =
             factor.is_driving_forward ? baselink2front : baselink2rear;
           const auto virtual_wall = createStopVirtualWallMarker(
