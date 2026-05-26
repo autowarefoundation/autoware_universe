@@ -225,29 +225,9 @@ builtin_interfaces::msg::Time offset_time(const rclcpp::Time & base, double seco
   return (base + rclcpp::Duration::from_seconds(seconds));
 }
 
-// --- Output inspection helpers -----------------------------------------
-
-const TrafficLightGroup * find_traffic_light_group(
-  const TrafficLightGroupArray & msg, lanelet::Id id)
-{
-  for (const auto & group : msg.traffic_light_groups) {
-    if (group.traffic_light_group_id == id) {
-      return &group;
-    }
-  }
-  return nullptr;
-}
-
-const TrafficLightElement * find_traffic_light_element(
-  const TrafficLightGroup & group, uint8_t shape)
-{
-  for (const auto & element : group.elements) {
-    if (element.shape == shape) {
-      return &element;
-    }
-  }
-  return nullptr;
-}
+// Output inspection helpers live on the fixture (see find_traffic_light_group
+// and find_traffic_light_element) so they can read latest_arbitrated_traffic_signal_
+// implicitly and share a layer with observed_color/shape/... etc.
 
 // --- Test fixture ------------------------------------------------------
 
@@ -346,28 +326,51 @@ protected:
     }
   }
 
+  // Look up a TrafficLightGroup or TrafficLightElement in the latest
+  // arbitrated output. Returning nullptr signals "not present"; tests
+  // pair this with ASSERT_NE / EXPECT_EQ accordingly.
+  const TrafficLightGroup * find_traffic_light_group(lanelet::Id id) const
+  {
+    for (const auto & group : latest_arbitrated_traffic_signal_.traffic_light_groups) {
+      if (group.traffic_light_group_id == id) {
+        return &group;
+      }
+    }
+    return nullptr;
+  }
+  const TrafficLightElement * find_traffic_light_element(
+    const TrafficLightGroup & group, uint8_t shape) const
+  {
+    for (const auto & element : group.elements) {
+      if (element.shape == shape) {
+        return &element;
+      }
+    }
+    return nullptr;
+  }
+
   // Return the first element's color/shape/confidence for the given id in
   // the latest arbitrated output. When the id is absent or has no
   // elements, return a sentinel value (UINT8_MAX / -1.0f) that is never
   // valid, so EXPECT_EQ at the call site fails loudly.
   uint8_t observed_color(lanelet::Id signal_id) const
   {
-    const auto * group = find_traffic_light_group(latest_arbitrated_traffic_signal_, signal_id);
+    const auto * group = find_traffic_light_group(signal_id);
     return (group && !group->elements.empty()) ? group->elements[0].color : UINT8_MAX;
   }
   uint8_t observed_shape(lanelet::Id signal_id) const
   {
-    const auto * group = find_traffic_light_group(latest_arbitrated_traffic_signal_, signal_id);
+    const auto * group = find_traffic_light_group(signal_id);
     return (group && !group->elements.empty()) ? group->elements[0].shape : UINT8_MAX;
   }
   float observed_confidence(lanelet::Id signal_id) const
   {
-    const auto * group = find_traffic_light_group(latest_arbitrated_traffic_signal_, signal_id);
+    const auto * group = find_traffic_light_group(signal_id);
     return (group && !group->elements.empty()) ? group->elements[0].confidence : -1.0f;
   }
   std::size_t observed_prediction_count(lanelet::Id signal_id) const
   {
-    const auto * group = find_traffic_light_group(latest_arbitrated_traffic_signal_, signal_id);
+    const auto * group = find_traffic_light_group(signal_id);
     return group ? group->predictions.size() : SIZE_MAX;
   }
 
@@ -532,8 +535,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingElementCountMismatchProducesUnknown)
   publish_perception(perception_traffic_signal);
 
   // Assert
-  const auto * group =
-    find_traffic_light_group(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_c);
+  const auto * group = find_traffic_light_group(map_ids::vehicle_signal_c);
   ASSERT_NE(group, nullptr);
   ASSERT_EQ(group->elements.size(), 2u);
   EXPECT_NE(find_traffic_light_element(*group, TrafficLightElement::CIRCLE), nullptr);
@@ -572,10 +574,8 @@ TEST_F(ArbiterCharacteristic, signalMatchingOffMapIdDropped)
   publish_perception(perception_traffic_signal);
 
   // Assert
-  EXPECT_EQ(find_traffic_light_group(latest_arbitrated_traffic_signal_, kOffMapProbeId), nullptr);
-  EXPECT_NE(
-    find_traffic_light_group(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a),
-    nullptr);
+  EXPECT_EQ(find_traffic_light_group(kOffMapProbeId), nullptr);
+  EXPECT_NE(find_traffic_light_group(map_ids::vehicle_signal_a), nullptr);
 }
 
 // Pedestrian path bypasses element matching; with source_priority=external
@@ -827,8 +827,7 @@ TEST_F(ArbiterCharacteristic, priorityBasedExternalOnlyPassesThrough)
   publish_perception(perception_traffic_signal);
 
   // Assert
-  const auto * group =
-    find_traffic_light_group(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_b);
+  const auto * group = find_traffic_light_group(map_ids::vehicle_signal_b);
   ASSERT_NE(group, nullptr);
   ASSERT_EQ(group->elements.size(), 2u);
   EXPECT_NE(find_traffic_light_element(*group, TrafficLightElement::CIRCLE), nullptr);
@@ -891,10 +890,8 @@ TEST_F(ArbiterCharacteristic, priorityBasedOffMapIdDropped)
   publish_perception(perception_traffic_signal);
 
   // Assert
-  EXPECT_EQ(find_traffic_light_group(latest_arbitrated_traffic_signal_, kOffMapProbeId), nullptr);
-  EXPECT_NE(
-    find_traffic_light_group(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a),
-    nullptr);
+  EXPECT_EQ(find_traffic_light_group(kOffMapProbeId), nullptr);
+  EXPECT_NE(find_traffic_light_group(map_ids::vehicle_signal_a), nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -1181,8 +1178,7 @@ TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
 
   // Assert
   ASSERT_EQ(observed_prediction_count(map_ids::vehicle_signal_a), 1u);
-  const auto * group =
-    find_traffic_light_group(latest_arbitrated_traffic_signal_, map_ids::vehicle_signal_a);
+  const auto * group = find_traffic_light_group(map_ids::vehicle_signal_a);
   EXPECT_EQ(
     group->predictions[0].information_source,
     PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION);
