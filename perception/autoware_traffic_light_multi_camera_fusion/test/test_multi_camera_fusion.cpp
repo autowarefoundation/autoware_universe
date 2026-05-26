@@ -189,6 +189,19 @@ TrafficLight make_unknown_signal(lanelet::Id traffic_light_id)
   return signal;
 }
 
+TrafficLight make_signal_with_left_arrow(
+  lanelet::Id traffic_light_id, uint8_t color, float confidence)
+{
+  TrafficLight signal = make_signal(traffic_light_id, color, confidence);
+  T4Element arrow_element;
+  arrow_element.color = color;
+  arrow_element.shape = T4Element::LEFT_ARROW;
+  arrow_element.status = T4Element::SOLID_ON;
+  arrow_element.confidence = confidence;
+  signal.elements.push_back(arrow_element);
+  return signal;
+}
+
 TrafficLightArray make_signal_array(
   const rclcpp::Time & stamp, const std::string & frame_id, const TrafficLight & signal)
 {
@@ -538,17 +551,8 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommo
   MultiCameraFusion fusion(config);
   const auto input0 =
     make_fusion_input("camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
-
-  TrafficLight compound_signal = make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f);
-  {
-    T4Element arrow_element;
-    arrow_element.color = T4Element::RED;
-    arrow_element.shape = T4Element::LEFT_ARROW;
-    arrow_element.status = T4Element::SOLID_ON;
-    arrow_element.confidence = 0.9f;
-    compound_signal.elements.push_back(arrow_element);
-  }
-  const auto input1 = make_fusion_input("camera1", compound_signal);
+  const auto input1 = make_fusion_input(
+    "camera1", make_signal_with_left_arrow(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
 
   // Act
   fusion.fuse(input0.camera_info, input0.roi_array, input0.signal_array);
@@ -572,17 +576,8 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchDisabledPublishesFail
   MultiCameraFusion fusion(config);
   const auto input0 =
     make_fusion_input("camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
-
-  TrafficLight compound_signal = make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f);
-  {
-    T4Element arrow_element;
-    arrow_element.color = T4Element::RED;
-    arrow_element.shape = T4Element::LEFT_ARROW;
-    arrow_element.status = T4Element::SOLID_ON;
-    arrow_element.confidence = 0.9f;
-    compound_signal.elements.push_back(arrow_element);
-  }
-  const auto input1 = make_fusion_input("camera1", compound_signal);
+  const auto input1 = make_fusion_input(
+    "camera1", make_signal_with_left_arrow(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
 
   // Act
   fusion.fuse(input0.camera_info, input0.roi_array, input0.signal_array);
