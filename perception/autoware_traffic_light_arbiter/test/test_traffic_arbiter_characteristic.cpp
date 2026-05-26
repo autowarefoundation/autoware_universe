@@ -375,19 +375,7 @@ protected:
 };
 
 // ---------------------------------------------------------------------------
-// A. Signal Matching mode - arbitration rules across source agreement.
-//
-// Pins the full Signal Matching behavior spec: the arbiter degrades
-// gracefully as the agreement between sources weakens, falling back to
-// UNKNOWN when the signals disagree and dropping ids that are not on the
-// map. Each validation outcome of SignalMatchValidator is exercised by
-// a dedicated test:
-//   - matched (color & shape agree) -> perception passes through
-//   - color mismatch                -> UNKNOWN over the shared shape
-//   - element-count mismatch        -> UNKNOWN over the shape union
-//   - off-map id                    -> dropped (WARN+skip)
-// (Confidence is omitted in element constructors because Signal Matching
-// never reads it; the 1.0f default applies.)
+// A. Signal Matching mode (enable_signal_matching=true)
 // ---------------------------------------------------------------------------
 
 // Matched: external and perception agree on color and shape. Perception
@@ -767,18 +755,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingIgnoresConfidenceInEquivalence)
 }
 
 // ---------------------------------------------------------------------------
-// B. Priority-based mode - per-shape element selection driven by
-//    source_priority and confidence.
-//
-// Pins the arbitration spec when Signal Matching is off: for each
-// regulatory-element id the arbiter walks every shape independently and
-// resolves the chosen element through a two-stage comparison
-// (priority flag first, confidence tiebreaker second). Each scenario is
-// exercised by a dedicated test:
-//   - both sources agree on shape         -> CONFIDENCE picks higher value
-//   - only external contributes (per id)  -> passes through (multi-shape preserved)
-//   - only perception contributes (per id) -> passes through
-//   - off-map id                          -> dropped (WARN+skip)
+// B. Priority-based mode (enable_signal_matching=false)
 // ---------------------------------------------------------------------------
 
 // Both sources contribute the same shape for the same id; under CONFIDENCE
@@ -924,12 +901,8 @@ TEST_F(ArbiterCharacteristic, priorityBasedOffMapIdDropped)
 }
 
 // ---------------------------------------------------------------------------
-// C. Focused specifications - boundary conditions, input validation, and
-//    isolated arbitration rules.
-//
-// Each test pins a single contract that the longest-path tests above do not
-// exercise: map availability, parameter validation, time tolerances,
-// priority overrides, equivalence semantics, and prediction passthrough.
+// C. Focused specifications — boundary cases, time tolerances,
+//    input validation, priority overrides, predictions.
 // ---------------------------------------------------------------------------
 
 TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
