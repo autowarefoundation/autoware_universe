@@ -223,6 +223,31 @@ TrafficLightGroup make_traffic_light_group(
   return group;
 }
 
+// Compose a TrafficLightGroupArray with one group in a single expression.
+// Reduces the per-test boilerplate of declaring an array, setting the
+// stamp, and pushing a group with three calls.
+TrafficLightGroupArray make_signal_array(
+  const rclcpp::Time & stamp, lanelet::Id id, std::vector<TrafficLightElement> elements,
+  std::vector<PredictedTrafficLightState> predictions = {})
+{
+  TrafficLightGroupArray msg;
+  msg.stamp = stamp;
+  msg.traffic_light_groups.push_back(
+    make_traffic_light_group(id, std::move(elements), std::move(predictions)));
+  return msg;
+}
+
+// Multi-group variant for tests that publish several ids in one message
+// (e.g. off-map-drop tests that mix an on-map id with kOffMapProbeId).
+TrafficLightGroupArray make_signal_array(
+  const rclcpp::Time & stamp, std::vector<TrafficLightGroup> groups)
+{
+  TrafficLightGroupArray msg;
+  msg.stamp = stamp;
+  msg.traffic_light_groups = std::move(groups);
+  return msg;
+}
+
 // --- Timestamp utility -------------------------------------------------
 
 builtin_interfaces::msg::Time offset_time(const rclcpp::Time & base, double seconds)
@@ -458,23 +483,15 @@ TEST_F(ArbiterCharacteristic, signalMatchingMatchedPassesThrough)
   start_arbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
-    {make_traffic_light_prediction(external_traffic_signal.stamp)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
-    {make_traffic_light_prediction(perception_traffic_signal.stamp)}));
-
   // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
+    {make_traffic_light_prediction(t0_)}));
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
+    {make_traffic_light_prediction(t0_)}));
 
   // Assert
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::RED);
@@ -489,21 +506,13 @@ TEST_F(ArbiterCharacteristic, signalMatchingColorMismatchProducesUnknown)
   start_arbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_b,
-    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_b,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-
   // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_b,
+    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_b,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
   // Assert
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_b), TrafficLightElement::UNKNOWN);
@@ -518,22 +527,14 @@ TEST_F(ArbiterCharacteristic, signalMatchingElementCountMismatchProducesUnknown)
   start_arbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_c,
+  // Act
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_c,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_c,
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_c,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE),
      make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW)}));
-
-  // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
 
   // Assert
   const auto * group = find_traffic_light_group(map_ids::vehicle_signal_c);
@@ -555,24 +556,17 @@ TEST_F(ArbiterCharacteristic, signalMatchingOffMapIdDropped)
   start_arbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    kOffMapProbeId,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-
   // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
+  publish_external(make_signal_array(
+    t0_, {make_traffic_light_group(
+            kOffMapProbeId,
+            {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}),
+          make_traffic_light_group(
+            map_ids::vehicle_signal_a,
+            {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
   // Assert
   EXPECT_EQ(find_traffic_light_group(kOffMapProbeId), nullptr);
@@ -587,23 +581,14 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianFallbackUsesSourcePriority
   start_arbiter(true, "external");  // signal matching mode, "external" priority
   publish_map();
 
-  // The confidence contrast (low external vs high perception) makes the
+  // Act: confidence contrast (low external vs high perception) makes the
   // priority override explicit: the lower-confidence external wins.
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::pedestrian_signal,
+  publish_external(make_signal_array(
+    t0_, map_ids::pedestrian_signal,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.1f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::pedestrian_signal,
+  publish_perception(make_signal_array(
+    t0_, map_ids::pedestrian_signal,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
-
-  // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
 
   // Assert: external priority wins despite its lower confidence.
   EXPECT_EQ(observed_color(map_ids::pedestrian_signal), TrafficLightElement::RED);
@@ -619,23 +604,14 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianPerceptionPriority)
   start_arbiter(true, "perception");  // signal matching mode, "perception" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  // The confidence contrast (high external vs low perception) makes the
+  // Act: confidence contrast (high external vs low perception) makes the
   // priority override explicit: the lower-confidence perception still wins.
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::pedestrian_signal,
+  publish_external(make_signal_array(
+    t0_, map_ids::pedestrian_signal,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.99f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::pedestrian_signal,
+  publish_perception(make_signal_array(
+    t0_, map_ids::pedestrian_signal,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.10f)}));
-
-  // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
 
   // Assert: perception priority wins despite its lower confidence.
   EXPECT_EQ(observed_color(map_ids::pedestrian_signal), TrafficLightElement::GREEN);
@@ -650,21 +626,13 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianConfidenceMode)
   start_arbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::pedestrian_signal,
-    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.6f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::pedestrian_signal,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
-
   // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
+  publish_external(make_signal_array(
+    t0_, map_ids::pedestrian_signal,
+    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.6f)}));
+  publish_perception(make_signal_array(
+    t0_, map_ids::pedestrian_signal,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
 
   // Assert: CONFIDENCE picks the higher-confidence element (perception 0.9)
   EXPECT_EQ(observed_color(map_ids::pedestrian_signal), TrafficLightElement::RED);
@@ -682,14 +650,10 @@ TEST_F(ArbiterCharacteristic, signalMatchingPedestrianSingleSourcePasses)
   start_arbiter(true, "external");  // signal matching mode, "external" priority
   publish_map();
 
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::pedestrian_signal,
-    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
-
   // Act (no external publish)
-  publish_perception(perception_traffic_signal);
+  publish_perception(make_signal_array(
+    t0_, map_ids::pedestrian_signal,
+    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Assert: perception passes through unchanged (no UNKNOWN translation)
   EXPECT_EQ(observed_color(map_ids::pedestrian_signal), TrafficLightElement::GREEN);
@@ -712,21 +676,13 @@ TEST_F(ArbiterCharacteristic, signalMatchingSingleSourceNonPedestrianYieldsUnkno
   start_arbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_b,
+  // Act: each side carries a different id, so each id has only one source.
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_b,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-
-  // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
 
   // Assert
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::UNKNOWN);
@@ -745,21 +701,13 @@ TEST_F(ArbiterCharacteristic, signalMatchingIgnoresConfidenceInEquivalence)
   start_arbiter(true, "confidence");  // signal matching mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.10f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.90f)}));
-
   // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.10f)}));
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.90f)}));
 
   // Assert
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::RED);
@@ -778,21 +726,13 @@ TEST_F(ArbiterCharacteristic, priorityBasedConfidencePicksHigherValue)
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
-
   // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
 
   // Assert
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
@@ -807,25 +747,17 @@ TEST_F(ArbiterCharacteristic, priorityBasedExternalOnlyPassesThrough)
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_b,
+  // Act
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_b,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.5f),
      make_traffic_light_element(
        TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW, 0.3f)}));
-
   // Send a separate id from perception so the arbiter publishes after both
   // callbacks have settled (the test then inspects vehicle_signal_b output).
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
-
-  // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
 
   // Assert
   const auto * group = find_traffic_light_group(map_ids::vehicle_signal_b);
@@ -843,23 +775,14 @@ TEST_F(ArbiterCharacteristic, priorityBasedPerceptionOnlyPassesThrough)
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
 
-  // External must publish something for the arbiter to settle; use a
+  // Act: external must publish something for the arbiter to settle; use a
   // different id so vehicle_signal_c is perception-only.
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_c,
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_c,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.8f)}));
-
-  // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
 
   // Assert
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_c), TrafficLightElement::GREEN);
@@ -874,21 +797,13 @@ TEST_F(ArbiterCharacteristic, priorityBasedOffMapIdDropped)
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    kOffMapProbeId,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
-
   // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
+  publish_external(make_signal_array(
+    t0_, kOffMapProbeId,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
 
   // Assert
   EXPECT_EQ(find_traffic_light_group(kOffMapProbeId), nullptr);
@@ -905,14 +820,10 @@ TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
   // Arrange (intentionally no publish_map())
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
 
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-
   // Act
-  publish_perception(perception_traffic_signal);
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
   // Assert: arbitrateAndPublish should early-return when no map has been received.
   expect_no_publish();
@@ -927,14 +838,10 @@ TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map(build_empty_map_bin());
 
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-
   // Act
-  publish_perception(perception_traffic_signal);
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
   // Assert: arbiter publishes, but the output contains no groups.
   expect_publish_happened();
@@ -952,21 +859,13 @@ TEST_F(ArbiterCharacteristic, unknownSourcePriorityFallsBackToConfidence)
   start_arbiter(false, "invalid_value");  // priority-based mode, "invalid_value" priority
   publish_map();
 
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
-
   // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
 
   // Assert: CONFIDENCE behavior - the higher-confidence perception wins.
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
@@ -979,23 +878,14 @@ TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
   start_arbiter(false, "perception");  // priority-based mode, "perception" priority
   publish_map();
 
-  // The confidence contrast (high external vs low perception) makes the
+  // Act: confidence contrast (high external vs low perception) makes the
   // priority override explicit: the lower-confidence perception still wins.
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.99f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.10f)}));
-
-  // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
 
   // Assert: perception priority wins despite its lower confidence.
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
@@ -1011,23 +901,14 @@ TEST_F(ArbiterCharacteristic, priorityFlagFromExternalOverridesHigherConfidence)
   start_arbiter(false, "external");  // priority-based mode, "external" priority
   publish_map();
 
-  // The confidence contrast (low external vs high perception) makes the
+  // Act: confidence contrast (low external vs high perception) makes the
   // priority override explicit: the lower-confidence external still wins.
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.10f)}));
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.99f)}));
-
-  // Act
-  publish_external(external_traffic_signal);
-  publish_perception(perception_traffic_signal);
 
   // Assert: external priority wins despite its lower confidence.
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::RED);
@@ -1043,12 +924,9 @@ TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
   publish_map();
 
   // Act 1: publish the first external signal (id vehicle_signal_a).
-  TrafficLightGroupArray first_external_traffic_signal;
-  first_external_traffic_signal.stamp = t0_;
-  first_external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
-  publish_external(first_external_traffic_signal);
 
   // Assert 1: only vehicle_signal_a is visible after the first publish.
   ASSERT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 1u);
@@ -1057,12 +935,9 @@ TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
     map_ids::vehicle_signal_a);
 
   // Act 2: publish a second external signal carrying a different id.
-  TrafficLightGroupArray second_external_traffic_signal;
-  second_external_traffic_signal.stamp = t0_;
-  second_external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_b,
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_b,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-  publish_external(second_external_traffic_signal);
 
   // Assert 2: both vehicle_signal_a and vehicle_signal_b appear in the output.
   EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 2u);
@@ -1075,24 +950,15 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
   // Arrange: establish a perception baseline so we can detect any extra publish.
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-  publish_perception(perception_traffic_signal);
   const auto baseline = publish_count();
 
-  // external_delay_tolerance defaults to 5.0s; 20s in the past is well past it.
-  TrafficLightGroupArray stale_external_traffic_signal;
-  stale_external_traffic_signal.stamp = offset_time(t0_, -20.0);
-  stale_external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  // Act: external_delay_tolerance defaults to 5.0s; 20s in the past is well past it.
+  publish_external(make_signal_array(
+    offset_time(t0_, -20.0), map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
-
-  // Act
-  publish_external(stale_external_traffic_signal);
 
   // Assert: stale external message must be dropped before arbitrateAndPublish runs.
   expect_no_publish_since(baseline);
@@ -1106,22 +972,14 @@ TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
   // arrival's cleanupExpiredExternalSignals (perception is +6s newer).
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
-
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = t0_;
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_external(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-  publish_external(external_traffic_signal);
-
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = offset_time(t0_, 6.0);
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
-    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Act
-  publish_perception(perception_traffic_signal);
+  publish_perception(make_signal_array(
+    offset_time(t0_, 6.0), map_ids::vehicle_signal_a,
+    {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
   // Assert
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
@@ -1137,23 +995,15 @@ TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
   publish_map();
 
   // Seed a perception value at t0_.
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-  publish_perception(perception_traffic_signal);
 
-  // External arrives 2.0s after perception (> perception_time_tolerance=1.0,
+  // Act: external arrives 2.0s after perception (> perception_time_tolerance=1.0,
   // < external_delay_tolerance=5.0 so it is itself accepted).
-  TrafficLightGroupArray external_traffic_signal;
-  external_traffic_signal.stamp = offset_time(t0_, 2.0);
-  external_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  publish_external(make_signal_array(
+    offset_time(t0_, 2.0), map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
-
-  // Act
-  publish_external(external_traffic_signal);
 
   // Assert: stale perception was wiped, output reflects only external.
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
@@ -1165,17 +1015,13 @@ TEST_F(ArbiterCharacteristic, predictionsFromSingleSidePropagate)
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
 
-  TrafficLightGroupArray perception_traffic_signal;
-  perception_traffic_signal.stamp = t0_;
-  perception_traffic_signal.traffic_light_groups.push_back(make_traffic_light_group(
-    map_ids::vehicle_signal_a,
+  // Act
+  publish_perception(make_signal_array(
+    t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
     {make_traffic_light_prediction(
       t0_, TrafficLightElement::GREEN, TrafficLightElement::CIRCLE,
       PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)}));
-
-  // Act
-  publish_perception(perception_traffic_signal);
 
   // Assert
   ASSERT_EQ(observed_prediction_count(map_ids::vehicle_signal_a), 1u);
