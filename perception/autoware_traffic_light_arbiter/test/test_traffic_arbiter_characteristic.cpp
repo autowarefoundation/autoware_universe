@@ -153,9 +153,7 @@ LaneletMapBin build_empty_map_bin()
 
 // --- Input message builders --------------------------------------------
 
-// Confidence defaults to 1.0f: most tests don't care about the value (the
-// arbiter only consults it under the CONFIDENCE branch), so omitting the
-// argument signals "this number is irrelevant to the assertion".
+// Confidence defaults to 1.0f because most tests do not assert on it.
 TrafficLightElement make_traffic_light_element(
   uint8_t color, uint8_t shape, float confidence = 1.0f)
 {
@@ -204,8 +202,6 @@ TrafficLightGroup make_traffic_light_group(
 }
 
 // Compose a TrafficLightGroupArray with one group in a single expression.
-// Reduces the per-test boilerplate of declaring an array, setting the
-// stamp, and pushing a group with three calls.
 TrafficLightGroupArray make_signal_array(
   const rclcpp::Time & stamp, lanelet::Id id, std::vector<TrafficLightElement> elements,
   std::vector<PredictedTrafficLightState> predictions = {})
@@ -217,8 +213,7 @@ TrafficLightGroupArray make_signal_array(
   return msg;
 }
 
-// Multi-group variant for tests that publish several ids in one message
-// (e.g. off-map-drop tests that mix an on-map id with map_ids::off_map_probe).
+// Multi-group variant for tests that publish several ids in one message.
 TrafficLightGroupArray make_signal_array(
   const rclcpp::Time & stamp, std::vector<TrafficLightGroup> groups)
 {
@@ -234,10 +229,6 @@ builtin_interfaces::msg::Time offset_time(const rclcpp::Time & base, double seco
 {
   return (base + rclcpp::Duration::from_seconds(seconds));
 }
-
-// Output inspection helpers live on the fixture (see find_traffic_light_group
-// and find_traffic_light_element) so they can read latest_arbitrated_traffic_signal_
-// implicitly and share a layer with observed_color/shape/... etc.
 
 // --- Test fixture ------------------------------------------------------
 
@@ -301,11 +292,6 @@ protected:
 
   void start_arbiter(bool enable_signal_matching, const std::string & source_priority)
   {
-    // Default tolerances mirror config/traffic_light_arbiter.param.yaml.
-    // We re-declare them here so the test is self-contained and unaffected
-    // by production config changes; only the two parameters that any test
-    // actually toggles (enable_signal_matching, source_priority) are
-    // exposed as start_arbiter() arguments.
     rclcpp::NodeOptions options;
     options.parameter_overrides({
       rclcpp::Parameter("external_delay_tolerance", kDefaultExternalDelayTolerance),
@@ -350,8 +336,7 @@ protected:
   }
 
   // Look up a TrafficLightGroup or TrafficLightElement in the latest
-  // arbitrated output. Returning nullptr signals "not present"; tests
-  // pair this with ASSERT_NE / EXPECT_EQ accordingly.
+  // arbitrated output. Returns nullptr when not present.
   const TrafficLightGroup * find_traffic_light_group(lanelet::Id id) const
   {
     for (const auto & group : latest_arbitrated_traffic_signal_.traffic_light_groups) {
@@ -397,17 +382,13 @@ protected:
     return group ? group->predictions.size() : SIZE_MAX;
   }
 
-  // Whole-output query: how many TrafficLightGroups the arbiter published
-  // in its latest message. Used by tests that pin the cardinality of the
-  // output (empty publish on empty map, accumulation across publishes).
+  // Cardinality of the latest published TrafficLightGroupArray.
   std::size_t observed_group_count() const
   {
     return latest_arbitrated_traffic_signal_.traffic_light_groups.size();
   }
 
-  // Multi-element variants: pick the element whose shape matches and read
-  // its color. Used by tests that pin a shape-union output (e.g.
-  // element-count mismatch yielding UNKNOWN over CIRCLE+RIGHT_ARROW).
+  // Multi-element variants: pick the element with the matching shape.
   std::size_t observed_element_count(lanelet::Id signal_id) const
   {
     const auto * group = find_traffic_light_group(signal_id);
@@ -423,10 +404,9 @@ protected:
     return element ? element->color : UINT8_MAX;
   }
 
-  // arbiter_publish_count_ (incremented by the output subscription callback)
-  // is read in two specific tests where content alone cannot express the
-  // contract: see perceptionBeforeMapProducesNoOutput and
-  // emptyMapProducesEmptyOutput for the rationale at each call site.
+  // arbiter_publish_count_ is incremented by the output subscription
+  // callback and read by tests where content alone cannot prove whether
+  // a publish happened.
 
   // Wrapped in std::optional because LaneletMapBin (a generated ROS msg)
   // has no usable default constructor that can be invoked at static storage
@@ -445,11 +425,8 @@ protected:
   TrafficLightGroupArray latest_arbitrated_traffic_signal_;
   std::size_t arbiter_publish_count_ = 0;
 
-  // Reference timestamp captured once in start_arbiter(). Tests use t0_
-  // (and offset_time(t0_, ...)) as a fixed clock so no test body needs
-  // to query the node clock again. t0_ is sampled just before each test
-  // publishes, so its small drift from the arbiter's wall clock stays
-  // well within external_delay_tolerance.
+  // Reference timestamp captured once in start_arbiter(); tests use it
+  // (and offset_time(t0_, ...)) as a fixed clock.
   rclcpp::Time t0_;
 
 private:
@@ -462,9 +439,7 @@ private:
   static constexpr const char * kOutputTopic = "/traffic_light_arbiter/pub/traffic_signals";
 
 protected:
-  // Tolerance used by TEST_F bodies when comparing confidence values via
-  // EXPECT_NEAR. Kept inside the fixture because it is only meaningful for
-  // tests that derive from this class.
+  // Tolerance used by EXPECT_NEAR when comparing confidence values.
   static constexpr float kConfidenceEpsilon = 1e-5f;
 
   // Default tolerance values declared on the arbiter (mirrors
@@ -856,11 +831,9 @@ TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
   EXPECT_EQ(observed_group_count(), 0u);
 }
 
-// Pins the input-validation contract: an unknown source_priority string
-// must not crash the node and must not silently change behavior; the
-// arbiter must fall back to CONFIDENCE. We verify the fallback by feeding
-// the typical CONFIDENCE scenario (high-confidence perception wins) and
-// confirming perception is selected.
+// An unknown source_priority string must fall back to CONFIDENCE. Verified
+// by feeding a CONFIDENCE scenario and confirming the higher-confidence
+// perception wins.
 TEST_F(ArbiterCharacteristic, unknownSourcePriorityFallsBackToConfidence)
 {
   // Arrange: pass a value not in {"external", "perception", "confidence"}.
@@ -901,8 +874,7 @@ TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
 
 // Symmetric counterpart of priorityFlagOverridesHigherConfidence: with
 // source_priority=external, the external value wins over a higher-confidence
-// perception value. This pins the EXTERNAL branch in arbitrateAndPublish
-// ([traffic_light_arbiter.cpp]: source_priority_ == EXTERNAL).
+// perception value.
 TEST_F(ArbiterCharacteristic, priorityFlagFromExternalOverridesHigherConfidence)
 {
   // Arrange
