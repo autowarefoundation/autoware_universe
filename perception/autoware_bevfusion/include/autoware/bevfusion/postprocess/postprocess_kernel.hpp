@@ -18,6 +18,8 @@
 #include "autoware/bevfusion/bevfusion_config.hpp"
 #include "autoware/bevfusion/utils.hpp"
 
+#include <autoware/cuda_utils/cuda_utils.hpp>
+
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 
