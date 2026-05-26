@@ -404,6 +404,24 @@ protected:
     return group ? group->predictions.size() : SIZE_MAX;
   }
 
+  // Multi-element variants: pick the element whose shape matches and read
+  // its color. Used by tests that pin a shape-union output (e.g.
+  // element-count mismatch yielding UNKNOWN over CIRCLE+RIGHT_ARROW).
+  std::size_t observed_element_count(lanelet::Id signal_id) const
+  {
+    const auto * group = find_traffic_light_group(signal_id);
+    return group ? group->elements.size() : SIZE_MAX;
+  }
+  uint8_t observed_color_of_shape(lanelet::Id signal_id, uint8_t shape) const
+  {
+    const auto * group = find_traffic_light_group(signal_id);
+    if (!group) {
+      return UINT8_MAX;
+    }
+    const auto * element = find_traffic_light_element(*group, shape);
+    return element ? element->color : UINT8_MAX;
+  }
+
   // arbiter_publish_count_ (incremented by the output subscription callback)
   // is read in two specific tests where content alone cannot express the
   // contract: see perceptionBeforeMapProducesNoOutput and
@@ -514,15 +532,14 @@ TEST_F(ArbiterCharacteristic, signalMatchingElementCountMismatchProducesUnknown)
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE),
      make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW)}));
 
-  // Assert
-  const auto * group = find_traffic_light_group(map_ids::vehicle_signal_c);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 2u);
-  EXPECT_NE(find_traffic_light_element(*group, TrafficLightElement::CIRCLE), nullptr);
-  EXPECT_NE(find_traffic_light_element(*group, TrafficLightElement::RIGHT_ARROW), nullptr);
-  for (const auto & element : group->elements) {
-    EXPECT_EQ(element.color, TrafficLightElement::UNKNOWN);
-  }
+  // Assert: shape union has both CIRCLE and RIGHT_ARROW, both as UNKNOWN.
+  EXPECT_EQ(observed_element_count(map_ids::vehicle_signal_c), 2u);
+  EXPECT_EQ(
+    observed_color_of_shape(map_ids::vehicle_signal_c, TrafficLightElement::CIRCLE),
+    TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(
+    observed_color_of_shape(map_ids::vehicle_signal_c, TrafficLightElement::RIGHT_ARROW),
+    TrafficLightElement::UNKNOWN);
 }
 
 // Off-map id: an id not present in the vector map is silently dropped
@@ -737,12 +754,14 @@ TEST_F(ArbiterCharacteristic, priorityBasedExternalOnlyPassesThrough)
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
 
-  // Assert
-  const auto * group = find_traffic_light_group(map_ids::vehicle_signal_b);
-  ASSERT_NE(group, nullptr);
-  ASSERT_EQ(group->elements.size(), 2u);
-  EXPECT_NE(find_traffic_light_element(*group, TrafficLightElement::CIRCLE), nullptr);
-  EXPECT_NE(find_traffic_light_element(*group, TrafficLightElement::RIGHT_ARROW), nullptr);
+  // Assert: external-only passes through with both shapes and colors preserved.
+  EXPECT_EQ(observed_element_count(map_ids::vehicle_signal_b), 2u);
+  EXPECT_EQ(
+    observed_color_of_shape(map_ids::vehicle_signal_b, TrafficLightElement::CIRCLE),
+    TrafficLightElement::RED);
+  EXPECT_EQ(
+    observed_color_of_shape(map_ids::vehicle_signal_b, TrafficLightElement::RIGHT_ARROW),
+    TrafficLightElement::GREEN);
 }
 
 // Only perception contributes an id (external silent). The element flows
