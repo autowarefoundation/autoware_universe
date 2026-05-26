@@ -15,7 +15,7 @@
 #include "autoware/bevfusion/postprocess/circle_nms_kernel.hpp"
 #include "autoware/bevfusion/postprocess/postprocess_kernel.hpp"
 
-#include <autoware/cuda_utils/cuda_utils.hpp>
+#include <autoware/cuda_utils/cuda_check_error.hpp>
 
 #include <thrust/count.h>
 #include <thrust/device_vector.h>

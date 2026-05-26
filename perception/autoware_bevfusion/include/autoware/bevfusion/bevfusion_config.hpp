@@ -43,8 +43,8 @@ public:
     const std::int64_t features_width, const std::int64_t num_depth_features,
     const std::int64_t image_feature_channel, const std::int64_t num_proposals,
     const float circle_nms_dist_threshold, const std::vector<double> & yaw_norm_thresholds,
-    const float score_thresholds, const std::vector<float> & distance_bin_upper_limits,
-    const bool use_intensity)
+    const std::vector<float> & score_thresholds,
+    const std::vector<float> & distance_bin_upper_limits, const bool use_intensity)
   {
     // Derive sensor_fusion from image backbone parameters
     // All three must be empty OR all three must be non-empty
@@ -129,7 +129,7 @@ public:
       throw std::invalid_argument("score_upper_bounds must be sorted in ascending order");
     }
     distance_bin_upper_limits_ = distance_bin_upper_limits;
-    for (auto & distance_bin_upper_limit : distance_bin_upper_limits) {
+    for (auto & distance_bin_upper_limit : distance_bin_upper_limits_) {
       // Note: Square the distance bin upper limit to get the radial distance to skip the sqrtf
       // operation
       distance_bin_upper_limit = distance_bin_upper_limit * distance_bin_upper_limit;

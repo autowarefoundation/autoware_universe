@@ -18,7 +18,7 @@
 #include "autoware/bevfusion/bevfusion_config.hpp"
 #include "autoware/bevfusion/utils.hpp"
 
-#include <autoware/cuda_utils/cuda_utils.hpp>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 
 #include <cuda.h>
 #include <cuda_runtime_api.h>
@@ -42,8 +42,8 @@ private:
   cudaStream_t stream_;
 
   // For distance-based and class-based score thresholding
-  cuda::unique_ptr<float[]> distance_bin_upper_limits_d_ptr_{nullptr};
-  cuda::unique_ptr<float[]> score_thresholds_d_ptr_{nullptr};
+  CudaUniquePtr<float[]> distance_bin_upper_limits_d_ptr_{nullptr};
+  CudaUniquePtr<float[]> score_thresholds_d_ptr_{nullptr};
 };
 
 }  // namespace autoware::bevfusion
