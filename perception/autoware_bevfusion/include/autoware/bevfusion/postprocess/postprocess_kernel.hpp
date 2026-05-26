@@ -38,6 +38,10 @@ public:
 private:
   BEVFusionConfig config_;
   cudaStream_t stream_;
+
+  // For distance-based and class-based score thresholding
+  cuda::unique_ptr<float[]> distance_bin_upper_limits_d_ptr_{nullptr};
+  cuda::unique_ptr<float[]> score_thresholds_d_ptr_{nullptr};
 };
 
 }  // namespace autoware::bevfusion

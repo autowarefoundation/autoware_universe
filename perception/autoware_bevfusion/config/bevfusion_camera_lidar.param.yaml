@@ -25,4 +25,3 @@
     iou_nms_search_distance_2d: 10.0
     iou_nms_threshold: 0.1
     yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0] # refers to the class_names
-    score_threshold: 0.1
