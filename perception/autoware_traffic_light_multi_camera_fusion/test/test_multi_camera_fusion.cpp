@@ -157,14 +157,32 @@ TrafficLight make_signal(lanelet::Id traffic_light_id, uint8_t color, float conf
 }
 
 TrafficLightArray make_signal_array(
-  const rclcpp::Time & stamp, const std::string & frame_id, lanelet::Id traffic_light_id,
-  uint8_t color, float confidence)
+  const rclcpp::Time & stamp, const std::string & frame_id, const TrafficLight & signal)
 {
   TrafficLightArray signal_array;
   signal_array.header.stamp = stamp;
   signal_array.header.frame_id = frame_id;
-  signal_array.signals.push_back(make_signal(traffic_light_id, color, confidence));
+  signal_array.signals.push_back(signal);
   return signal_array;
+}
+
+// Bundle the three inputs to `MultiCameraFusion::fuse` for the common case of a single signal
+// observed by one camera. The ROI id is derived from `signal.traffic_light_id` so the ROI and the
+// signal always match — use the lower-level `make_roi_array` / `make_signal_array` directly when a
+// mismatched ROI/signal pairing or empty arrays are required.
+struct FusionInput
+{
+  CameraInfo camera_info;
+  TrafficLightRoiArray roi_array;
+  TrafficLightArray signal_array;
+};
+
+FusionInput make_fusion_input(
+  const rclcpp::Time & stamp, const std::string & frame_id, const TrafficLight & signal)
+{
+  return FusionInput{
+    make_camera_info(stamp, frame_id), make_roi_array(stamp, frame_id, signal.traffic_light_id),
+    make_signal_array(stamp, frame_id, signal)};
 }
 
 }  // namespace
@@ -173,13 +191,11 @@ TEST(MultiCameraFusionFuse, SingleCameraSingleLightOutputsGroupWithMappedRegulat
 {
   // Arrange
   MultiCameraFusion fusion(make_default_config());
-  const rclcpp::Time stamp(100, 0);
-  const std::string frame_id = "camera0";
+  const auto input = make_fusion_input(
+    rclcpp::Time(100, 0), "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
 
   // Act
-  const auto result = fusion.fuse(
-    make_camera_info(stamp, frame_id), make_roi_array(stamp, frame_id, LEFT_TRAFFIC_LIGHT_ID),
-    make_signal_array(stamp, frame_id, LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  const auto result = fusion.fuse(input.camera_info, input.roi_array, input.signal_array);
 
   // Assert
   ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
@@ -216,13 +232,12 @@ TEST(MultiCameraFusionFuse, UnknownTrafficLightIdIsRecordedAsUnmapped)
 {
   // Arrange
   MultiCameraFusion fusion(make_default_config());
-  const rclcpp::Time stamp(100, 0);
-  const std::string frame_id = "camera0";
+  const auto input = make_fusion_input(
+    rclcpp::Time(100, 0), "camera0",
+    make_signal(UNMAPPED_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
 
   // Act
-  const auto result = fusion.fuse(
-    make_camera_info(stamp, frame_id), make_roi_array(stamp, frame_id, UNMAPPED_TRAFFIC_LIGHT_ID),
-    make_signal_array(stamp, frame_id, UNMAPPED_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  const auto result = fusion.fuse(input.camera_info, input.roi_array, input.signal_array);
 
   // Assert
   EXPECT_TRUE(result.traffic_light_groups.traffic_light_groups.empty());
@@ -236,13 +251,11 @@ TEST(MultiCameraFusionFuse, NullLaneletMapTreatsAllTrafficLightsAsUnmapped)
   auto config = make_default_config();
   config.lanelet_map_ptr = nullptr;
   MultiCameraFusion fusion(config);
-  const rclcpp::Time stamp(100, 0);
-  const std::string frame_id = "camera0";
+  const auto input = make_fusion_input(
+    rclcpp::Time(100, 0), "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
 
   // Act
-  const auto result = fusion.fuse(
-    make_camera_info(stamp, frame_id), make_roi_array(stamp, frame_id, LEFT_TRAFFIC_LIGHT_ID),
-    make_signal_array(stamp, frame_id, LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  const auto result = fusion.fuse(input.camera_info, input.roi_array, input.signal_array);
 
   // Assert
   EXPECT_TRUE(result.traffic_light_groups.traffic_light_groups.empty());
@@ -259,7 +272,7 @@ TEST(MultiCameraFusionFuse, RoiWithoutMatchingSignalIsIgnored)
 
   // signal id does not match the roi id -> the roi cannot be paired with a signal
   TrafficLightArray mismatched_signals =
-    make_signal_array(stamp, frame_id, RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f);
+    make_signal_array(stamp, frame_id, make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
 
   // Act
   const auto result = fusion.fuse(
@@ -277,14 +290,15 @@ TEST(MultiCameraFusionFuse, HigherConfidenceColorIsSelectedAcrossTwoLights)
   // the color reported with the higher confidence (GREEN at 0.9 vs RED at 0.6) is selected.
   MultiCameraFusion fusion(make_default_config());
   const rclcpp::Time stamp(100, 0);
+  const auto input_camera0 =
+    make_fusion_input(stamp, "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.6f));
+  const auto input_camera1 = make_fusion_input(
+    stamp, "camera1", make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
 
   // Act
-  fusion.fuse(
-    make_camera_info(stamp, "camera0"), make_roi_array(stamp, "camera0", LEFT_TRAFFIC_LIGHT_ID),
-    make_signal_array(stamp, "camera0", LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.6f));
-  const auto result = fusion.fuse(
-    make_camera_info(stamp, "camera1"), make_roi_array(stamp, "camera1", RIGHT_TRAFFIC_LIGHT_ID),
-    make_signal_array(stamp, "camera1", RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  fusion.fuse(input_camera0.camera_info, input_camera0.roi_array, input_camera0.signal_array);
+  const auto result =
+    fusion.fuse(input_camera1.camera_info, input_camera1.roi_array, input_camera1.signal_array);
 
   // Assert
   ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
@@ -301,18 +315,15 @@ TEST(MultiCameraFusionFuse, RecordOlderThanMessageLifespanIsDiscarded)
   auto config = make_default_config();
   config.message_lifespan = 1.0;
   MultiCameraFusion fusion(config);
+  const auto input_camera0 = make_fusion_input(
+    rclcpp::Time(100, 0), "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  const auto input_camera1 = make_fusion_input(
+    rclcpp::Time(102, 0), "camera1", make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.6f));
 
   // Act
-  fusion.fuse(
-    make_camera_info(rclcpp::Time(100, 0), "camera0"),
-    make_roi_array(rclcpp::Time(100, 0), "camera0", LEFT_TRAFFIC_LIGHT_ID),
-    make_signal_array(
-      rclcpp::Time(100, 0), "camera0", LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
-  const auto result = fusion.fuse(
-    make_camera_info(rclcpp::Time(102, 0), "camera1"),
-    make_roi_array(rclcpp::Time(102, 0), "camera1", RIGHT_TRAFFIC_LIGHT_ID),
-    make_signal_array(
-      rclcpp::Time(102, 0), "camera1", RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.6f));
+  fusion.fuse(input_camera0.camera_info, input_camera0.roi_array, input_camera0.signal_array);
+  const auto result =
+    fusion.fuse(input_camera1.camera_info, input_camera1.roi_array, input_camera1.signal_array);
 
   // Assert
   // Only the second record contributes -> single light, RED color.
@@ -329,18 +340,15 @@ TEST(MultiCameraFusionFuse, RecordWithinMessageLifespanIsKeptAndAccumulated)
   auto config = make_default_config();
   config.message_lifespan = 2.0;
   MultiCameraFusion fusion(config);
+  const auto input_camera0 = make_fusion_input(
+    rclcpp::Time(100, 0), "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  const auto input_camera1 = make_fusion_input(
+    rclcpp::Time(101, 0), "camera1", make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.7f));
 
   // Act
-  fusion.fuse(
-    make_camera_info(rclcpp::Time(100, 0), "camera0"),
-    make_roi_array(rclcpp::Time(100, 0), "camera0", LEFT_TRAFFIC_LIGHT_ID),
-    make_signal_array(
-      rclcpp::Time(100, 0), "camera0", LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
-  const auto result = fusion.fuse(
-    make_camera_info(rclcpp::Time(101, 0), "camera1"),
-    make_roi_array(rclcpp::Time(101, 0), "camera1", RIGHT_TRAFFIC_LIGHT_ID),
-    make_signal_array(
-      rclcpp::Time(101, 0), "camera1", RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.7f));
+  fusion.fuse(input_camera0.camera_info, input_camera0.roi_array, input_camera0.signal_array);
+  const auto result =
+    fusion.fuse(input_camera1.camera_info, input_camera1.roi_array, input_camera1.signal_array);
 
   // Assert
   // Both records aggregate into a single group (same regulatory element) with color GREEN.
@@ -357,14 +365,15 @@ TEST(MultiCameraFusionFuse, ConsistencyCheckWithSameColorOutputsNoConflict)
   config.use_signal_consistency_check = true;
   MultiCameraFusion fusion(config);
   const rclcpp::Time stamp(100, 0);
+  const auto input_camera0 =
+    make_fusion_input(stamp, "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  const auto input_camera1 = make_fusion_input(
+    stamp, "camera1", make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
 
   // Act
-  fusion.fuse(
-    make_camera_info(stamp, "camera0"), make_roi_array(stamp, "camera0", LEFT_TRAFFIC_LIGHT_ID),
-    make_signal_array(stamp, "camera0", LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
-  const auto result = fusion.fuse(
-    make_camera_info(stamp, "camera1"), make_roi_array(stamp, "camera1", RIGHT_TRAFFIC_LIGHT_ID),
-    make_signal_array(stamp, "camera1", RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  fusion.fuse(input_camera0.camera_info, input_camera0.roi_array, input_camera0.signal_array);
+  const auto result =
+    fusion.fuse(input_camera1.camera_info, input_camera1.roi_array, input_camera1.signal_array);
 
   // Assert
   ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
@@ -385,14 +394,15 @@ TEST(MultiCameraFusionFuse, ConsistencyCheckWithConflictingColorsOutputsUnknownF
   config.publish_partial_matched_signal = false;
   MultiCameraFusion fusion(config);
   const rclcpp::Time stamp(100, 0);
+  const auto input_camera0 =
+    make_fusion_input(stamp, "camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
+  const auto input_camera1 = make_fusion_input(
+    stamp, "camera1", make_signal(RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
 
   // Act
-  fusion.fuse(
-    make_camera_info(stamp, "camera0"), make_roi_array(stamp, "camera0", LEFT_TRAFFIC_LIGHT_ID),
-    make_signal_array(stamp, "camera0", LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
-  const auto result = fusion.fuse(
-    make_camera_info(stamp, "camera1"), make_roi_array(stamp, "camera1", RIGHT_TRAFFIC_LIGHT_ID),
-    make_signal_array(stamp, "camera1", RIGHT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f));
+  fusion.fuse(input_camera0.camera_info, input_camera0.roi_array, input_camera0.signal_array);
+  const auto result =
+    fusion.fuse(input_camera1.camera_info, input_camera1.roi_array, input_camera1.signal_array);
 
   // Assert
   ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
