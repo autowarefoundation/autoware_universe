@@ -6,5 +6,7 @@
     std: [58.395, 57.12, 57.375]
     over_exposure_threshold: 0.85
     under_exposure_threshold: -0.83
-    classifier_type: 1
     traffic_light_type: 0
+    score_threshold: 0.2
+    nms_threshold: 0.2
+    max_batch_size: 64
