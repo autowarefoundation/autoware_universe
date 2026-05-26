@@ -59,7 +59,6 @@ namespace map_ids
 {
 constexpr lanelet::Id vehicle_signal_a = 1001;
 constexpr lanelet::Id vehicle_signal_b = 1002;
-constexpr lanelet::Id vehicle_signal_c = 1003;
 constexpr lanelet::Id pedestrian_signal = 2001;
 
 // Intentionally not installed on the map; used by tests as the "off-map id"
@@ -98,7 +97,7 @@ LineString3d make_traffic_light_bulb()
 }
 
 // Builds the minimal map required to drive every code path under test:
-// three road lanelets each carrying one Traffic Light, plus one crosswalk
+// two road lanelets each carrying one Traffic Light, plus one crosswalk
 // lanelet carrying the pedestrian Traffic Light.
 //
 // Test map summary (top-down view).
@@ -106,8 +105,7 @@ LineString3d make_traffic_light_bulb()
 //
 //   left bound  right bound   Lanelet      Traffic Light id
 //   ----------  -----------   ----------   --------------------------
-//        12          11       crosswalk    2001 (pedestrian_signal)
-//         8           5       road3        1003 (vehicle_signal_c)
+//         8           5       crosswalk    2001 (pedestrian_signal)
 //         4           1       road2        1002 (vehicle_signal_b)
 //         0          -3       road1        1001 (vehicle_signal_a)
 //
@@ -116,8 +114,7 @@ LaneletMapBin build_minimal_map_bin()
 {
   Lanelet road1 = make_lanelet(0.0, -3.0, AttributeValueString::Road);
   Lanelet road2 = make_lanelet(4.0, 1.0, AttributeValueString::Road);
-  Lanelet road3 = make_lanelet(8.0, 5.0, AttributeValueString::Road);
-  Lanelet crosswalk = make_lanelet(12.0, 11.0, AttributeValueString::Crosswalk);
+  Lanelet crosswalk = make_lanelet(8.0, 5.0, AttributeValueString::Crosswalk);
 
   road1.addRegulatoryElement(
     TrafficLight::make(
@@ -125,15 +122,11 @@ LaneletMapBin build_minimal_map_bin()
   road2.addRegulatoryElement(
     TrafficLight::make(
       map_ids::vehicle_signal_b, {}, LineStringsOrPolygons3d{make_traffic_light_bulb()}));
-  road3.addRegulatoryElement(
-    TrafficLight::make(
-      map_ids::vehicle_signal_c, {}, LineStringsOrPolygons3d{make_traffic_light_bulb()}));
   crosswalk.addRegulatoryElement(
     TrafficLight::make(
       map_ids::pedestrian_signal, {}, LineStringsOrPolygons3d{make_traffic_light_bulb()}));
 
-  const LaneletMapConstPtr map{
-    utils::createMap(Lanelets{road1, road2, road3, crosswalk}).release()};
+  const LaneletMapConstPtr map{utils::createMap(Lanelets{road1, road2, crosswalk}).release()};
   auto bin = ::autoware::experimental::lanelet2_utils::to_autoware_map_msgs(map);
   bin.header.frame_id = "base_link";
   return bin;
@@ -508,20 +501,20 @@ TEST_F(ArbiterCharacteristic, signalMatchingElementCountMismatchProducesUnknown)
 
   // Act
   publish_external(make_signal_array(
-    t0_, map_ids::vehicle_signal_c,
+    t0_, map_ids::vehicle_signal_b,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
   publish_perception(make_signal_array(
-    t0_, map_ids::vehicle_signal_c,
+    t0_, map_ids::vehicle_signal_b,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE),
      make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW)}));
 
   // Assert: shape union has both CIRCLE and RIGHT_ARROW, both as UNKNOWN.
-  EXPECT_EQ(observed_element_count(map_ids::vehicle_signal_c), 2u);
+  EXPECT_EQ(observed_element_count(map_ids::vehicle_signal_b), 2u);
   EXPECT_EQ(
-    observed_color_of_shape(map_ids::vehicle_signal_c, TrafficLightElement::CIRCLE),
+    observed_color_of_shape(map_ids::vehicle_signal_b, TrafficLightElement::CIRCLE),
     TrafficLightElement::UNKNOWN);
   EXPECT_EQ(
-    observed_color_of_shape(map_ids::vehicle_signal_c, TrafficLightElement::RIGHT_ARROW),
+    observed_color_of_shape(map_ids::vehicle_signal_b, TrafficLightElement::RIGHT_ARROW),
     TrafficLightElement::UNKNOWN);
 }
 
@@ -750,17 +743,17 @@ TEST_F(ArbiterCharacteristic, priorityBasedPerceptionOnlyPassesThrough)
   publish_map();
 
   // Act: external must publish something for the arbiter to settle; use a
-  // different id so vehicle_signal_c is perception-only.
+  // different id so vehicle_signal_b is perception-only.
   publish_external(make_signal_array(
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)}));
   publish_perception(make_signal_array(
-    t0_, map_ids::vehicle_signal_c,
+    t0_, map_ids::vehicle_signal_b,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.8f)}));
 
   // Assert
-  EXPECT_EQ(observed_color(map_ids::vehicle_signal_c), TrafficLightElement::GREEN);
-  EXPECT_NEAR(observed_confidence(map_ids::vehicle_signal_c), 0.8f, kConfidenceEpsilon);
+  EXPECT_EQ(observed_color(map_ids::vehicle_signal_b), TrafficLightElement::GREEN);
+  EXPECT_NEAR(observed_confidence(map_ids::vehicle_signal_b), 0.8f, kConfidenceEpsilon);
 }
 
 // An id not in the vector map is silently dropped (WARN log only) by
