@@ -336,7 +336,7 @@ struct StartPlannerParameters
   double end_pose_search_end_distance{0.0};
   double end_pose_search_interval{0.0};
   double freespace_planner_velocity{0.0};
-  double vehicle_info_margin{0.0};
+  double vehicle_shape_margin{0.0};
   PlannerCommonParam freespace_planner_common_parameters;
   AstarParam astar_parameters;
   RRTStarParam rrt_star_parameters;

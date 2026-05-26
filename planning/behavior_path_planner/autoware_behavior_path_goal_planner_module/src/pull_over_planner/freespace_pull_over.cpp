@@ -44,7 +44,7 @@ FreespacePullOver::FreespacePullOver(rclcpp::Node & node, const GoalPlannerParam
   }
 {
   autoware::vehicle_info_utils::VehicleInfo vehicle_info =
-    autoware::vehicle_info_utils::extendVehicleInfo(vehicle_info_, parameters.vehicle_info_margin);
+    autoware::vehicle_info_utils::extendVehicleInfo(vehicle_info_, parameters.vehicle_shape_margin);
   if (parameters.freespace_parking_algorithm == "astar") {
     planner_ = std::make_unique<AstarSearch>(
       parameters.freespace_parking_common_parameters, vehicle_info, parameters.astar_parameters,

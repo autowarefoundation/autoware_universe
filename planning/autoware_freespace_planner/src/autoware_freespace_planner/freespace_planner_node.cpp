@@ -63,7 +63,7 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
     p.th_stopped_velocity_mps = declare_parameter<double>("th_stopped_velocity_mps");
     p.th_course_out_distance_m = declare_parameter<double>("th_course_out_distance_m");
     p.th_obstacle_time_sec = declare_parameter<double>("th_obstacle_time_sec");
-    p.vehicle_info_margin_m = declare_parameter<double>("vehicle_info_margin_m");
+    p.vehicle_shape_margin_m = declare_parameter<double>("vehicle_shape_margin_m");
     p.replan_when_obstacle_found = declare_parameter<bool>("replan_when_obstacle_found");
     p.replan_when_course_out = declare_parameter<bool>("replan_when_course_out");
   }
@@ -433,7 +433,7 @@ void FreespacePlannerNode::initializePlanningAlgorithm()
 {
   // Extend robot shape
   vehicle_info_utils::VehicleInfo extended_vehicle_info = vehicle_info_;
-  const double margin = node_param_.vehicle_info_margin_m;
+  const double margin = node_param_.vehicle_shape_margin_m;
   extended_vehicle_info.vehicle_length_m += margin;
   extended_vehicle_info.vehicle_width_m += margin;
   extended_vehicle_info.rear_overhang_m += margin / 2;

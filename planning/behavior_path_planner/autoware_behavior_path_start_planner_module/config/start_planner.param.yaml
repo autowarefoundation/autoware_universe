@@ -74,7 +74,7 @@
         end_pose_search_interval: 2.0
         freespace_planner_algorithm: "astar"  # options: astar, rrtstar
         velocity: 1.0
-        vehicle_info_margin: 1.0
+        vehicle_shape_margin: 1.0
         time_limit: 3000.0
         max_turning_ratio: 0.7
         turning_steps: 1

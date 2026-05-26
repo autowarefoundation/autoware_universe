@@ -45,7 +45,7 @@ None
 | Parameter                    | Type   | Description                                                                     |
 | ---------------------------- | ------ | ------------------------------------------------------------------------------- |
 | `planning_algorithms`        | string | algorithms used in the node                                                     |
-| `vehicle_info_margin_m`      | float  | collision margin in planning algorithm                                          |
+| `vehicle_shape_margin_m`     | float  | collision margin in planning algorithm                                          |
 | `update_rate`                | double | timer's update rate                                                             |
 | `waypoints_velocity`         | double | velocity in output trajectory (currently, only constant velocity is supported)  |
 | `th_arrived_distance_m`      | double | threshold distance to check if vehicle has arrived at the trajectory's endpoint |
@@ -53,7 +53,7 @@ None
 | `th_stopped_velocity_mps`    | double | threshold velocity to check if vehicle is stopped                               |
 | `th_course_out_distance_m`   | double | threshold distance to check if vehicle is out of course                         |
 | `th_obstacle_time_sec`       | double | threshold time to check if obstacle is on the trajectory                        |
-| `vehicle_info_margin_m`      | double | vehicle margin                                                                  |
+| `vehicle_shape_margin_m`     | double | vehicle margin                                                                  |
 | `replan_when_obstacle_found` | bool   | whether replanning when obstacle has found on the trajectory                    |
 | `replan_when_course_out`     | bool   | whether replanning when vehicle is out of course                                |
 

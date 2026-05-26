@@ -33,7 +33,7 @@ FreespacePullOut::FreespacePullOut(rclcpp::Node & node, const StartPlannerParame
 : PullOutPlannerBase{node, parameters}, velocity_{parameters.freespace_planner_velocity}
 {
   autoware::vehicle_info_utils::VehicleInfo vehicle_info =
-    autoware::vehicle_info_utils::extendVehicleInfo(vehicle_info_, parameters.vehicle_info_margin);
+    autoware::vehicle_info_utils::extendVehicleInfo(vehicle_info_, parameters.vehicle_shape_margin);
   if (parameters.freespace_planner_algorithm == "astar") {
     use_back_ = parameters.astar_parameters.use_back;
     planner_ = std::make_unique<AstarSearch>(

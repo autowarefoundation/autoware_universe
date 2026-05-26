@@ -89,7 +89,7 @@ struct NodeParam
   double th_stopped_velocity_mps;
   double th_course_out_distance_m;  // collision margin [m]
   double th_obstacle_time_sec;
-  double vehicle_info_margin_m;
+  double vehicle_shape_margin_m;
   bool replan_when_obstacle_found;
   bool replan_when_course_out;
 };
