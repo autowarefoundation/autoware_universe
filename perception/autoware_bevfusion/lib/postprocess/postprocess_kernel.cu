@@ -26,14 +26,10 @@
 
 namespace autoware::bevfusion
 {
-struct is_score_greater
+// Keep only the boxes with score > 0.0
+struct is_score_keep
 {
-  is_score_greater(float t) : t_(t) {}
-
-  __device__ bool operator()(const Box3D & b) const { return b.score > t_; }
-
-private:
-  float t_{0.0};
+  __device__ bool operator()(const Box3D & b) { return b.score > 0.0; }
 };
 
 struct is_kept
@@ -162,7 +158,7 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
 
   // suppress by score
   const auto num_det_boxes3d =
-    thrust::count_if(thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_greater(0.0));
+    thrust::count_if(thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_keep());
 
   if (num_det_boxes3d == 0) {
     return cudaGetLastError();
@@ -171,8 +167,7 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   thrust::device_vector<Box3D> det_boxes3d_d(num_det_boxes3d);
   // Remove any boxes with score == 0.0 after distance-based and clas-based filtering
   thrust::copy_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(),
-    is_score_greater(0.0));
+    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(), is_score_keep());
 
   // sort by score
   thrust::sort(det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());
