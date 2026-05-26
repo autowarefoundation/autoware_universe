@@ -128,7 +128,7 @@ public:
     }
     // score_upper_bounds must be sorted in ascending order, raise an error if not
     if (!std::is_sorted(distance_bin_upper_limits.begin(), distance_bin_upper_limits.end())) {
-      throw std::invalid_argument("score_upper_bounds must be sorted in ascending order");
+      throw std::invalid_argument("distance_bin_upper_limits must be sorted in ascending order");
     }
     distance_bin_upper_limits_ = distance_bin_upper_limits;
     for (auto & distance_bin_upper_limit : distance_bin_upper_limits_) {

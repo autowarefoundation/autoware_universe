@@ -123,7 +123,9 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
       "detection_score_thresholds.distance_bin_upper_limits", std::vector<double>{});
   // Must set at least one upper bound
   if (distance_bin_upper_limits_double.empty()) {
-    throw std::invalid_argument("The number of upper bounds must be at least one");
+    throw std::invalid_argument(
+      "The number of upper bounds: detection_score_thresholds.distance_bin_upper_limits must be at "
+      "least one");
   }
   const std::vector<float> distance_bin_upper_limits(
     distance_bin_upper_limits_double.begin(), distance_bin_upper_limits_double.end());
@@ -133,7 +135,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     std::vector<float>(class_names_.size() * distance_bin_upper_limits.size(), 0.0);
   int current_class_index = 0;
   for (const auto & class_name : class_names_) {
-    // Construct the parameter path (e.g., "model_params.score_thresholds.CAR")
+    // Construct the parameter path (e.g., "detection_score_thresholds.min_confidence_scores.CAR")
     std::string param_path = "detection_score_thresholds.min_confidence_scores." + class_name;
 
     // The same class name may appear multiple times in class_names_, so only declare the parameter

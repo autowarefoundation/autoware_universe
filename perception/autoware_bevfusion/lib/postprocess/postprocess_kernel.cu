@@ -80,9 +80,10 @@ __global__ void generateBoxes3D_kernel(
     bbox_pred_output[1 * num_proposals + point_idx] * out_size_factor * voxel_size_y + min_y_range;
   const float radial_distance = x * x + y * y;
 
-  // Loop through score_upper_bounds to decide the distance bucket index, and since upper_bounds is
-  // sorted in ascending order, the first one that is greater than the radial distance is the
-  // distance bucket index
+  // Loop through distance_bin_upper_limits to decide the distance bucket index, and since
+  // upper_bounds is sorted in ascending order, the first one that is greater than the radial
+  // distance is the distance bucket index. Note that the distance_bin_upper_limits is already
+  // squared, so we don't need to square the radial distance.
   int distance_bucket_index = -1;
   for (int i = 0; i < num_distance_bin_upper_limits; i++) {
     if (radial_distance < distance_bin_upper_limits[i]) {
@@ -165,7 +166,7 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   }
 
   thrust::device_vector<Box3D> det_boxes3d_d(num_det_boxes3d);
-  // Remove any boxes with score == 0.0 after distance-based and clas-based filtering
+  // Remove any boxes with score == 0.0 after distance-based and class-based filtering
   thrust::copy_if(
     thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(), is_score_keep());
 
