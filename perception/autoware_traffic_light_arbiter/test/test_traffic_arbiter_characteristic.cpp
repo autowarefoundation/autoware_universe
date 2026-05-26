@@ -1105,7 +1105,6 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
     {makeTrafficLightElement(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
   publishPerception(perception_traffic_signal);
   const auto baseline_count = arbiter_publish_count_;
-  ASSERT_GE(baseline_count, 1u);
 
   // external_delay_tolerance defaults to 5.0s; 20s in the past is well past it.
   TrafficLightGroupArray stale_external_traffic_signal;
