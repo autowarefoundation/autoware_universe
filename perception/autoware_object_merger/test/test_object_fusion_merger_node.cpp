@@ -41,13 +41,14 @@ std::shared_ptr<autoware::test_utils::AutowareTestManager> generate_test_manager
   return std::make_shared<autoware::test_utils::AutowareTestManager>();
 }
 
-std::shared_ptr<ObjectFusionMergerNode> generate_node()
+std::shared_ptr<ObjectFusionMergerNode> generate_node(const bool keep_input_dimensions = false)
 {
   auto node_options = rclcpp::NodeOptions{};
   const auto package_dir = std::filesystem::path(__FILE__).parent_path().parent_path();
   node_options.arguments(
     {"--ros-args", "--params-file",
-     (package_dir / "config" / "object_fusion_merger.param.yaml").string()});
+     (package_dir / "config" / "object_fusion_merger.param.yaml").string(), "-p",
+     std::string("keep_input_dimensions:=") + (keep_input_dimensions ? "true" : "false")});
   return std::make_shared<ObjectFusionMergerNode>(node_options);
 }
 
@@ -308,11 +309,13 @@ TEST(ObjectFusionMergerNodeTest, testPolygonSubCanExpandMainBoundingBox)
 
   DetectedObjects main_objects;
   main_objects.header.frame_id = "base_link";
-  main_objects.objects.push_back(make_object(0.0, 4.0, 0.6, 4.0, ObjectClassification::CAR));
+  auto main_object = make_object(0.0, 4.0, 0.6, 4.0, ObjectClassification::CAR);
+  main_object.kinematics.pose_with_covariance.pose.position.y = 2.0;
+  main_objects.objects.push_back(main_object);
 
   DetectedObjects sub_objects;
   sub_objects.header.frame_id = "base_link";
-  sub_objects.objects.push_back(make_polygon_object(
+  auto sub_object = make_polygon_object(
     1.0, 1.0, 0.5,
     {
       geometry_msgs::build<geometry_msgs::msg::Point32>().x(3.5).y(1.5).z(0.0),
@@ -320,7 +323,9 @@ TEST(ObjectFusionMergerNodeTest, testPolygonSubCanExpandMainBoundingBox)
       geometry_msgs::build<geometry_msgs::msg::Point32>().x(-3.5).y(-1.5).z(0.0),
       geometry_msgs::build<geometry_msgs::msg::Point32>().x(-3.5).y(1.5).z(0.0),
     },
-    ObjectClassification::CAR));
+    ObjectClassification::CAR);
+  sub_object.kinematics.pose_with_covariance.pose.position.y = 2.3;
+  sub_objects.objects.push_back(sub_object);
 
   test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/main_objects", main_objects);
   test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/sub_objects", sub_objects);
@@ -374,6 +379,110 @@ TEST(ObjectFusionMergerNodeTest, testUnionCanBeEnclosedWithMainCylinder)
   EXPECT_NEAR(
     latest_msg.objects.front().shape.dimensions.x, latest_msg.objects.front().shape.dimensions.y,
     1e-3);
+
+  rclcpp::shutdown();
+}
+
+TEST(ObjectFusionMergerNodeTest, testBoundingBoxCanRetainExpandedFootprintWithoutDimensionGrowth)
+{
+  rclcpp::init(0, nullptr);
+
+  auto test_manager = generate_test_manager();
+  auto test_target_node = generate_node(true);
+  auto tf_node = create_static_tf_broadcaster_node("map", "base_link");
+
+  DetectedObjects latest_msg;
+  test_manager->set_subscriber<DetectedObjects>(
+    "/output/objects",
+    [&latest_msg](const DetectedObjects::ConstSharedPtr msg) { latest_msg = *msg; });
+
+  DetectedObjects main_objects;
+  main_objects.header.frame_id = "base_link";
+  main_objects.objects.push_back(make_object(0.0, 4.0, 0.6, 4.0, ObjectClassification::CAR));
+
+  DetectedObjects sub_objects;
+  sub_objects.header.frame_id = "base_link";
+  sub_objects.objects.push_back(make_polygon_object(
+    1.0, 1.0, 0.5,
+    {
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(3.5).y(1.5).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(3.5).y(-1.5).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(-3.5).y(-1.5).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(-3.5).y(1.5).z(0.0),
+    },
+    ObjectClassification::CAR));
+
+  test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/main_objects", main_objects);
+  test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/sub_objects", sub_objects);
+
+  // The position and dimensions should be the same as the main object since the sub object is fully
+  // enclosed and keep_input_dimensions is true, but the footprint should be expanded to cover the
+  // union of main and sub objects.
+  ASSERT_EQ(latest_msg.objects.size(), 1U);
+  EXPECT_EQ(latest_msg.objects.front().shape.type, Shape::BOUNDING_BOX);
+  EXPECT_NEAR(
+    latest_msg.objects.front().kinematics.pose_with_covariance.pose.position.x, 0.0, 1e-3);
+  EXPECT_NEAR(
+    latest_msg.objects.front().kinematics.pose_with_covariance.pose.position.y, 2.0, 1e-3);
+  EXPECT_NEAR(latest_msg.objects.front().shape.dimensions.x, 4.0, 1e-3);
+  EXPECT_NEAR(latest_msg.objects.front().shape.dimensions.y, 2.0, 1e-3);
+  EXPECT_GT(max_abs_footprint_x(latest_msg.objects.front()), 4.4);
+  EXPECT_GT(max_abs_footprint_y(latest_msg.objects.front()), 1.4);
+
+  rclcpp::shutdown();
+}
+
+TEST(ObjectFusionMergerNodeTest, testCylinderCanRetainExpandedFootprintWithoutDiameterGrowth)
+{
+  rclcpp::init(0, nullptr);
+
+  auto test_manager = generate_test_manager();
+  auto test_target_node = generate_node(true);
+  auto tf_node = create_static_tf_broadcaster_node("map", "base_link");
+
+  DetectedObjects latest_msg;
+  test_manager->set_subscriber<DetectedObjects>(
+    "/output/objects",
+    [&latest_msg](const DetectedObjects::ConstSharedPtr msg) { latest_msg = *msg; });
+
+  DetectedObjects main_objects;
+  main_objects.header.frame_id = "base_link";
+  auto main_object = make_cylinder_object(0.0, 4.0, 0.6, 2.0, ObjectClassification::PEDESTRIAN);
+  main_object.kinematics.pose_with_covariance.pose.position.y = -1.5;
+  main_objects.objects.push_back(main_object);
+
+  DetectedObjects sub_objects;
+  sub_objects.header.frame_id = "base_link";
+  auto sub_object = make_polygon_object(
+    0.5, 1.0, 0.5,
+    {
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(1.5).y(1.2).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(1.5).y(-1.2).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(-0.5).y(-1.2).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(-0.5).y(1.2).z(0.0),
+    },
+    ObjectClassification::PEDESTRIAN);
+  sub_object.kinematics.pose_with_covariance.pose.position.y = -1.1;
+  sub_objects.objects.push_back(sub_object);
+
+  test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/main_objects", main_objects);
+  test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/sub_objects", sub_objects);
+
+  // The position and dimensions should be the same as the main object since the sub object is fully
+  // enclosed and keep_input_dimensions is true, but the footprint should be expanded to cover the
+  // union of main and sub objects.
+  ASSERT_EQ(latest_msg.objects.size(), 1U);
+  EXPECT_EQ(latest_msg.objects.front().shape.type, Shape::CYLINDER);
+  EXPECT_NEAR(
+    latest_msg.objects.front().kinematics.pose_with_covariance.pose.position.x, 0.0, 1e-3);
+  EXPECT_NEAR(
+    latest_msg.objects.front().kinematics.pose_with_covariance.pose.position.y, -1.5, 1e-3);
+  EXPECT_NEAR(latest_msg.objects.front().shape.dimensions.x, 2.0, 1e-3);
+  EXPECT_NEAR(
+    latest_msg.objects.front().shape.dimensions.x, latest_msg.objects.front().shape.dimensions.y,
+    1e-3);
+  EXPECT_GT(max_abs_footprint_x(latest_msg.objects.front()), 1.9);
+  EXPECT_GT(max_abs_footprint_y(latest_msg.objects.front()), 1.1);
 
   rclcpp::shutdown();
 }

@@ -2,3 +2,4 @@
   ros__parameters:
     sync_queue_size: 20
     base_link_frame_id: base_link
+    keep_input_dimensions: false

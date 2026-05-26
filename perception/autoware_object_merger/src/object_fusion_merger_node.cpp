@@ -116,6 +116,68 @@ MultiPoint2d collect_union_points_in_output_frame(
 }
 
 /**
+ * @brief Rebuild the output footprint from the convex hull of the combined union points.
+ *
+ * @param output Output object to update in place.
+ * @param combined_points Combined footprint points expressed in the output local frame.
+ */
+void fit_shape_footprint(DetectedObject & output, const MultiPoint2d & combined_points)
+{
+  Polygon2d hull_polygon;
+  boost::geometry::convex_hull(combined_points, hull_polygon);
+  output.shape.footprint.points.clear();
+  for (const auto & point : hull_polygon.outer()) {
+    output.shape.footprint.points.push_back(
+      geometry_msgs::build<geometry_msgs::msg::Point32>()
+        .x(static_cast<float>(boost::geometry::get<0>(point)))
+        .y(static_cast<float>(boost::geometry::get<1>(point)))
+        .z(0.0f));
+  }
+}
+
+/**
+ * @brief Tighten a bounding box around the grouped union in the output local frame.
+ *
+ * @param output Output object to update in place.
+ * @param combined_points Combined footprint points expressed in the output local frame.
+ */
+void fit_bounding_box_shape(DetectedObject & output, const MultiPoint2d & combined_points)
+{
+  double min_x = std::numeric_limits<double>::max();
+  double max_x = std::numeric_limits<double>::lowest();
+  double min_y = std::numeric_limits<double>::max();
+  double max_y = std::numeric_limits<double>::lowest();
+  for (const auto & point : combined_points) {
+    min_x = std::min(min_x, boost::geometry::get<0>(point));
+    max_x = std::max(max_x, boost::geometry::get<0>(point));
+    min_y = std::min(min_y, boost::geometry::get<1>(point));
+    max_y = std::max(max_y, boost::geometry::get<1>(point));
+  }
+
+  output.kinematics.pose_with_covariance.pose = autoware_utils::calc_offset_pose(
+    output.kinematics.pose_with_covariance.pose, 0.5 * (min_x + max_x), 0.5 * (min_y + max_y), 0.0);
+  output.shape.dimensions.x = max_x - min_x;
+  output.shape.dimensions.y = max_y - min_y;
+}
+
+/**
+ * @brief Expand a cylinder to cover the farthest grouped union point in the output local frame.
+ *
+ * @param output Output object to update in place.
+ * @param combined_points Combined footprint points expressed in the output local frame.
+ */
+void fit_cylinder_shape(DetectedObject & output, const MultiPoint2d & combined_points)
+{
+  double max_radius = 0.0;
+  for (const auto & point : combined_points) {
+    max_radius = std::max(
+      max_radius, std::hypot(boost::geometry::get<0>(point), boost::geometry::get<1>(point)));
+  }
+  output.shape.dimensions.x = 2.0 * max_radius;
+  output.shape.dimensions.y = 2.0 * max_radius;
+}
+
+/**
  * @brief Calculate the 2D footprint intersection area between one main and one sub object.
  *
  * @param main_object Main object candidate.
@@ -144,7 +206,8 @@ double get_intersection_area(const DetectedObject & main_object, const DetectedO
  * @return Main-based object whose geometry encloses the full grouped union.
  */
 DetectedObject enclose_union_with_main_shape(
-  const DetectedObject & main_object, const std::vector<DetectedObject> & sub_objects)
+  const DetectedObject & main_object, const std::vector<DetectedObject> & sub_objects,
+  const bool keep_input_dimensions)
 {
   DetectedObject output = main_object;
   output.shape = main_object.shape;
@@ -158,48 +221,27 @@ DetectedObject enclose_union_with_main_shape(
   }
 
   if (main_object.shape.type == Shape::BOUNDING_BOX) {
-    double min_x = std::numeric_limits<double>::max();
-    double max_x = std::numeric_limits<double>::lowest();
-    double min_y = std::numeric_limits<double>::max();
-    double max_y = std::numeric_limits<double>::lowest();
-    for (const auto & point : combined_points) {
-      min_x = std::min(min_x, boost::geometry::get<0>(point));
-      max_x = std::max(max_x, boost::geometry::get<0>(point));
-      min_y = std::min(min_y, boost::geometry::get<1>(point));
-      max_y = std::max(max_y, boost::geometry::get<1>(point));
+    if (keep_input_dimensions) {
+      fit_shape_footprint(output, combined_points);
+    } else {
+      fit_bounding_box_shape(output, combined_points);
     }
-    output.kinematics.pose_with_covariance.pose = autoware_utils::calc_offset_pose(
-      output.kinematics.pose_with_covariance.pose, 0.5 * (min_x + max_x), 0.5 * (min_y + max_y),
-      0.0);
-    output.shape.dimensions.x = max_x - min_x;
-    output.shape.dimensions.y = max_y - min_y;
     fit_shape_height(output, main_object, sub_objects);
     return output;
   }
 
   if (main_object.shape.type == Shape::CYLINDER) {
-    double max_radius = 0.0;
-    for (const auto & point : combined_points) {
-      max_radius = std::max(
-        max_radius, std::hypot(boost::geometry::get<0>(point), boost::geometry::get<1>(point)));
+    if (keep_input_dimensions) {
+      fit_shape_footprint(output, combined_points);
+    } else {
+      fit_cylinder_shape(output, combined_points);
     }
-    output.shape.dimensions.x = 2.0 * max_radius;
-    output.shape.dimensions.y = 2.0 * max_radius;
     fit_shape_height(output, main_object, sub_objects);
     return output;
   }
 
   if (main_object.shape.type == Shape::POLYGON) {
-    Polygon2d hull_polygon;
-    boost::geometry::convex_hull(combined_points, hull_polygon);
-    output.shape.footprint.points.clear();
-    for (const auto & point : hull_polygon.outer()) {
-      output.shape.footprint.points.push_back(
-        geometry_msgs::build<geometry_msgs::msg::Point32>()
-          .x(static_cast<float>(boost::geometry::get<0>(point)))
-          .y(static_cast<float>(boost::geometry::get<1>(point)))
-          .z(0.0f));
-    }
+    fit_shape_footprint(output, combined_points);
     fit_shape_height(output, main_object, sub_objects);
   }
   return output;
@@ -224,6 +266,7 @@ ObjectFusionMergerNode::ObjectFusionMergerNode(const rclcpp::NodeOptions & node_
   // Get parameters
   base_link_frame_id_ = declare_parameter<std::string>("base_link_frame_id");
   const auto sync_queue_size = static_cast<int>(declare_parameter<int64_t>("sync_queue_size"));
+  keep_input_dimensions_ = declare_parameter<bool>("keep_input_dimensions", false);
 
   // Set up publishers, subscribers, and synchronizer
   using std::placeholders::_1;
@@ -333,7 +376,8 @@ ObjectFusionMergerNode::FusionResult ObjectFusionMergerNode::fuse_objects(
       matched_objects.push_back(main_object);
       continue;
     }
-    matched_objects.push_back(enclose_union_with_main_shape(main_object, grouped_subs));
+    matched_objects.push_back(
+      enclose_union_with_main_shape(main_object, grouped_subs, keep_input_dimensions_));
   }
 
   const auto header = std_msgs::build<std_msgs::msg::Header>()
