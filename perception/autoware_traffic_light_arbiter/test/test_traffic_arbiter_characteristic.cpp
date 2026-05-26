@@ -311,7 +311,7 @@ protected:
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(arbiter_);
     executor_->add_node(test_node_);
-    spinFor(std::chrono::milliseconds(150));
+    spinFor();
   }
 
   void publishMap() { publishMap(*map_bin_); }
@@ -319,20 +319,20 @@ protected:
   void publishMap(const LaneletMapBin & bin)
   {
     map_pub_->publish(bin);
-    spinFor(std::chrono::milliseconds(150));
+    spinFor();
   }
   void publishPerception(const TrafficLightGroupArray & msg)
   {
     perception_pub_->publish(msg);
-    spinFor(std::chrono::milliseconds(150));
+    spinFor();
   }
   void publishExternal(const TrafficLightGroupArray & msg)
   {
     external_pub_->publish(msg);
-    spinFor(std::chrono::milliseconds(150));
+    spinFor();
   }
 
-  void spinFor(std::chrono::milliseconds duration)
+  void spinFor(std::chrono::milliseconds duration = std::chrono::milliseconds(150))
   {
     const auto deadline = std::chrono::steady_clock::now() + duration;
     while (std::chrono::steady_clock::now() < deadline) {
