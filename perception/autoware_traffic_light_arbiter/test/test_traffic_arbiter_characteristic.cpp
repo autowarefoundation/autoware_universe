@@ -380,14 +380,14 @@ protected:
 // Pins the full Signal Matching behavior spec: the arbiter degrades
 // gracefully as the agreement between sources weakens, falling back to
 // UNKNOWN when the signals disagree and dropping ids that are not on the
-// map. The longest path through SignalMatchValidator (4 ids in a single
-// publish) is traversed in one test:
+// map. All validation outcomes of SignalMatchValidator are exercised in
+// a single publish (4 ids):
 //   - matched (color & shape agree) -> perception passes through
 //   - color mismatch                -> UNKNOWN over the shared shape
 //   - element-count mismatch        -> UNKNOWN over the shape union
 //   - off-map id                    -> dropped (WARN+skip)
 // ---------------------------------------------------------------------------
-TEST_F(ArbiterCharacteristic, signalMatchingLongestPath)
+TEST_F(ArbiterCharacteristic, signalMatchingAllValidationOutcomes)
 {
   // Scenario inputs and expectations (confidence is omitted everywhere
   // because Signal Matching never reads it; the 1.0f default applies):
