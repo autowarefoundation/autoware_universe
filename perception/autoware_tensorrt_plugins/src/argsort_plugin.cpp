@@ -152,8 +152,9 @@ std::int32_t ArgsortPlugin::enqueue(
   const auto workspace_size = get_argsort_workspace_size(num_elements);
 
   if (const auto status = PLUGIN_CUDA_CHECK(argsort(
-    reinterpret_cast<std::int64_t const *>(inputs[0]), reinterpret_cast<std::int64_t *>(outputs[0]),
-    workspace, num_elements, workspace_size, stream));
+        reinterpret_cast<std::int64_t const *>(inputs[0]),
+        reinterpret_cast<std::int64_t *>(outputs[0]), workspace, num_elements, workspace_size,
+        stream));
       status != cudaSuccess) {
     return -1;
   }

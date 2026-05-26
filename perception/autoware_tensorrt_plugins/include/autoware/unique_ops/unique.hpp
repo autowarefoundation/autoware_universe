@@ -48,8 +48,8 @@
 cudaError_t unique(
   const std::int64_t * input_in, std::int64_t * unique_values_out,
   std::int64_t * inverse_indices_out, std::int64_t * unique_counts_out,
-  std::int64_t * num_unique_elements_out, void * workspace_inout,
-  std::size_t num_input_elements_in, std::size_t workspace_size_in, cudaStream_t stream_in);
+  std::int64_t * num_unique_elements_out, void * workspace_inout, std::size_t num_input_elements_in,
+  std::size_t workspace_size_in, cudaStream_t stream_in);
 
 /// Bytes of CUB temporary storage required by the largest CUB primitive used by `unique`.
 std::size_t get_unique_temp_storage_size(std::size_t num_elements_in);

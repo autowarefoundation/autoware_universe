@@ -265,8 +265,8 @@ __global__ void write_num_unique_elements(
 cudaError_t unique(
   const std::int64_t * input_in, std::int64_t * unique_values_out,
   std::int64_t * inverse_indices_out, std::int64_t * unique_counts_out,
-  std::int64_t * num_unique_elements_out, void * workspace_inout,
-  std::size_t num_input_elements_in, std::size_t workspace_size_in, cudaStream_t stream_in)
+  std::int64_t * num_unique_elements_out, void * workspace_inout, std::size_t num_input_elements_in,
+  std::size_t workspace_size_in, cudaStream_t stream_in)
 {
   if (num_input_elements_in == 0U) {
     return cudaMemsetAsync(num_unique_elements_out, 0, sizeof(std::int64_t), stream_in);
@@ -289,9 +289,9 @@ cudaError_t unique(
     return status;
   }
   if (const auto status = cub::DeviceRadixSort::SortPairs(
-    layout.cub_temp_storage, layout.cub_temp_storage_size, input_in, layout.sorted_input,
-    layout.input_positions, layout.sorted_input_positions, num_input_elements_in, 0, 64,
-    stream_in);
+        layout.cub_temp_storage, layout.cub_temp_storage_size, input_in, layout.sorted_input,
+        layout.input_positions, layout.sorted_input_positions, num_input_elements_in, 0, 64,
+        stream_in);
       status != cudaSuccess) {
     return status;
   }
@@ -303,8 +303,8 @@ cudaError_t unique(
     return status;
   }
   if (const auto status = cub::DeviceScan::InclusiveSum(
-    layout.cub_temp_storage, layout.cub_temp_storage_size, layout.run_ids, layout.run_ids,
-    num_input_elements_in, stream_in);
+        layout.cub_temp_storage, layout.cub_temp_storage_size, layout.run_ids, layout.run_ids,
+        num_input_elements_in, stream_in);
       status != cudaSuccess) {
     return status;
   }
@@ -319,9 +319,9 @@ cudaError_t unique(
   // 4. Compact sorted runs into unique values and each run's start offset.
   auto * unique_offsets_inout = layout.sorted_input_positions;
   if (const auto status = cub::DeviceSelect::UniqueByKey(
-    layout.cub_temp_storage, layout.cub_temp_storage_size, layout.sorted_input,
-    layout.input_positions, unique_values_out, unique_offsets_inout, layout.num_unique,
-    num_input_elements_in, stream_in);
+        layout.cub_temp_storage, layout.cub_temp_storage_size, layout.sorted_input,
+        layout.input_positions, unique_values_out, unique_offsets_inout, layout.num_unique,
+        num_input_elements_in, stream_in);
       status != cudaSuccess) {
     return status;
   }

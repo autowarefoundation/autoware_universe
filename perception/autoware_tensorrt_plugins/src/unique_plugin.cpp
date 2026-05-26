@@ -167,10 +167,10 @@ std::int32_t UniquePlugin::enqueue(
   const auto workspace_size = get_unique_workspace_size(static_cast<std::size_t>(num_elements));
 
   if (const auto status = PLUGIN_CUDA_CHECK(unique(
-    reinterpret_cast<const std::int64_t *>(inputs[0]), reinterpret_cast<std::int64_t *>(outputs[0]),
-    reinterpret_cast<std::int64_t *>(outputs[1]), reinterpret_cast<std::int64_t *>(outputs[2]),
-    reinterpret_cast<std::int64_t *>(outputs[3]), workspace, num_elements, workspace_size,
-    stream));
+        reinterpret_cast<const std::int64_t *>(inputs[0]),
+        reinterpret_cast<std::int64_t *>(outputs[0]), reinterpret_cast<std::int64_t *>(outputs[1]),
+        reinterpret_cast<std::int64_t *>(outputs[2]), reinterpret_cast<std::int64_t *>(outputs[3]),
+        workspace, num_elements, workspace_size, stream));
       status != cudaSuccess) {
     return -1;
   }
