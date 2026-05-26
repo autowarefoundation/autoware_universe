@@ -27,6 +27,7 @@
 
 namespace autoware::bevfusion
 {
+using autoware::cuda_utils::CudaUniquePtr;
 
 class PostprocessCuda
 {

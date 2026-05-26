@@ -169,7 +169,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   }
 
   BEVFusionConfig config(
-    plugins_path, image_backbone_onnx_path, image_backbone_engine_path,
+    class_names_.size(), plugins_path, image_backbone_onnx_path, image_backbone_engine_path,
     image_backbone_trt_precision, out_size_factor, cloud_capacity, max_points_per_voxel, voxels_num,
     point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
     raw_image_height, raw_image_width, img_aug_scale_x, img_aug_scale_y, roi_height, roi_width,

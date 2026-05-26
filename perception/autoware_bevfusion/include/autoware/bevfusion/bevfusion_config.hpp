@@ -29,8 +29,8 @@ class BEVFusionConfig
 {
 public:
   BEVFusionConfig(
-    const std::string & plugins_path, const std::string & image_backbone_onnx_path,
-    const std::string & image_backbone_engine_path,
+    const std::size_t class_size, const std::string & plugins_path,
+    const std::string & image_backbone_onnx_path, const std::string & image_backbone_engine_path,
     const std::string & image_backbone_trt_precision, const std::int64_t out_size_factor,
     const std::int64_t cloud_capacity, const std::int64_t max_points_per_voxel,
     const std::vector<std::int64_t> & voxels_num, const std::vector<float> & point_cloud_range,
@@ -120,6 +120,7 @@ public:
     image_feature_channel_ = image_feature_channel;
     resized_height_ = raw_image_height_ * img_aug_scale_y_;
     resized_width_ = raw_image_width_ * img_aug_scale_x_;
+    num_classes_ = class_size;
 
     if (num_proposals > 0) {
       num_proposals_ = num_proposals;
@@ -136,7 +137,7 @@ public:
     }
 
     // score_thresholds must have the size of score_upper_bounds * class_size
-    if (score_thresholds.size() != distance_bin_upper_limits_.size() * class_size_) {
+    if (score_thresholds.size() != distance_bin_upper_limits_.size() * num_classes_) {
       throw std::invalid_argument(
         "score_thresholds must have the size of distance_bin_upper_limits * class_size");
     }

@@ -153,7 +153,7 @@ cudaError_t PostprocessCuda::generateDetectedBoxes3D_launch(
   generateBoxes3D_kernel<<<blocks, threads, 0, stream>>>(
     label_pred_output, bbox_pred_output, score_output, config_.voxel_x_size_, config_.voxel_y_size_,
     config_.min_x_range_, config_.min_y_range_, config_.num_proposals_, config_.out_size_factor_,
-    thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()), config.class_size_,
+    thrust::raw_pointer_cast(yaw_norm_thresholds_d.data()), config_.num_classes_,
     distance_bin_upper_limits_d_ptr_.get(), score_thresholds_d_ptr_.get(),
     config_.distance_bin_upper_limits_.size(), thrust::raw_pointer_cast(boxes3d_d.data()));
 
