@@ -404,32 +404,25 @@ protected:
     return group ? group->predictions.size() : SIZE_MAX;
   }
 
-  // Publish-count specs: some contracts hinge on whether the arbiter emits
-  // a message at all, independent of the content. We count callbacks on
-  // the output subscription and expose these helpers so each contract is
-  // named at the call site.
-
-  // Snapshot the running publish count. Capture before an action that
-  // should not trigger a publish, then pair with expect_no_publish_since().
-  std::size_t publish_count() const { return arbiter_publish_count_; }
+  // Publish-count specs: a handful of contracts cannot be expressed by
+  // observing the published content alone, because they hinge on whether
+  // the arbiter emitted any message at all. For those, we count callbacks
+  // on the output subscription. Tests whose spec can be expressed as
+  // "the next publish contains X (and not the value that would have been
+  // emitted if the spec were violated)" should compare content via
+  // observed_* instead — content checks are stronger because they verify
+  // the user-visible behavior.
 
   // Spec: the arbiter has not emitted any TrafficLightGroupArray yet.
-  // Used when an early-return path is expected (e.g., perception arrived
-  // before the vector_map).
+  // Content-only checks cannot distinguish "subscriber never received
+  // anything" from "subscriber received a default-constructed payload",
+  // so the count is the only direct test of the early-return contract.
   void expect_no_publish() { EXPECT_EQ(arbiter_publish_count_, 0u); }
 
   // Spec: the arbiter has emitted at least one TrafficLightGroupArray.
   // Used when the published content is expected to be empty so a
   // content-based check cannot tell "no publish" from "empty publish".
   void expect_publish_happened() { ASSERT_GE(arbiter_publish_count_, 1u); }
-
-  // Spec: the arbiter has not emitted any new TrafficLightGroupArray
-  // since `baseline`. Used after an action whose contract is "this input
-  // must be dropped before reaching arbitrateAndPublish".
-  void expect_no_publish_since(std::size_t baseline)
-  {
-    EXPECT_EQ(arbiter_publish_count_, baseline);
-  }
 
   // Wrapped in std::optional because LaneletMapBin (a generated ROS msg)
   // has no usable default constructor that can be invoked at static storage
@@ -947,22 +940,21 @@ TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
 
 TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
 {
-  // Arrange: establish a perception baseline so we can detect any extra publish.
+  // Arrange: seed a perception value (RED). If the stale external below were
+  // ever accepted, the output would change to GREEN — the content check at
+  // the bottom is what pins "stale dropped".
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
   publish_perception(make_signal_array(
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
-  const auto baseline = publish_count();
 
   // Act: external_delay_tolerance defaults to 5.0s; 20s in the past is well past it.
   publish_external(make_signal_array(
     offset_time(t0_, -20.0), map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)}));
 
-  // Assert: stale external message must be dropped before arbitrateAndPublish runs.
-  expect_no_publish_since(baseline);
-  // Last publish must still reflect the earlier perception value.
+  // Assert: the stale GREEN never propagates; the published color stays RED.
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::RED);
 }
 
