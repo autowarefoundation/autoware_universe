@@ -61,11 +61,11 @@ constexpr lanelet::Id vehicle_signal_a = 1001;
 constexpr lanelet::Id vehicle_signal_b = 1002;
 constexpr lanelet::Id vehicle_signal_c = 1003;
 constexpr lanelet::Id pedestrian_signal = 2001;
-}  // namespace map_ids
 
 // Intentionally not installed on the map; used by tests as the "off-map id"
 // probe to exercise the WARN+skip branch in arbitrateAndPublish.
-constexpr lanelet::Id kOffMapProbeId = 9999;
+constexpr lanelet::Id off_map_probe = 9999;
+}  // namespace map_ids
 
 // --- Map construction --------------------------------------------------
 
@@ -111,7 +111,7 @@ LineString3d make_traffic_light_bulb()
 //         4           1       road2        1002 (vehicle_signal_b)
 //         0          -3       road1        1001 (vehicle_signal_a)
 //
-// Probe id intentionally absent from the map: 9999 (kOffMapProbeId)
+// Probe id intentionally absent from the map: 9999 (map_ids::off_map_probe)
 LaneletMapBin build_minimal_map_bin()
 {
   Lanelet road1 = make_lanelet(0.0, -3.0, AttributeValueString::Road);
@@ -150,8 +150,6 @@ LaneletMapBin build_empty_map_bin()
   bin.header.frame_id = "base_link";
   return bin;
 }
-
-// --- Node construction -------------------------------------------------
 
 // --- Input message builders --------------------------------------------
 
@@ -220,7 +218,7 @@ TrafficLightGroupArray make_signal_array(
 }
 
 // Multi-group variant for tests that publish several ids in one message
-// (e.g. off-map-drop tests that mix an on-map id with kOffMapProbeId).
+// (e.g. off-map-drop tests that mix an on-map id with map_ids::off_map_probe).
 TrafficLightGroupArray make_signal_array(
   const rclcpp::Time & stamp, std::vector<TrafficLightGroup> groups)
 {
@@ -253,11 +251,11 @@ protected:
     }
 
     // Reserve the highest signal id so utils::getId() never returns values
-    // that collide with map_ids::* or kOffMapProbeId. Calling registerId(9999)
+    // that collide with map_ids::* or map_ids::off_map_probe. Calling registerId(9999)
     // advances the global counter to >= 10000, which is safely above every
     // fixed signal id we use. This is process-wide global state, so doing it
     // once per suite is enough.
-    utils::registerId(kOffMapProbeId);
+    utils::registerId(map_ids::off_map_probe);
 
     // map_bin_ is immutable across tests, so build it once for the suite.
     map_bin_ = build_minimal_map_bin();
@@ -565,7 +563,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingOffMapIdDropped)
   // Act
   publish_external(make_signal_array(
     t0_, {make_traffic_light_group(
-            kOffMapProbeId,
+            map_ids::off_map_probe,
             {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}),
           make_traffic_light_group(
             map_ids::vehicle_signal_a,
@@ -575,7 +573,7 @@ TEST_F(ArbiterCharacteristic, signalMatchingOffMapIdDropped)
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
   // Assert
-  EXPECT_EQ(find_traffic_light_group(kOffMapProbeId), nullptr);
+  EXPECT_EQ(find_traffic_light_group(map_ids::off_map_probe), nullptr);
   EXPECT_NE(find_traffic_light_group(map_ids::vehicle_signal_a), nullptr);
 }
 
@@ -807,14 +805,14 @@ TEST_F(ArbiterCharacteristic, priorityBasedOffMapIdDropped)
 
   // Act
   publish_external(make_signal_array(
-    t0_, kOffMapProbeId,
+    t0_, map_ids::off_map_probe,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)}));
   publish_perception(make_signal_array(
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)}));
 
   // Assert
-  EXPECT_EQ(find_traffic_light_group(kOffMapProbeId), nullptr);
+  EXPECT_EQ(find_traffic_light_group(map_ids::off_map_probe), nullptr);
   EXPECT_NE(find_traffic_light_group(map_ids::vehicle_signal_a), nullptr);
 }
 
