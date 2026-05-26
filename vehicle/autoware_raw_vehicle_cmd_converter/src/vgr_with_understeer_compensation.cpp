@@ -12,34 +12,34 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "autoware_raw_vehicle_cmd_converter/vgr_with_understeer.hpp"
+#include "autoware_raw_vehicle_cmd_converter/vgr_with_understeer_compensation.hpp"
 
 namespace autoware::raw_vehicle_cmd_converter
 {
 
-void VGRWithUndersteer::setCoefficients(const double a, const double b, const double c)
+void VGRWithUndersteerCompensation::setCoefficients(const double a, const double b, const double c)
 {
   vgr_.setCoefficients(a, b, c);
 }
 
-void VGRWithUndersteer::setUndersteerParams(const double k_us, const double wheelbase)
+void VGRWithUndersteerCompensation::setUndersteerParams(const double k_us, const double wheelbase)
 {
   k_us_ = k_us;
   wheelbase_ = wheelbase;
 }
 
-double VGRWithUndersteer::calculateUndersteerRatio(const double vel) const
+double VGRWithUndersteerCompensation::calculateUndersteerRatio(const double vel) const
 {
   return 1.0 + k_us_ * vel * vel / wheelbase_;
 }
 
-double VGRWithUndersteer::calculateVariableGearRatio(
+double VGRWithUndersteerCompensation::calculateVariableGearRatio(
   const double vel, const double steer_wheel) const
 {
   return vgr_.calculateVariableGearRatio(vel, steer_wheel) * calculateUndersteerRatio(vel);
 }
 
-double VGRWithUndersteer::calculateSteeringTireState(
+double VGRWithUndersteerCompensation::calculateSteeringTireState(
   const double vel, const double steer_wheel) const
 {
   return steer_wheel / calculateVariableGearRatio(vel, steer_wheel);

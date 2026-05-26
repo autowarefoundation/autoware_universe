@@ -12,8 +12,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef AUTOWARE_RAW_VEHICLE_CMD_CONVERTER__VGR_WITH_UNDERSTEER_HPP_
-#define AUTOWARE_RAW_VEHICLE_CMD_CONVERTER__VGR_WITH_UNDERSTEER_HPP_
+#ifndef AUTOWARE_RAW_VEHICLE_CMD_CONVERTER__VGR_WITH_UNDERSTEER_COMPENSATION_HPP_
+#define AUTOWARE_RAW_VEHICLE_CMD_CONVERTER__VGR_WITH_UNDERSTEER_COMPENSATION_HPP_
 
 #include "autoware_raw_vehicle_cmd_converter/vgr.hpp"
 
@@ -24,10 +24,10 @@ namespace autoware::raw_vehicle_cmd_converter
 // at non-zero lateral acceleration. Pulling δ/L out and treating tan(δ) ≈ δ,
 // this becomes a multiplicative factor on the gear ratio:
 //   N(v, δ_w) = N_mech(v, δ_w) · (1 + K_us · v² / L)
-class VGRWithUndersteer
+class VGRWithUndersteerCompensation
 {
 public:
-  VGRWithUndersteer() = default;
+  VGRWithUndersteerCompensation() = default;
   void setCoefficients(double a, double b, double c);
   void setUndersteerParams(double k_us, double wheelbase);
   double calculateUndersteerRatio(double vel) const;
@@ -41,4 +41,4 @@ private:
 };
 }  // namespace autoware::raw_vehicle_cmd_converter
 
-#endif  // AUTOWARE_RAW_VEHICLE_CMD_CONVERTER__VGR_WITH_UNDERSTEER_HPP_
+#endif  // AUTOWARE_RAW_VEHICLE_CMD_CONVERTER__VGR_WITH_UNDERSTEER_COMPENSATION_HPP_

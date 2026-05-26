@@ -60,7 +60,7 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
       const double b = declare_parameter<double>("vgr_coef_b");
       const double c = declare_parameter<double>("vgr_coef_c");
       vgr_.setCoefficients(a, b, c);
-    } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer") {
+    } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer_compensation") {
       const double a = declare_parameter<double>("vgr_coef_a");
       const double b = declare_parameter<double>("vgr_coef_b");
       const double c = declare_parameter<double>("vgr_coef_c");
@@ -113,7 +113,7 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
   // subscribe only when the option is specified.
   const bool use_vgr = convert_steer_cmd_method_.has_value() &&
                        (convert_steer_cmd_method_.value() == "vgr" ||
-                        convert_steer_cmd_method_.value() == "vgr_with_understeer");
+                        convert_steer_cmd_method_.value() == "vgr_with_understeer_compensation");
   need_to_subscribe_actuation_status_ = convert_actuation_to_steering_status_ || use_vgr;
   if (need_to_subscribe_actuation_status_) {
     sub_actuation_status_ = create_subscription<ActuationStatusStamped>(
@@ -209,7 +209,7 @@ void RawVehicleCommandConverterNode::publishActuationCmd()
     const double current_steer_wheel = actuation_status_ptr_->status.steer_status;
     const double adaptive_gear_ratio = vgr_.calculateVariableGearRatio(vel, current_steer_wheel);
     desired_steer_cmd = steer * adaptive_gear_ratio;
-  } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer") {
+  } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer_compensation") {
     const double current_steer_wheel = actuation_status_ptr_->status.steer_status;
     const double adaptive_gear_ratio =
       vgr_with_us_.calculateVariableGearRatio(vel, current_steer_wheel);
@@ -334,7 +334,7 @@ void RawVehicleCommandConverterNode::onActuationStatus(
       steering_msg.stamp = this->now();
       steering_msg.steering_tire_angle = *current_steer_ptr_;
       pub_steering_status_->publish(steering_msg);
-    } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer") {
+    } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer_compensation") {
       current_steer_ptr_ = std::make_unique<double>(vgr_with_us_.calculateSteeringTireState(
         current_odometry_->twist.twist.linear.x, actuation_status_ptr_->status.steer_status));
       Steering steering_msg{};
