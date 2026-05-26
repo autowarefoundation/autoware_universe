@@ -311,8 +311,7 @@ protected:
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
     executor_->add_node(arbiter_);
     executor_->add_node(test_node_);
-    // Allow discovery to settle before any publish so transient_local replay works.
-    spinFor(std::chrono::milliseconds(200));
+    spinFor(std::chrono::milliseconds(150));
   }
 
   void publishMap() { publishMap(*map_bin_); }
