@@ -212,10 +212,6 @@ TrafficLightArray make_signal_array(
   return signal_array;
 }
 
-// Bundle the three inputs to `MultiCameraFusion::fuse` for the common case of a single signal
-// observed by one camera. The ROI id is derived from `signal.traffic_light_id` so the ROI and the
-// signal always match — use the lower-level `make_roi_array` / `make_signal_array` directly when a
-// mismatched ROI/signal pairing or empty arrays are required.
 struct FusionInput
 {
   CameraInfo camera_info;
