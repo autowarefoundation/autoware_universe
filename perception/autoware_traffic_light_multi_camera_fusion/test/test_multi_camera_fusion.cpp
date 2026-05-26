@@ -218,6 +218,24 @@ FusionInput make_fusion_input(
     make_signal_array(stamp, frame_id, signal)};
 }
 
+void expect_single_fused_color(const MultiCameraFusionResult & result, uint8_t expected_color)
+{
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(group.elements.front().color, expected_color);
+}
+
+void expect_single_fused_color_and_shape(
+  const MultiCameraFusionResult & result, uint8_t expected_color, uint8_t expected_shape)
+{
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_EQ(group.elements.size(), 1u);
+  EXPECT_EQ(group.elements.front().color, expected_color);
+  EXPECT_EQ(group.elements.front().shape, expected_shape);
+}
+
 }  // namespace
 
 TEST(MultiCameraFusionFuse, SingleCameraSingleLightOutputsGroupWithMappedRegulatoryId)
@@ -315,10 +333,7 @@ TEST(MultiCameraFusionFuse, HigherConfidenceColorIsSelectedAcrossTwoLights)
   const auto result = fusion.fuse(input1.camera_info, input1.roi_array, input1.signal_array);
 
   // Assert
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::GREEN);
+  expect_single_fused_color(result, TrafficLightElement::GREEN);
 }
 
 TEST(MultiCameraFusionFuse, RecordOlderThanMessageLifespanIsDiscarded)
@@ -340,10 +355,7 @@ TEST(MultiCameraFusionFuse, RecordOlderThanMessageLifespanIsDiscarded)
 
   // Assert
   // Only the second record contributes -> single light, RED color.
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
+  expect_single_fused_color(result, TrafficLightElement::RED);
 }
 
 TEST(MultiCameraFusionFuse, RecordWithinMessageLifespanIsKeptAndAccumulated)
@@ -364,10 +376,7 @@ TEST(MultiCameraFusionFuse, RecordWithinMessageLifespanIsKeptAndAccumulated)
 
   // Assert
   // Both records aggregate into a single group (same regulatory element) with color GREEN.
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::GREEN);
+  expect_single_fused_color(result, TrafficLightElement::GREEN);
 }
 
 TEST(MultiCameraFusionFuse, ConsistencyCheckWithSameColorOutputsNoConflict)
@@ -387,10 +396,7 @@ TEST(MultiCameraFusionFuse, ConsistencyCheckWithSameColorOutputsNoConflict)
   const auto result = fusion.fuse(input1.camera_info, input1.roi_array, input1.signal_array);
 
   // Assert
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  EXPECT_EQ(
-    result.traffic_light_groups.traffic_light_groups.front().elements.front().color,
-    TrafficLightElement::GREEN);
+  expect_single_fused_color(result, TrafficLightElement::GREEN);
   EXPECT_TRUE(result.conflicted_regulatory_element_status.empty());
 }
 
@@ -415,11 +421,8 @@ TEST(MultiCameraFusionFuse, ConsistencyCheckWithConflictingColorsOutputsUnknownF
   const auto result = fusion.fuse(input1.camera_info, input1.roi_array, input1.signal_array);
 
   // Assert
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(group.elements.front().shape, TrafficLightElement::UNKNOWN);
+  expect_single_fused_color_and_shape(
+    result, TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN);
   ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
   EXPECT_EQ(
     result.conflicted_regulatory_element_status.front().conflict_type, ConflictType::CONFLICT);
@@ -447,10 +450,7 @@ TEST(MultiCameraFusionFuse, TruncatedRoiHasLowerPriorityThanCenteredRoi)
     fusion.fuse(centered_input.camera_info, centered_input.roi_array, centered_input.signal_array);
 
   // Assert
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
+  expect_single_fused_color(result, TrafficLightElement::RED);
 }
 
 TEST(MultiCameraFusionFuse, UnknownSignalLosesToValidSignalForSameTrafficLightId)
@@ -472,10 +472,7 @@ TEST(MultiCameraFusionFuse, UnknownSignalLosesToValidSignalForSameTrafficLightId
     fusion.fuse(valid_input.camera_info, valid_input.roi_array, valid_input.signal_array);
 
   // Assert
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::GREEN);
+  expect_single_fused_color(result, TrafficLightElement::GREEN);
 }
 
 TEST(MultiCameraFusionFuse, NewerTimestampWinsForSameFrameIdAndTrafficLightId)
@@ -498,10 +495,7 @@ TEST(MultiCameraFusionFuse, NewerTimestampWinsForSameFrameIdAndTrafficLightId)
     fusion.fuse(later_input.camera_info, later_input.roi_array, later_input.signal_array);
 
   // Assert
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
+  expect_single_fused_color(result, TrafficLightElement::RED);
 }
 
 TEST(MultiCameraFusionFuse, HigherConfidenceWinsWhenVisibleScoreTiesForSameTrafficLightId)
@@ -526,10 +520,7 @@ TEST(MultiCameraFusionFuse, HigherConfidenceWinsWhenVisibleScoreTiesForSameTraff
     high_confidence_input.signal_array);
 
   // Assert
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
+  expect_single_fused_color(result, TrafficLightElement::RED);
 }
 
 TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommonState)
@@ -564,11 +555,8 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommo
   const auto result = fusion.fuse(input1.camera_info, input1.roi_array, input1.signal_array);
 
   // Assert
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::RED);
-  EXPECT_EQ(group.elements.front().shape, TrafficLightElement::CIRCLE);
+  expect_single_fused_color_and_shape(
+    result, TrafficLightElement::RED, TrafficLightElement::CIRCLE);
   ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
   EXPECT_EQ(
     result.conflicted_regulatory_element_status.front().conflict_type,
@@ -605,11 +593,8 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchDisabledPublishesFail
   const auto result = fusion.fuse(input1.camera_info, input1.roi_array, input1.signal_array);
 
   // Assert
-  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
-  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(group.elements.front().color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(group.elements.front().shape, TrafficLightElement::UNKNOWN);
+  expect_single_fused_color_and_shape(
+    result, TrafficLightElement::UNKNOWN, TrafficLightElement::UNKNOWN);
   ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
   EXPECT_EQ(
     result.conflicted_regulatory_element_status.front().conflict_type,
