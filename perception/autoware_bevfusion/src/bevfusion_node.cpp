@@ -120,7 +120,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   // Distance-based score thresholds
   const std::vector<double> distance_bin_upper_limits_double =
     this->declare_parameter<std::vector<double>>(
-      "model_params.detection_score_thresholds.distance_bin_upper_limits", std::vector<double>{});
+      "detection_score_thresholds.distance_bin_upper_limits", std::vector<double>{});
   // Must set at least one upper bound
   if (distance_bin_upper_limits_double.empty()) {
     throw std::invalid_argument("The number of upper bounds must be at least one");
@@ -134,8 +134,7 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   int current_class_index = 0;
   for (const auto & class_name : class_names_) {
     // Construct the parameter path (e.g., "model_params.score_thresholds.CAR")
-    std::string param_path =
-      "model_params.detection_score_thresholds.min_confidence_scores." + class_name;
+    std::string param_path = "detection_score_thresholds.min_confidence_scores." + class_name;
 
     // Declare it. If the number of thresholds is not equal to the number of upper bounds, throw an
     // error
