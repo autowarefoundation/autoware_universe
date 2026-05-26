@@ -414,8 +414,7 @@ bool StartPlannerModule::hasCollisionWithDynamicObjects() const
 bool StartPlannerModule::isInsideLanelets() const
 {
   const auto & current_pose = planner_data_->self_odometry->pose.pose;
-  const auto vehicle_footprint = autoware_utils::transform_vector(
-    vehicle_info_.createFootprint(), autoware_utils::pose2transform(current_pose));
+  const auto vehicle_footprint = vehicle_info_.createFootprint(0.0, current_pose);
 
   lanelet::BasicPolygon2d footprint_polygon;
   for (const auto & point : vehicle_footprint) {
@@ -655,9 +654,7 @@ StartPlannerModule::getGapBetweenEgoAndLaneBorder(
   const double starting_pose_lateral_offset) const
 {
   geometry_msgs::msg::Pose ego_overhang_point_as_pose;
-  const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-  const auto vehicle_footprint = autoware_utils::transform_vector(
-    local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
+  const auto vehicle_footprint = vehicle_info_.createFootprint(0.0, ego_pose);
   std::optional<double> smallest_lateral_gap_between_ego_and_border;
   std::optional<double> smallest_lateral_gap_between_ego_and_farthest_border;
   auto corresponding_lateral_gap_with_other_lane_bound = std::numeric_limits<double>::max();

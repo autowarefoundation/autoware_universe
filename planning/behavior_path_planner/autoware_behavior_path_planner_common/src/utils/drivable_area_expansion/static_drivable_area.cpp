@@ -1371,8 +1371,7 @@ std::pair<std::vector<lanelet::ConstPoint3d>, bool> getBoundWithFreeSpaceAreas(
     return std::make_pair(original_bound, false);
   }
 
-  const auto footprint = planner_data->parameters.vehicle_info.createFootprint();
-  const auto vehicle_polygon = transform_vector(footprint, pose2transform(ego_pose));
+  const auto vehicle_polygon = planner_data->parameters.vehicle_info.createFootprint(0.0, ego_pose);
   const auto is_driving_freespace =
     !boost::geometry::disjoint(vehicle_polygon, to2D(polygon).basicPolygon());
 
