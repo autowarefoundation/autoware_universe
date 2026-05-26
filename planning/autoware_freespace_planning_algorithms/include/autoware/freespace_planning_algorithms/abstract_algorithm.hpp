@@ -118,6 +118,7 @@ public:
   {
     planner_common_param_.turning_steps = std::max(planner_common_param_.turning_steps, 1);
     collision_vehicle_info_.max_steer_angle_rad *= planner_common_param_.max_turning_ratio;
+    is_collision_table_initialized = false;
   }
 
   virtual void setMap(const nav_msgs::msg::OccupancyGrid & costmap);
