@@ -370,8 +370,12 @@ bool VirtualTrafficLightModule::isBeforeStartLine(const size_t end_line_idx)
 
 bool VirtualTrafficLightModule::isBeforeStopLine(const size_t end_line_idx)
 {
+  if (!map_data_.stop_line) {
+    return false;
+  }
+  const auto stop_line = map_data_.stop_line.value_or(autoware_utils::LineString3d{});
   const auto collision =
-    findLastCollisionBeforeEndLine(module_data_.path.points, *map_data_.stop_line, end_line_idx);
+    findLastCollisionBeforeEndLine(module_data_.path.points, stop_line, end_line_idx);
 
   // Since the module is registered, a collision should be detected usually.
   // Therefore if no collision found, vehicle's path is fully after the line.
@@ -461,8 +465,11 @@ bool VirtualTrafficLightModule::hasRightOfWay(
 void VirtualTrafficLightModule::insertStopVelocityAtStopLine(
   autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx)
 {
-  const auto collision =
-    findLastCollisionBeforeEndLine(path->points, *map_data_.stop_line, end_line_idx);
+  std::optional<SegmentIndexWithPoint> collision;
+  if (map_data_.stop_line) {
+    const auto stop_line = map_data_.stop_line.value_or(autoware_utils::LineString3d{});
+    collision = findLastCollisionBeforeEndLine(path->points, stop_line, end_line_idx);
+  }
   const auto offset = -planner_data_->vehicle_info_.max_longitudinal_offset_m;
 
   geometry_msgs::msg::Pose stop_pose{};
