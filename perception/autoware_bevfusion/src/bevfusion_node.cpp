@@ -136,10 +136,12 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     // Construct the parameter path (e.g., "model_params.score_thresholds.CAR")
     std::string param_path = "detection_score_thresholds.min_confidence_scores." + class_name;
 
-    // Declare it. If the number of thresholds is not equal to the number of upper bounds, throw an
-    // error
-    auto class_score_thresholds =
-      this->declare_parameter<std::vector<double>>(param_path, std::vector<double>{});
+    // The same class name may appear multiple times in class_names_, so only declare the parameter
+    // on the first occurrence and reuse the already-declared value afterwards.
+    std::vector<double> class_score_thresholds =
+      this->has_parameter(param_path)
+        ? this->get_parameter(param_path).as_double_array()
+        : this->declare_parameter<std::vector<double>>(param_path, std::vector<double>{});
     if (class_score_thresholds.size() != distance_bin_upper_limits.size()) {
       throw std::invalid_argument(
         "The number of thresholds for " + class_name +
