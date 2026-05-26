@@ -371,6 +371,33 @@ protected:
     return group ? group->predictions.size() : SIZE_MAX;
   }
 
+  // Publish-count specs: some contracts hinge on whether the arbiter emits
+  // a message at all, independent of the content. We count callbacks on
+  // the output subscription and expose these helpers so each contract is
+  // named at the call site.
+
+  // Snapshot the running publish count. Capture before an action that
+  // should not trigger a publish, then pair with expect_no_publish_since().
+  std::size_t publish_count() const { return arbiter_publish_count_; }
+
+  // Spec: the arbiter has not emitted any TrafficLightGroupArray yet.
+  // Used when an early-return path is expected (e.g., perception arrived
+  // before the vector_map).
+  void expect_no_publish() { EXPECT_EQ(arbiter_publish_count_, 0u); }
+
+  // Spec: the arbiter has emitted at least one TrafficLightGroupArray.
+  // Used when the published content is expected to be empty so a
+  // content-based check cannot tell "no publish" from "empty publish".
+  void expect_publish_happened() { ASSERT_GE(arbiter_publish_count_, 1u); }
+
+  // Spec: the arbiter has not emitted any new TrafficLightGroupArray
+  // since `baseline`. Used after an action whose contract is "this input
+  // must be dropped before reaching arbitrateAndPublish".
+  void expect_no_publish_since(std::size_t baseline)
+  {
+    EXPECT_EQ(arbiter_publish_count_, baseline);
+  }
+
   // Wrapped in std::optional because LaneletMapBin (a generated ROS msg)
   // has no usable default constructor that can be invoked at static storage
   // duration; we initialise it during SetUpTestSuite().
@@ -889,9 +916,8 @@ TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
   // Act
   publish_perception(perception_traffic_signal);
 
-  // Assert
-  EXPECT_EQ(arbiter_publish_count_, 0u)
-    << "arbitrateAndPublish should early-return when no map has been received";
+  // Assert: arbitrateAndPublish should early-return when no map has been received.
+  expect_no_publish();
 }
 
 // A non-null but signal-free map should yield an empty TrafficLightGroupArray
@@ -913,9 +939,7 @@ TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
   publish_perception(perception_traffic_signal);
 
   // Assert: arbiter publishes, but the output contains no groups.
-  // The publish-count check distinguishes "no publish happened" from
-  // "publish happened with an empty array" — both leave groups empty.
-  ASSERT_GE(arbiter_publish_count_, 1u);
+  expect_publish_happened();
   EXPECT_EQ(latest_arbitrated_traffic_signal_.traffic_light_groups.size(), 0u);
 }
 
@@ -1060,7 +1084,7 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
     map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
   publish_perception(perception_traffic_signal);
-  const auto baseline_count = arbiter_publish_count_;
+  const auto baseline = publish_count();
 
   // external_delay_tolerance defaults to 5.0s; 20s in the past is well past it.
   TrafficLightGroupArray stale_external_traffic_signal;
@@ -1072,11 +1096,10 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
   // Act
   publish_external(stale_external_traffic_signal);
 
-  // Assert
-  EXPECT_EQ(arbiter_publish_count_, baseline_count)
-    << "Stale external message must be dropped before arbitrateAndPublish runs";
-  EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::RED)
-    << "Last publish must reflect perception";
+  // Assert: stale external message must be dropped before arbitrateAndPublish runs.
+  expect_no_publish_since(baseline);
+  // Last publish must still reflect the earlier perception value.
+  EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::RED);
 }
 
 TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
