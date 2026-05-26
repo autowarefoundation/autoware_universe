@@ -245,7 +245,7 @@ bool VirtualTrafficLightModule::modifyPathVelocity(
 
   const auto path_points = path.restore();
   const auto is_driving_forward =
-    autoware::motion_utils::isDrivingForward(module_data_.path.points);
+    autoware::motion_utils::isDrivingForward(path_points);
   module_data_.is_driving_forward = is_driving_forward.value_or(true);
 
   module_data_.leading_bumper_longitudinal_offset_m = calcLeadingBumperLongitudinalOffset(
