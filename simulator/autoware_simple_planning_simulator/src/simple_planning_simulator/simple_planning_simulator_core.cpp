@@ -171,7 +171,7 @@ SimplePlanningSimulator::SimplePlanningSimulator(const rclcpp::NodeOptions & opt
   pub_imu_ = create_publisher<Imu>("output/imu", QoS{1});
   pub_tf_ = create_publisher<tf2_msgs::msg::TFMessage>("/tf", QoS{1});
   pub_actuation_status_ =
-    create_publisher<ActuationStatusStamped>("output/actuation_status", QoS{1});
+    create_publisher<ActuationReportStamped>("output/actuation_status", QoS{1});
   if (enable_pub_steer_) {
     pub_steer_ = create_publisher<SteeringReport>("output/steering", QoS{1});
   }
@@ -578,9 +578,9 @@ void SimplePlanningSimulator::set_input(const InputCommand & cmd, const double a
 void SimplePlanningSimulator::set_input(
   const ActuationCommandStamped & cmd, const double acc_by_slope)
 {
-  const auto accel = cmd.actuation.accel_cmd;
-  const auto brake = cmd.actuation.brake_cmd;
-  const auto steer = cmd.actuation.steer_cmd;
+  const auto accel = cmd.actuation_command.accel_cmd;
+  const auto brake = cmd.actuation_command.brake_cmd;
+  const auto steer = cmd.actuation_command.steer_cmd;
   const auto gear = vehicle_model_ptr_->getGear();
 
   Eigen::VectorXd input(vehicle_model_ptr_->getDimU());

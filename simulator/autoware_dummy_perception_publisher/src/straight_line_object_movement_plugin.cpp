@@ -25,7 +25,7 @@ namespace autoware::dummy_perception_publisher::pluginlib
 
 void StraightLineObjectMovementPlugin::initialize()
 {
-  set_associated_action_type(tier4_simulation_msgs::msg::DummyObject::ADD);
+  set_associated_movement_model(autoware_simulation_msgs::msg::SimulatedObject::STRAIGHT_LINE);
 }
 
 std::vector<ObjectInfo> StraightLineObjectMovementPlugin::move_objects()
