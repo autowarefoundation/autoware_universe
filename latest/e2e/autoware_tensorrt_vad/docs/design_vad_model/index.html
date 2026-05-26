@@ -23108,18 +23108,19 @@
     VadInputDataBox --&gt; LoadInputs
 
     subgraph InferScope["VadModel::infer()"]
-        LoadInputs[load_inputs: Preprocess input data and transfer from CPU to GPU]
+        LoadInputs[load_inputs: Preprocess inputs and route prev_bev/out.bev_embed bindings via ping-pong]
         LoadInputs --&gt; Enqueue[enqueue: Execute TensorRT inference]
-        Enqueue --&gt; SavePrevBev[save_prev_bev: Transfer prev_bev from GPU to CPU for next frame]
-        SavePrevBev --&gt; Postprocess[postprocess: Postprocess output and transfer from GPU to CPU]
+        Enqueue --&gt; Postprocess[postprocess: Postprocess output and transfer from GPU to CPU]
 
         Postprocess --&gt; CheckFirstFrame{Is first frame?}
 
-        CheckFirstFrame --&gt;|Yes| ReleaseNetwork[release_network: Release first-frame-only ONNX]
-        ReleaseNetwork --&gt; LoadHead[load_head: Load head ONNX that uses previous frame's BEV features]
-        LoadHead --&gt; ReturnText[return]
+        CheckFirstFrame --&gt;|Yes| LoadHead[load_head: Load head ONNX that uses previous frame's BEV features]
+        LoadHead --&gt; SeedPingPong[Seed buffer A with head_no_prev BEV via D-&gt;D copy and capture A/B ptrs]
+        SeedPingPong --&gt; ReleaseNetwork[release_network: Release first-frame-only ONNX]
+        ReleaseNetwork --&gt; ReturnText[return]
 
-        CheckFirstFrame --&gt;|No| ReturnText
+        CheckFirstFrame --&gt;|No| SwapPingPong[Toggle ping-pong: the buffer just written becomes next frame's prev_bev]
+        SwapPingPong --&gt; ReturnText
     end
 
     ReturnText --&gt; VadOutputDataBox((VadOutputData))
@@ -23146,11 +23147,11 @@
 <ul>
 <li><a href="../src/vad_model.hpp"><code>infer(const VadInputData&amp;)</code></a>: Main inference pipeline<ol>
 <li>Selects head network (<code>head_no_prev</code> for first frame, <code>head</code> for subsequent frames)</li>
-<li>Calls <code>load_inputs()</code> to preprocess and transfer data to GPU</li>
+<li>Calls <code>load_inputs()</code> to preprocess inputs and (for <code>head</code>) route prev_bev/out.bev_embed bindings via ping-pong</li>
 <li>Calls <code>enqueue()</code> to execute backbone and head networks</li>
-<li>Calls <code>save_prev_bev()</code> to preserve BEV features for next frame</li>
 <li>Calls <code>postprocess()</code> to extract outputs and transfer to CPU</li>
-<li>On first frame: releases <code>head_no_prev</code> network and calls <code>load_head()</code> to initialize <code>head</code> network</li>
+<li>On first frame: calls <code>load_head()</code>, seeds ping-pong buffer A with the first BEV (one-time D→D copy), then releases <code>head_no_prev</code></li>
+<li>On subsequent frames: toggles the ping-pong selector so the freshly written buffer becomes next frame's <code>prev_bev</code></li>
 <li>Returns <code>VadOutputData</code> containing trajectories, objects, and map polylines</li>
 </ol>
 </li>
@@ -23168,7 +23169,7 @@
 <li><a href="../src/vad_model.hpp"><code>load_inputs()</code></a>: Prepares inputs for inference<ul>
 <li>Preprocesses multi-camera images using <code>MultiCameraPreprocessor::preprocess_images()</code></li>
 <li>Loads metadata: <code>shift</code>, <code>vad_base2img</code> (lidar2img), <code>can_bus</code></li>
-<li>Sets <code>prev_bev</code> binding for <code>head</code> network (not needed for <code>head_no_prev</code>)</li>
+<li>For <code>head</code>, calls <code>trt_common-&gt;setTensorAddress("prev_bev", ...)</code> and <code>setTensorAddress("out.bev_embed", ...)</code> to swap ping-pong buffers A/B (not needed for <code>head_no_prev</code>)</li>
 </ul>
 </li>
 </ul>
@@ -23177,14 +23178,6 @@
 <li>Enqueues backbone network</li>
 <li>Enqueues selected head network</li>
 <li>Synchronizes CUDA stream to wait for completion</li>
-</ul>
-</li>
-</ul>
-<ul>
-<li><a href="../src/vad_model.hpp"><code>save_prev_bev()</code></a>: Preserves BEV features for next frame<ul>
-<li>Copies <code>out.bev_embed</code> from head output to <code>prev_bev</code> tensor</li>
-<li>Uses <code>cudaMemcpyAsync</code> Device-to-Device transfer</li>
-<li>Returns shared pointer to <code>Tensor</code> stored in <code>saved_prev_bev_</code> member</li>
 </ul>
 </li>
 </ul>
@@ -23417,7 +23410,7 @@
 <ul>
 <li><strong>Bindings Sharing</strong>: Network outputs can be directly connected as inputs to other networks</li>
 <li><strong>Tensor Class</strong>: Encapsulates CUDA memory operations (malloc, copy, free)</li>
-<li><strong>Saved BEV</strong>: <code>prev_bev</code> is preserved on GPU between frames (Device-to-Device copy)</li>
+<li><strong>BEV Ping-Pong</strong>: <code>prev_bev</code> and <code>out.bev_embed</code> of the <code>head</code> engine share two persistent GPU buffers that swap roles every frame via <code>setTensorAddress</code>. Steady-state per-frame copies = 0; a single Device-to-Device copy happens only once when transitioning from <code>head_no_prev</code> to <code>head</code>.</li>
 </ul>
 <h3 id="asynchronous-execution">Asynchronous Execution<a class="headerlink" href="#asynchronous-execution" title="Permanent link">#</a></h3>
 <ul>
@@ -23427,7 +23420,6 @@
 </ul>
 <h2 id="todo">TODO<a class="headerlink" href="#todo" title="Permanent link">#</a></h2>
 <ul>
-<li><strong>Optimize prev_bev transfer</strong>: Currently copies Device→Device; could keep as output binding to avoid copy</li>
 <li><strong>Quantization</strong>: Currently uses FP32; INT8 quantization would improve speed and memory efficiency</li>
 <li><strong>Multi-stream execution</strong>: Could pipeline backbone and head execution with multiple streams</li>
 </ul></div>
