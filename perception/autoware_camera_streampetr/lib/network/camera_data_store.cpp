@@ -302,20 +302,6 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
     input_tensor->ptr, input_camera_image_msg->data.data(), input_tensor->nbytes(),
     cudaMemcpyHostToDevice, streams_[camera_id]);
 
-  if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
-    const auto & cfg = ego_mask_roi_configs_[camera_id].value();
-    auto err_mask = applyEgoMask_launch(
-      static_cast<std::uint8_t *>(input_tensor->ptr),
-      static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), original_height,
-      original_width, cfg.fill_bgr[0], cfg.fill_bgr[1], cfg.fill_bgr[2], streams_[camera_id]);
-    if (err_mask != cudaSuccess) {
-      RCLCPP_ERROR(
-        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
-        cudaGetErrorString(err_mask));
-      return nullptr;
-    }
-  }
-
   // Allocate GPU memory for undistorted image (same size as input - full resolution)
   auto image_input_tensor = std::make_unique<Tensor>(
     "camera_img", nvinfer1::Dims{3, {original_height, original_width, 3}},
@@ -335,6 +321,20 @@ std::unique_ptr<CameraDataStore::Tensor> CameraDataStore::process_distorted_imag
   if (err != cudaSuccess) {
     RCLCPP_ERROR(logger_, "remap_launch failed with error: %s", cudaGetErrorString(err));
     return nullptr;
+  }
+
+  if (ego_mask_built_[camera_id] && ego_mask_gpu_[camera_id]) {
+    const auto & cfg = ego_mask_roi_configs_[camera_id].value();
+    auto err_mask = applyEgoMask_launch(
+      static_cast<std::uint8_t *>(image_input_tensor->ptr),
+      static_cast<const std::uint8_t *>(ego_mask_gpu_[camera_id]->ptr), original_height,
+      original_width, cfg.fill_bgr[0], cfg.fill_bgr[1], cfg.fill_bgr[2], streams_[camera_id]);
+    if (err_mask != cudaSuccess) {
+      RCLCPP_ERROR(
+        logger_, "applyEgoMask_launch failed for camera %d: %s", camera_id,
+        cudaGetErrorString(err_mask));
+      return nullptr;
+    }
   }
 
   return image_input_tensor;

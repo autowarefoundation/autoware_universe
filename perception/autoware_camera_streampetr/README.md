@@ -110,7 +110,7 @@ The `autoware_camera_streampetr` node has various parameters for configuration:
 
 #### Ego mask (CUDA preprocess)
 
-Polygon ego masking runs on the GPU **before undistortion** (same semantics as filling regions on distorted `image_raw`). No separate `ego_mask` ROS node is required.
+Polygon ego masking runs on the GPU after undistortion and before resize/normalize. For distorted inputs, polygon coordinates are interpreted in the full-resolution undistorted image. No separate `ego_mask` ROS node is required.
 
 - `ego_mask.enabled`: Enable CUDA ego masking (default: `false`)
 - `ego_mask.fill_value_bgr`: BGR fill inside polygons, 0–255 (default: `[0, 0, 0]`)
