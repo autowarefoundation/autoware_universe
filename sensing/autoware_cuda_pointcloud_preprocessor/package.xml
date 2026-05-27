@@ -31,6 +31,7 @@
   <depend>tf2</depend>
   <depend>tf2_msgs</depend>
   <depend>tier4_debug_msgs</depend>
+  <depend>tl_expected</depend>
 
   <test_depend>ament_clang_format</test_depend>
   <test_depend>ament_lint_auto</test_depend>

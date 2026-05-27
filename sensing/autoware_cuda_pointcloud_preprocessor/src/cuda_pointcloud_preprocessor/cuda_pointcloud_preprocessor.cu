@@ -14,6 +14,7 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/common_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/memory.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/organize_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/outlier_kernels.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
@@ -26,8 +27,11 @@
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/thrust_utils.hpp>
 #include <cub/cub.cuh>
+#include <rclcpp/duration.hpp>
+#include <rclcpp/time.hpp>
 
 #include <sensor_msgs/msg/point_field.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <cuda_runtime.h>
 #include <tf2/utils.h>
@@ -36,7 +40,9 @@
 #include <thrust/reduce.h>
 #include <thrust/scan.h>
 
+#include <algorithm>
 #include <cstdint>
+#include <utility>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -109,11 +115,25 @@ CudaPointcloudPreprocessor::CudaPointcloudPreprocessor() : stream_(initialize_st
   preallocateOutput();
 }
 
+CudaPointcloudPreprocessor::CudaPointcloudPreprocessor(const Config & config)
+: CudaPointcloudPreprocessor()
+{
+  setConfig(config);
+}
+
 cudaStream_t CudaPointcloudPreprocessor::initialize_stream()
 {
   cudaStream_t stream{};
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
   return stream;
+}
+
+void CudaPointcloudPreprocessor::setConfig(const Config & config)
+{
+  setCropBoxParameters(config.crop_box_parameters);
+  setRingOutlierFilterParameters(config.ring_outlier_filter_parameters);
+  setRingOutlierFilterActive(config.enable_ring_outlier_filter);
+  setUndistortionType(config.undistortion_type);
 }
 
 void CudaPointcloudPreprocessor::setCropBoxParameters(
@@ -142,11 +162,107 @@ void CudaPointcloudPreprocessor::setUndistortionType(const UndistortionType & un
   undistortion_type_ = undistortion_type;
 }
 
+void CudaPointcloudPreprocessor::addTwist(
+  const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg)
+{
+  while (!twist_queue_.empty()) {
+    const bool backwards_time_jump_detected =
+      rclcpp::Time(twist_queue_.front().header.stamp) > rclcpp::Time(twist_msg.header.stamp);
+    const bool is_queue_longer_than_1s =
+      rclcpp::Time(twist_queue_.front().header.stamp) <
+      rclcpp::Time(twist_msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
+
+    if (backwards_time_jump_detected) {
+      twist_queue_.clear();
+    } else if (is_queue_longer_than_1s) {
+      twist_queue_.pop_front();
+    } else {
+      break;
+    }
+  }
+
+  auto it = std::lower_bound(
+    twist_queue_.begin(), twist_queue_.end(), twist_msg.header.stamp,
+    [](const auto & twist, const auto & stamp) {
+      return rclcpp::Time(twist.header.stamp) < stamp;
+    });
+  twist_queue_.insert(it, twist_msg);
+}
+
+void CudaPointcloudPreprocessor::addAngularVelocityInBaseFrame(
+  const geometry_msgs::msg::Vector3Stamped & angular_velocity)
+{
+  while (!angular_velocity_queue_.empty()) {
+    const bool backwards_time_jump_detected =
+      rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
+      rclcpp::Time(angular_velocity.header.stamp);
+    const bool is_queue_longer_than_1s =
+      rclcpp::Time(angular_velocity_queue_.front().header.stamp) <
+      rclcpp::Time(angular_velocity.header.stamp) - rclcpp::Duration::from_seconds(1.0);
+
+    if (backwards_time_jump_detected) {
+      angular_velocity_queue_.clear();
+    } else if (is_queue_longer_than_1s) {
+      angular_velocity_queue_.pop_front();
+    } else {
+      break;
+    }
+  }
+
+  auto it = std::lower_bound(
+    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), angular_velocity.header.stamp,
+    [](const auto & queued_angular_velocity, const auto & stamp) {
+      return rclcpp::Time(queued_angular_velocity.header.stamp) < stamp;
+    });
+  angular_velocity_queue_.insert(it, angular_velocity);
+}
+
 void CudaPointcloudPreprocessor::preallocateOutput()
 {
   output_pointcloud_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
   output_pointcloud_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
     num_rings_ * max_points_per_ring_ * sizeof(OutputPointType));
+}
+
+[[nodiscard]] bool CudaPointcloudPreprocessor::validatePointcloudLayout(
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const
+{
+  return is_data_layout_compatible_with_point_xyzircaedt(input_pointcloud_msg.fields);
+}
+
+std::pair<std::uint64_t, std::uint32_t> CudaPointcloudPreprocessor::getFirstPointTimeInfo(
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const
+{
+  sensor_msgs::PointCloud2ConstIterator<std::uint32_t> iter_stamp(
+    input_pointcloud_msg, "time_stamp");
+  const auto num_points = input_pointcloud_msg.width * input_pointcloud_msg.height;
+  const std::uint32_t first_point_rel_stamp = num_points > 0 ? *iter_stamp : 0;
+  const std::uint64_t first_point_stamp =
+    input_pointcloud_msg.header.stamp.sec * static_cast<std::uint64_t>(1'000'000'000) +
+    input_pointcloud_msg.header.stamp.nanosec + first_point_rel_stamp;
+  return {first_point_stamp, first_point_rel_stamp};
+}
+
+void CudaPointcloudPreprocessor::trimTwistQueue(std::uint64_t first_point_stamp)
+{
+  auto it = std::lower_bound(
+    twist_queue_.begin(), twist_queue_.end(), first_point_stamp,
+    [](const auto & twist, const std::uint64_t stamp) {
+      return rclcpp::Time(twist.header.stamp).nanoseconds() < stamp;
+    });
+
+  twist_queue_.erase(twist_queue_.begin(), it);
+}
+
+void CudaPointcloudPreprocessor::trimAngularVelocityQueue(std::uint64_t first_point_stamp)
+{
+  auto it = std::lower_bound(
+    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), first_point_stamp,
+    [](const auto & angular_velocity, const std::uint64_t stamp) {
+      return rclcpp::Time(angular_velocity.header.stamp).nanoseconds() < stamp;
+    });
+
+  angular_velocity_queue_.erase(angular_velocity_queue_.begin(), it);
 }
 
 void CudaPointcloudPreprocessor::organizePointcloud()
@@ -273,14 +389,22 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     organized_points_blocks_per_grid, stream_);
 }
 
-std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::process(
+tl::expected<ProcessResult, ProcessError> CudaPointcloudPreprocessor::process(
   const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
-  const geometry_msgs::msg::TransformStamped & transform_msg,
-  const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
-  const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
-  const std::uint32_t first_point_rel_stamp_nsec)
+  const geometry_msgs::msg::TransformStamped & transform_msg)
 {
-  auto frame_id = input_pointcloud_msg.header.frame_id;
+  if (!validatePointcloudLayout(input_pointcloud_msg)) {
+    return tl::make_unexpected(
+      ProcessError{
+        ProcessError::Code::IncompatiblePointcloudLayout,
+        "Input pointcloud data layout is not compatible with PointXYZIRCAEDT"});
+  }
+
+  const auto [first_point_stamp, first_point_rel_stamp_nsec] =
+    getFirstPointTimeInfo(input_pointcloud_msg);
+  trimTwistQueue(first_point_stamp);
+  trimAngularVelocityQueue(first_point_stamp);
+
   num_raw_points_ = static_cast<int>(input_pointcloud_msg.width * input_pointcloud_msg.height);
   num_organized_points_ = num_rings_ * max_points_per_ring_;
 
@@ -295,7 +419,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     output_pointcloud_ptr_->point_step = sizeof(OutputPointType);
     output_pointcloud_ptr_->header.stamp = input_pointcloud_msg.header.stamp;
 
-    return std::move(output_pointcloud_ptr_);
+    return ProcessResult{std::move(output_pointcloud_ptr_), stats_};
   }
 
   if (num_raw_points_ > device_input_points_.size()) {
@@ -349,11 +473,11 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
 
   if (undistortion_type_ == UndistortionType::Undistortion3D) {
     setupTwist3DStructs(
-      twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
+      twist_queue_, angular_velocity_queue_, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
       device_twist_3d_structs_, stream_);
   } else if (undistortion_type_ == UndistortionType::Undistortion2D) {
     setupTwist2DStructs(
-      twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
+      twist_queue_, angular_velocity_queue_, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
       device_twist_2d_structs_, stream_);
   } else {
     throw std::runtime_error("Invalid undistortion type");
@@ -470,7 +594,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   output_pointcloud_ptr_->point_step = sizeof(OutputPointType);
   output_pointcloud_ptr_->header.stamp = input_pointcloud_msg.header.stamp;
 
-  return std::move(output_pointcloud_ptr_);
+  return ProcessResult{std::move(output_pointcloud_ptr_), stats_};
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

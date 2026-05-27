@@ -22,6 +22,7 @@
 #include <Eigen/Geometry>
 #include <autoware/cuda_utils/thrust_utils.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
@@ -33,6 +34,8 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::cuda_pointcloud_preprocessor
@@ -45,30 +48,66 @@ struct ProcessingStats
   int num_nan_points{0};
 };
 
+struct CudaPointcloudPreprocessorConfig
+{
+  std::vector<CropBoxParameters> crop_box_parameters;
+  RingOutlierFilterParameters ring_outlier_filter_parameters;
+  bool enable_ring_outlier_filter{true};
+  enum class UndistortionType {
+    Invalid,
+    Undistortion2D,
+    Undistortion3D
+  } undistortion_type{UndistortionType::Invalid};
+};
+
+struct ProcessResult
+{
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> output;
+  ProcessingStats stats;
+};
+
+struct ProcessError
+{
+  enum class Code {
+    IncompatiblePointcloudLayout,
+  };
+
+  Code code;
+  std::string message;
+};
+
 class CudaPointcloudPreprocessor
 {
 public:
-  enum class UndistortionType { Invalid, Undistortion2D, Undistortion3D };
+  using Config = CudaPointcloudPreprocessorConfig;
+  using UndistortionType = CudaPointcloudPreprocessorConfig::UndistortionType;
 
   CudaPointcloudPreprocessor();
+  explicit CudaPointcloudPreprocessor(const Config & config);
 
+  void setConfig(const Config & config);
   void setCropBoxParameters(const std::vector<CropBoxParameters> & crop_box_parameters);
   void setRingOutlierFilterParameters(const RingOutlierFilterParameters & ring_outlier_parameters);
   void setRingOutlierFilterActive(const bool enable_filter);
   void setUndistortionType(const UndistortionType & undistortion_type);
+  void addTwist(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
+  void addAngularVelocityInBaseFrame(const geometry_msgs::msg::Vector3Stamped & angular_velocity);
 
   void preallocateOutput();
   [[nodiscard]] ProcessingStats getProcessingStats() const { return stats_; }
 
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> process(
+  tl::expected<ProcessResult, ProcessError> process(
     const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
-    const geometry_msgs::msg::TransformStamped & transform_msg,
-    const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
-    const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
-    const std::uint32_t first_point_rel_stamp_nsec);
+    const geometry_msgs::msg::TransformStamped & transform_msg);
 
 private:
   static cudaStream_t initialize_stream();
+  [[nodiscard]] bool validatePointcloudLayout(
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const;
+  std::pair<std::uint64_t, std::uint32_t> getFirstPointTimeInfo(
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const;
+  void trimTwistQueue(std::uint64_t first_point_stamp);
+  void trimAngularVelocityQueue(std::uint64_t first_point_stamp);
 
   void organizePointcloud();
 
@@ -92,6 +131,9 @@ private:
   cudaMemPool_t device_memory_pool_{};
 
   ProcessingStats stats_;
+
+  std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> twist_queue_;
+  std::deque<geometry_msgs::msg::Vector3Stamped> angular_velocity_queue_;
 
   // Organizing buffers
   thrust::device_vector<InputPointType> device_input_points_;
