@@ -82,14 +82,8 @@ public:
   using Config = CudaPointcloudPreprocessorConfig;
   using UndistortionType = CudaPointcloudPreprocessorConfig::UndistortionType;
 
-  CudaPointcloudPreprocessor();
   explicit CudaPointcloudPreprocessor(const Config & config);
 
-  void setConfig(const Config & config);
-  void setCropBoxParameters(const std::vector<CropBoxParameters> & crop_box_parameters);
-  void setRingOutlierFilterParameters(const RingOutlierFilterParameters & ring_outlier_parameters);
-  void setRingOutlierFilterActive(const bool enable_filter);
-  void setUndistortionType(const UndistortionType & undistortion_type);
   void addTwist(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
   void addAngularVelocityInBaseFrame(const geometry_msgs::msg::Vector3Stamped & angular_velocity);
 
@@ -102,6 +96,10 @@ public:
 
 private:
   static cudaStream_t initialize_stream();
+  void setCropBoxParameters(const std::vector<CropBoxParameters> & crop_box_parameters);
+  void setRingOutlierFilterParameters(const RingOutlierFilterParameters & ring_outlier_parameters);
+  void setRingOutlierFilterActive(const bool enable_filter);
+  void setUndistortionType(const UndistortionType & undistortion_type);
   [[nodiscard]] bool validatePointcloudLayout(
     const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const;
   std::pair<std::uint64_t, std::uint32_t> getFirstPointTimeInfo(

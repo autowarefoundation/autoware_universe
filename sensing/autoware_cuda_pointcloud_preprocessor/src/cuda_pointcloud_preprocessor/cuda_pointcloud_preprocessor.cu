@@ -49,7 +49,8 @@ namespace autoware::cuda_pointcloud_preprocessor
 
 namespace thrust_stream = cuda_utils::thrust_stream;
 
-CudaPointcloudPreprocessor::CudaPointcloudPreprocessor() : stream_(initialize_stream())
+CudaPointcloudPreprocessor::CudaPointcloudPreprocessor(const Config & config)
+: stream_(initialize_stream())
 {
   using sensor_msgs::msg::PointField;
 
@@ -113,12 +114,11 @@ CudaPointcloudPreprocessor::CudaPointcloudPreprocessor() : stream_(initialize_st
   device_indices_.resize(num_organized_points_);
 
   preallocateOutput();
-}
 
-CudaPointcloudPreprocessor::CudaPointcloudPreprocessor(const Config & config)
-: CudaPointcloudPreprocessor()
-{
-  setConfig(config);
+  setCropBoxParameters(config.crop_box_parameters);
+  setRingOutlierFilterParameters(config.ring_outlier_filter_parameters);
+  setRingOutlierFilterActive(config.enable_ring_outlier_filter);
+  setUndistortionType(config.undistortion_type);
 }
 
 cudaStream_t CudaPointcloudPreprocessor::initialize_stream()
@@ -126,14 +126,6 @@ cudaStream_t CudaPointcloudPreprocessor::initialize_stream()
   cudaStream_t stream{};
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream));
   return stream;
-}
-
-void CudaPointcloudPreprocessor::setConfig(const Config & config)
-{
-  setCropBoxParameters(config.crop_box_parameters);
-  setRingOutlierFilterParameters(config.ring_outlier_filter_parameters);
-  setRingOutlierFilterActive(config.enable_ring_outlier_filter);
-  setUndistortionType(config.undistortion_type);
 }
 
 void CudaPointcloudPreprocessor::setCropBoxParameters(
