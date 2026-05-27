@@ -42,6 +42,14 @@ struct Inputs
   autoware_perception_msgs::msg::TrafficLightGroupArray signals;
   double current_velocity;
   double current_acceleration;
+  std::vector<int64_t> force_reject_amber_ids;
+};
+
+/// @brief information about a stop line and its associated traffic light
+struct StopLineInfo
+{
+  lanelet::BasicLineString2d line;
+  int64_t traffic_light_id;
 };
 
 /// @brief type of traffic light violation
@@ -52,6 +60,7 @@ struct Violation
 {
   ViolationType type;
   lanelet::BasicLineString2d stop_line;
+  int64_t traffic_light_id;
 };
 
 /// @brief result of compliance check
@@ -69,6 +78,10 @@ struct Parameters
   double crossing_time_limit;
   bool treat_amber_light_as_red_light;
   double stop_overshoot_margin;
+  double stable_duration_threshold_red;
+  double stable_duration_threshold_amber;
+  double amber_rejection_hysteresis_duration;
+  double ego_stopped_velocity_threshold;
   struct CheckedTrajectoryLength
   {
     double deceleration_limit;
@@ -103,9 +116,7 @@ public:
 
 private:
   /// @brief return the red and amber stop lines related to the given traffic light groups
-  [[nodiscard]] std::pair<
-    std::vector<lanelet::BasicLineString2d>, std::vector<lanelet::BasicLineString2d>>
-  get_stop_lines(
+  [[nodiscard]] std::pair<std::vector<StopLineInfo>, std::vector<StopLineInfo>> get_stop_lines(
     const lanelet::LaneletMap & lanelet_map,
     const autoware_planning_msgs::msg::LaneletRoute & route,
     const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_lights) const;
