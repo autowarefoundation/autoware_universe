@@ -66,12 +66,22 @@ std::vector<visualization_msgs::msg::Marker> make_collision_markers(
     marker.text = object_uuid.substr(0, 5) + "\n";
     if (decision.should_be_avoided()) {
       marker.text += "avoiding\nlast detection = ";
-      marker.text += std::to_string((now - *decision.last_stop_decision_time).seconds());
-      marker.text += "s\n";
+      if (decision.last_stop_decision_time) {
+        const auto last_stop_decision_time = decision.last_stop_decision_time.value_or(now);
+        marker.text += std::to_string((now - last_stop_decision_time).seconds());
+        marker.text += "s\n";
+      } else {
+        marker.text += "unavailable\n";
+      }
     } else {
       marker.text += "first detection = ";
-      marker.text += std::to_string((now - *decision.start_detection_time).seconds());
-      marker.text += "s\n";
+      if (decision.start_detection_time) {
+        const auto start_detection_time = decision.start_detection_time.value_or(now);
+        marker.text += std::to_string((now - start_detection_time).seconds());
+        marker.text += "s\n";
+      } else {
+        marker.text += "unavailable\n";
+      }
     }
     marker.pose.position = decision.collision_point;
     marker.pose.position.z = z;
