@@ -111,6 +111,7 @@ private:
   // Static members for cached vehicle info
   static std::mutex s_mutex_;
   static std::optional<double> s_baselink2front_;
+  static std::optional<double> s_baselink2rear_;
   static bool s_request_started_;
 };
 }  // namespace autoware::rviz_plugins
