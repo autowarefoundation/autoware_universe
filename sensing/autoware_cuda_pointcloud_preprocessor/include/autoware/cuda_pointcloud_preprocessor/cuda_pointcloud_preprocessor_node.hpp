@@ -41,6 +41,7 @@
 
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -86,23 +87,15 @@ private:
   // Callback
   void pointcloudCallback(AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2)
                             input_pointcloud_msg_ptr);
-  void twistCallback(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
-  void imuCallback(const sensor_msgs::msg::Imu & imu_msg);
+  void updateTwistQueue();
+  void updateImuQueue();
 
   // Helper Functions
-  [[nodiscard]] bool validatePointcloudLayout(
-    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg) const;
-  std::pair<std::uint64_t, std::uint32_t> getFirstPointTimeInfo(
-    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
-
-  void updateTwistQueue(std::uint64_t first_point_stamp);
-  void updateImuQueue(std::uint64_t first_point_stamp);
   std::optional<geometry_msgs::msg::TransformStamped> lookupTransformToBase(
     const std::string & source_frame);
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> processPointcloud(
+  tl::expected<ProcessResult, ProcessError> processPointcloud(
     const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
-    const geometry_msgs::msg::TransformStamped & transform_msg,
-    const std::uint32_t first_point_rel_stamp);
+    const geometry_msgs::msg::TransformStamped & transform_msg);
 
   void publishDiagnostics(
     const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
@@ -119,9 +112,6 @@ private:
   bool use_imu_;
   double processing_time_threshold_sec_;
   double timestamp_mismatch_fraction_threshold_;
-
-  std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> twist_queue_;
-  std::deque<geometry_msgs::msg::Vector3Stamped> angular_velocity_queue_;
 
   // Subscribers
   autoware_utils::InterProcessPollingSubscriber<
