@@ -455,8 +455,7 @@ bool BicycleMotionModel::limitStates()
     const double vel_lat_limit_accel =
       acc_lat_max * wheel_base / std::max(vel_long_abs, vel_long_eps);
     const double vel_lat_limit_slip = vel_long_abs * std::tan(motion_params_.q_max_slip_angle);
-    const double vel_lat_limit_adjusted =
-      std::min(vel_lat_limit_accel, vel_lat_limit_slip) * motion_params_.wheel_pos_ratio;
+    const double vel_lat_limit_adjusted = std::min(vel_lat_limit_accel, vel_lat_limit_slip);
     if (std::abs(X_t(IDX::V)) > vel_lat_limit_adjusted) {
       // limit lateral velocity
       X_t(IDX::V) = X_t(IDX::V) < 0 ? -vel_lat_limit_adjusted : vel_lat_limit_adjusted;
