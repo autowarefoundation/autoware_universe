@@ -1,0 +1,76 @@
+proximity_hazard_object:
+  node_hz:
+    type: double
+    description: Timer frequency in Hz.
+    read_only: true
+    validation:
+      gt<>: [0.0]
+
+  max_detection_range_m:
+    type: double
+    description: Polygon-to-polygon distance threshold in meters between the ego footprint and an object polygon. Objects beyond this are filtered out before sector assignment.
+    read_only: true
+    validation:
+      gt<>: [0.0]
+
+  include_unknown_objects:
+    type: bool
+    description: If false, objects whose classification contains UNKNOWN are dropped before sector assignment.
+    read_only: true
+
+  sector_range:
+    front:
+      type: double_array
+      description: "[from_deg, to_deg] angular extent of the FRONT sector. REP-103 bearing (+x forward, +y left, 0 = ahead). Half-open [from, to). The 8 sectors must tile the full circle without gaps or overlaps."
+      read_only: true
+      validation:
+        fixed_size<>: [2]
+    front_left:
+      type: double_array
+      description: "[from_deg, to_deg] angular extent of the FRONT_LEFT sector. See `front` for bearing convention and tiling requirement."
+      read_only: true
+      validation:
+        fixed_size<>: [2]
+    left:
+      type: double_array
+      description: "[from_deg, to_deg] angular extent of the LEFT sector. See `front` for bearing convention and tiling requirement."
+      read_only: true
+      validation:
+        fixed_size<>: [2]
+    rear_left:
+      type: double_array
+      description: "[from_deg, to_deg] angular extent of the REAR_LEFT sector. See `front` for bearing convention and tiling requirement."
+      read_only: true
+      validation:
+        fixed_size<>: [2]
+    rear:
+      type: double_array
+      description: "[from_deg, to_deg] angular extent of the REAR sector. Set to_deg < from_deg to wrap through +/-180 degrees, as the default does. See `front` for bearing convention and tiling requirement."
+      read_only: true
+      validation:
+        fixed_size<>: [2]
+    rear_right:
+      type: double_array
+      description: "[from_deg, to_deg] angular extent of the REAR_RIGHT sector. See `front` for bearing convention and tiling requirement."
+      read_only: true
+      validation:
+        fixed_size<>: [2]
+    right:
+      type: double_array
+      description: "[from_deg, to_deg] angular extent of the RIGHT sector. See `front` for bearing convention and tiling requirement."
+      read_only: true
+      validation:
+        fixed_size<>: [2]
+    front_right:
+      type: double_array
+      description: "[from_deg, to_deg] angular extent of the FRONT_RIGHT sector. See `front` for bearing convention and tiling requirement."
+      read_only: true
+      validation:
+        fixed_size<>: [2]
+
+  sector_boundary_tolerance_deg:
+    type: double
+    description: "[degree] Angular tolerance applied to each side of every sector wedge boundary."
+    validation:
+      gt_eq<>: [0.0]
+    read_only: true

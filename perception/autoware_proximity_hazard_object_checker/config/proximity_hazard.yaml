@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    node_hz: 5.0
+
+    max_detection_range_m: 2.0
+
+    include_unknown_objects: true
+
+    sector_range:
+      front: [-10.0, 10.0]
+      front_left: [10.0, 30.0]
+      left: [30.0, 150.0]
+      rear_left: [150.0, 170.0]
+      rear: [170.0, -170.0]
+      rear_right: [-170.0, -150.0]
+      right: [-150.0, -30.0]
+      front_right: [-30.0, -10.0]
+
+    sector_boundary_tolerance_deg: 1.0
