@@ -2,6 +2,7 @@
   ros__parameters:
     # Plugin execution order - plugins will run in this order
     plugin_names:
+      - "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
@@ -21,3 +22,4 @@
     use_trajectory_extender: false
     use_kinematic_feasibility_enforcer: true
     use_mpt_optimizer: false
+    use_temporal_mpt_optimizer: true
