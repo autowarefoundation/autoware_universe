@@ -259,9 +259,7 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
   const PathWithLaneId & behavior_path, const Pose & ego_pose)
 {
   const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
-  const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-  const auto current_vehicle_footprint = autoware_utils::transform_vector(
-    local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
+  const auto current_vehicle_footprint = vehicle_info_.createFootprint(0.0, ego_pose);
 
   if (behavior_path.left_bound.size() >= 1) {
     LineString2d left_boundary;
@@ -308,35 +306,34 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
       route_handler_.getLaneletMapPtr(), ego_pose, search_distance)) {
     const auto & nearby_uncrossable_lines = *nearby_uncrossable_lines_opt;
 
-    const auto transformed_pose = autoware_utils::pose2transform(ego_pose);
-    const auto local_fp = vehicle_info_.createFootprint();
-    const auto current_fp = autoware_utils::transform_vector(local_fp, transformed_pose);
+    const auto current_fp = vehicle_info_.createFootprint(0.0, ego_pose);
     const auto side = bdc_utils::get_footprint_sides(current_fp, false, false);
 
-    auto is_overlapping{false};
     for (const auto & nearby_ls : nearby_uncrossable_lines) {
       const auto & basic_ls = nearby_ls.basicLineString();
       for (size_t idx = 0; idx + 1 < basic_ls.size(); ++idx) {
         const auto segment = bdc_utils::to_segment_2d(basic_ls[idx], basic_ls[idx + 1]);
 
-        is_overlapping = !boost::geometry::disjoint(current_fp, segment);
-        if (is_overlapping) {
-          nearest_left = 0.0;
-          nearest_right = 0.0;
-          break;
-        }
-
         const auto dist_to_left = boost::geometry::distance(segment, side.left);
         const auto dist_to_right = boost::geometry::distance(segment, side.right);
-        if (dist_to_left < dist_to_right) {
-          nearest_left = std::min(dist_to_left, nearest_left);
-        } else {
-          nearest_right = std::min(dist_to_right, nearest_right);
+
+        // Update the nearest distance to the boundary.
+        bool left_touched = dist_to_left <= 0.0;
+        bool right_touched = dist_to_right <= 0.0;
+        if (left_touched) nearest_left = 0.0;
+        if (right_touched) nearest_right = 0.0;
+
+        if (!left_touched && !right_touched) {
+          if (dist_to_left < dist_to_right) {
+            nearest_left = std::min(dist_to_left, nearest_left);
+          } else {
+            nearest_right = std::min(dist_to_right, nearest_right);
+          }
         }
+
+        if (nearest_left == 0.0 && nearest_right == 0.0) break;
       }
-      if (is_overlapping) {
-        break;
-      }
+      if (nearest_left == 0.0 && nearest_right == 0.0) break;
     }
   }
 
@@ -572,9 +569,8 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
   }
 
   const auto ego_polygon = [&]() -> autoware_utils::Polygon2d {
-    const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info_.createFootprint();
-    const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
-      local_ego_footprint, autoware_utils::pose2transform(odom.pose.pose));
+    const autoware_utils::LinearRing2d ego_footprint =
+      vehicle_info_.createFootprint(0.0, odom.pose.pose);
 
     autoware_utils::Polygon2d ego_polygon;
     ego_polygon.outer() = ego_footprint;
