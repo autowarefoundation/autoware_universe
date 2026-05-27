@@ -3,6 +3,7 @@ project(autoware_diffusion_planner)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
+find_package(Boost REQUIRED)
 
 # Options
 option(CUDA_VERBOSE "Verbose output of CUDA modules" OFF)
@@ -64,12 +65,21 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/utils/marker_utils.cpp
     src/utils/planning_factor_utils.cpp
     src/postprocessing/turn_indicator_manager.cpp
-    src/inference/tensorrt_inference.cpp
+    src/inference/solver/dpm_solver.cpp
+    src/inference/guidance/guidance.cpp
+    src/inference/guidance/centerline_guidance.cpp
+    src/inference/guidance/start_guidance.cpp
+    src/inference/guidance/stop_guidance.cpp
+    src/inference/guidance/utils.cpp
+    src/inference/multi_step_inference.cpp
+    src/inference/single_step_inference.cpp
+    src/inference/utils.cpp
   )
 
   target_include_directories(autoware_diffusion_planner_component PUBLIC
     ${CUDA_INCLUDE_DIRS}
     ${autoware_cuda_utils_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
   )
   target_link_libraries(autoware_diffusion_planner_component
     ${NVINFER}

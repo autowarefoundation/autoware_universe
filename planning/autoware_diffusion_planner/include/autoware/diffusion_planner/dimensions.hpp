@@ -27,8 +27,13 @@ inline constexpr int64_t NUM_SEGMENTS_IN_LANE = 140;
 inline constexpr int64_t NUM_SEGMENTS_IN_ROUTE = 25;
 inline constexpr int64_t NUM_POLYGONS = 10;
 inline constexpr int64_t NUM_LINE_STRINGS = 60;
+inline constexpr int64_t NUM_STATIC_OBJECTS = 5;
 inline constexpr int64_t MAX_NUM_NEIGHBORS = 320;
 inline constexpr int64_t MAX_NUM_AGENTS = MAX_NUM_NEIGHBORS + 1;  // Including ego
+inline constexpr int64_t HIDDEN_DIM = 256;
+inline constexpr int64_t ENCODING_TOKEN_NUM =
+  MAX_NUM_AGENTS + NUM_STATIC_OBJECTS + NUM_SEGMENTS_IN_LANE + NUM_SEGMENTS_IN_ROUTE +
+  NUM_POLYGONS + NUM_LINE_STRINGS + 3;  // goal_pose, ego_shape, turn_indicator
 inline constexpr int64_t POINTS_PER_SEGMENT = 20;
 inline constexpr int64_t POINTS_PER_POLYGON = 40;
 inline constexpr int64_t POINTS_PER_LINE_STRING = 20;
@@ -79,7 +84,7 @@ inline constexpr std::array<int64_t, 4> SAMPLED_TRAJECTORIES_SHAPE = {
 inline constexpr std::array<int64_t, 3> EGO_HISTORY_SHAPE = {1, INPUT_T + 1, POSE_DIM};
 inline constexpr std::array<int64_t, 2> EGO_CURRENT_STATE_SHAPE = {1, 10};
 inline constexpr std::array<int64_t, 4> NEIGHBOR_SHAPE = {1, MAX_NUM_NEIGHBORS, INPUT_T + 1, 11};
-inline constexpr std::array<int64_t, 3> STATIC_OBJECTS_SHAPE = {1, 5, 10};
+inline constexpr std::array<int64_t, 3> STATIC_OBJECTS_SHAPE = {1, NUM_STATIC_OBJECTS, 10};
 inline constexpr std::array<int64_t, 4> LANES_SHAPE = {
   1, NUM_SEGMENTS_IN_LANE, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM};
 inline constexpr std::array<int64_t, 3> LANES_HAS_SPEED_LIMIT_SHAPE = {1, NUM_SEGMENTS_IN_LANE, 1};

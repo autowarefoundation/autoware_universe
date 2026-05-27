@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DIFFUSION_PLANNER__INFERENCE__TENSORRT_INFERENCE_HPP_
-#define AUTOWARE__DIFFUSION_PLANNER__INFERENCE__TENSORRT_INFERENCE_HPP_
+#ifndef AUTOWARE__DIFFUSION_PLANNER__INFERENCE__SINGLE_STEP_INFERENCE_HPP_
+#define AUTOWARE__DIFFUSION_PLANNER__INFERENCE__SINGLE_STEP_INFERENCE_HPP_
 
+#include "autoware/diffusion_planner/inference/inference.hpp"
+#include "autoware/diffusion_planner/inference/utils.hpp"
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
-#include <autoware/tensorrt_common/tensorrt_conv_calib.hpp>
 
 #include <cuda_runtime_api.h>
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -35,24 +35,10 @@ namespace autoware::diffusion_planner
  * @class TensorrtInference
  * @brief TensorRT inference wrapper for diffusion planner models.
  */
-class TensorrtInference
+class SingleStepInference : public Inference
 {
 public:
-  /**
-   * @struct InferenceResult
-   * @brief Output container with optional tensors and error message.
-   */
-  struct InferenceResult
-  {
-    /**
-     * @brief Output tensors when inference succeeds.
-     */
-    std::optional<std::pair<std::vector<float>, std::vector<float>>> outputs;
-    /**
-     * @brief Error message for diagnostics when inference fails.
-     */
-    std::string error_msg;
-  };
+  using InferenceResult = autoware::diffusion_planner::InferenceResult;
 
   /**
    * @brief Initialize TensorRT engine and device buffers for the batch size.
@@ -60,16 +46,17 @@ public:
    * @param plugins_path Path to TensorRT plugin shared libraries.
    * @param batch_size Batch size for inference buffers and shapes.
    */
-  TensorrtInference(
-    const std::string & model_path, const std::string & plugins_path, int batch_size);
-  ~TensorrtInference();
+  SingleStepInference(
+    const std::string & model_path, const std::string & plugins_path, int batch_size,
+    const std::string & precision = "fp32", bool use_cuda_graph = false);
+  ~SingleStepInference() override;
 
   /**
    * @brief Run inference and return prediction and turn indicator logits.
    * @param input_data_map Input tensor data keyed by input names.
    * @return InferenceResult containing outputs or error message.
    */
-  InferenceResult infer(const preprocess::InputDataMap & input_data_map);
+  InferenceResult infer(const preprocess::InputDataMap & input_data_map) override;
   /**
    * @brief Load or rebuild the TensorRT engine from the given model path.
    * @param model_path Path to the TensorRT model file.
@@ -79,8 +66,10 @@ public:
 private:
   int batch_size_{1};
   std::string plugins_path_;
-  std::unique_ptr<autoware::tensorrt_common::TrtConvCalib> trt_common_;
+  std::string precision_{"fp32"};
+  bool use_cuda_graph_{false};
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
+  CudaGraphExecutor network_cuda_graph_;
   /**
    * @brief Device buffers for model inputs/outputs.
    */
@@ -118,4 +107,4 @@ private:
 
 }  // namespace autoware::diffusion_planner
 
-#endif  // AUTOWARE__DIFFUSION_PLANNER__INFERENCE__TENSORRT_INFERENCE_HPP_
+#endif  // AUTOWARE__DIFFUSION_PLANNER__INFERENCE__SINGLE_STEP_INFERENCE_HPP_

@@ -1,8 +1,26 @@
 /**:
   ros__parameters:
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
-    onnx_model_path: $(var data_path)/v4.0/diffusion_planner.onnx
-    args_path: $(var data_path)/v4.0/diffusion_planner.param.json
+    model:
+      type: "multi_step"
+      precision: "fp32"
+      use_cuda_graph: false
+      args_path: $(var data_path)/v5.0/diffusion_planner.param.json
+      single_step_model:
+        onnx_model_path: $(var data_path)/v5.0/diffusion_planner.onnx
+      multi_step_model:
+        encoder_onnx_model_path: $(var data_path)/v5.0/diffusion_planner_encoder.onnx
+        decoder_onnx_model_path: $(var data_path)/v5.0/diffusion_planner_decoder.onnx
+        turn_indicator_onnx_model_path: $(var data_path)/v5.0/diffusion_planner_turn_indicator.onnx
+        dpm_solver_steps: 10
+    guidance:
+      start_guidance:
+        reference_distance_m: 1.0
+        max_scale: 1.0
+      stop_guidance:
+        stop_acceleration_mps2: 1.0
+      centerline_guidance:
+        start_time_s: 2.0
     planning_frequency_hz: 10.0
     ignore_neighbors: false
     ignore_unknown_neighbors: true

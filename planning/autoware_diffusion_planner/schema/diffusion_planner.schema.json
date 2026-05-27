@@ -11,15 +11,83 @@
           "default": "$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so",
           "description": "Path to libautoware_tensorrt_plugins.so file for the diffusion planner"
         },
-        "onnx_model_path": {
-          "type": "string",
-          "default": "$(var data_path)/v4.0/diffusion_planner.onnx",
-          "description": "Path to the ONNX model file for the diffusion planner"
-        },
-        "args_path": {
-          "type": "string",
-          "default": "$(var data_path)/v4.0/diffusion_planner.param.json",
-          "description": "Path to model argument/configuration file"
+        "model": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "default": "single_step",
+              "enum": ["single_step", "multi_step"],
+              "description": "Inference model type"
+            },
+            "args_path": {
+              "type": "string",
+              "default": "/opt/autoware/mlmodels/diffusion_planner/args.json",
+              "description": "Path to model argument/configuration file"
+            },
+            "precision": {
+              "type": "string",
+              "default": "fp32",
+              "enum": ["fp32", "fp16"],
+              "description": "TensorRT engine precision"
+            },
+            "use_cuda_graph": {
+              "type": "boolean",
+              "default": false,
+              "description": "Use CUDA Graph replay for TensorRT enqueue calls"
+            },
+            "single_step_model": {
+              "type": "object",
+              "properties": {
+                "onnx_model_path": {
+                  "type": "string",
+                  "default": "/opt/autoware/mlmodels/diffusion_planner/diffusion_planner_single_step_simplified.onnx",
+                  "description": "Path to the single-step ONNX model file"
+                }
+              },
+              "required": ["onnx_model_path"]
+            },
+            "multi_step_model": {
+              "type": "object",
+              "properties": {
+                "encoder_onnx_model_path": {
+                  "type": "string",
+                  "default": "/opt/autoware/mlmodels/diffusion_planner/diffusion_planner_encoder_simplified.onnx",
+                  "description": "Path to the encoder ONNX model file"
+                },
+                "decoder_onnx_model_path": {
+                  "type": "string",
+                  "default": "/opt/autoware/mlmodels/diffusion_planner/diffusion_planner_decoder_single_step_simplified.onnx",
+                  "description": "Path to the decoder ONNX model file"
+                },
+                "turn_indicator_onnx_model_path": {
+                  "type": "string",
+                  "default": "/opt/autoware/mlmodels/diffusion_planner/diffusion_planner_turn_indicator_simplified.onnx",
+                  "description": "Path to the turn indicator ONNX model file"
+                },
+                "dpm_solver_steps": {
+                  "type": "integer",
+                  "default": 10,
+                  "minimum": 2,
+                  "description": "Number of DPM-Solver denoising steps. The final denoise-to-zero step is added separately."
+                }
+              },
+              "required": [
+                "encoder_onnx_model_path",
+                "decoder_onnx_model_path",
+                "turn_indicator_onnx_model_path",
+                "dpm_solver_steps"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "args_path",
+            "precision",
+            "use_cuda_graph",
+            "single_step_model",
+            "multi_step_model"
+          ]
         },
         "planning_frequency_hz": {
           "type": "number",
@@ -106,6 +174,54 @@
           "default": false,
           "description": "Whether to interpolate ego past trajectory at regular time intervals"
         },
+        "guidance": {
+          "type": "object",
+          "properties": {
+            "start_guidance": {
+              "type": "object",
+              "properties": {
+                "reference_distance_m": {
+                  "type": "number",
+                  "default": 10.0,
+                  "minimum": 0,
+                  "description": "Reference straight-line distance between the ego trajectory start and terminal point [m]"
+                },
+                "max_scale": {
+                  "type": "number",
+                  "default": 1.0,
+                  "minimum": 1.0,
+                  "description": "Maximum scale applied to the ego trajectory by start guidance"
+                }
+              },
+              "required": ["reference_distance_m", "max_scale"]
+            },
+            "stop_guidance": {
+              "type": "object",
+              "properties": {
+                "stop_acceleration_mps2": {
+                  "type": "number",
+                  "default": 1.0,
+                  "exclusiveMinimum": 0,
+                  "description": "Deceleration magnitude used to calculate stop guidance reference distance [m/s^2]"
+                }
+              },
+              "required": ["stop_acceleration_mps2"]
+            },
+            "centerline_guidance": {
+              "type": "object",
+              "properties": {
+                "start_time_s": {
+                  "type": "number",
+                  "default": 2.0,
+                  "minimum": 0,
+                  "description": "Trajectory points at and after this prediction time are snapped to the nearest route centerline point [s]"
+                }
+              },
+              "required": ["start_time_s"]
+            }
+          },
+          "required": ["start_guidance", "stop_guidance", "centerline_guidance"]
+        },
         "planning_factor": {
           "type": "object",
           "properties": {
@@ -166,8 +282,7 @@
         }
       },
       "required": [
-        "onnx_model_path",
-        "args_path",
+        "model",
         "planning_frequency_hz",
         "traffic_light_group_msg_timeout_seconds",
         "batch_size",
@@ -177,7 +292,8 @@
         "turn_indicator_keep_offset",
         "turn_indicator_hold_duration",
         "planning_factor",
-        "debug_params"
+        "debug_params",
+        "guidance"
       ]
     }
   },
