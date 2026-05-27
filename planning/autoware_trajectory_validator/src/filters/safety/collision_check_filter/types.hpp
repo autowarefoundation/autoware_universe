@@ -25,9 +25,11 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <array>
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace autoware::trajectory_validator::plugin::safety
@@ -36,12 +38,6 @@ using autoware_utils_geometry::Box2d;
 using autoware_utils_geometry::MultiPoint2d;
 using autoware_utils_geometry::Point2d;
 using autoware_utils_geometry::Polygon2d;
-
-using TimeTrajectory = std::vector<double>;
-using TravelDistanceTrajectory = std::vector<double>;
-using PoseTrajectory = std::vector<geometry_msgs::msg::Pose>;
-using FootprintTrajectory = std::vector<Polygon2d>;
-using StepPolygonTrajectory = std::vector<Polygon2d>;
 
 static constexpr double TIME_INDEX_EPSILON = 1e-3;
 
@@ -84,8 +80,8 @@ struct CollisionDetail
   TrajectoryIdentification object_identification;
   double pet;
   double ttc;
-  PoseTrajectory ego_trajectory;
-  PoseTrajectory object_trajectory;
+  std::vector<geometry_msgs::msg::Pose> ego_trajectory;
+  std::vector<geometry_msgs::msg::Pose> object_trajectory;
   Polygon2d ego_hull;
   Polygon2d object_hull;
 };

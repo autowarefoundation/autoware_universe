@@ -32,12 +32,20 @@
 #include <map>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::trajectory_validator::plugin::safety
 {
 
 using IndexRange = std::pair<size_t, size_t>;
 using TimeRange = std::pair<double, double>;
+
+using TimeTrajectory = std::vector<double>;
+using TravelDistanceTrajectory = std::vector<double>;
+using PoseTrajectory = std::vector<geometry_msgs::msg::Pose>;
+using QuadTrajectory = std::vector<std::array<Point2d, 4>>;
+using NgonTrajectory = std::vector<std::vector<Point2d>>;
+using FootprintTrajectory = std::variant<QuadTrajectory, NgonTrajectory>;
 
 class TrajectoryData
 {
@@ -79,11 +87,15 @@ private:
 
     Box2d box;
     boost::geometry::assign_inverse(box);
-    for (size_t i = key.first; i <= key.second; ++i) {
-      for (const auto & pt : footprints_[i].outer()) {
-        boost::geometry::expand(box, pt);
-      }
-    }
+    std::visit(
+      [&](const auto & polygons) {
+        for (size_t i = key.first; i <= key.second; ++i) {
+          for (const auto & pt : polygons[i]) {
+            boost::geometry::expand(box, pt);
+          }
+        }
+      },
+      footprints_);
     return box;
   }
 
@@ -92,12 +104,17 @@ private:
     assert(key.first <= key.second);
 
     MultiPoint2d all_points;
-    all_points.reserve((key.second - key.first + 1) * 4);
-    for (size_t i = key.first; i <= key.second; ++i) {
-      for (const auto & pt : footprints_[i].outer()) {
-        all_points.push_back(pt);
-      }
-    }
+    std::visit(
+      [&](const auto & polygons) {
+        size_t total_point_count = (key.second - key.first + 1U) * polygons[key.first].size();
+        all_points.reserve(total_point_count);
+        for (size_t i = key.first; i <= key.second; ++i) {
+          for (const auto & pt : polygons[i]) {
+            all_points.push_back(pt);
+          }
+        }
+      },
+      footprints_);
 
     Polygon2d hull;
     hull.outer().reserve(all_points.size());
@@ -129,7 +146,9 @@ public:
         "Trajectory sizes mismatch (times vs poses) classification: " +
         identification_.classification);
     }
-    if (times_.size() != footprints_.size()) {
+    const auto footprint_size =
+      std::visit([](const auto & polygons) { return polygons.size(); }, footprints_);
+    if (times_.size() != footprint_size) {
       throw std::invalid_argument(
         "Trajectory sizes mismatch (times vs footprints) classification: " +
         identification_.classification);
@@ -164,7 +183,7 @@ public:
 
   const Box2d & get_or_compute_overall_envelope() const
   {
-    return get_or_compute_envelope(IndexRange{0U, footprints_.size() - 1});
+    return get_or_compute_envelope(IndexRange{0U, times_.size() - 1});
   }
 
   const Polygon2d & get_or_compute_convex(const IndexRange & key) const

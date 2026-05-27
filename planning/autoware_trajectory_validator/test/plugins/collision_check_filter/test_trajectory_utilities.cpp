@@ -129,6 +129,16 @@ autoware_perception_msgs::msg::Shape create_bounding_box_shape(
   return shape;
 }
 
+autoware_perception_msgs::msg::Shape create_cylinder_shape(const double diameter = 2.0)
+{
+  autoware_perception_msgs::msg::Shape shape;
+  shape.type = autoware_perception_msgs::msg::Shape::CYLINDER;
+  shape.dimensions.x = diameter;
+  shape.dimensions.y = diameter;
+  shape.dimensions.z = 1.5;
+  return shape;
+}
+
 autoware_perception_msgs::msg::PredictedPath create_straight_predicted_path(
   const double y, const double confidence, const std::vector<double> & xs)
 {
@@ -176,6 +186,29 @@ void expect_same_polygon(const Polygon2d & actual, const Polygon2d & expected)
     EXPECT_DOUBLE_EQ(actual.outer().at(i).x(), expected.outer().at(i).x());
     EXPECT_DOUBLE_EQ(actual.outer().at(i).y(), expected.outer().at(i).y());
   }
+}
+
+size_t footprint_count(const FootprintTrajectory & footprints)
+{
+  return std::visit([](const auto & polygons) { return polygons.size(); }, footprints);
+}
+
+Polygon2d footprint_to_polygon2d(const FootprintTrajectory & footprints, const size_t index)
+{
+  return std::visit(
+    [&](const auto & polygons) {
+      Polygon2d polygon;
+      const auto & points = polygons.at(index);
+      polygon.outer().reserve(points.size() + 1U);
+      for (const auto & point : points) {
+        polygon.outer().push_back(point);
+      }
+      if (!polygon.outer().empty()) {
+        polygon.outer().push_back(polygon.outer().front());
+      }
+      return polygon;
+    },
+    footprints);
 }
 
 }  // namespace
@@ -265,9 +298,24 @@ TEST(TrajectoryUtilitiesTest, ComputeFootprintTrajectoryForObjectShapeMatchesUti
 
   const auto footprints = trajectory::footprint::compute_footprint_trajectory(poses, shape);
 
-  ASSERT_EQ(footprints.size(), 1u);
+  EXPECT_TRUE(std::holds_alternative<QuadTrajectory>(footprints));
+  ASSERT_EQ(footprint_count(footprints), 1u);
   expect_same_polygon(
-    footprints.front(), autoware_utils_geometry::to_polygon2d(poses.front(), shape));
+    footprint_to_polygon2d(footprints, 0U),
+    autoware_utils_geometry::to_polygon2d(poses.front(), shape));
+}
+
+TEST(TrajectoryUtilitiesTest, ComputeFootprintTrajectoryForCylinderUsesNgonTrajectory)
+{
+  const PoseTrajectory poses = {create_pose(1.0, 2.0, 0.0)};
+  const auto shape = create_cylinder_shape(2.0);
+
+  const auto footprints = trajectory::footprint::compute_footprint_trajectory(poses, shape);
+
+  EXPECT_TRUE(std::holds_alternative<QuadTrajectory>(footprints));
+  ASSERT_EQ(footprint_count(footprints), 1u);
+  expect_same_polygon(
+    footprint_to_polygon2d(footprints, 0U), geometry::to_polygon2d(poses.front(), shape));
 }
 
 TEST(TrajectoryUtilitiesTest, ComputeFootprintTrajectoryForVehicleMatchesUtility)
@@ -277,11 +325,13 @@ TEST(TrajectoryUtilitiesTest, ComputeFootprintTrajectoryForVehicleMatchesUtility
 
   const auto footprints = trajectory::footprint::compute_footprint_trajectory(poses, vehicle_info);
 
-  ASSERT_EQ(footprints.size(), 1u);
+  EXPECT_TRUE(std::holds_alternative<QuadTrajectory>(footprints));
+  ASSERT_EQ(footprint_count(footprints), 1u);
   expect_same_polygon(
-    footprints.front(), autoware_utils_geometry::to_footprint(
-                          poses.front(), vehicle_info.max_longitudinal_offset_m,
-                          -vehicle_info.min_longitudinal_offset_m, vehicle_info.vehicle_width_m));
+    footprint_to_polygon2d(footprints, 0U),
+    autoware_utils_geometry::to_footprint(
+      poses.front(), vehicle_info.max_longitudinal_offset_m,
+      -vehicle_info.min_longitudinal_offset_m, vehicle_info.vehicle_width_m));
 }
 
 TEST(TrajectoryUtilitiesTest, ObjectIdentificationClassificationConstructorSetsDefaults)
@@ -333,7 +383,7 @@ TEST(TrajectoryUtilitiesTest, GenerateEgoTrajectoryBuildsConsistentTrajectoryDat
   EXPECT_NEAR(trajectory_data.getDistances().back(), 2.1, 1e-6);
   EXPECT_NEAR(trajectory_data.getPoses().back().position.x, 2.1, 1e-6);
   expect_same_polygon(
-    trajectory_data.getFootprints().front(),
+    footprint_to_polygon2d(trajectory_data.getFootprints(), 0U),
     autoware_utils_geometry::to_footprint(
       trajectory_data.getPoses().front(), vehicle_info.max_longitudinal_offset_m,
       -vehicle_info.min_longitudinal_offset_m, vehicle_info.vehicle_width_m));
