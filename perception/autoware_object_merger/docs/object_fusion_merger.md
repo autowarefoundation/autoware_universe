@@ -62,9 +62,9 @@ Pose and dimension handling depends on the main shape type and on `keep_input_di
 
 When footprint retention is used, the retained union footprint is generated in the main object's local frame.
 
-- `BOUNDING_BOX`: keep the main x/y dimensions for frame-to-frame stability and store the union convex hull in `shape.footprint`.
-- `CYLINDER`: keep the main diameter for frame-to-frame stability and store the union convex hull in `shape.footprint`.
-- `POLYGON`: build a convex hull from the union footprint points in the main local frame and store it in `shape.footprint`.
+- `BOUNDING_BOX`: keep the main x/y dimensions for frame-to-frame stability and store the grouped union footprint in `shape.footprint`.
+- `CYLINDER`: keep the main diameter for frame-to-frame stability and store the grouped union footprint in `shape.footprint`.
+- `POLYGON`: rebuild the grouped union footprint in the main local frame and store it in `shape.footprint`.
 
 The height dimension is updated so the output encloses the full z-extent of the main object and all grouped sub objects.
 
@@ -72,7 +72,7 @@ The height dimension is updated so the output encloses the full z-extent of the 
 
 - `BOUNDING_BOX` main objects can either grow to the grouped union or keep their original x/y box dimensions, depending on `keep_input_dimensions`.
 - `CYLINDER` main objects can either grow to the grouped union or keep their original x/y diameter, depending on `keep_input_dimensions`.
-- `POLYGON` main objects keep polygon output and rebuild the footprint from the convex hull of the combined main/sub footprint points. Concavities in the original input footprints are not preserved.
+- `POLYGON` main objects keep polygon output and rebuild the footprint from the grouped union polygon in the main local frame.
 - Current generic geometry utilities in Autoware ignore `shape.footprint` for non-`POLYGON` types, so retained footprints on `BOUNDING_BOX` and `CYLINDER` outputs are auxiliary metadata unless downstream components opt in to use them.
 
 ## Association Preconditions
@@ -114,7 +114,7 @@ The current focused test suite covers the following cases:
 - multiple sub objects can expand one main object together
 - `BOUNDING_BOX` main object can retain a larger grouped union footprint from a sub `POLYGON` when `keep_input_dimensions=true`
 - `CYLINDER` main object can retain the grouped union footprint without changing its diameter when `keep_input_dimensions=true`
-- `POLYGON` main object rebuilds its footprint from the union convex hull
+- `POLYGON` main object rebuilds its footprint from the grouped union polygon
 
 ## Known Limits
 

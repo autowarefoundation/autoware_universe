@@ -15,7 +15,9 @@
 #include "autoware/object_merger/object_fusion_merger_node.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
-#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils_geometry/geometry.hpp"
+
+#include <autoware_utils_geometry/boost_geometry.hpp>
 
 #include <boost/geometry.hpp>
 
@@ -31,10 +33,10 @@ namespace
 {
 using DetectedObject = autoware_perception_msgs::msg::DetectedObject;
 using Shape = autoware_perception_msgs::msg::Shape;
-using MultiPoint2d = autoware_utils::MultiPoint2d;
-using Point2d = autoware_utils::Point2d;
-using Polygon2d = autoware_utils::Polygon2d;
+using Point2d = autoware_utils_geometry::Point2d;
+using Polygon2d = autoware_utils_geometry::Polygon2d;
 using MultiPolygon2d = boost::geometry::model::multi_polygon<Polygon2d>;
+using MultiPoint2d = autoware_utils_geometry::MultiPoint2d;
 
 /**
  * @brief Compute the combined vertical extent of one main object and its grouped sub objects.
@@ -82,51 +84,120 @@ void fit_shape_height(
 }
 
 /**
- * @brief Collect the footprint vertices of the main and grouped sub objects in the output frame.
+ * @brief Transform a polygon into the current output local frame.
+ *
+ * @param output Current output object that defines the local output frame.
+ * @param polygon Source polygon expressed in world coordinates.
+ * @return Polygon expressed in the output local frame.
+ */
+Polygon2d transform_polygon_to_output_frame(
+  const DetectedObject & output, const Polygon2d & polygon)
+{
+  Polygon2d local_polygon;
+  for (const auto & point : polygon.outer()) {
+    geometry_msgs::msg::Point world_point;
+    world_point.x = boost::geometry::get<0>(point);
+    world_point.y = boost::geometry::get<1>(point);
+    world_point.z = output.kinematics.pose_with_covariance.pose.position.z;
+    const auto local_point = autoware_utils_geometry::inverse_transform_point(
+      world_point, output.kinematics.pose_with_covariance.pose);
+    local_polygon.outer().push_back(Point2d(local_point.x, local_point.y));
+  }
+  boost::geometry::correct(local_polygon);
+  return local_polygon;
+}
+
+/**
+ * @brief Compute the exact grouped union polygons in the output local frame.
  *
  * @param output Current output object that defines the local output frame.
  * @param main_object Main object used as the base of the fused output.
  * @param sub_objects Sub objects uniquely grouped to the main object.
- * @return Combined footprint points expressed in the output local frame.
+ * @return Grouped union polygons expressed in the output local frame.
  */
-MultiPoint2d collect_union_points_in_output_frame(
+MultiPolygon2d collect_union_polygons_in_output_frame(
   const DetectedObject & output, const DetectedObject & main_object,
   const std::vector<DetectedObject> & sub_objects)
 {
-  const auto append_local_polygon_points =
-    [&output](const Polygon2d & polygon, MultiPoint2d & combined_points) {
-      for (const auto & point : polygon.outer()) {
-        geometry_msgs::msg::Point world_point;
-        world_point.x = boost::geometry::get<0>(point);
-        world_point.y = boost::geometry::get<1>(point);
-        world_point.z = output.kinematics.pose_with_covariance.pose.position.z;
-        const auto local_point = autoware_utils::inverse_transform_point(
-          world_point, output.kinematics.pose_with_covariance.pose);
-        combined_points.push_back(Point2d(local_point.x, local_point.y));
-      }
-    };
+  MultiPolygon2d union_polygons;
 
-  const auto main_polygon = autoware_utils::to_polygon2d(main_object);
-  MultiPoint2d combined_points;
-  append_local_polygon_points(main_polygon, combined_points);
+  const auto append_union_polygon = [&union_polygons](const Polygon2d & polygon) {
+    if (union_polygons.empty()) {
+      union_polygons.push_back(polygon);
+      return;
+    }
+
+    MultiPolygon2d next_union_polygons;
+    boost::geometry::union_(union_polygons, polygon, next_union_polygons);
+    union_polygons = std::move(next_union_polygons);
+  };
+
+  const auto main_polygon = autoware_utils_geometry::to_polygon2d(main_object);
+  append_union_polygon(transform_polygon_to_output_frame(output, main_polygon));
   for (const auto & sub_object : sub_objects) {
-    append_local_polygon_points(autoware_utils::to_polygon2d(sub_object), combined_points);
+    append_union_polygon(
+      transform_polygon_to_output_frame(output, autoware_utils_geometry::to_polygon2d(sub_object)));
   }
-  return combined_points;
+  return union_polygons;
 }
 
 /**
- * @brief Rebuild the output footprint from the convex hull of the combined union points.
+ * @brief Collect all outer boundary points from grouped union polygons.
+ *
+ * @param union_polygons Grouped union polygons expressed in the output local frame.
+ * @return Outer boundary points across all grouped union polygons.
+ */
+MultiPoint2d collect_union_boundary_points(const MultiPolygon2d & union_polygons)
+{
+  MultiPoint2d boundary_points;
+  for (const auto & polygon : union_polygons) {
+    for (const auto & point : polygon.outer()) {
+      boundary_points.push_back(
+        Point2d(boost::geometry::get<0>(point), boost::geometry::get<1>(point)));
+    }
+  }
+  return boundary_points;
+}
+
+/**
+ * @brief Select the largest polygon from a grouped union result.
+ *
+ * @param union_polygons Grouped union polygons expressed in the output local frame.
+ * @return Largest polygon by absolute area, or nullptr if empty.
+ */
+const Polygon2d * find_largest_union_polygon(const MultiPolygon2d & union_polygons)
+{
+  if (union_polygons.empty()) {
+    return nullptr;
+  }
+
+  const Polygon2d * largest_polygon = &union_polygons.front();
+  double largest_area = std::abs(boost::geometry::area(*largest_polygon));
+  for (const auto & polygon : union_polygons) {
+    const double polygon_area = std::abs(boost::geometry::area(polygon));
+    if (polygon_area > largest_area) {
+      largest_polygon = &polygon;
+      largest_area = polygon_area;
+    }
+  }
+  return largest_polygon;
+}
+
+/**
+ * @brief Rebuild the output footprint from the grouped union polygons.
  *
  * @param output Output object to update in place.
- * @param combined_points Combined footprint points expressed in the output local frame.
+ * @param union_polygons Grouped union polygons expressed in the output local frame.
  */
-void fit_shape_footprint(DetectedObject & output, const MultiPoint2d & combined_points)
+void fit_shape_footprint(DetectedObject & output, const MultiPolygon2d & union_polygons)
 {
-  Polygon2d hull_polygon;
-  boost::geometry::convex_hull(combined_points, hull_polygon);
+  const auto * union_polygon = find_largest_union_polygon(union_polygons);
+  if (union_polygon == nullptr) {
+    return;
+  }
+
   output.shape.footprint.points.clear();
-  for (const auto & point : hull_polygon.outer()) {
+  for (const auto & point : union_polygon->outer()) {
     output.shape.footprint.points.push_back(
       geometry_msgs::build<geometry_msgs::msg::Point32>()
         .x(static_cast<float>(boost::geometry::get<0>(point)))
@@ -154,7 +225,7 @@ void fit_bounding_box_shape(DetectedObject & output, const MultiPoint2d & combin
     max_y = std::max(max_y, boost::geometry::get<1>(point));
   }
 
-  output.kinematics.pose_with_covariance.pose = autoware_utils::calc_offset_pose(
+  output.kinematics.pose_with_covariance.pose = autoware_utils_geometry::calc_offset_pose(
     output.kinematics.pose_with_covariance.pose, 0.5 * (min_x + max_x), 0.5 * (min_y + max_y), 0.0);
   output.shape.dimensions.x = max_x - min_x;
   output.shape.dimensions.y = max_y - min_y;
@@ -188,8 +259,8 @@ double get_intersection_area(const DetectedObject & main_object, const DetectedO
 {
   MultiPolygon2d intersections;
   boost::geometry::intersection(
-    autoware_utils::to_polygon2d(main_object), autoware_utils::to_polygon2d(sub_object),
-    intersections);
+    autoware_utils_geometry::to_polygon2d(main_object),
+    autoware_utils_geometry::to_polygon2d(sub_object), intersections);
 
   double total_area = 0.0;
   for (const auto & polygon : intersections) {
@@ -214,15 +285,19 @@ DetectedObject enclose_union_with_main_shape(
   if (sub_objects.empty()) {
     return output;
   }
-  const auto combined_points =
-    collect_union_points_in_output_frame(output, main_object, sub_objects);
+  const auto union_polygons =
+    collect_union_polygons_in_output_frame(output, main_object, sub_objects);
+  if (union_polygons.empty()) {
+    return output;
+  }
+  const auto combined_points = collect_union_boundary_points(union_polygons);
   if (combined_points.empty()) {
     return output;
   }
 
   if (main_object.shape.type == Shape::BOUNDING_BOX) {
     if (keep_input_dimensions) {
-      fit_shape_footprint(output, combined_points);
+      fit_shape_footprint(output, union_polygons);
     } else {
       fit_bounding_box_shape(output, combined_points);
     }
@@ -232,7 +307,7 @@ DetectedObject enclose_union_with_main_shape(
 
   if (main_object.shape.type == Shape::CYLINDER) {
     if (keep_input_dimensions) {
-      fit_shape_footprint(output, combined_points);
+      fit_shape_footprint(output, union_polygons);
     } else {
       fit_cylinder_shape(output, combined_points);
     }
@@ -241,7 +316,7 @@ DetectedObject enclose_union_with_main_shape(
   }
 
   if (main_object.shape.type == Shape::POLYGON) {
-    fit_shape_footprint(output, combined_points);
+    fit_shape_footprint(output, union_polygons);
     fit_shape_height(output, main_object, sub_objects);
   }
   return output;

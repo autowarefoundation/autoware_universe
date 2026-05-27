@@ -136,6 +136,18 @@ double max_abs_footprint_y(const DetectedObject & object)
   }
   return max_abs_y;
 }
+
+bool footprint_has_vertex(
+  const DetectedObject & object, const double expected_x, const double expected_y,
+  const double epsilon = 1e-3)
+{
+  return std::any_of(
+    object.shape.footprint.points.begin(), object.shape.footprint.points.end(),
+    [expected_x, expected_y, epsilon](const auto & point) {
+      return std::abs(static_cast<double>(point.x) - expected_x) < epsilon &&
+             std::abs(static_cast<double>(point.y) - expected_y) < epsilon;
+    });
+}
 }  // namespace
 
 TEST(ObjectFusionMergerNodeTest, testMatchedObjectsAreFused)
@@ -532,6 +544,54 @@ TEST(ObjectFusionMergerNodeTest, testUnionCanBeEnclosedWithMainPolygon)
   EXPECT_GT(latest_msg.objects.front().shape.footprint.points.size(), 3U);
   EXPECT_GT(max_abs_footprint_x(latest_msg.objects.front()), 2.1);
   EXPECT_GT(max_abs_footprint_y(latest_msg.objects.front()), 0.9);
+
+  rclcpp::shutdown();
+}
+
+TEST(ObjectFusionMergerNodeTest, testPolygonUnionKeepsConcaveBoundary)
+{
+  rclcpp::init(0, nullptr);
+
+  auto test_manager = generate_test_manager();
+  auto test_target_node = generate_node();
+  auto tf_node = create_static_tf_broadcaster_node("map", "base_link");
+
+  DetectedObjects latest_msg;
+  test_manager->set_subscriber<DetectedObjects>(
+    "/output/objects",
+    [&latest_msg](const DetectedObjects::ConstSharedPtr msg) { latest_msg = *msg; });
+
+  DetectedObjects main_objects;
+  main_objects.header.frame_id = "base_link";
+  main_objects.objects.push_back(make_polygon_object(
+    0.0, 4.0, 0.6,
+    {
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(1.0).y(1.0).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(1.0).y(-1.0).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(-1.0).y(-1.0).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(-1.0).y(1.0).z(0.0),
+    },
+    ObjectClassification::CAR));
+
+  DetectedObjects sub_objects;
+  sub_objects.header.frame_id = "base_link";
+  sub_objects.objects.push_back(make_polygon_object(
+    0.0, 1.0, 0.5,
+    {
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(2.0).y(2.0).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(2.0).y(0.0).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(0.0).y(0.0).z(0.0),
+      geometry_msgs::build<geometry_msgs::msg::Point32>().x(0.0).y(2.0).z(0.0),
+    },
+    ObjectClassification::CAR));
+
+  test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/main_objects", main_objects);
+  test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/sub_objects", sub_objects);
+
+  ASSERT_EQ(latest_msg.objects.size(), 1U);
+  EXPECT_EQ(latest_msg.objects.front().shape.type, Shape::POLYGON);
+  EXPECT_TRUE(footprint_has_vertex(latest_msg.objects.front(), 1.0, 0.0));
+  EXPECT_TRUE(footprint_has_vertex(latest_msg.objects.front(), 0.0, 1.0));
 
   rclcpp::shutdown();
 }
