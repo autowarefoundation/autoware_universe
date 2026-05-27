@@ -51,7 +51,8 @@ struct DirectionChangeParameters
 
   // Goal lateral shift parameters (cubic polynomial blend toward route goal)
   bool enable_goal_lateral_shift{true};
-  double max_allowed_yaw_deg{20.0};  // [deg] Max heading change rate limit for shift maneuver length
+  double max_allowed_yaw_deg{
+    20.0};  // [deg] Max heading change rate limit for shift maneuver length
 
   // General parameters
   bool enable_cusp_detection;

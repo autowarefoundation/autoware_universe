@@ -78,15 +78,12 @@ double evalShiftDerivative(const CubicShiftCoefficients & coeffs, const double s
   return 2.0 * coeffs.a2 * s + 3.0 * coeffs.a3 * s * s;
 }
 
-double computeManeuverLength(
-  const double lateral_shift, const double max_allowed_yaw_rad)
+double computeManeuverLength(const double lateral_shift, const double max_allowed_yaw_rad)
 {
   // Approximation: tan(theta_max) ~= lateral_shift / maneuver_length
   // Assumption: max_allowed_yaw_rad > 0.0
 
-  return std::max(
-    kMinManeuverLengthM,
-    std::abs(lateral_shift) / std::tan(max_allowed_yaw_rad));
+  return std::max(kMinManeuverLengthM, std::abs(lateral_shift) / std::tan(max_allowed_yaw_rad));
 }
 
 geometry_msgs::msg::Pose applyLateralShiftToPose(
@@ -133,7 +130,9 @@ bool validateShiftedPathInCorridor(
   const CubicShiftCoefficients & coeffs, const double shift_start_s, const double goal_s,
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler)
 {
-  if (reference_path.points.size() < 2 || reference_arc_lengths.size() != reference_path.points.size()) {
+  if (
+    reference_path.points.size() < 2 ||
+    reference_arc_lengths.size() != reference_path.points.size()) {
     return false;
   }
 
@@ -339,7 +338,8 @@ PathWithLaneId getReferencePathFromDirectionChangeLanelets(
 
   try {
     const auto goal_pose = route_handler->getGoalPose();
-  const auto goal_idx_opt = autoware::motion_utils::findNearestIndex(out.points, goal_pose.position);
+    const auto goal_idx_opt =
+      autoware::motion_utils::findNearestIndex(out.points, goal_pose.position);
     if (goal_idx_opt >= out.points.size()) {
       return out;
     }
@@ -347,7 +347,9 @@ PathWithLaneId getReferencePathFromDirectionChangeLanelets(
     out.points.resize(goal_idx_opt + 1);
 
     if (parameters.enable_goal_lateral_shift) {
-      if (const auto shifted_path = applyGoalLateralShift(out, goal_pose, parameters, route_handler)) {
+      if (
+        const auto shifted_path =
+          applyGoalLateralShift(out, goal_pose, parameters, route_handler)) {
         return *shifted_path;
       }
     }
@@ -369,10 +371,10 @@ std::optional<PathWithLaneId> applyGoalLateralShift(
   /*if (path.points.size() < 2 || !route_handler) {
     return std::nullopt;
   }*/
-  static const auto logger_ =
-  rclcpp::get_logger("direction_change");
+  static const auto logger_ = rclcpp::get_logger("direction_change");
 
-  const auto goal_idx_opt = autoware::motion_utils::findNearestIndex(path.points, goal_pose.position);
+  const auto goal_idx_opt =
+    autoware::motion_utils::findNearestIndex(path.points, goal_pose.position);
   if (goal_idx_opt >= path.points.size()) {
     return std::nullopt;
   }
@@ -397,9 +399,8 @@ std::optional<PathWithLaneId> applyGoalLateralShift(
   const double maneuver_length = computeManeuverLength(d_goal, max_allowed_yaw_rad);
 
   const double shift_start_s = goal_s - maneuver_length;
-  std::cout << "[Debug applyGoalLateralShift] shift_start_s: " << shift_start_s 
-            << ", maneuver_length: " << maneuver_length 
-            << ", goal_s: " << goal_s << std::endl;
+  std::cout << "[Debug applyGoalLateralShift] shift_start_s: " << shift_start_s
+            << ", maneuver_length: " << maneuver_length << ", goal_s: " << goal_s << std::endl;
 
   if (shift_start_s < 0.0) {
     RCLCPP_WARN(
@@ -407,8 +408,7 @@ std::optional<PathWithLaneId> applyGoalLateralShift(
       "Infeasible lateral shift request. "
       "Required maneuver length: %.2f m, "
       "available distance: %.2f m",
-      maneuver_length,
-      goal_s);
+      maneuver_length, goal_s);
 
     return std::nullopt;
   }
