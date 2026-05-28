@@ -217,6 +217,7 @@ __global__ void scatter_inverse_indices(
     return;
   }
 
+  // Inclusive scan produces 1-based run ids; inverse indices use 0-based unique-value indices.
   inverse_indices_out[sorted_idx_in[index]] = static_cast<std::int64_t>(run_ids_in[index] - 1);
 }
 
