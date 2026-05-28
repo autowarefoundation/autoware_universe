@@ -190,14 +190,14 @@ TrafficLight make_unknown_signal(lanelet::Id traffic_light_id)
 }
 
 TrafficLight make_signal_with_left_arrow(
-  lanelet::Id traffic_light_id, uint8_t color, float confidence)
+  lanelet::Id traffic_light_id, uint8_t color, float circle_confidence, float arrow_confidence)
 {
-  TrafficLight signal = make_signal(traffic_light_id, color, confidence);
+  TrafficLight signal = make_signal(traffic_light_id, color, circle_confidence);
   T4Element arrow_element;
   arrow_element.color = color;
   arrow_element.shape = T4Element::LEFT_ARROW;
   arrow_element.status = T4Element::SOLID_ON;
-  arrow_element.confidence = confidence;
+  arrow_element.confidence = arrow_confidence;
   signal.elements.push_back(arrow_element);
   return signal;
 }
@@ -252,6 +252,15 @@ void expect_single_conflict_status(
   ASSERT_EQ(result.conflicted_regulatory_element_status.size(), 1u);
   EXPECT_EQ(
     result.conflicted_regulatory_element_status.front().conflict_type, expected_conflict_type);
+}
+
+void expect_element_confidence(
+  const MultiCameraFusionResult & result, size_t element_index, float expected_confidence)
+{
+  ASSERT_EQ(result.traffic_light_groups.traffic_light_groups.size(), 1u);
+  const auto & group = result.traffic_light_groups.traffic_light_groups.front();
+  ASSERT_LT(element_index, group.elements.size());
+  EXPECT_FLOAT_EQ(group.elements[element_index].confidence, expected_confidence);
 }
 
 }  // namespace
@@ -548,7 +557,7 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommo
   const auto input0 =
     make_fusion_input("camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
   const auto input1 = make_fusion_input(
-    "camera1", make_signal_with_left_arrow(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
+    "camera1", make_signal_with_left_arrow(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f, 0.9f));
 
   // Act
   fusion.fuse(input0.camera_info, input0.roi_array, input0.signal_array);
@@ -558,6 +567,32 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommo
   expect_single_fused_color_and_shape(
     result, TrafficLightElement::RED, TrafficLightElement::CIRCLE);
   expect_single_conflict_status(result, ConflictType::PARTIAL_CONFLICT);
+}
+
+TEST(MultiCameraFusionFuse, MinElementConfidenceDeterminesWinnerForMultiElementSignals)
+{
+  // Arrange
+  // Two cameras observe the same traffic_light_id with centered ROIs (visible_score tied at 1).
+  // Each signal has CIRCLE + LEFT_ARROW with differing per-element confidences:
+  //   camera0: {CIRCLE 0.8, LEFT_ARROW 0.8}  -> min = 0.8
+  //   camera1: {CIRCLE 0.9, LEFT_ARROW 0.3}  -> min = 0.3
+  // compare_record falls through to the confidence check, which uses utils::get_min_confidence.
+  // With min-aggregation, camera0 wins (0.8 > 0.3); with max-aggregation, camera1 would win
+  // (0.9 > 0.8). The output's preserved per-element confidences distinguish the two cases.
+  MultiCameraFusion fusion(make_default_config());
+  const auto input0 = make_fusion_input(
+    "camera0", make_signal_with_left_arrow(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.8f, 0.8f));
+  const auto input1 = make_fusion_input(
+    "camera1", make_signal_with_left_arrow(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.9f, 0.3f));
+
+  // Act
+  fusion.fuse(input0.camera_info, input0.roi_array, input0.signal_array);
+  const auto result = fusion.fuse(input1.camera_info, input1.roi_array, input1.signal_array);
+
+  // Assert
+  // camera0 wins -> output preserves camera0's per-element confidences (0.8 each).
+  expect_element_confidence(result, 0, 0.8f);
+  expect_element_confidence(result, 1, 0.8f);
 }
 
 TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchDisabledPublishesFailsafe)
@@ -573,7 +608,7 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchDisabledPublishesFail
   const auto input0 =
     make_fusion_input("camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
   const auto input1 = make_fusion_input(
-    "camera1", make_signal_with_left_arrow(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f));
+    "camera1", make_signal_with_left_arrow(RIGHT_TRAFFIC_LIGHT_ID, T4Element::RED, 0.9f, 0.9f));
 
   // Act
   fusion.fuse(input0.camera_info, input0.roi_array, input0.signal_array);
