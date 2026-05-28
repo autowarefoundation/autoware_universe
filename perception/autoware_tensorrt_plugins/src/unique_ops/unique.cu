@@ -98,6 +98,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "autoware/unique_ops/unique.hpp"
+#include "autoware/tensorrt_plugins/kernel_utils.hpp"
 
 #include <cub/cub.cuh>
 
@@ -110,11 +111,6 @@ namespace
 {
 
 constexpr int kThreadsPerBlock = 256;
-
-std::size_t align_up(const std::size_t size, const std::size_t alignment)
-{
-  return ((size + alignment - 1U) / alignment) * alignment;
-}
 
 struct UniqueWorkspaceLayout
 {
@@ -183,7 +179,8 @@ UniqueWorkspaceLayout make_unique_workspace_layout(
   void * workspace_inout, const std::size_t num_input_elements_in,
   const std::size_t cub_temp_storage_size_in)
 {
-  const auto scratch_offset = align_up(cub_temp_storage_size_in, alignof(std::int64_t));
+  const auto scratch_offset =
+    autoware::tensorrt_plugins::align_up(cub_temp_storage_size_in, alignof(std::int64_t));
   auto * scratch = reinterpret_cast<char *>(workspace_inout) + scratch_offset;
 
   auto * input_positions = reinterpret_cast<std::int64_t *>(scratch);
@@ -209,16 +206,6 @@ __global__ void mark_run_starts(
 
   run_ids_out[index] =
     (index == 0U || sorted_input_in[index] != sorted_input_in[index - 1U]) ? 1 : 0;
-}
-
-__global__ void fill_iota(std::int64_t * output_out, const std::size_t num_input_elements_in)
-{
-  const auto index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (index >= num_input_elements_in) {
-    return;
-  }
-
-  output_out[index] = static_cast<std::int64_t>(index);
 }
 
 __global__ void scatter_inverse_indices(
@@ -283,7 +270,7 @@ cudaError_t unique(
     static_cast<unsigned int>((num_input_elements_in + kThreadsPerBlock - 1U) / kThreadsPerBlock);
 
   // 1. Sort values while carrying their original input positions.
-  fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
+  autoware::tensorrt_plugins::fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream_in>>>(
     layout.input_positions, num_input_elements_in);
   if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
     return status;
@@ -353,7 +340,8 @@ std::size_t get_unique_temp_storage_size(std::size_t num_elements_in)
 std::size_t get_unique_workspace_size(std::size_t num_elements_in)
 {
   const auto temp_size = query_unique_temp_storage_size(num_elements_in);
-  const auto scratch_offset = align_up(temp_size, alignof(std::int64_t));
+  const auto scratch_offset =
+    autoware::tensorrt_plugins::align_up(temp_size, alignof(std::int64_t));
   return scratch_offset + (3 * num_elements_in + 1U) * sizeof(std::int64_t) +
          (num_elements_in + 1U) * sizeof(std::int32_t);
 }

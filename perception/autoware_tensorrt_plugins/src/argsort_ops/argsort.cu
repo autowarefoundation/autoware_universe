@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/argsort_ops/argsort.hpp"
+#include "autoware/tensorrt_plugins/kernel_utils.hpp"
 
 #include <cub/cub.cuh>
 
@@ -20,21 +21,6 @@ namespace
 {
 
 constexpr int kThreadsPerBlock = 256;
-
-std::size_t align_up(const std::size_t size, const std::size_t alignment)
-{
-  return ((size + alignment - 1U) / alignment) * alignment;
-}
-
-__global__ void fill_iota(std::int64_t * output, const std::size_t num_elements)
-{
-  const auto index = static_cast<std::size_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (index >= num_elements) {
-    return;
-  }
-
-  output[index] = static_cast<std::int64_t>(index);
-}
 
 }  // namespace
 
@@ -46,14 +32,16 @@ cudaError_t argsort(
     return cudaSuccess;
   }
 
-  const auto scratch_offset = align_up(argsort_workspace_size, alignof(std::int64_t));
+  const auto scratch_offset =
+    autoware::tensorrt_plugins::align_up(argsort_workspace_size, alignof(std::int64_t));
   auto * input_idx_d =
     reinterpret_cast<std::int64_t *>(reinterpret_cast<char *>(workspace) + scratch_offset);
   auto * input_sorted_d = input_idx_d + num_elements;
 
   const auto num_blocks =
     static_cast<unsigned int>((num_elements + kThreadsPerBlock - 1U) / kThreadsPerBlock);
-  fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream>>>(input_idx_d, num_elements);
+  autoware::tensorrt_plugins::fill_iota<<<num_blocks, kThreadsPerBlock, 0, stream>>>(
+    input_idx_d, num_elements);
   if (const auto status = cudaPeekAtLastError(); status != cudaSuccess) {
     return status;
   }
