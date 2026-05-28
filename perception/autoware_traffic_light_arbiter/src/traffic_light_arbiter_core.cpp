@@ -100,8 +100,7 @@ void TrafficLightArbiterCore::ingestExternal(const TrafficSignalArray & msg)
   }
 }
 
-TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
-  const builtin_interfaces::msg::Time & stamp)
+TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate()
 {
   ArbitrationResult result;
 
@@ -130,7 +129,7 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
   }
 
   TrafficSignalArray output_signals_msg;
-  output_signals_msg.stamp = stamp;
+  // stamp deliberately left default — the Node owns stamp inheritance.
 
   if (map_regulatory_elements_set_->empty()) {
     result.output = std::move(output_signals_msg);
@@ -206,7 +205,9 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
     output_signals_msg.traffic_light_groups.emplace_back(signal_msg);
   }
 
-  // Calculate latest time from available sources
+  // Compute latest input time across stored sources. The Node compares this
+  // against its trigger stamp to decide whether the published output is
+  // behind some input that has arrived but hasn't yet driven a publish cycle.
   rclcpp::Time latest_time = rclcpp::Time(latest_perception_msg_.stamp);
   for (const auto & [id, info] : external_traffic_lights_) {
     const auto & external_time = info.first;
@@ -214,10 +215,7 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
       latest_time = external_time;
     }
   }
-
-  if (rclcpp::Time(output_signals_msg.stamp) < latest_time) {
-    result.output_not_latest = true;
-  }
+  result.latest_input_time = latest_time;
 
   result.output = std::move(output_signals_msg);
   return result;

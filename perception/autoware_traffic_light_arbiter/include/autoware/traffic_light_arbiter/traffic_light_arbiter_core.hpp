@@ -65,13 +65,22 @@ public:
 
   void ingestExternal(const TrafficSignalArray & msg);
 
+  // Result of one arbitration cycle. The arbiter intentionally does not stamp
+  // the output: stamp inheritance is an I/O concern owned by the Node (e.g.
+  // "publish carries the trigger msg's stamp"). The Node assigns
+  // `output->stamp` before publishing and compares its trigger stamp against
+  // `latest_input_time` for staleness logging.
+  //
+  // latest_input_time defaults to epoch on RCL_ROS_TIME so the Node can compare
+  // it against rclcpp::Time(msg->stamp) (also RCL_ROS_TIME) regardless of which
+  // arbitrate() branch was taken.
   struct ArbitrationResult
   {
-    std::optional<TrafficSignalArray> output;
+    std::optional<TrafficSignalArray> output;  // stamp left default; Node fills it in.
     std::vector<lanelet::Id> off_map_signal_ids;
-    bool output_not_latest = false;
+    rclcpp::Time latest_input_time{0, 0, RCL_ROS_TIME};
   };
-  ArbitrationResult arbitrate(const builtin_interfaces::msg::Time & stamp);
+  ArbitrationResult arbitrate();
 
 private:
   SourcePriority source_priority_;
