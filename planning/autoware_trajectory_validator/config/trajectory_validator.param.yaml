@@ -6,14 +6,9 @@
     shadow_mode_filter_names:
       [
         "safety::UncrossableBoundaryDepartureFilter",
-        "safety::OutOfLaneFilter",
         "safety::VehicleConstraintFilter",
         "traffic_rule::TrafficLightFilter",
       ]
-
-    out_of_lane:
-      time: 2.0
-      min_value: 0.0
 
     vehicle_constraint:
       max_speed: 16.7 # m/s
