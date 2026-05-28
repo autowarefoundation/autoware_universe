@@ -236,9 +236,12 @@ __global__ void write_unique_counts(
     return;
   }
 
-  const auto next_offset = (index + 1U == static_cast<std::size_t>(*num_unique_in))
-                             ? *unique_offsets_end_in
-                             : unique_offsets_in[index + 1U];
+  std::int64_t next_offset;
+  if (index + 1U == static_cast<std::size_t>(*num_unique_in)) {
+    next_offset = *unique_offsets_end_in;
+  } else {
+    next_offset = unique_offsets_in[index + 1U];
+  }
   unique_counts_out[index] = next_offset - unique_offsets_in[index];
 }
 
