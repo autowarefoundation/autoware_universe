@@ -43,6 +43,12 @@ struct ImplicitGemmParameters
   std::int64_t is_train;
   float output_add_scale;
   float output_scale;
+  std::int32_t timing_enabled{0};  ///< 1 = log ConvGemmOps::implicit_gemm CUDA duration (stderr)
+  std::int32_t timing_max_logs{
+    1000};  ///< max timing lines across all ImplicitGemm plugin instances
+  /// ``tv::gemm::Activation`` as integer (kNone=0, kReLU=1, kSigmoid=2, kLeakyReLU=3); ONNX
+  /// ``act_type`` / ``act_type_i``.
+  std::int32_t act_type{0};
 };
 
 class ImplicitGemmPlugin : public IPluginV3,
@@ -54,7 +60,7 @@ public:
   using ConvTunerSimple = spconvlib::spconv::csrc::sparse::convops::spops::ConvTuner;
   ImplicitGemmPlugin(const std::string & name, ImplicitGemmParameters const & params);
 
-  ~ImplicitGemmPlugin() override = default;
+  ~ImplicitGemmPlugin() override;
 
   // IPluginV3 Methods
 
@@ -116,12 +122,17 @@ private:
   static constexpr std::int32_t INOUT_PAIR_FWD_INDEX{2};
   static constexpr std::int32_t INOUT_PAIR_MASK_FWD_SPLITS_INDEX{3};
   static constexpr std::int32_t INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX{4};
-  static constexpr std::int32_t INOUT_OUT_FEATURES_INDEX{5};
+  /// Optional 6th input: 1D bias ``[C_out]`` (FLOAT/ HALF, same as activations). ONNX fusion only.
+  static constexpr std::int32_t INOUT_OPTIONAL_BIAS_INDEX{5};
 
   void initFieldsToSerialize();
+  bool ensureTimingEvents() noexcept;
+  void destroyTimingEvents() noexcept;
 
   std::string layer_name_;
   ImplicitGemmParameters params_;
+  /// Set in ``configurePlugin`` / ``onShapeChange``: 5 = no bias tensor, 6 = bias at input index 5.
+  std::int32_t num_plugin_inputs_{5};
   std::tuple<int, int> arch_;
   std::vector<nvinfer1::PluginField> data_to_serialize_;
   nvinfer1::PluginFieldCollection fc_to_serialize_;
@@ -131,6 +142,10 @@ private:
 
   // Pre-allocated CPU mask tensor to avoid heap allocation during CUDA graph capture.
   tv::Tensor mask_tensor_;
+
+  cudaEvent_t timing_ev_implicit_start_{};
+  cudaEvent_t timing_ev_implicit_end_{};
+  bool timing_events_created_{false};
 };
 
 }  // namespace nvinfer1::plugin

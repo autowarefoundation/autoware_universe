@@ -45,6 +45,12 @@ struct GetIndicesPairsImplicitGemmParameters
   std::vector<std::int32_t> stride;
   std::int32_t subm;  // cSpell:ignore subm
   std::int32_t transpose;
+  // do_sort: 1 = run the pair-mask argsort (default; required for FP16).
+  //          0 = skip it (safe for INT8 inference, matching spconv's INT8 guide
+  //          and New3D's `bool do_sort = !int8_inference_;`).
+  // Optional on ONNX graphs; old graphs without the attribute keep the legacy
+  // behaviour (do_sort = 1).
+  std::int32_t do_sort{1};
 
   nvinfer1::Dims dilation_dims;
   nvinfer1::Dims ksize_dims;
