@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/ptv3/postprocess/det3d_transhead_postprocess.hpp"
+#include "autoware/ptv3/postprocess/det3d_trans_head_postprocess.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>

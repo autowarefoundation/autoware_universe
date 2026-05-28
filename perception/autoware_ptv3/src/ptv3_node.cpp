@@ -184,8 +184,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     source_reconstruction, use_seg3d_head, use_det3d_head, detection_class_names_, bbox_voxel_size,
     bbox_downsample_factor, distance_bin_upper_limits, detection_score_thresholds,
     yaw_norm_thresholds, has_twist_, has_variance_,
-    detection_head_type == DetectionHeadType::TransHead ? "transhead" : "centerhead", num_proposals,
-    post_center_range);
+    detection_head_type == DetectionHeadType::TransHead ? "trans_head" : "center_head",
+    num_proposals, post_center_range);
 
   const auto backbone_trt_config = tensorrt_common::TrtCommonConfig(
     backbone_onnx_path, trt_precision, backbone_engine_path, 1ULL << 33U);

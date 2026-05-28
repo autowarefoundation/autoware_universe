@@ -258,7 +258,7 @@ void PTv3TRT::init_ptr()
         vel_d_ =
           autoware::cuda_utils::make_unique<float[]>(det_grid_size * config_.head_out_vel_size_);
       }
-      centerhead_post_ptr_ = std::make_unique<Det3dCenterHeadPostprocess>(config_, stream_);
+      center_head_post_ptr_ = std::make_unique<Det3dCenterHeadPostprocess>(config_, stream_);
     } else {
       dense_heatmap_d_ = autoware::cuda_utils::make_unique<float[]>(det_grid_size * det_class_size);
       query_heatmap_score_d_ =
@@ -276,7 +276,7 @@ void PTv3TRT::init_ptr()
       if (config_.has_twist_) {
         vel_d_ = autoware::cuda_utils::make_unique<float[]>(2 * config_.num_proposals_);
       }
-      transhead_post_ptr_ = std::make_unique<Det3dTransHeadPostprocess>(config_, stream_);
+      trans_head_post_ptr_ = std::make_unique<Det3dTransHeadPostprocess>(config_, stream_);
     }
   }
 
@@ -1001,35 +1001,35 @@ bool PTv3TRT::post_process_det3d(std::vector<Box3D> & det_boxes3d)
 {
   if (config_.detection_head_type_ == DetectionHeadType::CenterHead) {
     if (heatmap_dtype_ == nvinfer1::DataType::kHALF) {
-      CHECK_CUDA_ERROR(centerhead_post_ptr_->process(
+      CHECK_CUDA_ERROR(center_head_post_ptr_->process(
         heatmap_fp16_d_.get(), reg_fp16_d_.get(), height_fp16_d_.get(), dim_fp16_d_.get(),
         rot_fp16_d_.get(), config_.has_twist_ ? vel_fp16_d_.get() : nullptr, stream_));
     } else {
-      CHECK_CUDA_ERROR(centerhead_post_ptr_->process(
+      CHECK_CUDA_ERROR(center_head_post_ptr_->process(
         heatmap_d_.get(), reg_d_.get(), height_d_.get(), dim_d_.get(), rot_d_.get(),
         config_.has_twist_ ? vel_d_.get() : nullptr, stream_));
     }
   } else {
     if (heatmap_dtype_ == nvinfer1::DataType::kHALF) {
       if (query_labels_dtype_ == nvinfer1::DataType::kINT32) {
-        CHECK_CUDA_ERROR(transhead_post_ptr_->process(
+        CHECK_CUDA_ERROR(trans_head_post_ptr_->process(
           query_heatmap_score_fp16_d_.get(), query_labels_i32_d_.get(), heatmap_fp16_d_.get(),
           center_fp16_d_.get(), height_fp16_d_.get(), dim_fp16_d_.get(), rot_fp16_d_.get(),
           config_.has_twist_ ? vel_fp16_d_.get() : nullptr, stream_));
       } else {
-        CHECK_CUDA_ERROR(transhead_post_ptr_->process(
+        CHECK_CUDA_ERROR(trans_head_post_ptr_->process(
           query_heatmap_score_fp16_d_.get(), query_labels_i64_d_.get(), heatmap_fp16_d_.get(),
           center_fp16_d_.get(), height_fp16_d_.get(), dim_fp16_d_.get(), rot_fp16_d_.get(),
           config_.has_twist_ ? vel_fp16_d_.get() : nullptr, stream_));
       }
     } else {
       if (query_labels_dtype_ == nvinfer1::DataType::kINT32) {
-        CHECK_CUDA_ERROR(transhead_post_ptr_->process(
+        CHECK_CUDA_ERROR(trans_head_post_ptr_->process(
           query_heatmap_score_d_.get(), query_labels_i32_d_.get(), heatmap_d_.get(),
           center_d_.get(), height_d_.get(), dim_d_.get(), rot_d_.get(),
           config_.has_twist_ ? vel_d_.get() : nullptr, stream_));
       } else {
-        CHECK_CUDA_ERROR(transhead_post_ptr_->process(
+        CHECK_CUDA_ERROR(trans_head_post_ptr_->process(
           query_heatmap_score_d_.get(), query_labels_i64_d_.get(), heatmap_d_.get(),
           center_d_.get(), height_d_.get(), dim_d_.get(), rot_d_.get(),
           config_.has_twist_ ? vel_d_.get() : nullptr, stream_));
@@ -1039,11 +1039,11 @@ bool PTv3TRT::post_process_det3d(std::vector<Box3D> & det_boxes3d)
 
   // Shared: both heads produce score-filtered boxes in the same device format.
   const Box3D * device_boxes = (config_.detection_head_type_ == DetectionHeadType::CenterHead)
-                                 ? centerhead_post_ptr_->device_boxes()
-                                 : transhead_post_ptr_->device_boxes();
+                                 ? center_head_post_ptr_->device_boxes()
+                                 : trans_head_post_ptr_->device_boxes();
   const std::size_t num_boxes = (config_.detection_head_type_ == DetectionHeadType::CenterHead)
-                                  ? centerhead_post_ptr_->num_boxes()
-                                  : transhead_post_ptr_->num_boxes();
+                                  ? center_head_post_ptr_->num_boxes()
+                                  : trans_head_post_ptr_->num_boxes();
 
   det_boxes3d.resize(num_boxes);
   if (num_boxes == 0) {

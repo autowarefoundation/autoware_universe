@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/ptv3/postprocess/det3d_centerhead_postprocess.hpp"
+#include "autoware/ptv3/postprocess/det3d_center_head_postprocess.hpp"
 
 #include <cuda_fp16.h>
 #include <thrust/copy.h>

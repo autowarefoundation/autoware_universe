@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PTV3__POSTPROCESS__DET3D_TRANSHEAD_POSTPROCESS_HPP_
-#define AUTOWARE__PTV3__POSTPROCESS__DET3D_TRANSHEAD_POSTPROCESS_HPP_
+#ifndef AUTOWARE__PTV3__POSTPROCESS__DET3D_TRANS_HEAD_POSTPROCESS_HPP_
+#define AUTOWARE__PTV3__POSTPROCESS__DET3D_TRANS_HEAD_POSTPROCESS_HPP_
 
 #include "autoware/ptv3/ptv3_config.hpp"
 #include "autoware/ptv3/utils.hpp"
@@ -141,4 +141,4 @@ private:
 
 }  // namespace autoware::ptv3
 
-#endif  // AUTOWARE__PTV3__POSTPROCESS__DET3D_TRANSHEAD_POSTPROCESS_HPP_
+#endif  // AUTOWARE__PTV3__POSTPROCESS__DET3D_TRANS_HEAD_POSTPROCESS_HPP_

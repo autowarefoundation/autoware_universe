@@ -56,7 +56,7 @@
         "head": {
           "type": "string",
           "description": "Detection head type.",
-          "enum": ["centerhead", "transhead"]
+          "enum": ["center_head", "trans_head"]
         },
         "bbox_voxel_size": {
           "type": "array",
@@ -87,13 +87,13 @@
         },
         "num_proposals": {
           "type": "integer",
-          "description": "Number of top proposals decoded by TransHead. Required when head is transhead.",
+          "description": "Number of top proposals decoded by TransHead. Required when head is trans_head.",
           "minimum": 1
         },
         "post_center_range": {
           "type": "array",
           "items": { "type": "number" },
-          "description": "Post-processing center range for TransHead [min_x, min_y, min_z, max_x, max_y, max_z]. Required when head is transhead.",
+          "description": "Post-processing center range for TransHead [min_x, min_y, min_z, max_x, max_y, max_z]. Required when head is trans_head.",
           "minItems": 6,
           "maxItems": 6
         }
@@ -107,7 +107,7 @@
         "class_names"
       ],
       "if": {
-        "properties": { "head": { "const": "transhead" } }
+        "properties": { "head": { "const": "trans_head" } }
       },
       "then": {
         "required": ["num_proposals", "post_center_range"]

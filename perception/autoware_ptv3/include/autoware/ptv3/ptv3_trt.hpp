@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__PTV3__PTV3_TRT_HPP_
 #define AUTOWARE__PTV3__PTV3_TRT_HPP_
 
-#include "autoware/ptv3/postprocess/det3d_centerhead_postprocess.hpp"
-#include "autoware/ptv3/postprocess/det3d_transhead_postprocess.hpp"
+#include "autoware/ptv3/postprocess/det3d_center_head_postprocess.hpp"
+#include "autoware/ptv3/postprocess/det3d_trans_head_postprocess.hpp"
 #include "autoware/ptv3/postprocess/seg3d_postprocess.hpp"
 #include "autoware/ptv3/preprocess/backbone_preprocess.hpp"
 #include "autoware/ptv3/utils.hpp"
@@ -170,8 +170,8 @@ protected:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<BackbonePreprocess> pre_ptr_{nullptr};
   std::unique_ptr<Seg3dPostprocess> post_ptr_{nullptr};
-  std::unique_ptr<Det3dCenterHeadPostprocess> centerhead_post_ptr_{nullptr};
-  std::unique_ptr<Det3dTransHeadPostprocess> transhead_post_ptr_{nullptr};
+  std::unique_ptr<Det3dCenterHeadPostprocess> center_head_post_ptr_{nullptr};
+  std::unique_ptr<Det3dTransHeadPostprocess> trans_head_post_ptr_{nullptr};
   cudaStream_t stream_{nullptr};
 
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
