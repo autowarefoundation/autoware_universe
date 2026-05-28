@@ -106,9 +106,9 @@ void PedestrianInitialPoseTool::onInitialize()
   updateTopic();
 }
 
-DummyObject PedestrianInitialPoseTool::createObjectMsg() const
+SimulatedObject PedestrianInitialPoseTool::createObjectMsg() const
 {
-  DummyObject object{};
+  SimulatedObject object{};
   std::string fixed_frame = context_->getFixedFrame().toStdString();
 
   // header

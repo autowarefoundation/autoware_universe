@@ -92,3 +92,55 @@ validator:
         default_value: 2.0
         description: jerk limit to calculate the stop distance used as trajectory length limit
         read_only: false
+
+  boundary_departure:
+    lateral_margin_m:
+      type: double
+      default_value: 0.01
+      description: lateral margin [m]
+      read_only: false
+    longitudinal_margin_m:
+      type: double
+      default_value: 1.0
+      description: longitudinal margin [m]
+      read_only: false
+    max_deceleration_mps2:
+      type: double
+      default_value: -4.0
+      description: maximum deceleration [m/s^2]
+      read_only: false
+    max_jerk_mps3:
+      type: double
+      default_value: -5.0
+      description: maximum jerk [m/s^3]
+      read_only: false
+    brake_delay_s:
+      type: double
+      default_value: 1.0
+      description: brake delay [s]
+      read_only: false
+    time_to_departure_cutoff_s:
+      type: double
+      default_value: 2.0
+      description: time to departure cutoff [s]
+      read_only: false
+    on_time_buffer_s:
+      type: double
+      default_value: 0.15
+      description: buffer for activating departure detection [s]
+      read_only: false
+    off_time_buffer_s:
+      type: double
+      default_value: 0.15
+      description: buffer for deactivating departure detection [s]
+      read_only: false
+    enable_developer_marker:
+      type: bool
+      default_value: true
+      description: flag marker only for developer
+      read_only: false
+    boundary_types:
+      type: string_array
+      default_value: [road_border]
+      description: boundary types to detect
+      read_only: true
