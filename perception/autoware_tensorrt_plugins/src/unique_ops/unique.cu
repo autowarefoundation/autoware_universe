@@ -97,8 +97,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "autoware/unique_ops/unique.hpp"
 #include "autoware/tensorrt_plugins/kernel_utils.hpp"
+#include "autoware/unique_ops/unique.hpp"
 
 #include <cub/cub.cuh>
 
