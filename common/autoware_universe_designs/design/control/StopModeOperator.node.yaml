@@ -1,0 +1,50 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: StopModeOperator.node
+
+package:
+  name: autoware_stop_mode_operator
+  provider: autoware
+
+launch:
+  plugin: autoware::stop_mode_operator::StopModeOperatorNode
+  executable: stop_mode_operator_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: route_state
+    message_type: autoware_planning_msgs/msg/RouteState
+  - name: steering
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: velocity
+    message_type: autoware_vehicle_msgs/msg/VelocityReport
+
+publishers:
+  - name: control
+    message_type: autoware_control_msgs/msg/Control
+  - name: gear
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+  - name: turn_indicators
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: hazard_lights
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+
+# parameters
+param_files:
+  - name: config
+    default: $(find-pkg-share autoware_stop_mode_operator)/config/default.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: generate_stop_command
+    trigger_conditions:
+      - periodic: 10.0
+    outcomes:
+      - to_output: control
+      - to_output: gear
+      - to_output: turn_indicators
+      - to_output: hazard_lights

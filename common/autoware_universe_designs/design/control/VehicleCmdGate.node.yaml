@@ -1,0 +1,146 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: VehicleCmdGate.node
+
+package:
+  name: autoware_vehicle_cmd_gate
+  provider: autoware
+
+launch:
+  plugin: autoware::vehicle_cmd_gate::VehicleCmdGate
+  executable: vehicle_cmd_gate_exe
+
+# interfaces
+subscribers:
+  - name: steering
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+    remap_target: input/steering
+  - name: operation_mode
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    remap_target: input/operation_mode
+  - name: auto_control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: input/auto/control_cmd
+  - name: auto_turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+    remap_target: input/auto/turn_indicators_cmd
+  - name: auto_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/auto/hazard_lights_cmd
+  - name: auto_gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: input/auto/gear_cmd
+  - name: external_control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: input/external/control_cmd
+  - name: external_turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+    remap_target: input/external/turn_indicators_cmd
+  - name: external_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/external/hazard_lights_cmd
+  - name: external_gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: input/external/gear_cmd
+  - name: external_emergency_stop_heartbeat
+    message_type: autoware_adapi_v1_msgs/msg/ManualOperatorHeartbeat
+    remap_target: input/external_emergency_stop_heartbeat
+  - name: gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+    remap_target: input/gate_mode
+  - name: emergency_control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: input/emergency/control_cmd
+  - name: emergency_turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+    remap_target: input/emergency/turn_indicators_cmd
+  - name: emergency_hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: input/emergency/hazard_lights_cmd
+  - name: emergency_gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: input/emergency/gear_cmd
+  - name: mrm_state
+    message_type: autoware_adapi_v1_msgs/msg/MrmState
+    remap_target: input/mrm_state
+  - name: kinematics
+    message_type: nav_msgs/msg/Odometry
+    remap_target: kinematics
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+    remap_target: input/acceleration
+  - name: engage
+    message_type: autoware_vehicle_msgs/msg/Engage
+    global: /autoware/engage
+    remap_target: input/engage
+
+publishers:
+  - name: emergency_cmd
+    message_type: tier4_vehicle_msgs/msg/VehicleEmergencyStamped
+    remap_target: output/vehicle_cmd_emergency
+  - name: control_cmd
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: output/control_cmd
+  - name: gear_cmd
+    message_type: autoware_vehicle_msgs/msg/GearCommand
+    remap_target: output/gear_cmd
+  - name: turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+    remap_target: output/turn_indicators_cmd
+  - name: hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+    remap_target: output/hazard_lights_cmd
+  - name: gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+    remap_target: output/gate_mode
+  - name: engage
+    message_type: autoware_vehicle_msgs/msg/Engage
+    remap_target: output/engage
+  - name: external_emergency
+    message_type: tier4_external_api_msgs/msg/Emergency
+    remap_target: output/external_emergency
+  - name: operation_mode
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+    remap_target: output/operation_mode
+  - name: is_paused
+    message_type: tier4_control_msgs/msg/IsPaused
+  - name: is_start_requested
+    message_type: tier4_control_msgs/msg/IsStartRequested
+  - name: is_stopped
+    message_type: tier4_control_msgs/msg/IsStopped
+  - name: is_filter_activated
+    message_type: autoware_vehicle_cmd_gate/msg/IsFilterActivated
+
+servers:
+  - name: engage_service
+    message_type: tier4_external_api_msgs/srv/Engage
+    remap_target: ~/service/engage
+  - name: external_emergency_service
+    message_type: tier4_external_api_msgs/srv/SetEmergency
+    remap_target: ~/service/external_emergency
+  - name: external_emergency_stop
+    message_type: std_srvs/srv/Trigger
+    remap_target: ~/service/external_emergency_stop
+  - name: clear_external_emergency_stop
+    message_type: std_srvs/srv/Trigger
+    remap_target: ~/service/clear_external_emergency_stop
+  - name: set_pause
+    message_type: tier4_control_msgs/srv/SetPause
+  - name: set_stop
+    message_type: tier4_control_msgs/srv/SetStop
+
+# parameters
+param_files:
+  - name: vehicle_cmd_gate_param
+    default: $(find-pkg-share autoware_vehicle_cmd_gate)/config/vehicle_cmd_gate.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: gate_commands
+    trigger_conditions:
+      - periodic: 10.0
+    outcomes:
+      - to_output: control_cmd

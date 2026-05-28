@@ -1,0 +1,44 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PathOptimizer.node
+
+package:
+  name: autoware_path_optimizer
+  provider: autoware
+
+launch:
+  plugin: autoware::path_optimizer::PathOptimizer
+  executable: path_optimizer_node
+
+# interfaces
+subscribers:
+  - name: path
+    message_type: autoware_planning_msgs/msg/Path
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+
+publishers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: ~/output/path
+  - name: virtual_wall
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/virtual_wall
+
+# parameters
+param_files:
+  - name: path_optimizer_param
+    default: $(find-pkg-share autoware_path_optimizer)/config/path_optimizer.param.yaml
+  - name: vehicle_param
+    default: $(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: optimize_path
+    trigger_conditions:
+      - on_input: path
+    outcomes:
+      - to_output: trajectory

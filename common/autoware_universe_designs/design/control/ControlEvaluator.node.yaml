@@ -1,0 +1,73 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ControlEvaluator.node
+
+package:
+  name: autoware_control_evaluator
+  provider: autoware
+
+launch:
+  plugin: autoware::control_evaluator::ControlEvaluatorNode
+  executable: control_evaluator
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: behavior_path
+    message_type: autoware_internal_planning_msgs/msg/PathWithLaneId
+  - name: steering_status
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: blind_spot
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: crosswalk
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: detection_area
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: intersection
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: no_stopping_area
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: stop_line
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: traffic_light
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: virtual_traffic_light
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+  - name: walkway
+    message_type: autoware_internal_planning_msgs/msg/PlanningFactorArray
+
+publishers:
+  - name: metrics
+    message_type: autoware_control_msgs/msg/ControlEvaluation
+
+# parameters
+param_files:
+  - name: control_evaluator_param
+    default: $(find-pkg-share autoware_control_evaluator)/config/control_evaluator.param.yaml
+
+param_values:
+  - name: output_metrics
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: evaluate_control
+    trigger_conditions:
+      - on_input: odometry
+      - on_input: trajectory
+    outcomes:
+      - to_output: metrics

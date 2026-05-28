@@ -1,0 +1,101 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: BehaviorPathPlanner.node
+
+package:
+  name: autoware_behavior_path_planner
+  provider: autoware
+
+launch:
+  plugin: autoware::behavior_path_planner::BehaviorPathPlannerNode
+  executable: autoware_behavior_path_planner_node
+
+# interfaces
+subscribers:
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+    remap_target: ~/input/perception
+  - name: occupancy_grid_map
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: costmap
+    message_type: nav_msgs/msg/OccupancyGrid
+  - name: traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: accel
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: scenario
+    message_type: autoware_internal_planning_msgs/msg/Scenario
+  - name: external_velocity_limit_mps
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+
+publishers:
+  - name: path_with_lane_id
+    message_type: autoware_internal_planning_msgs/msg/PathWithLaneId
+    remap_target: ~/output/path
+  - name: turn_indicators_cmd
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: hazard_lights_cmd
+    message_type: autoware_vehicle_msgs/msg/HazardLightsCommand
+  - name: modified_goal
+    message_type: autoware_planning_msgs/msg/PoseWithUuidStamped
+  - name: reroute_availability
+    message_type: tier4_planning_msgs/msg/RerouteAvailability
+    remap_target: ~/output/is_reroute_available
+
+# parameters
+param_files:
+  - name: behavior_path_planner_param
+    default: config/behavior_path_planner.param.yaml
+  - name: scene_module_manager_param
+    default: config/scene_module_manager.param.yaml
+  - name: drivable_area_expansion_param
+    default: config/drivable_area_expansion.param.yaml
+  - name: lane_change_param
+    default: config/lane_change.param.yaml
+  - name: goal_planner_param
+    default: config/goal_planner.param.yaml
+  - name: start_planner_param
+    default: config/start_planner.param.yaml
+  - name: avoidance_param
+    default: config/avoidance.param.yaml
+  - name: avoidance_by_lane_change_param
+    default: config/avoidance_by_lane_change.param.yaml
+  - name: bidirectional_traffic_param
+    default: config/bidirectional_traffic.param.yaml
+  - name: dynamic_obstacle_avoidance_param
+    default: config/dynamic_obstacle_avoidance.param.yaml
+  - name: sampling_planner_param
+    default: config/sampling_planner.param.yaml
+  - name: side_shift_param
+    default: config/side_shift.param.yaml
+
+param_values:
+  - name: launch_modules
+    type: string_array
+    default:
+      - autoware::behavior_path_planner::StaticObstacleAvoidanceModuleManager
+      - autoware::behavior_path_planner::SideShiftModuleManager
+      - autoware::behavior_path_planner::BidirectionalTrafficModuleManager
+      - autoware::behavior_path_planner::StartPlannerModuleManager
+      - autoware::behavior_path_planner::GoalPlannerModuleManager
+      - autoware::behavior_path_planner::LaneChangeRightModuleManager
+      - autoware::behavior_path_planner::LaneChangeLeftModuleManager
+      - autoware::behavior_path_planner::AvoidanceByLaneChangeModuleManager
+
+# processes
+processes:
+  - name: plan_path
+    trigger_conditions:
+      - on_input: route
+      - on_input: odometry
+    outcomes:
+      - to_output: path_with_lane_id

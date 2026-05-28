@@ -1,0 +1,67 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: MissionPlanner.node
+
+package:
+  name: autoware_mission_planner_universe
+  provider: autoware
+
+launch:
+  plugin: autoware::mission_planner_universe::MissionPlanner
+  executable: mission_planner
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: modified_goal
+    message_type: autoware_planning_msgs/msg/PoseWithUuidStamped
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: operation_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: reroute_availability
+    message_type: tier4_planning_msgs/msg/RerouteAvailability
+
+publishers:
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: ~/route
+  - name: state
+    message_type: autoware_planning_msgs/msg/RouteState
+    remap_target: ~/state
+  - name: route_marker
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/route_marker
+
+servers:
+  - name: clear_route
+    message_type: autoware_planning_msgs/srv/ClearRoute
+    remap_target: ~/clear_route
+  - name: set_lanelet_route
+    message_type: autoware_planning_msgs/srv/SetLaneletRoute
+    remap_target: ~/set_lanelet_route
+  - name: set_preferred_primitive
+    message_type: autoware_planning_msgs/srv/SetPreferredPrimitive
+    remap_target: ~/set_preferred_primitive
+  - name: set_waypoint_route
+    message_type: autoware_planning_msgs/srv/SetWaypointRoute
+    remap_target: ~/set_waypoint_route
+
+# parameters
+param_files:
+  - name: mission_planner_param
+    default: $(find-pkg-share autoware_mission_planner_universe)/config/mission_planner.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: plan_route
+    trigger_conditions:
+      - on_input: modified_goal
+    outcomes:
+      - to_output: route
+      - to_output: state
