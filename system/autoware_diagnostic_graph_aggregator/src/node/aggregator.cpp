@@ -146,7 +146,7 @@ void AggregatorNode::on_set_override(
     return;
   }
   response->status.success = false;
-  response->status.message = "invalid level";
+  response->status.message = "invalid level: " + std::to_string(request->level);
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator
