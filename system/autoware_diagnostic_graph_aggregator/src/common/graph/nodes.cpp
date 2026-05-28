@@ -39,7 +39,7 @@ NodeUnit::NodeUnit(Parser & parser)
   struct_.type = parser.type();
   status_.level = DiagnosticStatus::STALE;
 
-  allow_override_ = parser.yaml().optional("allow_override").flag(false);
+  allow_override_ = parser.yaml().optional("allow_override_for_debugging").flag(false);
 }
 
 NodeUnit::~NodeUnit()
