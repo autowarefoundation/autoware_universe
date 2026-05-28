@@ -17,6 +17,8 @@
 
 #include <cub/cub.cuh>
 
+#include <cstddef>
+
 namespace
 {
 
@@ -35,7 +37,7 @@ cudaError_t argsort(
   const auto scratch_offset =
     autoware::tensorrt_plugins::align_up(argsort_workspace_size, alignof(std::int64_t));
   auto * input_idx_d =
-    reinterpret_cast<std::int64_t *>(reinterpret_cast<char *>(workspace) + scratch_offset);
+    reinterpret_cast<std::int64_t *>(reinterpret_cast<std::byte *>(workspace) + scratch_offset);
   auto * input_sorted_d = input_idx_d + num_elements;
 
   const auto num_blocks =
