@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__PTV3__PTV3_NODE_HPP_
 #define AUTOWARE__PTV3__PTV3_NODE_HPP_
 
+#include "autoware/ptv3/detection_class_remapper.hpp"
+#include "autoware/ptv3/postprocess/non_maximum_suppression.hpp"
 #include "autoware/ptv3/ptv3_trt.hpp"
 #include "autoware/ptv3/visibility_control.hpp"
 
@@ -26,9 +28,12 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::ptv3
 {
@@ -38,15 +43,16 @@ class PTV3_PUBLIC PTv3Node : public rclcpp::Node
 public:
   explicit PTv3Node(const rclcpp::NodeOptions & options);
 
-  void publishSegmentedPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
-
-  void publishVisualizationPointcloud(
+  void publish_segmented_pointcloud(
     std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
 
-  void publishFilteredPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
+  void publish_visualization_pointcloud(
+    std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
+
+  void publish_filtered_pointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
 
 private:
-  void cloudCallback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
+  void cloud_callback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
 
   std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     pointcloud_sub_;
@@ -60,11 +66,20 @@ private:
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
     filtered_pointcloud_pub_;
 
+  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr
+    detected_objects_pub_;
+
   std::unique_ptr<PTv3TRT> model_ptr_{nullptr};
 
   rclcpp::TimerBase::SharedPtr timer_{nullptr};
 
-  // debugger
+  std::unique_ptr<NonMaximumSuppression> iou_bev_nms_{nullptr};
+  DetectionClassRemapper detection_class_remapper_;
+  std::vector<std::string> detection_class_names_;
+  bool has_twist_{false};
+  bool has_variance_{false};
+
+  // Debug helpers.
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_pub_{nullptr};

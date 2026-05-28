@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PTV3__PREPROCESS__PREPROCESS_KERNEL_HPP_
-#define AUTOWARE__PTV3__PREPROCESS__PREPROCESS_KERNEL_HPP_
+#ifndef AUTOWARE__PTV3__PREPROCESS__BACKBONE_PREPROCESS_HPP_
+#define AUTOWARE__PTV3__PREPROCESS__BACKBONE_PREPROCESS_HPP_
 
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
@@ -27,19 +27,57 @@
 namespace autoware::ptv3
 {
 
-class PreprocessCuda
+/**
+ * @brief Build sparse backbone inputs from a GPU point cloud.
+ */
+class BackbonePreprocess
 {
 public:
-  PreprocessCuda(const PTv3Config & config, cudaStream_t stream);
+  /**
+   * @brief Allocate preprocessing scratch buffers.
+   *
+   * @param config Runtime configuration for crop range, voxel grid, and buffer capacity.
+   * @param stream CUDA stream used for all preprocessing work.
+   */
+  BackbonePreprocess(const PTv3Config & config, cudaStream_t stream);
 
-  std::size_t generateFeatures(
+  /**
+   * @brief Crop, voxelize, and serialize the cloud for the backbone.
+   *
+   * @param input_data Device pointer to source points in the given input_format.
+   * @param input_format Layout of points in input_data.
+   * @param num_points Number of source points.
+   * @param voxel_features Output voxel feature array.
+   * @param voxel_coords Output voxel grid coordinates.
+   * @param voxel_hashes Output serialized voxel hashes.
+   * @param compact_points Output source points that passed the crop.
+   * @param reconstruction_features Output per-point features for partial or full reconstruction.
+   * @param cropped_source_points Output cropped source points for partial reconstruction.
+   * @param inverse_map Output cropped-point to voxel index map.
+   * @param num_cropped_points Output number of points that passed the crop.
+   * @param unclipped_num_voxels Output unique voxel count before max voxel clipping.
+   * @return Number of valid voxels after max voxel clipping.
+   */
+  std::size_t generate_features(
     const void * input_data, CloudFormat input_format, unsigned int num_points,
-    float * voxel_features, std::int64_t * voxel_coords, std::int64_t * voxel_hashes,
+    float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
     void * compact_points, float * reconstruction_features, void * cropped_source_points,
-    std::int64_t * inverse_map, std::size_t * num_cropped_points);
+    std::int64_t * inverse_map, std::size_t * num_cropped_points,
+    std::size_t * unclipped_num_voxels);
 
-  [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
-  [[nodiscard]] const std::uint32_t * cropIndices() const { return crop_indices_d_.get(); }
+  /**
+   * @brief Return the crop mask from the last preprocessing run.
+   *
+   * @return Device pointer to the crop mask.
+   */
+  [[nodiscard]] const std::uint32_t * crop_mask() const { return crop_mask_d_.get(); }
+
+  /**
+   * @brief Return the prefix sum over the last crop mask.
+   *
+   * @return Device pointer to the crop index array.
+   */
+  [[nodiscard]] const std::uint32_t * crop_indices() const { return crop_indices_d_.get(); }
 
 private:
   PTv3Config config_;
@@ -70,4 +108,4 @@ private:
 };
 }  // namespace autoware::ptv3
 
-#endif  // AUTOWARE__PTV3__PREPROCESS__PREPROCESS_KERNEL_HPP_
+#endif  // AUTOWARE__PTV3__PREPROCESS__BACKBONE_PREPROCESS_HPP_

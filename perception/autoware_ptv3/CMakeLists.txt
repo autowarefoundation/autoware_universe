@@ -80,8 +80,10 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   endif()
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
-    lib/postprocess/postprocess_kernel.cu
-    lib/preprocess/preprocess_kernel.cu
+    lib/postprocess/seg3d_postprocess.cu
+    lib/postprocess/det3d_centerhead_postprocess.cu
+    lib/postprocess/det3d_transhead_postprocess.cu
+    lib/preprocess/backbone_preprocess.cu
   )
 
   target_include_directories(${PROJECT_NAME}_cuda_lib
@@ -91,6 +93,9 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     lib/ptv3_trt.cpp
+    lib/postprocess/non_maximum_suppression.cpp
+    lib/detection_class_remapper.cpp
+    lib/ros_utils.cpp
   )
 
   target_compile_definitions(${PROJECT_NAME}_lib PRIVATE

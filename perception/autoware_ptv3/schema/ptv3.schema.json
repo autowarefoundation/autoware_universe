@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for ptv3",
+  "title": "Parameters for PTv3 node",
   "type": "object",
   "definitions": {
     "filter": {
@@ -8,23 +8,179 @@
       "properties": {
         "class_probability_threshold": {
           "type": "number",
-          "description": "If any filter class probability reaches this threshold, the point is excluded from the filtered output cloud.",
+          "description": "Points with any filter class probability above this threshold are excluded from the filtered output cloud.",
           "minimum": 0.0,
           "maximum": 1.0
         },
         "classes": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Class names to filter out from the filtered output cloud when their probability exceeds the threshold.",
+          "description": "Class names to filter from the output cloud when probability exceeds the threshold.",
           "uniqueItems": true
         },
         "output_format": {
           "type": "string",
-          "description": "Filtered output point format. Empty string preserves the input format.",
+          "description": "Output point format for the filtered cloud. Empty string preserves the input format.",
           "enum": ["", "xyzi", "xyzirc", "xyziradrt", "xyzircaedt"]
         }
       },
       "required": ["class_probability_threshold", "classes", "output_format"],
+      "additionalProperties": false
+    },
+    "post_process_params": {
+      "type": "object",
+      "properties": {
+        "iou_nms_search_distance_2d": {
+          "type": "number",
+          "description": "Maximum 2D distance between object centers considered for IoU NMS.",
+          "exclusiveMinimum": 0.0
+        },
+        "iou_nms_threshold": {
+          "type": "number",
+          "description": "IoU threshold above which the lower-scoring box is suppressed.",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "yaw_norm_thresholds": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "description": "Per-class minimum sine/cosine norm for yaw. Boxes below threshold are discarded.",
+          "minItems": 1
+        }
+      },
+      "required": ["iou_nms_search_distance_2d", "iou_nms_threshold", "yaw_norm_thresholds"],
+      "additionalProperties": false
+    },
+    "detection_score_thresholds": {
+      "type": "object",
+      "properties": {
+        "distance_bin_upper_limits": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0.0 },
+          "description": "Ordered upper bounds of radial distance bins in meters.",
+          "minItems": 1
+        },
+        "min_confidence_scores": {
+          "type": "object",
+          "description": "Per-class arrays of minimum confidence scores, one value per distance bin.",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+            "minItems": 1
+          }
+        }
+      },
+      "required": ["distance_bin_upper_limits", "min_confidence_scores"],
+      "additionalProperties": false
+    },
+    "backbone": {
+      "type": "object",
+      "properties": {
+        "onnx_path": {
+          "type": "string",
+          "description": "Path to the backbone ONNX file.",
+          "pattern": "\\.onnx$"
+        },
+        "engine_path": {
+          "type": "string",
+          "description": "Path to the backbone TensorRT engine file.",
+          "pattern": "\\.engine$"
+        }
+      },
+      "required": ["onnx_path", "engine_path"],
+      "additionalProperties": false
+    },
+    "segmentation3d": {
+      "type": "object",
+      "properties": {
+        "use_head": {
+          "description": "Enable the segmentation head."
+        },
+        "onnx_path": {
+          "type": "string",
+          "description": "Path to the segmentation head ONNX file.",
+          "pattern": "\\.onnx$"
+        },
+        "engine_path": {
+          "type": "string",
+          "description": "Path to the segmentation head TensorRT engine file.",
+          "pattern": "\\.engine$"
+        },
+        "source_reconstruction": {
+          "type": "string",
+          "description": "Controls mapping of voxel predictions back to source points. 'none': voxel representative points; 'partial': cropped source points inside point_cloud_range; 'full': full input cloud with unknown label 255 for out-of-range points.",
+          "enum": ["none", "partial", "full"]
+        },
+        "filter": {
+          "$ref": "#/definitions/filter"
+        }
+      },
+      "required": ["use_head"],
+      "allOf": [
+        {
+          "if": { "properties": { "use_head": { "const": true } }, "required": ["use_head"] },
+          "then": {
+            "required": ["onnx_path", "engine_path", "source_reconstruction", "filter"]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "detection3d": {
+      "type": "object",
+      "properties": {
+        "use_head": {
+          "description": "Enable the detection head."
+        },
+        "onnx_path": {
+          "type": "string",
+          "description": "Path to the detection head ONNX file.",
+          "pattern": "\\.onnx$"
+        },
+        "engine_path": {
+          "type": "string",
+          "description": "Path to the detection head TensorRT engine file.",
+          "pattern": "\\.engine$"
+        },
+        "post_process_params": {
+          "$ref": "#/definitions/post_process_params"
+        },
+        "detection_score_thresholds": {
+          "$ref": "#/definitions/detection_score_thresholds"
+        },
+        "allow_remapping_by_area_matrix": {
+          "type": "array",
+          "items": { "type": "integer", "enum": [0, 1] },
+          "description": "Flat row-major matrix (num_classes x num_classes) of allowed class remappings by area."
+        },
+        "min_area_matrix": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0.0 },
+          "description": "Flat row-major matrix (num_classes x num_classes) of minimum bounding box areas for remapping."
+        },
+        "max_area_matrix": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0.0 },
+          "description": "Flat row-major matrix (num_classes x num_classes) of maximum bounding box areas for remapping."
+        }
+      },
+      "required": ["use_head"],
+      "allOf": [
+        {
+          "if": { "properties": { "use_head": { "const": true } }, "required": ["use_head"] },
+          "then": {
+            "required": [
+              "onnx_path",
+              "engine_path",
+              "post_process_params",
+              "detection_score_thresholds",
+              "allow_remapping_by_area_matrix",
+              "min_area_matrix",
+              "max_area_matrix"
+            ]
+          }
+        }
+      ],
       "additionalProperties": false
     },
     "ptv3": {
@@ -32,52 +188,30 @@
       "properties": {
         "plugins_path": {
           "type": "string",
-          "description": "A path to the TensorRT plugins.",
-          "default": "$(find-pkg-share autoware_ptv3)/plugins/libautoware_tensorrt_plugins.so",
+          "description": "Path to the TensorRT plugins shared library.",
           "pattern": "\\.so$"
         },
         "trt_precision": {
           "type": "string",
-          "description": "A precision of TensorRT engine.",
-          "default": "fp16",
+          "description": "TensorRT inference precision.",
           "enum": ["fp16", "fp32"]
         },
         "cloud_capacity": {
           "type": "integer",
-          "description": "Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).",
-          "default": 2000000,
+          "description": "Point cloud buffer capacity. Must be at least the maximum expected number of points per frame.",
           "minimum": 1
         },
-        "source_reconstruction": {
-          "type": "string",
-          "description": "Controls whether voxel predictions are mapped back to source points. 'none' publishes voxel representative points; 'partial' publishes cropped source points inside point_cloud_range; 'full' publishes the full input cloud, assigning unknown label 255 and zero class probabilities to points outside point_cloud_range.",
-          "default": "full",
-          "enum": ["none", "partial", "full"]
-        },
-        "onnx_path": {
-          "type": "string",
-          "description": "A path to ONNX model file.",
-          "default": "$(var model_path)/ptv3.onnx",
-          "pattern": "\\.onnx$"
-        },
-        "engine_path": {
-          "type": "string",
-          "description": "A path to TensorRT engine file.",
-          "default": "$(var model_path)/ptv3.engine",
-          "pattern": "\\.engine$"
-        },
-        "filter": {
-          "$ref": "#/definitions/filter"
-        }
+        "backbone": { "$ref": "#/definitions/backbone" },
+        "segmentation3d": { "$ref": "#/definitions/segmentation3d" },
+        "detection3d": { "$ref": "#/definitions/detection3d" }
       },
       "required": [
         "plugins_path",
         "trt_precision",
         "cloud_capacity",
-        "source_reconstruction",
-        "onnx_path",
-        "engine_path",
-        "filter"
+        "backbone",
+        "segmentation3d",
+        "detection3d"
       ],
       "additionalProperties": false
     }

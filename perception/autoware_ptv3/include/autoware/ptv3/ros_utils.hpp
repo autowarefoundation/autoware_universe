@@ -15,31 +15,26 @@
 #ifndef AUTOWARE__PTV3__ROS_UTILS_HPP_
 #define AUTOWARE__PTV3__ROS_UTILS_HPP_
 
-#include "autoware/ptv3/preprocess/point_type.hpp"
+#include "autoware/ptv3/utils.hpp"
 
-#include <autoware/point_types/types.hpp>
+#include "autoware_perception_msgs/msg/detected_objects.hpp"
 
-#define CHECK_OFFSET(structure1, structure2, field)             \
-  static_assert(                                                \
-    offsetof(structure1, field) == offsetof(structure2, field), \
-    "Offset of " #field " in " #structure1 " does not match the one in " #structure2 ".")
-#define CHECK_TYPE(structure1, structure2, field)                             \
-  static_assert(                                                              \
-    std::is_same_v<decltype(structure1::field), decltype(structure2::field)>, \
-    "Type of " #field " in " #structure1 " and " #structure1 " have different types.")
-#define CHECK_FIELD(structure1, structure2, field) \
-  CHECK_OFFSET(structure1, structure2, field);     \
-  CHECK_TYPE(structure1, structure2, field)
+#include <array>
+#include <string>
+#include <vector>
 
 namespace autoware::ptv3
 {
-using sensor_msgs::msg::PointField;
 
-CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, x);
-CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, y);
-CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, z);
-CHECK_FIELD(CloudPointType, autoware::point_types::PointXYZIRC, intensity);
-static_assert(sizeof(CloudPointType) == sizeof(autoware::point_types::PointXYZIRC));
+void box3d_to_detected_object(
+  const Box3D & box3d, const std::vector<std::string> & class_names, bool has_twist,
+  bool has_variance, autoware_perception_msgs::msg::DetectedObject & obj);
+
+uint8_t get_semantic_type(const std::string & class_name);
+
+std::array<double, 36> convert_pose_covariance_matrix(const Box3D & box3d);
+
+std::array<double, 36> convert_twist_covariance_matrix(const Box3D & box3d, float yaw);
 
 }  // namespace autoware::ptv3
 

@@ -1,59 +1,117 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for ptv3",
+  "title": "ML package parameters for PTv3",
   "type": "object",
   "definitions": {
-    "ptv3": {
+    "backbone": {
       "type": "object",
       "properties": {
-        "class_names": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Predicted classes' names.",
-          "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"],
-          "uniqueItems": true
-        },
-        "palette": {
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 255
-          },
-          "description": "Flat RGB palette for visualization output. Must contain 3 values per class in class_names."
-        },
         "voxels_num": {
           "type": "array",
-          "items": {
-            "type": "integer"
-          },
-          "description": "Voxel ranges used during inference [min, opt, max].",
-          "default": [5000, 30000, 60000]
+          "items": { "type": "integer", "minimum": 1 },
+          "description": "Voxel count profile for TensorRT dynamic shape [min, opt, max].",
+          "minItems": 3,
+          "maxItems": 3
         },
         "point_cloud_range": {
           "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "description": "Range in meters of the pointcloud in meters [min_x, min_y, min_z, max_x, max_y, max_z].",
-          "default": [-76.8, -76.8, -3.0, 76.8, 76.8, 5.0],
+          "items": { "type": "number" },
+          "description": "Point cloud range [min_x, min_y, min_z, max_x, max_y, max_z] in meters.",
           "minItems": 6,
           "maxItems": 6
         },
         "voxel_size": {
           "type": "array",
-          "items": {
-            "type": "number"
-          },
-          "description": "Voxels size [x, y, z] in meters.",
-          "default": [0.3, 0.3, 8.0],
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "description": "Voxel size [x, y, z] in meters.",
           "minItems": 3,
           "maxItems": 3
         }
       },
-      "required": ["class_names", "palette", "voxels_num", "point_cloud_range", "voxel_size"],
+      "required": ["voxels_num", "point_cloud_range", "voxel_size"],
+      "additionalProperties": false
+    },
+    "segmentation3d": {
+      "type": "object",
+      "properties": {
+        "class_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Segmentation class names.",
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "palette": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 255 },
+          "description": "Flat RGB palette for visualization output. Must contain 3 values per class."
+        }
+      },
+      "required": ["class_names", "palette"],
+      "additionalProperties": false
+    },
+    "detection3d": {
+      "type": "object",
+      "properties": {
+        "head": {
+          "type": "string",
+          "description": "Detection head type.",
+          "enum": ["centerhead", "transhead"]
+        },
+        "bbox_voxel_size": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "description": "Voxel size for the bounding box grid [x, y, z] in meters.",
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "bbox_downsample_factor": {
+          "type": "integer",
+          "description": "Downsampling factor applied to the detection feature grid.",
+          "minimum": 1
+        },
+        "has_variance": {
+          "type": "boolean",
+          "description": "Whether the detection head outputs uncertainty variance."
+        },
+        "has_twist": {
+          "type": "boolean",
+          "description": "Whether the detection head outputs velocity twist."
+        },
+        "class_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Detection class names.",
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "num_proposals": {
+          "type": "integer",
+          "description": "Number of top proposals decoded by TransHead. Required when head is transhead.",
+          "minimum": 1
+        },
+        "post_center_range": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Post-processing center range for TransHead [min_x, min_y, min_z, max_x, max_y, max_z]. Required when head is transhead.",
+          "minItems": 6,
+          "maxItems": 6
+        }
+      },
+      "required": [
+        "head",
+        "bbox_voxel_size",
+        "bbox_downsample_factor",
+        "has_variance",
+        "has_twist",
+        "class_names"
+      ],
+      "if": {
+        "properties": { "head": { "const": "transhead" } }
+      },
+      "then": {
+        "required": ["num_proposals", "post_center_range"]
+      },
       "additionalProperties": false
     }
   },
@@ -62,7 +120,13 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/ptv3"
+          "type": "object",
+          "properties": {
+            "backbone": { "$ref": "#/definitions/backbone" },
+            "segmentation3d": { "$ref": "#/definitions/segmentation3d" },
+            "detection3d": { "$ref": "#/definitions/detection3d" }
+          },
+          "additionalProperties": false
         }
       },
       "required": ["ros__parameters"],

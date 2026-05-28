@@ -2,11 +2,13 @@
 
 ## Purpose
 
-The `autoware_ptv3` package is used for 3D lidar segmentation.
+The `autoware_ptv3` package is used for 3D lidar segmentation and 3D object detection.
 
 ## Inner-workings / Algorithms
 
-This package implements a TensorRT powered inference node for Point Transformers V3 (PTv3) [1].
+This package implements a TensorRT powered multi-head inference node for Point Transformers V3
+(PTv3) [1]. The backbone is shared by the segmentation and detection heads, and either head can be
+enabled independently.
 The sparse convolution backend corresponds to [spconv](https://github.com/traveller59/spconv).
 Autoware installs it automatically in its setup script. If needed, the user can also build it and install it following the [following instructions](https://github.com/autowarefoundation/spconv_cpp).
 
@@ -25,6 +27,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 | `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with class ID and probability fields.         |
 | `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                               |
 | `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`. |
+| `~/output/objects`                     | `autoware_perception_msgs::msg::DetectedObjects`    | Detected 3D objects after score filtering and IoU NMS.  |
 | `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                       |
 | `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                             |
 | `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                        |
@@ -42,8 +45,10 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 {{ json_to_markdown("perception/autoware_ptv3/schema/ml_package_ptv3.schema.json") }}
 
-`filter.*` parameters are configured in `config/ptv3.param.yaml`, while class metadata and the
-visualization `palette` are configured in `config/ml_package_ptv3.param.yaml`.
+Runtime head selection, filtering, detection thresholds, and remapping parameters are configured in
+`config/ptv3.param.yaml`. Model package metadata is split by artifact:
+`ml_package_ptv3_backbone.param.yaml`, `ml_package_ptv3_seg3d_head.param.yaml`, `ml_package_ptv3_det3d_head.param.yaml`.
+Source code supports CenterHead and TransHead for 3D object detection, but current artifacts might only include one of the two.
 
 ### The `build_only` option
 
@@ -61,6 +66,14 @@ The default logging severity level for `autoware_ptv3` is `info`. For debugging 
 ros2 launch autoware_ptv3 ptv3.launch.xml log_level:=debug
 ```
 
+### Head selection
+
+The segmentation and detection heads can be enabled independently:
+
+```bash
+ros2 launch autoware_ptv3 ptv3.launch.xml use_seg3d_head:=true use_det3d_head:=false
+```
+
 ## Assumptions / Known limits
 
 This node detects the input pointcloud format automatically on the first received message and
@@ -74,9 +87,14 @@ supports:
 The filtered output cloud format is controlled by `filter.output_format`. When it is set to an
 empty string, the filtered output preserves the same format as the input cloud.
 
+If a point cloud exceeds `cloud_capacity` or voxelization exceeds the configured maximum voxel
+count, the input is clipped to the configured capacity and an error is logged.
+
 ## Trained Models
 
-The model was trained on the T4Dataset using approximately 4,000 frames and is available in the Autoware artifacts.
+The segmentation head was trained on the T4Dataset using approximately 4,000 frames. The detection
+head uses a frozen seg3d backbone and was trained on 60,000 frames of the T4Dataset. The models are
+available in the Autoware artifacts.
 
 ## Troubleshooting
 
