@@ -15,16 +15,11 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__TRAFFIC_RULE__TRAFFIC_LIGHT_FILTER_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__TRAFFIC_RULE__TRAFFIC_LIGHT_FILTER_HPP_
 
-#include "autoware/trajectory_validator/filters/traffic_rule/traffic_light_compliance_checker.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
-#include <autoware_planning_msgs/msg/lanelet_route.hpp>
-
-#include <lanelet2_core/Forward.h>
+#include <autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp>
 
 #include <memory>
-#include <unordered_map>
-#include <vector>
 
 namespace autoware::trajectory_validator::plugin::traffic_rule
 {
@@ -40,27 +35,8 @@ public:
   void set_vehicle_info(const VehicleInfo & vehicle_info) final;
 
 private:
-  struct SignalStateHistory
-  {
-    autoware_perception_msgs::msg::TrafficLightGroup msg;
-    rclcpp::Time first_seen_time;
-    rclcpp::Time last_seen_time;
-  };
-
-  std::unique_ptr<traffic_light_filter::TrafficLightComplianceChecker> checker_;
+  std::unique_ptr<traffic_light_compliance_checker::TrafficLightComplianceChecker> checker_;
   validator::Params::TrafficLight params_;
-
-  std::unordered_map<int64_t, SignalStateHistory> signal_history_;
-  std::unordered_map<int64_t, rclcpp::Time> amber_rejection_history_;
-
-  autoware_perception_msgs::msg::TrafficLightGroupArray filter_signals(
-    const autoware_perception_msgs::msg::TrafficLightGroupArray & signals,
-    const rclcpp::Time & current_time, bool is_ego_stopped);
-
-  std::vector<int64_t> get_force_reject_amber_ids(
-    const rclcpp::Time & current_time, bool is_ego_stopped) const;
-
-  void cleanup_history(const rclcpp::Time & current_time);
 };
 
 }  // namespace autoware::trajectory_validator::plugin::traffic_rule
