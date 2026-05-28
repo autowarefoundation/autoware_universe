@@ -257,14 +257,13 @@ cudaError_t unique(
   const std::int64_t * input_in, std::int64_t * unique_values_out,
   std::int64_t * inverse_indices_out, std::int64_t * unique_counts_out,
   std::int64_t * num_unique_elements_out, void * workspace_inout, std::size_t num_input_elements_in,
-  std::size_t workspace_size_in, cudaStream_t stream_in)
+  [[maybe_unused]] std::size_t workspace_size_in, cudaStream_t stream_in)
 {
   if (num_input_elements_in == 0U) {
     return cudaMemsetAsync(num_unique_elements_out, 0, sizeof(std::int64_t), stream_in);
   }
 
   assert(workspace_size_in >= get_unique_workspace_size(num_input_elements_in));
-  (void)workspace_size_in;
 
   const auto cub_temp_storage_size = get_unique_temp_storage_size(num_input_elements_in);
   auto layout =
