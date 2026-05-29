@@ -48,10 +48,10 @@ enum class DetectionHeadType { CenterHead, TransHead };
  */
 inline DetectionHeadType parse_detection_head_type(const std::string & s)
 {
-  if (s == "centerhead") return DetectionHeadType::CenterHead;
-  if (s == "transhead") return DetectionHeadType::TransHead;
+  if (s == "center_head") return DetectionHeadType::CenterHead;
+  if (s == "trans_head") return DetectionHeadType::TransHead;
   throw std::runtime_error(
-    "Unsupported detection_head_type='" + s + "'. Expected 'centerhead' or 'transhead'.");
+    "Unsupported detection_head_type='" + s + "'. Expected 'center_head' or 'trans_head'.");
 }
 
 /**
@@ -108,7 +108,7 @@ public:
     const std::vector<float> & distance_bin_upper_limits = {},
     const std::vector<float> & detection_score_thresholds = {},
     const std::vector<float> & yaw_norm_thresholds = {}, bool has_twist = false,
-    bool has_variance = false, const std::string & detection_head_type = "transhead",
+    bool has_variance = false, const std::string & detection_head_type = "trans_head",
     std::size_t num_proposals = 0, const std::vector<float> & post_center_range = {})
   {
     plugins_path_ = plugins_path;
