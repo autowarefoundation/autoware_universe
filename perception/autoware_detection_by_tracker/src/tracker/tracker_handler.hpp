@@ -34,7 +34,7 @@ public:
   TrackerHandler() = default;
   void onTrackedObjects(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) &
-      input_objects_msg);
+    input_objects_msg);
   bool estimateTrackedObjects(
     const rclcpp::Time & time, autoware_perception_msgs::msg::TrackedObjects & output);
 };
