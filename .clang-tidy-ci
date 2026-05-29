@@ -30,4 +30,3 @@ ExtraArgs:
   - -Wno-deprecated-declarations
   - -Wno-unused-private-field
   - -Wno-unused-but-set-variable
-  - -Wno-deprecated-builtins
