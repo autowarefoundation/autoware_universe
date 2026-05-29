@@ -33,13 +33,6 @@ constexpr uint8_t circle = TrafficLightElement::CIRCLE;
 // unknown is shared between the color and shape fields
 constexpr uint8_t unknown = TrafficLightElement::UNKNOWN;
 
-// compare_record return values
-enum CompareResult : int {
-  R1_IS_WORSE = -1,
-  BOTH_RECORDS_EQUAL = 0,
-  R1_IS_BETTER = 1,
-};
-
 // cal_visible_score return values
 enum VisibleScore : int {
   TRUNCATED = 0,
@@ -128,129 +121,137 @@ TEST(AtOr, ReturnsDefaultValueWhenKeyMissing)
 }
 
 // first condition: records from the same camera are ranked by timestamp
-TEST(CompareRecordSameCamera, NewerRecordWinsOverOlderRecord)
+TEST(HasHigherOrEqualPrioritySameCamera, NewerRecordWinsOverOlderRecord)
 {
   const auto newer_record = make_record(red, circle, 0.9, "camera0", 200);
   const auto older_record = make_record(green, circle, 0.8, "camera0", 100);
-  EXPECT_EQ(utils::compare_record(newer_record, older_record), R1_IS_BETTER);
+  EXPECT_TRUE(utils::has_higher_or_equal_priority(newer_record, older_record));
 }
 
-TEST(CompareRecordSameCamera, OlderRecordLosesToNewerRecord)
+TEST(HasHigherOrEqualPrioritySameCamera, OlderRecordLosesToNewerRecord)
 {
   const auto older_record = make_record(red, circle, 0.9, "camera0", 100);
   const auto newer_record = make_record(green, circle, 0.8, "camera0", 200);
-  EXPECT_EQ(utils::compare_record(older_record, newer_record), R1_IS_WORSE);
+  EXPECT_FALSE(utils::has_higher_or_equal_priority(older_record, newer_record));
 }
 
 // second condition: an unknown signal loses to a recognized one
-TEST(CompareRecordSameCamera, UnknownRecordLosesToKnownRecord)
+TEST(HasHigherOrEqualPrioritySameCamera, UnknownRecordLosesToKnownRecord)
 {
   const auto unknown_record = make_record(unknown, unknown, 0.0);
   const auto known_record = make_record(green, circle, 0.8);
-  EXPECT_EQ(utils::compare_record(unknown_record, known_record), R1_IS_WORSE);
+  EXPECT_FALSE(utils::has_higher_or_equal_priority(unknown_record, known_record));
 }
 
-TEST(CompareRecordSameCamera, KnownRecordWinsOverUnknownRecord)
+TEST(HasHigherOrEqualPrioritySameCamera, KnownRecordWinsOverUnknownRecord)
 {
   const auto known_record = make_record(red, circle, 0.9);
   const auto unknown_record = make_record(unknown, unknown, 0.0);
-  EXPECT_EQ(utils::compare_record(known_record, unknown_record), R1_IS_BETTER);
+  EXPECT_TRUE(utils::has_higher_or_equal_priority(known_record, unknown_record));
 }
 
-TEST(CompareRecordSameCamera, BothUnknownRecordsAreEqual)
+TEST(HasHigherOrEqualPrioritySameCamera, BothUnknownRecordsHaveEqualPriority)
 {
   const auto unknown_record_1 = make_record(unknown, unknown, 0.0);
   const auto unknown_record_2 = make_record(unknown, unknown, 0.0);
-  EXPECT_EQ(utils::compare_record(unknown_record_1, unknown_record_2), BOTH_RECORDS_EQUAL);
+  // equal priority: each record has a higher-or-equal priority than the other
+  EXPECT_TRUE(utils::has_higher_or_equal_priority(unknown_record_1, unknown_record_2));
+  EXPECT_TRUE(utils::has_higher_or_equal_priority(unknown_record_2, unknown_record_1));
 }
 
 // third condition: a fully visible signal wins over a truncated one
-TEST(CompareRecordSameCamera, VisibleRecordWinsOverTruncatedRecord)
+TEST(HasHigherOrEqualPrioritySameCamera, VisibleRecordWinsOverTruncatedRecord)
 {
   const auto visible_record = make_record_with_roi(visible_offset, visible_offset);
   const auto truncated_record =
     make_record_with_roi(left_top_boundary_offset, left_top_boundary_offset);
-  EXPECT_EQ(utils::compare_record(visible_record, truncated_record), R1_IS_BETTER);
+  EXPECT_TRUE(utils::has_higher_or_equal_priority(visible_record, truncated_record));
 }
 
-TEST(CompareRecordSameCamera, TruncatedRecordLosesToVisibleRecord)
+TEST(HasHigherOrEqualPrioritySameCamera, TruncatedRecordLosesToVisibleRecord)
 {
   const auto truncated_record =
     make_record_with_roi(left_top_boundary_offset, left_top_boundary_offset);
   const auto visible_record = make_record_with_roi(visible_offset, visible_offset);
-  EXPECT_EQ(utils::compare_record(truncated_record, visible_record), R1_IS_WORSE);
+  EXPECT_FALSE(utils::has_higher_or_equal_priority(truncated_record, visible_record));
 }
 
 // fourth condition: a higher confidence signal wins
-TEST(CompareRecordSameCamera, HigherConfidenceRecordWins)
+TEST(HasHigherOrEqualPrioritySameCamera, HigherConfidenceRecordWins)
 {
   const auto higher_confidence_record = make_record(red, circle, 0.9);
   const auto lower_confidence_record = make_record(green, circle, 0.8);
-  EXPECT_EQ(utils::compare_record(higher_confidence_record, lower_confidence_record), R1_IS_BETTER);
+  EXPECT_TRUE(
+    utils::has_higher_or_equal_priority(higher_confidence_record, lower_confidence_record));
 }
 
-TEST(CompareRecordSameCamera, LowerConfidenceRecordLoses)
+TEST(HasHigherOrEqualPrioritySameCamera, LowerConfidenceRecordLoses)
 {
   const auto lower_confidence_record = make_record(red, circle, 0.9);
   const auto higher_confidence_record = make_record(green, circle, 0.95);
-  EXPECT_EQ(utils::compare_record(lower_confidence_record, higher_confidence_record), R1_IS_WORSE);
+  EXPECT_FALSE(
+    utils::has_higher_or_equal_priority(lower_confidence_record, higher_confidence_record));
 }
 
 // the timestamp condition does not apply across different cameras, so the
 // remaining conditions are exercised with different frame_ids below
 
 // second condition
-TEST(CompareRecordDifferentCamera, UnknownRecordLosesToKnownRecord)
+TEST(HasHigherOrEqualPriorityDifferentCamera, UnknownRecordLosesToKnownRecord)
 {
   const auto unknown_record = make_record(unknown, unknown, 0.0, "camera0");
   const auto known_record = make_record(green, circle, 0.8, "camera1");
-  EXPECT_EQ(utils::compare_record(unknown_record, known_record), R1_IS_WORSE);
+  EXPECT_FALSE(utils::has_higher_or_equal_priority(unknown_record, known_record));
 }
 
-TEST(CompareRecordDifferentCamera, KnownRecordWinsOverUnknownRecord)
+TEST(HasHigherOrEqualPriorityDifferentCamera, KnownRecordWinsOverUnknownRecord)
 {
   const auto known_record = make_record(red, circle, 0.9, "camera0");
   const auto unknown_record = make_record(unknown, unknown, 0.0, "camera1");
-  EXPECT_EQ(utils::compare_record(known_record, unknown_record), R1_IS_BETTER);
+  EXPECT_TRUE(utils::has_higher_or_equal_priority(known_record, unknown_record));
 }
 
-TEST(CompareRecordDifferentCamera, BothUnknownRecordsAreEqual)
+TEST(HasHigherOrEqualPriorityDifferentCamera, BothUnknownRecordsHaveEqualPriority)
 {
   const auto unknown_record_1 = make_record(unknown, unknown, 0.0, "camera0");
   const auto unknown_record_2 = make_record(unknown, unknown, 0.0, "camera1");
-  EXPECT_EQ(utils::compare_record(unknown_record_1, unknown_record_2), BOTH_RECORDS_EQUAL);
+  // equal priority: each record has a higher-or-equal priority than the other
+  EXPECT_TRUE(utils::has_higher_or_equal_priority(unknown_record_1, unknown_record_2));
+  EXPECT_TRUE(utils::has_higher_or_equal_priority(unknown_record_2, unknown_record_1));
 }
 
 // third condition
-TEST(CompareRecordDifferentCamera, VisibleRecordWinsOverTruncatedRecord)
+TEST(HasHigherOrEqualPriorityDifferentCamera, VisibleRecordWinsOverTruncatedRecord)
 {
   const auto visible_record = make_record_with_roi(visible_offset, visible_offset, "camera0");
   const auto truncated_record =
     make_record_with_roi(left_top_boundary_offset, left_top_boundary_offset, "camera1");
-  EXPECT_EQ(utils::compare_record(visible_record, truncated_record), R1_IS_BETTER);
+  EXPECT_TRUE(utils::has_higher_or_equal_priority(visible_record, truncated_record));
 }
 
-TEST(CompareRecordDifferentCamera, TruncatedRecordLosesToVisibleRecord)
+TEST(HasHigherOrEqualPriorityDifferentCamera, TruncatedRecordLosesToVisibleRecord)
 {
   const auto truncated_record =
     make_record_with_roi(left_top_boundary_offset, left_top_boundary_offset, "camera0");
   const auto visible_record = make_record_with_roi(visible_offset, visible_offset, "camera1");
-  EXPECT_EQ(utils::compare_record(truncated_record, visible_record), R1_IS_WORSE);
+  EXPECT_FALSE(utils::has_higher_or_equal_priority(truncated_record, visible_record));
 }
 
 // fourth condition
-TEST(CompareRecordDifferentCamera, HigherConfidenceRecordWins)
+TEST(HasHigherOrEqualPriorityDifferentCamera, HigherConfidenceRecordWins)
 {
   const auto higher_confidence_record = make_record(red, circle, 0.9, "camera0");
   const auto lower_confidence_record = make_record(green, circle, 0.8, "camera1");
-  EXPECT_EQ(utils::compare_record(higher_confidence_record, lower_confidence_record), R1_IS_BETTER);
+  EXPECT_TRUE(
+    utils::has_higher_or_equal_priority(higher_confidence_record, lower_confidence_record));
 }
 
-TEST(CompareRecordDifferentCamera, LowerConfidenceRecordLoses)
+TEST(HasHigherOrEqualPriorityDifferentCamera, LowerConfidenceRecordLoses)
 {
   const auto lower_confidence_record = make_record(red, circle, 0.9, "camera0");
   const auto higher_confidence_record = make_record(green, circle, 0.95, "camera1");
-  EXPECT_EQ(utils::compare_record(lower_confidence_record, higher_confidence_record), R1_IS_WORSE);
+  EXPECT_FALSE(
+    utils::has_higher_or_equal_priority(lower_confidence_record, higher_confidence_record));
 }
 
 TEST(CalVisibleScore, FullyVisibleRoiScoresOne)

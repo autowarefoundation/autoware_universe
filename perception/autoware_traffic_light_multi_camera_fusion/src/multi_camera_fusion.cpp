@@ -219,7 +219,7 @@ void MultiCameraFusion::multi_camera_fusion(
         */
         if (
           fused_record_map.find(roi.traffic_light_id) == fused_record_map.end() ||
-          utils::compare_record(record, fused_record_map[roi.traffic_light_id]) >= 0) {
+          utils::has_higher_or_equal_priority(record, fused_record_map[roi.traffic_light_id])) {
           fused_record_map[roi.traffic_light_id] = record;
         }
       }

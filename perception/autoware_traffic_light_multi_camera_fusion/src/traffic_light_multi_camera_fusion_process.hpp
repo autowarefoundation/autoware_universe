@@ -67,7 +67,19 @@ V at_or(const std::unordered_map<K, V> & map, const K & key, const V & value)
 }
 
 double get_min_confidence(const tier4_perception_msgs::msg::TrafficLight & signal);
-int compare_record(const FusionRecord & r1, const FusionRecord & r2);
+
+/**
+ * @brief Decide whether `candidate` should replace `existing` as the fused result.
+ *
+ * Records are ranked by a fixed priority order (timestamp for the same camera, then
+ * recognized-over-unknown, then visibility, then confidence). Ties favor the candidate
+ * so that a newly arrived record wins over an equally-ranked existing one.
+ *
+ * @param candidate   newly arrived record
+ * @param existing    record currently held as the best for this traffic light
+ * @return true if the candidate has a higher or equal priority than the existing record
+ */
+bool has_higher_or_equal_priority(const FusionRecord & candidate, const FusionRecord & existing);
 
 autoware_perception_msgs::msg::TrafficLightElement convert_t4_to_autoware(
   const tier4_perception_msgs::msg::TrafficLightElement & input);
