@@ -157,15 +157,9 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
 {
   const classes::Label label = classes::getHighestProbLabel(object.classification);
 
-  // Primary: shape + label lookup
-  const auto shape_tracker_opt = get_map_value_if_exists(
+  const auto tracker_type_opt = get_map_value_if_exists(
     creation_config_.shape_tracker_map,
     TrackerCreationConfig::ShapeLabelKey{types::toShapeType(object.shape.type), label});
-
-  // Fallback: label-only lookup
-  const auto tracker_type_opt =
-    shape_tracker_opt ? shape_tracker_opt
-                      : get_map_value_if_exists(creation_config_.tracker_map, label);
 
   if (tracker_type_opt) {
     const auto tracker_type = tracker_type_opt->get();

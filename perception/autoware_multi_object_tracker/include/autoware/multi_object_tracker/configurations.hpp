@@ -114,9 +114,6 @@ struct TrackerOverlapManagerConfig
 
 struct TrackerCreationConfig
 {
-  using LabelToTrackerTypeMap =
-    std::unordered_map<classes::Label, types::TrackerType, AssociatorConfig::EnumClassHash>;
-
   // Two-factor key: (shape_type, label) → tracker type
   using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
   struct ShapeLabelKeyHash
@@ -131,8 +128,8 @@ struct TrackerCreationConfig
   using ShapeLabelToTrackerTypeMap =
     std::unordered_map<ShapeLabelKey, types::TrackerType, ShapeLabelKeyHash>;
 
-  LabelToTrackerTypeMap tracker_map;        // fallback: label only
-  ShapeLabelToTrackerTypeMap shape_tracker_map;  // primary: shape + label
+  // Fully resolved map for all (shape, label) combinations — no runtime fallback needed.
+  ShapeLabelToTrackerTypeMap shape_tracker_map;
   bool enable_unknown_object_velocity_estimation;
   bool enable_unknown_object_motion_output;
 };

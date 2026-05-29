@@ -145,32 +145,41 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
   }
 
-  // initial_tracker: class-only defaults fill tracker_map; shape-specific overrides populate
-  // shape_tracker_map. Both are fully resolved at parse time — no runtime fallback needed.
+  // initial_tracker: shape_tracker_map is fully populated for all (shape, label) combinations.
+  // Fill order: lowest priority first so higher-priority entries overwrite.
   {
     using Label = classes::Label;
 
-    // Class-only defaults → tracker_map (label-only fallback for spawn)
-    TrackerCreationConfig::LabelToTrackerTypeMap class_only_map;
+    // Pass 1 (lowest priority): default POLYGON for every (shape, label) combination.
+    for (const auto shape_type : ALL_SHAPE_TYPES) {
+      for (const auto label : classes::trackedLabels()) {
+        params_.creation_config.shape_tracker_map[{shape_type, label}] = TrackerType::POLYGON;
+      }
+    }
+
+    // Pass 2: per-label defaults — override for all shape types.
     for (const auto label : classes::trackedLabels()) {
       if (label == Label::UNKNOWN) continue;
       const auto label_name = classes::toString(label);
       const auto param_name = "initial_tracker." + label_name;
       const TrackerType tt = parseTrackerType(declare_parameter<std::string>(param_name), param_name);
-      class_only_map[label] = tt;
-      params_.creation_config.tracker_map[label] = tt;
+      for (const auto shape_type : ALL_SHAPE_TYPES) {
+        params_.creation_config.shape_tracker_map[{shape_type, label}] = tt;
+      }
     }
-    params_.creation_config.tracker_map[Label::UNKNOWN] = TrackerType::POLYGON;
 
-    // Shape-specific overrides → shape_tracker_map; fall back to class-only when unset
+    // Pass 3 (highest priority): shape-specific overrides where explicitly configured.
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       const auto shape_name = types::toString(shape_type);
-      for (const auto & [label, default_tt] : class_only_map) {
+      for (const auto label : classes::trackedLabels()) {
+        if (label == Label::UNKNOWN) continue;
         const auto label_name = classes::toString(label);
         const auto param_name = "initial_tracker." + shape_name + "." + label_name;
         const auto shape_specific = declare_parameter<std::string>(param_name, "");
-        params_.creation_config.shape_tracker_map[{shape_type, label}] =
-          shape_specific.empty() ? default_tt : parseTrackerType(shape_specific, param_name);
+        if (!shape_specific.empty()) {
+          params_.creation_config.shape_tracker_map[{shape_type, label}] =
+            parseTrackerType(shape_specific, param_name);
+        }
       }
     }
   }

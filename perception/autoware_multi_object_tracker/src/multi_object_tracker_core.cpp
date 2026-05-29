@@ -85,7 +85,7 @@ namespace core
 //// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
-  // creation_config.tracker_map and shape_tracker_map are populated directly at parse time.
+  // creation_config.shape_tracker_map is fully populated at parse time for all (shape, label) pairs.
 
   // Set the pruning thresholds for tracker overlap manager config
   params.tracker_overlap_manager_config.pruning_giou_thresholds =
