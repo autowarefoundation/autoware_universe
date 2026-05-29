@@ -18,1218 +18,269 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
 #include <unordered_map>
 
-TEST(IsUnknown, Normal)
+namespace
 {
+namespace utils = autoware::traffic_light::utils;
+using TrafficLightElement = tier4_perception_msgs::msg::TrafficLightElement;
+
+// colors / shapes used by the tests
+constexpr uint8_t red = TrafficLightElement::RED;
+constexpr uint8_t green = TrafficLightElement::GREEN;
+constexpr uint8_t circle = TrafficLightElement::CIRCLE;
+// unknown is shared between the color and shape fields
+constexpr uint8_t unknown = TrafficLightElement::UNKNOWN;
+
+// compare_record return values
+enum CompareResult : int {
+  R1_IS_WORSE = -1,
+  BOTH_RECORDS_EQUAL = 0,
+  R1_IS_BETTER = 1,
+};
+
+// cal_visible_score return values
+enum VisibleScore : int {
+  TRUNCATED = 0,
+  VISIBLE = 1,
+};
+
+// image / roi geometry
+constexpr uint32_t image_width = 1440;
+constexpr uint32_t image_height = 1080;
+constexpr uint32_t roi_size = 100;
+constexpr uint32_t boundary_threshold = 5;
+// roi offset that keeps the traffic light fully inside the image (visible score == 1)
+constexpr uint32_t visible_offset = 100;
+// roi offsets that push the traffic light against each image boundary (visible score == 0)
+constexpr uint32_t left_top_boundary_offset = boundary_threshold;
+constexpr uint32_t right_boundary_offset = image_width - (roi_size + boundary_threshold);
+constexpr uint32_t bottom_boundary_offset = image_height - (roi_size + boundary_threshold);
+
+constexpr int32_t default_stamp_sec = 100;
+
+tier4_perception_msgs::msg::TrafficLight make_signal(
+  uint8_t color, uint8_t shape, double confidence)
+{
+  TrafficLightElement element;
+  element.color = color;
+  element.shape = shape;
+  element.confidence = confidence;
+
   tier4_perception_msgs::msg::TrafficLight signal;
-  tier4_perception_msgs::msg::TrafficLightElement element;
-  {
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    signal.elements.push_back(element);
-  }
-  EXPECT_TRUE(autoware::traffic_light::utils::is_signal_unknown(signal));
-
-  {
-    signal.elements.clear();
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    signal.elements.push_back(element);
-  }
-  EXPECT_FALSE(autoware::traffic_light::utils::is_signal_unknown(signal));
+  signal.elements.push_back(element);
+  return signal;
 }
 
-TEST(AtOr, Normal)
+utils::FusionRecord make_record(
+  uint8_t color, uint8_t shape, double confidence, const std::string & frame_id = "camera0",
+  int32_t stamp_sec = default_stamp_sec, uint32_t roi_x_offset = visible_offset,
+  uint32_t roi_y_offset = visible_offset)
 {
-  std::unordered_map<int, int> map;
-  map[1] = 2;
-  map[3] = 4;
-  EXPECT_EQ(autoware::traffic_light::utils::at_or(map, 1, -1), 2);
-  EXPECT_EQ(autoware::traffic_light::utils::at_or(map, 2, -1), -1);
-  EXPECT_EQ(autoware::traffic_light::utils::at_or(map, 3, -1), 4);
+  std_msgs::msg::Header header;
+  header.stamp = rclcpp::Time(stamp_sec, 10);
+  header.frame_id = frame_id;
+
+  utils::FusionRecord record;
+  record.header = header;
+  record.cam_info.header = header;
+  record.cam_info.width = image_width;
+  record.cam_info.height = image_height;
+  record.roi.roi.x_offset = roi_x_offset;
+  record.roi.roi.y_offset = roi_y_offset;
+  record.roi.roi.width = roi_size;
+  record.roi.roi.height = roi_size;
+  record.signal = make_signal(color, shape, confidence);
+  return record;
 }
 
-namespace same_camera
+// only the roi position affects the visible score, so the signal content is fixed here
+utils::FusionRecord make_record_with_roi(
+  uint32_t roi_x_offset, uint32_t roi_y_offset, const std::string & frame_id = "camera0")
 {
-
-// first condition
-TEST(CompareRecord, TimestampCheck)
-{
-  // r1 is newer
-  autoware::traffic_light::utils::FusionRecord r1;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(200, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  autoware::traffic_light::utils::FusionRecord r2;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
-
-  // r2 is newer
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(200, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
+  return make_record(red, circle, 0.9, frame_id, default_stamp_sec, roi_x_offset, roi_y_offset);
 }
+}  // namespace
+
+TEST(IsSignalUnknown, ReturnsTrueForUnknownSignal)
+{
+  const auto signal = make_signal(unknown, unknown, 0.0);
+  EXPECT_TRUE(utils::is_signal_unknown(signal));
+}
+
+TEST(IsSignalUnknown, ReturnsFalseForColoredSignal)
+{
+  const auto signal = make_signal(red, circle, 0.9);
+  EXPECT_FALSE(utils::is_signal_unknown(signal));
+}
+
+TEST(AtOr, ReturnsMappedValueWhenKeyExists)
+{
+  const std::unordered_map<int, int> map = {{1, 2}, {3, 4}};
+  EXPECT_EQ(utils::at_or(map, 1, -1), 2);
+}
+
+TEST(AtOr, ReturnsDefaultValueWhenKeyMissing)
+{
+  const std::unordered_map<int, int> map = {{1, 2}, {3, 4}};
+  EXPECT_EQ(utils::at_or(map, 2, -1), -1);
+}
+
+// first condition: records from the same camera are ranked by timestamp
+TEST(CompareRecordSameCamera, NewerRecordWinsOverOlderRecord)
+{
+  const auto newer_record = make_record(red, circle, 0.9, "camera0", 200);
+  const auto older_record = make_record(green, circle, 0.8, "camera0", 100);
+  EXPECT_EQ(utils::compare_record(newer_record, older_record), R1_IS_BETTER);
+}
+
+TEST(CompareRecordSameCamera, OlderRecordLosesToNewerRecord)
+{
+  const auto older_record = make_record(red, circle, 0.9, "camera0", 100);
+  const auto newer_record = make_record(green, circle, 0.8, "camera0", 200);
+  EXPECT_EQ(utils::compare_record(older_record, newer_record), R1_IS_WORSE);
+}
+
+// second condition: an unknown signal loses to a recognized one
+TEST(CompareRecordSameCamera, UnknownRecordLosesToKnownRecord)
+{
+  const auto unknown_record = make_record(unknown, unknown, 0.0);
+  const auto known_record = make_record(green, circle, 0.8);
+  EXPECT_EQ(utils::compare_record(unknown_record, known_record), R1_IS_WORSE);
+}
+
+TEST(CompareRecordSameCamera, KnownRecordWinsOverUnknownRecord)
+{
+  const auto known_record = make_record(red, circle, 0.9);
+  const auto unknown_record = make_record(unknown, unknown, 0.0);
+  EXPECT_EQ(utils::compare_record(known_record, unknown_record), R1_IS_BETTER);
+}
+
+TEST(CompareRecordSameCamera, BothUnknownRecordsAreEqual)
+{
+  const auto unknown_record_1 = make_record(unknown, unknown, 0.0);
+  const auto unknown_record_2 = make_record(unknown, unknown, 0.0);
+  EXPECT_EQ(utils::compare_record(unknown_record_1, unknown_record_2), BOTH_RECORDS_EQUAL);
+}
+
+// third condition: a fully visible signal wins over a truncated one
+TEST(CompareRecordSameCamera, VisibleRecordWinsOverTruncatedRecord)
+{
+  const auto visible_record = make_record_with_roi(visible_offset, visible_offset);
+  const auto truncated_record =
+    make_record_with_roi(left_top_boundary_offset, left_top_boundary_offset);
+  EXPECT_EQ(utils::compare_record(visible_record, truncated_record), R1_IS_BETTER);
+}
+
+TEST(CompareRecordSameCamera, TruncatedRecordLosesToVisibleRecord)
+{
+  const auto truncated_record =
+    make_record_with_roi(left_top_boundary_offset, left_top_boundary_offset);
+  const auto visible_record = make_record_with_roi(visible_offset, visible_offset);
+  EXPECT_EQ(utils::compare_record(truncated_record, visible_record), R1_IS_WORSE);
+}
+
+// fourth condition: a higher confidence signal wins
+TEST(CompareRecordSameCamera, HigherConfidenceRecordWins)
+{
+  const auto higher_confidence_record = make_record(red, circle, 0.9);
+  const auto lower_confidence_record = make_record(green, circle, 0.8);
+  EXPECT_EQ(utils::compare_record(higher_confidence_record, lower_confidence_record), R1_IS_BETTER);
+}
+
+TEST(CompareRecordSameCamera, LowerConfidenceRecordLoses)
+{
+  const auto lower_confidence_record = make_record(red, circle, 0.9);
+  const auto higher_confidence_record = make_record(green, circle, 0.95);
+  EXPECT_EQ(utils::compare_record(lower_confidence_record, higher_confidence_record), R1_IS_WORSE);
+}
+
+// the timestamp condition does not apply across different cameras, so the
+// remaining conditions are exercised with different frame_ids below
 
 // second condition
-TEST(CompareRecord, UnknownCheck)
+TEST(CompareRecordDifferentCamera, UnknownRecordLosesToKnownRecord)
 {
-  // r1 is unknown
-  autoware::traffic_light::utils::FusionRecord r1;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.confidence = 0.0;
-    r1.signal.elements.push_back(element);
-  }
-  autoware::traffic_light::utils::FusionRecord r2;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
+  const auto unknown_record = make_record(unknown, unknown, 0.0, "camera0");
+  const auto known_record = make_record(green, circle, 0.8, "camera1");
+  EXPECT_EQ(utils::compare_record(unknown_record, known_record), R1_IS_WORSE);
+}
 
-  // r2 is unknown
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.confidence = 0.0;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
+TEST(CompareRecordDifferentCamera, KnownRecordWinsOverUnknownRecord)
+{
+  const auto known_record = make_record(red, circle, 0.9, "camera0");
+  const auto unknown_record = make_record(unknown, unknown, 0.0, "camera1");
+  EXPECT_EQ(utils::compare_record(known_record, unknown_record), R1_IS_BETTER);
+}
 
-  // both of r1 and r2 is unknown
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.confidence = 0.0;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.confidence = 0.0;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 0);
+TEST(CompareRecordDifferentCamera, BothUnknownRecordsAreEqual)
+{
+  const auto unknown_record_1 = make_record(unknown, unknown, 0.0, "camera0");
+  const auto unknown_record_2 = make_record(unknown, unknown, 0.0, "camera1");
+  EXPECT_EQ(utils::compare_record(unknown_record_1, unknown_record_2), BOTH_RECORDS_EQUAL);
 }
 
 // third condition
-TEST(CompareRecord, VisibleCheck)
+TEST(CompareRecordDifferentCamera, VisibleRecordWinsOverTruncatedRecord)
 {
-  // r1 is better visible on top left
-  autoware::traffic_light::utils::FusionRecord r1;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  autoware::traffic_light::utils::FusionRecord r2;
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = boundary_thres;
-    r2.roi.roi.y_offset = boundary_thres;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
+  const auto visible_record = make_record_with_roi(visible_offset, visible_offset, "camera0");
+  const auto truncated_record =
+    make_record_with_roi(left_top_boundary_offset, left_top_boundary_offset, "camera1");
+  EXPECT_EQ(utils::compare_record(visible_record, truncated_record), R1_IS_BETTER);
+}
 
-  // r1 is better visible on bottom left
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 1440 - (100 + boundary_thres);
-    r2.roi.roi.y_offset = 1080 - (100 + boundary_thres);
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
-
-  // r2 is better visible on top left
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = boundary_thres;
-    r1.roi.roi.y_offset = boundary_thres;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
-
-  // r2 is better visible on bottom left
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 1440 - (100 + boundary_thres);
-    ;
-    r1.roi.roi.y_offset = 1080 - (100 + boundary_thres);
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
+TEST(CompareRecordDifferentCamera, TruncatedRecordLosesToVisibleRecord)
+{
+  const auto truncated_record =
+    make_record_with_roi(left_top_boundary_offset, left_top_boundary_offset, "camera0");
+  const auto visible_record = make_record_with_roi(visible_offset, visible_offset, "camera1");
+  EXPECT_EQ(utils::compare_record(truncated_record, visible_record), R1_IS_WORSE);
 }
 
 // fourth condition
-TEST(CompareRecord, ConfidenceCheck)
+TEST(CompareRecordDifferentCamera, HigherConfidenceRecordWins)
 {
-  // r1 is higher confidence
-  autoware::traffic_light::utils::FusionRecord r1;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  autoware::traffic_light::utils::FusionRecord r2;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
-
-  // r2 is higher confidence
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.95;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
+  const auto higher_confidence_record = make_record(red, circle, 0.9, "camera0");
+  const auto lower_confidence_record = make_record(green, circle, 0.8, "camera1");
+  EXPECT_EQ(utils::compare_record(higher_confidence_record, lower_confidence_record), R1_IS_BETTER);
 }
 
-}  // namespace same_camera
-
-namespace different_camera
+TEST(CompareRecordDifferentCamera, LowerConfidenceRecordLoses)
 {
-
-// first condition is nothing in different camera
-
-// second condition
-TEST(CompareRecord, UnknownCheck)
-{
-  // r1 is unknown
-  autoware::traffic_light::utils::FusionRecord r1;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.confidence = 0.0;
-    r1.signal.elements.push_back(element);
-  }
-  autoware::traffic_light::utils::FusionRecord r2;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera1";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
-
-  // r2 is unknown
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera1";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.confidence = 0.0;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
-
-  // both of r1 and r2 is unknown
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.confidence = 0.0;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera1";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-    element.confidence = 0.0;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 0);
+  const auto lower_confidence_record = make_record(red, circle, 0.9, "camera0");
+  const auto higher_confidence_record = make_record(green, circle, 0.95, "camera1");
+  EXPECT_EQ(utils::compare_record(lower_confidence_record, higher_confidence_record), R1_IS_WORSE);
 }
 
-// third condition
-TEST(CompareRecord, VisibleCheck)
+TEST(CalVisibleScore, FullyVisibleRoiScoresOne)
 {
-  // r1 is better visible on top left
-  autoware::traffic_light::utils::FusionRecord r1;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  autoware::traffic_light::utils::FusionRecord r2;
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera1";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = boundary_thres;
-    r2.roi.roi.y_offset = boundary_thres;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
-
-  // r1 is better visible on bottom left
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera1";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 1440 - (100 + boundary_thres);
-    r2.roi.roi.y_offset = 1080 - (100 + boundary_thres);
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
-
-  // r2 is better visible on top left
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = boundary_thres;
-    r1.roi.roi.y_offset = boundary_thres;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera1";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
-
-  // r2 is better visible on bottom left
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 1440 - (100 + boundary_thres);
-    ;
-    r1.roi.roi.y_offset = 1080 - (100 + boundary_thres);
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera1";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
+  const auto record = make_record_with_roi(visible_offset, visible_offset);
+  EXPECT_EQ(utils::cal_visible_score(record), VISIBLE);
 }
 
-// fourth condition
-TEST(CompareRecord, ConfidenceCheck)
+TEST(CalVisibleScore, RoiNearLeftBoundaryScoresZero)
 {
-  // r1 is higher confidence
-  autoware::traffic_light::utils::FusionRecord r1;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  autoware::traffic_light::utils::FusionRecord r2;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera1";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.8;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), 1);
-
-  // r2 is higher confidence
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera1";
-    // header
-    r2.header = header;
-    // cam_info
-    r2.cam_info.header = header;
-    r2.cam_info.width = 1440;
-    r2.cam_info.height = 1080;
-    // roi
-    r2.roi.roi.x_offset = 100;
-    r2.roi.roi.y_offset = 100;
-    r2.roi.roi.width = 100;
-    r2.roi.roi.height = 100;
-    // signal
-    r2.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.95;
-    r2.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::compare_record(r1, r2), -1);
+  const auto record = make_record_with_roi(left_top_boundary_offset, visible_offset);
+  EXPECT_EQ(utils::cal_visible_score(record), TRUNCATED);
 }
 
-}  // namespace different_camera
-
-TEST(CalVisibleScore, Normal)
+TEST(CalVisibleScore, RoiNearRightBoundaryScoresZero)
 {
-  // visible
-  autoware::traffic_light::utils::FusionRecord r1;
-  {
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 100;
-    r1.roi.roi.y_offset = 100;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 1);
+  const auto record = make_record_with_roi(right_boundary_offset, visible_offset);
+  EXPECT_EQ(utils::cal_visible_score(record), TRUNCATED);
+}
 
-  // invisible by left top
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = boundary_thres;
-    r1.roi.roi.y_offset = boundary_thres;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 0);
+TEST(CalVisibleScore, RoiNearTopBoundaryScoresZero)
+{
+  const auto record = make_record_with_roi(visible_offset, left_top_boundary_offset);
+  EXPECT_EQ(utils::cal_visible_score(record), TRUNCATED);
+}
 
-  // invisible by right top
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 1080 - (100 + boundary_thres);
-    r1.roi.roi.y_offset = boundary_thres;
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 0);
-
-  // invisible by left bottom
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = boundary_thres;
-    r1.roi.roi.y_offset = 1080 - (100 + boundary_thres);
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 0);
-
-  // invisible by right bottom
-  {
-    const uint32_t boundary_thres = 5;
-    std_msgs::msg::Header header;
-    header.stamp = rclcpp::Time(100, 10);
-    header.frame_id = "camera0";
-    // header
-    r1.header = header;
-    // cam_info
-    r1.cam_info.header = header;
-    r1.cam_info.width = 1440;
-    r1.cam_info.height = 1080;
-    // roi
-    r1.roi.roi.x_offset = 1440 - (100 + boundary_thres);
-    r1.roi.roi.y_offset = 1080 - (100 + boundary_thres);
-    r1.roi.roi.width = 100;
-    r1.roi.roi.height = 100;
-    // signal
-    r1.signal.elements.clear();
-    tier4_perception_msgs::msg::TrafficLightElement element;
-    element.color = tier4_perception_msgs::msg::TrafficLightElement::RED;
-    element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
-    element.confidence = 0.9;
-    r1.signal.elements.push_back(element);
-  }
-  EXPECT_EQ(autoware::traffic_light::utils::cal_visible_score(r1), 0);
+TEST(CalVisibleScore, RoiNearBottomBoundaryScoresZero)
+{
+  const auto record = make_record_with_roi(visible_offset, bottom_boundary_offset);
+  EXPECT_EQ(utils::cal_visible_score(record), TRUNCATED);
 }
 
 int main(int argc, char ** argv)
