@@ -19,8 +19,8 @@
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
-#include <cstring>
 #include <cmath>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>

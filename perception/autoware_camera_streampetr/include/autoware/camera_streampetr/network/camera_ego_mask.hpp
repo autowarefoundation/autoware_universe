@@ -57,8 +57,8 @@ std::vector<std::uint8_t> buildEgoMaskRaster(
   const std::vector<EgoMaskPolygon> & polygons, int width, int height);
 
 cudaError_t applyEgoMask_launch(
-  std::uint8_t * image_bgr, const std::uint8_t * mask, int height, int width,
-  std::uint8_t fill_b, std::uint8_t fill_g, std::uint8_t fill_r, cudaStream_t stream);
+  std::uint8_t * image_bgr, const std::uint8_t * mask, int height, int width, std::uint8_t fill_b,
+  std::uint8_t fill_g, std::uint8_t fill_r, cudaStream_t stream);
 
 }  // namespace autoware::camera_streampetr
 

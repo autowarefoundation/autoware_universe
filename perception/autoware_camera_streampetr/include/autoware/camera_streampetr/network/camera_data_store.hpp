@@ -43,7 +43,8 @@ class CameraDataStore
 public:
   CameraDataStore(
     rclcpp::Node * node, const int rois_number, const int image_height, const int image_width,
-    const int anchor_camera_id, const bool is_distorted_image, const EgoMaskParams & ego_mask_params);
+    const int anchor_camera_id, const bool is_distorted_image,
+    const EgoMaskParams & ego_mask_params);
   ~CameraDataStore();
   void update_camera_image(
     const int camera_id, const Image::ConstSharedPtr & input_camera_image_msg);

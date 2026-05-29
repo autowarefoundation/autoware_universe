@@ -416,8 +416,7 @@ void CameraDataStore::build_ego_mask_gpu(const int camera_id)
     return;
   }
 
-  const auto raster =
-    buildEgoMaskRaster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
+  const auto raster = buildEgoMaskRaster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
   if (raster.empty()) {
     RCLCPP_WARN(logger_, "Empty ego mask raster for camera %d", camera_id);
     return;
@@ -435,8 +434,7 @@ void CameraDataStore::build_ego_mask_gpu(const int camera_id)
   ego_mask_height_[camera_id] = height;
   ego_mask_built_[camera_id] = true;
 
-  RCLCPP_INFO(
-    logger_, "Ego mask GPU buffer built for camera %d (%dx%d)", camera_id, width, height);
+  RCLCPP_INFO(logger_, "Ego mask GPU buffer built for camera %d (%dx%d)", camera_id, width, height);
 }
 
 bool CameraDataStore::check_if_all_camera_info_received() const
