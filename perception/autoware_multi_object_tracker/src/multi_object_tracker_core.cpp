@@ -14,10 +14,6 @@
 
 #include "multi_object_tracker_core.hpp"
 
-#include <tf2_ros/create_timer_interface.hpp>
-
-#include <tf2_ros/create_timer_ros.h>
-
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -37,13 +33,12 @@ MultiObjectTrackerInternalState::MultiObjectTrackerInternalState()
 }
 
 void MultiObjectTrackerInternalState::init(
-  const MultiObjectTrackerParameters & params, rclcpp::Node & node,
+  const MultiObjectTrackerParameters & params, autoware::agnocast_wrapper::Node & node,
   const std::function<void(size_t)> & trigger_function)
 {
+  // Only synchronous tf lookups are performed (canTransform/lookupTransform), so the buffer does
+  // not need a CreateTimerInterface (which is only consulted by the async waitForTransform path).
   tf_buffer = std::make_shared<tf2_ros::Buffer>(node.get_clock());
-  auto cti = std::make_shared<tf2_ros::CreateTimerROS>(
-    node.get_node_base_interface(), node.get_node_timers_interface());
-  tf_buffer->setCreateTimerInterface(cti);
 
   odometry = std::make_shared<Odometry>(
     node.get_logger(), node.get_clock(), tf_buffer, params.world_frame_id, params.ego_frame_id,

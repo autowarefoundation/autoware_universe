@@ -22,6 +22,7 @@
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -78,7 +79,7 @@ struct MultiObjectTrackerInternalState
   MultiObjectTrackerInternalState();
 
   void init(
-    const MultiObjectTrackerParameters & params, rclcpp::Node & node,
+    const MultiObjectTrackerParameters & params, autoware::agnocast_wrapper::Node & node,
     const std::function<void(size_t)> & trigger_function);
 
   std::shared_ptr<tf2_ros::Buffer> tf_buffer;
