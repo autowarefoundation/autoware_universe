@@ -47,9 +47,9 @@ public:
       "debug/merged_objects", 1);
     divided_objects_pub_ = node->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
       "debug/divided_objects", 1);
-    processing_time_publisher_ = std::make_unique<
-      autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
-      node, "detection_by_tracker");
+    processing_time_publisher_ =
+      std::make_unique<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+        node, "detection_by_tracker");
     stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
     this->startStopWatch();
   }

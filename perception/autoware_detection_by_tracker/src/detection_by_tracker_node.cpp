@@ -127,8 +127,9 @@ DetectionByTracker::DetectionByTracker(const rclcpp::NodeOptions & node_options)
     false, 10, 10000, 0.7, 0.3, 0, std::numeric_limits<int>::max(), std::numeric_limits<int>::max(),
     10000);
   debugger_ = std::make_shared<Debugger>(this);
-  published_time_publisher_ = std::make_unique<
-    autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(this);
+  published_time_publisher_ =
+    std::make_unique<autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(
+      this);
 }
 
 void DetectionByTracker::setMaxSearchRange()
