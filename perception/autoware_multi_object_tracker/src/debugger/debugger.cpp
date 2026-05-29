@@ -44,9 +44,9 @@ void TrackerDebugger::init(autoware::agnocast_wrapper::Node & node)
   loadParameters(node);
   // initialize debug publishers
   if (debug_settings_.publish_processing_time) {
-    processing_time_publisher_ = std::make_unique<
-      autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
-      &node, "multi_object_tracker");
+    processing_time_publisher_ =
+      std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+        &node, "multi_object_tracker");
   }
 
   if (debug_settings_.publish_tentative_objects) {
