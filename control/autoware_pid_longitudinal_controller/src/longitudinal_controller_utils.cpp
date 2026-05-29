@@ -37,18 +37,24 @@ double calcStopDistance(
   const Pose & current_pose, const TrajectoryExperimental & traj, const double max_dist,
   const double max_yaw)
 {
-  const auto nearest_s = autoware::experimental::trajectory::find_first_nearest_index(
-    traj, current_pose, max_dist, max_yaw);
-  if (!nearest_s) {
+  static_cast<void>(max_dist);
+  static_cast<void>(max_yaw);
+
+  const auto bases = traj.get_underlying_bases();
+  if (bases.size() <= 1) {
     return 0.0;
   }
 
-  const auto stop_s = autoware::experimental::trajectory::search_zero_velocity_position(traj);
-  if (!stop_s) {
-    return traj.length() - *nearest_s;
-  }
+  const double ego_s =
+    autoware::experimental::trajectory::find_nearest_index(traj, current_pose.position);
+  const double stop_s =
+    autoware::experimental::trajectory::search_zero_velocity_position(traj).value_or(traj.length());
 
-  return *stop_s - *nearest_s;
+  const double signed_length_on_traj = stop_s - ego_s;
+  if (std::isnan(signed_length_on_traj)) {
+    return 0.0;
+  }
+  return signed_length_on_traj;
 }
 
 double getPitchByPose(const Quaternion & quaternion_msg)

@@ -110,8 +110,8 @@ TEST(TestLongitudinalControllerUtils, calcStopDistance)
 
   current_pose.position.x = 9.0;
   EXPECT_NEAR(
-    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw),
-    0.0, 1e-2);
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw), 0.0,
+    1e-2);
 }
 
 TEST(TestLongitudinalControllerUtils, calcStopDistanceRejectsMisalignedOrFarOverrun)
