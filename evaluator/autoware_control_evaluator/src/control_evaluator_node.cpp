@@ -107,9 +107,8 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   // Parameters
   output_metrics_ = declare_parameter<bool>("output_metrics");
   distance_filter_thr_m_ = declare_parameter<double>("object_metrics.distance_filter_thr_m");
-  const std::vector<std::string> excluded_labels =
-    declare_parameter<std::vector<std::string>>(
-      "object_metrics.excluded_labels", std::vector<std::string>{"unknown"});
+  const std::vector<std::string> excluded_labels = declare_parameter<std::vector<std::string>>(
+    "object_metrics.excluded_labels", std::vector<std::string>{"unknown"});
   for (const auto & label_name : excluded_labels) {
     const auto label = label_from_string(label_name);
     if (label) {

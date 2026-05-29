@@ -42,13 +42,13 @@ using TrajectoryPoint = autoware_planning_msgs::msg::TrajectoryPoint;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
 using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
-using geometry_msgs::msg::AccelWithCovarianceStamped;
-using geometry_msgs::msg::Pose;
-using nav_msgs::msg::Odometry;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::Shape;
+using geometry_msgs::msg::AccelWithCovarianceStamped;
+using geometry_msgs::msg::Pose;
+using nav_msgs::msg::Odometry;
 
 constexpr double epsilon = 1e-6;
 
@@ -88,8 +88,8 @@ protected:
       rclcpp::create_publisher<Odometry>(dummy_node, "/control_evaluator/input/odometry", 1);
     acc_pub_ = rclcpp::create_publisher<AccelWithCovarianceStamped>(
       dummy_node, "/control_evaluator/input/acceleration", 1);
-    objects_pub_ = rclcpp::create_publisher<PredictedObjects>(
-      dummy_node, "/control_evaluator/input/objects", 1);
+    objects_pub_ =
+      rclcpp::create_publisher<PredictedObjects>(dummy_node, "/control_evaluator/input/objects", 1);
     planning_factor_interface_ =
       std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
         dummy_node.get(), "stop_line");
