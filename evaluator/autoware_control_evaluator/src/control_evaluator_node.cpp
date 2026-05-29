@@ -627,7 +627,7 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
   for (const auto & object : objects.objects) {
     const auto label =
       autoware::object_recognition_utils::getHighestProbLabel(object.classification);
-    if (excluded_object_labels_.count(label) > 0) {
+    if (excluded_object_labels_.find(label) != excluded_object_labels.end()) {
       continue;
     }
 
