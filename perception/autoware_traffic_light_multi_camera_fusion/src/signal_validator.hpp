@@ -17,8 +17,6 @@
 
 #include "types.hpp"
 
-#include <tier4_perception_msgs/msg/traffic_light.hpp>
-
 #include <unordered_set>
 #include <utility>
 

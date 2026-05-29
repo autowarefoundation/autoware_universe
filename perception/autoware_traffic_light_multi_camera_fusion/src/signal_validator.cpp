@@ -16,6 +16,8 @@
 
 #include "types.hpp"
 
+#include <tier4_perception_msgs/msg/traffic_light_element.hpp>
+
 #include <utility>
 
 namespace autoware::traffic_light

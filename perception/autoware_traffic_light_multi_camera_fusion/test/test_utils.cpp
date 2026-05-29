@@ -14,7 +14,7 @@
 
 #include "../src/traffic_light_multi_camera_fusion_process.hpp"
 
-#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
 
 #include <gtest/gtest.h>
 

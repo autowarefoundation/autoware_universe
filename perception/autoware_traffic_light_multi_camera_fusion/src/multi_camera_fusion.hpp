@@ -31,7 +31,6 @@
 
 #include <map>
 #include <set>
-#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light

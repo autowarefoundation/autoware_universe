@@ -15,7 +15,7 @@
 #include "traffic_light_multi_camera_fusion_process.hpp"
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
 
 #include <unordered_map>
 
