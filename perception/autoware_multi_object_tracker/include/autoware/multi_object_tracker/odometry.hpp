@@ -17,6 +17,8 @@
 
 #include "autoware/multi_object_tracker/types.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -37,8 +39,7 @@ class Odometry
 {
 public:
   Odometry(
-    rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
-    std::shared_ptr<tf2_ros::Buffer> tf_buffer, const std::string & world_frame_id,
+    rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock, const std::string & world_frame_id,
     const std::string & ego_frame_id, bool enable_odometry_uncertainty = false);
 
   std::optional<geometry_msgs::msg::Transform> getTransform(
@@ -57,8 +58,8 @@ private:
   std::string ego_frame_id_;    // ego vehicle frame
   std::string world_frame_id_;  // absolute/relative ground frame
   // tf
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
+  autoware::agnocast_wrapper::Buffer tf_buffer_;
+  autoware::agnocast_wrapper::TransformListener tf_listener_;
 
 public:
   bool enable_odometry_uncertainty_ = false;

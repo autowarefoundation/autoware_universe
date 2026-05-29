@@ -81,8 +81,6 @@ struct MultiObjectTrackerInternalState
   void init(
     const MultiObjectTrackerParameters & params, autoware::agnocast_wrapper::Node & node,
     const std::function<void(size_t)> & trigger_function);
-
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer;
 };
 
 namespace core

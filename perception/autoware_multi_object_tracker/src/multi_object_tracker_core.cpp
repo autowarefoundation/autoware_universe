@@ -36,12 +36,8 @@ void MultiObjectTrackerInternalState::init(
   const MultiObjectTrackerParameters & params, autoware::agnocast_wrapper::Node & node,
   const std::function<void(size_t)> & trigger_function)
 {
-  // Only synchronous tf lookups are performed (canTransform/lookupTransform), so the buffer does
-  // not need a CreateTimerInterface (which is only consulted by the async waitForTransform path).
-  tf_buffer = std::make_shared<tf2_ros::Buffer>(node.get_clock());
-
   odometry = std::make_shared<Odometry>(
-    node.get_logger(), node.get_clock(), tf_buffer, params.world_frame_id, params.ego_frame_id,
+    node.get_logger(), node.get_clock(), params.world_frame_id, params.ego_frame_id,
     params.enable_odometry_uncertainty);
 
   // Initialize input manager
