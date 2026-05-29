@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
-#include <memory>
 #include <utility>
 #include <vector>
 
@@ -95,9 +94,6 @@ MultiCameraFusion::MultiCameraFusion(const MultiCameraFusionConfig & config)
   traffic_light_id_to_regulatory_ele_id_(
     build_traffic_light_id_to_regulatory_ele_id(config.lanelet_map_ptr))
 {
-  if (config_.use_signal_consistency_check) {
-    signal_validator_ = std::make_unique<SignalValidator>();
-  }
 }
 
 MultiCameraFusionResult MultiCameraFusion::fuse(
@@ -336,7 +332,7 @@ void MultiCameraFusion::determine_best_group_state(
     // check if conflicts exist among the signals within the same regulatory element id
     for (++log_odds_it; log_odds_it != group_info.accumulated_log_odds.end(); ++log_odds_it) {
       const StateKey & competitor_state = (*log_odds_it).first;
-      conflict_result = signal_validator_->check_conflict(running_state, competitor_state);
+      conflict_result = signal_validator::check_conflict(running_state, competitor_state);
       running_state = conflict_result.common_state_key;
 
       if (conflict_result.conflict_type == ConflictType::CONFLICT) {

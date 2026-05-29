@@ -30,7 +30,6 @@
 #include <lanelet2_core/Forward.h>
 
 #include <map>
-#include <memory>
 #include <set>
 #include <utility>
 #include <vector>
@@ -185,7 +184,6 @@ private:
   */
   std::multiset<utils::FusionRecordArr> record_arr_set_;
 
-  std::unique_ptr<SignalValidator> signal_validator_;
   std::vector<ConflictInfo> conflicted_regulatory_element_status_{};
 };
 
