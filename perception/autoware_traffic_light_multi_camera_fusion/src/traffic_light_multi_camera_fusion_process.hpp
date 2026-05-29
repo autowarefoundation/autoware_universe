@@ -85,13 +85,14 @@ autoware_perception_msgs::msg::TrafficLightElement convert_t4_to_autoware(
   const tier4_perception_msgs::msg::TrafficLightElement & input);
 
 /**
- * @brief Currently the visible score only considers the truncation.
- * If the detection roi is very close to the image boundary, it would be considered as truncated.
+ * @brief Check whether the detection roi is fully visible, i.e. not truncated by the image
+ * boundary. If the detection roi is very close to the image boundary, it is considered as
+ * truncated.
  *
  * @param record    fusion record
- * @return 0 if traffic light is truncated, otherwise 1
+ * @return true if the traffic light is fully visible, false if truncated
  */
-int cal_visible_score(const FusionRecord & record);
+bool is_fully_visible(const FusionRecord & record);
 FusionRecord generate_failsafe_record(FusionRecord base_record);
 
 }  // namespace utils

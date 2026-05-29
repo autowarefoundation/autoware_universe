@@ -33,20 +33,14 @@ constexpr uint8_t circle = TrafficLightElement::CIRCLE;
 // unknown is shared between the color and shape fields
 constexpr uint8_t unknown = TrafficLightElement::UNKNOWN;
 
-// cal_visible_score return values
-enum VisibleScore : int {
-  TRUNCATED = 0,
-  VISIBLE = 1,
-};
-
 // image / roi geometry
 constexpr uint32_t image_width = 1440;
 constexpr uint32_t image_height = 1080;
 constexpr uint32_t roi_size = 100;
 constexpr uint32_t boundary_threshold = 5;
-// roi offset that keeps the traffic light fully inside the image (visible score == 1)
+// roi offset that keeps the traffic light fully inside the image (fully visible)
 constexpr uint32_t visible_offset = 100;
-// roi offsets that push the traffic light against each image boundary (visible score == 0)
+// roi offsets that push the traffic light against each image boundary (truncated)
 constexpr uint32_t left_top_boundary_offset = boundary_threshold;
 constexpr uint32_t right_boundary_offset = image_width - (roi_size + boundary_threshold);
 constexpr uint32_t bottom_boundary_offset = image_height - (roi_size + boundary_threshold);
@@ -254,34 +248,34 @@ TEST(HasHigherOrEqualPriorityDifferentCamera, LowerConfidenceRecordLoses)
     utils::has_higher_or_equal_priority(lower_confidence_record, higher_confidence_record));
 }
 
-TEST(CalVisibleScore, FullyVisibleRoiScoresOne)
+TEST(IsFullyVisible, ReturnsTrueWhenRoiIsCentered)
 {
   const auto record = make_record_with_roi(visible_offset, visible_offset);
-  EXPECT_EQ(utils::cal_visible_score(record), VISIBLE);
+  EXPECT_TRUE(utils::is_fully_visible(record));
 }
 
-TEST(CalVisibleScore, RoiNearLeftBoundaryScoresZero)
+TEST(IsFullyVisible, ReturnsFalseWhenRoiNearLeftBoundary)
 {
   const auto record = make_record_with_roi(left_top_boundary_offset, visible_offset);
-  EXPECT_EQ(utils::cal_visible_score(record), TRUNCATED);
+  EXPECT_FALSE(utils::is_fully_visible(record));
 }
 
-TEST(CalVisibleScore, RoiNearRightBoundaryScoresZero)
+TEST(IsFullyVisible, ReturnsFalseWhenRoiNearRightBoundary)
 {
   const auto record = make_record_with_roi(right_boundary_offset, visible_offset);
-  EXPECT_EQ(utils::cal_visible_score(record), TRUNCATED);
+  EXPECT_FALSE(utils::is_fully_visible(record));
 }
 
-TEST(CalVisibleScore, RoiNearTopBoundaryScoresZero)
+TEST(IsFullyVisible, ReturnsFalseWhenRoiNearTopBoundary)
 {
   const auto record = make_record_with_roi(visible_offset, left_top_boundary_offset);
-  EXPECT_EQ(utils::cal_visible_score(record), TRUNCATED);
+  EXPECT_FALSE(utils::is_fully_visible(record));
 }
 
-TEST(CalVisibleScore, RoiNearBottomBoundaryScoresZero)
+TEST(IsFullyVisible, ReturnsFalseWhenRoiNearBottomBoundary)
 {
   const auto record = make_record_with_roi(visible_offset, bottom_boundary_offset);
-  EXPECT_EQ(utils::cal_visible_score(record), TRUNCATED);
+  EXPECT_FALSE(utils::is_fully_visible(record));
 }
 
 int main(int argc, char ** argv)

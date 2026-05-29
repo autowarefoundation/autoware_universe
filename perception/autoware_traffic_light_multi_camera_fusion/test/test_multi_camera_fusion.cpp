@@ -142,7 +142,7 @@ TrafficLightRoiArray make_roi_array(
   return roi_array;
 }
 
-// ROI placed against the top-left image boundary so cal_visible_score returns 0.
+// ROI placed against the top-left image boundary so is_fully_visible returns false.
 TrafficLightRoiArray make_truncated_roi_array(
   const rclcpp::Time & stamp, const std::string & frame_id, lanelet::Id traffic_light_id)
 {
@@ -453,8 +453,8 @@ TEST(MultiCameraFusionFuse, TruncatedRoiHasLowerPriorityThanCenteredRoi)
 {
   // Arrange
   // Two cameras observe the same traffic_light_id. camera0 reports a truncated ROI
-  // (visible_score=0) with the higher confidence; camera1 reports a centered ROI
-  // (visible_score=1) with the lower confidence. has_higher_or_equal_priority's visibility check
+  // (truncated) with the higher confidence; camera1 reports a centered ROI
+  // (fully visible) with the lower confidence. has_higher_or_equal_priority's visibility check
   // ranks above the confidence check, so camera1's record is selected and the fused output is RED.
   MultiCameraFusion fusion(make_default_config());
   const rclcpp::Time stamp(100, 0);
@@ -519,10 +519,10 @@ TEST(MultiCameraFusionFuse, NewerTimestampWinsForSameFrameIdAndTrafficLightId)
   expect_single_fused_color(result, TrafficLightElement::RED);
 }
 
-TEST(MultiCameraFusionFuse, HigherConfidenceWinsWhenVisibleScoreTiesForSameTrafficLightId)
+TEST(MultiCameraFusionFuse, HigherConfidenceWinsWhenBothFullyVisibleForSameTrafficLightId)
 {
   // Arrange
-  // Two cameras observe the same traffic_light_id with centered ROIs (visible_score=1 each).
+  // Two cameras observe the same traffic_light_id with centered ROIs (fully visible each).
   // has_higher_or_equal_priority falls through to its last priority — the confidence
   // comparison — and selects the higher-confidence RED over the lower-confidence GREEN.
   MultiCameraFusion fusion(make_default_config());
@@ -573,7 +573,7 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommo
 TEST(MultiCameraFusionFuse, MinElementConfidenceDeterminesWinnerForMultiElementSignals)
 {
   // Arrange
-  // Two cameras observe the same traffic_light_id with centered ROIs (visible_score tied at 1).
+  // Two cameras observe the same traffic_light_id with centered ROIs (both fully visible).
   // Each signal has CIRCLE + LEFT_ARROW with differing per-element confidences:
   //   camera0: {CIRCLE 0.8, LEFT_ARROW 0.8}  -> min = 0.8
   //   camera1: {CIRCLE 0.9, LEFT_ARROW 0.3}  -> min = 0.3

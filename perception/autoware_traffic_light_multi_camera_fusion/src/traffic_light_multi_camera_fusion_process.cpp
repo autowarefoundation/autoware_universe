@@ -114,10 +114,10 @@ bool has_higher_or_equal_priority(const FusionRecord & candidate, const FusionRe
   }
 
   // 3. a fully visible signal outranks a truncated one
-  const int candidate_visible_score = cal_visible_score(candidate);
-  const int existing_visible_score = cal_visible_score(existing);
-  if (candidate_visible_score != existing_visible_score) {
-    return candidate_visible_score > existing_visible_score;
+  const bool candidate_is_visible = is_fully_visible(candidate);
+  const bool existing_is_visible = is_fully_visible(existing);
+  if (candidate_is_visible != existing_is_visible) {
+    return candidate_is_visible;
   }
 
   // 4. otherwise the higher confidence wins
@@ -140,20 +140,16 @@ autoware_perception_msgs::msg::TrafficLightElement convert_t4_to_autoware(
   return output;
 }
 
-int cal_visible_score(const FusionRecord & record)
+bool is_fully_visible(const FusionRecord & record)
 {
   const uint32_t boundary = 5;
-  uint32_t x1 = record.roi.roi.x_offset;
-  uint32_t x2 = record.roi.roi.x_offset + record.roi.roi.width;
-  uint32_t y1 = record.roi.roi.y_offset;
-  uint32_t y2 = record.roi.roi.y_offset + record.roi.roi.height;
-  if (
-    x1 <= boundary || (record.cam_info.width - x2) <= boundary || y1 <= boundary ||
-    (record.cam_info.height - y2) <= boundary) {
-    return 0;
-  } else {
-    return 1;
-  }
+  const uint32_t x1 = record.roi.roi.x_offset;
+  const uint32_t x2 = record.roi.roi.x_offset + record.roi.roi.width;
+  const uint32_t y1 = record.roi.roi.y_offset;
+  const uint32_t y2 = record.roi.roi.y_offset + record.roi.roi.height;
+  const bool is_truncated = x1 <= boundary || (record.cam_info.width - x2) <= boundary ||
+                            y1 <= boundary || (record.cam_info.height - y2) <= boundary;
+  return !is_truncated;
 }
 
 FusionRecord generate_failsafe_record(FusionRecord base_record)
