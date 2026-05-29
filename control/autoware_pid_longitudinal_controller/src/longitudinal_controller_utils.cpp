@@ -44,10 +44,13 @@ double calcStopDistance(
 
   const auto ego_s_opt = autoware::experimental::trajectory::find_first_nearest_index(
     traj, current_pose, max_dist, max_yaw);
-  if (!ego_s_opt.has_value()) {
-    return 0.0;
+  double ego_s_raw;
+  if (ego_s_opt.has_value()) {
+    ego_s_raw = ego_s_opt.value();
+  } else {
+    // fallback: position-only search (matching old soft-constraints behavior)
+    ego_s_raw = autoware::experimental::trajectory::find_nearest_index(traj, current_pose.position);
   }
-  const double ego_s_raw = ego_s_opt.value();
 
   const double traj_length = traj.length();
   double ego_s = ego_s_raw;
