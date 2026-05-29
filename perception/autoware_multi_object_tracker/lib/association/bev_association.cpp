@@ -62,19 +62,13 @@ void BevAssociation::setTimeKeeper(
 void BevAssociation::updateMaxSearchDistances()
 {
   max_squared_dist_per_class_.clear();
-  for (const auto measurement_label : classes::trackedLabels()) {
-    double max_squared_dist = 0.0;
-    const auto tracker_params_map_opt =
-      get_map_value_if_exists(config_.association_params_map, measurement_label);
-    if (!tracker_params_map_opt) {
-      continue;
-    }
-    const auto & tracker_params_map = tracker_params_map_opt->get();
+  for (const auto & [shape_label, tracker_params_map] : config_.association_params_map) {
+    const auto measurement_label = shape_label.second;
+    double & max_sq = max_squared_dist_per_class_[measurement_label];
     for (const auto & [tracker_type, association_params] : tracker_params_map) {
       static_cast<void>(tracker_type);
-      max_squared_dist = std::max(max_squared_dist, association_params.max_dist_sq);
+      max_sq = std::max(max_sq, association_params.max_dist_sq);
     }
-    max_squared_dist_per_class_.insert_or_assign(measurement_label, max_squared_dist);
   }
 }
 
@@ -208,8 +202,10 @@ void BevAssociation::processMeasurement(
   const classes::Label measurement_label, const PreparationData & prep_data,
   types::AssociationData & association_data)
 {
+  const AssociatorConfig::ShapeLabelKey shape_label_key{
+    types::toShapeType(measurement_object.shape.type), measurement_label};
   const auto tracker_params_map_opt =
-    get_map_value_if_exists(config_.association_params_map, measurement_label);
+    get_map_value_if_exists(config_.association_params_map, shape_label_key);
   if (!tracker_params_map_opt) {
     return;
   }

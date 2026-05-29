@@ -200,43 +200,83 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.creation_config.enable_unknown_object_motion_output =
     declare_parameter<bool>("enable_unknown_object_motion_output");
 
-  // Parameters for associator (explicit layered configuration)
+  // Parameters for associator: two-factor (shape, label) → tracker_type → params.
+  // can_assign is declared per (shape, label); metric params (max_dist etc.) are class-only.
   params_.association_params_map.clear();
-  for (const auto measurement_label : classes::trackedLabels()) {
-    const auto measurement_label_name = classes::toString(measurement_label);
-    const auto can_assign_parameter_name = "association.can_assign." + measurement_label_name;
-    const auto tracker_type_names =
-      declare_parameter<std::vector<std::string>>(can_assign_parameter_name);
-    if (tracker_type_names.empty()) {
-      throw std::invalid_argument(
-        can_assign_parameter_name + " must contain at least one tracker type");
-    }
 
-    std::unordered_set<TrackerType, AssociatorConfig::EnumClassHash> unique_tracker_types;
-    for (const auto & tracker_type_name : tracker_type_names) {
-      const auto tracker_type = toTrackerType(tracker_type_name);
-      if (!tracker_type.has_value()) {
-        throw std::invalid_argument(
-          "Invalid tracker type: '" + tracker_type_name + "' in parameter '" +
-          can_assign_parameter_name + "'. Strict string match is required.");
+  const std::vector<std::string> assoc_shape_names = {"bounding_box", "cylinder", "polygon"};
+  using ShapeLabelKey = AssociatorConfig::ShapeLabelKey;
+
+  // Step 1: declare can_assign per (shape, label); accumulate unique (label, tracker_type) pairs.
+  std::unordered_map<
+    ShapeLabelKey, std::vector<TrackerType>, AssociatorConfig::ShapeLabelKeyHash>
+    shape_label_tracker_types;
+  std::unordered_map<
+    classes::Label,
+    std::unordered_set<TrackerType, AssociatorConfig::EnumClassHash>,
+    AssociatorConfig::EnumClassHash>
+    label_to_all_tracker_types;
+
+  for (const auto & shape_name : assoc_shape_names) {
+    const auto shape_type_opt = types::toShapeType(shape_name);
+    if (!shape_type_opt) continue;
+    const auto shape_type = *shape_type_opt;
+
+    for (const auto measurement_label : classes::trackedLabels()) {
+      const auto label_name = classes::toString(measurement_label);
+      const auto param_name = "association.can_assign." + shape_name + "." + label_name;
+      const auto tracker_type_names =
+        declare_parameter<std::vector<std::string>>(param_name, std::vector<std::string>{});
+
+      if (tracker_type_names.empty()) continue;
+
+      std::vector<TrackerType> tracker_types;
+      for (const auto & tt_name : tracker_type_names) {
+        const auto tt = toTrackerType(tt_name);
+        if (!tt) {
+          throw std::invalid_argument(
+            "Invalid tracker type: '" + tt_name + "' in '" + param_name +
+            "'. Strict string match is required.");
+        }
+        tracker_types.push_back(*tt);
+        label_to_all_tracker_types[measurement_label].insert(*tt);
       }
-      unique_tracker_types.insert(*tracker_type);
+      shape_label_tracker_types[{shape_type, measurement_label}] = std::move(tracker_types);
     }
+  }
 
-    using TrackerAssociationParameters = AssociatorConfig::TrackerAssociationParameters;
-    for (const auto tracker_type : unique_tracker_types) {
-      const auto tracker_type_name = toString(tracker_type);
-      const auto max_dist = declare_parameter<double>(
-        "association.max_dist." + measurement_label_name + "." + tracker_type_name);
-      params_.association_params_map[measurement_label][tracker_type] =
-        TrackerAssociationParameters{
-          max_dist * max_dist,
-          declare_parameter<double>(
-            "association.max_area." + measurement_label_name + "." + tracker_type_name),
-          declare_parameter<double>(
-            "association.min_area." + measurement_label_name + "." + tracker_type_name),
-          declare_parameter<double>(
-            "association.min_iou." + measurement_label_name + "." + tracker_type_name)};
+  if (shape_label_tracker_types.empty()) {
+    throw std::invalid_argument(
+      "No association.can_assign entries found — check the parameter file.");
+  }
+
+  // Step 2: declare metric params once per (label, tracker_type).
+  using TrackerAssociationParameters = AssociatorConfig::TrackerAssociationParameters;
+  std::unordered_map<
+    classes::Label, AssociatorConfig::TrackerAssociationParametersMap,
+    AssociatorConfig::EnumClassHash>
+    cached_label_params;
+
+  for (const auto & [label, tracker_type_set] : label_to_all_tracker_types) {
+    const auto label_name = classes::toString(label);
+    for (const auto tracker_type : tracker_type_set) {
+      const auto tt_name = toString(tracker_type);
+      const auto max_dist =
+        declare_parameter<double>("association.max_dist." + label_name + "." + tt_name);
+      cached_label_params[label][tracker_type] = TrackerAssociationParameters{
+        max_dist * max_dist,
+        declare_parameter<double>("association.max_area." + label_name + "." + tt_name),
+        declare_parameter<double>("association.min_area." + label_name + "." + tt_name),
+        declare_parameter<double>("association.min_iou." + label_name + "." + tt_name)};
+    }
+  }
+
+  // Step 3: populate the shape-label-keyed map.
+  for (const auto & [shape_label, tracker_types] : shape_label_tracker_types) {
+    const auto & label_params = cached_label_params.at(shape_label.second);
+    auto & entry = params_.association_params_map[shape_label];
+    for (const auto tracker_type : tracker_types) {
+      entry[tracker_type] = label_params.at(tracker_type);
     }
   }
 

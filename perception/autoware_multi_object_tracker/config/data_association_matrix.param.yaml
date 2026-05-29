@@ -2,14 +2,29 @@
   ros__parameters:
     association:
       can_assign:
-        unknown: [polygon_tracker]
-        car: [multi_vehicle_tracker]
-        truck: [multi_vehicle_tracker]
-        bus: [multi_vehicle_tracker]
-        trailer: [multi_vehicle_tracker]
-        motorcycle: [pedestrian_and_bicycle_tracker]
-        bicycle: [pedestrian_and_bicycle_tracker]
-        pedestrian: [pedestrian_and_bicycle_tracker]
+        polygon: 
+          unknown: [polygon_tracker, multi_vehicle_tracker, pedestrian_and_bicycle_tracker]
+          car: [polygon_tracker, multi_vehicle_tracker]
+          truck: [polygon_tracker, multi_vehicle_tracker]
+          bus: [polygon_tracker, multi_vehicle_tracker]
+          trailer: [polygon_tracker, multi_vehicle_tracker]
+          motorcycle: [polygon_tracker, pedestrian_and_bicycle_tracker]
+          bicycle: [polygon_tracker, pedestrian_and_bicycle_tracker]
+          pedestrian: [polygon_tracker, pedestrian_and_bicycle_tracker]
+        bounding_box:
+          unknown: [multi_vehicle_tracker, pedestrian_and_bicycle_tracker]
+          car: [multi_vehicle_tracker]
+          truck: [multi_vehicle_tracker]
+          bus: [multi_vehicle_tracker]
+          trailer: [multi_vehicle_tracker]
+          motorcycle: [pedestrian_and_bicycle_tracker]
+          bicycle: [pedestrian_and_bicycle_tracker]
+          pedestrian: [pedestrian_and_bicycle_tracker]
+        cylinder:
+          unknown: [pedestrian_and_bicycle_tracker]
+          motorcycle: [pedestrian_and_bicycle_tracker]
+          bicycle: [pedestrian_and_bicycle_tracker]
+          pedestrian: [pedestrian_and_bicycle_tracker]
 
       # The effective (measurement_label, tracker_type) combination is determined by
       # association.can_assign.<measurement_label>: [tracker_type, ...]
@@ -20,18 +35,25 @@
           multi_vehicle_tracker: 4.0
           pedestrian_and_bicycle_tracker: 3.0
         car:
+          polygon_tracker: 5.0
           multi_vehicle_tracker: 5.0
         truck:
+          polygon_tracker: 5.0
           multi_vehicle_tracker: 5.0
         bus:
+          polygon_tracker: 5.0
           multi_vehicle_tracker: 5.0
         trailer:
+          polygon_tracker: 5.0
           multi_vehicle_tracker: 5.0
         motorcycle:
+          polygon_tracker: 3.0
           pedestrian_and_bicycle_tracker: 3.0
         bicycle:
+          polygon_tracker: 3.0
           pedestrian_and_bicycle_tracker: 3.0
         pedestrian:
+          polygon_tracker: 2.0
           pedestrian_and_bicycle_tracker: 2.0
 
       max_area:
@@ -40,18 +62,25 @@
           multi_vehicle_tracker: 60.0
           pedestrian_and_bicycle_tracker: 2.5
         car:
+          polygon_tracker: 100.0
           multi_vehicle_tracker: 12.10
         truck:
+          polygon_tracker: 100.0
           multi_vehicle_tracker: 36.00
         bus:
+          polygon_tracker: 100.0
           multi_vehicle_tracker: 60.00
         trailer:
+          polygon_tracker: 100.0
           multi_vehicle_tracker: 60.00
         motorcycle:
+          polygon_tracker: 2.50
           pedestrian_and_bicycle_tracker: 2.50
         bicycle:
+          polygon_tracker: 2.50
           pedestrian_and_bicycle_tracker: 2.50
         pedestrian:
+          polygon_tracker: 2.00
           pedestrian_and_bicycle_tracker: 2.00
 
       min_area:
@@ -60,18 +89,25 @@
           multi_vehicle_tracker: 3.6
           pedestrian_and_bicycle_tracker: 0.001
         car:
+          polygon_tracker: 0.0
           multi_vehicle_tracker: 3.6
         truck:
+          polygon_tracker: 0.0
           multi_vehicle_tracker: 6.0
         bus:
+          polygon_tracker: 0.0
           multi_vehicle_tracker: 10.0
         trailer:
+          polygon_tracker: 0.0
           multi_vehicle_tracker: 10.0
         motorcycle:
+          polygon_tracker: 0.0
           pedestrian_and_bicycle_tracker: 0.1
         bicycle:
+          polygon_tracker: 0.0
           pedestrian_and_bicycle_tracker: 0.1
         pedestrian:
+          polygon_tracker: 0.0
           pedestrian_and_bicycle_tracker: 0.1
 
       min_iou:
@@ -80,18 +116,25 @@
           multi_vehicle_tracker: 0.0001
           pedestrian_and_bicycle_tracker: 0.0001
         car:
+          polygon_tracker: 0.0001
           multi_vehicle_tracker: 0.0001
         truck:
+          polygon_tracker: 0.0001
           multi_vehicle_tracker: 0.10
         bus:
+          polygon_tracker: 0.0001
           multi_vehicle_tracker: 0.10
         trailer:
+          polygon_tracker: 0.0001
           multi_vehicle_tracker: 0.10
         motorcycle:
+          polygon_tracker: -0.30
           pedestrian_and_bicycle_tracker: -0.30
         bicycle:
+          polygon_tracker: 0.0001
           pedestrian_and_bicycle_tracker: 0.0001
         pedestrian:
+          polygon_tracker: 0.0001
           pedestrian_and_bicycle_tracker: 0.0001
 
     unknown_association_giou_threshold: -0.8  # GIoU threshold for unknown-unknown association

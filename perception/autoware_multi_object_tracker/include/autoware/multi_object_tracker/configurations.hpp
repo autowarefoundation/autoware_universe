@@ -21,6 +21,7 @@
 #include <functional>
 #include <optional>
 #include <unordered_map>
+#include <utility>
 
 namespace autoware::multi_object_tracker
 {
@@ -49,11 +50,23 @@ struct AssociatorConfig
   using TrackerAssociationParametersMap =
     std::unordered_map<types::TrackerType, TrackerAssociationParameters, EnumClassHash>;
   using LabelDoubleMap = std::unordered_map<classes::Label, double, EnumClassHash>;
-  using LabelToTrackerAssociationParametersMap =
-    std::unordered_map<classes::Label, TrackerAssociationParametersMap, EnumClassHash>;
 
-  // Effective association parameters (per measurement label -> tracker type).
-  LabelToTrackerAssociationParametersMap association_params_map;
+  // Two-factor key: (shape_type, label) → association parameters per tracker type
+  using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
+  struct ShapeLabelKeyHash
+  {
+    std::size_t operator()(const ShapeLabelKey & k) const
+    {
+      const auto h1 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.first));
+      const auto h2 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.second));
+      return h1 ^ (h2 << 8);
+    }
+  };
+  using ShapeLabelToTrackerAssociationParametersMap =
+    std::unordered_map<ShapeLabelKey, TrackerAssociationParametersMap, ShapeLabelKeyHash>;
+
+  // Effective association parameters (per measurement shape+label → tracker type).
+  ShapeLabelToTrackerAssociationParametersMap association_params_map;
 
   double unknown_association_giou_threshold;
   double score_threshold = 0.01;

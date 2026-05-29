@@ -150,31 +150,24 @@ void process_parameters(MultiObjectTrackerParameters & params)
       label, threshold * threshold);
   }
 
-  for (const auto measurement_label : classes::trackedLabels()) {
-    const auto label_params_opt =
-      get_map_value_if_exists(params.association_params_map, measurement_label);
-    if (!label_params_opt || label_params_opt->get().empty()) {
+  for (const auto & [shape_label, tracker_params_map] : params.association_params_map) {
+    if (tracker_params_map.empty()) {
       throw std::runtime_error(
-        "Missing association configuration for measurement label: " +
-        classes::toString(measurement_label));
+        "Empty association configuration for (" + types::toString(shape_label.first) + ", " +
+        classes::toString(shape_label.second) + ")");
     }
 
-    const auto & label_params = label_params_opt->get();
+    const auto default_tracker_opt =
+      get_map_value_if_exists(params.creation_config.shape_tracker_map, shape_label);
+    if (!default_tracker_opt) continue;
 
-    const auto default_tracker_type_opt =
-      get_map_value_if_exists(params.creation_config.tracker_map, measurement_label);
-    if (!default_tracker_type_opt) {
+    if (!get_map_value_if_exists(tracker_params_map, default_tracker_opt->get())) {
       throw std::runtime_error(
-        "Missing default tracker mapping for measurement label: " +
-        classes::toString(measurement_label));
-    }
-
-    const auto default_tracker_type = default_tracker_type_opt->get();
-    if (!get_map_value_if_exists(label_params, default_tracker_type)) {
-      throw std::runtime_error(
-        "Inconsistent configuration: default tracker '" + toString(default_tracker_type) +
-        "' for measurement label '" + classes::toString(measurement_label) +
-        "' is not included in association.can_assign." + classes::toString(measurement_label));
+        "Inconsistent configuration: default tracker '" + toString(default_tracker_opt->get()) +
+        "' for (" + types::toString(shape_label.first) + ", " +
+        classes::toString(shape_label.second) +
+        ") is not included in association.can_assign." + types::toString(shape_label.first) +
+        "." + classes::toString(shape_label.second));
     }
   }
 
