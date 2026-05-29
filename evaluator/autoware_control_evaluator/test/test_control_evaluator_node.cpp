@@ -24,6 +24,8 @@
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
+#include <autoware_perception_msgs/msg/object_classification.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
 #include "boost/lexical_cast.hpp"
@@ -40,6 +42,10 @@ using TrajectoryPoint = autoware_planning_msgs::msg::TrajectoryPoint;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
 using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
+using autoware_perception_msgs::msg::ObjectClassification;
+using autoware_perception_msgs::msg::PredictedObject;
+using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_perception_msgs::msg::Shape;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using geometry_msgs::msg::Pose;
 using nav_msgs::msg::Odometry;
@@ -82,6 +88,8 @@ protected:
       rclcpp::create_publisher<Odometry>(dummy_node, "/control_evaluator/input/odometry", 1);
     acc_pub_ = rclcpp::create_publisher<AccelWithCovarianceStamped>(
       dummy_node, "/control_evaluator/input/acceleration", 1);
+    objects_pub_ =
+      rclcpp::create_publisher<PredictedObjects>(dummy_node, "/control_evaluator/input/objects", 1);
     planning_factor_interface_ =
       std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
         dummy_node.get(), "stop_line");
@@ -195,6 +203,37 @@ protected:
     return metric_value_;
   }
 
+  PredictedObject makePredictedObject(
+    const double x, const double y, const uint8_t label, const double size = 1.0)
+  {
+    PredictedObject object;
+    ObjectClassification classification;
+    classification.label = label;
+    classification.probability = 1.0;
+    object.classification = {classification};
+
+    object.kinematics.initial_pose_with_covariance.pose.position.x = x;
+    object.kinematics.initial_pose_with_covariance.pose.position.y = y;
+    object.kinematics.initial_pose_with_covariance.pose.orientation.w = 1.0;
+
+    object.shape.type = Shape::BOUNDING_BOX;
+    object.shape.dimensions.x = size;
+    object.shape.dimensions.y = size;
+    object.shape.dimensions.z = size;
+
+    return object;
+  }
+
+  double publishObjectsAndGetMetric(const PredictedObjects & objects)
+  {
+    metric_updated_ = false;
+    objects_pub_->publish(objects);
+    while (!metric_updated_) {
+      spin_some();
+    }
+    return metric_value_;
+  }
+
   void spin_some()
   {
     rclcpp::spin_some(eval_node);
@@ -212,6 +251,7 @@ protected:
   rclcpp::Publisher<Trajectory>::SharedPtr traj_pub_;
   rclcpp::Publisher<Odometry>::SharedPtr odom_pub_;
   rclcpp::Publisher<AccelWithCovarianceStamped>::SharedPtr acc_pub_;
+  rclcpp::Publisher<PredictedObjects>::SharedPtr objects_pub_;
   std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface_;
 
@@ -331,4 +371,17 @@ TEST_F(EvalTest, TestStopDeviationABS)
   EXPECT_NEAR(publishPlanningFactorAndGetStopDeviationMetric(-5.0, 4.0, 3.0), 5.0, epsilon);
 
   EXPECT_NEAR(publishPlanningFactorAndGetStopDeviationMetric(5.0, 4.0, 3.0), 5.0, epsilon);
+}
+
+TEST_F(EvalTest, TestClosestObjectDistanceExcludedLabels)
+{
+  setTargetMetric("closest_object_distance");
+  publishEgoPose(0.0, 0.0, 0.0);
+
+  PredictedObjects objects;
+  objects.objects.push_back(makePredictedObject(2.0, 0.0, ObjectClassification::UNKNOWN));
+  objects.objects.push_back(makePredictedObject(10.0, 0.0, ObjectClassification::CAR));
+
+  const double closest_distance = publishObjectsAndGetMetric(objects);
+  EXPECT_GT(closest_distance, 5.0);
 }
