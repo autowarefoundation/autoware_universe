@@ -185,9 +185,9 @@ UniqueWorkspaceLayout make_unique_workspace_layout(
     reinterpret_cast<std::int32_t *>(sorted_input_positions + num_input_elements_in);
   auto * run_ids = reinterpret_cast<std::int32_t *>(num_unique + 1U);
 
-  return UniqueWorkspaceLayout{
-    workspace_inout, cub_temp_storage_size_in, input_positions, sorted_input,
-    sorted_input_positions, num_unique, run_ids};
+  return UniqueWorkspaceLayout{workspace_inout, cub_temp_storage_size_in, input_positions,
+                               sorted_input,    sorted_input_positions,   num_unique,
+                               run_ids};
 }
 
 __global__ void mark_run_starts(
