@@ -20,6 +20,7 @@
 #include <autoware/deprecated/boundary_departure_checker/utils.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
@@ -29,6 +30,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -37,12 +39,42 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace control_diagnostics
 {
 namespace bg = boost::geometry;
+
+namespace
+{
+using autoware_perception_msgs::msg::ObjectClassification;
+
+const std::unordered_map<std::string, uint8_t> kObjectLabelNameToValue = {
+  {"unknown", ObjectClassification::UNKNOWN},
+  {"car", ObjectClassification::CAR},
+  {"truck", ObjectClassification::TRUCK},
+  {"bus", ObjectClassification::BUS},
+  {"trailer", ObjectClassification::TRAILER},
+  {"motorcycle", ObjectClassification::MOTORCYCLE},
+  {"bicycle", ObjectClassification::BICYCLE},
+  {"pedestrian", ObjectClassification::PEDESTRIAN},
+  {"animal", ObjectClassification::ANIMAL},
+  {"hazard", ObjectClassification::HAZARD},
+  {"over_drivable", ObjectClassification::OVER_DRIVABLE},
+  {"under_drivable", ObjectClassification::UNDER_DRIVABLE},
+};
+
+std::optional<uint8_t> label_from_string(const std::string & label_name)
+{
+  const auto it = kObjectLabelNameToValue.find(label_name);
+  if (it == kObjectLabelNameToValue.end()) {
+    return std::nullopt;
+  }
+  return it->second;
+}
+}  // namespace
 
 ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_options)
 : Node("control_evaluator", node_options),
@@ -75,6 +107,18 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   // Parameters
   output_metrics_ = declare_parameter<bool>("output_metrics");
   distance_filter_thr_m_ = declare_parameter<double>("object_metrics.distance_filter_thr_m");
+  const std::vector<std::string> excluded_labels = declare_parameter<std::vector<std::string>>(
+    "object_metrics.excluded_labels", std::vector<std::string>{"unknown"});
+  for (const auto & label_name : excluded_labels) {
+    const auto label = label_from_string(label_name);
+    if (label) {
+      excluded_object_labels_.insert(*label);
+    } else {
+      RCLCPP_ERROR(
+        get_logger(), "Unknown object label '%s' in object_metrics.excluded_labels",
+        label_name.c_str());
+    }
+  }
 
   // Setting about Output metrics only when the vehicle is moving
   const bool output_metrics_only_moving_enabled =
@@ -580,6 +624,12 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
 
   double minimum_distance = std::numeric_limits<double>::max();
   for (const auto & object : objects.objects) {
+    const auto label =
+      autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    if (excluded_object_labels_.find(label) != excluded_object_labels_.end()) {
+      continue;
+    }
+
     const double center_distance = autoware_utils::calc_distance2d(
       odom.pose.pose.position, object.kinematics.initial_pose_with_covariance.pose.position);
     if (center_distance > distance_filter_thr_m_) {
