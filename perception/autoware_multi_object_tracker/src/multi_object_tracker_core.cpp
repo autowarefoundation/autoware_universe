@@ -14,6 +14,7 @@
 
 #include "multi_object_tracker_core.hpp"
 
+#include <autoware_perception_msgs/msg/shape.hpp>
 #include <tf2_ros/create_timer_interface.hpp>
 
 #include <tf2_ros/create_timer_ros.h>
@@ -103,7 +104,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
     return *tracker_type;
   };
 
-  // Set the tracker map for creation config
+  // Set the tracker map for creation config (class-only fallback)
   params.creation_config.tracker_map = {
     {Label::CAR, getTrackerType("car")},
     {Label::TRUCK, getTrackerType("truck")},
@@ -113,6 +114,30 @@ void process_parameters(MultiObjectTrackerParameters & params)
     {Label::BICYCLE, getTrackerType("bicycle")},
     {Label::MOTORCYCLE, getTrackerType("motorcycle")},
     {Label::UNKNOWN, TrackerType::POLYGON}};
+
+  // Set the shape+label tracker map (primary two-factor lookup)
+  {
+    using Shape = autoware_perception_msgs::msg::Shape;
+    const std::unordered_map<std::string, uint8_t> shape_name_to_type = {
+      {"bounding_box", Shape::BOUNDING_BOX},
+      {"cylinder", Shape::CYLINDER},
+      {"polygon", Shape::POLYGON},
+    };
+    for (const auto & [shape_name, label_map] : params.tracker_type_map_by_shape) {
+      const auto shape_it = shape_name_to_type.find(shape_name);
+      if (shape_it == shape_name_to_type.end()) continue;
+      for (const auto & [label_str, tracker_str] : label_map) {
+        if (tracker_str.empty()) continue;
+        const auto label_opt = classes::toLabel(label_str);
+        const auto tracker_type_opt = toTrackerType(tracker_str);
+        if (label_opt && tracker_type_opt) {
+          params.creation_config.shape_tracker_map[{shape_it->second, *label_opt}] =
+            *tracker_type_opt;
+        }
+      }
+    }
+  }
+
   // Set the pruning thresholds for tracker overlap manager config
   params.tracker_overlap_manager_config.pruning_giou_thresholds =
     params.pruning_giou_thresholds.to_label_map();

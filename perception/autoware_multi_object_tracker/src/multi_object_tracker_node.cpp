@@ -132,7 +132,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
   }
 
-  // tracker type map
+  // tracker type map (class-only fallback)
   const auto declare_initial_tracker_parameter = [this](const std::string & classification) {
     return declare_parameter<std::string>("initial_tracker." + classification);
   };
@@ -143,6 +143,19 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.tracker_type_map["pedestrian"] = declare_initial_tracker_parameter("pedestrian");
   params_.tracker_type_map["bicycle"] = declare_initial_tracker_parameter("bicycle");
   params_.tracker_type_map["motorcycle"] = declare_initial_tracker_parameter("motorcycle");
+
+  // tracker type map (shape + class primary — empty string means fall back to class-only)
+  {
+    const std::vector<std::string> shape_names = {"bounding_box", "cylinder", "polygon"};
+    const std::vector<std::string> label_names = {
+      "car", "truck", "bus", "trailer", "pedestrian", "bicycle", "motorcycle"};
+    for (const auto & shape_name : shape_names) {
+      for (const auto & label_name : label_names) {
+        params_.tracker_type_map_by_shape[shape_name][label_name] = declare_parameter<std::string>(
+          "initial_tracker." + shape_name + "." + label_name, "");
+      }
+    }
+  }
 
   params_.tracker_overlap_manager_config.min_known_object_removal_iou =
     declare_parameter<double>("min_known_object_removal_iou");
