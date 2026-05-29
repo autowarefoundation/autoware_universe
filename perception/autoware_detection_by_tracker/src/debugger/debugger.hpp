@@ -18,6 +18,7 @@
 #include "autoware_utils/ros/debug_publisher.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2/convert.hpp>
@@ -41,7 +42,7 @@ namespace autoware::detection_by_tracker
 class Debugger
 {
 public:
-  explicit Debugger(rclcpp::Node * node)
+  explicit Debugger(autoware::agnocast_wrapper::Node * node)
   {
     initial_objects_pub_ = node->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
       "debug/initial_objects", 1);
@@ -51,8 +52,9 @@ public:
       "debug/merged_objects", 1);
     divided_objects_pub_ = node->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
       "debug/divided_objects", 1);
-    processing_time_publisher_ =
-      std::make_unique<autoware_utils::DebugPublisher>(node, "detection_by_tracker");
+    processing_time_publisher_ = std::make_unique<
+      autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      node, "detection_by_tracker");
     stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
     this->startStopWatch();
   }
@@ -89,13 +91,14 @@ public:
   }
 
 private:
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr initial_objects_pub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr tracked_objects_pub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr divided_objects_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) initial_objects_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) tracked_objects_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) merged_objects_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) divided_objects_pub_;
   // debug publisher
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils::DebugPublisher> processing_time_publisher_;
+  std::unique_ptr<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    processing_time_publisher_;
 
   static autoware_perception_msgs::msg::DetectedObjects removeFeature(
     const tier4_perception_msgs::msg::DetectedObjectsWithFeature & input)

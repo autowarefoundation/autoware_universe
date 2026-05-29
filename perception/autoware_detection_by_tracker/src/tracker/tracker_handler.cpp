@@ -23,7 +23,8 @@ namespace autoware::detection_by_tracker
 {
 
 void TrackerHandler::onTrackedObjects(
-  const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr input_objects_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) &
+    input_objects_msg)
 {
   constexpr size_t max_buffer_size = 10;
 

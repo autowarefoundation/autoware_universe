@@ -15,6 +15,7 @@
 #ifndef TRACKER__TRACKER_HANDLER_HPP_
 #define TRACKER__TRACKER_HANDLER_HPP_
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
@@ -32,7 +33,8 @@ private:
 public:
   TrackerHandler() = default;
   void onTrackedObjects(
-    const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr input_objects_msg);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) &
+      input_objects_msg);
   bool estimateTrackedObjects(
     const rclcpp::Time & time, autoware_perception_msgs::msg::TrackedObjects & output);
 };

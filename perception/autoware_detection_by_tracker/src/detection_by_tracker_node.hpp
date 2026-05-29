@@ -24,7 +24,7 @@
 #include "tracker/tracker_handler.hpp"
 #include "utils/utils.hpp"
 
-#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2/convert.hpp>
@@ -48,14 +48,14 @@
 namespace autoware::detection_by_tracker
 {
 
-class DetectionByTracker : public rclcpp::Node
+class DetectionByTracker : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit DetectionByTracker(const rclcpp::NodeOptions & node_options);
 
 private:
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_;
-  rclcpp::Subscription<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr trackers_sub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) objects_pub_;
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_perception_msgs::msg::TrackedObjects) trackers_sub_;
   AUTOWARE_SUBSCRIPTION_PTR(tier4_perception_msgs::msg::DetectedObjectsWithFeature)
   initial_objects_sub_;
 
@@ -71,7 +71,8 @@ private:
 
   detection_by_tracker::utils::TrackerIgnoreLabel tracker_ignore_;
 
-  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
+    published_time_publisher_;
 
   void setMaxSearchRange();
 
