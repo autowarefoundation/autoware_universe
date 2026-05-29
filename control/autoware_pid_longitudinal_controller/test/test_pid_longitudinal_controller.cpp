@@ -223,7 +223,7 @@ TEST_F(PidLongitudinalControllerTest, goalOverrunKeepsContinuousControlData)
   ASSERT_TRUE(control_data);
 }
 
-TEST_F(PidLongitudinalControllerTest, goalOverrunRejectsMisalignedOrLaterallyFarPose)
+TEST_F(PidLongitudinalControllerTest, goalOverrunKeepsContinuousControlDataEvenIfPoseIsImperfect)
 {
   rclcpp::NodeOptions options;
   options.parameter_overrides(makeControllerParameters());
@@ -260,7 +260,7 @@ TEST_F(PidLongitudinalControllerTest, goalOverrunRejectsMisalignedOrLaterallyFar
   odometry.pose.pose.orientation.z = misaligned_quaternion.z();
   odometry.pose.pose.orientation.w = misaligned_quaternion.w();
   controller.setKinematicState(odometry);
-  EXPECT_FALSE(controller.getExperimentalControlData(odometry.pose.pose));
+  EXPECT_TRUE(controller.getExperimentalControlData(odometry.pose.pose));
 
   odometry.pose.pose.orientation.w = 1.0;
   odometry.pose.pose.orientation.x = 0.0;
@@ -268,7 +268,7 @@ TEST_F(PidLongitudinalControllerTest, goalOverrunRejectsMisalignedOrLaterallyFar
   odometry.pose.pose.orientation.z = 0.0;
   odometry.pose.pose.position.y = 3.5;
   controller.setKinematicState(odometry);
-  EXPECT_FALSE(controller.getExperimentalControlData(odometry.pose.pose));
+  EXPECT_TRUE(controller.getExperimentalControlData(odometry.pose.pose));
 }
 
 }  // namespace

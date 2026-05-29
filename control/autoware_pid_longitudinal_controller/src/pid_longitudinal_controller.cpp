@@ -480,15 +480,10 @@ PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::
   control_data.current_motion.acc = m_current_accel.accel.accel.linear.x;
   control_data.interpolated_traj = m_trajectory_experimental;
 
-  const auto current_s = autoware::experimental::trajectory::find_first_nearest_index(
-    control_data.interpolated_traj, current_pose, m_ego_nearest_dist_threshold,
-    m_ego_nearest_yaw_threshold);
-  if (!current_s) {
-    RCLCPP_WARN(logger_, "failed nearest search for experimental trajectory");
-    return std::nullopt;
-  }
+  const double current_s = autoware::experimental::trajectory::find_nearest_index(
+    control_data.interpolated_traj, current_pose.position);
 
-  double target_s = *current_s;
+  double target_s = current_s;
 
   control_data.state_after_delay =
     predictedStateAfterDelay(control_data.current_motion, m_delay_compensation_time);
@@ -496,11 +491,11 @@ PidLongitudinalController::getExperimentalControlData(const geometry_msgs::msg::
   constexpr double min_running_dist = 0.01;
   if (control_data.state_after_delay.running_distance > min_running_dist) {
     target_s = std::clamp(
-      *current_s + control_data.state_after_delay.running_distance, 0.0,
+      current_s + control_data.state_after_delay.running_distance, 0.0,
       control_data.interpolated_traj.length());
   }
 
-  control_data.nearest_base = std::clamp(*current_s, 0.0, control_data.interpolated_traj.length());
+  control_data.nearest_base = std::clamp(current_s, 0.0, control_data.interpolated_traj.length());
   control_data.target_base = std::clamp(target_s, 0.0, control_data.interpolated_traj.length());
 
   const auto control_target_point =

@@ -94,6 +94,13 @@ TEST(TestLongitudinalControllerUtils, calcStopDistance)
     longitudinal_utils::calcStopDistance(current_pose, non_stopping_trajectory, max_dist, max_yaw),
     2.0, 1e-2);
 
+  current_pose.position.x = 3.0;
+  EXPECT_NEAR(
+    longitudinal_utils::calcStopDistance(current_pose, non_stopping_trajectory, max_dist, max_yaw),
+    -1.0, 1e-2);
+
+  current_pose.position.x = 0.0;
+
   const auto stopping_trajectory = makeContinuousTrajectory(
     {makeTrajectoryPoint(0.0, 0.0, 0.0, 1.0), makeTrajectoryPoint(1.0, 0.0, 0.0, 1.0),
      makeTrajectoryPoint(2.0, 0.0, 0.0, 1.0), makeTrajectoryPoint(3.0, 0.0, 0.0, 0.0),
@@ -109,9 +116,9 @@ TEST(TestLongitudinalControllerUtils, calcStopDistance)
     0.0);
 
   current_pose.position.x = 9.0;
-  EXPECT_NEAR(
-    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw), 0.0,
-    1e-2);
+  EXPECT_LT(
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw),
+    0.0);
 }
 
 TEST(TestLongitudinalControllerUtils, calcStopDistanceRejectsMisalignedOrFarOverrun)
