@@ -22846,6 +22846,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#following-the-ego-vehicle-with-the-carla-spectator-camera" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Following the Ego Vehicle with the CARLA Spectator Camera
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -23063,6 +23074,62 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release</code></p
 <!-- Multi-camera combiner for RViz visualization -->
 <!-- <node pkg="autoware_carla_interface" exec="multi_camera_combiner" output="screen"/> -->
 <p>```</p>
+<h3 id="following-the-ego-vehicle-with-the-carla-spectator-camera">Following the Ego Vehicle with the CARLA Spectator Camera<a class="headerlink" href="#following-the-ego-vehicle-with-the-carla-spectator-camera" title="Permanent link">#</a></h3>
+<p>The <code>spectator_follow</code> script locks the CARLA spectator (free) camera to the ego vehicle, so the in-simulator view chases the car automatically instead of having to pan manually. It connects to the running CARLA server, looks up the ego actor by its <code>role_name</code>, and updates the spectator transform at a fixed rate.</p>
+<p>Run it in a separate terminal while CARLA and the Autoware bridge are running:</p>
+<p><code>bash
+ros2 run autoware_carla_interface spectator_follow</code></p>
+<p>Common options (all optional):</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--host</code></td>
+<td><code>localhost</code></td>
+<td>CARLA server host</td>
+</tr>
+<tr>
+<td><code>--port</code></td>
+<td><code>2000</code></td>
+<td>CARLA server RPC port</td>
+</tr>
+<tr>
+<td><code>--role</code></td>
+<td><code>ego_vehicle</code></td>
+<td><code>role_name</code> attribute of the ego actor to follow</td>
+</tr>
+<tr>
+<td><code>--distance</code></td>
+<td><code>8.0</code></td>
+<td>Meters behind the ego vehicle (use <code>0</code> for a top-down view)</td>
+</tr>
+<tr>
+<td><code>--height</code></td>
+<td><code>4.0</code></td>
+<td>Meters above the ego vehicle</td>
+</tr>
+<tr>
+<td><code>--pitch</code></td>
+<td><code>-15.0</code></td>
+<td>Camera pitch in degrees (negative looks down)</td>
+</tr>
+<tr>
+<td><code>--rate</code></td>
+<td><code>30.0</code></td>
+<td>Update rate in Hz</td>
+</tr>
+</tbody>
+</table>
+<p>For a top-down view directly above the ego vehicle:</p>
+<p><code>bash
+ros2 run autoware_carla_interface spectator_follow --distance 0 --height 30 --pitch -90</code></p>
+<p>Press <code>Ctrl+C</code> to stop the script. It will keep retrying if the ego actor is not yet spawned, and re-acquire it if it is removed and respawned.</p>
 <h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
 <p>The <code>InitializeInterface</code> class is key to setting up both the CARLA world and the ego vehicle. It fetches configuration parameters through the <code>autoware_carla_interface.launch.xml</code>.</p>
 <p>The main simulation loop runs within the <code>carla_ros2_interface</code> class. This loop ticks simulation time inside the CARLA simulator at <code>fixed_delta_seconds</code> time, where data is received and published as ROS 2 messages at frequencies defined in <code>self.sensor_frequencies</code>.</p>
