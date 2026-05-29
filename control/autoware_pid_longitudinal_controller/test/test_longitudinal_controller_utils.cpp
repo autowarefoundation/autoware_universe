@@ -78,7 +78,7 @@ TEST(TestLongitudinalControllerUtils, calcStopDistance)
   current_pose.position.z = 0.0;
   current_pose.orientation.w = 1.0;
 
-  constexpr double max_dist = 3.0;
+  constexpr double max_dist = 10.0;
   constexpr double max_yaw = 0.7;
 
   const auto zero_vel_trajectory = makeContinuousTrajectory(
@@ -119,6 +119,11 @@ TEST(TestLongitudinalControllerUtils, calcStopDistance)
   EXPECT_LT(
     longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw),
     0.0);
+
+  current_pose.position.x = 12.0;
+  const double far_overrun_stop_dist =
+    longitudinal_utils::calcStopDistance(current_pose, stopping_trajectory, max_dist, max_yaw);
+  EXPECT_NEAR(far_overrun_stop_dist, -9.0, 1e-2);
 }
 
 TEST(TestLongitudinalControllerUtils, calcStopDistanceRejectsMisalignedOrFarOverrun)

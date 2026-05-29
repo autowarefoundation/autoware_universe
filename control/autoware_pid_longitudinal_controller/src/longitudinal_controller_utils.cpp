@@ -37,18 +37,77 @@ double calcStopDistance(
   const Pose & current_pose, const TrajectoryExperimental & traj, const double max_dist,
   const double max_yaw)
 {
-  static_cast<void>(max_dist);
-  static_cast<void>(max_yaw);
-
   const auto bases = traj.get_underlying_bases();
   if (bases.size() <= 1) {
     return 0.0;
   }
 
-  const double ego_s =
-    autoware::experimental::trajectory::find_nearest_index(traj, current_pose.position);
+  const auto ego_s_opt = autoware::experimental::trajectory::find_first_nearest_index(
+    traj, current_pose, max_dist, max_yaw);
+  if (!ego_s_opt.has_value()) {
+    return 0.0;
+  }
+  const double ego_s_raw = ego_s_opt.value();
+
+  const double traj_length = traj.length();
+  double ego_s = ego_s_raw;
+
+  if (ego_s_raw >= traj_length - 0.01 && bases.size() >= 2) {
+    const double last_base = bases.back();
+    const double prev_base = bases[bases.size() - 2];
+
+    const auto end_point = traj.compute(last_base);
+    const auto prev_point = traj.compute(prev_base);
+
+    const double dx = end_point.pose.position.x - prev_point.pose.position.x;
+    const double dy = end_point.pose.position.y - prev_point.pose.position.y;
+    const double dz = end_point.pose.position.z - prev_point.pose.position.z;
+    const double seg_len = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+    if (seg_len > 1e-9) {
+      const double tx = dx / seg_len;
+      const double ty = dy / seg_len;
+      const double tz = dz / seg_len;
+
+      const double ex = current_pose.position.x - end_point.pose.position.x;
+      const double ey = current_pose.position.y - end_point.pose.position.y;
+      const double ez = current_pose.position.z - end_point.pose.position.z;
+
+      const double projection = ex * tx + ey * ty + ez * tz;
+      if (projection > 0.0) {
+        ego_s = traj_length + projection;
+      }
+    }
+  } else if (ego_s_raw <= 0.01 && bases.size() >= 2) {
+    const double first_base = bases[0];
+    const double second_base = bases[1];
+
+    const auto first_point = traj.compute(first_base);
+    const auto second_point = traj.compute(second_base);
+
+    const double dx = second_point.pose.position.x - first_point.pose.position.x;
+    const double dy = second_point.pose.position.y - first_point.pose.position.y;
+    const double dz = second_point.pose.position.z - first_point.pose.position.z;
+    const double seg_len = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+    if (seg_len > 1e-9) {
+      const double tx = dx / seg_len;
+      const double ty = dy / seg_len;
+      const double tz = dz / seg_len;
+
+      const double ex = current_pose.position.x - first_point.pose.position.x;
+      const double ey = current_pose.position.y - first_point.pose.position.y;
+      const double ez = current_pose.position.z - first_point.pose.position.z;
+
+      const double projection = ex * tx + ey * ty + ez * tz;
+      if (projection < 0.0) {
+        ego_s = projection;
+      }
+    }
+  }
+
   const double stop_s =
-    autoware::experimental::trajectory::search_zero_velocity_position(traj).value_or(traj.length());
+    autoware::experimental::trajectory::search_zero_velocity_position(traj).value_or(traj_length);
 
   const double signed_length_on_traj = stop_s - ego_s;
   if (std::isnan(signed_length_on_traj)) {
