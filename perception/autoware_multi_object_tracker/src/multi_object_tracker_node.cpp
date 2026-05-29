@@ -148,8 +148,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // initial_tracker: shape_tracker_map is fully populated for all (shape, label) combinations.
   // Fill order: lowest priority first so higher-priority entries overwrite.
   {
-    using Label = classes::Label;
-
     // Pass 1 (lowest priority): default POLYGON for every (shape, label) combination.
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       for (const auto label : classes::trackedLabels()) {
@@ -157,12 +155,12 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       }
     }
 
-    // Pass 2: per-label defaults — override for all shape types.
+    // Pass 2: per-label defaults — override for all shape types (including unknown).
     for (const auto label : classes::trackedLabels()) {
-      if (label == Label::UNKNOWN) continue;
       const auto label_name = classes::toString(label);
       const auto param_name = "initial_tracker." + label_name;
-      const TrackerType tt = parseTrackerType(declare_parameter<std::string>(param_name), param_name);
+      const TrackerType tt =
+        parseTrackerType(declare_parameter<std::string>(param_name), param_name);
       for (const auto shape_type : ALL_SHAPE_TYPES) {
         params_.creation_config.shape_tracker_map[{shape_type, label}] = tt;
       }
@@ -172,7 +170,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       const auto shape_name = types::toString(shape_type);
       for (const auto label : classes::trackedLabels()) {
-        if (label == Label::UNKNOWN) continue;
         const auto label_name = classes::toString(label);
         const auto param_name = "initial_tracker." + shape_name + "." + label_name;
         const auto shape_specific = declare_parameter<std::string>(param_name, "");
@@ -230,32 +227,46 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     declare_parameter<bool>("enable_unknown_object_motion_output");
 
   // Parameters for associator: two-factor (shape, label) → tracker_type → params.
-  // can_assign is declared per (shape, label); metric params (max_dist etc.) are class-only.
+  // can_assign is fully populated for all (shape, label) combinations.
+  // Fill order: label-level defaults first, then shape-specific overrides.
   params_.association_params_map.clear();
 
   using ShapeLabelKey = AssociatorConfig::ShapeLabelKey;
 
-  // Step 1: declare can_assign per (shape, label); accumulate unique (label, tracker_type) pairs.
-  std::unordered_map<
-    ShapeLabelKey, std::vector<TrackerType>, AssociatorConfig::ShapeLabelKeyHash>
+  std::unordered_map<ShapeLabelKey, std::vector<TrackerType>, AssociatorConfig::ShapeLabelKeyHash>
     shape_label_tracker_types;
   std::unordered_map<
-    classes::Label,
-    std::unordered_set<TrackerType, AssociatorConfig::EnumClassHash>,
+    classes::Label, std::unordered_set<TrackerType, AssociatorConfig::EnumClassHash>,
     AssociatorConfig::EnumClassHash>
     label_to_all_tracker_types;
 
+  // Pass 1 (label-level defaults): fill all (shape, label) combinations.
+  for (const auto measurement_label : classes::trackedLabels()) {
+    const auto label_name = classes::toString(measurement_label);
+    const auto param_name = "association.can_assign." + label_name;
+    const auto default_names =
+      declare_parameter<std::vector<std::string>>(param_name, std::vector<std::string>{});
+    if (default_names.empty()) continue;
+    std::vector<TrackerType> default_types;
+    for (const auto & tt_name : default_names) {
+      const TrackerType tt = parseTrackerType(tt_name, param_name);
+      default_types.push_back(tt);
+      label_to_all_tracker_types[measurement_label].insert(tt);
+    }
+    for (const auto shape_type : ALL_SHAPE_TYPES) {
+      shape_label_tracker_types[{shape_type, measurement_label}] = default_types;
+    }
+  }
+
+  // Pass 2 (shape-specific overrides): override where explicitly configured.
   for (const auto shape_type : ALL_SHAPE_TYPES) {
     const auto shape_name = types::toString(shape_type);
-
     for (const auto measurement_label : classes::trackedLabels()) {
       const auto label_name = classes::toString(measurement_label);
       const auto param_name = "association.can_assign." + shape_name + "." + label_name;
       const auto tracker_type_names =
         declare_parameter<std::vector<std::string>>(param_name, std::vector<std::string>{});
-
       if (tracker_type_names.empty()) continue;
-
       std::vector<TrackerType> tracker_types;
       for (const auto & tt_name : tracker_type_names) {
         const TrackerType tt = parseTrackerType(tt_name, param_name);

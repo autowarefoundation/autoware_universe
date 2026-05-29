@@ -2,7 +2,17 @@
   ros__parameters:
     association:
       can_assign:
-        polygon: 
+        # class-only defaults: applied to all (shape, class) combinations not overridden in a shape block
+        unknown: [polygon_tracker, multi_vehicle_tracker, pedestrian_and_bicycle_tracker]
+        car: [multi_vehicle_tracker]
+        truck: [multi_vehicle_tracker]
+        bus: [multi_vehicle_tracker]
+        trailer: [multi_vehicle_tracker]
+        motorcycle: [pedestrian_and_bicycle_tracker]
+        bicycle: [pedestrian_and_bicycle_tracker]
+        pedestrian: [pedestrian_and_bicycle_tracker]
+        # shape-specific blocks override the class-only defaults above
+        polygon:
           unknown: [polygon_tracker, multi_vehicle_tracker, pedestrian_and_bicycle_tracker]
           car: [polygon_tracker, multi_vehicle_tracker]
           truck: [polygon_tracker, multi_vehicle_tracker]
