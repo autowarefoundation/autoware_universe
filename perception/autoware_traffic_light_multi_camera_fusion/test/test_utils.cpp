@@ -29,7 +29,7 @@ TEST(IsUnknown, Normal)
     element.shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
     signal.elements.push_back(element);
   }
-  EXPECT_TRUE(autoware::traffic_light::utils::is_unknown(signal));
+  EXPECT_TRUE(autoware::traffic_light::utils::is_signal_unknown(signal));
 
   {
     signal.elements.clear();
@@ -37,7 +37,7 @@ TEST(IsUnknown, Normal)
     element.shape = tier4_perception_msgs::msg::TrafficLightElement::CIRCLE;
     signal.elements.push_back(element);
   }
-  EXPECT_FALSE(autoware::traffic_light::utils::is_unknown(signal));
+  EXPECT_FALSE(autoware::traffic_light::utils::is_signal_unknown(signal));
 }
 
 TEST(AtOr, Normal)

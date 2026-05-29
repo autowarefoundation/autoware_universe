@@ -174,7 +174,7 @@ TrafficLight make_signal(lanelet::Id traffic_light_id, uint8_t color, float conf
   return signal;
 }
 
-// Matches utils::is_unknown: a single element whose color and shape are both UNKNOWN.
+// Matches utils::is_signal_unknown: a single element whose color and shape are both UNKNOWN.
 TrafficLight make_unknown_signal(lanelet::Id traffic_light_id)
 {
   T4Element element;

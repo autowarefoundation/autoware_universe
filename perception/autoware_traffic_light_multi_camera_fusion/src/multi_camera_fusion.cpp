@@ -52,7 +52,7 @@ double probability_to_log_odds(double prob)
   return std::log(prob / (1.0 - prob));
 }
 
-bool is_unknown(const StateKey & state_key)
+bool is_state_key_unknown(const StateKey & state_key)
 {
   return state_key.size() == 1 &&
          state_key[0].first == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
@@ -64,8 +64,8 @@ bool compare_state_key_log_odds(
   // Ordering rule:
   // 1. Unknown StateKey is always lower priority
   // 2. Otherwise, smaller log-odds comes first
-  const bool key1_is_unknown = is_unknown(key1.first);
-  const bool key2_is_unknown = is_unknown(key2.first);
+  const bool key1_is_unknown = is_state_key_unknown(key1.first);
+  const bool key2_is_unknown = is_state_key_unknown(key2.first);
   if (key1_is_unknown && !key2_is_unknown) {
     return true;
   }

@@ -53,7 +53,7 @@ struct FusionRecordArr
   }
 };
 
-inline bool is_unknown(const tier4_perception_msgs::msg::TrafficLight & signal)
+inline bool is_signal_unknown(const tier4_perception_msgs::msg::TrafficLight & signal)
 {
   return signal.elements.size() == 1 &&
          signal.elements[0].color == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN &&

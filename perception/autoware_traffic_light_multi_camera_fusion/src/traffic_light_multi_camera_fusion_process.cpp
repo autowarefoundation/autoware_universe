@@ -100,8 +100,8 @@ int compare_record(const FusionRecord & r1, const FusionRecord & r2)
   if (r1.header.frame_id == r2.header.frame_id && std::abs(t1 - t2) >= dt_thres) {
     return t1 < t2 ? -1 : 1;
   }
-  bool r1_is_unknown = is_unknown(r1.signal);
-  bool r2_is_unknown = is_unknown(r2.signal);
+  bool r1_is_unknown = is_signal_unknown(r1.signal);
+  bool r2_is_unknown = is_signal_unknown(r2.signal);
   /*
   if both are unknown, they are of the same priority
   */
