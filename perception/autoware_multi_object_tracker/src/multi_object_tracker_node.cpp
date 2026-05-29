@@ -25,7 +25,6 @@
 #include <array>
 #include <iomanip>
 #include <list>
-#include <map>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -39,6 +38,20 @@
 namespace autoware::multi_object_tracker
 {
 using autoware_utils_debug::ScopedTimeTrack;
+
+namespace
+{
+TrackerType parseTrackerType(const std::string & name, const std::string & param_name)
+{
+  const auto tt = toTrackerType(name);
+  if (!tt) {
+    throw std::invalid_argument(
+      "Invalid tracker type: '" + name + "' in '" + param_name +
+      "'. Strict string match is required.");
+  }
+  return *tt;
+}
+}  // namespace
 
 MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 : rclcpp::Node("multi_object_tracker", node_options)
@@ -132,25 +145,32 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
   }
 
-  // tracker type map: class-only base values, shape-specific overrides applied on top.
-  // Result is fully populated at parse time — no runtime fallback needed.
+  // initial_tracker: class-only defaults fill tracker_map; shape-specific overrides populate
+  // shape_tracker_map. Both are fully resolved at parse time — no runtime fallback needed.
   {
-    const std::vector<std::string> shape_names = {"bounding_box", "cylinder", "polygon"};
-    const std::vector<std::string> label_names = {
-      "car", "truck", "bus", "trailer", "pedestrian", "bicycle", "motorcycle"};
+    using Label = classes::Label;
 
-    std::map<std::string, std::string> class_only_map;
-    for (const auto & label_name : label_names) {
-      class_only_map[label_name] =
-        declare_parameter<std::string>("initial_tracker." + label_name);
+    // Class-only defaults → tracker_map (label-only fallback for spawn)
+    TrackerCreationConfig::LabelToTrackerTypeMap class_only_map;
+    for (const auto label : classes::trackedLabels()) {
+      if (label == Label::UNKNOWN) continue;
+      const auto label_name = classes::toString(label);
+      const auto param_name = "initial_tracker." + label_name;
+      const TrackerType tt = parseTrackerType(declare_parameter<std::string>(param_name), param_name);
+      class_only_map[label] = tt;
+      params_.creation_config.tracker_map[label] = tt;
     }
+    params_.creation_config.tracker_map[Label::UNKNOWN] = TrackerType::POLYGON;
 
-    for (const auto & shape_name : shape_names) {
-      for (const auto & label_name : label_names) {
-        const auto shape_specific = declare_parameter<std::string>(
-          "initial_tracker." + shape_name + "." + label_name, "");
-        params_.tracker_type_map_by_shape[shape_name][label_name] =
-          shape_specific.empty() ? class_only_map.at(label_name) : shape_specific;
+    // Shape-specific overrides → shape_tracker_map; fall back to class-only when unset
+    for (const auto shape_type : ALL_SHAPE_TYPES) {
+      const auto shape_name = types::toString(shape_type);
+      for (const auto & [label, default_tt] : class_only_map) {
+        const auto label_name = classes::toString(label);
+        const auto param_name = "initial_tracker." + shape_name + "." + label_name;
+        const auto shape_specific = declare_parameter<std::string>(param_name, "");
+        params_.creation_config.shape_tracker_map[{shape_type, label}] =
+          shape_specific.empty() ? default_tt : parseTrackerType(shape_specific, param_name);
       }
     }
   }
@@ -204,7 +224,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // can_assign is declared per (shape, label); metric params (max_dist etc.) are class-only.
   params_.association_params_map.clear();
 
-  const std::vector<std::string> assoc_shape_names = {"bounding_box", "cylinder", "polygon"};
   using ShapeLabelKey = AssociatorConfig::ShapeLabelKey;
 
   // Step 1: declare can_assign per (shape, label); accumulate unique (label, tracker_type) pairs.
@@ -217,10 +236,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     AssociatorConfig::EnumClassHash>
     label_to_all_tracker_types;
 
-  for (const auto & shape_name : assoc_shape_names) {
-    const auto shape_type_opt = types::toShapeType(shape_name);
-    if (!shape_type_opt) continue;
-    const auto shape_type = *shape_type_opt;
+  for (const auto shape_type : ALL_SHAPE_TYPES) {
+    const auto shape_name = types::toString(shape_type);
 
     for (const auto measurement_label : classes::trackedLabels()) {
       const auto label_name = classes::toString(measurement_label);
@@ -232,14 +249,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
       std::vector<TrackerType> tracker_types;
       for (const auto & tt_name : tracker_type_names) {
-        const auto tt = toTrackerType(tt_name);
-        if (!tt) {
-          throw std::invalid_argument(
-            "Invalid tracker type: '" + tt_name + "' in '" + param_name +
-            "'. Strict string match is required.");
-        }
-        tracker_types.push_back(*tt);
-        label_to_all_tracker_types[measurement_label].insert(*tt);
+        const TrackerType tt = parseTrackerType(tt_name, param_name);
+        tracker_types.push_back(tt);
+        label_to_all_tracker_types[measurement_label].insert(tt);
       }
       shape_label_tracker_types[{shape_type, measurement_label}] = std::move(tracker_types);
     }

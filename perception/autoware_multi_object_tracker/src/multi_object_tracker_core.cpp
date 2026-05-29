@@ -85,56 +85,7 @@ namespace core
 //// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
-  using Label = classes::Label;
-
-  // tracker_type_map_by_shape is fully populated at parse time: class-only values back-filled
-  // all shapes that had no shape-specific override. Derive the per-class default from the
-  // bounding_box entries, which carry those class-only defaults.
-  const auto canonical_it = params.tracker_type_map_by_shape.find("bounding_box");
-  if (canonical_it == params.tracker_type_map_by_shape.end()) {
-    throw std::runtime_error("Missing 'bounding_box' entry in tracker_type_map_by_shape");
-  }
-  const auto & canonical_label_map = canonical_it->second;
-
-  auto getTrackerType = [&canonical_label_map](const std::string & classification) -> TrackerType {
-    const auto it = canonical_label_map.find(classification);
-    if (it == canonical_label_map.end() || it->second.empty()) {
-      throw std::runtime_error("Missing tracker for classification: " + classification);
-    }
-    const auto tracker_type = toTrackerType(it->second);
-    if (!tracker_type.has_value()) {
-      throw std::runtime_error(
-        "Invalid tracker type: '" + it->second + "' for classification '" + classification +
-        "'. Strict string match is required.");
-    }
-    return *tracker_type;
-  };
-
-  // Set the tracker map for creation config (derived from bounding_box class defaults)
-  params.creation_config.tracker_map = {
-    {Label::CAR, getTrackerType("car")},
-    {Label::TRUCK, getTrackerType("truck")},
-    {Label::BUS, getTrackerType("bus")},
-    {Label::TRAILER, getTrackerType("trailer")},
-    {Label::PEDESTRIAN, getTrackerType("pedestrian")},
-    {Label::BICYCLE, getTrackerType("bicycle")},
-    {Label::MOTORCYCLE, getTrackerType("motorcycle")},
-    {Label::UNKNOWN, TrackerType::POLYGON}};
-
-  // Set the shape+label tracker map from the fully-populated map
-  for (const auto & [shape_name, label_map] : params.tracker_type_map_by_shape) {
-    const auto shape_type_opt = types::toShapeType(shape_name);
-    if (!shape_type_opt) continue;
-    for (const auto & [label_str, tracker_str] : label_map) {
-      if (tracker_str.empty()) continue;
-      const auto label_opt = classes::toLabel(label_str);
-      const auto tracker_type_opt = toTrackerType(tracker_str);
-      if (label_opt && tracker_type_opt) {
-        params.creation_config.shape_tracker_map[{*shape_type_opt, *label_opt}] =
-          *tracker_type_opt;
-      }
-    }
-  }
+  // creation_config.tracker_map and shape_tracker_map are populated directly at parse time.
 
   // Set the pruning thresholds for tracker overlap manager config
   params.tracker_overlap_manager_config.pruning_giou_thresholds =

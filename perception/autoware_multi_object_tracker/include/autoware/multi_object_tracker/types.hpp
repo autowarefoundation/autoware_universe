@@ -169,6 +169,14 @@ inline ShapeType toShapeType(const uint8_t shape_type)
   }
 }
 
+inline constexpr std::array<ShapeType, 3> ALL_SHAPE_TYPES = {
+  ShapeType::BOUNDING_BOX, ShapeType::CYLINDER, ShapeType::POLYGON};
+
+inline const std::array<ShapeType, 3> & allShapeTypes()
+{
+  return ALL_SHAPE_TYPES;
+}
+
 // constants
 constexpr float default_existence_probability = 0.75;
 
@@ -401,6 +409,8 @@ double getArea(const autoware_perception_msgs::msg::Shape & shape);
 using types::ALL_TRACKER_TYPES;
 using types::allTrackerTypes;
 using types::isVehicleTrackerType;
+using types::ALL_SHAPE_TYPES;
+using types::allShapeTypes;
 using types::ShapeType;
 using types::toString;
 using types::toShapeType;
