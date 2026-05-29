@@ -105,13 +105,12 @@ struct TrackerCreationConfig
     std::unordered_map<classes::Label, types::TrackerType, AssociatorConfig::EnumClassHash>;
 
   // Two-factor key: (shape_type, label) → tracker type
-  using ShapeType = uint8_t;
-  using ShapeLabelKey = std::pair<ShapeType, classes::Label>;
+  using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
   struct ShapeLabelKeyHash
   {
     std::size_t operator()(const ShapeLabelKey & k) const
     {
-      const auto h1 = std::hash<uint8_t>{}(k.first);
+      const auto h1 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.first));
       const auto h2 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.second));
       return h1 ^ (h2 << 8);
     }

@@ -126,6 +126,49 @@ inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name
   return std::nullopt;
 }
 
+// Shape type — mirrors autoware_perception_msgs::msg::Shape constants
+enum class ShapeType : uint8_t {
+  BOUNDING_BOX = 0,
+  CYLINDER = 1,
+  POLYGON = 2,
+};
+
+inline std::string toString(const ShapeType shape_type)
+{
+  switch (shape_type) {
+    case ShapeType::BOUNDING_BOX:
+      return "bounding_box";
+    case ShapeType::POLYGON:
+      return "polygon";
+    case ShapeType::CYLINDER:
+      return "cylinder";
+    default:
+      return "bounding_box";
+  }
+}
+
+inline std::optional<ShapeType> toShapeType(const std::string & shape_name)
+{
+  if (shape_name == "bounding_box") return ShapeType::BOUNDING_BOX;
+  if (shape_name == "polygon") return ShapeType::POLYGON;
+  if (shape_name == "cylinder") return ShapeType::CYLINDER;
+  return std::nullopt;
+}
+
+inline ShapeType toShapeType(const uint8_t shape_type)
+{
+  switch (shape_type) {
+    case 0:
+      return ShapeType::BOUNDING_BOX;
+    case 2:
+      return ShapeType::POLYGON;
+    case 1:
+      return ShapeType::CYLINDER;
+    default:
+      return ShapeType::BOUNDING_BOX;
+  }
+}
+
 // constants
 constexpr float default_existence_probability = 0.75;
 
@@ -358,7 +401,9 @@ double getArea(const autoware_perception_msgs::msg::Shape & shape);
 using types::ALL_TRACKER_TYPES;
 using types::allTrackerTypes;
 using types::isVehicleTrackerType;
+using types::ShapeType;
 using types::toString;
+using types::toShapeType;
 using types::toTrackerType;
 using types::TrackerType;
 

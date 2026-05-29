@@ -14,7 +14,6 @@
 
 #include "multi_object_tracker_core.hpp"
 
-#include <autoware_perception_msgs/msg/shape.hpp>
 #include <tf2_ros/create_timer_interface.hpp>
 
 #include <tf2_ros/create_timer_ros.h>
@@ -117,21 +116,15 @@ void process_parameters(MultiObjectTrackerParameters & params)
 
   // Set the shape+label tracker map (primary two-factor lookup)
   {
-    using Shape = autoware_perception_msgs::msg::Shape;
-    const std::unordered_map<std::string, uint8_t> shape_name_to_type = {
-      {"bounding_box", Shape::BOUNDING_BOX},
-      {"cylinder", Shape::CYLINDER},
-      {"polygon", Shape::POLYGON},
-    };
     for (const auto & [shape_name, label_map] : params.tracker_type_map_by_shape) {
-      const auto shape_it = shape_name_to_type.find(shape_name);
-      if (shape_it == shape_name_to_type.end()) continue;
+      const auto shape_type_opt = types::toShapeType(shape_name);
+      if (!shape_type_opt) continue;
       for (const auto & [label_str, tracker_str] : label_map) {
         if (tracker_str.empty()) continue;
         const auto label_opt = classes::toLabel(label_str);
         const auto tracker_type_opt = toTrackerType(tracker_str);
         if (label_opt && tracker_type_opt) {
-          params.creation_config.shape_tracker_map[{shape_it->second, *label_opt}] =
+          params.creation_config.shape_tracker_map[{*shape_type_opt, *label_opt}] =
             *tracker_type_opt;
         }
       }

@@ -160,7 +160,7 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   // Primary: shape + label lookup
   const auto shape_tracker_opt = get_map_value_if_exists(
     creation_config_.shape_tracker_map,
-    TrackerCreationConfig::ShapeLabelKey{object.shape.type, label});
+    TrackerCreationConfig::ShapeLabelKey{types::toShapeType(object.shape.type), label});
 
   // Fallback: label-only lookup
   const auto tracker_type_opt =
