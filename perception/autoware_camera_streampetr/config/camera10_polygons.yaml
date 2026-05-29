@@ -1,4 +1,3 @@
-# Polygon regions for ego masking (see package README).
 # Each polygon is [x0, y0, x1, y1, ...] with at least 3 points (6 numbers).
 
 polygons:
