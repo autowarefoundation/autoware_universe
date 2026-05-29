@@ -1,8 +1,8 @@
 /**:
   ros__parameters:
-    # initial tracker models: two-factor (shape + class) with class-only fallback
-    # shape-specific entries override the fallback for that (shape, class) combination
-    # omitting a shape block or a label within it falls back to the class-only entry below
+    # initial tracker models: shape+class entries take highest priority;
+    # class-only entries below fill all (shape, class) combinations not listed under a shape block.
+    # Both are resolved into a fully-populated map at parse time — no runtime fallback.
     initial_tracker:
       polygon:
         car: "polygon_tracker"
@@ -12,7 +12,7 @@
         pedestrian: "pedestrian_and_bicycle_tracker"
         bicycle: "pedestrian_and_bicycle_tracker"
         motorcycle: "pedestrian_and_bicycle_tracker"
-      # fallback: class-only (used when shape entry is absent or empty)
+      # class-only defaults: applied to bounding_box and cylinder (any shape without an explicit block)
       car: "multi_vehicle_tracker"
       truck: "multi_vehicle_tracker"
       bus: "multi_vehicle_tracker"

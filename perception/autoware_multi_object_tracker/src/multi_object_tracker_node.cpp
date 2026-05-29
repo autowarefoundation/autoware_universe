@@ -132,27 +132,25 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
   }
 
-  // tracker type map (class-only fallback)
-  const auto declare_initial_tracker_parameter = [this](const std::string & classification) {
-    return declare_parameter<std::string>("initial_tracker." + classification);
-  };
-  params_.tracker_type_map["car"] = declare_initial_tracker_parameter("car");
-  params_.tracker_type_map["truck"] = declare_initial_tracker_parameter("truck");
-  params_.tracker_type_map["bus"] = declare_initial_tracker_parameter("bus");
-  params_.tracker_type_map["trailer"] = declare_initial_tracker_parameter("trailer");
-  params_.tracker_type_map["pedestrian"] = declare_initial_tracker_parameter("pedestrian");
-  params_.tracker_type_map["bicycle"] = declare_initial_tracker_parameter("bicycle");
-  params_.tracker_type_map["motorcycle"] = declare_initial_tracker_parameter("motorcycle");
-
-  // tracker type map (shape + class primary — empty string means fall back to class-only)
+  // tracker type map: class-only base values, shape-specific overrides applied on top.
+  // Result is fully populated at parse time — no runtime fallback needed.
   {
     const std::vector<std::string> shape_names = {"bounding_box", "cylinder", "polygon"};
     const std::vector<std::string> label_names = {
       "car", "truck", "bus", "trailer", "pedestrian", "bicycle", "motorcycle"};
+
+    std::map<std::string, std::string> class_only_map;
+    for (const auto & label_name : label_names) {
+      class_only_map[label_name] =
+        declare_parameter<std::string>("initial_tracker." + label_name);
+    }
+
     for (const auto & shape_name : shape_names) {
       for (const auto & label_name : label_names) {
-        params_.tracker_type_map_by_shape[shape_name][label_name] = declare_parameter<std::string>(
+        const auto shape_specific = declare_parameter<std::string>(
           "initial_tracker." + shape_name + "." + label_name, "");
+        params_.tracker_type_map_by_shape[shape_name][label_name] =
+          shape_specific.empty() ? class_only_map.at(label_name) : shape_specific;
       }
     }
   }
