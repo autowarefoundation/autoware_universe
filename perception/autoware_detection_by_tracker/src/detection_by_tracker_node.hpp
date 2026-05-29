@@ -70,8 +70,7 @@ private:
 
   detection_by_tracker::utils::TrackerIgnoreLabel tracker_ignore_;
 
-  std::unique_ptr<
-    autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
+  std::unique_ptr<autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>
     published_time_publisher_;
 
   void setMaxSearchRange();
