@@ -28,7 +28,7 @@
 namespace autoware::low_intensity_cluster_filter
 {
 LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions & node_options)
-: Node("low_intensity_cluster_filter_node", node_options),
+: autoware::agnocast_wrapper::Node("low_intensity_cluster_filter_node", node_options),
   tf_buffer_(this->get_clock()),
   tf_listener_(tf_buffer_)
 {
@@ -50,20 +50,18 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
 
   using std::placeholders::_1;
   // Set publisher/subscriber
-  // cppcheck-suppress unknownMacro
-  object_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
-    tier4_perception_msgs::msg::DetectedObjectsWithFeature, "input/objects", rclcpp::QoS{1},
-    std::bind(&LowIntensityClusterFilter::objectCallback, this, _1),
-    AUTOWARE_SUBSCRIPTION_OPTIONS{});
-  object_pub_ = AUTOWARE_CREATE_PUBLISHER2(
-    tier4_perception_msgs::msg::DetectedObjectsWithFeature, "output/objects", rclcpp::QoS{1});
+  object_sub_ = create_subscription<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
+    "input/objects", rclcpp::QoS{1},
+    std::bind(&LowIntensityClusterFilter::objectCallback, this, _1));
+  object_pub_ = create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
+    "output/objects", rclcpp::QoS{1});
   // initialize debug tool
   {
-    using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ =
-      std::make_unique<DebugPublisher>(this, "low_intensity_cluster_filter_node");
+      std::make_unique<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+        this, "low_intensity_cluster_filter_node");
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
   }
