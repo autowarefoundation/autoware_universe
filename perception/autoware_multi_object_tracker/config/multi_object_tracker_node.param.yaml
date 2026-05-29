@@ -1,32 +1,5 @@
 /**:
   ros__parameters:
-    # initial tracker models: shape+class entries take highest priority;
-    # class-only entries below fill all (shape, class) combinations not listed under a shape block.
-    # Both are resolved into a fully-populated map at parse time — no runtime fallback.
-    initial_tracker:
-      # class-only defaults: applied to all (shape, class) combinations not overridden above
-      unknown: "polygon_tracker"
-      car: "multi_vehicle_tracker"
-      truck: "multi_vehicle_tracker"
-      bus: "multi_vehicle_tracker"
-      trailer: "multi_vehicle_tracker"
-      pedestrian: "pedestrian_and_bicycle_tracker"
-      bicycle: "pedestrian_and_bicycle_tracker"
-      motorcycle: "pedestrian_and_bicycle_tracker"
-      # shape-specific blocks override the class-only defaults below
-      polygon:
-        car: "polygon_tracker"
-        truck: "polygon_tracker"
-        bus: "polygon_tracker"
-        trailer: "polygon_tracker"
-        pedestrian: "pedestrian_and_bicycle_tracker"
-        bicycle: "pedestrian_and_bicycle_tracker"
-        motorcycle: "pedestrian_and_bicycle_tracker"
-      bounding_box:
-        unknown: "multi_vehicle_tracker"  # consistent with can_assign.bounding_box.unknown
-      cylinder:
-        unknown: "pedestrian_and_bicycle_tracker"  # consistent with can_assign.cylinder.unknown
-
     # default tracker node parameters
     publish_rate: 10.0
     world_frame_id: map

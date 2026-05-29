@@ -85,7 +85,8 @@ namespace core
 //// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
-  // creation_config.shape_tracker_map is fully populated at parse time for all (shape, label) pairs.
+  // creation_config.shape_tracker_map is fully populated at parse time for all (shape, label)
+  // pairs.
 
   // Set the pruning thresholds for tracker overlap manager config
   params.tracker_overlap_manager_config.pruning_giou_thresholds =
@@ -114,11 +115,11 @@ void process_parameters(MultiObjectTrackerParameters & params)
 
     if (!get_map_value_if_exists(tracker_params_map, default_tracker_opt->get())) {
       throw std::runtime_error(
-        "Inconsistent configuration: default tracker '" + toString(default_tracker_opt->get()) +
+        "Inconsistent configuration: create tracker '" + toString(default_tracker_opt->get()) +
         "' for (" + types::toString(shape_label.first) + ", " +
-        classes::toString(shape_label.second) +
-        ") is not included in association.can_assign." + types::toString(shape_label.first) +
-        "." + classes::toString(shape_label.second));
+        classes::toString(shape_label.second) + ") is not included in tracker_assignment." +
+        types::toString(shape_label.first) + "." + classes::toString(shape_label.second) +
+        ".match");
     }
   }
 

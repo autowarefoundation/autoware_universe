@@ -145,8 +145,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
   }
 
-  // initial_tracker: shape_tracker_map is fully populated for all (shape, label) combinations.
-  // Fill order: lowest priority first so higher-priority entries overwrite.
+  // tracker_assignment.create: shape_tracker_map is fully populated for all (shape, label)
+  // combinations. Fill order: lowest priority first so higher-priority entries overwrite.
   {
     // Pass 1 (lowest priority): default POLYGON for every (shape, label) combination.
     for (const auto shape_type : ALL_SHAPE_TYPES) {
@@ -155,10 +155,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       }
     }
 
-    // Pass 2: per-label defaults — override for all shape types (including unknown).
+    // Pass 2: per-label defaults — override for all shape types.
     for (const auto label : classes::trackedLabels()) {
       const auto label_name = classes::toString(label);
-      const auto param_name = "initial_tracker." + label_name;
+      const auto param_name = "tracker_assignment." + label_name + ".create";
       const TrackerType tt =
         parseTrackerType(declare_parameter<std::string>(param_name), param_name);
       for (const auto shape_type : ALL_SHAPE_TYPES) {
@@ -171,7 +171,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       const auto shape_name = types::toString(shape_type);
       for (const auto label : classes::trackedLabels()) {
         const auto label_name = classes::toString(label);
-        const auto param_name = "initial_tracker." + shape_name + "." + label_name;
+        const auto param_name = "tracker_assignment." + shape_name + "." + label_name + ".create";
         const auto shape_specific = declare_parameter<std::string>(param_name, "");
         if (!shape_specific.empty()) {
           params_.creation_config.shape_tracker_map[{shape_type, label}] =
@@ -227,7 +227,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     declare_parameter<bool>("enable_unknown_object_motion_output");
 
   // Parameters for associator: two-factor (shape, label) → tracker_type → params.
-  // can_assign is fully populated for all (shape, label) combinations.
+  // tracker_assignment.match is populated for all non-pass-through (shape, label) combinations.
   // Fill order: label-level defaults first, then shape-specific overrides.
   params_.association_params_map.clear();
 
@@ -243,7 +243,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Pass 1 (label-level defaults): fill all (shape, label) combinations.
   for (const auto measurement_label : classes::trackedLabels()) {
     const auto label_name = classes::toString(measurement_label);
-    const auto param_name = "association.can_assign." + label_name;
+    const auto param_name = "tracker_assignment." + label_name + ".match";
     const auto default_names =
       declare_parameter<std::vector<std::string>>(param_name, std::vector<std::string>{});
     if (default_names.empty()) continue;
@@ -263,7 +263,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     const auto shape_name = types::toString(shape_type);
     for (const auto measurement_label : classes::trackedLabels()) {
       const auto label_name = classes::toString(measurement_label);
-      const auto param_name = "association.can_assign." + shape_name + "." + label_name;
+      const auto param_name = "tracker_assignment." + shape_name + "." + label_name + ".match";
       const auto tracker_type_names =
         declare_parameter<std::vector<std::string>>(param_name, std::vector<std::string>{});
       if (tracker_type_names.empty()) continue;
@@ -277,12 +277,18 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
   }
 
-  if (shape_label_tracker_types.empty()) {
-    throw std::invalid_argument(
-      "No association.can_assign entries found — check the parameter file.");
+  {
+    const bool has_non_passthrough = std::any_of(
+      params_.creation_config.shape_tracker_map.begin(),
+      params_.creation_config.shape_tracker_map.end(),
+      [](const auto & e) { return e.second != TrackerType::PASS_THROUGH; });
+    if (shape_label_tracker_types.empty() && has_non_passthrough) {
+      throw std::invalid_argument(
+        "No tracker_assignment.match entries found — check the parameter file.");
+    }
   }
 
-  // Step 2: declare metric params once per (label, tracker_type).
+  // Step 2: load metric params from tracker_profiles once per (tracker_type, label).
   using TrackerAssociationParameters = AssociatorConfig::TrackerAssociationParameters;
   std::unordered_map<
     classes::Label, AssociatorConfig::TrackerAssociationParametersMap,
@@ -292,14 +298,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   for (const auto & [label, tracker_type_set] : label_to_all_tracker_types) {
     const auto label_name = classes::toString(label);
     for (const auto tracker_type : tracker_type_set) {
+      if (tracker_type == TrackerType::PASS_THROUGH) continue;
       const auto tt_name = toString(tracker_type);
-      const auto max_dist =
-        declare_parameter<double>("association.max_dist." + label_name + "." + tt_name);
+      const auto profile_prefix = "tracker_profiles." + tt_name + "." + label_name + ".";
+      const auto max_dist = declare_parameter<double>(profile_prefix + "max_dist");
       cached_label_params[label][tracker_type] = TrackerAssociationParameters{
-        max_dist * max_dist,
-        declare_parameter<double>("association.max_area." + label_name + "." + tt_name),
-        declare_parameter<double>("association.min_area." + label_name + "." + tt_name),
-        declare_parameter<double>("association.min_iou." + label_name + "." + tt_name)};
+        max_dist * max_dist, declare_parameter<double>(profile_prefix + "max_area"),
+        declare_parameter<double>(profile_prefix + "min_area"),
+        declare_parameter<double>(profile_prefix + "min_iou")};
     }
   }
 

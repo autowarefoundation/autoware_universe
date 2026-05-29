@@ -1,10 +1,13 @@
 /**:
   ros__parameters:
-    initial_tracker:
-      car: "pass_through_tracker"
-      truck: "pass_through_tracker"
-      bus: "pass_through_tracker"
-      trailer: "pass_through_tracker"
-      pedestrian: "pass_through_tracker"
-      bicycle: "pass_through_tracker"
-      motorcycle: "pass_through_tracker"
+    # Override: use pass_through_tracker for all classes (no state estimation, no association).
+    # 'match' is omitted for every entry — pass_through_tracker has no profile and needs no thresholds.
+    tracker_assignment:
+      car:        {create: pass_through_tracker}
+      truck:      {create: pass_through_tracker}
+      bus:        {create: pass_through_tracker}
+      trailer:    {create: pass_through_tracker}
+      pedestrian: {create: pass_through_tracker}
+      bicycle:    {create: pass_through_tracker}
+      motorcycle: {create: pass_through_tracker}
+      unknown:    {create: pass_through_tracker}
