@@ -39,7 +39,7 @@ struct AssociatorConfig
     }
   };
 
-  struct TrackerAssociationParameters
+  struct AssociationProfile
   {
     double max_dist_sq;
     double max_area;
@@ -47,8 +47,8 @@ struct AssociatorConfig
     double min_iou;
   };
 
-  using TrackerAssociationParametersMap =
-    std::unordered_map<types::TrackerType, TrackerAssociationParameters, EnumClassHash>;
+  using AssociationProfileMap =
+    std::unordered_map<types::TrackerType, AssociationProfile, EnumClassHash>;
   using LabelDoubleMap = std::unordered_map<classes::Label, double, EnumClassHash>;
 
   // Two-factor key: (shape_type, label) → association parameters per tracker type
@@ -62,38 +62,15 @@ struct AssociatorConfig
       return h1 ^ (h2 << 8);
     }
   };
-  using ShapeLabelToTrackerAssociationParametersMap =
-    std::unordered_map<ShapeLabelKey, TrackerAssociationParametersMap, ShapeLabelKeyHash>;
+  using AssociationMap =
+    std::unordered_map<ShapeLabelKey, AssociationProfileMap, ShapeLabelKeyHash>;
 
-  // Effective association parameters (per measurement shape+label → tracker type).
-  ShapeLabelToTrackerAssociationParametersMap association_params_map;
+  // Effective association map: (shape, label) → tracker type → profile.
+  AssociationMap association_params_map;
 
   double unknown_association_giou_threshold;
   double score_threshold = 0.01;
   double ego_pose_max_age_sec = 0.21;  // max staleness of ego pose before polar is disabled [s]
-};
-
-//// Helper: per-label threshold table
-
-struct TrackedLabelThresholds
-{
-  double unknown;
-  double car;
-  double truck;
-  double bus;
-  double trailer;
-  double motorcycle;
-  double bicycle;
-  double pedestrian;
-
-  [[nodiscard]] AssociatorConfig::LabelDoubleMap to_label_map() const
-  {
-    using Label = classes::Label;
-    return {{Label::UNKNOWN, unknown}, {Label::CAR, car},
-            {Label::TRUCK, truck},     {Label::BUS, bus},
-            {Label::TRAILER, trailer}, {Label::MOTORCYCLE, motorcycle},
-            {Label::BICYCLE, bicycle}, {Label::PEDESTRIAN, pedestrian}};
-  }
 };
 
 //// Tracker overlap manager (tracker-to-tracker layer: remove spatially redundant trackers)

@@ -53,10 +53,6 @@ struct MultiObjectTrackerParameters
 
   std::vector<types::InputChannel> input_channels_config;
 
-  AssociatorConfig::ShapeLabelToTrackerAssociationParametersMap association_params_map;
-  TrackedLabelThresholds pruning_giou_thresholds;
-  TrackedLabelThresholds pruning_distance_thresholds;
-
   // Induced parameters
   TrackerCreationConfig creation_config;
   TrackerOverlapManagerConfig tracker_overlap_manager_config;

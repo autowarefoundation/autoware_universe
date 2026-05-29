@@ -22,7 +22,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -85,25 +84,10 @@ namespace core
 //// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
-  // creation_config.shape_tracker_map is fully populated at parse time for all (shape, label)
-  // pairs.
-
-  // Set the pruning thresholds for tracker overlap manager config
-  params.tracker_overlap_manager_config.pruning_giou_thresholds =
-    params.pruning_giou_thresholds.to_label_map();
-  params.tracker_overlap_manager_config.pruning_distance_thresholds =
-    params.pruning_distance_thresholds.to_label_map();
-  params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.clear();
-  params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.reserve(
-    params.tracker_overlap_manager_config.pruning_distance_thresholds.size());
-  for (const auto & [label, threshold] :
-       params.tracker_overlap_manager_config.pruning_distance_thresholds) {
-    params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.emplace(
-      label, threshold * threshold);
-  }
-
-  for (const auto & [shape_label, tracker_params_map] : params.association_params_map) {
-    if (tracker_params_map.empty()) {
+  // Validate that every (shape, label) association map is non-empty and that the
+  // create-tracker for each pair is present in its match list.
+  for (const auto & [shape_label, profile_map] : params.associator_config.association_params_map) {
+    if (profile_map.empty()) {
       throw std::runtime_error(
         "Empty association configuration for (" + types::toString(shape_label.first) + ", " +
         classes::toString(shape_label.second) + ")");
@@ -113,7 +97,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
       get_map_value_if_exists(params.creation_config.shape_tracker_map, shape_label);
     if (!default_tracker_opt) continue;
 
-    if (!get_map_value_if_exists(tracker_params_map, default_tracker_opt->get())) {
+    if (!get_map_value_if_exists(profile_map, default_tracker_opt->get())) {
       throw std::runtime_error(
         "Inconsistent configuration: create tracker '" + toString(default_tracker_opt->get()) +
         "' for (" + types::toString(shape_label.first) + ", " +
@@ -122,8 +106,6 @@ void process_parameters(MultiObjectTrackerParameters & params)
         ".match");
     }
   }
-
-  params.associator_config.association_params_map = params.association_params_map;
 }
 
 //// Utility functions

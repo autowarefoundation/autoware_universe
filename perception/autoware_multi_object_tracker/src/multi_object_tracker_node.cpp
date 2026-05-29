@@ -186,31 +186,18 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.tracker_overlap_manager_config.min_unknown_object_removal_iou =
     declare_parameter<double>("min_unknown_object_removal_iou");
 
-  const auto declare_tracked_label_thresholds =
-    [this](const std::string & parameter_namespace) -> TrackedLabelThresholds {
-    TrackedLabelThresholds thresholds;
-    thresholds.unknown = declare_parameter<double>(
-      parameter_namespace + "." + classes::toString(classes::Label::UNKNOWN));
-    thresholds.car =
-      declare_parameter<double>(parameter_namespace + "." + classes::toString(classes::Label::CAR));
-    thresholds.truck = declare_parameter<double>(
-      parameter_namespace + "." + classes::toString(classes::Label::TRUCK));
-    thresholds.bus =
-      declare_parameter<double>(parameter_namespace + "." + classes::toString(classes::Label::BUS));
-    thresholds.trailer = declare_parameter<double>(
-      parameter_namespace + "." + classes::toString(classes::Label::TRAILER));
-    thresholds.motorcycle = declare_parameter<double>(
-      parameter_namespace + "." + classes::toString(classes::Label::MOTORCYCLE));
-    thresholds.bicycle = declare_parameter<double>(
-      parameter_namespace + "." + classes::toString(classes::Label::BICYCLE));
-    thresholds.pedestrian = declare_parameter<double>(
-      parameter_namespace + "." + classes::toString(classes::Label::PEDESTRIAN));
-    return thresholds;
+  const auto parse_label_double_map =
+    [this](const std::string & ns) -> AssociatorConfig::LabelDoubleMap {
+    AssociatorConfig::LabelDoubleMap result;
+    for (const auto label : classes::trackedLabels()) {
+      result[label] = declare_parameter<double>(ns + "." + classes::toString(label));
+    }
+    return result;
   };
 
-  // pruning parameters
-  params_.pruning_giou_thresholds =
-    declare_tracked_label_thresholds("pruning_generalized_iou_thresholds");
+  // pruning parameters (parsed directly into tracker_overlap_manager_config)
+  params_.tracker_overlap_manager_config.pruning_giou_thresholds =
+    parse_label_double_map("pruning_generalized_iou_thresholds");
   params_.tracker_overlap_manager_config.pruning_static_object_speed =
     declare_parameter<double>("pruning_static_object_speed");
   params_.tracker_overlap_manager_config.pruning_moving_object_speed =
@@ -218,18 +205,21 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.tracker_overlap_manager_config.pruning_static_iou_threshold =
     declare_parameter<double>("pruning_static_iou_threshold");
 
-  // overlap distance threshold
-  params_.pruning_distance_thresholds =
-    declare_tracked_label_thresholds("pruning_distance_thresholds");
+  params_.tracker_overlap_manager_config.pruning_distance_thresholds =
+    parse_label_double_map("pruning_distance_thresholds");
+  for (const auto & [label, dist] :
+       params_.tracker_overlap_manager_config.pruning_distance_thresholds) {
+    params_.tracker_overlap_manager_config.pruning_distance_thresholds_sq[label] = dist * dist;
+  }
   params_.creation_config.enable_unknown_object_velocity_estimation =
     declare_parameter<bool>("enable_unknown_object_velocity_estimation");
   params_.creation_config.enable_unknown_object_motion_output =
     declare_parameter<bool>("enable_unknown_object_motion_output");
 
-  // Parameters for associator: two-factor (shape, label) → tracker_type → params.
-  // tracker_assignment.match is populated for all non-pass-through (shape, label) combinations.
-  // Fill order: label-level defaults first, then shape-specific overrides.
-  params_.association_params_map.clear();
+  // tracker_assignment.match: two-pass (shape, label) → list of eligible tracker types.
+  // tracker_profiles: load thresholds once per (tracker_type, label) combination needed.
+  // Final result goes directly into associator_config.association_params_map.
+  params_.associator_config.association_params_map.clear();
 
   using ShapeLabelKey = AssociatorConfig::ShapeLabelKey;
 
@@ -288,12 +278,11 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
   }
 
-  // Step 2: load metric params from tracker_profiles once per (tracker_type, label).
-  using TrackerAssociationParameters = AssociatorConfig::TrackerAssociationParameters;
+  // Load association profiles from tracker_profiles once per (tracker_type, label).
+  using AssociationProfile = AssociatorConfig::AssociationProfile;
   std::unordered_map<
-    classes::Label, AssociatorConfig::TrackerAssociationParametersMap,
-    AssociatorConfig::EnumClassHash>
-    cached_label_params;
+    classes::Label, AssociatorConfig::AssociationProfileMap, AssociatorConfig::EnumClassHash>
+    cached_label_profiles;
 
   for (const auto & [label, tracker_type_set] : label_to_all_tracker_types) {
     const auto label_name = classes::toString(label);
@@ -302,19 +291,19 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       const auto tt_name = toString(tracker_type);
       const auto profile_prefix = "tracker_profiles." + tt_name + "." + label_name + ".";
       const auto max_dist = declare_parameter<double>(profile_prefix + "max_dist");
-      cached_label_params[label][tracker_type] = TrackerAssociationParameters{
+      cached_label_profiles[label][tracker_type] = AssociationProfile{
         max_dist * max_dist, declare_parameter<double>(profile_prefix + "max_area"),
         declare_parameter<double>(profile_prefix + "min_area"),
         declare_parameter<double>(profile_prefix + "min_iou")};
     }
   }
 
-  // Step 3: populate the shape-label-keyed map.
+  // Populate the shape-label-keyed association map.
   for (const auto & [shape_label, tracker_types] : shape_label_tracker_types) {
-    const auto & label_params = cached_label_params.at(shape_label.second);
-    auto & entry = params_.association_params_map[shape_label];
+    const auto & label_profiles = cached_label_profiles.at(shape_label.second);
+    auto & entry = params_.associator_config.association_params_map[shape_label];
     for (const auto tracker_type : tracker_types) {
-      entry[tracker_type] = label_params.at(tracker_type);
+      entry[tracker_type] = label_profiles.at(tracker_type);
     }
   }
 

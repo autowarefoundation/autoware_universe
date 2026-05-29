@@ -92,7 +92,7 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
   using autoware::multi_object_tracker::TrackerType;
   using Label = autoware::multi_object_tracker::classes::Label;
   using ShapeType = autoware::multi_object_tracker::types::ShapeType;
-  using Params = autoware::multi_object_tracker::AssociatorConfig::TrackerAssociationParameters;
+  using Params = autoware::multi_object_tracker::AssociatorConfig::AssociationProfile;
 
   // bounding_box entries
   config.association_params_map[{ShapeType::BOUNDING_BOX, Label::UNKNOWN}]
