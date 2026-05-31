@@ -81,7 +81,7 @@ lanelet::ConstLanelets get_lanelets_to(
  * @param lanelet The lanelet to check
  * @return true if the lanelet has the direction_change attribute set to "yes"
  */
-bool hasDirectionChangeAreaTag(const lanelet::ConstLanelet & lanelet)
+bool hasDirectionChangeTag(const lanelet::ConstLanelet & lanelet)
 {
   const std::string direction_change_tag = lanelet.attributeOr("direction_change", "none");
   return direction_change_tag == "yes";
@@ -295,8 +295,16 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
     const auto goal_yaw = tf2::getYaw(goal.orientation);
     const auto angle_diff = autoware_utils::normalize_radian(lane_yaw - goal_yaw);
     const double th_angle = autoware_utils::deg2rad(param_.goal_angle_threshold_deg);
+    const bool has_direction_change_tag = hasDirectionChangeTag(closest_shoulder_lanelet);
     if (std::abs(angle_diff) < th_angle) {
       return true;
+    }
+    if (has_direction_change_tag) {
+      const double reversed_angle_diff =
+        std::abs(autoware_utils::normalize_radian(angle_diff - M_PI));
+      if (reversed_angle_diff < th_angle) {
+        return true;
+      }
     }
   }
   const auto road_lanelets_at_goal = route_handler_.getRoadLaneletsAtPose(goal);
@@ -358,8 +366,16 @@ bool DefaultPlanner::is_goal_valid(const geometry_msgs::msg::Pose & goal)
     const auto angle_diff = autoware_utils::normalize_radian(lane_yaw - goal_yaw);
 
     const double th_angle = autoware_utils::deg2rad(param_.goal_angle_threshold_deg);
+    const bool has_direction_change_tag = hasDirectionChangeTag(closest_lanelet_to_goal);
     if (std::abs(angle_diff) < th_angle) {
       return true;
+    }
+    if (has_direction_change_tag) {
+      const double reversed_angle_diff =
+        std::abs(autoware_utils::normalize_radian(angle_diff - M_PI));
+      if (reversed_angle_diff < th_angle) {
+        return true;
+      }
     }
   }
 
