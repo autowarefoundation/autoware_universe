@@ -474,9 +474,14 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   path_generator_->setAccelerationHalfLife(acceleration_exponential_half_life_);
 
   // subscribers
-  sub_objects_ = this->create_subscription<TrackedObjects>(
-    "~/input/objects", 1,
-    std::bind(&MapBasedPredictionNode::objectsCallback, this, std::placeholders::_1));
+  objects_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+  AUTOWARE_SUBSCRIPTION_OPTIONS objects_sub_options{};
+  objects_sub_options.callback_group = objects_callback_group_;
+  // cppcheck-suppress unknownMacro
+  sub_objects_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    TrackedObjects, "~/input/objects", 1,
+    std::bind(&MapBasedPredictionNode::objectsCallback, this, std::placeholders::_1),
+    objects_sub_options);
   sub_map_ = this->create_subscription<LaneletMapBin>(
     "/vector_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&MapBasedPredictionNode::mapCallback, this, std::placeholders::_1));
@@ -601,21 +606,24 @@ void MapBasedPredictionNode::updateDiagnostics(
 void MapBasedPredictionNode::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
 {
   RCLCPP_DEBUG(get_logger(), "[Map Based Prediction]: Start loading lanelet");
-  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+  auto new_map_ptr = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
-
   auto routing_graph_and_traffic_rules =
     autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
-      lanelet_map_ptr_);
-
-  routing_graph_ptr_ =
+      new_map_ptr);
+  auto new_routing_graph_ptr =
     autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
-  traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
+  auto new_traffic_rules_ptr = routing_graph_and_traffic_rules.second;
 
-  lru_cache_of_convert_path_type_.clear();  // clear cache
+  {
+    std::lock_guard<std::mutex> lock(map_mutex_);
+    lanelet_map_ptr_ = std::move(new_map_ptr);
+    routing_graph_ptr_ = std::move(new_routing_graph_ptr);
+    traffic_rules_ptr_ = std::move(new_traffic_rules_ptr);
+    lru_cache_of_convert_path_type_.clear();  // clear cache
+    predictor_vru_->setLaneletMap(lanelet_map_ptr_);
+  }
   RCLCPP_DEBUG(get_logger(), "[Map Based Prediction]: Map is loaded");
-
-  predictor_vru_->setLaneletMap(lanelet_map_ptr_);
 }
 
 void MapBasedPredictionNode::trafficSignalsCallback(
@@ -625,12 +633,15 @@ void MapBasedPredictionNode::trafficSignalsCallback(
   predictor_vru_->setTrafficSignal(*msg);
 }
 
-void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPtr in_objects)
+void MapBasedPredictionNode::objectsCallback(
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) in_objects)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   stop_watch_ptr_->toc("processing_time", true);
+
+  std::lock_guard<std::mutex> lock(map_mutex_);
 
   // take traffic_signal
   {
