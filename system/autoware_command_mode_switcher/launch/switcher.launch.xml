@@ -6,7 +6,7 @@
   <arg name="~/command_mode/transition/completed" default="/system/command_mode/transition/completed"/>
   <arg name="~/source/status" default="/control/control_command_gate/source/status"/>
   <arg name="~/source/select" default="/control/control_command_gate/source/select"/>
-  <arg name="~/election/status" default="/system/election/status"/>
+  <arg name="~/active_control_unit" default="/system/redundancy/active_control_unit"/>
   <arg name="~/control_mode/report" default="/vehicle/status/control_mode"/>
   <arg name="~/control_mode/request" default="/control/control_mode_request"/>
 
@@ -17,7 +17,7 @@
     <remap from="~/command_mode/transition/completed" to="$(var ~/command_mode/transition/completed)"/>
     <remap from="~/source/status" to="$(var ~/source/status)"/>
     <remap from="~/source/select" to="$(var ~/source/select)"/>
-    <remap from="~/election/status" to="$(var ~/election/status)"/>
+    <remap from="~/active_control_unit" to="$(var ~/active_control_unit)"/>
     <remap from="~/control_mode/report" to="$(var ~/control_mode/report)"/>
     <remap from="~/control_mode/request" to="$(var ~/control_mode/request)"/>
   </node>
