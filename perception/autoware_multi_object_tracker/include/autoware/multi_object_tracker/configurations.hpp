@@ -91,17 +91,8 @@ struct TrackerOverlapManagerConfig
 
 struct TrackerCreationConfig
 {
-  // Two-factor key: (shape_type, label) → tracker type
-  using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
-  struct ShapeLabelKeyHash
-  {
-    std::size_t operator()(const ShapeLabelKey & k) const
-    {
-      const auto h1 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.first));
-      const auto h2 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.second));
-      return h1 ^ (h2 << 8);
-    }
-  };
+  using ShapeLabelKey = AssociatorConfig::ShapeLabelKey;
+  using ShapeLabelKeyHash = AssociatorConfig::ShapeLabelKeyHash;
   using ShapeLabelToTrackerTypeMap =
     std::unordered_map<ShapeLabelKey, types::TrackerType, ShapeLabelKeyHash>;
 

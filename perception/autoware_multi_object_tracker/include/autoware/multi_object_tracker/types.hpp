@@ -38,6 +38,7 @@
 #include <array>
 #include <functional>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -142,9 +143,8 @@ inline std::string toString(const ShapeType shape_type)
       return "polygon";
     case ShapeType::CYLINDER:
       return "cylinder";
-    default:
-      return "bounding_box";
   }
+  throw std::invalid_argument("Unknown ShapeType: " + std::to_string(static_cast<int>(shape_type)));
 }
 
 inline std::optional<ShapeType> toShapeType(const std::string & shape_name)
@@ -160,22 +160,17 @@ inline ShapeType toShapeType(const uint8_t shape_type)
   switch (shape_type) {
     case 0:
       return ShapeType::BOUNDING_BOX;
-    case 2:
-      return ShapeType::POLYGON;
     case 1:
       return ShapeType::CYLINDER;
+    case 2:
+      return ShapeType::POLYGON;
     default:
-      return ShapeType::BOUNDING_BOX;
+      return ShapeType::BOUNDING_BOX;  // treat unknown msg shape as bounding box
   }
 }
 
 inline constexpr std::array<ShapeType, 3> ALL_SHAPE_TYPES = {
   ShapeType::BOUNDING_BOX, ShapeType::CYLINDER, ShapeType::POLYGON};
-
-inline const std::array<ShapeType, 3> & allShapeTypes()
-{
-  return ALL_SHAPE_TYPES;
-}
 
 // constants
 constexpr float default_existence_probability = 0.75;
@@ -406,14 +401,13 @@ double getArea(const autoware_perception_msgs::msg::Shape & shape);
 
 }  // namespace types
 
+using types::ALL_SHAPE_TYPES;
 using types::ALL_TRACKER_TYPES;
 using types::allTrackerTypes;
 using types::isVehicleTrackerType;
-using types::ALL_SHAPE_TYPES;
-using types::allShapeTypes;
 using types::ShapeType;
-using types::toString;
 using types::toShapeType;
+using types::toString;
 using types::toTrackerType;
 using types::TrackerType;
 

@@ -132,34 +132,34 @@ autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
                                [TrackerType::PEDESTRIAN_AND_BICYCLE] =
     Params{3.0 * 3.0, 2.5, 0.001, 0.0001};
   config.association_params_map[{ShapeType::POLYGON, Label::CAR}][TrackerType::POLYGON] =
-    Params{5.0 * 5.0, 12.10, 3.6, 0.0001};
+    Params{5.0 * 5.0, 100.0, 0.0, 0.0001};
   config.association_params_map[{ShapeType::POLYGON, Label::CAR}][TrackerType::MULTIPLE_VEHICLE] =
     Params{5.0 * 5.0, 12.10, 3.6, 0.0001};
   config.association_params_map[{ShapeType::POLYGON, Label::TRUCK}][TrackerType::POLYGON] =
-    Params{5.0 * 5.0, 36.0, 6.0, 0.10};
+    Params{5.0 * 5.0, 100.0, 0.0, 0.0001};
   config.association_params_map[{ShapeType::POLYGON, Label::TRUCK}][TrackerType::MULTIPLE_VEHICLE] =
     Params{5.0 * 5.0, 36.0, 6.0, 0.10};
   config.association_params_map[{ShapeType::POLYGON, Label::BUS}][TrackerType::POLYGON] =
-    Params{5.0 * 5.0, 60.0, 10.0, 0.10};
+    Params{5.0 * 5.0, 100.0, 0.0, 0.0001};
   config.association_params_map[{ShapeType::POLYGON, Label::BUS}][TrackerType::MULTIPLE_VEHICLE] =
     Params{5.0 * 5.0, 60.0, 10.0, 0.10};
   config.association_params_map[{ShapeType::POLYGON, Label::TRAILER}][TrackerType::POLYGON] =
-    Params{5.0 * 5.0, 60.0, 10.0, 0.10};
+    Params{5.0 * 5.0, 100.0, 0.0, 0.0001};
   config
     .association_params_map[{ShapeType::POLYGON, Label::TRAILER}][TrackerType::MULTIPLE_VEHICLE] =
     Params{5.0 * 5.0, 60.0, 10.0, 0.10};
   config.association_params_map[{ShapeType::POLYGON, Label::MOTORCYCLE}][TrackerType::POLYGON] =
-    Params{3.0 * 3.0, 2.5, 0.1, -0.30};
+    Params{3.0 * 3.0, 2.5, 0.0, -0.30};
   config.association_params_map[{ShapeType::POLYGON, Label::MOTORCYCLE}]
                                [TrackerType::PEDESTRIAN_AND_BICYCLE] =
     Params{3.0 * 3.0, 2.5, 0.1, -0.30};
   config.association_params_map[{ShapeType::POLYGON, Label::BICYCLE}][TrackerType::POLYGON] =
-    Params{3.0 * 3.0, 2.5, 0.1, 0.0001};
+    Params{3.0 * 3.0, 2.5, 0.0, 0.0001};
   config.association_params_map[{ShapeType::POLYGON, Label::BICYCLE}]
                                [TrackerType::PEDESTRIAN_AND_BICYCLE] =
     Params{3.0 * 3.0, 2.5, 0.1, 0.0001};
   config.association_params_map[{ShapeType::POLYGON, Label::PEDESTRIAN}][TrackerType::POLYGON] =
-    Params{2.0 * 2.0, 2.0, 0.1, 0.0001};
+    Params{2.0 * 2.0, 2.0, 0.0, 0.0001};
   config.association_params_map[{ShapeType::POLYGON, Label::PEDESTRIAN}]
                                [TrackerType::PEDESTRIAN_AND_BICYCLE] =
     Params{2.0 * 2.0, 2.0, 0.1, 0.0001};
