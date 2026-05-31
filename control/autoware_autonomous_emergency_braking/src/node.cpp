@@ -966,9 +966,9 @@ void AEB::cropPointCloudWithEgoFootprintPath(
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   if (obstacle_ros_pointcloud_ptr_->width == 0 || obstacle_ros_pointcloud_ptr_->height == 0) {
     RCLCPP_DEBUG_SKIPFIRST_THROTTLE(
-    get_logger(), *get_clock(), 5000,
-    "[AEB]: Cropping point cloud with ego footprint path. Number of ego polygons: %zu",
-    ego_polys.size());
+      get_logger(), *get_clock(), 5000,
+      "[AEB]: Cropping point cloud with ego footprint path. Number of ego polygons: %zu",
+      ego_polys.size());
     return;
   }
   if (ego_polys.empty()) {
