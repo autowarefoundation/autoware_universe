@@ -10,7 +10,6 @@ Checks: "
   -bugprone-infinite-loop,
   -bugprone-integer-division,
   -bugprone-macro-parentheses,
-  -bugprone-multi-level-implicit-pointer-conversion,
   -bugprone-narrowing-conversions,
   -bugprone-optional-value-conversion,
   -bugprone-parent-virtual-call,
