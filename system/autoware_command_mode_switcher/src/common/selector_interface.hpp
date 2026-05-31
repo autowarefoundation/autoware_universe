@@ -21,7 +21,7 @@
 
 #include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
 #include <autoware_vehicle_msgs/srv/control_mode_command.hpp>
-#include <tier4_external_api_msgs/msg/election_status.hpp>
+#include <tier4_system_msgs/msg/active_control_unit.hpp>
 #include <tier4_system_msgs/msg/command_source_status.hpp>
 #include <tier4_system_msgs/srv/select_command_source.hpp>
 
@@ -91,13 +91,13 @@ public:
   bool is_selected(const std::optional<uint8_t> ecu) const;
 
 private:
-  using ElectionStatus = tier4_external_api_msgs::msg::ElectionStatus;
-  void on_election_status(const ElectionStatus & msg);
+  using ActiveControlUnit = tier4_system_msgs::msg::ActiveControlUnit;
+  void on_active_control_unit(const ActiveControlUnit & msg);
 
-  rclcpp::Subscription<ElectionStatus>::SharedPtr sub_election_status_;
+  rclcpp::Subscription<ActiveControlUnit>::SharedPtr sub_active_control_unit_;
 
   Callback notification_callback_;
-  std::optional<uint8_t> ecu_;
+  std::vector<uint8_t> units_;
 };
 
 }  // namespace autoware::command_mode_switcher
