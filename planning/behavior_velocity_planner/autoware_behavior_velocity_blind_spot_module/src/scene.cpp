@@ -197,9 +197,8 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(PathWithLaneId * pat
   const auto & ego_passage_time_interval = ego_passage_time_interval_opt.value();
   debug_data_.ego_passage_interval = ego_passage_time_interval;
 
-  const auto ego_footprint = autoware_utils::transform_vector(
-    planner_data_->vehicle_info_.createFootprint(),
-    autoware_utils::pose2transform(planner_data_->current_odometry->pose));
+  const auto ego_footprint =
+    planner_data_->vehicle_info_.createFootprint(0.0, planner_data_->current_odometry->pose);
   const auto ego_to_blind_side_lat_gap_opt = calc_ego_to_blind_spot_lanelet_lateral_gap(
     ego_footprint, blind_spot_lanelets_before_turning, turn_direction_);
 
