@@ -43,6 +43,7 @@
 #include <lanelet2_core/geometry/Lanelet.h>
 
 #include <limits>
+#include <string>
 #include <vector>
 
 namespace autoware::mission_planner_universe::lanelet2
@@ -73,6 +74,17 @@ lanelet::ConstLanelets get_lanelets_to(
     backward ? lanelets.begin() : lanelets.end(), ahead_lanelets.begin(), ahead_lanelets.end());
 
   return lanelets;
+}
+
+/**
+ * @brief Check if a lanelet has the direction_change tag
+ * @param lanelet The lanelet to check
+ * @return true if the lanelet has the direction_change attribute set to "yes"
+ */
+bool hasDirectionChangeAreaTag(const lanelet::ConstLanelet & lanelet)
+{
+  const std::string direction_change_tag = lanelet.attributeOr("direction_change", "none");
+  return direction_change_tag == "yes";
 }
 }  // namespace
 
