@@ -12,6 +12,7 @@ Checks: "
   -bugprone-macro-parentheses,
   -bugprone-multi-level-implicit-pointer-conversion,
   -bugprone-narrowing-conversions,
+  -bugprone-optional-value-conversion,
   -bugprone-parent-virtual-call,
   -bugprone-reserved-identifier,
   -bugprone-signed-char-misuse,
