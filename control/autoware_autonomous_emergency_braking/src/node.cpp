@@ -967,8 +967,7 @@ void AEB::cropPointCloudWithEgoFootprintPath(
   if (obstacle_ros_pointcloud_ptr_->width == 0 || obstacle_ros_pointcloud_ptr_->height == 0) {
     RCLCPP_DEBUG_SKIPFIRST_THROTTLE(
       get_logger(), *get_clock(), 5000,
-      "[AEB]: Cropping point cloud with ego footprint path. Number of ego polygons: %zu",
-      ego_polys.size());
+      "[AEB]: Received empty obstacle point cloud, skipping crop");
     return;
   }
   if (ego_polys.empty()) {
