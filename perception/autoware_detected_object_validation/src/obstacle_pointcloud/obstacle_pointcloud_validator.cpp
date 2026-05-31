@@ -305,8 +305,8 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
     validator_ = std::make_unique<Validator3D>(points_num_threshold_param_);
   }
 
-  objects_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "~/output/objects", rclcpp::QoS{1});
+  objects_pub_ = AUTOWARE_CREATE_PUBLISHER2(
+    autoware_perception_msgs::msg::DetectedObjects, "~/output/objects", rclcpp::QoS{1});
   debug_publisher_ =
     std::make_unique<autoware_utils::DebugPublisher>(this, "obstacle_pointcloud_based_validator");
 
@@ -319,8 +319,9 @@ void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_obstacle_pointcloud)
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stopwatch;
-  autoware_perception_msgs::msg::DetectedObjects output, removed_objects;
-  output.header = input_objects->header;
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(objects_pub_);
+  autoware_perception_msgs::msg::DetectedObjects removed_objects;
+  output->header = input_objects->header;
   removed_objects.header = input_objects->header;
 
   // Transform to pointcloud frame
@@ -350,7 +351,7 @@ void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
         transformed_object.kinematics.pose_with_covariance.pose.position.y;
     if (distance_sq > validate_max_distance_sq_) {
       // pass to output
-      output.objects.push_back(object);
+      output->objects.push_back(object);
       continue;
     }
 
@@ -361,14 +362,15 @@ void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
       debugger_->addPointcloudWithinPolygon(validator_->getDebugPointCloudWithinObject());
     }
     if (validated) {
-      output.objects.push_back(object);
+      output->objects.push_back(object);
     } else {
       removed_objects.objects.push_back(object);
     }
   }
 
-  objects_pub_->publish(output);
-  published_time_publisher_->publish_if_subscribed(objects_pub_, output.header.stamp);
+  const auto output_stamp = output->header.stamp;
+  objects_pub_->publish(std::move(output));
+  published_time_publisher_->publish_if_subscribed(objects_pub_, output_stamp);
   if (debugger_) {
     debugger_->publishRemovedObjects(removed_objects);
     debugger_->publishNeighborPointcloud(input_obstacle_pointcloud->header);
@@ -378,7 +380,7 @@ void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
   // Publish processing time info
   const double pipeline_latency =
     std::chrono::duration<double, std::milli>(
-      std::chrono::nanoseconds((this->get_clock()->now() - output.header.stamp).nanoseconds()))
+      std::chrono::nanoseconds((this->get_clock()->now() - output_stamp).nanoseconds()))
       .count();
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/pipeline_latency_ms", pipeline_latency);
