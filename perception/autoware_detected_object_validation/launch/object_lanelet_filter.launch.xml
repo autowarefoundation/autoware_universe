@@ -5,7 +5,6 @@
   <arg name="output/object" default="out_objects"/>
   <arg name="filtering_range_param" default="$(find-pkg-share autoware_detected_object_validation)/config/object_lanelet_filter.param.yaml"/>
 
-  <!-- Resolve LD_PRELOAD (heaphook) based on the ENABLE_AGNOCAST environment variable -->
   <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
 
   <node pkg="autoware_detected_object_validation" exec="object_lanelet_filter_node" name="object_lanelet_filter" output="screen">

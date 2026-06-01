@@ -95,11 +95,7 @@ rclcpp_components_register_node(occupancy_grid_based_validator
   EXECUTABLE occupancy_grid_based_validator_node
 )
 
-# The tests use the plain rclcpp::Node API (e.g. AutowareTestManager::test_pub_msg expects
-# rclcpp::Node::SharedPtr). When ENABLE_AGNOCAST=1, autoware::agnocast_wrapper::Node no longer
-# aliases rclcpp::Node, and the USE_AGNOCAST_ENABLED definition propagates (PUBLIC) from the
-# linked node libraries into the test translation units, so the tests would fail to compile.
-# They are therefore built only when Agnocast is disabled, mirroring autoware_shape_estimation.
+# Tests use the plain rclcpp::Node API, so build them only when Agnocast is disabled.
 if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
   ament_auto_add_gtest(detection_object_validation_tests
     test/test_utils.cpp

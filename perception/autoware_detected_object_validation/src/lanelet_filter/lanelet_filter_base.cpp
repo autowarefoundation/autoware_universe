@@ -379,7 +379,6 @@ void ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::objectCallback(
     }
   }
 
-  // Capture the stamp before the message ownership is transferred by publish().
   const auto output_stamp = output_object_msg->header.stamp;
   object_pub_->publish(std::move(output_object_msg));
   published_time_publisher_->publish_if_subscribed(object_pub_, output_stamp);
