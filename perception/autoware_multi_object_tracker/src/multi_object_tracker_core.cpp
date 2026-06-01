@@ -55,7 +55,8 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize processor
   processor = std::make_unique<TrackerProcessor>(
-    params.assignment_config, params.tracker_overlap_manager_config, params.input_channels_config);
+    params.creation_config, params.association_config, params.tracker_overlap_manager_config,
+    params.input_channels_config);
 
   last_publish_time = node.now();
   last_updated_time = node.now();
@@ -85,7 +86,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
 {
   // Validate that every (shape, label) association map is non-empty and that the
   // create-tracker for each pair is present in its match list.
-  for (const auto & [shape_label, profile_map] : params.assignment_config.association_params_map) {
+  for (const auto & [shape_label, profile_map] : params.association_config.association_params_map) {
     if (profile_map.empty()) {
       throw std::runtime_error(
         "Empty association configuration for (" + types::toString(shape_label.first) + ", " +
@@ -93,7 +94,7 @@ void process_parameters(MultiObjectTrackerParameters & params)
     }
 
     const auto default_tracker_opt =
-      get_map_value_if_exists(params.assignment_config.shape_tracker_map, shape_label);
+      get_map_value_if_exists(params.creation_config.shape_tracker_map, shape_label);
     if (!default_tracker_opt) continue;
 
     if (!get_map_value_if_exists(profile_map, default_tracker_opt->get())) {

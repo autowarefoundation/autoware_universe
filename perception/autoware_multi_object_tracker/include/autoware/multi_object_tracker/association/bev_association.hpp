@@ -68,7 +68,7 @@ struct PreparationData
 class BevAssociation : public AssociationBase
 {
 private:
-  TrackerAssignmentConfig config_;
+  TrackerAssociationConfig config_;
   const double score_threshold_;
   std::unique_ptr<gnn_solver::GnnSolverInterface> gnn_solver_ptr_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
@@ -87,7 +87,7 @@ private:
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  explicit BevAssociation(const TrackerAssignmentConfig & config);
+  explicit BevAssociation(const TrackerAssociationConfig & config);
   ~BevAssociation() override = default;
 
   /// AssociationBase implementation: full pipeline (calcAssociationData + assign).

@@ -40,12 +40,13 @@ namespace autoware::multi_object_tracker
 using autoware_utils_debug::ScopedTimeTrack;
 
 TrackerProcessor::TrackerProcessor(
-  const TrackerAssignmentConfig & assignment_config,
+  const TrackerCreationConfig & creation_config,
+  const TrackerAssociationConfig & association_config,
   const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
   const std::vector<types::InputChannel> & channels_config)
-: assignment_config_(assignment_config), channels_config_(channels_config)
+: creation_config_(creation_config), channels_config_(channels_config)
 {
-  association_manager_ = std::make_unique<AssociationManager>(assignment_config, channels_config);
+  association_manager_ = std::make_unique<AssociationManager>(association_config, channels_config);
   tracker_overlap_manager_ =
     std::make_unique<TrackerOverlapManager>(tracker_overlap_manager_config);
 }
@@ -158,7 +159,7 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   const classes::Label label = classes::getHighestProbLabel(object.classification);
 
   const auto tracker_type_opt = get_map_value_if_exists(
-    assignment_config_.shape_tracker_map,
+    creation_config_.shape_tracker_map,
     ShapeLabelKey{types::toShapeType(object.shape.type), label});
 
   if (tracker_type_opt) {
@@ -179,19 +180,19 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
         return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
       case types::TrackerType::POLYGON:
         return std::make_shared<PolygonTracker>(
-          time, object, assignment_config_.enable_unknown_object_velocity_estimation,
-          assignment_config_.enable_unknown_object_motion_output);
+          time, object, creation_config_.enable_unknown_object_velocity_estimation,
+          creation_config_.enable_unknown_object_motion_output);
       case types::TrackerType::PASS_THROUGH:
         return std::make_shared<PassThroughTracker>(time, object);
       default:
         return std::make_shared<PolygonTracker>(
-          time, object, assignment_config_.enable_unknown_object_velocity_estimation,
-          assignment_config_.enable_unknown_object_motion_output);
+          time, object, creation_config_.enable_unknown_object_velocity_estimation,
+          creation_config_.enable_unknown_object_motion_output);
     }
   }
   return std::make_shared<PolygonTracker>(
-    time, object, assignment_config_.enable_unknown_object_velocity_estimation,
-    assignment_config_.enable_unknown_object_motion_output);
+    time, object, creation_config_.enable_unknown_object_velocity_estimation,
+    creation_config_.enable_unknown_object_motion_output);
 }
 
 void TrackerProcessor::prune(const rclcpp::Time & time)

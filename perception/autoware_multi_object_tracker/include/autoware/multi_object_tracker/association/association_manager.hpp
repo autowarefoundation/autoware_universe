@@ -44,7 +44,7 @@ class AssociationManager
 {
 public:
   AssociationManager(
-    const TrackerAssignmentConfig & assignment_config,
+    const TrackerAssociationConfig & association_config,
     const std::vector<types::InputChannel> & channels_config);
 
   /// Match measurements to trackers using the channel's designated association.

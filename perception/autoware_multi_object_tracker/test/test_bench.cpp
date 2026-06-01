@@ -27,15 +27,12 @@
 #include <vector>
 
 // Configuration creation functions
-autoware::multi_object_tracker::TrackerAssignmentConfig createTrackerAssignmentConfig()
+autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfig()
 {
-  autoware::multi_object_tracker::TrackerAssignmentConfig config;
-  using autoware::multi_object_tracker::AssociationProfile;
+  autoware::multi_object_tracker::TrackerCreationConfig config;
   using autoware::multi_object_tracker::TrackerType;
   using Label = autoware::multi_object_tracker::classes::Label;
-  using ShapeType = autoware::multi_object_tracker::types::ShapeType;
 
-  // --- Creation table ---
   for (const auto shape_type : autoware::multi_object_tracker::ALL_SHAPE_TYPES) {
     config.setCreation(shape_type, Label::UNKNOWN, TrackerType::POLYGON);
     config.setCreation(shape_type, Label::CAR, TrackerType::MULTIPLE_VEHICLE);
@@ -46,6 +43,20 @@ autoware::multi_object_tracker::TrackerAssignmentConfig createTrackerAssignmentC
     config.setCreation(shape_type, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
     config.setCreation(shape_type, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
   }
+
+  config.enable_unknown_object_velocity_estimation = false;
+  config.enable_unknown_object_motion_output = false;
+
+  return config;
+}
+
+autoware::multi_object_tracker::TrackerAssociationConfig createTrackerAssociationConfig()
+{
+  autoware::multi_object_tracker::TrackerAssociationConfig config;
+  using autoware::multi_object_tracker::AssociationProfile;
+  using autoware::multi_object_tracker::TrackerType;
+  using Label = autoware::multi_object_tracker::classes::Label;
+  using ShapeType = autoware::multi_object_tracker::types::ShapeType;
 
   // --- Profile table (bounding_box) ---
   config.setProfile(
@@ -144,10 +155,7 @@ autoware::multi_object_tracker::TrackerAssignmentConfig createTrackerAssignmentC
     AssociationProfile{2.0 * 2.0, 2.0, 0.1, 0.0001});
 
   config.buildMaxDistances();
-
   config.unknown_association_giou_threshold = -0.8;
-  config.enable_unknown_object_velocity_estimation = false;
-  config.enable_unknown_object_motion_output = false;
 
   return config;
 }

@@ -72,46 +72,37 @@ using AssociationMap = std::unordered_map<ShapeLabelKey, AssociationProfileMap, 
 using ShapeLabelToTrackerTypeMap =
   std::unordered_map<ShapeLabelKey, types::TrackerType, ShapeLabelKeyHash>;
 
-// ---- Merged tracker assignment config (creation + association) ----
-//
-// Replaces the old separate TrackerCreationConfig + AssociatorConfig.
-// Both maps share the same ShapeLabelKey so they are merged here.
-//
-// Populate via setCreation() / setProfile(), then call buildMaxDistances() once.
-// The max_dist_sq_per_label is used by BevAssociation for the spatial search radius;
-// computing it here avoids repeating the map scan at association time.
-struct TrackerAssignmentConfig
+// ---- Tracker creation config: how to spawn a new tracker ----
+struct TrackerCreationConfig
 {
-  // --- Association scalars ---
+  bool enable_unknown_object_velocity_estimation{false};
+  bool enable_unknown_object_motion_output{false};
+
+  ShapeLabelToTrackerTypeMap shape_tracker_map;
+
+  void setCreation(types::ShapeType shape, classes::Label label, types::TrackerType tracker_type)
+  {
+    shape_tracker_map[{shape, label}] = tracker_type;
+  }
+};
+
+// ---- Tracker association config: how to match a measurement to a tracker ----
+struct TrackerAssociationConfig
+{
   double unknown_association_giou_threshold{0.0};
   double score_threshold{0.01};
   double ego_pose_max_age_sec{0.21};
 
-  // --- Creation scalars ---
-  bool enable_unknown_object_velocity_estimation{false};
-  bool enable_unknown_object_motion_output{false};
-
-  // --- Maps populated once at startup ---
-  ShapeLabelToTrackerTypeMap shape_tracker_map;
   AssociationMap association_params_map;
-
-  // Max squared search distance per measurement label (precomputed from association_params_map).
   LabelDoubleMap max_dist_sq_per_label;
 
-  // Convenience setter: shape_tracker_map[{shape, label}] = tt
-  void setCreation(types::ShapeType shape, classes::Label label, types::TrackerType tt)
-  {
-    shape_tracker_map[{shape, label}] = tt;
-  }
-
-  // Convenience setter: association_params_map[{shape, label}][tt] = profile
   void setProfile(
-    types::ShapeType shape, classes::Label label, types::TrackerType tt, AssociationProfile profile)
+    types::ShapeType shape, classes::Label label, types::TrackerType tracker_type,
+    AssociationProfile profile)
   {
-    association_params_map[{shape, label}][tt] = profile;
+    association_params_map[{shape, label}][tracker_type] = profile;
   }
 
-  // Precompute max_dist_sq_per_label from association_params_map.
   // Call once after all setProfile() calls are complete.
   void buildMaxDistances()
   {

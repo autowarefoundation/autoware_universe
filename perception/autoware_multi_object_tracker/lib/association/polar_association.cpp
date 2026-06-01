@@ -42,7 +42,7 @@ using autoware_utils_debug::ScopedTimeTrack;
 
 //// Construction & configuration
 
-PolarAssociation::PolarAssociation(const TrackerAssignmentConfig & config)
+PolarAssociation::PolarAssociation(const TrackerAssociationConfig & config)
 : config_(config), score_threshold_(config.score_threshold)
 {
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();

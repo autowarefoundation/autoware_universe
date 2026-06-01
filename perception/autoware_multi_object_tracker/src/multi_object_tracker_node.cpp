@@ -42,13 +42,13 @@ namespace
 {
 TrackerType parseTrackerType(const std::string & name, const std::string & param_name)
 {
-  const auto tt = toTrackerType(name);
-  if (!tt) {
+  const auto tracker_type = toTrackerType(name);
+  if (!tracker_type) {
     throw std::invalid_argument(
       "Invalid tracker type: '" + name + "' in '" + param_name +
       "'. Strict string match is required.");
   }
-  return *tt;
+  return *tracker_type;
 }
 }  // namespace
 
@@ -151,20 +151,21 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     // Safety fill: POLYGON for every (shape, label) before any override.
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       for (const auto label : classes::trackedLabels()) {
-        params_.assignment_config.setCreation(shape_type, label, TrackerType::POLYGON);
+        params_.creation_config.setCreation(shape_type, label, TrackerType::POLYGON);
       }
     }
 
     // Profile cache: loads declare_parameter exactly once per (tracker_type, label).
     std::unordered_map<classes::Label, AssociationProfileMap, EnumClassHash> profile_cache;
-    auto get_profile = [&](classes::Label label, TrackerType tt) -> AssociationProfile {
+    auto get_profile = [&](classes::Label label, TrackerType tracker_type) -> AssociationProfile {
       auto & label_cache = profile_cache[label];
-      if (const auto it = label_cache.find(tt); it != label_cache.end()) {
+      if (const auto it = label_cache.find(tracker_type); it != label_cache.end()) {
         return it->second;
       }
-      const auto prefix = "tracker_profiles." + toString(tt) + "." + classes::toString(label) + ".";
+      const auto prefix =
+        "tracker_profiles." + toString(tracker_type) + "." + classes::toString(label) + ".";
       const auto max_dist = declare_parameter<double>(prefix + "max_dist");
-      return label_cache[tt] = AssociationProfile{
+      return label_cache[tracker_type] = AssociationProfile{
                max_dist * max_dist, declare_parameter<double>(prefix + "max_area"),
                declare_parameter<double>(prefix + "min_area"),
                declare_parameter<double>(prefix + "min_iou")};
@@ -176,22 +177,22 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
       // create
       const auto create_param = "tracker_assignment." + label_name + ".create";
-      const TrackerType create_tt =
+      const TrackerType create_tracker_type =
         parseTrackerType(declare_parameter<std::string>(create_param), create_param);
       for (const auto shape_type : ALL_SHAPE_TYPES) {
-        params_.assignment_config.setCreation(shape_type, label, create_tt);
+        params_.creation_config.setCreation(shape_type, label, create_tracker_type);
       }
 
       // match
       const auto match_param = "tracker_assignment." + label_name + ".match";
       const auto match_names =
         declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
-      for (const auto & tt_name : match_names) {
-        const TrackerType tt = parseTrackerType(tt_name, match_param);
-        if (tt == TrackerType::PASS_THROUGH) continue;
-        const auto profile = get_profile(label, tt);
+      for (const auto & tracker_type_name : match_names) {
+        const TrackerType tracker_type = parseTrackerType(tracker_type_name, match_param);
+        if (tracker_type == TrackerType::PASS_THROUGH) continue;
+        const auto profile = get_profile(label, tracker_type);
         for (const auto shape_type : ALL_SHAPE_TYPES) {
-          params_.assignment_config.setProfile(shape_type, label, tt, profile);
+          params_.association_config.setProfile(shape_type, label, tracker_type, profile);
         }
       }
     }
@@ -206,7 +207,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         const auto create_param = "tracker_assignment." + shape_name + "." + label_name + ".create";
         const auto create_str = declare_parameter<std::string>(create_param, "");
         if (!create_str.empty()) {
-          params_.assignment_config.setCreation(
+          params_.creation_config.setCreation(
             shape_type, label, parseTrackerType(create_str, create_param));
         }
 
@@ -214,25 +215,26 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         const auto match_param = "tracker_assignment." + shape_name + "." + label_name + ".match";
         const auto match_names =
           declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
-        for (const auto & tt_name : match_names) {
-          const TrackerType tt = parseTrackerType(tt_name, match_param);
-          if (tt == TrackerType::PASS_THROUGH) continue;
-          params_.assignment_config.setProfile(shape_type, label, tt, get_profile(label, tt));
+        for (const auto & tracker_type_name : match_names) {
+          const TrackerType tracker_type = parseTrackerType(tracker_type_name, match_param);
+          if (tracker_type == TrackerType::PASS_THROUGH) continue;
+          params_.association_config.setProfile(
+            shape_type, label, tracker_type, get_profile(label, tracker_type));
         }
       }
     }
 
     // Validate: at least one match entry must exist if any non-passthrough tracker is configured.
     const bool has_non_passthrough = std::any_of(
-      params_.assignment_config.shape_tracker_map.begin(),
-      params_.assignment_config.shape_tracker_map.end(),
+      params_.creation_config.shape_tracker_map.begin(),
+      params_.creation_config.shape_tracker_map.end(),
       [](const auto & e) { return e.second != TrackerType::PASS_THROUGH; });
-    if (params_.assignment_config.association_params_map.empty() && has_non_passthrough) {
+    if (params_.association_config.association_params_map.empty() && has_non_passthrough) {
       throw std::invalid_argument(
         "No tracker_assignment.match entries found — check the parameter file.");
     }
 
-    params_.assignment_config.buildMaxDistances();
+    params_.association_config.buildMaxDistances();
   }
 
   params_.tracker_overlap_manager_config.min_known_object_removal_iou =
@@ -264,13 +266,13 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
        params_.tracker_overlap_manager_config.pruning_distance_thresholds) {
     params_.tracker_overlap_manager_config.pruning_distance_thresholds_sq[label] = dist * dist;
   }
-  params_.assignment_config.enable_unknown_object_velocity_estimation =
+  params_.creation_config.enable_unknown_object_velocity_estimation =
     declare_parameter<bool>("enable_unknown_object_velocity_estimation");
-  params_.assignment_config.enable_unknown_object_motion_output =
+  params_.creation_config.enable_unknown_object_motion_output =
     declare_parameter<bool>("enable_unknown_object_motion_output");
 
   // Set the unknown-unknown association GIoU threshold
-  params_.assignment_config.unknown_association_giou_threshold =
+  params_.association_config.unknown_association_giou_threshold =
     declare_parameter<double>("unknown_association_giou_threshold");
 
   // process parameters
