@@ -124,7 +124,11 @@ void TrafficLightArbiter::onMap(const LaneletMapBin::ConstSharedPtr msg)
 
   // Filter only pedestrian signals to distinguish them in signal matching
   const auto pedestrian_signals = lanelet::filter_pedestrian_signals(map);
-  core_->setPedestrianSignals(pedestrian_signals);
+  std::unordered_set<lanelet::Id> pedestrian_signal_ids;
+  for (const auto & signal : pedestrian_signals) {
+    pedestrian_signal_ids.emplace(signal->id());
+  }
+  core_->setPedestrianSignalIds(std::move(pedestrian_signal_ids));
 }
 
 void TrafficLightArbiter::onPerceptionMsg(const TrafficSignalArray::ConstSharedPtr msg)

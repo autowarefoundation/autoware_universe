@@ -45,11 +45,10 @@ void TrafficLightArbiterCore::setTrafficLightIds(std::unordered_set<lanelet::Id>
   map_regulatory_elements_set_ = std::make_unique<std::unordered_set<lanelet::Id>>(std::move(ids));
 }
 
-void TrafficLightArbiterCore::setPedestrianSignals(
-  const std::vector<TrafficLightConstPtr> & pedestrian_signals)
+void TrafficLightArbiterCore::setPedestrianSignalIds(std::unordered_set<lanelet::Id> ids)
 {
   if (enable_signal_matching_) {
-    signal_match_validator_->setPedestrianSignals(pedestrian_signals);
+    signal_match_validator_->setPedestrianSignalIds(std::move(ids));
   }
 }
 

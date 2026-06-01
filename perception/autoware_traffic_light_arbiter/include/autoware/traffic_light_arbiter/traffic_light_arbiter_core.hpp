@@ -49,7 +49,7 @@ public:
 
   void setTrafficLightIds(std::unordered_set<lanelet::Id> ids);
 
-  void setPedestrianSignals(const std::vector<TrafficLightConstPtr> & pedestrian_signals);
+  void setPedestrianSignalIds(std::unordered_set<lanelet::Id> ids);
 
   bool isExternalOutdated(const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const;
 

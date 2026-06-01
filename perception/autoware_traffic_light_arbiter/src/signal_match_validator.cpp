@@ -18,6 +18,7 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace util
@@ -280,12 +281,9 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
   return validated_signals;
 }
 
-void SignalMatchValidator::setPedestrianSignals(
-  const std::vector<TrafficLightConstPtr> & pedestrian_signals)
+void SignalMatchValidator::setPedestrianSignalIds(std::unordered_set<lanelet::Id> ids)
 {
-  for (const auto & pedestrian_signal : pedestrian_signals) {
-    map_pedestrian_signal_regulatory_elements_set_.emplace(pedestrian_signal->id());
-  }
+  map_pedestrian_signal_regulatory_elements_set_ = std::move(ids);
 }
 
 void SignalMatchValidator::setSourcePriority(const SourcePriority source_priority)

@@ -73,15 +73,16 @@ public:
     const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals);
 
   /**
-   * @brief Sets the pedestrian signals to be considered during validation.
+   * @brief Sets the pedestrian signal IDs to be considered during validation.
    *
-   * This method allows the specification of pedestrian signals, which are then
-   * used to adjust the validation logic, acknowledging their unique characteristics
-   * in traffic signal datasets.
+   * Pedestrian-classified signals receive distinct reconciliation handling in
+   * validateSignals(). The caller supplies the set of regulatory-element IDs
+   * (typically derived from crosswalk lanelets); only the IDs are needed for
+   * the routing decision.
    *
-   * @param pedestrian_signals A vector of pedestrian signal pointers.
+   * @param ids Set of regulatory-element IDs classified as pedestrian signals.
    */
-  void setPedestrianSignals(const std::vector<TrafficLightConstPtr> & pedestrian_signals);
+  void setPedestrianSignalIds(std::unordered_set<lanelet::Id> ids);
 
   /**
    * @brief Sets the source priority for signal selection.
