@@ -4,7 +4,6 @@
     # 'create': which tracker to spawn for a new detection (was initial_tracker).
     # 'match':  ordered list of tracker types eligible for association (was can_assign).
     # Label-level entries apply to all shapes; shape blocks override only where listed.
-    # pass_through_tracker entries omit 'match' (no profile, no association needed).
     tracker_assignment:
       # label-level defaults
       unknown:    {create: polygon_tracker,                match: [polygon_tracker, multi_vehicle_tracker, pedestrian_and_bicycle_tracker]}
@@ -31,7 +30,6 @@
 
     # Tracker profiles: each tracker type defines its association thresholds per label.
     # Only labels where the tracker is actually used are listed.
-    # pass_through_tracker has no thresholds — association is bypassed entirely.
     tracker_profiles:
       multi_vehicle_tracker:
         unknown:  {max_dist: 4.0, max_area: 60.0,  min_area: 3.6,   min_iou: 0.0001}
