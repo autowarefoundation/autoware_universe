@@ -98,12 +98,14 @@ void process_parameters(MultiObjectTrackerParameters & params)
     if (!default_tracker_opt) continue;
 
     if (!get_map_value_if_exists(profile_map, default_tracker_opt->get())) {
+      const auto shape_str = types::toString(shape_label.first);
+      const auto label_str = classes::toString(shape_label.second);
       throw std::runtime_error(
         "Inconsistent configuration: create tracker '" + toString(default_tracker_opt->get()) +
-        "' for (" + types::toString(shape_label.first) + ", " +
-        classes::toString(shape_label.second) + ") is not included in tracker_assignment." +
-        types::toString(shape_label.first) + "." + classes::toString(shape_label.second) +
-        ".match");
+        "' for (" + shape_str + ", " + label_str +
+        ") is not included in the match list. Check tracker_assignment." + shape_str + "." +
+        label_str + ".match (shape override) or tracker_assignment." + label_str +
+        ".match (label default).");
     }
   }
 }
