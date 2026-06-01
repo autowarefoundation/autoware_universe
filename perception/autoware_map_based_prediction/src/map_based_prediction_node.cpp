@@ -633,8 +633,8 @@ void MapBasedPredictionNode::trafficSignalsCallback(
   predictor_vru_->setTrafficSignal(*msg);
 }
 
-void MapBasedPredictionNode::objectsCallback(
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) in_objects)
+void MapBasedPredictionNode::objectsCallback(AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects)
+                                               in_objects)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
