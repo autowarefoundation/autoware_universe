@@ -14,56 +14,11 @@
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/traffic_light_arbiter/traffic_light_arbiter.hpp>
-#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <rclcpp/time.hpp>
 
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
-
-#include <algorithm>
 #include <memory>
 #include <string>
-#include <unordered_set>
-#include <utility>
 #include <vector>
-
-namespace lanelet
-{
-
-std::unordered_set<lanelet::Id> extract_traffic_light_ids(const LaneletMapConstPtr map)
-{
-  namespace query = lanelet::utils::query;
-
-  const auto all_lanelets = query::laneletLayer(map);
-
-  std::unordered_set<lanelet::Id> traffic_light_ids;
-  for (const auto & lanelet : all_lanelets) {
-    const auto traffic_lights = lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
-    for (const auto & traffic_light : traffic_lights) {
-      traffic_light_ids.emplace(traffic_light->id());
-    }
-  }
-  return traffic_light_ids;
-}
-
-std::unordered_set<lanelet::Id> extract_pedestrian_traffic_light_ids(const LaneletMapConstPtr map)
-{
-  namespace query = lanelet::utils::query;
-
-  const auto all_lanelets = query::laneletLayer(map);
-  const auto crosswalks = query::crosswalkLanelets(all_lanelets);
-
-  std::unordered_set<lanelet::Id> pedestrian_traffic_light_ids;
-  for (const auto & crosswalk : crosswalks) {
-    const auto traffic_lights = crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
-    for (const auto & traffic_light : traffic_lights) {
-      pedestrian_traffic_light_ids.emplace(traffic_light->id());
-    }
-  }
-  return pedestrian_traffic_light_ids;
-}
-
-}  // namespace lanelet
 
 namespace autoware::traffic_light
 {
@@ -114,9 +69,7 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
 
 void TrafficLightArbiter::on_map(const LaneletMapBin::ConstSharedPtr msg)
 {
-  const auto map = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg);
-  core_->set_traffic_light_ids(lanelet::extract_traffic_light_ids(map));
-  core_->set_pedestrian_traffic_light_ids(lanelet::extract_pedestrian_traffic_light_ids(map));
+  core_->set_map(autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 }
 
 void TrafficLightArbiter::on_perception_msg(const TrafficSignalArray::ConstSharedPtr msg)

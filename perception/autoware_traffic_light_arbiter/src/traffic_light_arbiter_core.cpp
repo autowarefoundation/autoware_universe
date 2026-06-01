@@ -13,17 +13,61 @@
 // limitations under the License.
 
 #include <autoware/traffic_light_arbiter/traffic_light_arbiter_core.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
+
+#include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
 #include <algorithm>
 #include <map>
 #include <memory>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
 {
+
+namespace
+{
+
+std::unordered_set<lanelet::Id> extract_traffic_light_ids(const lanelet::LaneletMapConstPtr & map)
+{
+  namespace query = lanelet::utils::query;
+
+  const auto all_lanelets = query::laneletLayer(map);
+
+  std::unordered_set<lanelet::Id> traffic_light_ids;
+  for (const auto & lanelet : all_lanelets) {
+    const auto traffic_lights = lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
+    for (const auto & traffic_light : traffic_lights) {
+      traffic_light_ids.emplace(traffic_light->id());
+    }
+  }
+  return traffic_light_ids;
+}
+
+std::unordered_set<lanelet::Id> extract_pedestrian_traffic_light_ids(
+  const lanelet::LaneletMapConstPtr & map)
+{
+  namespace query = lanelet::utils::query;
+
+  const auto all_lanelets = query::laneletLayer(map);
+  const auto crosswalks = query::crosswalkLanelets(all_lanelets);
+
+  std::unordered_set<lanelet::Id> pedestrian_traffic_light_ids;
+  for (const auto & crosswalk : crosswalks) {
+    const auto traffic_lights = crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
+    for (const auto & traffic_light : traffic_lights) {
+      pedestrian_traffic_light_ids.emplace(traffic_light->id());
+    }
+  }
+  return pedestrian_traffic_light_ids;
+}
+
+}  // namespace
 
 TrafficLightArbiterCore::TrafficLightArbiterCore(
   SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
@@ -39,15 +83,13 @@ TrafficLightArbiterCore::TrafficLightArbiterCore(
   }
 }
 
-void TrafficLightArbiterCore::set_traffic_light_ids(std::unordered_set<lanelet::Id> ids)
+void TrafficLightArbiterCore::set_map(const lanelet::LaneletMapConstPtr & map)
 {
-  map_regulatory_elements_set_ = std::make_unique<std::unordered_set<lanelet::Id>>(std::move(ids));
-}
-
-void TrafficLightArbiterCore::set_pedestrian_traffic_light_ids(std::unordered_set<lanelet::Id> ids)
-{
+  map_regulatory_elements_set_ =
+    std::make_unique<std::unordered_set<lanelet::Id>>(extract_traffic_light_ids(map));
   if (enable_signal_matching_) {
-    signal_match_validator_->set_pedestrian_traffic_light_ids(std::move(ids));
+    signal_match_validator_->set_pedestrian_traffic_light_ids(
+      extract_pedestrian_traffic_light_ids(map));
   }
 }
 

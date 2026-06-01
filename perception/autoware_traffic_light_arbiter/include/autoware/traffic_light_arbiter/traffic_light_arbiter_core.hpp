@@ -47,9 +47,11 @@ public:
     SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
     double external_time_tolerance, double perception_time_tolerance);
 
-  void set_traffic_light_ids(std::unordered_set<lanelet::Id> ids);
-
-  void set_pedestrian_traffic_light_ids(std::unordered_set<lanelet::Id> ids);
+  // Load map-derived state from a parsed LaneletMap. Core extracts the
+  // regulatory-element IDs it needs (vehicle traffic lights and, when
+  // signal matching is enabled, pedestrian traffic lights) internally so
+  // callers don't have to know which subsets matter.
+  void set_map(const lanelet::LaneletMapConstPtr & map);
 
   struct ExpiredExternalSignal
   {
