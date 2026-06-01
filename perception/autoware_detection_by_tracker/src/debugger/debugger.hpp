@@ -55,18 +55,22 @@ public:
   }
 
   ~Debugger() {}
+  // cppcheck-suppress functionStatic
   void publishInitialObjects(const tier4_perception_msgs::msg::DetectedObjectsWithFeature & input)
   {
     initial_objects_pub_->publish(removeFeature(input));
   }
+  // cppcheck-suppress functionStatic
   void publishTrackedObjects(const autoware_perception_msgs::msg::DetectedObjects & input)
   {
     tracked_objects_pub_->publish(input);
   }
+  // cppcheck-suppress functionStatic
   void publishMergedObjects(const tier4_perception_msgs::msg::DetectedObjectsWithFeature & input)
   {
     merged_objects_pub_->publish(removeFeature(input));
   }
+  // cppcheck-suppress functionStatic
   void publishDividedObjects(const tier4_perception_msgs::msg::DetectedObjectsWithFeature & input)
   {
     divided_objects_pub_->publish(removeFeature(input));
