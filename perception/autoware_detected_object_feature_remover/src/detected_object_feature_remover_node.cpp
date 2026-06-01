@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace autoware::detected_object_feature_remover
