@@ -964,6 +964,12 @@ void AEB::cropPointCloudWithEgoFootprintPath(
   const std::vector<Polygon2d> & ego_polys, PointCloud::Ptr filtered_objects)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  if (obstacle_ros_pointcloud_ptr_->width == 0 || obstacle_ros_pointcloud_ptr_->height == 0) {
+    RCLCPP_DEBUG_SKIPFIRST_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "[AEB]: Received empty obstacle point cloud, skipping crop");
+    return;
+  }
   if (ego_polys.empty()) {
     return;
   }
