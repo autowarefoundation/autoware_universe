@@ -110,6 +110,10 @@ class SensorKitLoader:
         # Try source directory as fallback
         source_mapping = Path(__file__).resolve().parents[3] / "config" / "sensor_mapping.yaml"
         if source_mapping.exists():
+            self.logger.warning(
+                f"Sensor mapping file not found at requested path: {mapping_file}. "
+                f"Falling back to source-tree default: {source_mapping}"
+            )
             return str(source_mapping)
 
         self.logger.error(f"Sensor mapping file not found: {mapping_file}")

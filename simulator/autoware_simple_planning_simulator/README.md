@@ -24,7 +24,7 @@ The purpose of this simulator is for the integration test of planning and contro
 - input/manual_gear_command [`autoware_vehicle_msgs/msg/GearCommand`] : target gear command (used when control_mode_request = Manual)
 - input/turn_indicators_command [`autoware_vehicle_msgs/msg/TurnIndicatorsCommand`] : target turn indicator command
 - input/hazard_lights_command [`autoware_vehicle_msgs/msg/HazardLightsCommand`] : target hazard lights command
-- input/control_mode_request [`tier4_vehicle_msgs::srv::ControlModeRequest`] : mode change for Auto/Manual driving
+- input/control_mode_request [`autoware_vehicle_msgs/srv/ControlModeCommand`] : mode change for Auto/Manual driving
 
 ### output
 
