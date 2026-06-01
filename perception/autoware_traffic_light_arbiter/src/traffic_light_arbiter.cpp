@@ -32,11 +32,15 @@ namespace lanelet
 
 std::unordered_set<lanelet::Id> extract_traffic_light_ids(const LaneletMapConstPtr map)
 {
+  namespace query = lanelet::utils::query;
+
+  const auto all_lanelets = query::laneletLayer(map);
+
   std::unordered_set<lanelet::Id> traffic_light_ids;
-  for (const auto & element : map->regulatoryElementLayer) {
-    const auto signal = std::dynamic_pointer_cast<const TrafficLight>(element);
-    if (signal) {
-      traffic_light_ids.emplace(signal->id());
+  for (const auto & lanelet : all_lanelets) {
+    const auto traffic_lights = lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
+    for (const auto & traffic_light : traffic_lights) {
+      traffic_light_ids.emplace(traffic_light->id());
     }
   }
   return traffic_light_ids;
@@ -51,10 +55,9 @@ std::unordered_set<lanelet::Id> extract_pedestrian_traffic_light_ids(const Lanel
 
   std::unordered_set<lanelet::Id> pedestrian_traffic_light_ids;
   for (const auto & crosswalk : crosswalks) {
-    const auto traffic_light_reg_elems =
-      crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
-    for (const auto & reg_elem : traffic_light_reg_elems) {
-      pedestrian_traffic_light_ids.emplace(reg_elem->id());
+    const auto traffic_lights = crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
+    for (const auto & traffic_light : traffic_lights) {
+      pedestrian_traffic_light_ids.emplace(traffic_light->id());
     }
   }
   return pedestrian_traffic_light_ids;
