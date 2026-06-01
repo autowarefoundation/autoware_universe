@@ -66,8 +66,7 @@ using AssociationProfileMap =
   std::unordered_map<types::TrackerType, AssociationProfile, EnumClassHash>;
 
 // ---- Outer map: (shape, label) → AssociationProfileMap ----
-using AssociationMap =
-  std::unordered_map<ShapeLabelKey, AssociationProfileMap, ShapeLabelKeyHash>;
+using AssociationMap = std::unordered_map<ShapeLabelKey, AssociationProfileMap, ShapeLabelKeyHash>;
 
 // ---- (shape, label) → TrackerType (creation routing) ----
 using ShapeLabelToTrackerTypeMap =
@@ -107,8 +106,7 @@ struct TrackerAssignmentConfig
 
   // Convenience setter: association_params_map[{shape, label}][tt] = profile
   void setProfile(
-    types::ShapeType shape, classes::Label label, types::TrackerType tt,
-    AssociationProfile profile)
+    types::ShapeType shape, classes::Label label, types::TrackerType tt, AssociationProfile profile)
   {
     association_params_map[{shape, label}][tt] = profile;
   }

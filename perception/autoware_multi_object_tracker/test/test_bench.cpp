@@ -32,86 +32,116 @@ autoware::multi_object_tracker::TrackerAssignmentConfig createTrackerAssignmentC
   autoware::multi_object_tracker::TrackerAssignmentConfig config;
   using autoware::multi_object_tracker::AssociationProfile;
   using autoware::multi_object_tracker::TrackerType;
-  using Label    = autoware::multi_object_tracker::classes::Label;
+  using Label = autoware::multi_object_tracker::classes::Label;
   using ShapeType = autoware::multi_object_tracker::types::ShapeType;
 
   // --- Creation table ---
   for (const auto shape_type : autoware::multi_object_tracker::ALL_SHAPE_TYPES) {
-    config.setCreation(shape_type, Label::UNKNOWN,    TrackerType::POLYGON);
-    config.setCreation(shape_type, Label::CAR,        TrackerType::MULTIPLE_VEHICLE);
-    config.setCreation(shape_type, Label::TRUCK,      TrackerType::MULTIPLE_VEHICLE);
-    config.setCreation(shape_type, Label::BUS,        TrackerType::MULTIPLE_VEHICLE);
-    config.setCreation(shape_type, Label::TRAILER,    TrackerType::MULTIPLE_VEHICLE);
+    config.setCreation(shape_type, Label::UNKNOWN, TrackerType::POLYGON);
+    config.setCreation(shape_type, Label::CAR, TrackerType::MULTIPLE_VEHICLE);
+    config.setCreation(shape_type, Label::TRUCK, TrackerType::MULTIPLE_VEHICLE);
+    config.setCreation(shape_type, Label::BUS, TrackerType::MULTIPLE_VEHICLE);
+    config.setCreation(shape_type, Label::TRAILER, TrackerType::MULTIPLE_VEHICLE);
     config.setCreation(shape_type, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE);
-    config.setCreation(shape_type, Label::BICYCLE,    TrackerType::PEDESTRIAN_AND_BICYCLE);
+    config.setCreation(shape_type, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
     config.setCreation(shape_type, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
   }
 
   // --- Profile table (bounding_box) ---
-  config.setProfile(ShapeType::BOUNDING_BOX, Label::UNKNOWN, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{4.0*4.0, 60.0, 3.6, 0.0001});
-  config.setProfile(ShapeType::BOUNDING_BOX, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{3.0*3.0, 2.5, 0.001, 0.0001});
-  config.setProfile(ShapeType::BOUNDING_BOX, Label::CAR, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{5.0*5.0, 12.10, 3.6, 0.0001});
-  config.setProfile(ShapeType::BOUNDING_BOX, Label::TRUCK, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{5.0*5.0, 36.0, 6.0, 0.10});
-  config.setProfile(ShapeType::BOUNDING_BOX, Label::BUS, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{5.0*5.0, 60.0, 10.0, 0.10});
-  config.setProfile(ShapeType::BOUNDING_BOX, Label::TRAILER, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{5.0*5.0, 60.0, 10.0, 0.10});
-  config.setProfile(ShapeType::BOUNDING_BOX, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{3.0*3.0, 2.5, 0.1, -0.30});
-  config.setProfile(ShapeType::BOUNDING_BOX, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{3.0*3.0, 2.5, 0.1, 0.0001});
-  config.setProfile(ShapeType::BOUNDING_BOX, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{2.0*2.0, 2.0, 0.1, 0.0001});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::UNKNOWN, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{4.0 * 4.0, 60.0, 3.6, 0.0001});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.001, 0.0001});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::CAR, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 12.10, 3.6, 0.0001});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::TRUCK, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 36.0, 6.0, 0.10});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::BUS, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 60.0, 10.0, 0.10});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::TRAILER, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 60.0, 10.0, 0.10});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, -0.30});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, 0.0001});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{2.0 * 2.0, 2.0, 0.1, 0.0001});
 
   // --- Profile table (polygon) ---
-  config.setProfile(ShapeType::POLYGON, Label::UNKNOWN, TrackerType::POLYGON,
-    AssociationProfile{4.0*4.0, 100.0, 0.0, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::UNKNOWN, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{4.0*4.0, 60.0, 3.6, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{3.0*3.0, 2.5, 0.001, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::CAR, TrackerType::POLYGON,
-    AssociationProfile{5.0*5.0, 100.0, 0.0, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::CAR, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{5.0*5.0, 12.10, 3.6, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::TRUCK, TrackerType::POLYGON,
-    AssociationProfile{5.0*5.0, 100.0, 0.0, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::TRUCK, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{5.0*5.0, 36.0, 6.0, 0.10});
-  config.setProfile(ShapeType::POLYGON, Label::BUS, TrackerType::POLYGON,
-    AssociationProfile{5.0*5.0, 100.0, 0.0, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::BUS, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{5.0*5.0, 60.0, 10.0, 0.10});
-  config.setProfile(ShapeType::POLYGON, Label::TRAILER, TrackerType::POLYGON,
-    AssociationProfile{5.0*5.0, 100.0, 0.0, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::TRAILER, TrackerType::MULTIPLE_VEHICLE,
-    AssociationProfile{5.0*5.0, 60.0, 10.0, 0.10});
-  config.setProfile(ShapeType::POLYGON, Label::MOTORCYCLE, TrackerType::POLYGON,
-    AssociationProfile{3.0*3.0, 2.5, 0.0, -0.30});
-  config.setProfile(ShapeType::POLYGON, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{3.0*3.0, 2.5, 0.1, -0.30});
-  config.setProfile(ShapeType::POLYGON, Label::BICYCLE, TrackerType::POLYGON,
-    AssociationProfile{3.0*3.0, 2.5, 0.0, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{3.0*3.0, 2.5, 0.1, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::PEDESTRIAN, TrackerType::POLYGON,
-    AssociationProfile{2.0*2.0, 2.0, 0.0, 0.0001});
-  config.setProfile(ShapeType::POLYGON, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{2.0*2.0, 2.0, 0.1, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::UNKNOWN, TrackerType::POLYGON,
+    AssociationProfile{4.0 * 4.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::UNKNOWN, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{4.0 * 4.0, 60.0, 3.6, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.001, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::CAR, TrackerType::POLYGON,
+    AssociationProfile{5.0 * 5.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::CAR, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 12.10, 3.6, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::TRUCK, TrackerType::POLYGON,
+    AssociationProfile{5.0 * 5.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::TRUCK, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 36.0, 6.0, 0.10});
+  config.setProfile(
+    ShapeType::POLYGON, Label::BUS, TrackerType::POLYGON,
+    AssociationProfile{5.0 * 5.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::BUS, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 60.0, 10.0, 0.10});
+  config.setProfile(
+    ShapeType::POLYGON, Label::TRAILER, TrackerType::POLYGON,
+    AssociationProfile{5.0 * 5.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::TRAILER, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 60.0, 10.0, 0.10});
+  config.setProfile(
+    ShapeType::POLYGON, Label::MOTORCYCLE, TrackerType::POLYGON,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.0, -0.30});
+  config.setProfile(
+    ShapeType::POLYGON, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, -0.30});
+  config.setProfile(
+    ShapeType::POLYGON, Label::BICYCLE, TrackerType::POLYGON,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::PEDESTRIAN, TrackerType::POLYGON,
+    AssociationProfile{2.0 * 2.0, 2.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{2.0 * 2.0, 2.0, 0.1, 0.0001});
 
   // --- Profile table (cylinder) ---
-  config.setProfile(ShapeType::CYLINDER, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{3.0*3.0, 2.5, 0.001, 0.0001});
-  config.setProfile(ShapeType::CYLINDER, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{3.0*3.0, 2.5, 0.1, -0.30});
-  config.setProfile(ShapeType::CYLINDER, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{3.0*3.0, 2.5, 0.1, 0.0001});
-  config.setProfile(ShapeType::CYLINDER, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
-    AssociationProfile{2.0*2.0, 2.0, 0.1, 0.0001});
+  config.setProfile(
+    ShapeType::CYLINDER, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.001, 0.0001});
+  config.setProfile(
+    ShapeType::CYLINDER, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, -0.30});
+  config.setProfile(
+    ShapeType::CYLINDER, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, 0.0001});
+  config.setProfile(
+    ShapeType::CYLINDER, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{2.0 * 2.0, 2.0, 0.1, 0.0001});
 
   config.buildMaxDistances();
 

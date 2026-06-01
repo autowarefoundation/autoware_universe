@@ -162,8 +162,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       if (const auto it = label_cache.find(tt); it != label_cache.end()) {
         return it->second;
       }
-      const auto prefix =
-        "tracker_profiles." + toString(tt) + "." + classes::toString(label) + ".";
+      const auto prefix = "tracker_profiles." + toString(tt) + "." + classes::toString(label) + ".";
       const auto max_dist = declare_parameter<double>(prefix + "max_dist");
       return label_cache[tt] = AssociationProfile{
                max_dist * max_dist, declare_parameter<double>(prefix + "max_area"),
@@ -204,8 +203,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         const auto label_name = classes::toString(label);
 
         // create override
-        const auto create_param =
-          "tracker_assignment." + shape_name + "." + label_name + ".create";
+        const auto create_param = "tracker_assignment." + shape_name + "." + label_name + ".create";
         const auto create_str = declare_parameter<std::string>(create_param, "");
         if (!create_str.empty()) {
           params_.assignment_config.setCreation(
@@ -213,8 +211,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         }
 
         // match override
-        const auto match_param =
-          "tracker_assignment." + shape_name + "." + label_name + ".match";
+        const auto match_param = "tracker_assignment." + shape_name + "." + label_name + ".match";
         const auto match_names =
           declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
         for (const auto & tt_name : match_names) {
@@ -243,8 +240,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.tracker_overlap_manager_config.min_unknown_object_removal_iou =
     declare_parameter<double>("min_unknown_object_removal_iou");
 
-  const auto parse_label_double_map =
-    [this](const std::string & ns) -> LabelDoubleMap {
+  const auto parse_label_double_map = [this](const std::string & ns) -> LabelDoubleMap {
     LabelDoubleMap result;
     for (const auto label : classes::trackedLabels()) {
       result[label] = declare_parameter<double>(ns + "." + classes::toString(label));
