@@ -23,8 +23,8 @@ namespace autoware::detected_object_feature_remover
 DetectedObjectFeatureRemover::DetectedObjectFeatureRemover(const rclcpp::NodeOptions & node_options)
 : Node("detected_object_feature_remover", node_options)
 {
-  pub_ = create_publisher<DetectedObjects>("~/output", rclcpp::QoS(1));
-  sub_ = create_subscription<DetectedObjectsWithFeature>(
+  pub_ = this->create_publisher<DetectedObjects>("~/output", rclcpp::QoS(1));
+  sub_ = this->create_subscription<DetectedObjectsWithFeature>(
     "~/input", rclcpp::QoS{1},
     [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjectsWithFeature) & input) {
       this->objectCallback(input);
