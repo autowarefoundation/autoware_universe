@@ -34,10 +34,14 @@ ros2 launch autoware_joy_controller joy_controller.launch.xml config_file:=/path
 | ----------------------------------- | --------------------------------------------------- | ---------------------------------------- |
 | `~/output/control_command`          | autoware_control_msgs::msg::Control                 | lateral and longitudinal control command |
 | `~/output/external_control_command` | tier4_external_api_msgs::msg::ControlCommandStamped | lateral and longitudinal control command |
-| `~/output/shift`                    | tier4_external_api_msgs::msg::GearShiftStamped      | gear command                             |
-| `~/output/turn_signal`              | tier4_external_api_msgs::msg::TurnSignalStamped     | turn signal command                      |
+| `~/output/pedals_command`           | autoware_adapi_v1_msgs::msg::PedalsCommand          | manual pedals command for latest Autoware |
+| `~/output/steering_command`         | autoware_adapi_v1_msgs::msg::SteeringCommand        | manual steering command for latest Autoware |
+| `~/output/shift`                    | autoware_vehicle_msgs::msg::GearCommand             | gear command                             |
+| `~/output/turn_signal`              | autoware_vehicle_msgs::msg::TurnIndicatorsCommand   | turn indicator command                   |
+| `~/output/hazard_lights`            | autoware_vehicle_msgs::msg::HazardLightsCommand     | hazard light command                     |
 | `~/output/gate_mode`                | tier4_control_msgs::msg::GateMode                   | gate mode (Auto or External)             |
 | `~/output/heartbeat`                | tier4_external_api_msgs::msg::Heartbeat             | heartbeat                                |
+| `~/output/operator_heartbeat`       | autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat | manual operator heartbeat for latest Autoware |
 | `~/output/vehicle_engage`           | autoware_vehicle_msgs::msg::Engage                  | vehicle engage                           |
 
 ## Parameters

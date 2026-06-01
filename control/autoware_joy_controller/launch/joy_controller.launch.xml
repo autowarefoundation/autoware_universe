@@ -6,9 +6,13 @@
 
   <arg name="output_control_command" default="/external/$(var external_cmd_source)/joy/control_cmd"/>
   <arg name="output_external_control_command" default="/api/external/set/command/$(var external_cmd_source)/control"/>
-  <arg name="output_shift" default="/api/external/set/command/$(var external_cmd_source)/shift"/>
-  <arg name="output_turn_signal" default="/api/external/set/command/$(var external_cmd_source)/turn_signal"/>
+  <arg name="output_pedals_command" default="/external/$(var external_cmd_source)/pedals_cmd"/>
+  <arg name="output_steering_command" default="/external/$(var external_cmd_source)/steering_cmd"/>
+  <arg name="output_shift" default="/external/$(var external_cmd_source)/gear_cmd"/>
+  <arg name="output_turn_signal" default="/external/$(var external_cmd_source)/turn_indicators_cmd"/>
+  <arg name="output_hazard_lights" default="/external/$(var external_cmd_source)/hazard_lights_cmd"/>
   <arg name="output_heartbeat" default="/api/external/set/command/$(var external_cmd_source)/heartbeat"/>
+  <arg name="output_operator_heartbeat" default="/external/$(var external_cmd_source)/heartbeat"/>
   <arg name="output_gate_mode" default="/control/gate_mode_cmd"/>
   <arg name="output_vehicle_engage" default="/vehicle/engage"/>
 
@@ -20,10 +24,14 @@
 
     <remap from="output/control_command" to="$(var output_control_command)"/>
     <remap from="output/external_control_command" to="$(var output_external_control_command)"/>
+    <remap from="output/pedals_command" to="$(var output_pedals_command)"/>
+    <remap from="output/steering_command" to="$(var output_steering_command)"/>
     <remap from="output/shift" to="$(var output_shift)"/>
     <remap from="output/turn_signal" to="$(var output_turn_signal)"/>
+    <remap from="output/hazard_lights" to="$(var output_hazard_lights)"/>
     <remap from="output/gate_mode" to="$(var output_gate_mode)"/>
     <remap from="output/heartbeat" to="$(var output_heartbeat)"/>
+    <remap from="output/operator_heartbeat" to="$(var output_operator_heartbeat)"/>
     <remap from="output/vehicle_engage" to="$(var output_vehicle_engage)"/>
 
     <remap from="service/emergency_stop" to="/api/autoware/set/emergency"/>
