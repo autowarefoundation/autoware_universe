@@ -30,37 +30,34 @@
 namespace lanelet
 {
 
-using TrafficLightConstPtr = std::shared_ptr<const TrafficLight>;
-
-std::vector<TrafficLightConstPtr> filter_traffic_signals(const LaneletMapConstPtr map)
+std::unordered_set<lanelet::Id> extract_traffic_light_ids(const LaneletMapConstPtr map)
 {
-  std::vector<TrafficLightConstPtr> signals;
+  std::unordered_set<lanelet::Id> traffic_light_ids;
   for (const auto & element : map->regulatoryElementLayer) {
     const auto signal = std::dynamic_pointer_cast<const TrafficLight>(element);
     if (signal) {
-      signals.push_back(signal);
+      traffic_light_ids.emplace(signal->id());
     }
   }
-
-  return signals;
+  return traffic_light_ids;
 }
 
-std::vector<TrafficLightConstPtr> filter_pedestrian_signals(const LaneletMapConstPtr map)
+std::unordered_set<lanelet::Id> extract_pedestrian_traffic_light_ids(const LaneletMapConstPtr map)
 {
   namespace query = lanelet::utils::query;
 
   const auto all_lanelets = query::laneletLayer(map);
   const auto crosswalks = query::crosswalkLanelets(all_lanelets);
-  std::vector<TrafficLightConstPtr> signals;
 
+  std::unordered_set<lanelet::Id> pedestrian_traffic_light_ids;
   for (const auto & crosswalk : crosswalks) {
     const auto traffic_light_reg_elems =
       crosswalk.regulatoryElementsAs<const lanelet::TrafficLight>();
-    std::copy(
-      traffic_light_reg_elems.begin(), traffic_light_reg_elems.end(), std::back_inserter(signals));
+    for (const auto & reg_elem : traffic_light_reg_elems) {
+      pedestrian_traffic_light_ids.emplace(reg_elem->id());
+    }
   }
-
-  return signals;
+  return pedestrian_traffic_light_ids;
 }
 
 }  // namespace lanelet
@@ -114,21 +111,8 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
 void TrafficLightArbiter::on_map(const LaneletMapBin::ConstSharedPtr msg)
 {
   const auto map = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg);
-
-  const auto signals = lanelet::filter_traffic_signals(map);
-  std::unordered_set<lanelet::Id> traffic_light_ids;
-  for (const auto & signal : signals) {
-    traffic_light_ids.emplace(signal->id());
-  }
-  core_->set_traffic_light_ids(std::move(traffic_light_ids));
-
-  // Filter only pedestrian signals to distinguish them in signal matching
-  const auto pedestrian_signals = lanelet::filter_pedestrian_signals(map);
-  std::unordered_set<lanelet::Id> pedestrian_signal_ids;
-  for (const auto & signal : pedestrian_signals) {
-    pedestrian_signal_ids.emplace(signal->id());
-  }
-  core_->set_pedestrian_signal_ids(std::move(pedestrian_signal_ids));
+  core_->set_traffic_light_ids(lanelet::extract_traffic_light_ids(map));
+  core_->set_pedestrian_traffic_light_ids(lanelet::extract_pedestrian_traffic_light_ids(map));
 }
 
 void TrafficLightArbiter::on_perception_msg(const TrafficSignalArray::ConstSharedPtr msg)

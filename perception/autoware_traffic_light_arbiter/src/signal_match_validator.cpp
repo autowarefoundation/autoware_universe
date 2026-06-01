@@ -247,7 +247,7 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
 
     // We don't validate the pedestrian signals
     // TODO(TomohitoAndo): Validate pedestrian signals
-    if (is_pedestrian_signal(signal_id)) {
+    if (is_pedestrian_traffic_light(signal_id)) {
       validated_signals.traffic_light_groups.emplace_back(
         util::get_highest_confidence_signal(perception_result, external_result, source_priority_));
 
@@ -281,9 +281,9 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
   return validated_signals;
 }
 
-void SignalMatchValidator::set_pedestrian_signal_ids(std::unordered_set<lanelet::Id> ids)
+void SignalMatchValidator::set_pedestrian_traffic_light_ids(std::unordered_set<lanelet::Id> ids)
 {
-  map_pedestrian_signal_regulatory_elements_set_ = std::move(ids);
+  pedestrian_traffic_light_ids_ = std::move(ids);
 }
 
 void SignalMatchValidator::set_source_priority(const SourcePriority source_priority)
@@ -291,10 +291,9 @@ void SignalMatchValidator::set_source_priority(const SourcePriority source_prior
   source_priority_ = source_priority;
 }
 
-bool SignalMatchValidator::is_pedestrian_signal(const lanelet::Id & signal_id)
+bool SignalMatchValidator::is_pedestrian_traffic_light(const lanelet::Id & signal_id)
 {
-  return map_pedestrian_signal_regulatory_elements_set_.find(signal_id) !=
-         map_pedestrian_signal_regulatory_elements_set_.end();
+  return pedestrian_traffic_light_ids_.find(signal_id) != pedestrian_traffic_light_ids_.end();
 }
 
 }  // namespace autoware::traffic_light

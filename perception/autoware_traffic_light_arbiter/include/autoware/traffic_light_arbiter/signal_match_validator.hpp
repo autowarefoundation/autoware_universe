@@ -82,7 +82,7 @@ public:
    *
    * @param ids Set of regulatory-element IDs classified as pedestrian signals.
    */
-  void set_pedestrian_signal_ids(std::unordered_set<lanelet::Id> ids);
+  void set_pedestrian_traffic_light_ids(std::unordered_set<lanelet::Id> ids);
 
   /**
    * @brief Sets the source priority for signal selection.
@@ -97,7 +97,7 @@ public:
 
 private:
   SourcePriority source_priority_;
-  std::unordered_set<lanelet::Id> map_pedestrian_signal_regulatory_elements_set_;
+  std::unordered_set<lanelet::Id> pedestrian_traffic_light_ids_;
 
   /**
    * @brief Checks if a given signal ID corresponds to a pedestrian signal.
@@ -108,7 +108,7 @@ private:
    * @param signal_id The ID of the signal to check.
    * @return True if the signal is a pedestrian signal, false otherwise.
    */
-  bool is_pedestrian_signal(const lanelet::Id & signal_id);
+  bool is_pedestrian_traffic_light(const lanelet::Id & signal_id);
 };
 
 }  // namespace autoware::traffic_light
