@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/map_based_prediction/map_based_prediction_node/maneuver_prediction.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
 
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -30,19 +30,18 @@ namespace autoware::map_based_prediction
 {
 using autoware_utils::ScopedTimeTrack;
 
-Maneuver MapBasedPredictionNode::predictObjectManeuver(
+Maneuver PredictorVehicle::predictObjectManeuver(
   const std::string & object_id, const geometry_msgs::msg::Pose & object_pose,
   const LaneletData & current_lanelet_data, const double object_detected_time)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  // calculate maneuver
   const auto current_maneuver = [&]() {
-    if (lane_change_detection_method_ == "time_to_change_lane") {
+    if (params_.lane_change_detection_method == "time_to_change_lane") {
       return predictObjectManeuverByTimeToLaneChange(
         object_id, current_lanelet_data, object_detected_time);
-    } else if (lane_change_detection_method_ == "lat_diff_distance") {
+    } else if (params_.lane_change_detection_method == "lat_diff_distance") {
       return predictObjectManeuverByLatDiffDistance(
         object_id, object_pose, current_lanelet_data, object_detected_time);
     }
@@ -54,12 +53,10 @@ Maneuver MapBasedPredictionNode::predictObjectManeuver(
   }
   auto & object_info = road_users_history_.at(object_id);
 
-  // update maneuver in object history
   if (!object_info.empty()) {
     object_info.back().one_shot_maneuver = current_maneuver;
   }
 
-  // decide maneuver considering previous results
   if (object_info.size() < 2) {
     object_info.back().output_maneuver = current_maneuver;
     return current_maneuver;
@@ -69,7 +66,8 @@ Maneuver MapBasedPredictionNode::predictObjectManeuver(
     object_info.at(static_cast<int>(object_info.size()) - 2).output_maneuver;
 
   for (int i = 0;
-       i < std::min(num_continuous_state_transition_, static_cast<int>(object_info.size())); ++i) {
+       i < std::min(params_.num_continuous_state_transition, static_cast<int>(object_info.size()));
+       ++i) {
     const auto & tmp_maneuver =
       object_info.at(static_cast<int>(object_info.size()) - 1 - i).one_shot_maneuver;
     if (tmp_maneuver != current_maneuver) {
@@ -82,28 +80,24 @@ Maneuver MapBasedPredictionNode::predictObjectManeuver(
   return current_maneuver;
 }
 
-Maneuver MapBasedPredictionNode::predictObjectManeuverByTimeToLaneChange(
+Maneuver PredictorVehicle::predictObjectManeuverByTimeToLaneChange(
   const std::string & object_id, const LaneletData & current_lanelet_data,
   const double /*object_detected_time*/)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  // Step1. Check if we have the object in the buffer
   if (road_users_history_.count(object_id) == 0) {
     return Maneuver::LANE_FOLLOW;
   }
 
   const std::deque<RoadUser> & object_info = road_users_history_.at(object_id);
 
-  // Step2. Check if object history length longer than history_time_length
   const int latest_id = static_cast<int>(object_info.size()) - 1;
-  // object history is not long enough
   if (latest_id < 1) {
     return Maneuver::LANE_FOLLOW;
   }
 
-  // Step3. get object lateral kinematics
   const auto & latest_info = object_info.at(static_cast<size_t>(latest_id));
 
   bool not_found_corresponding_lanelet = true;
@@ -119,65 +113,57 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByTimeToLaneChange(
     not_found_corresponding_lanelet = false;
   }
 
-  // return lane follow when catch exception
   if (not_found_corresponding_lanelet) {
     return Maneuver::LANE_FOLLOW;
   }
 
   const double latest_lane_width = left_dist + right_dist;
   if (latest_lane_width < 1e-3) {
-    RCLCPP_ERROR(get_logger(), "[Map Based Prediction]: Lane Width is too small");
+    RCLCPP_ERROR(node_.get_logger(), "[Map Based Prediction]: Lane Width is too small");
     return Maneuver::LANE_FOLLOW;
   }
 
-  // Step 4. check time to reach left/right bound
   const double epsilon = 1e-9;
   const double margin_to_reach_left_bound = left_dist / (std::fabs(v_left_filtered) + epsilon);
   const double margin_to_reach_right_bound = right_dist / (std::fabs(v_right_filtered) + epsilon);
 
-  // Step 5. detect lane change
   if (
-    left_dist < right_dist &&                              // in left side,
-    left_dist < dist_threshold_to_bound_ &&                // close to boundary,
-    v_left_filtered < 0 &&                                 // approaching,
-    margin_to_reach_left_bound < time_threshold_to_bound_  // will soon arrive to left bound
-  ) {
+    left_dist < right_dist &&
+    left_dist < params_.dist_threshold_to_bound &&
+    v_left_filtered < 0 &&
+    margin_to_reach_left_bound < params_.time_threshold_to_bound) {
     return Maneuver::LEFT_LANE_CHANGE;
   } else if (
-    right_dist < left_dist &&                               // in right side,
-    right_dist < dist_threshold_to_bound_ &&                // close to boundary,
-    v_right_filtered < 0 &&                                 // approaching,
-    margin_to_reach_right_bound < time_threshold_to_bound_  // will soon arrive to right bound
-  ) {
+    right_dist < left_dist &&
+    right_dist < params_.dist_threshold_to_bound &&
+    v_right_filtered < 0 &&
+    margin_to_reach_right_bound < params_.time_threshold_to_bound) {
     return Maneuver::RIGHT_LANE_CHANGE;
   }
 
   return Maneuver::LANE_FOLLOW;
 }
 
-Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
+Maneuver PredictorVehicle::predictObjectManeuverByLatDiffDistance(
   const std::string & object_id, const geometry_msgs::msg::Pose & object_pose,
   const LaneletData & current_lanelet_data, const double /*object_detected_time*/)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  // Step1. Check if we have the object in the buffer
   if (road_users_history_.count(object_id) == 0) {
     return Maneuver::LANE_FOLLOW;
   }
 
   const std::deque<RoadUser> & object_info = road_users_history_.at(object_id);
-  const double current_time = (this->get_clock()->now()).seconds();
+  const double current_time = (node_.get_clock()->now()).seconds();
 
-  // Step2. Get the previous id
   int prev_id = static_cast<int>(object_info.size()) - 1;
   while (prev_id >= 0) {
     const double prev_time_delay = object_info.at(prev_id).time_delay;
     const double prev_time =
       rclcpp::Time(object_info.at(prev_id).header.stamp).seconds() + prev_time_delay;
-    // if (object_detected_time - prev_time > history_time_length_) {
-    if (current_time - prev_time > history_time_length_) {
+    if (current_time - prev_time > params_.history_time_length) {
       break;
     }
     --prev_id;
@@ -187,7 +173,6 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
     return Maneuver::LANE_FOLLOW;
   }
 
-  // Step3. Get closest previous lanelet ID
   const auto & prev_info = object_info.at(static_cast<size_t>(prev_id));
   const auto prev_pose = prev_info.pose;
   const lanelet::ConstLanelets prev_lanelets =
@@ -208,7 +193,6 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
     }
   }
 
-  // Step4. Check if the vehicle has changed lane
   const auto current_lanelet = current_lanelet_data.lanelet;
   const auto current_pose = object_pose;
   const double dist = autoware_utils::calc_distance2d(prev_pose, current_pose);
@@ -232,7 +216,6 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
     return Maneuver::LANE_FOLLOW;
   }
 
-  // Step5. Lane Change Detection
   const lanelet::ConstLineString2d prev_left_bound = prev_lanelet.leftBound2d();
   const lanelet::ConstLineString2d prev_right_bound = prev_lanelet.rightBound2d();
   const lanelet::ConstLineString2d current_left_bound = current_lanelet.leftBound2d();
@@ -244,7 +227,7 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   const double prev_lane_width = std::fabs(prev_left_dist) + std::fabs(prev_right_dist);
   const double current_lane_width = std::fabs(current_left_dist) + std::fabs(current_right_dist);
   if (prev_lane_width < 1e-3 || current_lane_width < 1e-3) {
-    RCLCPP_ERROR(get_logger(), "[Map Based Prediction]: Lane Width is too small");
+    RCLCPP_ERROR(node_.get_logger(), "[Map Based Prediction]: Lane Width is too small");
     return Maneuver::LANE_FOLLOW;
   }
 
@@ -254,19 +237,19 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   const double diff_right_current_prev = current_right_dist - prev_right_dist;
 
   if (
-    current_left_dist_ratio > dist_ratio_threshold_to_left_bound_ &&
-    diff_left_current_prev > diff_dist_threshold_to_left_bound_) {
+    current_left_dist_ratio > params_.dist_ratio_threshold_to_left_bound &&
+    diff_left_current_prev > params_.diff_dist_threshold_to_left_bound) {
     return Maneuver::LEFT_LANE_CHANGE;
   } else if (
-    current_right_dist_ratio < dist_ratio_threshold_to_right_bound_ &&
-    diff_right_current_prev < diff_dist_threshold_to_right_bound_) {
+    current_right_dist_ratio < params_.dist_ratio_threshold_to_right_bound &&
+    diff_right_current_prev < params_.diff_dist_threshold_to_right_bound) {
     return Maneuver::RIGHT_LANE_CHANGE;
   }
 
   return Maneuver::LANE_FOLLOW;
 }
 
-double MapBasedPredictionNode::calcRightLateralOffset(
+double PredictorVehicle::calcRightLateralOffset(
   const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose)
 {
   std::vector<geometry_msgs::msg::Point> boundary_path(boundary_line.size());
@@ -275,19 +258,18 @@ double MapBasedPredictionNode::calcRightLateralOffset(
     const double y = boundary_line[i].y();
     boundary_path[i] = autoware_utils::create_point(x, y, 0.0);
   }
-
   return std::fabs(autoware::motion_utils::calcLateralOffset(boundary_path, search_pose.position));
 }
 
-double MapBasedPredictionNode::calcLeftLateralOffset(
+double PredictorVehicle::calcLeftLateralOffset(
   const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose)
 {
   return -calcRightLateralOffset(boundary_line, search_pose);
 }
 
-ManeuverProbability MapBasedPredictionNode::calculateManeuverProbability(
-  const Maneuver & predicted_maneuver, const bool & left_paths_exists,
-  const bool & right_paths_exists, const bool & center_paths_exists) const
+ManeuverProbability PredictorVehicle::calculateManeuverProbability(
+  const Maneuver & predicted_maneuver, const bool left_paths_exists,
+  const bool right_paths_exists, const bool center_paths_exists) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -296,42 +278,36 @@ ManeuverProbability MapBasedPredictionNode::calculateManeuverProbability(
   float right_lane_change_probability = 0.0;
   float lane_follow_probability = 0.0;
   if (left_paths_exists && predicted_maneuver == Maneuver::LEFT_LANE_CHANGE) {
-    constexpr float LF_PROB_WHEN_LC = 0.9;  // probability for lane follow during lane change
-    constexpr float LC_PROB_WHEN_LC = 1.0;  // probability for left lane change
+    constexpr float LF_PROB_WHEN_LC = 0.9;
+    constexpr float LC_PROB_WHEN_LC = 1.0;
     left_lane_change_probability = LC_PROB_WHEN_LC;
     right_lane_change_probability = 0.0;
     lane_follow_probability = LF_PROB_WHEN_LC;
   } else if (right_paths_exists && predicted_maneuver == Maneuver::RIGHT_LANE_CHANGE) {
-    constexpr float LF_PROB_WHEN_LC = 0.9;  // probability for lane follow during lane change
-    constexpr float RC_PROB_WHEN_LC = 1.0;  // probability for right lane change
+    constexpr float LF_PROB_WHEN_LC = 0.9;
+    constexpr float RC_PROB_WHEN_LC = 1.0;
     left_lane_change_probability = 0.0;
     right_lane_change_probability = RC_PROB_WHEN_LC;
     lane_follow_probability = LF_PROB_WHEN_LC;
   } else if (center_paths_exists) {
-    constexpr float LF_PROB = 1.0;  // probability for lane follow
-    constexpr float LC_PROB = 0.3;  // probability for left lane change
-    constexpr float RC_PROB = 0.3;  // probability for right lane change
+    constexpr float LF_PROB = 1.0;
+    constexpr float LC_PROB = 0.3;
+    constexpr float RC_PROB = 0.3;
     if (predicted_maneuver == Maneuver::LEFT_LANE_CHANGE) {
-      // If prediction says left change, but left lane is empty, assume lane follow
       left_lane_change_probability = 0.0;
       right_lane_change_probability = (right_paths_exists) ? RC_PROB : 0.0;
     } else if (predicted_maneuver == Maneuver::RIGHT_LANE_CHANGE) {
-      // If prediction says right change, but right lane is empty, assume lane follow
       left_lane_change_probability = (left_paths_exists) ? LC_PROB : 0.0;
       right_lane_change_probability = 0.0;
     } else {
-      // Predicted Maneuver is Lane Follow
       left_lane_change_probability = LC_PROB;
       right_lane_change_probability = RC_PROB;
     }
     lane_follow_probability = LF_PROB;
   } else {
-    // Center path is empty
-    constexpr float LC_PROB = 1.0;  // probability for left lane change
-    constexpr float RC_PROB = 1.0;  // probability for right lane change
+    constexpr float LC_PROB = 1.0;
+    constexpr float RC_PROB = 1.0;
     lane_follow_probability = 0.0;
-
-    // If the given lane is empty, the probability goes to 0
     left_lane_change_probability = left_paths_exists ? LC_PROB : 0.0;
     right_lane_change_probability = right_paths_exists ? RC_PROB : 0.0;
   }
@@ -342,7 +318,6 @@ ManeuverProbability MapBasedPredictionNode::calculateManeuverProbability(
                        lane_follow_probability,
                        std::max(left_lane_change_probability, right_lane_change_probability)));
 
-  // Insert Normalized Probability
   ManeuverProbability maneuver_prob;
   maneuver_prob[Maneuver::LEFT_LANE_CHANGE] = left_lane_change_probability / max_prob;
   maneuver_prob[Maneuver::RIGHT_LANE_CHANGE] = right_lane_change_probability / max_prob;

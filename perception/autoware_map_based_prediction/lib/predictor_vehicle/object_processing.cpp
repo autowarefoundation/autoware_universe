@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/map_based_prediction/map_based_prediction_node/object_processing.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
 
 #include "autoware/map_based_prediction/utils.hpp"
 
@@ -137,7 +137,7 @@ lanelet::ConstLanelets getLanelets(const map_based_prediction::LaneletsData & da
 }
 }  // namespace
 
-void MapBasedPredictionNode::updateObjectData(TrackedObject & object)
+void PredictorVehicle::updateObjectData(TrackedObject & object)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -162,20 +162,21 @@ void MapBasedPredictionNode::updateObjectData(TrackedObject & object)
     object.kinematics.twist_with_covariance.twist.linear.x *= -1.0;
     object.kinematics.twist_with_covariance.twist.linear.y *= -1.0;
   }
-  return;
 }
 
-LaneletsData MapBasedPredictionNode::getCurrentLanelets(const TrackedObject & object)
+LaneletsData PredictorVehicle::getCurrentLanelets(const TrackedObject & object)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   return utils::getCurrentLanelets(
-    object, lanelet_map_ptr_, road_users_history_, dist_threshold_for_searching_lanelet_,
-    delta_yaw_threshold_for_searching_lanelet_, sigma_lateral_offset_, sigma_yaw_angle_deg_);
+    object, lanelet_map_ptr_, road_users_history_,
+    params_.dist_threshold_for_searching_lanelet,
+    params_.delta_yaw_threshold_for_searching_lanelet, params_.sigma_lateral_offset,
+    params_.sigma_yaw_angle_deg);
 }
 
-void MapBasedPredictionNode::updateRoadUsersHistory(
+void PredictorVehicle::updateRoadUsersHistory(
   const std_msgs::msg::Header & header, const TrackedObject & object,
   const LaneletsData & current_lanelets_data)
 {
@@ -192,7 +193,7 @@ void MapBasedPredictionNode::updateRoadUsersHistory(
   road_user.pose = object.kinematics.pose_with_covariance.pose;
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
   road_user.pose.orientation = autoware_utils::create_quaternion_from_yaw(object_yaw);
-  road_user.time_delay = std::fabs((this->get_clock()->now() - header.stamp).seconds());
+  road_user.time_delay = std::fabs((node_.get_clock()->now() - header.stamp).seconds());
   road_user.twist = object.kinematics.twist_with_covariance.twist;
 
   for (const auto & current_lane : current_lanelets) {
@@ -207,7 +208,7 @@ void MapBasedPredictionNode::updateRoadUsersHistory(
     std::deque<RoadUser> & road_users = road_users_history_.at(object_id);
     const auto prev_road_user = road_users.back();
     updateLateralKinematicsVector(
-      prev_road_user, road_user, routing_graph_ptr_, cutoff_freq_of_velocity_lpf_);
+      prev_road_user, road_user, routing_graph_ptr_, params_.cutoff_freq_of_velocity_lpf);
     road_users.push_back(road_user);
   }
 }

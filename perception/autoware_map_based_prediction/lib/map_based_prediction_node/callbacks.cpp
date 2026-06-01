@@ -36,6 +36,7 @@ using autoware_utils::ScopedTimeTrack;
 void MapBasedPredictionNode::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
 {
   RCLCPP_DEBUG(get_logger(), "[Map Based Prediction]: Start loading lanelet");
+
   lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 
@@ -43,20 +44,19 @@ void MapBasedPredictionNode::mapCallback(const LaneletMapBin::ConstSharedPtr msg
     autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
       lanelet_map_ptr_);
 
-  routing_graph_ptr_ =
-    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
-  traffic_rules_ptr_ = routing_graph_and_traffic_rules.second;
+  auto routing_graph_ptr = autoware::experimental::lanelet2_utils::remove_const(
+    routing_graph_and_traffic_rules.first);
+  auto traffic_rules_ptr = routing_graph_and_traffic_rules.second;
 
-  lru_cache_of_convert_path_type_.clear();  // clear cache
-  RCLCPP_DEBUG(get_logger(), "[Map Based Prediction]: Map is loaded");
-
+  predictor_vehicle_->setLaneletMap(lanelet_map_ptr_, routing_graph_ptr, traffic_rules_ptr);
   predictor_vru_->setLaneletMap(lanelet_map_ptr_);
+
+  RCLCPP_DEBUG(get_logger(), "[Map Based Prediction]: Map is loaded");
 }
 
 void MapBasedPredictionNode::trafficSignalsCallback(
   const TrafficLightGroupArray::ConstSharedPtr msg)
 {
-  // load traffic signals to the predictor
   predictor_vru_->setTrafficSignal(*msg);
 }
 
@@ -67,56 +67,38 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
 
   stop_watch_ptr_->toc("processing_time", true);
 
-  // take traffic_signal
   {
     const auto msg = sub_traffic_signals_.take_data();
-    if (msg) {
-      trafficSignalsCallback(msg);
-    }
+    if (msg) trafficSignalsCallback(msg);
   }
 
-  // Guard for map pointer and frame transformation
-  if (!lanelet_map_ptr_) {
-    return;
-  }
+  if (!lanelet_map_ptr_) return;
 
-  // get world to map transform
   geometry_msgs::msg::TransformStamped::ConstSharedPtr world2map_transform;
   bool is_object_not_in_map_frame = in_objects->header.frame_id != "map";
   if (is_object_not_in_map_frame) {
     world2map_transform = transform_listener_.get_transform(
-      "map",                        // target
-      in_objects->header.frame_id,  // src
-      in_objects->header.stamp, rclcpp::Duration::from_seconds(0.1));
+      "map", in_objects->header.frame_id, in_objects->header.stamp,
+      rclcpp::Duration::from_seconds(0.1));
     if (!world2map_transform) return;
   }
 
-  // Get objects detected time
   const double objects_detected_time = rclcpp::Time(in_objects->header.stamp).seconds();
 
-  // Remove old objects information in object history
-  // road users
-  utils::removeOldObjectsHistory(
-    objects_detected_time, object_buffer_time_length_, road_users_history_);
-  // crosswalk users
+  predictor_vehicle_->removeOldHistory(objects_detected_time, object_buffer_time_length_);
   predictor_vru_->removeOldKnownMatches(objects_detected_time, object_buffer_time_length_);
 
-  // result output
   PredictedObjects output;
   output.header = in_objects->header;
   output.header.frame_id = "map";
 
-  // result debug
   visualization_msgs::msg::MarkerArray debug_markers;
 
-  // get current crosswalk users for later prediction
   predictor_vru_->loadCurrentCrosswalkUsers(*in_objects);
 
-  // for each object
   for (const auto & object : in_objects->objects) {
     TrackedObject transformed_object = object;
 
-    // transform object frame if it's based on map frame
     if (is_object_not_in_map_frame) {
       geometry_msgs::msg::PoseStamped pose_in_map;
       geometry_msgs::msg::PoseStamped pose_orig;
@@ -125,19 +107,14 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
       transformed_object.kinematics.pose_with_covariance.pose = pose_in_map.pose;
     }
 
-    // get the maximum probability label from the classification array
     const auto & label_ =
       autoware::object_recognition_utils::getHighestProbLabel(transformed_object.classification);
-    // overwrite the label for VRU in specific cases
     const auto label = utils::changeVRULabelForPrediction(label_, object, lanelet_map_ptr_);
 
     switch (label) {
       case ObjectClassification::PEDESTRIAN:
       case ObjectClassification::BICYCLE: {
-        // Run pedestrian/bicycle prediction
-        const auto predicted_vru =
-          getPredictionForNonVehicleObject(output.header, transformed_object);
-        output.objects.emplace_back(predicted_vru);
+        output.objects.emplace_back(predictor_vru_->predict(output.header, transformed_object));
         break;
       }
       case ObjectClassification::CAR:
@@ -145,11 +122,9 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
       case ObjectClassification::TRAILER:
       case ObjectClassification::MOTORCYCLE:
       case ObjectClassification::TRUCK: {
-        const auto predicted_object_opt = getPredictionForVehicleObject(
+        const auto predicted_object_opt = predictor_vehicle_->predict(
           output.header, transformed_object, objects_detected_time, debug_markers);
-        if (predicted_object_opt) {
-          output.objects.push_back(predicted_object_opt.value());
-        }
+        if (predicted_object_opt) output.objects.push_back(predicted_object_opt.value());
         break;
       }
       default: {
@@ -157,7 +132,6 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
         PredictedPath predicted_path = path_generator_->generatePathForNonVehicleObject(
           transformed_object, prediction_time_horizon_.unknown);
         predicted_path.confidence = 1.0;
-
         predicted_unknown_object.kinematics.predicted_paths.push_back(predicted_path);
         output.objects.push_back(predicted_unknown_object);
         break;
@@ -165,24 +139,19 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
     }
   }
 
-  // process lost crosswalk users to tackle unstable detection
   if (remember_lost_crosswalk_users_) {
     PredictedObjects retrieved_objects = predictor_vru_->retrieveUndetectedObjects();
     output.objects.insert(
       output.objects.end(), retrieved_objects.objects.begin(), retrieved_objects.objects.end());
   }
 
-  // Publish Results
   publish(output, debug_markers);
 
-  // Processing time
   const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
   const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
 
-  // Diagnostics
   updateDiagnostics(output.header.stamp, processing_time_ms);
 
-  // Publish Processing Time
   if (processing_time_publisher_) {
     processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);

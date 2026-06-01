@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
+
 #include "autoware_utils/ros/marker_helper.hpp"
-#include "autoware/map_based_prediction/map_based_prediction_node/debug.hpp"
-#include "autoware/map_based_prediction/data_structure.hpp"
 
 namespace autoware::map_based_prediction
 {
-visualization_msgs::msg::Marker MapBasedPredictionNode::getDebugMarker(
+
+visualization_msgs::msg::Marker PredictorVehicle::getDebugMarker(
   const TrackedObject & object, const Maneuver & maneuver, const size_t obj_num)
 {
   visualization_msgs::msg::Marker marker{};
   marker.header.frame_id = "map";
   marker.ns = "maneuver";
-
   marker.id = static_cast<int32_t>(obj_num);
   marker.lifetime = rclcpp::Duration::from_seconds(1.0);
   marker.type = visualization_msgs::msg::Marker::CUBE;
@@ -32,10 +32,7 @@ visualization_msgs::msg::Marker MapBasedPredictionNode::getDebugMarker(
   marker.pose = object.kinematics.pose_with_covariance.pose;
   marker.scale = autoware_utils::create_marker_scale(3.0, 1.0, 1.0);
 
-  // Color by maneuver
-  double r = 0.0;
-  double g = 0.0;
-  double b = 0.0;
+  double r = 0.0, g = 0.0, b = 0.0;
   if (maneuver == Maneuver::LEFT_LANE_CHANGE) {
     g = 1.0;
   } else if (maneuver == Maneuver::RIGHT_LANE_CHANGE) {
@@ -47,4 +44,5 @@ visualization_msgs::msg::Marker MapBasedPredictionNode::getDebugMarker(
 
   return marker;
 }
+
 }  // namespace autoware::map_based_prediction

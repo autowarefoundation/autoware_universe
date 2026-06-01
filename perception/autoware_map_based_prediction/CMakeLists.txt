@@ -20,13 +20,14 @@ include_directories(
 ament_auto_add_library(map_based_prediction_node SHARED
   src/map_based_prediction_node.cpp
   lib/map_based_prediction_node/callbacks.cpp
-  lib/map_based_prediction_node/object_processing.cpp
-  lib/map_based_prediction_node/maneuver_prediction.cpp
-  lib/map_based_prediction_node/path_processing.cpp
   lib/map_based_prediction_node/diagnostics.cpp
-  lib/map_based_prediction_node/debug.cpp
   lib/path_generator/path_generator.cpp
   lib/path_generator/frenet.cpp
+  lib/predictor_vehicle/predictor_vehicle.cpp
+  lib/predictor_vehicle/object_processing.cpp
+  lib/predictor_vehicle/maneuver_prediction.cpp
+  lib/predictor_vehicle/path_processing.cpp
+  lib/predictor_vehicle/debug.cpp
   lib/predictor_vru/predictor_vru.cpp
   lib/predictor_vru/history.cpp
   lib/predictor_vru/traffic_signal.cpp
