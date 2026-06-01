@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__BEV_ASSIGNMENT_SCORING_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__ASSOCIATION__SCORING__BEV_ASSIGNMENT_SCORING_HPP_
 
+#include "autoware/multi_object_tracker/association/scoring/scoring_types.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
@@ -35,15 +36,13 @@ constexpr double CHECK_GIOU_THRESHOLD = 0.7;
 constexpr double AREA_RATIO_THRESHOLD = 1.3;
 
 /// Computes a [0, 1] assignment score between a tracker and a measurement for D2T GNN assignment.
-/// Returns 0.0 (INVALID_SCORE) when the pair fails any gate and should be rejected.
-/// Sets has_significant_shape_change=true when matched vehicle objects differ noticeably in size.
-double calculateBevAssignmentScore(
-  const types::DynamicObject & tracked_object, const classes::Label tracker_label,
-  const types::TrackerType tracker_type,
+/// Returns score=0.0 when the pair fails any gate and should be rejected.
+ScoringResult calculateBevAssignmentScore(
+  const types::DynamicObject & tracked_object, classes::Label tracker_label,
+  types::TrackerType tracker_type,
   const AssociatorConfig::TrackerAssociationParameters & association_params,
-  const types::DynamicObject & measurement_object, const classes::Label measurement_label,
-  const InverseCovariance2D & inv_cov, double unknown_association_giou_threshold,
-  bool & has_significant_shape_change);
+  const types::DynamicObject & measurement_object, classes::Label measurement_label,
+  const InverseCovariance2D & inv_cov, double unknown_association_giou_threshold);
 
 }  // namespace autoware::multi_object_tracker
 

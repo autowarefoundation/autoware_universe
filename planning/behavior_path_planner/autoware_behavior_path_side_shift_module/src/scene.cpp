@@ -22,10 +22,14 @@
 
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 
+#include <lanelet2_core/geometry/Lanelet.h>
+
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 namespace autoware::behavior_path_planner
 {
@@ -125,7 +129,7 @@ bool SideShiftModule::canTransitSuccessState()
     const auto last_sp = path_shifter_.getLastShiftLine();
     if (last_sp) {
       const auto length = std::fabs(last_sp.value().end_shift_length);
-      const auto lateral_offset = std::fabs(requested_lateral_offset_);
+      const auto lateral_offset = std::fabs(calcMaxLateralOffset(requested_lateral_offset_));
       const auto offset_diff = lateral_offset - length;
       if (std::fabs(offset_diff) >= ZERO_THRESHOLD) {
         lateral_offset_change_request_ = true;
@@ -233,6 +237,21 @@ void SideShiftModule::updateData()
 
   const size_t nearest_idx = planner_data_->findEgoIndex(path_shifter_.getReferencePath().points);
   path_shifter_.removeBehindShiftLineAndSetBaseOffset(nearest_idx);
+
+  // Continuously clamp offsets against the current drivable boundary so the vehicle
+  // never departs when adjacent lanes disappear, and so it can use newly available
+  // width while keeping the original requested offset.
+  if (parameters_->drivable_area_check_mode != DrivableAreaCheckMode::DISABLED) {
+    const double safe_offset = calcMaxLateralOffset(requested_lateral_offset_);
+    const bool boundary_changed = std::fabs(safe_offset - inserted_lateral_offset_) > 1.0e-4;
+    if (boundary_changed) {
+      RCLCPP_DEBUG(
+        getLogger(),
+        "SideShift: updating constrained offset %.3f -> %.3f for requested offset %.3f",
+        inserted_lateral_offset_, safe_offset, requested_lateral_offset_);
+      lateral_offset_change_request_ = true;
+    }
+  }
 }
 
 void SideShiftModule::replaceShiftLine()
@@ -256,7 +275,7 @@ void SideShiftModule::replaceShiftLine()
   // set to path_shifter
   path_shifter_.setShiftLines(shift_lines);
   lateral_offset_change_request_ = false;
-  inserted_lateral_offset_ = requested_lateral_offset_;
+  inserted_lateral_offset_ = new_sl.end_shift_length;
   inserted_shift_line_ = new_sl;
 
   return;
@@ -269,7 +288,7 @@ BehaviorModuleOutput SideShiftModule::plan()
     lateral_offset_change_request_ && ((shift_status_ == SideShiftStatus::BEFORE_SHIFT) ||
                                        (shift_status_ == SideShiftStatus::AFTER_SHIFT))) {
     replaceShiftLine();
-  } else if (shift_status_ != SideShiftStatus::BEFORE_SHIFT) {
+  } else if (shift_status_ == SideShiftStatus::SHIFTING) {
     RCLCPP_DEBUG(getLogger(), "ego is shifting");
   } else {
     RCLCPP_DEBUG(getLogger(), "change is not requested");
@@ -357,26 +376,30 @@ ShiftLine SideShiftModule::calcShiftLine() const
 {
   const auto & p = parameters_;
   const auto ego_speed = std::abs(planner_data_->self_odometry->twist.twist.linear.x);
+  const double current_shift_length = getClosestShiftLength(prev_output_, getEgoPose().position);
+  const double final_shift_length = calcMaxLateralOffset(requested_lateral_offset_);
 
   const double dist_to_start =
     std::max(p->min_distance_to_start_shifting, ego_speed * p->time_to_start_shifting);
 
   const double dist_to_end = [&]() {
-    const double shift_length =
-      requested_lateral_offset_ - getClosestShiftLength(prev_output_, getEgoPose().position);
+    const double shift_length = final_shift_length - current_shift_length;
     const double jerk_shifting_distance = autoware::motion_utils::calc_longitudinal_dist_from_jerk(
       shift_length, p->shifting_lateral_jerk, std::max(ego_speed, p->min_shifting_speed));
     const double shifting_distance = std::max(jerk_shifting_distance, p->min_shifting_distance);
     const double dist_to_end = dist_to_start + shifting_distance;
     RCLCPP_DEBUG(
-      getLogger(), "min_distance_to_start_shifting = %f, dist_to_start = %f, dist_to_end = %f",
-      parameters_->min_distance_to_start_shifting, dist_to_start, dist_to_end);
+      getLogger(),
+      "SideShift: min_distance_to_start_shifting=%f, dist_to_start=%f, dist_to_end=%f, "
+      "current_shift=%f, final_shift=%f",
+      parameters_->min_distance_to_start_shifting, dist_to_start, dist_to_end, current_shift_length,
+      final_shift_length);
     return dist_to_end;
   }();
 
   const size_t nearest_idx = planner_data_->findEgoIndex(reference_path_.points);
   ShiftLine shift_line;
-  shift_line.end_shift_length = requested_lateral_offset_;
+  shift_line.end_shift_length = final_shift_length;
   shift_line.start_idx = utils::getIdxByArclength(reference_path_, nearest_idx, dist_to_start);
   shift_line.start = reference_path_.points.at(shift_line.start_idx).point.pose;
   shift_line.end_idx = utils::getIdxByArclength(reference_path_, nearest_idx, dist_to_end);
@@ -467,6 +490,95 @@ PathWithLaneId SideShiftModule::extendBackwardLength(const PathWithLaneId & orig
   }
 
   return extended_path;
+}
+
+std::pair<double, double> SideShiftModule::calcOffsetLimitsFromLanelets(
+  const double requested_offset) const
+{
+  if (!planner_data_ || !planner_data_->route_handler || reference_path_.points.empty()) {
+    return {0.0, 0.0};
+  }
+
+  const auto & route_handler = planner_data_->route_handler;
+  const double vehicle_half_width = planner_data_->parameters.vehicle_width / 2.0;
+  const double margin = parameters_->min_drivable_area_margin;
+  const bool use_adjacent =
+    (parameters_->drivable_area_check_mode == DrivableAreaCheckMode::ADJACENT_LANES);
+  const auto ego_idx = planner_data_->findEgoIndex(reference_path_.points);
+  const auto ego_speed = std::abs(planner_data_->self_odometry->twist.twist.linear.x);
+  const double dist_to_start = std::max(
+    parameters_->min_distance_to_start_shifting, ego_speed * parameters_->time_to_start_shifting);
+  const double current_shift_length = getClosestShiftLength(prev_output_, getEgoPose().position);
+  const double shift_length = requested_offset - current_shift_length;
+  const double jerk_shifting_distance = autoware::motion_utils::calc_longitudinal_dist_from_jerk(
+    shift_length, parameters_->shifting_lateral_jerk,
+    std::max(ego_speed, parameters_->min_shifting_speed));
+  const double shifting_distance =
+    std::max(jerk_shifting_distance, parameters_->min_shifting_distance);
+  const size_t start_idx = utils::getIdxByArclength(reference_path_, ego_idx, dist_to_start);
+  const size_t end_idx =
+    utils::getIdxByArclength(reference_path_, ego_idx, dist_to_start + shifting_distance);
+
+  double safe_left = std::numeric_limits<double>::max();
+  double safe_right = std::numeric_limits<double>::max();
+  bool found = false;
+
+  for (size_t i = start_idx; i < reference_path_.points.size() && i <= end_idx; ++i) {
+    const auto & pose = reference_path_.points.at(i).point.pose;
+    const lanelet::BasicPoint2d pt(pose.position.x, pose.position.y);
+
+    lanelet::ConstLanelet lane;
+    if (!route_handler->getClosestLaneletWithinRoute(pose, &lane)) {
+      continue;
+    }
+
+    const auto left_bound = [&]() -> lanelet::ConstLineString2d {
+      if (use_adjacent) {
+        return route_handler->getMostLeftLanelet(lane, true, false).leftBound2d();
+      }
+      return lane.leftBound2d();
+    }();
+
+    const auto right_bound = [&]() -> lanelet::ConstLineString2d {
+      if (use_adjacent) {
+        return route_handler->getMostRightLanelet(lane, true, false).rightBound2d();
+      }
+      return lane.rightBound2d();
+    }();
+
+    using lanelet::geometry::distance2d;
+    safe_left = std::min(safe_left, distance2d(left_bound, pt));
+    safe_right = std::min(safe_right, distance2d(right_bound, pt));
+    found = true;
+  }
+
+  if (!found || !std::isfinite(safe_left) || !std::isfinite(safe_right)) {
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 1000, "SideShift: no valid lanelet found for boundary check");
+    return {0.0, 0.0};
+  }
+
+  const double left_limit = std::max(0.0, safe_left - vehicle_half_width - margin);
+  const double right_limit = std::max(0.0, safe_right - vehicle_half_width - margin);
+  return {-right_limit, left_limit};
+}
+
+double SideShiftModule::calcMaxLateralOffset(const double requested_offset) const
+{
+  if (parameters_->drivable_area_check_mode == DrivableAreaCheckMode::DISABLED) {
+    return requested_offset;
+  }
+
+  const auto [right_limit, left_limit] = calcOffsetLimitsFromLanelets(requested_offset);
+
+  const double result = std::clamp(requested_offset, right_limit, left_limit);
+
+  RCLCPP_DEBUG(
+    getLogger(), "SideShift: req=%.2f left_limit=%.2f right_limit=%.2f result=%.2f mode=%d",
+    requested_offset, left_limit, right_limit, result,
+    static_cast<int>(parameters_->drivable_area_check_mode));
+
+  return result;
 }
 
 void SideShiftModule::setDebugMarkersVisualization() const
