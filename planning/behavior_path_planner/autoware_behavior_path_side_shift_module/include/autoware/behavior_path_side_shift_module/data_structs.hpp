@@ -30,6 +30,12 @@ using tier4_planning_msgs::msg::LateralOffset;
 
 enum class SideShiftStatus { STOP = 0, BEFORE_SHIFT, SHIFTING, AFTER_SHIFT };
 
+enum class DrivableAreaCheckMode {
+  DISABLED = 0,       // No boundary check; shift by exact requested amount
+  CURRENT_LANE = 1,   // Clamp to current lane boundaries
+  ADJACENT_LANES = 2  // Extend limit into same-direction neighbor lanes
+};
+
 struct SideShiftParameters
 {
   double time_to_start_shifting;
@@ -44,6 +50,8 @@ struct SideShiftParameters
   double max_shift_magnitude;
   double min_shift_gap;
   double unit_shift_amount;
+  DrivableAreaCheckMode drivable_area_check_mode;
+  double min_drivable_area_margin;
   bool publish_debug_marker;
 };
 

@@ -2,6 +2,13 @@
 Changelog for package autoware_frenet_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_frenet_planner): use normalized_radian function instead of wrap_angle (`#12133 <https://github.com/mitsudome-r/autoware_universe/issues/12133>`_)
+* feat(autoware_frenet_planner, autoware_auto_common): remove the autoware_auto_common dependency (`#12108 <https://github.com/mitsudome-r/autoware_universe/issues/12108>`_)
+* Contributors: Mert Yavuz, Ryohsuke Mitsudome, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

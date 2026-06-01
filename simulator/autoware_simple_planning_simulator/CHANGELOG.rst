@@ -2,6 +2,43 @@
 Changelog for package autoware_simple_planning_simulator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(`simple_planning_simulator`): remove `autoware_raw_vehicle_cmd_converter` dependency (`#12384 <https://github.com/mitsudome-r/autoware_universe/issues/12384>`_)
+  * refactor(`simple_planning_simulator`): remove `autoware_raw_vehicle_cmd_converter` dependency
+  * Launching `autoware_raw_vehicle_cmd_converter` is totally depends on the hardware.
+  Thus it would be better to decide if we launch `autoware_raw_vehicle_cmd_converter` or not
+  on the `autoware_launch` side. I'll create the corresponding PR on the `autoware_launch` side.
+  * add(`raw_vehicle_cmd_converter`): simulation launch gated to `ACTUATION_CMD` models
+  * style(pre-commit): autofix
+  * fix: to return `vehicle_model_type` for simplicity
+  * Determine if we launch `autoware_raw_vehicle_cmd_converter` on `autoware_launch` side
+  depending on `vehicle_model_type`
+  * style(pre-commit): autofix
+  * bug(`get_vehicle_model_type.launch.py`): fix a wrong launch file place
+  * fix: to return boolean that shows if we use actuation command
+  * bug: remove wrong dependencies, brought by the following commit:
+  * https://github.com/autowarefoundation/autoware_universe/pull/12384/changes/4946b43175c1b3b2998bf5fdf7d168554ce77b92#diff-8e5c58a225a55dc42651f7573f6f622ce58f9af9f8a0aab80feb6dc16119093d
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(`simple_planning_simulator`): remove `tier4_api_utils` dependency from `autoware_simple_planning_simulator` (`#12383 <https://github.com/mitsudome-r/autoware_universe/issues/12383>`_)
+  * refactor(`simple_planning_simulator`): remove `tier4_api_utils` dependency
+  * `tier4_api_utils` is deprecated. Thus fixed to use newer interface.
+  * bug: do not create unnecessary service (see below)
+  * Pose set must be performed by `autoware_pose_initializer`, not by simulator
+  * I noticed this issue thanks to the following review comment:
+  ```
+  The service `/api/simulator/set/pose` is probably not being used, so it should be possible to simply delete it.
+  According to [this diagram](https://github.com/autowarefoundation/autoware_universe/blob/main/system/autoware_default_adapi_universe/document/localization.md), the simulator receives `/initialpose3d` from the pose_initializer.
+  Also, since the service `/localization/initialize` is provided by pose_initializer, it should not be provided by the simulator.
+  ```
+  * bug: fix unsaved changes due to merge conflict
+  * bug: remove wrongly remaining lines following the previous commit
+  * https://github.com/autowarefoundation/autoware_universe/pull/12383/commits/3fbc5921d4652b4cd8be10c75d290fa0101f5b6f
+  ---------
+* Contributors: Junya Sasaki, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

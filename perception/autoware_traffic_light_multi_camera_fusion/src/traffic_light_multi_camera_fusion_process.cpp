@@ -14,6 +14,7 @@
 
 #include "traffic_light_multi_camera_fusion_process.hpp"
 
+#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <unordered_map>
@@ -72,7 +73,17 @@ const std::unordered_map<
      {tier4_perception_msgs::msg::TrafficLightElement::FLASHING,
       autoware_perception_msgs::msg::TrafficLightElement::FLASHING}});
 
-int compareRecord(const FusionRecord & r1, const FusionRecord & r2)
+double get_min_confidence(const tier4_perception_msgs::msg::TrafficLight & signal)
+{
+  // Normally, we should check whether the elements are empty,
+  // but we already know they are not, so we skip the check here
+  return std::min_element(
+           signal.elements.begin(), signal.elements.end(),
+           [](const auto & a, const auto & b) { return a.confidence < b.confidence; })
+    ->confidence;
+}
+
+int compare_record(const FusionRecord & r1, const FusionRecord & r2)
 {
   /*
   r1 will be checked
@@ -89,8 +100,8 @@ int compareRecord(const FusionRecord & r1, const FusionRecord & r2)
   if (r1.header.frame_id == r2.header.frame_id && std::abs(t1 - t2) >= dt_thres) {
     return t1 < t2 ? -1 : 1;
   }
-  bool r1_is_unknown = isUnknown(r1.signal);
-  bool r2_is_unknown = isUnknown(r2.signal);
+  bool r1_is_unknown = is_unknown(r1.signal);
+  bool r2_is_unknown = is_unknown(r2.signal);
   /*
   if both are unknown, they are of the same priority
   */
@@ -102,18 +113,18 @@ int compareRecord(const FusionRecord & r1, const FusionRecord & r2)
     */
     return r1_is_unknown ? -1 : 1;
   }
-  int visible_score_1 = calVisibleScore(r1);
-  int visible_score_2 = calVisibleScore(r2);
+  int visible_score_1 = cal_visible_score(r1);
+  int visible_score_2 = cal_visible_score(r2);
   if (visible_score_1 == visible_score_2) {
-    double confidence_1 = r1.signal.elements[0].confidence;
-    double confidence_2 = r2.signal.elements[0].confidence;
+    double confidence_1 = get_min_confidence(r1.signal);
+    double confidence_2 = get_min_confidence(r2.signal);
     return confidence_1 < confidence_2 ? -1 : 1;
   } else {
     return visible_score_1 < visible_score_2 ? -1 : 1;
   }
 }
 
-autoware_perception_msgs::msg::TrafficLightElement convertT4toAutoware(
+autoware_perception_msgs::msg::TrafficLightElement convert_t4_to_autoware(
   const tier4_perception_msgs::msg::TrafficLightElement & input)
 {
   // clang-format on
@@ -129,7 +140,7 @@ autoware_perception_msgs::msg::TrafficLightElement convertT4toAutoware(
   return output;
 }
 
-int calVisibleScore(const FusionRecord & record)
+int cal_visible_score(const FusionRecord & record)
 {
   const uint32_t boundary = 5;
   uint32_t x1 = record.roi.roi.x_offset;
@@ -143,6 +154,18 @@ int calVisibleScore(const FusionRecord & record)
   } else {
     return 1;
   }
+}
+
+FusionRecord generate_failsafe_record(FusionRecord base_record)
+{
+  // return unknown record for a fail safe
+  FusionRecord fail_safe_signal;
+  fail_safe_signal.header = base_record.header;
+  fail_safe_signal.cam_info = base_record.cam_info;
+  fail_safe_signal.roi = base_record.roi;
+  traffic_light_utils::setSignalUnknown(fail_safe_signal.signal, 0.0);
+
+  return fail_safe_signal;
 }
 
 }  // namespace utils

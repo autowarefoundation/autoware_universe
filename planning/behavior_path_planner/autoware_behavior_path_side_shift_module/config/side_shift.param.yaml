@@ -10,4 +10,6 @@
       max_shift_magnitude: 1.0
       min_shift_gap: 0.001
       unit_shift_amount: 0.1
+      drivable_area_check_mode: 1 # 0 = No check, 1 = Only current lane, 2 = Adjacent lanes included
+      min_drivable_area_margin: 0.3
       publish_debug_marker: false

@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_trajectory_validator</name>
-  <version>0.50.0</version>
+  <version>0.51.0</version>
   <description>The autoware_trajectory_validator package</description>
 
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
@@ -23,7 +23,7 @@
 
   <exec_depend>rosidl_default_runtime</exec_depend>
 
-  <depend>autoware_deprecated_boundary_departure_checker</depend>
+  <depend>autoware_boundary_departure_checker</depend>
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_map_msgs</depend>

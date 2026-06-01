@@ -50,13 +50,19 @@ typedef bg::model::point<double, 2, bg::cs::cartesian> Point;
 typedef bg::model::box<Point> Box;
 typedef std::pair<Point, size_t> ValueType;  // (position, tracker index)
 
+// Per-tracker entry bundling all precomputed data for one tracker
+struct TrackerBevEntry
+{
+  types::DynamicObject object;
+  classes::Label label;
+  types::TrackerType type;
+  InverseCovariance2D inv_cov;
+};
+
 // Per-tracker precomputed data for a single association round
 struct PreparationData
 {
-  std::vector<types::DynamicObject> tracked_objects;
-  std::vector<classes::Label> tracker_labels;
-  std::vector<types::TrackerType> tracker_types;
-  std::vector<InverseCovariance2D> tracker_inverse_covariances;
+  std::vector<TrackerBevEntry> trackers;
 };
 
 class BevAssociation : public AssociationBase
