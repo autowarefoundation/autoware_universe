@@ -199,7 +199,7 @@
       "sidebarDimension": 240,
       "lichtblickPanelTitle": "Accel Feedback"
     },
-    "StateTransitions!1ithet1": {
+    "Plot!long_4": {
       "paths": [
         {
           "value": "/control/trajectory_follower/longitudinal/diagnostic.data[13]",
@@ -231,7 +231,7 @@
       "first": "Plot!long_2",
       "second": {
         "first": "Plot!long_3",
-        "second": "StateTransitions!1ithet1",
+        "second": "Plot!long_4",
         "direction": "column",
         "splitPercentage": 41.322314049586794
       },
