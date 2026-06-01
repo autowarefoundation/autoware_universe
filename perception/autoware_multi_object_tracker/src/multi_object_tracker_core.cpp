@@ -14,6 +14,8 @@
 
 #include "multi_object_tracker_core.hpp"
 
+#include <autoware/agnocast_wrapper/tf2.hpp>
+
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -36,8 +38,9 @@ void MultiObjectTrackerInternalState::init(
   const MultiObjectTrackerParameters & params, autoware::agnocast_wrapper::Node & node,
   const std::function<void(size_t)> & trigger_function)
 {
+  auto tf_buffer = std::make_shared<autoware::agnocast_wrapper::Buffer>(node.get_clock());
   odometry = std::make_shared<Odometry>(
-    node.get_logger(), node.get_clock(), params.world_frame_id, params.ego_frame_id,
+    node.get_logger(), node.get_clock(), tf_buffer, params.world_frame_id, params.ego_frame_id,
     params.enable_odometry_uncertainty);
 
   // Initialize input manager

@@ -261,7 +261,7 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
   // === Setup ===
   rclcpp::init(0, nullptr);
   const auto node = std::make_shared<rclcpp::Node>("multi_object_tracker_test_node");
-  const auto tf_buffer = std::make_shared<tf2_ros::Buffer>(node->get_clock());
+  const auto tf_buffer = std::make_shared<autoware::agnocast_wrapper::Buffer>(node->get_clock());
   const auto tf_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer, node);
   RosbagWriterHelper writer(write_bag);
   RosbagReaderHelper reader(rosbag_path);
@@ -269,7 +269,7 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
   const std::string world_frame_id = "map";      // Assuming map is the world frame ID
   const std::string ego_frame_id = "base_link";  // Assuming base_link is the ego vehicle frame ID
   const auto odometry = std::make_shared<autoware::multi_object_tracker::Odometry>(
-    node->get_logger(), node->get_clock(), world_frame_id, ego_frame_id, true);
+    node->get_logger(), node->get_clock(), tf_buffer, world_frame_id, ego_frame_id, true);
 
   const auto creation_config = createTrackerCreationConfig();
   const auto overlap_config = createTrackerOverlapManagerConfig();

@@ -39,8 +39,10 @@ class Odometry
 {
 public:
   Odometry(
-    rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock, const std::string & world_frame_id,
-    const std::string & ego_frame_id, bool enable_odometry_uncertainty = false);
+    rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
+    std::shared_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer,
+    const std::string & world_frame_id, const std::string & ego_frame_id,
+    bool enable_odometry_uncertainty = false);
 
   std::optional<geometry_msgs::msg::Transform> getTransform(
     const std::string & source_frame_id, const rclcpp::Time & time) const;
@@ -58,7 +60,7 @@ private:
   std::string ego_frame_id_;    // ego vehicle frame
   std::string world_frame_id_;  // absolute/relative ground frame
   // tf
-  autoware::agnocast_wrapper::Buffer tf_buffer_;
+  std::shared_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer_;
   autoware::agnocast_wrapper::TransformListener tf_listener_;
 
 public:

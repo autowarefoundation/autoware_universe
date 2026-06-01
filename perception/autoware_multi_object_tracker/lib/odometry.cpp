@@ -25,14 +25,15 @@ namespace autoware::multi_object_tracker
 {
 
 Odometry::Odometry(
-  rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock, const std::string & world_frame_id,
+  rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
+  std::shared_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer, const std::string & world_frame_id,
   const std::string & ego_frame_id, bool enable_odometry_uncertainty)
 : logger_(logger),
   clock_(clock),
   ego_frame_id_(ego_frame_id),
   world_frame_id_(world_frame_id),
-  tf_buffer_(clock),
-  tf_listener_(tf_buffer_),
+  tf_buffer_(tf_buffer),
+  tf_listener_(*tf_buffer_),
   enable_odometry_uncertainty_(enable_odometry_uncertainty)
 {
 }
@@ -72,14 +73,14 @@ std::optional<geometry_msgs::msg::Transform> Odometry::getTransform(
   try {
     // Check if the frames are ready
     std::string errstr;  // This argument prevents error msg from being displayed in the terminal.
-    if (!tf_buffer_.canTransform(
+    if (!tf_buffer_->canTransform(
           world_frame_id_, source_frame_id, tf2::TimePointZero, tf2::Duration::zero(), &errstr)) {
       return std::nullopt;
     }
 
     // Lookup the transform
     geometry_msgs::msg::TransformStamped self_transform_stamped;
-    self_transform_stamped = tf_buffer_.lookupTransform(
+    self_transform_stamped = tf_buffer_->lookupTransform(
       world_frame_id_, source_frame_id, time, rclcpp::Duration::from_seconds(0.5));
 
     // update the cache
