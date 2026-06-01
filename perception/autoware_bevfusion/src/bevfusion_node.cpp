@@ -116,16 +116,69 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     static_cast<float>(this->declare_parameter<double>("circle_nms_dist_threshold", descriptor));
   const auto yaw_norm_thresholds =
     this->declare_parameter<std::vector<double>>("yaw_norm_thresholds", descriptor);
-  const float score_threshold =
-    static_cast<float>(this->declare_parameter<double>("score_threshold", descriptor));
+
+  // Distance-based score thresholds
+  const std::vector<double> distance_bin_upper_limits_double =
+    this->declare_parameter<std::vector<double>>(
+      "detection_score_thresholds.distance_bin_upper_limits", std::vector<double>{});
+  // Must set at least one upper bound
+  if (distance_bin_upper_limits_double.empty()) {
+    throw std::invalid_argument(
+      "The number of upper bounds: detection_score_thresholds.distance_bin_upper_limits must be at "
+      "least one");
+  }
+  const std::vector<float> distance_bin_upper_limits(
+    distance_bin_upper_limits_double.begin(), distance_bin_upper_limits_double.end());
+
+  // Create empty vector of thresholds for each class * number of upper bounds
+  std::vector<float> score_thresholds =
+    std::vector<float>(class_names_.size() * distance_bin_upper_limits.size(), 0.0);
+  int current_class_index = 0;
+  for (const auto & class_name : class_names_) {
+    // Construct the parameter path (e.g., "detection_score_thresholds.min_confidence_scores.CAR")
+    std::string param_path = "detection_score_thresholds.min_confidence_scores." + class_name;
+
+    // The same class name may appear multiple times in class_names_, so only declare the parameter
+    // on the first occurrence and reuse the already-declared value afterwards.
+    std::vector<double> class_score_thresholds =
+      this->has_parameter(param_path)
+        ? this->get_parameter(param_path).as_double_array()
+        : this->declare_parameter<std::vector<double>>(param_path, std::vector<double>{});
+    if (class_score_thresholds.size() != distance_bin_upper_limits.size()) {
+      throw std::invalid_argument(
+        "The number of thresholds for " + class_name +
+        " is not equal to the number of upper bounds");
+    }
+
+    // Move it to the correct position in the 1d-vector score_thresholds, where the order is number
+    // of classes * number of upper bounds
+    int current_upper_bound_index = 0;
+    for (auto class_score_threshold : class_score_thresholds) {
+      // The index is the current class index + the current upper bound index * the number of
+      // classes since score thresholds for the same class are in the same column For example, #
+      // CAR, TRUCK, BUS, BICYCLE, PEDESTRIAN
+      // [
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 0-50m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 50.0-90m
+      //  0.35, 0.35, 0.35, 0.35, 0.35,   # 90.0-121.0m
+      //  0.35, 0.35, 0.35, 0.35, 0.35    # 121.0-200.0m
+      // ]
+      auto score_threshold_index =
+        current_class_index + current_upper_bound_index * class_names_.size();
+      score_thresholds[score_threshold_index] = class_score_threshold;
+      current_upper_bound_index++;
+    }
+    current_class_index++;
+  }
 
   BEVFusionConfig config(
-    plugins_path, image_backbone_onnx_path, image_backbone_engine_path,
+    class_names_.size(), plugins_path, image_backbone_onnx_path, image_backbone_engine_path,
     image_backbone_trt_precision, out_size_factor, cloud_capacity, max_points_per_voxel, voxels_num,
     point_cloud_range, voxel_size, d_bound, x_bound, y_bound, z_bound, num_cameras,
     raw_image_height, raw_image_width, img_aug_scale_x, img_aug_scale_y, roi_height, roi_width,
     features_height, features_width, num_depth_features, image_feature_channel, num_proposals,
-    circle_nms_dist_threshold, yaw_norm_thresholds, score_threshold, use_intensity);
+    circle_nms_dist_threshold, yaw_norm_thresholds, score_thresholds, distance_bin_upper_limits,
+    use_intensity);
 
   sensor_fusion_ = config.sensor_fusion_;
 
