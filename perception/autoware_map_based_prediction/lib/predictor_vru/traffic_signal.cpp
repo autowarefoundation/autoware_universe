@@ -16,28 +16,48 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 
 #include <boost/geometry.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
+#include <algorithm>
 #include <memory>
+#include <utility>
+#include <vector>
 
 namespace autoware::map_based_prediction
 {
 using autoware_utils::ScopedTimeTrack;
 
-void PredictorVru::setTrafficSignal(const TrafficLightGroupArray & traffic_signal)
+void TrafficSignalModule::update(const TrafficLightGroupArray & traffic_signal_groups)
 {
-  traffic_signal_id_map_.clear();
-  for (const auto & signal : traffic_signal.traffic_light_groups) {
-    traffic_signal_id_map_[signal.traffic_light_group_id] = signal;
+  signal_id_map_.clear();
+  for (const auto & signal : traffic_signal_groups.traffic_light_groups) {
+    signal_id_map_[signal.traffic_light_group_id] = signal;
   }
 }
 
-std::optional<lanelet::Id> PredictorVru::getTrafficSignalId(
-  const lanelet::ConstLanelet & way_lanelet)
+void TrafficSignalModule::removeDisappearedObjects(const TrackedObjects & objects)
+{
+  for (auto it = stopped_times_against_green_.begin(); it != stopped_times_against_green_.end();) {
+    const bool isDisappeared = std::none_of(
+      objects.objects.begin(), objects.objects.end(),
+      [&it](autoware_perception_msgs::msg::TrackedObject obj) {
+        return autoware_utils::to_hex_string(obj.object_id) == it->first.first;
+      });
+    if (isDisappeared) {
+      it = stopped_times_against_green_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+std::optional<lanelet::Id> TrafficSignalModule::getSignalId(
+  const lanelet::ConstLanelet & way_lanelet) const
 {
   const auto traffic_light_reg_elems =
     way_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
@@ -52,7 +72,7 @@ std::optional<lanelet::Id> PredictorVru::getTrafficSignalId(
   return traffic_light_reg_elems.front()->id();
 }
 
-bool PredictorVru::calcIntentionToCrossWithTrafficSignal(
+bool TrafficSignalModule::calcIntentionToCross(
   const TrackedObject & object, const lanelet::ConstLanelet & crosswalk,
   const lanelet::Id & signal_id)
 {
@@ -60,7 +80,7 @@ bool PredictorVru::calcIntentionToCrossWithTrafficSignal(
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   const auto signal_color = [&] {
-    const auto elem_opt = getTrafficSignalElement(signal_id);
+    const auto elem_opt = getSignalElement(signal_id);
     return elem_opt ? elem_opt.value().color : TrafficLightElement::UNKNOWN;
   }();
 
@@ -108,7 +128,6 @@ bool PredictorVru::calcIntentionToCrossWithTrafficSignal(
 
   } else {
     stopped_times_against_green_.erase(key);
-    // If the pedestrian disappears, another function erases the old data.
   }
 
   if (signal_color == TrafficLightElement::RED) {
@@ -118,13 +137,14 @@ bool PredictorVru::calcIntentionToCrossWithTrafficSignal(
   return true;
 }
 
-std::optional<TrafficLightElement> PredictorVru::getTrafficSignalElement(const lanelet::Id & id)
+std::optional<TrafficLightElement> TrafficSignalModule::getSignalElement(
+  const lanelet::Id & id) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  if (traffic_signal_id_map_.count(id) != 0) {
-    const auto & signal_elements = traffic_signal_id_map_.at(id).elements;
+  if (signal_id_map_.count(id) != 0) {
+    const auto & signal_elements = signal_id_map_.at(id).elements;
     if (signal_elements.size() > 1) {
       RCLCPP_ERROR(
         node_.get_logger(), "[Map Based Prediction]: Multiple TrafficSignalElement_ are received.");

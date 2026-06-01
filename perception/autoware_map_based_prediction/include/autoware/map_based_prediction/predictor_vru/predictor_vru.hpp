@@ -17,6 +17,9 @@
 
 #include "autoware/map_based_prediction/data_structure.hpp"
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
+#include "autoware/map_based_prediction/predictor_vru/fence.hpp"
+#include "autoware/map_based_prediction/predictor_vru/history.hpp"
+#include "autoware/map_based_prediction/predictor_vru/traffic_signal.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -27,29 +30,20 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_traffic_rules/TrafficRules.h>
 
-#include <deque>
-#include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
 #include <vector>
 
 namespace autoware::map_based_prediction
 {
-using autoware_perception_msgs::msg::PredictedObject;
-using autoware_perception_msgs::msg::PredictedObjectKinematics;
-using autoware_perception_msgs::msg::TrackedObject;
-using autoware_perception_msgs::msg::TrackedObjectKinematics;
-using autoware_perception_msgs::msg::TrafficLightElement;
-using autoware_perception_msgs::msg::TrafficLightGroup;
-using autoware_perception_msgs::msg::TrafficLightGroupArray;
 
 class PredictorVru
 {
 public:
-  explicit PredictorVru(rclcpp::Node & node) : node_(node) {}
+  explicit PredictorVru(rclcpp::Node & node)
+  : node_(node), traffic_signal_module_(node), history_manager_(node)
+  {
+  }
   ~PredictorVru() = default;
 
   void setParameters(
@@ -62,18 +56,20 @@ public:
     double prediction_sampling_time_interval, double prediction_time_horizon,
     double crossing_intention_duration, double no_crossing_intention_duration)
   {
-    match_lost_and_appeared_crosswalk_users_ = match_lost_and_appeared_crosswalk_users;
     min_crosswalk_user_velocity_ = min_crosswalk_user_velocity;
     max_crosswalk_user_delta_yaw_threshold_for_lanelet_ =
       max_crosswalk_user_delta_yaw_threshold_for_lanelet;
     max_crosswalk_user_on_road_distance_ = max_crosswalk_user_on_road_distance;
     use_crosswalk_signal_ = use_crosswalk_signal;
-    threshold_velocity_assumed_as_stopping_ = threshold_velocity_assumed_as_stopping;
-    distance_set_for_no_intention_to_walk_ = distance_set_for_no_intention_to_walk;
-    timeout_set_for_no_intention_to_walk_ = timeout_set_for_no_intention_to_walk;
     prediction_time_horizon_ = prediction_time_horizon;
-    crossing_intention_duration_ = crossing_intention_duration;
-    no_crossing_intention_duration_ = no_crossing_intention_duration;
+
+    traffic_signal_module_.setParams(
+      threshold_velocity_assumed_as_stopping, distance_set_for_no_intention_to_walk,
+      timeout_set_for_no_intention_to_walk);
+
+    history_manager_.setParams(
+      match_lost_and_appeared_crosswalk_users, crossing_intention_duration,
+      no_crossing_intention_duration);
 
     path_generator_ = std::make_shared<PathGenerator>(
       prediction_sampling_time_interval, min_crosswalk_user_velocity);
@@ -83,12 +79,17 @@ public:
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
   {
-    time_keeper_ = std::move(time_keeper_ptr);
+    time_keeper_ = time_keeper_ptr;
+    traffic_signal_module_.setTimeKeeper(time_keeper_ptr);
+    history_manager_.setTimeKeeper(time_keeper_ptr);
   }
 
-  void setTrafficSignal(const TrafficLightGroupArray & traffic_signal_groups);
+  void setTrafficSignal(const TrafficLightGroupArray & traffic_signal_groups)
+  {
+    traffic_signal_module_.update(traffic_signal_groups);
+  }
 
-  void initialize();
+  void initialize() { history_manager_.initialize(); }
 
   void loadCurrentCrosswalkUsers(const TrackedObjects & objects);
   void removeOldKnownMatches(const double current_time, const double buffer_time);
@@ -103,51 +104,21 @@ private:
   // Map data
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   lanelet::ConstLanelets crosswalks_;
-  lanelet::LaneletMapUPtr fence_layer_{nullptr};
   std::shared_ptr<PathGenerator> path_generator_;
 
-  // Data
-  std::unordered_map<std::string, TrackedObject> current_crosswalk_users_;
-  std::unordered_set<std::string> predicted_crosswalk_users_ids_;
-  std::unordered_map<std::string, std::deque<CrosswalkUser>> crosswalk_users_history_;
-  std::map<std::pair<std::string, lanelet::Id>, rclcpp::Time> stopped_times_against_green_;
-  std::unordered_map<std::string, std::string> known_matches_;
-  std::unordered_map<lanelet::Id, TrafficLightGroup> traffic_signal_id_map_;
+  // Sub-modules
+  FenceModule fence_module_;
+  TrafficSignalModule traffic_signal_module_;
+  CrosswalkUserHistoryManager history_manager_;
 
   // Parameters
-  double prediction_time_horizon_;
-  bool match_lost_and_appeared_crosswalk_users_;
-  double min_crosswalk_user_velocity_;
-  double max_crosswalk_user_delta_yaw_threshold_for_lanelet_;
-  double max_crosswalk_user_on_road_distance_;
-  bool use_crosswalk_signal_;
-  double threshold_velocity_assumed_as_stopping_;
-  double crossing_intention_duration_{0.0};
-  double no_crossing_intention_duration_{0.0};
-  std::vector<double> distance_set_for_no_intention_to_walk_;
-  std::vector<double> timeout_set_for_no_intention_to_walk_;
+  double prediction_time_horizon_{0.0};
+  double min_crosswalk_user_velocity_{0.0};
+  double max_crosswalk_user_delta_yaw_threshold_for_lanelet_{0.0};
+  double max_crosswalk_user_on_road_distance_{0.0};
+  bool use_crosswalk_signal_{false};
 
-  //// process
-  std::optional<lanelet::Id> getTrafficSignalId(const lanelet::ConstLanelet & way_lanelet);
-  bool hasPotentialToReachWithHistory(
-    const TrackedObject & object, const Eigen::Vector2d & center_point,
-    const Eigen::Vector2d & right_point, const Eigen::Vector2d & left_point,
-    const double time_horizon, const double min_object_vel,
-    const double max_crosswalk_user_delta_yaw_threshold_for_lanelet, const bool is_crossing);
   PredictedObject getPredictedObjectAsCrosswalkUser(const TrackedObject & object);
-  void updateCrosswalkUserHistory(
-    const std_msgs::msg::Header & header, const TrackedObject & object,
-    const std::string & object_id);
-  std::string tryMatchNewObjectToDisappeared(
-    const std::string & object_id, std::unordered_map<std::string, TrackedObject> & current_users);
-  bool calcIntentionToCrossWithTrafficSignal(
-    const TrackedObject & object, const lanelet::ConstLanelet & crosswalk,
-    const lanelet::Id & signal_id);
-  /// @brief return true if the given predicted path crosses a fence before arriving at the
-  /// crosswalk
-  bool doesPathCrossAnyFenceBeforeCrosswalk(const PredictedPathWithArrivalIndex & predicted_path);
-  PredictedPath cutPathBeforeFences(const PredictedPath & predicted_path) const;
-  std::optional<TrafficLightElement> getTrafficSignalElement(const lanelet::Id & id);
 };
 
 }  // namespace autoware::map_based_prediction

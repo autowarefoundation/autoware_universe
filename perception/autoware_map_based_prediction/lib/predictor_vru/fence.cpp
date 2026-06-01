@@ -22,10 +22,12 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 namespace autoware::map_based_prediction
 {
-using autoware_utils::ScopedTimeTrack;
 
 namespace
 {
@@ -37,22 +39,10 @@ bool doesPathCrossFence(
 }
 }  // namespace
 
-void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr)
+void FenceModule::buildFromMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr)
 {
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  lanelet_map_ptr_ = std::move(lanelet_map_ptr);
-
-  const auto all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
-  const auto crosswalks = lanelet::utils::query::crosswalkLanelets(all_lanelets);
-  const auto walkways = lanelet::utils::query::walkwayLanelets(all_lanelets);
-  crosswalks_.clear();
-  crosswalks_.insert(crosswalks_.end(), crosswalks.begin(), crosswalks.end());
-  crosswalks_.insert(crosswalks_.end(), walkways.begin(), walkways.end());
-
   lanelet::LineStrings3d fences;
-  for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
+  for (const auto & linestring : lanelet_map_ptr->lineStringLayer) {
     if (const std::string type = linestring.attributeOr(lanelet::AttributeName::Type, "none");
         type == "fence") {
       fences.emplace_back(std::const_pointer_cast<lanelet::LineStringData>(linestring.constData()));
@@ -61,9 +51,12 @@ void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_ma
   fence_layer_ = lanelet::utils::createMap(fences);
 }
 
-bool PredictorVru::doesPathCrossAnyFenceBeforeCrosswalk(
-  const PredictedPathWithArrivalIndex & predicted_path)
+bool FenceModule::doesPathCrossAnyFenceBeforeCrosswalk(
+  const PredictedPathWithArrivalIndex & predicted_path) const
 {
+  if (!fence_layer_) {
+    return false;
+  }
   lanelet::BasicLineString2d predicted_path_ls;
   for (auto i = 0UL; i <= predicted_path.arrival_index; ++i) {
     const auto & pt = predicted_path.path[i];
@@ -79,8 +72,11 @@ bool PredictorVru::doesPathCrossAnyFenceBeforeCrosswalk(
   return false;
 }
 
-PredictedPath PredictorVru::cutPathBeforeFences(const PredictedPath & predicted_path) const
+PredictedPath FenceModule::cutPathBeforeFences(const PredictedPath & predicted_path) const
 {
+  if (!fence_layer_) {
+    return predicted_path;
+  }
   const auto & path = predicted_path.path;
   if (path.size() < 2) {
     return predicted_path;
@@ -117,7 +113,6 @@ PredictedPath PredictorVru::cutPathBeforeFences(const PredictedPath & predicted_
   if (!closest_cross_index) {
     return predicted_path;
   }
-  // trim the path to crossing
   auto trimmed_path = predicted_path;
   trimmed_path.path.clear();
   for (unsigned i = 0; i <= closest_cross_index.value(); ++i) {
