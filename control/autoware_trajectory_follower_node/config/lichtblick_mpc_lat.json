@@ -183,26 +183,6 @@
       "xAxisVal": "timestamp",
       "sidebarDimension": 240,
       "lichtblickPanelTitle": "yaw"
-    },
-    "Plot!lat_5": {
-      "paths": [
-        {
-          "timestampMethod": "receiveTime",
-          "value": "/vehicle/status/control_mode/mode",
-          "enabled": true,
-          "color": "#1f77b4",
-          "label": "mode"
-        }
-      ],
-      "showXAxisLabels": true,
-      "showYAxisLabels": true,
-      "showLegend": true,
-      "legendDisplay": "floating",
-      "showPlotValuesInLegend": false,
-      "isSynced": true,
-      "xAxisVal": "timestamp",
-      "sidebarDimension": 240,
-      "lichtblickPanelTitle": "control mode (1: Auto, 2: Manual, 3: Disengaged, 4: Not Ready)"
     }
   },
   "globalVariables": {},
@@ -224,14 +204,9 @@
     },
     "second": {
       "first": "Plot!lat_3",
-      "second": {
-        "first": "Plot!lat_4",
-        "second": "Plot!lat_5",
-        "direction": "column",
-        "splitPercentage": 50
-      },
+      "second": "Plot!lat_4",
       "direction": "column",
-      "splitPercentage": 50
+      "splitPercentage": 71.97149643705464
     },
     "direction": "column",
     "splitPercentage": 50

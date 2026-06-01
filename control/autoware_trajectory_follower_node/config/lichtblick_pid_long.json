@@ -199,32 +199,20 @@
       "sidebarDimension": 240,
       "lichtblickPanelTitle": "Accel Feedback"
     },
-    "Plot!long_4": {
+    "StateTransitions!1ithet1": {
       "paths": [
         {
-          "timestampMethod": "receiveTime",
           "value": "/control/trajectory_follower/longitudinal/diagnostic.data[13]",
-          "enabled": true,
-          "color": "#d62728",
+          "timestampMethod": "receiveTime",
           "label": "0:Drive 1:Stopping 2:Stopped 3:Emergency"
         },
         {
-          "timestampMethod": "receiveTime",
           "value": "/control/trajectory_follower/longitudinal/diagnostic.data[36]",
-          "enabled": true,
-          "color": "#f14cc1",
+          "timestampMethod": "receiveTime",
           "label": "smooth stop mode 0:Strong 1:Weak 2:Weak Stop 3:Strong Stop (0.05 offset)"
         }
       ],
-      "showXAxisLabels": true,
-      "showYAxisLabels": true,
-      "showLegend": true,
-      "legendDisplay": "floating",
-      "showPlotValuesInLegend": false,
-      "isSynced": true,
-      "xAxisVal": "timestamp",
-      "sidebarDimension": 240,
-      "lichtblickPanelTitle": "State"
+      "isSynced": true
     }
   },
   "globalVariables": {},
@@ -243,14 +231,14 @@
       "first": "Plot!long_2",
       "second": {
         "first": "Plot!long_3",
-        "second": "Plot!long_4",
+        "second": "StateTransitions!1ithet1",
         "direction": "column",
-        "splitPercentage": 50
+        "splitPercentage": 41.322314049586794
       },
       "direction": "column",
-      "splitPercentage": 50
+      "splitPercentage": 40.29605263157894
     },
     "direction": "column",
-    "splitPercentage": 50
+    "splitPercentage": 63.895486935866984
   }
 }
