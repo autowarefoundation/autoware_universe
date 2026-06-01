@@ -70,9 +70,10 @@ namespace autoware::traffic_light
 TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
 : Node("traffic_light_arbiter", options)
 {
-  external_delay_tolerance_ = this->declare_parameter<double>("external_delay_tolerance");
-  external_time_tolerance_ = this->declare_parameter<double>("external_time_tolerance");
-  perception_time_tolerance_ = this->declare_parameter<double>("perception_time_tolerance");
+  const auto external_delay_tolerance = this->declare_parameter<double>("external_delay_tolerance");
+  const auto external_time_tolerance = this->declare_parameter<double>("external_time_tolerance");
+  const auto perception_time_tolerance =
+    this->declare_parameter<double>("perception_time_tolerance");
 
   // Parse source priority parameter
   SourcePriority source_priority;
@@ -93,8 +94,8 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
   const bool enable_signal_matching = this->declare_parameter<bool>("enable_signal_matching");
 
   core_ = std::make_unique<TrafficLightArbiterCore>(
-    source_priority, enable_signal_matching, external_delay_tolerance_, external_time_tolerance_,
-    perception_time_tolerance_);
+    source_priority, enable_signal_matching, external_delay_tolerance, external_time_tolerance,
+    perception_time_tolerance);
 
   map_sub_ = create_subscription<LaneletMapBin>(
     "~/sub/vector_map", rclcpp::QoS(1).transient_local(),
@@ -120,11 +121,7 @@ void TrafficLightArbiter::on_map(const LaneletMapBin::ConstSharedPtr msg)
 
 void TrafficLightArbiter::on_perception_msg(const TrafficSignalArray::ConstSharedPtr msg)
 {
-  core_->ingest_perception(*msg);
-
-  // Clean up external signals that are too old relative to perception message
-  cleanup_expired_external_signals(rclcpp::Time(msg->stamp), external_time_tolerance_);
-
+  log_dropped_external_signals(core_->ingest_perception(*msg));
   arbitrate_and_publish(msg->stamp);
 }
 
@@ -139,18 +136,13 @@ void TrafficLightArbiter::on_external_msg(const TrafficSignalArray::ConstSharedP
     return;
   }
 
-  core_->ingest_external(*msg);
-
-  // Clean up expired signals against current time using the receive-delay tolerance
-  cleanup_expired_external_signals(current_time, external_delay_tolerance_);
-
+  log_dropped_external_signals(core_->ingest_external(*msg, current_time));
   arbitrate_and_publish(msg->stamp);
 }
 
-void TrafficLightArbiter::cleanup_expired_external_signals(
-  const rclcpp::Time & current_time, double tolerance)
+void TrafficLightArbiter::log_dropped_external_signals(
+  const std::vector<TrafficLightArbiterCore::DroppedExternalSignal> & dropped)
 {
-  const auto dropped = core_->cleanup_expired_external_signals(current_time, tolerance);
   for (const auto & entry : dropped) {
     RCLCPP_DEBUG(
       get_logger(), "Removing expired external traffic light signal (ID: %lu, age: %.2f s)",

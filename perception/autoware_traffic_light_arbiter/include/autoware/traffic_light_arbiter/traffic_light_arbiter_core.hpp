@@ -59,12 +59,17 @@ public:
     lanelet::Id id;
     double age;
   };
-  std::vector<DroppedExternalSignal> cleanup_expired_external_signals(
-    const rclcpp::Time & reference_time, double tolerance);
 
-  void ingest_perception(const TrafficSignalArray & msg);
+  // Update perception buffer, then sweep external cache against msg.stamp
+  // using external_time_tolerance_. Returns dropped entries for caller logging.
+  std::vector<DroppedExternalSignal> ingest_perception(const TrafficSignalArray & msg);
 
-  void ingest_external(const TrafficSignalArray & msg);
+  // Update external cache, clear perception if its stamp falls outside
+  // perception_time_tolerance_ of msg.stamp, then sweep external cache
+  // against current_time using external_delay_tolerance_. Returns dropped
+  // entries for caller logging.
+  std::vector<DroppedExternalSignal> ingest_external(
+    const TrafficSignalArray & msg, const rclcpp::Time & current_time);
 
   // Result of one arbitration cycle. The arbiter intentionally does not stamp
   // the output: stamp inheritance is an I/O concern owned by the Node (e.g.
@@ -84,6 +89,11 @@ public:
   ArbitrationResult arbitrate();
 
 private:
+  // Sweeps external cache: removes every stored entry whose stamp deviates
+  // from `reference_time` beyond `tolerance`, returning the removed entries.
+  std::vector<DroppedExternalSignal> sweep_expired_external_signals(
+    const rclcpp::Time & reference_time, double tolerance);
+
   SourcePriority source_priority_;
   bool enable_signal_matching_;
   double external_delay_tolerance_;

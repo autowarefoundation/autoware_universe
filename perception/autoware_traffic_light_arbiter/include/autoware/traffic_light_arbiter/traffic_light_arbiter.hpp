@@ -22,6 +22,7 @@
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -44,11 +45,11 @@ private:
   void on_perception_msg(const TrafficSignalArray::ConstSharedPtr msg);
   void on_external_msg(const TrafficSignalArray::ConstSharedPtr msg);
   void arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp);
-  void cleanup_expired_external_signals(const rclcpp::Time & current_time, double tolerance);
 
-  double external_delay_tolerance_;
-  double external_time_tolerance_;
-  double perception_time_tolerance_;
+  // Emits one DEBUG line per dropped entry; called from the on_*_msg
+  // handlers with the result of the corresponding ingest_*().
+  void log_dropped_external_signals(
+    const std::vector<TrafficLightArbiterCore::DroppedExternalSignal> & dropped);
 
   std::unique_ptr<TrafficLightArbiterCore> core_;
 };
