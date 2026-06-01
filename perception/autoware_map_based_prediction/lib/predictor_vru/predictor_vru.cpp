@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "map_based_prediction/predictor_vru.hpp"
+#include "autoware/map_based_prediction/predictor_vru/predictor_vru.hpp"
 
-#include "map_based_prediction/data_structure.hpp"
-#include "map_based_prediction/path_generator.hpp"
-#include "map_based_prediction/utils.hpp"
+#include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -25,6 +23,8 @@
 #include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <lanelet2_core/primitives/Lanelet.h>
+
+#include <boost/geometry.hpp>
 
 #include <algorithm>
 #include <deque>
@@ -198,167 +198,12 @@ CrosswalkEdgePoints getCrosswalkEdgePoints(const lanelet::ConstLanelet & crosswa
   return CrosswalkEdgePoints{front_center_point, r_p_front, l_p_front,
                              back_center_point,  r_p_back,  l_p_back};
 }
-
-bool doesPathCrossFence(
-  const lanelet::BasicLineString2d & predicted_path, const lanelet::ConstLineString3d & fence_line)
-{
-  return boost::geometry::intersects(
-    predicted_path, lanelet::utils::to2D(fence_line.basicLineString()));
-}
-
 }  // namespace
 
 void PredictorVru::initialize()
 {
   current_crosswalk_users_.clear();
   predicted_crosswalk_users_ids_.clear();
-}
-
-void PredictorVru::setTrafficSignal(const TrafficLightGroupArray & traffic_signal)
-{
-  traffic_signal_id_map_.clear();
-  for (const auto & signal : traffic_signal.traffic_light_groups) {
-    traffic_signal_id_map_[signal.traffic_light_group_id] = signal;
-  }
-}
-
-void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr)
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  lanelet_map_ptr_ = std::move(lanelet_map_ptr);
-
-  const auto all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_ptr_);
-  const auto crosswalks = lanelet::utils::query::crosswalkLanelets(all_lanelets);
-  const auto walkways = lanelet::utils::query::walkwayLanelets(all_lanelets);
-  crosswalks_.clear();
-  crosswalks_.insert(crosswalks_.end(), crosswalks.begin(), crosswalks.end());
-  crosswalks_.insert(crosswalks_.end(), walkways.begin(), walkways.end());
-
-  lanelet::LineStrings3d fences;
-  for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
-    if (const std::string type = linestring.attributeOr(lanelet::AttributeName::Type, "none");
-        type == "fence") {
-      fences.emplace_back(std::const_pointer_cast<lanelet::LineStringData>(linestring.constData()));
-    }
-  }
-  fence_layer_ = lanelet::utils::createMap(fences);
-}
-
-bool PredictorVru::doesPathCrossAnyFenceBeforeCrosswalk(
-  const PredictedPathWithArrivalIndex & predicted_path)
-{
-  lanelet::BasicLineString2d predicted_path_ls;
-  for (auto i = 0UL; i <= predicted_path.arrival_index; ++i) {
-    const auto & pt = predicted_path.path[i];
-    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
-  }
-  const auto candidates =
-    fence_layer_->lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
-  for (const auto & candidate : candidates) {
-    if (doesPathCrossFence(predicted_path_ls, candidate)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-PredictedPath PredictorVru::cutPathBeforeFences(const PredictedPath & predicted_path) const
-{
-  const auto & path = predicted_path.path;
-  if (path.size() < 2) {
-    return predicted_path;
-  }
-  lanelet::BasicLineString2d predicted_path_ls;
-  for (const auto & pt : path) {
-    predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
-  }
-  const auto candidates =
-    fence_layer_->lineStringLayer.search(lanelet::geometry::boundingBox2d(predicted_path_ls));
-  std::vector<lanelet::ConstLineString3d> crossed_fences{};
-  for (const auto & candidate : candidates) {
-    if (doesPathCrossFence(predicted_path_ls, candidate)) {
-      crossed_fences.push_back(candidate);
-      break;
-    }
-  }
-  if (crossed_fences.empty()) {
-    return predicted_path;
-  }
-
-  std::optional<size_t> closest_cross_index{};
-  for (auto i = 0UL; i + 1 < predicted_path_ls.size() && !closest_cross_index.has_value(); ++i) {
-    lanelet::BasicLineString2d path_segment(
-      lanelet::BasicPoints2d{predicted_path_ls[i], predicted_path_ls[i + 1]});
-    for (const auto & fence : crossed_fences) {
-      if (boost::geometry::intersects(
-            path_segment, lanelet::utils::to2D(fence).basicLineString())) {
-        closest_cross_index = i;
-      }
-    }
-  }
-
-  if (!closest_cross_index) {
-    return predicted_path;
-  }
-  // trim the path to crossing
-  auto trimmed_path = predicted_path;
-  trimmed_path.path.clear();
-  for (unsigned i = 0; i <= closest_cross_index.value(); ++i) {
-    trimmed_path.path.push_back(path.at(i));
-  }
-  return trimmed_path;
-}
-
-void PredictorVru::loadCurrentCrosswalkUsers(const TrackedObjects & objects)
-{
-  if (!lanelet_map_ptr_) {
-    return;
-  }
-
-  // removeStaleTrafficLightInfo
-  for (auto it = stopped_times_against_green_.begin(); it != stopped_times_against_green_.end();) {
-    const bool isDisappeared = std::none_of(
-      objects.objects.begin(), objects.objects.end(),
-      [&it](autoware_perception_msgs::msg::TrackedObject obj) {
-        return autoware_utils::to_hex_string(obj.object_id) == it->first.first;
-      });
-    if (isDisappeared) {
-      it = stopped_times_against_green_.erase(it);
-    } else {
-      ++it;
-    }
-  }
-
-  //
-  initialize();
-
-  // load current crosswalk users
-  for (const auto & object : objects.objects) {
-    const auto label_for_prediction = utils::changeVRULabelForPrediction(
-      object.classification.front().label, object, lanelet_map_ptr_);
-    if (
-      label_for_prediction == ObjectClassification::PEDESTRIAN ||
-      label_for_prediction == ObjectClassification::BICYCLE) {
-      const std::string object_id = autoware_utils::to_hex_string(object.object_id);
-      current_crosswalk_users_.emplace(object_id, object);
-    }
-  }
-}
-
-void PredictorVru::removeOldKnownMatches(const double current_time, const double buffer_time)
-{
-  auto invalidated_crosswalk_users =
-    utils::removeOldObjectsHistory(current_time, buffer_time, crosswalk_users_history_);
-  // delete matches that point to invalid object
-  for (auto it = known_matches_.begin(); it != known_matches_.end();) {
-    if (invalidated_crosswalk_users.count(it->second)) {
-      it = known_matches_.erase(it);
-    } else {
-      ++it;
-    }
-  }
 }
 
 PredictedObject PredictorVru::predict(
@@ -667,188 +512,6 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
   }
 
   return predicted_object;
-}
-
-std::optional<lanelet::Id> PredictorVru::getTrafficSignalId(
-  const lanelet::ConstLanelet & way_lanelet)
-{
-  const auto traffic_light_reg_elems =
-    way_lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
-  if (traffic_light_reg_elems.empty()) {
-    return std::nullopt;
-  } else if (traffic_light_reg_elems.size() > 1) {
-    RCLCPP_ERROR(
-      node_.get_logger(),
-      "[Map Based Prediction]: "
-      "Multiple regulatory elements as TrafficLight are defined to one lanelet object.");
-  }
-  return traffic_light_reg_elems.front()->id();
-}
-
-void PredictorVru::updateCrosswalkUserHistory(
-  const std_msgs::msg::Header & header, const TrackedObject & object, const std::string & object_id)
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  const auto now = node_.get_clock()->now();
-  CrosswalkUser crosswalk_user;
-  crosswalk_user.header = header;
-  crosswalk_user.tracked_object = object;
-
-  if (crosswalk_users_history_.count(object_id) == 0) {
-    crosswalk_users_history_.emplace(object_id, std::deque<CrosswalkUser>{crosswalk_user});
-    return;
-  }
-
-  const auto last_object_data = crosswalk_users_history_.at(object_id).back();
-  crosswalk_user.intention_history = last_object_data.intention_history;
-  crosswalk_user.is_crossing = last_object_data.is_crossing;
-  crosswalk_users_history_.at(object_id).push_back(crosswalk_user);
-}
-
-std::string PredictorVru::tryMatchNewObjectToDisappeared(
-  const std::string & object_id, std::unordered_map<std::string, TrackedObject> & current_users)
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  const auto known_match_opt = [&]() -> std::optional<std::string> {
-    if (!known_matches_.count(object_id)) {
-      return std::nullopt;
-    }
-
-    std::string match_id = known_matches_[object_id];
-    // object in the history is already matched to something (possibly itself)
-    if (crosswalk_users_history_.count(match_id)) {
-      // avoid matching two appeared users to one user in history
-      current_users[match_id] = crosswalk_users_history_[match_id].back().tracked_object;
-      return match_id;
-    } else {
-      RCLCPP_WARN_STREAM(
-        node_.get_logger(), "Crosswalk user was "
-                              << object_id << "was matched to " << match_id
-                              << " but history for the crosswalk user was deleted. Rematching");
-    }
-    return std::nullopt;
-  }();
-  //  early return if the match is already known
-  if (known_match_opt.has_value()) {
-    return known_match_opt.value();
-  }
-
-  std::string match_id = object_id;
-  double best_score = std::numeric_limits<double>::max();
-  const auto object_pos = current_users[object_id].kinematics.pose_with_covariance.pose.position;
-  for (const auto & [user_id, user_history] : crosswalk_users_history_) {
-    // user present in current_users and will be matched to itself
-    if (current_users.count(user_id)) {
-      continue;
-    }
-    // TODO(dkoldaev): implement more sophisticated scoring, for now simply dst to last position in
-    // history
-    const auto match_candidate_pos =
-      user_history.back().tracked_object.kinematics.pose_with_covariance.pose.position;
-    const double score =
-      std::hypot(match_candidate_pos.x - object_pos.x, match_candidate_pos.y - object_pos.y);
-    if (score < best_score) {
-      best_score = score;
-      match_id = user_id;
-    }
-  }
-
-  if (object_id != match_id) {
-    RCLCPP_INFO_STREAM(
-      node_.get_logger(), "[Map Based Prediction]: Matched " << object_id << " to " << match_id);
-    // avoid matching two appeared users to one user in history
-    current_users[match_id] = crosswalk_users_history_[match_id].back().tracked_object;
-  }
-
-  known_matches_[object_id] = match_id;
-  return match_id;
-}
-
-bool PredictorVru::calcIntentionToCrossWithTrafficSignal(
-  const TrackedObject & object, const lanelet::ConstLanelet & crosswalk,
-  const lanelet::Id & signal_id)
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  const auto signal_color = [&] {
-    const auto elem_opt = getTrafficSignalElement(signal_id);
-    return elem_opt ? elem_opt.value().color : TrafficLightElement::UNKNOWN;
-  }();
-
-  const auto key = std::make_pair(autoware_utils::to_hex_string(object.object_id), signal_id);
-  if (
-    signal_color == TrafficLightElement::GREEN &&
-    autoware_utils::calc_norm(object.kinematics.twist_with_covariance.twist.linear) <
-      threshold_velocity_assumed_as_stopping_) {
-    stopped_times_against_green_.try_emplace(key, node_.get_clock()->now());
-
-    const auto timeout_no_intention_to_walk = [&]() {
-      auto InterpolateMap = [](
-                              const std::vector<double> & key_set,
-                              const std::vector<double> & value_set, const double query) {
-        if (query <= key_set.front()) {
-          return value_set.front();
-        } else if (query >= key_set.back()) {
-          return value_set.back();
-        }
-        for (size_t i = 0; i < key_set.size() - 1; ++i) {
-          if (key_set.at(i) <= query && query <= key_set.at(i + 1)) {
-            auto ratio =
-              (query - key_set.at(i)) / std::max(key_set.at(i + 1) - key_set.at(i), 1.0e-5);
-            ratio = std::clamp(ratio, 0.0, 1.0);
-            return value_set.at(i) + ratio * (value_set.at(i + 1) - value_set.at(i));
-          }
-        }
-        return value_set.back();
-      };
-
-      const auto obj_position = object.kinematics.pose_with_covariance.pose.position;
-      const double distance_to_crosswalk = boost::geometry::distance(
-        crosswalk.polygon2d().basicPolygon(),
-        lanelet::BasicPoint2d(obj_position.x, obj_position.y));
-      return InterpolateMap(
-        distance_set_for_no_intention_to_walk_, timeout_set_for_no_intention_to_walk_,
-        distance_to_crosswalk);
-    }();
-
-    if (
-      (node_.get_clock()->now() - stopped_times_against_green_.at(key)).seconds() >
-      timeout_no_intention_to_walk) {
-      return false;
-    }
-
-  } else {
-    stopped_times_against_green_.erase(key);
-    // If the pedestrian disappears, another function erases the old data.
-  }
-
-  if (signal_color == TrafficLightElement::RED) {
-    return false;
-  }
-
-  return true;
-}
-
-std::optional<TrafficLightElement> PredictorVru::getTrafficSignalElement(const lanelet::Id & id)
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  if (traffic_signal_id_map_.count(id) != 0) {
-    const auto & signal_elements = traffic_signal_id_map_.at(id).elements;
-    if (signal_elements.size() > 1) {
-      RCLCPP_ERROR(
-        node_.get_logger(), "[Map Based Prediction]: Multiple TrafficSignalElement_ are received.");
-    } else if (!signal_elements.empty()) {
-      return signal_elements.front();
-    }
-  }
-  return std::nullopt;
 }
 
 }  // namespace autoware::map_based_prediction

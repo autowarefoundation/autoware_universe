@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "autoware_utils/ros/marker_helper.hpp"
-#include "map_based_prediction/data_structure.hpp"
-#include "map_based_prediction/map_based_prediction_node.hpp"
+#include "autoware/map_based_prediction/map_based_prediction_node/debug.hpp"
+#include "autoware/map_based_prediction/data_structure.hpp"
 
 namespace autoware::map_based_prediction
 {

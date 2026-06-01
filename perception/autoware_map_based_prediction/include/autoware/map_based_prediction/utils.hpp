@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAP_BASED_PREDICTION__UTILS_HPP_
-#define MAP_BASED_PREDICTION__UTILS_HPP_
+#ifndef AUTOWARE_MAP_BASED_PREDICTION__UTILS_HPP_
+#define AUTOWARE_MAP_BASED_PREDICTION__UTILS_HPP_
 
-#include "map_based_prediction/data_structure.hpp"
+#include "autoware/map_based_prediction/data_structure.hpp"
 
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -133,4 +133,4 @@ double lateral_distance_to_lanelet_bounds(
 
 }  // namespace autoware::map_based_prediction
 
-#endif  // MAP_BASED_PREDICTION__UTILS_HPP_
+#endif  // AUTOWARE_MAP_BASED_PREDICTION__UTILS_HPP_

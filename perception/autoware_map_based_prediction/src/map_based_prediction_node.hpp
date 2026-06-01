@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE_HPP_
-#define MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE_HPP_
+#ifndef AUTOWARE_MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE_HPP_
+#define AUTOWARE_MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE_HPP_
 
-#include "map_based_prediction/data_structure.hpp"
-#include "map_based_prediction/path_generator.hpp"
-#include "map_based_prediction/predictor_vru.hpp"
+#include "autoware/map_based_prediction/data_structure.hpp"
+#include "autoware/map_based_prediction/path_generator/path_generator.hpp"
+#include "autoware/map_based_prediction/predictor_vru/predictor_vru.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
@@ -358,4 +358,4 @@ private:
 };
 }  // namespace autoware::map_based_prediction
 
-#endif  // MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE_HPP_
+#endif  // AUTOWARE_MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE_HPP_

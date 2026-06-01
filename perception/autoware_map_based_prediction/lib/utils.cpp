@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "map_based_prediction/utils.hpp"
+#include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
