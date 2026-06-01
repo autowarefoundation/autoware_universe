@@ -45,6 +45,7 @@ public:
   }
 
   std::optional<types::DynamicObjectList> processMessage(
+    // cppcheck-suppress unknownMacro
     AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
   void push(const types::DynamicObjectList & objects, const types::AssociationResult & association);
   void updateTimingStatus(const rclcpp::Time & now, const rclcpp::Time & objects_time);
