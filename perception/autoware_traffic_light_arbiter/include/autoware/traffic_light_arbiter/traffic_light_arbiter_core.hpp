@@ -51,24 +51,24 @@ public:
 
   void set_pedestrian_traffic_light_ids(std::unordered_set<lanelet::Id> ids);
 
-  struct DroppedExternalSignal
+  struct ExpiredExternalSignal
   {
     lanelet::Id id;
     double age;
   };
 
   // Update perception buffer, then sweep external cache against msg.stamp
-  // using external_time_tolerance_. Returns dropped entries for caller logging.
-  std::vector<DroppedExternalSignal> ingest_perception(const TrafficSignalArray & msg);
+  // using external_time_tolerance_. Returns expired entries for caller logging.
+  std::vector<ExpiredExternalSignal> ingest_perception(const TrafficSignalArray & msg);
 
   // Outcome of an external-msg ingest. `accepted == false` means the msg's
   // stamp differed from current_time by more than external_delay_tolerance_
   // and was rejected without touching internal state. When accepted,
-  // `dropped` carries any cache entries that the bundled sweep evicted.
+  // `expired` carries any cache entries that the bundled sweep evicted.
   struct ExternalIngestResult
   {
     bool accepted;
-    std::vector<DroppedExternalSignal> dropped;
+    std::vector<ExpiredExternalSignal> expired;
   };
 
   // Admission-control + update + sweep for an external msg:
@@ -76,7 +76,7 @@ public:
   //      current_time, using external_delay_tolerance_.
   //   2. Otherwise update external cache entries with msg.stamp, sweep
   //      external cache against current_time using external_delay_tolerance_,
-  //      and return dropped entries.
+  //      and return expired entries.
   // Perception staleness is evaluated non-destructively inside arbitrate()
   // using perception_time_tolerance_; ingest_external no longer touches
   // latest_perception_msg_.
@@ -108,7 +108,7 @@ private:
 
   // Sweeps external cache: removes every stored entry whose stamp deviates
   // from `reference_time` beyond `tolerance`, returning the removed entries.
-  std::vector<DroppedExternalSignal> sweep_expired_external_signals(
+  std::vector<ExpiredExternalSignal> sweep_expired_external_signals(
     const rclcpp::Time & reference_time, double tolerance);
 
   SourcePriority source_priority_;

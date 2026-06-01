@@ -121,7 +121,7 @@ void TrafficLightArbiter::on_map(const LaneletMapBin::ConstSharedPtr msg)
 
 void TrafficLightArbiter::on_perception_msg(const TrafficSignalArray::ConstSharedPtr msg)
 {
-  log_dropped_external_signals(core_->ingest_perception(*msg));
+  log_expired_external_signals(core_->ingest_perception(*msg));
   arbitrate_and_publish(msg->stamp);
 }
 
@@ -133,14 +133,14 @@ void TrafficLightArbiter::on_external_msg(const TrafficSignalArray::ConstSharedP
       get_logger(), *get_clock(), 5000, "Received outdated external traffic signal messages");
     return;
   }
-  log_dropped_external_signals(result.dropped);
+  log_expired_external_signals(result.expired);
   arbitrate_and_publish(msg->stamp);
 }
 
-void TrafficLightArbiter::log_dropped_external_signals(
-  const std::vector<TrafficLightArbiterCore::DroppedExternalSignal> & dropped)
+void TrafficLightArbiter::log_expired_external_signals(
+  const std::vector<TrafficLightArbiterCore::ExpiredExternalSignal> & expired)
 {
-  for (const auto & entry : dropped) {
+  for (const auto & entry : expired) {
     RCLCPP_DEBUG(
       get_logger(), "Removing expired external traffic light signal (ID: %lu, age: %.2f s)",
       entry.id, entry.age);

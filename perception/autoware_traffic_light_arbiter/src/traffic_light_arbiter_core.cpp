@@ -58,26 +58,26 @@ bool TrafficLightArbiterCore::is_external_outdated(
   return std::abs((current_time - msg_stamp).seconds()) > external_delay_tolerance_;
 }
 
-std::vector<TrafficLightArbiterCore::DroppedExternalSignal>
+std::vector<TrafficLightArbiterCore::ExpiredExternalSignal>
 TrafficLightArbiterCore::sweep_expired_external_signals(
   const rclcpp::Time & reference_time, double tolerance)
 {
-  std::vector<DroppedExternalSignal> dropped;
+  std::vector<ExpiredExternalSignal> expired;
   auto it = external_traffic_lights_.begin();
   while (it != external_traffic_lights_.end()) {
     const auto & msg_stamp = it->second.first;
     const auto age = (reference_time - msg_stamp).seconds();
     if (std::abs(age) > tolerance) {
-      dropped.push_back({it->first, age});
+      expired.push_back({it->first, age});
       it = external_traffic_lights_.erase(it);
     } else {
       ++it;
     }
   }
-  return dropped;
+  return expired;
 }
 
-std::vector<TrafficLightArbiterCore::DroppedExternalSignal>
+std::vector<TrafficLightArbiterCore::ExpiredExternalSignal>
 TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
 {
   latest_perception_msg_ = msg;

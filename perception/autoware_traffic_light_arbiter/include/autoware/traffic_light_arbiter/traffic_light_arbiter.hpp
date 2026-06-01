@@ -46,10 +46,10 @@ private:
   void on_external_msg(const TrafficSignalArray::ConstSharedPtr msg);
   void arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp);
 
-  // Emits one DEBUG line per dropped entry; called from the on_*_msg
+  // Emits one DEBUG line per expired entry; called from the on_*_msg
   // handlers with the result of the corresponding ingest_*().
-  void log_dropped_external_signals(
-    const std::vector<TrafficLightArbiterCore::DroppedExternalSignal> & dropped);
+  void log_expired_external_signals(
+    const std::vector<TrafficLightArbiterCore::ExpiredExternalSignal> & expired);
 
   std::unique_ptr<TrafficLightArbiterCore> core_;
 };
