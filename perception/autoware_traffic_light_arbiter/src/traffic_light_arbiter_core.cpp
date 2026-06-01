@@ -84,25 +84,27 @@ TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
   return sweep_expired_external_signals(rclcpp::Time(msg.stamp), external_time_tolerance_);
 }
 
-std::vector<TrafficLightArbiterCore::DroppedExternalSignal>
-TrafficLightArbiterCore::ingest_external(
+TrafficLightArbiterCore::ExternalIngestResult TrafficLightArbiterCore::ingest_external(
   const TrafficSignalArray & msg, const rclcpp::Time & current_time)
 {
+  const auto msg_time = rclcpp::Time(msg.stamp);
+  if (is_external_outdated(current_time, msg_time)) {
+    return {false, {}};
+  }
+
   // Update external traffic lights map with new information
   for (const auto & signal : msg.traffic_light_groups) {
-    external_traffic_lights_[signal.traffic_light_group_id] =
-      std::make_pair(rclcpp::Time(msg.stamp), signal);
+    external_traffic_lights_[signal.traffic_light_group_id] = std::make_pair(msg_time, signal);
   }
 
   // Clear perception data if too old relative to this external signal
-  const auto msg_time = rclcpp::Time(msg.stamp);
   if (
     std::abs((msg_time - rclcpp::Time(latest_perception_msg_.stamp)).seconds()) >
     perception_time_tolerance_) {
     latest_perception_msg_.traffic_light_groups.clear();
   }
 
-  return sweep_expired_external_signals(current_time, external_delay_tolerance_);
+  return {true, sweep_expired_external_signals(current_time, external_delay_tolerance_)};
 }
 
 TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate()

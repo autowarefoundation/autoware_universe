@@ -127,16 +127,13 @@ void TrafficLightArbiter::on_perception_msg(const TrafficSignalArray::ConstShare
 
 void TrafficLightArbiter::on_external_msg(const TrafficSignalArray::ConstSharedPtr msg)
 {
-  const auto current_time = this->now();
-  const auto msg_time = rclcpp::Time(msg->stamp);
-
-  if (core_->is_external_outdated(current_time, msg_time)) {
+  const auto result = core_->ingest_external(*msg, this->now());
+  if (!result.accepted) {
     RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), 5000, "Received outdated V2X traffic signal messages");
+      get_logger(), *get_clock(), 5000, "Received outdated external traffic signal messages");
     return;
   }
-
-  log_dropped_external_signals(core_->ingest_external(*msg, current_time));
+  log_dropped_external_signals(result.dropped);
   arbitrate_and_publish(msg->stamp);
 }
 

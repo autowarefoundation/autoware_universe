@@ -51,9 +51,6 @@ public:
 
   void set_pedestrian_traffic_light_ids(std::unordered_set<lanelet::Id> ids);
 
-  bool is_external_outdated(
-    const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const;
-
   struct DroppedExternalSignal
   {
     lanelet::Id id;
@@ -64,11 +61,24 @@ public:
   // using external_time_tolerance_. Returns dropped entries for caller logging.
   std::vector<DroppedExternalSignal> ingest_perception(const TrafficSignalArray & msg);
 
-  // Update external cache, clear perception if its stamp falls outside
-  // perception_time_tolerance_ of msg.stamp, then sweep external cache
-  // against current_time using external_delay_tolerance_. Returns dropped
-  // entries for caller logging.
-  std::vector<DroppedExternalSignal> ingest_external(
+  // Outcome of an external-msg ingest. `accepted == false` means the msg's
+  // stamp differed from current_time by more than external_delay_tolerance_
+  // and was rejected without touching internal state. When accepted,
+  // `dropped` carries any cache entries that the bundled sweep evicted.
+  struct ExternalIngestResult
+  {
+    bool accepted;
+    std::vector<DroppedExternalSignal> dropped;
+  };
+
+  // Admission-control + update + sweep for an external msg:
+  //   1. Reject (return {false, {}}) when the msg arrival is too far from
+  //      current_time, using external_delay_tolerance_.
+  //   2. Otherwise update external cache entries with msg.stamp, clear
+  //      perception when its stamp falls outside perception_time_tolerance_
+  //      of msg.stamp, sweep external cache against current_time using
+  //      external_delay_tolerance_, and return dropped entries.
+  ExternalIngestResult ingest_external(
     const TrafficSignalArray & msg, const rclcpp::Time & current_time);
 
   // Result of one arbitration cycle. The arbiter intentionally does not stamp
@@ -89,6 +99,11 @@ public:
   ArbitrationResult arbitrate();
 
 private:
+  // True when |current_time - msg_stamp| exceeds external_delay_tolerance_.
+  // Used by ingest_external for admission control.
+  bool is_external_outdated(
+    const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const;
+
   // Sweeps external cache: removes every stored entry whose stamp deviates
   // from `reference_time` beyond `tolerance`, returning the removed entries.
   std::vector<DroppedExternalSignal> sweep_expired_external_signals(
