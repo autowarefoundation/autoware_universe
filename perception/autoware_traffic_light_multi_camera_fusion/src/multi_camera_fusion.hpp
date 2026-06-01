@@ -102,7 +102,6 @@ private:
   void group_fusion(
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map,
-    std::vector<IdType> & unmapped_traffic_light_ids,
     std::vector<ConflictInfo> & conflicted_regulatory_element_status);
 
   /**
@@ -110,15 +109,13 @@ private:
    * records.
    */
   GroupFusionInfoMap accumulate_group_evidence(
-    const std::map<IdType, utils::FusionRecord> & fused_record_map,
-    std::vector<IdType> & unmapped_traffic_light_ids);
+    const std::map<IdType, utils::FusionRecord> & fused_record_map);
 
   /**
    * @brief Processes a single fused record and updates the group_fusion_info_map.
    */
   void process_fused_record(
-    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record,
-    std::vector<IdType> & unmapped_traffic_light_ids);
+    GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record);
 
   /**
    * @brief Updates the map for a single (element, regulatory_id) combination.
