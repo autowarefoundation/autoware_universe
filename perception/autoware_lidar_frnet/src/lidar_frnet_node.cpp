@@ -186,11 +186,16 @@ bool LidarFRNetNode::setStaticCropBoxTransform(const std::string & sensor_frame_
  */
 visualization_msgs::msg::Marker LidarFRNetNode::getMarkerMsg(rclcpp::Time stamp) const
 {
-  visualization_msgs::msg::Marker msg =
-    ego_crop_box_marker_msg_.value_or(visualization_msgs::msg::Marker{});
+  if (!ego_crop_box_marker_msg_) {
+    throw std::bad_optional_access();
+  }
+  visualization_msgs::msg::Marker msg = *ego_crop_box_marker_msg_;
   msg.header.stamp = stamp;
   return msg;
 }
+
+namespace
+{
 
 const ros_utils::PointCloudLayout & getCloudFilteredLayout(
   const std::optional<ros_utils::PointCloudLayout> & layout)
@@ -200,6 +205,16 @@ const ros_utils::PointCloudLayout & getCloudFilteredLayout(
   }
   return *layout;
 }
+
+CloudFormat getFilteredOutputFormat(const std::optional<CloudFormat> & format)
+{
+  if (!format) {
+    throw std::bad_optional_access();
+  }
+  return *format;
+}
+
+}  // namespace
 
 /**
  * @brief On each point cloud: init filtered layout once from first message, skip if no subscribers,
@@ -335,10 +350,10 @@ void LidarFRNetNode::cloudCallback(
     ros_utils::generatePointCloudMessageFromInput(*msg, cloud_filtered_layout, max_output_points_);
 
   std::unordered_map<std::string, double> proc_timing;
+  const auto filtered_output_format = getFilteredOutputFormat(filtered_output_format_);
   if (!frnet_->process(
         msg, *cloud_seg_msg_ptr, *cloud_viz_msg_ptr, *cloud_filtered_msg_ptr,
-        filtered_output_format_.value_or(CloudFormat::UNKNOWN), active_comm, proc_timing,
-        crop_sensor_to_ref_ptr)) {
+        filtered_output_format, active_comm, proc_timing, crop_sensor_to_ref_ptr)) {
     return;
   }
 
