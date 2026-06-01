@@ -15,6 +15,7 @@
 #include "autoware/tensorrt_plugins/get_indices_pairs_implicit_gemm_plugin.hpp"
 
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
+#include "autoware/tensorrt_plugins/spconv_workspace.hpp"
 
 #include <NvInferRuntime.h>
 #include <NvInferRuntimePlugin.h>
@@ -31,12 +32,86 @@
 #include <cstring>
 #include <exception>
 #include <functional>
+#include <limits>
 #include <string>
 #include <tuple>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace nvinfer1::plugin
 {
+namespace
+{
+
+using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
+
+constexpr std::size_t kWorkspaceAlignment{256};
+
+std::size_t align_up(std::size_t value, std::size_t alignment = kWorkspaceAlignment)
+{
+  return ((value + alignment - 1) / alignment) * alignment;
+}
+
+std::uint8_t * align_ptr(std::uint8_t * ptr, std::size_t alignment = kWorkspaceAlignment)
+{
+  const auto address = reinterpret_cast<std::uintptr_t>(ptr);
+  return reinterpret_cast<std::uint8_t *>(align_up(address, alignment));
+}
+
+tv::Tensor make_workspace_tensor(
+  std::uint8_t *& workspace, std::vector<std::int64_t> const & shape, tv::DType dtype)
+{
+  workspace = align_ptr(workspace);
+  tv::Tensor tensor = tv::from_blob(workspace, shape, dtype, 0);
+  workspace += align_up(tensor.nbytes());
+  return tensor;
+}
+
+std::size_t get_workspace_tensor_size(std::vector<std::int64_t> const & shape, tv::DType dtype)
+{
+  std::int64_t elements = 1;
+  for (const std::int64_t dim : shape) {
+    elements *= dim;
+  }
+  return align_up(static_cast<std::size_t>(elements) * tv::detail::sizeof_dtype(dtype));
+}
+
+class WorkspaceStaticAllocator : public StaticAllocator
+{
+public:
+  WorkspaceStaticAllocator(
+    std::unordered_map<std::string, tv::Tensor> tensor_dict, std::uint8_t * thrust_temp_workspace,
+    std::size_t thrust_temp_workspace_size)
+  : StaticAllocator(std::move(tensor_dict)),
+    thrust_temp_workspace_{thrust_temp_workspace},
+    thrust_temp_workspace_size_{thrust_temp_workspace_size}
+  {
+  }
+
+  tv::Tensor empty(
+    std::string name, std::vector<std::int64_t> shape, int dtype, int device,
+    std::uintptr_t stream = 0, bool is_temp_memory = false, float scale = 1.0) override
+  {
+    if (name == "ThrustTemp") {
+      PLUGIN_ASSERT(dtype == tv::uint8);
+      PLUGIN_ASSERT(device == 0);
+      PLUGIN_ASSERT(shape.size() == 1);
+      const auto num_bytes = static_cast<std::size_t>(shape[0]);
+      PLUGIN_ASSERT(num_bytes <= thrust_temp_workspace_size_);
+      return tv::from_blob(
+        thrust_temp_workspace_, {static_cast<std::int64_t>(num_bytes)}, tv::uint8, 0);
+    }
+
+    return StaticAllocator::empty(name, shape, dtype, device, stream, is_temp_memory, scale);
+  }
+
+private:
+  std::uint8_t * thrust_temp_workspace_;
+  std::size_t thrust_temp_workspace_size_;
+};
+
+}  // namespace
 
 GetIndicesPairsImplicitGemmPlugin::GetIndicesPairsImplicitGemmPlugin(
   const std::string & name, GetIndicesPairsImplicitGemmParameters const & params)
@@ -248,7 +323,6 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
   cudaStream_t stream) noexcept
 {
   using SpconvOps = spconvlib::spconv::csrc::sparse::all::SpconvOps;
-  using StaticAllocator = spconvlib::spconv::csrc::sparse::alloc::StaticAllocator;
 
   const bool is_subm = params_.subm;
   const bool direct_table = true;
@@ -279,6 +353,11 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
   auto ws_tensors = SpconvOps::get_indice_gen_tensors_from_workspace(
     reinterpret_cast<std::uint8_t *>(workspace), kernel_volume, out_indices_num_limit_,
     out_indices_num_limit_, max_act_out_theory, is_subm, use_int64_hash_k, use_direct_table);
+  std::size_t const indice_gen_workspace_size = SpconvOps::get_indice_gen_workspace_size(
+    kernel_volume, out_indices_num_limit_, out_indices_num_limit_, max_act_out_theory, is_subm,
+    use_int64_hash_k, use_direct_table);
+  std::uint8_t * extra_workspace =
+    reinterpret_cast<std::uint8_t *>(workspace) + indice_gen_workspace_size;
 
   int pair_fwd_size_padded = is_subm ? input_desc[0].dims.d[0] : out_indices_num_limit_;
   tv::Tensor pair_fwd_padded =
@@ -287,6 +366,7 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
   bool is_split_mask =
     params_.algo == static_cast<std::int64_t>(tv::gemm::SparseConvAlgo::kMaskSplitImplicitGemm);
   int mask_count = is_split_mask ? 2 : 1;
+  int mask_int_count = (kernel_volume + 31) / 32;
 
   tv::Tensor pair_mask_fwd_padded =
     tv::from_blob(outputs[2], {mask_count, pair_fwd_size_padded}, tv::int32, 0);
@@ -294,9 +374,20 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
     tv::from_blob(outputs[3], {mask_count, pair_fwd_size_padded}, tv::int32, 0);
   tv::Tensor out_indices = tv::from_blob(
     outputs[0], {is_subm ? input_desc[0].dims.d[0] : out_indices_num_limit_, 4}, tv::int32, 0);
-  tv::Tensor indices_kernel_num = tv::zeros({kernel_volume}, tv::int32, 0);
+  tv::Tensor indices_kernel_num =
+    make_workspace_tensor(extra_workspace, {kernel_volume}, tv::int32);
+  cudaMemsetAsync(
+    indices_kernel_num.data_ptr(), 0,
+    static_cast<std::size_t>(kernel_volume) * sizeof(std::int32_t), stream);
 
   tv::Tensor input_indices = tv::from_blob(inputs[0], {input_desc[0].dims.d[0], 4}, tv::int32, 0);
+
+  const int thrust_temp_num_items = std::max(pair_fwd_size_padded, out_indices_num_limit_);
+  const std::size_t thrust_temp_workspace_size = get_spconv_sort_temp_storage_size(
+    thrust_temp_num_items, mask_int_count, is_split_mask, use_int64_hash_k);
+  extra_workspace = align_ptr(extra_workspace);
+  std::uint8_t * thrust_temp_workspace = extra_workspace;
+  extra_workspace += align_up(thrust_temp_workspace_size);
 
   std::tuple<tv::Tensor, int> pair_res;
 
@@ -312,7 +403,7 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
     ws_tensors.insert({SPCONV_ALLOC_OUT_INDICES, out_indices});
     ws_tensors.insert(
       {SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num});  // cSpell:ignore INDICE
-    StaticAllocator alloc(ws_tensors);
+    WorkspaceStaticAllocator alloc(ws_tensors, thrust_temp_workspace, thrust_temp_workspace_size);
 
     // cSpell:ignore indice
     pair_res = SpconvOps::get_indice_pairs_implicit_gemm(
@@ -322,9 +413,12 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
       use_direct_table);
 
   } else {
-    tv::Tensor pair_bwd_padded = tv::empty({kernel_volume, static_num_act_in}, tv::int32, 0);
-    tv::Tensor pair_mask_bwd_padded = tv::empty({mask_count, static_num_act_in}, tv::int32, 0);
-    tv::Tensor mask_argsort_bwd_padded = tv::empty({mask_count, static_num_act_in}, tv::int32, 0);
+    tv::Tensor pair_bwd_padded =
+      make_workspace_tensor(extra_workspace, {kernel_volume, static_num_act_in}, tv::int32);
+    tv::Tensor pair_mask_bwd_padded =
+      make_workspace_tensor(extra_workspace, {mask_count, static_num_act_in}, tv::int32);
+    tv::Tensor mask_argsort_bwd_padded =
+      make_workspace_tensor(extra_workspace, {mask_count, static_num_act_in}, tv::int32);
 
     ws_tensors.insert({SPCONV_ALLOC_PAIR_FWD, pair_fwd_padded});
     ws_tensors.insert({SPCONV_ALLOC_PAIR_BWD, pair_bwd_padded});
@@ -339,7 +433,7 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
     ws_tensors.insert(
       {SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num});  // cSpell:ignore INDICE
 
-    StaticAllocator alloc(ws_tensors);
+    WorkspaceStaticAllocator alloc(ws_tensors, thrust_temp_workspace, thrust_temp_workspace_size);
 
     // cSpell:ignore indice
     pair_res = SpconvOps::get_indice_pairs_implicit_gemm(
@@ -377,7 +471,7 @@ PluginFieldCollection const * GetIndicesPairsImplicitGemmPlugin::getFieldsToSeri
 }
 
 std::size_t GetIndicesPairsImplicitGemmPlugin::getWorkspaceSize(
-  [[maybe_unused]] DynamicPluginTensorDesc const * inputs, [[maybe_unused]] std::int32_t num_inputs,
+  DynamicPluginTensorDesc const * inputs, [[maybe_unused]] std::int32_t num_inputs,
   [[maybe_unused]] DynamicPluginTensorDesc const * outputs,
   [[maybe_unused]] std::int32_t num_outputs) const noexcept
 {
@@ -403,13 +497,37 @@ std::size_t GetIndicesPairsImplicitGemmPlugin::getWorkspaceSize(
 
   int kernel_volume =
     std::accumulate(params_.ksize.begin(), params_.ksize.end(), 1, std::multiplies<int>());
+  int mask_int_count = (kernel_volume + 31) / 32;
+  bool is_split_mask =
+    params_.algo == static_cast<std::int64_t>(tv::gemm::SparseConvAlgo::kMaskSplitImplicitGemm);
+  int mask_count = is_split_mask ? 2 : 1;
+
+  int max_num_act_in = out_indices_num_limit_;
+  if (inputs != nullptr && inputs[0].max.nbDims == 2 && inputs[0].max.d[0] > 0) {
+    max_num_act_in = inputs[0].max.d[0];
+  }
+  int pair_fwd_size_padded = is_subm ? max_num_act_in : out_indices_num_limit_;
+  int max_act_out_theory =
+    SpconvOps::get_handcrafted_max_act_out(max_num_act_in, ksize, stride, padding, dilation);
 
   // query workspace size.
-  int workspace_size = SpconvOps::get_indice_gen_workspace_size(
-    kernel_volume, out_indices_num_limit_, out_indices_num_limit_, out_indices_num_limit_, is_subm,
+  std::size_t workspace_size = SpconvOps::get_indice_gen_workspace_size(
+    kernel_volume, out_indices_num_limit_, out_indices_num_limit_, max_act_out_theory, is_subm,
     use_int64_hash_k, use_direct_table);
+  workspace_size = align_up(workspace_size);
+  workspace_size += get_workspace_tensor_size({kernel_volume}, tv::int32);
 
-  return static_cast<std::size_t>(workspace_size);
+  int thrust_temp_num_items = std::max(pair_fwd_size_padded, out_indices_num_limit_);
+  workspace_size += align_up(get_spconv_sort_temp_storage_size(
+    thrust_temp_num_items, mask_int_count, is_split_mask, use_int64_hash_k));
+
+  if (!is_subm) {
+    workspace_size += get_workspace_tensor_size({kernel_volume, out_indices_num_limit_}, tv::int32);
+    workspace_size += get_workspace_tensor_size({mask_count, out_indices_num_limit_}, tv::int32);
+    workspace_size += get_workspace_tensor_size({mask_count, out_indices_num_limit_}, tv::int32);
+  }
+
+  return workspace_size;
 }
 
 }  // namespace nvinfer1::plugin
