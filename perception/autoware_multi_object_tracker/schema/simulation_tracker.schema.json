@@ -33,16 +33,49 @@
           "type": "object",
           "description": "Per-label tracker assignment rules.",
           "properties": {
-            "unknown":    { "$ref": "#/definitions/tracker_assignment_entry", "description": "Tracker assignment for unknown class." },
-            "car":        { "$ref": "#/definitions/tracker_assignment_entry", "description": "Tracker assignment for car class." },
-            "truck":      { "$ref": "#/definitions/tracker_assignment_entry", "description": "Tracker assignment for truck class." },
-            "bus":        { "$ref": "#/definitions/tracker_assignment_entry", "description": "Tracker assignment for bus class." },
-            "trailer":    { "$ref": "#/definitions/tracker_assignment_entry", "description": "Tracker assignment for trailer class." },
-            "pedestrian": { "$ref": "#/definitions/tracker_assignment_entry", "description": "Tracker assignment for pedestrian class." },
-            "bicycle":    { "$ref": "#/definitions/tracker_assignment_entry", "description": "Tracker assignment for bicycle class." },
-            "motorcycle": { "$ref": "#/definitions/tracker_assignment_entry", "description": "Tracker assignment for motorcycle class." }
+            "unknown": {
+              "$ref": "#/definitions/tracker_assignment_entry",
+              "description": "Tracker assignment for unknown class."
+            },
+            "car": {
+              "$ref": "#/definitions/tracker_assignment_entry",
+              "description": "Tracker assignment for car class."
+            },
+            "truck": {
+              "$ref": "#/definitions/tracker_assignment_entry",
+              "description": "Tracker assignment for truck class."
+            },
+            "bus": {
+              "$ref": "#/definitions/tracker_assignment_entry",
+              "description": "Tracker assignment for bus class."
+            },
+            "trailer": {
+              "$ref": "#/definitions/tracker_assignment_entry",
+              "description": "Tracker assignment for trailer class."
+            },
+            "pedestrian": {
+              "$ref": "#/definitions/tracker_assignment_entry",
+              "description": "Tracker assignment for pedestrian class."
+            },
+            "bicycle": {
+              "$ref": "#/definitions/tracker_assignment_entry",
+              "description": "Tracker assignment for bicycle class."
+            },
+            "motorcycle": {
+              "$ref": "#/definitions/tracker_assignment_entry",
+              "description": "Tracker assignment for motorcycle class."
+            }
           },
-          "required": ["unknown", "car", "truck", "bus", "trailer", "pedestrian", "bicycle", "motorcycle"]
+          "required": [
+            "unknown",
+            "car",
+            "truck",
+            "bus",
+            "trailer",
+            "pedestrian",
+            "bicycle",
+            "motorcycle"
+          ]
         }
       },
       "required": ["tracker_assignment"]
