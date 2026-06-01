@@ -17,4 +17,39 @@
 
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
 
+#include <vector>
+
+namespace autoware::map_based_prediction
+{
+
+struct FrenetPoint
+{
+  double s;
+  double d;
+  float s_vel;
+  float d_vel;
+  float s_acc;
+  float d_acc;
+};
+
+using FrenetPath = std::vector<FrenetPoint>;
+
+FrenetPoint getFrenetPoint(
+  const TrackedObject & object, const geometry_msgs::msg::Pose & ref_pose, const double duration,
+  const double speed_limit, bool use_vehicle_acceleration,
+  double acceleration_exponential_half_life);
+
+FrenetPath generateFrenetPath(
+  const FrenetPoint & current_point, const FrenetPoint & target_point, const double max_length,
+  const double duration, const double lateral_duration, const double sampling_time_interval);
+
+PosePath interpolateReferencePath(
+  const PosePath & base_path, const FrenetPath & frenet_predicted_path);
+
+PredictedPath convertToPredictedPath(
+  const TrackedObject & object, const FrenetPath & frenet_predicted_path, const PosePath & ref_path,
+  const double sampling_time_interval);
+
+}  // namespace autoware::map_based_prediction
+
 #endif  // AUTOWARE__MAP_BASED_PREDICTION__PATH_GENERATOR__FRENET_HPP_

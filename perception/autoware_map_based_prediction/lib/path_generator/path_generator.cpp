@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/map_based_prediction/path_generator/frenet.hpp"
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -247,7 +249,9 @@ PredictedPath PathGenerator::generatePolynomialPath(
 
   // Get current Frenet Point
   const double ref_path_len = autoware::motion_utils::calcArcLength(ref_path);
-  const auto current_point = getFrenetPoint(object, ref_path.at(0), duration, speed_limit);
+  const auto current_point = getFrenetPoint(
+    object, ref_path.at(0), duration, speed_limit, use_vehicle_acceleration_,
+    acceleration_exponential_half_life_);
 
   // Step 1. Set Target Frenet Point
   // Note that we do not set position s,
@@ -300,7 +304,8 @@ PredictedPath PathGenerator::generatePolynomialPath(
 
   // Step 2. Generate Predicted Path on a Frenet coordinate
   const auto frenet_predicted_path = generateFrenetPath(
-    current_point, terminal_point, ref_path_len, duration, lateral_duration_adjusted);
+    current_point, terminal_point, ref_path_len, duration, lateral_duration_adjusted,
+    sampling_time_interval_);
 
   // Step 3. Interpolate Reference Path for converting predicted path coordinate
   const auto interpolated_ref_path = interpolateReferencePath(ref_path, frenet_predicted_path);
@@ -310,7 +315,8 @@ PredictedPath PathGenerator::generatePolynomialPath(
   }
 
   // Step 4. Convert predicted trajectory from Frenet to Cartesian coordinate
-  return convertToPredictedPath(object, frenet_predicted_path, interpolated_ref_path);
+  return convertToPredictedPath(
+    object, frenet_predicted_path, interpolated_ref_path, sampling_time_interval_);
 }
 
 }  // namespace autoware::map_based_prediction
