@@ -29,9 +29,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <chrono>
-#include <deque>
 #include <memory>
-#include <vector>
 namespace autoware::detection_by_tracker
 {
 class Debugger
