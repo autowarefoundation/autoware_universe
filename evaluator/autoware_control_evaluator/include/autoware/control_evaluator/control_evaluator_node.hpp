@@ -131,6 +131,7 @@ private:
   // Parameters
   bool output_metrics_;
   double distance_filter_thr_m_;
+  std::unordered_set<uint8_t> excluded_object_labels_;
 
   // Metric
   const std::vector<Metric> metrics_ = {
