@@ -171,14 +171,15 @@ MultiCameraFusionResult MultiCameraFusion::fuse(
   MultiCameraFusionResult result;
   std::map<IdType, utils::FusionRecord> fused_record_map, grouped_record_map;
   multi_camera_fusion(fused_record_map);
-  group_fusion(fused_record_map, grouped_record_map, result.unmapped_traffic_light_ids);
+  group_fusion(
+    fused_record_map, grouped_record_map, result.unmapped_traffic_light_ids,
+    result.conflicted_regulatory_element_status);
 
   NewSignalArrayType msg_out;
   convert_output_msg(grouped_record_map, msg_out);
   msg_out.stamp = cam_info.header.stamp;
   result.traffic_light_groups = msg_out;
 
-  result.conflicted_regulatory_element_status = conflicted_regulatory_element_status_;
   return result;
 }
 
@@ -231,7 +232,8 @@ void MultiCameraFusion::multi_camera_fusion(
 void MultiCameraFusion::group_fusion(
   const std::map<IdType, utils::FusionRecord> & fused_record_map,
   std::map<IdType, utils::FusionRecord> & grouped_record_map,
-  std::vector<IdType> & unmapped_traffic_light_ids)
+  std::vector<IdType> & unmapped_traffic_light_ids,
+  std::vector<ConflictInfo> & conflicted_regulatory_element_status)
 {
   grouped_record_map.clear();
 
@@ -240,7 +242,8 @@ void MultiCameraFusion::group_fusion(
     accumulate_group_evidence(fused_record_map, unmapped_traffic_light_ids);
 
   // Stage 2: Determine the best state for each group from the accumulated evidence
-  determine_best_group_state(group_fusion_info_map, grouped_record_map);
+  conflicted_regulatory_element_status =
+    determine_best_group_state(group_fusion_info_map, grouped_record_map);
 }
 
 GroupFusionInfoMap MultiCameraFusion::accumulate_group_evidence(
@@ -321,11 +324,11 @@ void MultiCameraFusion::update_log_odds(
   log_odds_map[state_key] += evidence_log_odds - config_.prior_log_odds;
 }
 
-void MultiCameraFusion::determine_best_group_state(
+std::vector<ConflictInfo> MultiCameraFusion::determine_best_group_state(
   const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
-  std::map<IdType, utils::FusionRecord> & grouped_record_map)
+  std::map<IdType, utils::FusionRecord> & grouped_record_map) const
 {
-  conflicted_regulatory_element_status_.clear();
+  std::vector<ConflictInfo> conflicted_regulatory_element_status;
 
   for (const auto & pair : group_fusion_info_map) {
     const IdType reg_ele_id = pair.first;
@@ -409,9 +412,11 @@ void MultiCameraFusion::determine_best_group_state(
     // suppress diagnostics for comparisons with unknown
     if (conflict_result.conflict_type != ConflictType::NO_CONFLICT) {
       // record it for diagnostics
-      conflicted_regulatory_element_status_.push_back({reg_ele_id, conflict_result.conflict_type});
+      conflicted_regulatory_element_status.push_back({reg_ele_id, conflict_result.conflict_type});
     }
   }
+
+  return conflicted_regulatory_element_status;
 }
 
 }  // namespace autoware::traffic_light

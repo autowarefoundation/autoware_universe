@@ -102,7 +102,8 @@ private:
   void group_fusion(
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map,
-    std::vector<IdType> & unmapped_traffic_light_ids);
+    std::vector<IdType> & unmapped_traffic_light_ids,
+    std::vector<ConflictInfo> & conflicted_regulatory_element_status);
 
   /**
    * @brief Accumulates log-odds evidence for each traffic light group from individual fused
@@ -134,10 +135,11 @@ private:
 
   /**
    * @brief Determines the best state for each group based on accumulated evidence.
+   * @return The conflicts detected during this call. Empty when no conflict is found.
    */
-  void determine_best_group_state(
+  std::vector<ConflictInfo> determine_best_group_state(
     const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
-    std::map<IdType, utils::FusionRecord> & grouped_record_map);
+    std::map<IdType, utils::FusionRecord> & grouped_record_map) const;
 
   MultiCameraFusionConfig config_{};
   /*
@@ -149,8 +151,6 @@ private:
   Use multiset in case multiple cameras publish images at the exact same time.
   */
   std::multiset<utils::FusionRecordArr> record_arr_set_;
-
-  std::vector<ConflictInfo> conflicted_regulatory_element_status_{};
 };
 
 }  // namespace autoware::traffic_light
