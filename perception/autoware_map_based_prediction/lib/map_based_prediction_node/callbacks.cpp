@@ -21,9 +21,9 @@
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils/autoware_utils.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <chrono>
 #include <memory>
@@ -44,8 +44,8 @@ void MapBasedPredictionNode::mapCallback(const LaneletMapBin::ConstSharedPtr msg
     autoware::experimental::lanelet2_utils::instantiate_routing_graph_and_traffic_rules(
       lanelet_map_ptr_);
 
-  auto routing_graph_ptr = autoware::experimental::lanelet2_utils::remove_const(
-    routing_graph_and_traffic_rules.first);
+  auto routing_graph_ptr =
+    autoware::experimental::lanelet2_utils::remove_const(routing_graph_and_traffic_rules.first);
   auto traffic_rules_ptr = routing_graph_and_traffic_rules.second;
 
   predictor_vehicle_->setLaneletMap(lanelet_map_ptr_, routing_graph_ptr, traffic_rules_ptr);

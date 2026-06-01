@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
-
 #include "autoware_utils/ros/marker_helper.hpp"
 
 namespace autoware::map_based_prediction

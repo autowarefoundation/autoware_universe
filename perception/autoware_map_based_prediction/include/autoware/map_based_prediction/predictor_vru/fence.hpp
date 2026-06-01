@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_MAP_BASED_PREDICTION__PREDICTOR_VRU__FENCE_HPP_
-#define AUTOWARE_MAP_BASED_PREDICTION__PREDICTOR_VRU__FENCE_HPP_
+#ifndef AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VRU__FENCE_HPP_
+#define AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VRU__FENCE_HPP_
 
 #include "autoware/map_based_prediction/predictor_vru/predictor_vru.hpp"
 
-#endif  // AUTOWARE_MAP_BASED_PREDICTION__PREDICTOR_VRU__FENCE_HPP_
+#endif  // AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VRU__FENCE_HPP_

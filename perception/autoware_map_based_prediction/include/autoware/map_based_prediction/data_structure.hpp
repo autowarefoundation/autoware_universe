@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
-#define AUTOWARE_MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
+#ifndef AUTOWARE__MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
+#define AUTOWARE__MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
 
 #include <autoware_utils/system/stop_watch.hpp>
 
@@ -135,4 +135,4 @@ using LaneletPathWithPathInfo = std::pair<lanelet::routing::LaneletPath, Predict
 
 }  // namespace autoware::map_based_prediction
 
-#endif  // AUTOWARE_MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
+#endif  // AUTOWARE__MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_

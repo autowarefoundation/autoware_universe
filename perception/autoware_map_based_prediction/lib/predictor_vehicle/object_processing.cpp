@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
-
 #include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -22,6 +21,8 @@
 #include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/tracked_object_kinematics.hpp>
+
+#include <lanelet2_routing/RoutingGraph.h>
 
 #include <cmath>
 #include <memory>
@@ -170,8 +171,7 @@ LaneletsData PredictorVehicle::getCurrentLanelets(const TrackedObject & object)
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   return utils::getCurrentLanelets(
-    object, lanelet_map_ptr_, road_users_history_,
-    params_.dist_threshold_for_searching_lanelet,
+    object, lanelet_map_ptr_, road_users_history_, params_.dist_threshold_for_searching_lanelet,
     params_.delta_yaw_threshold_for_searching_lanelet, params_.sigma_lateral_offset,
     params_.sigma_yaw_angle_deg);
 }

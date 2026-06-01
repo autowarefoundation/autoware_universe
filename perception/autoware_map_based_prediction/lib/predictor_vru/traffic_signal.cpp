@@ -19,6 +19,9 @@
 
 #include <boost/geometry.hpp>
 
+#include <lanelet2_core/geometry/Polygon.h>
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+
 #include <memory>
 
 namespace autoware::map_based_prediction

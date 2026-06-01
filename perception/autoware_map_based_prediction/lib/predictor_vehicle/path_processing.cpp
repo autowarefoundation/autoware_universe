@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
-
 #include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
@@ -24,12 +23,13 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <tf2/utils.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <autoware_perception_msgs/msg/tracked_object_kinematics.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
+
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_routing/RoutingGraph.h>
@@ -360,15 +360,13 @@ std::vector<LaneletPathWithPathInfo> PredictorVehicle::getPredictedReferencePath
     object.kinematics.twist_with_covariance.twist.linear.x,
     object.kinematics.twist_with_covariance.twist.linear.y);
 
-  const double obj_acc =
-    params_.use_vehicle_acceleration
-      ? std::hypot(
-          object.kinematics.acceleration_with_covariance.accel.linear.x,
-          object.kinematics.acceleration_with_covariance.accel.linear.y)
-      : 0.0;
+  const double obj_acc = params_.use_vehicle_acceleration
+                           ? std::hypot(
+                               object.kinematics.acceleration_with_covariance.accel.linear.x,
+                               object.kinematics.acceleration_with_covariance.accel.linear.y)
+                           : 0.0;
   const double t_h = time_horizon;
-  const double lambda =
-    std::log(2) / params_.acceleration_exponential_half_life;
+  const double lambda = std::log(2) / params_.acceleration_exponential_half_life;
   const double validate_time_horizon =
     t_h * params_.prediction_time_horizon_rate_for_validate_lane_length;
   const double final_speed_after_acceleration =
@@ -384,8 +382,7 @@ std::vector<LaneletPathWithPathInfo> PredictorVehicle::getPredictedReferencePath
   auto get_search_distance_with_partial_acc = [&](const double final_speed) -> double {
     constexpr double epsilon = 1E-5;
     if (std::abs(obj_acc) < epsilon) return obj_vel * t_h;
-    const double t_f =
-      (-1.0 / lambda) * std::log(1 - ((final_speed - obj_vel) * lambda) / obj_acc);
+    const double t_f = (-1.0 / lambda) * std::log(1 - ((final_speed - obj_vel) * lambda) / obj_acc);
     return obj_acc * (1.0 / lambda) * t_f +
            obj_acc * (1.0 / std::pow(lambda, 2)) * std::expm1(-lambda * t_f) + obj_vel * t_f +
            final_speed * (t_h - t_f);
@@ -425,9 +422,9 @@ std::vector<LaneletPathWithPathInfo> PredictorVehicle::getPredictedReferencePath
       return getPossiblePathsForIsolatedLanelet(lanelet);
     };
 
-    auto getLeftOrRightLanelets =
-      [&](const lanelet::ConstLanelet & lanelet,
-          const bool get_left) -> std::optional<lanelet::ConstLanelet> {
+    auto getLeftOrRightLanelets = [&](
+                                    const lanelet::ConstLanelet & lanelet,
+                                    const bool get_left) -> std::optional<lanelet::ConstLanelet> {
       const auto opt =
         get_left ? routing_graph_ptr_->left(lanelet) : routing_graph_ptr_->right(lanelet);
       if (!!opt) return *opt;
@@ -674,8 +671,7 @@ std::vector<double> PredictorVehicle::calcTrajectoryCurvatureFrom3Points(
     double curvature = 0.0;
     const auto p0 = get_point(trajectory.at(i - std::min(idx_dist, i)));
     const auto p1 = get_point(trajectory.at(i));
-    const auto p2 =
-      get_point(trajectory.at(i + std::min(idx_dist, trajectory.size() - 1 - i)));
+    const auto p2 = get_point(trajectory.at(i + std::min(idx_dist, trajectory.size() - 1 - i)));
     try {
       curvature = calc_curvature(p0, p1, p2);
     } catch (std::exception const & e) {
@@ -694,13 +690,12 @@ TrajectoryPoints PredictorVehicle::toTrajectoryPoints(
   const PredictedPath & path, const double velocity)
 {
   TrajectoryPoints out_trajectory;
-  std::for_each(
-    path.path.begin(), path.path.end(), [&out_trajectory, velocity](const auto & pose) {
-      TrajectoryPoint p;
-      p.pose = pose;
-      p.longitudinal_velocity_mps = velocity;
-      out_trajectory.push_back(p);
-    });
+  std::for_each(path.path.begin(), path.path.end(), [&out_trajectory, velocity](const auto & pose) {
+    TrajectoryPoint p;
+    p.pose = pose;
+    p.longitudinal_velocity_mps = velocity;
+    out_trajectory.push_back(p);
+  });
   return out_trajectory;
 }
 

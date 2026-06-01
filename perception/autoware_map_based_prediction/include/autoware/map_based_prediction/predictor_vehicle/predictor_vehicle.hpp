@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_
-#define AUTOWARE_MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_
+#ifndef AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_
+#define AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_
 
 #include "autoware/map_based_prediction/data_structure.hpp"
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
@@ -160,11 +160,9 @@ private:
     const std::string & object_id, const geometry_msgs::msg::Pose & object_pose,
     const LaneletData & current_lanelet_data, double object_detected_time);
   double calcRightLateralOffset(
-    const lanelet::ConstLineString2d & boundary_line,
-    const geometry_msgs::msg::Pose & search_pose);
+    const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose);
   double calcLeftLateralOffset(
-    const lanelet::ConstLineString2d & boundary_line,
-    const geometry_msgs::msg::Pose & search_pose);
+    const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose);
   ManeuverProbability calculateManeuverProbability(
     const Maneuver & predicted_maneuver, bool left_paths_exists, bool right_paths_exists,
     bool center_paths_exists) const;
@@ -195,4 +193,4 @@ private:
 
 }  // namespace autoware::map_based_prediction
 
-#endif  // AUTOWARE_MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_
+#endif  // AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_

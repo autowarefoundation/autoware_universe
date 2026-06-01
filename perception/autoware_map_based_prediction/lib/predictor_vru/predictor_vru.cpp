@@ -22,9 +22,9 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 
-#include <lanelet2_core/primitives/Lanelet.h>
-
 #include <boost/geometry.hpp>
+
+#include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
 #include <deque>

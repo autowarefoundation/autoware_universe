@@ -16,9 +16,10 @@
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
-#include <lanelet2_core/primitives/Lanelet.h>
-
 #include <boost/geometry.hpp>
+
+#include <lanelet2_core/geometry/LineString.h>
+#include <lanelet2_core/primitives/Lanelet.h>
 
 #include <memory>
 

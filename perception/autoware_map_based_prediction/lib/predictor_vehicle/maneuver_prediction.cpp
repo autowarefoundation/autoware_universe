@@ -14,11 +14,14 @@
 
 #include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <tf2/utils.hpp>
+
+#include <lanelet2_routing/RoutingGraph.h>
 
 #include <algorithm>
 #include <cmath>
@@ -128,16 +131,12 @@ Maneuver PredictorVehicle::predictObjectManeuverByTimeToLaneChange(
   const double margin_to_reach_right_bound = right_dist / (std::fabs(v_right_filtered) + epsilon);
 
   if (
-    left_dist < right_dist &&
-    left_dist < params_.dist_threshold_to_bound &&
-    v_left_filtered < 0 &&
+    left_dist < right_dist && left_dist < params_.dist_threshold_to_bound && v_left_filtered < 0 &&
     margin_to_reach_left_bound < params_.time_threshold_to_bound) {
     return Maneuver::LEFT_LANE_CHANGE;
   } else if (
-    right_dist < left_dist &&
-    right_dist < params_.dist_threshold_to_bound &&
-    v_right_filtered < 0 &&
-    margin_to_reach_right_bound < params_.time_threshold_to_bound) {
+    right_dist < left_dist && right_dist < params_.dist_threshold_to_bound &&
+    v_right_filtered < 0 && margin_to_reach_right_bound < params_.time_threshold_to_bound) {
     return Maneuver::RIGHT_LANE_CHANGE;
   }
 
@@ -268,8 +267,8 @@ double PredictorVehicle::calcLeftLateralOffset(
 }
 
 ManeuverProbability PredictorVehicle::calculateManeuverProbability(
-  const Maneuver & predicted_maneuver, const bool left_paths_exists,
-  const bool right_paths_exists, const bool center_paths_exists) const
+  const Maneuver & predicted_maneuver, const bool left_paths_exists, const bool right_paths_exists,
+  const bool center_paths_exists) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
