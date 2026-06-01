@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(autoware_vehicle_cmd_gate)
 
 find_package(autoware_cmake REQUIRED)
+find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 ament_auto_add_library(vehicle_cmd_gate_node SHARED
@@ -11,9 +12,11 @@ ament_auto_add_library(vehicle_cmd_gate_node SHARED
   src/moderate_stop_interface.cpp
 )
 
-rclcpp_components_register_node(vehicle_cmd_gate_node
+autoware_agnocast_wrapper_register_node(vehicle_cmd_gate_node
   PLUGIN "autoware::vehicle_cmd_gate::VehicleCmdGate"
   EXECUTABLE vehicle_cmd_gate_exe
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 rosidl_generate_interfaces(
