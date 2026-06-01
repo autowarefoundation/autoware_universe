@@ -14,7 +14,6 @@
 
 #pragma once
 
-
 #include "autoware/euclidean_cluster/euclidean_cluster_interface.hpp"
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
