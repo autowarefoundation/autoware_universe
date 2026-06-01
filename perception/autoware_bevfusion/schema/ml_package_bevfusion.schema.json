@@ -198,8 +198,7 @@
         "features_width",
         "num_depth_features",
         "image_feature_channel",
-        "use_intensity",
-        "detection_score_thresholds"
+        "use_intensity"
       ],
       "additionalProperties": false
     }

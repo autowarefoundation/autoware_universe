@@ -163,7 +163,8 @@
         "circle_nms_dist_threshold",
         "iou_nms_search_distance_2d",
         "iou_nms_threshold",
-        "yaw_norm_thresholds"
+        "yaw_norm_thresholds",
+        "detection_score_thresholds"
       ],
       "additionalProperties": false
     }
