@@ -53,9 +53,16 @@ public:
   using TrafficLightConstPtr = lanelet::TrafficLightConstPtr;
 
   /**
-   * @brief Default constructor for SignalMatchValidator.
+   * @brief Construct a validator with the source-priority mode fixed at
+   *        construction. The mode is immutable for the validator's lifetime.
+   *
+   * @param source_priority CONFIDENCE (confidence-based selection),
+   *                        EXTERNAL (prioritize external), or
+   *                        PERCEPTION (prioritize perception).
    */
-  SignalMatchValidator() = default;
+  explicit SignalMatchValidator(SourcePriority source_priority) : source_priority_(source_priority)
+  {
+  }
 
   /**
    * @brief Validates and compares traffic signal data from perception and external sources.
@@ -83,17 +90,6 @@ public:
    * @param ids Set of regulatory-element IDs classified as pedestrian signals.
    */
   void set_pedestrian_traffic_light_ids(std::unordered_set<lanelet::Id> ids);
-
-  /**
-   * @brief Sets the source priority for signal selection.
-   *
-   * This method sets the priority mode for selecting between perception and external signals.
-   * Options are CONFIDENCE (use confidence-based selection), EXTERNAL (prioritize external),
-   * or PERCEPTION (prioritize perception signals).
-   *
-   * @param source_priority The priority mode for signal selection.
-   */
-  void set_source_priority(const SourcePriority source_priority);
 
 private:
   SourcePriority source_priority_;

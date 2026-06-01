@@ -286,11 +286,6 @@ void SignalMatchValidator::set_pedestrian_traffic_light_ids(std::unordered_set<l
   pedestrian_traffic_light_ids_ = std::move(ids);
 }
 
-void SignalMatchValidator::set_source_priority(const SourcePriority source_priority)
-{
-  source_priority_ = source_priority;
-}
-
 bool SignalMatchValidator::is_pedestrian_traffic_light(const lanelet::Id & signal_id)
 {
   return pedestrian_traffic_light_ids_.find(signal_id) != pedestrian_traffic_light_ids_.end();

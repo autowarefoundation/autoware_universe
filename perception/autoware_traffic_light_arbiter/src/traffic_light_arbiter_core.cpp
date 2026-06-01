@@ -35,8 +35,7 @@ TrafficLightArbiterCore::TrafficLightArbiterCore(
   perception_time_tolerance_(perception_time_tolerance)
 {
   if (enable_signal_matching_) {
-    signal_match_validator_ = std::make_unique<SignalMatchValidator>();
-    signal_match_validator_->set_source_priority(source_priority_);
+    signal_match_validator_ = std::make_unique<SignalMatchValidator>(source_priority_);
   }
 }
 
