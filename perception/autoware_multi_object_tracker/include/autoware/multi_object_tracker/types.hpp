@@ -157,13 +157,14 @@ inline std::optional<ShapeType> toShapeType(const std::string & shape_name)
 
 inline ShapeType toShapeType(const uint8_t shape_type)
 {
+  using MsgShape = autoware_perception_msgs::msg::Shape;
   switch (shape_type) {
-    case 0:
+    case MsgShape::BOUNDING_BOX:
       return ShapeType::BOUNDING_BOX;
-    case 1:
-      return ShapeType::CYLINDER;
-    case 2:
+    case MsgShape::POLYGON:
       return ShapeType::POLYGON;
+    case MsgShape::CYLINDER:
+      return ShapeType::CYLINDER;
     default:
       return ShapeType::BOUNDING_BOX;  // treat unknown msg shape as bounding box
   }

@@ -20,12 +20,10 @@
 #include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
-#include <autoware_perception_msgs/msg/object_classification.hpp>
-
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <iomanip>
-#include <list>
 #include <memory>
 #include <optional>
 #include <sstream>
