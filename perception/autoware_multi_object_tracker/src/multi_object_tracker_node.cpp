@@ -23,6 +23,7 @@
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
 #include <array>
+#include <cmath>
 #include <iomanip>
 #include <list>
 #include <memory>
@@ -151,22 +152,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       }
     }
 
-    std::unordered_map<classes::Label, AssociationProfileMap, EnumClassHash> profile_cache;
-    auto get_profile = [&](classes::Label label, TrackerType tracker_type) -> AssociationProfile {
-      auto & label_cache = profile_cache[label];
-      if (const auto it = label_cache.find(tracker_type); it != label_cache.end()) {
-        return it->second;
-      }
-      const auto prefix =
-        "tracker_profiles." + toString(tracker_type) + "." + classes::toString(label) + ".";
-      const auto max_dist = declare_parameter<double>(prefix + "max_dist");
-      return label_cache[tracker_type] = AssociationProfile{
-               max_dist * max_dist, declare_parameter<double>(prefix + "max_area"),
-               declare_parameter<double>(prefix + "min_area"),
-               declare_parameter<double>(prefix + "min_iou")};
-    };
-
-    // Pass 1: label defaults
+    // tracker_assignment Pass 1: label defaults
+    // Builds the association assignment map; profile application is deferred to a separate pass.
+    std::unordered_map<ShapeLabelKey, std::vector<TrackerType>, ShapeLabelKeyHash>
+      association_assignment;
     for (const auto label : classes::trackedLabels()) {
       const auto label_name = classes::toString(label);
 
@@ -183,14 +172,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       for (const auto & tracker_type_name : match_names) {
         const TrackerType tracker_type = parseTrackerType(tracker_type_name, match_param);
         if (tracker_type == TrackerType::PASS_THROUGH) continue;
-        const auto profile = get_profile(label, tracker_type);
         for (const auto shape_type : ALL_SHAPE_TYPES) {
-          params_.association_config.setProfile(shape_type, label, tracker_type, profile);
+          association_assignment[{shape_type, label}].push_back(tracker_type);
         }
       }
     }
 
-    // Pass 2: shape overrides
+    // tracker_assignment Pass 2: shape overrides
+    // Shape-specific match entries replace the label-default assignment for that (shape, label).
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       const auto shape_name = types::toString(shape_type);
       for (const auto label : classes::trackedLabels()) {
@@ -206,12 +195,43 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         const auto match_param = "tracker_assignment." + shape_name + "." + label_name + ".match";
         const auto match_names =
           declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
+        if (match_names.empty()) continue;
+        auto & trackers = association_assignment[{shape_type, label}];
+        trackers.clear();
         for (const auto & tracker_type_name : match_names) {
           const TrackerType tracker_type = parseTrackerType(tracker_type_name, match_param);
           if (tracker_type == TrackerType::PASS_THROUGH) continue;
-          params_.association_config.setProfile(
-            shape_type, label, tracker_type, get_profile(label, tracker_type));
+          trackers.push_back(tracker_type);
         }
+      }
+    }
+
+    // tracker_profiles: apply — independent of tracker_assignment parsing
+    // For each (shape, label, tracker) from the assignment map:
+    //   1. Declare the label-level profile once per unique (tracker, label).
+    //   2. Declare the shape-specific override with label-level values as fallback.
+    using LabelProfileMap = std::unordered_map<classes::Label, AssociationProfile, EnumClassHash>;
+    std::unordered_map<TrackerType, LabelProfileMap, EnumClassHash> label_profiles;
+    for (const auto & [shape_label, tracker_types] : association_assignment) {
+      const auto & [shape, label] = shape_label;
+      for (const auto tracker_type : tracker_types) {
+        if (!label_profiles[tracker_type].count(label)) {
+          const auto p =
+            "tracker_profiles." + toString(tracker_type) + "." + classes::toString(label) + ".";
+          const auto d = declare_parameter<double>(p + "max_dist");
+          label_profiles[tracker_type][label] = {
+            d * d, declare_parameter<double>(p + "max_area"),
+            declare_parameter<double>(p + "min_area"), declare_parameter<double>(p + "min_iou")};
+        }
+        const auto & base = label_profiles[tracker_type][label];
+        const auto p = "tracker_profiles." + toString(tracker_type) + "." + types::toString(shape) +
+                       "." + classes::toString(label) + ".";
+        const auto d = declare_parameter<double>(p + "max_dist", std::sqrt(base.max_dist_sq));
+        params_.association_config.setProfile(
+          shape, label, tracker_type,
+          {d * d, declare_parameter<double>(p + "max_area", base.max_area),
+           declare_parameter<double>(p + "min_area", base.min_area),
+           declare_parameter<double>(p + "min_iou", base.min_iou)});
       }
     }
 
