@@ -27,7 +27,6 @@
 namespace autoware::multi_object_tracker
 {
 
-// ---- Utility hash for enum class types ----
 struct EnumClassHash
 {
   template <typename T>
@@ -37,7 +36,7 @@ struct EnumClassHash
   }
 };
 
-// ---- Association profile: thresholds for one (measurement_shape_label, tracker_type) pair ----
+//// Association profile
 struct AssociationProfile
 {
   double max_dist_sq;
@@ -46,10 +45,8 @@ struct AssociationProfile
   double min_iou;
 };
 
-// ---- Shared map type: Label → double (used by TrackerOverlapManagerConfig) ----
 using LabelDoubleMap = std::unordered_map<classes::Label, double, EnumClassHash>;
 
-// ---- (shape, label) composite key used in both creation and association maps ----
 using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
 struct ShapeLabelKeyHash
 {
@@ -61,18 +58,15 @@ struct ShapeLabelKeyHash
   }
 };
 
-// ---- Inner map: TrackerType → AssociationProfile ----
 using AssociationProfileMap =
   std::unordered_map<types::TrackerType, AssociationProfile, EnumClassHash>;
 
-// ---- Outer map: (shape, label) → AssociationProfileMap ----
 using AssociationMap = std::unordered_map<ShapeLabelKey, AssociationProfileMap, ShapeLabelKeyHash>;
 
-// ---- (shape, label) → TrackerType (creation routing) ----
 using ShapeLabelToTrackerTypeMap =
   std::unordered_map<ShapeLabelKey, types::TrackerType, ShapeLabelKeyHash>;
 
-// ---- Tracker creation config: how to spawn a new tracker ----
+//// Tracker creation (spawning, type mapping)
 struct TrackerCreationConfig
 {
   bool enable_unknown_object_velocity_estimation{false};
@@ -86,7 +80,7 @@ struct TrackerCreationConfig
   }
 };
 
-// ---- Tracker association config: how to match a measurement to a tracker ----
+//// Tracker association (measurement <-> tracker matching)
 struct TrackerAssociationConfig
 {
   double unknown_association_giou_threshold{0.0};
@@ -103,7 +97,6 @@ struct TrackerAssociationConfig
     association_params_map[{shape, label}][tracker_type] = profile;
   }
 
-  // Call once after all setProfile() calls are complete.
   void buildMaxDistances()
   {
     max_dist_sq_per_label.clear();
@@ -117,7 +110,7 @@ struct TrackerAssociationConfig
   }
 };
 
-// ---- Tracker overlap manager config (unchanged) ----
+//// Tracker overlap manager (tracker-to-tracker layer: remove spatially redundant trackers)
 struct TrackerOverlapManagerConfig
 {
   float min_known_object_removal_iou{0.0f};
@@ -130,7 +123,7 @@ struct TrackerOverlapManagerConfig
   double pruning_static_iou_threshold{0.0};
 };
 
-// ---- Utility: safe map lookup ----
+//// Utility: safe map lookup
 template <typename Map, typename Key>
 auto get_map_value_if_exists(const Map & map, const Key & key)
   -> std::optional<std::reference_wrapper<const typename Map::mapped_type>>

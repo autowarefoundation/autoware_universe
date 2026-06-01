@@ -144,18 +144,13 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
   }
 
-  // tracker_assignment: parse create and match together in two passes.
-  // Pass 1 (label-level defaults), Pass 2 (shape-specific overrides).
-  // Profiles are loaded lazily once per (tracker_type, label) via a cache.
   {
-    // Safety fill: POLYGON for every (shape, label) before any override.
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       for (const auto label : classes::trackedLabels()) {
         params_.creation_config.setCreation(shape_type, label, TrackerType::POLYGON);
       }
     }
 
-    // Profile cache: loads declare_parameter exactly once per (tracker_type, label).
     std::unordered_map<classes::Label, AssociationProfileMap, EnumClassHash> profile_cache;
     auto get_profile = [&](classes::Label label, TrackerType tracker_type) -> AssociationProfile {
       auto & label_cache = profile_cache[label];
@@ -171,11 +166,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
                declare_parameter<double>(prefix + "min_iou")};
     };
 
-    // Pass 1: label-level defaults — apply to all shapes.
+    // Pass 1: label defaults
     for (const auto label : classes::trackedLabels()) {
       const auto label_name = classes::toString(label);
 
-      // create
       const auto create_param = "tracker_assignment." + label_name + ".create";
       const TrackerType create_tracker_type =
         parseTrackerType(declare_parameter<std::string>(create_param), create_param);
@@ -183,7 +177,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         params_.creation_config.setCreation(shape_type, label, create_tracker_type);
       }
 
-      // match
       const auto match_param = "tracker_assignment." + label_name + ".match";
       const auto match_names =
         declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
@@ -197,13 +190,12 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       }
     }
 
-    // Pass 2: shape-specific overrides.
+    // Pass 2: shape overrides
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       const auto shape_name = types::toString(shape_type);
       for (const auto label : classes::trackedLabels()) {
         const auto label_name = classes::toString(label);
 
-        // create override
         const auto create_param = "tracker_assignment." + shape_name + "." + label_name + ".create";
         const auto create_str = declare_parameter<std::string>(create_param, "");
         if (!create_str.empty()) {
@@ -211,7 +203,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
             shape_type, label, parseTrackerType(create_str, create_param));
         }
 
-        // match override
         const auto match_param = "tracker_assignment." + shape_name + "." + label_name + ".match";
         const auto match_names =
           declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
@@ -224,7 +215,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       }
     }
 
-    // Validate: at least one match entry must exist if any non-passthrough tracker is configured.
     const bool has_non_passthrough = std::any_of(
       params_.creation_config.shape_tracker_map.begin(),
       params_.creation_config.shape_tracker_map.end(),
@@ -250,7 +240,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     return result;
   };
 
-  // pruning parameters (parsed directly into tracker_overlap_manager_config)
+  // pruning parameters
   params_.tracker_overlap_manager_config.pruning_giou_thresholds =
     parse_label_double_map("pruning_generalized_iou_thresholds");
   params_.tracker_overlap_manager_config.pruning_static_object_speed =

@@ -58,7 +58,7 @@ autoware::multi_object_tracker::TrackerAssociationConfig createTrackerAssociatio
   using Label = autoware::multi_object_tracker::classes::Label;
   using ShapeType = autoware::multi_object_tracker::types::ShapeType;
 
-  // --- Profile table (bounding_box) ---
+  // bounding_box
   config.setProfile(
     ShapeType::BOUNDING_BOX, Label::UNKNOWN, TrackerType::MULTIPLE_VEHICLE,
     AssociationProfile{4.0 * 4.0, 60.0, 3.6, 0.0001});
@@ -87,7 +87,7 @@ autoware::multi_object_tracker::TrackerAssociationConfig createTrackerAssociatio
     ShapeType::BOUNDING_BOX, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
     AssociationProfile{2.0 * 2.0, 2.0, 0.1, 0.0001});
 
-  // --- Profile table (polygon) ---
+  // polygon
   config.setProfile(
     ShapeType::POLYGON, Label::UNKNOWN, TrackerType::POLYGON,
     AssociationProfile{4.0 * 4.0, 100.0, 0.0, 0.0001});
@@ -140,7 +140,7 @@ autoware::multi_object_tracker::TrackerAssociationConfig createTrackerAssociatio
     ShapeType::POLYGON, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
     AssociationProfile{2.0 * 2.0, 2.0, 0.1, 0.0001});
 
-  // --- Profile table (cylinder) ---
+  // cylinder
   config.setProfile(
     ShapeType::CYLINDER, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
     AssociationProfile{3.0 * 3.0, 2.5, 0.001, 0.0001});
