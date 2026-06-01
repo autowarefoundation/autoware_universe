@@ -31,7 +31,6 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -145,40 +144,98 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     }
   }
 
-  // tracker_assignment.create: shape_tracker_map is fully populated for all (shape, label)
-  // combinations. Fill order: lowest priority first so higher-priority entries overwrite.
+  // tracker_assignment: parse create and match together in two passes.
+  // Pass 1 (label-level defaults), Pass 2 (shape-specific overrides).
+  // Profiles are loaded lazily once per (tracker_type, label) via a cache.
   {
-    // Pass 1 (lowest priority): default POLYGON for every (shape, label) combination.
+    // Safety fill: POLYGON for every (shape, label) before any override.
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       for (const auto label : classes::trackedLabels()) {
         params_.assignment_config.setCreation(shape_type, label, TrackerType::POLYGON);
       }
     }
 
-    // Pass 2: per-label defaults — override for all shape types.
+    // Profile cache: loads declare_parameter exactly once per (tracker_type, label).
+    std::unordered_map<classes::Label, AssociationProfileMap, EnumClassHash> profile_cache;
+    auto get_profile = [&](classes::Label label, TrackerType tt) -> AssociationProfile {
+      auto & label_cache = profile_cache[label];
+      if (const auto it = label_cache.find(tt); it != label_cache.end()) {
+        return it->second;
+      }
+      const auto prefix =
+        "tracker_profiles." + toString(tt) + "." + classes::toString(label) + ".";
+      const auto max_dist = declare_parameter<double>(prefix + "max_dist");
+      return label_cache[tt] = AssociationProfile{
+               max_dist * max_dist, declare_parameter<double>(prefix + "max_area"),
+               declare_parameter<double>(prefix + "min_area"),
+               declare_parameter<double>(prefix + "min_iou")};
+    };
+
+    // Pass 1: label-level defaults — apply to all shapes.
     for (const auto label : classes::trackedLabels()) {
       const auto label_name = classes::toString(label);
-      const auto param_name = "tracker_assignment." + label_name + ".create";
-      const TrackerType tt =
-        parseTrackerType(declare_parameter<std::string>(param_name), param_name);
+
+      // create
+      const auto create_param = "tracker_assignment." + label_name + ".create";
+      const TrackerType create_tt =
+        parseTrackerType(declare_parameter<std::string>(create_param), create_param);
       for (const auto shape_type : ALL_SHAPE_TYPES) {
-        params_.assignment_config.setCreation(shape_type, label, tt);
+        params_.assignment_config.setCreation(shape_type, label, create_tt);
+      }
+
+      // match
+      const auto match_param = "tracker_assignment." + label_name + ".match";
+      const auto match_names =
+        declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
+      for (const auto & tt_name : match_names) {
+        const TrackerType tt = parseTrackerType(tt_name, match_param);
+        if (tt == TrackerType::PASS_THROUGH) continue;
+        const auto profile = get_profile(label, tt);
+        for (const auto shape_type : ALL_SHAPE_TYPES) {
+          params_.assignment_config.setProfile(shape_type, label, tt, profile);
+        }
       }
     }
 
-    // Pass 3 (highest priority): shape-specific overrides where explicitly configured.
+    // Pass 2: shape-specific overrides.
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       const auto shape_name = types::toString(shape_type);
       for (const auto label : classes::trackedLabels()) {
         const auto label_name = classes::toString(label);
-        const auto param_name = "tracker_assignment." + shape_name + "." + label_name + ".create";
-        const auto shape_specific = declare_parameter<std::string>(param_name, "");
-        if (!shape_specific.empty()) {
+
+        // create override
+        const auto create_param =
+          "tracker_assignment." + shape_name + "." + label_name + ".create";
+        const auto create_str = declare_parameter<std::string>(create_param, "");
+        if (!create_str.empty()) {
           params_.assignment_config.setCreation(
-            shape_type, label, parseTrackerType(shape_specific, param_name));
+            shape_type, label, parseTrackerType(create_str, create_param));
+        }
+
+        // match override
+        const auto match_param =
+          "tracker_assignment." + shape_name + "." + label_name + ".match";
+        const auto match_names =
+          declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
+        for (const auto & tt_name : match_names) {
+          const TrackerType tt = parseTrackerType(tt_name, match_param);
+          if (tt == TrackerType::PASS_THROUGH) continue;
+          params_.assignment_config.setProfile(shape_type, label, tt, get_profile(label, tt));
         }
       }
     }
+
+    // Validate: at least one match entry must exist if any non-passthrough tracker is configured.
+    const bool has_non_passthrough = std::any_of(
+      params_.assignment_config.shape_tracker_map.begin(),
+      params_.assignment_config.shape_tracker_map.end(),
+      [](const auto & e) { return e.second != TrackerType::PASS_THROUGH; });
+    if (params_.assignment_config.association_params_map.empty() && has_non_passthrough) {
+      throw std::invalid_argument(
+        "No tracker_assignment.match entries found — check the parameter file.");
+    }
+
+    params_.assignment_config.buildMaxDistances();
   }
 
   params_.tracker_overlap_manager_config.min_known_object_removal_iou =
@@ -215,103 +272,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     declare_parameter<bool>("enable_unknown_object_velocity_estimation");
   params_.assignment_config.enable_unknown_object_motion_output =
     declare_parameter<bool>("enable_unknown_object_motion_output");
-
-  // tracker_assignment.match: two-pass (shape, label) → list of eligible tracker types.
-  // tracker_profiles: load thresholds once per (tracker_type, label) combination needed.
-  // Final result goes into assignment_config.association_params_map.
-  {
-    // Local types for intermediate parsing — not part of the public config API.
-    using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
-    struct ShapeLabelKeyHash {
-      std::size_t operator()(const ShapeLabelKey & k) const {
-        const auto h1 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.first));
-        const auto h2 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.second));
-        return h1 ^ (h2 << 8);
-      }
-    };
-    using ProfileMap = std::unordered_map<TrackerType, AssociationProfile, EnumClassHash>;
-
-    std::unordered_map<ShapeLabelKey, std::vector<TrackerType>, ShapeLabelKeyHash>
-      shape_label_tracker_types;
-    std::unordered_map<classes::Label, std::unordered_set<TrackerType, EnumClassHash>, EnumClassHash>
-      label_to_all_tracker_types;
-
-    // Pass 1 (label-level defaults): fill all (shape, label) combinations.
-    for (const auto measurement_label : classes::trackedLabels()) {
-      const auto label_name = classes::toString(measurement_label);
-      const auto param_name = "tracker_assignment." + label_name + ".match";
-      const auto default_names =
-        declare_parameter<std::vector<std::string>>(param_name, std::vector<std::string>{});
-      if (default_names.empty()) continue;
-      std::vector<TrackerType> default_types;
-      for (const auto & tt_name : default_names) {
-        const TrackerType tt = parseTrackerType(tt_name, param_name);
-        default_types.push_back(tt);
-        label_to_all_tracker_types[measurement_label].insert(tt);
-      }
-      for (const auto shape_type : ALL_SHAPE_TYPES) {
-        shape_label_tracker_types[{shape_type, measurement_label}] = default_types;
-      }
-    }
-
-    // Pass 2 (shape-specific overrides): override where explicitly configured.
-    for (const auto shape_type : ALL_SHAPE_TYPES) {
-      const auto shape_name = types::toString(shape_type);
-      for (const auto measurement_label : classes::trackedLabels()) {
-        const auto label_name = classes::toString(measurement_label);
-        const auto param_name = "tracker_assignment." + shape_name + "." + label_name + ".match";
-        const auto tracker_type_names =
-          declare_parameter<std::vector<std::string>>(param_name, std::vector<std::string>{});
-        if (tracker_type_names.empty()) continue;
-        std::vector<TrackerType> tracker_types;
-        for (const auto & tt_name : tracker_type_names) {
-          const TrackerType tt = parseTrackerType(tt_name, param_name);
-          tracker_types.push_back(tt);
-          label_to_all_tracker_types[measurement_label].insert(tt);
-        }
-        shape_label_tracker_types[{shape_type, measurement_label}] = std::move(tracker_types);
-      }
-    }
-
-    {
-      const bool has_non_passthrough = std::any_of(
-        params_.assignment_config.shape_tracker_map.begin(),
-        params_.assignment_config.shape_tracker_map.end(),
-        [](const auto & e) { return e.second != TrackerType::PASS_THROUGH; });
-      if (shape_label_tracker_types.empty() && has_non_passthrough) {
-        throw std::invalid_argument(
-          "No tracker_assignment.match entries found — check the parameter file.");
-      }
-    }
-
-    // Load association profiles from tracker_profiles once per (tracker_type, label).
-    std::unordered_map<classes::Label, ProfileMap, EnumClassHash> cached_label_profiles;
-
-    for (const auto & [label, tracker_type_set] : label_to_all_tracker_types) {
-      const auto label_name = classes::toString(label);
-      for (const auto tracker_type : tracker_type_set) {
-        if (tracker_type == TrackerType::PASS_THROUGH) continue;
-        const auto tt_name = toString(tracker_type);
-        const auto profile_prefix = "tracker_profiles." + tt_name + "." + label_name + ".";
-        const auto max_dist = declare_parameter<double>(profile_prefix + "max_dist");
-        cached_label_profiles[label][tracker_type] = AssociationProfile{
-          max_dist * max_dist, declare_parameter<double>(profile_prefix + "max_area"),
-          declare_parameter<double>(profile_prefix + "min_area"),
-          declare_parameter<double>(profile_prefix + "min_iou")};
-      }
-    }
-
-    // Populate the flat profile table and precompute max distances.
-    for (const auto & [shape_label, tracker_types] : shape_label_tracker_types) {
-      const auto & label_profiles = cached_label_profiles.at(shape_label.second);
-      for (const auto tracker_type : tracker_types) {
-        params_.assignment_config.setProfile(
-          shape_label.first, shape_label.second, tracker_type,
-          label_profiles.at(tracker_type));
-      }
-    }
-    params_.assignment_config.buildMaxDistances();
-  }
 
   // Set the unknown-unknown association GIoU threshold
   params_.assignment_config.unknown_association_giou_threshold =
