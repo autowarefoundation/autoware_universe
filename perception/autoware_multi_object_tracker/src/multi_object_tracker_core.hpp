@@ -54,9 +54,8 @@ struct MultiObjectTrackerParameters
   std::vector<types::InputChannel> input_channels_config;
 
   // Induced parameters
-  TrackerCreationConfig creation_config;
+  TrackerAssignmentConfig assignment_config;
   TrackerOverlapManagerConfig tracker_overlap_manager_config;
-  AssociatorConfig associator_config;
 };
 
 struct MultiObjectTrackerInternalState
