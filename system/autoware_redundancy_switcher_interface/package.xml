@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_redundancy_switcher_interface</name>
+  <version>1.0.0</version>
+  <description>Base package for redundancy switcher system providing core logic and interfaces</description>
+  <maintainer email="tetsuhiro.kawaguchi@tier4.jp">Tetsuhiro Kawaguchi</maintainer>
+  <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_adapi_v1_msgs</depend>
+  <depend>autoware_command_mode_types</depend>
+  <depend>autoware_common_msgs</depend>
+  <depend>autoware_vehicle_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>diagnostic_updater</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>std_srvs</depend>
+  <depend>tier4_external_api_msgs</depend>
+  <depend>tier4_system_msgs</depend>
+
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
