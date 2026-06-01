@@ -20,6 +20,7 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include <autoware/agnocast_wrapper/node.hpp>
+
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 
 #include <deque>
