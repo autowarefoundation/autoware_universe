@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for autoware_redundancy_switcher_interface",
+  "type": "object",
+  "definitions": {
+    "diag": {
+      "type": "object",
+      "properties": {
+        "transitional_timeout_milli": {
+          "type": "number",
+          "description": "Elapsed time [ms] after which a transitional switcher state (startup or state change in progress) is reported as DiagStatus::ERROR.",
+          "default": 10000.0,
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": ["transitional_timeout_milli"],
+      "additionalProperties": false
+    },
+    "base_params": {
+      "type": "object",
+      "properties": {
+        "is_redundant": {
+          "type": "boolean",
+          "description": "Set to false for non-redundant (single-ECU) systems. When false, switcher_plugin is not loaded and the system is treated as permanently stable.",
+          "default": true
+        },
+        "switcher_plugin": {
+          "type": "string",
+          "description": "pluginlib class name for the switcher-side adapter (required when is_redundant=true). Provided by the plugin package.",
+          "default": ""
+        },
+        "diag": {
+          "$ref": "#/definitions/diag"
+        }
+      },
+      "required": ["diag"],
+      "additionalProperties": true
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/base_params"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
