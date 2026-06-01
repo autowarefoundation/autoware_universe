@@ -24,6 +24,7 @@
 #include <sensor_msgs/msg/image.hpp>
 
 #include <condition_variable>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -93,6 +94,11 @@ private:
     const std::chrono::high_resolution_clock::time_point & start_time);
   void compute_undistortion_maps(const int camera_id);
   void build_ego_mask_gpu(const int camera_id);
+  void build_ego_mask_gpu(const int camera_id, const int width, const int height);
+  bool is_ego_mask_current(const int camera_id, const int width, const int height) const;
+  void upload_ego_mask_gpu(
+    const int camera_id, const std::vector<std::uint8_t> & raster, const int width,
+    const int height);
 
   const size_t rois_number_;
   const int image_height_;

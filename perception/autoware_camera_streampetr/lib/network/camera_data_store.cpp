@@ -172,25 +172,9 @@ void CameraDataStore::update_camera_image(
 
   auto start_time = std::chrono::high_resolution_clock::now();
 
-  if (ego_mask_roi_configs_[camera_id].has_value() && !ego_mask_built_[camera_id]) {
-    const int width = static_cast<int>(input_camera_image_msg->width);
-    const int height = static_cast<int>(input_camera_image_msg->height);
-    if (width > 0 && height > 0) {
-      const auto raster =
-        buildEgoMaskRaster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
-      if (!raster.empty()) {
-        ego_mask_gpu_[camera_id] = std::make_shared<Tensor>(
-          "ego_mask", nvinfer1::Dims{2, {height, width}}, nvinfer1::DataType::kUINT8);
-        cudaMemcpyAsync(
-          ego_mask_gpu_[camera_id]->ptr, raster.data(), ego_mask_gpu_[camera_id]->nbytes(),
-          cudaMemcpyHostToDevice, streams_[camera_id]);
-        cudaStreamSynchronize(streams_[camera_id]);
-        ego_mask_width_[camera_id] = width;
-        ego_mask_height_[camera_id] = height;
-        ego_mask_built_[camera_id] = true;
-      }
-    }
-  }
+  build_ego_mask_gpu(
+    camera_id, static_cast<int>(input_camera_image_msg->width),
+    static_cast<int>(input_camera_image_msg->height));
 
   // Calculate image processing parameters
   auto params = calculate_image_processing_params(camera_id, input_camera_image_msg);
@@ -392,27 +376,29 @@ void CameraDataStore::update_camera_info(
     compute_undistortion_maps(camera_id);
   }
 
-  if (ego_mask_roi_configs_[camera_id].has_value() && input_camera_info_msg) {
-    build_ego_mask_gpu(camera_id);
-  }
+  build_ego_mask_gpu(camera_id);
 }
 
 void CameraDataStore::build_ego_mask_gpu(const int camera_id)
 {
   const auto & camera_info = camera_info_list_[camera_id];
-  if (!camera_info || !ego_mask_roi_configs_[camera_id]) {
+  if (!camera_info) {
     return;
   }
 
-  const int width = static_cast<int>(camera_info->width);
-  const int height = static_cast<int>(camera_info->height);
+  build_ego_mask_gpu(
+    camera_id, static_cast<int>(camera_info->width), static_cast<int>(camera_info->height));
+}
+
+void CameraDataStore::build_ego_mask_gpu(const int camera_id, const int width, const int height)
+{
+  if (!ego_mask_roi_configs_[camera_id]) {
+    return;
+  }
   if (width <= 0 || height <= 0) {
     return;
   }
-
-  if (
-    ego_mask_built_[camera_id] && ego_mask_width_[camera_id] == width &&
-    ego_mask_height_[camera_id] == height) {
+  if (is_ego_mask_current(camera_id, width, height)) {
     return;
   }
 
@@ -422,6 +408,21 @@ void CameraDataStore::build_ego_mask_gpu(const int camera_id)
     return;
   }
 
+  upload_ego_mask_gpu(camera_id, raster, width, height);
+
+  RCLCPP_INFO(logger_, "Ego mask GPU buffer built for camera %d (%dx%d)", camera_id, width, height);
+}
+
+bool CameraDataStore::is_ego_mask_current(
+  const int camera_id, const int width, const int height) const
+{
+  return ego_mask_built_[camera_id] && ego_mask_width_[camera_id] == width &&
+         ego_mask_height_[camera_id] == height;
+}
+
+void CameraDataStore::upload_ego_mask_gpu(
+  const int camera_id, const std::vector<std::uint8_t> & raster, const int width, const int height)
+{
   ego_mask_gpu_[camera_id] = std::make_shared<Tensor>(
     "ego_mask", nvinfer1::Dims{2, {height, width}}, nvinfer1::DataType::kUINT8);
 
@@ -433,8 +434,6 @@ void CameraDataStore::build_ego_mask_gpu(const int camera_id)
   ego_mask_width_[camera_id] = width;
   ego_mask_height_[camera_id] = height;
   ego_mask_built_[camera_id] = true;
-
-  RCLCPP_INFO(logger_, "Ego mask GPU buffer built for camera %d (%dx%d)", camera_id, width, height);
 }
 
 bool CameraDataStore::check_if_all_camera_info_received() const

@@ -26,6 +26,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::camera_streampetr
 {
@@ -54,6 +55,141 @@ std::array<std::uint8_t, 3> clampFillBgr(const std::array<std::uint8_t, 3> & fil
   return fill;
 }
 
+YAML::Node parseYamlRoot(const std::string & yaml_text)
+{
+  YAML::Node root = YAML::Load(yaml_text);
+  if (!root.IsMap()) {
+    throw std::runtime_error("polygons YAML: root must be a mapping (e.g. 'polygons: [...]').");
+  }
+  return root;
+}
+
+YAML::Node getPolygonsNode(const YAML::Node & root)
+{
+  const YAML::Node polygons = root["polygons"];
+  if (!polygons.IsDefined() || polygons.IsNull()) {
+    return {};
+  }
+  if (!polygons.IsSequence()) {
+    throw std::runtime_error("polygons YAML: 'polygons' must be a sequence.");
+  }
+  return polygons;
+}
+
+std::vector<bool> parseNormalizedFlags(const YAML::Node & root, const std::size_t polygons_count)
+{
+  std::vector<bool> normalized_parallel;
+  const YAML::Node normalized_node = root["polygons_normalized"];
+  if (!normalized_node) {
+    return normalized_parallel;
+  }
+
+  if (!normalized_node.IsSequence()) {
+    throw std::runtime_error(
+      "polygons YAML: 'polygons_normalized' must be a sequence of booleans.");
+  }
+  if (normalized_node.size() != polygons_count) {
+    throw std::runtime_error(
+      "polygons YAML: 'polygons_normalized' must be the same length as 'polygons' when provided.");
+  }
+
+  normalized_parallel.reserve(polygons_count);
+  for (const auto & item : normalized_node) {
+    normalized_parallel.push_back(item.as<bool>());
+  }
+  return normalized_parallel;
+}
+
+std::vector<double> parsePolygonPoints(const YAML::Node & points_node)
+{
+  const std::size_t points_count = points_node.size();
+  if (points_count < 6 || (points_count % 2) != 0) {
+    throw std::runtime_error(
+      "polygons YAML: each polygon must have an even length >= 6 (at least 3 (x,y) points).");
+  }
+
+  std::vector<double> points;
+  points.reserve(points_count);
+  for (const auto & value : points_node) {
+    points.push_back(value.as<double>());
+  }
+  return points;
+}
+
+EgoMaskPolygon parsePolygonNode(
+  const YAML::Node & polygon_node, const std::vector<bool> & normalized_parallel,
+  const std::size_t polygon_index)
+{
+  bool normalized = !normalized_parallel.empty() && normalized_parallel[polygon_index];
+  YAML::Node points_node = polygon_node;
+
+  if (polygon_node.IsSequence()) {
+    points_node = polygon_node;
+  } else if (polygon_node.IsMap()) {
+    points_node = polygon_node["points"];
+    if (!points_node || !points_node.IsSequence()) {
+      throw std::runtime_error("polygons YAML: each map entry must have a 'points' sequence.");
+    }
+    if (polygon_node["normalized"]) {
+      normalized = polygon_node["normalized"].as<bool>();
+    }
+  } else {
+    throw std::runtime_error(
+      "polygons YAML: each polygon must be a number sequence or a map with 'points'.");
+  }
+
+  EgoMaskPolygon spec;
+  spec.points = parsePolygonPoints(points_node);
+  spec.normalized = normalized;
+  return spec;
+}
+
+std::vector<cv::Point> toCvPolygon(
+  const EgoMaskPolygon & polygon, const int width, const int height)
+{
+  const double x_scale = polygon.normalized ? static_cast<double>(width) : 1.0;
+  const double y_scale = polygon.normalized ? static_cast<double>(height) : 1.0;
+
+  std::vector<cv::Point> points;
+  points.reserve(polygon.points.size() / 2);
+  for (std::size_t i = 0; i < polygon.points.size(); i += 2) {
+    points.emplace_back(
+      static_cast<int>(polygon.points[i] * x_scale),
+      static_cast<int>(polygon.points[i + 1] * y_scale));
+  }
+  return points;
+}
+
+std::vector<std::vector<cv::Point>> toCvPolygons(
+  const std::vector<EgoMaskPolygon> & polygons, const int width, const int height)
+{
+  std::vector<std::vector<cv::Point>> cv_polygons;
+  cv_polygons.reserve(polygons.size());
+  for (const auto & polygon : polygons) {
+    cv_polygons.push_back(toCvPolygon(polygon, width, height));
+  }
+  return cv_polygons;
+}
+
+std::vector<std::uint8_t> copyMaskToRaster(const cv::Mat & mask)
+{
+  const int width = mask.cols;
+  const int height = mask.rows;
+  std::vector<std::uint8_t> raster(static_cast<std::size_t>(width * height));
+
+  if (mask.isContinuous()) {
+    std::memcpy(raster.data(), mask.data, raster.size());
+    return raster;
+  }
+
+  for (int y = 0; y < height; ++y) {
+    std::memcpy(
+      raster.data() + static_cast<std::size_t>(y * width), mask.ptr(y),
+      static_cast<std::size_t>(width));
+  }
+  return raster;
+}
+
 }  // namespace
 
 std::vector<EgoMaskPolygon> parsePolygonsYamlText(const std::string & yaml_text)
@@ -62,71 +198,17 @@ std::vector<EgoMaskPolygon> parsePolygonsYamlText(const std::string & yaml_text)
     return {};
   }
 
-  YAML::Node root = YAML::Load(yaml_text);
-  if (!root.IsMap()) {
-    throw std::runtime_error("polygons YAML: root must be a mapping (e.g. 'polygons: [...]').");
-  }
-
-  std::vector<bool> normalized_parallel;
-  if (root["polygons_normalized"]) {
-    const YAML::Node nn = root["polygons_normalized"];
-    if (!nn.IsSequence()) {
-      throw std::runtime_error(
-        "polygons YAML: 'polygons_normalized' must be a sequence of booleans.");
-    }
-    for (const auto & item : nn) {
-      normalized_parallel.push_back(item.as<bool>());
-    }
-  }
-
-  const YAML::Node polys = root["polygons"];
-  if (!polys.IsDefined() || polys.IsNull()) {
+  const YAML::Node root = parseYamlRoot(yaml_text);
+  const YAML::Node polygons = getPolygonsNode(root);
+  if (!polygons.IsDefined()) {
     return {};
   }
-  if (!polys.IsSequence()) {
-    throw std::runtime_error("polygons YAML: 'polygons' must be a sequence.");
-  }
 
-  if (!normalized_parallel.empty() && normalized_parallel.size() != polys.size()) {
-    throw std::runtime_error(
-      "polygons YAML: 'polygons_normalized' must be the same length as 'polygons' when provided.");
-  }
-
+  const auto normalized_parallel = parseNormalizedFlags(root, polygons.size());
   std::vector<EgoMaskPolygon> out;
-  out.reserve(polys.size());
-  for (std::size_t i = 0; i < polys.size(); ++i) {
-    const YAML::Node & pn = polys[i];
-    EgoMaskPolygon spec{};
-
-    if (pn.IsSequence()) {
-      for (const auto & v : pn) {
-        spec.points.push_back(v.as<double>());
-      }
-      if (i < normalized_parallel.size()) {
-        spec.normalized = normalized_parallel[i];
-      }
-    } else if (pn.IsMap()) {
-      if (!pn["points"] || !pn["points"].IsSequence()) {
-        throw std::runtime_error("polygons YAML: each map entry must have a 'points' sequence.");
-      }
-      for (const auto & v : pn["points"]) {
-        spec.points.push_back(v.as<double>());
-      }
-      if (pn["normalized"]) {
-        spec.normalized = pn["normalized"].as<bool>();
-      } else if (i < normalized_parallel.size()) {
-        spec.normalized = normalized_parallel[i];
-      }
-    } else {
-      throw std::runtime_error(
-        "polygons YAML: each polygon must be a number sequence or a map with 'points'.");
-    }
-
-    if (spec.points.size() < 6 || (spec.points.size() % 2) != 0) {
-      throw std::runtime_error(
-        "polygons YAML: each polygon must have an even length >= 6 (at least 3 (x,y) points).");
-    }
-    out.push_back(std::move(spec));
+  out.reserve(polygons.size());
+  for (std::size_t i = 0; i < polygons.size(); ++i) {
+    out.push_back(parsePolygonNode(polygons[i], normalized_parallel, i));
   }
   return out;
 }
@@ -174,38 +256,10 @@ std::vector<std::uint8_t> buildEgoMaskRaster(
     return {};
   }
 
-  std::vector<std::vector<cv::Point>> polys;
-  polys.reserve(polygons.size());
-
-  for (const auto & poly : polygons) {
-    std::vector<cv::Point> pts;
-    pts.reserve(poly.points.size() / 2);
-    for (std::size_t j = 0; j < poly.points.size(); j += 2) {
-      double x = poly.points[j];
-      double y = poly.points[j + 1];
-      if (poly.normalized) {
-        x *= static_cast<double>(width);
-        y *= static_cast<double>(height);
-      }
-      pts.emplace_back(static_cast<int>(x), static_cast<int>(y));
-    }
-    polys.push_back(std::move(pts));
-  }
-
   cv::Mat mask = cv::Mat::zeros(height, width, CV_8UC1);
-  cv::fillPoly(mask, polys, cv::Scalar(255), cv::LINE_AA);
+  cv::fillPoly(mask, toCvPolygons(polygons, width, height), cv::Scalar(255), cv::LINE_AA);
 
-  std::vector<std::uint8_t> raster(static_cast<std::size_t>(width * height));
-  if (mask.isContinuous()) {
-    std::memcpy(raster.data(), mask.data, raster.size());
-  } else {
-    for (int y = 0; y < height; ++y) {
-      std::memcpy(
-        raster.data() + static_cast<std::size_t>(y * width), mask.ptr(y),
-        static_cast<std::size_t>(width));
-    }
-  }
-  return raster;
+  return copyMaskToRaster(mask);
 }
 
 }  // namespace autoware::camera_streampetr
