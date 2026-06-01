@@ -15,7 +15,7 @@
 #include "traffic_light_multi_camera_fusion_process.hpp"
 
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
 
 #include <unordered_map>
 
@@ -83,45 +83,45 @@ double get_min_confidence(const tier4_perception_msgs::msg::TrafficLight & signa
     ->confidence;
 }
 
-int compare_record(const FusionRecord & r1, const FusionRecord & r2)
+bool has_higher_or_equal_priority(const FusionRecord & candidate, const FusionRecord & existing)
 {
   /*
-  r1 will be checked
-  return 1 if r1 is better than r2
-  return -1 if r1 is worse than r2
-  return 0 if r1 is equal to r2
+  Records are ranked by a fixed priority order. Ties favor the candidate so that a
+  newly arrived record wins over an equally-ranked existing one.
   */
-  /*
-  if both records are from the same sensor but different stamp, trust the latest one
-  */
-  double t1 = rclcpp::Time(r1.header.stamp).seconds();
-  double t2 = rclcpp::Time(r2.header.stamp).seconds();
+
+  // 1. records from the same camera are ranked by timestamp; trust the latest one
+  const double candidate_time = rclcpp::Time(candidate.header.stamp).seconds();
+  const double existing_time = rclcpp::Time(existing.header.stamp).seconds();
   const double dt_thres = 1e-3;
-  if (r1.header.frame_id == r2.header.frame_id && std::abs(t1 - t2) >= dt_thres) {
-    return t1 < t2 ? -1 : 1;
+  if (
+    candidate.header.frame_id == existing.header.frame_id &&
+    std::abs(candidate_time - existing_time) >= dt_thres) {
+    return candidate_time >= existing_time;
   }
-  bool r1_is_unknown = is_unknown(r1.signal);
-  bool r2_is_unknown = is_unknown(r2.signal);
-  /*
-  if both are unknown, they are of the same priority
-  */
-  if (r1_is_unknown && r2_is_unknown) {
-    return 0;
-  } else if (r1_is_unknown ^ r2_is_unknown) {
-    /*
-    if either is unknown, the unknown is of lower priority
-    */
-    return r1_is_unknown ? -1 : 1;
+
+  // 2. a recognized signal outranks an unknown one
+  const bool candidate_is_unknown = is_signal_unknown(candidate.signal);
+  const bool existing_is_unknown = is_signal_unknown(existing.signal);
+  if (candidate_is_unknown && existing_is_unknown) {
+    return true;  // both unknown -> equal priority (favor the candidate)
   }
-  int visible_score_1 = cal_visible_score(r1);
-  int visible_score_2 = cal_visible_score(r2);
-  if (visible_score_1 == visible_score_2) {
-    double confidence_1 = get_min_confidence(r1.signal);
-    double confidence_2 = get_min_confidence(r2.signal);
-    return confidence_1 < confidence_2 ? -1 : 1;
-  } else {
-    return visible_score_1 < visible_score_2 ? -1 : 1;
+  if (candidate_is_unknown) {
+    return false;  // only the candidate is unknown -> it loses
   }
+  if (existing_is_unknown) {
+    return true;  // only the existing record is unknown -> the candidate wins
+  }
+
+  // 3. a fully visible signal outranks a truncated one
+  const bool candidate_is_visible = is_fully_visible(candidate);
+  const bool existing_is_visible = is_fully_visible(existing);
+  if (candidate_is_visible != existing_is_visible) {
+    return candidate_is_visible;
+  }
+
+  // 4. otherwise the higher confidence wins
+  return get_min_confidence(candidate.signal) >= get_min_confidence(existing.signal);
 }
 
 autoware_perception_msgs::msg::TrafficLightElement convert_t4_to_autoware(
@@ -140,20 +140,16 @@ autoware_perception_msgs::msg::TrafficLightElement convert_t4_to_autoware(
   return output;
 }
 
-int cal_visible_score(const FusionRecord & record)
+bool is_fully_visible(const FusionRecord & record)
 {
   const uint32_t boundary = 5;
-  uint32_t x1 = record.roi.roi.x_offset;
-  uint32_t x2 = record.roi.roi.x_offset + record.roi.roi.width;
-  uint32_t y1 = record.roi.roi.y_offset;
-  uint32_t y2 = record.roi.roi.y_offset + record.roi.roi.height;
-  if (
-    x1 <= boundary || (record.cam_info.width - x2) <= boundary || y1 <= boundary ||
-    (record.cam_info.height - y2) <= boundary) {
-    return 0;
-  } else {
-    return 1;
-  }
+  const uint32_t x1 = record.roi.roi.x_offset;
+  const uint32_t x2 = record.roi.roi.x_offset + record.roi.roi.width;
+  const uint32_t y1 = record.roi.roi.y_offset;
+  const uint32_t y2 = record.roi.roi.y_offset + record.roi.roi.height;
+  const bool is_truncated = x1 <= boundary || (record.cam_info.width - x2) <= boundary ||
+                            y1 <= boundary || (record.cam_info.height - y2) <= boundary;
+  return !is_truncated;
 }
 
 FusionRecord generate_failsafe_record(FusionRecord base_record)
