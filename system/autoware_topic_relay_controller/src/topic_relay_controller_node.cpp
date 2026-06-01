@@ -113,8 +113,6 @@ TopicRelayController::TopicRelayController(const rclcpp::NodeOptions & options)
   if (node_param_.enable_keep_publishing) {
     const auto update_period_ns = rclcpp::Rate(node_param_.update_rate).period();
     timer_ = rclcpp::create_timer(this, get_clock(), update_period_ns, [this]() {
-      if (!is_relaying_) return;
-
       if (node_param_.is_transform) {
         if (last_tf_topic_) pub_transform_->publish(*last_tf_topic_);
       } else {
