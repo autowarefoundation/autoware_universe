@@ -20,10 +20,10 @@
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_adapi_v1_msgs/msg/manual_operator_heartbeat.hpp>
 #include <autoware_adapi_v1_msgs/msg/pedals_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/steering_command.hpp>
+#include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_vehicle_msgs/msg/engage.hpp>
 #include <autoware_vehicle_msgs/msg/gear_command.hpp>
 #include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
@@ -88,15 +88,11 @@ private:
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr pub_control_command_;
   rclcpp::Publisher<tier4_external_api_msgs::msg::ControlCommandStamped>::SharedPtr
     pub_external_control_command_;
-  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::PedalsCommand>::SharedPtr
-    pub_pedals_command_;
-  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::SteeringCommand>::SharedPtr
-    pub_steering_command_;
+  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::PedalsCommand>::SharedPtr pub_pedals_command_;
+  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::SteeringCommand>::SharedPtr pub_steering_command_;
   rclcpp::Publisher<autoware_vehicle_msgs::msg::GearCommand>::SharedPtr pub_shift_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>::SharedPtr
-    pub_turn_signal_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>::SharedPtr
-    pub_hazard_lights_;
+  rclcpp::Publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>::SharedPtr pub_turn_signal_;
+  rclcpp::Publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>::SharedPtr pub_hazard_lights_;
   rclcpp::Publisher<tier4_external_api_msgs::msg::Heartbeat>::SharedPtr pub_heartbeat_;
   rclcpp::Publisher<autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat>::SharedPtr
     pub_operator_heartbeat_;

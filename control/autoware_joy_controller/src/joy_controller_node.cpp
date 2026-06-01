@@ -329,8 +329,7 @@ void AutowareJoyControllerNode::publishPedalsCommand()
 {
   autoware_adapi_v1_msgs::msg::PedalsCommand cmd;
   cmd.stamp = this->now();
-  cmd.throttle =
-    accel_ratio_ * calcMapping(static_cast<double>(joy_->accel()), accel_sensitivity_);
+  cmd.throttle = accel_ratio_ * calcMapping(static_cast<double>(joy_->accel()), accel_sensitivity_);
   cmd.brake = brake_ratio_ * calcMapping(static_cast<double>(joy_->brake()), brake_sensitivity_);
   pub_pedals_command_->publish(cmd);
 }
@@ -541,19 +540,14 @@ AutowareJoyControllerNode::AutowareJoyControllerNode(const rclcpp::NodeOptions &
     this->create_publisher<tier4_external_api_msgs::msg::ControlCommandStamped>(
       "output/external_control_command", 1);
   pub_pedals_command_ =
-    this->create_publisher<autoware_adapi_v1_msgs::msg::PedalsCommand>(
-      "output/pedals_command", 1);
-  pub_steering_command_ =
-    this->create_publisher<autoware_adapi_v1_msgs::msg::SteeringCommand>(
-      "output/steering_command", 1);
-  pub_shift_ =
-    this->create_publisher<autoware_vehicle_msgs::msg::GearCommand>("output/shift", 1);
-  pub_turn_signal_ =
-    this->create_publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>(
-      "output/turn_signal", 1);
-  pub_hazard_lights_ =
-    this->create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
-      "output/hazard_lights", 1);
+    this->create_publisher<autoware_adapi_v1_msgs::msg::PedalsCommand>("output/pedals_command", 1);
+  pub_steering_command_ = this->create_publisher<autoware_adapi_v1_msgs::msg::SteeringCommand>(
+    "output/steering_command", 1);
+  pub_shift_ = this->create_publisher<autoware_vehicle_msgs::msg::GearCommand>("output/shift", 1);
+  pub_turn_signal_ = this->create_publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>(
+    "output/turn_signal", 1);
+  pub_hazard_lights_ = this->create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
+    "output/hazard_lights", 1);
   pub_gate_mode_ = this->create_publisher<tier4_control_msgs::msg::GateMode>("output/gate_mode", 1);
   pub_heartbeat_ =
     this->create_publisher<tier4_external_api_msgs::msg::Heartbeat>("output/heartbeat", 1);

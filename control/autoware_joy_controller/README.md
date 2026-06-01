@@ -30,19 +30,19 @@ ros2 launch autoware_joy_controller joy_controller.launch.xml config_file:=/path
 
 ### Output topics
 
-| Name                                | Type                                                | Description                              |
-| ----------------------------------- | --------------------------------------------------- | ---------------------------------------- |
-| `~/output/control_command`          | autoware_control_msgs::msg::Control                 | lateral and longitudinal control command |
-| `~/output/external_control_command` | tier4_external_api_msgs::msg::ControlCommandStamped | lateral and longitudinal control command |
-| `~/output/pedals_command`           | autoware_adapi_v1_msgs::msg::PedalsCommand          | manual pedals command for latest Autoware |
-| `~/output/steering_command`         | autoware_adapi_v1_msgs::msg::SteeringCommand        | manual steering command for latest Autoware |
-| `~/output/shift`                    | autoware_vehicle_msgs::msg::GearCommand             | gear command                             |
-| `~/output/turn_signal`              | autoware_vehicle_msgs::msg::TurnIndicatorsCommand   | turn indicator command                   |
-| `~/output/hazard_lights`            | autoware_vehicle_msgs::msg::HazardLightsCommand     | hazard light command                     |
-| `~/output/gate_mode`                | tier4_control_msgs::msg::GateMode                   | gate mode (Auto or External)             |
-| `~/output/heartbeat`                | tier4_external_api_msgs::msg::Heartbeat             | heartbeat                                |
+| Name                                | Type                                                 | Description                                   |
+| ----------------------------------- | ---------------------------------------------------- | --------------------------------------------- |
+| `~/output/control_command`          | autoware_control_msgs::msg::Control                  | lateral and longitudinal control command      |
+| `~/output/external_control_command` | tier4_external_api_msgs::msg::ControlCommandStamped  | lateral and longitudinal control command      |
+| `~/output/pedals_command`           | autoware_adapi_v1_msgs::msg::PedalsCommand           | manual pedals command for latest Autoware     |
+| `~/output/steering_command`         | autoware_adapi_v1_msgs::msg::SteeringCommand         | manual steering command for latest Autoware   |
+| `~/output/shift`                    | autoware_vehicle_msgs::msg::GearCommand              | gear command                                  |
+| `~/output/turn_signal`              | autoware_vehicle_msgs::msg::TurnIndicatorsCommand    | turn indicator command                        |
+| `~/output/hazard_lights`            | autoware_vehicle_msgs::msg::HazardLightsCommand      | hazard light command                          |
+| `~/output/gate_mode`                | tier4_control_msgs::msg::GateMode                    | gate mode (Auto or External)                  |
+| `~/output/heartbeat`                | tier4_external_api_msgs::msg::Heartbeat              | heartbeat                                     |
 | `~/output/operator_heartbeat`       | autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat | manual operator heartbeat for latest Autoware |
-| `~/output/vehicle_engage`           | autoware_vehicle_msgs::msg::Engage                  | vehicle engage                           |
+| `~/output/vehicle_engage`           | autoware_vehicle_msgs::msg::Engage                   | vehicle engage                                |
 
 ## Parameters
 
@@ -75,6 +75,7 @@ ros2 launch autoware_joy_controller joy_controller.launch.xml config_file:=/path
 | Shift Reverse        | Cursor Right          |
 | Turn Signal Left     | L1                    |
 | Turn Signal Right    | R1                    |
+| Hazard Lights        | L1 + R1               |
 | Clear Turn Signal    | A                     |
 | Gate Mode            | B                     |
 | Emergency Stop       | Select                |
@@ -97,6 +98,7 @@ ros2 launch autoware_joy_controller joy_controller.launch.xml config_file:=/path
 | Shift Reverse        | Cursor Right               |
 | Turn Signal Left     | L1                         |
 | Turn Signal Right    | R1                         |
+| Hazard Lights        | L1 + R1                    |
 | Clear Turn Signal    | SHARE                      |
 | Gate Mode            | OPTIONS                    |
 | Emergency Stop       | PS                         |
@@ -119,6 +121,7 @@ ros2 launch autoware_joy_controller joy_controller.launch.xml config_file:=/path
 | Shift Reverse        | Cursor Right          |
 | Turn Signal Left     | LB                    |
 | Turn Signal Right    | RB                    |
+| Hazard Lights        | LB + RB               |
 | Clear Turn Signal    | A                     |
 | Gate Mode            | B                     |
 | Emergency Stop       | View                  |
