@@ -97,13 +97,6 @@ TrafficLightArbiterCore::ExternalIngestResult TrafficLightArbiterCore::ingest_ex
     external_traffic_lights_[signal.traffic_light_group_id] = std::make_pair(msg_time, signal);
   }
 
-  // Clear perception data if too old relative to this external signal
-  if (
-    std::abs((msg_time - rclcpp::Time(latest_perception_msg_.stamp)).seconds()) >
-    perception_time_tolerance_) {
-    latest_perception_msg_.traffic_light_groups.clear();
-  }
-
   return {true, sweep_expired_external_signals(current_time, external_delay_tolerance_)};
 }
 
@@ -114,11 +107,29 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate()
   using ElementAndPriority = std::pair<Element, bool>;
   std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> regulatory_element_signals_map;
 
-  // Create external signals array from stored valid signals
+  // Create external signals array from stored valid signals, tracking the
+  // freshest external stamp for the perception-staleness check below.
   TrafficSignalArray valid_external_signals;
+  rclcpp::Time max_external_stamp{0, 0, RCL_ROS_TIME};
+  bool has_externals = false;
   for (const auto & [id, info] : external_traffic_lights_) {
     valid_external_signals.traffic_light_groups.emplace_back(info.second);
+    if (!has_externals || info.first > max_external_stamp) {
+      max_external_stamp = info.first;
+      has_externals = true;
+    }
   }
+
+  // Ignore perception for this cycle when it lags the freshest external by
+  // more than perception_time_tolerance_. Done as a non-destructive view so
+  // ingest_perception() remains the sole writer of latest_perception_msg_.
+  const auto perception_stamp = rclcpp::Time(latest_perception_msg_.stamp);
+  const bool perception_is_stale =
+    has_externals && (max_external_stamp - perception_stamp).seconds() > perception_time_tolerance_;
+  TrafficSignalArray empty_perception;
+  empty_perception.stamp = latest_perception_msg_.stamp;
+  const auto & effective_perception =
+    perception_is_stale ? empty_perception : latest_perception_msg_;
 
   auto append_predictions = [](auto & map, const auto & groups) {
     for (const auto & group : groups) {
@@ -128,7 +139,7 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate()
   };
   std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predictions_map;
   // add in order from perception msg
-  append_predictions(predictions_map, latest_perception_msg_.traffic_light_groups);
+  append_predictions(predictions_map, effective_perception.traffic_light_groups);
   append_predictions(predictions_map, valid_external_signals.traffic_light_groups);
 
   if (map_regulatory_elements_set_ == nullptr) {
@@ -158,12 +169,12 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate()
 
   if (enable_signal_matching_) {
     const auto validated_signals =
-      signal_match_validator_->validate_signals(latest_perception_msg_, valid_external_signals);
+      signal_match_validator_->validate_signals(effective_perception, valid_external_signals);
     for (const auto & signal : validated_signals.traffic_light_groups) {
       add_signal_function(signal, false);
     }
   } else {
-    for (const auto & signal : latest_perception_msg_.traffic_light_groups) {
+    for (const auto & signal : effective_perception.traffic_light_groups) {
       add_signal_function(signal, source_priority_ == SourcePriority::PERCEPTION);
     }
 
@@ -212,17 +223,12 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate()
     output_signals_msg.traffic_light_groups.emplace_back(signal_msg);
   }
 
-  // Compute latest input time across stored sources. The Node compares this
-  // against its trigger stamp to decide whether the published output is
-  // behind some input that has arrived but hasn't yet driven a publish cycle.
-  rclcpp::Time latest_time = rclcpp::Time(latest_perception_msg_.stamp);
-  for (const auto & [id, info] : external_traffic_lights_) {
-    const auto & external_time = info.first;
-    if (external_time > latest_time) {
-      latest_time = external_time;
-    }
-  }
-  result.latest_input_time = latest_time;
+  // Latest input stamp across stored sources. The Node compares this against
+  // its trigger stamp to decide whether the published output is behind some
+  // input that has arrived but hasn't yet driven a publish cycle.
+  result.latest_input_time = (has_externals && max_external_stamp > perception_stamp)
+                               ? max_external_stamp
+                               : perception_stamp;
 
   result.output = std::move(output_signals_msg);
   return result;

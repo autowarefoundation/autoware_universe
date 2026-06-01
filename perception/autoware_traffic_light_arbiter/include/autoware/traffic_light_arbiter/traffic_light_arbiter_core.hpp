@@ -74,10 +74,12 @@ public:
   // Admission-control + update + sweep for an external msg:
   //   1. Reject (return {false, {}}) when the msg arrival is too far from
   //      current_time, using external_delay_tolerance_.
-  //   2. Otherwise update external cache entries with msg.stamp, clear
-  //      perception when its stamp falls outside perception_time_tolerance_
-  //      of msg.stamp, sweep external cache against current_time using
-  //      external_delay_tolerance_, and return dropped entries.
+  //   2. Otherwise update external cache entries with msg.stamp, sweep
+  //      external cache against current_time using external_delay_tolerance_,
+  //      and return dropped entries.
+  // Perception staleness is evaluated non-destructively inside arbitrate()
+  // using perception_time_tolerance_; ingest_external no longer touches
+  // latest_perception_msg_.
   ExternalIngestResult ingest_external(
     const TrafficSignalArray & msg, const rclcpp::Time & current_time);
 
