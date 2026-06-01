@@ -68,7 +68,7 @@ private:
   void processObjects();
   void onMeasurement(
     const size_t channel_index,
-    const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
 
   // publish processes
   void publish();

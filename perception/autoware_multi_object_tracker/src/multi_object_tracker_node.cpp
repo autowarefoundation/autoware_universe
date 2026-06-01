@@ -257,11 +257,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         input_channel_topic, rclcpp::QoS{1},
         [this, index](
           AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg) {
-          // Copy into a ConstSharedPtr at the subscription boundary so the downstream
-          // processing chain keeps its rclcpp message type regardless of the active backend.
-          auto ros2_msg =
-            std::make_shared<const autoware_perception_msgs::msg::DetectedObjects>(*msg);
-          this->onMeasurement(index, ros2_msg);
+          this->onMeasurement(index, std::move(msg));
         });
   }
 
@@ -301,7 +297,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
 void MultiObjectTracker::onMeasurement(
   const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
