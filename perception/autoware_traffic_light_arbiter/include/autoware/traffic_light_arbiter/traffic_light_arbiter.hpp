@@ -40,11 +40,11 @@ private:
   rclcpp::Subscription<TrafficSignalArray>::SharedPtr external_tlr_sub_;
   rclcpp::Publisher<TrafficSignalArray>::SharedPtr pub_;
 
-  void onMap(const LaneletMapBin::ConstSharedPtr msg);
-  void onPerceptionMsg(const TrafficSignalArray::ConstSharedPtr msg);
-  void onExternalMsg(const TrafficSignalArray::ConstSharedPtr msg);
-  void arbitrateAndPublish(const builtin_interfaces::msg::Time & stamp);
-  void cleanupExpiredExternalSignals(const rclcpp::Time & current_time, double tolerance);
+  void on_map(const LaneletMapBin::ConstSharedPtr msg);
+  void on_perception_msg(const TrafficSignalArray::ConstSharedPtr msg);
+  void on_external_msg(const TrafficSignalArray::ConstSharedPtr msg);
+  void arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp);
+  void cleanup_expired_external_signals(const rclcpp::Time & current_time, double tolerance);
 
   double external_delay_tolerance_;
   double external_time_tolerance_;

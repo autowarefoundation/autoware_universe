@@ -36,30 +36,30 @@ TrafficLightArbiterCore::TrafficLightArbiterCore(
 {
   if (enable_signal_matching_) {
     signal_match_validator_ = std::make_unique<SignalMatchValidator>();
-    signal_match_validator_->setSourcePriority(source_priority_);
+    signal_match_validator_->set_source_priority(source_priority_);
   }
 }
 
-void TrafficLightArbiterCore::setTrafficLightIds(std::unordered_set<lanelet::Id> ids)
+void TrafficLightArbiterCore::set_traffic_light_ids(std::unordered_set<lanelet::Id> ids)
 {
   map_regulatory_elements_set_ = std::make_unique<std::unordered_set<lanelet::Id>>(std::move(ids));
 }
 
-void TrafficLightArbiterCore::setPedestrianSignalIds(std::unordered_set<lanelet::Id> ids)
+void TrafficLightArbiterCore::set_pedestrian_signal_ids(std::unordered_set<lanelet::Id> ids)
 {
   if (enable_signal_matching_) {
-    signal_match_validator_->setPedestrianSignalIds(std::move(ids));
+    signal_match_validator_->set_pedestrian_signal_ids(std::move(ids));
   }
 }
 
-bool TrafficLightArbiterCore::isExternalOutdated(
+bool TrafficLightArbiterCore::is_external_outdated(
   const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const
 {
   return std::abs((current_time - msg_stamp).seconds()) > external_delay_tolerance_;
 }
 
 std::vector<TrafficLightArbiterCore::DroppedExternalSignal>
-TrafficLightArbiterCore::cleanupExpiredExternalSignals(
+TrafficLightArbiterCore::cleanup_expired_external_signals(
   const rclcpp::Time & reference_time, double tolerance)
 {
   std::vector<DroppedExternalSignal> dropped;
@@ -77,12 +77,12 @@ TrafficLightArbiterCore::cleanupExpiredExternalSignals(
   return dropped;
 }
 
-void TrafficLightArbiterCore::ingestPerception(const TrafficSignalArray & msg)
+void TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
 {
   latest_perception_msg_ = msg;
 }
 
-void TrafficLightArbiterCore::ingestExternal(const TrafficSignalArray & msg)
+void TrafficLightArbiterCore::ingest_external(const TrafficSignalArray & msg)
 {
   // Update external traffic lights map with new information
   for (const auto & signal : msg.traffic_light_groups) {
@@ -150,7 +150,7 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate()
 
   if (enable_signal_matching_) {
     const auto validated_signals =
-      signal_match_validator_->validateSignals(latest_perception_msg_, valid_external_signals);
+      signal_match_validator_->validate_signals(latest_perception_msg_, valid_external_signals);
     for (const auto & signal : validated_signals.traffic_light_groups) {
       add_signal_function(signal, false);
     }

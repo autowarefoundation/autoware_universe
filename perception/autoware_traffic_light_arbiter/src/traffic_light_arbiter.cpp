@@ -98,20 +98,20 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
 
   map_sub_ = create_subscription<LaneletMapBin>(
     "~/sub/vector_map", rclcpp::QoS(1).transient_local(),
-    std::bind(&TrafficLightArbiter::onMap, this, std::placeholders::_1));
+    std::bind(&TrafficLightArbiter::on_map, this, std::placeholders::_1));
 
   perception_tlr_sub_ = create_subscription<TrafficSignalArray>(
     "~/sub/perception_traffic_signals", rclcpp::QoS(1),
-    std::bind(&TrafficLightArbiter::onPerceptionMsg, this, std::placeholders::_1));
+    std::bind(&TrafficLightArbiter::on_perception_msg, this, std::placeholders::_1));
 
   external_tlr_sub_ = create_subscription<TrafficSignalArray>(
     "~/sub/external_traffic_signals", rclcpp::QoS(1),
-    std::bind(&TrafficLightArbiter::onExternalMsg, this, std::placeholders::_1));
+    std::bind(&TrafficLightArbiter::on_external_msg, this, std::placeholders::_1));
 
   pub_ = create_publisher<TrafficSignalArray>("~/pub/traffic_signals", rclcpp::QoS(1));
 }
 
-void TrafficLightArbiter::onMap(const LaneletMapBin::ConstSharedPtr msg)
+void TrafficLightArbiter::on_map(const LaneletMapBin::ConstSharedPtr msg)
 {
   const auto map = autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg);
 
@@ -120,7 +120,7 @@ void TrafficLightArbiter::onMap(const LaneletMapBin::ConstSharedPtr msg)
   for (const auto & signal : signals) {
     traffic_light_ids.emplace(signal->id());
   }
-  core_->setTrafficLightIds(std::move(traffic_light_ids));
+  core_->set_traffic_light_ids(std::move(traffic_light_ids));
 
   // Filter only pedestrian signals to distinguish them in signal matching
   const auto pedestrian_signals = lanelet::filter_pedestrian_signals(map);
@@ -128,42 +128,42 @@ void TrafficLightArbiter::onMap(const LaneletMapBin::ConstSharedPtr msg)
   for (const auto & signal : pedestrian_signals) {
     pedestrian_signal_ids.emplace(signal->id());
   }
-  core_->setPedestrianSignalIds(std::move(pedestrian_signal_ids));
+  core_->set_pedestrian_signal_ids(std::move(pedestrian_signal_ids));
 }
 
-void TrafficLightArbiter::onPerceptionMsg(const TrafficSignalArray::ConstSharedPtr msg)
+void TrafficLightArbiter::on_perception_msg(const TrafficSignalArray::ConstSharedPtr msg)
 {
-  core_->ingestPerception(*msg);
+  core_->ingest_perception(*msg);
 
   // Clean up external signals that are too old relative to perception message
-  cleanupExpiredExternalSignals(rclcpp::Time(msg->stamp), external_time_tolerance_);
+  cleanup_expired_external_signals(rclcpp::Time(msg->stamp), external_time_tolerance_);
 
-  arbitrateAndPublish(msg->stamp);
+  arbitrate_and_publish(msg->stamp);
 }
 
-void TrafficLightArbiter::onExternalMsg(const TrafficSignalArray::ConstSharedPtr msg)
+void TrafficLightArbiter::on_external_msg(const TrafficSignalArray::ConstSharedPtr msg)
 {
   const auto current_time = this->now();
   const auto msg_time = rclcpp::Time(msg->stamp);
 
-  if (core_->isExternalOutdated(current_time, msg_time)) {
+  if (core_->is_external_outdated(current_time, msg_time)) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "Received outdated V2X traffic signal messages");
     return;
   }
 
-  core_->ingestExternal(*msg);
+  core_->ingest_external(*msg);
 
   // Clean up expired signals against current time using the receive-delay tolerance
-  cleanupExpiredExternalSignals(current_time, external_delay_tolerance_);
+  cleanup_expired_external_signals(current_time, external_delay_tolerance_);
 
-  arbitrateAndPublish(msg->stamp);
+  arbitrate_and_publish(msg->stamp);
 }
 
-void TrafficLightArbiter::cleanupExpiredExternalSignals(
+void TrafficLightArbiter::cleanup_expired_external_signals(
   const rclcpp::Time & current_time, double tolerance)
 {
-  const auto dropped = core_->cleanupExpiredExternalSignals(current_time, tolerance);
+  const auto dropped = core_->cleanup_expired_external_signals(current_time, tolerance);
   for (const auto & entry : dropped) {
     RCLCPP_DEBUG(
       get_logger(), "Removing expired external traffic light signal (ID: %lu, age: %.2f s)",
@@ -171,7 +171,7 @@ void TrafficLightArbiter::cleanupExpiredExternalSignals(
   }
 }
 
-void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Time & stamp)
+void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp)
 {
   auto result = core_->arbitrate();
 

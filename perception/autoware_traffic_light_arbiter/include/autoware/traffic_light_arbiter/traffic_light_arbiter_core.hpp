@@ -47,23 +47,24 @@ public:
     SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
     double external_time_tolerance, double perception_time_tolerance);
 
-  void setTrafficLightIds(std::unordered_set<lanelet::Id> ids);
+  void set_traffic_light_ids(std::unordered_set<lanelet::Id> ids);
 
-  void setPedestrianSignalIds(std::unordered_set<lanelet::Id> ids);
+  void set_pedestrian_signal_ids(std::unordered_set<lanelet::Id> ids);
 
-  bool isExternalOutdated(const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const;
+  bool is_external_outdated(
+    const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const;
 
   struct DroppedExternalSignal
   {
     lanelet::Id id;
     double age;
   };
-  std::vector<DroppedExternalSignal> cleanupExpiredExternalSignals(
+  std::vector<DroppedExternalSignal> cleanup_expired_external_signals(
     const rclcpp::Time & reference_time, double tolerance);
 
-  void ingestPerception(const TrafficSignalArray & msg);
+  void ingest_perception(const TrafficSignalArray & msg);
 
-  void ingestExternal(const TrafficSignalArray & msg);
+  void ingest_external(const TrafficSignalArray & msg);
 
   // Result of one arbitration cycle. The arbiter intentionally does not stamp
   // the output: stamp inheritance is an I/O concern owned by the Node (e.g.

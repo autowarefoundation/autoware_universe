@@ -220,7 +220,7 @@ Time get_newer_stamp(const Time & stamp1, const Time & stamp2)
 namespace autoware::traffic_light
 {
 
-autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::validateSignals(
+autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::validate_signals(
   const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals)
 {
   TrafficSignalArray validated_signals;
@@ -247,7 +247,7 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
 
     // We don't validate the pedestrian signals
     // TODO(TomohitoAndo): Validate pedestrian signals
-    if (isPedestrianSignal(signal_id)) {
+    if (is_pedestrian_signal(signal_id)) {
       validated_signals.traffic_light_groups.emplace_back(
         util::get_highest_confidence_signal(perception_result, external_result, source_priority_));
 
@@ -281,17 +281,17 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
   return validated_signals;
 }
 
-void SignalMatchValidator::setPedestrianSignalIds(std::unordered_set<lanelet::Id> ids)
+void SignalMatchValidator::set_pedestrian_signal_ids(std::unordered_set<lanelet::Id> ids)
 {
   map_pedestrian_signal_regulatory_elements_set_ = std::move(ids);
 }
 
-void SignalMatchValidator::setSourcePriority(const SourcePriority source_priority)
+void SignalMatchValidator::set_source_priority(const SourcePriority source_priority)
 {
   source_priority_ = source_priority;
 }
 
-bool SignalMatchValidator::isPedestrianSignal(const lanelet::Id & signal_id)
+bool SignalMatchValidator::is_pedestrian_signal(const lanelet::Id & signal_id)
 {
   return map_pedestrian_signal_regulatory_elements_set_.find(signal_id) !=
          map_pedestrian_signal_regulatory_elements_set_.end();

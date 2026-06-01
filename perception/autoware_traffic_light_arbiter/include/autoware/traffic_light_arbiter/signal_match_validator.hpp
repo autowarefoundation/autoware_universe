@@ -69,20 +69,20 @@ public:
    * @param external_signals Traffic signal data from external source.
    * @return A validated TrafficSignalArray.
    */
-  TrafficSignalArray validateSignals(
+  TrafficSignalArray validate_signals(
     const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals);
 
   /**
    * @brief Sets the pedestrian signal IDs to be considered during validation.
    *
    * Pedestrian-classified signals receive distinct reconciliation handling in
-   * validateSignals(). The caller supplies the set of regulatory-element IDs
+   * validate_signals(). The caller supplies the set of regulatory-element IDs
    * (typically derived from crosswalk lanelets); only the IDs are needed for
    * the routing decision.
    *
    * @param ids Set of regulatory-element IDs classified as pedestrian signals.
    */
-  void setPedestrianSignalIds(std::unordered_set<lanelet::Id> ids);
+  void set_pedestrian_signal_ids(std::unordered_set<lanelet::Id> ids);
 
   /**
    * @brief Sets the source priority for signal selection.
@@ -93,7 +93,7 @@ public:
    *
    * @param source_priority The priority mode for signal selection.
    */
-  void setSourcePriority(const SourcePriority source_priority);
+  void set_source_priority(const SourcePriority source_priority);
 
 private:
   SourcePriority source_priority_;
@@ -108,7 +108,7 @@ private:
    * @param signal_id The ID of the signal to check.
    * @return True if the signal is a pedestrian signal, false otherwise.
    */
-  bool isPedestrianSignal(const lanelet::Id & signal_id);
+  bool is_pedestrian_signal(const lanelet::Id & signal_id);
 };
 
 }  // namespace autoware::traffic_light
