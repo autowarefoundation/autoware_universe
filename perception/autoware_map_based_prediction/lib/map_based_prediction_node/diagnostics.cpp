@@ -23,17 +23,14 @@
 namespace autoware::map_based_prediction
 {
 
-void MapBasedPredictionNode::updateDiagnostics(
-  const rclcpp::Time & timestamp, double processing_time_ms)
+void Callbacks::updateDiagnostics(const rclcpp::Time & timestamp, double processing_time_ms)
 {
   diagnostics_interface_ptr_->clear();
   diagnostics_interface_ptr_->add_key_value("timestamp", timestamp.seconds());
   diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
-  // check processing time is in time
   bool is_processing_in_time = processing_time_ms <= processing_time_tolerance_ms_;
   diagnostics_interface_ptr_->add_key_value("is_processing_in_time", is_processing_in_time);
   if (!is_processing_in_time) {
-    // publish warning if the current processing time exceeded
     std::ostringstream oss;
     oss << "Processing time exceeded: " << processing_time_tolerance_ms_ << "[ms] < "
         << processing_time_ms << "[ms]";
@@ -45,7 +42,6 @@ void MapBasedPredictionNode::updateDiagnostics(
     last_in_time_processing_timestamp_ = timestamp;
   }
 
-  // calculate consecutive excess duration
   const double consecutive_excess_duration_ms =
     std::chrono::duration<double, std::milli>(
       std::chrono::nanoseconds(
@@ -59,7 +55,6 @@ void MapBasedPredictionNode::updateDiagnostics(
   diagnostics_interface_ptr_->add_key_value(
     "is_consecutive_excess_duration_ok", is_consecutive_excess_duration_ok);
   if (!is_consecutive_excess_duration_ok) {
-    // publish error if the processing time exceeded in a long term
     std::ostringstream oss;
     oss << "Processing time exceeded consecutively in a long term: "
         << processing_time_consecutive_excess_tolerance_ms_ << "[ms] < "

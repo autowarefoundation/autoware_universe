@@ -15,6 +15,6 @@
 #ifndef AUTOWARE__MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE__DIAGNOSTICS_HPP_
 #define AUTOWARE__MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE__DIAGNOSTICS_HPP_
 
-#include "map_based_prediction_node.hpp"
+#include "autoware/map_based_prediction/map_based_prediction_node/callbacks.hpp"
 
 #endif  // AUTOWARE__MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE__DIAGNOSTICS_HPP_
