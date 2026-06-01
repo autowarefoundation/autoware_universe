@@ -23321,6 +23321,48 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 <td>[0.3, 0.3, 0.3, 0.3, 0.0]</td>
 <td>N/A</td>
 </tr>
+<tr>
+<td>detection_score_thresholds.distance_bin_upper_limits</td>
+<td>array</td>
+<td>An array of upper bounds of each distance bin.</td>
+<td>[50.0, 90.0, 121.0, 200.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.CAR</td>
+<td>array</td>
+<td>A minimum confidence score for CAR in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.TRUCK</td>
+<td>array</td>
+<td>A minimum confidence score for TRUCK in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.BUS</td>
+<td>array</td>
+<td>A minimum confidence score for BUS in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.BICYCLE</td>
+<td>array</td>
+<td>A minimum confidence score for BICYCLE in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.PEDESTRIAN</td>
+<td>array</td>
+<td>A minimum confidence score for PEDESTRIAN in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
+</tr>
 </tbody>
 </table>
 <h3 id="bevfusion-model">BEVFusion model<a class="headerlink" href="#bevfusion-model" title="Permanent link">#</a></h3>
@@ -23494,48 +23536,6 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 <td>boolean</td>
 <td>Whether to use intensity feature in point cloud processing.</td>
 <td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>detection_score_thresholds.distance_bin_upper_limits</td>
-<td>array</td>
-<td>An array of upper bounds of each distance bin.</td>
-<td>[50.0, 90.0, 121.0, 200.0]</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>min_confidence_scores.CAR</td>
-<td>array</td>
-<td>A minimum confidence score for CAR in each distance bin.</td>
-<td>[0.1, 0.1, 0.1, 0.1]</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>min_confidence_scores.TRUCK</td>
-<td>array</td>
-<td>A minimum confidence score for TRUCK in each distance bin.</td>
-<td>[0.1, 0.1, 0.1, 0.1]</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>min_confidence_scores.BUS</td>
-<td>array</td>
-<td>A minimum confidence score for BUS in each distance bin.</td>
-<td>[0.1, 0.1, 0.1, 0.1]</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>min_confidence_scores.BICYCLE</td>
-<td>array</td>
-<td>A minimum confidence score for BICYCLE in each distance bin.</td>
-<td>[0.1, 0.1, 0.1, 0.1]</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>min_confidence_scores.PEDESTRIAN</td>
-<td>array</td>
-<td>A minimum confidence score for PEDESTRIAN in each distance bin.</td>
-<td>[0.1, 0.1, 0.1, 0.1]</td>
 <td>N/A</td>
 </tr>
 </tbody>
