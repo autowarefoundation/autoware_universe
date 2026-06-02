@@ -84,8 +84,9 @@ namespace core
 //// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
-  // Validate that the create tracker for each (shape, label) is present in its match list.
-  // Profile existence is already guaranteed by the parser (missing entries throw at startup).
+  // For each (shape, label) in the association config, validate that its designated create
+  // tracker also appears in its own match list. Per-tracker profile validity within each
+  // match list is already guaranteed by the parser (missing entries throw at startup).
   for (const auto & [shape_label, profile_map] : params.association_config.association_params_map) {
     const auto default_tracker_opt =
       get_map_value_if_exists(params.creation_config.shape_tracker_map, shape_label);
