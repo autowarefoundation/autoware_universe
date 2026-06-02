@@ -32,8 +32,6 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/joy.hpp>
 #include <tier4_control_msgs/msg/gate_mode.hpp>
-#include <tier4_external_api_msgs/msg/control_command_stamped.hpp>
-#include <tier4_external_api_msgs/msg/heartbeat.hpp>
 #include <tier4_external_api_msgs/srv/engage.hpp>
 #include <tier4_external_api_msgs/srv/set_emergency.hpp>
 
@@ -86,25 +84,22 @@ private:
 
   // Publisher
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr pub_control_command_;
-  rclcpp::Publisher<tier4_external_api_msgs::msg::ControlCommandStamped>::SharedPtr
-    pub_external_control_command_;
   rclcpp::Publisher<autoware_adapi_v1_msgs::msg::PedalsCommand>::SharedPtr pub_pedals_command_;
   rclcpp::Publisher<autoware_adapi_v1_msgs::msg::SteeringCommand>::SharedPtr pub_steering_command_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::GearCommand>::SharedPtr pub_shift_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>::SharedPtr pub_turn_signal_;
+  rclcpp::Publisher<autoware_vehicle_msgs::msg::GearCommand>::SharedPtr pub_gear_cmd_;
+  rclcpp::Publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>::SharedPtr
+    pub_turn_indicators_cmd_;
   rclcpp::Publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>::SharedPtr pub_hazard_lights_;
-  rclcpp::Publisher<tier4_external_api_msgs::msg::Heartbeat>::SharedPtr pub_heartbeat_;
   rclcpp::Publisher<autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat>::SharedPtr
     pub_operator_heartbeat_;
   rclcpp::Publisher<tier4_control_msgs::msg::GateMode>::SharedPtr pub_gate_mode_;
   rclcpp::Publisher<autoware_vehicle_msgs::msg::Engage>::SharedPtr pub_vehicle_engage_;
 
   void publishControlCommand();
-  void publishExternalControlCommand();
   void publishPedalsCommand();
   void publishSteeringCommand();
-  void publishShift();
-  void publishTurnSignal();
+  void publishGearCommand();
+  void publishTurnIndicatorsCommand();
   void publishHazardLights(bool enable);
   void publishGateMode();
   void publishHeartbeat();
@@ -118,7 +113,6 @@ private:
 
   // Previous State
   autoware_control_msgs::msg::Control prev_control_command_;
-  tier4_external_api_msgs::msg::ControlCommand prev_external_control_command_;
   GearCommandType prev_shift_ = autoware_vehicle_msgs::msg::GearCommand::NONE;
   GateModeType prev_gate_mode_ = tier4_control_msgs::msg::GateMode::AUTO;
 
