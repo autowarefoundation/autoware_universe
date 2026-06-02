@@ -105,8 +105,8 @@ __global__ void generate_boxes3d_kernel(
   }
 
   const float z = static_cast<float>(out_height[idx]);
-  const float w = static_cast<float>(out_dim[det_grid_size * 0 + idx]);
-  const float l = static_cast<float>(out_dim[det_grid_size * 1 + idx]);
+  const float l = static_cast<float>(out_dim[det_grid_size * 0 + idx]);
+  const float w = static_cast<float>(out_dim[det_grid_size * 1 + idx]);
   const float h = static_cast<float>(out_dim[det_grid_size * 2 + idx]);
   const float yaw_sin = static_cast<float>(out_rot[det_grid_size * 0 + idx]);
   const float yaw_cos = static_cast<float>(out_rot[det_grid_size * 1 + idx]);
@@ -134,8 +134,8 @@ __global__ void generate_boxes3d_kernel(
     const float offset_x_variance = static_cast<float>(out_reg[det_grid_size * 2 + idx]);
     const float offset_y_variance = static_cast<float>(out_reg[det_grid_size * 3 + idx]);
     const float z_variance = static_cast<float>(out_height[det_grid_size * 1 + idx]);
-    const float w_variance = static_cast<float>(out_dim[det_grid_size * 3 + idx]);
-    const float l_variance = static_cast<float>(out_dim[det_grid_size * 4 + idx]);
+    const float l_variance = static_cast<float>(out_dim[det_grid_size * 3 + idx]);
+    const float w_variance = static_cast<float>(out_dim[det_grid_size * 4 + idx]);
     const float h_variance = static_cast<float>(out_dim[det_grid_size * 5 + idx]);
     const float yaw_sin_log_variance = static_cast<float>(out_rot[det_grid_size * 2 + idx]);
     const float yaw_cos_log_variance = static_cast<float>(out_rot[det_grid_size * 3 + idx]);
