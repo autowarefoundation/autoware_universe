@@ -32,7 +32,8 @@ namespace autoware::tensorrt_plugins
 ///
 /// This class makes lifetime management of such pinned host buffers easy and safe.
 ///
-/// Read more: https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/asynchronous-execution.html#launching-memory-transfers-in-cuda-streams
+/// Read more:
+/// https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/asynchronous-execution.html#launching-memory-transfers-in-cuda-streams
 ///
 /// Move-only: ownership is unique, so the buffer is freed exactly once.
 template <typename T>
@@ -51,8 +52,7 @@ public:
   PinnedHostBuffer(const PinnedHostBuffer &) = delete;
   PinnedHostBuffer & operator=(const PinnedHostBuffer &) = delete;
 
-  PinnedHostBuffer(PinnedHostBuffer && other) noexcept
-  : data_{std::exchange(other.data_, nullptr)}
+  PinnedHostBuffer(PinnedHostBuffer && other) noexcept : data_{std::exchange(other.data_, nullptr)}
   {
   }
 
