@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__TENSORRT_PLUGINS__GET_INDICES_PAIRS_PLUGIN_HPP_
 #define AUTOWARE__TENSORRT_PLUGINS__GET_INDICES_PAIRS_PLUGIN_HPP_
 
+#include "autoware/tensorrt_plugins/pinned_host_buffer.hpp"
+
 #include <NvInferRuntime.h>
 #include <NvInferRuntimePlugin.h>
 #include <cuda_runtime.h>
@@ -61,7 +63,7 @@ class GetIndicesPairsPlugin : public IPluginV3,
 public:
   GetIndicesPairsPlugin(const std::string & name, GetIndicesPairsParameters const & params);
 
-  ~GetIndicesPairsPlugin() override;
+  ~GetIndicesPairsPlugin() override = default;
 
   // IPluginV3 Methods
 
@@ -125,7 +127,7 @@ private:
 
   std::string layer_name_;
   GetIndicesPairsParameters params_;
-  std::int32_t * num_act_out_host_{nullptr};
+  autoware::tensorrt_plugins::PinnedHostBuffer<std::int32_t> num_act_out_host_;
   std::vector<nvinfer1::PluginField> data_to_serialize_;
   nvinfer1::PluginFieldCollection fc_to_serialize_;
 };
