@@ -152,6 +152,8 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
 
   // debugger
   debug_mode_ = declare_parameter<bool>("debug_mode");
+  // The debugger uses image_transport, which requires a real rclcpp::Node and cannot run under an
+  // AgnocastOnly executor, so debug_mode is unsupported when the node is agnocast-backed.
 #ifdef USE_AGNOCAST_ENABLED
   if (debug_mode_ && autoware::agnocast_wrapper::use_agnocast()) {
     RCLCPP_WARN(
@@ -209,8 +211,7 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
     stop_watch_ptr_->tic("processing_time");
   }
 
-  // Diagnostic Updater (switches between diagnostic_updater::Updater and agnocast::Updater
-  // based on ENABLE_AGNOCAST via autoware_agnocast_wrapper).
+  // Diagnostic Updater
   diagnostic_updater_.setHardwareID(node_name + "_checker");
   diagnostic_updater_.add(node_name + "_status", this, &FusionNode::check_fusion_status);
 }
@@ -220,10 +221,10 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_strategy()
 {
   if (matching_strategy_ == "naive") {
     fusion_matching_strategy_ = std::make_unique<NaiveMatchingStrategy<Msg3D, Msg2D, ExportObj>>(
-      std::shared_ptr<FusionNode>(this, [](FusionNode *) {}), id_to_offset_map_);
+      std::dynamic_pointer_cast<FusionNode>(this->shared_from_this()), id_to_offset_map_);
   } else if (matching_strategy_ == "advanced") {
     fusion_matching_strategy_ = std::make_unique<AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>>(
-      std::shared_ptr<FusionNode>(this, [](FusionNode *) {}), id_to_offset_map_);
+      std::dynamic_pointer_cast<FusionNode>(this->shared_from_this()), id_to_offset_map_);
     // subscribe concatenation_info
     sub_concatenation_info_ = this->create_subscription<
       autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
@@ -242,7 +243,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_collector_list()
   for (size_t i = 0; i < num_of_collectors; ++i) {
     fusion_collectors_.emplace_back(
       std::make_shared<FusionCollector<Msg3D, Msg2D, ExportObj>>(
-        std::shared_ptr<FusionNode>(this, [](FusionNode *) {}), rois_number_, det2d_status_list_,
+        std::dynamic_pointer_cast<FusionNode>(this->shared_from_this()), rois_number_, det2d_status_list_,
         collector_debug_mode_));
   }
   init_collector_list_ = true;

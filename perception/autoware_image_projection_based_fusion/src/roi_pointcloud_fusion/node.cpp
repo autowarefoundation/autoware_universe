@@ -59,7 +59,7 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
   override_class_with_unknown_ = declare_parameter<bool>("override_class_with_unknown");
   max_object_size_ = declare_parameter<double>("max_object_size");
 
-  // publisher (subscription is set up by the FusionNode base via agnocast_wrapper)
+  // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
   cluster_debug_pub_ = this->create_publisher<PointCloudMsgType>("debug/clusters", 1);
 }

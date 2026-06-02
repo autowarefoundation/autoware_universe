@@ -70,7 +70,7 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
     get_logger(), "Pedestrian size validation: %s",
     pedestrian_size_params_.enable_size_validation ? "enabled" : "disabled");
 
-  // publisher (subscription is set up by the FusionNode base via agnocast_wrapper)
+  // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
 }
 
