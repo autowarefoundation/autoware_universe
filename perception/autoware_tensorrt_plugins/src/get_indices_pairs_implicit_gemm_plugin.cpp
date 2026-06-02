@@ -43,6 +43,16 @@ GetIndicesPairsImplicitGemmPlugin::GetIndicesPairsImplicitGemmPlugin(
 : layer_name_{name}, params_{params}
 {
   initFieldsToSerialize();
+  PLUGIN_ASSERT(
+    cudaMallocHost(reinterpret_cast<void **>(&num_act_out_host_), sizeof(std::int32_t)) ==
+    cudaSuccess);
+}
+
+GetIndicesPairsImplicitGemmPlugin::~GetIndicesPairsImplicitGemmPlugin()
+{
+  if (num_act_out_host_ != nullptr) {
+    cudaFreeHost(num_act_out_host_);
+  }
 }
 
 void GetIndicesPairsImplicitGemmPlugin::initFieldsToSerialize()
@@ -438,9 +448,10 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
 
   std::int32_t num_act_out_real = std::get<1>(pair_res);
   std::int32_t * num_act_out_data = static_cast<std::int32_t *>(outputs[4]);
+  *num_act_out_host_ = num_act_out_real;
 
   cudaError_t const status = cudaMemcpyAsync(
-    num_act_out_data, &num_act_out_real, sizeof(std::int32_t), cudaMemcpyHostToDevice, stream);
+    num_act_out_data, num_act_out_host_, sizeof(std::int32_t), cudaMemcpyHostToDevice, stream);
 
   return status;
 }

@@ -61,7 +61,7 @@ class GetIndicesPairsPlugin : public IPluginV3,
 public:
   GetIndicesPairsPlugin(const std::string & name, GetIndicesPairsParameters const & params);
 
-  ~GetIndicesPairsPlugin() override = default;
+  ~GetIndicesPairsPlugin() override;
 
   // IPluginV3 Methods
 
@@ -125,6 +125,7 @@ private:
 
   std::string layer_name_;
   GetIndicesPairsParameters params_;
+  std::int32_t * num_act_out_host_{nullptr};
   std::vector<nvinfer1::PluginField> data_to_serialize_;
   nvinfer1::PluginFieldCollection fc_to_serialize_;
 };
