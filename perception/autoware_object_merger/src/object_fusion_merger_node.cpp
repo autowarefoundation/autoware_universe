@@ -249,6 +249,45 @@ void fit_cylinder_shape(DetectedObject & output, const MultiPoint2d & combined_p
 }
 
 /**
+ * @brief Apply shape-specific footprint or dimension fitting for fused output.
+ *
+ * @param output Output object to update in place.
+ * @param union_polygons Grouped union polygons expressed in the output local frame.
+ * @param combined_points Combined footprint points expressed in the output local frame.
+ * @param keep_input_dimensions Whether to preserve input dimensions and update only footprint.
+ * @return True when the shape type is supported and was handled.
+ */
+bool fit_shape_by_type(
+  DetectedObject & output, const MultiPolygon2d & union_polygons,
+  const MultiPoint2d & combined_points, const bool keep_input_dimensions)
+{
+  if (output.shape.type == Shape::BOUNDING_BOX) {
+    if (keep_input_dimensions) {
+      fit_shape_footprint(output, union_polygons);
+    } else {
+      fit_bounding_box_shape(output, combined_points);
+    }
+    return true;
+  }
+
+  if (output.shape.type == Shape::CYLINDER) {
+    if (keep_input_dimensions) {
+      fit_shape_footprint(output, union_polygons);
+    } else {
+      fit_cylinder_shape(output, combined_points);
+    }
+    return true;
+  }
+
+  if (output.shape.type == Shape::POLYGON) {
+    fit_shape_footprint(output, union_polygons);
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * @brief Calculate the 2D footprint intersection area between one main and one sub object.
  *
  * @param main_object Main object candidate.
@@ -295,30 +334,11 @@ DetectedObject enclose_union_with_main_shape(
     return output;
   }
 
-  if (main_object.shape.type == Shape::BOUNDING_BOX) {
-    if (keep_input_dimensions) {
-      fit_shape_footprint(output, union_polygons);
-    } else {
-      fit_bounding_box_shape(output, combined_points);
-    }
+  if (fit_shape_by_type(output, union_polygons, combined_points, keep_input_dimensions)) {
     fit_shape_height(output, main_object, sub_objects);
     return output;
   }
 
-  if (main_object.shape.type == Shape::CYLINDER) {
-    if (keep_input_dimensions) {
-      fit_shape_footprint(output, union_polygons);
-    } else {
-      fit_cylinder_shape(output, combined_points);
-    }
-    fit_shape_height(output, main_object, sub_objects);
-    return output;
-  }
-
-  if (main_object.shape.type == Shape::POLYGON) {
-    fit_shape_footprint(output, union_polygons);
-    fit_shape_height(output, main_object, sub_objects);
-  }
   return output;
 }
 
