@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/maneuver_prediction.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
@@ -33,9 +33,30 @@ namespace autoware::map_based_prediction
 {
 using autoware_utils::ScopedTimeTrack;
 
-Maneuver PredictorVehicle::predictObjectManeuver(
+ManeuverPredictor::ManeuverPredictor(rclcpp::Node & node) : node_(node)
+{
+}
+
+void ManeuverPredictor::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
+{
+  time_keeper_ = time_keeper_ptr;
+}
+
+void ManeuverPredictor::setRoutingGraph(
+  std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr)
+{
+  routing_graph_ptr_ = routing_graph_ptr;
+}
+
+void ManeuverPredictor::setParams(const Params & params)
+{
+  params_ = params;
+}
+
+Maneuver ManeuverPredictor::predictObjectManeuver(
   const std::string & object_id, const geometry_msgs::msg::Pose & object_pose,
-  const LaneletData & current_lanelet_data, const double object_detected_time)
+  const LaneletData & current_lanelet_data, const double object_detected_time,
+  std::unordered_map<std::string, std::deque<RoadUser>> & history)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -43,18 +64,18 @@ Maneuver PredictorVehicle::predictObjectManeuver(
   const auto current_maneuver = [&]() {
     if (params_.lane_change_detection_method == "time_to_change_lane") {
       return predictObjectManeuverByTimeToLaneChange(
-        object_id, current_lanelet_data, object_detected_time);
+        object_id, current_lanelet_data, object_detected_time, history);
     } else if (params_.lane_change_detection_method == "lat_diff_distance") {
       return predictObjectManeuverByLatDiffDistance(
-        object_id, object_pose, current_lanelet_data, object_detected_time);
+        object_id, object_pose, current_lanelet_data, object_detected_time, history);
     }
     throw std::logic_error("Lane change detection method is invalid.");
   }();
 
-  if (road_users_history_.count(object_id) == 0) {
+  if (history.count(object_id) == 0) {
     return current_maneuver;
   }
-  auto & object_info = road_users_history_.at(object_id);
+  auto & object_info = history.at(object_id);
 
   if (!object_info.empty()) {
     object_info.back().one_shot_maneuver = current_maneuver;
@@ -83,18 +104,19 @@ Maneuver PredictorVehicle::predictObjectManeuver(
   return current_maneuver;
 }
 
-Maneuver PredictorVehicle::predictObjectManeuverByTimeToLaneChange(
+Maneuver ManeuverPredictor::predictObjectManeuverByTimeToLaneChange(
   const std::string & object_id, const LaneletData & current_lanelet_data,
-  const double /*object_detected_time*/)
+  const double /*object_detected_time*/,
+  const std::unordered_map<std::string, std::deque<RoadUser>> & history)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  if (road_users_history_.count(object_id) == 0) {
+  if (history.count(object_id) == 0) {
     return Maneuver::LANE_FOLLOW;
   }
 
-  const std::deque<RoadUser> & object_info = road_users_history_.at(object_id);
+  const std::deque<RoadUser> & object_info = history.at(object_id);
 
   const int latest_id = static_cast<int>(object_info.size()) - 1;
   if (latest_id < 1) {
@@ -143,18 +165,19 @@ Maneuver PredictorVehicle::predictObjectManeuverByTimeToLaneChange(
   return Maneuver::LANE_FOLLOW;
 }
 
-Maneuver PredictorVehicle::predictObjectManeuverByLatDiffDistance(
+Maneuver ManeuverPredictor::predictObjectManeuverByLatDiffDistance(
   const std::string & object_id, const geometry_msgs::msg::Pose & object_pose,
-  const LaneletData & current_lanelet_data, const double /*object_detected_time*/)
+  const LaneletData & current_lanelet_data, const double /*object_detected_time*/,
+  const std::unordered_map<std::string, std::deque<RoadUser>> & history)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  if (road_users_history_.count(object_id) == 0) {
+  if (history.count(object_id) == 0) {
     return Maneuver::LANE_FOLLOW;
   }
 
-  const std::deque<RoadUser> & object_info = road_users_history_.at(object_id);
+  const std::deque<RoadUser> & object_info = history.at(object_id);
   const double current_time = (node_.get_clock()->now()).seconds();
 
   int prev_id = static_cast<int>(object_info.size()) - 1;
@@ -248,7 +271,7 @@ Maneuver PredictorVehicle::predictObjectManeuverByLatDiffDistance(
   return Maneuver::LANE_FOLLOW;
 }
 
-double PredictorVehicle::calcRightLateralOffset(
+double ManeuverPredictor::calcRightLateralOffset(
   const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose)
 {
   std::vector<geometry_msgs::msg::Point> boundary_path(boundary_line.size());
@@ -260,13 +283,13 @@ double PredictorVehicle::calcRightLateralOffset(
   return std::fabs(autoware::motion_utils::calcLateralOffset(boundary_path, search_pose.position));
 }
 
-double PredictorVehicle::calcLeftLateralOffset(
+double ManeuverPredictor::calcLeftLateralOffset(
   const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose)
 {
   return -calcRightLateralOffset(boundary_line, search_pose);
 }
 
-ManeuverProbability PredictorVehicle::calculateManeuverProbability(
+ManeuverProbability ManeuverPredictor::calculateManeuverProbability(
   const Maneuver & predicted_maneuver, const bool left_paths_exists, const bool right_paths_exists,
   const bool center_paths_exists) const
 {

@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
-#include "autoware_utils/ros/marker_helper.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/debug.hpp"
+
+#include <autoware_utils/ros/marker_helper.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 namespace autoware::map_based_prediction
 {
 
-visualization_msgs::msg::Marker PredictorVehicle::getDebugMarker(
+visualization_msgs::msg::Marker DebugModule::getDebugMarker(
   const TrackedObject & object, const Maneuver & maneuver, const size_t obj_num)
 {
   visualization_msgs::msg::Marker marker{};

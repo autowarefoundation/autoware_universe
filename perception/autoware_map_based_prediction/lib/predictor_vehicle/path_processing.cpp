@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/path_processing.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/debug.hpp"
 #include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
@@ -140,17 +141,71 @@ void replaceObjectYawWithLaneletsYaw(
 }
 }  // namespace
 
-std::optional<PredictedObject> PredictorVehicle::predict(
+PathProcessor::PathProcessor(rclcpp::Node & node) : node_(node)
+{
+}
+
+void PathProcessor::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
+{
+  time_keeper_ = time_keeper_ptr;
+  if (path_generator_) path_generator_->setTimeKeeper(time_keeper_);
+}
+
+void PathProcessor::setLaneletMap(
+  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr,
+  std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr,
+  std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr)
+{
+  lanelet_map_ptr_ = lanelet_map_ptr;
+  routing_graph_ptr_ = routing_graph_ptr;
+  traffic_rules_ptr_ = traffic_rules_ptr;
+  lru_cache_of_convert_path_type_.clear();
+}
+
+void PathProcessor::setManeuverPredictor(ManeuverPredictor & maneuver_predictor)
+{
+  maneuver_predictor_ = &maneuver_predictor;
+}
+
+void PathProcessor::setObjectTracker(ObjectTracker & object_tracker)
+{
+  object_tracker_ = &object_tracker;
+}
+
+void PathProcessor::setParams(const Params & params)
+{
+  const bool recreate_generator =
+    !path_generator_ ||
+    std::abs(params_.prediction_sampling_time_interval - params.prediction_sampling_time_interval) >
+      1e-9;
+
+  params_ = params;
+
+  if (recreate_generator) {
+    path_generator_ = std::make_shared<PathGenerator>(params_.prediction_sampling_time_interval);
+    if (time_keeper_) path_generator_->setTimeKeeper(time_keeper_);
+  }
+
+  path_generator_->setUseVehicleAcceleration(params_.use_vehicle_acceleration);
+  path_generator_->setAccelerationHalfLife(params_.acceleration_exponential_half_life);
+}
+
+void PathProcessor::clearLRUCache()
+{
+  lru_cache_of_convert_path_type_.clear();
+}
+
+std::optional<PredictedObject> PathProcessor::predict(
   const std_msgs::msg::Header & header, const TrackedObject & transformed_object,
   const double objects_detected_time, visualization_msgs::msg::MarkerArray & debug_markers)
 {
   auto object = transformed_object;
 
-  updateObjectData(object);
+  object_tracker_->updateObjectData(object);
 
-  const auto current_lanelets = getCurrentLanelets(object);
+  const auto current_lanelets = object_tracker_->getCurrentLanelets(object);
 
-  updateRoadUsersHistory(header, object, current_lanelets);
+  object_tracker_->updateRoadUsersHistory(header, object, current_lanelets);
 
   if (current_lanelets.empty()) {
     PredictedPath predicted_path =
@@ -199,7 +254,7 @@ std::optional<PredictedObject> PredictorVehicle::predict(
         return a.probability < b.probability;
       });
     const auto debug_marker =
-      getDebugMarker(object, max_prob_path->maneuver, debug_markers.markers.size());
+      DebugModule::getDebugMarker(object, max_prob_path->maneuver, debug_markers.markers.size());
     debug_markers.markers.push_back(debug_marker);
   }
 
@@ -271,7 +326,7 @@ std::optional<PredictedObject> PredictorVehicle::predict(
   return predicted_object;
 }
 
-std::optional<size_t> PredictorVehicle::searchProperStartingRefPathIndex(
+std::optional<size_t> PathProcessor::searchProperStartingRefPathIndex(
   const TrackedObject & object, const PosePath & pose_path) const
 {
   std::unique_ptr<ScopedTimeTrack> st1_ptr;
@@ -349,7 +404,7 @@ std::optional<size_t> PredictorVehicle::searchProperStartingRefPathIndex(
   return is_position_found ? opt_index : std::nullopt;
 }
 
-std::vector<LaneletPathWithPathInfo> PredictorVehicle::getPredictedReferencePath(
+std::vector<LaneletPathWithPathInfo> PathProcessor::getPredictedReferencePath(
   const TrackedObject & object, const LaneletsData & current_lanelets_data,
   const double object_detected_time, const double time_horizon)
 {
@@ -482,11 +537,12 @@ std::vector<LaneletPathWithPathInfo> PredictorVehicle::getPredictedReferencePath
 
     if (ref_paths_per_lanelet.empty()) continue;
 
-    const Maneuver predicted_maneuver =
-      predictObjectManeuver(object_id, object_pose, current_lanelet_data, object_detected_time);
+    const Maneuver predicted_maneuver = maneuver_predictor_->predictObjectManeuver(
+      object_id, object_pose, current_lanelet_data, object_detected_time,
+      object_tracker_->getHistory());
 
     const float & path_prob = current_lanelet_data.probability;
-    const auto maneuver_prob = calculateManeuverProbability(
+    const auto maneuver_prob = maneuver_predictor_->calculateManeuverProbability(
       predicted_maneuver, left_paths_exists, right_paths_exists, center_paths_exists);
     for (auto & ref_path : ref_paths_per_lanelet) {
       auto & ref_path_info = ref_path.second;
@@ -497,9 +553,10 @@ std::vector<LaneletPathWithPathInfo> PredictorVehicle::getPredictedReferencePath
       lanelet_ref_paths.end(), ref_paths_per_lanelet.begin(), ref_paths_per_lanelet.end());
   }
 
-  if (road_users_history_.count(object_id) != 0) {
+  auto & history = object_tracker_->getHistory();
+  if (history.count(object_id) != 0) {
     std::vector<lanelet::ConstLanelet> & possible_lanelets =
-      road_users_history_.at(object_id).back().future_possible_lanelets;
+      history.at(object_id).back().future_possible_lanelets;
     for (const auto & ref_path : lanelet_ref_paths) {
       for (const auto & lanelet : ref_path.first) {
         if (
@@ -514,7 +571,7 @@ std::vector<LaneletPathWithPathInfo> PredictorVehicle::getPredictedReferencePath
   return lanelet_ref_paths;
 }
 
-std::vector<PredictedRefPath> PredictorVehicle::convertPredictedReferencePath(
+std::vector<PredictedRefPath> PathProcessor::convertPredictedReferencePath(
   const TrackedObject & object,
   const std::vector<LaneletPathWithPathInfo> & lanelet_ref_paths) const
 {
@@ -554,7 +611,7 @@ std::vector<PredictedRefPath> PredictorVehicle::convertPredictedReferencePath(
   return converted_ref_paths;
 }
 
-std::pair<PosePath, double> PredictorVehicle::convertLaneletPathToPosePath(
+std::pair<PosePath, double> PathProcessor::convertLaneletPathToPosePath(
   const lanelet::routing::LaneletPath & path) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
@@ -650,7 +707,7 @@ std::pair<PosePath, double> PredictorVehicle::convertLaneletPathToPosePath(
   return converted_path_and_width;
 }
 
-std::vector<double> PredictorVehicle::calcTrajectoryCurvatureFrom3Points(
+std::vector<double> PathProcessor::calcTrajectoryCurvatureFrom3Points(
   const TrajectoryPoints & trajectory, size_t idx_dist)
 {
   using autoware_utils::calc_curvature;
@@ -686,8 +743,7 @@ std::vector<double> PredictorVehicle::calcTrajectoryCurvatureFrom3Points(
   return k_arr;
 }
 
-TrajectoryPoints PredictorVehicle::toTrajectoryPoints(
-  const PredictedPath & path, const double velocity)
+TrajectoryPoints PathProcessor::toTrajectoryPoints(const PredictedPath & path, const double velocity)
 {
   TrajectoryPoints out_trajectory;
   std::for_each(path.path.begin(), path.path.end(), [&out_trajectory, velocity](const auto & pose) {
@@ -699,7 +755,7 @@ TrajectoryPoints PredictorVehicle::toTrajectoryPoints(
   return out_trajectory;
 }
 
-bool PredictorVehicle::isLateralAccelerationConstraintSatisfied(
+bool PathProcessor::isLateralAccelerationConstraintSatisfied(
   const TrajectoryPoints & trajectory, const double delta_time)
 {
   constexpr double epsilon = 1E-6;

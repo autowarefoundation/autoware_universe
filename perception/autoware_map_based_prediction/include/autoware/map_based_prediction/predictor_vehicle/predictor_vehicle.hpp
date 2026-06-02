@@ -15,59 +15,31 @@
 #ifndef AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_
 #define AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_
 
-#include "autoware/map_based_prediction/data_structure.hpp"
-#include "autoware/map_based_prediction/path_generator/path_generator.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/debug.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/maneuver_prediction.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/object_processing.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/path_processing.hpp"
 
-#include <autoware_utils/system/lru_cache.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
-#include <autoware_planning_msgs/msg/trajectory_point.hpp>
-#include <geometry_msgs/msg/pose.hpp>
 #include <std_msgs/msg/header.hpp>
-#include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/Forward.h>
-#include <lanelet2_routing/LaneletPath.h>
 #include <lanelet2_traffic_rules/TrafficRules.h>
 
-#include <deque>
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-
-// Hash specialization for LaneletPath used by the LRU cache
-namespace std
-{
-template <>
-struct hash<lanelet::routing::LaneletPath>
-{
-  // 0x9e3779b9 is a magic number. See
-  // https://stackoverflow.com/questions/4948780/magic-number-in-boosthash-combine
-  size_t operator()(const lanelet::routing::LaneletPath & path) const
-  {
-    size_t seed = 0;
-    for (const auto & lanelet : path) {
-      seed ^= hash<int64_t>{}(lanelet.id()) + 0x9e3779b9 + (seed << 6U) + (seed >> 2U);
-    }
-    return seed;
-  }
-};
-}  // namespace std
 
 namespace autoware::map_based_prediction
 {
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::TrackedObject;
-using autoware_planning_msgs::msg::TrajectoryPoint;
-using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
 class PredictorVehicle
 {
@@ -130,65 +102,12 @@ private:
   rclcpp::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
-  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
-  std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;
-  std::shared_ptr<lanelet::traffic_rules::TrafficRules> traffic_rules_ptr_;
-
-  std::shared_ptr<PathGenerator> path_generator_;
-
-  std::unordered_map<std::string, std::deque<RoadUser>> road_users_history_;
-  mutable autoware_utils::LRUCache<lanelet::routing::LaneletPath, std::pair<PosePath, double>>
-    lru_cache_of_convert_path_type_{1000};
-
   Params params_;
 
-  // Object processing
-  void updateObjectData(TrackedObject & object);
-  LaneletsData getCurrentLanelets(const TrackedObject & object);
-  void updateRoadUsersHistory(
-    const std_msgs::msg::Header & header, const TrackedObject & object,
-    const LaneletsData & current_lanelets_data);
-
-  // Maneuver prediction
-  Maneuver predictObjectManeuver(
-    const std::string & object_id, const geometry_msgs::msg::Pose & object_pose,
-    const LaneletData & current_lanelet_data, double object_detected_time);
-  Maneuver predictObjectManeuverByTimeToLaneChange(
-    const std::string & object_id, const LaneletData & current_lanelet_data,
-    double object_detected_time);
-  Maneuver predictObjectManeuverByLatDiffDistance(
-    const std::string & object_id, const geometry_msgs::msg::Pose & object_pose,
-    const LaneletData & current_lanelet_data, double object_detected_time);
-  double calcRightLateralOffset(
-    const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose);
-  double calcLeftLateralOffset(
-    const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose);
-  ManeuverProbability calculateManeuverProbability(
-    const Maneuver & predicted_maneuver, bool left_paths_exists, bool right_paths_exists,
-    bool center_paths_exists) const;
-
-  // Path processing
-  std::optional<size_t> searchProperStartingRefPathIndex(
-    const TrackedObject & object, const PosePath & pose_path) const;
-  std::vector<LaneletPathWithPathInfo> getPredictedReferencePath(
-    const TrackedObject & object, const LaneletsData & current_lanelets_data,
-    double object_detected_time, double time_horizon);
-  std::vector<PredictedRefPath> convertPredictedReferencePath(
-    const TrackedObject & object,
-    const std::vector<LaneletPathWithPathInfo> & lanelet_ref_paths) const;
-  std::pair<PosePath, double> convertLaneletPathToPosePath(
-    const lanelet::routing::LaneletPath & path) const;
-
-  // Lateral acceleration helpers
-  std::vector<double> calcTrajectoryCurvatureFrom3Points(
-    const TrajectoryPoints & trajectory, size_t idx_dist);
-  TrajectoryPoints toTrajectoryPoints(const PredictedPath & path, double velocity);
-  bool isLateralAccelerationConstraintSatisfied(
-    const TrajectoryPoints & trajectory, double delta_time);
-
-  // Debug
-  visualization_msgs::msg::Marker getDebugMarker(
-    const TrackedObject & object, const Maneuver & maneuver, size_t obj_num);
+  // Sub-modules
+  ObjectTracker object_tracker_;
+  ManeuverPredictor maneuver_predictor_;
+  PathProcessor path_processor_;
 };
 
 }  // namespace autoware::map_based_prediction

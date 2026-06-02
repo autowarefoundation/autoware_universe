@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
+#include "autoware/map_based_prediction/predictor_vehicle/object_processing.hpp"
 #include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -138,7 +138,37 @@ lanelet::ConstLanelets getLanelets(const map_based_prediction::LaneletsData & da
 }
 }  // namespace
 
-void PredictorVehicle::updateObjectData(TrackedObject & object)
+ObjectTracker::ObjectTracker(rclcpp::Node & node) : node_(node)
+{
+}
+
+void ObjectTracker::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
+{
+  time_keeper_ = time_keeper_ptr;
+}
+
+void ObjectTracker::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr)
+{
+  lanelet_map_ptr_ = lanelet_map_ptr;
+}
+
+void ObjectTracker::setRoutingGraph(
+  std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr)
+{
+  routing_graph_ptr_ = routing_graph_ptr;
+}
+
+void ObjectTracker::setParams(const Params & params)
+{
+  params_ = params;
+}
+
+void ObjectTracker::removeOldHistory(double current_time, double buffer_time)
+{
+  utils::removeOldObjectsHistory(current_time, buffer_time, road_users_history_);
+}
+
+void ObjectTracker::updateObjectData(TrackedObject & object)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -165,7 +195,7 @@ void PredictorVehicle::updateObjectData(TrackedObject & object)
   }
 }
 
-LaneletsData PredictorVehicle::getCurrentLanelets(const TrackedObject & object)
+LaneletsData ObjectTracker::getCurrentLanelets(const TrackedObject & object)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -176,7 +206,7 @@ LaneletsData PredictorVehicle::getCurrentLanelets(const TrackedObject & object)
     params_.sigma_yaw_angle_deg);
 }
 
-void PredictorVehicle::updateRoadUsersHistory(
+void ObjectTracker::updateRoadUsersHistory(
   const std_msgs::msg::Header & header, const TrackedObject & object,
   const LaneletsData & current_lanelets_data)
 {
