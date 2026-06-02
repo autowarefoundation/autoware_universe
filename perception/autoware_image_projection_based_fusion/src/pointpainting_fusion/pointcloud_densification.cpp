@@ -59,7 +59,8 @@ PointCloudDensification::PointCloudDensification(
 }
 
 bool PointCloudDensification::enqueuePointCloud(
-  const sensor_msgs::msg::PointCloud2 & pointcloud_msg, const autoware::agnocast_wrapper::Buffer & tf_buffer)
+  const sensor_msgs::msg::PointCloud2 & pointcloud_msg,
+  const autoware::agnocast_wrapper::Buffer & tf_buffer)
 {
   const auto header = pointcloud_msg.header;
 

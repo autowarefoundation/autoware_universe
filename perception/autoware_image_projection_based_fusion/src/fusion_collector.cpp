@@ -176,8 +176,8 @@ void FusionCollector<Msg3D, Msg2D, ExportObj>::fusion_callback()
   for (const auto & [rois_id, rois_msg] : id_to_rois_map_) {
     if (det2d_status_list_[rois_id].camera_projector_ptr == nullptr) {
       RCLCPP_WARN_THROTTLE(
-        parent_node_->get_logger(), *parent_node_->get_clock(), 5000,
-        "no camera info. id is %zu", rois_id);
+        parent_node_->get_logger(), *parent_node_->get_clock(), 5000, "no camera info. id is %zu",
+        rois_id);
       continue;
     }
     parent_node_->fuse_on_single_image(
@@ -244,8 +244,8 @@ void FusionCollector<Msg3D, Msg2D, ExportObj>::show_debug_message()
   auto time_until_trigger = timer_->time_until_trigger();
   std::stringstream log_stream;
   log_stream << std::fixed << std::setprecision(6);
-  log_stream << "Collector's fusion callback time: "
-             << parent_node_->get_clock()->now().seconds() << " seconds\n";
+  log_stream << "Collector's fusion callback time: " << parent_node_->get_clock()->now().seconds()
+             << " seconds\n";
 
   if (
     auto advanced_info = std::dynamic_pointer_cast<AdvancedCollectorInfo>(fusion_collector_info_)) {

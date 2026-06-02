@@ -128,9 +128,8 @@ public:
 
   double get_concatenation_offset(
     const double & msg3d_timestamp,
-    const std::optional<
-      AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)> &
-      concatenation_info_msg);
+    const std::optional<AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+      autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)> & concatenation_info_msg);
 
   double extract_fractional(double timestamp);
   void update_fractional_timestamp_set(double new_timestamp);

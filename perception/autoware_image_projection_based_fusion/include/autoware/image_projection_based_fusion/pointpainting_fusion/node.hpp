@@ -19,11 +19,11 @@
 #include "autoware/image_projection_based_fusion/pointpainting_fusion/pointpainting_trt.hpp"
 #include "autoware/lidar_centerpoint/postprocess/non_maximum_suppression.hpp"
 
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <autoware/image_projection_based_fusion/utils/geometry.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 #include <autoware/lidar_centerpoint/centerpoint_trt.hpp>
 #include <autoware/lidar_centerpoint/detection_class_remapper.hpp>
-#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 
 #include <map>

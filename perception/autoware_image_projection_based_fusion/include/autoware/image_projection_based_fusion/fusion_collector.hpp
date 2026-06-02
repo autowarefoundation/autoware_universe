@@ -77,9 +77,8 @@ class FusionCollector
 {
 public:
   FusionCollector(
-    std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && parent_node,
-    std::size_t rois_number, const std::vector<Det2dStatus<Msg2D>> & det2d_status_list,
-    bool debug_mode);
+    std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && parent_node, std::size_t rois_number,
+    const std::vector<Det2dStatus<Msg2D>> & det2d_status_list, bool debug_mode);
   void process_msg3d(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg3D) msg3d, double msg3d_timeout);
   void process_rois(
     const std::size_t & rois_id, const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg2D) rois_msg,
@@ -103,7 +102,7 @@ private:
   std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> parent_node_;
   AUTOWARE_TIMER_PTR timer_;
   std::size_t rois_number_;
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg3D) msg3d_{};
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg3D) msg3d_ {};
   std::vector<Det2dStatus<Msg2D>> det2d_status_list_;
   std::unordered_map<std::size_t, AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg2D)> id_to_rois_map_;
   bool is_first_msg3d_{false};

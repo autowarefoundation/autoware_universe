@@ -185,9 +185,9 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
 #endif
 
     // input topic timing publisher
-    debug_internal_pub_ = std::make_unique<
-      autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
-      this, self_node_name_.c_str());
+    debug_internal_pub_ =
+      std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+        this, self_node_name_.c_str());
   }
   collector_debug_mode_ = declare_parameter<bool>("collector_debug_mode");
 
@@ -204,9 +204,9 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
   // initialize debug tool
   {
     stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
-    debug_publisher_ = std::make_unique<
-      autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
-      this, self_node_name_.c_str());
+    debug_publisher_ =
+      std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+        this, self_node_name_.c_str());
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
   }
@@ -226,11 +226,12 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_strategy()
     fusion_matching_strategy_ = std::make_unique<AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>>(
       std::dynamic_pointer_cast<FusionNode>(this->shared_from_this()), id_to_offset_map_);
     // subscribe concatenation_info
-    sub_concatenation_info_ = this->create_subscription<
-      autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
-      "input/concatenation_info", rclcpp::SensorDataQoS().keep_last(10),
-      [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)
-               msg) { this->concatenation_info_callback(std::move(msg)); });
+    sub_concatenation_info_ =
+      this->create_subscription<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+        "input/concatenation_info", rclcpp::SensorDataQoS().keep_last(10),
+        [this](
+          AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)
+            msg) { this->concatenation_info_callback(std::move(msg)); });
   } else {
     throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");
   }
@@ -243,8 +244,8 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_collector_list()
   for (size_t i = 0; i < num_of_collectors; ++i) {
     fusion_collectors_.emplace_back(
       std::make_shared<FusionCollector<Msg3D, Msg2D, ExportObj>>(
-        std::dynamic_pointer_cast<FusionNode>(this->shared_from_this()), rois_number_, det2d_status_list_,
-        collector_debug_mode_));
+        std::dynamic_pointer_cast<FusionNode>(this->shared_from_this()), rois_number_,
+        det2d_status_list_, collector_debug_mode_));
   }
   init_collector_list_ = true;
 }
@@ -385,8 +386,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::export_process(
       auto rois_timestamp = diagnostic_id_to_stamp_map_[rois_id];
       auto timestamp_interval_ms = (rois_timestamp - current_output_msg_timestamp_) * 1000;
       debug_internal_pub_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-        "debug/roi" + std::to_string(rois_id) + "/timestamp_interval_ms",
-        timestamp_interval_ms);
+        "debug/roi" + std::to_string(rois_id) + "/timestamp_interval_ms", timestamp_interval_ms);
       debug_internal_pub_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
         "debug/roi" + std::to_string(rois_id) + "/timestamp_interval_offset_ms",
         timestamp_interval_ms - id_to_offset_map_[rois_id] * 1000);
@@ -701,8 +701,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::check_fusion_status(
     }
 
     if (
-      auto naive_info =
-        std::dynamic_pointer_cast<NaiveCollectorInfo>(diagnostic_collector_info_)) {
+      auto naive_info = std::dynamic_pointer_cast<NaiveCollectorInfo>(diagnostic_collector_info_)) {
       stat.add("first_input_arrival_timestamp", format_timestamp(naive_info->timestamp));
     } else if (
       auto advanced_info =

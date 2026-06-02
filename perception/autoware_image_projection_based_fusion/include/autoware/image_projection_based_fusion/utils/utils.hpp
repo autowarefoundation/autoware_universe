@@ -87,8 +87,8 @@ void closest_cluster(
 void updateOutputFusedObjects(
   std::vector<DetectedObjectWithFeature> & output_objs, std::vector<PointCloudMsgType> & clusters,
   const PointCloudMsgType & in_cloud, const std_msgs::msg::Header & in_roi_header,
-  const autoware::agnocast_wrapper::Buffer & tf_buffer, const int min_cluster_size, const int max_cluster_size,
-  const float cluster_2d_tolerance, const double max_object_size,
+  const autoware::agnocast_wrapper::Buffer & tf_buffer, const int min_cluster_size,
+  const int max_cluster_size, const float cluster_2d_tolerance, const double max_object_size,
   std::vector<DetectedObjectWithFeature> & output_fused_objects);
 
 geometry_msgs::msg::Point getCentroid(const PointCloudMsgType & pointcloud);

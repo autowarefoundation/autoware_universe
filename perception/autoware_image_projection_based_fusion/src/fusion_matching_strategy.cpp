@@ -152,15 +152,13 @@ AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::AdvancedMatchingStrategy(
 : parent_node_(std::move(parent_node)), id_to_offset_map_(id_to_offset_map)
 {
   if (!parent_node_) {
-    throw std::runtime_error(
-      "parent_node is nullptr in AdvancedMatchingStrategy constructor.");
+    throw std::runtime_error("parent_node is nullptr in AdvancedMatchingStrategy constructor.");
   }
 
   msg3d_noise_window_ =
     parent_node_->template declare_parameter<double>("matching_strategy.msg3d_noise_window");
-  auto rois_timestamp_noise_window =
-    parent_node_->template declare_parameter<std::vector<double>>(
-      "matching_strategy.rois_timestamp_noise_window");
+  auto rois_timestamp_noise_window = parent_node_->template declare_parameter<std::vector<double>>(
+    "matching_strategy.rois_timestamp_noise_window");
 
   auto rois_number = id_to_offset_map_.size();
   if (rois_timestamp_noise_window.size() < rois_number) {
@@ -174,8 +172,7 @@ AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::AdvancedMatchingStrategy(
     id_to_noise_window_map_[i] = rois_timestamp_noise_window[i];
   }
 
-  RCLCPP_INFO(
-    parent_node_->get_logger(), "Utilize advanced matching strategy for fusion nodes.");
+  RCLCPP_INFO(parent_node_->get_logger(), "Utilize advanced matching strategy for fusion nodes.");
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
@@ -285,9 +282,8 @@ void AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
 template <class Msg3D, class Msg2D, class ExportObj>
 double AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::get_concatenation_offset(
   const double & msg3d_timestamp,
-  const std::optional<
-    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)> &
-    concatenation_info_msg)
+  const std::optional<AUTOWARE_MESSAGE_CONST_SHARED_PTR(
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)> & concatenation_info_msg)
 {
   double offset = 0.0;
 

@@ -24,9 +24,9 @@
 #include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/image_projection_based_fusion/camera_projection.hpp>
 #include <autoware/image_projection_based_fusion/debugger.hpp>
-#include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
