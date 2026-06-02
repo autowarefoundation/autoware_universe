@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_INTERFACE_HPP_
-#define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_INTERFACE_HPP_
+#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_WRAPPER_HPP_
+#define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_WRAPPER_HPP_
 
 #include "autoware/trajectory_validator/detail/trajectory_validator.hpp"
 #include "autoware/trajectory_validator/detail/trajectory_validator_report.hpp"
@@ -62,7 +62,7 @@ using nav_msgs::msg::Odometry;
  * @brief Adapter for TrajectoryValidator: manages plugin loading, parameter updates,
  * diagnostics, and debug publishing.
  */
-class TrajectoryValidatorInterface
+class TrajectoryValidatorWrapper
 {
 public:
   /**
@@ -72,7 +72,7 @@ public:
    * @param vehicle_info Ego vehicle dimensions forwarded to each plugin.
    * @param time_keeper Shared time keeper for processing time tracking.
    */
-  TrajectoryValidatorInterface(
+  TrajectoryValidatorWrapper(
     rclcpp::Node & node,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface,
     vehicle_info_utils::VehicleInfo vehicle_info,
@@ -172,4 +172,4 @@ private:
 
 }  // namespace autoware::trajectory_validator
 
-#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_INTERFACE_HPP_
+#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_WRAPPER_HPP_

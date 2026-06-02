@@ -14,7 +14,7 @@ set(trajectory_validator_lib_target ${PROJECT_NAME}_lib)
 
 ament_auto_add_library(${trajectory_validator_lib_target} SHARED
   src/trajectory_selector_node.cpp
-  src/trajectory_validator_interface.cpp
+  src/trajectory_validator_wrapper.cpp
   src/detail/trajectory_validator.cpp
 )
 

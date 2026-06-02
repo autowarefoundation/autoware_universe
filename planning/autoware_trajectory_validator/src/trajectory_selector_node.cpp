@@ -25,10 +25,10 @@ TrajectorySelectorNode::TrajectorySelectorNode(const rclcpp::NodeOptions & node_
   subscribers();
   publishers();
 
-  concatenator_ptr_ = std::make_unique<trajectory_concatenator::TrajectoryConcatenatorInterface>(
+  concatenator_ptr_ = std::make_unique<trajectory_concatenator::TrajectoryConcatenatorWrapper>(
     *this, get_node_parameters_interface());
 
-  validator_ptr_ = std::make_unique<trajectory_validator::TrajectoryValidatorInterface>(
+  validator_ptr_ = std::make_unique<trajectory_validator::TrajectoryValidatorWrapper>(
     *this, get_node_parameters_interface(),
     autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo(), time_keeper_);
 

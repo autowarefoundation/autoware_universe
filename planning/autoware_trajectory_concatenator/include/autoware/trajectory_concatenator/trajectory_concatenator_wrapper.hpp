@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_INTERFACE_HPP_
-#define AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_INTERFACE_HPP_
+#ifndef AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_WRAPPER_HPP_
+#define AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_WRAPPER_HPP_
 
 #include <autoware/trajectory_concatenator/detail/trajectory_concatenator.hpp>
 #include <autoware_trajectory_concatenator/autoware_trajectory_concatenator_param.hpp>
@@ -31,15 +31,15 @@ namespace autoware::trajectory_concatenator
 /**
  * @brief Adapter for TrajectoryConcatenator: handles parameter updates and thread safety.
  */
-class TrajectoryConcatenatorInterface
+class TrajectoryConcatenatorWrapper
 {
 public:
   /**
-   * @brief Constructs the interface and initialises the concatenator with declared parameters.
+   * @brief Constructs the wrapper and initialises the concatenator with declared parameters.
    * @param node Node used for parameter declaration and logging.
    * @param node_parameters_interface Parameter interface for declaring and reading parameters.
    */
-  TrajectoryConcatenatorInterface(
+  TrajectoryConcatenatorWrapper(
     rclcpp::Node & node,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface)
   : node_ptr_(&node),
@@ -101,4 +101,4 @@ private:
 
 }  // namespace autoware::trajectory_concatenator
 
-#endif  // AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_INTERFACE_HPP_
+#endif  // AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_WRAPPER_HPP_

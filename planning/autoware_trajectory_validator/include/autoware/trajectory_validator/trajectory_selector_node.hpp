@@ -16,10 +16,10 @@
 #define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_SELECTOR_NODE_HPP_
 
 #include "autoware/trajectory_validator/detail/validator_context.hpp"
-#include "autoware/trajectory_validator/trajectory_validator_interface.hpp"
+#include "autoware/trajectory_validator/trajectory_validator_wrapper.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
-#include <autoware/trajectory_concatenator/trajectory_concatenator_interface.hpp>
+#include <autoware/trajectory_concatenator/trajectory_concatenator_wrapper.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -82,8 +82,8 @@ private:
    * mandatory input is unavailable. */
   tl::expected<trajectory_validator::FilterContext, std::string> take_validator_data();
 
-  std::unique_ptr<trajectory_concatenator::TrajectoryConcatenatorInterface> concatenator_ptr_;
-  std::unique_ptr<trajectory_validator::TrajectoryValidatorInterface> validator_ptr_;
+  std::unique_ptr<trajectory_concatenator::TrajectoryConcatenatorWrapper> concatenator_ptr_;
+  std::unique_ptr<trajectory_validator::TrajectoryValidatorWrapper> validator_ptr_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 

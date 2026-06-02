@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_validator/trajectory_validator_interface.hpp"
+#include "autoware/trajectory_validator/trajectory_validator_wrapper.hpp"
 
 #include "autoware/trajectory_validator/detail/trajectory_validator.hpp"
 
@@ -37,7 +37,7 @@
 namespace autoware::trajectory_validator
 {
 
-TrajectoryValidatorInterface::TrajectoryValidatorInterface(
+TrajectoryValidatorWrapper::TrajectoryValidatorWrapper(
   rclcpp::Node & node,
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface,
   vehicle_info_utils::VehicleInfo vehicle_info,
@@ -74,7 +74,7 @@ TrajectoryValidatorInterface::TrajectoryValidatorInterface(
   diagnostics_interface_ptr_ = std::make_unique<DiagnosticsInterface>(node_ptr_, interface_name_);
 }
 
-void TrajectoryValidatorInterface::load_metric(const std::string & name, const bool is_shadow_mode)
+void TrajectoryValidatorWrapper::load_metric(const std::string & name, const bool is_shadow_mode)
 {
   if (name.empty()) return;
 
@@ -114,7 +114,7 @@ void TrajectoryValidatorInterface::load_metric(const std::string & name, const b
   }
 }
 
-void TrajectoryValidatorInterface::update_parameters()
+void TrajectoryValidatorWrapper::update_parameters()
 {
   if (validator_params_listener_.is_old(validator_params_)) {
     validator_params_ = validator_params_listener_.get_params();
@@ -124,12 +124,12 @@ void TrajectoryValidatorInterface::update_parameters()
   }
 }
 
-void TrajectoryValidatorInterface::publishers()
+void TrajectoryValidatorWrapper::publishers()
 {
   pub_debug_ = std::make_shared<autoware_utils_debug::DebugPublisher>(node_ptr_, "~/debug");
 }
 
-CandidateTrajectories TrajectoryValidatorInterface::validate_trajectories(
+CandidateTrajectories TrajectoryValidatorWrapper::validate_trajectories(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
   const ValidatorContext & context)
 {
@@ -164,7 +164,7 @@ CandidateTrajectories TrajectoryValidatorInterface::validate_trajectories(
   return report.valid_trajectories;
 }
 
-void TrajectoryValidatorInterface::update_diagnostic(
+void TrajectoryValidatorWrapper::update_diagnostic(
   const CandidateTrajectories & input_trajectories, const size_t num_feasible_trajectories)
 {
   if (input_trajectories.candidate_trajectories.size() == num_feasible_trajectories) {
@@ -184,14 +184,14 @@ void TrajectoryValidatorInterface::update_diagnostic(
   diagnostics_interface_ptr_->publish(node_ptr_->get_clock()->now());
 }
 
-void TrajectoryValidatorInterface::publish_validation_reports(
+void TrajectoryValidatorWrapper::publish_validation_reports(
   const std::vector<ValidationReport> & reports)
 {
   auto msg = autoware_trajectory_validator::build<ValidationReportArray>().reports(reports);
   pub_debug_->publish<ValidationReportArray>("validation_reports", msg);
 }
 
-void TrajectoryValidatorInterface::publish_debug(
+void TrajectoryValidatorWrapper::publish_debug(
   const std::vector<EvaluationTable> & evaluation_tables,
   const std::unordered_map<std::string, double> & processing_time,
   const geometry_msgs::msg::Pose & marker_pose)
@@ -204,7 +204,7 @@ void TrajectoryValidatorInterface::publish_debug(
   publish_processing_time_text(processing_time);
 }
 
-void TrajectoryValidatorInterface::publish_plugins_debug_markers() const
+void TrajectoryValidatorWrapper::publish_plugins_debug_markers() const
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -215,7 +215,7 @@ void TrajectoryValidatorInterface::publish_plugins_debug_markers() const
   }
 }
 
-void TrajectoryValidatorInterface::publish_plugins_report_text(
+void TrajectoryValidatorWrapper::publish_plugins_report_text(
   const std::vector<EvaluationTable> & evaluation_tables,
   const geometry_msgs::msg::Pose & marker_pose)
 {
@@ -271,7 +271,7 @@ void TrajectoryValidatorInterface::publish_plugins_report_text(
     "plugin_report_text", plugin_report_text_marker);
 }
 
-void TrajectoryValidatorInterface::publish_processing_time(
+void TrajectoryValidatorWrapper::publish_processing_time(
   const std::unordered_map<std::string, double> & processing_time)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -287,7 +287,7 @@ void TrajectoryValidatorInterface::publish_processing_time(
   }
 }
 
-void TrajectoryValidatorInterface::publish_processing_time_text(
+void TrajectoryValidatorWrapper::publish_processing_time_text(
   const std::unordered_map<std::string, double> & processing_time)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
