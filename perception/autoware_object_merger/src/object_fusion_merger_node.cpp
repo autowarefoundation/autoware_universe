@@ -79,6 +79,36 @@ struct Bounds2d
 };
 
 /**
+ * @brief Cached grouped union geometry derived in the output local frame.
+ */
+struct UnionGeometry
+{
+  MultiPolygon2d polygons;
+  MultiPoint2d boundary_points;
+  std::size_t largest_polygon_index = 0;
+
+  /**
+   * @brief Return whether the grouped union contains any polygons.
+   *
+   * @return True when at least one union polygon exists.
+   */
+  bool empty() const { return polygons.empty(); }
+
+  /**
+   * @brief Access the largest union polygon by absolute area.
+   *
+   * @return Largest polygon, or nullptr when the union is empty.
+   */
+  const Polygon2d * largest_polygon() const
+  {
+    if (empty()) {
+      return nullptr;
+    }
+    return &polygons.at(largest_polygon_index);
+  }
+};
+
+/**
  * @brief Compute the combined z range covered by one main object and its grouped sub objects.
  *
  * @param main_object Main object used as the base of the fused output.
@@ -173,28 +203,28 @@ Polygon2d transform_polygon_to_output_frame(
 }
 
 /**
- * @brief Compute the exact grouped union polygons in the output local frame.
+ * @brief Compute grouped union geometry caches in the output local frame.
  *
  * @param output Current output object that defines the local output frame.
  * @param main_object Main object used as the base of the fused output.
  * @param sub_objects Sub objects uniquely grouped to the main object.
- * @return Grouped union polygons expressed in the output local frame.
+ * @return Grouped union polygons, boundary points, and largest polygon metadata.
  */
-MultiPolygon2d collect_union_polygons_in_output_frame(
+UnionGeometry collect_union_geometry_in_output_frame(
   const DetectedObject & output, const DetectedObject & main_object,
   const std::vector<DetectedObject> & sub_objects)
 {
-  MultiPolygon2d union_polygons;
+  UnionGeometry union_geometry;
 
-  const auto append_union_polygon = [&union_polygons](const Polygon2d & polygon) {
-    if (union_polygons.empty()) {
-      union_polygons.push_back(polygon);
+  const auto append_union_polygon = [&union_geometry](const Polygon2d & polygon) {
+    if (union_geometry.polygons.empty()) {
+      union_geometry.polygons.push_back(polygon);
       return;
     }
 
     MultiPolygon2d next_union_polygons;
-    boost::geometry::union_(union_polygons, polygon, next_union_polygons);
-    union_polygons = std::move(next_union_polygons);
+    boost::geometry::union_(union_geometry.polygons, polygon, next_union_polygons);
+    union_geometry.polygons = std::move(next_union_polygons);
   };
 
   const auto main_polygon = autoware_utils_geometry::to_polygon2d(main_object);
@@ -203,60 +233,38 @@ MultiPolygon2d collect_union_polygons_in_output_frame(
     append_union_polygon(
       transform_polygon_to_output_frame(output, autoware_utils_geometry::to_polygon2d(sub_object)));
   }
-  return union_polygons;
-}
 
-/**
- * @brief Collect all outer boundary points from grouped union polygons.
- *
- * @param union_polygons Grouped union polygons expressed in the output local frame.
- * @return Outer boundary points across all grouped union polygons.
- */
-MultiPoint2d collect_union_boundary_points(const MultiPolygon2d & union_polygons)
-{
-  MultiPoint2d boundary_points;
-  for (const auto & polygon : union_polygons) {
+  if (union_geometry.empty()) {
+    return union_geometry;
+  }
+
+  double largest_area = std::numeric_limits<double>::lowest();
+  for (std::size_t polygon_index = 0; polygon_index < union_geometry.polygons.size();
+       ++polygon_index) {
+    const auto & polygon = union_geometry.polygons.at(polygon_index);
     for (const auto & point : polygon.outer()) {
-      boundary_points.push_back(
+      union_geometry.boundary_points.push_back(
         Point2d(boost::geometry::get<0>(point), boost::geometry::get<1>(point)));
     }
-  }
-  return boundary_points;
-}
-
-/**
- * @brief Select the largest polygon from a grouped union result.
- *
- * @param union_polygons Grouped union polygons expressed in the output local frame.
- * @return Largest polygon by absolute area, or nullptr if empty.
- */
-const Polygon2d * find_largest_union_polygon(const MultiPolygon2d & union_polygons)
-{
-  if (union_polygons.empty()) {
-    return nullptr;
-  }
-
-  const Polygon2d * largest_polygon = &union_polygons.front();
-  double largest_area = std::abs(boost::geometry::area(*largest_polygon));
-  for (const auto & polygon : union_polygons) {
     const double polygon_area = std::abs(boost::geometry::area(polygon));
     if (polygon_area > largest_area) {
-      largest_polygon = &polygon;
       largest_area = polygon_area;
+      union_geometry.largest_polygon_index = polygon_index;
     }
   }
-  return largest_polygon;
+
+  return union_geometry;
 }
 
 /**
  * @brief Rebuild the output footprint from the grouped union polygons.
  *
  * @param output Output object to update in place.
- * @param union_polygons Grouped union polygons expressed in the output local frame.
+ * @param union_geometry Grouped union geometry expressed in the output local frame.
  */
-void fit_shape_footprint(DetectedObject & output, const MultiPolygon2d & union_polygons)
+void fit_shape_footprint(DetectedObject & output, const UnionGeometry & union_geometry)
 {
-  const auto * union_polygon = find_largest_union_polygon(union_polygons);
+  const auto * union_polygon = union_geometry.largest_polygon();
   if (union_polygon == nullptr) {
     return;
   }
@@ -309,35 +317,33 @@ void fit_cylinder_shape(DetectedObject & output, const MultiPoint2d & combined_p
  * @brief Apply shape-specific footprint or dimension fitting for fused output.
  *
  * @param output Output object to update in place.
- * @param union_polygons Grouped union polygons expressed in the output local frame.
- * @param combined_points Combined footprint points expressed in the output local frame.
+ * @param union_geometry Grouped union geometry expressed in the output local frame.
  * @param keep_input_dimensions Whether to preserve input dimensions and update only footprint.
  * @return True when the shape type is supported and was handled.
  */
 bool fit_shape_by_type(
-  DetectedObject & output, const MultiPolygon2d & union_polygons,
-  const MultiPoint2d & combined_points, const bool keep_input_dimensions)
+  DetectedObject & output, const UnionGeometry & union_geometry, const bool keep_input_dimensions)
 {
   if (output.shape.type == Shape::BOUNDING_BOX) {
     if (keep_input_dimensions) {
-      fit_shape_footprint(output, union_polygons);
+      fit_shape_footprint(output, union_geometry);
     } else {
-      fit_bounding_box_shape(output, combined_points);
+      fit_bounding_box_shape(output, union_geometry.boundary_points);
     }
     return true;
   }
 
   if (output.shape.type == Shape::CYLINDER) {
     if (keep_input_dimensions) {
-      fit_shape_footprint(output, union_polygons);
+      fit_shape_footprint(output, union_geometry);
     } else {
-      fit_cylinder_shape(output, combined_points);
+      fit_cylinder_shape(output, union_geometry.boundary_points);
     }
     return true;
   }
 
   if (output.shape.type == Shape::POLYGON) {
-    fit_shape_footprint(output, union_polygons);
+    fit_shape_footprint(output, union_geometry);
     return true;
   }
 
@@ -381,17 +387,13 @@ DetectedObject enclose_union_with_main_shape(
   if (sub_objects.empty()) {
     return output;
   }
-  const auto union_polygons =
-    collect_union_polygons_in_output_frame(output, main_object, sub_objects);
-  if (union_polygons.empty()) {
-    return output;
-  }
-  const auto combined_points = collect_union_boundary_points(union_polygons);
-  if (combined_points.empty()) {
+  const auto union_geometry =
+    collect_union_geometry_in_output_frame(output, main_object, sub_objects);
+  if (union_geometry.empty() || union_geometry.boundary_points.empty()) {
     return output;
   }
 
-  if (fit_shape_by_type(output, union_polygons, combined_points, keep_input_dimensions)) {
+  if (fit_shape_by_type(output, union_geometry, keep_input_dimensions)) {
     fit_shape_height(output, main_object, sub_objects);
     return output;
   }
