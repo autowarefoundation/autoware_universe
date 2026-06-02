@@ -14,6 +14,7 @@ find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3 REQUIRED)
 
 include_directories(
+  include
   SYSTEM
     ${EIGEN3_INCLUDE_DIR}
 )
@@ -21,6 +22,7 @@ include_directories(
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/association/data_association.cpp
   src/association/solver/mu_successive_shortest_path_wrapper.cpp
+  src/object_fusion_merger_node.cpp
   src/object_association_merger_node.cpp
 )
 
@@ -35,7 +37,24 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::object_merger::ObjectFusionMergerNode"
+  EXECUTABLE object_fusion_merger_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+)
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+
+  ament_auto_add_gtest(object_fusion_merger_node_tests
+    test/test_object_fusion_merger_node.cpp
+  )
+endif()
+
 ament_auto_package(INSTALL_TO_SHARE
   launch
   config
+  docs
 )
