@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
-#define MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
+#ifndef AUTOWARE__MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
+#define AUTOWARE__MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
 
+#include <Eigen/Core>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <rclcpp/time.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -25,7 +27,6 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <std_msgs/msg/header.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/LaneletPath.h>
@@ -135,4 +136,4 @@ using LaneletPathWithPathInfo = std::pair<lanelet::routing::LaneletPath, Predict
 
 }  // namespace autoware::map_based_prediction
 
-#endif  // MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
+#endif  // AUTOWARE__MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
