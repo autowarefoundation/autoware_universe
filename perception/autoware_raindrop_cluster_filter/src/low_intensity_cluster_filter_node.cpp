@@ -47,6 +47,8 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
   filter_target_.MOTORCYCLE = declare_parameter<bool>("filter_target_label.MOTORCYCLE");
   filter_target_.BICYCLE = declare_parameter<bool>("filter_target_label.BICYCLE");
   filter_target_.PEDESTRIAN = declare_parameter<bool>("filter_target_label.PEDESTRIAN");
+  filter_target_.ANIMAL = declare_parameter<bool>("filter_target_label.ANIMAL");
+  filter_target_.HAZARD = declare_parameter<bool>("filter_target_label.HAZARD");
 
   using std::placeholders::_1;
   // Set publisher/subscriber

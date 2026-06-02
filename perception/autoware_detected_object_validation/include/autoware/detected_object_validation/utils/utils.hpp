@@ -33,6 +33,8 @@ struct FilterTargetLabel
   bool MOTORCYCLE;
   bool BICYCLE;
   bool PEDESTRIAN;
+  bool ANIMAL;
+  bool HAZARD;
   bool isTarget(const uint8_t label) const;
 };  // struct FilterTargetLabel
 
