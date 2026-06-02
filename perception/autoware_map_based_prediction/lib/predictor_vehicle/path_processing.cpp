@@ -267,7 +267,7 @@ std::optional<PredictedObject> PathProcessor::predict(
 
   std::vector<PredictedPath> predicted_paths;
   double min_avg_curvature = std::numeric_limits<double>::max();
-  PredictedPath path_with_smallest_avg_curvature;
+  std::optional<PredictedPath> path_with_smallest_avg_curvature;
 
   for (const auto & ref_path : ref_paths) {
     PredictedPath predicted_path = path_generator_->generatePathForOnLaneVehicle(
@@ -303,11 +303,20 @@ std::optional<PredictedObject> PathProcessor::predict(
     if (curvature_avg < min_avg_curvature) {
       min_avg_curvature = curvature_avg;
       path_with_smallest_avg_curvature = predicted_path;
-      path_with_smallest_avg_curvature.confidence = ref_path.probability;
+      path_with_smallest_avg_curvature->confidence = ref_path.probability;
     }
   }
 
-  if (predicted_paths.empty()) predicted_paths.push_back(path_with_smallest_avg_curvature);
+  if (predicted_paths.empty()) {
+    if (path_with_smallest_avg_curvature) {
+      predicted_paths.push_back(*path_with_smallest_avg_curvature);
+    } else {
+      PredictedPath straight_path = path_generator_->generatePathForOffLaneVehicle(
+        yaw_fixed_object, params_.prediction_time_horizon);
+      straight_path.confidence = 1.0;
+      predicted_paths.push_back(straight_path);
+    }
+  }
 
   float sum_confidence = 0.0;
   for (const auto & predicted_path : predicted_paths) {
