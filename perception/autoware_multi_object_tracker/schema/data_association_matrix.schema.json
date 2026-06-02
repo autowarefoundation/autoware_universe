@@ -20,20 +20,23 @@
     },
     "tracker_assignment_entry": {
       "type": "object",
-      "description": "Tracker assignment rule: tracker to create on new detection, and ordered list of tracker types eligible for association.",
+      "description": "Tracker assignment rule: tracker to create on new detection, and optional ordered list of tracker types eligible for association. 'match' is omitted when 'create' is \"null\" (explicitly rejected).",
       "properties": {
         "create": {
-          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
-          "description": "Tracker type to spawn for new detections of this class."
+          "oneOf": [
+            { "$ref": "#/definitions/tracker_type" },
+            { "type": "string", "enum": ["null"] }
+          ],
+          "description": "Tracker type to spawn for new detections of this class, or \"null\" to explicitly reject (no tracker created, no association attempted)."
         },
         "match": {
           "type": "array",
           "items": { "$ref": "#/definitions/tracker_type" },
           "minItems": 1,
-          "description": "Ordered list of tracker types eligible for association."
+          "description": "Ordered list of tracker types eligible for association. Omitted when create is \"null\"."
         }
       },
-      "required": ["create", "match"],
+      "required": ["create"],
       "additionalProperties": false
     },
     "label_assignment": {
@@ -127,39 +130,21 @@
       "properties": {
         "tracker_assignment": {
           "type": "object",
-          "description": "Unified (shape, label) → {create, match} assignment rules. Label-level entries apply to all shapes; shape blocks override only where listed.",
+          "description": "Per-shape, per-label assignment rules mapping (shape, label) → {create, match}. Each shape block (bounding_box, polygon, cylinder) lists its accepted labels explicitly. Omitted (shape, label) combinations are implicitly not accepted.",
           "properties": {
-            "unknown": { "$ref": "#/definitions/tracker_assignment_entry" },
-            "car": { "$ref": "#/definitions/tracker_assignment_entry" },
-            "truck": { "$ref": "#/definitions/tracker_assignment_entry" },
-            "bus": { "$ref": "#/definitions/tracker_assignment_entry" },
-            "trailer": { "$ref": "#/definitions/tracker_assignment_entry" },
-            "motorcycle": { "$ref": "#/definitions/tracker_assignment_entry" },
-            "bicycle": { "$ref": "#/definitions/tracker_assignment_entry" },
-            "pedestrian": { "$ref": "#/definitions/tracker_assignment_entry" },
-            "polygon": {
-              "$ref": "#/definitions/label_assignment",
-              "description": "Shape-specific overrides for polygon measurements."
-            },
             "bounding_box": {
               "$ref": "#/definitions/label_assignment",
-              "description": "Shape-specific overrides for bounding box measurements."
+              "description": "Assignment rules for bounding_box detections."
+            },
+            "polygon": {
+              "$ref": "#/definitions/label_assignment",
+              "description": "Assignment rules for polygon detections."
             },
             "cylinder": {
               "$ref": "#/definitions/label_assignment",
-              "description": "Shape-specific overrides for cylinder measurements."
+              "description": "Assignment rules for cylinder detections."
             }
           },
-          "required": [
-            "unknown",
-            "car",
-            "truck",
-            "bus",
-            "trailer",
-            "motorcycle",
-            "bicycle",
-            "pedestrian"
-          ],
           "additionalProperties": false
         },
         "tracker_profiles": {
