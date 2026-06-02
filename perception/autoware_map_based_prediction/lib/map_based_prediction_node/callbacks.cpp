@@ -28,6 +28,7 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace autoware::map_based_prediction
 {
@@ -37,7 +38,9 @@ using autoware_utils::ScopedTimeTrack;
 // MapCallback
 // ---------------------------------------------------------------------------
 
-MapCallback::MapCallback(rclcpp::Node * node, NodeState & state) : node_(node), state_(state) {}
+MapCallback::MapCallback(rclcpp::Node * node, NodeState & state) : node_(node), state_(state)
+{
+}
 
 void MapCallback::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
 {
@@ -66,7 +69,9 @@ void MapCallback::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
 // ---------------------------------------------------------------------------
 
 ObjectsCallback::ObjectsCallback(rclcpp::Node * node, NodeState & state)
-: node_(node), state_(state), sub_traffic_signals_(node, "/traffic_signals"),
+: node_(node),
+  state_(state),
+  sub_traffic_signals_(node, "/traffic_signals"),
   transform_listener_(node)
 {
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
@@ -99,8 +104,7 @@ void ObjectsCallback::trafficSignalsCallback(const TrafficLightGroupArray::Const
 void ObjectsCallback::objectsCallback(const TrackedObjects::ConstSharedPtr in_objects)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (state_.time_keeper)
-    st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
+  if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
 
   stop_watch_ptr_->toc("processing_time", true);
 
@@ -148,8 +152,7 @@ void ObjectsCallback::objectsCallback(const TrackedObjects::ConstSharedPtr in_ob
 
     const auto & label_ =
       autoware::object_recognition_utils::getHighestProbLabel(transformed_object.classification);
-    const auto label =
-      utils::changeVRULabelForPrediction(label_, object, state_.lanelet_map_ptr);
+    const auto label = utils::changeVRULabelForPrediction(label_, object, state_.lanelet_map_ptr);
 
     switch (label) {
       case ObjectClassification::PEDESTRIAN:
@@ -198,8 +201,7 @@ void ObjectsCallback::publish(
   const PredictedObjects & output, const visualization_msgs::msg::MarkerArray & debug_markers) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (state_.time_keeper)
-    st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
+  if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
 
   pub_objects_->publish(output);
   if (diagnostics_)

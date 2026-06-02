@@ -25,9 +25,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <deque>
 #include <limits>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace autoware::map_based_prediction
 {

@@ -49,8 +49,7 @@ public:
   }
 
   // Runs diagnostics checks and publishes processing-time debug topics.
-  void update(
-    const rclcpp::Time & timestamp, double processing_time_ms, double cyclic_time_ms);
+  void update(const rclcpp::Time & timestamp, double processing_time_ms, double cyclic_time_ms);
 
 private:
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;

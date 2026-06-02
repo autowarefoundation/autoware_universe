@@ -73,11 +73,9 @@ private:
     const LaneletData & current_lanelet_data, double object_detected_time,
     const std::unordered_map<std::string, std::deque<RoadUser>> & history);
   double calcRightLateralOffset(
-    const lanelet::ConstLineString2d & boundary_line,
-    const geometry_msgs::msg::Pose & search_pose);
+    const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose);
   double calcLeftLateralOffset(
-    const lanelet::ConstLineString2d & boundary_line,
-    const geometry_msgs::msg::Pose & search_pose);
+    const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose);
 
   rclcpp::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;

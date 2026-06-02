@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/map_based_prediction/predictor_vehicle/object_processing.hpp"
+
 #include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -25,8 +26,10 @@
 #include <lanelet2_routing/RoutingGraph.h>
 
 #include <cmath>
+#include <deque>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::map_based_prediction
 {

@@ -18,7 +18,9 @@
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 
 #include <chrono>
+#include <memory>
 #include <sstream>
+#include <utility>
 
 namespace autoware::map_based_prediction
 {
@@ -53,8 +55,7 @@ void Diagnostics::update(
   diagnostics_interface_ptr_->add_key_value("timestamp", timestamp.seconds());
   diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
 
-  const bool is_processing_in_time =
-    processing_time_ms <= params_.processing_time_tolerance_ms;
+  const bool is_processing_in_time = processing_time_ms <= params_.processing_time_tolerance_ms;
   diagnostics_interface_ptr_->add_key_value("is_processing_in_time", is_processing_in_time);
   if (!is_processing_in_time) {
     std::ostringstream oss;

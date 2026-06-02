@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/map_based_prediction/path_generator/frenet.hpp"
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
+
+#include "autoware/map_based_prediction/path_generator/frenet.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/interpolation/spline_interpolation.hpp>

@@ -130,8 +130,7 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   state_.path_generator = std::make_shared<PathGenerator>(prediction_sampling_time_interval);
 
   // --- Shared state params ---
-  state_.params.object_buffer_time_length =
-    declare_parameter<double>("object_buffer_time_length");
+  state_.params.object_buffer_time_length = declare_parameter<double>("object_buffer_time_length");
   state_.params.remember_lost_crosswalk_users =
     declare_parameter<bool>("use_crosswalk_user_history.remember_lost_users");
   state_.params.prediction_time_horizon_unknown = prediction_time_horizon.unknown;

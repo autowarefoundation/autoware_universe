@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/map_based_prediction/predictor_vehicle/path_processing.hpp"
+
 #include "autoware/map_based_prediction/predictor_vehicle/debug.hpp"
 #include "autoware/map_based_prediction/utils.hpp"
 
@@ -743,7 +744,8 @@ std::vector<double> PathProcessor::calcTrajectoryCurvatureFrom3Points(
   return k_arr;
 }
 
-TrajectoryPoints PathProcessor::toTrajectoryPoints(const PredictedPath & path, const double velocity)
+TrajectoryPoints PathProcessor::toTrajectoryPoints(
+  const PredictedPath & path, const double velocity)
 {
   TrajectoryPoints out_trajectory;
   std::for_each(path.path.begin(), path.path.end(), [&out_trajectory, velocity](const auto & pose) {

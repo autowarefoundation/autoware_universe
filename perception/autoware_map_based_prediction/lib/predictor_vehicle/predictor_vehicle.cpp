@@ -14,6 +14,8 @@
 
 #include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
 
+#include <memory>
+
 namespace autoware::map_based_prediction
 {
 
@@ -62,7 +64,8 @@ void PredictorVehicle::setParams(const Params & params)
     pp_params.prediction_sampling_time_interval = params.prediction_sampling_time_interval;
     pp_params.min_velocity_for_map_based_prediction = params.min_velocity_for_map_based_prediction;
     pp_params.reference_path_resolution = params.reference_path_resolution;
-    pp_params.check_lateral_acceleration_constraints = params.check_lateral_acceleration_constraints;
+    pp_params.check_lateral_acceleration_constraints =
+      params.check_lateral_acceleration_constraints;
     pp_params.max_lateral_accel = params.max_lateral_accel;
     pp_params.min_acceleration_before_curve = params.min_acceleration_before_curve;
     pp_params.use_vehicle_acceleration = params.use_vehicle_acceleration;
@@ -98,8 +101,8 @@ void PredictorVehicle::removeOldHistory(double current_time, double buffer_time)
 }
 
 std::optional<PredictedObject> PredictorVehicle::predict(
-  const std_msgs::msg::Header & header, const TrackedObject & object,
-  double objects_detected_time, visualization_msgs::msg::MarkerArray & debug_markers)
+  const std_msgs::msg::Header & header, const TrackedObject & object, double objects_detected_time,
+  visualization_msgs::msg::MarkerArray & debug_markers)
 {
   return path_processor_.predict(header, object, objects_detected_time, debug_markers);
 }
