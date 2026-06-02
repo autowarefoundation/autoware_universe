@@ -172,8 +172,8 @@ std::string CrosswalkUserHistoryManager::tryMatchToDisappeared(const std::string
       return match_id;
     } else {
       RCLCPP_WARN_STREAM(
-        node_.get_logger(), "Crosswalk user was "
-                              << object_id << "was matched to " << match_id
+        node_.get_logger(), "Crosswalk user "
+                              << object_id << " was matched to " << match_id
                               << " but history for the crosswalk user was deleted. Rematching");
     }
     return std::nullopt;
