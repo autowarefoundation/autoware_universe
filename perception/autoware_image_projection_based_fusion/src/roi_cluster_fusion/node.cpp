@@ -75,7 +75,6 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   msg3d_sub_.reset();
   agnocast_msg3d_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
     ClusterMsgType, "input", rclcpp::QoS(1).best_effort(),
-    // cppcheck-suppress unknownMacro
     [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(ClusterMsgType) msg) {
       auto ros2_msg = std::make_shared<const ClusterMsgType>(*msg);
       this->sub_callback(ros2_msg);
