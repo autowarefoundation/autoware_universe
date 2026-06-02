@@ -596,6 +596,7 @@ std::vector<PredictedRefPath> PathProcessor::convertPredictedReferencePath(
   for (auto it = converted_ref_paths.begin(); it != converted_ref_paths.end();) {
     auto & pose_path = it->path;
     if (pose_path.empty()) {
+      it = converted_ref_paths.erase(it);
       continue;
     }
     const std::optional<size_t> opt_starting_idx =
