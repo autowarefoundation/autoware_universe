@@ -437,8 +437,8 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
   }
 
   std::int32_t num_act_out_real = std::get<1>(pair_res);
-  std::int32_t * num_act_out_data = static_cast<std::int32_t *>(outputs[4]);
   *num_act_out_host_ = num_act_out_real;
+  auto * num_act_out_data = static_cast<std::int32_t *>(outputs[4]);
 
   cudaError_t const status = cudaMemcpyAsync(
     num_act_out_data, num_act_out_host_.get(), sizeof(std::int32_t), cudaMemcpyHostToDevice,

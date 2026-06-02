@@ -289,8 +289,8 @@ std::int32_t GetIndicesPairsPlugin::enqueue(
       stream);
   }
 
-  std::int32_t * num_act_out_data = static_cast<std::int32_t *>(outputs[3]);
   *num_act_out_host_ = num_act_out_real;
+  auto * num_act_out_data = static_cast<std::int32_t *>(outputs[3]);
 
   cudaError_t const status = cudaMemcpyAsync(
     num_act_out_data, num_act_out_host_.get(), sizeof(std::int32_t), cudaMemcpyHostToDevice,
