@@ -39,6 +39,86 @@ using MultiPolygon2d = boost::geometry::model::multi_polygon<Polygon2d>;
 using MultiPoint2d = autoware_utils_geometry::MultiPoint2d;
 
 /**
+ * @brief One-dimensional min/max range accumulator.
+ */
+struct Range1d
+{
+  double min = std::numeric_limits<double>::max();
+  double max = std::numeric_limits<double>::lowest();
+
+  /**
+   * @brief Extend the range to include a new value.
+   *
+   * @param value Value to include in the range.
+   */
+  void extend(const double value)
+  {
+    min = std::min(min, value);
+    max = std::max(max, value);
+  }
+};
+
+/**
+ * @brief Two-dimensional x/y bounds accumulator.
+ */
+struct Bounds2d
+{
+  Range1d x;
+  Range1d y;
+
+  /**
+   * @brief Extend the bounds to include a 2D point.
+   *
+   * @param point Point to include in the bounds.
+   */
+  void extend(const Point2d & point)
+  {
+    x.extend(boost::geometry::get<0>(point));
+    y.extend(boost::geometry::get<1>(point));
+  }
+};
+
+/**
+ * @brief Compute the combined z range covered by one main object and its grouped sub objects.
+ *
+ * @param main_object Main object used as the base of the fused output.
+ * @param sub_objects Sub objects uniquely grouped to the main object.
+ * @return Accumulated z range across all grouped objects.
+ */
+Range1d make_z_range(
+  const DetectedObject & main_object, const std::vector<DetectedObject> & sub_objects)
+{
+  Range1d z_range;
+
+  const double main_half_z = main_object.shape.dimensions.z * 0.5;
+  z_range.extend(main_object.kinematics.pose_with_covariance.pose.position.z - main_half_z);
+  z_range.extend(main_object.kinematics.pose_with_covariance.pose.position.z + main_half_z);
+
+  for (const auto & sub_object : sub_objects) {
+    const double sub_half_z = sub_object.shape.dimensions.z * 0.5;
+    z_range.extend(sub_object.kinematics.pose_with_covariance.pose.position.z - sub_half_z);
+    z_range.extend(sub_object.kinematics.pose_with_covariance.pose.position.z + sub_half_z);
+  }
+
+  return z_range;
+}
+
+/**
+ * @brief Compute x/y bounds from a set of 2D points.
+ *
+ * @param points Points expressed in the current output local frame.
+ * @return Accumulated x/y bounds across all points.
+ */
+Bounds2d make_bounds_2d(const MultiPoint2d & points)
+{
+  Bounds2d bounds;
+  for (const auto & point : points) {
+    bounds.extend(point);
+  }
+  return bounds;
+}
+
+/**
  * @brief Compute the combined vertical extent of one main object and its grouped sub objects.
  *
  * @param main_object Main object used as the base of the fused output.
@@ -48,23 +128,8 @@ using MultiPoint2d = autoware_utils_geometry::MultiPoint2d;
 std::pair<double, double> get_z_range(
   const DetectedObject & main_object, const std::vector<DetectedObject> & sub_objects)
 {
-  const double main_half_z = main_object.shape.dimensions.z * 0.5;
-  const double main_min_z =
-    main_object.kinematics.pose_with_covariance.pose.position.z - main_half_z;
-  const double main_max_z =
-    main_object.kinematics.pose_with_covariance.pose.position.z + main_half_z;
-  double min_z = main_min_z;
-  double max_z = main_max_z;
-
-  for (const auto & sub_object : sub_objects) {
-    const double sub_half_z = sub_object.shape.dimensions.z * 0.5;
-    min_z =
-      std::min(min_z, sub_object.kinematics.pose_with_covariance.pose.position.z - sub_half_z);
-    max_z =
-      std::max(max_z, sub_object.kinematics.pose_with_covariance.pose.position.z + sub_half_z);
-  }
-
-  return {min_z, max_z};
+  const auto z_range = make_z_range(main_object, sub_objects);
+  return {z_range.min, z_range.max};
 }
 
 /**
@@ -214,21 +279,13 @@ void fit_shape_footprint(DetectedObject & output, const MultiPolygon2d & union_p
  */
 void fit_bounding_box_shape(DetectedObject & output, const MultiPoint2d & combined_points)
 {
-  double min_x = std::numeric_limits<double>::max();
-  double max_x = std::numeric_limits<double>::lowest();
-  double min_y = std::numeric_limits<double>::max();
-  double max_y = std::numeric_limits<double>::lowest();
-  for (const auto & point : combined_points) {
-    min_x = std::min(min_x, boost::geometry::get<0>(point));
-    max_x = std::max(max_x, boost::geometry::get<0>(point));
-    min_y = std::min(min_y, boost::geometry::get<1>(point));
-    max_y = std::max(max_y, boost::geometry::get<1>(point));
-  }
+  const auto bounds = make_bounds_2d(combined_points);
 
   output.kinematics.pose_with_covariance.pose = autoware_utils_geometry::calc_offset_pose(
-    output.kinematics.pose_with_covariance.pose, 0.5 * (min_x + max_x), 0.5 * (min_y + max_y), 0.0);
-  output.shape.dimensions.x = max_x - min_x;
-  output.shape.dimensions.y = max_y - min_y;
+    output.kinematics.pose_with_covariance.pose, 0.5 * (bounds.x.min + bounds.x.max),
+    0.5 * (bounds.y.min + bounds.y.max), 0.0);
+  output.shape.dimensions.x = bounds.x.max - bounds.x.min;
+  output.shape.dimensions.y = bounds.y.max - bounds.y.min;
 }
 
 /**

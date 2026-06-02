@@ -190,6 +190,44 @@ TEST(ObjectFusionMergerNodeTest, testMatchedObjectsAreFused)
   rclcpp::shutdown();
 }
 
+TEST(ObjectFusionMergerNodeTest, testFusedObjectHeightCoversMainAndSubZRange)
+{
+  rclcpp::init(0, nullptr);
+
+  auto test_manager = generate_test_manager();
+  auto test_target_node = generate_node();
+  auto tf_node = create_static_tf_broadcaster_node("map", "base_link");
+
+  DetectedObjects latest_msg;
+  test_manager->set_subscriber<DetectedObjects>(
+    "/output/objects",
+    [&latest_msg](const DetectedObjects::ConstSharedPtr msg) { latest_msg = *msg; });
+
+  DetectedObjects main_objects;
+  main_objects.header.frame_id = "base_link";
+  auto main_object = make_object(0.0, 4.0, 0.6, 4.0, ObjectClassification::CAR);
+  main_object.kinematics.pose_with_covariance.pose.position.z = 1.0;
+  main_object.shape.dimensions.z = 2.0;
+  main_objects.objects.push_back(main_object);
+
+  DetectedObjects sub_objects;
+  sub_objects.header.frame_id = "base_link";
+  auto sub_object = make_object(1.5, 1.0, 0.5, 2.0, ObjectClassification::CAR);
+  sub_object.kinematics.pose_with_covariance.pose.position.z = 2.5;
+  sub_object.shape.dimensions.z = 3.0;
+  sub_objects.objects.push_back(sub_object);
+
+  test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/main_objects", main_objects);
+  test_manager->test_pub_msg<DetectedObjects>(test_target_node, "input/sub_objects", sub_objects);
+
+  ASSERT_EQ(latest_msg.objects.size(), 1U);
+  EXPECT_NEAR(
+    latest_msg.objects.front().kinematics.pose_with_covariance.pose.position.z, 2.0, 1e-3);
+  EXPECT_NEAR(latest_msg.objects.front().shape.dimensions.z, 4.0, 1e-3);
+
+  rclcpp::shutdown();
+}
+
 TEST(ObjectFusionMergerNodeTest, testUnmatchedMainIsKeptAndUnmatchedSubIsPublishedSeparately)
 {
   rclcpp::init(0, nullptr);
@@ -410,7 +448,9 @@ TEST(ObjectFusionMergerNodeTest, testBoundingBoxCanRetainExpandedFootprintWithou
 
   DetectedObjects main_objects;
   main_objects.header.frame_id = "base_link";
-  main_objects.objects.push_back(make_object(0.0, 4.0, 0.6, 4.0, ObjectClassification::CAR));
+  auto main_object = make_object(0.0, 4.0, 0.6, 4.0, ObjectClassification::CAR);
+  main_object.kinematics.pose_with_covariance.pose.position.y = 2.0;
+  main_objects.objects.push_back(main_object);
 
   DetectedObjects sub_objects;
   sub_objects.header.frame_id = "base_link";
