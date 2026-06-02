@@ -21,6 +21,7 @@
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
