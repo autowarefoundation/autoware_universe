@@ -50,7 +50,6 @@ namespace types
 {
 
 enum class TrackerType {
-  PASS_THROUGH = 0,
   PEDESTRIAN_AND_BICYCLE = 10,
   PEDESTRIAN = 11,
   BICYCLE = 12,
@@ -62,12 +61,16 @@ enum class TrackerType {
   POLYGON = 30,
 };
 
-inline constexpr std::array<TrackerType, 10> ALL_TRACKER_TYPES = {
-  TrackerType::PASS_THROUGH,     TrackerType::PEDESTRIAN_AND_BICYCLE,
-  TrackerType::PEDESTRIAN,       TrackerType::BICYCLE,
-  TrackerType::MULTIPLE_VEHICLE, TrackerType::GENERAL_VEHICLE,
-  TrackerType::NORMAL_VEHICLE,   TrackerType::BIG_VEHICLE,
-  TrackerType::VEHICLE,          TrackerType::POLYGON};
+inline constexpr std::array<TrackerType, 9> ALL_TRACKER_TYPES = {
+  TrackerType::PEDESTRIAN_AND_BICYCLE,
+  TrackerType::PEDESTRIAN,
+  TrackerType::BICYCLE,
+  TrackerType::MULTIPLE_VEHICLE,
+  TrackerType::GENERAL_VEHICLE,
+  TrackerType::NORMAL_VEHICLE,
+  TrackerType::BIG_VEHICLE,
+  TrackerType::VEHICLE,
+  TrackerType::POLYGON};
 
 inline bool isVehicleTrackerType(const TrackerType tracker_type)
 {
@@ -77,7 +80,7 @@ inline bool isVehicleTrackerType(const TrackerType tracker_type)
          tracker_type == TrackerType::VEHICLE;
 }
 
-inline const std::array<TrackerType, 10> & allTrackerTypes()
+inline const std::array<TrackerType, 9> & allTrackerTypes()
 {
   return ALL_TRACKER_TYPES;
 }
@@ -85,8 +88,6 @@ inline const std::array<TrackerType, 10> & allTrackerTypes()
 inline std::string toString(const TrackerType tracker_type)
 {
   switch (tracker_type) {
-    case TrackerType::PASS_THROUGH:
-      return "pass_through_tracker";
     case TrackerType::PEDESTRIAN_AND_BICYCLE:
       return "pedestrian_and_bicycle_tracker";
     case TrackerType::PEDESTRIAN:
@@ -112,7 +113,6 @@ inline std::string toString(const TrackerType tracker_type)
 
 inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name)
 {
-  if (tracker_name == "pass_through_tracker") return TrackerType::PASS_THROUGH;
   if (tracker_name == "pedestrian_and_bicycle_tracker") {
     return TrackerType::PEDESTRIAN_AND_BICYCLE;
   }

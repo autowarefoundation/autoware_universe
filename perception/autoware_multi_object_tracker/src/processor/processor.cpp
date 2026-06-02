@@ -186,8 +186,6 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
         return std::make_shared<PolygonTracker>(
           time, object, creation_config_.enable_unknown_object_velocity_estimation,
           creation_config_.enable_unknown_object_motion_output);
-      case types::TrackerType::PASS_THROUGH:
-        return std::make_shared<PassThroughTracker>(time, object);
       default:
         return std::make_shared<PolygonTracker>(
           time, object, creation_config_.enable_unknown_object_velocity_estimation,

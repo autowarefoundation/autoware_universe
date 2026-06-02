@@ -171,7 +171,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         auto & trackers = association_assignment[{shape_type, label}];
         for (const auto & tracker_type_name : match_names) {
           const TrackerType tracker_type = parseTrackerType(tracker_type_name, match_param);
-          if (tracker_type == TrackerType::PASS_THROUGH) continue;
           trackers.push_back(tracker_type);
         }
       }
@@ -206,11 +205,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       }
     }
 
-    const bool has_non_passthrough = std::any_of(
-      params_.creation_config.shape_tracker_map.begin(),
-      params_.creation_config.shape_tracker_map.end(),
-      [](const auto & e) { return e.second != TrackerType::PASS_THROUGH; });
-    if (params_.association_config.association_params_map.empty() && has_non_passthrough) {
+    if (params_.association_config.association_params_map.empty()) {
       throw std::invalid_argument(
         "No tracker_assignment.match entries found — check the parameter file.");
     }
