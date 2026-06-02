@@ -43,10 +43,11 @@ TrackerProcessor::TrackerProcessor(
   const TrackerCreationConfig & creation_config,
   const TrackerAssociationConfig & association_config,
   const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
-  const std::vector<types::InputChannel> & channels_config,
-  const rclcpp::Logger & logger,
+  const std::vector<types::InputChannel> & channels_config, const rclcpp::Logger & logger,
   rclcpp::Clock::SharedPtr clock)
-: creation_config_(creation_config), channels_config_(channels_config), logger_(logger),
+: creation_config_(creation_config),
+  channels_config_(channels_config),
+  logger_(logger),
   clock_(std::move(clock))
 {
   association_manager_ = std::make_unique<AssociationManager>(association_config, channels_config);
