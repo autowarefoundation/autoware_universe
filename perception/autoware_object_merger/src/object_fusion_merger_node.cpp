@@ -38,6 +38,8 @@ using Polygon2d = autoware_utils_geometry::Polygon2d;
 using MultiPolygon2d = boost::geometry::model::multi_polygon<Polygon2d>;
 using MultiPoint2d = autoware_utils_geometry::MultiPoint2d;
 
+constexpr double kMinMeaningfulOverlapArea = 1e-6;
+
 /**
  * @brief One-dimensional min/max range accumulator.
  */
@@ -117,11 +119,38 @@ struct GroupedFusionInputs
   std::vector<DetectedObject> other_objects;
 };
 
-double get_intersection_area(const DetectedObject & main_object, const DetectedObject & sub_object);
+/**
+ * @brief Calculate the 2D footprint intersection area between one main and one sub object.
+ *
+ * @param main_object Main object candidate.
+ * @param sub_object Sub object candidate.
+ * @return Overlapped footprint area in square meters.
+ */
+double get_intersection_area(const DetectedObject & main_object, const DetectedObject & sub_object)
+{
+  MultiPolygon2d intersections;
+  boost::geometry::intersection(
+    autoware_utils_geometry::to_polygon2d(main_object),
+    autoware_utils_geometry::to_polygon2d(sub_object), intersections);
 
-DetectedObject enclose_union_with_main_shape(
-  const DetectedObject & main_object, const std::vector<DetectedObject> & sub_objects,
-  bool keep_input_dimensions);
+  double total_area = 0.0;
+  for (const auto & polygon : intersections) {
+    total_area += std::abs(boost::geometry::area(polygon));
+  }
+  return total_area;
+}
+
+/**
+ * @brief Return whether two objects overlap by more than the minimum meaningful area.
+ *
+ * @param main_object Main object candidate.
+ * @param sub_object Sub object candidate.
+ * @return True when the intersection area is large enough to be treated as overlap.
+ */
+bool has_meaningful_overlap(const DetectedObject & main_object, const DetectedObject & sub_object)
+{
+  return get_intersection_area(main_object, sub_object) > kMinMeaningfulOverlapArea;
+}
 
 /**
  * @brief Compute the combined z range covered by one main object and its grouped sub objects.
@@ -311,7 +340,7 @@ GroupedFusionInputs classify_sub_objects_by_overlap(
   for (const auto & sub_object : sub_objects) {
     std::vector<std::size_t> overlapped_main_indices;
     for (std::size_t main_index = 0; main_index < main_objects.size(); ++main_index) {
-      if (get_intersection_area(main_objects.at(main_index), sub_object) > 1e-6) {
+      if (has_meaningful_overlap(main_objects.at(main_index), sub_object)) {
         overlapped_main_indices.push_back(main_index);
       }
     }
@@ -327,35 +356,6 @@ GroupedFusionInputs classify_sub_objects_by_overlap(
   }
 
   return inputs;
-}
-
-/**
- * @brief Build the main-based fused output from grouped overlap associations.
- *
- * @param main_objects Main objects that anchor the fused outputs.
- * @param grouped_inputs Grouped sub objects classified per main object.
- * @param keep_input_dimensions Whether to preserve the main object's base dimensions.
- * @return Main-based fused objects, preserving unmatched main objects as-is.
- */
-std::vector<DetectedObject> build_fused_main_objects(
-  const std::vector<DetectedObject> & main_objects, const GroupedFusionInputs & grouped_inputs,
-  const bool keep_input_dimensions)
-{
-  std::vector<DetectedObject> fused_main_objects;
-  fused_main_objects.reserve(main_objects.size());
-
-  for (std::size_t main_index = 0; main_index < main_objects.size(); ++main_index) {
-    const auto & main_object = main_objects.at(main_index);
-    const auto & grouped_subs = grouped_inputs.grouped_sub_objects.at(main_index);
-    if (grouped_subs.empty()) {
-      fused_main_objects.push_back(main_object);
-      continue;
-    }
-    fused_main_objects.push_back(
-      enclose_union_with_main_shape(main_object, grouped_subs, keep_input_dimensions));
-  }
-
-  return fused_main_objects;
 }
 
 /**
@@ -430,27 +430,6 @@ bool fit_shape_by_type(
 }
 
 /**
- * @brief Calculate the 2D footprint intersection area between one main and one sub object.
- *
- * @param main_object Main object candidate.
- * @param sub_object Sub object candidate.
- * @return Overlapped footprint area in square meters.
- */
-double get_intersection_area(const DetectedObject & main_object, const DetectedObject & sub_object)
-{
-  MultiPolygon2d intersections;
-  boost::geometry::intersection(
-    autoware_utils_geometry::to_polygon2d(main_object),
-    autoware_utils_geometry::to_polygon2d(sub_object), intersections);
-
-  double total_area = 0.0;
-  for (const auto & polygon : intersections) {
-    total_area += std::abs(boost::geometry::area(polygon));
-  }
-  return total_area;
-}
-
-/**
  * @brief Expand a main object so its shape encloses the main and grouped sub objects.
  *
  * @param main_object Main object that defines the output shape type and metadata.
@@ -480,6 +459,34 @@ DetectedObject enclose_union_with_main_shape(
   return output;
 }
 
+/**
+ * @brief Build the main-based fused output from grouped overlap associations.
+ *
+ * @param main_objects Main objects that anchor the fused outputs.
+ * @param grouped_inputs Grouped sub objects classified per main object.
+ * @param keep_input_dimensions Whether to preserve the main object's base dimensions.
+ * @return Main-based fused objects, preserving unmatched main objects as-is.
+ */
+std::vector<DetectedObject> build_fused_main_objects(
+  const std::vector<DetectedObject> & main_objects, const GroupedFusionInputs & grouped_inputs,
+  const bool keep_input_dimensions)
+{
+  std::vector<DetectedObject> fused_main_objects;
+  fused_main_objects.reserve(main_objects.size());
+
+  for (std::size_t main_index = 0; main_index < main_objects.size(); ++main_index) {
+    const auto & main_object = main_objects.at(main_index);
+    const auto & grouped_subs = grouped_inputs.grouped_sub_objects.at(main_index);
+    if (grouped_subs.empty()) {
+      fused_main_objects.push_back(main_object);
+      continue;
+    }
+    fused_main_objects.push_back(
+      enclose_union_with_main_shape(main_object, grouped_subs, keep_input_dimensions));
+  }
+
+  return fused_main_objects;
+}
 }  // namespace
 
 namespace autoware::object_merger
@@ -588,7 +595,6 @@ ObjectFusionMergerNode::FusionResult ObjectFusionMergerNode::fuse_objects(
     autoware_perception_msgs::build<DetectedObjects>().header(header).objects(
       grouped_inputs.other_objects)};
 }
-
 }  // namespace autoware::object_merger
 
 #include <rclcpp_components/register_node_macro.hpp>
