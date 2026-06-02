@@ -36,8 +36,6 @@ using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 
 void TrajectoryConcatenator::add_candidate(const CandidateTrajectories & msg)
 {
-  stop_watch_.tic(__func__);
-
   std::unordered_map<std::string, std::vector<CandidateTrajectory>> by_generator;
   by_generator.reserve(msg.generator_info.size());
   for (const auto & traj : msg.candidate_trajectories) {
@@ -52,15 +50,11 @@ void TrajectoryConcatenator::add_candidate(const CandidateTrajectories & msg)
           it != by_generator.end() ? std::move(it->second) : std::vector<CandidateTrajectory>{})
         .generator_info({generator_info});
   }
-
-  processing_time_ms_ += stop_watch_.toc(__func__, true);
 }
 
 CandidateTrajectories TrajectoryConcatenator::get_concatenated(
   const builtin_interfaces::msg::Time & current_time)
 {
-  stop_watch_.tic(__func__);
-
   std::vector<autoware_internal_planning_msgs::msg::CandidateTrajectory> trajectories;
   std::vector<autoware_internal_planning_msgs::msg::GeneratorInfo> generator_info;
 
@@ -95,16 +89,9 @@ CandidateTrajectories TrajectoryConcatenator::get_concatenated(
       generator_info.end(), pre_combine.generator_info.begin(), pre_combine.generator_info.end());
   }
 
-  processing_time_ms_ += stop_watch_.toc(__func__, true);
-
   return autoware_internal_planning_msgs::build<CandidateTrajectories>()
     .candidate_trajectories(trajectories)
     .generator_info(generator_info);
-}
-
-double TrajectoryConcatenator::take_processing_time()
-{
-  return std::exchange(processing_time_ms_, 0.0);
 }
 
 }  // namespace autoware::trajectory_concatenator

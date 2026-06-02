@@ -24,7 +24,6 @@
 
 #include <memory>
 #include <string>
-#include <utility>
 
 namespace autoware::trajectory_concatenator
 {
@@ -80,14 +79,6 @@ public:
     std::lock_guard<std::mutex> lock(concatenator_mutex_);
     return concatenator_ptr_->get_concatenated(time_now);
   };
-
-  /** @brief Returns the interface name and elapsed processing time in milliseconds, then resets it.
-   */
-  [[nodiscard]] std::pair<std::string, double> take_processing_time()
-  {
-    std::lock_guard<std::mutex> lock(concatenator_mutex_);
-    return {interface_name_, concatenator_ptr_->take_processing_time()};
-  }
 
 private:
   std::string interface_name_{"trajectory_concatenator"};
