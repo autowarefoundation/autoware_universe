@@ -15,7 +15,9 @@
 #ifndef AUTOWARE__MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
 #define AUTOWARE__MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
 
+#include <Eigen/Core>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <rclcpp/time.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -25,8 +27,6 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <std_msgs/msg/header.hpp>
-#include <Eigen/Core>
-#include <rclcpp/time.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/LaneletPath.h>
