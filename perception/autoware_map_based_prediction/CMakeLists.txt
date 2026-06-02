@@ -13,12 +13,26 @@ include_directories(
     ${EIGEN3_INCLUDE_DIR}
 )
 
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
 ament_auto_add_library(map_based_prediction_node SHARED
   src/map_based_prediction_node.cpp
-  src/path_generator.cpp
-  src/predictor_vru.cpp
-  src/debug.cpp
-  src/utils.cpp
+  lib/map_based_prediction_node/callbacks.cpp
+  lib/map_based_prediction_node/diagnostics.cpp
+  lib/path_generator/path_generator.cpp
+  lib/path_generator/frenet.cpp
+  lib/predictor_vehicle/predictor_vehicle.cpp
+  lib/predictor_vehicle/object_processing.cpp
+  lib/predictor_vehicle/maneuver_prediction.cpp
+  lib/predictor_vehicle/path_processing.cpp
+  lib/predictor_vehicle/debug.cpp
+  lib/predictor_vru/predictor_vru.cpp
+  lib/predictor_vru/history.cpp
+  lib/predictor_vru/traffic_signal.cpp
+  lib/predictor_vru/fence.cpp
+  lib/utils.cpp
 )
 
 target_link_libraries(map_based_prediction_node
