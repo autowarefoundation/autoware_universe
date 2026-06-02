@@ -213,10 +213,11 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
 
   // subscriber
-  std::function<void(const PointCloudMsgType::ConstSharedPtr msg)> sub_callback =
-    std::bind(&PointPaintingFusionNode::sub_callback, this, std::placeholders::_1);
   msg3d_sub_ = this->create_subscription<PointCloudMsgType>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS().keep_last(3), sub_callback);
+    "~/input/pointcloud", rclcpp::SensorDataQoS().keep_last(3),
+    [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(PointCloudMsgType) msg) {
+      this->sub_callback(std::move(msg));
+    });
 
   // publisher
   pub_ptr_ = this->create_publisher<DetectedObjects>("~/output/objects", rclcpp::QoS{1});
@@ -248,8 +249,9 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
   // create detector
   detector_ptr_ = std::make_unique<image_projection_based_fusion::PointPaintingTRT>(
     encoder_param, head_param, densification_param, config);
-  diagnostics_interface_ptr_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "pointpainting_trt");
+  diagnostics_interface_ptr_ = std::make_unique<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>(
+    this, "pointpainting_trt");
 
   // setup diagnostics
   {
@@ -261,7 +263,6 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     diagnostic_processing_time_updater_.add(
       "pointpainting_processing_time_status", this,
       &PointPaintingFusionNode::diagnosePointPaintingProcessingTime);
-    // msec -> sec
     diagnostic_processing_time_updater_.setPeriod(validation_callback_interval_ms / 1e3);
   }
 

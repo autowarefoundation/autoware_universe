@@ -19,6 +19,8 @@
 
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
+#include <autoware/agnocast_wrapper/tf2.hpp>
+
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -40,7 +42,7 @@ public:
   explicit PointCloudDensification(const autoware::lidar_centerpoint::DensificationParam & param);
 
   bool enqueuePointCloud(
-    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const tf2_ros::Buffer & tf_buffer);
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const autoware::agnocast_wrapper::Buffer & tf_buffer);
 
   double getCurrentTimestamp() const { return current_timestamp_; }
   Eigen::Affine3f getAffineWorldToCurrent() const { return affine_world2current_; }

@@ -39,7 +39,7 @@ PointPaintingTRT::PointPaintingTRT(
 }
 
 bool PointPaintingTRT::detect(
-  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const tf2_ros::Buffer & tf_buffer,
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const autoware::agnocast_wrapper::Buffer & tf_buffer,
   std::vector<autoware::lidar_centerpoint::Box3D> & det_boxes3d, bool & is_num_pillars_within_range)
 {
   is_num_pillars_within_range = true;
@@ -75,7 +75,7 @@ bool PointPaintingTRT::detect(
 }
 
 bool PointPaintingTRT::preprocess(
-  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const tf2_ros::Buffer & tf_buffer)
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const autoware::agnocast_wrapper::Buffer & tf_buffer)
 {
   bool is_success = vg_ptr_pp_->enqueuePointCloud(input_pointcloud_msg, tf_buffer);
   if (!is_success) {

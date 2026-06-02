@@ -42,7 +42,7 @@ VoxelGenerator::VoxelGenerator(
 }
 
 bool VoxelGenerator::enqueuePointCloud(
-  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const tf2_ros::Buffer & tf_buffer)
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const autoware::agnocast_wrapper::Buffer & tf_buffer)
 {
   return pd_ptr_->enqueuePointCloud(input_pointcloud_msg, tf_buffer);
 }

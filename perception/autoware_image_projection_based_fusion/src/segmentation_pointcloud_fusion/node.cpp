@@ -42,9 +42,23 @@ SegmentPointCloudFusionNode::SegmentPointCloudFusionNode(const rclcpp::NodeOptio
       this->get_logger(), "filter_semantic_label_target: %s %d", item.first.c_str(), item.second);
   }
   is_publish_debug_mask_ = declare_parameter<bool>("is_publish_debug_mask");
+#ifdef USE_AGNOCAST_ENABLED
+  if (is_publish_debug_mask_ && autoware::agnocast_wrapper::use_agnocast()) {
+    RCLCPP_WARN(
+      get_logger(),
+      "is_publish_debug_mask is not supported in Agnocast mode (image_transport requires "
+      "rclcpp::Node). Forcing is_publish_debug_mask=false.");
+    is_publish_debug_mask_ = false;
+  }
+  if (is_publish_debug_mask_) {
+    auto rclcpp_node = this->get_rclcpp_node();
+    pub_debug_mask_ptr_ = image_transport::create_publisher(rclcpp_node.get(), "~/debug/mask");
+  }
+#else
   pub_debug_mask_ptr_ = image_transport::create_publisher(this, "~/debug/mask");
+#endif
 
-  // publisher
+  // publisher (subscription is set up by the FusionNode base via agnocast_wrapper)
   pub_ptr_ = this->create_publisher<PointCloudMsgType>("output", rclcpp::QoS{1});
 }
 

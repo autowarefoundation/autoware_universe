@@ -36,17 +36,17 @@ namespace autoware::image_projection_based_fusion
 
 template <class Msg3D, class Msg2D, class ExportObj>
 NaiveMatchingStrategy<Msg3D, Msg2D, ExportObj>::NaiveMatchingStrategy(
-  std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && ros2_parent_node,
+  std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && parent_node,
   const std::unordered_map<std::size_t, double> & id_to_offset_map)
-: ros2_parent_node_(std::move(ros2_parent_node)), id_to_offset_map_(id_to_offset_map)
+: parent_node_(std::move(parent_node)), id_to_offset_map_(id_to_offset_map)
 {
-  if (!ros2_parent_node_) {
-    throw std::runtime_error("ros2_parent_node is nullptr in NaiveMatchingStrategy constructor.");
+  if (!parent_node_) {
+    throw std::runtime_error("parent_node is nullptr in NaiveMatchingStrategy constructor.");
   }
 
-  threshold_ = ros2_parent_node_->template declare_parameter<double>("matching_strategy.threshold");
+  threshold_ = parent_node_->template declare_parameter<double>("matching_strategy.threshold");
 
-  RCLCPP_INFO(ros2_parent_node_->get_logger(), "Utilize naive matching strategy for fusion nodes.");
+  RCLCPP_INFO(parent_node_->get_logger(), "Utilize naive matching strategy for fusion nodes.");
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
@@ -66,7 +66,7 @@ NaiveMatchingStrategy<Msg3D, Msg2D, ExportObj>::match_rois_to_collector(
         auto offset_it = id_to_offset_map_.find(matching_context->rois_id);
         if (offset_it == id_to_offset_map_.end()) {
           RCLCPP_ERROR(
-            ros2_parent_node_->get_logger(), "Missing offset for rois_id: %zu",
+            parent_node_->get_logger(), "Missing offset for rois_id: %zu",
             matching_context->rois_id);
           continue;
         }
@@ -118,7 +118,7 @@ void NaiveMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
   const std::shared_ptr<MatchingContextBase> & matching_context)
 {
   if (!matching_context) {
-    RCLCPP_ERROR(ros2_parent_node_->get_logger(), "matching_context is nullptr!");
+    RCLCPP_ERROR(parent_node_->get_logger(), "matching_context is nullptr!");
     return;
   }
 
@@ -134,7 +134,7 @@ void NaiveMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
     auto offset_it = id_to_offset_map_.find(rois_matching_context->rois_id);
     if (offset_it == id_to_offset_map_.end()) {
       RCLCPP_ERROR(
-        ros2_parent_node_->get_logger(), "Missing offset for rois_id: %zu",
+        parent_node_->get_logger(), "Missing offset for rois_id: %zu",
         rois_matching_context->rois_id);
       return;
     }
@@ -147,19 +147,19 @@ void NaiveMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
 
 template <class Msg3D, class Msg2D, class ExportObj>
 AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::AdvancedMatchingStrategy(
-  std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && ros2_parent_node,
+  std::shared_ptr<FusionNode<Msg3D, Msg2D, ExportObj>> && parent_node,
   const std::unordered_map<std::size_t, double> & id_to_offset_map)
-: ros2_parent_node_(std::move(ros2_parent_node)), id_to_offset_map_(id_to_offset_map)
+: parent_node_(std::move(parent_node)), id_to_offset_map_(id_to_offset_map)
 {
-  if (!ros2_parent_node_) {
+  if (!parent_node_) {
     throw std::runtime_error(
-      "ros2_parent_node is nullptr in AdvancedMatchingStrategy constructor.");
+      "parent_node is nullptr in AdvancedMatchingStrategy constructor.");
   }
 
   msg3d_noise_window_ =
-    ros2_parent_node_->template declare_parameter<double>("matching_strategy.msg3d_noise_window");
+    parent_node_->template declare_parameter<double>("matching_strategy.msg3d_noise_window");
   auto rois_timestamp_noise_window =
-    ros2_parent_node_->template declare_parameter<std::vector<double>>(
+    parent_node_->template declare_parameter<std::vector<double>>(
       "matching_strategy.rois_timestamp_noise_window");
 
   auto rois_number = id_to_offset_map_.size();
@@ -175,7 +175,7 @@ AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::AdvancedMatchingStrategy(
   }
 
   RCLCPP_INFO(
-    ros2_parent_node_->get_logger(), "Utilize advanced matching strategy for fusion nodes.");
+    parent_node_->get_logger(), "Utilize advanced matching strategy for fusion nodes.");
 }
 
 template <class Msg3D, class Msg2D, class ExportObj>
@@ -189,7 +189,7 @@ AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::match_rois_to_collector(
 
   if (offset_it == id_to_offset_map_.end() || noise_it == id_to_noise_window_map_.end()) {
     RCLCPP_ERROR(
-      ros2_parent_node_->get_logger(), "Missing offset or noise window for rois_id: %zu",
+      parent_node_->get_logger(), "Missing offset or noise window for rois_id: %zu",
       matching_context->rois_id);
     return std::nullopt;
   }
@@ -221,7 +221,7 @@ AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::match_msg3d_to_collector(
   const std::shared_ptr<Msg3dMatchingContext> & matching_context)
 {
   auto concatenation_info =
-    ros2_parent_node_->find_concatenation_info(matching_context->msg3d_timestamp);
+    parent_node_->find_concatenation_info(matching_context->msg3d_timestamp);
 
   double offset = get_concatenation_offset(matching_context->msg3d_timestamp, concatenation_info);
   double adjusted_timestamp = matching_context->msg3d_timestamp - offset;
@@ -249,7 +249,7 @@ void AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
   const std::shared_ptr<MatchingContextBase> & matching_context)
 {
   if (!matching_context) {
-    RCLCPP_ERROR(ros2_parent_node_->get_logger(), "matching_context is nullptr!");
+    RCLCPP_ERROR(parent_node_->get_logger(), "matching_context is nullptr!");
     return;
   }
 
@@ -257,7 +257,7 @@ void AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
     auto msg3d_matching_context =
       std::dynamic_pointer_cast<Msg3dMatchingContext>(matching_context)) {
     auto concatenated_status =
-      ros2_parent_node_->find_concatenation_info(msg3d_matching_context->msg3d_timestamp);
+      parent_node_->find_concatenation_info(msg3d_matching_context->msg3d_timestamp);
     double offset =
       get_concatenation_offset(msg3d_matching_context->msg3d_timestamp, concatenated_status);
 
@@ -271,7 +271,7 @@ void AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
 
     if (offset_it == id_to_offset_map_.end() || noise_it == id_to_noise_window_map_.end()) {
       RCLCPP_ERROR(
-        ros2_parent_node_->get_logger(), "Missing offset or noise window for rois_id: %zu",
+        parent_node_->get_logger(), "Missing offset or noise window for rois_id: %zu",
         rois_matching_context->rois_id);
       return;
     }
@@ -285,7 +285,8 @@ void AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::set_collector_info(
 template <class Msg3D, class Msg2D, class ExportObj>
 double AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::get_concatenation_offset(
   const double & msg3d_timestamp,
-  const std::optional<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr> &
+  const std::optional<
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)> &
     concatenation_info_msg)
 {
   double offset = 0.0;
@@ -324,7 +325,7 @@ double AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::get_concatenation_offs
   } else {
     if (database_created_) {
       offset = compute_offset(msg3d_timestamp);
-      RCLCPP_DEBUG(ros2_parent_node_->get_logger(), "Using database, computed offset: %f", offset);
+      RCLCPP_DEBUG(parent_node_->get_logger(), "Using database, computed offset: %f", offset);
     } else {
       offset = 0.0;  // Database not created yet, expect the concatenation is successful
     }

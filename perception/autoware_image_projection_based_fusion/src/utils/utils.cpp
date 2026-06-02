@@ -72,7 +72,7 @@ bool check_camera_info(const sensor_msgs::msg::CameraInfo & camera_info)
 }
 
 std::optional<geometry_msgs::msg::TransformStamped> getTransformStamped(
-  const tf2_ros::Buffer & tf_buffer, const std::string & target_frame_id,
+  const autoware::agnocast_wrapper::Buffer & tf_buffer, const std::string & target_frame_id,
   const std::string & source_frame_id, const rclcpp::Time & time)
 {
   try {
@@ -159,7 +159,7 @@ void closest_cluster(
 void updateOutputFusedObjects(
   std::vector<DetectedObjectWithFeature> & output_objs, std::vector<PointCloudMsgType> & clusters,
   const PointCloudMsgType & in_cloud, const std_msgs::msg::Header & in_roi_header,
-  const tf2_ros::Buffer & tf_buffer, const int min_cluster_size, const int max_cluster_size,
+  const autoware::agnocast_wrapper::Buffer & tf_buffer, const int min_cluster_size, const int max_cluster_size,
   const float cluster_2d_tolerance, const double max_object_size,
   std::vector<DetectedObjectWithFeature> & output_fused_objects)
 {
