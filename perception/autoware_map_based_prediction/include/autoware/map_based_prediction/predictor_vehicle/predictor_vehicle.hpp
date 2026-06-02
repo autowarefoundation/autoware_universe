@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_
 #define AUTOWARE__MAP_BASED_PREDICTION__PREDICTOR_VEHICLE__PREDICTOR_VEHICLE_HPP_
 
-#include "autoware/map_based_prediction/predictor_vehicle/debug.hpp"
 #include "autoware/map_based_prediction/predictor_vehicle/maneuver_prediction.hpp"
 #include "autoware/map_based_prediction/predictor_vehicle/object_processing.hpp"
 #include "autoware/map_based_prediction/predictor_vehicle/path_processing.hpp"
@@ -34,7 +33,6 @@
 
 #include <memory>
 #include <optional>
-#include <string>
 
 namespace autoware::map_based_prediction
 {

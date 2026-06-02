@@ -21,6 +21,7 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+#include <tf2/utils.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 
 #include <boost/geometry.hpp>

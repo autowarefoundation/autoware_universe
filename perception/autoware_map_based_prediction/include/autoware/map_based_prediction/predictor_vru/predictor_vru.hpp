@@ -28,10 +28,8 @@
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_traffic_rules/TrafficRules.h>
 
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace autoware::map_based_prediction

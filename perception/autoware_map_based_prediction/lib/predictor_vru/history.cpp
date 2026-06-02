@@ -17,6 +17,7 @@
 #include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 

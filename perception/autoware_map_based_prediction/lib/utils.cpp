@@ -19,7 +19,10 @@
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+#include <tf2/utils.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>

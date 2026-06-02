@@ -23,7 +23,6 @@
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
-#include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <map>
