@@ -60,7 +60,7 @@ void PredictorVehicle::removeOldHistory(double current_time, double buffer_time)
 
 std::optional<PredictedObject> PredictorVehicle::predict(
   const std_msgs::msg::Header & header, const TrackedObject & object, double objects_detected_time,
-  visualization_msgs::msg::MarkerArray & debug_markers)
+  visualization_msgs::msg::MarkerArray * debug_markers)
 {
   return path_processor_.predict(header, object, objects_detected_time, debug_markers);
 }

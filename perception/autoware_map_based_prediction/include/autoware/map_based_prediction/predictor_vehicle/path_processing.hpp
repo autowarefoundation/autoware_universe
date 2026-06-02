@@ -94,7 +94,7 @@ public:
 
   std::optional<PredictedObject> predict(
     const std_msgs::msg::Header & header, const TrackedObject & object,
-    double objects_detected_time, visualization_msgs::msg::MarkerArray & debug_markers);
+    double objects_detected_time, visualization_msgs::msg::MarkerArray * debug_markers);
 
 private:
   std::optional<size_t> searchProperStartingRefPathIndex(

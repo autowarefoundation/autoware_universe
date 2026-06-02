@@ -167,7 +167,8 @@ void ObjectsCallback::objectsCallback(const TrackedObjects::ConstSharedPtr in_ob
       case ObjectClassification::MOTORCYCLE:
       case ObjectClassification::TRUCK: {
         const auto predicted_object_opt = state_.predictor_vehicle->predict(
-          output.header, transformed_object, objects_detected_time, debug_markers);
+          output.header, transformed_object, objects_detected_time,
+          pub_debug_markers_ ? &debug_markers : nullptr);
         if (predicted_object_opt) output.objects.push_back(predicted_object_opt.value());
         break;
       }

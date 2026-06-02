@@ -198,7 +198,7 @@ void PathProcessor::clearLRUCache()
 
 std::optional<PredictedObject> PathProcessor::predict(
   const std_msgs::msg::Header & header, const TrackedObject & transformed_object,
-  const double objects_detected_time, visualization_msgs::msg::MarkerArray & debug_markers)
+  const double objects_detected_time, visualization_msgs::msg::MarkerArray * debug_markers)
 {
   auto object = transformed_object;
 
@@ -248,15 +248,14 @@ std::optional<PredictedObject> PathProcessor::predict(
     return predicted_object_out_of_lane;
   }
 
-  {
+  if (debug_markers) {
     const auto max_prob_path = std::max_element(
       ref_paths.begin(), ref_paths.end(),
       [](const PredictedRefPath & a, const PredictedRefPath & b) {
         return a.probability < b.probability;
       });
-    const auto debug_marker =
-      DebugModule::getDebugMarker(object, max_prob_path->maneuver, debug_markers.markers.size());
-    debug_markers.markers.push_back(debug_marker);
+    debug_markers->markers.push_back(
+      DebugModule::getDebugMarker(object, max_prob_path->maneuver, debug_markers->markers.size()));
   }
 
   TrackedObject yaw_fixed_object = object;
