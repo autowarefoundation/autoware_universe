@@ -27,6 +27,7 @@
 
 #include <cmath>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace autoware::detected_object_validation
