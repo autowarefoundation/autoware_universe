@@ -199,15 +199,15 @@ MultiCameraFusionResult MultiCameraFusion::fuse(
   record_arr_set_.insert(utils::FusionRecordArr{cam_info.header, cam_info, rois, signals});
 
   MultiCameraFusionResult result;
-  std::map<IdType, utils::FusionRecord> grouped_record_map;
   std::map<IdType, utils::FusionRecord> fused_record_map =
     multi_camera_fusion(record_arr_set_, config_.message_lifespan);
   result.unmapped_traffic_light_ids =
     find_unmapped_traffic_light_ids(fused_record_map, traffic_light_id_to_regulatory_ele_id_);
-  group_fusion(fused_record_map, grouped_record_map, result.conflicted_regulatory_element_status);
+  GroupFusionResult group_result = group_fusion(fused_record_map);
+  result.conflicted_regulatory_element_status = group_result.conflicts;
 
   NewSignalArrayType msg_out;
-  convert_output_msg(grouped_record_map, msg_out);
+  convert_output_msg(group_result.grouped_record_map, msg_out);
   msg_out.stamp = cam_info.header.stamp;
   result.traffic_light_groups = msg_out;
 
@@ -263,20 +263,17 @@ std::map<MultiCameraFusion::IdType, utils::FusionRecord> multi_camera_fusion(
   return fused_record_map;
 }
 
-void MultiCameraFusion::group_fusion(
-  const std::map<IdType, utils::FusionRecord> & fused_record_map,
-  std::map<IdType, utils::FusionRecord> & grouped_record_map,
-  std::vector<ConflictInfo> & conflicted_regulatory_element_status)
+GroupFusionResult MultiCameraFusion::group_fusion(
+  const std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
-  grouped_record_map.clear();
-
   // Stage 1: Accumulate evidence from all fused records
   const std::map<IdType, GroupFusionInfo> group_fusion_info_map =
     accumulate_group_evidence(fused_record_map);
 
   // Stage 2: Determine the best state for each group from the accumulated evidence
-  conflicted_regulatory_element_status =
-    determine_best_group_state(group_fusion_info_map, grouped_record_map);
+  GroupFusionResult result;
+  result.conflicts = determine_best_group_state(group_fusion_info_map, result.grouped_record_map);
+  return result;
 }
 
 GroupFusionInfoMap MultiCameraFusion::accumulate_group_evidence(

@@ -51,6 +51,13 @@ struct ConflictInfo
 using GroupFusionInfoMap =
   std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, GroupFusionInfo>;
 
+struct GroupFusionResult
+{
+  std::map<tier4_perception_msgs::msg::TrafficLightRoi::_traffic_light_id_type, utils::FusionRecord>
+    grouped_record_map;
+  std::vector<ConflictInfo> conflicts;
+};
+
 struct MultiCameraFusionConfig
 {
   /*
@@ -97,10 +104,7 @@ public:
     const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals);
 
 private:
-  void group_fusion(
-    const std::map<IdType, utils::FusionRecord> & fused_record_map,
-    std::map<IdType, utils::FusionRecord> & grouped_record_map,
-    std::vector<ConflictInfo> & conflicted_regulatory_element_status);
+  GroupFusionResult group_fusion(const std::map<IdType, utils::FusionRecord> & fused_record_map);
 
   /**
    * @brief Accumulates log-odds evidence for each traffic light group from individual fused
