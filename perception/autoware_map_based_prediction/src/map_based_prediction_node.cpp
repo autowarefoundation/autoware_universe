@@ -477,7 +477,6 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   objects_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   AUTOWARE_SUBSCRIPTION_OPTIONS objects_sub_options{};
   objects_sub_options.callback_group = objects_callback_group_;
-  // cppcheck-suppress unknownMacro
   sub_objects_ = AUTOWARE_CREATE_SUBSCRIPTION(
     TrackedObjects, "~/input/objects", 1,
     std::bind(&MapBasedPredictionNode::objectsCallback, this, std::placeholders::_1),
