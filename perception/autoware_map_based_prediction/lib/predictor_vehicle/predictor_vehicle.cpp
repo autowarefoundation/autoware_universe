@@ -29,51 +29,9 @@ PredictorVehicle::PredictorVehicle(rclcpp::Node & node)
 void PredictorVehicle::setParams(const Params & params)
 {
   params_ = params;
-
-  {
-    ObjectTracker::Params ot_params;
-    ot_params.dist_threshold_for_searching_lanelet = params.dist_threshold_for_searching_lanelet;
-    ot_params.delta_yaw_threshold_for_searching_lanelet =
-      params.delta_yaw_threshold_for_searching_lanelet;
-    ot_params.sigma_lateral_offset = params.sigma_lateral_offset;
-    ot_params.sigma_yaw_angle_deg = params.sigma_yaw_angle_deg;
-    ot_params.cutoff_freq_of_velocity_lpf = params.cutoff_freq_of_velocity_lpf;
-    object_tracker_.setParams(ot_params);
-  }
-
-  {
-    ManeuverPredictor::Params mp_params;
-    mp_params.lane_change_detection_method = params.lane_change_detection_method;
-    mp_params.dist_threshold_to_bound = params.dist_threshold_to_bound;
-    mp_params.time_threshold_to_bound = params.time_threshold_to_bound;
-    mp_params.dist_ratio_threshold_to_left_bound = params.dist_ratio_threshold_to_left_bound;
-    mp_params.dist_ratio_threshold_to_right_bound = params.dist_ratio_threshold_to_right_bound;
-    mp_params.diff_dist_threshold_to_left_bound = params.diff_dist_threshold_to_left_bound;
-    mp_params.diff_dist_threshold_to_right_bound = params.diff_dist_threshold_to_right_bound;
-    mp_params.num_continuous_state_transition = params.num_continuous_state_transition;
-    mp_params.history_time_length = params.history_time_length;
-    maneuver_predictor_.setParams(mp_params);
-  }
-
-  {
-    PathProcessor::Params pp_params;
-    pp_params.lateral_control_time_horizon = params.lateral_control_time_horizon;
-    pp_params.prediction_time_horizon = params.prediction_time_horizon;
-    pp_params.prediction_time_horizon_rate_for_validate_lane_length =
-      params.prediction_time_horizon_rate_for_validate_lane_length;
-    pp_params.prediction_sampling_time_interval = params.prediction_sampling_time_interval;
-    pp_params.min_velocity_for_map_based_prediction = params.min_velocity_for_map_based_prediction;
-    pp_params.reference_path_resolution = params.reference_path_resolution;
-    pp_params.check_lateral_acceleration_constraints =
-      params.check_lateral_acceleration_constraints;
-    pp_params.max_lateral_accel = params.max_lateral_accel;
-    pp_params.min_acceleration_before_curve = params.min_acceleration_before_curve;
-    pp_params.use_vehicle_acceleration = params.use_vehicle_acceleration;
-    pp_params.speed_limit_multiplier = params.speed_limit_multiplier;
-    pp_params.acceleration_exponential_half_life = params.acceleration_exponential_half_life;
-    pp_params.consider_only_routable_neighbours = params.consider_only_routable_neighbours;
-    path_processor_.setParams(pp_params);
-  }
+  object_tracker_.setParams(params.object_tracker);
+  maneuver_predictor_.setParams(params.maneuver_predictor);
+  path_processor_.setParams(params.path_processor);
 }
 
 void PredictorVehicle::setLaneletMap(

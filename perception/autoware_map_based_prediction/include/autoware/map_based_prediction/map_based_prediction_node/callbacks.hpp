@@ -16,6 +16,7 @@
 #define AUTOWARE__MAP_BASED_PREDICTION__MAP_BASED_PREDICTION_NODE__CALLBACKS_HPP_
 
 #include "autoware/map_based_prediction/data_structure.hpp"
+#include "autoware/map_based_prediction/params.hpp"
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
 #include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
 #include "autoware/map_based_prediction/predictor_vru/predictor_vru.hpp"
@@ -37,14 +38,7 @@ class Diagnostics;
 
 struct NodeState
 {
-  struct Params
-  {
-    double object_buffer_time_length{};
-    bool remember_lost_crosswalk_users{};
-    double prediction_time_horizon_unknown{};
-  };
-
-  Params params;
+  NodeParams params;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr;
   std::shared_ptr<PredictorVehicle> predictor_vehicle;
   std::shared_ptr<PredictorVru> predictor_vru;

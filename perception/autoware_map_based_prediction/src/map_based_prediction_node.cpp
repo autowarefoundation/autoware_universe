@@ -14,6 +14,8 @@
 
 #include "map_based_prediction_node.hpp"
 
+#include "autoware/map_based_prediction/params.hpp"
+
 #include <autoware_utils/ros/update_param.hpp>
 
 #include <functional>
@@ -28,112 +30,110 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
 : Node("map_based_prediction", node_options)
 {
   // --- Prediction time horizons ---
-  PredictionTimeHorizon prediction_time_horizon;
-  prediction_time_horizon.vehicle = declare_parameter<double>("prediction_time_horizon.vehicle");
-  prediction_time_horizon.pedestrian =
-    declare_parameter<double>("prediction_time_horizon.pedestrian");
-  prediction_time_horizon.unknown = declare_parameter<double>("prediction_time_horizon.unknown");
+  PredictionTimeHorizonParams time_horizon;
+  time_horizon.vehicle = declare_parameter<double>("prediction_time_horizon.vehicle");
+  time_horizon.pedestrian = declare_parameter<double>("prediction_time_horizon.pedestrian");
+  time_horizon.unknown = declare_parameter<double>("prediction_time_horizon.unknown");
 
-  const double prediction_sampling_time_interval =
-    declare_parameter<double>("prediction_sampling_delta_time");
+  const double prediction_sampling_dt = declare_parameter<double>("prediction_sampling_delta_time");
 
   // --- Vehicle predictor ---
   PredictorVehicle::Params vehicle_params;
-  vehicle_params.prediction_time_horizon = prediction_time_horizon.vehicle;
-  vehicle_params.prediction_sampling_time_interval = prediction_sampling_time_interval;
-  vehicle_params.lateral_control_time_horizon =
-    declare_parameter<double>("lateral_control_time_horizon");
-  vehicle_params.min_velocity_for_map_based_prediction =
-    declare_parameter<double>("min_velocity_for_map_based_prediction");
-  vehicle_params.dist_threshold_for_searching_lanelet =
-    declare_parameter<double>("dist_threshold_for_searching_lanelet");
-  vehicle_params.delta_yaw_threshold_for_searching_lanelet =
-    declare_parameter<double>("delta_yaw_threshold_for_searching_lanelet");
-  vehicle_params.sigma_lateral_offset = declare_parameter<double>("sigma_lateral_offset");
-  vehicle_params.sigma_yaw_angle_deg = declare_parameter<double>("sigma_yaw_angle_deg");
-  vehicle_params.history_time_length = declare_parameter<double>("history_time_length");
-  vehicle_params.check_lateral_acceleration_constraints =
-    declare_parameter<bool>("check_lateral_acceleration_constraints");
-  vehicle_params.max_lateral_accel = declare_parameter<double>("max_lateral_accel");
-  vehicle_params.min_acceleration_before_curve =
-    declare_parameter<double>("min_acceleration_before_curve");
-
   {
-    vehicle_params.lane_change_detection_method =
-      declare_parameter<std::string>("lane_change_detection.method");
-    vehicle_params.dist_threshold_to_bound = declare_parameter<double>(
-      "lane_change_detection.time_to_change_lane.dist_threshold_for_lane_change_detection");
-    vehicle_params.time_threshold_to_bound = declare_parameter<double>(
-      "lane_change_detection.time_to_change_lane.time_threshold_for_lane_change_detection");
-    vehicle_params.cutoff_freq_of_velocity_lpf = declare_parameter<double>(
+    auto & ot = vehicle_params.object_tracker;
+    ot.dist_threshold_for_searching_lanelet =
+      declare_parameter<double>("dist_threshold_for_searching_lanelet");
+    ot.delta_yaw_threshold_for_searching_lanelet =
+      declare_parameter<double>("delta_yaw_threshold_for_searching_lanelet");
+    ot.sigma_lateral_offset = declare_parameter<double>("sigma_lateral_offset");
+    ot.sigma_yaw_angle_deg = declare_parameter<double>("sigma_yaw_angle_deg");
+    ot.cutoff_freq_of_velocity_lpf = declare_parameter<double>(
       "lane_change_detection.time_to_change_lane.cutoff_freq_of_velocity_for_lane_change_"
       "detection");
-    vehicle_params.dist_ratio_threshold_to_left_bound = declare_parameter<double>(
+  }
+  {
+    auto & mp = vehicle_params.maneuver_predictor;
+    mp.history_time_length = declare_parameter<double>("history_time_length");
+    mp.lane_change_detection_method =
+      declare_parameter<std::string>("lane_change_detection.method");
+    mp.dist_threshold_to_bound = declare_parameter<double>(
+      "lane_change_detection.time_to_change_lane.dist_threshold_for_lane_change_detection");
+    mp.time_threshold_to_bound = declare_parameter<double>(
+      "lane_change_detection.time_to_change_lane.time_threshold_for_lane_change_detection");
+    mp.dist_ratio_threshold_to_left_bound = declare_parameter<double>(
       "lane_change_detection.lat_diff_distance.dist_ratio_threshold_to_left_bound");
-    vehicle_params.dist_ratio_threshold_to_right_bound = declare_parameter<double>(
+    mp.dist_ratio_threshold_to_right_bound = declare_parameter<double>(
       "lane_change_detection.lat_diff_distance.dist_ratio_threshold_to_right_bound");
-    vehicle_params.diff_dist_threshold_to_left_bound = declare_parameter<double>(
+    mp.diff_dist_threshold_to_left_bound = declare_parameter<double>(
       "lane_change_detection.lat_diff_distance.diff_dist_threshold_to_left_bound");
-    vehicle_params.diff_dist_threshold_to_right_bound = declare_parameter<double>(
+    mp.diff_dist_threshold_to_right_bound = declare_parameter<double>(
       "lane_change_detection.lat_diff_distance.diff_dist_threshold_to_right_bound");
-    vehicle_params.num_continuous_state_transition =
+    mp.num_continuous_state_transition =
       declare_parameter<int>("lane_change_detection.num_continuous_state_transition");
-    vehicle_params.consider_only_routable_neighbours =
+  }
+  {
+    auto & pp = vehicle_params.path_processor;
+    pp.prediction_time_horizon = time_horizon.vehicle;
+    pp.prediction_sampling_time_interval = prediction_sampling_dt;
+    pp.lateral_control_time_horizon = declare_parameter<double>("lateral_control_time_horizon");
+    pp.min_velocity_for_map_based_prediction =
+      declare_parameter<double>("min_velocity_for_map_based_prediction");
+    pp.reference_path_resolution = declare_parameter<double>("reference_path_resolution");
+    pp.prediction_time_horizon_rate_for_validate_lane_length =
+      declare_parameter<double>("prediction_time_horizon_rate_for_validate_shoulder_lane_length");
+    pp.check_lateral_acceleration_constraints =
+      declare_parameter<bool>("check_lateral_acceleration_constraints");
+    pp.max_lateral_accel = declare_parameter<double>("max_lateral_accel");
+    pp.min_acceleration_before_curve = declare_parameter<double>("min_acceleration_before_curve");
+    pp.use_vehicle_acceleration = declare_parameter<bool>("use_vehicle_acceleration");
+    pp.speed_limit_multiplier = declare_parameter<double>("speed_limit_multiplier");
+    pp.acceleration_exponential_half_life =
+      declare_parameter<double>("acceleration_exponential_half_life");
+    pp.consider_only_routable_neighbours =
       declare_parameter<bool>("lane_change_detection.consider_only_routable_neighbours");
   }
-
-  vehicle_params.reference_path_resolution = declare_parameter<double>("reference_path_resolution");
-  vehicle_params.prediction_time_horizon_rate_for_validate_lane_length =
-    declare_parameter<double>("prediction_time_horizon_rate_for_validate_shoulder_lane_length");
-  vehicle_params.use_vehicle_acceleration = declare_parameter<bool>("use_vehicle_acceleration");
-  vehicle_params.speed_limit_multiplier = declare_parameter<double>("speed_limit_multiplier");
-  vehicle_params.acceleration_exponential_half_life =
-    declare_parameter<double>("acceleration_exponential_half_life");
-
   state_.predictor_vehicle = std::make_shared<PredictorVehicle>(*this);
   state_.predictor_vehicle->setParams(vehicle_params);
 
   // --- VRU predictor ---
   state_.predictor_vru = std::make_shared<PredictorVru>(*this);
-
   {
-    bool match_lost_and_appeared_crosswalk_users =
-      declare_parameter<bool>("use_crosswalk_user_history.match_lost_and_appeared_users");
-    double min_crosswalk_user_velocity = declare_parameter<double>("min_crosswalk_user_velocity");
-    double max_crosswalk_user_delta_yaw_threshold_for_lanelet =
+    PredictorVru::Params vru_params;
+    vru_params.prediction_time_horizon = time_horizon.pedestrian;
+    vru_params.prediction_sampling_time_interval = prediction_sampling_dt;
+    vru_params.min_crosswalk_user_velocity =
+      declare_parameter<double>("min_crosswalk_user_velocity");
+    vru_params.max_crosswalk_user_delta_yaw_threshold_for_lanelet =
       declare_parameter<double>("max_crosswalk_user_delta_yaw_threshold_for_lanelet");
-    double max_crosswalk_user_on_road_distance =
+    vru_params.max_crosswalk_user_on_road_distance =
       declare_parameter<double>("max_crosswalk_user_on_road_distance");
-    bool use_crosswalk_signal =
+    vru_params.use_crosswalk_signal =
       declare_parameter<bool>("crosswalk_with_signal.use_crosswalk_signal");
-    double threshold_velocity_assumed_as_stopping =
+    vru_params.traffic_signal.threshold_velocity_assumed_as_stopping =
       declare_parameter<double>("crosswalk_with_signal.threshold_velocity_assumed_as_stopping");
-    double crossing_intention_duration = declare_parameter<double>("crossing_intention_duration");
-    double no_crossing_intention_duration =
-      declare_parameter<double>("no_crossing_intention_duration");
-    std::vector<double> distance_set_for_no_intention_to_walk =
+    vru_params.traffic_signal.distance_set_for_no_intention_to_walk =
       declare_parameter<std::vector<double>>(
         "crosswalk_with_signal.distance_set_for_no_intention_to_walk");
-    std::vector<double> timeout_set_for_no_intention_to_walk =
+    vru_params.traffic_signal.timeout_set_for_no_intention_to_walk =
       declare_parameter<std::vector<double>>(
         "crosswalk_with_signal.timeout_set_for_no_intention_to_walk");
-    state_.predictor_vru->setParameters(
-      match_lost_and_appeared_crosswalk_users, min_crosswalk_user_velocity,
-      max_crosswalk_user_delta_yaw_threshold_for_lanelet, max_crosswalk_user_on_road_distance,
-      use_crosswalk_signal, threshold_velocity_assumed_as_stopping,
-      distance_set_for_no_intention_to_walk, timeout_set_for_no_intention_to_walk,
-      prediction_sampling_time_interval, prediction_time_horizon.pedestrian,
-      crossing_intention_duration, no_crossing_intention_duration);
+    vru_params.history.match_lost_and_appeared =
+      declare_parameter<bool>("use_crosswalk_user_history.match_lost_and_appeared_users");
+    vru_params.history.crossing_intention_duration =
+      declare_parameter<double>("crossing_intention_duration");
+    vru_params.history.no_crossing_intention_duration =
+      declare_parameter<double>("no_crossing_intention_duration");
+    state_.predictor_vru->setParams(vru_params);
   }
 
   // --- Path generator for unknown-class objects ---
-  state_.path_generator = std::make_shared<PathGenerator>(prediction_sampling_time_interval);
+  state_.path_generator = std::make_shared<PathGenerator>(prediction_sampling_dt);
 
-  // --- Shared state params ---
+  // --- Node params ---
   state_.params.object_buffer_time_length = declare_parameter<double>("object_buffer_time_length");
   state_.params.remember_lost_crosswalk_users =
     declare_parameter<bool>("use_crosswalk_user_history.remember_lost_users");
-  state_.params.prediction_time_horizon_unknown = prediction_time_horizon.unknown;
+  state_.params.prediction_time_horizon_unknown = time_horizon.unknown;
 
   // --- Callbacks ---
   map_callback_ = std::make_unique<MapCallback>(this, state_);
@@ -204,17 +204,16 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   using autoware_utils::update_param;
 
   auto vehicle_params = state_.predictor_vehicle->getParams();
-  update_param(parameters, "max_lateral_accel", vehicle_params.max_lateral_accel);
-  update_param(
-    parameters, "min_acceleration_before_curve", vehicle_params.min_acceleration_before_curve);
+  auto & pp = vehicle_params.path_processor;
+  update_param(parameters, "max_lateral_accel", pp.max_lateral_accel);
+  update_param(parameters, "min_acceleration_before_curve", pp.min_acceleration_before_curve);
   update_param(
     parameters, "check_lateral_acceleration_constraints",
-    vehicle_params.check_lateral_acceleration_constraints);
-  update_param(parameters, "use_vehicle_acceleration", vehicle_params.use_vehicle_acceleration);
-  update_param(parameters, "speed_limit_multiplier", vehicle_params.speed_limit_multiplier);
+    pp.check_lateral_acceleration_constraints);
+  update_param(parameters, "use_vehicle_acceleration", pp.use_vehicle_acceleration);
+  update_param(parameters, "speed_limit_multiplier", pp.speed_limit_multiplier);
   update_param(
-    parameters, "acceleration_exponential_half_life",
-    vehicle_params.acceleration_exponential_half_life);
+    parameters, "acceleration_exponential_half_life", pp.acceleration_exponential_half_life);
   state_.predictor_vehicle->setParams(vehicle_params);
 
   rcl_interfaces::msg::SetParametersResult result;

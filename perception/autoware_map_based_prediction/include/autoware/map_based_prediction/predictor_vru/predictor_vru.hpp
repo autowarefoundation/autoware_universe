@@ -40,40 +40,38 @@ namespace autoware::map_based_prediction
 class PredictorVru
 {
 public:
+  struct Params
+  {
+    // Path generation
+    double prediction_time_horizon{10.0};
+    double prediction_sampling_time_interval{0.5};
+    // Movement thresholds
+    double min_crosswalk_user_velocity{1.39};
+    double max_crosswalk_user_delta_yaw_threshold_for_lanelet{0.785};
+    double max_crosswalk_user_on_road_distance{2.0};
+    // Signal interaction
+    bool use_crosswalk_signal{true};
+    // Sub-module params
+    TrafficSignalModule::Params traffic_signal;
+    CrosswalkUserHistoryManager::Params history;
+  };
+
   explicit PredictorVru(rclcpp::Node & node)
   : node_(node), traffic_signal_module_(node), history_manager_(node)
   {
   }
   ~PredictorVru() = default;
 
-  void setParameters(
-    bool match_lost_and_appeared_crosswalk_users, double min_crosswalk_user_velocity,
-    double max_crosswalk_user_delta_yaw_threshold_for_lanelet,
-    double max_crosswalk_user_on_road_distance, bool use_crosswalk_signal,
-    double threshold_velocity_assumed_as_stopping,
-    const std::vector<double> & distance_set_for_no_intention_to_walk,
-    const std::vector<double> & timeout_set_for_no_intention_to_walk,
-    double prediction_sampling_time_interval, double prediction_time_horizon,
-    double crossing_intention_duration, double no_crossing_intention_duration)
+  void setParams(const Params & params)
   {
-    min_crosswalk_user_velocity_ = min_crosswalk_user_velocity;
-    max_crosswalk_user_delta_yaw_threshold_for_lanelet_ =
-      max_crosswalk_user_delta_yaw_threshold_for_lanelet;
-    max_crosswalk_user_on_road_distance_ = max_crosswalk_user_on_road_distance;
-    use_crosswalk_signal_ = use_crosswalk_signal;
-    prediction_time_horizon_ = prediction_time_horizon;
-
-    traffic_signal_module_.setParams(
-      threshold_velocity_assumed_as_stopping, distance_set_for_no_intention_to_walk,
-      timeout_set_for_no_intention_to_walk);
-
-    history_manager_.setParams(
-      match_lost_and_appeared_crosswalk_users, crossing_intention_duration,
-      no_crossing_intention_duration);
-
+    params_ = params;
+    traffic_signal_module_.setParams(params.traffic_signal);
+    history_manager_.setParams(params.history);
     path_generator_ = std::make_shared<PathGenerator>(
-      prediction_sampling_time_interval, min_crosswalk_user_velocity);
+      params.prediction_sampling_time_interval, params.min_crosswalk_user_velocity);
   }
+
+  const Params & getParams() const { return params_; }
 
   void setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr);
 
@@ -111,12 +109,7 @@ private:
   TrafficSignalModule traffic_signal_module_;
   CrosswalkUserHistoryManager history_manager_;
 
-  // Parameters
-  double prediction_time_horizon_{0.0};
-  double min_crosswalk_user_velocity_{0.0};
-  double max_crosswalk_user_delta_yaw_threshold_for_lanelet_{0.0};
-  double max_crosswalk_user_on_road_distance_{0.0};
-  bool use_crosswalk_signal_{false};
+  Params params_{};
 
   PredictedObject getPredictedObjectAsCrosswalkUser(const TrackedObject & object);
 };

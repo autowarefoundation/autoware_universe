@@ -46,37 +46,9 @@ class PredictorVehicle
 public:
   struct Params
   {
-    // Lanelet search
-    double dist_threshold_for_searching_lanelet{3.0};
-    double delta_yaw_threshold_for_searching_lanelet{0.785};
-    double sigma_lateral_offset{0.5};
-    double sigma_yaw_angle_deg{5.0};
-    bool consider_only_routable_neighbours{false};
-    // Object history
-    double history_time_length{1.0};
-    double cutoff_freq_of_velocity_lpf{0.1};
-    // Lane change detection
-    std::string lane_change_detection_method{"time_to_change_lane"};
-    double dist_threshold_to_bound{1.0};
-    double time_threshold_to_bound{5.0};
-    double dist_ratio_threshold_to_left_bound{0.4};
-    double dist_ratio_threshold_to_right_bound{-0.4};
-    double diff_dist_threshold_to_left_bound{0.1};
-    double diff_dist_threshold_to_right_bound{-0.1};
-    int num_continuous_state_transition{3};
-    // Path generation
-    double lateral_control_time_horizon{5.0};
-    double prediction_time_horizon{15.0};
-    double prediction_time_horizon_rate_for_validate_lane_length{0.8};
-    double prediction_sampling_time_interval{0.5};
-    double min_velocity_for_map_based_prediction{1.0};
-    double reference_path_resolution{0.5};
-    bool check_lateral_acceleration_constraints{true};
-    double max_lateral_accel{0.5};
-    double min_acceleration_before_curve{-2.5};
-    bool use_vehicle_acceleration{false};
-    double speed_limit_multiplier{1.5};
-    double acceleration_exponential_half_life{2.5};
+    ObjectTracker::Params object_tracker;
+    ManeuverPredictor::Params maneuver_predictor;
+    PathProcessor::Params path_processor;
   };
 
   explicit PredictorVehicle(rclcpp::Node & node);

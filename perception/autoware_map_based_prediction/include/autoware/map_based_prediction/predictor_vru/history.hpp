@@ -38,6 +38,13 @@ namespace autoware::map_based_prediction
 class CrosswalkUserHistoryManager
 {
 public:
+  struct Params
+  {
+    bool match_lost_and_appeared{false};
+    double crossing_intention_duration{0.3};
+    double no_crossing_intention_duration{1.0};
+  };
+
   explicit CrosswalkUserHistoryManager(rclcpp::Node & node) : node_(node) {}
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
@@ -45,13 +52,11 @@ public:
     time_keeper_ = std::move(time_keeper);
   }
 
-  void setParams(
-    bool match_lost_and_appeared, double crossing_intention_duration,
-    double no_crossing_intention_duration)
+  void setParams(const Params & params)
   {
-    match_lost_and_appeared_ = match_lost_and_appeared;
-    crossing_intention_duration_ = crossing_intention_duration;
-    no_crossing_intention_duration_ = no_crossing_intention_duration;
+    match_lost_and_appeared_ = params.match_lost_and_appeared;
+    crossing_intention_duration_ = params.crossing_intention_duration;
+    no_crossing_intention_duration_ = params.no_crossing_intention_duration;
   }
 
   void initialize();

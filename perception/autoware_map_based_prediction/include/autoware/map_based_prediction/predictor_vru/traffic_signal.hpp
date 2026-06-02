@@ -40,6 +40,13 @@ namespace autoware::map_based_prediction
 class TrafficSignalModule
 {
 public:
+  struct Params
+  {
+    double threshold_velocity_assumed_as_stopping{0.25};
+    std::vector<double> distance_set_for_no_intention_to_walk;
+    std::vector<double> timeout_set_for_no_intention_to_walk;
+  };
+
   explicit TrafficSignalModule(rclcpp::Node & node) : node_(node) {}
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
@@ -47,14 +54,11 @@ public:
     time_keeper_ = std::move(time_keeper);
   }
 
-  void setParams(
-    double threshold_velocity_assumed_as_stopping,
-    const std::vector<double> & distance_set_for_no_intention_to_walk,
-    const std::vector<double> & timeout_set_for_no_intention_to_walk)
+  void setParams(const Params & params)
   {
-    threshold_velocity_assumed_as_stopping_ = threshold_velocity_assumed_as_stopping;
-    distance_set_for_no_intention_to_walk_ = distance_set_for_no_intention_to_walk;
-    timeout_set_for_no_intention_to_walk_ = timeout_set_for_no_intention_to_walk;
+    threshold_velocity_assumed_as_stopping_ = params.threshold_velocity_assumed_as_stopping;
+    distance_set_for_no_intention_to_walk_ = params.distance_set_for_no_intention_to_walk;
+    timeout_set_for_no_intention_to_walk_ = params.timeout_set_for_no_intention_to_walk;
   }
 
   void update(const TrafficLightGroupArray & traffic_signal_groups);
