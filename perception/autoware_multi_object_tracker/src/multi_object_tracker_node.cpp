@@ -144,40 +144,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   {
-    for (const auto shape_type : ALL_SHAPE_TYPES) {
-      for (const auto label : classes::trackedLabels()) {
-        params_.creation_config.setCreation(shape_type, label, TrackerType::POLYGON);
-      }
-    }
-
-    // tracker_assignment Pass 1: label defaults
-    // Builds the association assignment map; profile application is deferred to a separate pass.
+    // tracker_assignment: each explicit (shape, label) entry defines create and match.
+    // Omitted combinations are not accepted — no tracker is created or matched.
     std::unordered_map<ShapeLabelKey, std::vector<TrackerType>, ShapeLabelKeyHash>
       association_assignment;
-    for (const auto label : classes::trackedLabels()) {
-      const auto label_name = classes::toString(label);
-
-      const auto create_param = "tracker_assignment." + label_name + ".create";
-      const TrackerType create_tracker_type =
-        parseTrackerType(declare_parameter<std::string>(create_param), create_param);
-      for (const auto shape_type : ALL_SHAPE_TYPES) {
-        params_.creation_config.setCreation(shape_type, label, create_tracker_type);
-      }
-
-      const auto match_param = "tracker_assignment." + label_name + ".match";
-      const auto match_names =
-        declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
-      for (const auto & tracker_type_name : match_names) {
-        const TrackerType tracker_type = parseTrackerType(tracker_type_name, match_param);
-        if (tracker_type == TrackerType::PASS_THROUGH) continue;
-        for (const auto shape_type : ALL_SHAPE_TYPES) {
-          association_assignment[{shape_type, label}].push_back(tracker_type);
-        }
-      }
-    }
-
-    // tracker_assignment Pass 2: shape overrides
-    // Shape-specific match entries replace the label-default assignment for that (shape, label).
     for (const auto shape_type : ALL_SHAPE_TYPES) {
       const auto shape_name = types::toString(shape_type);
       for (const auto label : classes::trackedLabels()) {
@@ -185,17 +155,20 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
         const auto create_param = "tracker_assignment." + shape_name + "." + label_name + ".create";
         const auto create_str = declare_parameter<std::string>(create_param, "");
-        if (!create_str.empty()) {
-          params_.creation_config.setCreation(
-            shape_type, label, parseTrackerType(create_str, create_param));
+        if (create_str.empty()) continue;  // implicitly omitted — warn at runtime on first use
+        if (create_str == "null") {
+          params_.creation_config.setExplicitNull(shape_type, label);
+          continue;
         }
+
+        params_.creation_config.setCreation(
+          shape_type, label, parseTrackerType(create_str, create_param));
 
         const auto match_param = "tracker_assignment." + shape_name + "." + label_name + ".match";
         const auto match_names =
           declare_parameter<std::vector<std::string>>(match_param, std::vector<std::string>{});
         if (match_names.empty()) continue;
         auto & trackers = association_assignment[{shape_type, label}];
-        trackers.clear();
         for (const auto & tracker_type_name : match_names) {
           const TrackerType tracker_type = parseTrackerType(tracker_type_name, match_param);
           if (tracker_type == TrackerType::PASS_THROUGH) continue;

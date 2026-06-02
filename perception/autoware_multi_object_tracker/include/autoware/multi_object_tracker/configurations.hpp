@@ -22,6 +22,7 @@
 #include <functional>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace autoware::multi_object_tracker
@@ -73,10 +74,16 @@ struct TrackerCreationConfig
   bool enable_unknown_object_motion_output{false};
 
   ShapeLabelToTrackerTypeMap shape_tracker_map;
+  std::unordered_set<ShapeLabelKey, ShapeLabelKeyHash> explicit_null_combos;
 
   void setCreation(types::ShapeType shape, classes::Label label, types::TrackerType tracker_type)
   {
     shape_tracker_map[{shape, label}] = tracker_type;
+  }
+
+  void setExplicitNull(types::ShapeType shape, classes::Label label)
+  {
+    explicit_null_combos.insert({shape, label});
   }
 };
 

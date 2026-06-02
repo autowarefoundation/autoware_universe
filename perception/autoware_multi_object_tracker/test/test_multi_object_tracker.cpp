@@ -69,7 +69,9 @@ FunctionTimings runIterationsAssociation(
   const auto input_channels_config = createInputChannelsConfig();
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
-    creation_config, association_config, overlap_config, input_channels_config);
+    creation_config, association_config, overlap_config, input_channels_config,
+    rclcpp::get_logger("test_multi_object_tracker"),
+    std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME));
   // TestBenchAssociation by default.
   // Or use TestBenchAssociationLemniscate for more complex association scenarios
   TestBenchAssociation simulator(config);
@@ -160,7 +162,9 @@ FunctionTimings runIterations(
   const auto input_channels_config = createInputChannelsConfig();
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
-    creation_config, association_config, overlap_config, input_channels_config);
+    creation_config, association_config, overlap_config, input_channels_config,
+    rclcpp::get_logger("test_multi_object_tracker"),
+    std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME));
   TestBench simulator(config);
   simulator.initializeObjects();
   // Performance tracking for individual functions
@@ -277,7 +281,9 @@ void runPerformanceTestWithRosbag(const std::string & rosbag_path, bool write_ba
   const auto input_channels_config = createInputChannelsConfig();
 
   auto processor = std::make_unique<autoware::multi_object_tracker::TrackerProcessor>(
-    creation_config, association_config, overlap_config, input_channels_config);
+    creation_config, association_config, overlap_config, input_channels_config,
+    rclcpp::get_logger("test_multi_object_tracker"),
+    std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME));
 
   // Create serialization objects
   rclcpp::Serialization<autoware_perception_msgs::msg::DetectedObjects> detection_serialization;
