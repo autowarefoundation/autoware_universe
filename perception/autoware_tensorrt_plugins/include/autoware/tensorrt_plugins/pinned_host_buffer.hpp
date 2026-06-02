@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,10 +27,12 @@ namespace autoware::tensorrt_plugins
 
 /// RAII owner of a page-locked (pinned) host allocation obtained via `cudaMallocHost`.
 ///
-/// Pinned host memory is needed whenever a host scalar is the source/destination of an async
-/// stream copy: the buffer must outlive the (asynchronous) copy, which a plain stack variable does
-/// not guarantee without a blocking `cudaStreamSynchronize`. Holding one of these as a plugin
-/// member keeps such copies stream-ordered while tying the allocation's lifetime to the plugin's.
+/// `cudaMemcpyAsync` is only asynchronous if the host memory is pinned, so performance can be
+/// improved by using pinned host memory in some cases.
+///
+/// This class makes lifetime management of such pinned host buffers easy and safe.
+///
+/// Read more: https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/asynchronous-execution.html#launching-memory-transfers-in-cuda-streams
 ///
 /// Move-only: ownership is unique, so the buffer is freed exactly once.
 template <typename T>
