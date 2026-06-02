@@ -116,19 +116,6 @@ private:
     GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record);
 
   /**
-   * @brief Updates the map for a single (element, regulatory_id) combination.
-   */
-  void update_group_info_for_element(
-    GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
-    const utils::FusionRecord & record) const;
-
-  /**
-   * @brief Handles the log-odds accumulation logic.
-   */
-  void update_log_odds(
-    std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence) const;
-
-  /**
    * @brief Determines the best state for each group based on accumulated evidence.
    * @return The conflicts detected during this call. Empty when no conflict is found.
    */
