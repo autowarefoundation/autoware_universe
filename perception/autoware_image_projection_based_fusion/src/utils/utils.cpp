@@ -45,6 +45,10 @@ float ObjClassIoUThresh::get_class_iou_thresh(const uint8_t label)
       return BICYCLE;
     case Label::PEDESTRIAN:
       return PEDESTRIAN;
+    case Label::ANIMAL:
+      return ANIMAL;
+    case Label::HAZARD:
+      return HAZARD;
     default:
       return UNKNOWN;
   }
