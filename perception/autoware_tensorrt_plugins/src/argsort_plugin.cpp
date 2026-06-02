@@ -149,14 +149,17 @@ std::int32_t ArgsortPlugin::enqueue(
   cudaStream_t stream) noexcept
 {
   auto num_elements = static_cast<std::size_t>(input_desc[0].dims.d[0]);
-  if (max_num_elements_ < num_elements) {
-    max_num_elements_ = num_elements;
-    argsort_workspace_size_ = get_argsort_workspace_size(max_num_elements_);
+  const auto workspace_size = get_argsort_workspace_size(num_elements);
+
+  if (const auto status = PLUGIN_CUDA_CHECK(argsort(
+        reinterpret_cast<std::int64_t const *>(inputs[0]),
+        reinterpret_cast<std::int64_t *>(outputs[0]), workspace, num_elements, workspace_size,
+        stream));
+      status != cudaSuccess) {
+    return -1;
   }
 
-  return argsort(
-    reinterpret_cast<std::int64_t const *>(inputs[0]), reinterpret_cast<std::int64_t *>(outputs[0]),
-    workspace, num_elements, argsort_workspace_size_, stream);
+  return 0;
 }
 
 std::int32_t ArgsortPlugin::onShapeChange(
@@ -183,8 +186,10 @@ std::size_t ArgsortPlugin::getWorkspaceSize(
   [[maybe_unused]] std::int32_t num_outputs) const noexcept
 {
   std::int64_t max_num_elements = inputs[0].max.d[0];
-  return get_argsort_workspace_size(max_num_elements) +
-         sizeof(std::int64_t) * 2 * (max_num_elements + 1);
+  const auto temp_size = get_argsort_workspace_size(max_num_elements);
+  const auto scratch_offset =
+    ((temp_size + alignof(std::int64_t) - 1U) / alignof(std::int64_t)) * alignof(std::int64_t);
+  return scratch_offset + sizeof(std::int64_t) * 2 * max_num_elements;
 }
 
 }  // namespace nvinfer1::plugin

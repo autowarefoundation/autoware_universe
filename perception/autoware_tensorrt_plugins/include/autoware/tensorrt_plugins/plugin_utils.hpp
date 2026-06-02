@@ -16,6 +16,7 @@
 #define AUTOWARE__TENSORRT_PLUGINS__PLUGIN_UTILS_HPP_
 
 #include <NvInferRuntime.h>
+#include <cuda_runtime_api.h>
 
 #include <cstdint>
 #include <exception>
@@ -25,6 +26,11 @@ void caughtError(std::exception const & e);
 void logDebug(char const * msg);
 
 void logWarning(char const * msg);
+
+cudaError_t reportCudaStatus(
+  cudaError_t status, char const * msg, char const * file, std::int32_t line);
+
+#define PLUGIN_CUDA_CHECK(val) reportCudaStatus((val), #val, __FILE__, __LINE__)
 
 #define PLUGIN_ASSERT(val) reportAssertion((val), #val, __FILE__, __LINE__)
 void reportAssertion(bool success, char const * msg, char const * file, std::int32_t line);
