@@ -18,13 +18,14 @@
 
 #include "autoware/trajectory_concatenator/trajectory_concatenator_wrapper.hpp"
 
-#include <gtest/gtest.h>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_internal_planning_msgs/msg/generator_info.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
+
+#include <gtest/gtest.h>
 
 #include <memory>
 #include <thread>
