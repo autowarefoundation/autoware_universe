@@ -97,8 +97,6 @@ public:
     const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals);
 
 private:
-  void multi_camera_fusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
-
   void group_fusion(
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map,

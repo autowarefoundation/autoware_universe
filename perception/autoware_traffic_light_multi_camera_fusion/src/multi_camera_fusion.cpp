@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -170,6 +171,9 @@ std::vector<MultiCameraFusion::IdType> find_unmapped_traffic_light_ids(
 
 }  // namespace
 
+std::map<MultiCameraFusion::IdType, utils::FusionRecord> multi_camera_fusion(
+  std::multiset<utils::FusionRecordArr> & record_arr_set, double message_lifespan);
+
 MultiCameraFusion::MultiCameraFusion(const MultiCameraFusionConfig & config)
 : config_(config),
   traffic_light_id_to_regulatory_ele_id_(
@@ -187,8 +191,9 @@ MultiCameraFusionResult MultiCameraFusion::fuse(
   record_arr_set_.insert(utils::FusionRecordArr{cam_info.header, cam_info, rois, signals});
 
   MultiCameraFusionResult result;
-  std::map<IdType, utils::FusionRecord> fused_record_map, grouped_record_map;
-  multi_camera_fusion(fused_record_map);
+  std::map<IdType, utils::FusionRecord> grouped_record_map;
+  std::map<IdType, utils::FusionRecord> fused_record_map =
+    multi_camera_fusion(record_arr_set_, config_.message_lifespan);
   result.unmapped_traffic_light_ids =
     find_unmapped_traffic_light_ids(fused_record_map, traffic_light_id_to_regulatory_ele_id_);
   group_fusion(fused_record_map, grouped_record_map, result.conflicted_regulatory_element_status);
@@ -201,30 +206,32 @@ MultiCameraFusionResult MultiCameraFusion::fuse(
   return result;
 }
 
-void MultiCameraFusion::multi_camera_fusion(
-  std::map<IdType, utils::FusionRecord> & fused_record_map)
+std::map<MultiCameraFusion::IdType, utils::FusionRecord> multi_camera_fusion(
+  std::multiset<utils::FusionRecordArr> & record_arr_set, double message_lifespan)
 {
-  fused_record_map.clear();
-  const rclcpp::Time & newest_stamp(record_arr_set_.rbegin()->header.stamp);
-  for (auto it = record_arr_set_.begin(); it != record_arr_set_.end();) {
+  std::map<MultiCameraFusion::IdType, utils::FusionRecord> fused_record_map;
+  const rclcpp::Time & newest_stamp(record_arr_set.rbegin()->header.stamp);
+  for (auto it = record_arr_set.begin(); it != record_arr_set.end();) {
     /*
     remove all old record arrays whose timestamp difference with newest record is larger than
     threshold
     */
     if (
       (newest_stamp - rclcpp::Time(it->header.stamp)) >
-      rclcpp::Duration::from_seconds(config_.message_lifespan)) {
-      it = record_arr_set_.erase(it);
+      rclcpp::Duration::from_seconds(message_lifespan)) {
+      it = record_arr_set.erase(it);
     } else {
       /*
       generate fused record result with the saved records
       */
       const utils::FusionRecordArr & record_arr = *it;
       for (size_t i = 0; i < record_arr.rois.rois.size(); i++) {
-        const RoiType & roi = record_arr.rois.rois[i];
+        const MultiCameraFusion::RoiType & roi = record_arr.rois.rois[i];
         auto signal_it = std::find_if(
           record_arr.signals.signals.begin(), record_arr.signals.signals.end(),
-          [roi](const SignalType & s1) { return roi.traffic_light_id == s1.traffic_light_id; });
+          [roi](const MultiCameraFusion::SignalType & s1) {
+            return roi.traffic_light_id == s1.traffic_light_id;
+          });
         /*
         failed to find corresponding signal. skip it
         */
@@ -245,6 +252,7 @@ void MultiCameraFusion::multi_camera_fusion(
       it++;
     }
   }
+  return fused_record_map;
 }
 
 void MultiCameraFusion::group_fusion(
