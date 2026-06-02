@@ -142,7 +142,7 @@ TrafficLightRoiArray make_roi_array(
   return roi_array;
 }
 
-// ROI placed against the top-left image boundary so cal_visible_score returns 0.
+// ROI placed against the top-left image boundary so is_fully_visible returns false.
 TrafficLightRoiArray make_truncated_roi_array(
   const rclcpp::Time & stamp, const std::string & frame_id, lanelet::Id traffic_light_id)
 {
@@ -174,7 +174,7 @@ TrafficLight make_signal(lanelet::Id traffic_light_id, uint8_t color, float conf
   return signal;
 }
 
-// Matches utils::is_unknown: a single element whose color and shape are both UNKNOWN.
+// Matches utils::is_signal_unknown: a single element whose color and shape are both UNKNOWN.
 TrafficLight make_unknown_signal(lanelet::Id traffic_light_id)
 {
   T4Element element;
@@ -453,9 +453,9 @@ TEST(MultiCameraFusionFuse, TruncatedRoiHasLowerPriorityThanCenteredRoi)
 {
   // Arrange
   // Two cameras observe the same traffic_light_id. camera0 reports a truncated ROI
-  // (visible_score=0) with the higher confidence; camera1 reports a centered ROI
-  // (visible_score=1) with the lower confidence. compare_record's visibility check ranks above the
-  // confidence check, so camera1's record is selected and the fused output is RED.
+  // (truncated) with the higher confidence; camera1 reports a centered ROI
+  // (fully visible) with the lower confidence. has_higher_or_equal_priority's visibility check
+  // ranks above the confidence check, so camera1's record is selected and the fused output is RED.
   MultiCameraFusion fusion(make_default_config());
   const rclcpp::Time stamp(100, 0);
   const auto truncated_camera_info = make_camera_info(stamp, "camera0");
@@ -478,8 +478,8 @@ TEST(MultiCameraFusionFuse, UnknownSignalLosesToValidSignalForSameTrafficLightId
 {
   // Arrange
   // Two cameras observe the same traffic_light_id. camera0 reports an UNKNOWN signal;
-  // camera1 reports GREEN. compare_record's unknown check drops the unknown record, so the
-  // fused output reflects camera1.
+  // camera1 reports GREEN. has_higher_or_equal_priority's unknown check drops the unknown record,
+  // so the fused output reflects camera1.
   MultiCameraFusion fusion(make_default_config());
   const auto unknown_input =
     make_fusion_input("camera0", make_unknown_signal(LEFT_TRAFFIC_LIGHT_ID));
@@ -499,8 +499,9 @@ TEST(MultiCameraFusionFuse, NewerTimestampWinsForSameFrameIdAndTrafficLightId)
 {
   // Arrange
   // The same camera publishes two observations of the same traffic_light_id within the lifespan.
-  // compare_record's first priority (same frame_id with timestamps differing by >= 1 ms) prefers
-  // the newer record regardless of confidence, so the later RED supersedes the earlier GREEN.
+  // has_higher_or_equal_priority's first priority (same frame_id with timestamps differing by >= 1
+  // ms) prefers the newer record regardless of confidence, so the later RED supersedes the earlier
+  // GREEN.
   MultiCameraFusion fusion(make_default_config());
   const std::string frame_id = "camera0";
   const auto earlier_input = make_fusion_input(
@@ -518,12 +519,12 @@ TEST(MultiCameraFusionFuse, NewerTimestampWinsForSameFrameIdAndTrafficLightId)
   expect_single_fused_color(result, TrafficLightElement::RED);
 }
 
-TEST(MultiCameraFusionFuse, HigherConfidenceWinsWhenVisibleScoreTiesForSameTrafficLightId)
+TEST(MultiCameraFusionFuse, HigherConfidenceWinsWhenBothFullyVisibleForSameTrafficLightId)
 {
   // Arrange
-  // Two cameras observe the same traffic_light_id with centered ROIs (visible_score=1 each).
-  // compare_record falls through to its last priority — the confidence comparison — and selects
-  // the higher-confidence RED over the lower-confidence GREEN.
+  // Two cameras observe the same traffic_light_id with centered ROIs (fully visible each).
+  // has_higher_or_equal_priority falls through to its last priority — the confidence
+  // comparison — and selects the higher-confidence RED over the lower-confidence GREEN.
   MultiCameraFusion fusion(make_default_config());
   const auto low_confidence_input =
     make_fusion_input("camera0", make_signal(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.5f));
@@ -572,13 +573,14 @@ TEST(MultiCameraFusionFuse, PartialConflictWithPartialMatchEnabledPublishesCommo
 TEST(MultiCameraFusionFuse, MinElementConfidenceDeterminesWinnerForMultiElementSignals)
 {
   // Arrange
-  // Two cameras observe the same traffic_light_id with centered ROIs (visible_score tied at 1).
+  // Two cameras observe the same traffic_light_id with centered ROIs (both fully visible).
   // Each signal has CIRCLE + LEFT_ARROW with differing per-element confidences:
   //   camera0: {CIRCLE 0.8, LEFT_ARROW 0.8}  -> min = 0.8
   //   camera1: {CIRCLE 0.9, LEFT_ARROW 0.3}  -> min = 0.3
-  // compare_record falls through to the confidence check, which uses utils::get_min_confidence.
-  // With min-aggregation, camera0 wins (0.8 > 0.3); with max-aggregation, camera1 would win
-  // (0.9 > 0.8). The output's preserved per-element confidences distinguish the two cases.
+  // has_higher_or_equal_priority falls through to the confidence check, which uses
+  // utils::get_min_confidence. With min-aggregation, camera0 wins (0.8 > 0.3); with
+  // max-aggregation, camera1 would win (0.9 > 0.8). The output's preserved per-element confidences
+  // distinguish the two cases.
   MultiCameraFusion fusion(make_default_config());
   const auto input0 = make_fusion_input(
     "camera0", make_signal_with_left_arrow(LEFT_TRAFFIC_LIGHT_ID, T4Element::GREEN, 0.8f, 0.8f));
