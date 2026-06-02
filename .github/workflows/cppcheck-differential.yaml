@@ -56,7 +56,7 @@ jobs:
           done
           echo "filtered-full-paths=$filtered_paths" >> $GITHUB_OUTPUT
 
-      # cspell: ignore suppr Dslots
+      # cspell: ignore suppr Dslots DAUTOWARE
       - name: Run Cppcheck on modified packages
         if: ${{ steps.filter-paths-no-cpp-files.outputs.filtered-full-paths != '' }}
         continue-on-error: true
