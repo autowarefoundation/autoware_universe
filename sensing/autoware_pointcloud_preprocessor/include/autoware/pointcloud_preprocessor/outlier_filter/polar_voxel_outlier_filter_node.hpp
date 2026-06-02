@@ -258,7 +258,6 @@ protected:
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   // TODO(Koichi98): Remove once Filter base class supports agnocast_wrapper.
-  // cppcheck-suppress unknownMacro
   AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::PointCloud2) agnocast_sub_input_;
 
   // Diagnostic helper methods
