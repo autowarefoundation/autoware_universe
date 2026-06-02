@@ -90,11 +90,11 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   vehicle_params.acceleration_exponential_half_life =
     declare_parameter<double>("acceleration_exponential_half_life");
 
-  predictor_vehicle_ = std::make_shared<PredictorVehicle>(*this);
-  predictor_vehicle_->setParams(vehicle_params);
+  state_.predictor_vehicle = std::make_shared<PredictorVehicle>(*this);
+  state_.predictor_vehicle->setParams(vehicle_params);
 
   // --- VRU predictor ---
-  predictor_vru_ = std::make_shared<PredictorVru>(*this);
+  state_.predictor_vru = std::make_shared<PredictorVru>(*this);
 
   {
     bool match_lost_and_appeared_crosswalk_users =
@@ -117,7 +117,7 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     std::vector<double> timeout_set_for_no_intention_to_walk =
       declare_parameter<std::vector<double>>(
         "crosswalk_with_signal.timeout_set_for_no_intention_to_walk");
-    predictor_vru_->setParameters(
+    state_.predictor_vru->setParameters(
       match_lost_and_appeared_crosswalk_users, min_crosswalk_user_velocity,
       max_crosswalk_user_delta_yaw_threshold_for_lanelet, max_crosswalk_user_on_road_distance,
       use_crosswalk_signal, threshold_velocity_assumed_as_stopping,
@@ -127,22 +127,22 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   }
 
   // --- Path generator for unknown-class objects ---
-  path_generator_ = std::make_shared<PathGenerator>(prediction_sampling_time_interval);
+  state_.path_generator = std::make_shared<PathGenerator>(prediction_sampling_time_interval);
+
+  // --- Shared state params ---
+  state_.params.object_buffer_time_length =
+    declare_parameter<double>("object_buffer_time_length");
+  state_.params.remember_lost_crosswalk_users =
+    declare_parameter<bool>("use_crosswalk_user_history.remember_lost_users");
+  state_.params.prediction_time_horizon_unknown = prediction_time_horizon.unknown;
 
   // --- Callbacks ---
-  callbacks_ = std::make_unique<Callbacks>(this);
-
-  Callbacks::Params callbacks_params;
-  callbacks_params.object_buffer_time_length =
-    declare_parameter<double>("object_buffer_time_length");
-  callbacks_params.remember_lost_crosswalk_users =
-    declare_parameter<bool>("use_crosswalk_user_history.remember_lost_users");
-  callbacks_params.prediction_time_horizon_unknown = prediction_time_horizon.unknown;
-  callbacks_->setParams(callbacks_params);
-  callbacks_->setPredictors(predictor_vehicle_, predictor_vru_, path_generator_);
+  map_callback_ = std::make_unique<MapCallback>(this, state_);
+  objects_callback_ = std::make_unique<ObjectsCallback>(this, state_);
+  diagnostics_ = std::make_unique<Diagnostics>(this);
 
   // --- ROS publishers ---
-  callbacks_->setObjectsPublisher(
+  objects_callback_->setObjectsPublisher(
     this->create_publisher<PredictedObjects>("~/output/objects", rclcpp::QoS{1}));
 
   // --- Debug parameters ---
@@ -151,9 +151,9 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   const bool use_debug_marker = declare_parameter<bool>("publish_debug_markers");
 
   if (use_time_publisher) {
-    callbacks_->setPublishedTimePublisher(
+    diagnostics_->setPublishedTimePublisher(
       std::make_unique<autoware_utils::PublishedTimePublisher>(this));
-    callbacks_->setProcessingTimePublisher(
+    diagnostics_->setProcessingTimePublisher(
       std::make_unique<autoware_utils::DebugPublisher>(this, "map_based_prediction"));
   }
 
@@ -162,35 +162,37 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
       this->create_publisher<autoware_utils::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
     auto time_keeper = autoware_utils::TimeKeeper(detailed_processing_time_publisher_);
-    time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
-    predictor_vehicle_->setTimeKeeper(time_keeper_);
-    predictor_vru_->setTimeKeeper(time_keeper_);
-    callbacks_->setTimeKeeper(time_keeper_);
+    state_.time_keeper = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
+    state_.predictor_vehicle->setTimeKeeper(state_.time_keeper);
+    state_.predictor_vru->setTimeKeeper(state_.time_keeper);
   }
 
   if (use_debug_marker) {
-    callbacks_->setDebugMarkersPublisher(
+    objects_callback_->setDebugMarkersPublisher(
       this->create_publisher<visualization_msgs::msg::MarkerArray>("maneuver", rclcpp::QoS{1}));
   }
 
-  // --- Diagnostics ---
+  // --- Diagnostics params + link ---
   {
     const double processing_time_tolerance_ms =
       declare_parameter<double>("processing_time_tolerance") * 1e3;
     const double processing_time_consecutive_excess_tolerance_ms =
       declare_parameter<double>("processing_time_consecutive_excess_tolerance") * 1e3;
-    callbacks_->setDiagnostics(
-      std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction"),
-      processing_time_tolerance_ms, processing_time_consecutive_excess_tolerance_ms);
+    Diagnostics::Params diag_params;
+    diag_params.processing_time_tolerance_ms = processing_time_tolerance_ms;
+    diag_params.processing_time_consecutive_excess_tolerance_ms =
+      processing_time_consecutive_excess_tolerance_ms;
+    diagnostics_->setParams(diag_params);
+    objects_callback_->setDiagnostics(diagnostics_.get());
   }
 
   // --- ROS subscriptions ---
   sub_objects_ = this->create_subscription<TrackedObjects>(
     "~/input/objects", 1,
-    [this](const TrackedObjects::ConstSharedPtr msg) { callbacks_->objectsCallback(msg); });
+    [this](const TrackedObjects::ConstSharedPtr msg) { objects_callback_->objectsCallback(msg); });
   sub_map_ = this->create_subscription<LaneletMapBin>(
     "/vector_map", rclcpp::QoS{1}.transient_local(),
-    [this](const LaneletMapBin::ConstSharedPtr msg) { callbacks_->mapCallback(msg); });
+    [this](const LaneletMapBin::ConstSharedPtr msg) { map_callback_->mapCallback(msg); });
 
   // --- Dynamic reconfigure ---
   set_param_res_ = this->add_on_set_parameters_callback(
@@ -202,7 +204,7 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
 {
   using autoware_utils::update_param;
 
-  auto vehicle_params = predictor_vehicle_->getParams();
+  auto vehicle_params = state_.predictor_vehicle->getParams();
   update_param(parameters, "max_lateral_accel", vehicle_params.max_lateral_accel);
   update_param(
     parameters, "min_acceleration_before_curve", vehicle_params.min_acceleration_before_curve);
@@ -214,7 +216,7 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   update_param(
     parameters, "acceleration_exponential_half_life",
     vehicle_params.acceleration_exponential_half_life);
-  predictor_vehicle_->setParams(vehicle_params);
+  state_.predictor_vehicle->setParams(vehicle_params);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
