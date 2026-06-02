@@ -8,14 +8,14 @@
 
 Each plugin implements the following methods:
 
-| Method | Description |
-|---|---|
-| `mode()` | Returns the command mode ID that this plugin corresponds to |
-| `source()` | Returns the control source ID that this plugin uses |
-| `autoware_control()` | Returns whether Autoware controls the vehicle |
-| `initialize()` | Initializes publishers, subscribers, and service clients |
+| Method                              | Description                                                                                                                                      |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `mode()`                            | Returns the command mode ID that this plugin corresponds to                                                                                      |
+| `source()`                          | Returns the control source ID that this plugin uses                                                                                              |
+| `autoware_control()`                | Returns whether Autoware controls the vehicle                                                                                                    |
+| `initialize()`                      | Initializes publishers, subscribers, and service clients                                                                                         |
 | `update_source_state(bool request)` | Manages source gate open/close based on the switcher selection state (`request`) and executes side effects (deceleration command, relay control) |
-| `update_mrm_state()` | Returns the MRM execution state (`Normal` / `Operating` / `Succeeded`) |
+| `update_mrm_state()`                | Returns the MRM execution state (`Normal` / `Operating` / `Succeeded`)                                                                           |
 
 ---
 
@@ -82,13 +82,13 @@ Conforming to the `autoware_command_mode_switcher` framework, this function mana
 
 The state transitions in `update_source_state(bool request)` are as follows:
 
-| request | mrm_state_ | Action | SourceState |
-|---|---|---|---|
-| `true` | `Operating` | No action (already operating) | `{true, false}` |
-| `true` | `Succeeded` | No action (already stopped) | `{true, false}` |
-| `false` | `Normal` | No action (already released) | `{false, true}` |
-| `true` | `Normal` | Trigger ON, relay OFF → transition to `Operating` | `{true, false}` |
-| `false` | `Operating` / `Succeeded` | Trigger OFF, relay ON → transition to `Normal` | `{false, true}` |
+| request | mrm*state*                | Action                                            | SourceState     |
+| ------- | ------------------------- | ------------------------------------------------- | --------------- |
+| `true`  | `Operating`               | No action (already operating)                     | `{true, false}` |
+| `true`  | `Succeeded`               | No action (already stopped)                       | `{true, false}` |
+| `false` | `Normal`                  | No action (already released)                      | `{false, true}` |
+| `true`  | `Normal`                  | Trigger ON, relay OFF → transition to `Operating` | `{true, false}` |
+| `false` | `Operating` / `Succeeded` | Trigger OFF, relay ON → transition to `Normal`    | `{false, true}` |
 
 `update_mrm_state()` monitors the odometry from `/localization/kinematic_state` while in the `Operating` state, and transitions to `Succeeded` when the vehicle speed falls below 0.001 m/s.
 
@@ -111,13 +111,13 @@ During normal autonomous driving, in_lane_stop continuously captures `pose_with_
 
 #### Parameters
 
-| Parameter | Type | Description |
-|---|---|---|
-| `target_acceleration` | `double` | Target deceleration commanded to jerk_constant_deceleration_controller [m/s²] |
-| `target_jerk` | `double` | Target jerk commanded to jerk_constant_deceleration_controller [m/s³] |
-| `enable_trajectory_relay` | `bool` | Enable/disable trajectory relay control |
-| `enable_pose_with_covariance_relay` | `bool` | Enable/disable pose_with_covariance relay control |
-| `service_timeout_ms` | `int64` | Timeout for service calls [ms] |
+| Parameter                           | Type     | Description                                                                   |
+| ----------------------------------- | -------- | ----------------------------------------------------------------------------- |
+| `target_acceleration`               | `double` | Target deceleration commanded to jerk_constant_deceleration_controller [m/s²] |
+| `target_jerk`                       | `double` | Target jerk commanded to jerk_constant_deceleration_controller [m/s³]         |
+| `enable_trajectory_relay`           | `bool`   | Enable/disable trajectory relay control                                       |
+| `enable_pose_with_covariance_relay` | `bool`   | Enable/disable pose_with_covariance relay control                             |
+| `service_timeout_ms`                | `int64`  | Timeout for service calls [ms]                                                |
 
 ---
 
