@@ -109,6 +109,21 @@ struct UnionGeometry
 };
 
 /**
+ * @brief Result of classifying sub objects against main objects by overlap.
+ */
+struct GroupedFusionInputs
+{
+  std::vector<std::vector<DetectedObject>> grouped_sub_objects;
+  std::vector<DetectedObject> other_objects;
+};
+
+double get_intersection_area(const DetectedObject & main_object, const DetectedObject & sub_object);
+
+DetectedObject enclose_union_with_main_shape(
+  const DetectedObject & main_object, const std::vector<DetectedObject> & sub_objects,
+  bool keep_input_dimensions);
+
+/**
  * @brief Compute the combined z range covered by one main object and its grouped sub objects.
  *
  * @param main_object Main object used as the base of the fused output.
@@ -277,6 +292,70 @@ void fit_shape_footprint(DetectedObject & output, const UnionGeometry & union_ge
         .y(static_cast<float>(boost::geometry::get<1>(point)))
         .z(0.0f));
   }
+}
+
+/**
+ * @brief Group sub objects by unique overlap and collect unmatched sub objects.
+ *
+ * @param main_objects Main objects that anchor the fused outputs.
+ * @param sub_objects Candidate sub objects to associate to the main objects.
+ * @return Grouped sub objects per main index and unmatched sub objects.
+ */
+GroupedFusionInputs classify_sub_objects_by_overlap(
+  const std::vector<DetectedObject> & main_objects, const std::vector<DetectedObject> & sub_objects)
+{
+  GroupedFusionInputs inputs;
+  inputs.grouped_sub_objects.resize(main_objects.size());
+  inputs.other_objects.reserve(sub_objects.size());
+
+  for (const auto & sub_object : sub_objects) {
+    std::vector<std::size_t> overlapped_main_indices;
+    for (std::size_t main_index = 0; main_index < main_objects.size(); ++main_index) {
+      if (get_intersection_area(main_objects.at(main_index), sub_object) > 1e-6) {
+        overlapped_main_indices.push_back(main_index);
+      }
+    }
+
+    if (overlapped_main_indices.empty()) {
+      inputs.other_objects.push_back(sub_object);
+      continue;
+    }
+
+    if (overlapped_main_indices.size() == 1U) {
+      inputs.grouped_sub_objects.at(overlapped_main_indices.front()).push_back(sub_object);
+    }
+  }
+
+  return inputs;
+}
+
+/**
+ * @brief Build the main-based fused output from grouped overlap associations.
+ *
+ * @param main_objects Main objects that anchor the fused outputs.
+ * @param grouped_inputs Grouped sub objects classified per main object.
+ * @param keep_input_dimensions Whether to preserve the main object's base dimensions.
+ * @return Main-based fused objects, preserving unmatched main objects as-is.
+ */
+std::vector<DetectedObject> build_fused_main_objects(
+  const std::vector<DetectedObject> & main_objects, const GroupedFusionInputs & grouped_inputs,
+  const bool keep_input_dimensions)
+{
+  std::vector<DetectedObject> fused_main_objects;
+  fused_main_objects.reserve(main_objects.size());
+
+  for (std::size_t main_index = 0; main_index < main_objects.size(); ++main_index) {
+    const auto & main_object = main_objects.at(main_index);
+    const auto & grouped_subs = grouped_inputs.grouped_sub_objects.at(main_index);
+    if (grouped_subs.empty()) {
+      fused_main_objects.push_back(main_object);
+      continue;
+    }
+    fused_main_objects.push_back(
+      enclose_union_with_main_shape(main_object, grouped_subs, keep_input_dimensions));
+  }
+
+  return fused_main_objects;
 }
 
 /**
@@ -496,51 +575,18 @@ ObjectFusionMergerNode::FusionResult ObjectFusionMergerNode::fuse_objects(
   const auto & main_objects = main_objects_msg.objects;
   const auto & sub_objects = sub_objects_msg.objects;
 
-  std::vector<std::vector<DetectedObject>> grouped_sub_objects(main_objects.size());
-  std::vector<DetectedObject> other_objects;
-  other_objects.reserve(sub_objects.size());
-
-  for (const auto & sub_object : sub_objects) {
-    std::vector<std::size_t> overlapped_main_indices;
-    for (std::size_t main_index = 0; main_index < main_objects.size(); ++main_index) {
-      if (get_intersection_area(main_objects.at(main_index), sub_object) > 1e-6) {
-        overlapped_main_indices.push_back(main_index);
-      }
-    }
-
-    // If sub-object does not overlap with any main object, treat it as a matched object
-    if (overlapped_main_indices.empty()) {
-      other_objects.push_back(sub_object);
-      continue;
-    }
-
-    // If sub-object overlaps with a single main object, group it with that main object
-    // If sub-object overlaps with multiple main objects, ignore it for fusion to avoid ambiguity
-    if (overlapped_main_indices.size() == 1U) {
-      grouped_sub_objects.at(overlapped_main_indices.front()).push_back(sub_object);
-    }
-  }
-
-  std::vector<DetectedObject> matched_objects;
-  matched_objects.reserve(main_objects.size());
-  for (std::size_t main_index = 0; main_index < main_objects.size(); ++main_index) {
-    const auto & main_object = main_objects.at(main_index);
-    const auto & grouped_subs = grouped_sub_objects.at(main_index);
-    if (grouped_subs.empty()) {
-      matched_objects.push_back(main_object);
-      continue;
-    }
-    matched_objects.push_back(
-      enclose_union_with_main_shape(main_object, grouped_subs, keep_input_dimensions_));
-  }
+  const auto grouped_inputs = classify_sub_objects_by_overlap(main_objects, sub_objects);
+  auto fused_main_objects =
+    build_fused_main_objects(main_objects, grouped_inputs, keep_input_dimensions_);
 
   const auto header = std_msgs::build<std_msgs::msg::Header>()
                         .stamp(main_objects_msg.header.stamp)
                         .frame_id(base_link_frame_id_);
 
   return FusionResult{
-    autoware_perception_msgs::build<DetectedObjects>().header(header).objects(matched_objects),
-    autoware_perception_msgs::build<DetectedObjects>().header(header).objects(other_objects)};
+    autoware_perception_msgs::build<DetectedObjects>().header(header).objects(fused_main_objects),
+    autoware_perception_msgs::build<DetectedObjects>().header(header).objects(
+      grouped_inputs.other_objects)};
 }
 
 }  // namespace autoware::object_merger
