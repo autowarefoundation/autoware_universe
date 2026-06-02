@@ -21,8 +21,8 @@
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_control_msgs/msg/jerk_constant_deceleration_trigger.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <tier4_control_msgs/msg/jerk_constant_deceleration_trigger.hpp>
 #include <tier4_system_msgs/srv/change_topic_relay_control.hpp>
 
 namespace autoware::command_mode_switcher

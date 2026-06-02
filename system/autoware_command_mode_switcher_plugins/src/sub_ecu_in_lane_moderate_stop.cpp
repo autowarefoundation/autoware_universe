@@ -64,7 +64,8 @@ SourceState SubEcuInLaneModerateStopSwitcher::update_source_state(bool request)
     if (params_.enable_trajectory_relay)
       request_topic_relay_control(false, client_relay_trajectory_, "trajectory");
     if (params_.enable_pose_with_covariance_relay)
-      request_topic_relay_control(false, client_relay_pose_with_covariance_, "pose_with_covariance");
+      request_topic_relay_control(
+        false, client_relay_pose_with_covariance_, "pose_with_covariance");
     mrm_state_ = MrmState::Operating;
     return SourceState{true, false};
   } else {
@@ -115,8 +116,9 @@ void SubEcuInLaneModerateStopSwitcher::request_topic_relay_control(
   request->relay_on = relay_on;
 
   auto future = client->async_send_request(request);
-  if (future.wait_for(std::chrono::milliseconds(params_.service_timeout_ms)) !=
-      std::future_status::ready) {
+  if (
+    future.wait_for(std::chrono::milliseconds(params_.service_timeout_ms)) !=
+    std::future_status::ready) {
     RCLCPP_WARN(
       node_->get_logger(), "Timeout waiting for %s relay control: %s", srv_name.c_str(),
       relay_on ? "ON" : "OFF");
