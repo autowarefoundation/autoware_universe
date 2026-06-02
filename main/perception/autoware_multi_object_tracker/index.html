@@ -22914,7 +22914,7 @@
 
 <div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
 <p><em>File</em>: <code>perception/autoware_multi_object_tracker/README.md</code></p>
-<p><em>KeyError</em>: 'properties'</p>
+<p><em>KeyError</em>: 'description'</p>
 <p>```
 Traceback (most recent call last):
   File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 703, in render
@@ -22926,9 +22926,11 @@ Traceback (most recent call last):
   File "<template>", line 104, in top-level template code
   File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
     return format_json(data)
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 62, in format_json
-    parameters = list(json_data["definitions"].values())[0]["properties"]
-KeyError: 'properties'</template></p>
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
+    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 52, in extract_parameter_info
+    param["Description"] = v["description"]
+KeyError: 'description'</template></p>
 <p>```</p></div>
 
 

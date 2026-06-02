@@ -23322,11 +23322,46 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 <td>N/A</td>
 </tr>
 <tr>
-<td>score_threshold</td>
-<td>float</td>
-<td>A threshold value of confidence score, all of objects with score less than this threshold are ignored.</td>
-<td>0.2</td>
-<td>≥0.0</td>
+<td>detection_score_thresholds.distance_bin_upper_limits</td>
+<td>array</td>
+<td>An array of upper bounds of each distance bin.</td>
+<td>[50.0, 90.0, 121.0, 200.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.CAR</td>
+<td>array</td>
+<td>A minimum confidence score for CAR in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.TRUCK</td>
+<td>array</td>
+<td>A minimum confidence score for TRUCK in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.BUS</td>
+<td>array</td>
+<td>A minimum confidence score for BUS in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.BICYCLE</td>
+<td>array</td>
+<td>A minimum confidence score for BICYCLE in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_confidence_scores.PEDESTRIAN</td>
+<td>array</td>
+<td>A minimum confidence score for PEDESTRIAN in each distance bin.</td>
+<td>[0.1, 0.1, 0.1, 0.1]</td>
+<td>N/A</td>
 </tr>
 </tbody>
 </table>
