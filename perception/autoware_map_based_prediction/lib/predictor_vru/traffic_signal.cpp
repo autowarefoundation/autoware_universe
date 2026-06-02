@@ -45,7 +45,7 @@ void TrafficSignalModule::removeDisappearedObjects(const TrackedObjects & object
   for (auto it = stopped_times_against_green_.begin(); it != stopped_times_against_green_.end();) {
     const bool isDisappeared = std::none_of(
       objects.objects.begin(), objects.objects.end(),
-      [&it](autoware_perception_msgs::msg::TrackedObject obj) {
+      [&it](const autoware_perception_msgs::msg::TrackedObject & obj) {
         return autoware_utils::to_hex_string(obj.object_id) == it->first.first;
       });
     if (isDisappeared) {

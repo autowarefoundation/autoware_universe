@@ -57,8 +57,10 @@ bool FenceModule::doesPathCrossAnyFenceBeforeCrosswalk(
   if (!fence_layer_) {
     return false;
   }
+  if (predicted_path.path.empty()) return false;
+  const size_t last_idx = std::min(predicted_path.arrival_index, predicted_path.path.size() - 1);
   lanelet::BasicLineString2d predicted_path_ls;
-  for (auto i = 0UL; i <= predicted_path.arrival_index; ++i) {
+  for (auto i = 0UL; i <= last_idx; ++i) {
     const auto & pt = predicted_path.path[i];
     predicted_path_ls.emplace_back(pt.position.x, pt.position.y);
   }
