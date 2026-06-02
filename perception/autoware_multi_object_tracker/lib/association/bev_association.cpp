@@ -46,36 +46,16 @@ struct MeasurementWithIndex
   MeasurementWithIndex(const types::DynamicObject & obj, size_t idx) : object(obj), index(idx) {}
 };
 
-BevAssociation::BevAssociation(const AssociatorConfig & config)
+BevAssociation::BevAssociation(const TrackerAssociationConfig & config)
 : config_(config), score_threshold_(config.score_threshold)
 {
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
-  updateMaxSearchDistances();
 }
 
 void BevAssociation::setTimeKeeper(
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
-}
-
-void BevAssociation::updateMaxSearchDistances()
-{
-  max_squared_dist_per_class_.clear();
-  for (const auto measurement_label : classes::trackedLabels()) {
-    double max_squared_dist = 0.0;
-    const auto tracker_params_map_opt =
-      get_map_value_if_exists(config_.association_params_map, measurement_label);
-    if (!tracker_params_map_opt) {
-      continue;
-    }
-    const auto & tracker_params_map = tracker_params_map_opt->get();
-    for (const auto & [tracker_type, association_params] : tracker_params_map) {
-      static_cast<void>(tracker_type);
-      max_squared_dist = std::max(max_squared_dist, association_params.max_dist_sq);
-    }
-    max_squared_dist_per_class_.insert_or_assign(measurement_label, max_squared_dist);
-  }
 }
 
 types::AssociationResult BevAssociation::associate(
@@ -208,15 +188,17 @@ void BevAssociation::processMeasurement(
   const classes::Label measurement_label, const PreparationData & prep_data,
   types::AssociationData & association_data)
 {
+  const ShapeLabelKey shape_label_key{
+    types::toShapeType(measurement_object.shape.type), measurement_label};
   const auto tracker_params_map_opt =
-    get_map_value_if_exists(config_.association_params_map, measurement_label);
+    get_map_value_if_exists(config_.association_params_map, shape_label_key);
   if (!tracker_params_map_opt) {
     return;
   }
   const auto & tracker_params_map = tracker_params_map_opt->get();
 
   const auto max_squared_dist_opt =
-    get_map_value_if_exists(max_squared_dist_per_class_, measurement_label);
+    get_map_value_if_exists(config_.max_dist_sq_per_label, measurement_label);
   const double max_squared_dist = max_squared_dist_opt ? max_squared_dist_opt->get() : 0.0;
 
   Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);

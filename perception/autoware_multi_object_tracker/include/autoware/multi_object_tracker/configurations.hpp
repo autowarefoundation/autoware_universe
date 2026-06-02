@@ -17,100 +17,120 @@
 
 #include "autoware/multi_object_tracker/types.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <functional>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
 
 namespace autoware::multi_object_tracker
 {
 
-//// Online association (measurement <-> tracker matching)
-
-struct AssociatorConfig
+struct EnumClassHash
 {
-  struct EnumClassHash
+  template <typename T>
+  std::size_t operator()(const T value) const
   {
-    template <typename T>
-    std::size_t operator()(const T value) const
-    {
-      return static_cast<std::size_t>(value);
-    }
-  };
-
-  struct TrackerAssociationParameters
-  {
-    double max_dist_sq;
-    double max_area;
-    double min_area;
-    double min_iou;
-  };
-
-  using TrackerAssociationParametersMap =
-    std::unordered_map<types::TrackerType, TrackerAssociationParameters, EnumClassHash>;
-  using LabelDoubleMap = std::unordered_map<classes::Label, double, EnumClassHash>;
-  using LabelToTrackerAssociationParametersMap =
-    std::unordered_map<classes::Label, TrackerAssociationParametersMap, EnumClassHash>;
-
-  // Effective association parameters (per measurement label -> tracker type).
-  LabelToTrackerAssociationParametersMap association_params_map;
-
-  double unknown_association_giou_threshold;
-  double score_threshold = 0.01;
-  double ego_pose_max_age_sec = 0.21;  // max staleness of ego pose before polar is disabled [s]
+    return static_cast<std::size_t>(value);
+  }
 };
 
-//// Helper: per-label threshold table
-
-struct TrackedLabelThresholds
+//// Association profile
+struct AssociationProfile
 {
-  double unknown;
-  double car;
-  double truck;
-  double bus;
-  double trailer;
-  double motorcycle;
-  double bicycle;
-  double pedestrian;
+  double max_dist_sq;
+  double max_area;
+  double min_area;
+  double min_iou;
+};
 
-  [[nodiscard]] AssociatorConfig::LabelDoubleMap to_label_map() const
+using LabelDoubleMap = std::unordered_map<classes::Label, double, EnumClassHash>;
+
+using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
+struct ShapeLabelKeyHash
+{
+  std::size_t operator()(const ShapeLabelKey & k) const
   {
-    using Label = classes::Label;
-    return {{Label::UNKNOWN, unknown}, {Label::CAR, car},
-            {Label::TRUCK, truck},     {Label::BUS, bus},
-            {Label::TRAILER, trailer}, {Label::MOTORCYCLE, motorcycle},
-            {Label::BICYCLE, bicycle}, {Label::PEDESTRIAN, pedestrian}};
+    const auto h1 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.first));
+    const auto h2 = std::hash<uint8_t>{}(static_cast<uint8_t>(k.second));
+    return h1 ^ (h2 << 8);
+  }
+};
+
+using AssociationProfileMap =
+  std::unordered_map<types::TrackerType, AssociationProfile, EnumClassHash>;
+
+using AssociationMap = std::unordered_map<ShapeLabelKey, AssociationProfileMap, ShapeLabelKeyHash>;
+
+using ShapeLabelToTrackerTypeMap =
+  std::unordered_map<ShapeLabelKey, types::TrackerType, ShapeLabelKeyHash>;
+
+//// Tracker creation (spawning, type mapping)
+struct TrackerCreationConfig
+{
+  bool enable_unknown_object_velocity_estimation{false};
+  bool enable_unknown_object_motion_output{false};
+
+  ShapeLabelToTrackerTypeMap shape_tracker_map;
+  std::unordered_set<ShapeLabelKey, ShapeLabelKeyHash> explicit_null_combos;
+
+  void setCreation(types::ShapeType shape, classes::Label label, types::TrackerType tracker_type)
+  {
+    shape_tracker_map[{shape, label}] = tracker_type;
+  }
+
+  void setExplicitNull(types::ShapeType shape, classes::Label label)
+  {
+    explicit_null_combos.insert({shape, label});
+  }
+};
+
+//// Tracker association (measurement <-> tracker matching)
+struct TrackerAssociationConfig
+{
+  double unknown_association_giou_threshold{0.0};
+  double score_threshold{0.01};
+  double ego_pose_max_age_sec{0.21};
+
+  AssociationMap association_params_map;
+  LabelDoubleMap max_dist_sq_per_label;
+
+  void setProfile(
+    types::ShapeType shape, classes::Label label, types::TrackerType tracker_type,
+    AssociationProfile profile)
+  {
+    association_params_map[{shape, label}][tracker_type] = profile;
+  }
+
+  void buildMaxDistances()
+  {
+    max_dist_sq_per_label.clear();
+    for (const auto & [shape_label, profile_map] : association_params_map) {
+      auto & max_sq = max_dist_sq_per_label[shape_label.second];
+      for (const auto & [tracker_type, profile] : profile_map) {
+        (void)tracker_type;
+        max_sq = std::max(max_sq, profile.max_dist_sq);
+      }
+    }
   }
 };
 
 //// Tracker overlap manager (tracker-to-tracker layer: remove spatially redundant trackers)
-
 struct TrackerOverlapManagerConfig
 {
-  float min_known_object_removal_iou;    // ratio [0, 1]
-  float min_unknown_object_removal_iou;  // ratio [0, 1]
-  AssociatorConfig::LabelDoubleMap pruning_giou_thresholds;
-  AssociatorConfig::LabelDoubleMap pruning_distance_thresholds;     // [m]
-  AssociatorConfig::LabelDoubleMap pruning_distance_thresholds_sq;  // [m^2]
-  double pruning_static_object_speed;                               // [m/s]
-  double pruning_moving_object_speed;                               // [m/s]
-  double pruning_static_iou_threshold;                              // [ratio]
-};
-
-//// Tracker creation (spawning, type mapping)
-
-struct TrackerCreationConfig
-{
-  using LabelToTrackerTypeMap =
-    std::unordered_map<classes::Label, types::TrackerType, AssociatorConfig::EnumClassHash>;
-
-  LabelToTrackerTypeMap tracker_map;
-  bool enable_unknown_object_velocity_estimation;
-  bool enable_unknown_object_motion_output;
+  float min_known_object_removal_iou{0.0f};
+  float min_unknown_object_removal_iou{0.0f};
+  LabelDoubleMap pruning_giou_thresholds;
+  LabelDoubleMap pruning_distance_thresholds;
+  LabelDoubleMap pruning_distance_thresholds_sq;
+  double pruning_static_object_speed{0.0};
+  double pruning_moving_object_speed{0.0};
+  double pruning_static_iou_threshold{0.0};
 };
 
 //// Utility: safe map lookup
-
 template <typename Map, typename Key>
 auto get_map_value_if_exists(const Map & map, const Key & key)
   -> std::optional<std::reference_wrapper<const typename Map::mapped_type>>

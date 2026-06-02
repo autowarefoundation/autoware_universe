@@ -40,9 +40,11 @@ class TrackerProcessor
 {
 public:
   TrackerProcessor(
-    const TrackerCreationConfig & creation_config, const AssociatorConfig & associator_config,
+    const TrackerCreationConfig & creation_config,
+    const TrackerAssociationConfig & association_config,
     const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
-    const std::vector<types::InputChannel> & channels_config);
+    const std::vector<types::InputChannel> & channels_config, const rclcpp::Logger & logger,
+    rclcpp::Clock::SharedPtr clock);
 
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
 
@@ -86,6 +88,9 @@ private:
 
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   AdaptiveThresholdCache adaptive_threshold_cache_;
+
+  rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
 };
 
 }  // namespace autoware::multi_object_tracker

@@ -1,15 +1,5 @@
 /**:
   ros__parameters:
-    # initial tracker models for each class
-    initial_tracker:
-      car: "multi_vehicle_tracker"
-      truck: "multi_vehicle_tracker"
-      bus: "multi_vehicle_tracker"
-      trailer: "multi_vehicle_tracker"
-      pedestrian: "pedestrian_and_bicycle_tracker"
-      bicycle: "pedestrian_and_bicycle_tracker"
-      motorcycle: "pedestrian_and_bicycle_tracker"
-
     # default tracker node parameters
     publish_rate: 10.0
     world_frame_id: map

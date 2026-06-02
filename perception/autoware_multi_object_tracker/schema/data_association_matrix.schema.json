@@ -3,61 +3,137 @@
   "title": "Parameters for Data Association",
   "type": "object",
   "definitions": {
+    "tracker_type": {
+      "type": "string",
+      "enum": [
+        "pass_through_tracker",
+        "pedestrian_and_bicycle_tracker",
+        "pedestrian_tracker",
+        "bicycle_tracker",
+        "multi_vehicle_tracker",
+        "general_vehicle_tracker",
+        "normal_vehicle_tracker",
+        "big_vehicle_tracker",
+        "vehicle_tracker",
+        "polygon_tracker"
+      ]
+    },
+    "tracker_assignment_entry": {
+      "type": "object",
+      "description": "Tracker assignment rule: tracker to create on new detection, and optional ordered list of tracker types eligible for association. 'match' is omitted when 'create' is \"null\" (explicitly rejected).",
+      "properties": {
+        "create": {
+          "oneOf": [
+            { "$ref": "#/definitions/tracker_type" },
+            { "type": "string", "enum": ["null"] }
+          ],
+          "description": "Tracker type to spawn for new detections of this class, or \"null\" to explicitly reject (no tracker created, no association attempted)."
+        },
+        "match": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/tracker_type" },
+          "minItems": 1,
+          "description": "Ordered list of tracker types eligible for association. Omitted when create is \"null\"."
+        }
+      },
+      "required": ["create"],
+      "additionalProperties": false
+    },
+    "label_assignment": {
+      "type": "object",
+      "description": "Per-label assignment rules for a specific shape.",
+      "properties": {
+        "unknown": { "$ref": "#/definitions/tracker_assignment_entry" },
+        "car": { "$ref": "#/definitions/tracker_assignment_entry" },
+        "truck": { "$ref": "#/definitions/tracker_assignment_entry" },
+        "bus": { "$ref": "#/definitions/tracker_assignment_entry" },
+        "trailer": { "$ref": "#/definitions/tracker_assignment_entry" },
+        "motorcycle": { "$ref": "#/definitions/tracker_assignment_entry" },
+        "bicycle": { "$ref": "#/definitions/tracker_assignment_entry" },
+        "pedestrian": { "$ref": "#/definitions/tracker_assignment_entry" }
+      },
+      "additionalProperties": false
+    },
+    "tracker_profile_entry": {
+      "type": "object",
+      "description": "Association thresholds for one (tracker type, label) combination.",
+      "properties": {
+        "max_dist": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Maximum distance threshold for association [m]."
+        },
+        "max_area": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Maximum area threshold for association [m²]."
+        },
+        "min_area": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Minimum area threshold for association [m²]."
+        },
+        "min_iou": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0,
+          "description": "Minimum IoU threshold for association."
+        }
+      },
+      "required": ["max_dist", "max_area", "min_area", "min_iou"],
+      "additionalProperties": false
+    },
+    "tracker_profile_labels": {
+      "type": "object",
+      "description": "Per-label association thresholds for one (tracker, shape) combination. Only labels referenced in tracker_assignment.match for this shape need to be listed.",
+      "properties": {
+        "unknown": { "$ref": "#/definitions/tracker_profile_entry" },
+        "car": { "$ref": "#/definitions/tracker_profile_entry" },
+        "truck": { "$ref": "#/definitions/tracker_profile_entry" },
+        "bus": { "$ref": "#/definitions/tracker_profile_entry" },
+        "trailer": { "$ref": "#/definitions/tracker_profile_entry" },
+        "motorcycle": { "$ref": "#/definitions/tracker_profile_entry" },
+        "bicycle": { "$ref": "#/definitions/tracker_profile_entry" },
+        "pedestrian": { "$ref": "#/definitions/tracker_profile_entry" }
+      },
+      "additionalProperties": false
+    },
+    "tracker_type_profile": {
+      "type": "object",
+      "description": "Association thresholds for one tracker type, keyed by shape (bounding_box, cylinder, polygon). Each shape block lists per-label thresholds explicitly. Every (tracker, shape, label) triple referenced in tracker_assignment.match must have a corresponding entry here.",
+      "properties": {
+        "bounding_box": { "$ref": "#/definitions/tracker_profile_labels" },
+        "cylinder": { "$ref": "#/definitions/tracker_profile_labels" },
+        "polygon": { "$ref": "#/definitions/tracker_profile_labels" }
+      },
+      "additionalProperties": false
+    },
     "data_association_matrix": {
       "type": "object",
       "properties": {
-        "association": {
+        "tracker_assignment": {
           "type": "object",
-          "description": "Layered association configuration: association.<config_type>.<measurement_class>.<tracker_type> = value",
+          "description": "Per-shape, per-label assignment rules mapping (shape, label) → {create, match}. Each shape block (bounding_box, polygon, cylinder) lists its accepted labels explicitly. Omitted (shape, label) combinations are implicitly not accepted.",
           "properties": {
-            "can_assign": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "minItems": 1
-              }
+            "bounding_box": {
+              "$ref": "#/definitions/label_assignment",
+              "description": "Assignment rules for bounding_box detections."
             },
-            "max_dist": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "number"
-                }
-              }
+            "polygon": {
+              "$ref": "#/definitions/label_assignment",
+              "description": "Assignment rules for polygon detections."
             },
-            "max_area": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "number"
-                }
-              }
-            },
-            "min_area": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "number"
-                }
-              }
-            },
-            "min_iou": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "number"
-                }
-              }
+            "cylinder": {
+              "$ref": "#/definitions/label_assignment",
+              "description": "Assignment rules for cylinder detections."
             }
           },
-          "required": ["can_assign", "max_dist", "max_area", "min_area", "min_iou"]
+          "additionalProperties": false
+        },
+        "tracker_profiles": {
+          "type": "object",
+          "description": "Per-tracker-type association thresholds keyed by shape then label. Keys are tracker type names (e.g. multi_vehicle_tracker). Every (tracker, shape, label) triple listed in tracker_assignment.match must have an explicit entry here.",
+          "additionalProperties": { "$ref": "#/definitions/tracker_type_profile" }
         },
         "unknown_association_giou_threshold": {
           "type": "number",
@@ -65,7 +141,7 @@
           "default": -0.8
         }
       },
-      "required": ["association"]
+      "required": ["tracker_assignment", "tracker_profiles"]
     }
   },
   "properties": {

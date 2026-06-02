@@ -33,8 +33,7 @@ inline double getMahalanobisDistanceFast(double dx, double dy, const InverseCova
 
 ScoringResult calculateBevAssignmentScore(
   const types::DynamicObject & tracked_object, const classes::Label tracker_label,
-  const types::TrackerType tracker_type,
-  const AssociatorConfig::TrackerAssociationParameters & association_params,
+  const types::TrackerType tracker_type, const AssociationProfile & association_params,
   const types::DynamicObject & measurement_object, const classes::Label measurement_label,
   const InverseCovariance2D & inv_cov, const double unknown_association_giou_threshold)
 {

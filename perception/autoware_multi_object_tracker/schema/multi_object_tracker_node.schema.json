@@ -3,62 +3,6 @@
   "title": "Parameters for Multi Object Tracker Node",
   "type": "object",
   "definitions": {
-    "tracker_type": {
-      "type": "string",
-      "enum": [
-        "pass_through_tracker",
-        "pedestrian_and_bicycle_tracker",
-        "pedestrian_tracker",
-        "bicycle_tracker",
-        "multi_vehicle_tracker",
-        "general_vehicle_tracker",
-        "normal_vehicle_tracker",
-        "big_vehicle_tracker",
-        "vehicle_tracker",
-        "polygon_tracker"
-      ]
-    },
-    "initial_tracker": {
-      "type": "object",
-      "properties": {
-        "car": {
-          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
-          "description": "Tracker model for car class.",
-          "default": "multi_vehicle_tracker"
-        },
-        "truck": {
-          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
-          "description": "Tracker model for truck class.",
-          "default": "multi_vehicle_tracker"
-        },
-        "bus": {
-          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
-          "description": "Tracker model for bus class.",
-          "default": "multi_vehicle_tracker"
-        },
-        "trailer": {
-          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
-          "description": "Tracker model for trailer class.",
-          "default": "multi_vehicle_tracker"
-        },
-        "pedestrian": {
-          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
-          "description": "Tracker model for pedestrian class.",
-          "default": "pedestrian_and_bicycle_tracker"
-        },
-        "bicycle": {
-          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
-          "description": "Tracker model for bicycle class.",
-          "default": "pedestrian_and_bicycle_tracker"
-        },
-        "motorcycle": {
-          "allOf": [{ "$ref": "#/definitions/tracker_type" }],
-          "description": "Tracker model for motorcycle class.",
-          "default": "pedestrian_and_bicycle_tracker"
-        }
-      },
-      "required": ["car", "truck", "bus", "trailer", "pedestrian", "bicycle", "motorcycle"]
-    },
     "pruning_generalized_iou_thresholds": {
       "type": "object",
       "additionalProperties": false,
@@ -168,9 +112,6 @@
     "multi_object_tracker_node": {
       "type": "object",
       "properties": {
-        "initial_tracker": {
-          "$ref": "#/definitions/initial_tracker"
-        },
         "publish_rate": {
           "type": "number",
           "description": "Timer frequency to output with delay compensation.",
@@ -188,7 +129,7 @@
         },
         "enable_delay_compensation": {
           "type": "boolean",
-          "description": "If True, tracker use timers to schedule publishers and use prediction step to extrapolate object state at desired timestamp.",
+          "description": "If True, tracker uses timers to schedule publishers and uses prediction step to extrapolate object state at desired timestamp.",
           "default": false
         },
         "consider_odometry_uncertainty": {
@@ -208,12 +149,12 @@
         },
         "min_known_object_removal_iou": {
           "type": "number",
-          "description": "Minimum IOU between associated objects with known label to remove younger tracker",
+          "description": "Minimum IOU between associated objects with known label to remove younger tracker.",
           "default": 0.1
         },
         "min_unknown_object_removal_iou": {
           "type": "number",
-          "description": "Minimum IOU between associated objects with unknown label to remove unknown tracker",
+          "description": "Minimum IOU between associated objects with unknown label to remove unknown tracker.",
           "default": 0.001
         },
         "pruning_generalized_iou_thresholds": {
@@ -227,6 +168,19 @@
             "motorcycle": -0.1,
             "bicycle": -0.1,
             "pedestrian": -0.1
+          }
+        },
+        "pruning_distance_thresholds": {
+          "$ref": "#/definitions/pruning_distance_thresholds",
+          "default": {
+            "unknown": 9.0,
+            "car": 5.0,
+            "truck": 9.0,
+            "bus": 9.0,
+            "trailer": 9.0,
+            "motorcycle": 4.0,
+            "bicycle": 3.0,
+            "pedestrian": 2.0
           }
         },
         "pruning_static_object_speed": {
@@ -243,19 +197,6 @@
           "type": "number",
           "description": "Generalized IoU threshold for a static object.",
           "default": 0.0
-        },
-        "pruning_distance_thresholds": {
-          "$ref": "#/definitions/pruning_distance_thresholds",
-          "default": {
-            "unknown": 9.0,
-            "car": 5.0,
-            "truck": 9.0,
-            "bus": 9.0,
-            "trailer": 9.0,
-            "motorcycle": 4.0,
-            "bicycle": 3.0,
-            "pedestrian": 2.0
-          }
         },
         "publish_processing_time": {
           "type": "boolean",
@@ -289,35 +230,38 @@
         },
         "diagnostics_warn_extrapolation": {
           "type": "number",
-          "description": "Delay extrapolation threshold for warning diagnostics in seconds.",
+          "description": "Extrapolation duration threshold for warning diagnostics in seconds.",
           "default": 0.5
         },
         "diagnostics_error_extrapolation": {
           "type": "number",
-          "description": "Delay extrapolation threshold for error diagnostics in seconds.",
+          "description": "Extrapolation duration threshold for error diagnostics in seconds.",
           "default": 1.0
         }
       },
       "required": [
-        "initial_tracker",
         "publish_rate",
         "world_frame_id",
         "ego_frame_id",
         "enable_delay_compensation",
         "consider_odometry_uncertainty",
+        "enable_unknown_object_velocity_estimation",
+        "enable_unknown_object_motion_output",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
         "pruning_generalized_iou_thresholds",
+        "pruning_distance_thresholds",
         "pruning_static_object_speed",
         "pruning_moving_object_speed",
         "pruning_static_iou_threshold",
-        "pruning_distance_thresholds",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_tentative_objects",
         "publish_debug_markers",
         "diagnostics_warn_delay",
-        "diagnostics_error_delay"
+        "diagnostics_error_delay",
+        "diagnostics_warn_extrapolation",
+        "diagnostics_error_extrapolation"
       ]
     }
   },

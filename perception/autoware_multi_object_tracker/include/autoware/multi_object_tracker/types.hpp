@@ -38,6 +38,7 @@
 #include <array>
 #include <functional>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -49,7 +50,6 @@ namespace types
 {
 
 enum class TrackerType {
-  PASS_THROUGH = 0,
   PEDESTRIAN_AND_BICYCLE = 10,
   PEDESTRIAN = 11,
   BICYCLE = 12,
@@ -61,12 +61,16 @@ enum class TrackerType {
   POLYGON = 30,
 };
 
-inline constexpr std::array<TrackerType, 10> ALL_TRACKER_TYPES = {
-  TrackerType::PASS_THROUGH,     TrackerType::PEDESTRIAN_AND_BICYCLE,
-  TrackerType::PEDESTRIAN,       TrackerType::BICYCLE,
-  TrackerType::MULTIPLE_VEHICLE, TrackerType::GENERAL_VEHICLE,
-  TrackerType::NORMAL_VEHICLE,   TrackerType::BIG_VEHICLE,
-  TrackerType::VEHICLE,          TrackerType::POLYGON};
+inline constexpr std::array<TrackerType, 9> ALL_TRACKER_TYPES = {
+  TrackerType::PEDESTRIAN_AND_BICYCLE,
+  TrackerType::PEDESTRIAN,
+  TrackerType::BICYCLE,
+  TrackerType::MULTIPLE_VEHICLE,
+  TrackerType::GENERAL_VEHICLE,
+  TrackerType::NORMAL_VEHICLE,
+  TrackerType::BIG_VEHICLE,
+  TrackerType::VEHICLE,
+  TrackerType::POLYGON};
 
 inline bool isVehicleTrackerType(const TrackerType tracker_type)
 {
@@ -76,7 +80,7 @@ inline bool isVehicleTrackerType(const TrackerType tracker_type)
          tracker_type == TrackerType::VEHICLE;
 }
 
-inline const std::array<TrackerType, 10> & allTrackerTypes()
+inline const std::array<TrackerType, 9> & allTrackerTypes()
 {
   return ALL_TRACKER_TYPES;
 }
@@ -84,8 +88,6 @@ inline const std::array<TrackerType, 10> & allTrackerTypes()
 inline std::string toString(const TrackerType tracker_type)
 {
   switch (tracker_type) {
-    case TrackerType::PASS_THROUGH:
-      return "pass_through_tracker";
     case TrackerType::PEDESTRIAN_AND_BICYCLE:
       return "pedestrian_and_bicycle_tracker";
     case TrackerType::PEDESTRIAN:
@@ -111,7 +113,6 @@ inline std::string toString(const TrackerType tracker_type)
 
 inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name)
 {
-  if (tracker_name == "pass_through_tracker") return TrackerType::PASS_THROUGH;
   if (tracker_name == "pedestrian_and_bicycle_tracker") {
     return TrackerType::PEDESTRIAN_AND_BICYCLE;
   }
@@ -125,6 +126,52 @@ inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name
   if (tracker_name == "polygon_tracker") return TrackerType::POLYGON;
   return std::nullopt;
 }
+
+// Shape type — mirrors autoware_perception_msgs::msg::Shape constants
+enum class ShapeType : uint8_t {
+  BOUNDING_BOX = 0,
+  CYLINDER = 1,
+  POLYGON = 2,
+};
+
+inline std::string toString(const ShapeType shape_type)
+{
+  switch (shape_type) {
+    case ShapeType::BOUNDING_BOX:
+      return "bounding_box";
+    case ShapeType::POLYGON:
+      return "polygon";
+    case ShapeType::CYLINDER:
+      return "cylinder";
+  }
+  throw std::invalid_argument("Unknown ShapeType: " + std::to_string(static_cast<int>(shape_type)));
+}
+
+inline std::optional<ShapeType> toShapeType(const std::string & shape_name)
+{
+  if (shape_name == "bounding_box") return ShapeType::BOUNDING_BOX;
+  if (shape_name == "polygon") return ShapeType::POLYGON;
+  if (shape_name == "cylinder") return ShapeType::CYLINDER;
+  return std::nullopt;
+}
+
+inline ShapeType toShapeType(const uint8_t shape_type)
+{
+  using MsgShape = autoware_perception_msgs::msg::Shape;
+  switch (shape_type) {
+    case MsgShape::BOUNDING_BOX:
+      return ShapeType::BOUNDING_BOX;
+    case MsgShape::POLYGON:
+      return ShapeType::POLYGON;
+    case MsgShape::CYLINDER:
+      return ShapeType::CYLINDER;
+    default:
+      return ShapeType::BOUNDING_BOX;  // treat unknown msg shape as bounding box
+  }
+}
+
+inline constexpr std::array<ShapeType, 3> ALL_SHAPE_TYPES = {
+  ShapeType::BOUNDING_BOX, ShapeType::CYLINDER, ShapeType::POLYGON};
 
 // constants
 constexpr float default_existence_probability = 0.75;
@@ -355,9 +402,12 @@ double getArea(const autoware_perception_msgs::msg::Shape & shape);
 
 }  // namespace types
 
+using types::ALL_SHAPE_TYPES;
 using types::ALL_TRACKER_TYPES;
 using types::allTrackerTypes;
 using types::isVehicleTrackerType;
+using types::ShapeType;
+using types::toShapeType;
 using types::toString;
 using types::toTrackerType;
 using types::TrackerType;

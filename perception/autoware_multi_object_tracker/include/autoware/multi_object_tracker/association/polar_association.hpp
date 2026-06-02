@@ -45,7 +45,7 @@ namespace autoware::multi_object_tracker
 class PolarAssociation : public AssociationBase
 {
 public:
-  explicit PolarAssociation(const AssociatorConfig & config);
+  explicit PolarAssociation(const TrackerAssociationConfig & config);
   ~PolarAssociation() override = default;
 
   /// AssociationBase implementation.
@@ -73,7 +73,7 @@ private:
     double x, y, z, yaw;
   };
 
-  AssociatorConfig config_;
+  TrackerAssociationConfig config_;
   const double score_threshold_;
   std::unique_ptr<gnn_solver::GnnSolverInterface> gnn_solver_ptr_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;

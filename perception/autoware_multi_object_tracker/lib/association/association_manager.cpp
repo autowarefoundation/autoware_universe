@@ -28,12 +28,12 @@ namespace autoware::multi_object_tracker
 {
 
 AssociationManager::AssociationManager(
-  const AssociatorConfig & associator_config,
+  const TrackerAssociationConfig & association_config,
   const std::vector<types::InputChannel> & channels_config)
 : channels_config_(channels_config),
-  ego_pose_max_age_sec_(associator_config.ego_pose_max_age_sec),
-  bev_association_(std::make_unique<BevAssociation>(associator_config)),
-  polar_association_(std::make_unique<PolarAssociation>(associator_config))
+  ego_pose_max_age_sec_(association_config.ego_pose_max_age_sec),
+  bev_association_(std::make_unique<BevAssociation>(association_config)),
+  polar_association_(std::make_unique<PolarAssociation>(association_config))
 {
 }
 
