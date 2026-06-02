@@ -92,7 +92,7 @@ void TrafficLightArbiterCore::set_map(const lanelet::LaneletMapConstPtr & map)
 bool TrafficLightArbiterCore::is_external_outdated(
   const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const
 {
-  return (current_time - msg_stamp).seconds() > external_delay_tolerance_;
+  return std::abs((current_time - msg_stamp).seconds()) > external_delay_tolerance_;
 }
 
 std::vector<TrafficLightArbiterCore::ExpiredExternalSignal>
@@ -104,7 +104,7 @@ TrafficLightArbiterCore::sweep_expired_external_signals(
   while (it != external_traffic_lights_.end()) {
     const auto & msg_stamp = it->second.first;
     const auto age = (reference_time - msg_stamp).seconds();
-    if (age > tolerance) {
+    if (std::abs(age) > tolerance) {
       expired.push_back({it->first, age});
       it = external_traffic_lights_.erase(it);
     } else {
