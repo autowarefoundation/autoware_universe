@@ -83,9 +83,9 @@
       "required": ["max_dist", "max_area", "min_area", "min_iou"],
       "additionalProperties": false
     },
-    "tracker_profile_shape_override": {
+    "tracker_profile_labels": {
       "type": "object",
-      "description": "Shape-specific association threshold overrides per label; each present label overrides the label-level profile for that (tracker, shape, label) combination.",
+      "description": "Per-label association thresholds for one (tracker, shape) combination. Only labels referenced in tracker_assignment.match for this shape need to be listed.",
       "properties": {
         "unknown": { "$ref": "#/definitions/tracker_profile_entry" },
         "car": { "$ref": "#/definitions/tracker_profile_entry" },
@@ -100,28 +100,11 @@
     },
     "tracker_type_profile": {
       "type": "object",
-      "description": "Association thresholds for one tracker type: label-level defaults plus optional per-shape overrides (bounding_box, cylinder, polygon). Shape overrides use label-level values as fallback when not present.",
+      "description": "Association thresholds for one tracker type, keyed by shape (bounding_box, cylinder, polygon). Each shape block lists per-label thresholds explicitly. Every (tracker, shape, label) triple referenced in tracker_assignment.match must have a corresponding entry here.",
       "properties": {
-        "unknown": { "$ref": "#/definitions/tracker_profile_entry" },
-        "car": { "$ref": "#/definitions/tracker_profile_entry" },
-        "truck": { "$ref": "#/definitions/tracker_profile_entry" },
-        "bus": { "$ref": "#/definitions/tracker_profile_entry" },
-        "trailer": { "$ref": "#/definitions/tracker_profile_entry" },
-        "motorcycle": { "$ref": "#/definitions/tracker_profile_entry" },
-        "bicycle": { "$ref": "#/definitions/tracker_profile_entry" },
-        "pedestrian": { "$ref": "#/definitions/tracker_profile_entry" },
-        "bounding_box": {
-          "$ref": "#/definitions/tracker_profile_shape_override",
-          "description": "Per-label overrides for bounding_box measurements."
-        },
-        "cylinder": {
-          "$ref": "#/definitions/tracker_profile_shape_override",
-          "description": "Per-label overrides for cylinder measurements."
-        },
-        "polygon": {
-          "$ref": "#/definitions/tracker_profile_shape_override",
-          "description": "Per-label overrides for polygon measurements."
-        }
+        "bounding_box": { "$ref": "#/definitions/tracker_profile_labels" },
+        "cylinder": { "$ref": "#/definitions/tracker_profile_labels" },
+        "polygon": { "$ref": "#/definitions/tracker_profile_labels" }
       },
       "additionalProperties": false
     },
@@ -149,7 +132,7 @@
         },
         "tracker_profiles": {
           "type": "object",
-          "description": "Per-tracker-type association thresholds per label, with optional per-shape overrides. Keys are tracker type names (e.g. multi_vehicle_tracker). Shape override blocks (bounding_box, cylinder, polygon) within a tracker type fall back to the label-level values when omitted.",
+          "description": "Per-tracker-type association thresholds keyed by shape then label. Keys are tracker type names (e.g. multi_vehicle_tracker). Every (tracker, shape, label) triple listed in tracker_assignment.match must have an explicit entry here.",
           "additionalProperties": { "$ref": "#/definitions/tracker_type_profile" }
         },
         "unknown_association_giou_threshold": {

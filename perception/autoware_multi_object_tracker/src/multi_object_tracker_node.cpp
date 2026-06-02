@@ -24,6 +24,7 @@
 #include <array>
 #include <cmath>
 #include <iomanip>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -176,32 +177,27 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       }
     }
 
-    // tracker_profiles: apply — independent of tracker_assignment parsing
-    // For each (shape, label, tracker) from the assignment map:
-    //   1. Declare the label-level profile once per unique (tracker, label).
-    //   2. Declare the shape-specific override with label-level values as fallback.
-    using LabelProfileMap = std::unordered_map<classes::Label, AssociationProfile, EnumClassHash>;
-    std::unordered_map<TrackerType, LabelProfileMap, EnumClassHash> label_profiles;
+    // tracker_profiles: for each (tracker, shape, label) required by the match lists,
+    // load an explicit profile entry. Missing entries throw at startup with a clear message.
     for (const auto & [shape_label, tracker_types] : association_assignment) {
       const auto & [shape, label] = shape_label;
+      const auto shape_str = types::toString(shape);
+      const auto label_str = classes::toString(label);
       for (const auto tracker_type : tracker_types) {
-        if (!label_profiles[tracker_type].count(label)) {
-          const auto p =
-            "tracker_profiles." + toString(tracker_type) + "." + classes::toString(label) + ".";
-          const auto d = declare_parameter<double>(p + "max_dist");
-          label_profiles[tracker_type][label] = {
-            d * d, declare_parameter<double>(p + "max_area"),
-            declare_parameter<double>(p + "min_area"), declare_parameter<double>(p + "min_iou")};
+        const auto tracker_str = toString(tracker_type);
+        const auto p = "tracker_profiles." + tracker_str + "." + shape_str + "." + label_str + ".";
+        const auto d =
+          declare_parameter<double>(p + "max_dist", std::numeric_limits<double>::quiet_NaN());
+        if (std::isnan(d)) {
+          throw std::invalid_argument(
+            "Missing tracker_profiles." + tracker_str + "." + shape_str + "." + label_str +
+            " — required by tracker_assignment." + shape_str + "." + label_str + ".match entry '" +
+            tracker_str + "'");
         }
-        const auto & base = label_profiles[tracker_type][label];
-        const auto p = "tracker_profiles." + toString(tracker_type) + "." + types::toString(shape) +
-                       "." + classes::toString(label) + ".";
-        const auto d = declare_parameter<double>(p + "max_dist", std::sqrt(base.max_dist_sq));
         params_.association_config.setProfile(
           shape, label, tracker_type,
-          {d * d, declare_parameter<double>(p + "max_area", base.max_area),
-           declare_parameter<double>(p + "min_area", base.min_area),
-           declare_parameter<double>(p + "min_iou", base.min_iou)});
+          {d * d, declare_parameter<double>(p + "max_area"),
+           declare_parameter<double>(p + "min_area"), declare_parameter<double>(p + "min_iou")});
       }
     }
 

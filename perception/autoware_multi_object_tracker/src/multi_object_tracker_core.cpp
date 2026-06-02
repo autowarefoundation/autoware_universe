@@ -84,15 +84,9 @@ namespace core
 //// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
-  // Validate that every (shape, label) association map is non-empty and that the
-  // create-tracker for each pair is present in its match list.
+  // Validate that the create tracker for each (shape, label) is present in its match list.
+  // Profile existence is already guaranteed by the parser (missing entries throw at startup).
   for (const auto & [shape_label, profile_map] : params.association_config.association_params_map) {
-    if (profile_map.empty()) {
-      throw std::runtime_error(
-        "Empty association configuration for (" + types::toString(shape_label.first) + ", " +
-        classes::toString(shape_label.second) + ")");
-    }
-
     const auto default_tracker_opt =
       get_map_value_if_exists(params.creation_config.shape_tracker_map, shape_label);
     if (!default_tracker_opt) continue;
