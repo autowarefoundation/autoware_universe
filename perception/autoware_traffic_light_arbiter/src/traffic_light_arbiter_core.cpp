@@ -35,14 +35,10 @@ namespace
 
 std::unordered_set<lanelet::Id> extract_traffic_light_ids(const lanelet::LaneletMapConstPtr & map)
 {
-  namespace query = lanelet::utils::query;
-
-  const auto all_lanelets = query::laneletLayer(map);
-
   std::unordered_set<lanelet::Id> traffic_light_ids;
-  for (const auto & lanelet : all_lanelets) {
-    const auto traffic_lights = lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
-    for (const auto & traffic_light : traffic_lights) {
+  for (const auto & element : map->regulatoryElementLayer) {
+    const auto traffic_light = std::dynamic_pointer_cast<const lanelet::TrafficLight>(element);
+    if (traffic_light) {
       traffic_light_ids.emplace(traffic_light->id());
     }
   }
