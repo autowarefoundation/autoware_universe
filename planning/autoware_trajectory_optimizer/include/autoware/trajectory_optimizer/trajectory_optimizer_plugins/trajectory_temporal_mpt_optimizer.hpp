@@ -71,6 +71,7 @@ private:
   TemporalMPTParams mpt_params_;
 
   void create_or_reset_solver();
+  void apply_solver_model_parameters();
   void write_temporal_mpt_replay_fixture(
     const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_trajectory,
     int acados_status, const char * tag);

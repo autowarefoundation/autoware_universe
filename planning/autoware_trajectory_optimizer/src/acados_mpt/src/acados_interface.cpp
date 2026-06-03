@@ -14,15 +14,13 @@
 
 #include "autoware/trajectory_optimizer/acados_interface.hpp"
 
-#include <iostream>
 #include <sstream>
 
 namespace temporal_mpt
 {
 
-AcadosInterface::AcadosInterface()
+AcadosInterface::AcadosInterface() : capsule_{kinematic_bicycle_temporal_acados_create_capsule()}
 {
-  capsule_ = kinematic_bicycle_temporal_acados_create_capsule();
   kinematic_bicycle_temporal_acados_create(capsule_);
 
   double lbx0[KINEMATIC_BICYCLE_TEMPORAL_NX] = {0};
@@ -40,6 +38,9 @@ AcadosInterface::AcadosInterface()
 
 AcadosInterface::~AcadosInterface()
 {
+  if (capsule_ == nullptr) {
+    return;
+  }
   kinematic_bicycle_temporal_acados_free(capsule_);
   kinematic_bicycle_temporal_acados_free_capsule(capsule_);
 }
@@ -93,6 +94,11 @@ void AcadosInterface::setInitialState(std::array<double, NX> x0)
     nlp_config_, nlp_dims_, nlp_in_, nlp_out_, 0, "ubx", const_cast<double *>(x0.data()));
 }
 
+void AcadosInterface::set_print_solver_stats(const bool print_solver_stats)
+{
+  print_solver_stats_ = print_solver_stats;
+}
+
 std::array<std::array<double, NX>, N + 1> AcadosInterface::getStateTrajectory() const
 {
   std::array<std::array<double, NX>, N + 1> xtraj;
@@ -111,11 +117,6 @@ std::array<std::array<double, NU>, N> AcadosInterface::getControlTrajectory() co
   return utraj;
 }
 
-int AcadosInterface::solve()
-{
-  return kinematic_bicycle_temporal_acados_solve(capsule_);
-}
-
 AcadosSolution AcadosInterface::getControl(std::array<double, NX> x0)
 {
   double kkt_norm_inf = 0.0;
@@ -129,12 +130,14 @@ AcadosSolution AcadosInterface::getControl(std::array<double, NX> x0)
   ocp_nlp_out_get(nlp_config_, nlp_dims_, nlp_out_, 0, "kkt_norm_inf", &kkt_norm_inf);
   ocp_nlp_get(nlp_solver_, "sqp_iter", &sqp_iter);
 
-  kinematic_bicycle_temporal_acados_print_stats(capsule_);
+  if (print_solver_stats_) {
+    kinematic_bicycle_temporal_acados_print_stats(capsule_);
+  }
 
   std::stringstream ss;
   ss << "\nSolver info:" << std::endl;
-  ss << " SQP iterations " << sqp_iter << "\n minimum time for " << 1 << " solve "
-     << elapsed_time * 1000 << " [ms]\n KKT " << kkt_norm_inf << std::endl;
+  ss << " SQP iterations " << sqp_iter << "\n solve time " << elapsed_time * 1000 << " [ms]\n KKT "
+     << kkt_norm_inf << std::endl;
 
   AcadosSolution solution;
   solution.xtraj = getStateTrajectory();

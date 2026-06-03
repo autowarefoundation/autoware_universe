@@ -37,14 +37,14 @@ constexpr size_t NYN = KINEMATIC_BICYCLE_TEMPORAL_NYN;
 
 struct AcadosSolution
 {
-  std::array<std::array<double, NX>, N + 1> xtraj;
-  std::array<std::array<double, NU>, N> utraj;
+  std::array<std::array<double, NX>, N + 1> xtraj{};
+  std::array<std::array<double, NU>, N> utraj{};
 
-  int sqp_iter;
-  double kkt_norm_inf;
-  double elapsed_time;
+  int sqp_iter{0};
+  double kkt_norm_inf{0.0};
+  double elapsed_time{0.0};
 
-  int status;
+  int status{0};
   std::string info;
 };
 
@@ -54,7 +54,6 @@ public:
   AcadosInterface();
   ~AcadosInterface();
 
-  int solve();
   AcadosSolution getControl(std::array<double, NX> x0);
   void setParameters(int stage, std::array<double, NP> params);
   void setParametersAllStages(std::array<double, NP> params);
@@ -62,16 +61,18 @@ public:
   void setTerminalReference(std::array<double, NYN> yref_e);
   void setWarmStart(std::array<double, NX> x0, std::array<double, NU> u0);
   void setInitialState(std::array<double, NX> x0);
+  void set_print_solver_stats(bool print_solver_stats);
 
 private:
   std::array<std::array<double, NX>, N + 1> getStateTrajectory() const;
   std::array<std::array<double, NU>, N> getControlTrajectory() const;
 
-  kinematic_bicycle_temporal_solver_capsule * capsule_;
-  ocp_nlp_config * nlp_config_;
-  ocp_nlp_dims * nlp_dims_;
-  ocp_nlp_in * nlp_in_;
-  ocp_nlp_out * nlp_out_;
-  ocp_nlp_solver * nlp_solver_;
+  kinematic_bicycle_temporal_solver_capsule * capsule_{nullptr};
+  ocp_nlp_config * nlp_config_{nullptr};
+  ocp_nlp_dims * nlp_dims_{nullptr};
+  ocp_nlp_in * nlp_in_{nullptr};
+  ocp_nlp_out * nlp_out_{nullptr};
+  ocp_nlp_solver * nlp_solver_{nullptr};
+  bool print_solver_stats_{false};
 };
 }  // namespace temporal_mpt

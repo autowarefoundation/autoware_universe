@@ -142,7 +142,6 @@ rcl_interfaces::msg::SetParametersResult TrajectoryTemporalMPTOptimizer::on_para
   const std::vector<rclcpp::Parameter> & parameters)
 {
   using autoware_utils_rclcpp::update_param;
-  bool solver_reinit_required = false;
 
   int min_points_for_optimization = static_cast<int>(mpt_params_.min_points_for_optimization);
   if (update_param(
@@ -166,10 +165,6 @@ rcl_interfaces::msg::SetParametersResult TrajectoryTemporalMPTOptimizer::on_para
   update_param(
     parameters, "trajectory_temporal_mpt_optimizer.log_replay_fixture_to_console",
     mpt_params_.log_replay_fixture_to_console);
-
-  if (solver_reinit_required) {
-    create_or_reset_solver();
-  }
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
@@ -198,9 +193,6 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
   }
 
   const TrajectoryPoints reference_snapshot = traj_points;
-
-  const std::array<double, temporal_mpt::NP> model_params = {mpt_params_.lf, mpt_params_.lr};
-  acados_interface_->setParametersAllStages(model_params);
 
   // Initial state from the first incoming trajectory point (kinematic bicycle: x, y, psi, v).
   const auto & p0 = traj_points.front();
@@ -422,9 +414,19 @@ void TrajectoryTemporalMPTOptimizer::write_temporal_mpt_replay_fixture(
     out_path.c_str());
 }
 
+void TrajectoryTemporalMPTOptimizer::apply_solver_model_parameters()
+{
+  if (!acados_interface_) {
+    return;
+  }
+  const std::array<double, temporal_mpt::NP> model_params = {mpt_params_.lf, mpt_params_.lr};
+  acados_interface_->setParametersAllStages(model_params);
+}
+
 void TrajectoryTemporalMPTOptimizer::create_or_reset_solver()
 {
   acados_interface_ = std::make_unique<temporal_mpt::AcadosInterface>();
+  apply_solver_model_parameters();
 }
 
 void TrajectoryTemporalMPTOptimizer::ensure_debug_publishers()
