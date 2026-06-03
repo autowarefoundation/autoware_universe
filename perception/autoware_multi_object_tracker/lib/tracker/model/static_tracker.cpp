@@ -16,6 +16,9 @@
 
 #include "autoware/multi_object_tracker/tracker/model/static_tracker.hpp"
 
+#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+
+#include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_utils_geometry/msg/covariance.hpp>
 
 #include <cmath>
@@ -75,12 +78,20 @@ bool StaticTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & /*time*/,
   const types::InputChannel & /*channel_info*/)
 {
-  object_.shape = object.shape;
-  object_.pose = object.pose;
-  object_.area = types::getArea(object.shape);
-  last_pose_ = object.pose;
+  const types::DynamicObject * effective = &object;
+  types::DynamicObject converted;
+  if (
+    object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON &&
+    shapes::convertConvexHullToBoundingBox(object, converted, ego_pos_)) {
+    effective = &converted;
+  }
 
-  measureWithPose(object);
+  object_.shape = effective->shape;
+  object_.pose = effective->pose;
+  object_.area = types::getArea(effective->shape);
+  last_pose_ = effective->pose;
+
+  measureWithPose(*effective);
 
   return true;
 }
@@ -103,6 +114,13 @@ bool StaticTracker::getTrackedObject(
         time_object, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
     RCLCPP_WARN(logger_, "StaticTracker::getTrackedObject: Failed to get predicted state.");
     return false;
+  }
+
+  if (to_publish && object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
+    types::DynamicObject converted;
+    if (shapes::convertConvexHullToBoundingBox(object, converted, ego_pos_)) {
+      object = converted;
+    }
   }
 
   return true;

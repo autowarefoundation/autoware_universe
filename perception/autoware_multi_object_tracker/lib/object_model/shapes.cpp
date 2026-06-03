@@ -180,64 +180,137 @@ bool get2dPrecisionRecallGIoU(
   return true;
 }
 
-/**
- * @brief convert convex hull shape object to bounding box object
- * @param input_object: input convex hull objects
- * @param output_object: output bounding box objects
- */
 bool convertConvexHullToBoundingBox(
-  const types::DynamicObject & input_object, types::DynamicObject & output_object)
+  const types::DynamicObject & input_object, types::DynamicObject & output_object,
+  const std::optional<geometry_msgs::msg::Point> & ego_pos)
 {
-  // check footprint size
   const auto & points = input_object.shape.footprint.points;
   if (points.size() < 3) {
     return false;
   }
 
-  // Pre-allocate boundary values using first point
-  float max_x = points[0].x;
-  float max_y = points[0].y;
-  float min_x = points[0].x;
-  float min_y = points[0].y;
-
-  // Start from second point since we used first point for initialization
-  for (size_t i = 1; i < points.size(); ++i) {
-    const auto & point = points[i];
-    // Use direct comparison instead of std::max/min
-    if (point.x > max_x) max_x = point.x;
-    if (point.y > max_y) max_y = point.y;
-    if (point.x < min_x) min_x = point.x;
-    if (point.y < min_y) min_y = point.y;
+  // Transform ego position into the object's local frame for the ego-facing edge filter.
+  // Footprint points are defined in local frame (object-relative 2D coords).
+  double ego_local_x = 0.0, ego_local_y = 0.0;
+  const bool use_ego = ego_pos.has_value();
+  if (use_ego) {
+    const double yaw = tf2::getYaw(input_object.pose.orientation);
+    const double cos_yaw = std::cos(yaw);
+    const double sin_yaw = std::sin(yaw);
+    const double dgx = ego_pos->x - input_object.pose.position.x;
+    const double dgy = ego_pos->y - input_object.pose.position.y;
+    ego_local_x = cos_yaw * dgx + sin_yaw * dgy;
+    ego_local_y = -sin_yaw * dgx + cos_yaw * dgy;
   }
 
-  // calc new center in local coordinates - avoid division by 2.0 twice
-  const double center_x = (max_x + min_x) * 0.5;
-  const double center_y = (max_y + min_y) * 0.5;
+  const size_t n = points.size();
+  double best_scaled_area = std::numeric_limits<double>::max();
+  size_t best_i = 0;
+  double best_min_u = 0.0, best_max_u = 0.0, best_min_v = 0.0, best_max_v = 0.0;
+  bool found_any = false;
 
-  // transform to global for the object's position
-  const double yaw = tf2::getYaw(input_object.pose.orientation);
-  const double cos_yaw = cos(yaw);
-  const double sin_yaw = sin(yaw);
-  const double dx = center_x * cos_yaw - center_y * sin_yaw;
-  const double dy = center_x * sin_yaw + center_y * cos_yaw;
+  auto tryEdge = [&](const size_t i) {
+    const auto & p0 = points[i];
+    const auto & p1 = points[(i + 1) % n];
+    const double ex = p1.x - p0.x;
+    const double ey = p1.y - p0.y;
+    const double len_sq = ex * ex + ey * ey;
+    if (len_sq < 1e-12) return;
 
-  // set output parameters - avoid unnecessary copying
+    double min_u = std::numeric_limits<double>::max();
+    double max_u = std::numeric_limits<double>::lowest();
+    double min_v = std::numeric_limits<double>::max();
+    double max_v = std::numeric_limits<double>::lowest();
+    for (const auto & p : points) {
+      const double u = p.x * ex + p.y * ey;
+      const double v = -p.x * ey + p.y * ex;
+      if (u < min_u) min_u = u;
+      if (u > max_u) max_u = u;
+      if (v < min_v) min_v = v;
+      if (v > max_v) max_v = v;
+    }
+    // scaled_area = actual_area * len_sq; compare without sqrt
+    const double scaled_area = (max_u - min_u) * (max_v - min_v) / len_sq;
+    if (scaled_area < best_scaled_area) {
+      best_scaled_area = scaled_area;
+      best_i = i;
+      best_min_u = min_u;
+      best_max_u = max_u;
+      best_min_v = min_v;
+      best_max_v = max_v;
+      found_any = true;
+    }
+  };
+
+  // Ego-facing pass: outward normal of CCW edge (ex,ey) is (ey,-ex).
+  // Edge faces ego when (ey,-ex)·(ego_local_x,ego_local_y) > 0, i.e. ey*ego_local_x - ex*ego_local_y > 0.
+  if (use_ego) {
+    for (size_t i = 0; i < n; ++i) {
+      const auto & p0 = points[i];
+      const auto & p1 = points[(i + 1) % n];
+      const double ex = p1.x - p0.x;
+      const double ey = p1.y - p0.y;
+      if (ey * ego_local_x - ex * ego_local_y <= 0.0) continue;
+      tryEdge(i);
+    }
+  }
+
+  // Fallback: full per-edge search (no ego, CW polygon, or no ego-facing edges).
+  if (!found_any) {
+    for (size_t i = 0; i < n; ++i) {
+      tryEdge(i);
+    }
+  }
+
+  if (!found_any) return false;
+
+  // Recover actual dimensions and center from the winning edge (one sqrt + one atan2).
+  const auto & p0 = points[best_i];
+  const auto & p1 = points[(best_i + 1) % n];
+  const double ex = p1.x - p0.x;
+  const double ey = p1.y - p0.y;
+  const double edge_len = std::sqrt(ex * ex + ey * ey);
+  const double len_sq = ex * ex + ey * ey;
+
+  // Bbox dimensions in local frame
+  const double dim_along = (best_max_u - best_min_u) / edge_len;
+  const double dim_perp = (best_max_v - best_min_v) / edge_len;
+
+  // Bbox center in local frame: invert the unnormalized projection transform.
+  // [x; y] = (1/len_sq) * [[ex, -ey]; [ey, ex]] * [cu; cv]
+  const double cu = (best_min_u + best_max_u) * 0.5;
+  const double cv = (best_min_v + best_max_v) * 0.5;
+  const double center_local_x = (ex * cu - ey * cv) / len_sq;
+  const double center_local_y = (ey * cu + ex * cv) / len_sq;
+
+  // Winning edge orientation in local frame → global yaw offset
+  const double bbox_yaw_local = std::atan2(ey, ex);
+
+  const double obj_yaw = tf2::getYaw(input_object.pose.orientation);
+  const double cos_yaw = std::cos(obj_yaw);
+  const double sin_yaw = std::sin(obj_yaw);
+
   output_object = input_object;
-  output_object.pose.position.x += dx;
-  output_object.pose.position.y += dy;
+
+  // Rotate local center offset to global and add to object position
+  output_object.pose.position.x += cos_yaw * center_local_x - sin_yaw * center_local_y;
+  output_object.pose.position.y += sin_yaw * center_local_x + cos_yaw * center_local_y;
+
+  // Set global bbox orientation (object yaw + edge yaw in local frame)
+  const double half = (obj_yaw + bbox_yaw_local) * 0.5;
+  output_object.pose.orientation.x = 0.0;
+  output_object.pose.orientation.y = 0.0;
+  output_object.pose.orientation.z = std::sin(half);
+  output_object.pose.orientation.w = std::cos(half);
 
   output_object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-  output_object.shape.dimensions.x = max_x - min_x;
-  output_object.shape.dimensions.y = max_y - min_y;
+  output_object.shape.dimensions.x = dim_along;
+  output_object.shape.dimensions.y = dim_perp;
 
-  //// pose.position.z and shape.dimensions.z (height)
-  // Footprint points are 2D (z=0), so deriving height from
-  // them would always give zero. Preserve the input value unchanged.
-
-  // adjust footprint points in local coordinates - use references to avoid copies
+  // Shift footprint to be relative to new center (still in original local frame axes)
   for (auto & point : output_object.shape.footprint.points) {
-    point.x -= center_x;
-    point.y -= center_y;
+    point.x -= static_cast<float>(center_local_x);
+    point.y -= static_cast<float>(center_local_y);
   }
 
   return true;
