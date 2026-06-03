@@ -63,6 +63,7 @@ void GetIndicesPairsImplicitGemmPlugin::initFieldsToSerialize()
   data_to_serialize_.emplace_back(
     "subm", &params_.subm, PluginFieldType::kINT32, 1);  // cSpell:ignore subm
   data_to_serialize_.emplace_back("transpose", &params_.transpose, PluginFieldType::kINT32, 1);
+  data_to_serialize_.emplace_back("do_sort", &params_.do_sort, PluginFieldType::kINT32, 1);
 
   fc_to_serialize_.nbFields = data_to_serialize_.size();
   fc_to_serialize_.fields = data_to_serialize_.data();
@@ -392,7 +393,7 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
       alloc, input_indices, params_.batch_size, input_dims, static_cast<int>(params_.algo), ksize,
       stride, padding, dilation, {0, 0, 0}, params_.subm, params_.transpose, false /*is_train*/,
       reinterpret_cast<std::uintptr_t>(stream), out_indices_num_limit_, tv::CUDAKernelTimer(false),
-      use_direct_table);
+      use_direct_table, static_cast<bool>(params_.do_sort));
 
   } else {
     // Allocate bwd tensors from the workspace instead of tv::empty to avoid cudaMalloc during
@@ -432,7 +433,7 @@ std::int32_t GetIndicesPairsImplicitGemmPlugin::enqueue(
       alloc, input_indices, params_.batch_size, input_dims, static_cast<int>(params_.algo), ksize,
       stride, padding, dilation, {0, 0, 0}, params_.subm, params_.transpose, false /*is_train*/,
       reinterpret_cast<std::uintptr_t>(stream), out_indices_num_limit_, tv::CUDAKernelTimer(false),
-      use_direct_table);
+      use_direct_table, static_cast<bool>(params_.do_sort));
   }
 
   std::int32_t num_act_out_real = std::get<1>(pair_res);
