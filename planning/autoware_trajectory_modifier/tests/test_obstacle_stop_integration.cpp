@@ -221,6 +221,7 @@ protected:
     params_.stopping_constraints.nominal_deceleration = 1.0;
     params_.stopping_constraints.maximum_deceleration = 4.0;
     params_.stopping_constraints.jerk_limit = 3.0;
+    params_.stopping_constraints.arrived_distance_threshold = 0.5;
 
     auto & p = params_.obstacle_stop;
     p.use_objects = true;
@@ -229,7 +230,6 @@ protected:
     p.enable_stop_for_pointcloud = true;
     p.stop_margin = 6.0;
     p.lateral_margin = 0.5;
-    p.arrived_distance_threshold = 0.5;
 
     p.obstacle_tracking.on_time_buffer = 0.01;
     p.obstacle_tracking.off_time_buffer = 1.0;
