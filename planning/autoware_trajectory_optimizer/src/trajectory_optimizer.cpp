@@ -29,7 +29,6 @@
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
 #include <chrono>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -206,7 +205,6 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     data.current_acceleration = *current_acceleration_ptr_;
     // Apply optimizations - plugins execute in order from plugin_names parameter
     for (auto & plugin : plugins_) {
-      std::cout << "Optimizing trajectory with plugin: " << plugin->get_name() << std::endl;
       plugin->optimize_trajectory(trajectory.points, params_, data);
     }
 
@@ -217,14 +215,6 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
         utils::generate_three_point_stopped_trajectory(trajectory.points, data.current_odometry);
     }
   }
-
-  const double elapsed_ms =
-    std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_opt_start)
-      .count();
-  RCLCPP_INFO(
-    get_logger(),
-    "Trajectory optimizer: total execution time %.3f ms (%zu candidate trajectories, %zu plugins)",
-    elapsed_ms, output_trajectories.candidate_trajectories.size(), plugins_.size());
 
   trajectories_pub_->publish(output_trajectories);
 

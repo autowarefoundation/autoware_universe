@@ -228,14 +228,13 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
   // LINEAR_LS yref: [x, y, psi, v, a_ref, delta_ref] per path_tracking_mpc_temporal. Stage 0 uses
   // x0 for the state part so the running cost matches the fixed initial state. Stages k>=1 and
   // terminal use longitudinal_velocity_mps from the sampled trajectory point (non-negative).
+  {
+    const std::array<double, temporal_mpt::NY> yref_stage0 = {x0[0] - x_off, x0[1] - y_off, x0[2],
+                                                              x0[3],         0.0,           0.0};
+    acados_interface_->setStageReference(0, yref_stage0);
+  }
   const size_t max_k = temporal_mpt::N;
-  for (size_t k = 0; k < max_k; ++k) {
-    if (k == 0) {
-      const std::array<double, temporal_mpt::NY> yref = {x0[0] - x_off, x0[1] - y_off, x0[2],
-                                                         x0[3],         0.0,           0.0};
-      acados_interface_->setStageReference(static_cast<int>(k), yref);
-      continue;
-    }
+  for (size_t k = 1; k < max_k; ++k) {
     const size_t idx = std::min(start_idx + k, n_pts - 1);
     const auto & p = traj_points.at(idx);
     const double yaw = tf2::getYaw(p.pose.orientation) + psi_bias;
@@ -259,7 +258,7 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
 
   auto solution = acados_interface_->getControl(x0_local);
 
-  for (size_t i = 0; i <= temporal_mpt::N; ++i) {
+  for (auto & state : solution.xtraj) {
     solution.xtraj[i][0] += x_off;
     solution.xtraj[i][1] += y_off;
   }
@@ -328,7 +327,7 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
     p.pose.orientation.y = q.y();
     p.pose.orientation.z = q.z();
     p.pose.orientation.w = q.w();
-    p.longitudinal_velocity_mps = std::max(0.0, solution.xtraj[i][3]);
+    p.longitudinal_velocity_mps = static_cast<float>(std::max(0.0, solution.xtraj[i][3]));
     {
       const size_t uk = std::min(i, static_cast<size_t>(temporal_mpt::N) - 1);
       p.front_wheel_angle_rad = static_cast<float>(solution.utraj[uk][1]);
@@ -487,9 +486,9 @@ void TrajectoryTemporalMPTOptimizer::publish_temporal_mpt_debug_io(
   if (mpc_solution != nullptr) {
     accel_msg.data.reserve(temporal_mpt::N);
     delta_cmd_msg.data.reserve(temporal_mpt::N);
-    for (size_t k = 0; k < temporal_mpt::N; ++k) {
-      accel_msg.data.push_back(mpc_solution->utraj[k][0]);
-      delta_cmd_msg.data.push_back(mpc_solution->utraj[k][1]);
+    for (const auto & u : mpc_solution->utraj) {
+      accel_msg.data.push_back(u[0]);
+      delta_cmd_msg.data.push_back(u[1]);
     }
   }
 
