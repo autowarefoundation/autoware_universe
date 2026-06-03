@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "acados_interface.hpp"
+#include "autoware/trajectory_optimizer/acados_interface.hpp"
 
 #include <iostream>
 #include <sstream>

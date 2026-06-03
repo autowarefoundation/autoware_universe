@@ -49,6 +49,23 @@ add_custom_command(
 # Create a logical target for the generation to ensure proper dependency tracking
 add_custom_target(generate_acados_code_temporal DEPENDS ${GENERATED_TEMPORAL_MPC_FILES})
 
+# Stage generated headers under include/autoware/trajectory_optimizer/ so installed-style
+# includes resolve at build time (matches install DESTINATION layout).
+set(STAGING_INCLUDE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/include")
+set(STAGING_GEN_LINK "${STAGING_INCLUDE_ROOT}/autoware/trajectory_optimizer/c_generated_code")
+set(STAGING_GEN_STAMP "${CMAKE_CURRENT_BINARY_DIR}/staged_c_generated_code.stamp")
+add_custom_command(
+  OUTPUT ${STAGING_GEN_STAMP}
+  COMMAND ${CMAKE_COMMAND} -E make_directory
+    "${STAGING_INCLUDE_ROOT}/autoware/trajectory_optimizer"
+  COMMAND ${CMAKE_COMMAND} -E rm -rf "${STAGING_GEN_LINK}"
+  COMMAND ${CMAKE_COMMAND} -E create_symlink "${GEN_DIR}" "${STAGING_GEN_LINK}"
+  COMMAND ${CMAKE_COMMAND} -E touch "${STAGING_GEN_STAMP}"
+  DEPENDS ${GENERATED_TEMPORAL_MPC_FILES}
+  COMMENT "Staging acados generated headers for install-layout includes"
+)
+add_custom_target(stage_acados_gen_includes DEPENDS ${STAGING_GEN_STAMP})
+
 # 4. acados_interface_temporal library
 add_library(acados_interface_temporal SHARED
   ${CMAKE_CURRENT_SOURCE_DIR}/src/acados_interface.cpp
@@ -56,13 +73,13 @@ add_library(acados_interface_temporal SHARED
 )
 
 # Ensure the library waits for the generator to finish
-add_dependencies(acados_interface_temporal generate_acados_code_temporal)
+add_dependencies(
+  acados_interface_temporal generate_acados_code_temporal stage_acados_gen_includes
+)
 
-# Binary dir first so real generated header shadows stub; source dir for clang-tidy/IDE when no build.
 target_include_directories(acados_interface_temporal PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../include>
+  $<BUILD_INTERFACE:${STAGING_INCLUDE_ROOT}>
   $<INSTALL_INTERFACE:include>
   ${ACADOS_SOURCE_DIR}/include
   ${ACADOS_SOURCE_DIR}/include/acados

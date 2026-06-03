@@ -6,12 +6,11 @@
     # use_temporal_mpt_optimizer only skips optimize_trajectory() when that plugin IS loaded; it
     # does not unload the plugin or stop acados init. For a full off, remove from plugin_names.
     plugin_names:
-      # - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-      # - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
-      # - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
-      # - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
-      # - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
-      - "autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
+      - "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"
+      - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
       - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
 
     # Plugin activation flags - control runtime enable/disable

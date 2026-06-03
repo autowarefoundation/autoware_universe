@@ -23,7 +23,7 @@
 #endif
 
 extern "C" {
-#include "c_generated_code/acados_solver_kinematic_bicycle_temporal.h"
+#include "autoware/trajectory_optimizer/c_generated_code/acados_solver_kinematic_bicycle_temporal.h"
 }
 
 namespace temporal_mpt
