@@ -4,7 +4,8 @@
   <name>autoware_redundancy_switcher_interface_plugins</name>
   <version>0.1.0</version>
   <description>IAdapterPlugin implementations for autoware_redundancy_switcher_interface. Includes RedundancySwitcherAdapter (for https://github.com/tier4/redundancy_switcher via UDS protocol) and NonRedundantSwitcherAdapter (for single-ECU non-redundant systems).</description>
-  <maintainer email="autoware@example.com">Autoware</maintainer>
+  <maintainer email="tetsuhiro.kawaguchi@tier4.jp">Tetsuhiro Kawaguchi</maintainer>
+  <maintainer email="mokoto.kurihara@tier4.jp">Mokoto Kurihara</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
