@@ -17,7 +17,7 @@
         bicycle:    {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         pedestrian: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         animal:     {create: pedestrian_tracker,             match: [pedestrian_tracker]}
-        hazard:     {create: pedestrian_tracker,             match: [pedestrian_tracker]}
+        hazard:     {create: static_tracker,                 match: [static_tracker]}
       polygon:
         unknown:    {create: polygon_tracker,                match: [polygon_tracker, multi_vehicle_tracker, pedestrian_and_bicycle_tracker]}
         car:        {create: polygon_tracker,                match: [polygon_tracker, multi_vehicle_tracker]}
@@ -27,8 +27,8 @@
         motorcycle: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         bicycle:    {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         pedestrian: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
-        animal:     {create: polygon_tracker, match: [polygon_tracker, pedestrian_tracker]}
-        hazard:     {create: polygon_tracker, match: [polygon_tracker, pedestrian_tracker]}
+        animal:     {create: polygon_tracker,                match: [polygon_tracker, pedestrian_tracker]}
+        hazard:     {create: static_tracker,                 match: [polygon_tracker, static_tracker]}
       cylinder:
         unknown:    {create: "null"}
         car:        {create: "null"}
@@ -38,8 +38,8 @@
         motorcycle: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         bicycle:    {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         pedestrian: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
-        animal:     {create: pedestrian_tracker, match: [pedestrian_tracker]}
-        hazard:     {create: pedestrian_tracker, match: [pedestrian_tracker]}
+        animal:     {create: pedestrian_tracker,             match: [pedestrian_tracker]}
+        hazard:     {create: static_tracker,                 match: [static_tracker]}
 
     # Tracker profiles: each tracker type defines its association thresholds per label.
     # Only labels where the tracker is actually used are listed.
@@ -87,12 +87,16 @@
       pedestrian_tracker:
         bounding_box:
           animal:     {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
-          hazard:     {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
         cylinder:
           animal:     {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
-          hazard:     {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
         polygon:
           animal:     {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
-          hazard:     {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
+      static_tracker:
+        bounding_box:
+          hazard:     {max_dist: 2.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
+        cylinder:
+          hazard:     {max_dist: 2.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
+        polygon:
+          hazard:     {max_dist: 2.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
 
     unknown_association_giou_threshold: -0.8  # GIoU threshold for unknown-unknown association
