@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+  <node
+    pkg="autoware_redundancy_command_selector"
+    exec="redundancy_command_selector_node"
+    name="redundancy_command_selector"
+    output="screen">
+    <remap from="~/input/main/control_command" to="/main/control/command/control_cmd"/>
+    <remap from="~/input/main/gear_command" to="/main/control/command/gear_cmd"/>
+    <remap from="~/input/main/hazard_lights_command" to="/main/control/command/hazard_lights_cmd"/>
+    <remap from="~/input/main/turn_indicators_command" to="/main/control/command/turn_indicators_cmd"/>
+
+    <remap from="~/input/sub/control_command" to="/sub/control/command/control_cmd"/>
+    <remap from="~/input/sub/gear_command" to="/sub/control/command/gear_cmd"/>
+    <remap from="~/input/sub/hazard_lights_command" to="/sub/control/command/hazard_lights_cmd"/>
+    <remap from="~/input/sub/turn_indicators_command" to="/sub/control/command/turn_indicators_cmd"/>
+
+    <remap from="~/input/active_control_unit" to="/system/redundancy/active_control_unit"/>
+
+    <remap from="~/output/control_command" to="/control/command/control_cmd"/>
+    <remap from="~/output/gear_command" to="/control/command/gear_cmd"/>
+    <remap from="~/output/hazard_lights_command" to="/control/command/hazard_lights_cmd"/>
+    <remap from="~/output/turn_indicators_command" to="/control/command/turn_indicators_cmd"/>
+  </node>
+</launch>
