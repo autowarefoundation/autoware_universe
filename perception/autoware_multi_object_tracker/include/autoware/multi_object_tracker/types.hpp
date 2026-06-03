@@ -221,6 +221,7 @@ struct ObjectKinematics
   OrientationAvailability orientation_availability;
   bool has_twist = false;
   bool has_twist_covariance = false;
+  bool is_stationary = false;
 };
 
 struct DynamicObject

@@ -97,6 +97,7 @@ bool StaticTracker::getTrackedObject(
 
   object = object_;
   object.time = time;
+  object.kinematics.is_stationary = true;
 
   if (!motion_model_.getPredictedState(
         time_object, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
