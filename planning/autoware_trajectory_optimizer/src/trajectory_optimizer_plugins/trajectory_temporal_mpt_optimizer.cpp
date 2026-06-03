@@ -212,20 +212,15 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
   // sample period is implicit in the message): start_idx = index closest to x0 (typically 0 when x0
   // is traj_points[0]), then start_idx+k for stage k. No arc-length resampling or
   // re-parameterization.
-  const size_t n_pts = traj_points.size();
-  size_t start_idx = 0;
-  {
-    double best_d2 = std::numeric_limits<double>::infinity();
-    for (size_t i = 0; i < n_pts; ++i) {
-      const double dx = traj_points[i].pose.position.x - x0[0];
-      const double dy = traj_points[i].pose.position.y - x0[1];
-      const double d2 = dx * dx + dy * dy;
-      if (d2 < best_d2) {
-        best_d2 = d2;
-        start_idx = i;
-      }
-    }
+ const auto closest_itr = std::min_element(
+  traj_points.begin() + 1, traj_points.end(),
+  [&x0](const auto & a, const auto & b) {
+    return autoware_utils::calc_distance2d(a.pose.position, x0) < 
+           autoware_utils::calc_distance2d(b.pose.position, x0);
   }
+);
+
+const size_t start_idx = std::distance(traj_points.begin(), closest_itr);
 
   // Shift reference yaw by k*2π so the path heading at start_idx matches x0 psi in LINEAR_LS (same
   // idea as generators/utils.py run_closed_loop_mpc / solve_autoware_temporal_mpc). Avoids false
