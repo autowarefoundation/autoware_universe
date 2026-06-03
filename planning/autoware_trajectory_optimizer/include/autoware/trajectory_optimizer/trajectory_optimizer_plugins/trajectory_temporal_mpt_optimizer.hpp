@@ -42,8 +42,8 @@ struct TemporalMPTParams
   double lr{1.0};
   size_t min_points_for_optimization{2};
   bool enable_debug_info{false};
-  bool publish_debug_topics{true};
-  bool write_replay_fixture{true};
+  bool publish_debug_topics{false};
+  bool write_replay_fixture{false};
   std::string replay_fixture_directory;
   bool log_replay_fixture_to_console{false};
 };
