@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_validator/trajectory_selector_node.hpp"
+#include "autoware/trajectory_selector/trajectory_selector_node.hpp"
 
 #include <memory>
 #include <string>

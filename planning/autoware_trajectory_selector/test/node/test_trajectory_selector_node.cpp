@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_validator/trajectory_selector_node.hpp"
+#include "autoware/trajectory_selector/trajectory_selector_node.hpp"
 
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
@@ -24,10 +24,10 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::trajectory_validator
+namespace autoware::trajectory_selector
 {
 
-class TrajectoryValidatorNodeTest : public ::testing::Test
+class TrajectorySelectorNodeTest : public ::testing::Test
 {
 protected:
   void SetUp() override
@@ -38,13 +38,11 @@ protected:
       std::vector<std::string>{"autoware::trajectory_validator::plugin::DummyFilter"});
     node_options_.append_parameter_override("dummy.dummy_param", 0.0);
 
-    const auto test_pkg_share = ament_index_cpp::get_package_share_directory("autoware_test_utils");
     const auto vehicle_info_param_path = autoware::test_utils::get_absolute_path_to_config(
       "autoware_test_utils", "test_vehicle_info.param.yaml");
 
     autoware::test_utils::updateNodeOptions(node_options_, {vehicle_info_param_path});
 
-    // Update the class being instantiated
     node_under_test_ =
       std::make_shared<autoware::trajectory_selector::TrajectorySelectorNode>(node_options_);
     test_node_ = std::make_shared<rclcpp::Node>("test_helper_node");
@@ -112,7 +110,6 @@ protected:
     obj_pub_->publish(objects);
 
     autoware_perception_msgs::msg::TrafficLightGroupArray tl_signals;
-
     tl_pub_->publish(tl_signals);
   }
 
@@ -120,7 +117,7 @@ protected:
     CandidateTrajectories & msg, std::string name, float start_vel, const rclcpp::Time & stamp)
   {
     CandidateTrajectory traj;
-    traj.header.stamp = stamp;  // Set trajectory-specific stamp
+    traj.header.stamp = stamp;
 
     autoware_internal_planning_msgs::msg::GeneratorInfo info;
     info.generator_name.data = std::move(name);
@@ -128,9 +125,9 @@ protected:
 
     traj.generator_id = info.generator_id;
 
-    TrajectoryPoint p1;
+    autoware_planning_msgs::msg::TrajectoryPoint p1;
     p1.longitudinal_velocity_mps = start_vel;
-    p1.time_from_start = rclcpp::Duration::from_seconds(0.0);  // Ensure time is set
+    p1.time_from_start = rclcpp::Duration::from_seconds(0.0);
     traj.points.push_back(p1);
 
     msg.candidate_trajectories.push_back(traj);
@@ -154,7 +151,7 @@ protected:
   autoware_internal_planning_msgs::msg::CandidateTrajectories::ConstSharedPtr last_output_;
 };
 
-TEST_F(TrajectoryValidatorNodeTest, FiltersTrajectoriesViaPlugin)
+TEST_F(TrajectorySelectorNodeTest, FiltersTrajectoriesViaPlugin)
 {
   publish_context();
   spin_until([] { return false; }, std::chrono::milliseconds(100));
@@ -167,7 +164,6 @@ TEST_F(TrajectoryValidatorNodeTest, FiltersTrajectoriesViaPlugin)
 
   traj_pub_->publish(msg);
 
-  // Increase timeout if necessary to account for the node's 30ms timer
   ASSERT_TRUE(spin_until(
     [this] { return last_output_ != nullptr && !last_output_->candidate_trajectories.empty(); },
     std::chrono::milliseconds(1000)));
@@ -177,7 +173,7 @@ TEST_F(TrajectoryValidatorNodeTest, FiltersTrajectoriesViaPlugin)
   EXPECT_EQ(last_output_->generator_info.front().generator_name.data, "SafePlanner");
 }
 
-TEST_F(TrajectoryValidatorNodeTest, HandlesPluginRejection)
+TEST_F(TrajectorySelectorNodeTest, HandlesPluginRejection)
 {
   publish_context();
   spin_until([] { return false; }, std::chrono::milliseconds(100));
@@ -192,15 +188,10 @@ TEST_F(TrajectoryValidatorNodeTest, HandlesPluginRejection)
   EXPECT_EQ(last_output_->candidate_trajectories.size(), 0u);
 }
 
-// take_validator_data() early-return paths: the node must NOT publish when a
-// mandatory input is absent.  Each test withholds exactly one required topic
-// and verifies that last_output_ is never set within the timeout.
-
-TEST_F(TrajectoryValidatorNodeTest, NoPublishWhenOdometryMissing)
+TEST_F(TrajectorySelectorNodeTest, NoPublishWhenOdometryMissing)
 {
   const auto now = node_under_test_->now();
 
-  // Publish every input except odometry
   auto map_msg = autoware::test_utils::makeMapBinMsg("autoware_test_utils", "lanelet2_map.osm");
   map_pub_->publish(map_msg);
 
@@ -221,11 +212,10 @@ TEST_F(TrajectoryValidatorNodeTest, NoPublishWhenOdometryMissing)
   EXPECT_FALSE(received) << "Node must not publish when odometry is unavailable";
 }
 
-TEST_F(TrajectoryValidatorNodeTest, NoPublishWhenAccelerationMissing)
+TEST_F(TrajectorySelectorNodeTest, NoPublishWhenAccelerationMissing)
 {
   const auto now = node_under_test_->now();
 
-  // Publish every input except acceleration
   auto map_msg = autoware::test_utils::makeMapBinMsg("autoware_test_utils", "lanelet2_map.osm");
   map_pub_->publish(map_msg);
 
@@ -246,11 +236,10 @@ TEST_F(TrajectoryValidatorNodeTest, NoPublishWhenAccelerationMissing)
   EXPECT_FALSE(received) << "Node must not publish when acceleration is unavailable";
 }
 
-TEST_F(TrajectoryValidatorNodeTest, NoPublishWhenObjectsMissing)
+TEST_F(TrajectorySelectorNodeTest, NoPublishWhenObjectsMissing)
 {
   const auto now = node_under_test_->now();
 
-  // Publish every input except predicted objects
   auto map_msg = autoware::test_utils::makeMapBinMsg("autoware_test_utils", "lanelet2_map.osm");
   map_pub_->publish(map_msg);
 
@@ -270,4 +259,5 @@ TEST_F(TrajectoryValidatorNodeTest, NoPublishWhenObjectsMissing)
     spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(500));
   EXPECT_FALSE(received) << "Node must not publish when predicted objects are unavailable";
 }
-}  // namespace autoware::trajectory_validator
+
+}  // namespace autoware::trajectory_selector

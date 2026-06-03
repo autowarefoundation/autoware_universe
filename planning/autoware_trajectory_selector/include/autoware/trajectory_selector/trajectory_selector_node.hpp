@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_SELECTOR_NODE_HPP_
-#define AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_SELECTOR_NODE_HPP_
+#ifndef AUTOWARE__TRAJECTORY_SELECTOR__TRAJECTORY_SELECTOR_NODE_HPP_
+#define AUTOWARE__TRAJECTORY_SELECTOR__TRAJECTORY_SELECTOR_NODE_HPP_
 
 #include "autoware/trajectory_validator/detail/validator_context.hpp"
 #include "autoware/trajectory_validator/trajectory_validator_wrapper.hpp"
@@ -112,4 +112,4 @@ private:
 
 }  // namespace autoware::trajectory_selector
 
-#endif  // AUTOWARE__TRAJECTORY_VALIDATOR__TRAJECTORY_SELECTOR_NODE_HPP_
+#endif  // AUTOWARE__TRAJECTORY_SELECTOR__TRAJECTORY_SELECTOR_NODE_HPP_
