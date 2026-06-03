@@ -76,6 +76,10 @@ private:
     const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_trajectory,
     int acados_status, const char * tag);
   void ensure_debug_publishers();
+  void log_acados_solve_failure_debug(
+    int acados_status, const std::array<double, temporal_mpt::NX> & x0, size_t start_idx,
+    size_t terminal_idx, const TrajectoryOptimizerData & data,
+    const TrajectoryPoints & traj_points) const;
   void publish_temporal_mpt_debug_io(
     const TrajectoryPoints & reference_before, const nav_msgs::msg::Odometry & initial_odom,
     const TrajectoryPoints & trajectory_after, size_t output_point_count, int acados_status,

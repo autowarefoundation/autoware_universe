@@ -54,18 +54,18 @@ public:
   AcadosInterface();
   ~AcadosInterface();
 
-  AcadosSolution getControl(std::array<double, NX> x0);
-  void setParameters(int stage, std::array<double, NP> params);
-  void setParametersAllStages(std::array<double, NP> params);
-  void setStageReference(int stage, std::array<double, NY> yref);
-  void setTerminalReference(std::array<double, NYN> yref_e);
-  void setWarmStart(std::array<double, NX> x0, std::array<double, NU> u0);
-  void setInitialState(std::array<double, NX> x0);
+  AcadosSolution get_control(std::array<double, NX> x0);
+  void set_parameters(int stage, std::array<double, NP> params);
+  void set_parameters_all_stages(std::array<double, NP> params);
+  void set_stage_reference(int stage, std::array<double, NY> yref);
+  void set_terminal_reference(std::array<double, NYN> yref_e);
+  void set_warm_start(std::array<double, NX> x0, std::array<double, NU> u0);
+  void set_initial_state(std::array<double, NX> x0);
   void set_print_solver_stats(bool print_solver_stats);
 
 private:
-  std::array<std::array<double, NX>, N + 1> getStateTrajectory() const;
-  std::array<std::array<double, NU>, N> getControlTrajectory() const;
+  std::array<std::array<double, NX>, N + 1> get_state_trajectory() const;
+  std::array<std::array<double, NU>, N> get_control_trajectory() const;
 
   kinematic_bicycle_temporal_solver_capsule * capsule_{nullptr};
   ocp_nlp_config * nlp_config_{nullptr};

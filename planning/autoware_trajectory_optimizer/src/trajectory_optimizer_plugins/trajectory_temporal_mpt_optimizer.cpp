@@ -231,7 +231,7 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
   {
     const std::array<double, temporal_mpt::NY> yref_stage0 = {x0[0] - x_off, x0[1] - y_off, x0[2],
                                                               x0[3],         0.0,           0.0};
-    acados_interface_->setStageReference(0, yref_stage0);
+    acados_interface_->set_stage_reference(0, yref_stage0);
   }
   const size_t max_k = temporal_mpt::N;
   for (size_t k = 1; k < max_k; ++k) {
@@ -241,7 +241,7 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
     const double v_ref = std::max(0.0, static_cast<double>(p.longitudinal_velocity_mps));
     const std::array<double, temporal_mpt::NY> yref = {
       p.pose.position.x - x_off, p.pose.position.y - y_off, yaw, v_ref, 0.0, 0.0};
-    acados_interface_->setStageReference(static_cast<int>(k), yref);
+    acados_interface_->set_stage_reference(static_cast<int>(k), yref);
   }
 
   const size_t terminal_idx = std::min(start_idx + temporal_mpt::N, n_pts - 1);
@@ -249,16 +249,16 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
   const double terminal_yaw = tf2::getYaw(terminal_point.pose.orientation) + psi_bias;
   const double terminal_v_ref =
     std::max(0.0, static_cast<double>(terminal_point.longitudinal_velocity_mps));
-  acados_interface_->setTerminalReference(
+  acados_interface_->set_terminal_reference(
     {terminal_point.pose.position.x - x_off, terminal_point.pose.position.y - y_off, terminal_yaw,
      terminal_v_ref});
 
   const std::array<double, temporal_mpt::NX> x0_local = {
     x0[0] - x_off, x0[1] - y_off, x0[2], x0[3]};
 
-  auto solution = acados_interface_->getControl(x0_local);
+  auto solution = acados_interface_->get_control(x0_local);
 
-  for (auto & state : solution.xtraj) {
+  for (size_t i = 0; i <= temporal_mpt::N; ++i) {
     solution.xtraj[i][0] += x_off;
     solution.xtraj[i][1] += y_off;
   }
@@ -266,36 +266,8 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
     write_temporal_mpt_replay_fixture(x0, reference_snapshot, solution.status, "failed");
 
     if (mpt_params_.enable_debug_info) {
-      RCLCPP_WARN_THROTTLE(
-        get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 2000,
-        "Temporal MPT acados solve failed with status %d", solution.status);
-
-      rclcpp::Logger logger = get_node_ptr()->get_logger();
-      RCLCPP_INFO(logger, "Temporal MPT optimize: plugin=%s", get_name().c_str());
-
-      RCLCPP_INFO(
-        logger,
-        "x0 (first trajectory point): x=%.6f y=%.6f yaw=%.6f v=%.6f | MPC start_idx=%zu "
-        "terminal_idx=%zu",
-        x0[0], x0[1], x0[2], x0[3], start_idx, terminal_idx);
-      RCLCPP_INFO(
-        logger, "odom twist linear (map/body per msg): x=%.6f y=%.6f z=%.6f",
-        data.current_odometry.twist.twist.linear.x, data.current_odometry.twist.twist.linear.y,
-        data.current_odometry.twist.twist.linear.z);
-
-      std::ostringstream oss;
-      oss << "trajectory points (" << traj_points.size() << "): [";
-      for (size_t i = 0; i < traj_points.size(); ++i) {
-        const auto & p = traj_points[i];
-        const double pyaw = tf2::getYaw(p.pose.orientation);
-        oss << "(" << p.pose.position.x << ", " << p.pose.position.y << ", " << pyaw << ")";
-        if (i + 1 < traj_points.size()) {
-          oss << ", ";
-        }
-      }
-      oss << "]";
-
-      RCLCPP_INFO(logger, "%s", oss.str().c_str());
+      log_acados_solve_failure_debug(
+        solution.status, x0, start_idx, terminal_idx, data, traj_points);
     }
 
     if (mpt_params_.publish_debug_topics) {
@@ -417,13 +389,51 @@ void TrajectoryTemporalMPTOptimizer::apply_solver_model_parameters()
     return;
   }
   const std::array<double, temporal_mpt::NP> model_params = {mpt_params_.lf, mpt_params_.lr};
-  acados_interface_->setParametersAllStages(model_params);
+  acados_interface_->set_parameters_all_stages(model_params);
 }
 
 void TrajectoryTemporalMPTOptimizer::create_or_reset_solver()
 {
   acados_interface_ = std::make_unique<temporal_mpt::AcadosInterface>();
   apply_solver_model_parameters();
+}
+
+void TrajectoryTemporalMPTOptimizer::log_acados_solve_failure_debug(
+  const int acados_status, const std::array<double, temporal_mpt::NX> & x0, const size_t start_idx,
+  const size_t terminal_idx, const TrajectoryOptimizerData & data,
+  const TrajectoryPoints & traj_points) const
+{
+  rclcpp::Node * const node = get_node_ptr();
+  RCLCPP_WARN_THROTTLE(
+    node->get_logger(), *node->get_clock(), 2000, "Temporal MPT acados solve failed with status %d",
+    acados_status);
+
+  const rclcpp::Logger logger = node->get_logger();
+  RCLCPP_INFO(logger, "Temporal MPT optimize: plugin=%s", get_name().c_str());
+
+  RCLCPP_INFO(
+    logger,
+    "x0 (first trajectory point): x=%.6f y=%.6f yaw=%.6f v=%.6f | MPC start_idx=%zu "
+    "terminal_idx=%zu",
+    x0[0], x0[1], x0[2], x0[3], start_idx, terminal_idx);
+  RCLCPP_INFO(
+    logger, "odom twist linear (map/body per msg): x=%.6f y=%.6f z=%.6f",
+    data.current_odometry.twist.twist.linear.x, data.current_odometry.twist.twist.linear.y,
+    data.current_odometry.twist.twist.linear.z);
+
+  std::ostringstream oss;
+  oss << "trajectory points (" << traj_points.size() << "): [";
+  for (size_t i = 0; i < traj_points.size(); ++i) {
+    const auto & p = traj_points[i];
+    const double pyaw = tf2::getYaw(p.pose.orientation);
+    oss << "(" << p.pose.position.x << ", " << p.pose.position.y << ", " << pyaw << ")";
+    if (i + 1 < traj_points.size()) {
+      oss << ", ";
+    }
+  }
+  oss << "]";
+
+  RCLCPP_INFO(logger, "%s", oss.str().c_str());
 }
 
 void TrajectoryTemporalMPTOptimizer::ensure_debug_publishers()

@@ -45,13 +45,13 @@ AcadosInterface::~AcadosInterface()
   kinematic_bicycle_temporal_acados_free_capsule(capsule_);
 }
 
-void AcadosInterface::setParameters(int stage, std::array<double, NP> params)
+void AcadosInterface::set_parameters(int stage, std::array<double, NP> params)
 {
   kinematic_bicycle_temporal_acados_update_params(
     capsule_, stage, const_cast<double *>(params.data()), NP);
 }
 
-void AcadosInterface::setParametersAllStages(std::array<double, NP> params)
+void AcadosInterface::set_parameters_all_stages(std::array<double, NP> params)
 {
   ocp_nlp_dims * nlp_dims = kinematic_bicycle_temporal_acados_get_nlp_dims(capsule_);
   for (int i = 0; i <= nlp_dims->N; ++i) {
@@ -60,20 +60,20 @@ void AcadosInterface::setParametersAllStages(std::array<double, NP> params)
   }
 }
 
-void AcadosInterface::setStageReference(int stage, std::array<double, NY> yref)
+void AcadosInterface::set_stage_reference(int stage, std::array<double, NY> yref)
 {
   ocp_nlp_cost_model_set(
     nlp_config_, nlp_dims_, nlp_in_, stage, "yref", const_cast<double *>(yref.data()));
 }
 
-void AcadosInterface::setTerminalReference(std::array<double, NYN> yref_e)
+void AcadosInterface::set_terminal_reference(std::array<double, NYN> yref_e)
 {
   ocp_nlp_cost_model_set(
     nlp_config_, nlp_dims_, nlp_in_, static_cast<int>(N), "yref",
     const_cast<double *>(yref_e.data()));
 }
 
-void AcadosInterface::setWarmStart(std::array<double, NX> x0, std::array<double, NU> u0)
+void AcadosInterface::set_warm_start(std::array<double, NX> x0, std::array<double, NU> u0)
 {
   ocp_nlp_dims * nlp_dims = kinematic_bicycle_temporal_acados_get_nlp_dims(capsule_);
   for (int i = 0; i < nlp_dims->N; ++i) {
@@ -86,7 +86,7 @@ void AcadosInterface::setWarmStart(std::array<double, NX> x0, std::array<double,
     nlp_config_, nlp_dims_, nlp_out_, nlp_in_, nlp_dims->N, "x", const_cast<double *>(x0.data()));
 }
 
-void AcadosInterface::setInitialState(std::array<double, NX> x0)
+void AcadosInterface::set_initial_state(std::array<double, NX> x0)
 {
   ocp_nlp_constraints_model_set(
     nlp_config_, nlp_dims_, nlp_in_, nlp_out_, 0, "lbx", const_cast<double *>(x0.data()));
@@ -99,7 +99,7 @@ void AcadosInterface::set_print_solver_stats(const bool print_solver_stats)
   print_solver_stats_ = print_solver_stats;
 }
 
-std::array<std::array<double, NX>, N + 1> AcadosInterface::getStateTrajectory() const
+std::array<std::array<double, NX>, N + 1> AcadosInterface::get_state_trajectory() const
 {
   std::array<std::array<double, NX>, N + 1> xtraj;
   for (size_t ii = 0; ii <= static_cast<size_t>(nlp_dims_->N); ii++) {
@@ -108,7 +108,7 @@ std::array<std::array<double, NX>, N + 1> AcadosInterface::getStateTrajectory() 
   return xtraj;
 }
 
-std::array<std::array<double, NU>, N> AcadosInterface::getControlTrajectory() const
+std::array<std::array<double, NU>, N> AcadosInterface::get_control_trajectory() const
 {
   std::array<std::array<double, NU>, N> utraj;
   for (size_t ii = 0; ii < static_cast<size_t>(N); ii++) {
@@ -117,13 +117,13 @@ std::array<std::array<double, NU>, N> AcadosInterface::getControlTrajectory() co
   return utraj;
 }
 
-AcadosSolution AcadosInterface::getControl(std::array<double, NX> x0)
+AcadosSolution AcadosInterface::get_control(std::array<double, NX> x0)
 {
   double kkt_norm_inf = 0.0;
   double elapsed_time = 0.0;
   int sqp_iter = 0;
 
-  setInitialState(x0);
+  set_initial_state(x0);
 
   int status = kinematic_bicycle_temporal_acados_solve(capsule_);
   ocp_nlp_get(nlp_solver_, "time_tot", &elapsed_time);
@@ -140,8 +140,8 @@ AcadosSolution AcadosInterface::getControl(std::array<double, NX> x0)
      << kkt_norm_inf << std::endl;
 
   AcadosSolution solution;
-  solution.xtraj = getStateTrajectory();
-  solution.utraj = getControlTrajectory();
+  solution.xtraj = get_state_trajectory();
+  solution.utraj = get_control_trajectory();
   solution.sqp_iter = sqp_iter;
   solution.kkt_norm_inf = kkt_norm_inf;
   solution.elapsed_time = elapsed_time;
