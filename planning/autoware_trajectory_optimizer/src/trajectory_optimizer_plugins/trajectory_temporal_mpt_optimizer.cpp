@@ -262,6 +262,7 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
     solution.xtraj[i][0] += x_off;
     solution.xtraj[i][1] += y_off;
   }
+
   if (solution.status != 0) {
     write_temporal_mpt_replay_fixture(x0, reference_snapshot, solution.status, "failed");
 
@@ -280,12 +281,10 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
         &solution);
     }
     return;
-  } else {
-    if (mpt_params_.enable_debug_info) {
-      RCLCPP_INFO_THROTTLE(
-        get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 2000,
-        "Temporal MPT acados solve succeeded with status %d", solution.status);
-    }
+  } else if (mpt_params_.enable_debug_info) {
+    RCLCPP_INFO_THROTTLE(
+      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 2000,
+      "Temporal MPT acados solve succeeded with status %d", solution.status);
   }
 
   const size_t n_apply = std::min(traj_points.size(), static_cast<size_t>(temporal_mpt::N + 1));
