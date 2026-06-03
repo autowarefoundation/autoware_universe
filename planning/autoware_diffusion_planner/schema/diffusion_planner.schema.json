@@ -9,7 +9,7 @@
         "plugins_path": {
           "type": "string",
           "default": "$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so",
-          "description": "Path to libautoware_tensorrt_plugins.so file for the diffusion planner"
+          "description": "Path to libautoware_tensorrt_plugins.so file for native TensorRT and ONNX Runtime TensorRT EP"
         },
         "model": {
           "type": "object",
@@ -24,6 +24,12 @@
               "type": "string",
               "default": "/opt/autoware/mlmodels/diffusion_planner/args.json",
               "description": "Path to model argument/configuration file"
+            },
+            "backend": {
+              "type": "string",
+              "default": "tensorrt",
+              "enum": ["tensorrt", "ort_cpu", "ort_cuda", "ort_tensorrt"],
+              "description": "Inference backend. tensorrt uses the native TensorRT implementation; ort_cpu/ort_cuda/ort_tensorrt use ONNX Runtime with the corresponding execution provider."
             },
             "precision": {
               "type": "string",
@@ -83,6 +89,7 @@
           "required": [
             "type",
             "args_path",
+            "backend",
             "precision",
             "use_cuda_graph",
             "single_step_model",

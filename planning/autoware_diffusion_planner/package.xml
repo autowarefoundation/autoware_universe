@@ -43,6 +43,7 @@
   <depend>libexpected-dev</depend>
   <depend>nav_msgs</depend>
   <depend>nlohmann-json-dev</depend>
+  <depend>onnxruntime</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
@@ -52,6 +53,7 @@
   <exec_depend>autoware_tensorrt_plugins</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_index_cpp</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
   <test_depend>autoware_test_utils</test_depend>

@@ -169,6 +169,7 @@ void DiffusionPlanner::set_up_params()
     "model.multi_step_model.turn_indicator_onnx_model_path", "");
   params_.dpm_solver_steps =
     this->declare_parameter<int>("model.multi_step_model.dpm_solver_steps", 10);
+  params_.backend = this->declare_parameter<std::string>("model.backend", "tensorrt");
   params_.trt_precision = this->declare_parameter<std::string>("model.precision", "fp32");
   params_.use_cuda_graph = this->declare_parameter<bool>("model.use_cuda_graph", false);
   params_.plugins_path = this->declare_parameter<std::string>("plugins_path", "");
@@ -268,6 +269,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
     const auto previous_turn_indicator_model_path = params_.turn_indicator_model_path;
     const auto previous_batch_size = params_.batch_size;
     const auto previous_dpm_solver_steps = params_.dpm_solver_steps;
+    const auto previous_backend = params_.backend;
     const auto previous_trt_precision = params_.trt_precision;
     const auto previous_use_cuda_graph = params_.use_cuda_graph;
     const auto previous_line_string_max_step_m = params_.line_string_max_step_m;
@@ -284,6 +286,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
       temp_params.turn_indicator_model_path);
     update_param<int>(
       parameters, "model.multi_step_model.dpm_solver_steps", temp_params.dpm_solver_steps);
+    update_param<std::string>(parameters, "model.backend", temp_params.backend);
     update_param<std::string>(parameters, "model.precision", temp_params.trt_precision);
     update_param<bool>(parameters, "model.use_cuda_graph", temp_params.use_cuda_graph);
     update_param<bool>(
@@ -322,6 +325,24 @@ SetParametersResult DiffusionPlanner::on_parameter(
       result.reason = "model.precision must be either 'fp32' or 'fp16'";
       return result;
     }
+    const bool valid_backend = temp_params.backend == "tensorrt"
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
+                               || temp_params.backend == "ort_cpu" ||
+                               temp_params.backend == "ort_cuda" ||
+                               temp_params.backend == "ort_tensorrt"
+#endif
+      ;
+    if (!valid_backend) {
+      SetParametersResult result;
+      result.successful = false;
+      result.reason = "model.backend must be 'tensorrt'";
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
+      result.reason += ", 'ort_cpu', 'ort_cuda', or 'ort_tensorrt'";
+#else
+      result.reason += "; ONNX Runtime support is not available in this build";
+#endif
+      return result;
+    }
     const bool args_path_changed = temp_params.args_path != previous_args_path;
     const bool model_paths_changed =
       temp_params.model_type != previous_model_type ||
@@ -331,6 +352,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
       temp_params.turn_indicator_model_path != previous_turn_indicator_model_path;
     const bool batch_size_changed = temp_params.batch_size != previous_batch_size;
     const bool dpm_solver_steps_changed = temp_params.dpm_solver_steps != previous_dpm_solver_steps;
+    const bool backend_changed = temp_params.backend != previous_backend;
     const bool trt_config_changed = temp_params.trt_precision != previous_trt_precision ||
                                     temp_params.use_cuda_graph != previous_use_cuda_graph;
     const bool line_string_max_step_changed =
@@ -340,7 +362,7 @@ SetParametersResult DiffusionPlanner::on_parameter(
 
     if (
       args_path_changed || model_paths_changed || batch_size_changed || dpm_solver_steps_changed ||
-      trt_config_changed) {
+      backend_changed || trt_config_changed) {
       try {
         load_model();
       } catch (const std::exception & e) {

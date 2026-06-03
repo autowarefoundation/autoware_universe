@@ -25,6 +25,10 @@
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
 
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
+#include "autoware/diffusion_planner/inference/onnxruntime_inference.hpp"
+#endif
+
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_internal_planning_msgs/msg/generator_info.hpp>
 
@@ -41,6 +45,32 @@
 
 namespace autoware::diffusion_planner
 {
+
+namespace
+{
+
+bool is_onnxruntime_backend(const std::string & backend)
+{
+  return backend == "ort_cpu" || backend == "ort_cuda" || backend == "ort_tensorrt";
+}
+
+std::string onnxruntime_execution_provider_from_backend(const std::string & backend)
+{
+  if (backend == "ort_cpu") {
+    return "cpu";
+  }
+  if (backend == "ort_cuda") {
+    return "cuda";
+  }
+  if (backend == "ort_tensorrt") {
+    return "tensorrt";
+  }
+  throw std::invalid_argument(
+    "Unsupported model.backend '" + backend +
+    "'. Expected 'tensorrt', 'ort_cpu', 'ort_cuda', or 'ort_tensorrt'.");
+}
+
+}  // namespace
 
 DiffusionPlannerCore::DiffusionPlannerCore(
   const DiffusionPlannerParams & params, const VehicleInfo & vehicle_info)
@@ -94,16 +124,32 @@ void DiffusionPlannerCore::load_model()
 
   std::unordered_map<std::string, std::shared_ptr<Guidance>> guidances{
     {"start", start_guidance_}, {"stop", stop_guidance_}, {"centerline", centerline_guidance_}};
-  if (params_.model_type == "single_step") {
+  if (params_.backend == "tensorrt" && params_.model_type == "single_step") {
     diffusion_planner_inference_ = std::make_unique<SingleStepInference>(
       params_.single_step_model_path, params_.plugins_path, params_.batch_size,
       params_.trt_precision, params_.use_cuda_graph);
-  } else if (params_.model_type == "multi_step") {
+  } else if (params_.backend == "tensorrt" && params_.model_type == "multi_step") {
     diffusion_planner_inference_ = std::make_unique<MultiStepInference>(
       params_.encoder_model_path, params_.decoder_model_path, params_.turn_indicator_model_path,
       params_.plugins_path, params_.batch_size, params_.trt_precision, params_.use_cuda_graph,
       params_.dpm_solver_steps, std::move(guidances));
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
+  } else if (is_onnxruntime_backend(params_.backend) && params_.model_type == "single_step") {
+    diffusion_planner_inference_ = std::make_unique<OnnxruntimeSingleStepInference>(
+      params_.single_step_model_path, onnxruntime_execution_provider_from_backend(params_.backend),
+      params_.plugins_path, params_.batch_size);
+  } else if (is_onnxruntime_backend(params_.backend) && params_.model_type == "multi_step") {
+    diffusion_planner_inference_ = std::make_unique<OnnxruntimeMultiStepInference>(
+      params_.encoder_model_path, params_.decoder_model_path, params_.turn_indicator_model_path,
+      onnxruntime_execution_provider_from_backend(params_.backend), params_.plugins_path,
+      params_.batch_size, params_.dpm_solver_steps, std::move(guidances));
+#endif
   } else {
+    if (params_.backend != "tensorrt") {
+      throw std::invalid_argument(
+        "Unsupported model.backend '" + params_.backend +
+        "'. ONNX Runtime support is not available in this build.");
+    }
     throw std::invalid_argument(
       "Unsupported model.type '" + params_.model_type +
       "'. Expected 'single_step' or 'multi_step'.");
