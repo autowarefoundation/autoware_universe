@@ -37,9 +37,9 @@
       pedestrian: pedestrian
       personal_mobility: pedestrian
       animal: animal
-      pushable_pullable: unknown
-      traffic_cone: unknown
-      debris: unknown
+      pushable_pullable: hazard
+      traffic_cone: hazard
+      debris: hazard
       stroller: pedestrian
       other_stuff: ignore
       noise+ghost_point: ignore

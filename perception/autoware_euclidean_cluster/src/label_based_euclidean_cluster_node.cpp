@@ -121,6 +121,9 @@ std::vector<std::pair<std::string, std::string>> extract_class_mappings(
 /// @brief Map a configured label name to an Autoware object classification label.
 std::optional<std::uint8_t> to_object_label(const std::string & mapped_label)
 {
+  if (mapped_label == "unknown") {
+    return ObjectClassification::UNKNOWN;
+  }
   if (mapped_label == "car") {
     return ObjectClassification::CAR;
   }
@@ -142,11 +145,11 @@ std::optional<std::uint8_t> to_object_label(const std::string & mapped_label)
   if (mapped_label == "animal") {
     return ObjectClassification::ANIMAL;
   }
-  if (mapped_label == "unknown") {
-    return ObjectClassification::UNKNOWN;
-  }
   if (mapped_label == "trailer") {
     return ObjectClassification::TRAILER;
+  }
+  if (mapped_label == "hazard") {
+    return ObjectClassification::HAZARD;
   }
   return std::nullopt;
 }
