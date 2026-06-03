@@ -23,8 +23,12 @@
 namespace autoware::redundancy_switcher
 {
 
-struct ResetCommand {};
-struct SelfInterruptionCommand {};
+struct ResetCommand
+{
+};
+struct SelfInterruptionCommand
+{
+};
 
 enum class LogLevel { Debug, Info, Warn, Error, Fatal };
 
@@ -35,8 +39,14 @@ struct LogCommand
 };
 
 // DiagAdapter reads the current state via gateway->snapshot(); snapshot field is for compatibility.
-struct UpdateStatusDiagCommand  { DomainSnapshot snapshot; };
-struct UpdateActiveControlUnitCommand { ActiveControlUnit value; };
+struct UpdateStatusDiagCommand
+{
+  DomainSnapshot snapshot;
+};
+struct UpdateActiveControlUnitCommand
+{
+  ActiveControlUnit value;
+};
 
 // SubSystemAdapter maps reason to ResponseStatus:
 //   accepted=true                     → SUCCESS
@@ -52,8 +62,14 @@ struct ResetResultCommand
   std::string message;
 };
 
-struct UpdateAutowareReadyCommand               { AutowareReady value; };
-struct UpdateAnotherEcuAvailabilityTimeoutCommand { bool timed_out; };
+struct UpdateAutowareReadyCommand
+{
+  AutowareReady value;
+};
+struct UpdateAnotherEcuAvailabilityTimeoutCommand
+{
+  bool timed_out;
+};
 
 using OutputCommand = std::variant<
   LogCommand, ResetCommand, SelfInterruptionCommand, UpdateStatusDiagCommand,

@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "diag_adapter.hpp"
+
 #include "diag_logic.hpp"
 
+#include <redundancy_switcher_interface/detail/overloaded.hpp>
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
 
 #include <stdexcept>
 #include <string>
-#include <redundancy_switcher_interface/detail/overloaded.hpp>
 
 namespace autoware::redundancy_switcher
 {
@@ -29,18 +30,16 @@ void DiagAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> 
 
   node_ = node;
   gateway_ = gateway;
-  transitional_timeout_milli_ =
-    node->declare_parameter<double>("diag.transitional_timeout_milli");
-  
+  transitional_timeout_milli_ = node->declare_parameter<double>("diag.transitional_timeout_milli");
+
   const bool is_main_ecu = node_->has_parameter("is_main_ecu")
-    ? node_->get_parameter("is_main_ecu").as_bool()
-    : node_->declare_parameter<bool>("is_main_ecu");
+                             ? node_->get_parameter("is_main_ecu").as_bool()
+                             : node_->declare_parameter<bool>("is_main_ecu");
   const std::string hardware_id = is_main_ecu ? "main_ecu_redundancy_switcher_interface"
-    : "sub_ecu_redundancy_switcher_interface";
+                                              : "sub_ecu_redundancy_switcher_interface";
   updater_ = std::make_unique<diagnostic_updater::Updater>(node);
   updater_->setHardwareID(hardware_id);
-  updater_->add(
-    "redundancy_switcher_interface_status", this, &DiagAdapter::update_status);
+  updater_->add("redundancy_switcher_interface_status", this, &DiagAdapter::update_status);
 }
 
 void DiagAdapter::execute(const OutputCommand & command)

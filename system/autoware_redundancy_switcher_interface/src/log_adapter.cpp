@@ -13,9 +13,10 @@
 // limitations under the License.
 #include "log_adapter.hpp"
 
+#include <redundancy_switcher_interface/detail/overloaded.hpp>
+
 #include <memory>
 #include <stdexcept>
-#include <redundancy_switcher_interface/detail/overloaded.hpp>
 
 namespace autoware::redundancy_switcher
 {
@@ -50,7 +51,9 @@ void LogAdapter::execute(const OutputCommand & command)
             RCLCPP_FATAL(logger_, "%s", c.message.c_str());
             break;
           default:
-            RCLCPP_WARN(logger_, "Received LogCommand with unknown LogLevel: %d. Message: %s", static_cast<int>(c.level), c.message.c_str());
+            RCLCPP_WARN(
+              logger_, "Received LogCommand with unknown LogLevel: %d. Message: %s",
+              static_cast<int>(c.level), c.message.c_str());
             break;
         }
       },

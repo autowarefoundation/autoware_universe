@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef NON_REDUNDANT_ADAPTER_HPP_
-#define NON_REDUNDANT_ADAPTER_HPP_
+#ifndef REDUNDANCY_SWITCHER__NON_REDUNDANT_ADAPTER_HPP_
+#define REDUNDANCY_SWITCHER__NON_REDUNDANT_ADAPTER_HPP_
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -41,4 +41,4 @@ private:
 };
 
 }  // namespace autoware::redundancy_switcher
-#endif  // NON_REDUNDANT_ADAPTER_HPP_
+#endif  // REDUNDANCY_SWITCHER__NON_REDUNDANT_ADAPTER_HPP_

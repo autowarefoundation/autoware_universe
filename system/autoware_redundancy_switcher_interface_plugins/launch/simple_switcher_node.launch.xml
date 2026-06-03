@@ -1,11 +1,7 @@
 <launch>
-  <arg name="param_file"
-    default="$(find-pkg-share autoware_redundancy_switcher_interface_plugins)/config/simple_switcher_node.param.yaml"/>
+  <arg name="param_file" default="$(find-pkg-share autoware_redundancy_switcher_interface_plugins)/config/simple_switcher_node.param.yaml"/>
 
-  <node pkg="autoware_redundancy_switcher_interface_plugins"
-        exec="simple_switcher_node"
-        name="simple_switcher_node"
-        output="screen">
+  <node pkg="autoware_redundancy_switcher_interface_plugins" exec="simple_switcher_node" name="simple_switcher_node" output="screen">
     <param from="$(var param_file)"/>
   </node>
 </launch>

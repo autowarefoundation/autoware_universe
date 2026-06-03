@@ -46,10 +46,8 @@ struct SwitcherLevelResult
 //                               Pass nullopt on first call or after a non-transitional state.
 // @param timeout_milli          Threshold (ms) after which transitional → ERROR.
 SwitcherLevelResult compute_switcher_level(
-  const std::optional<Annotated<SwitcherSignals>> & switcher,
-  double now_ms,
-  std::optional<double> transitional_start_ms,
-  double timeout_milli);
+  const std::optional<Annotated<SwitcherSignals>> & switcher, double now_ms,
+  std::optional<double> transitional_start_ms, double timeout_milli);
 
 }  // namespace autoware::redundancy_switcher
 #endif  // DIAG_LOGIC_HPP_

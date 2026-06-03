@@ -17,13 +17,12 @@ namespace autoware::redundancy_switcher
 {
 
 SwitcherLevelResult compute_switcher_level(
-  const std::optional<Annotated<SwitcherSignals>> & switcher,
-  double now_ms,
-  std::optional<double> transitional_start_ms,
-  double timeout_milli)
+  const std::optional<Annotated<SwitcherSignals>> & switcher, double now_ms,
+  std::optional<double> transitional_start_ms, double timeout_milli)
 {
   if (!switcher.has_value()) {
-    return {DiagLevel::Warn, "Startup not yet complete: awaiting switcher data (WARN)", std::nullopt};
+    return {
+      DiagLevel::Warn, "Startup not yet complete: awaiting switcher data (WARN)", std::nullopt};
   }
 
   const auto & sw = *switcher;
@@ -32,7 +31,8 @@ SwitcherLevelResult compute_switcher_level(
     return {DiagLevel::Error, "Switcher fault: " + sw.annotation + " (ERROR)", std::nullopt};
   }
   if (sw.value.is_self_interrupted) {
-    return {DiagLevel::Warn, "Self-interruption occurred: " + sw.annotation + " (WARN)", std::nullopt};
+    return {
+      DiagLevel::Warn, "Self-interruption occurred: " + sw.annotation + " (WARN)", std::nullopt};
   }
   if (sw.value.is_stable) {
     return {DiagLevel::Ok, "Switcher stable: " + sw.annotation + " (OK)", std::nullopt};
@@ -45,15 +45,13 @@ SwitcherLevelResult compute_switcher_level(
   if (elapsed_ms > timeout_milli) {
     return {
       DiagLevel::Error,
-      "Switcher transitional state too long (" +
-        std::to_string(static_cast<int>(elapsed_ms)) + "ms): " + sw.annotation + " (ERROR)",
+      "Switcher transitional state too long (" + std::to_string(static_cast<int>(elapsed_ms)) +
+        "ms): " + sw.annotation + " (ERROR)",
       start_ms};
   }
 
   return {
-    DiagLevel::Warn,
-    "Switcher in transitional state: " + sw.annotation + " (WARN)",
-    start_ms};
+    DiagLevel::Warn, "Switcher in transitional state: " + sw.annotation + " (WARN)", start_ms};
 }
 
 }  // namespace autoware::redundancy_switcher

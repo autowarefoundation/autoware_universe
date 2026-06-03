@@ -14,6 +14,8 @@
 #include "subsystem_adapter.hpp"
 
 #include <autoware_command_mode_types/modes.hpp>
+#include <redundancy_switcher_interface/detail/overloaded.hpp>
+
 #include <autoware_common_msgs/msg/response_status.hpp>
 
 #include <algorithm>
@@ -21,7 +23,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <redundancy_switcher_interface/detail/overloaded.hpp>
 
 namespace autoware::redundancy_switcher
 {
@@ -39,8 +40,8 @@ void SubSystemAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGate
   gateway_ = gateway;
 
   is_main_ecu_ = node_->has_parameter("is_main_ecu")
-    ? node_->get_parameter("is_main_ecu").as_bool()
-    : node_->declare_parameter<bool>("is_main_ecu", true);
+                   ? node_->get_parameter("is_main_ecu").as_bool()
+                   : node_->declare_parameter<bool>("is_main_ecu", true);
   availability_timeout_milli_ = node_->declare_parameter<double>("availability_timeout_milli");
 
   const auto qos = rclcpp::QoS(1);
@@ -96,7 +97,9 @@ void SubSystemAdapter::on_command_mode_request(const CommandModeRequest::ConstSh
 
   const auto & mode = msg->items[0].mode;
   if (mode == modes::sub_ecu_standby || mode == modes::sub_ecu_in_lane_moderate_stop) {
-    submit_event(InputEvent{SelfInterruptionEvent{Annotated<std::monostate>{{}, "requested mode: " + std::to_string(mode)}}});
+    submit_event(
+      InputEvent{SelfInterruptionEvent{
+        Annotated<std::monostate>{{}, "requested mode: " + std::to_string(mode)}}});
   }
 }
 
@@ -116,14 +119,15 @@ void SubSystemAdapter::check_sub_ecu_error(const CommandModeAvailability::ConstS
 
   for (const auto & item : msg->items) {
     if (item.mode == modes::sub_ecu_in_lane_moderate_stop && !item.available) {
-      submit_event(InputEvent{SelfInterruptionEvent{Annotated<std::monostate>{{}, "mode unavailable: sub_ecu_in_lane_moderate_stop"}}});
+      submit_event(
+        InputEvent{SelfInterruptionEvent{
+          Annotated<std::monostate>{{}, "mode unavailable: sub_ecu_in_lane_moderate_stop"}}});
       return;
     }
   }
 }
 
-void SubSystemAdapter::check_availability_timeout(
-  const CommandModeAvailability::ConstSharedPtr msg)
+void SubSystemAdapter::check_availability_timeout(const CommandModeAvailability::ConstSharedPtr msg)
 {
   namespace modes = autoware::command_mode_types::modes;
   const auto now = node_->now();
@@ -158,11 +162,10 @@ void SubSystemAdapter::check_availability_timeout(
 
   // Submit an event on both the rising edge (false → true) and falling edge (true → false).
   if (prev_timeout != curr_timeout) {
-    const std::string annotation = curr_timeout
-      ? "availability timeout exceeded"
-      : "availability recovered";
-    submit_event(InputEvent{SetAnotherEcuAvailabilityTimeoutEvent{
-      Annotated<bool>{curr_timeout, annotation}}});
+    const std::string annotation =
+      curr_timeout ? "availability timeout exceeded" : "availability recovered";
+    submit_event(
+      InputEvent{SetAnotherEcuAvailabilityTimeoutEvent{Annotated<bool>{curr_timeout, annotation}}});
   }
 }
 
@@ -220,14 +223,17 @@ void SubSystemAdapter::on_velocity_report(const VelocityReport::ConstSharedPtr m
 {
   constexpr auto th_stopped_velocity = 0.001;
   const bool is_stopped = std::abs(msg->longitudinal_velocity) < th_stopped_velocity;
-  submit_event(InputEvent{SetVelocityStatusEvent{Annotated<VelocityStatus>{
-    is_stopped ? VelocityStatus::Stopped : VelocityStatus::Moving, "velocity report"}}});
+  submit_event(
+    InputEvent{SetVelocityStatusEvent{Annotated<VelocityStatus>{
+      is_stopped ? VelocityStatus::Stopped : VelocityStatus::Moving, "velocity report"}}});
 }
 
 void SubSystemAdapter::on_control_mode_report(const ControlModeReport::ConstSharedPtr msg)
 {
-  const auto mode = (msg->mode == ControlModeReport::AUTONOMOUS) ? ControlMode::Auto : ControlMode::Manual;
-  submit_event(InputEvent{SetControlModeEvent{Annotated<ControlMode>{mode, "control mode report"}}});
+  const auto mode =
+    (msg->mode == ControlModeReport::AUTONOMOUS) ? ControlMode::Auto : ControlMode::Manual;
+  submit_event(
+    InputEvent{SetControlModeEvent{Annotated<ControlMode>{mode, "control mode report"}}});
 }
 
 void SubSystemAdapter::execute(const OutputCommand & command)
@@ -243,8 +249,9 @@ void SubSystemAdapter::send_active_control_unit(const UpdateActiveControlUnitCom
 {
   {
     std::lock_guard<std::mutex> lock(state_mutex_);
-    if (last_active_control_unit_ids_.has_value() &&
-        *last_active_control_unit_ids_ == command.value.unit_ids) {
+    if (
+      last_active_control_unit_ids_.has_value() &&
+      *last_active_control_unit_ids_ == command.value.unit_ids) {
       return;
     }
     last_active_control_unit_ids_ = command.value.unit_ids;

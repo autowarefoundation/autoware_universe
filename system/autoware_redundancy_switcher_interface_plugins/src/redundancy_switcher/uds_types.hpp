@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef UDS_TYPES_HPP_
-#define UDS_TYPES_HPP_
+#ifndef REDUNDANCY_SWITCHER__UDS_TYPES_HPP_
+#define REDUNDANCY_SWITCHER__UDS_TYPES_HPP_
 
 #include <nlohmann/json.hpp>
 
@@ -66,7 +66,8 @@ struct ElectionStatus
   bool sub_vcu_to_main_vcu_connected{false};
   bool sub_vcu_to_sub_vcu_connected{false};
 };
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ElectionStatus, node_state, node_id, leader_id, path_info, main_ecu_to_main_ecu_connected,
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+  ElectionStatus, node_state, node_id, leader_id, path_info, main_ecu_to_main_ecu_connected,
   main_ecu_to_sub_ecu_connected, main_ecu_to_main_vcu_connected, main_ecu_to_sub_vcu_connected,
   sub_ecu_to_main_ecu_connected, sub_ecu_to_sub_ecu_connected, sub_ecu_to_main_vcu_connected,
   sub_ecu_to_sub_vcu_connected, main_vcu_to_main_ecu_connected, main_vcu_to_sub_ecu_connected,
@@ -74,4 +75,4 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ElectionStatus, node_state, node_id, leader_i
   sub_vcu_to_sub_ecu_connected, sub_vcu_to_main_vcu_connected, sub_vcu_to_sub_vcu_connected)
 
 }  // namespace autoware::redundancy_switcher
-#endif  // UDS_TYPES_HPP_
+#endif  // REDUNDANCY_SWITCHER__UDS_TYPES_HPP_

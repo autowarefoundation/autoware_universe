@@ -19,7 +19,10 @@
 #include <memory>
 
 // Forward declaration only; keeps this header ROS-free for pure GTest of Processor/EventGateway.
-namespace rclcpp { class Node; }
+namespace rclcpp
+{
+class Node;
+}
 
 namespace autoware::redundancy_switcher
 {

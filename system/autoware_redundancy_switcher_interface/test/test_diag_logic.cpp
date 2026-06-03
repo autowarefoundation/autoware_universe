@@ -42,21 +42,24 @@ TEST(DiagLogicTest, NullSwitcher_IsWarn)
 
 TEST(DiagLogicTest, Stable_IsOk)
 {
-  const auto r = compute_switcher_level(make_switcher(true, false, false), kNow, std::nullopt, kTimeout);
+  const auto r =
+    compute_switcher_level(make_switcher(true, false, false), kNow, std::nullopt, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Ok);
   EXPECT_FALSE(r.transitional_start_ms.has_value());
 }
 
 TEST(DiagLogicTest, SelfInterrupted_IsWarn)
 {
-  const auto r = compute_switcher_level(make_switcher(false, true, false), kNow, std::nullopt, kTimeout);
+  const auto r =
+    compute_switcher_level(make_switcher(false, true, false), kNow, std::nullopt, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Warn);
   EXPECT_FALSE(r.transitional_start_ms.has_value());
 }
 
 TEST(DiagLogicTest, Faulted_IsError)
 {
-  const auto r = compute_switcher_level(make_switcher(false, false, true), kNow, std::nullopt, kTimeout);
+  const auto r =
+    compute_switcher_level(make_switcher(false, false, true), kNow, std::nullopt, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Error);
   EXPECT_FALSE(r.transitional_start_ms.has_value());
 }
@@ -66,8 +69,8 @@ TEST(DiagLogicTest, Faulted_IsError)
 TEST(DiagLogicTest, Transitional_FirstCall_StartsTimer)
 {
   // No prior start → timestamp should be initialized to now_ms
-  const auto r = compute_switcher_level(
-    make_switcher(false, false, false), kNow, std::nullopt, kTimeout);
+  const auto r =
+    compute_switcher_level(make_switcher(false, false, false), kNow, std::nullopt, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Warn);
   ASSERT_TRUE(r.transitional_start_ms.has_value());
   EXPECT_DOUBLE_EQ(*r.transitional_start_ms, kNow);
@@ -77,8 +80,7 @@ TEST(DiagLogicTest, Transitional_SubsequentCall_PreservesStartTime)
 {
   // Timer already started at kNow - 100ms; must not be reset
   const double start = kNow - 100.0;
-  const auto r = compute_switcher_level(
-    make_switcher(false, false, false), kNow, start, kTimeout);
+  const auto r = compute_switcher_level(make_switcher(false, false, false), kNow, start, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Warn);
   ASSERT_TRUE(r.transitional_start_ms.has_value());
   EXPECT_DOUBLE_EQ(*r.transitional_start_ms, start);
@@ -90,16 +92,14 @@ TEST(DiagLogicTest, Transitional_ExactlyAtTimeout_IsWarn)
 {
   // elapsed == timeout is NOT over the threshold (strict >)
   const double start = kNow - kTimeout;
-  const auto r = compute_switcher_level(
-    make_switcher(false, false, false), kNow, start, kTimeout);
+  const auto r = compute_switcher_level(make_switcher(false, false, false), kNow, start, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Warn);
 }
 
 TEST(DiagLogicTest, Transitional_JustOverTimeout_IsError)
 {
   const double start = kNow - kTimeout - 1.0;
-  const auto r = compute_switcher_level(
-    make_switcher(false, false, false), kNow, start, kTimeout);
+  const auto r = compute_switcher_level(make_switcher(false, false, false), kNow, start, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Error);
   ASSERT_TRUE(r.transitional_start_ms.has_value());
   EXPECT_DOUBLE_EQ(*r.transitional_start_ms, start);
@@ -110,16 +110,16 @@ TEST(DiagLogicTest, Transitional_JustOverTimeout_IsError)
 TEST(DiagLogicTest, StableAfterTransitional_ClearsTimer)
 {
   // Had an active timer; switching to stable must clear it
-  const auto r = compute_switcher_level(
-    make_switcher(true, false, false), kNow, kNow - 500.0, kTimeout);
+  const auto r =
+    compute_switcher_level(make_switcher(true, false, false), kNow, kNow - 500.0, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Ok);
   EXPECT_FALSE(r.transitional_start_ms.has_value());
 }
 
 TEST(DiagLogicTest, FaultedAfterTransitional_ClearsTimer)
 {
-  const auto r = compute_switcher_level(
-    make_switcher(false, false, true), kNow, kNow - 500.0, kTimeout);
+  const auto r =
+    compute_switcher_level(make_switcher(false, false, true), kNow, kNow - 500.0, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Error);
   EXPECT_FALSE(r.transitional_start_ms.has_value());
 }
@@ -136,8 +136,7 @@ TEST(DiagLogicTest, StableMessage_ContainsAnnotation)
 TEST(DiagLogicTest, TimeoutMessage_ContainsElapsedMs)
 {
   const double start = kNow - 1500.0;
-  const auto r = compute_switcher_level(
-    make_switcher(false, false, false), kNow, start, kTimeout);
+  const auto r = compute_switcher_level(make_switcher(false, false, false), kNow, start, kTimeout);
   EXPECT_EQ(r.level, DiagLevel::Error);
   // message should contain elapsed time (1500ms)
   EXPECT_NE(r.message.find("1500"), std::string::npos);

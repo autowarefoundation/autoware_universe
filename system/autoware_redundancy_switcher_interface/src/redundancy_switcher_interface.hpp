@@ -11,12 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef REDUNDANCY_SWITCHER_INTERFACE_NODE_HPP_
-#define REDUNDANCY_SWITCHER_INTERFACE_NODE_HPP_
+#ifndef REDUNDANCY_SWITCHER_INTERFACE_HPP_
+#define REDUNDANCY_SWITCHER_INTERFACE_HPP_
 
 #include "diag_adapter.hpp"
 #include "log_adapter.hpp"
-#include "subsystem_adapter.hpp"
 #include "pluginlib/class_loader.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "redundancy_switcher_interface/core_logic/processor.hpp"
@@ -24,6 +23,7 @@
 #include "redundancy_switcher_interface/plugin/command_bus.hpp"
 #include "redundancy_switcher_interface/plugin/event_gateway.hpp"
 #include "redundancy_switcher_interface/plugin/i_adapter_plugin.hpp"
+#include "subsystem_adapter.hpp"
 
 #include <memory>
 #include <vector>
@@ -53,4 +53,4 @@ private:
 };
 
 }  // namespace autoware::redundancy_switcher
-#endif  // REDUNDANCY_SWITCHER_INTERFACE_NODE_HPP_
+#endif  // REDUNDANCY_SWITCHER_INTERFACE_HPP_

@@ -4,11 +4,11 @@
 
 This package provides three adapters that can be loaded at runtime via pluginlib:
 
-| Adapter | Use case |
-|---|---|
-| `RedundancySwitcherAdapter` | Production: connects to [redundancy_switcher](https://github.com/tier4/redundancy_switcher) via UDS |
-| `SimpleSwitcherAdapter` | Development / CI: topic-based mock switcher, no hardware required |
-| `NonRedundantSwitcherAdapter` | Single-ECU systems with no hardware switcher |
+| Adapter                       | Use case                                                                                            |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| `RedundancySwitcherAdapter`   | Production: connects to [redundancy_switcher](https://github.com/tier4/redundancy_switcher) via UDS |
+| `SimpleSwitcherAdapter`       | Development / CI: topic-based mock switcher, no hardware required                                   |
+| `NonRedundantSwitcherAdapter` | Single-ECU systems with no hardware switcher                                                        |
 
 ---
 
@@ -50,6 +50,7 @@ special hardware.
 ```
 
 Manual state injection:
+
 ```bash
 # Self-interruption from Main ECU
 ros2 topic pub --once /system/simple_switcher/request/self_interruption/main_ecu std_msgs/msg/Empty {}

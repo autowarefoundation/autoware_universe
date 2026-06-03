@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef UDS_RECEIVER_HPP_
-#define UDS_RECEIVER_HPP_
+#ifndef REDUNDANCY_SWITCHER__UDS_RECEIVER_HPP_
+#define REDUNDANCY_SWITCHER__UDS_RECEIVER_HPP_
 
 #include <nlohmann/json.hpp>
 
@@ -77,8 +77,7 @@ UdsReceiver<T>::UdsReceiver(const std::string & path, bool use_nonblocking) : so
 }
 
 template <typename T>
-UdsReceiver<T>::UdsReceiver(
-  const std::string & path, bool use_nonblocking, CallbackType callback)
+UdsReceiver<T>::UdsReceiver(const std::string & path, bool use_nonblocking, CallbackType callback)
 : UdsReceiver(path, use_nonblocking)
 {
   callback_ = std::move(callback);
@@ -129,4 +128,4 @@ void UdsReceiver<T>::receive()
 }
 
 }  // namespace autoware::redundancy_switcher
-#endif  // UDS_RECEIVER_HPP_
+#endif  // REDUNDANCY_SWITCHER__UDS_RECEIVER_HPP_
