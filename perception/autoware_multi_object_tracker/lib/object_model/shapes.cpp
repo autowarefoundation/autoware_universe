@@ -311,10 +311,12 @@ bool convertConvexHullToBoundingBox(
   output_object.shape.dimensions.x = dim_along;
   output_object.shape.dimensions.y = dim_perp;
 
-  // Shift footprint to be relative to new center (still in original local frame axes)
+  // Shift footprint to new center and rotate into new object frame (which is rotated by bbox_yaw_local)
   for (auto & point : output_object.shape.footprint.points) {
-    point.x -= static_cast<float>(center_local_x);
-    point.y -= static_cast<float>(center_local_y);
+    const float dx = point.x - static_cast<float>(center_local_x);
+    const float dy = point.y - static_cast<float>(center_local_y);
+    point.x = static_cast<float>(cos_u) * dx + static_cast<float>(sin_u) * dy;
+    point.y = -static_cast<float>(sin_u) * dx + static_cast<float>(cos_u) * dy;
   }
 
   return true;
