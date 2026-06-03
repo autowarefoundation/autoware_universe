@@ -123,7 +123,7 @@ bool VehicleGateInterface::is_selected(const CommandPlugin & plugin) const
 bool NetworkGateInterface::is_selected(const std::optional<uint8_t> ecu) const
 {
   if (!ecu.has_value()) {
-    return true; // No multiple ECUs or not specified, consider selected
+    return true;  // No multiple ECUs or not specified, consider selected
   }
   const auto id = ecu.value();
   const auto itr = std::find(units_.begin(), units_.end(), id);
