@@ -438,6 +438,11 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
     std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters;
     cluster_->cluster(label_cloud, clusters);
 
+    // TODO(ktro2828): This probability is averaged per segmented label bucket before clustering,
+    // not per individual cluster. Consider to refine the probability assignment to reflect
+    // cluster-level confidence.
+    // Or uncertainty aware clustering can be applied to propagate point-level probabilities into
+    // clusters using 'entropy' field values.
     const float label_probability = average_probability(semantic_points);
     for (const auto & cluster : clusters) {
       if (cluster.empty()) {
