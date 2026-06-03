@@ -36,8 +36,9 @@ namespace autoware::trajectory_optimizer::plugin
 
 struct TemporalMPTParams
 {
-  /** Kinematic bicycle CG distances [m]; fixed 1.0 m to match Python examples /
-   * ocp.parameter_values. */
+  /** Distance from rear axle (base_link) to bicycle CG [m]; lr = ratio * wheel_base, lf =
+   * wheel_base - lr. */
+  double cg_distance_from_rear_axle_ratio{0.8};
   double lf{1.0};
   double lr{1.0};
   size_t min_points_for_optimization{2};
@@ -71,6 +72,7 @@ private:
   TemporalMPTParams mpt_params_;
 
   void create_or_reset_solver();
+  void update_bicycle_geometry_from_vehicle();
   void apply_solver_model_parameters();
   void write_temporal_mpt_replay_fixture(
     const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_trajectory,

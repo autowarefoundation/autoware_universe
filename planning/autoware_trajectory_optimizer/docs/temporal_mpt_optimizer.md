@@ -46,16 +46,17 @@ Plugin-specific parameters live in `config/plugins/trajectory_temporal_mpt_optim
 
 ## Parameters
 
-| Parameter                       | Default                               | Description                                                                                                          |
-| ------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `min_points_for_optimization`   | `2`                                   | Minimum trajectory points required before running MPC                                                                |
-| `enable_debug_info`             | `false`                               | Extra `RCLCPP_INFO` / `WARN` on solve success or failure                                                             |
-| `publish_debug_topics`          | `false`                               | Publish reference, odometry, output trajectory, solve status, and control debug topics under `~/debug/temporal_mpt/` |
-| `write_replay_fixture`          | `false`                               | Write a text fixture for offline replay (e.g. Python generators)                                                     |
-| `replay_fixture_directory`      | `~/.ros/autoware_temporal_mpt_replay` | Output directory for replay fixtures                                                                                 |
-| `log_replay_fixture_to_console` | `false`                               | Log fixture path and contents to the console                                                                         |
+| Parameter                          | Default                               | Description                                                                                                                                                                     |
+| ---------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cg_distance_from_rear_axle_ratio` | `0.8`                                 | CG distance from rear axle as a fraction of `wheel_base` (`vehicle_info`). `lr = ratio × wheel_base`, `lf = wheel_base − lr`. Applied at node startup only (restart to change). |
+| `min_points_for_optimization`      | `2`                                   | Minimum trajectory points required before running MPC                                                                                                                           |
+| `enable_debug_info`                | `false`                               | Extra `RCLCPP_INFO` / `WARN` on solve success or failure                                                                                                                        |
+| `publish_debug_topics`             | `false`                               | Publish reference, odometry, output trajectory, solve status, and control debug topics under `~/debug/temporal_mpt/`                                                            |
+| `write_replay_fixture`             | `false`                               | Write a text fixture for offline replay (e.g. Python generators)                                                                                                                |
+| `replay_fixture_directory`         | `~/.ros/autoware_temporal_mpt_replay` | Output directory for replay fixtures                                                                                                                                            |
+| `log_replay_fixture_to_console`    | `false`                               | Log fixture path and contents to the console                                                                                                                                    |
 
-Bicycle CG distances `lf` / `lr` are fixed at **1.0 m** in code to match the generated OCP (`ocp.parameter_values`).
+`wheel_base` is read from the vehicle description (`vehicle_info.param.yaml`, loaded with the stack via `common_param_path` in `trajectory_optimizer.launch.xml`), not from this plugin YAML.
 
 ## Debug visualization
 

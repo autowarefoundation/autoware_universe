@@ -14,6 +14,8 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_temporal_mpt_optimizer.hpp"
 
+#include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/logging.hpp>
 
@@ -110,11 +112,9 @@ void TrajectoryTemporalMPTOptimizer::set_up_params()
   // SQP max_iter / tol: from codegen (generators/path_tracking_mpc_temporal.py → acados_ocp.json),
   // applied inside kinematic_bicycle_temporal_acados_create — not overridden in C++.
 
-  mpt_params_.lf = 1.0;
-  mpt_params_.lr = 1.0;
-  RCLCPP_INFO(
-    node_ptr->get_logger(), "Temporal MPT: bicycle lf=%.3f m lr=%.3f m (Python reference default)",
-    mpt_params_.lf, mpt_params_.lr);
+  mpt_params_.cg_distance_from_rear_axle_ratio = get_or_declare_parameter<double>(
+    *node_ptr, "trajectory_temporal_mpt_optimizer.cg_distance_from_rear_axle_ratio");
+  update_bicycle_geometry_from_vehicle();
 
   mpt_params_.min_points_for_optimization = static_cast<size_t>(get_or_declare_parameter<int>(
     *node_ptr, "trajectory_temporal_mpt_optimizer.min_points_for_optimization"));
@@ -204,13 +204,19 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
   // sample period is implicit in the message): start_idx = index closest to x0 (typically 0 when x0
   // is traj_points[0]), then start_idx+k for stage k. No arc-length resampling or
   // re-parameterization.
+  const size_t n_pts = traj_points.size();
+  geometry_msgs::msg::Point x0_position;
+  x0_position.x = x0[0];
+  x0_position.y = x0[1];
+  x0_position.z = 0.0;
+
   const auto closest_itr = std::min_element(
-    traj_points.begin() + 1, traj_points.end(), [&x0](const auto & a, const auto & b) {
-      return autoware_utils::calc_distance2d(a.pose.position, x0) <
-             autoware_utils::calc_distance2d(b.pose.position, x0);
+    traj_points.begin(), traj_points.end(), [&x0_position](const auto & a, const auto & b) {
+      return autoware_utils_geometry::calc_distance2d(a.pose.position, x0_position) <
+             autoware_utils_geometry::calc_distance2d(b.pose.position, x0_position);
     });
 
-  const size_t start_idx = std::distance(traj_points.begin(), closest_itr);
+  const size_t start_idx = static_cast<size_t>(std::distance(traj_points.begin(), closest_itr));
 
   // Shift reference yaw by k*2π so the path heading at start_idx matches x0 psi in LINEAR_LS (same
   // idea as generators/utils.py run_closed_loop_mpc / solve_autoware_temporal_mpc). Avoids false
@@ -282,7 +288,7 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
     }
     return;
   } else if (mpt_params_.enable_debug_info) {
-    RCLCPP_INFO_THROTTLE(
+    RCLCPP_DEBUG_THROTTLE(
       get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 2000,
       "Temporal MPT acados solve succeeded with status %d", solution.status);
   }
@@ -382,6 +388,36 @@ void TrajectoryTemporalMPTOptimizer::write_temporal_mpt_replay_fixture(
     out_path.c_str());
 }
 
+void TrajectoryTemporalMPTOptimizer::update_bicycle_geometry_from_vehicle()
+{
+  auto * const node_ptr = get_node_ptr();
+  const auto vehicle_info =
+    autoware::vehicle_info_utils::VehicleInfoUtils(*node_ptr).getVehicleInfo();
+
+  const double ratio = std::clamp(mpt_params_.cg_distance_from_rear_axle_ratio, 0.0, 1.0);
+  mpt_params_.cg_distance_from_rear_axle_ratio = ratio;
+  mpt_params_.lr = vehicle_info.wheel_base_m * ratio;
+  mpt_params_.lf = vehicle_info.wheel_base_m - mpt_params_.lr;
+
+  constexpr double min_segment_m = 1e-3;
+  if (mpt_params_.lf < min_segment_m || mpt_params_.lr < min_segment_m) {
+    RCLCPP_WARN(
+      node_ptr->get_logger(),
+      "Temporal MPT: wheel_base=%.3f m with cg_distance_from_rear_axle_ratio=%.3f yields "
+      "lf=%.3f lr=%.3f; clamping ratio for a valid bicycle split",
+      vehicle_info.wheel_base_m, ratio, mpt_params_.lf, mpt_params_.lr);
+    mpt_params_.lr = std::max(min_segment_m, mpt_params_.lr);
+    mpt_params_.lf = std::max(min_segment_m, vehicle_info.wheel_base_m - mpt_params_.lr);
+  }
+
+  RCLCPP_INFO(
+    node_ptr->get_logger(),
+    "Temporal MPT: bicycle geometry from vehicle (wheel_base=%.3f m, cg_ratio=%.3f): lf=%.3f m "
+    "lr=%.3f m",
+    vehicle_info.wheel_base_m, mpt_params_.cg_distance_from_rear_axle_ratio, mpt_params_.lf,
+    mpt_params_.lr);
+}
+
 void TrajectoryTemporalMPTOptimizer::apply_solver_model_parameters()
 {
   if (!acados_interface_) {
@@ -408,14 +444,14 @@ void TrajectoryTemporalMPTOptimizer::log_acados_solve_failure_debug(
     acados_status);
 
   const rclcpp::Logger logger = node->get_logger();
-  RCLCPP_INFO(logger, "Temporal MPT optimize: plugin=%s", get_name().c_str());
+  RCLCPP_DEBUG(logger, "Temporal MPT optimize: plugin=%s", get_name().c_str());
 
-  RCLCPP_INFO(
+  RCLCPP_DEBUG(
     logger,
     "x0 (first trajectory point): x=%.6f y=%.6f yaw=%.6f v=%.6f | MPC start_idx=%zu "
     "terminal_idx=%zu",
     x0[0], x0[1], x0[2], x0[3], start_idx, terminal_idx);
-  RCLCPP_INFO(
+  RCLCPP_DEBUG(
     logger, "odom twist linear (map/body per msg): x=%.6f y=%.6f z=%.6f",
     data.current_odometry.twist.twist.linear.x, data.current_odometry.twist.twist.linear.y,
     data.current_odometry.twist.twist.linear.z);
@@ -432,7 +468,7 @@ void TrajectoryTemporalMPTOptimizer::log_acados_solve_failure_debug(
   }
   oss << "]";
 
-  RCLCPP_INFO(logger, "%s", oss.str().c_str());
+  RCLCPP_DEBUG(logger, "%s", oss.str().c_str());
 }
 
 void TrajectoryTemporalMPTOptimizer::ensure_debug_publishers()

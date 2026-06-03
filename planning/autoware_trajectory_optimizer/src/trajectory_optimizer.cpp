@@ -195,8 +195,6 @@ void TrajectoryOptimizer::on_traj([[maybe_unused]] const CandidateTrajectories::
     return;
   }
 
-  const auto t_opt_start = std::chrono::steady_clock::now();
-
   CandidateTrajectories output_trajectories = *msg;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     // Create a fresh data instance per trajectory so semantic_speed_tracker is reset each time
