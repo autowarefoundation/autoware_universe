@@ -50,6 +50,9 @@ bool convertConvexHullToBoundingBox(
   const types::DynamicObject & input_object, types::DynamicObject & output_object,
   const std::optional<geometry_msgs::msg::Point> & ego_pos = std::nullopt);
 
+std::optional<types::DynamicObject> alignClusterToOrientation(
+  const types::DynamicObject & cluster, double target_yaw);
+
 std::pair<double, double> getObjectZRange(const types::DynamicObject & object);
 
 double get3dGeneralizedIoU(

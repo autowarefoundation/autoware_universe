@@ -78,20 +78,12 @@ bool StaticTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & /*time*/,
   const types::InputChannel & /*channel_info*/)
 {
-  const types::DynamicObject * effective = &object;
-  types::DynamicObject converted;
-  if (
-    object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON &&
-    shapes::convertConvexHullToBoundingBox(object, converted, ego_pos_)) {
-    effective = &converted;
-  }
+  object_.shape = object.shape;
+  object_.pose = object.pose;
+  object_.area = types::getArea(object.shape);
+  last_pose_ = object.pose;
 
-  object_.shape = effective->shape;
-  object_.pose = effective->pose;
-  object_.area = types::getArea(effective->shape);
-  last_pose_ = effective->pose;
-
-  measureWithPose(*effective);
+  measureWithPose(object);
 
   return true;
 }

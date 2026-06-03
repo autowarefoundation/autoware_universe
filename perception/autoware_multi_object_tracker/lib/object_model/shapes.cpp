@@ -35,6 +35,30 @@ namespace
 {
 constexpr double MIN_AREA = 1e-6;
 constexpr double INVALID_SCORE = -1.0;
+
+struct OrientedExtent
+{
+  double min_along, max_along, min_lat, max_lat;
+};
+
+// Project polygon footprint points onto a unit axis (cos_u, sin_u) and its perpendicular.
+template <typename PointContainer>
+inline OrientedExtent computeOrientedExtent(
+  const PointContainer & points, const double cos_u, const double sin_u)
+{
+  OrientedExtent ext{
+    std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest(),
+    std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest()};
+  for (const auto & p : points) {
+    const double along = p.x * cos_u + p.y * sin_u;
+    const double lat = -p.x * sin_u + p.y * cos_u;
+    if (along < ext.min_along) ext.min_along = along;
+    if (along > ext.max_along) ext.max_along = along;
+    if (lat < ext.min_lat) ext.min_lat = lat;
+    if (lat > ext.max_lat) ext.max_lat = lat;
+  }
+  return ext;
+}
 }  // namespace
 
 namespace autoware::multi_object_tracker
@@ -204,40 +228,24 @@ bool convertConvexHullToBoundingBox(
   }
 
   const size_t n = points.size();
-  double best_scaled_area = std::numeric_limits<double>::max();
+  double best_area = std::numeric_limits<double>::max();
   size_t best_i = 0;
-  double best_min_u = 0.0, best_max_u = 0.0, best_min_v = 0.0, best_max_v = 0.0;
+  OrientedExtent best_ext{};
   bool found_any = false;
 
   auto tryEdge = [&](const size_t i) {
     const auto & p0 = points[i];
     const auto & p1 = points[(i + 1) % n];
-    const double ex = p1.x - p0.x;
-    const double ey = p1.y - p0.y;
+    const double ex = p1.x - p0.x, ey = p1.y - p0.y;
     const double len_sq = ex * ex + ey * ey;
     if (len_sq < 1e-12) return;
-
-    double min_u = std::numeric_limits<double>::max();
-    double max_u = std::numeric_limits<double>::lowest();
-    double min_v = std::numeric_limits<double>::max();
-    double max_v = std::numeric_limits<double>::lowest();
-    for (const auto & p : points) {
-      const double u = p.x * ex + p.y * ey;
-      const double v = -p.x * ey + p.y * ex;
-      if (u < min_u) min_u = u;
-      if (u > max_u) max_u = u;
-      if (v < min_v) min_v = v;
-      if (v > max_v) max_v = v;
-    }
-    // scaled_area = actual_area * len_sq; compare without sqrt
-    const double scaled_area = (max_u - min_u) * (max_v - min_v) / len_sq;
-    if (scaled_area < best_scaled_area) {
-      best_scaled_area = scaled_area;
+    const double edge_len = std::sqrt(len_sq);
+    const auto ext = computeOrientedExtent(points, ex / edge_len, ey / edge_len);
+    const double area = (ext.max_along - ext.min_along) * (ext.max_lat - ext.min_lat);
+    if (area < best_area) {
+      best_area = area;
       best_i = i;
-      best_min_u = min_u;
-      best_max_u = max_u;
-      best_min_v = min_v;
-      best_max_v = max_v;
+      best_ext = ext;
       found_any = true;
     }
   };
@@ -264,26 +272,22 @@ bool convertConvexHullToBoundingBox(
 
   if (!found_any) return false;
 
-  // Recover actual dimensions and center from the winning edge (one sqrt + one atan2).
+  // Recover edge direction and bbox geometry from the winning edge.
   const auto & p0 = points[best_i];
   const auto & p1 = points[(best_i + 1) % n];
-  const double ex = p1.x - p0.x;
-  const double ey = p1.y - p0.y;
+  const double ex = p1.x - p0.x, ey = p1.y - p0.y;
   const double edge_len = std::sqrt(ex * ex + ey * ey);
-  const double len_sq = ex * ex + ey * ey;
+  const double cos_u = ex / edge_len, sin_u = ey / edge_len;
 
-  // Bbox dimensions in local frame
-  const double dim_along = (best_max_u - best_min_u) / edge_len;
-  const double dim_perp = (best_max_v - best_min_v) / edge_len;
+  const double dim_along = best_ext.max_along - best_ext.min_along;
+  const double dim_perp = best_ext.max_lat - best_ext.min_lat;
 
-  // Bbox center in local frame: invert the unnormalized projection transform.
-  // [x; y] = (1/len_sq) * [[ex, -ey]; [ey, ex]] * [cu; cv]
-  const double cu = (best_min_u + best_max_u) * 0.5;
-  const double cv = (best_min_v + best_max_v) * 0.5;
-  const double center_local_x = (ex * cu - ey * cv) / len_sq;
-  const double center_local_y = (ey * cu + ex * cv) / len_sq;
+  // Bbox center in local frame: inverse of the normalized projection.
+  const double cu = (best_ext.min_along + best_ext.max_along) * 0.5;
+  const double cv = (best_ext.min_lat + best_ext.max_lat) * 0.5;
+  const double center_local_x = cu * cos_u - cv * sin_u;
+  const double center_local_y = cu * sin_u + cv * cos_u;
 
-  // Winning edge orientation in local frame → global yaw offset
   const double bbox_yaw_local = std::atan2(ey, ex);
 
   const double obj_yaw = tf2::getYaw(input_object.pose.orientation);
@@ -314,6 +318,37 @@ bool convertConvexHullToBoundingBox(
   }
 
   return true;
+}
+
+std::optional<types::DynamicObject> alignClusterToOrientation(
+  const types::DynamicObject & cluster, const double target_yaw)
+{
+  if (
+    cluster.shape.type != autoware_perception_msgs::msg::Shape::POLYGON ||
+    cluster.shape.footprint.points.empty()) {
+    return std::nullopt;
+  }
+
+  // Compose the two rotations (cluster local → map, map → target frame) into one.
+  const double phi = target_yaw - tf2::getYaw(cluster.pose.orientation);
+  const auto ext = computeOrientedExtent(cluster.shape.footprint.points, std::cos(phi), std::sin(phi));
+
+  const double long_center = (ext.min_along + ext.max_along) * 0.5;
+  const double lat_center = (ext.min_lat + ext.max_lat) * 0.5;
+  const double cos_tr = std::cos(target_yaw), sin_tr = std::sin(target_yaw);
+
+  types::DynamicObject aligned = cluster;
+  aligned.pose.position.x = cluster.pose.position.x + long_center * cos_tr - lat_center * sin_tr;
+  aligned.pose.position.y = cluster.pose.position.y + long_center * sin_tr + lat_center * cos_tr;
+
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, target_yaw);
+  aligned.pose.orientation = tf2::toMsg(q);
+
+  aligned.shape.dimensions.x = ext.max_along - ext.min_along;
+  aligned.shape.dimensions.y = ext.max_lat - ext.min_lat;
+
+  return aligned;
 }
 
 std::pair<double, double> getObjectZRange(const types::DynamicObject & object)
