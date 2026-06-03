@@ -2,7 +2,7 @@
   ros__parameters:
     trajectory_temporal_mpt_optimizer:
       min_points_for_optimization: 2
-      enable_debug_info: true
+      enable_debug_info: false
       publish_debug_topics: true
       write_replay_fixture: true
       replay_fixture_directory: "~/.ros/autoware_temporal_mpt_replay"
