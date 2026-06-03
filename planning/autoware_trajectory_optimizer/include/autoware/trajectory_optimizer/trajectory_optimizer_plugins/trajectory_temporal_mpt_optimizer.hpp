@@ -74,18 +74,21 @@ private:
   void create_or_reset_solver();
   void update_bicycle_geometry_from_vehicle();
   void apply_solver_model_parameters();
+  void log_debug_info(
+    const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_snapshot,
+    const temporal_mpt::AcadosSolution & solution, size_t start_idx, size_t terminal_idx,
+    const TrajectoryOptimizerData & data, const TrajectoryPoints & traj_points);
   void write_temporal_mpt_replay_fixture(
     const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_trajectory,
-    int acados_status, const char * tag);
+    int acados_status);
   void ensure_debug_publishers();
-  void log_acados_solve_failure_debug(
+  void log_acados_solve_debug(
     int acados_status, const std::array<double, temporal_mpt::NX> & x0, size_t start_idx,
     size_t terminal_idx, const TrajectoryOptimizerData & data,
     const TrajectoryPoints & traj_points) const;
   void publish_temporal_mpt_debug_io(
     const TrajectoryPoints & reference_before, const nav_msgs::msg::Odometry & initial_odom,
-    const TrajectoryPoints & trajectory_after, size_t output_point_count, int acados_status,
-    const temporal_mpt::AcadosSolution * mpc_solution);
+    const temporal_mpt::AcadosSolution & solution);
 
   rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr debug_input_trajectory_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr debug_input_initial_state_pub_;

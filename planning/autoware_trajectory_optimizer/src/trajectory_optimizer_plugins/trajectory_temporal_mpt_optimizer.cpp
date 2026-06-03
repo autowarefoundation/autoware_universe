@@ -47,8 +47,7 @@ namespace autoware::trajectory_optimizer::plugin
 namespace
 {
 /** Overlay MPC state (x, y, psi, v) and steering from u[1] on reference points for debug
- * visualization. Used when acados status != 0 so we still publish the solver's last iterate
- * (reference alone has no optimized steering). */
+ * visualization (solver last iterate; reference alone has no optimized steering). */
 TrajectoryPoints trajectory_from_solution_overlay(
   const TrajectoryPoints & reference, const temporal_mpt::AcadosSolution & solution, size_t n_out)
 {
@@ -269,28 +268,10 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
     solution.xtraj[i][1] += y_off;
   }
 
+  log_debug_info(x0, reference_snapshot, solution, start_idx, terminal_idx, data, traj_points);
+
   if (solution.status != 0) {
-    write_temporal_mpt_replay_fixture(x0, reference_snapshot, solution.status, "failed");
-
-    if (mpt_params_.enable_debug_info) {
-      log_acados_solve_failure_debug(
-        solution.status, x0, start_idx, terminal_idx, data, traj_points);
-    }
-
-    if (mpt_params_.publish_debug_topics) {
-      const size_t n_out =
-        std::min(reference_snapshot.size(), static_cast<size_t>(temporal_mpt::N + 1));
-      const TrajectoryPoints debug_traj =
-        trajectory_from_solution_overlay(reference_snapshot, solution, n_out);
-      publish_temporal_mpt_debug_io(
-        reference_snapshot, data.current_odometry, debug_traj, debug_traj.size(), solution.status,
-        &solution);
-    }
     return;
-  } else if (mpt_params_.enable_debug_info) {
-    RCLCPP_DEBUG_THROTTLE(
-      get_node_ptr()->get_logger(), *get_node_ptr()->get_clock(), 2000,
-      "Temporal MPT acados solve succeeded with status %d", solution.status);
   }
 
   const size_t n_apply = std::min(traj_points.size(), static_cast<size_t>(temporal_mpt::N + 1));
@@ -315,17 +296,32 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
       p.acceleration_mps2 = static_cast<float>(solution.utraj[i][0]);
     }
   }
+}
+
+void TrajectoryTemporalMPTOptimizer::log_debug_info(
+  const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_snapshot,
+  const temporal_mpt::AcadosSolution & solution, const size_t start_idx, const size_t terminal_idx,
+  const TrajectoryOptimizerData & data, const TrajectoryPoints & traj_points)
+{
+  write_temporal_mpt_replay_fixture(x0, reference_snapshot, solution.status);
+
+  if (mpt_params_.enable_debug_info) {
+    log_acados_solve_debug(solution.status, x0, start_idx, terminal_idx, data, traj_points);
+  }
 
   if (mpt_params_.publish_debug_topics) {
-    publish_temporal_mpt_debug_io(
-      reference_snapshot, data.current_odometry, traj_points, traj_points.size(), 0, &solution);
+    publish_temporal_mpt_debug_io(reference_snapshot, data.current_odometry, solution);
   }
 }
 
 void TrajectoryTemporalMPTOptimizer::write_temporal_mpt_replay_fixture(
   const std::array<double, temporal_mpt::NX> & x0, const TrajectoryPoints & reference_trajectory,
-  const int acados_status, const char * tag)
+  const int acados_status)
 {
+  if (acados_status == 0) {
+    return;
+  }
+
   const std::string dir_raw = mpt_params_.replay_fixture_directory;
   const bool want_file = mpt_params_.write_replay_fixture && !dir_raw.empty();
   const bool want_console = mpt_params_.log_replay_fixture_to_console;
@@ -352,7 +348,7 @@ void TrajectoryTemporalMPTOptimizer::write_temporal_mpt_replay_fixture(
 
   if (want_console) {
     RCLCPP_ERROR(
-      logger, "Temporal MPT replay fixture (%s, status=%d):\n%s", tag, acados_status, text.c_str());
+      logger, "Temporal MPT replay fixture (failed, status=%d):\n%s", acados_status, text.c_str());
   }
 
   if (!want_file) {
@@ -373,9 +369,8 @@ void TrajectoryTemporalMPTOptimizer::write_temporal_mpt_replay_fixture(
                          std::chrono::system_clock::now().time_since_epoch())
                          .count();
   const std::filesystem::path out_path =
-    std::filesystem::path(dir_exp) /
-    ("temporal_mpt_replay_" + std::string(tag) + "_" + std::to_string(wall_ms) + "_status" +
-     std::to_string(acados_status) + ".txt");
+    std::filesystem::path(dir_exp) / ("temporal_mpt_replay_failed_" + std::to_string(wall_ms) +
+                                      "_status" + std::to_string(acados_status) + ".txt");
 
   std::ofstream out(out_path);
   if (!out) {
@@ -433,17 +428,25 @@ void TrajectoryTemporalMPTOptimizer::create_or_reset_solver()
   apply_solver_model_parameters();
 }
 
-void TrajectoryTemporalMPTOptimizer::log_acados_solve_failure_debug(
+void TrajectoryTemporalMPTOptimizer::log_acados_solve_debug(
   const int acados_status, const std::array<double, temporal_mpt::NX> & x0, const size_t start_idx,
   const size_t terminal_idx, const TrajectoryOptimizerData & data,
   const TrajectoryPoints & traj_points) const
 {
   rclcpp::Node * const node = get_node_ptr();
-  RCLCPP_WARN_THROTTLE(
-    node->get_logger(), *node->get_clock(), 2000, "Temporal MPT acados solve failed with status %d",
-    acados_status);
-
   const rclcpp::Logger logger = node->get_logger();
+
+  if (acados_status != 0) {
+    RCLCPP_WARN_THROTTLE(
+      logger, *node->get_clock(), 2000, "Temporal MPT acados solve failed with status %d",
+      acados_status);
+  } else {
+    RCLCPP_DEBUG_THROTTLE(
+      logger, *node->get_clock(), 2000, "Temporal MPT acados solve succeeded with status %d",
+      acados_status);
+    return;
+  }
+
   RCLCPP_DEBUG(logger, "Temporal MPT optimize: plugin=%s", get_name().c_str());
 
   RCLCPP_DEBUG(
@@ -496,13 +499,16 @@ void TrajectoryTemporalMPTOptimizer::ensure_debug_publishers()
 
 void TrajectoryTemporalMPTOptimizer::publish_temporal_mpt_debug_io(
   const TrajectoryPoints & reference_before, const nav_msgs::msg::Odometry & initial_odom,
-  const TrajectoryPoints & trajectory_after, const size_t output_point_count,
-  const int acados_status, const temporal_mpt::AcadosSolution * mpc_solution)
+  const temporal_mpt::AcadosSolution & solution)
 {
   ensure_debug_publishers();
   if (!debug_input_trajectory_pub_) {
     return;
   }
+
+  const size_t n_out = std::min(reference_before.size(), static_cast<size_t>(temporal_mpt::N + 1));
+  const TrajectoryPoints trajectory_after =
+    trajectory_from_solution_overlay(reference_before, solution, n_out);
 
   rclcpp::Node * const node = get_node_ptr();
   std_msgs::msg::Header header;
@@ -515,26 +521,21 @@ void TrajectoryTemporalMPTOptimizer::publish_temporal_mpt_debug_io(
 
   autoware_planning_msgs::msg::Trajectory output_traj;
   output_traj.header = header;
-  const size_t n = std::min(output_point_count, trajectory_after.size());
-  if (n > 0) {
-    output_traj.points.assign(trajectory_after.begin(), trajectory_after.begin() + n);
-  }
+  output_traj.points = trajectory_after;
 
   std_msgs::msg::Int32 status_msg;
-  status_msg.data = acados_status;
+  status_msg.data = solution.status;
 
   // Publish u = [a_long, delta] for every stage whenever the solver returned a trajectory,
   // including failed solves (status != 0): values are the last SQP iterate and are useful for
   // debug.
   std_msgs::msg::Float64MultiArray accel_msg;
   std_msgs::msg::Float64MultiArray delta_cmd_msg;
-  if (mpc_solution != nullptr) {
-    accel_msg.data.reserve(temporal_mpt::N);
-    delta_cmd_msg.data.reserve(temporal_mpt::N);
-    for (const auto & u : mpc_solution->utraj) {
-      accel_msg.data.push_back(u[0]);
-      delta_cmd_msg.data.push_back(u[1]);
-    }
+  accel_msg.data.reserve(temporal_mpt::N);
+  delta_cmd_msg.data.reserve(temporal_mpt::N);
+  for (const auto & u : solution.utraj) {
+    accel_msg.data.push_back(u[0]);
+    delta_cmd_msg.data.push_back(u[1]);
   }
 
   debug_input_trajectory_pub_->publish(std::move(input_traj));
