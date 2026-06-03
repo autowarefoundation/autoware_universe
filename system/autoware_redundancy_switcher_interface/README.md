@@ -19,13 +19,13 @@ The Switcher-side adapter (hardware-specific UDS or topic-based) is loaded at ru
 
 ## Documentation
 
-| Document | Description |
-|---|---|
-| [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) | Functional requirements derived from the implementation |
-| [docs/DESIGN.md](docs/DESIGN.md) | Detailed design: file structure, Mermaid diagrams, event/command lists, interfaces |
-| [docs/PLUGIN_DEVELOPMENT_GUIDE.md](docs/PLUGIN_DEVELOPMENT_GUIDE.md) | How to implement a custom SwitcherAdapter plugin |
-| [docs/TERMINOLOGY.md](docs/TERMINOLOGY.md) | Data type definitions and data flow |
-| [docs/ADAPTER_THREAD_SAFETY.md](docs/ADAPTER_THREAD_SAFETY.md) | Thread safety guide for adapter plugin authors |
+| Document                                                             | Description                                                                        |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)                         | Functional requirements derived from the implementation                            |
+| [docs/DESIGN.md](docs/DESIGN.md)                                     | Detailed design: file structure, Mermaid diagrams, event/command lists, interfaces |
+| [docs/PLUGIN_DEVELOPMENT_GUIDE.md](docs/PLUGIN_DEVELOPMENT_GUIDE.md) | How to implement a custom SwitcherAdapter plugin                                   |
+| [docs/TERMINOLOGY.md](docs/TERMINOLOGY.md)                           | Data type definitions and data flow                                                |
+| [docs/ADAPTER_THREAD_SAFETY.md](docs/ADAPTER_THREAD_SAFETY.md)       | Thread safety guide for adapter plugin authors                                     |
 
 ## Quick Start
 

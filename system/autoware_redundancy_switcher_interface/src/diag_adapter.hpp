@@ -35,7 +35,8 @@ namespace autoware::redundancy_switcher
  *     VelocityStatus, ControlMode) and publishes them as redundancy_switcher_interface/status.
  *   - Emits ERROR if the transitional state (is_stable, is_self_interrupted, and is_faulted
  *     all false) persists longer than diag.transitional_timeout_milli.
- *   - Architecture-agnostic; does not depend on a specific Switcher implementation or ECU architecture.
+ *   - Architecture-agnostic; does not depend on a specific Switcher implementation or ECU
+ * architecture.
  *   - Does not submit any events to the EventGateway (output-only).
  */
 class DiagAdapter : public IAdapterPlugin

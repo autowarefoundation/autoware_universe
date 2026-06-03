@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SIMPLE_SWITCHER_NODE_HPP_
-#define SIMPLE_SWITCHER_NODE_HPP_
+#ifndef SIMPLE_SWITCHER__SIMPLE_SWITCHER_NODE_HPP_
+#define SIMPLE_SWITCHER__SIMPLE_SWITCHER_NODE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
+
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int8.hpp>
@@ -38,8 +39,7 @@ public:
 private:
   static uint8_t encode_signals(bool stable, bool self_interrupted, bool faulted);
   void on_manual_active(
-    const std_srvs::srv::SetBool::Request & request,
-    std_srvs::srv::SetBool::Response & response);
+    const std_srvs::srv::SetBool::Request & request, std_srvs::srv::SetBool::Response & response);
   void on_self_main();
   void on_self_sub();
   void on_reset();
@@ -70,4 +70,4 @@ private:
 
 }  // namespace autoware::redundancy_switcher
 
-#endif  // SIMPLE_SWITCHER_NODE_HPP_
+#endif  // SIMPLE_SWITCHER__SIMPLE_SWITCHER_NODE_HPP_

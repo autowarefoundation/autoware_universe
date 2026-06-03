@@ -15,34 +15,38 @@
 
 #include "pluginlib/class_list_macros.hpp"
 
+#include <redundancy_switcher_interface/detail/overloaded.hpp>
+
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <redundancy_switcher_interface/detail/overloaded.hpp>
 
 namespace autoware::redundancy_switcher
 {
 
 using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
-void RedundancySwitcherAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
+void RedundancySwitcherAdapter::initialize(
+  rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
 {
   if (!node) throw std::invalid_argument("RedundancySwitcherAdapter: node is null");
   if (!gateway) throw std::invalid_argument("RedundancySwitcherAdapter: gateway is null");
   node_ = node;
   gateway_ = gateway;
 
-  const std::string sender_path = node_->declare_parameter<std::string>("uds.switcher_command_path");
-  const std::string receiver_path = node_->declare_parameter<std::string>("uds.switcher_status_path");
-  election_status_timeout_milli_ = node_->declare_parameter<double>(
-    "uds.election_status_timeout_milli");
-  const double election_request_send_interval_milli = node_->declare_parameter<double>(
-    "uds.election_request_send_interval_milli");
+  const std::string sender_path =
+    node_->declare_parameter<std::string>("uds.switcher_command_path");
+  const std::string receiver_path =
+    node_->declare_parameter<std::string>("uds.switcher_status_path");
+  election_status_timeout_milli_ =
+    node_->declare_parameter<double>("uds.election_status_timeout_milli");
+  const double election_request_send_interval_milli =
+    node_->declare_parameter<double>("uds.election_request_send_interval_milli");
   is_main_ecu_ = node_->has_parameter("is_main_ecu")
-    ? node_->get_parameter("is_main_ecu").as_bool()
-    : node_->declare_parameter<bool>("is_main_ecu");
+                   ? node_->get_parameter("is_main_ecu").as_bool()
+                   : node_->declare_parameter<bool>("is_main_ecu");
 
   RCLCPP_INFO(
     node_->get_logger(),
@@ -56,14 +60,16 @@ void RedundancySwitcherAdapter::initialize(rclcpp::Node * node, std::shared_ptr<
     receiver_path, /*use_nonblocking=*/false,
     [this](const ElectionStatus & s) { on_switcher_status(s); });
 
-  const auto interval_ms = std::chrono::duration<double, std::milli>(election_request_send_interval_milli);
-  timer_ = node_->create_wall_timer(
-    interval_ms, [this]() {
-      send_election_request(ElectionRequest{/*.self_fault_request=*/false, /*.reset=*/false});
-      check_election_status_timeout(); });
+  const auto interval_ms =
+    std::chrono::duration<double, std::milli>(election_request_send_interval_milli);
+  timer_ = node_->create_wall_timer(interval_ms, [this]() {
+    send_election_request(ElectionRequest{/*.self_fault_request=*/false, /*.reset=*/false});
+    check_election_status_timeout();
+  });
 
   updater_ = std::make_unique<diagnostic_updater::Updater>(node_);
-  const std::string hardware_id = is_main_ecu_ ? "main_ecu_redundancy_switcher" : "sub_ecu_redundancy_switcher";
+  const std::string hardware_id =
+    is_main_ecu_ ? "main_ecu_redundancy_switcher" : "sub_ecu_redundancy_switcher";
   updater_->setHardwareID(hardware_id);
   updater_->add("main_ecu_fault", this, &RedundancySwitcherAdapter::update_main_ecu_fault_diag);
   updater_->add("sub_ecu_fault", this, &RedundancySwitcherAdapter::update_sub_ecu_fault_diag);
@@ -161,10 +167,12 @@ void RedundancySwitcherAdapter::on_switcher_status(const ElectionStatus & status
     node_state_to_string(status.node_state) + " leader=" + std::to_string(status.leader_id);
   const auto active_control_unit = to_active_control_unit(status.path_info);
   const auto path_info_annotation = path_info_to_string(status.path_info);
-  gateway_->submit(InputEvent{SetSwitcherSignalsEvent{
-    Annotated<SwitcherSignals>{signals, node_state_annotation}}});
-  gateway_->submit(InputEvent{SetActiveControlUnitEvent{
-    Annotated<ActiveControlUnit>{active_control_unit, path_info_annotation}}});
+  gateway_->submit(
+    InputEvent{
+      SetSwitcherSignalsEvent{Annotated<SwitcherSignals>{signals, node_state_annotation}}});
+  gateway_->submit(
+    InputEvent{SetActiveControlUnitEvent{
+      Annotated<ActiveControlUnit>{active_control_unit, path_info_annotation}}});
 }
 
 // ---------------------------------------------------------------------------
@@ -187,23 +195,33 @@ void RedundancySwitcherAdapter::check_election_status_timeout()
   }
 
   if (timed_out) {
-    gateway_->submit(InputEvent{
-      SetSwitcherSignalsEvent{Annotated<SwitcherSignals>{{false, false, true}, "Switcher data timeout"}}});
+    gateway_->submit(
+      InputEvent{SetSwitcherSignalsEvent{
+        Annotated<SwitcherSignals>{{false, false, true}, "Switcher data timeout"}}});
   }
 }
 
 std::string RedundancySwitcherAdapter::node_state_to_string(uint8_t node_state)
 {
   switch (node_state) {
-    case 0: return "INITIALIZING";
-    case 1: return "ELECTABLE";
-    case 2: return "WAIT_FOR_AUTOWARE";
-    case 3: return "IN_ELECTION";
-    case 4: return "ELECTION_COMPLETED";
-    case 5: return "ELECTION_UNCLOSED";
-    case 6: return "PATH_NOT_FOUND";
-    case 7: return "SELF_INTERRUPTION";
-    default: return "UNKNOWN(" + std::to_string(node_state) + ")";
+    case 0:
+      return "INITIALIZING";
+    case 1:
+      return "ELECTABLE";
+    case 2:
+      return "WAIT_FOR_AUTOWARE";
+    case 3:
+      return "IN_ELECTION";
+    case 4:
+      return "ELECTION_COMPLETED";
+    case 5:
+      return "ELECTION_UNCLOSED";
+    case 6:
+      return "PATH_NOT_FOUND";
+    case 7:
+      return "SELF_INTERRUPTION";
+    default:
+      return "UNKNOWN(" + std::to_string(node_state) + ")";
   }
 }
 
@@ -237,12 +255,18 @@ std::string RedundancySwitcherAdapter::path_info_to_string(uint8_t path_info)
 {
   // Bit-field: bit0=main_ecu, bit1=sub_ecu, bit2=main_vcu, bit3=sub_vcu connectivity.
   switch (path_info) {
-    case 0: return "unknown";
-    case 5: return "main_ecu_to_main_vcu";
-    case 6: return "sub_ecu_to_main_vcu";
-    case 9: return "main_ecu_to_sub_vcu";
-    case 10: return "sub_ecu_to_sub_vcu";
-    default: return "unknown(" + std::to_string(path_info) + ")";
+    case 0:
+      return "unknown";
+    case 5:
+      return "main_ecu_to_main_vcu";
+    case 6:
+      return "sub_ecu_to_main_vcu";
+    case 9:
+      return "main_ecu_to_sub_vcu";
+    case 10:
+      return "sub_ecu_to_sub_vcu";
+    default:
+      return "unknown(" + std::to_string(path_info) + ")";
   }
 }
 
@@ -298,13 +322,13 @@ void RedundancySwitcherAdapter::check_switcher_connection()
   // unreachable from this ECU.
   ElectionStatus judge = s;
   judge.main_ecu_to_main_ecu_connected = judge.main_ecu_to_sub_ecu_connected =
-  judge.main_ecu_to_main_vcu_connected = judge.main_ecu_to_sub_vcu_connected =
-  judge.sub_ecu_to_main_ecu_connected  = judge.sub_ecu_to_sub_ecu_connected  =
-  judge.sub_ecu_to_main_vcu_connected  = judge.sub_ecu_to_sub_vcu_connected  =
-  judge.main_vcu_to_main_ecu_connected = judge.main_vcu_to_sub_ecu_connected =
-  judge.main_vcu_to_main_vcu_connected = judge.main_vcu_to_sub_vcu_connected =
-  judge.sub_vcu_to_main_ecu_connected  = judge.sub_vcu_to_sub_ecu_connected  =
-  judge.sub_vcu_to_main_vcu_connected  = judge.sub_vcu_to_sub_vcu_connected  = true;
+    judge.main_ecu_to_main_vcu_connected = judge.main_ecu_to_sub_vcu_connected =
+      judge.sub_ecu_to_main_ecu_connected = judge.sub_ecu_to_sub_ecu_connected =
+        judge.sub_ecu_to_main_vcu_connected = judge.sub_ecu_to_sub_vcu_connected =
+          judge.main_vcu_to_main_ecu_connected = judge.main_vcu_to_sub_ecu_connected =
+            judge.main_vcu_to_main_vcu_connected = judge.main_vcu_to_sub_vcu_connected =
+              judge.sub_vcu_to_main_ecu_connected = judge.sub_vcu_to_sub_ecu_connected =
+                judge.sub_vcu_to_main_vcu_connected = judge.sub_vcu_to_sub_vcu_connected = true;
 
   // Trust propagation: if the connection from this ECU to a remote node is severed,
   // distrust all reports originating from that node.
@@ -313,64 +337,77 @@ void RedundancySwitcherAdapter::check_switcher_connection()
   };
 
   if (is_main_ecu_) {
-    if (!s.main_ecu_to_sub_ecu_connected && !s.main_ecu_to_main_vcu_connected &&
-        !s.main_ecu_to_sub_vcu_connected) {
+    if (
+      !s.main_ecu_to_sub_ecu_connected && !s.main_ecu_to_main_vcu_connected &&
+      !s.main_ecu_to_sub_vcu_connected) {
       node_faults.insert("main_ecu");
       std::lock_guard<std::mutex> lock(fault_mutex_);
       node_fault_points_ = std::move(node_faults);
       link_fault_points_.clear();
       return;
     }
-    distrust(s.main_ecu_to_sub_ecu_connected,
-      judge.sub_ecu_to_main_ecu_connected, judge.sub_ecu_to_sub_ecu_connected,
-      judge.sub_ecu_to_main_vcu_connected, judge.sub_ecu_to_sub_vcu_connected);
-    distrust(s.main_ecu_to_main_vcu_connected,
-      judge.main_vcu_to_main_ecu_connected, judge.main_vcu_to_sub_ecu_connected,
-      judge.main_vcu_to_main_vcu_connected, judge.main_vcu_to_sub_vcu_connected);
-    distrust(s.main_ecu_to_sub_vcu_connected,
-      judge.sub_vcu_to_main_ecu_connected, judge.sub_vcu_to_sub_ecu_connected,
-      judge.sub_vcu_to_main_vcu_connected, judge.sub_vcu_to_sub_vcu_connected);
+    distrust(
+      s.main_ecu_to_sub_ecu_connected, judge.sub_ecu_to_main_ecu_connected,
+      judge.sub_ecu_to_sub_ecu_connected, judge.sub_ecu_to_main_vcu_connected,
+      judge.sub_ecu_to_sub_vcu_connected);
+    distrust(
+      s.main_ecu_to_main_vcu_connected, judge.main_vcu_to_main_ecu_connected,
+      judge.main_vcu_to_sub_ecu_connected, judge.main_vcu_to_main_vcu_connected,
+      judge.main_vcu_to_sub_vcu_connected);
+    distrust(
+      s.main_ecu_to_sub_vcu_connected, judge.sub_vcu_to_main_ecu_connected,
+      judge.sub_vcu_to_sub_ecu_connected, judge.sub_vcu_to_main_vcu_connected,
+      judge.sub_vcu_to_sub_vcu_connected);
   } else {
-    if (!s.sub_ecu_to_main_ecu_connected && !s.sub_ecu_to_main_vcu_connected &&
-        !s.sub_ecu_to_sub_vcu_connected) {
+    if (
+      !s.sub_ecu_to_main_ecu_connected && !s.sub_ecu_to_main_vcu_connected &&
+      !s.sub_ecu_to_sub_vcu_connected) {
       node_faults.insert("sub_ecu");
       std::lock_guard<std::mutex> lock(fault_mutex_);
       node_fault_points_ = std::move(node_faults);
       link_fault_points_.clear();
       return;
     }
-    distrust(s.sub_ecu_to_main_ecu_connected,
-      judge.main_ecu_to_main_ecu_connected, judge.main_ecu_to_sub_ecu_connected,
-      judge.main_ecu_to_main_vcu_connected, judge.main_ecu_to_sub_vcu_connected);
-    distrust(s.sub_ecu_to_main_vcu_connected,
-      judge.main_vcu_to_main_ecu_connected, judge.main_vcu_to_sub_ecu_connected,
-      judge.main_vcu_to_main_vcu_connected, judge.main_vcu_to_sub_vcu_connected);
-    distrust(s.sub_ecu_to_sub_vcu_connected,
-      judge.sub_vcu_to_main_ecu_connected, judge.sub_vcu_to_sub_ecu_connected,
-      judge.sub_vcu_to_main_vcu_connected, judge.sub_vcu_to_sub_vcu_connected);
+    distrust(
+      s.sub_ecu_to_main_ecu_connected, judge.main_ecu_to_main_ecu_connected,
+      judge.main_ecu_to_sub_ecu_connected, judge.main_ecu_to_main_vcu_connected,
+      judge.main_ecu_to_sub_vcu_connected);
+    distrust(
+      s.sub_ecu_to_main_vcu_connected, judge.main_vcu_to_main_ecu_connected,
+      judge.main_vcu_to_sub_ecu_connected, judge.main_vcu_to_main_vcu_connected,
+      judge.main_vcu_to_sub_vcu_connected);
+    distrust(
+      s.sub_ecu_to_sub_vcu_connected, judge.sub_vcu_to_main_ecu_connected,
+      judge.sub_vcu_to_sub_ecu_connected, judge.sub_vcu_to_main_vcu_connected,
+      judge.sub_vcu_to_sub_vcu_connected);
   }
 
-  // Node fault detection: if all incoming directions are either untrusted or actually disconnected → fault
+  // Node fault detection: if all incoming directions are either untrusted or actually disconnected
+  // → fault
   auto unreachable = [](bool jf, bool af) { return !jf || !af; };
 
-  if (unreachable(judge.sub_ecu_to_main_ecu_connected,  s.sub_ecu_to_main_ecu_connected) &&
-      unreachable(judge.main_vcu_to_main_ecu_connected, s.main_vcu_to_main_ecu_connected) &&
-      unreachable(judge.sub_vcu_to_main_ecu_connected,  s.sub_vcu_to_main_ecu_connected))
+  if (
+    unreachable(judge.sub_ecu_to_main_ecu_connected, s.sub_ecu_to_main_ecu_connected) &&
+    unreachable(judge.main_vcu_to_main_ecu_connected, s.main_vcu_to_main_ecu_connected) &&
+    unreachable(judge.sub_vcu_to_main_ecu_connected, s.sub_vcu_to_main_ecu_connected))
     node_faults.insert("main_ecu");
 
-  if (unreachable(judge.main_ecu_to_sub_ecu_connected, s.main_ecu_to_sub_ecu_connected) &&
-      unreachable(judge.main_vcu_to_sub_ecu_connected, s.main_vcu_to_sub_ecu_connected) &&
-      unreachable(judge.sub_vcu_to_sub_ecu_connected,  s.sub_vcu_to_sub_ecu_connected))
+  if (
+    unreachable(judge.main_ecu_to_sub_ecu_connected, s.main_ecu_to_sub_ecu_connected) &&
+    unreachable(judge.main_vcu_to_sub_ecu_connected, s.main_vcu_to_sub_ecu_connected) &&
+    unreachable(judge.sub_vcu_to_sub_ecu_connected, s.sub_vcu_to_sub_ecu_connected))
     node_faults.insert("sub_ecu");
 
-  if (unreachable(judge.main_ecu_to_main_vcu_connected, s.main_ecu_to_main_vcu_connected) &&
-      unreachable(judge.sub_ecu_to_main_vcu_connected,  s.sub_ecu_to_main_vcu_connected) &&
-      unreachable(judge.sub_vcu_to_main_vcu_connected,  s.sub_vcu_to_main_vcu_connected))
+  if (
+    unreachable(judge.main_ecu_to_main_vcu_connected, s.main_ecu_to_main_vcu_connected) &&
+    unreachable(judge.sub_ecu_to_main_vcu_connected, s.sub_ecu_to_main_vcu_connected) &&
+    unreachable(judge.sub_vcu_to_main_vcu_connected, s.sub_vcu_to_main_vcu_connected))
     node_faults.insert("main_vcu");
 
-  if (unreachable(judge.main_ecu_to_sub_vcu_connected, s.main_ecu_to_sub_vcu_connected) &&
-      unreachable(judge.sub_ecu_to_sub_vcu_connected,  s.sub_ecu_to_sub_vcu_connected) &&
-      unreachable(judge.main_vcu_to_sub_vcu_connected, s.main_vcu_to_sub_vcu_connected))
+  if (
+    unreachable(judge.main_ecu_to_sub_vcu_connected, s.main_ecu_to_sub_vcu_connected) &&
+    unreachable(judge.sub_ecu_to_sub_vcu_connected, s.sub_ecu_to_sub_vcu_connected) &&
+    unreachable(judge.main_vcu_to_sub_vcu_connected, s.main_vcu_to_sub_vcu_connected))
     node_faults.insert("sub_vcu");
 
   // Link fault detection: judge=true with both endpoints healthy but actual=false → link fault
@@ -430,7 +467,10 @@ void RedundancySwitcherAdapter::update_main_ecu_fault_diag(
   if (no_data(s_opt, stat)) return;
 
   const auto & s = *s_opt;
-  if (is_transitional_state(s.node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s.node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
   bool fault;
   bool another_timeout;
   {
@@ -467,15 +507,19 @@ void RedundancySwitcherAdapter::update_sub_ecu_fault_diag(
     s_opt = last_election_status_;
   }
   if (no_data(s_opt, stat)) return;
-  if (is_transitional_state(s_opt->node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s_opt->node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
 
   bool fault;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
     fault = node_fault_points_.count("sub_ecu");
   }
-  stat.summary(fault ? DiagStatus::ERROR : DiagStatus::OK,
-               fault ? "Sub ECU fault detected" : "Sub ECU is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Sub ECU fault detected" : "Sub ECU is healthy");
 }
 
 void RedundancySwitcherAdapter::update_main_vcu_fault_diag(
@@ -487,15 +531,19 @@ void RedundancySwitcherAdapter::update_main_vcu_fault_diag(
     s_opt = last_election_status_;
   }
   if (no_data(s_opt, stat)) return;
-  if (is_transitional_state(s_opt->node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s_opt->node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
 
   bool fault;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
     fault = node_fault_points_.count("main_vcu");
   }
-  stat.summary(fault ? DiagStatus::ERROR : DiagStatus::OK,
-               fault ? "Main VCU fault detected" : "Main VCU is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Main VCU fault detected" : "Main VCU is healthy");
 }
 
 void RedundancySwitcherAdapter::update_sub_vcu_fault_diag(
@@ -507,15 +555,19 @@ void RedundancySwitcherAdapter::update_sub_vcu_fault_diag(
     s_opt = last_election_status_;
   }
   if (no_data(s_opt, stat)) return;
-  if (is_transitional_state(s_opt->node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s_opt->node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
 
   bool fault;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
     fault = node_fault_points_.count("sub_vcu");
   }
-  stat.summary(fault ? DiagStatus::ERROR : DiagStatus::OK,
-               fault ? "Sub VCU fault detected" : "Sub VCU is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Sub VCU fault detected" : "Sub VCU is healthy");
 }
 
 void RedundancySwitcherAdapter::update_main_ecu_to_sub_ecu_link_fault_diag(
@@ -529,7 +581,10 @@ void RedundancySwitcherAdapter::update_main_ecu_to_sub_ecu_link_fault_diag(
   if (no_data(s_opt, stat)) return;
 
   const auto & s = *s_opt;
-  if (is_transitional_state(s.node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s.node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
   bool fault;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
@@ -537,8 +592,9 @@ void RedundancySwitcherAdapter::update_main_ecu_to_sub_ecu_link_fault_diag(
   }
   stat.add("main_ecu_to_sub_ecu", s.main_ecu_to_sub_ecu_connected);
   stat.add("sub_ecu_to_main_ecu", s.sub_ecu_to_main_ecu_connected);
-  stat.summary(fault ? DiagStatus::ERROR : DiagStatus::OK,
-               fault ? "Main-Sub ECU link fault detected" : "Main-Sub ECU link is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Main-Sub ECU link fault detected" : "Main-Sub ECU link is healthy");
 }
 
 void RedundancySwitcherAdapter::update_main_ecu_to_main_vcu_link_fault_diag(
@@ -552,7 +608,10 @@ void RedundancySwitcherAdapter::update_main_ecu_to_main_vcu_link_fault_diag(
   if (no_data(s_opt, stat)) return;
 
   const auto & s = *s_opt;
-  if (is_transitional_state(s.node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s.node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
   bool fault;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
@@ -560,8 +619,9 @@ void RedundancySwitcherAdapter::update_main_ecu_to_main_vcu_link_fault_diag(
   }
   stat.add("main_ecu_to_main_vcu", s.main_ecu_to_main_vcu_connected);
   stat.add("main_vcu_to_main_ecu", s.main_vcu_to_main_ecu_connected);
-  stat.summary(fault ? DiagStatus::ERROR : DiagStatus::OK,
-               fault ? "Main ECU to Main VCU link fault detected" : "Main ECU to Main VCU link is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Main ECU to Main VCU link fault detected" : "Main ECU to Main VCU link is healthy");
 }
 
 void RedundancySwitcherAdapter::update_main_ecu_to_sub_vcu_link_fault_diag(
@@ -575,7 +635,10 @@ void RedundancySwitcherAdapter::update_main_ecu_to_sub_vcu_link_fault_diag(
   if (no_data(s_opt, stat)) return;
 
   const auto & s = *s_opt;
-  if (is_transitional_state(s.node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s.node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
   bool fault;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
@@ -583,8 +646,9 @@ void RedundancySwitcherAdapter::update_main_ecu_to_sub_vcu_link_fault_diag(
   }
   stat.add("main_ecu_to_sub_vcu", s.main_ecu_to_sub_vcu_connected);
   stat.add("sub_vcu_to_main_ecu", s.sub_vcu_to_main_ecu_connected);
-  stat.summary(fault ? DiagStatus::ERROR : DiagStatus::OK,
-               fault ? "Main ECU to Sub VCU link fault detected" : "Main ECU to Sub VCU link is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Main ECU to Sub VCU link fault detected" : "Main ECU to Sub VCU link is healthy");
 }
 
 void RedundancySwitcherAdapter::update_sub_ecu_to_main_vcu_link_fault_diag(
@@ -598,7 +662,10 @@ void RedundancySwitcherAdapter::update_sub_ecu_to_main_vcu_link_fault_diag(
   if (no_data(s_opt, stat)) return;
 
   const auto & s = *s_opt;
-  if (is_transitional_state(s.node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s.node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
   bool fault;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
@@ -606,8 +673,9 @@ void RedundancySwitcherAdapter::update_sub_ecu_to_main_vcu_link_fault_diag(
   }
   stat.add("sub_ecu_to_main_vcu", s.sub_ecu_to_main_vcu_connected);
   stat.add("main_vcu_to_sub_ecu", s.main_vcu_to_sub_ecu_connected);
-  stat.summary(fault ? DiagStatus::ERROR : DiagStatus::OK,
-               fault ? "Sub ECU to Main VCU link fault detected" : "Sub ECU to Main VCU link is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Sub ECU to Main VCU link fault detected" : "Sub ECU to Main VCU link is healthy");
 }
 
 void RedundancySwitcherAdapter::update_sub_ecu_to_sub_vcu_link_fault_diag(
@@ -621,7 +689,10 @@ void RedundancySwitcherAdapter::update_sub_ecu_to_sub_vcu_link_fault_diag(
   if (no_data(s_opt, stat)) return;
 
   const auto & s = *s_opt;
-  if (is_transitional_state(s.node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s.node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
   bool fault;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
@@ -629,8 +700,9 @@ void RedundancySwitcherAdapter::update_sub_ecu_to_sub_vcu_link_fault_diag(
   }
   stat.add("sub_ecu_to_sub_vcu", s.sub_ecu_to_sub_vcu_connected);
   stat.add("sub_vcu_to_sub_ecu", s.sub_vcu_to_sub_ecu_connected);
-  stat.summary(fault ? DiagStatus::ERROR : DiagStatus::OK,
-               fault ? "Sub ECU to Sub VCU link fault detected" : "Sub ECU to Sub VCU link is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Sub ECU to Sub VCU link fault detected" : "Sub ECU to Sub VCU link is healthy");
 }
 
 void RedundancySwitcherAdapter::update_main_vcu_to_sub_vcu_link_fault_diag(
@@ -644,7 +716,10 @@ void RedundancySwitcherAdapter::update_main_vcu_to_sub_vcu_link_fault_diag(
   if (no_data(s_opt, stat)) return;
 
   const auto & s = *s_opt;
-  if (is_transitional_state(s.node_state)) { stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION"); return; }
+  if (is_transitional_state(s.node_state)) {
+    stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
+    return;
+  }
   bool fault;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
@@ -652,10 +727,13 @@ void RedundancySwitcherAdapter::update_main_vcu_to_sub_vcu_link_fault_diag(
   }
   stat.add("main_vcu_to_sub_vcu", s.main_vcu_to_sub_vcu_connected);
   stat.add("sub_vcu_to_main_vcu", s.sub_vcu_to_main_vcu_connected);
-  stat.summary(fault ? DiagStatus::ERROR : DiagStatus::OK,
-               fault ? "Main-Sub VCU link fault detected" : "Main-Sub VCU link is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Main-Sub VCU link fault detected" : "Main-Sub VCU link is healthy");
 }
 
 }  // namespace autoware::redundancy_switcher
 
-PLUGINLIB_EXPORT_CLASS(autoware::redundancy_switcher::RedundancySwitcherAdapter, autoware::redundancy_switcher::IAdapterPlugin)
+PLUGINLIB_EXPORT_CLASS(
+  autoware::redundancy_switcher::RedundancySwitcherAdapter,
+  autoware::redundancy_switcher::IAdapterPlugin)

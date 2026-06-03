@@ -5,9 +5,9 @@
 This package provides the core framework. The Switcher-side adapter is loaded at runtime as a
 pluginlib plugin; the framework has no knowledge of which plugin is used or its internal protocol.
 
-| Package | Location | Role |
-|---|---|---|
-| `autoware_redundancy_switcher_interface` | `universe/system/` | Core framework: Processor, EventGateway, built-in adapters |
+| Package                                          | Location           | Role                                                            |
+| ------------------------------------------------ | ------------------ | --------------------------------------------------------------- |
+| `autoware_redundancy_switcher_interface`         | `universe/system/` | Core framework: Processor, EventGateway, built-in adapters      |
 | `autoware_redundancy_switcher_interface_plugins` | `universe/system/` | Default topic-based SwitcherAdapter plugin + SimpleSwitcherNode |
 
 > Plugin implementations that use hardware-specific transports (e.g., UDS) are maintained
@@ -224,16 +224,16 @@ flowchart TD
 
 ## 7. InputEvent List
 
-| Event | Submitted by | Payload | Processor action |
-|---|---|---|---|
-| `SelfInterruptionEvent` | SubSystemAdapter | — | Evaluate conditions; emit SelfInterruptionCommand if accepted |
-| `ResetEvent` | SubSystemAdapter | — | Evaluate conditions; emit ResetCommand + ResetResultCommand |
-| `SetAutowareReadyEvent` | SubSystemAdapter | `AutowareReady` (False/True) | Update `autoware_ready`; emit UpdateAutowareReadyCommand + diag + log |
-| `SetVelocityStatusEvent` | SubSystemAdapter | `VelocityStatus` | Update `velocity_status`; emit diag + log if changed |
-| `SetControlModeEvent` | SubSystemAdapter | `ControlMode` | Update `control_mode`; emit diag + log if changed |
-| `SetSwitcherSignalsEvent` | SwitcherAdapter plugin | `SwitcherSignals` | Update `switcher`; force active_unit empty if interrupted/faulted; emit diag + log if changed |
-| `SetActiveControlUnitEvent` | SwitcherAdapter plugin | `ActiveControlUnit` | If not interrupted/faulted: emit UpdateActiveControlUnitCommand |
-| `SetAnotherEcuAvailabilityTimeoutEvent` | SubSystemAdapter | `bool timed_out` | Update `another_ecu_availability_timeout`; emit UpdateAnotherEcuAvailabilityTimeoutCommand + log |
+| Event                                   | Submitted by           | Payload                      | Processor action                                                                                 |
+| --------------------------------------- | ---------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| `SelfInterruptionEvent`                 | SubSystemAdapter       | —                            | Evaluate conditions; emit SelfInterruptionCommand if accepted                                    |
+| `ResetEvent`                            | SubSystemAdapter       | —                            | Evaluate conditions; emit ResetCommand + ResetResultCommand                                      |
+| `SetAutowareReadyEvent`                 | SubSystemAdapter       | `AutowareReady` (False/True) | Update `autoware_ready`; emit UpdateAutowareReadyCommand + diag + log                            |
+| `SetVelocityStatusEvent`                | SubSystemAdapter       | `VelocityStatus`             | Update `velocity_status`; emit diag + log if changed                                             |
+| `SetControlModeEvent`                   | SubSystemAdapter       | `ControlMode`                | Update `control_mode`; emit diag + log if changed                                                |
+| `SetSwitcherSignalsEvent`               | SwitcherAdapter plugin | `SwitcherSignals`            | Update `switcher`; force active_unit empty if interrupted/faulted; emit diag + log if changed    |
+| `SetActiveControlUnitEvent`             | SwitcherAdapter plugin | `ActiveControlUnit`          | If not interrupted/faulted: emit UpdateActiveControlUnitCommand                                  |
+| `SetAnotherEcuAvailabilityTimeoutEvent` | SubSystemAdapter       | `bool timed_out`             | Update `another_ecu_availability_timeout`; emit UpdateAnotherEcuAvailabilityTimeoutCommand + log |
 
 Each event carries an `Annotated<T>` value: the payload `T` plus a human-readable annotation string.
 The annotation content is defined by the submitting adapter; the Processor only stores it.
@@ -242,16 +242,16 @@ The annotation content is defined by the submitting adapter; the Processor only 
 
 ## 8. OutputCommand List
 
-| Command | Handled by | Meaning |
-|---|---|---|
-| `LogCommand` | LogAdapter | Emit a log message at the specified level (Debug/Info/Warn/Error/Fatal) |
-| `ResetCommand` | SwitcherAdapter plugin | Send a reset request to the Switcher |
-| `SelfInterruptionCommand` | SwitcherAdapter plugin | Send a self-interruption request to the Switcher |
-| `UpdateStatusDiagCommand` | DiagAdapter | Trigger a diagnostic update (DiagAdapter reads snapshot via gateway) |
-| `UpdateActiveControlUnitCommand` | SubSystemAdapter | Publish the active control unit message |
-| `UpdateAutowareReadyCommand` | SwitcherAdapter plugin | Update the plugin's local `autoware_ready` cache |
-| `ResetResultCommand` | SubSystemAdapter | Return accept/reject result of a reset request to the service caller |
-| `UpdateAnotherEcuAvailabilityTimeoutCommand` | SwitcherAdapter plugin | Update the plugin's local peer-ECU timeout state cache |
+| Command                                      | Handled by             | Meaning                                                                 |
+| -------------------------------------------- | ---------------------- | ----------------------------------------------------------------------- |
+| `LogCommand`                                 | LogAdapter             | Emit a log message at the specified level (Debug/Info/Warn/Error/Fatal) |
+| `ResetCommand`                               | SwitcherAdapter plugin | Send a reset request to the Switcher                                    |
+| `SelfInterruptionCommand`                    | SwitcherAdapter plugin | Send a self-interruption request to the Switcher                        |
+| `UpdateStatusDiagCommand`                    | DiagAdapter            | Trigger a diagnostic update (DiagAdapter reads snapshot via gateway)    |
+| `UpdateActiveControlUnitCommand`             | SubSystemAdapter       | Publish the active control unit message                                 |
+| `UpdateAutowareReadyCommand`                 | SwitcherAdapter plugin | Update the plugin's local `autoware_ready` cache                        |
+| `ResetResultCommand`                         | SubSystemAdapter       | Return accept/reject result of a reset request to the service caller    |
+| `UpdateAnotherEcuAvailabilityTimeoutCommand` | SwitcherAdapter plugin | Update the plugin's local peer-ECU timeout state cache                  |
 
 ---
 
@@ -259,26 +259,26 @@ The annotation content is defined by the submitting adapter; the Processor only 
 
 ### 9.1 ROS Topics / Services (SubSystemAdapter)
 
-| Direction | Name | Type | Description |
-|---|---|---|---|
-| Subscribe | `~/input/velocity` | `VelocityReport` | Vehicle velocity |
-| Subscribe | `~/input/control_mode` | `ControlModeReport` | Autoware control mode |
-| Subscribe | `~/input/command_mode_request` | `CommandModeRequest` | Command mode request (main ECU only) |
-| Subscribe | `~/input/command_mode_availability` | `CommandModeAvailability` | Availability from peer ECU |
-| Publish | `~/output/active_control_unit` | `ActiveControlUnit` | Currently active ECU/VCU |
-| Service | `~/set_initializing` | `std_srvs/SetBool` | Set Autoware readiness (data=true → not ready) |
-| Service | `~/service/reset` | `ResetRedundancySwitcher` | Reset self-interruption state |
+| Direction | Name                                | Type                      | Description                                    |
+| --------- | ----------------------------------- | ------------------------- | ---------------------------------------------- |
+| Subscribe | `~/input/velocity`                  | `VelocityReport`          | Vehicle velocity                               |
+| Subscribe | `~/input/control_mode`              | `ControlModeReport`       | Autoware control mode                          |
+| Subscribe | `~/input/command_mode_request`      | `CommandModeRequest`      | Command mode request (main ECU only)           |
+| Subscribe | `~/input/command_mode_availability` | `CommandModeAvailability` | Availability from peer ECU                     |
+| Publish   | `~/output/active_control_unit`      | `ActiveControlUnit`       | Currently active ECU/VCU                       |
+| Service   | `~/set_initializing`                | `std_srvs/SetBool`        | Set Autoware readiness (data=true → not ready) |
+| Service   | `~/service/reset`                   | `ResetRedundancySwitcher` | Reset self-interruption state                  |
 
 ### 9.2 ROS Topics / Services (SimpleSwitcherAdapter + SimpleSwitcherNode)
 
-| Direction | Name | Type | Description |
-|---|---|---|---|
-| Subscribe | `/system/simple_switcher/status/active_control_unit` | `ActiveControlUnit` | Active unit from switcher node |
-| Subscribe | `/system/simple_switcher/status/switcher_signals/{main,sub}_ecu` | `UInt8` | Encoded switcher signals (bit0=stable, bit1=self_interrupted, bit2=faulted) |
-| Subscribe | `/system/simple_switcher/status/switcher_annotation/{main,sub}_ecu` | `String` | Human-readable state annotation |
-| Publish | `/system/simple_switcher/request/reset` | `Empty` | Reset request to switcher node |
-| Publish | `/system/simple_switcher/request/self_interruption/{main,sub}_ecu` | `Empty` | Self-interruption request |
-| Service | `/system/simple_switcher/input/manual_active_control_unit` | `SetBool` | Manual override (true=Main ECU, false=Sub ECU) |
+| Direction | Name                                                                | Type                | Description                                                                 |
+| --------- | ------------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------- |
+| Subscribe | `/system/simple_switcher/status/active_control_unit`                | `ActiveControlUnit` | Active unit from switcher node                                              |
+| Subscribe | `/system/simple_switcher/status/switcher_signals/{main,sub}_ecu`    | `UInt8`             | Encoded switcher signals (bit0=stable, bit1=self_interrupted, bit2=faulted) |
+| Subscribe | `/system/simple_switcher/status/switcher_annotation/{main,sub}_ecu` | `String`            | Human-readable state annotation                                             |
+| Publish   | `/system/simple_switcher/request/reset`                             | `Empty`             | Reset request to switcher node                                              |
+| Publish   | `/system/simple_switcher/request/self_interruption/{main,sub}_ecu`  | `Empty`             | Self-interruption request                                                   |
+| Service   | `/system/simple_switcher/input/manual_active_control_unit`          | `SetBool`           | Manual override (true=Main ECU, false=Sub ECU)                              |
 
 ### 9.3 IAdapterPlugin
 
@@ -351,10 +351,10 @@ DiagAdapter publishes one `diagnostic_updater` item triggered by every `UpdateSt
 
 ### Hardware ID
 
-| `is_main_ecu` | Hardware ID |
-|---|---|
-| true | `main_ecu_redundancy_switcher_interface` |
-| false | `sub_ecu_redundancy_switcher_interface` |
+| `is_main_ecu` | Hardware ID                              |
+| ------------- | ---------------------------------------- |
+| true          | `main_ecu_redundancy_switcher_interface` |
+| false         | `sub_ecu_redundancy_switcher_interface`  |
 
 ### Diagnostic item
 
@@ -362,12 +362,12 @@ DiagAdapter publishes one `diagnostic_updater` item triggered by every `UpdateSt
 
 Four key-value fields are added to the diagnostic status:
 
-| Key | Value content |
-|---|---|
+| Key                | Value content                                                               |
+| ------------------ | --------------------------------------------------------------------------- |
 | `switcher_signals` | Current switcher state and annotation (e.g., `"Switcher stable: ... (OK)"`) |
-| `autoware_ready` | Whether Autoware is ready for switching (e.g., `"Autoware is ready (OK)"`) |
-| `velocity_status` | Vehicle stopped/moving (e.g., `"Vehicle is stopped (OK)"`) |
-| `control_mode` | Manual/Autoware control (e.g., `"Autoware control mode (OK)"`) |
+| `autoware_ready`   | Whether Autoware is ready for switching (e.g., `"Autoware is ready (OK)"`)  |
+| `velocity_status`  | Vehicle stopped/moving (e.g., `"Vehicle is stopped (OK)"`)                  |
+| `control_mode`     | Manual/Autoware control (e.g., `"Autoware control mode (OK)"`)              |
 
 The summary level is the **worst** level across all four fields.
 
@@ -375,13 +375,13 @@ The summary level is the **worst** level across all four fields.
 
 **switcher_signals:**
 
-| Condition | Level | Summary message |
-|---|---|---|
-| `nullopt` (no data received) | WARN | `"Startup not yet complete: awaiting switcher data"` |
-| `is_faulted` | ERROR | `"Switcher fault: <annotation>"` |
-| `is_self_interrupted` | WARN | `"Self-interruption occurred: <annotation>"` |
-| `is_stable` | OK | `"Switcher stable: <annotation>"` |
-| transitional, within timeout | WARN | `"Switcher in transitional state: <annotation>"` |
+| Condition                      | Level | Summary message                                                |
+| ------------------------------ | ----- | -------------------------------------------------------------- |
+| `nullopt` (no data received)   | WARN  | `"Startup not yet complete: awaiting switcher data"`           |
+| `is_faulted`                   | ERROR | `"Switcher fault: <annotation>"`                               |
+| `is_self_interrupted`          | WARN  | `"Self-interruption occurred: <annotation>"`                   |
+| `is_stable`                    | OK    | `"Switcher stable: <annotation>"`                              |
+| transitional, within timeout   | WARN  | `"Switcher in transitional state: <annotation>"`               |
 | transitional, timeout exceeded | ERROR | `"Switcher transitional state too long (<N>ms): <annotation>"` |
 
 The transitional timeout threshold is `diag.transitional_timeout_milli` (ms).
@@ -389,21 +389,21 @@ The timer starts when the switcher first enters the transitional state and reset
 
 **autoware_ready:**
 
-| Condition | Level |
-|---|---|
-| `nullopt` | WARN |
-| `False` or `True` | OK |
+| Condition         | Level |
+| ----------------- | ----- |
+| `nullopt`         | WARN  |
+| `False` or `True` | OK    |
 
 **velocity_status:**
 
-| Condition | Level |
-|---|---|
-| `nullopt` | WARN |
-| `Stopped` or `Moving` | OK |
+| Condition             | Level |
+| --------------------- | ----- |
+| `nullopt`             | WARN  |
+| `Stopped` or `Moving` | OK    |
 
 **control_mode:**
 
-| Condition | Level |
-|---|---|
-| `nullopt` | WARN |
-| `Manual` or `Auto` | OK |
+| Condition          | Level |
+| ------------------ | ----- |
+| `nullopt`          | WARN  |
+| `Manual` or `Auto` | OK    |

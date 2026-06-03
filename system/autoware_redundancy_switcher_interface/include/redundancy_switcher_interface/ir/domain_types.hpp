@@ -23,10 +23,11 @@
 namespace autoware::redundancy_switcher
 {
 
-struct SwitcherSignals {
-  bool is_stable;           // Switcher is ready; self-interruption is possible.
-  bool is_self_interrupted; // Self-interruption acknowledged; only reset is accepted.
-  bool is_faulted;          // Unrecoverable fault reported; all operations rejected.
+struct SwitcherSignals
+{
+  bool is_stable;            // Switcher is ready; self-interruption is possible.
+  bool is_self_interrupted;  // Self-interruption acknowledged; only reset is accepted.
+  bool is_faulted;           // Unrecoverable fault reported; all operations rejected.
   // all false: transitional state (startup or state change in progress)
 };
 
@@ -34,7 +35,8 @@ enum class AutowareReady { False, True };
 enum class VelocityStatus { Stopped, Moving };
 enum class ControlMode { Manual, Auto };
 
-struct ActiveControlUnit {
+struct ActiveControlUnit
+{
   std::vector<uint8_t> unit_ids;
 };
 

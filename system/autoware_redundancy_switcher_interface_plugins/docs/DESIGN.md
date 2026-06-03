@@ -84,33 +84,33 @@ docs/
 
 ### 4.1 Requests → simple_switcher_node
 
-| Topic / Service | Type | Sender | Effect |
-|---|---|---|---|
-| `/system/simple_switcher/request/reset` | `std_msgs/Empty` | SimpleSwitcherAdapter (via ResetCommand) or operator | Reset all interruption flags; active=Main |
-| `/system/simple_switcher/request/self_interruption/main_ecu` | `std_msgs/Empty` | SimpleSwitcherAdapter (via SelfInterruptionCommand, is_main_ecu=true) or operator | Set main_interrupted=true |
-| `/system/simple_switcher/request/self_interruption/sub_ecu` | `std_msgs/Empty` | SimpleSwitcherAdapter (via SelfInterruptionCommand, is_main_ecu=false) or operator | Set sub_interrupted=true |
-| `/system/simple_switcher/input/manual_active_control_unit` | `std_srvs/SetBool` | Operator (DomainID1) | Manual override: true=Main, false=Sub (sets main_interrupted=true) |
+| Topic / Service                                              | Type               | Sender                                                                             | Effect                                                             |
+| ------------------------------------------------------------ | ------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `/system/simple_switcher/request/reset`                      | `std_msgs/Empty`   | SimpleSwitcherAdapter (via ResetCommand) or operator                               | Reset all interruption flags; active=Main                          |
+| `/system/simple_switcher/request/self_interruption/main_ecu` | `std_msgs/Empty`   | SimpleSwitcherAdapter (via SelfInterruptionCommand, is_main_ecu=true) or operator  | Set main_interrupted=true                                          |
+| `/system/simple_switcher/request/self_interruption/sub_ecu`  | `std_msgs/Empty`   | SimpleSwitcherAdapter (via SelfInterruptionCommand, is_main_ecu=false) or operator | Set sub_interrupted=true                                           |
+| `/system/simple_switcher/input/manual_active_control_unit`   | `std_srvs/SetBool` | Operator (DomainID1)                                                               | Manual override: true=Main, false=Sub (sets main_interrupted=true) |
 
 > The manual service is not bridged in the sub-domain bridge configuration, as it is
 > intended for operator use from DomainID1 only.
 
 ### 4.2 Status ← simple_switcher_node
 
-| Topic | Type | Subscriber | Content |
-|---|---|---|---|
-| `/system/simple_switcher/status/active_control_unit` | `ActiveControlUnit` | SimpleSwitcherAdapter | Active ECU IDs |
-| `/system/simple_switcher/status/switcher_signals/main_ecu` | `std_msgs/UInt8` | SimpleSwitcherAdapter (is_main_ecu=true) | Encoded SwitcherSignals for Main ECU |
-| `/system/simple_switcher/status/switcher_signals/sub_ecu` | `std_msgs/UInt8` | SimpleSwitcherAdapter (is_main_ecu=false) | Encoded SwitcherSignals for Sub ECU |
-| `/system/simple_switcher/status/switcher_annotation/main_ecu` | `std_msgs/String` | SimpleSwitcherAdapter (is_main_ecu=true) | Human-readable state annotation |
-| `/system/simple_switcher/status/switcher_annotation/sub_ecu` | `std_msgs/String` | SimpleSwitcherAdapter (is_main_ecu=false) | Human-readable state annotation |
+| Topic                                                         | Type                | Subscriber                                | Content                              |
+| ------------------------------------------------------------- | ------------------- | ----------------------------------------- | ------------------------------------ |
+| `/system/simple_switcher/status/active_control_unit`          | `ActiveControlUnit` | SimpleSwitcherAdapter                     | Active ECU IDs                       |
+| `/system/simple_switcher/status/switcher_signals/main_ecu`    | `std_msgs/UInt8`    | SimpleSwitcherAdapter (is_main_ecu=true)  | Encoded SwitcherSignals for Main ECU |
+| `/system/simple_switcher/status/switcher_signals/sub_ecu`     | `std_msgs/UInt8`    | SimpleSwitcherAdapter (is_main_ecu=false) | Encoded SwitcherSignals for Sub ECU  |
+| `/system/simple_switcher/status/switcher_annotation/main_ecu` | `std_msgs/String`   | SimpleSwitcherAdapter (is_main_ecu=true)  | Human-readable state annotation      |
+| `/system/simple_switcher/status/switcher_annotation/sub_ecu`  | `std_msgs/String`   | SimpleSwitcherAdapter (is_main_ecu=false) | Human-readable state annotation      |
 
 **switcher_signals bit encoding:**
 
-| Bit | Signal |
-|---|---|
-| bit0 | `is_stable` |
+| Bit  | Signal                |
+| ---- | --------------------- |
+| bit0 | `is_stable`           |
 | bit1 | `is_self_interrupted` |
-| bit2 | `is_faulted` |
+| bit2 | `is_faulted`          |
 
 ---
 
@@ -118,19 +118,19 @@ docs/
 
 ### 5.1 State Variables
 
-| Variable | Type | Initial value |
-|---|---|---|
-| `main_interrupted_` | bool | false |
-| `sub_interrupted_` | bool | false |
-| `active_ids_` | vector\<uint8_t\> | `[0]` (Main ECU) |
+| Variable            | Type              | Initial value    |
+| ------------------- | ----------------- | ---------------- |
+| `main_interrupted_` | bool              | false            |
+| `sub_interrupted_`  | bool              | false            |
+| `active_ids_`       | vector\<uint8_t\> | `[0]` (Main ECU) |
 
 ### 5.2 Derived Signals (per ECU)
 
-| Signal | Condition |
-|---|---|
-| `faulted` | `main_interrupted && sub_interrupted` |
+| Signal             | Condition                                             |
+| ------------------ | ----------------------------------------------------- |
+| `faulted`          | `main_interrupted && sub_interrupted`                 |
 | `self_interrupted` | `(main_interrupted \|\| sub_interrupted) && !faulted` |
-| `stable` | `!self_interrupted && !faulted` |
+| `stable`           | `!self_interrupted && !faulted`                       |
 
 Main ECU and Sub ECU receive per-ECU signals that reflect which side is interrupted.
 
@@ -169,13 +169,13 @@ stateDiagram-v2
 
 ### 5.4 Event Details
 
-| Event | `main_interrupted_` | `sub_interrupted_` | `active_ids_` | annotation |
-|---|---|---|---|---|
-| `self_interruption/main_ecu` | true | unchanged | `[]` or `[sub]` if sub healthy | `"self_interrupted by=main ..."` |
-| `self_interruption/sub_ecu` | unchanged | true | `[]` or `[main]` if main healthy | `"self_interrupted by=sub ..."` |
-| `reset` | false | false | `[main]` | `"stable active=main (reset)"` |
-| manual service (true) | false | false | `[main]` | `"manual override active=main"` |
-| manual service (false) | **true** | false | `[sub]` | `"manual override active=sub main_fault=true"` |
+| Event                        | `main_interrupted_` | `sub_interrupted_` | `active_ids_`                    | annotation                                     |
+| ---------------------------- | ------------------- | ------------------ | -------------------------------- | ---------------------------------------------- |
+| `self_interruption/main_ecu` | true                | unchanged          | `[]` or `[sub]` if sub healthy   | `"self_interrupted by=main ..."`               |
+| `self_interruption/sub_ecu`  | unchanged           | true               | `[]` or `[main]` if main healthy | `"self_interrupted by=sub ..."`                |
+| `reset`                      | false               | false              | `[main]`                         | `"stable active=main (reset)"`                 |
+| manual service (true)        | false               | false              | `[main]`                         | `"manual override active=main"`                |
+| manual service (false)       | **true**            | false              | `[sub]`                          | `"manual override active=sub main_fault=true"` |
 
 > Manual service with `data=false` (Sub ECU) sets `main_interrupted=true`. This is intentional:
 > forcing Sub active implies Main has been declared faulted by the operator.
@@ -188,22 +188,22 @@ The adapter bridges the interface framework and `simple_switcher_node`.
 
 ### 6.1 Inbound (status → EventGateway)
 
-| Received topic | Submitted event |
-|---|---|
-| `status/active_control_unit` | `SetActiveControlUnitEvent` |
-| `status/switcher_signals/{main,sub}_ecu` + cached annotation | `SetSwitcherSignalsEvent` |
-| `status/switcher_annotation/{main,sub}_ecu` | cached in `latest_annotation_` (used on next signals message) |
+| Received topic                                               | Submitted event                                               |
+| ------------------------------------------------------------ | ------------------------------------------------------------- |
+| `status/active_control_unit`                                 | `SetActiveControlUnitEvent`                                   |
+| `status/switcher_signals/{main,sub}_ecu` + cached annotation | `SetSwitcherSignalsEvent`                                     |
+| `status/switcher_annotation/{main,sub}_ecu`                  | cached in `latest_annotation_` (used on next signals message) |
 
 The adapter subscribes to the per-ECU topics determined by `is_main_ecu`.
 
 ### 6.2 Outbound (CommandBus → request topics)
 
-| Received command | Published topic |
-|---|---|
-| `ResetCommand` | `/system/simple_switcher/request/reset` |
-| `SelfInterruptionCommand` (is_main_ecu=true) | `/system/simple_switcher/request/self_interruption/main_ecu` |
-| `SelfInterruptionCommand` (is_main_ecu=false) | `/system/simple_switcher/request/self_interruption/sub_ecu` |
-| All other commands | ignored |
+| Received command                              | Published topic                                              |
+| --------------------------------------------- | ------------------------------------------------------------ |
+| `ResetCommand`                                | `/system/simple_switcher/request/reset`                      |
+| `SelfInterruptionCommand` (is_main_ecu=true)  | `/system/simple_switcher/request/self_interruption/main_ecu` |
+| `SelfInterruptionCommand` (is_main_ecu=false) | `/system/simple_switcher/request/self_interruption/sub_ecu`  |
+| All other commands                            | ignored                                                      |
 
 ### 6.3 Annotation Handling
 
@@ -266,16 +266,16 @@ graph LR
 
 ### simple_switcher_node (`config/simple_switcher_node.param.yaml`)
 
-| Parameter | Default | Description |
-|---|---|---|
-| `main_ecu_id` | 0 | ECU ID for Main ECU |
-| `sub_ecu_id` | 1 | ECU ID for Sub ECU |
-| `publish_period_ms` | 200 | Periodic status publish interval (ms) |
+| Parameter           | Default | Description                           |
+| ------------------- | ------- | ------------------------------------- |
+| `main_ecu_id`       | 0       | ECU ID for Main ECU                   |
+| `sub_ecu_id`        | 1       | ECU ID for Sub ECU                    |
+| `publish_period_ms` | 200     | Periodic status publish interval (ms) |
 
 ### SimpleSwitcherAdapter (`config/default.param.yaml`)
 
-| Parameter | Value | Description |
-|---|---|---|
+| Parameter         | Value                                                    | Description          |
+| ----------------- | -------------------------------------------------------- | -------------------- |
 | `switcher_plugin` | `"autoware::redundancy_switcher::SimpleSwitcherAdapter"` | pluginlib class name |
 
 ---

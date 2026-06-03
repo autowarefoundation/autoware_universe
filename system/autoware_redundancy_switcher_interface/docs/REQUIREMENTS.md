@@ -12,11 +12,11 @@ This package provides the framework for managing redundancy switching in an Auto
 
 The system shall continuously receive and maintain the following state from the Autoware stack:
 
-| Input | Source | Values |
-|---|---|---|
-| Autoware readiness | `/set_initializing` service | `False` / `True` |
-| Vehicle velocity | velocity topic | `Stopped` / `Moving` |
-| Vehicle control mode | control mode topic | `Manual` / `Auto` |
+| Input                 | Source                          | Values                |
+| --------------------- | ------------------------------- | --------------------- |
+| Autoware readiness    | `/set_initializing` service     | `False` / `True`      |
+| Vehicle velocity      | velocity topic                  | `Stopped` / `Moving`  |
+| Vehicle control mode  | control mode topic              | `Manual` / `Auto`     |
 | Peer ECU availability | command mode availability topic | available / timed-out |
 
 Each state field shall be `nullopt` until the first message is received (startup not yet complete).
@@ -27,12 +27,12 @@ Each state field shall be `nullopt` until the first message is received (startup
 
 The system shall receive the switching state from a SwitcherAdapter plugin and represent it as three mutually exclusive boolean signals:
 
-| Signal | Meaning |
-|---|---|
-| `is_stable` | Switching is complete; self-interruption is possible |
-| `is_self_interrupted` | A self-interruption has been acknowledged; only reset is accepted |
-| `is_faulted` | An unrecoverable fault has been reported; all operations are rejected |
-| all false | Transitional state — startup or state change in progress |
+| Signal                | Meaning                                                               |
+| --------------------- | --------------------------------------------------------------------- |
+| `is_stable`           | Switching is complete; self-interruption is possible                  |
+| `is_self_interrupted` | A self-interruption has been acknowledged; only reset is accepted     |
+| `is_faulted`          | An unrecoverable fault has been reported; all operations are rejected |
+| all false             | Transitional state — startup or state change in progress              |
 
 The SwitcherAdapter plugin is responsible for translating hardware-specific state into these three signals.
 
@@ -59,14 +59,14 @@ The system shall support a self-interruption request from the Autoware stack. Se
 
 **Rejection cases:**
 
-| Condition | Log level | Reason |
-|---|---|---|
-| `autoware_ready ≠ True` | Debug | Autoware is not ready |
-| `control_mode ≠ Auto` | Debug | Autoware is not in control |
-| No switcher data | Warn | Startup not yet complete |
-| `is_self_interrupted` | Debug | Already interrupted |
-| `is_faulted` | Error | Switcher fault |
-| Transitional | Info | Switcher in transitional state |
+| Condition               | Log level | Reason                         |
+| ----------------------- | --------- | ------------------------------ |
+| `autoware_ready ≠ True` | Debug     | Autoware is not ready          |
+| `control_mode ≠ Auto`   | Debug     | Autoware is not in control     |
+| No switcher data        | Warn      | Startup not yet complete       |
+| `is_self_interrupted`   | Debug     | Already interrupted            |
+| `is_faulted`            | Error     | Switcher fault                 |
+| Transitional            | Info      | Switcher in transitional state |
 
 ---
 
@@ -76,15 +76,15 @@ The system shall support a reset request to restore normal operation after self-
 
 **Processing rules (evaluated in order):**
 
-| Condition | Result | ResponseStatus |
-|---|---|---|
-| `velocity = Moving` | Rejected (Ignored) | NO_EFFECT |
-| `autoware_ready ≠ True` (incl. nullopt) | **Accepted** | SUCCESS |
-| No switcher data | Rejected (Error) | UNKNOWN |
-| `is_self_interrupted` | **Accepted** | SUCCESS |
-| `is_stable` | Rejected (NotNecessary) | **SUCCESS** (already stable) |
-| `is_faulted` | Rejected (Error) | UNKNOWN |
-| Transitional | Rejected (Error) | UNKNOWN |
+| Condition                               | Result                  | ResponseStatus               |
+| --------------------------------------- | ----------------------- | ---------------------------- |
+| `velocity = Moving`                     | Rejected (Ignored)      | NO_EFFECT                    |
+| `autoware_ready ≠ True` (incl. nullopt) | **Accepted**            | SUCCESS                      |
+| No switcher data                        | Rejected (Error)        | UNKNOWN                      |
+| `is_self_interrupted`                   | **Accepted**            | SUCCESS                      |
+| `is_stable`                             | Rejected (NotNecessary) | **SUCCESS** (already stable) |
+| `is_faulted`                            | Rejected (Error)        | UNKNOWN                      |
+| Transitional                            | Rejected (Error)        | UNKNOWN                      |
 
 The result is returned synchronously to the caller (SubSystemAdapter) via `ResetResultCommand`.
 
@@ -105,12 +105,12 @@ The system shall publish a `diagnostic_updater` item named `redundancy_switcher_
 with hardware ID `{main,sub}_ecu_redundancy_switcher_interface`, reflecting the aggregated
 state of the four fields below.
 
-| Field (key) | OK | WARN | ERROR |
-|---|---|---|---|
-| `switcher_signals` | `is_stable` | `is_self_interrupted`, transitional (before timeout), `nullopt` | `is_faulted`, transitional (timeout exceeded) |
-| `autoware_ready` | `False` or `True` | `nullopt` | — |
-| `velocity_status` | `Stopped` or `Moving` | `nullopt` | — |
-| `control_mode` | `Manual` or `Auto` | `nullopt` | — |
+| Field (key)        | OK                    | WARN                                                            | ERROR                                         |
+| ------------------ | --------------------- | --------------------------------------------------------------- | --------------------------------------------- |
+| `switcher_signals` | `is_stable`           | `is_self_interrupted`, transitional (before timeout), `nullopt` | `is_faulted`, transitional (timeout exceeded) |
+| `autoware_ready`   | `False` or `True`     | `nullopt`                                                       | —                                             |
+| `velocity_status`  | `Stopped` or `Moving` | `nullopt`                                                       | —                                             |
+| `control_mode`     | `Manual` or `Auto`    | `nullopt`                                                       | —                                             |
 
 The overall summary level is the worst level across all four fields.
 
@@ -157,13 +157,13 @@ All concurrent access from multiple adapter threads shall be safe. The EventGate
 
 ## 3. Configuration Parameters
 
-| Parameter | Package | Default | Description |
-|---|---|---|---|
-| `is_redundant` | interface | `true` | Enable redundant mode |
-| `is_main_ecu` | interface / plugin | required | ECU role (main/sub) |
-| `diag.transitional_timeout_milli` | interface | 2000.0 | Transitional state ERROR threshold (ms) |
-| `availability_timeout_milli` | interface | 200.0 | Peer ECU availability timeout (ms) |
-| `switcher_plugin` | interface | (required if redundant) | pluginlib class name |
+| Parameter                         | Package            | Default                 | Description                             |
+| --------------------------------- | ------------------ | ----------------------- | --------------------------------------- |
+| `is_redundant`                    | interface          | `true`                  | Enable redundant mode                   |
+| `is_main_ecu`                     | interface / plugin | required                | ECU role (main/sub)                     |
+| `diag.transitional_timeout_milli` | interface          | 2000.0                  | Transitional state ERROR threshold (ms) |
+| `availability_timeout_milli`      | interface          | 200.0                   | Peer ECU availability timeout (ms)      |
+| `switcher_plugin`                 | interface          | (required if redundant) | pluginlib class name                    |
 
 ---
 

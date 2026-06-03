@@ -17,12 +17,12 @@
 
 #include "non_redundant_adapter.hpp"
 
+#include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/core_logic/i_processor.hpp>
 #include <redundancy_switcher_interface/plugin/command_bus.hpp>
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
 
 #include <gtest/gtest.h>
-#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <vector>

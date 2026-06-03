@@ -10,16 +10,16 @@ This document defines the key terms and data types used in the Redundancy Switch
 
 **Type**: `std::variant` of the following event structs:
 
-| Event | Source | Meaning |
-|---|---|---|
-| `SelfInterruptionEvent` | SubSystemAdapter / SwitcherAdapter | This ECU detected an error and must step down. |
-| `ResetEvent` | SubSystemAdapter | An operator requested a reset. |
-| `SetAutowareReadyEvent` | SubSystemAdapter | Autoware readiness changed. |
-| `SetVelocityStatusEvent` | SubSystemAdapter | Vehicle velocity status changed. |
-| `SetControlModeEvent` | SubSystemAdapter | Vehicle control mode changed. |
-| `SetSwitcherSignalsEvent` | SwitcherAdapter | Switching state updated from the SwitcherAdapter. |
-| `SetActiveControlUnitEvent` | SwitcherAdapter | Active control unit updated. |
-| `SetAnotherEcuAvailabilityTimeoutEvent` | SubSystemAdapter | Peer ECU availability timed out or recovered. |
+| Event                                   | Source                             | Meaning                                           |
+| --------------------------------------- | ---------------------------------- | ------------------------------------------------- |
+| `SelfInterruptionEvent`                 | SubSystemAdapter / SwitcherAdapter | This ECU detected an error and must step down.    |
+| `ResetEvent`                            | SubSystemAdapter                   | An operator requested a reset.                    |
+| `SetAutowareReadyEvent`                 | SubSystemAdapter                   | Autoware readiness changed.                       |
+| `SetVelocityStatusEvent`                | SubSystemAdapter                   | Vehicle velocity status changed.                  |
+| `SetControlModeEvent`                   | SubSystemAdapter                   | Vehicle control mode changed.                     |
+| `SetSwitcherSignalsEvent`               | SwitcherAdapter                    | Switching state updated from the SwitcherAdapter. |
+| `SetActiveControlUnitEvent`             | SwitcherAdapter                    | Active control unit updated.                      |
+| `SetAnotherEcuAvailabilityTimeoutEvent` | SubSystemAdapter                   | Peer ECU availability timed out or recovered.     |
 
 Adapters create InputEvents and submit them via `EventGateway::submit()` or `submit_request()`.
 The Processor has no knowledge of the event source (ROS, UDS, etc.).
@@ -32,16 +32,16 @@ The Processor has no knowledge of the event source (ROS, UDS, etc.).
 
 **Type**: `std::variant` of the following command structs:
 
-| Command | Consumer | Meaning |
-|---|---|---|
-| `LogCommand` | LogAdapter | Emit a log message at the specified level. |
-| `ResetCommand` | SwitcherAdapter | Send a reset request to the Switcher. |
-| `SelfInterruptionCommand` | SwitcherAdapter | Send a self-interruption request to the Switcher. |
-| `UpdateStatusDiagCommand` | DiagAdapter | Trigger a diagnostic status update. |
-| `UpdateActiveControlUnitCommand` | SubSystemAdapter | Publish the active control unit. |
-| `UpdateAutowareReadyCommand` | SwitcherAdapter | Update the local autoware_ready cache. |
-| `ResetResultCommand` | SubSystemAdapter | Return the accept/reject result of a reset request. |
-| `UpdateAnotherEcuAvailabilityTimeoutCommand` | SwitcherAdapter | Update the peer ECU availability timeout cache. |
+| Command                                      | Consumer         | Meaning                                             |
+| -------------------------------------------- | ---------------- | --------------------------------------------------- |
+| `LogCommand`                                 | LogAdapter       | Emit a log message at the specified level.          |
+| `ResetCommand`                               | SwitcherAdapter  | Send a reset request to the Switcher.               |
+| `SelfInterruptionCommand`                    | SwitcherAdapter  | Send a self-interruption request to the Switcher.   |
+| `UpdateStatusDiagCommand`                    | DiagAdapter      | Trigger a diagnostic status update.                 |
+| `UpdateActiveControlUnitCommand`             | SubSystemAdapter | Publish the active control unit.                    |
+| `UpdateAutowareReadyCommand`                 | SwitcherAdapter  | Update the local autoware_ready cache.              |
+| `ResetResultCommand`                         | SubSystemAdapter | Return the accept/reject result of a reset request. |
+| `UpdateAnotherEcuAvailabilityTimeoutCommand` | SwitcherAdapter  | Update the peer ECU availability timeout cache.     |
 
 The Processor returns a list of OutputCommands from `handle()`.
 The CommandBus broadcasts each command to all registered adapters.
@@ -124,12 +124,12 @@ reside in the SwitcherAdapter plugin implementation.
 
 ## 3. Adapter Responsibilities
 
-| Adapter | Inbound (creates InputEvents) | Outbound (handles OutputCommands) |
-|---|---|---|
-| **SubSystemAdapter** | velocity, control mode, operation mode, availability timeout, reset service, set_initializing service | UpdateActiveControlUnitCommand → publish |
-| **SwitcherAdapter** (plugin) | switching state from the Switcher | ResetCommand, SelfInterruptionCommand → Switcher |
-| **LogAdapter** | — | LogCommand → RCLCPP_* |
-| **DiagAdapter** | — | UpdateStatusDiagCommand → diagnostic_updater |
+| Adapter                      | Inbound (creates InputEvents)                                                                         | Outbound (handles OutputCommands)                |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **SubSystemAdapter**         | velocity, control mode, operation mode, availability timeout, reset service, set_initializing service | UpdateActiveControlUnitCommand → publish         |
+| **SwitcherAdapter** (plugin) | switching state from the Switcher                                                                     | ResetCommand, SelfInterruptionCommand → Switcher |
+| **LogAdapter**               | —                                                                                                     | LogCommand → RCLCPP\_\*                          |
+| **DiagAdapter**              | —                                                                                                     | UpdateStatusDiagCommand → diagnostic_updater     |
 
 ---
 

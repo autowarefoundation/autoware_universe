@@ -30,7 +30,8 @@ constexpr char kSelfInterruptionMainTopic[] =
 constexpr char kSelfInterruptionSubTopic[] =
   "/system/simple_switcher/request/self_interruption/sub_ecu";
 constexpr char kActiveStatusTopic[] = "/system/simple_switcher/status/active_control_unit";
-constexpr char kSignalsStatusMainTopic[] = "/system/simple_switcher/status/switcher_signals/main_ecu";
+constexpr char kSignalsStatusMainTopic[] =
+  "/system/simple_switcher/status/switcher_signals/main_ecu";
 constexpr char kSignalsStatusSubTopic[] = "/system/simple_switcher/status/switcher_signals/sub_ecu";
 constexpr char kAnnotationStatusMainTopic[] =
   "/system/simple_switcher/status/switcher_annotation/main_ecu";
@@ -45,22 +46,21 @@ SimpleSwitcherNode::SimpleSwitcherNode(const rclcpp::NodeOptions & options)
   const auto publish_period_ms = declare_parameter<int64_t>("publish_period_ms", 200);
 
   const auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable();
-  pub_active_ = create_publisher<tier4_system_msgs::msg::ActiveControlUnit>(kActiveStatusTopic, qos);
+  pub_active_ =
+    create_publisher<tier4_system_msgs::msg::ActiveControlUnit>(kActiveStatusTopic, qos);
   pub_signals_main_ = create_publisher<std_msgs::msg::UInt8>(kSignalsStatusMainTopic, qos);
   pub_signals_sub_ = create_publisher<std_msgs::msg::UInt8>(kSignalsStatusSubTopic, qos);
   pub_annotation_main_ = create_publisher<std_msgs::msg::String>(kAnnotationStatusMainTopic, qos);
   pub_annotation_sub_ = create_publisher<std_msgs::msg::String>(kAnnotationStatusSubTopic, qos);
 
   srv_manual_active_ = create_service<std_srvs::srv::SetBool>(
-    kManualActiveService,
-    [this](
-      const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
-      std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
+    kManualActiveService, [this](
+                            const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+                            std::shared_ptr<std_srvs::srv::SetBool::Response> response) {
       on_manual_active(*request, *response);
     });
   sub_reset_ = create_subscription<std_msgs::msg::Empty>(
-    kResetRequestTopic, qos,
-    [this](const std_msgs::msg::Empty::ConstSharedPtr) { on_reset(); });
+    kResetRequestTopic, qos, [this](const std_msgs::msg::Empty::ConstSharedPtr) { on_reset(); });
   sub_self_main_ = create_subscription<std_msgs::msg::Empty>(
     kSelfInterruptionMainTopic, qos,
     [this](const std_msgs::msg::Empty::ConstSharedPtr) { on_self_main(); });
@@ -74,7 +74,8 @@ SimpleSwitcherNode::SimpleSwitcherNode(const rclcpp::NodeOptions & options)
     annotation_ = "stable active=main";
   }
 
-  timer_ = create_wall_timer(std::chrono::milliseconds(publish_period_ms), [this]() { publish_status(); });
+  timer_ =
+    create_wall_timer(std::chrono::milliseconds(publish_period_ms), [this]() { publish_status(); });
 
   publish_status();
 
@@ -93,8 +94,7 @@ uint8_t SimpleSwitcherNode::encode_signals(bool stable, bool self_interrupted, b
 }
 
 void SimpleSwitcherNode::on_manual_active(
-  const std_srvs::srv::SetBool::Request & request,
-  std_srvs::srv::SetBool::Response & response)
+  const std_srvs::srv::SetBool::Request & request, std_srvs::srv::SetBool::Response & response)
 {
   {
     std::lock_guard<std::mutex> lock(mutex_);

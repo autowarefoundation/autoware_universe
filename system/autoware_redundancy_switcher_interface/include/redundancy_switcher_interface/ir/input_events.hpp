@@ -35,9 +35,18 @@ struct ResetEvent
   Annotated<std::monostate> value{{}, ""};
 };
 
-struct SetAutowareReadyEvent  { Annotated<AutowareReady> value; };
-struct SetVelocityStatusEvent { Annotated<VelocityStatus> value; };
-struct SetControlModeEvent    { Annotated<ControlMode> value; };
+struct SetAutowareReadyEvent
+{
+  Annotated<AutowareReady> value;
+};
+struct SetVelocityStatusEvent
+{
+  Annotated<VelocityStatus> value;
+};
+struct SetControlModeEvent
+{
+  Annotated<ControlMode> value;
+};
 
 /// Timeout notification fired when CommandModeAvailability from the peer ECU
 /// has not arrived within the configured interval.
@@ -48,8 +57,14 @@ struct SetAnotherEcuAvailabilityTimeoutEvent
 
 /// Fired when the switching state has been updated by the SwitcherAdapter.
 /// Timeouts and disconnections are represented as SwitcherSignals with is_faulted=true.
-struct SetSwitcherSignalsEvent    { Annotated<SwitcherSignals> value; };
-struct SetActiveControlUnitEvent  { Annotated<ActiveControlUnit> value; };
+struct SetSwitcherSignalsEvent
+{
+  Annotated<SwitcherSignals> value;
+};
+struct SetActiveControlUnitEvent
+{
+  Annotated<ActiveControlUnit> value;
+};
 
 using InputEvent = std::variant<
   SelfInterruptionEvent, ResetEvent, SetAutowareReadyEvent, SetVelocityStatusEvent,

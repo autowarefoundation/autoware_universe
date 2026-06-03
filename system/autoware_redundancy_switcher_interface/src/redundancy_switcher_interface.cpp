@@ -62,8 +62,9 @@ RedundancySwitcherInterface::RedundancySwitcherInterface(const rclcpp::NodeOptio
     command_bus_->add_handler(switcher_plugin_);
     switcher_plugin_->initialize(this, gateway_);
   } else {
-    gateway_->submit(InputEvent{SetSwitcherSignalsEvent{
-      Annotated<SwitcherSignals>{{true, false, false}, "non-redundant system"}}});
+    gateway_->submit(
+      InputEvent{SetSwitcherSignalsEvent{
+        Annotated<SwitcherSignals>{{true, false, false}, "non-redundant system"}}});
   }
 }
 

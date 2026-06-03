@@ -25,6 +25,7 @@
   <depend>tier4_external_api_msgs</depend>
   <depend>tier4_system_msgs</depend>
 
+  <exec_depend>autoware_redundancy_switcher_interface_plugins</exec_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

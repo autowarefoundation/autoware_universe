@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef REDUNDANCY_SWITCHER_ADAPTER_HPP_
-#define REDUNDANCY_SWITCHER_ADAPTER_HPP_
+#ifndef REDUNDANCY_SWITCHER__REDUNDANCY_SWITCHER_ADAPTER_HPP_
+#define REDUNDANCY_SWITCHER__REDUNDANCY_SWITCHER_ADAPTER_HPP_
 
 #include "uds_receiver.hpp"
 #include "uds_sender.hpp"
@@ -23,12 +23,12 @@
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
 #include <redundancy_switcher_interface/plugin/i_adapter_plugin.hpp>
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
-#include <atomic>
 #include <unordered_set>
 
 namespace autoware::redundancy_switcher
@@ -97,7 +97,8 @@ private:
   std::optional<ElectionStatus> last_election_status_;
   std::optional<rclcpp::Time> stamp_election_status_;
   std::optional<AutowareReady> autoware_ready_;  // cached via UpdateAutowareReadyCommand
-  bool another_ecu_availability_timeout_{false};  // cached via UpdateAnotherEcuAvailabilityTimeoutCommand
+  bool another_ecu_availability_timeout_{
+    false};  // cached via UpdateAnotherEcuAvailabilityTimeoutCommand
   std::unordered_set<std::string> node_fault_points_;
   std::unordered_set<std::string> link_fault_points_;
   bool uds_connection_established_{false};  // true once the UDS connection is established
@@ -117,4 +118,4 @@ private:
 };
 
 }  // namespace autoware::redundancy_switcher
-#endif  // REDUNDANCY_SWITCHER_ADAPTER_HPP_
+#endif  // REDUNDANCY_SWITCHER__REDUNDANCY_SWITCHER_ADAPTER_HPP_

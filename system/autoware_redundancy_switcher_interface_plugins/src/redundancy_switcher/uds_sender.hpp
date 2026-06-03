@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef UDS_SENDER_HPP_
-#define UDS_SENDER_HPP_
+#ifndef REDUNDANCY_SWITCHER__UDS_SENDER_HPP_
+#define REDUNDANCY_SWITCHER__UDS_SENDER_HPP_
 
 #include <nlohmann/json.hpp>
 
@@ -102,4 +102,4 @@ void UdsSender<T>::send(const T & data)
 }
 
 }  // namespace autoware::redundancy_switcher
-#endif  // UDS_SENDER_HPP_
+#endif  // REDUNDANCY_SWITCHER__UDS_SENDER_HPP_

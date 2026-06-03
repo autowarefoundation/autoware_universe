@@ -22,10 +22,10 @@
 #include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <std_srvs/srv/set_bool.hpp>
-#include <tier4_system_msgs/srv/reset_redundancy_switcher.hpp>
+#include <tier4_system_msgs/msg/active_control_unit.hpp>
 #include <tier4_system_msgs/msg/command_mode_availability.hpp>
 #include <tier4_system_msgs/msg/command_mode_request.hpp>
-#include <tier4_system_msgs/msg/active_control_unit.hpp>
+#include <tier4_system_msgs/srv/reset_redundancy_switcher.hpp>
 
 #include <memory>
 #include <mutex>
@@ -47,9 +47,11 @@ using ControlModeReport = autoware_vehicle_msgs::msg::ControlModeReport;
  * @brief ROS adapter responsible for I/O with the lower-level system (Autoware / subsystem).
  *
  * Responsibilities:
- *   - Converts incoming ROS messages from Autoware into InputEvents and submits them to the Processor.
+ *   - Converts incoming ROS messages from Autoware into InputEvents and submits them to the
+ * Processor.
  *   - Handles UpdateActiveControlUnitCommand and publishes the ActiveControlUnit message.
- *   - Diagnostics are handled by DiagAdapter (aggregated status) and SwitcherAdapter (switcher-specific diag).
+ *   - Diagnostics are handled by DiagAdapter (aggregated status) and SwitcherAdapter
+ * (switcher-specific diag).
  */
 class SubSystemAdapter : public IAdapterPlugin
 {

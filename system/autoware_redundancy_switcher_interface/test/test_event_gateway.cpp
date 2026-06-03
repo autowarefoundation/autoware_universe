@@ -58,9 +58,7 @@ private:
 class SpyAdapter : public IAdapterPlugin
 {
 public:
-  void initialize(rclcpp::Node *, std::shared_ptr<EventGateway>) override
-  {
-    }
+  void initialize(rclcpp::Node *, std::shared_ptr<EventGateway>) override {}
 
   void execute(const OutputCommand & command) override { captured_effects_.push_back(command); }
 
@@ -160,8 +158,9 @@ TEST_F(EventGatewayTest, SubmitRequest_ReturnsCommandsAndDispatchesToAdapter)
   const auto commands = gateway_->submit_request(InputEvent{ResetEvent{}});
 
   ASSERT_EQ(commands.size(), 3u);
-  EXPECT_TRUE(std::any_of(commands.begin(), commands.end(),
-    [](const auto & c) { return std::holds_alternative<ResetResultCommand>(c); }));
+  EXPECT_TRUE(std::any_of(commands.begin(), commands.end(), [](const auto & c) {
+    return std::holds_alternative<ResetResultCommand>(c);
+  }));
 
   EXPECT_EQ(spy_->captured().size(), 3u);
   EXPECT_TRUE(spy_->has_effect<ResetCommand>());
@@ -174,8 +173,9 @@ TEST_F(EventGatewayTest, SubmitRequest_ResetResult_ReflectsAccepted)
 
   const auto commands = gateway_->submit_request(InputEvent{ResetEvent{}});
 
-  const auto it = std::find_if(commands.begin(), commands.end(),
-    [](const auto & c) { return std::holds_alternative<ResetResultCommand>(c); });
+  const auto it = std::find_if(commands.begin(), commands.end(), [](const auto & c) {
+    return std::holds_alternative<ResetResultCommand>(c);
+  });
   ASSERT_NE(it, commands.end());
   EXPECT_FALSE(std::get<ResetResultCommand>(*it).accepted);
   EXPECT_EQ(std::get<ResetResultCommand>(*it).message, "rejected");

@@ -11,13 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef SWITCHER_ADAPTER_HPP_
-#define SWITCHER_ADAPTER_HPP_
+#ifndef SIMPLE_SWITCHER__SWITCHER_ADAPTER_HPP_
+#define SIMPLE_SWITCHER__SWITCHER_ADAPTER_HPP_
 
+#include <rclcpp/rclcpp.hpp>
 #include <redundancy_switcher_interface/plugin/event_gateway.hpp>
 #include <redundancy_switcher_interface/plugin/i_adapter_plugin.hpp>
 
-#include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int8.hpp>
@@ -68,4 +68,4 @@ private:
 };
 
 }  // namespace autoware::redundancy_switcher
-#endif  // SWITCHER_ADAPTER_HPP_
+#endif  // SIMPLE_SWITCHER__SWITCHER_ADAPTER_HPP_
