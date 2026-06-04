@@ -251,7 +251,8 @@ bool convertConvexHullToBoundingBox(
   };
 
   // Ego-facing pass: outward normal of CCW edge (ex,ey) is (ey,-ex).
-  // Edge faces ego when (ey,-ex)·(ego_local_x,ego_local_y) > 0, i.e. ey*ego_local_x - ex*ego_local_y > 0.
+  // Edge faces ego when (ey,-ex)·(ego_local_x,ego_local_y) > 0, i.e. ey*ego_local_x -
+  // ex*ego_local_y > 0.
   if (use_ego) {
     for (size_t i = 0; i < n; ++i) {
       const auto & p0 = points[i];
@@ -311,7 +312,8 @@ bool convertConvexHullToBoundingBox(
   output_object.shape.dimensions.x = dim_along;
   output_object.shape.dimensions.y = dim_perp;
 
-  // Shift footprint to new center and rotate into new object frame (which is rotated by bbox_yaw_local)
+  // Shift footprint to new center and rotate into new object frame (which is rotated by
+  // bbox_yaw_local)
   for (auto & point : output_object.shape.footprint.points) {
     const float dx = point.x - static_cast<float>(center_local_x);
     const float dy = point.y - static_cast<float>(center_local_y);
@@ -333,7 +335,8 @@ std::optional<types::DynamicObject> alignClusterToOrientation(
 
   // Compose the two rotations (cluster local → map, map → target frame) into one.
   const double phi = target_yaw - tf2::getYaw(cluster.pose.orientation);
-  const auto ext = computeOrientedExtent(cluster.shape.footprint.points, std::cos(phi), std::sin(phi));
+  const auto ext =
+    computeOrientedExtent(cluster.shape.footprint.points, std::cos(phi), std::sin(phi));
 
   const double long_center = (ext.min_along + ext.max_along) * 0.5;
   const double lat_center = (ext.min_lat + ext.max_lat) * 0.5;

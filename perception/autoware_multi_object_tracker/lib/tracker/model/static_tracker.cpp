@@ -18,8 +18,9 @@
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
-#include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_utils_geometry/msg/covariance.hpp>
+
+#include <autoware_perception_msgs/msg/shape.hpp>
 
 #include <cmath>
 

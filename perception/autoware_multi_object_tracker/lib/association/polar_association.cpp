@@ -128,9 +128,11 @@ void PolarAssociation::processMeasurement(
 
     // Area gate: reject measurement outside the expected footprint size range
     const double meas_area = measurement_object.area;
-    if (meas_area < association_params.min_area || meas_area > association_params.max_area) continue;
+    if (meas_area < association_params.min_area || meas_area > association_params.max_area)
+      continue;
 
-    // Depth gate: the cluster's nearest 3D point must be within max_dist of the tracker's nearest point.
+    // Depth gate: the cluster's nearest 3D point must be within max_dist of the tracker's nearest
+    // point.
     const double depth_gate = std::sqrt(association_params.max_dist_sq);
     const double depth_gap = std::abs(meas_fp.r_min_3d - tracker_entry.footprint.r_min_3d);
     if (depth_gap > depth_gate) continue;
