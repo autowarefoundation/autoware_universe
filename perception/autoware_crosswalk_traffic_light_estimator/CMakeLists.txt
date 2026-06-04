@@ -41,12 +41,14 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest)
   ament_lint_auto_find_test_dependencies()
 
-  ament_add_gtest(test_crosswalk_traffic_light_estimator_node
-    test/test_crosswalk_traffic_light_estimator_node.cpp
-  )
-  target_link_libraries(test_crosswalk_traffic_light_estimator_node
-    autoware_crosswalk_traffic_light_estimator
-  )
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_add_gtest(test_crosswalk_traffic_light_estimator_node
+      test/test_crosswalk_traffic_light_estimator_node.cpp
+    )
+    target_link_libraries(test_crosswalk_traffic_light_estimator_node
+      autoware_crosswalk_traffic_light_estimator
+    )
+  endif()
 
   ament_add_gtest(test_flashing_detection
     test/test_flashing_detection.cpp
