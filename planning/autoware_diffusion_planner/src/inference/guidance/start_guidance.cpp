@@ -79,7 +79,6 @@ GuidanceResult StartGuidance::compute_delta(
       static_cast<double>(reference_distance) / (terminal_distance + 1e-5),
       static_cast<double>(max_scale));
 
-    std::cout << "time_step " << context.timestep << " scale = " << scale << std::endl;
 
     for (int64_t t = 1; t <= OUTPUT_T; ++t) {
       guided_trajectory[t].x() =
