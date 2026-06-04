@@ -142,9 +142,9 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
     "output/object", rclcpp::QoS{1});
 
   // Debug publisher
-  processing_time_publisher_ = std::make_unique<
-    autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
-    this, "object_association_merger");
+  processing_time_publisher_ =
+    std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "object_association_merger");
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");

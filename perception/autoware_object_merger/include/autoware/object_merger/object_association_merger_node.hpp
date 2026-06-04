@@ -83,8 +83,8 @@ private:
   std::optional<rclcpp::Time> last_sync_time_;
   std::optional<double> message_interval_;
   AUTOWARE_TIMER_PTR timeout_timer_;
-  std::unique_ptr<autoware_utils_diagnostics::BasicDiagnosticsInterface<
-    autoware::agnocast_wrapper::Node>>
+  std::unique_ptr<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>
     diagnostics_interface_ptr_;
 
   PriorityMode priority_mode_;
