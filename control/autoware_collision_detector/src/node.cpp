@@ -452,6 +452,9 @@ std::optional<Obstacle> CollisionDetectorNode::getNearestObstacle(
 std::optional<Obstacle> CollisionDetectorNode::getNearestObstacleByPointCloud(
   const autoware_utils_geometry::Polygon2d & ego_polygon) const
 {
+  if (pointcloud_ptr_->width == 0 || pointcloud_ptr_->height == 0) {
+    return {};
+  }
   const auto transform_stamped =
     getTransform("base_link", pointcloud_ptr_->header.frame_id, pointcloud_ptr_->header.stamp, 0.5);
 
