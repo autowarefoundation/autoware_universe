@@ -45,10 +45,9 @@
 
 namespace autoware::diffusion_planner
 {
-
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
 namespace
 {
-#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
 bool is_onnxruntime_backend(const std::string & backend)
 {
   return backend == "ort_cpu" || backend == "ort_cuda" || backend == "ort_tensorrt";
@@ -69,9 +68,8 @@ std::string onnxruntime_execution_provider_from_backend(const std::string & back
     "Unsupported model.backend '" + backend +
     "'. Expected 'tensorrt', 'ort_cpu', 'ort_cuda', or 'ort_tensorrt'.");
 }
-#endif
-
 }  // namespace
+#endif
 
 DiffusionPlannerCore::DiffusionPlannerCore(
   const DiffusionPlannerParams & params, const VehicleInfo & vehicle_info)
