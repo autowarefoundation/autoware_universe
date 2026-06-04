@@ -50,4 +50,4 @@
     use_shape_estimation_filter: false
     use_boost_bbox_optimizer: false
     # 0: ALL_POLYGON, 1: LABEL_DEPEND
-    # shape_policy: 0
+    shape_policy: 0

@@ -17,7 +17,6 @@ from launch.actions import DeclareLaunchArgument
 from launch.actions import OpaqueFunction
 from launch.conditions import IfCondition
 from launch.conditions import UnlessCondition
-from launch.substitutions import AnonName
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.actions import LoadComposableNodes
@@ -81,7 +80,7 @@ def generate_launch_description():
             add_launch_arg("output_objects", "objects"),
             add_launch_arg("use_pointcloud_container", "false"),
             add_launch_arg("pointcloud_container_name", "pointcloud_container"),
-            add_launch_arg("shape_policy"),
+            add_launch_arg("shape_policy", 0),
             add_launch_arg(
                 "param_path",
                 [
