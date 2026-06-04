@@ -50,29 +50,31 @@ typedef bg::model::point<double, 2, bg::cs::cartesian> Point;
 typedef bg::model::box<Point> Box;
 typedef std::pair<Point, size_t> ValueType;  // (position, tracker index)
 
+// Per-tracker entry bundling all precomputed data for one tracker
+struct TrackerBevEntry
+{
+  types::DynamicObject object;
+  classes::Label label;
+  types::TrackerType type;
+  InverseCovariance2D inv_cov;
+};
+
 // Per-tracker precomputed data for a single association round
 struct PreparationData
 {
-  std::vector<types::DynamicObject> tracked_objects;
-  std::vector<classes::Label> tracker_labels;
-  std::vector<types::TrackerType> tracker_types;
-  std::vector<InverseCovariance2D> tracker_inverse_covariances;
+  std::vector<TrackerBevEntry> trackers;
 };
 
 class BevAssociation : public AssociationBase
 {
 private:
-  AssociatorConfig config_;
+  TrackerAssociationConfig config_;
   const double score_threshold_;
   std::unique_ptr<gnn_solver::GnnSolverInterface> gnn_solver_ptr_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
 
   // R-tree for spatial indexing of trackers
   bgi::rtree<ValueType, bgi::quadratic<16>> rtree_;
-  // Maximum squared search distance per measurement class (precomputed from config)
-  AssociatorConfig::LabelDoubleMap max_squared_dist_per_class_;
-
-  void updateMaxSearchDistances();
 
   PreparationData prepareAssociationData(
     const types::DynamicObjectList & measurements,
@@ -85,7 +87,7 @@ private:
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  explicit BevAssociation(const AssociatorConfig & config);
+  explicit BevAssociation(const TrackerAssociationConfig & config);
   ~BevAssociation() override = default;
 
   /// AssociationBase implementation: full pipeline (calcAssociationData + assign).
