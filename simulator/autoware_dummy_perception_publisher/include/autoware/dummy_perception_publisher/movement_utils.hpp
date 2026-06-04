@@ -20,8 +20,8 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
+#include <autoware_simulation_msgs/msg/simulated_object.hpp>
 #include <geometry_msgs/msg/pose.hpp>
-#include <tier4_simulation_msgs/msg/dummy_object.hpp>
 
 namespace autoware::dummy_perception_publisher::utils
 {
@@ -31,23 +31,24 @@ class MovementUtils
 public:
   // Calculate position for straight-line movement
   static geometry_msgs::msg::Pose calculate_straight_line_position(
-    const tier4_simulation_msgs::msg::DummyObject & object, const rclcpp::Time & current_time);
+    const autoware_simulation_msgs::msg::SimulatedObject & object,
+    const rclcpp::Time & current_time);
 
   // Helper to stop at zero velocity
   static void stop_at_zero_velocity(double & current_vel, double initial_vel, double initial_acc);
 
   // Create a basic ObjectInfo with common fields populated
   static ObjectInfo create_basic_object_info(
-    const tier4_simulation_msgs::msg::DummyObject & object);
+    const autoware_simulation_msgs::msg::SimulatedObject & object);
 
   // Update ObjectInfo with calculated pose and velocity
   static void update_object_info_with_movement(
-    ObjectInfo & obj_info, const tier4_simulation_msgs::msg::DummyObject & object,
+    ObjectInfo & obj_info, const autoware_simulation_msgs::msg::SimulatedObject & object,
     const geometry_msgs::msg::Pose & current_pose, const rclcpp::Time & current_time);
 
   // Calculate position based on predicted trajectory path
   static geometry_msgs::msg::Pose calculate_trajectory_based_position(
-    const tier4_simulation_msgs::msg::DummyObject & object,
+    const autoware_simulation_msgs::msg::SimulatedObject & object,
     const autoware_perception_msgs::msg::PredictedObject & predicted_object,
     const rclcpp::Time & predicted_time, const rclcpp::Time & current_time);
 };

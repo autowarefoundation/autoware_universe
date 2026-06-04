@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020-2026 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,46 +25,13 @@
 
 namespace
 {
+using autoware::traffic_light::Bulb;
+using autoware_perception_msgs::msg::TrafficLightElement;
 
-struct BulbColor
-{
-  uint8_t map_bulb_color;
-  std_msgs::msg::ColorRGBA marker_color;
-};
-
-bool has_bulb_color(const lanelet::ConstPoint3d & point, const std::string & expected_value)
-{
-  lanelet::Attribute attr = point.attribute("color");
-  return attr.value() == expected_value;
-}
-
-std::optional<BulbColor> resolve_bulb_color(const lanelet::ConstPoint3d & point)
-{
-  using autoware_perception_msgs::msg::TrafficLightElement;
-
-  BulbColor bulb;
-  constexpr float marker_alpha = 0.999f;
-  bulb.marker_color.a = marker_alpha;
-
-  if (has_bulb_color(point, "red")) {
-    bulb.map_bulb_color = TrafficLightElement::RED;
-    bulb.marker_color.r = 1.0f;
-  } else if (has_bulb_color(point, "green")) {
-    bulb.map_bulb_color = TrafficLightElement::GREEN;
-    bulb.marker_color.g = 1.0f;
-  } else if (has_bulb_color(point, "yellow")) {
-    bulb.map_bulb_color = TrafficLightElement::AMBER;
-    bulb.marker_color.r = 1.0f;
-    bulb.marker_color.g = 1.0f;
-  } else {
-    return std::nullopt;
-  }
-  return bulb;
-}
+// --- helpers for generate_markers ---
 
 bool is_color_detected(
-  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & detected_elements,
-  uint8_t bulb_color)
+  const std::vector<TrafficLightElement> & detected_elements, uint8_t bulb_color)
 {
   for (const auto & element : detected_elements) {
     if (element.color == bulb_color) {
@@ -74,23 +41,36 @@ bool is_color_detected(
   return false;
 }
 
+std_msgs::msg::ColorRGBA marker_color_for(uint8_t bulb_color)
+{
+  std_msgs::msg::ColorRGBA color;
+  constexpr float marker_alpha = 0.999f;
+  color.a = marker_alpha;
+  if (bulb_color == TrafficLightElement::RED) {
+    color.r = 1.0f;
+  } else if (bulb_color == TrafficLightElement::GREEN) {
+    color.g = 1.0f;
+  } else if (bulb_color == TrafficLightElement::AMBER) {
+    color.r = 1.0f;
+    color.g = 1.0f;
+  }
+  return color;
+}
+
 visualization_msgs::msg::Marker create_bulb_marker(
-  const lanelet::ConstPoint3d & point, const std_msgs::msg::ColorRGBA & color,
-  const builtin_interfaces::msg::Time & stamp)
+  const Bulb & bulb, builtin_interfaces::msg::Time stamp)
 {
   visualization_msgs::msg::Marker marker;
   marker.header.frame_id = "map";
   marker.header.stamp = stamp;
   marker.frame_locked = true;
   marker.ns = "traffic_light";
-  marker.id = point.id();
+  marker.id = bulb.id;
   constexpr uint32_t marker_lifetime_ns = 200000000u;  // 200 ms
   marker.lifetime.sec = 0;
   marker.lifetime.nanosec = marker_lifetime_ns;
   marker.type = visualization_msgs::msg::Marker::SPHERE;
-  marker.pose.position.x = point.x();
-  marker.pose.position.y = point.y();
-  marker.pose.position.z = point.z();
+  marker.pose.position = bulb.position;
   marker.pose.orientation.x = 0.0;
   marker.pose.orientation.y = 0.0;
   marker.pose.orientation.z = 0.0;
@@ -101,66 +81,89 @@ visualization_msgs::msg::Marker create_bulb_marker(
   marker.scale.y = marker_scale;
   marker.scale.z = marker_scale;
 
-  marker.color = color;
+  marker.color = marker_color_for(bulb.color);
 
   return marker;
 }
 
 std::vector<visualization_msgs::msg::Marker> create_markers_for_active_bulbs(
-  const std::vector<lanelet::ConstPoint3d> & bulb_points,
-  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & detected_elements,
-  const builtin_interfaces::msg::Time & stamp)
+  const std::vector<Bulb> & bulbs, const std::vector<TrafficLightElement> & detected_elements,
+  builtin_interfaces::msg::Time stamp)
 {
   std::vector<visualization_msgs::msg::Marker> markers;
-  for (const auto & point : bulb_points) {
-    auto bulb = resolve_bulb_color(point);
-    if (!bulb) {
+  for (const auto & bulb : bulbs) {
+    if (!is_color_detected(detected_elements, bulb.color)) {
       continue;
     }
-    if (!is_color_detected(detected_elements, bulb->map_bulb_color)) {
-      continue;
-    }
-    markers.push_back(create_bulb_marker(point, bulb->marker_color, stamp));
+    markers.push_back(create_bulb_marker(bulb, stamp));
   }
   return markers;
+}
+
+// --- helpers for extract_bulbs ---
+
+std::optional<uint8_t> parse_bulb_color(const std::string & color_attribute)
+{
+  if (color_attribute == "red") return TrafficLightElement::RED;
+  if (color_attribute == "green") return TrafficLightElement::GREEN;
+  if (color_attribute == "yellow") return TrafficLightElement::AMBER;
+  return std::nullopt;
 }
 
 }  // namespace
 
 namespace autoware::traffic_light
 {
-TrafficLightVisualizer::TrafficLightVisualizer(
-  const std::vector<lanelet::AutowareTrafficLightConstPtr> & regulatory_elements)
+BulbsByGroupId extract_bulbs(
+  const std::vector<lanelet::AutowareTrafficLightConstPtr> & map_traffic_lights)
 {
-  for (const auto & regulatory_element : regulatory_elements) {
-    std::vector<lanelet::ConstPoint3d> points;
+  BulbsByGroupId result;
+  for (const auto & map_traffic_light : map_traffic_lights) {
+    std::vector<Bulb> bulbs;
     // A lightBulbs linestring with "traffic_light_id" represents a bulb group.
     // Points with "color" attribute represent individual bulbs.
-    for (const auto & light_bulbs : regulatory_element->lightBulbs()) {
+    for (const auto & light_bulbs : map_traffic_light->lightBulbs()) {
       if (!light_bulbs.hasAttribute("traffic_light_id")) {
         continue;
       }
       for (const auto & point : light_bulbs) {
-        if (point.hasAttribute("color")) {
-          points.push_back(point);
+        if (!point.hasAttribute("color")) {
+          continue;
         }
+        const auto color = parse_bulb_color(point.attribute("color").value());
+        if (!color) {
+          continue;
+        }
+        Bulb bulb;
+        bulb.id = point.id();
+        bulb.position.x = point.x();
+        bulb.position.y = point.y();
+        bulb.position.z = point.z();
+        bulb.color = *color;
+        bulbs.push_back(bulb);
       }
     }
-    if (!points.empty()) {
-      bulb_points_by_group_id_.emplace(regulatory_element->id(), std::move(points));
+    if (!bulbs.empty()) {
+      result.emplace(map_traffic_light->id(), std::move(bulbs));
     }
   }
+  return result;
+}
+
+TrafficLightVisualizer::TrafficLightVisualizer(BulbsByGroupId bulbs_by_group_id)
+: bulbs_by_group_id_(std::move(bulbs_by_group_id))
+{
 }
 
 std::vector<visualization_msgs::msg::Marker> TrafficLightVisualizer::generate_markers(
   const autoware_perception_msgs::msg::TrafficLightGroupArray & detected_traffic_lights,
-  const builtin_interfaces::msg::Time & stamp) const
+  builtin_interfaces::msg::Time stamp) const
 {
   std::vector<visualization_msgs::msg::Marker> markers;
 
   for (const auto & traffic_light_group : detected_traffic_lights.traffic_light_groups) {
-    auto it = bulb_points_by_group_id_.find(traffic_light_group.traffic_light_group_id);
-    if (it == bulb_points_by_group_id_.end()) {
+    auto it = bulbs_by_group_id_.find(traffic_light_group.traffic_light_group_id);
+    if (it == bulbs_by_group_id_.end()) {
       continue;
     }
     auto group_markers =

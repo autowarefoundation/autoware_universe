@@ -14,7 +14,7 @@
 
 #include "autoware/trajectory_validator/trajectory_validator_node.hpp"
 
-#include "autoware/trajectory_validator/filter_context.hpp"
+#include "autoware/trajectory_validator/validation_stage.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
 #include <autoware_utils_system/stop_watch.hpp>
@@ -33,20 +33,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-namespace
-{
-std::unordered_map<std::string, std::string> get_generator_uuid_to_name_map(
-  const autoware_internal_planning_msgs::msg::CandidateTrajectories & candidate_trajectories)
-{
-  std::unordered_map<std::string, std::string> uuid_to_name;
-  uuid_to_name.reserve(candidate_trajectories.generator_info.size());
-  for (const auto & info : candidate_trajectories.generator_info) {
-    uuid_to_name[autoware_utils_uuid::to_hex_string(info.generator_id)] = info.generator_name.data;
-  }
-  return uuid_to_name;
-}
-}  // namespace
 
 namespace autoware::trajectory_validator
 {
@@ -137,10 +123,16 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;
-  std::unordered_map<std::string, double> processing_time_ms;
+  if (listener_.is_old(params_)) {
+    params_ = listener_.get_params();
+    for (const auto & plugin : plugins_) {
+      plugin->update_parameters(params_);
+    }
+    RCLCPP_INFO(get_logger(), "Dynamic parameters updated successfully.");
+  }
 
-  stop_watch.tic("Total");
+  // 4. Instantiate and execute the stateless ValidationStage
+  ValidationStage validation_stage(plugins_);
 
   auto context_opt = take_data();
   if (!context_opt) {
@@ -148,101 +140,32 @@ void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr ms
     return;
   }
 
-  const FilterContext & context = context_opt.value();
-
-  if (listener_.is_old(params_)) {
-    params_ = listener_.get_params();
-
-    for (const auto & plugin : plugins_) {
-      plugin->update_parameters(params_);
-    }
-    RCLCPP_INFO(get_logger(), "Dynamic parameters updated successfully.");
-  }
+  const auto & context = context_opt.value();
+  const auto report = validation_stage.process(*msg, context);
 
   diagnostics_interface_.clear();
-  evaluation_tables_.clear();
-  size_t num_feasible_trajectories = 0;
 
-  // Create output message for filtered trajectories
-  const auto uuid_to_name = get_generator_uuid_to_name_map(*msg);
-
-  CandidateTrajectories filtered_msg;
-
-  std::vector<ValidationReport> reports;
-
-  for (const auto & trajectory : msg->candidate_trajectories) {
-    EvaluationTable table;
-    const auto hex_generator_id = autoware_utils_uuid::to_hex_string(trajectory.generator_id);
-    table.generator_id = hex_generator_id;
-
-    std::vector<MetricReport> metrics;
-    for (const auto & plugin : plugins_) {
-      PluginEvaluation evaluation;
-      evaluation.plugin_name = plugin->get_name();
-      evaluation.is_shadow_mode = plugin->is_shadow_mode();
-      stop_watch.tic(evaluation.plugin_name);
-
-      const auto res = plugin->is_feasible(trajectory.points, context);
-      if (!res) {
-        evaluation.is_feasible = false;
-        evaluation.reason = res.error();
-      } else {
-        const auto & val = res.value();
-        evaluation.is_feasible = evaluation.is_feasible && val.is_feasible;
-        if (!val.is_feasible) {
-          evaluation.reason = "Found failed metrics";
-        }
-        metrics.insert(metrics.end(), val.metrics.begin(), val.metrics.end());
-      }
-      processing_time_ms[evaluation.plugin_name] += stop_watch.toc(evaluation.plugin_name);
-
-      if (!evaluation.is_feasible) {
+  for (const auto & table : report.evaluation_tables) {
+    for (const auto & eval : table.plugin_evaluations) {
+      if (!eval.is_feasible) {
         RCLCPP_WARN_THROTTLE(
-          get_logger(), *get_clock(), 1000, "[%s] %s", plugin->get_name().c_str(),
-          evaluation.reason.c_str());
+          get_logger(), *get_clock(), 1000, "[%s] %s", eval.plugin_name.c_str(),
+          eval.reason.c_str());
       }
-
+      // Exact original behavior: last trajectory's result overwrites previous ones
       diagnostics_interface_.add_key_value(
-        plugin->get_name(), evaluation.is_feasible ? std::string("OK") : std::string("NG"));
-      table.evaluations[plugin->category()].push_back(evaluation);
-    }
-
-    evaluation_tables_.push_back(table);
-
-    if (table.all_acceptable()) filtered_msg.candidate_trajectories.push_back(trajectory);
-
-    const auto all_feasible = table.all_feasible();
-    if (all_feasible) ++num_feasible_trajectories;
-
-    reports.push_back(
-      autoware_trajectory_validator::build<ValidationReport>()
-        .trajectory_stamp(trajectory.header.stamp)
-        .generator_id(trajectory.generator_id)
-        .generator_name(uuid_to_name.at(hex_generator_id))
-        .level(all_feasible ? ValidationReport::OK : ValidationReport::ERROR)
-        .metrics(std::move(metrics)));
-  }
-
-  // Also filter generator_info to match kept trajectories
-  for (const auto & traj : filtered_msg.candidate_trajectories) {
-    auto it = std::find_if(
-      msg->generator_info.begin(), msg->generator_info.end(),
-      [&](const auto & info) { return traj.generator_id.uuid == info.generator_id.uuid; });
-
-    if (it != msg->generator_info.end()) {
-      filtered_msg.generator_info.push_back(*it);
+        eval.plugin_name, std::string(eval.is_feasible ? "OK" : "NG"));
     }
   }
 
-  pub_trajectories_->publish(filtered_msg);
+  // 6. Publish outputs
+  pub_trajectories_->publish(report.valid_trajectories);
+  update_diagnostic(*msg, report.num_feasible_trajectories);
 
-  update_diagnostic(*msg, num_feasible_trajectories);
+  publish_validation_reports(report.validation_reports);
 
-  publish_validation_reports(reports);
-
-  processing_time_ms["Total"] = stop_watch.toc("Total");
-
-  publish_debug(processing_time_ms, context.odometry->pose.pose);
+  // Wire up the debug publishers using the opaque report data
+  publish_debug(report.evaluation_tables, report.processing_time_ms, context.odometry->pose.pose);
 }
 
 void TrajectoryValidator::map_callback(const LaneletMapBin::ConstSharedPtr msg)
@@ -338,13 +261,14 @@ void TrajectoryValidator::publish_validation_reports(const std::vector<Validatio
 }
 
 void TrajectoryValidator::publish_debug(
+  const std::vector<EvaluationTable> & evaluation_tables,
   const std::unordered_map<std::string, double> & processing_time,
   const geometry_msgs::msg::Pose & marker_pose)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   publish_plugins_debug_markers();
-  publish_plugins_report_text(marker_pose);
+  publish_plugins_report_text(evaluation_tables, marker_pose);
   publish_processing_time(processing_time);
   publish_processing_time_text(processing_time);
 }
@@ -360,17 +284,18 @@ void TrajectoryValidator::publish_plugins_debug_markers() const
   }
 }
 
-void TrajectoryValidator::publish_plugins_report_text(const geometry_msgs::msg::Pose & marker_pose)
+void TrajectoryValidator::publish_plugins_report_text(
+  const std::vector<EvaluationTable> & evaluation_tables,
+  const geometry_msgs::msg::Pose & marker_pose)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
   std::unordered_map<std::string, int> used_filters;
-  for (const auto & eval : evaluation_tables_) {
-    for (const auto & [category, evaluations] : eval.evaluations) {
-      for (const auto & plugin_eval : evaluations) {
-        if (!plugin_eval.is_feasible) {
-          used_filters[plugin_eval.plugin_name]++;
-        }
+  for (const auto & eval : evaluation_tables) {
+    // Walk the flat list instead of the categorized map to simplify the code
+    for (const auto & plugin_eval : eval.plugin_evaluations) {
+      if (!plugin_eval.is_feasible) {
+        used_filters[plugin_eval.plugin_name]++;
       }
     }
   }
