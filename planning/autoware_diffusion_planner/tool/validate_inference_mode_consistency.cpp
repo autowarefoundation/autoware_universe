@@ -17,6 +17,7 @@
 #include "autoware/diffusion_planner/inference/onnxruntime_inference.hpp"
 #include "autoware/diffusion_planner/inference/single_step_inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"
+#include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/arg_reader.hpp"
 
 #include <CLI/CLI.hpp>
@@ -293,27 +294,6 @@ std::vector<float> with_batch(const std::vector<float> & data)
   return data;
 }
 
-std::vector<float> create_sampled_trajectories_from_npz(
-  const std::vector<float> & ego_current_state, const std::vector<float> & ego_agent_future_pose3)
-{
-  std::vector<float> sampled_trajectories(shape_size(SAMPLED_TRAJECTORIES_SHAPE), 0.0f);
-  sampled_trajectories[0] = ego_current_state.at(0);
-  sampled_trajectories[1] = ego_current_state.at(1);
-  sampled_trajectories[2] = ego_current_state.at(2);
-  sampled_trajectories[3] = ego_current_state.at(3);
-
-  const auto ego_agent_future = pose3_to_pose4(ego_agent_future_pose3);
-  for (int64_t t = 0; t < OUTPUT_T; ++t) {
-    const size_t output_offset = static_cast<size_t>(t + 1) * POSE_DIM;
-    const size_t input_offset = static_cast<size_t>(t) * POSE_DIM;
-    for (int64_t d = 0; d < POSE_DIM; ++d) {
-      sampled_trajectories[output_offset + static_cast<size_t>(d)] =
-        ego_agent_future[input_offset + static_cast<size_t>(d)];
-    }
-  }
-  return sampled_trajectories;
-}
-
 preprocess::InputDataMap load_npz_input_data(const std::filesystem::path & npz_path)
 {
   auto npz = cnpy::npz_load(npz_path.string());
@@ -345,9 +325,7 @@ preprocess::InputDataMap load_npz_input_data(const std::filesystem::path & npz_p
   input_data_map["turn_indicators"] =
     load_int32_array_as_float(npz, "turn_indicators", shape_without_batch(TURN_INDICATORS_SHAPE));
   input_data_map["delay"] = std::vector<float>(shape_size(DELAY_SHAPE), 0.0f);
-  input_data_map["sampled_trajectories"] = create_sampled_trajectories_from_npz(
-    input_data_map.at("ego_current_state"),
-    load_float_array(npz, "ego_agent_future", {OUTPUT_T, 3}));
+  input_data_map["sampled_trajectories"] = preprocess::create_sampled_trajectories(0.0);
   return input_data_map;
 }
 
