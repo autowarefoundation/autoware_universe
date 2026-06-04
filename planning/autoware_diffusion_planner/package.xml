@@ -43,7 +43,6 @@
   <depend>libexpected-dev</depend>
   <depend>nav_msgs</depend>
   <depend>nlohmann-json-dev</depend>
-  <depend>onnxruntime</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
