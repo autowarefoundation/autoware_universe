@@ -55,6 +55,10 @@ autoware_perception_msgs::msg::TrafficLightGroupArray DummyTrafficLight::create_
     return build_empty_message(now);
   }
 
+  if (config_.mode == Mode::Fixed) {
+    return build_fixed_message(now);
+  }
+
   return build_standalone_message(now);
 }
 
@@ -66,18 +70,18 @@ size_t DummyTrafficLight::traffic_light_count() const
 autoware_perception_msgs::msg::TrafficLightGroupArray DummyTrafficLight::build_standalone_message(
   const rclcpp::Time & now)
 {
-  autoware_perception_msgs::msg::TrafficLightGroupArray output;
-  output.stamp = now;
+  return build_groups_message(now, cycle_->update(now));
+}
 
-  const auto element = cycle_->update(now);
-  for (const auto id : traffic_light_ids_) {
-    autoware_perception_msgs::msg::TrafficLightGroup group;
-    group.traffic_light_group_id = id;
-    group.elements.push_back(element);
-    output.traffic_light_groups.push_back(group);
-  }
-
-  return output;
+autoware_perception_msgs::msg::TrafficLightGroupArray DummyTrafficLight::build_fixed_message(
+  const rclcpp::Time & now) const
+{
+  autoware_perception_msgs::msg::TrafficLightElement element;
+  element.color = config_.fixed_color;
+  element.shape = autoware_perception_msgs::msg::TrafficLightElement::CIRCLE;
+  element.status = autoware_perception_msgs::msg::TrafficLightElement::SOLID_ON;
+  element.confidence = 1.0;
+  return build_groups_message(now, element);
 }
 
 autoware_perception_msgs::msg::TrafficLightGroupArray DummyTrafficLight::build_empty_message(
@@ -85,6 +89,23 @@ autoware_perception_msgs::msg::TrafficLightGroupArray DummyTrafficLight::build_e
 {
   autoware_perception_msgs::msg::TrafficLightGroupArray output;
   output.stamp = now;
+  return output;
+}
+
+autoware_perception_msgs::msg::TrafficLightGroupArray DummyTrafficLight::build_groups_message(
+  const rclcpp::Time & now,
+  const autoware_perception_msgs::msg::TrafficLightElement & element) const
+{
+  autoware_perception_msgs::msg::TrafficLightGroupArray output;
+  output.stamp = now;
+
+  for (const auto id : traffic_light_ids_) {
+    autoware_perception_msgs::msg::TrafficLightGroup group;
+    group.traffic_light_group_id = id;
+    group.elements.push_back(element);
+    output.traffic_light_groups.push_back(group);
+  }
+
   return output;
 }
 

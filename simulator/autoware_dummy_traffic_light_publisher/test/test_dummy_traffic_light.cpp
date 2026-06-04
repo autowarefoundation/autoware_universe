@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <memory>
 
 using autoware::dummy_traffic_light_publisher::DummyTrafficLight;
@@ -43,6 +44,13 @@ protected:
   {
     return std::make_unique<DummyTrafficLight>(
       DummyTrafficLight::Config{Mode::Empty, kPassthroughTimeout},
+      std::make_unique<TrafficLightCycle>(kGreenDuration, kYellowDuration, kRedDuration));
+  }
+
+  std::unique_ptr<DummyTrafficLight> createFixed(uint8_t color)
+  {
+    return std::make_unique<DummyTrafficLight>(
+      DummyTrafficLight::Config{Mode::Fixed, kPassthroughTimeout, color},
       std::make_unique<TrafficLightCycle>(kGreenDuration, kYellowDuration, kRedDuration));
   }
 
@@ -85,6 +93,42 @@ TEST_F(DummyTrafficLightTest, StandaloneWithIdsPublishesGroups)
     EXPECT_EQ(group.elements[0].status, TrafficLightElement::SOLID_ON);
   }
   EXPECT_EQ(logic->traffic_light_count(), 3u);
+}
+
+TEST_F(DummyTrafficLightTest, FixedModePublishesFixedColorForAllIds)
+{
+  auto logic = createFixed(TrafficLightElement::RED);
+  logic->set_traffic_light_ids({100, 200, 300});
+
+  const auto msg = logic->create_message(timeFromSec(0.0));
+  ASSERT_EQ(msg.traffic_light_groups.size(), 3u);
+  for (const auto & group : msg.traffic_light_groups) {
+    ASSERT_EQ(group.elements.size(), 1u);
+    EXPECT_EQ(group.elements[0].color, TrafficLightElement::RED);
+    EXPECT_EQ(group.elements[0].shape, TrafficLightElement::CIRCLE);
+    EXPECT_EQ(group.elements[0].status, TrafficLightElement::SOLID_ON);
+  }
+}
+
+TEST_F(DummyTrafficLightTest, FixedModeWithoutIdsPublishesEmpty)
+{
+  auto logic = createFixed(TrafficLightElement::GREEN);
+  const auto msg = logic->create_message(timeFromSec(0.0));
+  EXPECT_TRUE(msg.traffic_light_groups.empty());
+}
+
+TEST_F(DummyTrafficLightTest, FixedModeColorDoesNotChangeOverTime)
+{
+  auto logic = createFixed(TrafficLightElement::GREEN);
+  logic->set_traffic_light_ids({1});
+
+  // Times that would move a standalone cycle into other phases must not affect the fixed color.
+  const double times[] = {0.0, 31.0, 35.0, 100.0};
+  for (const double sec : times) {
+    const auto msg = logic->create_message(timeFromSec(sec));
+    ASSERT_EQ(msg.traffic_light_groups.size(), 1u);
+    EXPECT_EQ(msg.traffic_light_groups[0].elements[0].color, TrafficLightElement::GREEN);
+  }
 }
 
 TEST_F(DummyTrafficLightTest, PassthroughRelaysInput)

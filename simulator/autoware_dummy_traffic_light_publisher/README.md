@@ -6,10 +6,13 @@ Publish dummy traffic light signals for simulation environments where a traffic 
 
 ## Modes
 
-| Mode         | Description                                                                           |
-| ------------ | ------------------------------------------------------------------------------------- |
-| `standalone` | Cycles through Green -> Yellow -> Red for all traffic lights found in the vector map. |
-| `empty`      | Publishes an empty `TrafficLightGroupArray` (no traffic light groups).                |
+| Mode         | Description                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| `standalone` | Cycles through Green -> Yellow -> Red for all traffic lights found in the vector map.          |
+| `empty`      | Publishes an empty `TrafficLightGroupArray` (no traffic light groups).                         |
+| `fixed`      | Publishes a single fixed color (`fixed_color`) for all traffic lights found in the vector map. |
+
+To assign different signals per traffic light ID, use pass-through instead (see below); `fixed` mode intentionally applies one color to every light.
 
 ## Pass-through
 
@@ -34,12 +37,13 @@ When a message is received on the input topic (`~/input/traffic_signals`), the n
 
 | Parameter             | Type   | Default   | Description                                                           |
 | --------------------- | ------ | --------- | --------------------------------------------------------------------- |
-| `mode`                | string | `"empty"` | Operating mode: `"standalone"` or `"empty"`.                          |
+| `mode`                | string | `"empty"` | Operating mode: `"standalone"`, `"empty"` or `"fixed"`.               |
 | `publish_rate`        | double | `10.0`    | Publishing frequency [Hz].                                            |
-| `green_duration`      | double | `30.0`    | Duration of the green phase [s].                                      |
-| `yellow_duration`     | double | `3.0`     | Duration of the yellow phase [s].                                     |
-| `red_duration`        | double | `30.0`    | Duration of the red phase [s].                                        |
+| `green_duration`      | double | `30.0`    | Duration of the green phase [s] (`standalone` mode).                  |
+| `yellow_duration`     | double | `3.0`     | Duration of the yellow phase [s] (`standalone` mode).                 |
+| `red_duration`        | double | `30.0`    | Duration of the red phase [s] (`standalone` mode).                    |
 | `passthrough_timeout` | double | `1.0`     | Time after last input before falling back to the configured mode [s]. |
+| `fixed_color`         | string | `"red"`   | Color published in `fixed` mode: `"green"`, `"yellow"` or `"red"`.    |
 
 ## Usage
 
@@ -53,6 +57,12 @@ To override the mode:
 
 ```bash
 ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml mode:=standalone
+```
+
+To publish a fixed color for all traffic lights:
+
+```bash
+ros2 launch autoware_dummy_traffic_light_publisher dummy_traffic_light_publisher.launch.xml mode:=fixed fixed_color:=green
 ```
 
 ## Design and extension tactics

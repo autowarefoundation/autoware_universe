@@ -19,8 +19,10 @@
 
 #include <rclcpp/time.hpp>
 
+#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -28,7 +30,7 @@
 namespace autoware::dummy_traffic_light_publisher
 {
 
-enum class Mode { Standalone, Empty };
+enum class Mode { Standalone, Empty, Fixed };
 
 class DummyTrafficLight
 {
@@ -37,6 +39,8 @@ public:
   {
     Mode mode;
     double passthrough_timeout;
+    // Color published in Fixed mode (a TrafficLightElement color constant). Unused in other modes.
+    uint8_t fixed_color = autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN;
   };
 
   DummyTrafficLight(const Config & config, std::unique_ptr<TrafficLightCycle> cycle);
@@ -51,8 +55,13 @@ public:
 private:
   autoware_perception_msgs::msg::TrafficLightGroupArray build_standalone_message(
     const rclcpp::Time & now);
+  autoware_perception_msgs::msg::TrafficLightGroupArray build_fixed_message(
+    const rclcpp::Time & now) const;
   static autoware_perception_msgs::msg::TrafficLightGroupArray build_empty_message(
     const rclcpp::Time & now);
+  autoware_perception_msgs::msg::TrafficLightGroupArray build_groups_message(
+    const rclcpp::Time & now,
+    const autoware_perception_msgs::msg::TrafficLightElement & element) const;
 
   Config config_;
   std::unique_ptr<TrafficLightCycle> cycle_;

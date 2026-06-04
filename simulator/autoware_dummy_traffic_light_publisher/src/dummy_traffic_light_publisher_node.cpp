@@ -18,6 +18,9 @@
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 
+#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
+
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -34,7 +37,27 @@ Mode parse_mode(const std::string & mode_str)
   if (mode_str == "empty") {
     return Mode::Empty;
   }
-  throw std::invalid_argument("mode must be 'standalone' or 'empty', got: '" + mode_str + "'");
+  if (mode_str == "fixed") {
+    return Mode::Fixed;
+  }
+  throw std::invalid_argument(
+    "mode must be 'standalone', 'empty' or 'fixed', got: '" + mode_str + "'");
+}
+
+uint8_t parse_color(const std::string & color_str)
+{
+  using Element = autoware_perception_msgs::msg::TrafficLightElement;
+  if (color_str == "green") {
+    return Element::GREEN;
+  }
+  if (color_str == "yellow") {
+    return Element::AMBER;
+  }
+  if (color_str == "red") {
+    return Element::RED;
+  }
+  throw std::invalid_argument(
+    "fixed_color must be 'green', 'yellow' or 'red', got: '" + color_str + "'");
 }
 
 void validate_positive(const std::string & name, double value)
@@ -59,10 +82,11 @@ DummyTrafficLightPublisherNode::DummyTrafficLightPublisherNode(const rclcpp::Nod
   validate_positive("red_duration", red_duration);
   const auto passthrough_timeout = this->declare_parameter<double>("passthrough_timeout");
   validate_positive("passthrough_timeout", passthrough_timeout);
+  const auto fixed_color = parse_color(this->declare_parameter<std::string>("fixed_color"));
 
   // Logic
   dummy_traffic_light_ = std::make_unique<DummyTrafficLight>(
-    DummyTrafficLight::Config{mode, passthrough_timeout},
+    DummyTrafficLight::Config{mode, passthrough_timeout, fixed_color},
     std::make_unique<TrafficLightCycle>(green_duration, yellow_duration, red_duration));
 
   // Pub/Sub/Timer (subscriptions use take() in onTimer instead of callbacks)
