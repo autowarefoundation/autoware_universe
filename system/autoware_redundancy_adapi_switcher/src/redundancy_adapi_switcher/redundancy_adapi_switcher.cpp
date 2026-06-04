@@ -27,27 +27,23 @@ RedundancyAdapiSwitcher::RedundancyAdapiSwitcher(const rclcpp::NodeOptions & nod
 
   is_main_ecu_ = declare_parameter<bool>("is_main_ecu");
   main_ecu_id_ = declare_parameter<uint8_t>("main_ecu_id");
-  sub_ecu_id_  = declare_parameter<uint8_t>("sub_ecu_id");
+  sub_ecu_id_ = declare_parameter<uint8_t>("sub_ecu_id");
 
-  pub_mrm_state_   = create_publisher<MrmState>("~/output/mrm_state", qos_status);
+  pub_mrm_state_ = create_publisher<MrmState>("~/output/mrm_state", qos_status);
   pub_diag_struct_ = create_publisher<DiagGraphStruct>("~/output/diag/struct", qos_struct);
   pub_diag_status_ = create_publisher<DiagGraphStatus>("~/output/diag/status", qos_status);
 
   sub_mrm_state_ = create_subscription<MrmState>(
-    "~/input/mrm_state", qos_status,
-    [this](const MrmState::ConstSharedPtr & msg) {
+    "~/input/mrm_state", qos_status, [this](const MrmState::ConstSharedPtr & msg) {
       if (is_active_output_master()) pub_mrm_state_->publish(*msg);
     });
 
   sub_diag_struct_ = create_subscription<DiagGraphStruct>(
     "~/input/diag/struct", qos_struct,
-    [this](const DiagGraphStruct::ConstSharedPtr & msg) {
-      pending_diag_struct_ = *msg;
-    });
+    [this](const DiagGraphStruct::ConstSharedPtr & msg) { pending_diag_struct_ = *msg; });
 
   sub_diag_status_ = create_subscription<DiagGraphStatus>(
-    "~/input/diag/status", qos_status,
-    [this](const DiagGraphStatus::ConstSharedPtr & msg) {
+    "~/input/diag/status", qos_status, [this](const DiagGraphStatus::ConstSharedPtr & msg) {
       if (!is_active_output_master()) return;
       pub_diag_status_->publish(*msg);
       if (pending_diag_struct_) {
@@ -77,10 +73,11 @@ void RedundancyAdapiSwitcher::on_active_control_unit(const ActiveControlUnit::Co
     return std::find(msg->ids.begin(), msg->ids.end(), id) != msg->ids.end();
   };
   const bool main_active = contains(main_ecu_id_);
-  const bool sub_active  = contains(sub_ecu_id_);
+  const bool sub_active = contains(sub_ecu_id_);
 
   if (main_active && sub_active) {
-    if (changed) RCLCPP_WARN(get_logger(), "Both Main and Sub ECU are active — keeping current master.");
+    if (changed)
+      RCLCPP_WARN(get_logger(), "Both Main and Sub ECU are active — keeping current master.");
     return;
   }
 
@@ -90,8 +87,7 @@ void RedundancyAdapiSwitcher::on_active_control_unit(const ActiveControlUnit::Co
     if (changed) {
       RCLCPP_WARN(
         get_logger(), "%s ECU assumed faulty — deferring output to %s ECU.",
-        is_main_ecu_ ? "Main" : "Sub",
-        is_main_ecu_ ? "Sub" : "Main");
+        is_main_ecu_ ? "Main" : "Sub", is_main_ecu_ ? "Sub" : "Main");
     }
     return;
   }
