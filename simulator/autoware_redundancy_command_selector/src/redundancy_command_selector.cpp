@@ -33,15 +33,13 @@ RedundancyCommandSelector::RedundancyCommandSelector(const rclcpp::NodeOptions &
   pub_turn_ = create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators_command", qos);
 
   sub_main_control_ = create_subscription<Control>(
-    "~/input/main/control_command", qos,
-    [this](const Control::ConstSharedPtr & msg) {
+    "~/input/main/control_command", qos, [this](const Control::ConstSharedPtr & msg) {
       if (use_main_) {
         pub_control_->publish(*msg);
       }
     });
   sub_main_gear_ = create_subscription<GearCommand>(
-    "~/input/main/gear_command", qos,
-    [this](const GearCommand::ConstSharedPtr & msg) {
+    "~/input/main/gear_command", qos, [this](const GearCommand::ConstSharedPtr & msg) {
       if (use_main_) {
         pub_gear_->publish(*msg);
       }
@@ -62,15 +60,13 @@ RedundancyCommandSelector::RedundancyCommandSelector(const rclcpp::NodeOptions &
     });
 
   sub_sub_control_ = create_subscription<Control>(
-    "~/input/sub/control_command", qos,
-    [this](const Control::ConstSharedPtr & msg) {
+    "~/input/sub/control_command", qos, [this](const Control::ConstSharedPtr & msg) {
       if (!use_main_) {
         pub_control_->publish(*msg);
       }
     });
   sub_sub_gear_ = create_subscription<GearCommand>(
-    "~/input/sub/gear_command", qos,
-    [this](const GearCommand::ConstSharedPtr & msg) {
+    "~/input/sub/gear_command", qos, [this](const GearCommand::ConstSharedPtr & msg) {
       if (!use_main_) {
         pub_gear_->publish(*msg);
       }

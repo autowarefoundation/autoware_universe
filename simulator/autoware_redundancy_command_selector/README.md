@@ -17,33 +17,33 @@ Instead of switching the output ECU itself in simulation, this node switches bet
 
 ### Input
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `~/input/main/control_command` | `autoware_control_msgs/msg/Control` | Main ECU control command |
-| `~/input/main/gear_command` | `autoware_vehicle_msgs/msg/GearCommand` | Main ECU gear command |
-| `~/input/main/hazard_lights_command` | `autoware_vehicle_msgs/msg/HazardLightsCommand` | Main ECU hazard lights command |
+| Name                                   | Type                                              | Description                      |
+| -------------------------------------- | ------------------------------------------------- | -------------------------------- |
+| `~/input/main/control_command`         | `autoware_control_msgs/msg/Control`               | Main ECU control command         |
+| `~/input/main/gear_command`            | `autoware_vehicle_msgs/msg/GearCommand`           | Main ECU gear command            |
+| `~/input/main/hazard_lights_command`   | `autoware_vehicle_msgs/msg/HazardLightsCommand`   | Main ECU hazard lights command   |
 | `~/input/main/turn_indicators_command` | `autoware_vehicle_msgs/msg/TurnIndicatorsCommand` | Main ECU turn indicators command |
-| `~/input/sub/control_command` | `autoware_control_msgs/msg/Control` | Sub ECU control command |
-| `~/input/sub/gear_command` | `autoware_vehicle_msgs/msg/GearCommand` | Sub ECU gear command |
-| `~/input/sub/hazard_lights_command` | `autoware_vehicle_msgs/msg/HazardLightsCommand` | Sub ECU hazard lights command |
-| `~/input/sub/turn_indicators_command` | `autoware_vehicle_msgs/msg/TurnIndicatorsCommand` | Sub ECU turn indicators command |
-| `~/input/active_control_unit` | `tier4_system_msgs/msg/ActiveControlUnit` | Active ECU IDs |
+| `~/input/sub/control_command`          | `autoware_control_msgs/msg/Control`               | Sub ECU control command          |
+| `~/input/sub/gear_command`             | `autoware_vehicle_msgs/msg/GearCommand`           | Sub ECU gear command             |
+| `~/input/sub/hazard_lights_command`    | `autoware_vehicle_msgs/msg/HazardLightsCommand`   | Sub ECU hazard lights command    |
+| `~/input/sub/turn_indicators_command`  | `autoware_vehicle_msgs/msg/TurnIndicatorsCommand` | Sub ECU turn indicators command  |
+| `~/input/active_control_unit`          | `tier4_system_msgs/msg/ActiveControlUnit`         | Active ECU IDs                   |
 
 ### Output
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `~/output/control_command` | `autoware_control_msgs/msg/Control` | Selected control command |
-| `~/output/gear_command` | `autoware_vehicle_msgs/msg/GearCommand` | Selected gear command |
-| `~/output/hazard_lights_command` | `autoware_vehicle_msgs/msg/HazardLightsCommand` | Selected hazard lights command |
+| Name                               | Type                                              | Description                      |
+| ---------------------------------- | ------------------------------------------------- | -------------------------------- |
+| `~/output/control_command`         | `autoware_control_msgs/msg/Control`               | Selected control command         |
+| `~/output/gear_command`            | `autoware_vehicle_msgs/msg/GearCommand`           | Selected gear command            |
+| `~/output/hazard_lights_command`   | `autoware_vehicle_msgs/msg/HazardLightsCommand`   | Selected hazard lights command   |
 | `~/output/turn_indicators_command` | `autoware_vehicle_msgs/msg/TurnIndicatorsCommand` | Selected turn indicators command |
 
 ## Parameters
 
-| Name | Type | Description |
-| --- | --- | --- |
+| Name          | Type    | Description            |
+| ------------- | ------- | ---------------------- |
 | `main_ecu_id` | `uint8` | ECU ID treated as Main |
-| `sub_ecu_id` | `uint8` | ECU ID treated as Sub |
+| `sub_ecu_id`  | `uint8` | ECU ID treated as Sub  |
 
 ## Launch
 

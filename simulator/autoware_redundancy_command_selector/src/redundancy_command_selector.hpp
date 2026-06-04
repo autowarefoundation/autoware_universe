@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__REDUNDANCY_COMMAND_SELECTOR__REDUNDANCY_COMMAND_SELECTOR_HPP_
-#define AUTOWARE__REDUNDANCY_COMMAND_SELECTOR__REDUNDANCY_COMMAND_SELECTOR_HPP_
+#ifndef REDUNDANCY_COMMAND_SELECTOR_HPP_
+#define REDUNDANCY_COMMAND_SELECTOR_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -67,4 +67,4 @@ private:
 
 }  // namespace autoware::simulator::redundancy_command_selector
 
-#endif  // AUTOWARE__REDUNDANCY_COMMAND_SELECTOR__REDUNDANCY_COMMAND_SELECTOR_HPP_
+#endif  // REDUNDANCY_COMMAND_SELECTOR_HPP_
