@@ -336,12 +336,9 @@ TrafficLightComplianceChecker::check_with_filtered_signals(
       get_red_light_violations(red_stop_lines, trajectory_ls, stop_point, backward_length);
   }
   if (check_amber_lights) {
-    const auto amber_light_violations =
-      params_.treat_amber_light_as_red_light
-        ? get_red_light_violations(amber_stop_lines, trajectory_ls, stop_point, backward_length)
-        : get_amber_light_violations(
-            amber_stop_lines, trajectory, trajectory_ls, stop_point, force_reject_amber_ids,
-            backward_length);
+    const auto amber_light_violations = get_amber_light_violations(
+      amber_stop_lines, trajectory, trajectory_ls, stop_point, force_reject_amber_ids,
+      backward_length);
     result.violations.insert(
       result.violations.end(), amber_light_violations.begin(), amber_light_violations.end());
   }
