@@ -66,10 +66,10 @@ private:
   void splitByRange(const ObjsMsgType & input_object);
 
   // Subscriber
-  AUTOWARE_SUBSCRIPTION_PTR(ObjsMsgType) sub_objects_{};
+  AUTOWARE_SUBSCRIPTION_PTR(ObjsMsgType) sub_objects_ {};
 
   // Publisher
-  AUTOWARE_PUBLISHER_PTR(ObjsMsgType) pub_output_objects_{};
+  AUTOWARE_PUBLISHER_PTR(ObjsMsgType) pub_output_objects_ {};
 
   autoware::agnocast_wrapper::Buffer tf_buffer_;
   autoware::agnocast_wrapper::TransformListener tf_listener_;
