@@ -21,7 +21,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 #include <vector>
 
 namespace autoware::diffusion_planner
