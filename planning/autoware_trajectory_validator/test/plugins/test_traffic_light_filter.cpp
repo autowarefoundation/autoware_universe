@@ -57,6 +57,7 @@ protected:
     node_->declare_parameter("traffic_light.delay_response_time", 0.5);
     node_->declare_parameter("traffic_light.crossing_time_limit", 2.75);
     node_->declare_parameter("traffic_light.treat_amber_light_as_red_light", false);
+    node_->declare_parameter("traffic_light.treat_unknown_light_as_red_light", false);
     node_->declare_parameter("traffic_light.stable_duration_threshold_red", 0.0);
     node_->declare_parameter("traffic_light.stable_duration_threshold_amber", 0.0);
     node_->declare_parameter("traffic_light.amber_rejection_hysteresis_duration", 0.0);
@@ -70,6 +71,7 @@ protected:
     params.traffic_light.delay_response_time = 0.5;
     params.traffic_light.crossing_time_limit = 2.75;
     params.traffic_light.treat_amber_light_as_red_light = false;
+    params.traffic_light.treat_unknown_light_as_red_light = false;
     params.traffic_light.stable_duration_threshold_red = 0.0;
     params.traffic_light.stable_duration_threshold_amber = 0.0;
     params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
@@ -390,6 +392,42 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
   expect_feasibility(
     points, false,
     "Should return false for amber light when treat_amber_light_as_red_light is true");
+}
+
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithUnknownLightAsRedLight)
+{
+  const lanelet::Id light_id = 301;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
+
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_unknown_light_as_red_light = true;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  // Crossing unknown light when treat_unknown_light_as_red_light is true
+  auto points = create_trajectory(0.0, 10.0, 5.0);
+
+  expect_feasibility(
+    points, false,
+    "Should return false for unknown light when treat_unknown_light_as_red_light is true");
+
+  // Setting parameter to false
+  params.traffic_light.treat_unknown_light_as_red_light = false;
+  filter_->update_parameters(params);
+  expect_feasibility(
+    points, true,
+    "Should return true for unknown light when treat_unknown_light_as_red_light is false");
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithStabilityFiltering)

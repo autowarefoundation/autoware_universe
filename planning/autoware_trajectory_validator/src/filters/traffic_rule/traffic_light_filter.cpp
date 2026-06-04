@@ -14,6 +14,8 @@
 
 #include "autoware/trajectory_validator/filters/traffic_rule/traffic_light_filter.hpp"
 
+#include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -21,6 +23,28 @@
 
 namespace
 {
+std::string get_signal_label(
+  const autoware_perception_msgs::msg::TrafficLightGroup & signal,
+  const validator::Params::TrafficLight & params)
+{
+  const bool is_red = autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
+    signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+    autoware_perception_msgs::msg::TrafficLightElement::RED);
+  const bool is_amber = autoware::traffic_light_utils::hasTrafficLightShapeAndColor(
+    signal.elements, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE,
+    autoware_perception_msgs::msg::TrafficLightElement::AMBER);
+  const bool is_unknown = autoware::traffic_light_utils::hasTrafficLightColor(
+    signal.elements, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN);
+
+  if (is_red) return "red";
+  if (is_amber) {
+    if (params.treat_amber_light_as_red_light) return "amber as red";
+    return "amber";
+  }
+  if (is_unknown && params.treat_unknown_light_as_red_light) return "unknown as red";
+  return "unknown";
+}
+
 std::optional<std::string> is_invalid_input(
   const autoware::trajectory_validator::FilterContext & context,
   const std::shared_ptr<autoware::vehicle_info_utils::VehicleInfo> & vehicle_info)
@@ -57,6 +81,7 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
   p.delay_response_time = params.delay_response_time;
   p.crossing_time_limit = params.crossing_time_limit;
   p.treat_amber_light_as_red_light = params.treat_amber_light_as_red_light;
+  p.treat_unknown_light_as_red_light = params.treat_unknown_light_as_red_light;
   p.stop_overshoot_margin = params.stop_overshoot_margin;
   p.stable_duration_threshold_red = params.stable_duration_threshold_red;
   p.stable_duration_threshold_amber = params.stable_duration_threshold_amber;
@@ -104,6 +129,11 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
 
   const auto current_time = rclcpp::Time(context.odometry->header.stamp);
 
+  if (!last_frame_time_ || *last_frame_time_ != current_time) {
+    aggregated_rejections_.clear();
+    last_frame_time_ = current_time;
+  }
+
   const traffic_light_compliance_checker::Inputs inputs{
     traj_points,
     context.lanelet_map,
@@ -129,6 +159,10 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
     }
   }
 
+  update_debug_data(
+    result->violations, *context.traffic_light_signals, current_time,
+    context.odometry->pose.pose.position.z);
+
   std::vector<MetricReport> metrics;
   metrics.push_back(
     autoware_trajectory_validator::build<MetricReport>()
@@ -150,6 +184,63 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
 
   return ValidationResult{is_feasible, std::move(metrics)};
 }
+
+void TrafficLightFilter::update_debug_data(
+  const std::vector<traffic_light_compliance_checker::Violation> & violations,
+  const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_light_signals,
+  const rclcpp::Time & current_time, const double z)
+{
+  for (const auto & violation : violations) {
+    auto & info = aggregated_rejections_[violation.traffic_light_id];
+    info.rejection_count++;
+    if (info.rejection_count == 1) {
+      info.stop_line_pos.x = violation.stop_line.front().x();
+      info.stop_line_pos.y = violation.stop_line.front().y();
+      info.stop_line_pos.z = z;
+
+      auto it = std::find_if(
+        traffic_light_signals.traffic_light_groups.begin(),
+        traffic_light_signals.traffic_light_groups.end(),
+        [&](const auto & g) { return g.traffic_light_group_id == violation.traffic_light_id; });
+
+      if (it != traffic_light_signals.traffic_light_groups.end()) {
+        info.signal_label = get_signal_label(*it, params_);
+      } else {
+        info.signal_label = "unknown";
+      }
+    }
+  }
+  debug_markers_.markers.clear();
+  visualization_msgs::msg::Marker marker;
+  marker.header.frame_id = "map";
+  marker.header.stamp = current_time;
+  marker.ns = "rejection_info";
+  marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+  marker.action = visualization_msgs::msg::Marker::ADD;
+  marker.scale.z = 0.5;
+  marker.color.a = 0.9;
+  for (const auto & [tl_id, info] : aggregated_rejections_) {
+    marker.id = static_cast<int>(debug_markers_.markers.size());
+    marker.pose.position = info.stop_line_pos;
+    marker.pose.position.z += 2.0;
+
+    if (info.signal_label == "red" || info.signal_label == "amber as red") {
+      marker.color.r = 1.0;
+      marker.color.g = 0.0;
+      marker.color.b = 0.0;
+    } else {
+      marker.color.r = 1.0;
+      marker.color.g = 0.5;
+      marker.color.b = 0.0;
+    }
+
+    marker.text = "TL: " + std::to_string(tl_id) + ", " + info.signal_label +
+                  ", Rejections: " + std::to_string(info.rejection_count);
+
+    debug_markers_.markers.push_back(marker);
+  }
+}
+
 }  // namespace autoware::trajectory_validator::plugin::traffic_rule
 
 #include <pluginlib/class_list_macros.hpp>
