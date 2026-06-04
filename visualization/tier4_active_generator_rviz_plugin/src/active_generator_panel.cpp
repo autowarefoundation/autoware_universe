@@ -14,12 +14,28 @@
 
 #include "active_generator_panel.hpp"
 
+#include <QColor>
 #include <pluginlib/class_list_macros.hpp>
 #include <rviz_common/display_context.hpp>
 
 #include <algorithm>
 #include <limits>
 #include <string>
+
+namespace
+{
+
+QString colorForGeneratorName(const std::string & name)
+{
+  int hash = 0;
+  for (const char character : name) {
+    hash = (hash * 31 + static_cast<unsigned char>(character)) % 360;
+  }
+  const int hue = (hash + 360) % 360;
+  return QColor::fromHslF(hue / 360.0, 0.62, 0.52).name();
+}
+
+}  // namespace
 
 namespace rviz_plugins
 {
@@ -110,13 +126,7 @@ void ActiveGeneratorPanel::updateLabel(const std::string & generator_name)
     bg_color = "#333333";  // Dark gray
   } else {
     text = QString::fromStdString(generator_name);
-    if (generator_name.rfind("DiffusionPlanner", 0) == 0) {
-      bg_color = "#4CAF50";  // Green
-    } else if (generator_name.rfind("MinimumRuleBasedPlanner", 0) == 0) {
-      bg_color = "#2196F3";  // Blue
-    } else {
-      bg_color = "#9E9E9E";  // Gray
-    }
+    bg_color = colorForGeneratorName(generator_name);
   }
 
   generator_label_->setText(text);
