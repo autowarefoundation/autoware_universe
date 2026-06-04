@@ -15,6 +15,7 @@
 #include "traffic_light_cycle.hpp"
 
 #include <cmath>
+#include <stdexcept>
 
 namespace autoware::dummy_traffic_light_publisher
 {
@@ -23,6 +24,9 @@ TrafficLightCycle::TrafficLightCycle(
   double green_duration, double yellow_duration, double red_duration)
 : green_duration_(green_duration), yellow_duration_(yellow_duration), red_duration_(red_duration)
 {
+  if (green_duration_ <= 0.0 || yellow_duration_ <= 0.0 || red_duration_ <= 0.0) {
+    throw std::invalid_argument("TrafficLightCycle durations must be positive");
+  }
 }
 
 autoware_perception_msgs::msg::TrafficLightElement TrafficLightCycle::update(

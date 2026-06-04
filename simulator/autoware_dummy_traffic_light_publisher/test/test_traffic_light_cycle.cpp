@@ -16,6 +16,8 @@
 
 #include <gtest/gtest.h>
 
+#include <stdexcept>
+
 using autoware::dummy_traffic_light_publisher::TrafficLightCycle;
 using autoware_perception_msgs::msg::TrafficLightElement;
 
@@ -142,4 +144,17 @@ TEST_F(TrafficLightCycleTest, NonZeroStartTime)
   EXPECT_EQ(cycle.update(timeFromSec(130.0)).color, TrafficLightElement::AMBER);
   // 33s after start → Red
   EXPECT_EQ(cycle.update(timeFromSec(133.0)).color, TrafficLightElement::RED);
+}
+
+TEST(TrafficLightCycleConstruction, ThrowsOnNonPositiveDuration)
+{
+  // Non-positive durations make the cycle total zero/negative and would break fmod, so reject them.
+  EXPECT_THROW(TrafficLightCycle(0.0, 3.0, 30.0), std::invalid_argument);
+  EXPECT_THROW(TrafficLightCycle(30.0, -1.0, 30.0), std::invalid_argument);
+  EXPECT_THROW(TrafficLightCycle(30.0, 3.0, 0.0), std::invalid_argument);
+}
+
+TEST(TrafficLightCycleConstruction, AcceptsPositiveDurations)
+{
+  EXPECT_NO_THROW(TrafficLightCycle(30.0, 3.0, 30.0));
 }

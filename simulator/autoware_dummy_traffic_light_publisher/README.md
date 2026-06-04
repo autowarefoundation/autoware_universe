@@ -73,8 +73,11 @@ When extending, modify only the layer that owns the responsibility:
 
 ### Run node directly
 
+The parameters have no in-code defaults, so a parameter file must be provided (e.g. the packaged `config/dummy_traffic_light_publisher.param.yaml`):
+
 ```bash
 ros2 run autoware_dummy_traffic_light_publisher autoware_dummy_traffic_light_publisher_node --ros-args \
+  --params-file $(ros2 pkg prefix --share autoware_dummy_traffic_light_publisher)/config/dummy_traffic_light_publisher.param.yaml \
   -p mode:=standalone \
   -r ~/input/vector_map:=/map/vector_map \
   -r ~/input/traffic_signals:=/simulator/input/traffic_signals \

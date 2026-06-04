@@ -84,7 +84,7 @@ DummyTrafficLightPublisherNode::DummyTrafficLightPublisherNode(const rclcpp::Nod
     "~/input/traffic_signals", rclcpp::QoS(1),
     [](autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr) {}, sub_options);
 
-  const auto period = std::chrono::milliseconds(static_cast<int64_t>(1e3 / publish_rate));
+  const auto period = rclcpp::Rate(publish_rate).period();
   timer_ = rclcpp::create_timer(
     this, get_clock(), period, std::bind(&DummyTrafficLightPublisherNode::onTimer, this));
 }
