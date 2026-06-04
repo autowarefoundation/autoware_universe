@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library path="tier4_active_generator_rviz_plugin">
+  <class name="rviz_plugins/ActiveGeneratorPanel"
+         type="rviz_plugins::ActiveGeneratorPanel"
+         base_class_type="rviz_common::Panel">
+    <description>
+      A panel that displays which trajectory generator (e.g. DiffusionPlanner_batch_0,
+      MinimumRuleBasedPlanner) is currently selected (highest score) by the trajectory ranker.
+    </description>
+  </class>
+</library>
