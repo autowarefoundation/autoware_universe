@@ -1,10 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <node
-    pkg="autoware_redundancy_command_selector"
-    exec="redundancy_command_selector_node"
-    name="redundancy_command_selector"
-    output="screen">
+  <node pkg="autoware_redundancy_command_selector" exec="redundancy_command_selector_node" name="redundancy_command_selector" output="screen">
     <remap from="~/input/main/control_command" to="/main/control/command/control_cmd"/>
     <remap from="~/input/main/gear_command" to="/main/control/command/gear_cmd"/>
     <remap from="~/input/main/hazard_lights_command" to="/main/control/command/hazard_lights_cmd"/>
