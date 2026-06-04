@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_REDUNDANCY_ADAPI_SWITCHER__REDUNDANCY_ADAPI_SWITCHER_HPP_
-#define AUTOWARE_REDUNDANCY_ADAPI_SWITCHER__REDUNDANCY_ADAPI_SWITCHER_HPP_
+#ifndef REDUNDANCY_ADAPI_SWITCHER__REDUNDANCY_ADAPI_SWITCHER_HPP_
+#define REDUNDANCY_ADAPI_SWITCHER__REDUNDANCY_ADAPI_SWITCHER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -52,8 +52,8 @@ private:
   uint8_t sub_ecu_id_;
 
   // State
-  bool use_main_ecu_{true};    // true: Main ECU is the output master; false: Sub ECU
-  bool output_blocked_{false}; // true while active_control_unit reports an empty ID list
+  bool use_main_ecu_{true};     // true: Main ECU is the output master; false: Sub ECU
+  bool output_blocked_{false};  // true while active_control_unit reports an empty ID list
   std::optional<std::vector<uint8_t>> last_active_ids_;
 
   // DiagGraphStruct is transient_local — buffer the latest value so it can be
@@ -74,4 +74,4 @@ private:
 
 }  // namespace autoware::redundancy_adapi_switcher
 
-#endif  // AUTOWARE_REDUNDANCY_ADAPI_SWITCHER__REDUNDANCY_ADAPI_SWITCHER_HPP_
+#endif  // REDUNDANCY_ADAPI_SWITCHER__REDUNDANCY_ADAPI_SWITCHER_HPP_
