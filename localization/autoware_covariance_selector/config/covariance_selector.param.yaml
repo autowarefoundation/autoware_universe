@@ -1,0 +1,46 @@
+/**:
+  ros__parameters:
+    # Default environment ID when the pose is not within any designated area polygon
+    # Corresponds to feature_environment_recognizer's default_environment_id
+    default_environment_id: 0
+
+    # Area subtype to environment ID mapping
+    # The lanelet2 polygon type must be "feature_environment_specify"
+    # Environment ID definitions:
+    #   0: Normal environment
+    #   1: Uniform road (e.g., tunnel straight sections)
+    #   2: Feature-poor road
+    area_subtype_uniform_road:
+      environment_id: 1
+    area_subtype_feature_poor_road:
+      environment_id: 2
+
+    # Covariance matrix (6x6 row-major, 36 elements) applied when no environment match is found.
+    # This should match the pose estimator's default output_pose_covariance.
+    default_output_pose_covariance:
+      [0.0225, 0.0,   0.0,   0.0,      0.0,      0.0,
+       0.0,   0.0225, 0.0,   0.0,      0.0,      0.0,
+       0.0,   0.0,   0.0225, 0.0,      0.0,      0.0,
+       0.0,   0.0,   0.0,   0.000625, 0.0,      0.0,
+       0.0,   0.0,   0.0,   0.0,      0.000625, 0.0,
+       0.0,   0.0,   0.0,   0.0,      0.0,      0.000625]
+
+    # Covariance for environment_id=1 (uniform road / tunnel)
+    # Lateral (Y) covariance is enlarged to reflect degraded lateral matching confidence.
+    environment_1_output_pose_covariance:
+      [0.0225, 0.0,  0.0,   0.0,      0.0,      0.0,
+       0.0,   0.16,  0.0,   0.0,      0.0,      0.0,
+       0.0,   0.0,   0.0225, 0.0,     0.0,      0.0,
+       0.0,   0.0,   0.0,   0.000625, 0.0,      0.0,
+       0.0,   0.0,   0.0,   0.0,      0.000625, 0.0,
+       0.0,   0.0,   0.0,   0.0,      0.0,      0.000625]
+
+    # Covariance for environment_id=2 (feature-poor road)
+    # Both X and Y are enlarged; overall confidence is low.
+    environment_2_output_pose_covariance:
+      [0.16,  0.0,  0.0,   0.0,      0.0,      0.0,
+       0.0,   0.16,  0.0,   0.0,      0.0,      0.0,
+       0.0,   0.0,   0.0225, 0.0,     0.0,      0.0,
+       0.0,   0.0,   0.0,   0.000625, 0.0,      0.0,
+       0.0,   0.0,   0.0,   0.0,      0.000625, 0.0,
+       0.0,   0.0,   0.0,   0.0,      0.0,      0.000625]
