@@ -172,12 +172,12 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     if(onnxruntime_FOUND)
       include(FetchContent)
       find_package(ZLIB REQUIRED)
-      FetchContent_Declare(
+      fetchcontent_declare(
         CLI11
         GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
         GIT_TAG v2.4.2
       )
-      FetchContent_MakeAvailable(CLI11)
+      fetchcontent_makeavailable(CLI11)
 
       add_library(cnpy STATIC
         tool/cnpy/cnpy.cpp
