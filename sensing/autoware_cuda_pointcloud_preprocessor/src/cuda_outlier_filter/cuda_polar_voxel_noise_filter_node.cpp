@@ -164,16 +164,11 @@ void CudaPolarVoxelNoiseFilterNode::pointcloud_callback(
   // overwritten during one frame processing
   std::scoped_lock lock(param_mutex_);
 
-  if (!msg) {
-    RCLCPP_ERROR(this->get_logger(), "Input point cloud is null");
-    throw std::invalid_argument("Input point cloud is null");
-  }
-
-  validate_filter_inputs(msg);
-
   // Check if the input point cloud has PointXYZIRCAEDT layout (with pre-computed polar coordinates)
 
   std::call_once(input_format_once_flag_, [this, &msg]() {
+    validate_filter_inputs(msg);
+
     const bool has_polar_coords =
       autoware::pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzircaedt(
         *msg);

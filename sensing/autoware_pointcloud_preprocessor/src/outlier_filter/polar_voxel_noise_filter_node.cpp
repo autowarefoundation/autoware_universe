@@ -108,24 +108,19 @@ void PolarVoxelNoiseFilterComponent::filter(
 {
   std::scoped_lock lock(mutex_);
 
-  if (!input) {
-    RCLCPP_ERROR(get_logger(), "Input point cloud is null");
-    throw std::invalid_argument("Input point cloud is null");
-  }
+  std::call_once(input_format_once_flag_, [this, &input, &indices]() {
+    validate_filter_inputs(*input, indices);
 
-  // Phase 1: Validate inputs
-  validate_filter_inputs(*input, indices);
+    if (has_polar_coordinates(*input)) {
+      input_format_ = InputPointCloudFormat::PointXYZIRCAEDT;
+      RCLCPP_DEBUG(
+        get_logger(), "Processing PointXYZIRCAEDT format with pre-computed polar coordinates");
+      return;
+    }
 
-  // Check if we have pre-computed polar coordinates
-  bool has_polar_coords = has_polar_coordinates(*input);
-
-  if (has_polar_coords) {
-    RCLCPP_DEBUG_ONCE(
-      get_logger(), "Processing PointXYZIRCAEDT format with pre-computed polar coordinates");
-  } else {
-    RCLCPP_DEBUG_ONCE(
-      get_logger(), "Processing PointXYZIRC format, computing azimuth and elevation");
-  }
+    input_format_ = InputPointCloudFormat::PointXYZIRC;
+    RCLCPP_DEBUG(get_logger(), "Processing PointXYZIRC format, computing azimuth and elevation");
+  });
 
   // Phase 2: Collect voxel information (unified for both formats)
   auto point_voxel_info = collect_voxel_info(*input);
@@ -152,7 +147,8 @@ PolarVoxelNoiseFilterComponent::collect_voxel_info(const PointCloud2 & input)
   PointVoxelInfoVector point_voxel_info;
   point_voxel_info.reserve(input.width * input.height);
 
-  bool has_polar_coords = has_polar_coordinates(input);
+  const bool has_polar_coords =
+    input_format_ == InputPointCloudFormat::PointXYZIRCAEDT || has_polar_coordinates(input);
 
   if (has_polar_coords) {
     process_polar_points(input, point_voxel_info);

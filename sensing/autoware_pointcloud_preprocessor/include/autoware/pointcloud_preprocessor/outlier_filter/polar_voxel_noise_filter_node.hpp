@@ -143,6 +143,8 @@ public:
   };
 
 protected:
+  enum class InputPointCloudFormat { PointXYZIRC, PointXYZIRCAEDT };
+
   // Parameter update helper methods
   void update_primary_return_types(const rclcpp::Parameter & param);
   void update_publish_noise_cloud(const rclcpp::Parameter & param);
@@ -230,6 +232,8 @@ protected:
   std::vector<int> primary_return_types_;
   bool publish_noise_cloud_{};
   std::mutex mutex_;
+  std::once_flag input_format_once_flag_;
+  std::optional<InputPointCloudFormat> input_format_;
 
   // Publishers and diagnostics
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr noise_cloud_pub_;
