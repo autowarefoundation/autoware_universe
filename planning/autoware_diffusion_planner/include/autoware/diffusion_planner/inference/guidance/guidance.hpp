@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__DIFFUSION_PLANNER__INFERENCE__GUIDANCE__GUIDANCE_HPP_
 #define AUTOWARE__DIFFUSION_PLANNER__INFERENCE__GUIDANCE__GUIDANCE_HPP_
 
-#include <string>
 #include <vector>
 
 namespace autoware::diffusion_planner
