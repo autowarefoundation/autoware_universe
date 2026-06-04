@@ -64,7 +64,6 @@ public:
   InferenceResult infer(const preprocess::InputDataMap & input_data_map) override;
 
 private:
-  int batch_size_{1};
   OrtModel model_;
 };
 

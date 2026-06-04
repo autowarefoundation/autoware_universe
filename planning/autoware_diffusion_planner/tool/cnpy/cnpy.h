@@ -96,24 +96,23 @@ NpyArray npz_load(const std::string & fname, const std::string & varname);
 NpyArray npy_load(const std::string & fname);
 
 template <typename T>
-std::vector<char> & operator+=(std::vector<char> & lhs, const T rhs)
+std::vector<char> & operator+=(std::vector<char> & lhs, const T & rhs)
 {
   // write in little endian
   for (size_t byte = 0; byte < sizeof(T); byte++) {
-    char val = *reinterpret_cast<const char *>(&rhs) + byte;
+    const char val = *(reinterpret_cast<const char *>(&rhs) + byte);
     lhs.push_back(val);
   }
   return lhs;
 }
 
-template <>
-std::vector<char> & operator+=(std::vector<char> & lhs, const std::string rhs);
-template <>
+std::vector<char> & operator+=(std::vector<char> & lhs, const std::string & rhs);
 std::vector<char> & operator+=(std::vector<char> & lhs, const char * rhs);
 
 template <typename T>
 void npy_save(
-  std::string fname, const T * data, const std::vector<size_t> shape, std::string mode = "w")
+  const std::string & fname, const T * data, const std::vector<size_t> & shape,
+  const std::string & mode = "w")
 {
   FILE * fp = nullptr;
   std::vector<size_t> true_data_shape;  // if appending, the shape of existing + new data
@@ -133,8 +132,8 @@ void npy_save(
       assert(word_size == sizeof(T));
     }
     if (true_data_shape.size() != shape.size()) {
-      std::cout << "libnpy error: npy_save attempting to append misdimensioned data to " << fname
-                << "\n";
+      std::cout << "libnpy error: npy_save attempting to append data with mismatched dimensions to "
+                << fname << "\n";
       assert(true_data_shape.size() != shape.size());
     }
 
@@ -152,19 +151,19 @@ void npy_save(
   }
 
   std::vector<char> header = create_npy_header<T>(true_data_shape);
-  size_t nels = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+  size_t element_count = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
 
   fseek(fp, 0, SEEK_SET);
   fwrite(&header[0], sizeof(char), header.size(), fp);
   fseek(fp, 0, SEEK_END);
-  fwrite(data, sizeof(T), nels, fp);
+  fwrite(data, sizeof(T), element_count, fp);
   fclose(fp);
 }
 
 template <typename T>
 void npz_save(
-  std::string zipname, std::string fname, const T * data, const std::vector<size_t> & shape,
-  std::string mode = "w")
+  const std::string & zipname, std::string fname, const T * data, const std::vector<size_t> & shape,
+  const std::string & mode = "w")
 {
   // first, append a .npy to the fname
   fname += ".npy";
@@ -198,12 +197,12 @@ void npz_save(
 
   std::vector<char> npy_header = create_npy_header<T>(shape);
 
-  size_t nels = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
-  size_t nbytes = nels * sizeof(T) + npy_header.size();
+  size_t element_count = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<size_t>());
+  size_t byte_count = element_count * sizeof(T) + npy_header.size();
 
   // get the CRC of the data to be added
   uint32_t crc = crc32(0L, reinterpret_cast<uint8_t *>(&npy_header[0]), npy_header.size());
-  crc = crc32(crc, reinterpret_cast<uint8_t *>(data), nels * sizeof(T));
+  crc = crc32(crc, reinterpret_cast<uint8_t *>(data), element_count * sizeof(T));
 
   // build the local header
   std::vector<char> local_header;
@@ -215,8 +214,8 @@ void npz_save(
   local_header += static_cast<uint16_t>(0);             // file last mod time
   local_header += static_cast<uint16_t>(0);             // file last mod date
   local_header += static_cast<uint32_t>(crc);           // crc
-  local_header += static_cast<uint32_t>(nbytes);        // compressed size
-  local_header += static_cast<uint32_t>(nbytes);        // uncompressed size
+  local_header += static_cast<uint32_t>(byte_count);    // compressed size
+  local_header += static_cast<uint32_t>(byte_count);    // uncompressed size
   local_header += static_cast<uint16_t>(fname.size());  // fname length
   local_header += static_cast<uint16_t>(0);             // extra field length
   local_header += fname;
@@ -242,22 +241,23 @@ void npz_save(
   footer += static_cast<uint16_t>(0);                     // disk where footer starts
   footer += static_cast<uint16_t>(nrecs + 1);             // number of records on this disk
   footer += static_cast<uint16_t>(nrecs + 1);             // total number of records
-  footer += static_cast<uint32_t>(global_header.size());  // nbytes of global headers
+  footer += static_cast<uint32_t>(global_header.size());  // number of bytes in global headers
   footer += static_cast<uint32_t>(
-    global_header_offset + nbytes + local_header.size());  // offset of start of global headers
-  footer += static_cast<uint16_t>(0);                      // zip file comment length
+    global_header_offset + byte_count + local_header.size());  // offset of start of global headers
+  footer += static_cast<uint16_t>(0);                          // zip file comment length
 
   // write everything
   fwrite(&local_header[0], sizeof(char), local_header.size(), fp);
   fwrite(&npy_header[0], sizeof(char), npy_header.size(), fp);
-  fwrite(data, sizeof(T), nels, fp);
+  fwrite(data, sizeof(T), element_count, fp);
   fwrite(&global_header[0], sizeof(char), global_header.size(), fp);
   fwrite(&footer[0], sizeof(char), footer.size(), fp);
   fclose(fp);
 }
 
 template <typename T>
-void npy_save(std::string fname, const std::vector<T> data, std::string mode = "w")
+void npy_save(
+  const std::string & fname, const std::vector<T> & data, const std::string & mode = "w")
 {
   std::vector<size_t> shape;
   shape.push_back(data.size());
@@ -266,7 +266,8 @@ void npy_save(std::string fname, const std::vector<T> data, std::string mode = "
 
 template <typename T>
 void npz_save(
-  std::string zipname, std::string fname, const std::vector<T> data, std::string mode = "w")
+  const std::string & zipname, const std::string & fname, const std::vector<T> & data,
+  const std::string & mode = "w")
 {
   std::vector<size_t> shape;
   shape.push_back(data.size());

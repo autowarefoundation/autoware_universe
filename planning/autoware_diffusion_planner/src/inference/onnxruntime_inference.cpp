@@ -20,7 +20,9 @@
 
 #include <chrono>
 #include <cstddef>
+#include <functional>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -31,21 +33,9 @@ namespace autoware::diffusion_planner
 {
 namespace
 {
-template <class Shape>
-std::vector<int64_t> shape_with_batch(const Shape & shape, const int batch_size)
-{
-  std::vector<int64_t> dims(shape.begin(), shape.end());
-  dims.at(0) = batch_size;
-  return dims;
-}
-
 size_t num_elements_from_shape(const std::vector<int64_t> & shape)
 {
-  size_t size = 1;
-  for (const auto dim : shape) {
-    size *= static_cast<size_t>(dim);
-  }
-  return size;
+  return std::accumulate(shape.begin(), shape.end(), size_t{1}, std::multiplies<>());
 }
 
 std::vector<uint8_t> make_speed_mask(const std::vector<float> & speed_limit)
@@ -61,7 +51,6 @@ struct FloatInput
 {
   std::string name;
   const std::vector<float> * data;
-  std::vector<int64_t> shape;
 };
 
 void append_cpu_provider(Ort::SessionOptions &)
@@ -100,61 +89,41 @@ void append_tensorrt_provider(
   Ort::GetApi().ReleaseTensorRTProviderOptions(trt_options);
 }
 
-std::vector<FloatInput> single_step_float_inputs(
-  const preprocess::InputDataMap & input_data_map, const int batch_size)
+std::vector<FloatInput> single_step_float_inputs(const preprocess::InputDataMap & input_data_map)
 {
   return {
-    {"sampled_trajectories", &input_data_map.at("sampled_trajectories"),
-     shape_with_batch(SAMPLED_TRAJECTORIES_SHAPE, batch_size)},
-    {"ego_agent_past", &input_data_map.at("ego_agent_past"),
-     shape_with_batch(EGO_HISTORY_SHAPE, batch_size)},
-    {"ego_current_state", &input_data_map.at("ego_current_state"),
-     shape_with_batch(EGO_CURRENT_STATE_SHAPE, batch_size)},
-    {"neighbor_agents_past", &input_data_map.at("neighbor_agents_past"),
-     shape_with_batch(NEIGHBOR_SHAPE, batch_size)},
-    {"static_objects", &input_data_map.at("static_objects"),
-     shape_with_batch(STATIC_OBJECTS_SHAPE, batch_size)},
-    {"lanes", &input_data_map.at("lanes"), shape_with_batch(LANES_SHAPE, batch_size)},
-    {"lanes_speed_limit", &input_data_map.at("lanes_speed_limit"),
-     shape_with_batch(LANES_SPEED_LIMIT_SHAPE, batch_size)},
-    {"route_lanes", &input_data_map.at("route_lanes"),
-     shape_with_batch(ROUTE_LANES_SHAPE, batch_size)},
-    {"route_lanes_speed_limit", &input_data_map.at("route_lanes_speed_limit"),
-     shape_with_batch(ROUTE_LANES_SPEED_LIMIT_SHAPE, batch_size)},
-    {"polygons", &input_data_map.at("polygons"), shape_with_batch(POLYGONS_SHAPE, batch_size)},
-    {"line_strings", &input_data_map.at("line_strings"),
-     shape_with_batch(LINE_STRINGS_SHAPE, batch_size)},
-    {"goal_pose", &input_data_map.at("goal_pose"), shape_with_batch(GOAL_POSE_SHAPE, batch_size)},
-    {"ego_shape", &input_data_map.at("ego_shape"), shape_with_batch(EGO_SHAPE_SHAPE, batch_size)},
-    {"turn_indicators", &input_data_map.at("turn_indicators"),
-     shape_with_batch(TURN_INDICATORS_SHAPE, batch_size)},
-    {"delay", &input_data_map.at("delay"), shape_with_batch(DELAY_SHAPE, batch_size)}};
+    {"sampled_trajectories", &input_data_map.at("sampled_trajectories")},
+    {"ego_agent_past", &input_data_map.at("ego_agent_past")},
+    {"ego_current_state", &input_data_map.at("ego_current_state")},
+    {"neighbor_agents_past", &input_data_map.at("neighbor_agents_past")},
+    {"static_objects", &input_data_map.at("static_objects")},
+    {"lanes", &input_data_map.at("lanes")},
+    {"lanes_speed_limit", &input_data_map.at("lanes_speed_limit")},
+    {"route_lanes", &input_data_map.at("route_lanes")},
+    {"route_lanes_speed_limit", &input_data_map.at("route_lanes_speed_limit")},
+    {"polygons", &input_data_map.at("polygons")},
+    {"line_strings", &input_data_map.at("line_strings")},
+    {"goal_pose", &input_data_map.at("goal_pose")},
+    {"ego_shape", &input_data_map.at("ego_shape")},
+    {"turn_indicators", &input_data_map.at("turn_indicators")},
+    {"delay", &input_data_map.at("delay")}};
 }
 
-std::vector<FloatInput> encoder_float_inputs(
-  const preprocess::InputDataMap & input_data_map, const int batch_size)
+std::vector<FloatInput> encoder_float_inputs(const preprocess::InputDataMap & input_data_map)
 {
   return {
-    {"ego_agent_past", &input_data_map.at("ego_agent_past"),
-     shape_with_batch(EGO_HISTORY_SHAPE, batch_size)},
-    {"neighbor_agents_past", &input_data_map.at("neighbor_agents_past"),
-     shape_with_batch(NEIGHBOR_SHAPE, batch_size)},
-    {"static_objects", &input_data_map.at("static_objects"),
-     shape_with_batch(STATIC_OBJECTS_SHAPE, batch_size)},
-    {"lanes", &input_data_map.at("lanes"), shape_with_batch(LANES_SHAPE, batch_size)},
-    {"lanes_speed_limit", &input_data_map.at("lanes_speed_limit"),
-     shape_with_batch(LANES_SPEED_LIMIT_SHAPE, batch_size)},
-    {"route_lanes", &input_data_map.at("route_lanes"),
-     shape_with_batch(ROUTE_LANES_SHAPE, batch_size)},
-    {"route_lanes_speed_limit", &input_data_map.at("route_lanes_speed_limit"),
-     shape_with_batch(ROUTE_LANES_SPEED_LIMIT_SHAPE, batch_size)},
-    {"polygons", &input_data_map.at("polygons"), shape_with_batch(POLYGONS_SHAPE, batch_size)},
-    {"line_strings", &input_data_map.at("line_strings"),
-     shape_with_batch(LINE_STRINGS_SHAPE, batch_size)},
-    {"goal_pose", &input_data_map.at("goal_pose"), shape_with_batch(GOAL_POSE_SHAPE, batch_size)},
-    {"ego_shape", &input_data_map.at("ego_shape"), shape_with_batch(EGO_SHAPE_SHAPE, batch_size)},
-    {"turn_indicators", &input_data_map.at("turn_indicators"),
-     shape_with_batch(TURN_INDICATORS_SHAPE, batch_size)}};
+    {"ego_agent_past", &input_data_map.at("ego_agent_past")},
+    {"neighbor_agents_past", &input_data_map.at("neighbor_agents_past")},
+    {"static_objects", &input_data_map.at("static_objects")},
+    {"lanes", &input_data_map.at("lanes")},
+    {"lanes_speed_limit", &input_data_map.at("lanes_speed_limit")},
+    {"route_lanes", &input_data_map.at("route_lanes")},
+    {"route_lanes_speed_limit", &input_data_map.at("route_lanes_speed_limit")},
+    {"polygons", &input_data_map.at("polygons")},
+    {"line_strings", &input_data_map.at("line_strings")},
+    {"goal_pose", &input_data_map.at("goal_pose")},
+    {"ego_shape", &input_data_map.at("ego_shape")},
+    {"turn_indicators", &input_data_map.at("turn_indicators")}};
 }
 
 std::unordered_map<std::string, std::vector<uint8_t>> speed_limit_bool_inputs(
@@ -372,9 +341,8 @@ std::unordered_map<std::string, std::vector<float>> OrtModel::run(
 
 OnnxruntimeSingleStepInference::OnnxruntimeSingleStepInference(
   const std::string & model_path, const std::string & execution_provider,
-  const std::string & plugins_path, const int batch_size)
-: batch_size_(batch_size),
-  model_(model_path, parse_execution_provider(execution_provider), plugins_path)
+  const std::string & plugins_path, const int)
+: model_(model_path, parse_execution_provider(execution_provider), plugins_path)
 {
 }
 
@@ -384,7 +352,7 @@ InferenceResult OnnxruntimeSingleStepInference::infer(
   auto start = std::chrono::steady_clock::now();
   try {
     const auto outputs = model_.run(
-      to_float_input_map(single_step_float_inputs(input_data_map, batch_size_)),
+      to_float_input_map(single_step_float_inputs(input_data_map)),
       speed_limit_bool_inputs(input_data_map), {"prediction", "turn_indicator_logit"});
 
     auto end = std::chrono::steady_clock::now();
@@ -497,7 +465,7 @@ InferenceResult OnnxruntimeMultiStepInference::infer(
   auto start = std::chrono::steady_clock::now();
   try {
     const auto encoder_outputs = encoder_model_.run(
-      to_float_input_map(encoder_float_inputs(input_data_map, batch_size_)),
+      to_float_input_map(encoder_float_inputs(input_data_map)),
       speed_limit_bool_inputs(input_data_map), {"encoding"});
     encoding_ = encoder_outputs.at("encoding");
 

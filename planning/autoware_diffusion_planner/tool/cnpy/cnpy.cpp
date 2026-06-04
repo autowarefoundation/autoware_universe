@@ -49,7 +49,7 @@ char cnpy::map_type(const std::type_info & t)
 
   if (t == typeid(unsigned char)) return 'u';
   if (t == typeid(uint16_t)) return 'u';
-  if (t == typeid(uint64_t)) return 'u';
+  if (t == typeid(uint32_t)) return 'u';
   if (t == typeid(uint64_t)) return 'u';
   if (t == typeid(unsigned int)) return 'u';
 
@@ -62,14 +62,12 @@ char cnpy::map_type(const std::type_info & t)
   return '?';
 }
 
-template <>
 std::vector<char> & cnpy::operator+=(std::vector<char> & lhs, const std::string & rhs)
 {
   lhs.insert(lhs.end(), rhs.begin(), rhs.end());
   return lhs;
 }
 
-template <>
 std::vector<char> & cnpy::operator+=(std::vector<char> & lhs, const char * rhs)
 {
   // write in little endian
@@ -224,14 +222,13 @@ cnpy::NpyArray load_the_npy_file(FILE * fp)
   return arr;
 }
 
-cnpy::NpyArray load_the_npz_array(FILE * fp, uint32_t compr_bytes, uint32_t uncompr_bytes)
+cnpy::NpyArray load_the_npz_array(FILE * fp, uint32_t compressed_bytes, uint32_t uncompressed_bytes)
 {
-  std::vector<unsigned char> buffer_compr(compr_bytes);
-  std::vector<unsigned char> buffer_uncompr(uncompr_bytes);
-  size_t nread = fread(&buffer_compr[0], 1, compr_bytes, fp);
-  if (nread != compr_bytes) throw std::runtime_error("load_the_npy_file: failed fread");
+  std::vector<unsigned char> compressed_buffer(compressed_bytes);
+  std::vector<unsigned char> uncompressed_buffer(uncompressed_bytes);
+  size_t nread = fread(&compressed_buffer[0], 1, compressed_bytes, fp);
+  if (nread != compressed_bytes) throw std::runtime_error("load_the_npy_file: failed fread");
 
-  int err = 0;
   z_stream d_stream;
 
   d_stream.zalloc = Z_NULL;
@@ -239,26 +236,35 @@ cnpy::NpyArray load_the_npz_array(FILE * fp, uint32_t compr_bytes, uint32_t unco
   d_stream.opaque = Z_NULL;
   d_stream.avail_in = 0;
   d_stream.next_in = Z_NULL;
-  err = inflateInit2(&d_stream, -MAX_WBITS);
+  int err = inflateInit2(&d_stream, -MAX_WBITS);
+  if (err != Z_OK) {
+    throw std::runtime_error("load_the_npy_file: inflateInit2 failed");
+  }
 
-  d_stream.avail_in = compr_bytes;
-  d_stream.next_in = &buffer_compr[0];
-  d_stream.avail_out = uncompr_bytes;
-  d_stream.next_out = &buffer_uncompr[0];
+  d_stream.avail_in = compressed_bytes;
+  d_stream.next_in = &compressed_buffer[0];
+  d_stream.avail_out = uncompressed_bytes;
+  d_stream.next_out = &uncompressed_buffer[0];
 
   err = inflate(&d_stream, Z_FINISH);
+  if (err != Z_STREAM_END) {
+    inflateEnd(&d_stream);
+    throw std::runtime_error("load_the_npy_file: inflate failed");
+  }
   err = inflateEnd(&d_stream);
-  (void)err;
+  if (err != Z_OK) {
+    throw std::runtime_error("load_the_npy_file: inflateEnd failed");
+  }
 
   std::vector<size_t> shape;
   size_t word_size;
   bool fortran_order;
-  cnpy::parse_npy_header(&buffer_uncompr[0], word_size, shape, fortran_order);
+  cnpy::parse_npy_header(&uncompressed_buffer[0], word_size, shape, fortran_order);
 
   cnpy::NpyArray array(shape, word_size, fortran_order);
 
-  size_t offset = uncompr_bytes - array.num_bytes();
-  memcpy(array.data<unsigned char>(), buffer_uncompr.data() + offset, array.num_bytes());
+  size_t offset = uncompressed_bytes - array.num_bytes();
+  memcpy(array.data<unsigned char>(), uncompressed_buffer.data() + offset, array.num_bytes());
 
   return array;
 }
@@ -294,18 +300,20 @@ cnpy::npz_t cnpy::npz_load(const std::string & fname)
     uint16_t extra_field_len = *reinterpret_cast<uint16_t *>(&local_header[28]);
     if (extra_field_len > 0) {
       std::vector<char> buff(extra_field_len);
-      size_t efield_res = fread(&buff[0], sizeof(char), extra_field_len, fp);
-      if (efield_res != extra_field_len) throw std::runtime_error("npz_load: failed fread");
+      size_t extra_field_read_size = fread(&buff[0], sizeof(char), extra_field_len, fp);
+      if (extra_field_read_size != extra_field_len) {
+        throw std::runtime_error("npz_load: failed fread");
+      }
     }
 
-    uint16_t compr_method = *reinterpret_cast<uint16_t *>(&local_header[0] + 8);
-    uint32_t compr_bytes = *reinterpret_cast<uint32_t *>(&local_header[0] + 18);
-    uint32_t uncompr_bytes = *reinterpret_cast<uint32_t *>(&local_header[0] + 22);
+    uint16_t compression_method = *reinterpret_cast<uint16_t *>(&local_header[0] + 8);
+    uint32_t compressed_bytes = *reinterpret_cast<uint32_t *>(&local_header[0] + 18);
+    uint32_t uncompressed_bytes = *reinterpret_cast<uint32_t *>(&local_header[0] + 22);
 
-    if (compr_method == 0) {
+    if (compression_method == 0) {
       arrays[varname] = load_the_npy_file(fp);
     } else {
-      arrays[varname] = load_the_npz_array(fp, compr_bytes, uncompr_bytes);
+      arrays[varname] = load_the_npz_array(fp, compressed_bytes, uncompressed_bytes);
     }
   }
 
@@ -338,13 +346,14 @@ cnpy::NpyArray cnpy::npz_load(const std::string & fname, const std::string & var
     uint16_t extra_field_len = *reinterpret_cast<uint16_t *>(&local_header[28]);
     fseek(fp, extra_field_len, SEEK_CUR);  // skip past the extra field
 
-    uint16_t compr_method = *reinterpret_cast<uint16_t *>(&local_header[0] + 8);
-    uint32_t compr_bytes = *reinterpret_cast<uint32_t *>(&local_header[0] + 18);
-    uint32_t uncompr_bytes = *reinterpret_cast<uint32_t *>(&local_header[0] + 22);
+    uint16_t compression_method = *reinterpret_cast<uint16_t *>(&local_header[0] + 8);
+    uint32_t compressed_bytes = *reinterpret_cast<uint32_t *>(&local_header[0] + 18);
+    uint32_t uncompressed_bytes = *reinterpret_cast<uint32_t *>(&local_header[0] + 22);
 
     if (vname == varname) {
-      NpyArray array = (compr_method == 0) ? load_the_npy_file(fp)
-                                           : load_the_npz_array(fp, compr_bytes, uncompr_bytes);
+      NpyArray array = (compression_method == 0)
+                         ? load_the_npy_file(fp)
+                         : load_the_npz_array(fp, compressed_bytes, uncompressed_bytes);
       fclose(fp);
       return array;
     }
