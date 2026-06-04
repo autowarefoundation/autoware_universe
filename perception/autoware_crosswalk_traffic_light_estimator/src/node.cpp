@@ -46,8 +46,9 @@ CrosswalkTrafficLightEstimatorNode::CrosswalkTrafficLightEstimatorNode(
 
   pub_traffic_light_array_ =
     this->create_publisher<TrafficSignalArray>("~/output/traffic_signals", rclcpp::QoS{1});
-  pub_processing_time_ = std::make_shared<
-    autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(this, "~/debug");
+  pub_processing_time_ =
+    std::make_shared<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "~/debug");
 }
 
 void CrosswalkTrafficLightEstimatorNode::on_map(
