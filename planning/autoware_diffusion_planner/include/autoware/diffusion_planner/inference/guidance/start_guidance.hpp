@@ -38,6 +38,8 @@ public:
   StartGuidance();
   explicit StartGuidance(const StartGuidanceConfig & config);
 
+  void set_config(const StartGuidanceConfig & config);
+
   GuidanceResult compute_delta(
     const GuidanceContext & context, const std::vector<float> & model_output) const override;
 

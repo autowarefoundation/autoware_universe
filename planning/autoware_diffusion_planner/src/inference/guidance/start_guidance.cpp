@@ -37,6 +37,11 @@ StartGuidance::StartGuidance(const StartGuidanceConfig & config)
   config_ = config;
 }
 
+void StartGuidance::set_config(const StartGuidanceConfig & config)
+{
+  config_ = config;
+}
+
 GuidanceResult StartGuidance::compute_delta(
   [[maybe_unused]] const GuidanceContext & context, const std::vector<float> & model_output) const
 {

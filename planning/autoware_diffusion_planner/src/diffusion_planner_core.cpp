@@ -162,6 +162,18 @@ void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
   turn_indicator_manager_.set_hold_duration(
     rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
   turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
+  if (start_guidance_) {
+    StartGuidanceConfig start_guidance_config;
+    start_guidance_config.reference_distance_m =
+      static_cast<float>(params_.start_guidance_reference_distance_m);
+    start_guidance_config.max_scale = static_cast<float>(params_.start_guidance_max_scale);
+    start_guidance_config.x_mean = static_cast<float>(state_normalization_.first.at(0));
+    start_guidance_config.x_std = static_cast<float>(state_normalization_.second.at(0));
+    start_guidance_config.y_mean = static_cast<float>(state_normalization_.first.at(1));
+    start_guidance_config.y_std = static_cast<float>(state_normalization_.second.at(1));
+    start_guidance_->set_config(start_guidance_config);
+    start_guidance_->set_enabled(start_guidance_enabled_);
+  }
   if (stop_guidance_) {
     StopGuidanceConfig stop_guidance_config;
     stop_guidance_config.stop_acceleration_mps2 =
