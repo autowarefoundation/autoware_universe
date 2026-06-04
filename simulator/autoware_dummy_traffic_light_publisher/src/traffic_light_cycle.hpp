@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DUMMY_TRAFFIC_LIGHT_PUBLISHER__TRAFFIC_LIGHT_CYCLE_HPP_
-#define AUTOWARE__DUMMY_TRAFFIC_LIGHT_PUBLISHER__TRAFFIC_LIGHT_CYCLE_HPP_
+#ifndef TRAFFIC_LIGHT_CYCLE_HPP_
+#define TRAFFIC_LIGHT_CYCLE_HPP_
 
 #include <rclcpp/time.hpp>
 
@@ -40,4 +40,4 @@ private:
 
 }  // namespace autoware::dummy_traffic_light_publisher
 
-#endif  // AUTOWARE__DUMMY_TRAFFIC_LIGHT_PUBLISHER__TRAFFIC_LIGHT_CYCLE_HPP_
+#endif  // TRAFFIC_LIGHT_CYCLE_HPP_

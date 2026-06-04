@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/dummy_traffic_light_publisher/traffic_light_cycle.hpp"
+#include "traffic_light_cycle.hpp"
 
 #include <gtest/gtest.h>
 

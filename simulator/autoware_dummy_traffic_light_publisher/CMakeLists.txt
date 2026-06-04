@@ -20,11 +20,13 @@ if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_traffic_light_cycle
     test/test_traffic_light_cycle.cpp
   )
+  target_include_directories(test_traffic_light_cycle PRIVATE src)
   target_link_libraries(test_traffic_light_cycle ${PROJECT_NAME}_lib)
 
   ament_add_ros_isolated_gtest(test_dummy_traffic_light
     test/test_dummy_traffic_light.cpp
   )
+  target_include_directories(test_dummy_traffic_light PRIVATE src)
   target_link_libraries(test_dummy_traffic_light ${PROJECT_NAME}_lib)
 endif()
 

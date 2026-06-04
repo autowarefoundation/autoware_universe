@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/dummy_traffic_light_publisher/dummy_traffic_light.hpp"
+#include "dummy_traffic_light.hpp"
 
 #include <memory>
 #include <utility>
