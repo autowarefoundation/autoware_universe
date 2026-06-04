@@ -334,7 +334,7 @@ void CrosswalkTrafficLightEstimatorNode::updateLastDetectedSignal(
     const auto & id = input_traffic_signal.second.first.traffic_light_group_id;
 
     if (last_detect_color_.count(id) == 0) {
-      last_detect_color_.insert(std::make_pair(id, input_traffic_signal.second));
+      last_detect_color_.emplace(id, input_traffic_signal.second);
       continue;
     }
 
@@ -380,7 +380,7 @@ void CrosswalkTrafficLightEstimatorNode::updateLastDetectedSignals(
 
     if (last_colors_.count(id) == 0) {
       std::vector<TrafficSignalAndTime> signal{input_traffic_signal.second};
-      last_colors_.insert(std::make_pair(id, signal));
+      last_colors_.emplace(id, signal);
       continue;
     }
 
@@ -513,7 +513,7 @@ void CrosswalkTrafficLightEstimatorNode::updateFlashingState(const TrafficSignal
 
   // no record of detected color in last_detect_color_hold_time_
   if (is_flashing_.count(id) == 0) {
-    is_flashing_.insert(std::make_pair(id, false));
+    is_flashing_.emplace(id, false);
     return;
   }
 
@@ -550,7 +550,7 @@ uint8_t CrosswalkTrafficLightEstimatorNode::updateAndGetColorState(const Traffic
   const auto color = signal.elements[0].color;
 
   if (current_color_state_.count(id) == 0) {
-    current_color_state_.insert(std::make_pair(id, color));
+    current_color_state_.emplace(id, color);
   } else if (is_flashing_.at(id) == false) {
     current_color_state_.at(id) = color;
   } else if (is_flashing_.at(id) == true) {

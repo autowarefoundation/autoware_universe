@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,18 +11,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Yukihiro Saito
-//
 
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__VEHICLE_TRACKER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__VEHICLE_TRACKER_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
+
+#include <optional>
 
 namespace autoware::multi_object_tracker
 {
@@ -75,7 +73,16 @@ public:
 
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
 
-  const double ALIGNMENT_RATIO_THRESHOLD = 0.09;  // 9% of length as alignment tolerance
+  // Clusters (trust_extension=false) have unreliable bbox orientation — always use conditioned.
+  UpdatePath selectUpdatePath(
+    bool trust_extension, bool has_significant_shape_change) const override
+  {
+    if (!trust_extension) return UpdatePath::CONDITIONED;
+    return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
+  }
+
+  const double ALIGNMENT_RATIO_THRESHOLD = 0.2;     // 20% of the larger object's length
+  const double ALIGNMENT_ABSOLUTE_THRESHOLD = 1.0;  // [m] minimum tolerance for small objects
   UpdateStrategy determineUpdateStrategy(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction) const;
 
@@ -101,6 +108,11 @@ private:
     const EdgePositions & meas_edges, const types::DynamicObject & prediction) const;
   geometry_msgs::msg::Point calculateAnchorPoint(
     const EdgeAlignment & alignment, const types::DynamicObject & measurement) const;
+
+  // Re-project a cluster's polygon footprint onto the tracker's current heading.
+  // Returns std::nullopt when the cluster has no footprint points.
+  std::optional<types::DynamicObject> alignClusterToTrackerOrientation(
+    const types::DynamicObject & cluster, double tracker_yaw) const;
 };
 
 }  // namespace autoware::multi_object_tracker

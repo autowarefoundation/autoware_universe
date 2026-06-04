@@ -16,72 +16,53 @@
 #define PROCESSOR__PROCESSOR_HPP_
 
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
-#include "autoware/multi_object_tracker/association/association.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/association/association_manager.hpp"
+#include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include <list>
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace autoware::multi_object_tracker
 {
-using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
-
-struct TrackerProcessorConfig
-{
-  std::unordered_map<LabelType, TrackerType> tracker_map;
-  float tracker_lifetime;                // [s]
-  float min_known_object_removal_iou;    // ratio [0, 1]
-  float min_unknown_object_removal_iou;  // ratio [0, 1]
-  bool enable_unknown_object_velocity_estimation;
-  bool enable_unknown_object_motion_output;
-  std::unordered_map<LabelType, double> pruning_giou_thresholds;
-  std::unordered_map<LabelType, double> pruning_distance_thresholds;  // [m]
-  double pruning_static_object_speed;                                 // [m/s]
-  double pruning_moving_object_speed;                                 // [m/s]
-  double pruning_static_iou_threshold;                                // [ratio]
-};
-
 class TrackerProcessor
 {
 public:
   TrackerProcessor(
-    const TrackerProcessorConfig & config, const AssociatorConfig & associator_config,
-    const std::vector<types::InputChannel> & channels_config);
+    const TrackerCreationConfig & creation_config,
+    const TrackerAssociationConfig & association_config,
+    const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
+    const std::vector<types::InputChannel> & channels_config, const rclcpp::Logger & logger,
+    rclcpp::Clock::SharedPtr clock);
 
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
-  // tracker processes
-  void predict(const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose);
-  void associate(
-    const types::DynamicObjectList & detected_objects,
-    std::unordered_map<int, int> & direct_assignment,
-    std::unordered_map<int, int> & reverse_assignment) const;
-  void update(
-    const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & direct_assignment);
-  void spawn(
-    const types::DynamicObjectList & detected_objects,
-    const std::unordered_map<int, int> & reverse_assignment);
+
+  // Tracker processes
+  void updateEgoPose(const std::optional<geometry_msgs::msg::PoseStamped> & ego_pose_stamped);
+  void predictTrackers(const rclcpp::Time & time);
+  types::AssociationResult associate(const types::DynamicObjectList & detected_objects) const;
+  void update(const types::AssociatedObjects & associated_objects);
+  void spawn(const types::AssociatedObjects & associated_objects);
   void prune(const rclcpp::Time & time);
 
-  // output processes
+  // Output processes
   void getTrackedObjects(
     const rclcpp::Time & time,
     autoware_perception_msgs::msg::TrackedObjects & tracked_objects) const;
   void getTentativeObjects(
     const rclcpp::Time & time,
     autoware_perception_msgs::msg::TrackedObjects & tentative_objects) const;
-
   void getMergedObjects(
     const rclcpp::Time & time, const geometry_msgs::msg::Transform & tf_base_to_world,
     autoware_perception_msgs::msg::DetectedObjects & merged_objects) const;
@@ -89,24 +70,27 @@ public:
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
 private:
-  const TrackerProcessorConfig config_;
+  const TrackerCreationConfig creation_config_;
   const std::vector<types::InputChannel> & channels_config_;
 
-  std::unique_ptr<DataAssociation> association_;
+  std::optional<geometry_msgs::msg::PoseStamped> ego_pose_;
+
+  std::unique_ptr<AssociationManager> association_manager_;
+  std::unique_ptr<TrackerOverlapManager> tracker_overlap_manager_;
 
   mutable rclcpp::Time last_prune_time_;
 
   std::list<std::shared_ptr<Tracker>> list_tracker_;
+  std::optional<geometry_msgs::msg::Pose> getEgoPose() const;
   void removeOldTracker(const rclcpp::Time & time);
-  void mergeOverlappedTracker(const rclcpp::Time & time);
-  bool canMergeOverlappedTarget(
-    const Tracker & target, const Tracker & other, const rclcpp::Time & time) const;
   std::shared_ptr<Tracker> createNewTracker(
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
-  std::optional<geometry_msgs::msg::Pose> ego_pose_;
   AdaptiveThresholdCache adaptive_threshold_cache_;
+
+  rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
 };
 
 }  // namespace autoware::multi_object_tracker

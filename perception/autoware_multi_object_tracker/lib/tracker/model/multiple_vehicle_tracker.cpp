@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,10 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Yukihiro Saito
-//
 
 #include "autoware/multi_object_tracker/tracker/model/multiple_vehicle_tracker.hpp"
 
@@ -70,12 +66,13 @@ void MultipleVehicleTracker::setObjectShape(const autoware_perception_msgs::msg:
 bool MultipleVehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  using Label = autoware_perception_msgs::msg::ObjectClassification;
-  const uint8_t label = getHighestProbLabel();
+  const auto label = getHighestProbLabel();
 
-  if (label == Label::CAR) {
+  if (label == classes::Label::CAR) {
     normal_vehicle_tracker_.getTrackedObject(time, object, to_publish);
-  } else if (label == Label::BUS || label == Label::TRUCK || label == Label::TRAILER) {
+  } else if (
+    label == classes::Label::BUS || label == classes::Label::TRUCK ||
+    label == classes::Label::TRAILER) {
     big_vehicle_tracker_.getTrackedObject(time, object, to_publish);
   } else {
     // If the label is others, use the normal vehicle tracker as a fallback
