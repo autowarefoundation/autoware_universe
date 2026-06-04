@@ -16,7 +16,7 @@
         motorcycle: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         bicycle:    {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         pedestrian: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
-        animal:     {create: pedestrian_tracker,             match: [pedestrian_tracker]}
+        animal:     {create: "null"}
         hazard:     {create: static_tracker,                 match: [static_tracker]}
       polygon:
         unknown:    {create: polygon_tracker,                match: [polygon_tracker, static_tracker, pedestrian_tracker, multi_vehicle_tracker, pedestrian_and_bicycle_tracker]}
@@ -27,7 +27,7 @@
         motorcycle: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         bicycle:    {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         pedestrian: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
-        animal:     {create: pedestrian_tracker,             match: [pedestrian_tracker]}
+        animal:     {create: polygon_tracker,                match: [polygon_tracker]}
         hazard:     {create: static_tracker,                 match: [static_tracker]}
       cylinder:
         unknown:    {create: "null"}
@@ -38,7 +38,7 @@
         motorcycle: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         bicycle:    {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
         pedestrian: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
-        animal:     {create: pedestrian_tracker,             match: [pedestrian_tracker]}
+        animal:     {create: "null"}
         hazard:     {create: static_tracker,                 match: [static_tracker]}
 
     # Tracker profiles: each tracker type defines its association thresholds per label.
