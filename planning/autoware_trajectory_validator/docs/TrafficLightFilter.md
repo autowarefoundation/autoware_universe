@@ -94,6 +94,7 @@ The filter utilizes the following data from the `FilterContext`:
 | `traffic_light.delay_response_time`                          | double | 0.5     | [s] Delay response time added to the stopping distance calculation.                                               |
 | `traffic_light.crossing_time_limit`                          | double | 2.75    | [s] Maximum time allowed for the ego vehicle to cross the stop line after an amber light appears.                 |
 | `traffic_light.treat_amber_light_as_red_light`               | bool   | true    | When true, amber lights are treated identically to red lights (rejection on intersection regardless of distance). |
+| `traffic_light.treat_unknown_light_as_red_light`             | bool   | false   | When true, unknown lights are treated identically to red lights (rejection on intersection).                      |
 | `traffic_light.stop_overshoot_margin`                        | double | 0.5     | [m] Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible.     |
 | `traffic_light.stable_duration_threshold_red`                | double | 0.0     | [s] Minimum duration a RED light must be seen before it is considered active (only when ego is moving).           |
 | `traffic_light.stable_duration_threshold_amber`              | double | 0.0     | [s] Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving).        |
@@ -101,3 +102,19 @@ The filter utilizes the following data from the `FilterContext`:
 | `traffic_light.ego_stopped_velocity_threshold`               | double | 0.01    | [m/s] Velocity threshold below which stability and hysteresis filters are bypassed.                               |
 | `traffic_light.checked_trajectory_length.deceleration_limit` | double | 2.0     | [m/s²] Deceleration limit used to calculate the maximum trajectory length to check for traffic lights.            |
 | `traffic_light.checked_trajectory_length.jerk_limit`         | double | 4.0     | [m/s³] Jerk limit used to calculate the maximum trajectory length to check for traffic lights.                    |
+
+## Logging and Visualization
+
+The `TrafficLightFilter` provides debug markers to visualize which traffic lights caused trajectory rejections. These markers are aggregated across all candidate trajectories evaluated within a single processing frame.
+
+### Debug Markers
+
+For each traffic light that causes at least one trajectory rejection, a `TEXT_VIEW_FACING` marker is generated at the position of the traffic light's stop line.
+
+The marker text contains:
+
+- **TL ID**: The unique identifier of the traffic light (regulatory element).
+- **Signal**: The current signal state as interpreted by the filter (e.g., `red`, `amber`, `amber as red`, `unknown as amber`).
+- **Rejections**: The total number of trajectories that were rejected due to this specific traffic light in the current frame.
+
+![Traffic Light Filter Debug Markers](traffic_light_filter_debug_markers.png)

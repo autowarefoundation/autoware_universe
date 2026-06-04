@@ -19,7 +19,13 @@
 
 #include <autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp>
 
+#include <geometry_msgs/msg/point.hpp>
+
 #include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace autoware::trajectory_validator::plugin::traffic_rule
 {
@@ -35,8 +41,23 @@ public:
   void set_vehicle_info(const VehicleInfo & vehicle_info) final;
 
 private:
+  struct RejectionInfo
+  {
+    geometry_msgs::msg::Point stop_line_pos;
+    std::string signal_label;
+    size_t rejection_count{0};
+  };
+
   std::unique_ptr<traffic_light_compliance_checker::TrafficLightComplianceChecker> checker_;
   validator::Params::TrafficLight params_;
+
+  std::unordered_map<int64_t, RejectionInfo> aggregated_rejections_;
+  std::optional<rclcpp::Time> last_frame_time_;
+
+  void update_debug_data(
+    const std::vector<traffic_light_compliance_checker::Violation> & violations,
+    const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_light_signals,
+    const rclcpp::Time & current_time, const double z);
 };
 
 }  // namespace autoware::trajectory_validator::plugin::traffic_rule
