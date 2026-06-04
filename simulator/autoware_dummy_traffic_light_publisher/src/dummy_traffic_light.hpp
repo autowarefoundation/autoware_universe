@@ -51,8 +51,8 @@ public:
 private:
   autoware_perception_msgs::msg::TrafficLightGroupArray build_standalone_message(
     const rclcpp::Time & now);
-  autoware_perception_msgs::msg::TrafficLightGroupArray build_empty_message(
-    const rclcpp::Time & now) const;
+  static autoware_perception_msgs::msg::TrafficLightGroupArray build_empty_message(
+    const rclcpp::Time & now);
 
   Config config_;
   std::unique_ptr<TrafficLightCycle> cycle_;

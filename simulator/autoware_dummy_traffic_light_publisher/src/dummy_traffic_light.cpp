@@ -81,7 +81,7 @@ autoware_perception_msgs::msg::TrafficLightGroupArray DummyTrafficLight::build_s
 }
 
 autoware_perception_msgs::msg::TrafficLightGroupArray DummyTrafficLight::build_empty_message(
-  const rclcpp::Time & now) const
+  const rclcpp::Time & now)
 {
   autoware_perception_msgs::msg::TrafficLightGroupArray output;
   output.stamp = now;
