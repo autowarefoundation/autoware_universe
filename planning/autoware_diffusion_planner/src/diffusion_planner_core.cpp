@@ -54,6 +54,7 @@ bool is_onnxruntime_backend(const std::string & backend)
   return backend == "ort_cpu" || backend == "ort_cuda" || backend == "ort_tensorrt";
 }
 
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
 std::string onnxruntime_execution_provider_from_backend(const std::string & backend)
 {
   if (backend == "ort_cpu") {
@@ -69,6 +70,7 @@ std::string onnxruntime_execution_provider_from_backend(const std::string & back
     "Unsupported model.backend '" + backend +
     "'. Expected 'tensorrt', 'ort_cpu', 'ort_cuda', or 'ort_tensorrt'.");
 }
+#endif
 
 }  // namespace
 
