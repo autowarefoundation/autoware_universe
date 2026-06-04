@@ -22,7 +22,7 @@
             },
             "args_path": {
               "type": "string",
-              "default": "/opt/autoware/mlmodels/diffusion_planner/args.json",
+              "default": "$(var data_path)/diffusion_planner/v5.0/args.json",
               "description": "Path to model argument/configuration file"
             },
             "backend": {
@@ -39,7 +39,7 @@
             },
             "use_cuda_graph": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "description": "Use CUDA Graph replay for TensorRT enqueue calls"
             },
             "single_step_model": {
@@ -47,7 +47,7 @@
               "properties": {
                 "onnx_model_path": {
                   "type": "string",
-                  "default": "/opt/autoware/mlmodels/diffusion_planner/diffusion_planner_single_step_simplified.onnx",
+                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner.onnx",
                   "description": "Path to the single-step ONNX model file"
                 }
               },
@@ -58,17 +58,17 @@
               "properties": {
                 "encoder_onnx_model_path": {
                   "type": "string",
-                  "default": "/opt/autoware/mlmodels/diffusion_planner/diffusion_planner_encoder_simplified.onnx",
+                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner_encoder.onnx",
                   "description": "Path to the encoder ONNX model file"
                 },
                 "decoder_onnx_model_path": {
                   "type": "string",
-                  "default": "/opt/autoware/mlmodels/diffusion_planner/diffusion_planner_decoder_single_step_simplified.onnx",
+                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner_decoder.onnx",
                   "description": "Path to the decoder ONNX model file"
                 },
                 "turn_indicator_onnx_model_path": {
                   "type": "string",
-                  "default": "/opt/autoware/mlmodels/diffusion_planner/diffusion_planner_turn_indicator_simplified.onnx",
+                  "default": "$(var data_path)/diffusion_planner/v5.0/diffusion_planner_turn_indicator.onnx",
                   "description": "Path to the turn indicator ONNX model file"
                 },
                 "dpm_solver_steps": {
@@ -195,7 +195,7 @@
                 },
                 "max_scale": {
                   "type": "number",
-                  "default": 1.0,
+                  "default": 30.0,
                   "minimum": 1.0,
                   "description": "Maximum scale applied to the ego trajectory by start guidance"
                 }
