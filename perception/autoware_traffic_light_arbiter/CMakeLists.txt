@@ -6,6 +6,7 @@ autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_arbiter.cpp
+  src/traffic_light_arbiter_core.cpp
   src/signal_match_validator.cpp
 )
 
