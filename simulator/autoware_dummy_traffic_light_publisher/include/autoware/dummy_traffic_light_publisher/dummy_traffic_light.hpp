@@ -57,7 +57,7 @@ private:
   Config config_;
   std::unique_ptr<TrafficLightCycle> cycle_;
   std::vector<int64_t> traffic_light_ids_;
-  std::optional<autoware_perception_msgs::msg::TrafficLightGroupArray> last_input_;
+  std::optional<autoware_perception_msgs::msg::TrafficLightGroupArray> last_input_signals_;
   std::optional<rclcpp::Time> last_input_time_;
 };
 

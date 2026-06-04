@@ -35,19 +35,19 @@ void DummyTrafficLight::set_traffic_light_ids(const std::vector<int64_t> & ids)
 void DummyTrafficLight::update_input_signals(
   const autoware_perception_msgs::msg::TrafficLightGroupArray & msg, const rclcpp::Time & now)
 {
-  last_input_ = msg;
+  last_input_signals_ = msg;
   last_input_time_ = now;
 }
 
 autoware_perception_msgs::msg::TrafficLightGroupArray DummyTrafficLight::create_message(
   const rclcpp::Time & now)
 {
-  if (last_input_ && last_input_time_) {
+  if (last_input_signals_ && last_input_time_) {
     const double elapsed = (now - *last_input_time_).seconds();
     if (elapsed < config_.passthrough_timeout) {
-      return *last_input_;
+      return *last_input_signals_;
     }
-    last_input_.reset();
+    last_input_signals_.reset();
     last_input_time_.reset();
   }
 
