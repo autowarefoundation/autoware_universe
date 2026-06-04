@@ -16,6 +16,7 @@
 
     # Semantic label selection and mapping
     # YAML declaration order is treated as the input class_id order.
+    # cspell:ignore pullable
     class_names:
       drivable_surface: ignore
       other_flat_surface: ignore

@@ -1,3 +1,5 @@
+<!-- cspell:ignore pullable -->
+
 # label_based_euclidean_cluster
 
 ## Purpose
@@ -96,11 +98,11 @@ Parameters are loaded from [config/label_based_euclidean_cluster.param.yaml](../
 | `tolerance`                             | float | Euclidean clustering tolerance.                                     |
 | `min_cluster_size`                      | int   | Minimum number of points required to keep a cluster.                |
 | `max_cluster_size`                      | int   | Maximum number of points allowed in a cluster.                      |
-| `voxel_leaf_size`                       | float | Voxel size used by the internal voxel-grid-based clusterer.         |
+| `voxel_leaf_size`                       | float | Voxel size used by the internal voxel-grid-based cluster.           |
 | `min_points_number_per_voxel`           | int   | Minimum number of points required to keep a voxel centroid.         |
 | `min_voxel_cluster_size_for_filtering`  | int   | Minimum voxel-cluster size before applying large-cluster filtering. |
 | `max_points_per_voxel_in_large_cluster` | int   | Maximum number of points kept per voxel for large clusters.         |
-| `max_voxel_cluster_for_output`          | int   | Maximum number of voxel clusters emitted by the internal clusterer. |
+| `max_voxel_cluster_for_output`          | int   | Maximum number of voxel clusters emitted by the internal cluster.   |
 
 ### Semantic Filtering Parameters
 
@@ -147,4 +149,4 @@ The following items came up during PR review as acceptable short-term trade-offs
 - Load semantic label order from the segmentation model artifact, such as `label.txt`, and keep the ROS parameter file focused on label selection and Autoware label remapping instead of treating YAML declaration order as the source of truth.
 - Preserve source point indices through clustering so `existence_probability` can be computed per output cluster rather than once per semantic bucket.
   - Or uncertainty aware clustering can be applied to propagate point-level probabilities into clusters using entropy field values.
-- Improve large-cluster downsampling in the internal voxel-grid-based clusterer with deterministic voxel-wise, spatially uniform, or edge-preserving sampling so shape estimation keeps outline points more reliably.
+- Improve large-cluster downsampling in the internal voxel-grid-based cluster with deterministic voxel-wise, spatially uniform, or edge-preserving sampling so shape estimation keeps outline points more reliably.
