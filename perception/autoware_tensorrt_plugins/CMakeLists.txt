@@ -109,6 +109,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     src/multi_scale_deform_attn_ops/ms_deform_attn_kernel.cu
     src/rotate_ops/rotate_kernel.cu
     src/select_and_pad_ops/select_and_pad_kernel.cu
+    src/quantize_ops/quantize_features.cu
   )
 
   add_library(${PROJECT_NAME} SHARED
