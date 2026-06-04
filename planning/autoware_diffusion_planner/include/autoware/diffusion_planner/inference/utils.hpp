@@ -87,7 +87,6 @@ nvinfer1::Dims to_dims_with_batch(const Container & shape, const int batch_size)
 autoware::tensorrt_common::ProfileDims make_profile_dims(
   const std::string & name, const nvinfer1::Dims & dims, int batch_size);
 
-std::string engine_file_path(const std::string & model_path, int batch_size);
 std::string engine_file_path(
   const std::string & model_path, int batch_size, const std::string & precision);
 

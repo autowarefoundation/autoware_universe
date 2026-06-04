@@ -101,11 +101,6 @@ ProfileDims make_profile_dims(
   return ProfileDims{name, min_dims, opt_dims, max_dims};
 }
 
-std::string engine_file_path(const std::string & model_path, const int batch_size)
-{
-  return engine_file_path(model_path, batch_size, "fp32");
-}
-
 std::string engine_file_path(
   const std::string & model_path, const int batch_size, const std::string & precision)
 {
