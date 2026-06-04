@@ -48,13 +48,12 @@ namespace autoware::diffusion_planner
 
 namespace
 {
-
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
 bool is_onnxruntime_backend(const std::string & backend)
 {
   return backend == "ort_cpu" || backend == "ort_cuda" || backend == "ort_tensorrt";
 }
 
-#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
 std::string onnxruntime_execution_provider_from_backend(const std::string & backend)
 {
   if (backend == "ort_cpu") {
