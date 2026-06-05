@@ -89,8 +89,7 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_debug_markers_;
   AUTOWARE_SUBSCRIPTION_PTR(TrackedObjects) sub_objects_;
   rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
-  autoware_utils::InterProcessPollingSubscriber<TrafficLightGroupArray> sub_traffic_signals_{
-    this, "/traffic_signals"};
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(TrafficLightGroupArray) sub_traffic_signals_;
 
   rclcpp::CallbackGroup::SharedPtr objects_callback_group_;
   std::mutex map_mutex_;
@@ -172,7 +171,7 @@ private:
   ////// Member Functions
   // Node callbacks
   void mapCallback(const LaneletMapBin::ConstSharedPtr msg);
-  void trafficSignalsCallback(const TrafficLightGroupArray::ConstSharedPtr msg);
+  void trafficSignalsCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & msg);
   void objectsCallback(AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) in_objects);
 
   // Diagnostics proccess

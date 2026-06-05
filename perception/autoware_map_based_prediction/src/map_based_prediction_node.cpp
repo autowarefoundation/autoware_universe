@@ -484,6 +484,8 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   sub_map_ = this->create_subscription<LaneletMapBin>(
     "/vector_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&MapBasedPredictionNode::mapCallback, this, std::placeholders::_1));
+  sub_traffic_signals_ =
+    AUTOWARE_CREATE_POLLING_SUBSCRIBER(TrafficLightGroupArray, "/traffic_signals", rclcpp::QoS{1});
 
   // publishers
   pub_objects_ = this->create_publisher<PredictedObjects>("~/output/objects", rclcpp::QoS{1});
@@ -626,7 +628,7 @@ void MapBasedPredictionNode::mapCallback(const LaneletMapBin::ConstSharedPtr msg
 }
 
 void MapBasedPredictionNode::trafficSignalsCallback(
-  const TrafficLightGroupArray::ConstSharedPtr msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & msg)
 {
   // load traffic signals to the predictor
   predictor_vru_->setTrafficSignal(*msg);
@@ -644,7 +646,7 @@ void MapBasedPredictionNode::objectsCallback(AUTOWARE_MESSAGE_CONST_SHARED_PTR(T
 
   // take traffic_signal
   {
-    const auto msg = sub_traffic_signals_.take_data();
+    const auto msg = sub_traffic_signals_->take_data();
     if (msg) {
       trafficSignalsCallback(msg);
     }
