@@ -38,7 +38,7 @@
       pedestrian: pedestrian
       personal_mobility: pedestrian
       animal: animal
-      pushable_pullable: hazard
+      pushable_pullable: pedestrian
       traffic_cone: hazard
       debris: hazard
       stroller: pedestrian
