@@ -71,9 +71,8 @@ void MapCallback::mapCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMap
 ObjectsCallback::ObjectsCallback(rclcpp::Node * node, NodeState & state)
 : node_(node), state_(state), transform_listener_(node)
 {
-  sub_traffic_signals_ =
-    AUTOWARE_CREATE_POLLING_SUBSCRIBER_ON_NODE(
-      TrafficLightGroupArray, node, "/traffic_signals", rclcpp::QoS{1});
+  sub_traffic_signals_ = AUTOWARE_CREATE_POLLING_SUBSCRIBER_ON_NODE(
+    TrafficLightGroupArray, node, "/traffic_signals", rclcpp::QoS{1});
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");

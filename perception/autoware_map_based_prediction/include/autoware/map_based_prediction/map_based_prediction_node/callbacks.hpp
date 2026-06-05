@@ -84,7 +84,8 @@ private:
 
   Diagnostics * diagnostics_{};
 
-  void trafficSignalsCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & msg);
+  void trafficSignalsCallback(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & msg);
   void publish(
     const PredictedObjects & output,
     const visualization_msgs::msg::MarkerArray & debug_markers) const;
