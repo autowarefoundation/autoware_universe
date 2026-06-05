@@ -87,6 +87,7 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_pointcloud_preprocessor/common_kernels.cu
   src/cuda_pointcloud_preprocessor/organize_kernels.cu
   src/cuda_pointcloud_preprocessor/outlier_kernels.cu
+  src/cuda_outlier_filter/cuda_polar_voxel_noise_filter.cu
   src/cuda_pointcloud_preprocessor/undistort_kernels.cu
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.cu
   src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter.cu
@@ -129,6 +130,7 @@ ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor_node.cpp
   src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
   src/cuda_outlier_filter/cuda_polar_voxel_outlier_filter_node.cpp
+  src/cuda_outlier_filter/cuda_polar_voxel_noise_filter_node.cpp
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor
@@ -158,6 +160,12 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
 rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPolarVoxelOutlierFilterNode"
   EXECUTABLE cuda_polar_voxel_outlier_filter_node
+)
+
+# ========== PolarVoxel noise filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPolarVoxelNoiseFilterNode"
+  EXECUTABLE cuda_polar_voxel_noise_filter_node
 )
 
 ################################################################################
