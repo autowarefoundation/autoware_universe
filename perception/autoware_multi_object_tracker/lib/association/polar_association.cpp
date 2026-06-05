@@ -42,7 +42,7 @@ using autoware_utils_debug::ScopedTimeTrack;
 
 //// Construction & configuration
 
-PolarAssociation::PolarAssociation(const AssociatorConfig & config)
+PolarAssociation::PolarAssociation(const TrackerAssociationConfig & config)
 : config_(config), score_threshold_(config.score_threshold)
 {
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
@@ -106,8 +106,10 @@ void PolarAssociation::processMeasurement(
   const classes::Label measurement_label, const std::vector<TrackerPolarEntry> & tracker_entries,
   const EgoContext & ego, types::AssociationData & association_data)
 {
+  const ShapeLabelKey shape_label_key{
+    types::toShapeType(measurement_object.shape.type), measurement_label};
   const auto tracker_params_map_opt =
-    get_map_value_if_exists(config_.association_params_map, measurement_label);
+    get_map_value_if_exists(config_.association_params_map, shape_label_key);
   if (!tracker_params_map_opt) return;
   const auto & tracker_params_map = tracker_params_map_opt->get();
 

@@ -30,36 +30,11 @@
 #include <lanelet2_core/Forward.h>
 
 #include <map>
-#include <memory>
 #include <set>
-#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
 {
-
-inline bool is_unknown(const StateKey & state_key)
-{
-  return state_key.size() == 1 &&
-         state_key[0].first == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-}
-
-inline bool compare_state_key_log_odds(
-  const std::pair<StateKey, double> & key1, const std::pair<StateKey, double> & key2)
-{
-  // Ordering rule:
-  // 1. Unknown StateKey is always lower priority
-  // 2. Otherwise, smaller log-odds comes first
-  const bool key1_is_unknown = is_unknown(key1.first);
-  const bool key2_is_unknown = is_unknown(key2.first);
-  if (key1_is_unknown && !key2_is_unknown) {
-    return true;
-  }
-  if (!key1_is_unknown && key2_is_unknown) {
-    return false;
-  }
-  return key1.second < key2.second;
-}
 
 struct GroupFusionInfo
 {
@@ -124,9 +99,6 @@ public:
 private:
   void multi_camera_fusion(std::map<IdType, utils::FusionRecord> & fused_record_map);
 
-  static void convert_output_msg(
-    const std::map<IdType, utils::FusionRecord> & grouped_record_map, NewSignalArrayType & msg_out);
-
   void group_fusion(
     const std::map<IdType, utils::FusionRecord> & fused_record_map,
     std::map<IdType, utils::FusionRecord> & grouped_record_map,
@@ -161,13 +133,6 @@ private:
     std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence) const;
 
   /**
-   * @brief Handles the logic for tracking the best record for a given state.
-   */
-  static void update_best_record(
-    std::map<StateKey, utils::FusionRecord> & best_record_map, const StateKey & state_key,
-    double confidence, const utils::FusionRecord & record);
-
-  /**
    * @brief Determines the best state for each group based on accumulated evidence.
    */
   void determine_best_group_state(
@@ -185,7 +150,6 @@ private:
   */
   std::multiset<utils::FusionRecordArr> record_arr_set_;
 
-  std::unique_ptr<SignalValidator> signal_validator_;
   std::vector<ConflictInfo> conflicted_regulatory_element_status_{};
 };
 
