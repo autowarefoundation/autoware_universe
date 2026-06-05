@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_concatenator/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/autoware_trajectory_selector/">
       
       
-        <link rel="prev" href="../autoware_trajectory_adapter/">
+        <link rel="prev" href="../autoware_trajectory_ranker/">
       
       
-        <link rel="next" href="../autoware_trajectory_modifier/">
+        <link rel="next" href="../autoware_trajectory_validator/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Trajectory Concatenator - Autoware Universe Documentation</title>
+        <title>Trajectory Selector - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#trajectory-concatenator" class="md-skip">
+        <a href="#trajectory-selector" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Trajectory Concatenator
+              Trajectory Selector
             
           </span>
         </div>
@@ -22912,12 +22912,17 @@
   
 
 
-<div><h1 id="trajectory-concatenator">Trajectory Concatenator<a class="headerlink" href="#trajectory-concatenator" title="Permanent link">#</a></h1>
+<div><h1 id="trajectory-selector">Trajectory Selector<a class="headerlink" href="#trajectory-selector" title="Permanent link">#</a></h1>
 <h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
-<p>This node aggregates trajectory candidates from multiple trajectory generators into a single <code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code> message. It is intended to be placed between trajectory generators and the selector/ranker.</p>
+<p><code>trajectory_selector_node</code> is the ROS 2 node that orchestrates the full candidate trajectory pipeline. It buffers trajectory candidates from multiple upstream planners via <code>autoware_trajectory_concatenator</code>, validates each candidate against the safety and traffic-rule plugins of <code>autoware_trajectory_validator</code>, and publishes the surviving trajectories for downstream processing.</p>
 <h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
-<p>When a <code>CandidateTrajectories</code> message is received (from either <code>~/input/trajectories_generative</code> or <code>~/input/trajectories_backup</code>), the library splits it by <code>generator_id</code> and updates an in-memory buffer so that only the most recent trajectory set for each generator is retained.</p>
-<p>A 100 ms timer then scans this buffer and drops any entry whose header stamp is older than the configured duration_time. Immediately after pruning, the timer concatenates all remaining trajectories and their accompanying <code>generator_info</code> arrays, publishes the aggregated message.</p>
+<ol>
+<li>Candidate trajectories arrive on two separate input topics — <code>~/input/trajectories_generative</code> for generative planners and <code>~/input/trajectories_backup</code> for backup planners. Each received message is forwarded to the internal concatenator buffer.</li>
+<li>A 100 ms timer fires: the concatenator prunes stale entries (older than <code>duration_time</code>) and returns the merged trajectory set from all registered generators.</li>
+<li>If any mandatory sensor input (odometry, predicted objects, acceleration, or HD map) is unavailable, the timer returns early without publishing.</li>
+<li>The validator runs all loaded plugins against each trajectory. Trajectories rejected by any enforced plugin (listed in <code>filter_names</code>) are removed from the output set.</li>
+<li>The surviving trajectories are published to <code>~/output/trajectories</code>.</li>
+</ol>
 <h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
 <h3 id="topics">Topics<a class="headerlink" href="#topics" title="Permanent link">#</a></h3>
 <table>
@@ -22934,43 +22939,64 @@
 <td>Subscriber</td>
 <td><code>~/input/trajectories_generative</code></td>
 <td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
-<td>Trajectory sets from generative planners</td>
+<td>Trajectories from generative planners</td>
 </tr>
 <tr>
 <td>Subscriber</td>
 <td><code>~/input/trajectories_backup</code></td>
 <td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
-<td>Trajectory sets from backup planners</td>
+<td>Trajectories from backup planners</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/lanelet2_map</code></td>
+<td><code>autoware_map_msgs/msg/LaneletMapBin</code></td>
+<td>HD map (transient local QoS; loaded once at startup)</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/odometry</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td>Current ego pose and velocity</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/objects</code></td>
+<td><code>autoware_perception_msgs/msg/PredictedObjects</code></td>
+<td>Surrounding dynamic obstacles</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/acceleration</code></td>
+<td><code>geometry_msgs/msg/AccelWithCovarianceStamped</code></td>
+<td>Current ego acceleration</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/traffic_signals</code></td>
+<td><code>autoware_perception_msgs/msg/TrafficLightGroupArray</code></td>
+<td>Traffic light states (optional; missing data does not block the timer)</td>
 </tr>
 <tr>
 <td>Publisher</td>
 <td><code>~/output/trajectories</code></td>
 <td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
-<td>Concatenated list of all buffered trajectories</td>
+<td>Trajectories that passed all enforced validator plugins</td>
+</tr>
+<tr>
+<td>Publisher</td>
+<td><code>~/debug/processing_time_detail_ms/trajectory_selector</code></td>
+<td><code>autoware_internal_debug_msgs/msg/ProcessingTimeTree</code></td>
+<td>Per-function processing time breakdown</td>
 </tr>
 </tbody>
 </table>
 <h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-<th>Range</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>duration_time</td>
-<td>float</td>
-<td>Duration time to keep the trajectory (it will be deleted once exceeding this value)</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-</tbody>
-</table></div>
+<p>This node does not declare parameters of its own. Configuration is provided through the sub-package parameter files loaded at launch:</p>
+<ul>
+<li>Concatenation parameters: see <a href="../autoware_trajectory_concatenator/#parameters"><code>autoware_trajectory_concatenator</code></a></li>
+<li>Validation parameters: see <a href="../autoware_trajectory_validator/#parameters"><code>autoware_trajectory_validator</code></a></li>
+</ul></div>
 
 
 
@@ -23006,7 +23032,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_trajectory_adapter/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Trajectory Adapter">
+          <a href="../autoware_trajectory_ranker/" class="md-footer__link md-footer__link--prev" aria-label="Previous: autoware_trajectory_ranker">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23016,20 +23042,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Trajectory Adapter
+                autoware_trajectory_ranker
               </div>
             </div>
           </a>
         
         
           
-          <a href="../autoware_trajectory_modifier/" class="md-footer__link md-footer__link--next" aria-label="Next: Autoware Trajectory Modifier">
+          <a href="../autoware_trajectory_validator/" class="md-footer__link md-footer__link--next" aria-label="Next: Trajectory Validator">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Autoware Trajectory Modifier
+                Trajectory Validator
               </div>
             </div>
             <div class="md-footer__button md-icon">
