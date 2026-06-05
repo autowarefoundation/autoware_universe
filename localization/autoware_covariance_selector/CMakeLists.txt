@@ -25,6 +25,21 @@ rclcpp_components_register_node(${LIBRARY_NAME}
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_auto_add_gtest(test_${PROJECT_NAME}
+    test/test_covariance_selector.cpp
+  )
+  target_include_directories(test_${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_${PROJECT_NAME} ${LIBRARY_NAME})
+  ament_target_dependencies(test_${PROJECT_NAME}
+    autoware_lanelet2_utils
+    autoware_map_msgs
+    geometry_msgs
+    rclcpp
+  )
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
