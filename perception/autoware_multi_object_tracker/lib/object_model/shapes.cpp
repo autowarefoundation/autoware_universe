@@ -233,12 +233,12 @@ bool convertConvexHullToBoundingBox(
   OrientedExtent best_ext{};
   bool found_any = false;
 
-  auto tryEdge = [&](const size_t i) {
+  auto tryEdge = [&](const size_t i) -> bool {
     const auto & p0 = points[i];
     const auto & p1 = points[(i + 1) % n];
     const double ex = p1.x - p0.x, ey = p1.y - p0.y;
     const double len_sq = ex * ex + ey * ey;
-    if (len_sq < 1e-12) return;
+    if (len_sq < 1e-12) return false;
     const double edge_len = std::sqrt(len_sq);
     const auto ext = computeOrientedExtent(points, ex / edge_len, ey / edge_len);
     const double area = (ext.max_along - ext.min_along) * (ext.max_lat - ext.min_lat);
@@ -246,8 +246,9 @@ bool convertConvexHullToBoundingBox(
       best_area = area;
       best_i = i;
       best_ext = ext;
-      found_any = true;
+      return true;
     }
+    return false;
   };
 
   // Ego-facing pass: outward normal of CCW edge (ex,ey) is (ey,-ex).
@@ -260,14 +261,14 @@ bool convertConvexHullToBoundingBox(
       const double ex = p1.x - p0.x;
       const double ey = p1.y - p0.y;
       if (ey * ego_local_x - ex * ego_local_y <= 0.0) continue;
-      tryEdge(i);
+      found_any |= tryEdge(i);
     }
   }
 
   // Fallback: full per-edge search (no ego, CW polygon, or no ego-facing edges).
   if (!found_any) {
     for (size_t i = 0; i < n; ++i) {
-      tryEdge(i);
+      found_any |= tryEdge(i);
     }
     if (!found_any) return false;
   }
