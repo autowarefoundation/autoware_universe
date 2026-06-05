@@ -160,7 +160,8 @@ MultiCameraFusion::MultiCameraFusion(const MultiCameraFusionConfig & config)
 }
 
 MultiCameraFusionResult MultiCameraFusion::fuse(
-  const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals)
+  const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals,
+  NewSignalArrayType & output_groups)
 {
   /*
   Insert the received record array to the table.
@@ -173,10 +174,8 @@ MultiCameraFusionResult MultiCameraFusion::fuse(
   multi_camera_fusion(fused_record_map);
   group_fusion(fused_record_map, grouped_record_map, result.unmapped_traffic_light_ids);
 
-  NewSignalArrayType msg_out;
-  convert_output_msg(grouped_record_map, msg_out);
-  msg_out.stamp = cam_info.header.stamp;
-  result.traffic_light_groups = msg_out;
+  convert_output_msg(grouped_record_map, output_groups);
+  output_groups.stamp = cam_info.header.stamp;
 
   result.conflicted_regulatory_element_status = conflicted_regulatory_element_status_;
   return result;
