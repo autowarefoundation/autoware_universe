@@ -15,7 +15,8 @@
         "normal_vehicle_tracker",
         "big_vehicle_tracker",
         "vehicle_tracker",
-        "polygon_tracker"
+        "polygon_tracker",
+        "static_tracker"
       ]
     },
     "tracker_assignment_entry": {

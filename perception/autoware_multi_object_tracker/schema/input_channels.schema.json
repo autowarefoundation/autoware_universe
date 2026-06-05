@@ -75,13 +75,6 @@
                   "$ref": "#/definitions/input_channel",
                   "default": {
                     "associator_type": "bev",
-                    "flags": {
-                      "can_spawn_new_tracker": true,
-                      "can_trust_existence_probability": true,
-                      "can_trust_extension": true,
-                      "can_trust_classification": true,
-                      "can_trust_orientation": true
-                    },
                     "optional": {
                       "name": "detected_objects",
                       "short_name": "all"
@@ -91,7 +84,7 @@
                 "lidar_clustering": {
                   "$ref": "#/definitions/input_channel",
                   "default": {
-                    "associator_type": "bev",
+                    "associator_type": "polar",
                     "flags": {
                       "can_spawn_new_tracker": true,
                       "can_trust_existence_probability": false,
@@ -143,7 +136,6 @@
                   "$ref": "#/definitions/input_channel",
                   "default": {
                     "associator_type": "bev",
-                    "topic": "/perception/object_recognition/detection/apollo/objects",
                     "flags": {
                       "can_spawn_new_tracker": true,
                       "can_trust_existence_probability": true,
@@ -194,7 +186,7 @@
                 "camera_lidar_fusion": {
                   "$ref": "#/definitions/input_channel",
                   "default": {
-                    "associator_type": "bev",
+                    "associator_type": "polar",
                     "flags": {
                       "can_spawn_new_tracker": true,
                       "can_trust_existence_probability": false,
@@ -211,7 +203,7 @@
                 "camera_lidar_fusion_irregular": {
                   "$ref": "#/definitions/input_channel",
                   "default": {
-                    "associator_type": "bev",
+                    "associator_type": "polar",
                     "flags": {
                       "can_spawn_new_tracker": true,
                       "can_trust_existence_probability": false,
@@ -262,7 +254,7 @@
                 "camera_vru": {
                   "$ref": "#/definitions/input_channel",
                   "default": {
-                    "associator_type": "bev",
+                    "associator_type": "polar",
                     "flags": {
                       "can_spawn_new_tracker": true,
                       "can_trust_existence_probability": true,
