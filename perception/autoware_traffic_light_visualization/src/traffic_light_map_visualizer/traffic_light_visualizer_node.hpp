@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020-2026 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,14 +33,16 @@ public:
   explicit TrafficLightMapVisualizerNode(const rclcpp::NodeOptions & node_options);
 
 private:
-  void traffic_lights_callback(
-    const autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_lights);
-  void bin_map_callback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr input_map_msg);
+  using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
+  using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr light_marker_pub_;
-  rclcpp::Subscription<autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr
-    tl_state_sub_;
-  rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr vector_map_sub_;
+  void detected_traffic_lights_callback(
+    const TrafficLightGroupArray::ConstSharedPtr detected_traffic_lights);
+  void lanelet_map_callback(const LaneletMapBin::ConstSharedPtr lanelet_map_msg);
+
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr traffic_light_marker_pub_;
+  rclcpp::Subscription<TrafficLightGroupArray>::SharedPtr detected_traffic_lights_sub_;
+  rclcpp::Subscription<LaneletMapBin>::SharedPtr lanelet_map_sub_;
 
   std::optional<TrafficLightVisualizer> visualizer_;
 };
