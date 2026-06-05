@@ -1,6 +1,4 @@
 <launch>
-  <!-- Agnocast (Method 1): provides ld_preload_value for the heaphook when ENABLE_AGNOCAST=1.
-       The output publisher is shared via ObjectSorterBase, so it is Agnocast-wrapped here too. -->
   <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <!-- Input -->
   <arg name="input/objects" default="~/input/objects"/>

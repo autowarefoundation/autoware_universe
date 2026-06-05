@@ -13,9 +13,6 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/tracked_object_sorter_node.cpp
 )
 
-# Agnocast Method 2: the sorter nodes inherit autoware::agnocast_wrapper::Node (via the shared
-# ObjectSorterBase template). Pull in the wrapper (and, transitively, agnocastlib) include dirs
-# and define USE_AGNOCAST_ENABLED when Agnocast is enabled.
 target_include_directories(${PROJECT_NAME} PRIVATE
   ${autoware_agnocast_wrapper_INCLUDE_DIRS}
 )

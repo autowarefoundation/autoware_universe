@@ -115,7 +115,6 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
     return;
   }
 
-  // Build directly into the loaned message to keep the Agnocast zero-copy path.
   auto output_objects = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_output_objects_);
   output_objects->header = input_msg->header;
 
