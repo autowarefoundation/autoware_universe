@@ -36,7 +36,7 @@
 #include <thread>
 #include <vector>
 
-using autoware::traffic_light::MultiCameraFusion;
+using autoware::traffic_light::MultiCameraFusionNode;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::TrafficLightGroupArray;
 using sensor_msgs::msg::CameraInfo;
@@ -109,7 +109,7 @@ protected:
       "signal_consistency_check.publish_partial_matched_signal",
       options.publish_partial_matched_signal);
 
-    node_ = std::make_shared<MultiCameraFusion>(node_options);
+    node_ = std::make_shared<MultiCameraFusionNode>(node_options);
     executor_->add_node(node_);
   }
 
@@ -221,7 +221,7 @@ protected:
     publish_signal(camera_index, stamp, frame_id, traffic_light_id, color, confidence);
   }
 
-  std::shared_ptr<MultiCameraFusion> node_;
+  std::shared_ptr<MultiCameraFusionNode> node_;
   std::shared_ptr<rclcpp::Node> test_node_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
 
