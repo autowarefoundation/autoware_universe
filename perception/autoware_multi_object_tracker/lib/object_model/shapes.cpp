@@ -269,9 +269,8 @@ bool convertConvexHullToBoundingBox(
     for (size_t i = 0; i < n; ++i) {
       tryEdge(i);
     }
+    if (!found_any) return false;
   }
-
-  if (!found_any) return false;
 
   // Recover edge direction and bbox geometry from the winning edge.
   const auto & p0 = points[best_i];
