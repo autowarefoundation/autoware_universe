@@ -51,7 +51,7 @@ TrajectoryValidatorWrapper::TrajectoryValidatorWrapper(
   time_keeper_(std::move(time_keeper))
 {
   if (!time_keeper_) {
-    throw std::runtime_error("TimeKeeper is required for TrajectoryValidatorInterface");
+    throw std::runtime_error("TimeKeeper is required for TrajectoryValidatorWrapper");
   }
 
   validator_params_ = validator_params_listener_.get_params();
@@ -264,6 +264,7 @@ void TrajectoryValidatorWrapper::publish_plugins_report_text(
   plugin_report_text.pose = marker_pose;
   plugin_report_text.pose.position.z += vehicle_info_.vehicle_height_m;
   plugin_report_text.text = fmt::to_string(out);
+  plugin_report_text.frame_locked = true;
 
   visualization_msgs::msg::MarkerArray plugin_report_text_marker;
   plugin_report_text_marker.markers.push_back(plugin_report_text);
