@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
   <arg name="trajectory_validator_param_path" default="$(find-pkg-share autoware_trajectory_validator)/config/trajectory_validator.param.yaml"/>
-  <arg name="input_trajectories" default="~/input/trajectories"/>
+  <arg name="input_generative_trajectories" default="~/input/trajectories_generative"/>
+  <arg name="input_backup_trajectories" default="~/input/trajectories_backup"/>
   <arg name="output_trajectories" default="~/output/trajectories"/>
   <arg name="input_vector_map" default="~/input/vector_map"/>
   <arg name="input_odometry" default="~/input/odometry"/>
@@ -9,9 +10,10 @@
   <arg name="input_acceleration" default="~/input/acceleration"/>
   <arg name="input_traffic_signals" default="~/input/traffic_signals"/>
 
-  <node pkg="autoware_trajectory_validator" exec="autoware_trajectory_validator_node" name="trajectory_validator_node" output="screen">
+  <node pkg="autoware_trajectory_selector" exec="autoware_trajectory_selector_node" name="trajectory_selector_node" output="screen">
     <param from="$(var trajectory_validator_param_path)" allow_substs="true"/>
-    <remap from="~/input/trajectories" to="$(var input_trajectories)"/>
+    <remap from="~/input/trajectories_generative" to="$(var input_generative_trajectories)"/>
+    <remap from="~/input/trajectories_backup" to="$(var input_backup_trajectories)"/>
     <remap from="~/output/trajectories" to="$(var output_trajectories)"/>
     <remap from="~/input/lanelet2_map" to="$(var input_vector_map)"/>
     <remap from="~/input/odometry" to="$(var input_odometry)"/>
