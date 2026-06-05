@@ -115,6 +115,34 @@ inline std::string toString(const TrackerType tracker_type)
   }
 }
 
+inline std::string toShortString(const TrackerType tracker_type)
+{
+  switch (tracker_type) {
+    case TrackerType::PEDESTRIAN_AND_BICYCLE:
+      return "ped&bic";
+    case TrackerType::PEDESTRIAN:
+      return "ped";
+    case TrackerType::BICYCLE:
+      return "bic";
+    case TrackerType::MULTIPLE_VEHICLE:
+      return "multi_veh";
+    case TrackerType::GENERAL_VEHICLE:
+      return "general_veh";
+    case TrackerType::NORMAL_VEHICLE:
+      return "normal_veh";
+    case TrackerType::BIG_VEHICLE:
+      return "big_veh";
+    case TrackerType::VEHICLE:
+      return "veh";
+    case TrackerType::POLYGON:
+      return "poly";
+    case TrackerType::STATIC:
+      return "static";
+    default:
+      return "default";
+  }
+}
+
 inline std::optional<TrackerType> toTrackerType(const std::string & tracker_name)
 {
   if (tracker_name == "pedestrian_and_bicycle_tracker") {
@@ -414,6 +442,7 @@ using types::allTrackerTypes;
 using types::isVehicleTrackerType;
 using types::ShapeType;
 using types::toShapeType;
+using types::toShortString;
 using types::toString;
 using types::toTrackerType;
 using types::TrackerType;

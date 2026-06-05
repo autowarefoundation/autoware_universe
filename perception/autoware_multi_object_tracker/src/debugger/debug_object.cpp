@@ -104,7 +104,7 @@ void TrackerObjectDebugger::collect(
 
     object_data.existence_vector = (*tracker_itr)->getExistenceProbabilityVector();
     object_data.total_existence_probability = (*tracker_itr)->getTotalExistenceProbability();
-    object_data.tracker_type_str = types::toString((*tracker_itr)->getTrackerType());
+    object_data.tracker_type_str = types::toShortString((*tracker_itr)->getTrackerType());
 
     auto & group = object_data_map_[object_data.uuid];
     group.push_back(std::move(object_data));
