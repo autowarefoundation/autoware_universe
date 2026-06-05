@@ -35,6 +35,19 @@
 
 namespace autoware::ptv3
 {
+namespace
+{
+
+std::int64_t poolingDepth(const std::int64_t stride)
+{
+  std::int64_t depth = 0;
+  for (auto value = stride; value > 1; value >>= 1) {
+    ++depth;
+  }
+  return depth;
+}
+
+}  // namespace
 
 PTv3TRT::PTv3TRT(const tensorrt_common::TrtCommonConfig & trt_config, const PTv3Config & config)
 : config_(config)
@@ -148,6 +161,39 @@ void PTv3TRT::initPtr()
   post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
 
   allocateMessages();
+  allocateSerializedPoolingBuffers();
+}
+
+void PTv3TRT::allocateSerializedPoolingBuffers()
+{
+  serialized_pooling_stages_d_.clear();
+  serialized_pooling_stages_d_.reserve(config_.pooling_strides_.size());
+  const auto max_num_voxels = static_cast<std::size_t>(config_.max_num_voxels_);
+  const auto num_orders = config_.serialization_orders_.size();
+
+  for (std::size_t stage_index = 0; stage_index < config_.pooling_strides_.size(); ++stage_index) {
+    SerializedPoolingDeviceStage stage;
+    stage.indices = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
+    stage.indptr = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels + 1);
+    stage.head_indices = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
+    stage.cluster = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
+    stage.grid_coord = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * 3);
+    stage.serialized_code =
+      autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * num_orders);
+    stage.serialized_order =
+      autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * num_orders);
+    stage.serialized_inverse =
+      autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * num_orders);
+    serialized_pooling_stages_d_.push_back(std::move(stage));
+  }
+
+  serialized_pooling_num_voxels_d_ =
+    autoware::cuda_utils::make_unique<std::int64_t[]>(config_.pooling_strides_.size() + 1);
+  serialized_pooling_num_voxels_.assign(config_.pooling_strides_.size() + 1, 0);
+  serialized_pooling_depths_.resize(config_.pooling_strides_.size());
+  for (std::size_t stage_index = 0; stage_index < config_.pooling_strides_.size(); ++stage_index) {
+    serialized_pooling_depths_[stage_index] = poolingDepth(config_.pooling_strides_[stage_index]);
+  }
 }
 
 void PTv3TRT::createPointFields()
@@ -230,6 +276,30 @@ void PTv3TRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
   network_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
   network_trt_ptr_->setTensorAddress("pred_labels", pred_labels_d_.get());
   network_trt_ptr_->setTensorAddress("pred_probs", pred_probs_d_.get());
+}
+
+void PTv3TRT::precomputeSerializedPoolingMetadata()
+{
+  if (config_.pooling_strides_.empty()) {
+    return;
+  }
+
+  std::vector<SerializedPoolingDeviceStageView> stage_views;
+  stage_views.reserve(serialized_pooling_stages_d_.size());
+  for (auto & stage : serialized_pooling_stages_d_) {
+    stage_views.push_back(SerializedPoolingDeviceStageView{
+      stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+      stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+      stage.serialized_inverse.get()});
+  }
+
+  pre_ptr_->generateSerializedPoolingMetadata(
+    grid_coord_d_.get(), serialized_code_d_.get(), num_voxels_, stage_views,
+    serialized_pooling_num_voxels_d_.get());
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    serialized_pooling_num_voxels_.data(), serialized_pooling_num_voxels_d_.get(),
+    serialized_pooling_num_voxels_.size() * sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
 CloudFormat PTv3TRT::detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const
@@ -438,6 +508,8 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
                                     << config_.max_num_voxels_ << "). Clipping to the limit.");
     num_voxels_ = config_.max_num_voxels_;
   }
+
+  precomputeSerializedPoolingMetadata();
 
   network_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
   network_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});

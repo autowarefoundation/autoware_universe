@@ -49,6 +49,10 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     to_float_vector(this->declare_parameter<std::vector<double>>("point_cloud_range", descriptor));
   const auto voxel_size =
     to_float_vector(this->declare_parameter<std::vector<double>>("voxel_size", descriptor));
+  const auto serialization_orders =
+    this->declare_parameter<std::vector<std::string>>("serialization_orders", descriptor);
+  const auto pooling_strides =
+    this->declare_parameter<std::vector<std::int64_t>>("pooling_strides", descriptor);
 
   // Head parameters
   auto class_names = this->declare_parameter<std::vector<std::string>>("class_names", descriptor);
@@ -70,9 +74,9 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   }
 
   PTv3Config config(
-    plugins_path, cloud_capacity, voxels_num, point_cloud_range, voxel_size, class_names, palette,
-    filter_class_probability_threshold, filter_classes, filter_output_format,
-    source_reconstruction);
+    plugins_path, cloud_capacity, voxels_num, point_cloud_range, voxel_size, class_names,
+    serialization_orders, pooling_strides, palette, filter_class_probability_threshold,
+    filter_classes, filter_output_format, source_reconstruction);
 
   auto trt_config =
     tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 33U);

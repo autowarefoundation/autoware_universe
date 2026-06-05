@@ -59,3 +59,5 @@
     voxels_num: [32000, 192000, 320000] # [min, opt, max]
     point_cloud_range: [-102.4, -102.4, -2.8, 102.4, 102.4, 10.0] # [x_min, y_min, z_min, x_max, y_max, z_max]
     voxel_size: [0.1, 0.1, 0.1] # [x, y, z]
+    serialization_orders: ["z", "z-trans"]
+    pooling_strides: [2, 2, 2, 2]

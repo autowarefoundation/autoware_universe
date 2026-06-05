@@ -41,9 +41,10 @@ public:
     const std::string & plugins_path, const std::int64_t cloud_capacity,
     const std::vector<std::int64_t> & voxels_num, const std::vector<float> & point_cloud_range,
     const std::vector<float> & voxel_size, const std::vector<std::string> & class_names,
-    const std::vector<std::int64_t> & palette, const float filter_class_probability_threshold,
-    const std::vector<std::string> & filter_classes, const std::string & filter_output_format,
-    const std::string & source_reconstruction)
+    const std::vector<std::string> & serialization_orders,
+    const std::vector<std::int64_t> & pooling_strides, const std::vector<std::int64_t> & palette,
+    const float filter_class_probability_threshold, const std::vector<std::string> & filter_classes,
+    const std::string & filter_output_format, const std::string & source_reconstruction)
   {
     plugins_path_ = plugins_path;
 
@@ -87,6 +88,8 @@ public:
       grid_x_size_ * grid_y_size_ * grid_z_size_ > std::numeric_limits<std::uint32_t>::max();
 
     class_names_ = class_names;
+    serialization_orders_ = validate_serialization_orders(serialization_orders);
+    pooling_strides_ = validate_pooling_strides(pooling_strides);
 
     colors_rgb_ = make_palette(class_names_, palette);
 
@@ -159,6 +162,32 @@ public:
     return colors;
   }
 
+  static std::vector<std::string> validate_serialization_orders(
+    const std::vector<std::string> & serialization_orders)
+  {
+    if (serialization_orders.empty()) {
+      throw std::runtime_error("serialization_orders must not be empty.");
+    }
+    if (
+      serialization_orders.size() != 2 || serialization_orders[0] != "z" ||
+      serialization_orders[1] != "z-trans") {
+      throw std::runtime_error(
+        "The current PTv3 preprocessing path supports serialization_orders: ['z', 'z-trans'].");
+    }
+    return serialization_orders;
+  }
+
+  static std::vector<std::int64_t> validate_pooling_strides(
+    const std::vector<std::int64_t> & pooling_strides)
+  {
+    for (const auto stride : pooling_strides) {
+      if (stride < 1 || (stride & (stride - 1)) != 0) {
+        throw std::runtime_error("Each pooling stride must be a positive power of two.");
+      }
+    }
+    return pooling_strides;
+  }
+
   // CUDA parameters
   const std::uint32_t threads_per_block_{256};  // threads number for a block
 
@@ -173,6 +202,8 @@ public:
 
   // Head parameters
   std::vector<std::string> class_names_;
+  std::vector<std::string> serialization_orders_;
+  std::vector<std::int64_t> pooling_strides_;
   std::vector<float> colors_rgb_;
   float filter_class_probability_threshold_{};
   std::vector<std::uint32_t> filter_class_indices_;

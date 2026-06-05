@@ -51,9 +51,37 @@
           "default": [0.3, 0.3, 8.0],
           "minItems": 3,
           "maxItems": 3
+        },
+        "serialization_orders": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["z", "z-trans"]
+          },
+          "description": "Space-filling curve serialization orders used by the exported model.",
+          "default": ["z", "z-trans"],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "pooling_strides": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "enum": [2]
+          },
+          "description": "SerializedPooling strides for each encoder downsampling stage.",
+          "default": [2, 2, 2, 2]
         }
       },
-      "required": ["class_names", "palette", "voxels_num", "point_cloud_range", "voxel_size"],
+      "required": [
+        "class_names",
+        "palette",
+        "voxels_num",
+        "point_cloud_range",
+        "voxel_size",
+        "serialization_orders",
+        "pooling_strides"
+      ],
       "additionalProperties": false
     }
   },
