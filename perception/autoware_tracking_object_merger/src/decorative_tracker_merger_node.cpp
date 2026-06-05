@@ -249,10 +249,11 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
       closest_time_sub_objects, closest_time_sub_objects_later, transformed_main_objects->header);
     if (interpolated_sub_objects.has_value()) {
       // Merge sub objects
-      const auto interp_sub_objs = interpolated_sub_objects.value();
-      debug_object_pub_->publish(interp_sub_objs);
-      this->decorativeMerger(
-        sub_sensor_type_, std::make_shared<TrackedObjects>(interpolated_sub_objects.value()));
+      const auto & interp_sub_objs = interpolated_sub_objects.value();
+      auto debug_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(debug_object_pub_);
+      *debug_msg = interp_sub_objs;
+      debug_object_pub_->publish(std::move(debug_msg));
+      this->decorativeMerger(sub_sensor_type_, std::make_shared<TrackedObjects>(interp_sub_objs));
     } else {
       RCLCPP_DEBUG(this->get_logger(), "interpolated_sub_objects is null");
     }
