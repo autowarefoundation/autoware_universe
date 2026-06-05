@@ -56,7 +56,7 @@
         "head": {
           "type": "string",
           "description": "Detection head type.",
-          "enum": ["center_head", "trans_head"]
+          "enum": ["trans_head"]
         },
         "bbox_voxel_size": {
           "type": "array",
@@ -69,10 +69,6 @@
           "type": "integer",
           "description": "Downsampling factor applied to the detection feature grid.",
           "minimum": 1
-        },
-        "has_variance": {
-          "type": "boolean",
-          "description": "Whether the detection head outputs uncertainty variance."
         },
         "has_twist": {
           "type": "boolean",
@@ -98,14 +94,7 @@
           "maxItems": 6
         }
       },
-      "required": [
-        "head",
-        "bbox_voxel_size",
-        "bbox_downsample_factor",
-        "has_variance",
-        "has_twist",
-        "class_names"
-      ],
+      "required": ["head", "bbox_voxel_size", "bbox_downsample_factor", "has_twist", "class_names"],
       "if": {
         "properties": { "head": { "const": "trans_head" } }
       },

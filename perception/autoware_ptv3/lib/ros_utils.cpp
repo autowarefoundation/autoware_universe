@@ -29,7 +29,7 @@ using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 void box3d_to_detected_object(
   const Box3D & box3d, const std::vector<std::string> & class_names, const bool has_twist,
-  const bool has_variance, autoware_perception_msgs::msg::DetectedObject & obj)
+  autoware_perception_msgs::msg::DetectedObject & obj)
 {
   obj.existence_probability = box3d.score;
 
@@ -57,21 +57,12 @@ void box3d_to_detected_object(
   obj.shape.dimensions =
     autoware_utils::create_translation(box3d.length, box3d.width, box3d.height);
 
-  if (has_variance) {
-    obj.kinematics.has_position_covariance = true;
-    obj.kinematics.pose_with_covariance.covariance = convert_pose_covariance_matrix(box3d);
-  }
-
   if (has_twist) {
     geometry_msgs::msg::Twist twist;
     twist.linear.x = std::cos(yaw) * box3d.vel_x + std::sin(yaw) * box3d.vel_y;
     twist.linear.y = -std::sin(yaw) * box3d.vel_x + std::cos(yaw) * box3d.vel_y;
     obj.kinematics.twist_with_covariance.twist = twist;
     obj.kinematics.has_twist = true;
-    if (has_variance) {
-      obj.kinematics.has_twist_covariance = true;
-      obj.kinematics.twist_with_covariance.covariance = convert_twist_covariance_matrix(box3d, yaw);
-    }
   }
 }
 
@@ -99,32 +90,6 @@ uint8_t get_semantic_type(const std::string & class_name)
     return Label::PEDESTRIAN;
   }
   return Label::UNKNOWN;
-}
-
-std::array<double, 36> convert_pose_covariance_matrix(const Box3D & box3d)
-{
-  using CovIdx = autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  std::array<double, 36> pose_covariance{};
-  pose_covariance[CovIdx::X_X] = box3d.x_variance;
-  pose_covariance[CovIdx::Y_Y] = box3d.y_variance;
-  pose_covariance[CovIdx::Z_Z] = box3d.z_variance;
-  pose_covariance[CovIdx::YAW_YAW] = box3d.yaw_variance;
-  return pose_covariance;
-}
-
-std::array<double, 36> convert_twist_covariance_matrix(const Box3D & box3d, const float yaw)
-{
-  using CovIdx = autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  std::array<double, 36> twist_covariance{};
-  const float cos_yaw = std::cos(yaw);
-  const float sin_yaw = std::sin(yaw);
-  twist_covariance[CovIdx::X_X] =
-    box3d.vel_x_variance * cos_yaw * cos_yaw + box3d.vel_y_variance * sin_yaw * sin_yaw;
-  twist_covariance[CovIdx::X_Y] = (box3d.vel_y_variance - box3d.vel_x_variance) * sin_yaw * cos_yaw;
-  twist_covariance[CovIdx::Y_X] = twist_covariance[CovIdx::X_Y];
-  twist_covariance[CovIdx::Y_Y] =
-    box3d.vel_x_variance * sin_yaw * sin_yaw + box3d.vel_y_variance * cos_yaw * cos_yaw;
-  return twist_covariance;
 }
 
 }  // namespace autoware::ptv3

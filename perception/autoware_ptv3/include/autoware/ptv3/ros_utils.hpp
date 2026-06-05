@@ -19,7 +19,6 @@
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 
-#include <array>
 #include <string>
 #include <vector>
 
@@ -28,13 +27,9 @@ namespace autoware::ptv3
 
 void box3d_to_detected_object(
   const Box3D & box3d, const std::vector<std::string> & class_names, bool has_twist,
-  bool has_variance, autoware_perception_msgs::msg::DetectedObject & obj);
+  autoware_perception_msgs::msg::DetectedObject & obj);
 
 uint8_t get_semantic_type(const std::string & class_name);
-
-std::array<double, 36> convert_pose_covariance_matrix(const Box3D & box3d);
-
-std::array<double, 36> convert_twist_covariance_matrix(const Box3D & box3d, float yaw);
 
 }  // namespace autoware::ptv3
 

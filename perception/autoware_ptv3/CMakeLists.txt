@@ -81,7 +81,6 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/postprocess/seg3d_postprocess.cu
-    lib/postprocess/det3d_center_head_postprocess.cu
     lib/postprocess/det3d_trans_head_postprocess.cu
     lib/preprocess/backbone_preprocess.cu
   )

@@ -37,21 +37,19 @@ enum class SourceReconstruction {
 };
 
 /** @brief Detection head layouts supported by this package. */
-enum class DetectionHeadType { CenterHead, TransHead };
+enum class DetectionHeadType { TransHead };
 
 /**
  * @brief Parse a detection head type string.
  *
- * @param s Expected value is `centerhead` or `transhead`.
+ * @param s Expected value is `trans_head`.
  * @return Parsed detection head type.
  * @throws std::runtime_error if the value is not supported.
  */
 inline DetectionHeadType parse_detection_head_type(const std::string & s)
 {
-  if (s == "center_head") return DetectionHeadType::CenterHead;
   if (s == "trans_head") return DetectionHeadType::TransHead;
-  throw std::runtime_error(
-    "Unsupported detection_head_type='" + s + "'. Expected 'center_head' or 'trans_head'.");
+  throw std::runtime_error("Unsupported detection_head_type='" + s + "'. Expected 'trans_head'.");
 }
 
 /**
@@ -85,8 +83,7 @@ public:
    * @param detection_score_thresholds Per-class thresholds for each distance bin.
    * @param yaw_norm_thresholds Per-class yaw vector norm thresholds.
    * @param has_twist Whether the detection head exports velocity tensors.
-   * @param has_variance Whether the detection head exports variance tensors.
-   * @param detection_head_type `centerhead` or `transhead`.
+   * @param detection_head_type `trans_head`.
    * @param num_proposals Number of query proposals for TransHead.
    * @param post_center_range TransHead range filter in `[x_min, y_min, z_min, x_max, y_max, z_max]`
    * order.
@@ -108,8 +105,8 @@ public:
     const std::vector<float> & distance_bin_upper_limits = {},
     const std::vector<float> & detection_score_thresholds = {},
     const std::vector<float> & yaw_norm_thresholds = {}, bool has_twist = false,
-    bool has_variance = false, const std::string & detection_head_type = "trans_head",
-    std::size_t num_proposals = 0, const std::vector<float> & post_center_range = {})
+    const std::string & detection_head_type = "trans_head", std::size_t num_proposals = 0,
+    const std::vector<float> & post_center_range = {})
   {
     plugins_path_ = plugins_path;
     cloud_capacity_ = cloud_capacity;
@@ -261,21 +258,7 @@ public:
       detection_score_thresholds_ = detection_score_thresholds;
       yaw_norm_thresholds_ = yaw_norm_thresholds;
       has_twist_ = has_twist;
-      has_variance_ = has_variance;
       detection_head_type_ = parse_detection_head_type(detection_head_type);
-      if (detection_head_type_ == DetectionHeadType::TransHead && has_variance_) {
-        throw std::runtime_error("has_variance is not supported for TransHead.");
-      }
-
-      if (has_variance_) {
-        head_out_reg_size_ = 4;
-        head_out_height_size_ = 2;
-        head_out_dim_size_ = 6;
-        head_out_rot_size_ = 4;
-        head_out_vel_size_ = has_twist_ ? 4 : 0;
-      } else {
-        head_out_vel_size_ = has_twist_ ? 2 : 0;
-      }
 
       bbox_grid_x_size_ =
         static_cast<std::size_t>((max_x_range_ - min_x_range_) / bbox_voxel_x_size_);
@@ -422,13 +405,7 @@ public:
   float bbox_voxel_z_size_{8.0f};
   std::size_t bbox_downsample_factor_{1};
   bool has_twist_{false};
-  bool has_variance_{false};
-  DetectionHeadType detection_head_type_{DetectionHeadType::CenterHead};
-  std::size_t head_out_reg_size_{2};
-  std::size_t head_out_height_size_{1};
-  std::size_t head_out_dim_size_{3};
-  std::size_t head_out_rot_size_{2};
-  std::size_t head_out_vel_size_{0};
+  DetectionHeadType detection_head_type_{DetectionHeadType::TransHead};
   std::size_t num_proposals_{0};
   std::vector<float> post_center_range_;
   std::vector<float> distance_bin_upper_limits_;

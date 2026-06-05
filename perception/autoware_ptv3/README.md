@@ -48,7 +48,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 Runtime head selection, filtering, detection thresholds, and remapping parameters are configured in
 `config/ptv3.param.yaml`. Model package metadata is split by artifact:
 `ml_package_ptv3_backbone.param.yaml`, `ml_package_ptv3_seg3d_head.param.yaml`, `ml_package_ptv3_det3d_head.param.yaml`.
-Source code supports CenterHead and TransHead for 3D object detection, but current artifacts might only include one of the two.
+Source code uses the TransHead for 3D object detection.
 
 ### The `build_only` option
 

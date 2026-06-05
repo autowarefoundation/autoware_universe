@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__PTV3__PTV3_TRT_HPP_
 #define AUTOWARE__PTV3__PTV3_TRT_HPP_
 
-#include "autoware/ptv3/postprocess/det3d_center_head_postprocess.hpp"
 #include "autoware/ptv3/postprocess/det3d_trans_head_postprocess.hpp"
 #include "autoware/ptv3/postprocess/seg3d_postprocess.hpp"
 #include "autoware/ptv3/preprocess/backbone_preprocess.hpp"
@@ -170,7 +169,6 @@ protected:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<BackbonePreprocess> pre_ptr_{nullptr};
   std::unique_ptr<Seg3dPostprocess> post_ptr_{nullptr};
-  std::unique_ptr<Det3dCenterHeadPostprocess> center_head_post_ptr_{nullptr};
   std::unique_ptr<Det3dTransHeadPostprocess> trans_head_post_ptr_{nullptr};
   cudaStream_t stream_{nullptr};
 
@@ -225,13 +223,10 @@ protected:
   // Full and partial reconstruction buffers for FP16 probabilities.
   CudaUniquePtr<__half[]> reconstructed_probs_fp16_d_{nullptr};
 
-  // CenterHead outputs.
+  // Detection head outputs.
   CudaUniquePtr<float[]> heatmap_d_{nullptr};
   CudaUniquePtr<__half[]> heatmap_fp16_d_{nullptr};
   nvinfer1::DataType heatmap_dtype_{nvinfer1::DataType::kFLOAT};
-  CudaUniquePtr<float[]> reg_d_{nullptr};
-  CudaUniquePtr<__half[]> reg_fp16_d_{nullptr};
-  nvinfer1::DataType reg_dtype_{nvinfer1::DataType::kFLOAT};
   CudaUniquePtr<float[]> height_d_{nullptr};
   CudaUniquePtr<__half[]> height_fp16_d_{nullptr};
   nvinfer1::DataType height_dtype_{nvinfer1::DataType::kFLOAT};

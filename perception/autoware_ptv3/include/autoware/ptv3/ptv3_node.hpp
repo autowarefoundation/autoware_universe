@@ -77,7 +77,6 @@ private:
   DetectionClassRemapper detection_class_remapper_;
   std::vector<std::string> detection_class_names_;
   bool has_twist_{false};
-  bool has_variance_{false};
 
   // Debug helpers.
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};

@@ -101,7 +101,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   std::vector<float> distance_bin_upper_limits;
   std::vector<float> detection_score_thresholds;
   std::vector<float> yaw_norm_thresholds;
-  DetectionHeadType detection_head_type = DetectionHeadType::CenterHead;
+  DetectionHeadType detection_head_type = DetectionHeadType::TransHead;
   NMSParams nms_params;
   std::size_t num_proposals = 0;
   std::vector<float> post_center_range;
@@ -120,7 +120,6 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     bbox_downsample_factor = static_cast<std::size_t>(
       this->declare_parameter<std::int64_t>("detection3d.bbox_downsample_factor", descriptor));
     has_twist_ = this->declare_parameter<bool>("detection3d.has_twist", descriptor);
-    has_variance_ = this->declare_parameter<bool>("detection3d.has_variance", descriptor);
 
     const auto allow_remapping_by_area_matrix = this->declare_parameter<std::vector<std::int64_t>>(
       "detection3d.allow_remapping_by_area_matrix", descriptor);
@@ -183,9 +182,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     palette, filter_class_probability_threshold, filter_classes, filter_output_format,
     source_reconstruction, use_seg3d_head, use_det3d_head, detection_class_names_, bbox_voxel_size,
     bbox_downsample_factor, distance_bin_upper_limits, detection_score_thresholds,
-    yaw_norm_thresholds, has_twist_, has_variance_,
-    detection_head_type == DetectionHeadType::TransHead ? "trans_head" : "center_head",
-    num_proposals, post_center_range);
+    yaw_norm_thresholds, has_twist_, "trans_head", num_proposals, post_center_range);
 
   const auto backbone_trt_config = tensorrt_common::TrtCommonConfig(
     backbone_onnx_path, trt_precision, backbone_engine_path, 1ULL << 33U);
@@ -313,7 +310,7 @@ void PTv3Node::cloud_callback(
     raw_objects.reserve(det_boxes3d->size());
     for (const auto & box3d : *det_boxes3d) {
       autoware_perception_msgs::msg::DetectedObject object;
-      box3d_to_detected_object(box3d, detection_class_names_, has_twist_, has_variance_, object);
+      box3d_to_detected_object(box3d, detection_class_names_, has_twist_, object);
       raw_objects.emplace_back(std::move(object));
     }
 
