@@ -71,8 +71,7 @@ void CrosswalkTrafficLightEstimatorNode::on_traffic_light_array(
     return;
   }
 
-  StopWatch<std::chrono::milliseconds> stop_watch;
-  stop_watch.tic("Total");
+  stop_watch_.tic("Total");
 
   const auto unregistered_ids = estimator_.find_unregistered_traffic_light_group_ids(*msg);
   for (const auto & id : unregistered_ids) {
@@ -83,7 +82,7 @@ void CrosswalkTrafficLightEstimatorNode::on_traffic_light_array(
   *output_ptr = estimator_.estimate(*msg, get_clock()->now());
 
   pub_traffic_light_array_->publish(std::move(output_ptr));
-  pub_processing_time_->publish<Float64Stamped>("processing_time_ms", stop_watch.toc("Total"));
+  pub_processing_time_->publish<Float64Stamped>("processing_time_ms", stop_watch_.toc("Total"));
 }
 
 }  // namespace autoware::crosswalk_traffic_light_estimator
