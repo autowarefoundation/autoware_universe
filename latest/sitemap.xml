@@ -921,6 +921,10 @@
          <lastmod>2026-06-05</lastmod>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-polar-voxel-noise-filter/</loc>
+         <lastmod>2026-06-05</lastmod>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-polar-voxel-outlier-filter/</loc>
          <lastmod>2026-06-05</lastmod>
     </url>
@@ -990,6 +994,10 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/sensing/autoware_pointcloud_preprocessor/docs/pointcloud-densifier/</loc>
+         <lastmod>2026-06-05</lastmod>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/sensing/autoware_pointcloud_preprocessor/docs/polar-voxel-noise-filter/</loc>
          <lastmod>2026-06-05</lastmod>
     </url>
     <url>
