@@ -111,7 +111,10 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & input_msg)
 {
   // Guard
-  if (pub_output_objects_->get_subscription_count() < 1) {
+  if (
+    pub_output_objects_->get_subscription_count() +
+      pub_output_objects_->get_intra_process_subscription_count() <
+    1) {
     return;
   }
 
