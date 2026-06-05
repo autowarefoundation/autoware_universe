@@ -171,7 +171,7 @@ void DiffusionPlanner::set_up_params()
     this->declare_parameter<int>("model.multi_step_model.dpm_solver_steps", 10);
   params_.backend = this->declare_parameter<std::string>("model.backend", "tensorrt");
   params_.trt_precision = this->declare_parameter<std::string>("model.precision", "fp32");
-  params_.use_cuda_graph = this->declare_parameter<bool>("model.use_cuda_graph", false);
+  params_.use_cuda_graph = this->declare_parameter<bool>("model.use_cuda_graph", true);
   params_.plugins_path = this->declare_parameter<std::string>("plugins_path", "");
   params_.build_only = this->declare_parameter<bool>("build_only", false);
   params_.planning_frequency_hz = this->declare_parameter<double>("planning_frequency_hz", 10.0);
@@ -196,7 +196,7 @@ void DiffusionPlanner::set_up_params()
   params_.start_guidance_reference_distance_m =
     this->declare_parameter<double>("guidance.start_guidance.reference_distance_m", 10.0);
   params_.start_guidance_max_scale =
-    this->declare_parameter<double>("guidance.start_guidance.max_scale", 1.0);
+    this->declare_parameter<double>("guidance.start_guidance.max_scale", 30.0);
   params_.stop_guidance_stop_acceleration_mps2 =
     this->declare_parameter<double>("guidance.stop_guidance.stop_acceleration_mps2", 1.0);
   params_.centerline_guidance_start_time_s =
