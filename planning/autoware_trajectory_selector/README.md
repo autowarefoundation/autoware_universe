@@ -16,17 +16,17 @@
 
 ### Topics
 
-| Direction  | Topic name                                                    | Message Type                                                | Description                                                            |
-| ---------- | ------------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Subscriber | `~/input/trajectories_generative`                             | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectories from generative planners                                  |
-| Subscriber | `~/input/trajectories_backup`                                 | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectories from backup planners                                      |
-| Subscriber | `~/input/lanelet2_map`                                        | `autoware_map_msgs/msg/LaneletMapBin`                       | HD map (transient local QoS; loaded once at startup)                   |
-| Subscriber | `~/input/odometry`                                            | `nav_msgs/msg/Odometry`                                     | Current ego pose and velocity                                          |
-| Subscriber | `~/input/objects`                                             | `autoware_perception_msgs/msg/PredictedObjects`             | Surrounding dynamic obstacles                                          |
-| Subscriber | `~/input/acceleration`                                        | `geometry_msgs/msg/AccelWithCovarianceStamped`              | Current ego acceleration                                               |
-| Subscriber | `~/input/traffic_signals`                                     | `autoware_perception_msgs/msg/TrafficLightGroupArray`       | Traffic light states (optional; missing data does not block the timer) |
-| Publisher  | `~/output/trajectories`                                       | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectories that passed all enforced validator plugins                |
-| Publisher  | `~/debug/processing_time_detail_ms/trajectory_validator_node` | `autoware_internal_debug_msgs/msg/ProcessingTimeTree`       | Per-function processing time breakdown                                 |
+| Direction  | Topic name                                              | Message Type                                                | Description                                                            |
+| ---------- | ------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Subscriber | `~/input/trajectories_generative`                       | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectories from generative planners                                  |
+| Subscriber | `~/input/trajectories_backup`                           | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectories from backup planners                                      |
+| Subscriber | `~/input/lanelet2_map`                                  | `autoware_map_msgs/msg/LaneletMapBin`                       | HD map (transient local QoS; loaded once at startup)                   |
+| Subscriber | `~/input/odometry`                                      | `nav_msgs/msg/Odometry`                                     | Current ego pose and velocity                                          |
+| Subscriber | `~/input/objects`                                       | `autoware_perception_msgs/msg/PredictedObjects`             | Surrounding dynamic obstacles                                          |
+| Subscriber | `~/input/acceleration`                                  | `geometry_msgs/msg/AccelWithCovarianceStamped`              | Current ego acceleration                                               |
+| Subscriber | `~/input/traffic_signals`                               | `autoware_perception_msgs/msg/TrafficLightGroupArray`       | Traffic light states (optional; missing data does not block the timer) |
+| Publisher  | `~/output/trajectories`                                 | `autoware_internal_planning_msgs/msg/CandidateTrajectories` | Trajectories that passed all enforced validator plugins                |
+| Publisher  | `~/debug/processing_time_detail_ms/trajectory_selector` | `autoware_internal_debug_msgs/msg/ProcessingTimeTree`       | Per-function processing time breakdown                                 |
 
 ### Parameters
 

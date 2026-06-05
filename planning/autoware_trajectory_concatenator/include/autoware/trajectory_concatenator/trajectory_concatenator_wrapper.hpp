@@ -52,6 +52,7 @@ public:
   /** @brief Reloads parameters from the parameter server if they have changed. */
   void update_parameters()
   {
+    std::lock_guard<std::mutex> lock(concatenator_mutex_);
     if (concatenator_params_listener_.is_old(concatenator_params_)) {
       concatenator_params_ = concatenator_params_listener_.get_params();
       concatenator_ptr_->update_parameters(concatenator_params_);

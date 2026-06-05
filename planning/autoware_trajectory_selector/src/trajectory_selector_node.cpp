@@ -58,7 +58,7 @@ void TrajectorySelectorNode::publishers()
   pub_trajectories_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
 
   pub_processing_time_detail_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
-    "~/debug/processing_time_detail_ms/trajectory_validator_node", 1);
+    "~/debug/processing_time_detail_ms/trajectory_selector", 1);
   time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(pub_processing_time_detail_);
 }
 
