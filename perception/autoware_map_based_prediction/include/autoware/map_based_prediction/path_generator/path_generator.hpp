@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2021 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,47 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAP_BASED_PREDICTION__PATH_GENERATOR_HPP_
-#define MAP_BASED_PREDICTION__PATH_GENERATOR_HPP_
+#ifndef AUTOWARE__MAP_BASED_PREDICTION__PATH_GENERATOR__PATH_GENERATOR_HPP_
+#define AUTOWARE__MAP_BASED_PREDICTION__PATH_GENERATOR__PATH_GENERATOR_HPP_
 
-#include "map_based_prediction/data_structure.hpp"
+#include "autoware/map_based_prediction/data_structure.hpp"
 
 #include <Eigen/Eigen>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <tf2/LinearMath/Quaternion.hpp>
-
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <autoware_perception_msgs/msg/tracked_objects.hpp>
-#include <geometry_msgs/msg/pose.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
-#include <geometry_msgs/msg/quaternion.hpp>
-#include <geometry_msgs/msg/twist.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <memory>
 #include <vector>
 
 namespace autoware::map_based_prediction
 {
-using autoware_perception_msgs::msg::ObjectClassification;
-using autoware_perception_msgs::msg::PredictedObject;
-using autoware_perception_msgs::msg::PredictedObjectKinematics;
-using autoware_perception_msgs::msg::PredictedObjects;
-using autoware_perception_msgs::msg::PredictedPath;
-using autoware_perception_msgs::msg::TrackedObject;
-using autoware_perception_msgs::msg::TrackedObjectKinematics;
-using autoware_perception_msgs::msg::TrackedObjects;
-
-struct FrenetPoint
-{
-  double s;
-  double d;
-  float s_vel;
-  float d_vel;
-  float s_acc;
-  float d_acc;
-};
 
 struct CrosswalkEdgePoints
 {
@@ -83,8 +55,6 @@ struct PredictedPathWithArrivalIndex : PredictedPath
 {
   size_t arrival_index{};
 };
-
-using FrenetPath = std::vector<FrenetPoint>;
 
 class PathGenerator
 {
@@ -141,33 +111,7 @@ private:
     const TrackedObject & object, const PosePath & ref_path, const double duration,
     const double lateral_duration, const double path_width, const double backlash_width,
     const double speed_limit = 0.0) const;
-
-  FrenetPath generateFrenetPath(
-    const FrenetPoint & current_point, const FrenetPoint & target_point, const double max_length,
-    const double duration, const double lateral_duration) const;
-  Eigen::Vector3d calcLatCoefficients(
-    const FrenetPoint & current_point, const FrenetPoint & target_point, const double T) const;
-  Eigen::Vector2d calcLonCoefficients(
-    const FrenetPoint & current_point, const FrenetPoint & target_point, const double T) const;
-
-  std::vector<double> interpolationLerp(
-    const std::vector<double> & base_keys, const std::vector<double> & base_values,
-    const std::vector<double> & query_keys) const;
-  std::vector<tf2::Quaternion> interpolationLerp(
-    const std::vector<double> & base_keys, const std::vector<tf2::Quaternion> & base_values,
-    const std::vector<double> & query_keys) const;
-
-  PosePath interpolateReferencePath(
-    const PosePath & base_path, const FrenetPath & frenet_predicted_path) const;
-
-  PredictedPath convertToPredictedPath(
-    const TrackedObject & object, const FrenetPath & frenet_predicted_path,
-    const PosePath & ref_path) const;
-
-  FrenetPoint getFrenetPoint(
-    const TrackedObject & object, const geometry_msgs::msg::Pose & ref_pose, const double duration,
-    const double speed_limit = 0.0) const;
 };
 }  // namespace autoware::map_based_prediction
 
-#endif  // MAP_BASED_PREDICTION__PATH_GENERATOR_HPP_
+#endif  // AUTOWARE__MAP_BASED_PREDICTION__PATH_GENERATOR__PATH_GENERATOR_HPP_
