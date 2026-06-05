@@ -33,7 +33,7 @@ StaticTracker::StaticTracker(const rclcpp::Time & time, const types::DynamicObje
   tracker_type_ = TrackerType::STATIC;
 
   // Set motion model parameters
-  constexpr double q_stddev_x = 5.0;  // [m/s]
+  constexpr double q_stddev_x = 0.5;  // [m/s]
   constexpr double q_stddev_y = q_stddev_x;
   motion_model_.setMotionParams(q_stddev_x, q_stddev_y);
 
@@ -66,13 +66,7 @@ bool StaticTracker::measureWithPose(const types::DynamicObject & object)
   const double x = object.pose.position.x;
   const double y = object.pose.position.y;
 
-  const bool is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
-
-  // position z
-  constexpr double gain = 0.1;
-  object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
-
-  return is_updated;
+  return motion_model_.updateStatePose(x, y, object.pose_covariance);
 }
 
 bool StaticTracker::measure(
@@ -82,7 +76,6 @@ bool StaticTracker::measure(
   object_.shape = object.shape;
   object_.pose = object.pose;
   object_.area = types::getArea(object.shape);
-  last_pose_ = object.pose;
 
   measureWithPose(object);
 

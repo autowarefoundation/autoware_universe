@@ -30,13 +30,12 @@ private:
 
   StaticMotionModel motion_model_;
 
-  geometry_msgs::msg::Pose last_pose_;
   std::optional<geometry_msgs::msg::Point> ego_pos_;
 
 public:
   StaticTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
-  void setEgoPos(const std::optional<geometry_msgs::msg::Point> & pos) { ego_pos_ = pos; }
+  void setEgoPose(const std::optional<geometry_msgs::msg::Point> & pos) override { ego_pos_ = pos; }
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
