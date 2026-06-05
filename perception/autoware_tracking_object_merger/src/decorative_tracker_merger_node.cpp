@@ -259,8 +259,6 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
 
   // try to merge main object
   this->decorativeMerger(main_sensor_type_, transformed_main_objects);
-  // Move the assembled objects directly into the loaned message (getTrackedObjects returns by
-  // value, so this is a move-assignment, not a deep copy).
   auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(merged_object_pub_);
   *output = getTrackedObjects(transformed_main_objects->header);
   const auto output_stamp = output->header.stamp;
