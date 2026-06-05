@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_trajectory_validator/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_trajectory_selector/">
       
       
-        <link rel="prev" href="../autoware_trajectory_selector/">
+        <link rel="prev" href="../autoware_trajectory_ranker/">
       
       
-        <link rel="next" href="../behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_module/">
+        <link rel="next" href="../autoware_trajectory_validator/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Trajectory Validator - Autoware Universe Documentation</title>
+        <title>Trajectory Selector - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#trajectory-validator" class="md-skip">
+        <a href="#trajectory-selector" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Trajectory Validator
+              Trajectory Selector
             
           </span>
         </div>
@@ -22854,17 +22854,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#built-in-plugins" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Built-in Plugins
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#interface" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -22923,45 +22912,18 @@
   
 
 
-<div><h1 id="trajectory-validator">Trajectory Validator<a class="headerlink" href="#trajectory-validator" title="Permanent link">#</a></h1>
+<div><h1 id="trajectory-selector">Trajectory Selector<a class="headerlink" href="#trajectory-selector" title="Permanent link">#</a></h1>
 <h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
-<p>This package provides a pluginlib-based C++ library for evaluating candidate trajectories against a configurable set of safety and traffic-rule filters. Each filter plugin receives a world-state context snapshot (<code>ValidatorContext</code>) and returns a feasibility verdict for a single trajectory. Trajectories rejected by any <em>enforced</em> plugin are removed from the output set. The library is embedded in <code>autoware_trajectory_selector</code>.</p>
+<p><code>trajectory_selector_node</code> is the ROS 2 node that orchestrates the full candidate trajectory pipeline. It buffers trajectory candidates from multiple upstream planners via <code>autoware_trajectory_concatenator</code>, validates each candidate against the safety and traffic-rule plugins of <code>autoware_trajectory_validator</code>, and publishes the surviving trajectories for downstream processing.</p>
 <h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
-<p>For each input <code>CandidateTrajectories</code> message the library runs every loaded plugin against every trajectory:</p>
 <ol>
-<li><strong>Plugin evaluation</strong>: each plugin's <code>is_feasible()</code> is called with the trajectory points and the current <code>ValidatorContext</code> (odometry, predicted objects, acceleration, HD map, traffic light states).</li>
-<li><strong>Feasibility decision</strong>: a trajectory survives if every plugin listed in <code>filter_names</code> returns <code>is_feasible = true</code>. Plugins listed in <code>shadow_mode_filter_names</code> are evaluated and reported but never remove a trajectory.</li>
-<li><strong>Diagnostics</strong>: the wrapper publishes an Autoware diagnostics status — <code>OK</code> if all trajectories pass all enforced plugins, <code>WARN</code> if at least one is rejected, <code>ERROR</code> if none survive.</li>
+<li>Candidate trajectories arrive on two separate input topics — <code>~/input/trajectories_generative</code> for generative planners and <code>~/input/trajectories_backup</code> for backup planners. Each received message is forwarded to the internal concatenator buffer.</li>
+<li>A 100 ms timer fires: the concatenator prunes stale entries (older than <code>duration_time</code>) and returns the merged trajectory set from all registered generators.</li>
+<li>If any mandatory sensor input (odometry, predicted objects, acceleration, or HD map) is unavailable, the timer returns early without publishing.</li>
+<li>The validator runs all loaded plugins against each trajectory. Trajectories rejected by any enforced plugin (listed in <code>filter_names</code>) are removed from the output set.</li>
+<li>The surviving trajectories are published to <code>~/output/trajectories</code>.</li>
 </ol>
-<h2 id="built-in-plugins">Built-in Plugins<a class="headerlink" href="#built-in-plugins" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Class name</th>
-<th>Category</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>safety::VehicleConstraintFilter</code></td>
-<td><code>safety</code></td>
-<td>Rejects trajectories that exceed maximum speed, acceleration, deceleration, steering angle, or steering rate.</td>
-</tr>
-<tr>
-<td><code>safety::UncrossableBoundaryDepartureFilter</code></td>
-<td><code>safety</code></td>
-<td>Rejects trajectories whose footprint crosses an uncrossable map boundary (e.g., road borders).</td>
-</tr>
-<tr>
-<td><code>traffic_rule::TrafficLightFilter</code></td>
-<td><code>traffic_rule</code></td>
-<td>Rejects trajectories that cross a red or amber stop line when the vehicle could safely stop.</td>
-</tr>
-</tbody>
-</table>
 <h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
-<p>This package is a C++ library. The topics below are subscribed to by the hosting node (<code>trajectory_selector_node</code>) and passed to the validator as a <code>ValidatorContext</code>.</p>
 <h3 id="topics">Topics<a class="headerlink" href="#topics" title="Permanent link">#</a></h3>
 <table>
 <thead>
@@ -22975,261 +22937,66 @@
 <tbody>
 <tr>
 <td>Subscriber</td>
-<td><code>~/input/odometry</code></td>
-<td><code>nav_msgs/msg/Odometry</code></td>
-<td>Current ego pose and velocity (mandatory)</td>
+<td><code>~/input/trajectories_generative</code></td>
+<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
+<td>Trajectories from generative planners</td>
 </tr>
 <tr>
 <td>Subscriber</td>
-<td><code>~/input/acceleration</code></td>
-<td><code>geometry_msgs/msg/AccelWithCovarianceStamped</code></td>
-<td>Current ego acceleration (mandatory)</td>
-</tr>
-<tr>
-<td>Subscriber</td>
-<td><code>~/input/objects</code></td>
-<td><code>autoware_perception_msgs/msg/PredictedObjects</code></td>
-<td>Surrounding dynamic obstacles (mandatory)</td>
-</tr>
-<tr>
-<td>Subscriber</td>
-<td><code>~/input/traffic_signals</code></td>
-<td><code>autoware_perception_msgs/msg/TrafficLightGroupArray</code></td>
-<td>Traffic light states (optional; absent data does not block validation)</td>
+<td><code>~/input/trajectories_backup</code></td>
+<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
+<td>Trajectories from backup planners</td>
 </tr>
 <tr>
 <td>Subscriber</td>
 <td><code>~/input/lanelet2_map</code></td>
 <td><code>autoware_map_msgs/msg/LaneletMapBin</code></td>
-<td>HD map loaded once at startup (transient local QoS; mandatory)</td>
+<td>HD map (transient local QoS; loaded once at startup)</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/odometry</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td>Current ego pose and velocity</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/objects</code></td>
+<td><code>autoware_perception_msgs/msg/PredictedObjects</code></td>
+<td>Surrounding dynamic obstacles</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/acceleration</code></td>
+<td><code>geometry_msgs/msg/AccelWithCovarianceStamped</code></td>
+<td>Current ego acceleration</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/traffic_signals</code></td>
+<td><code>autoware_perception_msgs/msg/TrafficLightGroupArray</code></td>
+<td>Traffic light states (optional; missing data does not block the timer)</td>
 </tr>
 <tr>
 <td>Publisher</td>
-<td><code>~/debug/validation_reports</code></td>
-<td><code>autoware_trajectory_validator/msg/ValidationReportArray</code></td>
-<td>Per-trajectory validation verdict and per-metric values</td>
+<td><code>~/output/trajectories</code></td>
+<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
+<td>Trajectories that passed all enforced validator plugins</td>
 </tr>
 <tr>
 <td>Publisher</td>
-<td><code>~/debug/markers/&lt;plugin_name&gt;</code></td>
-<td><code>visualization_msgs/msg/MarkerArray</code></td>
-<td>Per-plugin debug visualization markers</td>
-</tr>
-<tr>
-<td>Publisher</td>
-<td><code>~/debug/plugin_report_text</code></td>
-<td><code>visualization_msgs/msg/MarkerArray</code></td>
-<td>Text overlay summarizing how many paths each plugin filtered</td>
-</tr>
-<tr>
-<td>Publisher</td>
-<td><code>~/debug/processing_time_ms</code></td>
-<td><code>autoware_internal_debug_msgs/msg/Float64Stamped</code></td>
-<td>Total validator processing time [ms]</td>
-</tr>
-<tr>
-<td>Publisher</td>
-<td><code>~/debug/&lt;plugin_name&gt;/processing_time_ms</code></td>
-<td><code>autoware_internal_debug_msgs/msg/Float64Stamped</code></td>
-<td>Per-plugin processing time [ms]</td>
-</tr>
-<tr>
-<td>Publisher</td>
-<td><code>~/debug/processing_time_text</code></td>
-<td><code>autoware_internal_debug_msgs/msg/StringStamped</code></td>
-<td>Human-readable processing time breakdown</td>
+<td><code>~/debug/processing_time_detail_ms/trajectory_selector</code></td>
+<td><code>autoware_internal_debug_msgs/msg/ProcessingTimeTree</code></td>
+<td>Per-function processing time breakdown</td>
 </tr>
 </tbody>
 </table>
 <h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-<th>Range</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>filter_names</td>
-<td>array</td>
-<td>List of validator plugin class names to enforce. Trajectories rejected by any plugin in this list are removed from the output.</td>
-<td>['']</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>shadow_mode_filter_names</td>
-<td>array</td>
-<td>List of validator plugin class names that run in shadow mode: results are evaluated, logged, and reported via diagnostics but do not affect the output trajectory set.</td>
-<td>['']</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>vehicle_constraint.max_speed</td>
-<td>float</td>
-<td>Maximum allowed longitudinal speed [m/s].</td>
-<td>16.7</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>vehicle_constraint.max_acceleration</td>
-<td>float</td>
-<td>Maximum allowed longitudinal acceleration [m/s²].</td>
-<td>5.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>vehicle_constraint.max_deceleration</td>
-<td>float</td>
-<td>Maximum allowed deceleration magnitude [m/s²] (positive value representing deceleration).</td>
-<td>5.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>vehicle_constraint.max_steering_angle</td>
-<td>float</td>
-<td>Maximum allowed front-wheel steering angle [rad].</td>
-<td>0.8</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>vehicle_constraint.max_steering_rate</td>
-<td>float</td>
-<td>Maximum allowed steering rate [rad/s].</td>
-<td>0.3</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>traffic_light.deceleration_limit</td>
-<td>float</td>
-<td>Deceleration limit used to decide whether ego can safely stop before an amber stop line [m/s²]. A trajectory crossing an amber light is rejected if ego could stop within this deceleration.</td>
-<td>2.8</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>traffic_light.jerk_limit</td>
-<td>float</td>
-<td>Jerk limit used together with <code>deceleration_limit</code> to compute the minimum stopping distance [m/s³].</td>
-<td>5.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>traffic_light.delay_response_time</td>
-<td>float</td>
-<td>Driver/system response delay used to estimate the earliest possible start of braking [s].</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>traffic_light.crossing_time_limit</td>
-<td>float</td>
-<td>A trajectory crossing an amber light is rejected unless ego can fully clear the stop line within this time [s].</td>
-<td>2.75</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>traffic_light.treat_amber_light_as_red_light</td>
-<td>boolean</td>
-<td>When true, amber lights are treated identically to red lights (no dilemma-zone logic is applied).</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>traffic_light.stop_overshoot_margin</td>
-<td>float</td>
-<td>Maximum allowed distance between the trajectory's stop point and the stop line for the trajectory to be considered as stopping correctly [m].</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>checked_trajectory_length.deceleration_limit</td>
-<td>float</td>
-<td>Deceleration limit used to compute the trajectory length scanned for traffic light stop lines [m/s²].</td>
-<td>2.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>checked_trajectory_length.jerk_limit</td>
-<td>float</td>
-<td>Jerk limit used together with <code>deceleration_limit</code> to compute the trajectory scan length [m/s³].</td>
-<td>2.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>boundary_departure.lateral_margin_m</td>
-<td>float</td>
-<td>Lateral clearance margin from an uncrossable boundary [m]. Trajectories whose footprint comes within this margin are rejected.</td>
-<td>0.01</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>boundary_departure.longitudinal_margin_m</td>
-<td>float</td>
-<td>Longitudinal look-ahead margin applied when projecting the vehicle footprint along the trajectory [m].</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>boundary_departure.max_deceleration_mps2</td>
-<td>float</td>
-<td>Maximum deceleration (negative value) used to compute whether ego can stop before the boundary [m/s²].</td>
-<td>-4.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>boundary_departure.max_jerk_mps3</td>
-<td>float</td>
-<td>Maximum jerk (negative value) used together with <code>max_deceleration_mps2</code> for the stopping distance estimate [m/s³].</td>
-<td>-5.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>boundary_departure.brake_delay_s</td>
-<td>float</td>
-<td>Braking response delay [s].</td>
-<td>1.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>boundary_departure.time_to_departure_cutoff_s</td>
-<td>float</td>
-<td>Time-to-boundary-crossing threshold below which a trajectory is flagged as departing [s].</td>
-<td>2.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>boundary_departure.on_time_buffer_s</td>
-<td>float</td>
-<td>Hysteresis buffer before activating boundary-departure detection [s].</td>
-<td>0.15</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>boundary_departure.off_time_buffer_s</td>
-<td>float</td>
-<td>Hysteresis buffer before deactivating boundary-departure detection [s].</td>
-<td>0.15</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>boundary_departure.enable_developer_marker</td>
-<td>boolean</td>
-<td>Publish diagnostic visualization markers intended for developer use.</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>boundary_departure.boundary_types</td>
-<td>array</td>
-<td>List of lanelet boundary type strings to treat as uncrossable (e.g., 'road_border').</td>
-<td>['road_border']</td>
-<td>N/A</td>
-</tr>
-</tbody>
-</table></div>
+<p>This node does not declare parameters of its own. Configuration is provided through the sub-package parameter files loaded at launch:</p>
+<ul>
+<li>Concatenation parameters: see <a href="../autoware_trajectory_concatenator/#parameters"><code>autoware_trajectory_concatenator</code></a></li>
+<li>Validation parameters: see <a href="../autoware_trajectory_validator/#parameters"><code>autoware_trajectory_validator</code></a></li>
+</ul></div>
 
 
 
@@ -23265,7 +23032,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_trajectory_selector/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Trajectory Selector">
+          <a href="../autoware_trajectory_ranker/" class="md-footer__link md-footer__link--prev" aria-label="Previous: autoware_trajectory_ranker">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23275,20 +23042,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Trajectory Selector
+                autoware_trajectory_ranker
               </div>
             </div>
           </a>
         
         
           
-          <a href="../behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_module/" class="md-footer__link md-footer__link--next" aria-label="Next: Avoidance by lane change design">
+          <a href="../autoware_trajectory_validator/" class="md-footer__link md-footer__link--next" aria-label="Next: Trajectory Validator">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Avoidance by lane change design
+                Trajectory Validator
               </div>
             </div>
             <div class="md-footer__button md-icon">

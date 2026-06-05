@@ -22916,7 +22916,7 @@
 <h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
 <p>This node aggregates trajectory candidates from multiple trajectory generators into a single <code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code> message. It is intended to be placed between trajectory generators and the selector/ranker.</p>
 <h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
-<p>When a message arrives on <code>~/input/trajectories</code>, the node splits it by <code>generator_id</code> and updates an in-memory buffer so that only the most recent trajectory set for each generator is retained.</p>
+<p>When a <code>CandidateTrajectories</code> message is received (from either <code>~/input/trajectories_generative</code> or <code>~/input/trajectories_backup</code>), the library splits it by <code>generator_id</code> and updates an in-memory buffer so that only the most recent trajectory set for each generator is retained.</p>
 <p>A 100 ms timer then scans this buffer and drops any entry whose header stamp is older than the configured duration_time. Immediately after pruning, the timer concatenates all remaining trajectories and their accompanying <code>generator_info</code> arrays, publishes the aggregated message.</p>
 <h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
 <h3 id="topics">Topics<a class="headerlink" href="#topics" title="Permanent link">#</a></h3>
@@ -22932,9 +22932,15 @@
 <tbody>
 <tr>
 <td>Subscriber</td>
-<td><code>~/input/trajectories</code></td>
+<td><code>~/input/trajectories_generative</code></td>
 <td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
-<td>Trajectory sets produced by each generator</td>
+<td>Trajectory sets from generative planners</td>
+</tr>
+<tr>
+<td>Subscriber</td>
+<td><code>~/input/trajectories_backup</code></td>
+<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
+<td>Trajectory sets from backup planners</td>
 </tr>
 <tr>
 <td>Publisher</td>
