@@ -27,6 +27,11 @@
 
 namespace autoware::imu_corrector
 {
+namespace
+{
+constexpr double kYawStateProcessNoise = 1e-8;
+}  // namespace
+
 GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
 : rclcpp::Node("gyro_bias_scale_validator", options),
   gyro_bias_threshold_(declare_parameter<double>("gyro_bias_threshold")),
@@ -139,7 +144,8 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   ekf_angle_.estimated_scale_angle_ = ekf_angle_.initial_scale_;
   ekf_angle_.max_variance_p_angle_ = declare_parameter<double>("ekf_angle.variance_p_angle");
   ekf_angle_.noise_ekf_r_angle_ = declare_parameter<double>("ekf_angle.measurement_noise_r_angle");
-  ekf_angle_.q_angle_ << 0, 0, 0, declare_parameter<double>("ekf_angle.process_noise_q_angle");
+  ekf_angle_.q_angle_ << kYawStateProcessNoise, 0, 0,
+    declare_parameter<double>("ekf_angle.process_noise_q_angle");
   ekf_angle_.p_angle_ << ekf_angle_.max_variance_p_angle_, 0, 0, ekf_angle_.max_variance_p_angle_;
   ekf_angle_.r_angle_ << ekf_angle_.noise_ekf_r_angle_ * ekf_angle_.noise_ekf_r_angle_;
   ekf_angle_.filtered_scale_angle_ = ekf_angle_.initial_scale_;
@@ -271,16 +277,13 @@ void GyroBiasEstimator::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr
     Eigen::Matrix2d f_matrix;
     f_matrix << 1, dt_imu * (gyro.vector.z - gyro_bias_not_rotated_.value().z), 0,
       ekf_angle_.decay_coefficient_;
-    ekf_angle_.p_angle_ =
-      f_matrix * ekf_angle_.p_angle_ * f_matrix.transpose() + ekf_angle_.q_angle_;
-
-    // Limit covariance
-    ekf_angle_.p_angle_(0, 0) = std::min(
-      std::max(ekf_angle_.p_angle_(0, 0), ekf_angle_.min_covariance_angle_),
-      ekf_angle_.max_variance_p_angle_);
-    ekf_angle_.p_angle_(1, 1) = std::min(
-      std::max(ekf_angle_.p_angle_(1, 1), ekf_angle_.min_covariance_angle_),
-      ekf_angle_.max_variance_p_angle_);
+    // Predict covariance with F first, then skip Q injection once reach max allowed variance.
+    ekf_angle_.p_angle_ = f_matrix * ekf_angle_.p_angle_ * f_matrix.transpose();
+    if (
+      ekf_angle_.p_angle_(0, 0) < ekf_angle_.max_variance_p_angle_ &&
+      ekf_angle_.p_angle_(1, 1) < ekf_angle_.max_variance_p_angle_) {
+      ekf_angle_.p_angle_ += ekf_angle_.q_angle_;
+    }
 
     if (gyro_yaw_angle_ < -M_PI) {
       gyro_yaw_angle_ += 2.0 * M_PI;
@@ -341,7 +344,7 @@ void GyroBiasEstimator::reinitialize_angle_ekf(EKFEstimateScaleAngleVars & ekf_a
   ekf_angle.x_state_(1) = ekf_angle.initial_scale_;  // estimated scale
   ekf_angle.estimated_scale_angle_ = ekf_angle.initial_scale_;
   ekf_angle.p_angle_ << ekf_angle.max_variance_p_angle_, 0, 0, ekf_angle.max_variance_p_angle_;
-  ekf_angle.q_angle_ << 0, 0, 0, ekf_angle.process_noise_q_angle_;
+  ekf_angle.q_angle_ << kYawStateProcessNoise, 0, 0, ekf_angle.process_noise_q_angle_;
   ekf_angle.r_angle_ << ekf_angle.noise_ekf_r_angle_ * ekf_angle.noise_ekf_r_angle_;
   ekf_angle.filtered_scale_angle_ = ekf_angle.initial_scale_;
   ekf_angle.has_gyro_yaw_angle_init_ = false;
