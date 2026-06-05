@@ -54,7 +54,7 @@ private:
 
   void mainObjectsCallback(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) &
-      main_objects);
+    main_objects);
   void subObjectsCallback(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) & msg);
 
@@ -131,8 +131,8 @@ private:
   } logging_;
 
   // diagnostics
-  std::unique_ptr<autoware_utils_diagnostics::BasicDiagnosticsInterface<
-    autoware::agnocast_wrapper::Node>>
+  std::unique_ptr<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>
     diagnostics_interface_ptr_;
   double delay_main_objects_tolerance_;
   double duration_empty_main_objects_tolerance_;

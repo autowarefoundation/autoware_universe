@@ -158,9 +158,9 @@ DecorativeTrackerMergerNode::DecorativeTrackerMergerNode(const rclcpp::NodeOptio
   set3dDataAssociation("radar-radar", data_association_map_);
 
   // debug publisher
-  processing_time_publisher_ = std::make_unique<
-    autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
-    this, "decorative_object_merger_node");
+  processing_time_publisher_ =
+    std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "decorative_object_merger_node");
   stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
