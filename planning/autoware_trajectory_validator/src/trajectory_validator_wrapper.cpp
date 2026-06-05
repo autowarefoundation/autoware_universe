@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/trajectory_validator/trajectory_validator_node.hpp"
+#include "autoware/trajectory_validator/trajectory_validator_wrapper.hpp"
 
-#include "autoware/trajectory_validator/validation_stage.hpp"
-#include "autoware/trajectory_validator/validator_interface.hpp"
+#include "autoware/trajectory_validator/detail/trajectory_validator.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 #include <autoware_utils_visualization/marker_helper.hpp>
@@ -37,146 +37,44 @@
 namespace autoware::trajectory_validator
 {
 
-TrajectoryValidator::TrajectoryValidator(const rclcpp::NodeOptions & options)
-: Node{"trajectory_validator_node", options},
-  listener_{get_node_parameters_interface()},
-  params_(listener_.get_params()),
+TrajectoryValidatorWrapper::TrajectoryValidatorWrapper(
+  rclcpp::Node & node,
+  rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface,
+  vehicle_info_utils::VehicleInfo vehicle_info,
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
+: node_ptr_(&node),
+  logger_(node.get_logger().get_child(interface_name_)),
+  validator_params_listener_{node_parameters_interface},
+  vehicle_info_(vehicle_info),
   plugin_loader_(
     "autoware_trajectory_validator", "autoware::trajectory_validator::plugin::ValidatorInterface"),
-  vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
+  time_keeper_(std::move(time_keeper))
 {
-  const auto filters = params_.filter_names;
+  if (!time_keeper_) {
+    throw std::runtime_error("TimeKeeper is required for TrajectoryValidatorWrapper");
+  }
+
+  validator_params_ = validator_params_listener_.get_params();
+  const auto filters = validator_params_.filter_names;
   for (const auto & filter : filters) {
     load_metric(filter);
   }
 
   constexpr bool shadow_mode = true;
-  for (const auto & filter : params_.shadow_mode_filter_names) {
+  for (const auto & filter : validator_params_.shadow_mode_filter_names) {
     load_metric(filter, shadow_mode);
   }
 
   std::sort(plugins_.begin(), plugins_.end(), [](const auto & plugin1, const auto & plugin2) {
     return plugin1->get_name() < plugin2->get_name();
   });
-
-  subscribers();
   publishers();
+
+  validator_ptr_ = std::make_unique<TrajectoryValidator>(plugins_);
+  diagnostics_interface_ptr_ = std::make_unique<DiagnosticsInterface>(node_ptr_, interface_name_);
 }
 
-void TrajectoryValidator::subscribers()
-{
-  sub_map_ = create_subscription<LaneletMapBin>(
-    "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&TrajectoryValidator::map_callback, this, std::placeholders::_1));
-
-  sub_trajectories_ = create_subscription<CandidateTrajectories>(
-    "~/input/trajectories", 1,
-    std::bind(&TrajectoryValidator::process, this, std::placeholders::_1));
-}
-
-void TrajectoryValidator::publishers()
-{
-  pub_trajectories_ = create_publisher<CandidateTrajectories>("~/output/trajectories", 1);
-
-  pub_processing_time_detail_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
-    "~/debug/processing_time_detail_ms/trajectory_validator_node", 1);
-  time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(pub_processing_time_detail_);
-
-  pub_validation_reports_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
-  pub_debug_ = std::make_shared<autoware_utils_debug::DebugPublisher>(this, "~/debug");
-}
-
-tl::expected<FilterContext, std::string> TrajectoryValidator::take_data()
-{
-  FilterContext context;
-
-  context.odometry = sub_odometry_.take_data();
-  if (!context.odometry) {
-    return tl::make_unexpected("Failed to take odometry data");
-  }
-
-  context.predicted_objects = sub_objects_.take_data();
-  if (!context.predicted_objects) {
-    return tl::make_unexpected("Failed to take predicted objects data");
-  }
-
-  context.acceleration = sub_acceleration_.take_data();
-  if (!context.acceleration) {
-    return tl::make_unexpected("Failed to take acceleration data");
-  }
-
-  context.traffic_light_signals = sub_traffic_lights_.take_data();
-
-  context.lanelet_map = lanelet_map_ptr_;
-  if (!context.lanelet_map) {
-    return tl::make_unexpected("Lanelet map is not available");
-  }
-
-  if (context.lanelet_map->laneletLayer.empty()) {
-    return tl::make_unexpected("Lanelet map does not contain any lanelets");
-  }
-
-  return context;
-}
-
-void TrajectoryValidator::process(const CandidateTrajectories::ConstSharedPtr msg)
-{
-  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-
-  if (listener_.is_old(params_)) {
-    params_ = listener_.get_params();
-    for (const auto & plugin : plugins_) {
-      plugin->update_parameters(params_);
-    }
-    RCLCPP_INFO(get_logger(), "Dynamic parameters updated successfully.");
-  }
-
-  // 4. Instantiate and execute the stateless ValidationStage
-  ValidationStage validation_stage(plugins_);
-
-  auto context_opt = take_data();
-  if (!context_opt) {
-    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "%s", context_opt.error().c_str());
-    return;
-  }
-
-  const auto & context = context_opt.value();
-  const auto report = validation_stage.process(*msg, context);
-
-  diagnostics_interface_.clear();
-
-  for (const auto & table : report.evaluation_tables) {
-    for (const auto & eval : table.plugin_evaluations) {
-      if (!eval.is_feasible) {
-        RCLCPP_WARN_THROTTLE(
-          get_logger(), *get_clock(), 1000, "[%s] %s", eval.plugin_name.c_str(),
-          eval.reason.c_str());
-      }
-      // Exact original behavior: last trajectory's result overwrites previous ones
-      diagnostics_interface_.add_key_value(
-        eval.plugin_name, std::string(eval.is_feasible ? "OK" : "NG"));
-    }
-  }
-
-  // 6. Publish outputs
-  pub_trajectories_->publish(report.valid_trajectories);
-  update_diagnostic(*msg, report.num_feasible_trajectories);
-
-  publish_validation_reports(report.validation_reports);
-
-  // Wire up the debug publishers using the opaque report data
-  publish_debug(report.evaluation_tables, report.processing_time_ms, context.odometry->pose.pose);
-}
-
-void TrajectoryValidator::map_callback(const LaneletMapBin::ConstSharedPtr msg)
-{
-  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
-
-  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
-    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
-}
-
-void TrajectoryValidator::load_metric(const std::string & name, const bool is_shadow_mode)
+void TrajectoryValidatorWrapper::load_metric(const std::string & name, const bool is_shadow_mode)
 {
   if (name.empty()) return;
 
@@ -184,20 +82,21 @@ void TrajectoryValidator::load_metric(const std::string & name, const bool is_sh
     auto plugin = plugin_loader_.createSharedInstance(name);
 
     if (!plugin) {
-      RCLCPP_ERROR_STREAM(get_logger(), "Failed to create plugin instance for '" << name << "'.");
+      RCLCPP_ERROR_STREAM(logger_, "Failed to create plugin instance for '" << name << "'.");
       return;
     }
 
     for (const auto & p : plugins_) {
       if (plugin->get_name() == p->get_name()) {
-        RCLCPP_WARN_STREAM(get_logger(), "The plugin '" << name << "' is already loaded.");
+        RCLCPP_WARN_STREAM(logger_, "The plugin '" << name << "' is already loaded.");
         return;
       }
     }
 
     plugin->set_vehicle_info(vehicle_info_);
     plugin->set_shadow_mode(is_shadow_mode);
-    plugin->update_parameters(params_);
+    plugin->update_parameters(validator_params_);
+
     std::string category;
     size_t pos = name.find("::");
     if (pos != std::string::npos) {
@@ -207,60 +106,92 @@ void TrajectoryValidator::load_metric(const std::string & name, const bool is_sh
 
     plugins_.push_back(plugin);
 
-    RCLCPP_INFO_STREAM(
-      get_logger(), "The scene plugin '" << name << "' is loaded and initialized.");
+    RCLCPP_INFO_STREAM(logger_, "The validator plugin '" << name << "' is loaded and initialized.");
   } catch (const pluginlib::CreateClassException & e) {
-    RCLCPP_ERROR_STREAM(
-      get_logger(), "[validator] createSharedInstance failed for '" << name << "': " << e.what());
+    RCLCPP_ERROR_STREAM(logger_, "createSharedInstance failed for '" << name << "': " << e.what());
   } catch (const std::exception & e) {
-    RCLCPP_ERROR_STREAM(
-      get_logger(), "[validator] unexpected exception for '" << name << "': " << e.what());
+    RCLCPP_ERROR_STREAM(logger_, "unexpected exception for '" << name << "': " << e.what());
   }
 }
 
-void TrajectoryValidator::unload_metric(const std::string & name)
+void TrajectoryValidatorWrapper::update_parameters()
 {
-  auto it = std::remove_if(
-    plugins_.begin(), plugins_.end(),
-    [&](const std::shared_ptr<plugin::ValidatorInterface> & plugin) {
-      return plugin->get_name() == name;
-    });
+  if (validator_params_listener_.is_old(validator_params_)) {
+    validator_params_ = validator_params_listener_.get_params();
+    validator_ptr_->update_parameters(validator_params_);
 
-  if (it == plugins_.end()) {
-    RCLCPP_WARN_STREAM(
-      get_logger(), "The scene plugin '" << name << "' is not found in the registered modules.");
-  } else {
-    plugins_.erase(it, plugins_.end());
-    RCLCPP_INFO_STREAM(get_logger(), "The scene plugin '" << name << "' is unloaded.");
+    RCLCPP_INFO(logger_, "Trajectory Validator parameters are updated.");
   }
 }
 
-void TrajectoryValidator::update_diagnostic(
+void TrajectoryValidatorWrapper::publishers()
+{
+  pub_debug_ = std::make_shared<autoware_utils_debug::DebugPublisher>(node_ptr_, "~/debug");
+}
+
+CandidateTrajectories TrajectoryValidatorWrapper::validate_trajectories(
+  const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
+  const ValidatorContext & context)
+{
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  update_parameters();
+
+  const auto report = validator_ptr_->process(input_trajectories, context);
+
+  diagnostics_interface_ptr_->clear();
+
+  for (const auto & table : report.evaluation_tables) {
+    for (const auto & eval : table.plugin_evaluations) {
+      if (!eval.is_feasible) {
+        RCLCPP_WARN_THROTTLE(
+          logger_, *node_ptr_->get_clock(), 1000, "[%s] %s", eval.plugin_name.c_str(),
+          eval.reason.c_str());
+      }
+      // Exact original behavior: last trajectory's result overwrites previous ones
+      diagnostics_interface_ptr_->add_key_value(
+        eval.plugin_name, std::string(eval.is_feasible ? "OK" : "NG"));
+    }
+  }
+
+  update_diagnostic(input_trajectories, report.num_feasible_trajectories);
+
+  publish_validation_reports(report.validation_reports);
+
+  // Wire up the debug publishers using the opaque report data
+  publish_debug(report.evaluation_tables, report.processing_time_ms, context.odometry->pose.pose);
+
+  return report.valid_trajectories;
+}
+
+void TrajectoryValidatorWrapper::update_diagnostic(
   const CandidateTrajectories & input_trajectories, const size_t num_feasible_trajectories)
 {
   if (input_trajectories.candidate_trajectories.size() == num_feasible_trajectories) {
     // All trajectories are feasible
-    diagnostics_interface_.update_level_and_message(diagnostic_msgs::msg::DiagnosticStatus::OK, "");
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::OK, "");
   } else if (num_feasible_trajectories == 0) {
     // No feasible trajectories found
-    diagnostics_interface_.update_level_and_message(
+    diagnostics_interface_ptr_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR, "No feasible trajectories found");
   } else {
     // At least one trajectory is infeasible
-    diagnostics_interface_.update_level_and_message(
+    diagnostics_interface_ptr_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, "At least one trajectory is infeasible");
   }
 
-  diagnostics_interface_.publish(this->get_clock()->now());
+  diagnostics_interface_ptr_->publish(node_ptr_->get_clock()->now());
 }
 
-void TrajectoryValidator::publish_validation_reports(const std::vector<ValidationReport> & reports)
+void TrajectoryValidatorWrapper::publish_validation_reports(
+  const std::vector<ValidationReport> & reports)
 {
   auto msg = autoware_trajectory_validator::build<ValidationReportArray>().reports(reports);
-  pub_validation_reports_->publish<ValidationReportArray>("validation_reports", msg);
+  pub_debug_->publish<ValidationReportArray>("validation_reports", msg);
 }
 
-void TrajectoryValidator::publish_debug(
+void TrajectoryValidatorWrapper::publish_debug(
   const std::vector<EvaluationTable> & evaluation_tables,
   const std::unordered_map<std::string, double> & processing_time,
   const geometry_msgs::msg::Pose & marker_pose)
@@ -273,7 +204,7 @@ void TrajectoryValidator::publish_debug(
   publish_processing_time_text(processing_time);
 }
 
-void TrajectoryValidator::publish_plugins_debug_markers() const
+void TrajectoryValidatorWrapper::publish_plugins_debug_markers() const
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -284,7 +215,7 @@ void TrajectoryValidator::publish_plugins_debug_markers() const
   }
 }
 
-void TrajectoryValidator::publish_plugins_report_text(
+void TrajectoryValidatorWrapper::publish_plugins_report_text(
   const std::vector<EvaluationTable> & evaluation_tables,
   const geometry_msgs::msg::Pose & marker_pose)
 {
@@ -292,7 +223,6 @@ void TrajectoryValidator::publish_plugins_report_text(
 
   std::unordered_map<std::string, int> used_filters;
   for (const auto & eval : evaluation_tables) {
-    // Walk the flat list instead of the categorized map to simplify the code
     for (const auto & plugin_eval : eval.plugin_evaluations) {
       if (!plugin_eval.is_feasible) {
         used_filters[plugin_eval.plugin_name]++;
@@ -326,7 +256,7 @@ void TrajectoryValidator::publish_plugins_report_text(
   fmt::format_to(out_it, "-----------------------------------");
 
   auto plugin_report_text = autoware_utils_visualization::create_default_marker(
-    "map", get_clock()->now(), "plugin_report", 0,
+    "map", node_ptr_->get_clock()->now(), "plugin_report", 0,
     visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
     autoware_utils_visualization::create_marker_scale(0.0, 0.0, 0.4),
     autoware_utils_visualization::create_marker_color(1., 1., 1., 0.999));
@@ -334,6 +264,7 @@ void TrajectoryValidator::publish_plugins_report_text(
   plugin_report_text.pose = marker_pose;
   plugin_report_text.pose.position.z += vehicle_info_.vehicle_height_m;
   plugin_report_text.text = fmt::to_string(out);
+  plugin_report_text.frame_locked = true;
 
   visualization_msgs::msg::MarkerArray plugin_report_text_marker;
   plugin_report_text_marker.markers.push_back(plugin_report_text);
@@ -341,7 +272,7 @@ void TrajectoryValidator::publish_plugins_report_text(
     "plugin_report_text", plugin_report_text_marker);
 }
 
-void TrajectoryValidator::publish_processing_time(
+void TrajectoryValidatorWrapper::publish_processing_time(
   const std::unordered_map<std::string, double> & processing_time)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -357,7 +288,7 @@ void TrajectoryValidator::publish_processing_time(
   }
 }
 
-void TrajectoryValidator::publish_processing_time_text(
+void TrajectoryValidatorWrapper::publish_processing_time_text(
   const std::unordered_map<std::string, double> & processing_time)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -385,6 +316,3 @@ void TrajectoryValidator::publish_processing_time_text(
     "processing_time_text", fmt::to_string(out));
 }
 }  // namespace autoware::trajectory_validator
-
-#include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::trajectory_validator::TrajectoryValidator)

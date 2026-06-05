@@ -11,13 +11,10 @@ generate_parameter_library(${PROJECT_NAME}_param
 
 set(trajectory_validator_lib_target ${PROJECT_NAME}_lib)
 
-include_directories(
-  SYSTEM
-)
 
 ament_auto_add_library(${trajectory_validator_lib_target} SHARED
-  src/trajectory_validator_node.cpp
-  src/validation_stage.cpp
+  src/trajectory_validator_wrapper.cpp
+  src/detail/trajectory_validator.cpp
 )
 
 target_link_libraries(${trajectory_validator_lib_target}
@@ -26,11 +23,6 @@ target_link_libraries(${trajectory_validator_lib_target}
 
 target_compile_options(${trajectory_validator_lib_target} PUBLIC
   -Wno-error=deprecated-declarations
-)
-
-rclcpp_components_register_node(${trajectory_validator_lib_target}
-  PLUGIN "autoware::trajectory_validator::TrajectoryValidator"
-  EXECUTABLE ${PROJECT_NAME}_node
 )
 
 ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
@@ -81,37 +73,6 @@ if(BUILD_TESTING)
     autoware_trajectory_validator_plugins
   )
 
-  # ==========================================
-  # 2. Dummy Plugin (Test Utility)
-  # ==========================================
-  pluginlib_export_plugin_description_file(autoware_trajectory_validator
-    test/dummy_plugin/dummy_plugins.xml
-  )
-
-  ament_auto_add_library(dummy_validator_plugin SHARED
-    test/dummy_plugin/dummy_validator_plugin.cpp
-  )
-
-  target_link_libraries(dummy_validator_plugin
-    ${trajectory_validator_lib_target}
-  )
-
-  # ==========================================
-  # 3. Node Integration/Unit Tests
-  # ==========================================
-  ament_add_ros_isolated_gtest(test_trajectory_validator_node
-    test/node/test_trajectory_validator_node.cpp
-  )
-
-  target_link_libraries(test_trajectory_validator_node
-    ${trajectory_validator_lib_target}
-    dummy_validator_plugin
-  )
-
-  ament_target_dependencies(test_trajectory_validator_node
-    autoware_test_utils
-  )
-
   ament_add_gtest(test_traffic_light_filter
     test/plugins/test_traffic_light_filter.cpp
   )
@@ -122,8 +83,7 @@ if(BUILD_TESTING)
 
 endif()
 
-ament_auto_package(
+autoware_ament_auto_package(
   INSTALL_TO_SHARE
   config
-  launch
 )

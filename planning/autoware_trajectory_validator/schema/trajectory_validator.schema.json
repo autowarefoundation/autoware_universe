@@ -1,0 +1,196 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Trajectory Validator",
+  "type": "object",
+  "definitions": {
+    "trajectory_validator": {
+      "type": "object",
+      "properties": {
+        "filter_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of validator plugin class names to enforce. Trajectories rejected by any plugin in this list are removed from the output.",
+          "default": [""]
+        },
+        "shadow_mode_filter_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of validator plugin class names that run in shadow mode: results are evaluated, logged, and reported via diagnostics but do not affect the output trajectory set.",
+          "default": [""]
+        },
+        "vehicle_constraint": {
+          "type": "object",
+          "properties": {
+            "max_speed": {
+              "type": "number",
+              "description": "Maximum allowed longitudinal speed [m/s].",
+              "default": 16.7,
+              "minimum": 0.0
+            },
+            "max_acceleration": {
+              "type": "number",
+              "description": "Maximum allowed longitudinal acceleration [m/s²].",
+              "default": 5.0,
+              "minimum": 0.0
+            },
+            "max_deceleration": {
+              "type": "number",
+              "description": "Maximum allowed deceleration magnitude [m/s²] (positive value representing deceleration).",
+              "default": 5.0,
+              "minimum": 0.0
+            },
+            "max_steering_angle": {
+              "type": "number",
+              "description": "Maximum allowed front-wheel steering angle [rad].",
+              "default": 0.8,
+              "minimum": 0.0
+            },
+            "max_steering_rate": {
+              "type": "number",
+              "description": "Maximum allowed steering rate [rad/s].",
+              "default": 0.3,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "traffic_light": {
+          "type": "object",
+          "properties": {
+            "deceleration_limit": {
+              "type": "number",
+              "description": "Deceleration limit used to decide whether ego can safely stop before an amber stop line [m/s²]. A trajectory crossing an amber light is rejected if ego could stop within this deceleration.",
+              "default": 2.8
+            },
+            "jerk_limit": {
+              "type": "number",
+              "description": "Jerk limit used together with `deceleration_limit` to compute the minimum stopping distance [m/s³].",
+              "default": 5.0
+            },
+            "delay_response_time": {
+              "type": "number",
+              "description": "Driver/system response delay used to estimate the earliest possible start of braking [s].",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "crossing_time_limit": {
+              "type": "number",
+              "description": "A trajectory crossing an amber light is rejected unless ego can fully clear the stop line within this time [s].",
+              "default": 2.75,
+              "minimum": 0.0
+            },
+            "treat_amber_light_as_red_light": {
+              "type": "boolean",
+              "description": "When true, amber lights are treated identically to red lights (no dilemma-zone logic is applied).",
+              "default": true
+            },
+            "stop_overshoot_margin": {
+              "type": "number",
+              "description": "Maximum allowed distance between the trajectory's stop point and the stop line for the trajectory to be considered as stopping correctly [m].",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "checked_trajectory_length": {
+              "type": "object",
+              "properties": {
+                "deceleration_limit": {
+                  "type": "number",
+                  "description": "Deceleration limit used to compute the trajectory length scanned for traffic light stop lines [m/s²].",
+                  "default": 2.0
+                },
+                "jerk_limit": {
+                  "type": "number",
+                  "description": "Jerk limit used together with `deceleration_limit` to compute the trajectory scan length [m/s³].",
+                  "default": 2.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "boundary_departure": {
+          "type": "object",
+          "properties": {
+            "lateral_margin_m": {
+              "type": "number",
+              "description": "Lateral clearance margin from an uncrossable boundary [m]. Trajectories whose footprint comes within this margin are rejected.",
+              "default": 0.01
+            },
+            "longitudinal_margin_m": {
+              "type": "number",
+              "description": "Longitudinal look-ahead margin applied when projecting the vehicle footprint along the trajectory [m].",
+              "default": 1.0
+            },
+            "max_deceleration_mps2": {
+              "type": "number",
+              "description": "Maximum deceleration (negative value) used to compute whether ego can stop before the boundary [m/s²].",
+              "default": -4.0
+            },
+            "max_jerk_mps3": {
+              "type": "number",
+              "description": "Maximum jerk (negative value) used together with `max_deceleration_mps2` for the stopping distance estimate [m/s³].",
+              "default": -5.0
+            },
+            "brake_delay_s": {
+              "type": "number",
+              "description": "Braking response delay [s].",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "time_to_departure_cutoff_s": {
+              "type": "number",
+              "description": "Time-to-boundary-crossing threshold below which a trajectory is flagged as departing [s].",
+              "default": 2.0,
+              "minimum": 0.0
+            },
+            "on_time_buffer_s": {
+              "type": "number",
+              "description": "Hysteresis buffer before activating boundary-departure detection [s].",
+              "default": 0.15,
+              "minimum": 0.0
+            },
+            "off_time_buffer_s": {
+              "type": "number",
+              "description": "Hysteresis buffer before deactivating boundary-departure detection [s].",
+              "default": 0.15,
+              "minimum": 0.0
+            },
+            "enable_developer_marker": {
+              "type": "boolean",
+              "description": "Publish diagnostic visualization markers intended for developer use.",
+              "default": true
+            },
+            "boundary_types": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of lanelet boundary type strings to treat as uncrossable (e.g., 'road_border').",
+              "default": ["road_border"]
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/trajectory_validator"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
