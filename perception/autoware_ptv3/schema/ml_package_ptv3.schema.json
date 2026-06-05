@@ -49,59 +49,6 @@
       },
       "required": ["class_names", "palette"],
       "additionalProperties": false
-    },
-    "detection3d": {
-      "type": "object",
-      "properties": {
-        "head": {
-          "type": "string",
-          "description": "Detection head type.",
-          "enum": ["trans_head"]
-        },
-        "bbox_voxel_size": {
-          "type": "array",
-          "items": { "type": "number", "exclusiveMinimum": 0 },
-          "description": "Voxel size for the bounding box grid [x, y, z] in meters.",
-          "minItems": 3,
-          "maxItems": 3
-        },
-        "bbox_downsample_factor": {
-          "type": "integer",
-          "description": "Downsampling factor applied to the detection feature grid.",
-          "minimum": 1
-        },
-        "has_twist": {
-          "type": "boolean",
-          "description": "Whether the detection head outputs velocity twist."
-        },
-        "class_names": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Detection class names.",
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "num_proposals": {
-          "type": "integer",
-          "description": "Number of top proposals decoded by TransHead. Required when head is trans_head.",
-          "minimum": 1
-        },
-        "post_center_range": {
-          "type": "array",
-          "items": { "type": "number" },
-          "description": "Post-processing center range for TransHead [min_x, min_y, min_z, max_x, max_y, max_z]. Required when head is trans_head.",
-          "minItems": 6,
-          "maxItems": 6
-        }
-      },
-      "required": ["head", "bbox_voxel_size", "bbox_downsample_factor", "has_twist", "class_names"],
-      "if": {
-        "properties": { "head": { "const": "trans_head" } }
-      },
-      "then": {
-        "required": ["num_proposals", "post_center_range"]
-      },
-      "additionalProperties": false
     }
   },
   "properties": {
@@ -112,8 +59,7 @@
           "type": "object",
           "properties": {
             "backbone": { "$ref": "#/definitions/backbone" },
-            "segmentation3d": { "$ref": "#/definitions/segmentation3d" },
-            "detection3d": { "$ref": "#/definitions/detection3d" }
+            "segmentation3d": { "$ref": "#/definitions/segmentation3d" }
           },
           "additionalProperties": false
         }

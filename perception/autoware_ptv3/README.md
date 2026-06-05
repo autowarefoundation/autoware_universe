@@ -2,13 +2,12 @@
 
 ## Purpose
 
-The `autoware_ptv3` package is used for 3D lidar segmentation and 3D object detection.
+The `autoware_ptv3` package is used for 3D lidar segmentation.
 
 ## Inner-workings / Algorithms
 
-This package implements a TensorRT powered multi-head inference node for Point Transformers V3
-(PTv3) [1]. The backbone is shared by the segmentation and detection heads, and either head can be
-enabled independently.
+This package implements a TensorRT powered inference node for Point Transformers V3
+(PTv3) [1]. The backbone feeds the segmentation head.
 The sparse convolution backend corresponds to [spconv](https://github.com/traveller59/spconv).
 Autoware installs it automatically in its setup script. If needed, the user can also build it and install it following the [following instructions](https://github.com/autowarefoundation/spconv_cpp).
 
@@ -27,7 +26,6 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 | `~/output/pointcloud/segmentation`     | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with class ID and probability fields.         |
 | `~/output/pointcloud/visualization`    | `sensor_msgs::msg::PointCloud2`                     | XYZ cloud with RGB field.                               |
 | `~/output/pointcloud/filtered`         | `sensor_msgs::msg::PointCloud2`                     | Filtered cloud in the requested `filter.output_format`. |
-| `~/output/objects`                     | `autoware_perception_msgs::msg::DetectedObjects`    | Detected 3D objects after score filtering and IoU NMS.  |
 | `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                                       |
 | `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).                             |
 | `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                                        |
@@ -45,10 +43,9 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 {{ json_to_markdown("perception/autoware_ptv3/schema/ml_package_ptv3.schema.json") }}
 
-Runtime head selection, filtering, detection thresholds, and remapping parameters are configured in
-`config/ptv3.param.yaml`. Model package metadata is split by artifact:
-`ml_package_ptv3_backbone.param.yaml`, `ml_package_ptv3_seg3d_head.param.yaml`, `ml_package_ptv3_det3d_head.param.yaml`.
-Source code uses the TransHead for 3D object detection.
+Runtime head enablement and filtering parameters are configured in `config/ptv3.param.yaml`. Model
+package metadata is split by artifact: `ml_package_ptv3_backbone.param.yaml`,
+`ml_package_ptv3_seg3d_head.param.yaml`.
 
 ### The `build_only` option
 
@@ -64,14 +61,6 @@ The default logging severity level for `autoware_ptv3` is `info`. For debugging 
 
 ```bash
 ros2 launch autoware_ptv3 ptv3.launch.xml log_level:=debug
-```
-
-### Head selection
-
-The segmentation and detection heads can be enabled independently:
-
-```bash
-ros2 launch autoware_ptv3 ptv3.launch.xml use_seg3d_head:=true use_det3d_head:=false
 ```
 
 ## Assumptions / Known limits
@@ -92,8 +81,7 @@ count, the input is clipped to the configured capacity and an error is logged.
 
 ## Trained Models
 
-The segmentation head was trained on the T4Dataset using approximately 4,000 frames. The detection
-head uses a frozen seg3d backbone and was trained on 60,000 frames of the T4Dataset. The models are
+The segmentation head was trained on the T4Dataset using approximately 4,000 frames. The models are
 available in the Autoware artifacts.
 
 ## Troubleshooting

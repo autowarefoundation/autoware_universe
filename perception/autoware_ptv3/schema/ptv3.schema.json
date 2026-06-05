@@ -27,52 +27,6 @@
       "required": ["class_probability_threshold", "classes", "output_format"],
       "additionalProperties": false
     },
-    "post_process_params": {
-      "type": "object",
-      "properties": {
-        "iou_nms_search_distance_2d": {
-          "type": "number",
-          "description": "Maximum 2D distance between object centers considered for IoU NMS.",
-          "exclusiveMinimum": 0.0
-        },
-        "iou_nms_threshold": {
-          "type": "number",
-          "description": "IoU threshold above which the lower-scoring box is suppressed.",
-          "minimum": 0.0,
-          "maximum": 1.0
-        },
-        "yaw_norm_thresholds": {
-          "type": "array",
-          "items": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
-          "description": "Per-class minimum sine/cosine norm for yaw. Boxes below threshold are discarded.",
-          "minItems": 1
-        }
-      },
-      "required": ["iou_nms_search_distance_2d", "iou_nms_threshold", "yaw_norm_thresholds"],
-      "additionalProperties": false
-    },
-    "detection_score_thresholds": {
-      "type": "object",
-      "properties": {
-        "distance_bin_upper_limits": {
-          "type": "array",
-          "items": { "type": "number", "exclusiveMinimum": 0.0 },
-          "description": "Ordered upper bounds of radial distance bins in meters.",
-          "minItems": 1
-        },
-        "min_confidence_scores": {
-          "type": "object",
-          "description": "Per-class arrays of minimum confidence scores, one value per distance bin.",
-          "additionalProperties": {
-            "type": "array",
-            "items": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
-            "minItems": 1
-          }
-        }
-      },
-      "required": ["distance_bin_upper_limits", "min_confidence_scores"],
-      "additionalProperties": false
-    },
     "backbone": {
       "type": "object",
       "properties": {
@@ -126,63 +80,6 @@
       ],
       "additionalProperties": false
     },
-    "detection3d": {
-      "type": "object",
-      "properties": {
-        "use_head": {
-          "description": "Enable the detection head."
-        },
-        "onnx_path": {
-          "type": "string",
-          "description": "Path to the detection head ONNX file.",
-          "pattern": "\\.onnx$"
-        },
-        "engine_path": {
-          "type": "string",
-          "description": "Path to the detection head TensorRT engine file.",
-          "pattern": "\\.engine$"
-        },
-        "post_process_params": {
-          "$ref": "#/definitions/post_process_params"
-        },
-        "detection_score_thresholds": {
-          "$ref": "#/definitions/detection_score_thresholds"
-        },
-        "allow_remapping_by_area_matrix": {
-          "type": "array",
-          "items": { "type": "integer", "enum": [0, 1] },
-          "description": "Flat row-major matrix (num_classes x num_classes) of allowed class remappings by area."
-        },
-        "min_area_matrix": {
-          "type": "array",
-          "items": { "type": "number", "minimum": 0.0 },
-          "description": "Flat row-major matrix (num_classes x num_classes) of minimum bounding box areas for remapping."
-        },
-        "max_area_matrix": {
-          "type": "array",
-          "items": { "type": "number", "minimum": 0.0 },
-          "description": "Flat row-major matrix (num_classes x num_classes) of maximum bounding box areas for remapping."
-        }
-      },
-      "required": ["use_head"],
-      "allOf": [
-        {
-          "if": { "properties": { "use_head": { "const": true } }, "required": ["use_head"] },
-          "then": {
-            "required": [
-              "onnx_path",
-              "engine_path",
-              "post_process_params",
-              "detection_score_thresholds",
-              "allow_remapping_by_area_matrix",
-              "min_area_matrix",
-              "max_area_matrix"
-            ]
-          }
-        }
-      ],
-      "additionalProperties": false
-    },
     "ptv3": {
       "type": "object",
       "properties": {
@@ -202,17 +99,9 @@
           "minimum": 1
         },
         "backbone": { "$ref": "#/definitions/backbone" },
-        "segmentation3d": { "$ref": "#/definitions/segmentation3d" },
-        "detection3d": { "$ref": "#/definitions/detection3d" }
+        "segmentation3d": { "$ref": "#/definitions/segmentation3d" }
       },
-      "required": [
-        "plugins_path",
-        "trt_precision",
-        "cloud_capacity",
-        "backbone",
-        "segmentation3d",
-        "detection3d"
-      ],
+      "required": ["plugins_path", "trt_precision", "cloud_capacity", "backbone", "segmentation3d"],
       "additionalProperties": false
     }
   },

@@ -41,42 +41,11 @@ namespace autoware::ptv3
 namespace
 {
 constexpr const char * k_logger = "ptv3";
-
-const char * to_trt_dtype_name(const nvinfer1::DataType dtype)
-{
-  switch (dtype) {
-    case nvinfer1::DataType::kFLOAT:
-      return "FLOAT";
-    case nvinfer1::DataType::kHALF:
-      return "HALF";
-    case nvinfer1::DataType::kINT8:
-      return "INT8";
-    case nvinfer1::DataType::kINT32:
-      return "INT32";
-    case nvinfer1::DataType::kBOOL:
-      return "BOOL";
-    case nvinfer1::DataType::kINT64:
-      return "INT64";
-    default:
-      return "UNKNOWN";
-  }
-}
-
-void require_same_dtype(
-  const nvinfer1::DataType expected, const nvinfer1::DataType actual, const char * tensor_name)
-{
-  if (actual != expected) {
-    throw std::runtime_error(
-      std::string("Mixed TensorRT float output dtypes are not supported. Tensor '") + tensor_name +
-      "' has " + to_trt_dtype_name(actual) + ", expected " + to_trt_dtype_name(expected) + ".");
-  }
-}
 }  // namespace
 
 PTv3TRT::PTv3TRT(
   const tensorrt_common::TrtCommonConfig & backbone_trt_config,
   const std::optional<tensorrt_common::TrtCommonConfig> & seg3d_head_trt_config,
-  const std::optional<tensorrt_common::TrtCommonConfig> & det3d_head_trt_config,
   const PTv3Config & config)
 : config_(config)
 {
@@ -92,12 +61,6 @@ PTv3TRT::PTv3TRT(
       throw std::runtime_error("seg3d_head_trt_config is required when segmentation3d.use_head.");
     }
     init_seg3d_head_trt(*seg3d_head_trt_config);
-  }
-  if (config_.use_det3d_head_) {
-    if (!det3d_head_trt_config.has_value()) {
-      throw std::runtime_error("det3d_head_trt_config is required when detection3d.use_head.");
-    }
-    init_det3d_head_trt(*det3d_head_trt_config);
   }
 }
 
@@ -239,28 +202,6 @@ void PTv3TRT::init_ptr()
     post_ptr_ = std::make_unique<Seg3dPostprocess>(config_, stream_);
   }
 
-  // Det head output buffers
-  if (config_.use_det3d_head_) {
-    const auto det_grid_size = config_.det_grid_x_size_ * config_.det_grid_y_size_;
-    const auto det_class_size = config_.detection_class_names_.size();
-
-    dense_heatmap_d_ = autoware::cuda_utils::make_unique<float[]>(det_grid_size * det_class_size);
-    query_heatmap_score_d_ =
-      autoware::cuda_utils::make_unique<float[]>(det_class_size * config_.num_proposals_);
-    query_labels_i32_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(config_.num_proposals_);
-    query_labels_i64_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.num_proposals_);
-    heatmap_d_ =
-      autoware::cuda_utils::make_unique<float[]>(det_class_size * config_.num_proposals_);
-    center_d_ = autoware::cuda_utils::make_unique<float[]>(2 * config_.num_proposals_);
-    height_d_ = autoware::cuda_utils::make_unique<float[]>(config_.num_proposals_);
-    dim_d_ = autoware::cuda_utils::make_unique<float[]>(3 * config_.num_proposals_);
-    rot_d_ = autoware::cuda_utils::make_unique<float[]>(2 * config_.num_proposals_);
-    if (config_.has_twist_) {
-      vel_d_ = autoware::cuda_utils::make_unique<float[]>(2 * config_.num_proposals_);
-    }
-    trans_head_post_ptr_ = std::make_unique<Det3dTransHeadPostprocess>(config_, stream_);
-  }
-
   allocate_messages();
 }
 
@@ -381,102 +322,6 @@ void PTv3TRT::init_seg3d_head_trt(const tensorrt_common::TrtCommonConfig & trt_c
   }
 }
 
-void PTv3TRT::init_det3d_head_trt(const tensorrt_common::TrtCommonConfig & trt_config)
-{
-  std::vector<autoware::tensorrt_common::NetworkIO> network_io;
-
-  // Inputs (dynamic on num_points)
-  // Note: point_offset is folded out of the det3d head ONNX by the exporter (batch_size=1),
-  // so it is not registered here.
-  network_io.emplace_back("point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}});
-  network_io.emplace_back("point_grid_coord", nvinfer1::Dims{2, {-1, 3}});
-
-  std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
-  profile_dims.emplace_back(
-    "point_feat", nvinfer1::Dims{2, {config_.voxels_num_[0], config_.backbone_feat_dim_}},
-    nvinfer1::Dims{2, {config_.voxels_num_[1], config_.backbone_feat_dim_}},
-    nvinfer1::Dims{2, {config_.voxels_num_[2], config_.backbone_feat_dim_}});
-  profile_dims.emplace_back(
-    "point_grid_coord", nvinfer1::Dims{2, {config_.voxels_num_[0], 3}},
-    nvinfer1::Dims{2, {config_.voxels_num_[1], 3}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 3}});
-
-  const auto det_grid_size = config_.det_grid_x_size_ * config_.det_grid_y_size_;
-  const auto det_cls = static_cast<std::int64_t>(config_.detection_class_names_.size());
-  const auto gx = static_cast<std::int64_t>(config_.det_grid_x_size_);
-  const auto gy = static_cast<std::int64_t>(config_.det_grid_y_size_);
-  const auto np = static_cast<std::int64_t>(config_.num_proposals_);
-
-  network_io.emplace_back("dense_heatmap", nvinfer1::Dims{4, {1, det_cls, gy, gx}});
-  network_io.emplace_back("query_heatmap_score", nvinfer1::Dims{3, {1, det_cls, np}});
-  network_io.emplace_back("query_labels", nvinfer1::Dims{2, {1, np}});
-  network_io.emplace_back("heatmap", nvinfer1::Dims{3, {1, det_cls, np}});
-  network_io.emplace_back("center", nvinfer1::Dims{3, {1, 2, np}});
-  network_io.emplace_back("height", nvinfer1::Dims{3, {1, 1, np}});
-  network_io.emplace_back("dim", nvinfer1::Dims{3, {1, 3, np}});
-  network_io.emplace_back("rot", nvinfer1::Dims{3, {1, 2, np}});
-  if (config_.has_twist_) {
-    network_io.emplace_back("vel", nvinfer1::Dims{3, {1, 2, np}});
-  }
-
-  det3d_head_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
-    std::vector<std::string>{config_.plugins_path_});
-
-  if (!det3d_head_trt_ptr_->setup(
-        std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims),
-        std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io))) {
-    throw std::runtime_error("Failed to setup det3d_head (TransHead) TRT engine.");
-  }
-
-  det3d_head_trt_ptr_->setTensorAddress("point_feat", bb_point_feat_d_.get());
-  det3d_head_trt_ptr_->setTensorAddress("point_grid_coord", bb_point_grid_coord_d_.get());
-
-  const auto query_labels_dtype = det3d_head_trt_ptr_->getTensorDataType("query_labels");
-  if (!query_labels_dtype.has_value()) {
-    throw std::runtime_error("Failed to query TensorRT dtype for query_labels.");
-  }
-  query_labels_dtype_ = *query_labels_dtype;
-  if (query_labels_dtype_ == nvinfer1::DataType::kINT32) {
-    det3d_head_trt_ptr_->setTensorAddress("query_labels", query_labels_i32_d_.get());
-  } else if (query_labels_dtype_ == nvinfer1::DataType::kINT64) {
-    det3d_head_trt_ptr_->setTensorAddress("query_labels", query_labels_i64_d_.get());
-  } else {
-    throw std::runtime_error(
-      std::string("Unsupported TensorRT dtype for query_labels: ") +
-      to_trt_dtype_name(query_labels_dtype_) + ". Expected INT32 or INT64.");
-  }
-
-  dense_heatmap_dtype_ = bind_float_output(
-    det3d_head_trt_ptr_.get(), "dense_heatmap", dense_heatmap_d_.get(), dense_heatmap_fp16_d_,
-    det_grid_size * config_.detection_class_names_.size());
-  query_heatmap_score_dtype_ = bind_float_output(
-    det3d_head_trt_ptr_.get(), "query_heatmap_score", query_heatmap_score_d_.get(),
-    query_heatmap_score_fp16_d_, config_.detection_class_names_.size() * config_.num_proposals_);
-  heatmap_dtype_ = bind_float_output(
-    det3d_head_trt_ptr_.get(), "heatmap", heatmap_d_.get(), heatmap_fp16_d_,
-    config_.detection_class_names_.size() * config_.num_proposals_);
-  center_dtype_ = bind_float_output(
-    det3d_head_trt_ptr_.get(), "center", center_d_.get(), center_fp16_d_,
-    2 * config_.num_proposals_);
-  height_dtype_ = bind_float_output(
-    det3d_head_trt_ptr_.get(), "height", height_d_.get(), height_fp16_d_, config_.num_proposals_);
-  dim_dtype_ = bind_float_output(
-    det3d_head_trt_ptr_.get(), "dim", dim_d_.get(), dim_fp16_d_, 3 * config_.num_proposals_);
-  rot_dtype_ = bind_float_output(
-    det3d_head_trt_ptr_.get(), "rot", rot_d_.get(), rot_fp16_d_, 2 * config_.num_proposals_);
-  require_same_dtype(heatmap_dtype_, dense_heatmap_dtype_, "dense_heatmap");
-  require_same_dtype(heatmap_dtype_, query_heatmap_score_dtype_, "query_heatmap_score");
-  require_same_dtype(heatmap_dtype_, center_dtype_, "center");
-  require_same_dtype(heatmap_dtype_, height_dtype_, "height");
-  require_same_dtype(heatmap_dtype_, dim_dtype_, "dim");
-  require_same_dtype(heatmap_dtype_, rot_dtype_, "rot");
-  if (config_.has_twist_) {
-    vel_dtype_ = bind_float_output(
-      det3d_head_trt_ptr_.get(), "vel", vel_d_.get(), vel_fp16_d_, 2 * config_.num_proposals_);
-    require_same_dtype(heatmap_dtype_, vel_dtype_, "vel");
-  }
-}
-
 CloudFormat PTv3TRT::detect_cloud_format(const cuda_blackboard::CudaPointCloud2 & cloud)
 {
   const auto & fields = cloud.fields;
@@ -498,36 +343,11 @@ CloudFormat PTv3TRT::detect_cloud_format(const cuda_blackboard::CudaPointCloud2 
   return CloudFormat::UNKNOWN;
 }
 
-bool PTv3TRT::segment(
+bool PTv3TRT::infer(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
   bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
   bool should_publish_filtered_pointcloud, std::unordered_map<std::string, double> & proc_timing)
 {
-  std::optional<std::vector<Box3D>> dummy_boxes;
-  return infer(
-    msg_ptr, should_publish_segmented_pointcloud, should_publish_visualization_pointcloud,
-    should_publish_filtered_pointcloud, false, dummy_boxes, proc_timing);
-}
-
-bool PTv3TRT::detect(
-  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-  std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing)
-{
-  std::optional<std::vector<Box3D>> detected_boxes;
-  const bool success = infer(msg_ptr, false, false, false, true, detected_boxes, proc_timing);
-  det_boxes3d = detected_boxes.value_or(std::vector<Box3D>{});
-  return success && detected_boxes.has_value();
-}
-
-bool PTv3TRT::infer(
-  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
-  bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
-  bool should_publish_filtered_pointcloud, bool should_detect_objects,
-  std::optional<std::vector<Box3D>> & det_boxes3d,
-  std::unordered_map<std::string, double> & proc_timing)
-{
-  det_boxes3d.reset();
-
   stop_watch_ptr_->toc("processing/inner", true);
   if (!pre_process(msg_ptr)) {
     RCLCPP_ERROR(rclcpp::get_logger(k_logger), "Pre-process failed.");
@@ -545,24 +365,14 @@ bool PTv3TRT::infer(
     config_.use_seg3d_head_ &&
     (should_publish_segmented_pointcloud || should_publish_visualization_pointcloud ||
      should_publish_filtered_pointcloud);
-  const bool should_run_det3d = config_.use_det3d_head_ && should_detect_objects;
 
   bool seg_ok = !should_run_seg3d;
-  bool det_ok = !should_run_det3d;
   bool seg_post_ok = !should_run_seg3d;
-  bool det_post_ok = !should_run_det3d;
 
   if (should_run_seg3d) {
     seg_ok = infer_seg3d_head();
     if (!seg_ok) {
       RCLCPP_ERROR(rclcpp::get_logger(k_logger), "Seg head inference failed.");
-    }
-  }
-
-  if (should_run_det3d) {
-    det_ok = infer_det3d_head();
-    if (!det_ok) {
-      RCLCPP_ERROR(rclcpp::get_logger(k_logger), "Det head inference failed.");
     }
   }
 
@@ -586,26 +396,10 @@ bool PTv3TRT::infer(
     }
   }
 
-  if (det_ok && should_run_det3d) {
-    std::vector<Box3D> detected_boxes;
-    try {
-      if (post_process_det3d(detected_boxes)) {
-        det_boxes3d = std::move(detected_boxes);
-        det_post_ok = true;
-      } else {
-        RCLCPP_ERROR(rclcpp::get_logger(k_logger), "Det post-process failed.");
-        det_post_ok = false;
-      }
-    } catch (const std::exception & e) {
-      RCLCPP_ERROR(rclcpp::get_logger(k_logger), "Det post-process failed: %s", e.what());
-      det_post_ok = false;
-    }
-  }
-
   proc_timing.emplace(
     "debug/processing_time/postprocess_ms", stop_watch_ptr_->toc("processing/inner", true));
 
-  return (should_run_seg3d && seg_ok && seg_post_ok) || (should_run_det3d && det_ok && det_post_ok);
+  return should_run_seg3d && seg_ok && seg_post_ok;
 }
 
 bool PTv3TRT::pre_process(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr)
@@ -799,19 +593,6 @@ bool PTv3TRT::infer_seg3d_head()
   return true;
 }
 
-bool PTv3TRT::infer_det3d_head()
-{
-  det3d_head_trt_ptr_->setInputShape(
-    "point_feat", nvinfer1::Dims{2, {num_voxels_, config_.backbone_feat_dim_}});
-  det3d_head_trt_ptr_->setInputShape("point_grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
-  const auto status = det3d_head_trt_ptr_->enqueueV3(stream_);
-  if (!status) {
-    RCLCPP_ERROR(rclcpp::get_logger(k_logger), "Det head enqueue failed.");
-    return false;
-  }
-  return true;
-}
-
 bool PTv3TRT::post_process_seg3d(
   const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
   bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud)
@@ -912,47 +693,6 @@ bool PTv3TRT::post_process_seg3d(
   }
 
   allocate_messages();
-  return true;
-}
-
-bool PTv3TRT::post_process_det3d(std::vector<Box3D> & det_boxes3d)
-{
-  if (heatmap_dtype_ == nvinfer1::DataType::kHALF) {
-    if (query_labels_dtype_ == nvinfer1::DataType::kINT32) {
-      CHECK_CUDA_ERROR(trans_head_post_ptr_->process(
-        query_heatmap_score_fp16_d_.get(), query_labels_i32_d_.get(), heatmap_fp16_d_.get(),
-        center_fp16_d_.get(), height_fp16_d_.get(), dim_fp16_d_.get(), rot_fp16_d_.get(),
-        config_.has_twist_ ? vel_fp16_d_.get() : nullptr, stream_));
-    } else {
-      CHECK_CUDA_ERROR(trans_head_post_ptr_->process(
-        query_heatmap_score_fp16_d_.get(), query_labels_i64_d_.get(), heatmap_fp16_d_.get(),
-        center_fp16_d_.get(), height_fp16_d_.get(), dim_fp16_d_.get(), rot_fp16_d_.get(),
-        config_.has_twist_ ? vel_fp16_d_.get() : nullptr, stream_));
-    }
-  } else {
-    if (query_labels_dtype_ == nvinfer1::DataType::kINT32) {
-      CHECK_CUDA_ERROR(trans_head_post_ptr_->process(
-        query_heatmap_score_d_.get(), query_labels_i32_d_.get(), heatmap_d_.get(), center_d_.get(),
-        height_d_.get(), dim_d_.get(), rot_d_.get(), config_.has_twist_ ? vel_d_.get() : nullptr,
-        stream_));
-    } else {
-      CHECK_CUDA_ERROR(trans_head_post_ptr_->process(
-        query_heatmap_score_d_.get(), query_labels_i64_d_.get(), heatmap_d_.get(), center_d_.get(),
-        height_d_.get(), dim_d_.get(), rot_d_.get(), config_.has_twist_ ? vel_d_.get() : nullptr,
-        stream_));
-    }
-  }
-
-  const Box3D * device_boxes = trans_head_post_ptr_->device_boxes();
-  const std::size_t num_boxes = trans_head_post_ptr_->num_boxes();
-
-  det_boxes3d.resize(num_boxes);
-  if (num_boxes == 0) {
-    return true;
-  }
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    det_boxes3d.data(), device_boxes, num_boxes * sizeof(Box3D), cudaMemcpyDeviceToHost, stream_));
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   return true;
 }
 

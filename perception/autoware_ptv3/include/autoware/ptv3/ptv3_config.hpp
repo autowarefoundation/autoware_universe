@@ -36,22 +36,6 @@ enum class SourceReconstruction {
   FULL,
 };
 
-/** @brief Detection head layouts supported by this package. */
-enum class DetectionHeadType { TransHead };
-
-/**
- * @brief Parse a detection head type string.
- *
- * @param s Expected value is `trans_head`.
- * @return Parsed detection head type.
- * @throws std::runtime_error if the value is not supported.
- */
-inline DetectionHeadType parse_detection_head_type(const std::string & s)
-{
-  if (s == "trans_head") return DetectionHeadType::TransHead;
-  throw std::runtime_error("Unsupported detection_head_type='" + s + "'. Expected 'trans_head'.");
-}
-
 /**
  * @brief Runtime settings shared by preprocessing, TensorRT, and postprocessing.
  *
@@ -75,18 +59,6 @@ public:
    * @param filter_output_format Output point format for the filtered cloud.
    * @param source_reconstruction One of `none`, `partial`, or `full`.
    * @param use_seg3d_head Enable the segmentation head.
-   * @param use_det3d_head Enable the detection head.
-   * @param detection_class_names Detection class names. Required when detection is enabled.
-   * @param bbox_voxel_size Detection BEV voxel size in `[x, y, z]` order.
-   * @param bbox_downsample_factor Downsample factor from BEV grid to detection output grid.
-   * @param distance_bin_upper_limits Sorted distance bins for score thresholds.
-   * @param detection_score_thresholds Per-class thresholds for each distance bin.
-   * @param yaw_norm_thresholds Per-class yaw vector norm thresholds.
-   * @param has_twist Whether the detection head exports velocity tensors.
-   * @param detection_head_type `trans_head`.
-   * @param num_proposals Number of query proposals for TransHead.
-   * @param post_center_range TransHead range filter in `[x_min, y_min, z_min, x_max, y_max, z_max]`
-   * order.
    * @throws std::runtime_error if the configuration is inconsistent.
    */
   PTv3Config(
@@ -96,26 +68,15 @@ public:
     const std::vector<std::int64_t> & palette, const float filter_class_probability_threshold,
     const std::vector<std::string> & filter_classes, const std::string & filter_output_format,
     const std::string & source_reconstruction,
-    // Head selection flags.
-    bool use_seg3d_head, bool use_det3d_head,
-    // Detection parameters are checked only when the detection head is enabled.
-    const std::vector<std::string> & detection_class_names = {},
-    const std::vector<float> & bbox_voxel_size = {0.64f, 0.64f, 8.0f},
-    std::size_t bbox_downsample_factor = 1,
-    const std::vector<float> & distance_bin_upper_limits = {},
-    const std::vector<float> & detection_score_thresholds = {},
-    const std::vector<float> & yaw_norm_thresholds = {}, bool has_twist = false,
-    const std::string & detection_head_type = "trans_head", std::size_t num_proposals = 0,
-    const std::vector<float> & post_center_range = {})
+    // Head selection flag.
+    bool use_seg3d_head)
   {
     plugins_path_ = plugins_path;
     cloud_capacity_ = cloud_capacity;
     use_seg3d_head_ = use_seg3d_head;
-    use_det3d_head_ = use_det3d_head;
 
-    if (!use_seg3d_head_ && !use_det3d_head_) {
-      throw std::runtime_error(
-        "At least one of segmentation3d.use_head or detection3d.use_head must be true.");
+    if (!use_seg3d_head_) {
+      throw std::runtime_error("segmentation3d.use_head must be true.");
     }
     if (cloud_capacity <= 0) {
       throw std::runtime_error("cloud_capacity must be positive.");
@@ -205,94 +166,6 @@ public:
     filter_class_indices_ = make_filter_class_indices(class_names_, filter_classes);
     filter_output_format_ = filter_output_format;
     source_reconstruction_ = parse_source_reconstruction(source_reconstruction);
-
-    // Detection configuration.
-    if (use_det3d_head_) {
-      if (detection_class_names.empty()) {
-        throw std::runtime_error("detection_class_names must not be empty when use_det3d_head.");
-      }
-      if (bbox_voxel_size.size() != 3) {
-        throw std::runtime_error("bbox_voxel_size must contain 3 elements.");
-      }
-      if (bbox_voxel_size[0] <= 0.0F || bbox_voxel_size[1] <= 0.0F || bbox_voxel_size[2] <= 0.0F) {
-        throw std::runtime_error("bbox_voxel_size values must be positive.");
-      }
-      if (bbox_downsample_factor == 0) {
-        throw std::runtime_error("bbox_downsample_factor must be positive.");
-      }
-      if (distance_bin_upper_limits.empty()) {
-        throw std::runtime_error("distance_bin_upper_limits must not be empty.");
-      }
-      if (!std::is_sorted(distance_bin_upper_limits.begin(), distance_bin_upper_limits.end())) {
-        throw std::runtime_error("distance_bin_upper_limits must be sorted.");
-      }
-      if (distance_bin_upper_limits.front() <= 0.0F) {
-        throw std::runtime_error("distance_bin_upper_limits values must be positive.");
-      }
-      if (
-        detection_score_thresholds.size() !=
-        distance_bin_upper_limits.size() * detection_class_names.size()) {
-        throw std::runtime_error(
-          "detection_score_thresholds size must match distance bins x detection classes.");
-      }
-      if (!std::all_of(
-            detection_score_thresholds.begin(), detection_score_thresholds.end(),
-            [](float value) { return value >= 0.0F && value <= 1.0F; })) {
-        throw std::runtime_error("detection_score_thresholds values must be between 0 and 1.");
-      }
-      if (yaw_norm_thresholds.size() != detection_class_names.size()) {
-        throw std::runtime_error("yaw_norm_thresholds size must match detection class_names.");
-      }
-      if (!std::all_of(yaw_norm_thresholds.begin(), yaw_norm_thresholds.end(), [](float value) {
-            return value >= 0.0F && value <= 1.0F;
-          })) {
-        throw std::runtime_error("yaw_norm_thresholds values must be between 0 and 1.");
-      }
-
-      detection_class_names_ = detection_class_names;
-      bbox_voxel_x_size_ = bbox_voxel_size[0];
-      bbox_voxel_y_size_ = bbox_voxel_size[1];
-      bbox_voxel_z_size_ = bbox_voxel_size[2];
-      bbox_downsample_factor_ = bbox_downsample_factor;
-      distance_bin_upper_limits_ = distance_bin_upper_limits;
-      detection_score_thresholds_ = detection_score_thresholds;
-      yaw_norm_thresholds_ = yaw_norm_thresholds;
-      has_twist_ = has_twist;
-      detection_head_type_ = parse_detection_head_type(detection_head_type);
-
-      bbox_grid_x_size_ =
-        static_cast<std::size_t>((max_x_range_ - min_x_range_) / bbox_voxel_x_size_);
-      bbox_grid_y_size_ =
-        static_cast<std::size_t>((max_y_range_ - min_y_range_) / bbox_voxel_y_size_);
-      if (bbox_grid_x_size_ == 0 || bbox_grid_y_size_ == 0) {
-        throw std::runtime_error("bbox_voxel_size produces an empty detection grid.");
-      }
-      if (
-        bbox_grid_x_size_ % bbox_downsample_factor_ != 0 ||
-        bbox_grid_y_size_ % bbox_downsample_factor_ != 0) {
-        throw std::runtime_error("bbox grid size must be divisible by bbox_downsample_factor.");
-      }
-      det_grid_x_size_ = bbox_grid_x_size_ / bbox_downsample_factor_;
-      det_grid_y_size_ = bbox_grid_y_size_ / bbox_downsample_factor_;
-
-      if (detection_head_type_ == DetectionHeadType::TransHead) {
-        if (num_proposals == 0) {
-          throw std::runtime_error("num_proposals must be positive for TransHead.");
-        }
-        if (post_center_range.size() != 6) {
-          throw std::runtime_error("post_center_range must contain 6 elements for TransHead.");
-        }
-        if (
-          post_center_range[0] >= post_center_range[3] ||
-          post_center_range[1] >= post_center_range[4] ||
-          post_center_range[2] >= post_center_range[5]) {
-          throw std::runtime_error(
-            "post_center_range minimum values must be smaller than maximum values.");
-        }
-      }
-      num_proposals_ = num_proposals;
-      post_center_range_ = post_center_range;
-    }
   }
 
   /**
@@ -384,7 +257,6 @@ public:
 
   // Head selection
   bool use_seg3d_head_{true};
-  bool use_det3d_head_{false};
 
   // Preprocess parameters
   bool use_64bit_hash_{};
@@ -397,24 +269,6 @@ public:
   std::vector<std::uint32_t> filter_class_indices_;
   std::string filter_output_format_;
   SourceReconstruction source_reconstruction_{SourceReconstruction::NONE};
-
-  // Detection head.
-  std::vector<std::string> detection_class_names_;
-  float bbox_voxel_x_size_{0.64f};
-  float bbox_voxel_y_size_{0.64f};
-  float bbox_voxel_z_size_{8.0f};
-  std::size_t bbox_downsample_factor_{1};
-  bool has_twist_{false};
-  DetectionHeadType detection_head_type_{DetectionHeadType::TransHead};
-  std::size_t num_proposals_{0};
-  std::vector<float> post_center_range_;
-  std::vector<float> distance_bin_upper_limits_;
-  std::vector<float> detection_score_thresholds_;
-  std::vector<float> yaw_norm_thresholds_;
-  std::size_t bbox_grid_x_size_{};
-  std::size_t bbox_grid_y_size_{};
-  std::size_t det_grid_x_size_{};
-  std::size_t det_grid_y_size_{};
 
   // Shared backbone and preprocessing.
   std::int64_t cloud_capacity_{};
