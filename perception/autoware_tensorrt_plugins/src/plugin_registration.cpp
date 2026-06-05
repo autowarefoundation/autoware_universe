@@ -22,6 +22,7 @@
 #include "autoware/tensorrt_plugins/rotate_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/segment_csr_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/select_and_pad_plugin_creator.hpp"
+#include "autoware/tensorrt_plugins/serialized_pooling_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/unique_plugin_creator.hpp"
 
 #include <NvInferRuntime.h>
@@ -67,7 +68,7 @@ extern "C" void setLoggerFinder(nvinfer1::ILoggerFinder * finder)
 
 extern "C" nvinfer1::IPluginCreatorInterface * const * getCreators(std::int32_t & num_creators)
 {
-  num_creators = 11;
+  num_creators = 12;
   static nvinfer1::plugin::ArgsortPluginCreator argsort_plugin_creator{};
   static nvinfer1::plugin::QuickCumsumCudaPluginCreator quick_cumsum_cuda_plugin_creator{};
   static nvinfer1::plugin::GetIndicesPairsImplicitGemmPluginCreator
@@ -80,6 +81,7 @@ extern "C" nvinfer1::IPluginCreatorInterface * const * getCreators(std::int32_t 
     multi_scale_deformable_attention_plugin_creator{};
   static autoware::tensorrt_plugins::RotatePluginCreator rotate_plugin_creator{};
   static nvinfer1::plugin::SegmentCSRPluginCreator segment_csr_plugin_creator{};
+  static autoware::ptv3::SerializedPoolingPluginCreator serialized_pooling_plugin_creator{};
   static autoware::tensorrt_plugins::SelectAndPadPluginCreator select_and_pad_plugin_creator{};
   static nvinfer1::plugin::UniquePluginCreator unique_plugin_creator{};
 
@@ -93,6 +95,7 @@ extern "C" nvinfer1::IPluginCreatorInterface * const * getCreators(std::int32_t 
     &multi_scale_deformable_attention_plugin_creator,
     &rotate_plugin_creator,
     &segment_csr_plugin_creator,
+    &serialized_pooling_plugin_creator,
     &select_and_pad_plugin_creator,
     &unique_plugin_creator};
   return plugin_creator_list;
