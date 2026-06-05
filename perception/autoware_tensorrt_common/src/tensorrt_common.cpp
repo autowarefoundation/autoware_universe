@@ -480,7 +480,7 @@ bool TrtCommon::initialize()
     return false;
   }
 
-#if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH < 10000
+#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH < 100000
   const auto explicit_batch =
     1U << static_cast<uint32_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
   network_ = TrtUniquePtr<nvinfer1::INetworkDefinition>(builder_->createNetworkV2(explicit_batch));
@@ -578,21 +578,22 @@ bool TrtCommon::buildEngineFromOnnx()
 
 bool TrtCommon::validateEngine()
 {
-#if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 8600
+#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH >= 80600
   std::ifstream engine_file(trt_config_->engine_path);
   std::stringstream engine_buffer;
   engine_buffer << engine_file.rdbuf();
   std::string engine_str = engine_buffer.str();
 
   auto const blob = reinterpret_cast<uint8_t *>(engine_str.data());
+  auto const plan_major = static_cast<int32_t>(blob[TRT_MAJOR_IDX]);
+  auto const plan_minor = static_cast<int32_t>(blob[TRT_MINOR_IDX]);
+  auto const plan_patch = static_cast<int32_t>(blob[TRT_PATCH_IDX]);
   logger_->log(
-    nvinfer1::ILogger::Severity::kINFO, "Plan was created with TensorRT %d.%d.%d",
-    static_cast<int32_t>(blob[TRT_MAJOR_IDX]), static_cast<int32_t>(blob[TRT_MINOR_IDX]),
-    static_cast<int32_t>(blob[TRT_PATCH_IDX]));
-  auto plan_ver = static_cast<int32_t>(blob[TRT_MAJOR_IDX]) * 1000 +
-                  static_cast<int32_t>(blob[TRT_MINOR_IDX]) * 100 +
-                  static_cast<int32_t>(blob[TRT_PATCH_IDX]);
-  if (plan_ver != (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSORRT_PATCH) {
+    nvinfer1::ILogger::Severity::kINFO, "Plan was created with TensorRT %d.%d.%d", plan_major,
+    plan_minor, plan_patch);
+  if (
+    plan_major != NV_TENSORRT_MAJOR || plan_minor != NV_TENSORRT_MINOR ||
+    plan_patch != NV_TENSORRT_PATCH) {
     logger_->log(
       nvinfer1::ILogger::Severity::kWARNING,
       "Plan was created with a different version of TensorRT! Current version: %d.%d.%d",
