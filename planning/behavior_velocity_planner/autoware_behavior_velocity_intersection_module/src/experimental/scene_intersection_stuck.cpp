@@ -12,19 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/behavior_velocity_intersection_module/util.hpp"
+#include "autoware/behavior_velocity_intersection_module/experimental/util.hpp"
 #include "scene_intersection.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/lanelet2_utils/geometry.hpp>
-#include <autoware/trajectory/utils/find_nearest.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/length.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
-#include <lanelet2_core/primitives/LaneletSequence.h>
 
 #include <algorithm>
 #include <string>
@@ -116,7 +114,6 @@ lanelet::ConstLanelet createLaneletFromArcLength(
 
   return lanelet::Lanelet(lanelet::InvalId, left_bound, right_bound);
 }
-
 }  // namespace
 
 namespace autoware::behavior_velocity_planner::experimental
@@ -124,28 +121,21 @@ namespace autoware::behavior_velocity_planner::experimental
 namespace bg = boost::geometry;
 
 std::optional<StuckStop> IntersectionModule::isStuckStatus(
-  const Trajectory & path, const std::vector<PathPointWithLaneId> & path_points,
   const IntersectionStopLines & intersection_stoplines, const PathLanelets & path_lanelets,
   const PlannerData & planner_data) const
 {
-  const auto closest_idx = intersection_stoplines.closest_idx;
-  const auto closest_s_opt = autoware::experimental::trajectory::find_first_nearest_index(
-    path, path_points.at(closest_idx).point.pose, planner_data.ego_nearest_dist_threshold,
-    planner_data.ego_nearest_yaw_threshold);
-  if (!closest_s_opt) {
-    return std::nullopt;
-  }
-  const auto & closest_s = closest_s_opt.value();
+  const auto & closest_s = intersection_stoplines.closest_s;
+  const auto & stuck_stopline_s_opt = intersection_stoplines.stuck_stopline;
+  const auto & default_stopline_s_opt = intersection_stoplines.default_stopline;
+  const auto & first_attention_stopline_s = intersection_stoplines.first_attention_stopline;
 
   const auto & intersection_lanelets = intersection_lanelets_.value();  // this is OK
-  const bool stuck_detected = checkStuckVehicleInIntersection(path_lanelets, planner_data);
-  const auto first_conflicting_lane =
+  const auto stuck_detected = checkStuckVehicleInIntersection(path_lanelets, planner_data);
+  const auto & first_conflicting_lane =
     intersection_lanelets.first_conflicting_lane().value();  // this is OK
-  const bool is_first_conflicting_lane_private =
-    (std::string(first_conflicting_lane.attributeOr("location", "else")) == "private");
-  const auto stuck_stopline_idx_opt = intersection_stoplines.stuck_stopline;
-  const auto default_stopline_idx_opt = intersection_stoplines.default_stopline;
-  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
+  const auto is_first_conflicting_lane_private =
+    first_conflicting_lane.attributeOr<std::string>("location", "else") == "private";
+
   if (stuck_detected) {
     if (
       is_first_conflicting_lane_private &&
@@ -153,15 +143,8 @@ std::optional<StuckStop> IntersectionModule::isStuckStatus(
       // do nothing
     } else {
       std::optional<double> stopline_s = std::nullopt;
-      if (stuck_stopline_idx_opt) {
-        const auto stuck_stopline_s_opt =
-          autoware::experimental::trajectory::find_first_nearest_index(
-            path, path_points.at(stuck_stopline_idx_opt.value()).point.pose,
-            planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
-        if (!stuck_stopline_s_opt) {
-          return std::nullopt;
-        }
-        const auto stuck_stopline_s = stuck_stopline_s_opt.value();
+      if (stuck_stopline_s_opt) {
+        const auto & stuck_stopline_s = stuck_stopline_s_opt.value();
         const bool is_stuck_stopline_feasible =
           can_smoothly_stop_at(closest_s, stuck_stopline_s, planner_data);
         if (is_stuck_stopline_feasible) {
@@ -169,27 +152,12 @@ std::optional<StuckStop> IntersectionModule::isStuckStatus(
         }
       }
       if (!stopline_s) {
-        if (default_stopline_idx_opt) {
-          const auto default_stopline_s_opt =
-            autoware::experimental::trajectory::find_first_nearest_index(
-              path, path_points.at(default_stopline_idx_opt.value()).point.pose,
-              planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
-          if (!default_stopline_s_opt) {
-            return std::nullopt;
-          }
-          const auto default_stopline_s = default_stopline_s_opt.value();
+        if (default_stopline_s_opt) {
+          const auto & default_stopline_s = default_stopline_s_opt.value();
           if (can_smoothly_stop_at(closest_s, default_stopline_s, planner_data)) {
             stopline_s = default_stopline_s;
           }
         } else {
-          const auto first_attention_stopline_s_opt =
-            autoware::experimental::trajectory::find_first_nearest_index(
-              path, path_points.at(first_attention_stopline_idx).point.pose,
-              planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
-          if (!first_attention_stopline_s_opt) {
-            return std::nullopt;
-          }
-          const auto first_attention_stopline_s = first_attention_stopline_s_opt.value();
           if (can_smoothly_stop_at(closest_s, first_attention_stopline_s, planner_data)) {
             stopline_s = first_attention_stopline_s;
           }
@@ -339,61 +307,26 @@ bool IntersectionModule::checkStuckVehicleInIntersection(
 }
 
 std::optional<YieldStuckStop> IntersectionModule::isYieldStuckStatus(
-  const Trajectory & path, const std::vector<PathPointWithLaneId> & path_points,
-  const std::pair<size_t, size_t> & lane_id_interval,
+  const Trajectory & path, const Interval & lane_id_interval,
   const IntersectionStopLines & intersection_stoplines, const PlannerData & planner_data) const
 {
-  const auto closest_idx = intersection_stoplines.closest_idx;
+  const auto & closest_s = intersection_stoplines.closest_s;
   const auto & intersection_lanelets = intersection_lanelets_.value();
-  const auto default_stopline_idx = intersection_stoplines.default_stopline.value();
-  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
-  const auto stuck_stopline_idx_opt = intersection_stoplines.stuck_stopline;
+  const auto & default_stopline_s = intersection_stoplines.default_stopline.value();
+  const auto & first_attention_stopline_s = intersection_stoplines.first_attention_stopline;
+  const auto & stuck_stopline_s_opt = intersection_stoplines.stuck_stopline;
 
-  const bool yield_stuck_detected = checkYieldStuckVehicleInIntersection(
-    path, path_points, lane_id_interval, intersection_lanelets.attention_non_preceding(),
-    planner_data);
+  const auto yield_stuck_detected = checkYieldStuckVehicleInIntersection(
+    path, lane_id_interval, intersection_lanelets.attention_non_preceding(), planner_data);
   if (yield_stuck_detected) {
-    const auto closest_s_opt = autoware::experimental::trajectory::find_first_nearest_index(
-      path, path_points.at(closest_idx).point.pose, planner_data.ego_nearest_dist_threshold,
-      planner_data.ego_nearest_yaw_threshold);
-    if (!closest_s_opt) {
-      return std::nullopt;
-    }
-    const auto & closest_s = closest_s_opt.value();
-
-    const auto default_stopline_s_opt =
-      autoware::experimental::trajectory::find_first_nearest_index(
-        path, path_points.at(default_stopline_idx).point.pose,
-        planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
-    if (!default_stopline_s_opt) {
-      return std::nullopt;
-    }
-    const auto & default_stopline_s = default_stopline_s_opt.value();
-
-    const auto first_attention_stopline_s_opt =
-      autoware::experimental::trajectory::find_first_nearest_index(
-        path, path_points.at(first_attention_stopline_idx).point.pose,
-        planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
-    if (!first_attention_stopline_s_opt) {
-      return std::nullopt;
-    }
-    const auto & first_attention_stopline_s = first_attention_stopline_s_opt.value();
-
     std::optional<double> stopline_s = std::nullopt;
-    const bool is_default_stopline_feasible =
+    const auto is_default_stopline_feasible =
       can_smoothly_stop_at(closest_s, default_stopline_s, planner_data);
-    const bool is_first_attention_stopline_feasible =
+    const auto is_first_attention_stopline_feasible =
       can_smoothly_stop_at(closest_s, first_attention_stopline_s, planner_data);
-    if (stuck_stopline_idx_opt) {
-      const auto stuck_stopline_s_opt =
-        autoware::experimental::trajectory::find_first_nearest_index(
-          path, path_points.at(*stuck_stopline_idx_opt).point.pose,
-          planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
-      if (!stuck_stopline_s_opt) {
-        return std::nullopt;
-      }
+    if (stuck_stopline_s_opt) {
       const auto & stuck_stopline_s = stuck_stopline_s_opt.value();
-      const bool is_stuck_stopline_feasible =
+      const auto is_stuck_stopline_feasible =
         can_smoothly_stop_at(closest_s, stuck_stopline_s, planner_data);
       if (is_stuck_stopline_feasible) {
         stopline_s = stuck_stopline_s;
@@ -414,8 +347,7 @@ std::optional<YieldStuckStop> IntersectionModule::isYieldStuckStatus(
 }
 
 bool IntersectionModule::checkYieldStuckVehicleInIntersection(
-  const Trajectory & path, const std::vector<PathPointWithLaneId> & path_points,
-  const std::pair<size_t, size_t> & lane_id_interval,
+  const Trajectory & path, const Interval & lane_id_interval,
   const lanelet::ConstLanelets & attention_lanelets, const PlannerData & planner_data) const
 {
   const bool yield_stuck_detection_direction = [&]() {
@@ -433,20 +365,9 @@ bool IntersectionModule::checkYieldStuckVehicleInIntersection(
   const double yield_stuck_distance_thr = planner_param_.yield_stuck.distance_threshold;
 
   LineString2d sparse_intersection_path;
-  const auto [start, end] = lane_id_interval;
-  const auto start_s_opt = autoware::experimental::trajectory::find_first_nearest_index(
-    path, path_points.at(start).point.pose, planner_data.ego_nearest_dist_threshold,
-    planner_data.ego_nearest_yaw_threshold);
-  const auto end_s_opt = autoware::experimental::trajectory::find_first_nearest_index(
-    path, path_points.at(end).point.pose, planner_data.ego_nearest_dist_threshold,
-    planner_data.ego_nearest_yaw_threshold);
-  if (!start_s_opt || !end_s_opt) {
-    return false;
-  }
-  const auto & start_s = start_s_opt.value();
-  const auto & end_s = end_s_opt.value();
-  for (const auto s :
-       path.base_arange({start_s, end_s}, planner_param_.common.path_interpolation_ds)) {
+  for (const auto s : path.base_arange(
+         {lane_id_interval.start, lane_id_interval.end},
+         planner_param_.common.path_interpolation_ds)) {
     const auto pose = path.compute(s).point.pose;
     const auto & point = pose.position;
     const auto yaw = tf2::getYaw(pose.orientation);

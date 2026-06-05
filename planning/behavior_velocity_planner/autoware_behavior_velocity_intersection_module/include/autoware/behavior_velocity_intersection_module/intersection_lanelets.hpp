@@ -17,12 +17,12 @@
 
 #include "interpolated_path_info.hpp"
 
+#include <autoware/trajectory/path_point_with_lane_id.hpp>
+#include <autoware/trajectory/utils/find_intervals.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <lanelet2_core/primitives/CompoundPolygon.h>
 #include <lanelet2_core/primitives/Lanelet.h>
-#include <lanelet2_core/primitives/LineString.h>
-#include <lanelet2_routing/Forward.h>
 
 #include <optional>
 #include <vector>
@@ -41,6 +41,13 @@ public:
    */
   void update(
     const bool is_prioritized, const InterpolatedPathInfo & interpolated_path_info,
+    const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
+
+  void update(
+    const bool is_prioritized,
+    const autoware::experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & path,
+    const autoware::experimental::trajectory::Interval & lane_id_interval,
     const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 
   const lanelet::ConstLanelets & attention() const

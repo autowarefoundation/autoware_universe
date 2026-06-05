@@ -28,6 +28,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/experimental/scene_intersection_occlusion.cpp
   src/experimental/scene_intersection_collision.cpp
   src/experimental/scene_merge_from_private_road.cpp
+  src/experimental/util.cpp
 )
 
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
