@@ -60,7 +60,6 @@ public:
 
 private:
   void setupSortTarget(bool use_distance_thresholding);
-  // cppcheck-suppress unknownMacro
   void objectCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & input_msg);
   void splitByVelocity(const ObjsMsgType & input_object);
   void splitByRange(const ObjsMsgType & input_object);
