@@ -134,12 +134,10 @@ TEST_P(SerializedPoolingKernelTest, MatchesCpuCsrReference)
   constexpr std::int32_t kNumChannels = 3;
   const auto reduce = GetParam().second;
 
-  const std::vector<float> features{
-    1.0F, 10.0F, -1.0F, 2.0F, 20.0F, -2.0F, 3.0F, 30.0F, -3.0F,
-    4.0F, 40.0F, -4.0F, 5.0F, 50.0F, -5.0F, 6.0F, 60.0F, -6.0F};
-  const std::vector<float> coords{
-    0.0F, 0.0F, 0.0F, 1.0F, 2.0F, 3.0F, 2.0F, 4.0F, 6.0F,
-    3.0F, 6.0F, 9.0F, 4.0F, 8.0F, 12.0F, 5.0F, 10.0F, 15.0F};
+  const std::vector<float> features{1.0F, 10.0F, -1.0F, 2.0F, 20.0F, -2.0F, 3.0F, 30.0F, -3.0F,
+                                    4.0F, 40.0F, -4.0F, 5.0F, 50.0F, -5.0F, 6.0F, 60.0F, -6.0F};
+  const std::vector<float> coords{0.0F, 0.0F, 0.0F, 1.0F, 2.0F, 3.0F,  2.0F, 4.0F,  6.0F,
+                                  3.0F, 6.0F, 9.0F, 4.0F, 8.0F, 12.0F, 5.0F, 10.0F, 15.0F};
 
   // Non-identity ordering is essential: it catches accidental pre-gathered plugin inputs.
   const std::vector<std::int64_t> indices{4, 1, 5, 0, 3, 2};
@@ -170,8 +168,10 @@ TEST_P(SerializedPoolingKernelTest, MatchesCpuCsrReference)
     cudaSuccess);
   ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
 
-  expect_near_vector(copy_to_host(feature_out_d.get(), expected_features.size()), expected_features, 1.0e-5F);
-  expect_near_vector(copy_to_host(coord_out_d.get(), expected_coords.size()), expected_coords, 1.0e-5F);
+  expect_near_vector(
+    copy_to_host(feature_out_d.get(), expected_features.size()), expected_features, 1.0e-5F);
+  expect_near_vector(
+    copy_to_host(coord_out_d.get(), expected_coords.size()), expected_coords, 1.0e-5F);
 
   (void)kNumInputs;
 }

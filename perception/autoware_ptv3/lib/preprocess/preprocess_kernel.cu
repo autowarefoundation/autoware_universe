@@ -458,18 +458,20 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
       static_cast<std::int32_t>(stage_index), pooling_depth, capacity);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-    CHECK_CUDA_ERROR(cub::DeviceRadixSort::SortPairs(
-      pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
-      pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
-      capacity, 0, 63, stream_));
+    CHECK_CUDA_ERROR(
+      cub::DeviceRadixSort::SortPairs(
+        pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
+        pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
+        capacity, 0, 63, stream_));
 
     markPoolingRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
       pooling_sorted_keys_d_.get(), pooling_run_flags_d_.get(), capacity);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-    CHECK_CUDA_ERROR(cub::DeviceScan::InclusiveSum(
-      pooling_workspace_d_.get(), pooling_workspace_size_, pooling_run_flags_d_.get(),
-      pooling_run_ids_d_.get(), capacity, stream_));
+    CHECK_CUDA_ERROR(
+      cub::DeviceScan::InclusiveSum(
+        pooling_workspace_d_.get(), pooling_workspace_size_, pooling_run_flags_d_.get(),
+        pooling_run_ids_d_.get(), capacity, stream_));
 
     fillPoolingStageKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
       current_grid_coord, current_serialized_code, pooling_sorted_keys_d_.get(),
@@ -485,10 +487,11 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
         static_cast<std::int32_t>(stage_index + 1), order_index, capacity);
       CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-      CHECK_CUDA_ERROR(cub::DeviceRadixSort::SortPairs(
-        pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
-        pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
-        capacity, 0, 63, stream_));
+      CHECK_CUDA_ERROR(
+        cub::DeviceRadixSort::SortPairs(
+          pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
+          pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
+          capacity, 0, 63, stream_));
 
       fillOrderAndInverseKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
         pooling_sorted_keys_d_.get(), pooling_sorted_indices_d_.get(), stage_counts,

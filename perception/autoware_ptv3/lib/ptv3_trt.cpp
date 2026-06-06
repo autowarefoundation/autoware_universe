@@ -263,13 +263,13 @@ void PTv3TRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
   // so they are declared dynamic and bounded by the voxel-count optimization profile. A pooled
   // (output) count is at most its input count, so all pooled dims are conservatively bounded by
   // [1, opt, max] voxels.
-  const auto add_pooling_io =
-    [&network_io, &profile_dims](
-      const std::string & name, const nvinfer1::Dims & io_dims, const nvinfer1::Dims & min_dims,
-      const nvinfer1::Dims & opt_dims, const nvinfer1::Dims & max_dims) {
-      network_io.emplace_back(name, io_dims);
-      profile_dims.emplace_back(name, min_dims, opt_dims, max_dims);
-    };
+  const auto add_pooling_io = [&network_io, &profile_dims](
+                                const std::string & name, const nvinfer1::Dims & io_dims,
+                                const nvinfer1::Dims & min_dims, const nvinfer1::Dims & opt_dims,
+                                const nvinfer1::Dims & max_dims) {
+    network_io.emplace_back(name, io_dims);
+    profile_dims.emplace_back(name, min_dims, opt_dims, max_dims);
+  };
 
   const std::int64_t min_voxels = config_.voxels_num_[0];
   const std::int64_t opt_voxels = config_.voxels_num_[1];
@@ -360,10 +360,11 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   stage_views.reserve(serialized_pooling_stages_d_.size());
   for (auto & stage : serialized_pooling_stages_d_) {
-    stage_views.push_back(SerializedPoolingDeviceStageView{
-      stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
-      stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
-      stage.serialized_inverse.get()});
+    stage_views.push_back(
+      SerializedPoolingDeviceStageView{
+        stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+        stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+        stage.serialized_inverse.get()});
   }
 
   pre_ptr_->generateSerializedPoolingMetadata(
@@ -386,10 +387,10 @@ bool PTv3TRT::setSerializedPoolingInputShapes()
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
     const auto in_count = serialized_pooling_num_voxels_[stage];
     const auto out_count = serialized_pooling_num_voxels_[stage + 1];
-    success &= network_trt_ptr_->setInputShape(
-      (prefix + "indices").c_str(), nvinfer1::Dims{1, {in_count}});
-    success &= network_trt_ptr_->setInputShape(
-      (prefix + "cluster").c_str(), nvinfer1::Dims{1, {in_count}});
+    success &=
+      network_trt_ptr_->setInputShape((prefix + "indices").c_str(), nvinfer1::Dims{1, {in_count}});
+    success &=
+      network_trt_ptr_->setInputShape((prefix + "cluster").c_str(), nvinfer1::Dims{1, {in_count}});
     success &= network_trt_ptr_->setInputShape(
       (prefix + "indptr").c_str(), nvinfer1::Dims{1, {out_count + 1}});
     success &= network_trt_ptr_->setInputShape(

@@ -287,8 +287,8 @@ CpuStage make_stage_reference(
 PTv3Config make_test_config()
 {
   return PTv3Config(
-    "", 64, {1, 16, 32}, {0.0F, 0.0F, 0.0F, 64.0F, 64.0F, 64.0F}, {1.0F, 1.0F, 1.0F},
-    {"class"}, {"z", "z-trans"}, {2, 2}, {0, 0, 0}, 0.0F, {}, "XYZI", "none");
+    "", 64, {1, 16, 32}, {0.0F, 0.0F, 0.0F, 64.0F, 64.0F, 64.0F}, {1.0F, 1.0F, 1.0F}, {"class"},
+    {"z", "z-trans"}, {2, 2}, {0, 0, 0}, 0.0F, {}, "XYZI", "none");
 }
 
 void expect_equal(
@@ -304,9 +304,8 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
 
   const auto config = make_test_config();
   constexpr std::size_t kNumOrders = 2;
-  const std::vector<std::int64_t> grid_coord{
-    5, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 1,
-    4, 4, 0, 5, 4, 1, 8, 0, 0, 9, 0, 0, 10, 2, 0};
+  const std::vector<std::int64_t> grid_coord{5, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 3,  0, 1,
+                                             4, 4, 0, 5, 4, 1, 8, 0, 0, 9, 0, 0, 10, 2, 0};
   const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
   const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
 
@@ -321,10 +320,11 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
     device_stages.emplace_back(config.max_num_voxels_, kNumOrders);
   }
   for (auto & stage : device_stages) {
-    stage_views.push_back(SerializedPoolingDeviceStageView{
-      stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
-      stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
-      stage.serialized_inverse.get()});
+    stage_views.push_back(
+      SerializedPoolingDeviceStageView{
+        stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+        stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+        stage.serialized_inverse.get()});
   }
 
   copy_to_device(grid_coord_d.get(), grid_coord);
@@ -353,13 +353,15 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
     const auto out_count = static_cast<std::size_t>(stage_counts[stage_index + 1]);
     const auto prefix = "stage " + std::to_string(stage_index) + " ";
 
-    expect_equal(copy_to_host(actual.indices.get(), in_count), expected.indices, prefix + "indices");
+    expect_equal(
+      copy_to_host(actual.indices.get(), in_count), expected.indices, prefix + "indices");
     expect_equal(
       copy_to_host(actual.indptr.get(), out_count + 1), expected.indptr, prefix + "indptr");
     expect_equal(
       copy_to_host(actual.head_indices.get(), out_count), expected.head_indices,
       prefix + "head_indices");
-    expect_equal(copy_to_host(actual.cluster.get(), in_count), expected.cluster, prefix + "cluster");
+    expect_equal(
+      copy_to_host(actual.cluster.get(), in_count), expected.cluster, prefix + "cluster");
     expect_equal(
       copy_to_host(actual.grid_coord.get(), out_count * 3), expected.grid_coord,
       prefix + "grid_coord");
