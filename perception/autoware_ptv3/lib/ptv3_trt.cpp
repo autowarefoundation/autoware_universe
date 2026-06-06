@@ -258,6 +258,55 @@ void PTv3TRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
     "serialized_code", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
     nvinfer1::Dims{2, {2, config_.voxels_num_[1]}}, nvinfer1::Dims{2, {2, config_.voxels_num_[2]}});
 
+  // Serialized pooling metadata inputs are precomputed on device each frame and fed as engine
+  // inputs (see precomputeSerializedPoolingMetadata). Their per-stage extents are data-dependent,
+  // so they are declared dynamic and bounded by the voxel-count optimization profile. A pooled
+  // (output) count is at most its input count, so all pooled dims are conservatively bounded by
+  // [1, opt, max] voxels.
+  const auto add_pooling_io =
+    [&network_io, &profile_dims](
+      const std::string & name, const nvinfer1::Dims & io_dims, const nvinfer1::Dims & min_dims,
+      const nvinfer1::Dims & opt_dims, const nvinfer1::Dims & max_dims) {
+      network_io.emplace_back(name, io_dims);
+      profile_dims.emplace_back(name, min_dims, opt_dims, max_dims);
+    };
+
+  const std::int64_t min_voxels = config_.voxels_num_[0];
+  const std::int64_t opt_voxels = config_.voxels_num_[1];
+  const std::int64_t max_voxels = config_.voxels_num_[2];
+  const std::int64_t num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
+
+  for (std::size_t stage = 0; stage < config_.pooling_strides_.size(); ++stage) {
+    const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
+    // Input-count-sized tensors. Stage 0 consumes the original voxels and therefore shares their
+    // lower bound; deeper stages consume an already-pooled (smaller) count.
+    const std::int64_t in_min = stage == 0 ? min_voxels : 1;
+    add_pooling_io(
+      prefix + "indices", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {in_min}},
+      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}});
+    add_pooling_io(
+      prefix + "cluster", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {in_min}},
+      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}});
+    // Output-count-sized (pooled) tensors.
+    add_pooling_io(
+      prefix + "indptr", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {2}},
+      nvinfer1::Dims{1, {opt_voxels + 1}}, nvinfer1::Dims{1, {max_voxels + 1}});
+    add_pooling_io(
+      prefix + "head_indices", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {1}},
+      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}});
+    add_pooling_io(
+      prefix + "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::Dims{2, {1, 3}},
+      nvinfer1::Dims{2, {opt_voxels, 3}}, nvinfer1::Dims{2, {max_voxels, 3}});
+    add_pooling_io(
+      prefix + "serialized_order", nvinfer1::Dims{2, {num_orders, -1}},
+      nvinfer1::Dims{2, {num_orders, 1}}, nvinfer1::Dims{2, {num_orders, opt_voxels}},
+      nvinfer1::Dims{2, {num_orders, max_voxels}});
+    add_pooling_io(
+      prefix + "serialized_inverse", nvinfer1::Dims{2, {num_orders, -1}},
+      nvinfer1::Dims{2, {num_orders, 1}}, nvinfer1::Dims{2, {num_orders, opt_voxels}},
+      nvinfer1::Dims{2, {num_orders, max_voxels}});
+  }
+
   auto network_io_ptr =
     std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io);
   auto profile_dims_ptr =
@@ -276,6 +325,30 @@ void PTv3TRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
   network_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
   network_trt_ptr_->setTensorAddress("pred_labels", pred_labels_d_.get());
   network_trt_ptr_->setTensorAddress("pred_probs", pred_probs_d_.get());
+
+  bindSerializedPoolingAddresses();
+}
+
+void PTv3TRT::bindSerializedPoolingAddresses()
+{
+  // Metadata buffers are allocated once in allocateSerializedPoolingBuffers and never reallocated,
+  // so their device addresses are stable and can be bound a single time. The per-stage
+  // serialized_code buffers are only used to chain pooling stages on the host side and are not
+  // engine inputs, so they are intentionally not bound here.
+  for (std::size_t stage = 0; stage < serialized_pooling_stages_d_.size(); ++stage) {
+    const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
+    auto & buffers = serialized_pooling_stages_d_[stage];
+    network_trt_ptr_->setTensorAddress((prefix + "indices").c_str(), buffers.indices.get());
+    network_trt_ptr_->setTensorAddress((prefix + "indptr").c_str(), buffers.indptr.get());
+    network_trt_ptr_->setTensorAddress(
+      (prefix + "head_indices").c_str(), buffers.head_indices.get());
+    network_trt_ptr_->setTensorAddress((prefix + "cluster").c_str(), buffers.cluster.get());
+    network_trt_ptr_->setTensorAddress((prefix + "grid_coord").c_str(), buffers.grid_coord.get());
+    network_trt_ptr_->setTensorAddress(
+      (prefix + "serialized_order").c_str(), buffers.serialized_order.get());
+    network_trt_ptr_->setTensorAddress(
+      (prefix + "serialized_inverse").c_str(), buffers.serialized_inverse.get());
+  }
 }
 
 void PTv3TRT::precomputeSerializedPoolingMetadata()
@@ -300,6 +373,36 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
     serialized_pooling_num_voxels_.data(), serialized_pooling_num_voxels_d_.get(),
     serialized_pooling_num_voxels_.size() * sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+}
+
+bool PTv3TRT::setSerializedPoolingInputShapes()
+{
+  bool success = true;
+  const auto num_orders = static_cast<std::int64_t>(config_.serialization_orders_.size());
+
+  // serialized_pooling_num_voxels_[s] is the input count of stage s (entry 0 is num_voxels_) and
+  // [s + 1] is its pooled output count, matching the dense buffer layouts written by the kernels.
+  for (std::size_t stage = 0; stage < serialized_pooling_stages_d_.size(); ++stage) {
+    const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
+    const auto in_count = serialized_pooling_num_voxels_[stage];
+    const auto out_count = serialized_pooling_num_voxels_[stage + 1];
+    success &= network_trt_ptr_->setInputShape(
+      (prefix + "indices").c_str(), nvinfer1::Dims{1, {in_count}});
+    success &= network_trt_ptr_->setInputShape(
+      (prefix + "cluster").c_str(), nvinfer1::Dims{1, {in_count}});
+    success &= network_trt_ptr_->setInputShape(
+      (prefix + "indptr").c_str(), nvinfer1::Dims{1, {out_count + 1}});
+    success &= network_trt_ptr_->setInputShape(
+      (prefix + "head_indices").c_str(), nvinfer1::Dims{1, {out_count}});
+    success &= network_trt_ptr_->setInputShape(
+      (prefix + "grid_coord").c_str(), nvinfer1::Dims{2, {out_count, 3}});
+    success &= network_trt_ptr_->setInputShape(
+      (prefix + "serialized_order").c_str(), nvinfer1::Dims{2, {num_orders, out_count}});
+    success &= network_trt_ptr_->setInputShape(
+      (prefix + "serialized_inverse").c_str(), nvinfer1::Dims{2, {num_orders, out_count}});
+  }
+
+  return success;
 }
 
 CloudFormat PTv3TRT::detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const
@@ -514,6 +617,11 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
   network_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
   network_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});
   network_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
+
+  if (!setSerializedPoolingInputShapes()) {
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Failed to set serialized pooling input shapes.");
+    return false;
+  }
 
   return true;
 }

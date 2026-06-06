@@ -350,10 +350,16 @@ __global__ void fillPoolingStageKernel(
     return;
   }
 
+  // The order-major (per-serialization-order) tensors are stored densely so they can be bound
+  // directly to the engine inputs of shape [num_orders, count]: the input is strided by the
+  // stage's input count (the original serialized_code is laid out [2, num_voxels]) and the output
+  // by the stage's output count. Using `capacity` as the stride here would both misread the
+  // dense input and produce a non-dense output that TensorRT cannot consume.
+  const auto input_count = stage_counts[stage_index];
   const auto next_count = run_ids[capacity - 1];
   if (idx == 0) {
     stage_counts[stage_index + 1] = next_count;
-    indptr_out[next_count] = stage_counts[stage_index];
+    indptr_out[next_count] = input_count;
   }
 
   if (sorted_keys[idx] == kInvalidPoolingKey) {
@@ -376,8 +382,8 @@ __global__ void fillPoolingStageKernel(
       grid_coord_in[input_index * 3 + coord_index] >> pooling_depth;
   }
   for (std::int32_t order_index = 0; order_index < num_orders; ++order_index) {
-    serialized_code_out[order_index * capacity + segment_index] =
-      serialized_code_in[order_index * capacity + input_index] >> (pooling_depth * 3);
+    serialized_code_out[order_index * next_count + segment_index] =
+      serialized_code_in[order_index * input_count + input_index] >> (pooling_depth * 3);
   }
 }
 
@@ -392,8 +398,9 @@ __global__ void prepareOrderSortInputKernel(
   }
 
   const auto input_count = stage_counts[stage_index];
+  // serialized_code is stored densely as [num_orders, input_count] (see fillPoolingStageKernel).
   keys[idx] =
-    idx < input_count ? serialized_code[order_index * capacity + idx] : kInvalidPoolingKey;
+    idx < input_count ? serialized_code[order_index * input_count + idx] : kInvalidPoolingKey;
   indices[idx] = idx;
 }
 
@@ -403,16 +410,16 @@ __global__ void fillOrderAndInverseKernel(
   std::int64_t * __restrict__ inverse_out, std::int32_t stage_index, std::int32_t order_index,
   std::int64_t capacity)
 {
+  const auto count = stage_counts[stage_index];
   const auto rank = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
-  if (
-    rank >= capacity || rank >= stage_counts[stage_index] ||
-    sorted_keys[rank] == kInvalidPoolingKey) {
+  if (rank >= capacity || rank >= count || sorted_keys[rank] == kInvalidPoolingKey) {
     return;
   }
 
+  // order/inverse are stored densely as [num_orders, count] to match the engine input layout.
   const auto input_index = sorted_indices[rank];
-  order_out[order_index * capacity + rank] = input_index;
-  inverse_out[order_index * capacity + input_index] = rank;
+  order_out[order_index * count + rank] = input_index;
+  inverse_out[order_index * count + input_index] = rank;
 }
 
 std::int32_t poolingDepth(const std::int64_t stride)

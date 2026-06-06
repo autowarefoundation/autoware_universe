@@ -28,7 +28,9 @@
 
 constexpr char const * const kSERIALIZED_POOLING_PLUGIN_NAME{"SerializedPooling"};
 constexpr char const * const kSERIALIZED_POOLING_PLUGIN_VERSION{"1"};
-constexpr char const * const kSERIALIZED_POOLING_PLUGIN_NAMESPACE{"autoware::ptv3"};
+// Empty namespace to match every other plugin in this package: the ONNX-parser fallback importer
+// resolves custom ops (domain "autoware") against the default/empty plugin namespace.
+constexpr char const * const kSERIALIZED_POOLING_PLUGIN_NAMESPACE{""};
 
 namespace autoware::ptv3
 {

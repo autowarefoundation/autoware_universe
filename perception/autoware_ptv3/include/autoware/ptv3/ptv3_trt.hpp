@@ -63,7 +63,9 @@ protected:
   void createPointFields();
   void allocateMessages();
   void allocateSerializedPoolingBuffers();
+  void bindSerializedPoolingAddresses();
   void precomputeSerializedPoolingMetadata();
+  bool setSerializedPoolingInputShapes();
   [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
 
   bool preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
