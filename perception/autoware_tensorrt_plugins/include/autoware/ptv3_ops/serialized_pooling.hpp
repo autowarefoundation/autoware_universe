@@ -30,6 +30,21 @@ enum class SerializedPoolingReduce : std::int32_t {
   kMax = 3,
 };
 
+/// \brief Run PTv3 serialized pooling over CSR-encoded voxel groups.
+///
+/// Inputs:
+/// - `feature_in`: dense `[num_input_voxels, num_channels]` feature tensor. This must be the
+///   ungathered projected feature tensor; the kernel applies `indices_in` internally.
+/// - `coord_in`: dense `[num_input_voxels, 3]` float coordinate tensor.
+/// - `indices_in`: concatenated source voxel indices sorted by output segment.
+/// - `indptr_in`: CSR pointer tensor of shape `[num_segments + 1]`.
+///
+/// Outputs:
+/// - `feature_out`: dense `[num_segments, num_channels]` reduced features.
+/// - `coord_out`: dense `[num_segments, 3]` mean-reduced coordinates.
+///
+/// The output shape is fully determined by `indptr_in.shape[0] - 1`, so TensorRT sees the plugin
+/// as a non-data-dependent-shape operation when `indptr_in` is provided as an engine input.
 cudaError_t serialized_pooling_float(
   const float * feature_in, const float * coord_in, const std::int64_t * indices_in,
   const std::int64_t * indptr_in, float * feature_out, float * coord_out,
