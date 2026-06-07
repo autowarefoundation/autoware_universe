@@ -26,7 +26,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::traffic_light::TrafficLightArbiter"
   EXECUTABLE traffic_light_arbiter_node
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlySingleThreadedExecutor
 )
 
 if(BUILD_TESTING AND NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
