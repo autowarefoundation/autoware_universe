@@ -17,6 +17,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <type_traits>
 
 namespace autoware::ptv3
 {
@@ -32,6 +33,8 @@ namespace autoware::ptv3
 template <typename T1, typename T2>
 constexpr std::size_t divup(const T1 a, const T2 b)
 {
+  static_assert(
+    std::is_unsigned_v<T1> && std::is_unsigned_v<T2>, "divup: both operands must be unsigned.");
   if (b == 0) {
     throw std::runtime_error("divup: divisor must be non-zero.");
   }

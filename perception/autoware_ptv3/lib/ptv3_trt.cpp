@@ -17,13 +17,11 @@
 #include "autoware/ptv3/preprocess/backbone_preprocess.hpp"
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
+#include "autoware/ptv3/ros_utils.hpp"
 
 #include <autoware/cuda_utils/cuda_utils.hpp>
-#include <autoware/point_types/memory.hpp>
 #include <autoware/point_types/types.hpp>
 #include <rclcpp/rclcpp.hpp>
-
-#include <sensor_msgs/msg/point_field.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -53,7 +51,6 @@ PTv3TRT::PTv3TRT(
   stop_watch_ptr_->tic("processing/inner");
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
-  create_point_fields();
   init_ptr();
   init_backbone_trt(backbone_trt_config);
   if (config_.use_seg3d_head_) {
@@ -88,76 +85,6 @@ void PTv3TRT::set_publish_filtered_pointcloud(
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func)
 {
   publish_filtered_pointcloud_ = std::move(func);
-}
-
-nvinfer1::DataType PTv3TRT::bind_float_output(
-  autoware::tensorrt_common::TrtCommon * trt_ptr, const char * tensor_name, float * fp32_buffer,
-  CudaUniquePtr<__half[]> & fp16_buffer, std::size_t num_elements)
-{
-  const auto dtype = trt_ptr->getTensorDataType(tensor_name);
-  if (!dtype.has_value()) {
-    throw std::runtime_error(
-      std::string("Failed to query TensorRT dtype for ") + tensor_name + ".");
-  }
-  if (*dtype == nvinfer1::DataType::kFLOAT) {
-    trt_ptr->setTensorAddress(tensor_name, fp32_buffer);
-    return *dtype;
-  }
-  if (*dtype == nvinfer1::DataType::kHALF) {
-    fp16_buffer = autoware::cuda_utils::make_unique<__half[]>(num_elements);
-    trt_ptr->setTensorAddress(tensor_name, fp16_buffer.get());
-    return *dtype;
-  }
-  throw std::runtime_error(
-    std::string("Unsupported TensorRT dtype for float output '") + tensor_name + "'.");
-}
-
-void PTv3TRT::allocate_messages()
-{
-  if (!config_.use_seg3d_head_) {
-    return;
-  }
-
-  const auto output_capacity = config_.source_reconstruction_ != SourceReconstruction::NONE
-                                 ? config_.cloud_capacity_
-                                 : config_.max_num_voxels_;
-  if (segmented_points_msg_ptr_ == nullptr) {
-    segmented_points_msg_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
-    segmented_points_msg_ptr_->height = 1;
-    segmented_points_msg_ptr_->width = output_capacity;
-    segmented_points_msg_ptr_->fields = segmented_pointcloud_fields_;
-    segmented_points_msg_ptr_->is_bigendian = false;
-    segmented_points_msg_ptr_->is_dense = true;
-    segmented_points_msg_ptr_->point_step = 21U;
-    segmented_points_msg_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
-      output_capacity * segmented_points_msg_ptr_->point_step);
-  }
-
-  if (visualization_points_msg_ptr_ == nullptr) {
-    visualization_points_msg_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
-    visualization_points_msg_ptr_->height = 1;
-    visualization_points_msg_ptr_->width = output_capacity;
-    visualization_points_msg_ptr_->fields = visualization_pointcloud_fields_;
-    visualization_points_msg_ptr_->is_bigendian = false;
-    visualization_points_msg_ptr_->is_dense = true;
-    visualization_points_msg_ptr_->point_step =
-      static_cast<std::uint32_t>(visualization_pointcloud_fields_.size() * sizeof(float));
-    visualization_points_msg_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
-      output_capacity * visualization_points_msg_ptr_->point_step);
-  }
-
-  if (filtered_points_msg_ptr_ == nullptr && filtered_output_format_ != CloudFormat::UNKNOWN) {
-    filtered_points_msg_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
-    filtered_points_msg_ptr_->height = 1;
-    filtered_points_msg_ptr_->width = output_capacity;
-    filtered_points_msg_ptr_->fields = filtered_pointcloud_fields_;
-    filtered_points_msg_ptr_->is_bigendian = false;
-    filtered_points_msg_ptr_->is_dense = true;
-    filtered_points_msg_ptr_->point_step =
-      static_cast<std::uint32_t>(get_point_step(filtered_output_format_));
-    filtered_points_msg_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
-      output_capacity * filtered_points_msg_ptr_->point_step);
-  }
 }
 
 void PTv3TRT::init_ptr()
@@ -201,42 +128,6 @@ void PTv3TRT::init_ptr()
       config_.max_num_voxels_ * config_.class_names_.size());
     post_ptr_ = std::make_unique<Seg3dPostprocess>(config_, stream_);
   }
-
-  allocate_messages();
-}
-
-void PTv3TRT::create_point_fields()
-{
-  auto make_point_field = [](const std::string & name, int offset, int datatype, int count) {
-    sensor_msgs::msg::PointField field;
-    field.name = name;
-    field.offset = offset;
-    field.datatype = datatype;
-    field.count = count;
-    return field;
-  };
-
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("class_id", 12, sensor_msgs::msg::PointField::UINT8, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("probability", 13, sensor_msgs::msg::PointField::FLOAT32, 1));
-  segmented_pointcloud_fields_.push_back(
-    make_point_field("entropy", 17, sensor_msgs::msg::PointField::FLOAT32, 1));
-
-  visualization_pointcloud_fields_.push_back(
-    make_point_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1));
-  visualization_pointcloud_fields_.push_back(
-    make_point_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1));
-  visualization_pointcloud_fields_.push_back(
-    make_point_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1));
-  visualization_pointcloud_fields_.push_back(
-    make_point_field("rgb", 12, sensor_msgs::msg::PointField::FLOAT32, 1));
 }
 
 void PTv3TRT::init_backbone_trt(const tensorrt_common::TrtCommonConfig & trt_config)
@@ -249,7 +140,8 @@ void PTv3TRT::init_backbone_trt(const tensorrt_common::TrtCommonConfig & trt_con
   network_io.emplace_back("serialized_code", nvinfer1::Dims{2, {2, -1}});
 
   // Outputs: point_feat [N,64], point_grid_coord [N,3], point_offset [1]
-  network_io.emplace_back("point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}});
+  network_io.emplace_back(
+    "point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}}, nvinfer1::DataType::kFLOAT);
   network_io.emplace_back("point_grid_coord", nvinfer1::Dims{2, {-1, 3}});
   network_io.emplace_back("point_offset", nvinfer1::Dims{1, {1}});
 
@@ -289,7 +181,8 @@ void PTv3TRT::init_seg3d_head_trt(const tensorrt_common::TrtCommonConfig & trt_c
   network_io.emplace_back("point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}});
   network_io.emplace_back("pred_labels", nvinfer1::Dims{1, {-1}});
   network_io.emplace_back(
-    "pred_probs", nvinfer1::Dims{2, {-1, static_cast<std::int64_t>(config_.class_names_.size())}});
+    "pred_probs", nvinfer1::Dims{2, {-1, static_cast<std::int64_t>(config_.class_names_.size())}},
+    nvinfer1::DataType::kFLOAT);
 
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
   profile_dims.emplace_back(
@@ -309,38 +202,7 @@ void PTv3TRT::init_seg3d_head_trt(const tensorrt_common::TrtCommonConfig & trt_c
 
   seg3d_head_trt_ptr_->setTensorAddress("point_feat", bb_point_feat_d_.get());
   seg3d_head_trt_ptr_->setTensorAddress("pred_labels", pred_labels_d_.get());
-
-  pred_probs_dtype_ = bind_float_output(
-    seg3d_head_trt_ptr_.get(), "pred_probs", pred_probs_d_.get(), pred_probs_fp16_d_,
-    static_cast<std::size_t>(config_.max_num_voxels_) * config_.class_names_.size());
-
-  if (
-    pred_probs_dtype_ == nvinfer1::DataType::kHALF &&
-    config_.source_reconstruction_ != SourceReconstruction::NONE) {
-    reconstructed_probs_fp16_d_ = autoware::cuda_utils::make_unique<__half[]>(
-      config_.cloud_capacity_ * config_.class_names_.size());
-  }
-}
-
-CloudFormat PTv3TRT::detect_cloud_format(const cuda_blackboard::CudaPointCloud2 & cloud)
-{
-  const auto & fields = cloud.fields;
-  const auto num_fields = fields.size();
-
-  if (num_fields == 10 && point_types::is_data_layout_compatible_with_point_xyzircaedt(fields)) {
-    return CloudFormat::XYZIRCAEDT;
-  }
-  if (num_fields == 9 && point_types::is_data_layout_compatible_with_point_xyziradrt(fields)) {
-    return CloudFormat::XYZIRADRT;
-  }
-  if (num_fields == 6 && point_types::is_data_layout_compatible_with_point_xyzirc(fields)) {
-    return CloudFormat::XYZIRC;
-  }
-  if (num_fields == 4 && point_types::is_data_layout_compatible_with_point_xyzi(fields)) {
-    return CloudFormat::XYZI;
-  }
-
-  return CloudFormat::UNKNOWN;
+  seg3d_head_trt_ptr_->setTensorAddress("pred_probs", pred_probs_d_.get());
 }
 
 bool PTv3TRT::infer(
@@ -425,64 +287,12 @@ bool PTv3TRT::pre_process(const std::shared_ptr<const cuda_blackboard::CudaPoint
         "' is not compatible with input format '" + std::string(to_string(input_format_)) + "'.");
     }
 
-    auto append_field = [this](const std::string & name, int offset, int datatype, int count) {
-      sensor_msgs::msg::PointField field;
-      field.name = name;
-      field.offset = offset;
-      field.datatype = datatype;
-      field.count = count;
-      filtered_pointcloud_fields_.push_back(field);
-    };
-    filtered_pointcloud_fields_.clear();
-    switch (filtered_output_format_) {
-      case CloudFormat::XYZIRCAEDT:
-        append_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("intensity", 12, sensor_msgs::msg::PointField::UINT8, 1);
-        append_field("return_type", 13, sensor_msgs::msg::PointField::UINT8, 1);
-        append_field("channel", 14, sensor_msgs::msg::PointField::UINT16, 1);
-        append_field("azimuth", 16, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("elevation", 20, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("distance", 24, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("time_stamp", 28, sensor_msgs::msg::PointField::UINT32, 1);
-        break;
-      case CloudFormat::XYZIRADRT:
-        append_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("intensity", 12, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("ring", 16, sensor_msgs::msg::PointField::UINT16, 1);
-        append_field("azimuth", 18, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("distance", 22, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("return_type", 26, sensor_msgs::msg::PointField::UINT8, 1);
-        append_field("time_stamp", 27, sensor_msgs::msg::PointField::FLOAT64, 1);
-        break;
-      case CloudFormat::XYZIRC:
-        append_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("intensity", 12, sensor_msgs::msg::PointField::UINT8, 1);
-        append_field("return_type", 13, sensor_msgs::msg::PointField::UINT8, 1);
-        append_field("channel", 14, sensor_msgs::msg::PointField::UINT16, 1);
-        break;
-      case CloudFormat::XYZI:
-        append_field("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1);
-        append_field("intensity", 12, sensor_msgs::msg::PointField::FLOAT32, 1);
-        break;
-      default:
-        throw std::runtime_error("Unsupported filtered point cloud format.");
-    }
-
     RCLCPP_INFO(
       rclcpp::get_logger(k_logger),
       "Detected input format with %zu fields and point step %zu bytes; filtered output format '%s'",
       get_num_fields(input_format_), get_point_step(input_format_),
       to_string(filtered_output_format_));
   });
-  allocate_messages();
 
   const auto raw_num_points =
     static_cast<std::size_t>(msg_ptr->height) * static_cast<std::size_t>(msg_ptr->width);
@@ -527,13 +337,6 @@ bool PTv3TRT::pre_process(const std::shared_ptr<const cuda_blackboard::CudaPoint
     clear_async(
       reconstructed_probs_d_.get(),
       static_cast<std::size_t>(config_.cloud_capacity_) * config_.class_names_.size(), stream_);
-    if (reconstructed_probs_fp16_d_) {
-      CHECK_CUDA_ERROR(cudaMemsetAsync(
-        reconstructed_probs_fp16_d_.get(), 0,
-        static_cast<std::size_t>(config_.cloud_capacity_) * config_.class_names_.size() *
-          sizeof(__half),
-        stream_));
-    }
   }
 
   std::size_t num_cropped_points = 0;
@@ -546,7 +349,7 @@ bool PTv3TRT::pre_process(const std::shared_ptr<const cuda_blackboard::CudaPoint
     config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? cropped_source_points_d_.get()
                                                                     : nullptr,
     config_.source_reconstruction_ != SourceReconstruction::NONE ? inverse_map_d_.get() : nullptr,
-    &num_cropped_points, &unclipped_num_voxels);
+    num_cropped_points, unclipped_num_voxels);
   if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
     num_cropped_points_ = static_cast<std::int64_t>(num_cropped_points);
   }
@@ -597,43 +400,25 @@ bool PTv3TRT::post_process_seg3d(
   const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
   bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud)
 {
-  const bool probs_fp16 = (pred_probs_dtype_ == nvinfer1::DataType::kHALF);
-
   const bool in_reconstruction = (config_.source_reconstruction_ != SourceReconstruction::NONE);
 
   if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
-    if (probs_fp16) {
-      post_ptr_->reconstruct_partial(
-        inverse_map_d_.get(), pred_labels_d_.get(), pred_probs_fp16_d_.get(),
-        reconstructed_labels_d_.get(), reconstructed_probs_fp16_d_.get(),
-        config_.class_names_.size(), num_cropped_points_, num_voxels_);
-    } else {
-      post_ptr_->reconstruct_partial(
-        inverse_map_d_.get(), pred_labels_d_.get(), pred_probs_d_.get(),
-        reconstructed_labels_d_.get(), reconstructed_probs_d_.get(), config_.class_names_.size(),
-        num_cropped_points_, num_voxels_);
-    }
+    post_ptr_->reconstruct_partial(
+      inverse_map_d_.get(), pred_labels_d_.get(), pred_probs_d_.get(),
+      reconstructed_labels_d_.get(), reconstructed_probs_d_.get(), config_.class_names_.size(),
+      num_cropped_points_, num_voxels_);
   }
   if (config_.source_reconstruction_ == SourceReconstruction::FULL) {
-    if (probs_fp16) {
-      post_ptr_->reconstruct_full(
-        pre_ptr_->crop_mask(), pre_ptr_->crop_indices(), inverse_map_d_.get(), pred_labels_d_.get(),
-        pred_probs_fp16_d_.get(), reconstructed_labels_d_.get(), reconstructed_probs_fp16_d_.get(),
-        config_.class_names_.size(), num_source_points_, num_voxels_);
-    } else {
-      post_ptr_->reconstruct_full(
-        pre_ptr_->crop_mask(), pre_ptr_->crop_indices(), inverse_map_d_.get(), pred_labels_d_.get(),
-        pred_probs_d_.get(), reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
-        config_.class_names_.size(), num_source_points_, num_voxels_);
-    }
+    post_ptr_->reconstruct_full(
+      pre_ptr_->crop_mask(), pre_ptr_->crop_indices(), inverse_map_d_.get(), pred_labels_d_.get(),
+      pred_probs_d_.get(), reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
+      config_.class_names_.size(), num_source_points_, num_voxels_);
   }
 
   const auto source_features = in_reconstruction ? reconstructed_features_d_.get() : feat_d_.get();
   const auto source_labels =
     in_reconstruction ? reconstructed_labels_d_.get() : pred_labels_d_.get();
-  const __half * source_probs_fp16 =
-    in_reconstruction ? reconstructed_probs_fp16_d_.get() : pred_probs_fp16_d_.get();
-  const float * source_probs_fp32 =
+  const float * source_probs =
     in_reconstruction ? reconstructed_probs_d_.get() : pred_probs_d_.get();
 
   const auto source_points = config_.source_reconstruction_ == SourceReconstruction::FULL
@@ -646,16 +431,15 @@ bool PTv3TRT::post_process_seg3d(
     : config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? num_cropped_points_
                                                                       : num_voxels_;
 
+  const auto output_capacity = config_.source_reconstruction_ != SourceReconstruction::NONE
+                                 ? config_.cloud_capacity_
+                                 : config_.max_num_voxels_;
+
   if (should_publish_segmented_pointcloud) {
-    if (probs_fp16) {
-      post_ptr_->create_segmentation_pointcloud(
-        source_features, source_labels, source_probs_fp16, segmented_points_msg_ptr_->data.get(),
-        config_.class_names_.size(), num_source_output_points);
-    } else {
-      post_ptr_->create_segmentation_pointcloud(
-        source_features, source_labels, source_probs_fp32, segmented_points_msg_ptr_->data.get(),
-        config_.class_names_.size(), num_source_output_points);
-    }
+    allocate_seg3d_segmentation_msg(output_capacity, segmented_points_msg_ptr_);
+    post_ptr_->create_segmentation_pointcloud(
+      source_features, source_labels, source_probs, segmented_points_msg_ptr_->data.get(),
+      config_.class_names_.size(), num_source_output_points);
     segmented_points_msg_ptr_->header = header;
     segmented_points_msg_ptr_->width = static_cast<std::uint32_t>(num_source_output_points);
     publish_segmented_pointcloud_(std::move(segmented_points_msg_ptr_));
@@ -663,6 +447,7 @@ bool PTv3TRT::post_process_seg3d(
   }
 
   if (should_publish_visualization_pointcloud) {
+    allocate_seg3d_visualization_msg(output_capacity, visualization_points_msg_ptr_);
     post_ptr_->create_visualization_pointcloud(
       source_features, source_labels,
       reinterpret_cast<float *>(visualization_points_msg_ptr_->data.get()),
@@ -674,25 +459,16 @@ bool PTv3TRT::post_process_seg3d(
   }
 
   if (should_publish_filtered_pointcloud) {
-    std::size_t num_filtered_points = 0;
-    if (probs_fp16) {
-      num_filtered_points = post_ptr_->create_filtered_pointcloud(
-        source_points, input_format_, filtered_output_format_, source_probs_fp16,
-        filtered_points_msg_ptr_->data.get(), config_.class_names_.size(),
-        num_source_output_points);
-    } else {
-      num_filtered_points = post_ptr_->create_filtered_pointcloud(
-        source_points, input_format_, filtered_output_format_, source_probs_fp32,
-        filtered_points_msg_ptr_->data.get(), config_.class_names_.size(),
-        num_source_output_points);
-    }
+    allocate_seg3d_filtered_msg(output_capacity, filtered_output_format_, filtered_points_msg_ptr_);
+    const auto num_filtered_points = post_ptr_->create_filtered_pointcloud(
+      source_points, input_format_, filtered_output_format_, source_probs,
+      filtered_points_msg_ptr_->data.get(), config_.class_names_.size(), num_source_output_points);
     filtered_points_msg_ptr_->header = header;
     filtered_points_msg_ptr_->width = num_filtered_points;
     publish_filtered_pointcloud_(std::move(filtered_points_msg_ptr_));
     filtered_points_msg_ptr_ = nullptr;
   }
 
-  allocate_messages();
   return true;
 }
 

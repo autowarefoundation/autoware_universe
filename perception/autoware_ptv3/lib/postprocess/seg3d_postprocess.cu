@@ -16,8 +16,6 @@
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/utils.hpp"
 
-#include <cuda_fp16.h>
-
 namespace autoware::ptv3
 {
 
@@ -49,12 +47,10 @@ __global__ void create_visualization_pointcloud_kernel(
     make_float4(input_features[idx].x, input_features[idx].y, input_features[idx].z, color);
 }
 
-template <typename FloatType>
 __global__ void create_segmentation_pointcloud_kernel(
   const float4 * __restrict__ input_features, const std::int64_t * __restrict__ labels,
-  const FloatType * __restrict__ pred_probs,
-  OutputSegmentationPointType * __restrict__ output_points, std::size_t num_classes,
-  std::size_t num_points)
+  const float * __restrict__ pred_probs, OutputSegmentationPointType * __restrict__ output_points,
+  std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -66,7 +62,7 @@ __global__ void create_segmentation_pointcloud_kernel(
   const bool has_valid_label = label >= 0 && static_cast<std::size_t>(label) < num_classes;
   float entropy = 0.0f;
   for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
-    const float probability = static_cast<float>(pred_probs[idx * num_classes + class_idx]);
+    const float probability = pred_probs[idx * num_classes + class_idx];
     if (probability > 0.0f) {
       entropy -= probability * logf(probability);
     }
@@ -78,16 +74,14 @@ __global__ void create_segmentation_pointcloud_kernel(
   output_points[idx].y = input_point.y;
   output_points[idx].z = input_point.z;
   output_points[idx].class_id = has_valid_label ? static_cast<std::uint8_t>(label) : 255U;
-  output_points[idx].probability =
-    has_valid_label ? static_cast<float>(pred_probs[idx * num_classes + label]) : 0.0f;
+  output_points[idx].probability = has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
   output_points[idx].entropy = entropy;
 }
 
-template <typename FloatType>
 __global__ void reconstruct_partial_kernel(
   const std::int64_t * __restrict__ inverse_map, const std::int64_t * __restrict__ voxel_labels,
-  const FloatType * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
-  FloatType * __restrict__ output_probs, std::size_t num_classes, std::size_t num_cropped_points,
+  const float * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
+  float * __restrict__ output_probs, std::size_t num_classes, std::size_t num_cropped_points,
   std::size_t num_voxels)
 {
   const auto point_idx = blockIdx.x * blockDim.y + threadIdx.y;
@@ -103,15 +97,14 @@ __global__ void reconstruct_partial_kernel(
 
   output_probs[point_idx * num_classes + class_idx] =
     has_valid_voxel ? voxel_probs[static_cast<std::size_t>(voxel_idx) * num_classes + class_idx]
-                    : FloatType{0};
+                    : 0.0f;
 }
 
-template <typename FloatType>
 __global__ void reconstruct_full_kernel(
   const std::uint32_t * __restrict__ crop_mask, const std::uint32_t * __restrict__ crop_indices,
   const std::int64_t * __restrict__ inverse_map, const std::int64_t * __restrict__ voxel_labels,
-  const FloatType * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
-  FloatType * __restrict__ output_probs, std::size_t num_classes, std::size_t num_points,
+  const float * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
+  float * __restrict__ output_probs, std::size_t num_classes, std::size_t num_points,
   std::size_t num_voxels)
 {
   const auto point_idx = blockIdx.x * blockDim.y + threadIdx.y;
@@ -122,7 +115,7 @@ __global__ void reconstruct_full_kernel(
   const auto mask = crop_mask[point_idx];
   if (mask == 0) {
     if (class_idx == 0) output_labels[point_idx] = 255;
-    output_probs[point_idx * num_classes + class_idx] = FloatType{0};
+    output_probs[point_idx * num_classes + class_idx] = 0.0f;
     return;
   }
 
@@ -130,7 +123,7 @@ __global__ void reconstruct_full_kernel(
   const auto voxel_idx = inverse_map[cropped_idx];
   if (voxel_idx < 0 || static_cast<std::size_t>(voxel_idx) >= num_voxels) {
     if (class_idx == 0) output_labels[point_idx] = 255;
-    output_probs[point_idx * num_classes + class_idx] = FloatType{0};
+    output_probs[point_idx * num_classes + class_idx] = 0.0f;
     return;
   }
 
@@ -225,9 +218,9 @@ __device__ void set_point_from_input<CloudPointTypeXYZIRCAEDT>(
   output_point = input_point;
 }
 
-template <typename InputPointT, typename OutputPointT, typename FloatType>
+template <typename InputPointT, typename OutputPointT>
 __global__ void create_filtered_pointcloud_kernel(
-  const InputPointT * __restrict__ input_points, const FloatType * __restrict__ pred_probs,
+  const InputPointT * __restrict__ input_points, const float * __restrict__ pred_probs,
   const std::uint32_t * __restrict__ filter_class_indices, std::size_t num_filter_classes,
   float filter_class_probability_threshold, std::size_t num_classes,
   std::uint32_t * __restrict__ output_num_points, OutputPointT * __restrict__ output_points,
@@ -239,10 +232,10 @@ __global__ void create_filtered_pointcloud_kernel(
   }
 
   bool keep_point = true;
-  const FloatType * point_probs = &pred_probs[num_classes * idx];
+  const float * point_probs = &pred_probs[num_classes * idx];
   for (std::size_t i = 0; i < num_filter_classes; ++i) {
     const auto class_idx = filter_class_indices[i];
-    if (static_cast<float>(point_probs[class_idx]) >= filter_class_probability_threshold) {
+    if (point_probs[class_idx] >= filter_class_probability_threshold) {
       keep_point = false;
       break;
     }
@@ -256,15 +249,15 @@ __global__ void create_filtered_pointcloud_kernel(
   set_point_from_input(output_points[output_idx], input_points[idx]);
 }
 
-template <typename InputPointT, typename OutputPointT, typename FloatType>
+template <typename InputPointT, typename OutputPointT>
 void create_filtered_pointcloud_typed(
   cudaStream_t stream, std::uint32_t threads_per_block, const void * compact_input_points,
-  const FloatType * pred_probs, const std::uint32_t * filter_class_indices,
+  const float * pred_probs, const std::uint32_t * filter_class_indices,
   std::size_t num_filter_classes, float filter_class_probability_threshold, std::size_t num_classes,
   std::uint32_t * output_num_points, void * output_points, std::size_t num_points)
 {
   const auto num_blocks = divup(num_points, threads_per_block);
-  create_filtered_pointcloud_kernel<InputPointT, OutputPointT, FloatType>
+  create_filtered_pointcloud_kernel<InputPointT, OutputPointT>
     <<<num_blocks, threads_per_block, 0, stream>>>(
       static_cast<const InputPointT *>(compact_input_points), pred_probs, filter_class_indices,
       num_filter_classes, filter_class_probability_threshold, num_classes, output_num_points,
@@ -306,59 +299,53 @@ void Seg3dPostprocess::create_visualization_pointcloud(
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-template <typename FloatType>
 void Seg3dPostprocess::create_segmentation_pointcloud(
-  const float * input_features, const std::int64_t * pred_labels, const FloatType * pred_probs,
+  const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
   std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points)
 {
   auto num_blocks = divup(num_points, config_.threads_per_block_);
 
-  create_segmentation_pointcloud_kernel<FloatType>
-    <<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-      reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
-      reinterpret_cast<OutputSegmentationPointType *>(output_points), num_classes, num_points);
+  create_segmentation_pointcloud_kernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+    reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
+    reinterpret_cast<OutputSegmentationPointType *>(output_points), num_classes, num_points);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-template <typename FloatType>
 void Seg3dPostprocess::reconstruct_partial(
-  const std::int64_t * inverse_map, const std::int64_t * voxel_labels,
-  const FloatType * voxel_probs, std::int64_t * output_labels, FloatType * output_probs,
-  std::size_t num_classes, std::size_t num_cropped_points, std::size_t num_voxels)
+  const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
+  std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
+  std::size_t num_cropped_points, std::size_t num_voxels)
 {
   auto block = dim3(32, 8);
   auto grid = dim3(divup(num_cropped_points, block.y), divup(num_classes, block.x));
 
-  reconstruct_partial_kernel<FloatType><<<grid, block, 0, stream_>>>(
+  reconstruct_partial_kernel<<<grid, block, 0, stream_>>>(
     inverse_map, voxel_labels, voxel_probs, output_labels, output_probs, num_classes,
     num_cropped_points, num_voxels);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-template <typename FloatType>
 void Seg3dPostprocess::reconstruct_full(
   const std::uint32_t * crop_mask, const std::uint32_t * crop_indices,
-  const std::int64_t * inverse_map, const std::int64_t * voxel_labels,
-  const FloatType * voxel_probs, std::int64_t * output_labels, FloatType * output_probs,
-  std::size_t num_classes, std::size_t num_points, std::size_t num_voxels)
+  const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
+  std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
+  std::size_t num_points, std::size_t num_voxels)
 {
   auto block = dim3(32, 8);
   auto grid = dim3(divup(num_points, block.y), divup(num_classes, block.x));
 
-  reconstruct_full_kernel<FloatType><<<grid, block, 0, stream_>>>(
+  reconstruct_full_kernel<<<grid, block, 0, stream_>>>(
     crop_mask, crop_indices, inverse_map, voxel_labels, voxel_probs, output_labels, output_probs,
     num_classes, num_points, num_voxels);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-template <typename FloatType>
 std::size_t Seg3dPostprocess::create_filtered_pointcloud(
   const void * compact_input_points, CloudFormat input_format, CloudFormat output_format,
-  const FloatType * pred_probs, void * output_points, std::size_t num_classes,
-  std::size_t num_points)
+  const float * pred_probs, void * output_points, std::size_t num_classes, std::size_t num_points)
 {
   cudaMemsetAsync(filtered_mask_d_.get(), 0, sizeof(std::uint32_t), stream_);
 
@@ -366,23 +353,21 @@ std::size_t Seg3dPostprocess::create_filtered_pointcloud(
     case CloudFormat::XYZIRCAEDT:
       switch (output_format) {
         case CloudFormat::XYZIRCAEDT:
-          create_filtered_pointcloud_typed<
-            CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRCAEDT, FloatType>(
+          create_filtered_pointcloud_typed<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRCAEDT>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
             output_points, num_points);
           break;
         case CloudFormat::XYZIRC:
-          create_filtered_pointcloud_typed<
-            CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRC, FloatType>(
+          create_filtered_pointcloud_typed<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRC>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
             output_points, num_points);
           break;
         case CloudFormat::XYZI:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZI, FloatType>(
+          create_filtered_pointcloud_typed<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
@@ -395,15 +380,14 @@ std::size_t Seg3dPostprocess::create_filtered_pointcloud(
     case CloudFormat::XYZIRADRT:
       switch (output_format) {
         case CloudFormat::XYZIRADRT:
-          create_filtered_pointcloud_typed<
-            CloudPointTypeXYZIRADRT, CloudPointTypeXYZIRADRT, FloatType>(
+          create_filtered_pointcloud_typed<CloudPointTypeXYZIRADRT, CloudPointTypeXYZIRADRT>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
             output_points, num_points);
           break;
         case CloudFormat::XYZI:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRADRT, CloudPointTypeXYZI, FloatType>(
+          create_filtered_pointcloud_typed<CloudPointTypeXYZIRADRT, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
@@ -416,14 +400,14 @@ std::size_t Seg3dPostprocess::create_filtered_pointcloud(
     case CloudFormat::XYZIRC:
       switch (output_format) {
         case CloudFormat::XYZIRC:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRC, CloudPointTypeXYZIRC, FloatType>(
+          create_filtered_pointcloud_typed<CloudPointTypeXYZIRC, CloudPointTypeXYZIRC>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
             output_points, num_points);
           break;
         case CloudFormat::XYZI:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRC, CloudPointTypeXYZI, FloatType>(
+          create_filtered_pointcloud_typed<CloudPointTypeXYZIRC, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
@@ -437,7 +421,7 @@ std::size_t Seg3dPostprocess::create_filtered_pointcloud(
       if (output_format != CloudFormat::XYZI) {
         throw std::runtime_error("Unsupported filtered output format.");
       }
-      create_filtered_pointcloud_typed<CloudPointTypeXYZI, CloudPointTypeXYZI, FloatType>(
+      create_filtered_pointcloud_typed<CloudPointTypeXYZI, CloudPointTypeXYZI>(
         stream_, config_.threads_per_block_, compact_input_points, pred_probs,
         filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
         config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
@@ -454,30 +438,5 @@ std::size_t Seg3dPostprocess::create_filtered_pointcloud(
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   return num_filtered_points;
 }
-
-// Explicit instantiations
-template void Seg3dPostprocess::create_segmentation_pointcloud<float>(
-  const float *, const std::int64_t *, const float *, std::uint8_t *, std::size_t, std::size_t);
-template void Seg3dPostprocess::create_segmentation_pointcloud<__half>(
-  const float *, const std::int64_t *, const __half *, std::uint8_t *, std::size_t, std::size_t);
-
-template void Seg3dPostprocess::reconstruct_partial<float>(
-  const std::int64_t *, const std::int64_t *, const float *, std::int64_t *, float *, std::size_t,
-  std::size_t, std::size_t);
-template void Seg3dPostprocess::reconstruct_partial<__half>(
-  const std::int64_t *, const std::int64_t *, const __half *, std::int64_t *, __half *, std::size_t,
-  std::size_t, std::size_t);
-
-template void Seg3dPostprocess::reconstruct_full<float>(
-  const std::uint32_t *, const std::uint32_t *, const std::int64_t *, const std::int64_t *,
-  const float *, std::int64_t *, float *, std::size_t, std::size_t, std::size_t);
-template void Seg3dPostprocess::reconstruct_full<__half>(
-  const std::uint32_t *, const std::uint32_t *, const std::int64_t *, const std::int64_t *,
-  const __half *, std::int64_t *, __half *, std::size_t, std::size_t, std::size_t);
-
-template std::size_t Seg3dPostprocess::create_filtered_pointcloud<float>(
-  const void *, CloudFormat, CloudFormat, const float *, void *, std::size_t, std::size_t);
-template std::size_t Seg3dPostprocess::create_filtered_pointcloud<__half>(
-  const void *, CloudFormat, CloudFormat, const __half *, void *, std::size_t, std::size_t);
 
 }  // namespace autoware::ptv3

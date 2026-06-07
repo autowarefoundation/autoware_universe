@@ -77,11 +77,15 @@ BackbonePreprocess::BackbonePreprocess(const PTv3Config & config, cudaStream_t s
     thrust::sequence(policy, idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
   }
 
-  std::uint64_t * uint64_nullptr = nullptr;
-
-  cub::DeviceRadixSort::SortPairs(
-    nullptr, sort_workspace_size_, uint64_nullptr, uint64_nullptr, uint64_nullptr, uint64_nullptr,
-    config_.cloud_capacity_, 0, 64, nullptr);
+  if (config_.use_64bit_hash_) {
+    std::uint64_t * p = nullptr;
+    cub::DeviceRadixSort::SortPairs(
+      nullptr, sort_workspace_size_, p, p, p, p, config_.cloud_capacity_, 0, 64, nullptr);
+  } else {
+    std::uint32_t * p = nullptr;
+    cub::DeviceRadixSort::SortPairs(
+      nullptr, sort_workspace_size_, p, p, p, p, config_.cloud_capacity_, 0, 32, nullptr);
+  }
 
   sort_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(sort_workspace_size_);
 
@@ -286,8 +290,8 @@ std::size_t BackbonePreprocess::generate_features(
   const void * input_data, CloudFormat input_format, unsigned int num_points,
   float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
   void * compact_points, float * reconstruction_features, void * cropped_source_points,
-  std::int64_t * inverse_map, std::size_t * output_num_cropped_points,
-  std::size_t * output_unclipped_num_voxels)
+  std::int64_t * inverse_map, std::size_t & output_num_cropped_points,
+  std::size_t & output_unclipped_num_voxels)
 {
   auto policy = thrust::cuda::par.on(stream_);
 
@@ -343,13 +347,11 @@ std::size_t BackbonePreprocess::generate_features(
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (num_cropped_points == 0) {
-    *output_num_cropped_points = 0;
-    if (output_unclipped_num_voxels != nullptr) {
-      *output_unclipped_num_voxels = 0;
-    }
+    output_num_cropped_points = 0;
+    output_unclipped_num_voxels = 0;
     return 0;
   }
-  *output_num_cropped_points = num_cropped_points;
+  output_num_cropped_points = num_cropped_points;
 
   extract_indices_kernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), crop_indices_d_.get(),
@@ -422,37 +424,25 @@ std::size_t BackbonePreprocess::generate_features(
       throw std::runtime_error("Unsupported input point cloud format.");
   }
 
-  auto min_op = [] __host__ __device__(const float4 & a, const float4 & b) {
-    return make_float4(fminf(a.x, b.x), fminf(a.y, b.y), fminf(a.z, b.z), fminf(a.w, b.w));
-  };
-
-  auto max_op = [] __host__ __device__(const float4 & a, const float4 & b) {
-    return make_float4(fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z), fmaxf(a.w, b.w));
-  };
-
-  float4 min_value = make_float4(
-    std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
-    std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-  min_value = thrust::reduce(
-    policy, reinterpret_cast<float4 *>(cropped_points_d_.get()),
-    reinterpret_cast<float4 *>(cropped_points_d_.get()) + num_cropped_points, min_value, min_op);
-
-  float4 max_value = make_float4(
-    -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(),
-    -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
-  max_value = thrust::reduce(
-    policy, reinterpret_cast<float4 *>(cropped_points_d_.get()),
-    reinterpret_cast<float4 *>(cropped_points_d_.get()) + num_cropped_points, max_value, max_op);
-
-  auto min_x = static_cast<std::int32_t>(std::floor(min_value.x / config_.voxel_x_size_));
-  auto min_y = static_cast<std::int32_t>(std::floor(min_value.y / config_.voxel_y_size_));
-  auto min_z = static_cast<std::int32_t>(std::floor(min_value.z / config_.voxel_z_size_));
-
   const auto num_cropped_blocks = divup(num_cropped_points, config_.threads_per_block_);
 
   std::uint64_t num_unique_points{};
 
   if (config_.use_64bit_hash_) {
+    auto min_op = [] __host__ __device__(const float4 & a, const float4 & b) {
+      return make_float4(fminf(a.x, b.x), fminf(a.y, b.y), fminf(a.z, b.z), fminf(a.w, b.w));
+    };
+    float4 min_value = make_float4(
+      std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
+      std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+    min_value = thrust::reduce(
+      policy, reinterpret_cast<float4 *>(cropped_points_d_.get()),
+      reinterpret_cast<float4 *>(cropped_points_d_.get()) + num_cropped_points, min_value, min_op);
+
+    const auto min_x = static_cast<std::int32_t>(std::floor(min_value.x / config_.voxel_x_size_));
+    const auto min_y = static_cast<std::int32_t>(std::floor(min_value.y / config_.voxel_y_size_));
+    const auto min_z = static_cast<std::int32_t>(std::floor(min_value.z / config_.voxel_z_size_));
+
     voxelization_hash64_kernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
       reinterpret_cast<float4 *>(cropped_points_d_.get()), hashes64_d_.get(), num_cropped_points,
       config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, min_x, min_y, min_z);
@@ -477,7 +467,7 @@ std::size_t BackbonePreprocess::generate_features(
       unique_indices64_d_.get());
 
     cudaMemcpyAsync(
-      &num_unique_points, unique_indices64_d_.get() + num_cropped_points - 1, sizeof(std::int64_t),
+      &num_unique_points, unique_indices64_d_.get() + num_cropped_points - 1, sizeof(std::uint64_t),
       cudaMemcpyDeviceToHost, stream_);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
@@ -607,9 +597,7 @@ std::size_t BackbonePreprocess::generate_features(
   const auto origin_z =
     static_cast<std::int32_t>(std::floor(config_.min_z_range_ / config_.voxel_z_size_));
 
-  if (output_unclipped_num_voxels != nullptr) {
-    *output_unclipped_num_voxels = static_cast<std::size_t>(num_unique_points);
-  }
+  output_unclipped_num_voxels = static_cast<std::size_t>(num_unique_points);
   const auto num_output_voxels = static_cast<std::size_t>(std::min<std::uint64_t>(
     num_unique_points, static_cast<std::uint64_t>(config_.max_num_voxels_)));
   const auto num_voxel_blocks = divup(num_output_voxels, config_.threads_per_block_);

@@ -76,7 +76,7 @@ public:
     use_seg3d_head_ = use_seg3d_head;
 
     if (!use_seg3d_head_) {
-      throw std::runtime_error("segmentation3d.use_head must be true.");
+      throw std::runtime_error("At least one head must be enabled.");
     }
     if (cloud_capacity <= 0) {
       throw std::runtime_error("cloud_capacity must be positive.");
@@ -202,7 +202,10 @@ public:
   {
     std::vector<std::uint32_t> indices;
     for (const auto & filter_class : filter_classes) {
-      auto it = std::find(class_names.begin(), class_names.end(), filter_class);
+      std::string lc = filter_class;
+      std::transform(
+        lc.begin(), lc.end(), lc.begin(), [](unsigned char c) { return std::tolower(c); });
+      auto it = std::find(class_names.begin(), class_names.end(), lc);
       if (it == class_names.end()) {
         throw std::runtime_error("Filter class '" + filter_class + "' not found in class names.");
       }
@@ -231,7 +234,7 @@ public:
 
     std::vector<float> colors;
     colors.reserve(class_names.size());
-    for (size_t i = 0; i < palette.size(); i += 3) {
+    for (std::size_t i = 0; i < palette.size(); i += 3) {
       const auto r = palette[i];
       const auto g = palette[i + 1];
       const auto b = palette[i + 2];
@@ -250,7 +253,7 @@ public:
   }
 
   // CUDA parameters
-  const std::uint32_t threads_per_block_{256};
+  static constexpr std::uint32_t threads_per_block_{256};
 
   // TensorRT parameters
   std::string plugins_path_;
@@ -274,7 +277,7 @@ public:
   std::int64_t cloud_capacity_{};
   std::int64_t min_num_voxels_{};
   std::int64_t max_num_voxels_{};
-  const std::int64_t num_point_feature_size_{4};  // x, y, z, intensity
+  static constexpr std::int64_t num_point_feature_size_{4};  // x, y, z, intensity
 
   float min_x_range_{};
   float max_x_range_{};
@@ -294,7 +297,7 @@ public:
   std::array<std::int64_t, 3> voxels_num_{};
 
   // PTv3 backbone output feature dimension.
-  const std::int64_t backbone_feat_dim_{64};
+  static constexpr std::int64_t backbone_feat_dim_{64};
 };
 
 }  // namespace autoware::ptv3

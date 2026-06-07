@@ -65,8 +65,6 @@ private:
 
   std::unique_ptr<PTv3TRT> model_ptr_{nullptr};
 
-  rclcpp::TimerBase::SharedPtr timer_{nullptr};
-
   // Debug helpers.
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};

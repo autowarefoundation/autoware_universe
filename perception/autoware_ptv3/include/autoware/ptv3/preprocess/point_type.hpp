@@ -109,7 +109,7 @@ struct CloudPointTypeXYZI
 } __attribute__((packed));
 
 /** @brief Packed XYZIRC point layout. */
-struct CloudPointType
+struct CloudPointTypeXYZIRC
 {
   float x;
   float y;
@@ -118,8 +118,6 @@ struct CloudPointType
   std::uint8_t return_type;
   std::uint16_t channel;
 } __attribute__((packed));
-
-using CloudPointTypeXYZIRC = CloudPointType;
 
 /** @brief Packed XYZIRADRT point layout. */
 struct CloudPointTypeXYZIRADRT

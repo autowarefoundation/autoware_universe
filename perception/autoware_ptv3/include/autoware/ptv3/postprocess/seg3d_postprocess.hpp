@@ -21,7 +21,6 @@
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 
-#include <cuda_fp16.h>
 #include <cuda_runtime_api.h>
 
 namespace autoware::ptv3
@@ -69,9 +68,8 @@ public:
    * @param num_classes     Number of segmentation classes.
    * @param num_points      Number of points to process.
    */
-  template <typename FloatType>
   void create_segmentation_pointcloud(
-    const float * input_features, const std::int64_t * pred_labels, const FloatType * pred_probs,
+    const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
     std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points);
 
   /**
@@ -86,11 +84,10 @@ public:
    * @param num_cropped_points Number of points in the cropped region.
    * @param num_voxels         Number of voxels.
    */
-  template <typename FloatType>
   void reconstruct_partial(
-    const std::int64_t * inverse_map, const std::int64_t * voxel_labels,
-    const FloatType * voxel_probs, std::int64_t * output_labels, FloatType * output_probs,
-    std::size_t num_classes, std::size_t num_cropped_points, std::size_t num_voxels);
+    const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
+    std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
+    std::size_t num_cropped_points, std::size_t num_voxels);
 
   /**
    * @brief Reconstruct labels and probabilities for the full input cloud.
@@ -106,12 +103,11 @@ public:
    * @param num_points    Total number of input points.
    * @param num_voxels    Number of voxels.
    */
-  template <typename FloatType>
   void reconstruct_full(
     const std::uint32_t * crop_mask, const std::uint32_t * crop_indices,
-    const std::int64_t * inverse_map, const std::int64_t * voxel_labels,
-    const FloatType * voxel_probs, std::int64_t * output_labels, FloatType * output_probs,
-    std::size_t num_classes, std::size_t num_points, std::size_t num_voxels);
+    const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
+    std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
+    std::size_t num_points, std::size_t num_voxels);
 
   /**
    * @brief Build a cloud with configured classes removed above the probability threshold.
@@ -125,10 +121,9 @@ public:
    * @param num_points           Number of input points.
    * @return Number of points written to output_points.
    */
-  template <typename FloatType>
   std::size_t create_filtered_pointcloud(
     const void * compact_input_points, CloudFormat input_format, CloudFormat output_format,
-    const FloatType * pred_probs, void * output_points, std::size_t num_classes,
+    const float * pred_probs, void * output_points, std::size_t num_classes,
     std::size_t num_points);
 
 private:

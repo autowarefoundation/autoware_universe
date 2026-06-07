@@ -24,8 +24,6 @@
 #include <autoware_utils/system/stop_watch.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
-#include <cuda_fp16.h>
-
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -60,7 +58,7 @@ public:
     const PTv3Config & config);
 
   /** @brief Wait for CUDA work and release the stream. */
-  virtual ~PTv3TRT();
+  ~PTv3TRT();
 
   /**
    * @brief Run the shared backbone, then the segmentation head for the requested outputs.
@@ -101,14 +99,10 @@ public:
   void set_publish_filtered_pointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
 
-protected:
+private:
   void init_ptr();
   void init_backbone_trt(const tensorrt_common::TrtCommonConfig & trt_config);
   void init_seg3d_head_trt(const tensorrt_common::TrtCommonConfig & trt_config);
-  void create_point_fields();
-  void allocate_messages();
-  [[nodiscard]] static CloudFormat detect_cloud_format(
-    const cuda_blackboard::CudaPointCloud2 & cloud);
 
   bool pre_process(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
   bool infer_backbone();
@@ -117,10 +111,6 @@ protected:
   bool post_process_seg3d(
     const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
     bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud);
-
-  static nvinfer1::DataType bind_float_output(
-    autoware::tensorrt_common::TrtCommon * trt_ptr, const char * tensor_name, float * fp32_buffer,
-    CudaUniquePtr<__half[]> & fp16_buffer, std::size_t num_elements);
 
   // The backbone is always present. The segmentation head is loaded only when enabled.
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> backbone_trt_ptr_{nullptr};
@@ -137,10 +127,6 @@ protected:
     publish_visualization_pointcloud_{nullptr};
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
     publish_filtered_pointcloud_{nullptr};
-
-  std::vector<sensor_msgs::msg::PointField> segmented_pointcloud_fields_;
-  std::vector<sensor_msgs::msg::PointField> visualization_pointcloud_fields_;
-  std::vector<sensor_msgs::msg::PointField> filtered_pointcloud_fields_;
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> segmented_points_msg_ptr_{nullptr};
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> visualization_points_msg_ptr_{nullptr};
@@ -176,11 +162,6 @@ protected:
   // Segmentation head outputs.
   CudaUniquePtr<std::int64_t[]> pred_labels_d_{nullptr};
   CudaUniquePtr<float[]> pred_probs_d_{nullptr};
-  CudaUniquePtr<__half[]> pred_probs_fp16_d_{nullptr};
-  nvinfer1::DataType pred_probs_dtype_{nvinfer1::DataType::kFLOAT};
-
-  // Full and partial reconstruction buffers for FP16 probabilities.
-  CudaUniquePtr<__half[]> reconstructed_probs_fp16_d_{nullptr};
 };
 
 }  // namespace autoware::ptv3

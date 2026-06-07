@@ -62,8 +62,8 @@ public:
     const void * input_data, CloudFormat input_format, unsigned int num_points,
     float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
     void * compact_points, float * reconstruction_features, void * cropped_source_points,
-    std::int64_t * inverse_map, std::size_t * num_cropped_points,
-    std::size_t * unclipped_num_voxels);
+    std::int64_t * inverse_map, std::size_t & num_cropped_points,
+    std::size_t & unclipped_num_voxels);
 
   /**
    * @brief Return the crop mask from the last preprocessing run.
