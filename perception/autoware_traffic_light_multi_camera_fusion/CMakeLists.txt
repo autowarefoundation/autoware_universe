@@ -27,12 +27,10 @@ ament_target_dependencies(${PROJECT_NAME}
 
 autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 
-# Agnocast Method 1: node stays rclcpp::Node; only the output publisher (signal_pub_) is
-# agnocast-wrapped via the AUTOWARE_PUBLISHER macros. Use the non-AgnocastOnly executor.
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::traffic_light::MultiCameraFusionNode"
   EXECUTABLE traffic_light_multi_camera_fusion_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
