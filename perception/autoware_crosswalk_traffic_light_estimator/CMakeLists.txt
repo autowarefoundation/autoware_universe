@@ -33,7 +33,7 @@ autoware_agnocast_wrapper_register_node(autoware_crosswalk_traffic_light_estimat
   PLUGIN "autoware::crosswalk_traffic_light_estimator::CrosswalkTrafficLightEstimatorNode"
   EXECUTABLE crosswalk_traffic_light_estimator_node
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlySingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
