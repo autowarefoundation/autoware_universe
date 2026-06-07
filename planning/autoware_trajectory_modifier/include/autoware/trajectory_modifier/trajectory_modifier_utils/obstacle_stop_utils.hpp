@@ -193,20 +193,6 @@ std::optional<CollisionPoint> get_nearest_pcd_collision(
   const TrajectoryPoints & trajectory_points, const TrajectoryShape & trajectory_shape,
   const PointCloud::Ptr & pointcloud, std::vector<geometry_msgs::msg::Point> & target_pcd_points);
 
-/**
- * @brief Find the nearest obstacle along the path using each object's footprint polygon at the
- * current time.
- * @details For every target object, polygon vertices are projected onto arc length along the
- * trajectory; the minimum over all vertices and objects defines the collision point.
- * @param trajectory_points Reference path.
- * @param target_objects Predicted objects to test (typically already filtered).
- * @param[out] colliding_object Object that yielded the minimum arc-length collision.
- * @return Collision point and arc length, or nullopt if inputs are invalid or no objects.
- */
-std::optional<CollisionPoint> get_nearest_object_collision(
-  const TrajectoryPoints & trajectory_points, const PredictedObjects & target_objects,
-  PredictedObject & colliding_object);
-
 using ObjectDecelMap = std::unordered_map<ObjectType, double>;
 
 /**
@@ -239,7 +225,8 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
   const PredictedObjects & target_objects, const ObjectDecelMap & object_decel_map,
   const double ego_decel, const double reaction_time, const double safety_margin,
-  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object);
+  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object,
+  const bool use_rss_check = true);
 
 /// Filters predicted objects by semantic type, speed, and spatial relationship to the trajectory.
 struct ObjectFilter

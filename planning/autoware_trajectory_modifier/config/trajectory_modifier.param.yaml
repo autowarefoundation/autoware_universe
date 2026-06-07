@@ -46,7 +46,7 @@
       objects:
         object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"] # object types to consider for obstacle stop
         max_velocity_th: 5.0      # maximum velocity threshold for target object [m/s]
-        stopped_velocity_th: 0.25 # [m/s]
+        stopped_velocity_th: 0.4 # [m/s]
         max_lateral_velocity_th: 1.0 # [m/s] max lateral velocity (w.r.t ego traj) to consider for obstacle stop
         safety_buffer: 0.0 # [m] safety buffer to expand object shape
 
@@ -74,9 +74,9 @@
           motorcycle: 3.0
           bicycle: 5.0
           pedestrian: 5.0
-        ego_decel: 4.0 # [m/s^2]
-        reaction_time: 0.2 # [s]
-        safety_margin: 2.0 # [m]
+        ego_decel: 2.0 # [m/s^2]
+        reaction_time: 0.4 # [s]
+        safety_margin: 2.5 # [m]
         lookahead_horizon: 1.5 # [s]
 
     # Traffic Light Stop Plugin Parameters
