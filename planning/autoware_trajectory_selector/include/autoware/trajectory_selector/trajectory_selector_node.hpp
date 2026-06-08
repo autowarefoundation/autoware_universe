@@ -70,6 +70,12 @@ private:
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
   /**
+   * @brief Forwards incoming candidate trajectories to the concatenator and trigger the
+   * concatenation.
+   * @param msg Incoming candidate trajectories message.
+   */
+  void on_anchor_trajectories(const CandidateTrajectories::ConstSharedPtr msg);
+  /**
    * @brief Forwards incoming candidate trajectories to the concatenator.
    * @param msg Incoming candidate trajectories message.
    */

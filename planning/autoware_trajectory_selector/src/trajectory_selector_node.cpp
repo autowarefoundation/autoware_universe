@@ -46,7 +46,7 @@ void TrajectorySelectorNode::subscribers()
 
   sub_trajectories_generative_ = create_subscription<CandidateTrajectories>(
     "~/input/trajectories_generative", 1,
-    std::bind(&TrajectorySelectorNode::on_trajectories, this, std::placeholders::_1));
+    std::bind(&TrajectorySelectorNode::on_anchor_trajectories, this, std::placeholders::_1));
 
   sub_trajectories_backup_ = create_subscription<CandidateTrajectories>(
     "~/input/trajectories_backup", 1,
@@ -70,6 +70,13 @@ void TrajectorySelectorNode::map_callback(const LaneletMapBin::ConstSharedPtr ms
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 }
 
+void TrajectorySelectorNode::on_anchor_trajectories(const CandidateTrajectories::ConstSharedPtr msg)
+{
+  concatenator_ptr_->add_candidate(*msg);
+  on_timer();  // WARN: on_timer() can also be executed by the timer callback so multithreaded
+               // executor must not be used
+  timer_->reset();
+}
 void TrajectorySelectorNode::on_trajectories(const CandidateTrajectories::ConstSharedPtr msg)
 {
   concatenator_ptr_->add_candidate(*msg);
