@@ -95,6 +95,7 @@ private:
   std::shared_ptr<Sync> sync_ptr_;
 
   std::string base_link_frame_id_;
+  bool keep_input_dimensions_;
 
   std::unique_ptr<autoware_utils::DebugPublisher> processing_time_publisher_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;

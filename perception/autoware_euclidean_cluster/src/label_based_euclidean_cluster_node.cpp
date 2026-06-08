@@ -121,6 +121,9 @@ std::vector<std::pair<std::string, std::string>> extract_class_mappings(
 /// @brief Map a configured label name to an Autoware object classification label.
 std::optional<std::uint8_t> to_object_label(const std::string & mapped_label)
 {
+  if (mapped_label == "unknown") {
+    return ObjectClassification::UNKNOWN;
+  }
   if (mapped_label == "car") {
     return ObjectClassification::CAR;
   }
@@ -142,11 +145,11 @@ std::optional<std::uint8_t> to_object_label(const std::string & mapped_label)
   if (mapped_label == "animal") {
     return ObjectClassification::ANIMAL;
   }
-  if (mapped_label == "unknown") {
-    return ObjectClassification::UNKNOWN;
-  }
   if (mapped_label == "trailer") {
     return ObjectClassification::TRAILER;
+  }
+  if (mapped_label == "hazard") {
+    return ObjectClassification::HAZARD;
   }
   return std::nullopt;
 }
@@ -435,6 +438,11 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
     std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters;
     cluster_->cluster(label_cloud, clusters);
 
+    // TODO(ktro2828): This probability is averaged per segmented label bucket before clustering,
+    // not per individual cluster. Consider to refine the probability assignment to reflect
+    // cluster-level confidence.
+    // Or uncertainty aware clustering can be applied to propagate point-level probabilities into
+    // clusters using 'entropy' field values.
     const float label_probability = average_probability(semantic_points);
     for (const auto & cluster : clusters) {
       if (cluster.empty()) {

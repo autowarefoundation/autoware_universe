@@ -16,6 +16,7 @@
 
     # Semantic label selection and mapping
     # YAML declaration order is treated as the input class_id order.
+    # cspell:ignore pullable
     class_names:
       drivable_surface: ignore
       other_flat_surface: ignore
@@ -37,9 +38,9 @@
       pedestrian: pedestrian
       personal_mobility: pedestrian
       animal: animal
-      pushable_pullable: unknown
-      traffic_cone: unknown
-      debris: unknown
+      pushable_pullable: pedestrian
+      traffic_cone: hazard
+      debris: hazard
       stroller: pedestrian
       other_stuff: ignore
       noise+ghost_point: ignore
@@ -49,4 +50,4 @@
     use_shape_estimation_filter: false
     use_boost_bbox_optimizer: false
     # 0: ALL_POLYGON, 1: LABEL_DEPEND
-    # shape_policy: 0
+    shape_policy: 0
