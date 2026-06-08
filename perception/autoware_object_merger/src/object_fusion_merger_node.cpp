@@ -518,8 +518,9 @@ ObjectFusionMergerNode::ObjectFusionMergerNode(const rclcpp::NodeOptions & node_
   fused_objects_pub_ = create_publisher<DetectedObjects>("output/objects", rclcpp::QoS{1});
   other_objects_pub_ = create_publisher<DetectedObjects>("output/other_objects", rclcpp::QoS{1});
 
-  processing_time_publisher_ = std::make_unique<
-    autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(this, get_name());
+  processing_time_publisher_ =
+    std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, get_name());
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
