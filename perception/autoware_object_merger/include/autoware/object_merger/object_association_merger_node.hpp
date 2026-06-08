@@ -49,7 +49,6 @@ public:
   enum class PriorityMode : int { Object0 = 0, Object1 = 1, Confidence = 2, ClassBased = 3 };
 
 private:
-  // cppcheck-suppress unknownMacro
   void objectsCallback(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) &
       input_objects0_msg,

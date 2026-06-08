@@ -186,7 +186,6 @@ void ObjectAssociationMergerNode::objectsCallback(
   }
 
   // build output msg
-  // Build the output directly into the loaned message to avoid an extra copy.
   auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(merged_object_pub_);
   auto & output_msg = *output;
   output_msg.header = input_objects0_msg->header;

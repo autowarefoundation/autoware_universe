@@ -68,7 +68,6 @@ private:
    * @param main_objects_msg Main detected objects input.
    * @param sub_objects_msg Sub detected objects input.
    */
-  // cppcheck-suppress unknownMacro
   void callback(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & main_objects_msg,
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DetectedObjects) & sub_objects_msg);
