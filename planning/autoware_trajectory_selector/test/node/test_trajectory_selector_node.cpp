@@ -61,6 +61,9 @@ protected:
     traj_pub_ =
       test_node_->create_publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
         "/trajectory_selector_node/input/trajectories_generative", 1);
+    backup_traj_pub_ =
+      test_node_->create_publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
+        "/trajectory_selector_node/input/trajectories_backup", 1);
 
     output_sub_ =
       test_node_->create_subscription<autoware_internal_planning_msgs::msg::CandidateTrajectories>(
@@ -145,6 +148,8 @@ protected:
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroupArray>::SharedPtr tl_pub_;
   rclcpp::Publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>::SharedPtr
     traj_pub_;
+  rclcpp::Publisher<autoware_internal_planning_msgs::msg::CandidateTrajectories>::SharedPtr
+    backup_traj_pub_;
 
   rclcpp::Subscription<autoware_internal_planning_msgs::msg::CandidateTrajectories>::SharedPtr
     output_sub_;
@@ -171,6 +176,64 @@ TEST_F(TrajectorySelectorNodeTest, FiltersTrajectoriesViaPlugin)
   EXPECT_EQ(last_output_->candidate_trajectories.size(), 1u);
   ASSERT_EQ(last_output_->generator_info.size(), 1u);
   EXPECT_EQ(last_output_->generator_info.front().generator_name.data, "SafePlanner");
+}
+
+TEST_F(TrajectorySelectorNodeTest, ImmediateOutputOnGenerativeInput)
+{
+  publish_context();
+  spin_until([] { return false; }, std::chrono::milliseconds(100));
+
+  const auto now = node_under_test_->now();
+  autoware_internal_planning_msgs::msg::CandidateTrajectories msg;
+  add_trajectory(msg, "GenerativePlanner", 10.0, now);
+
+  last_output_ = nullptr;
+  traj_pub_->publish(msg);
+
+  // Should publish immediately (timer is 100ms, so 50ms is "immediate" enough)
+  const bool received =
+    spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(50));
+  EXPECT_TRUE(received) << "Node should publish immediately on generative input";
+}
+
+TEST_F(TrajectorySelectorNodeTest, NoImmediateOutputOnBackupInput)
+{
+  publish_context();
+  spin_until([] { return false; }, std::chrono::milliseconds(100));
+
+  const auto now = node_under_test_->now();
+  autoware_internal_planning_msgs::msg::CandidateTrajectories msg;
+  add_trajectory(msg, "BackupPlanner", 10.0, now);
+
+  last_output_ = nullptr;
+  backup_traj_pub_->publish(msg);
+
+  // Should NOT publish immediately
+  bool received =
+    spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(50));
+  EXPECT_FALSE(received) << "Node should NOT publish immediately on backup input";
+
+  // Should publish eventually via timer (timer is 100ms)
+  received = spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(200));
+  EXPECT_TRUE(received) << "Node should eventually publish on backup input via timer";
+}
+
+TEST_F(TrajectorySelectorNodeTest, TimerOutputWithoutGenerativeInput)
+{
+  publish_context();
+  spin_until([] { return false; }, std::chrono::milliseconds(100));
+
+  const auto now = node_under_test_->now();
+  autoware_internal_planning_msgs::msg::CandidateTrajectories msg;
+  add_trajectory(msg, "SomePlanner", 10.0, now);
+
+  // Publish only to backup, generative is never published
+  last_output_ = nullptr;
+  backup_traj_pub_->publish(msg);
+
+  const bool received =
+    spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(200));
+  EXPECT_TRUE(received) << "Node should publish via timer even if generative input is missing";
 }
 
 TEST_F(TrajectorySelectorNodeTest, HandlesPluginRejection)
