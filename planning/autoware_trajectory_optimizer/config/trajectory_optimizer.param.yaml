@@ -1,10 +1,6 @@
 /**:
   ros__parameters:
-    # Plugin execution order — this list is the ONLY control for which plugins load and run.
-    # To disable temporal MPC entirely, omit TrajectoryTemporalMPTOptimizer from this list.
-    #
-    # use_temporal_mpt_optimizer only skips optimize_trajectory() when that plugin IS loaded; it
-    # does not unload the plugin or stop acados init. For a full off, remove from plugin_names.
+    # Plugin execution order - plugins will run in this order
     plugin_names:
       - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer"
