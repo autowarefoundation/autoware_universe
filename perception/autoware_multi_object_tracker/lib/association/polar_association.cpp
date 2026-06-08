@@ -126,29 +126,14 @@ void PolarAssociation::processMeasurement(
     if (!association_params_opt) continue;
     const auto & association_params = association_params_opt->get();
 
-    // Depth gate (Step 2): LiDAR can only return the nearest visible surface of a solid object,
-    // so the cluster's closest 3D corner must be near the tracker's closest 3D corner.
-    //
-    // The gate scales with the tracker's footprint area to tolerate nearest-corner geometry
-    // shifts that occur when a large vehicle's visible face changes (e.g., a truck turning 15°
-    // so the front face replaces the side as the nearest surface):
-    //
-    //   gate [m] = kDepthGateBase + kDepthGateAreaRate * sqrt(tracker_area_m2)
-    //
-    // Object-size assumptions and resulting gate values (10 Hz, good CV prediction):
-    //   Pedestrian  area ~0.25 m²  →  gate = 2.0 + 0.25*0.50 = 2.1 m
-    //   Car         area ~9 m²     →  gate = 2.0 + 0.25*3.00 = 2.75 m
-    //   Truck       area ~20 m²    →  gate = 2.0 + 0.25*4.47 = 3.1 m
-    //   Bus         area ~30 m²    →  gate = 2.0 + 0.25*5.48 = 3.4 m
-    //
-    // Dominant error source is prediction inaccuracy, not raw displacement: at 10 Hz a good
-    // constant-velocity model keeps position error below 0.5–1.5 m for nominal maneuvers.
-    // The size scaling absorbs post-occlusion coasting drift for large vehicles without
-    // inflating the gate for small objects where false associations are most damaging.
-    constexpr double kDepthGateBase = 2.0;       // [m] minimum gate regardless of object size
-    constexpr double kDepthGateAreaRate = 0.25;  // [m/sqrt(m²)] size-scaling coefficient
-    const double depth_gate =
-      kDepthGateBase + kDepthGateAreaRate * std::sqrt(std::max(0.0, tracker_entry.object.area));
+    // Area gate: reject measurement outside the expected footprint size range
+    const double meas_area = measurement_object.area;
+    if (meas_area < association_params.min_area || meas_area > association_params.max_area)
+      continue;
+
+    // Depth gate: the cluster's nearest 3D point must be within max_dist of the tracker's nearest
+    // point.
+    const double depth_gate = std::sqrt(association_params.max_dist_sq);
     const double depth_gap = std::abs(meas_fp.r_min_3d - tracker_entry.footprint.r_min_3d);
     if (depth_gap > depth_gate) continue;
 
