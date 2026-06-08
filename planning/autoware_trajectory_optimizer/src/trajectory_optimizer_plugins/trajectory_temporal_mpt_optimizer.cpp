@@ -14,8 +14,9 @@
 
 #include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/trajectory_temporal_mpt_optimizer.hpp"
 
+#include "autoware/trajectory_optimizer/trajectory_optimizer_plugins/plugin_utils/trajectory_temporal_mpt_optimizer_utils.hpp"
+
 #include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
-#include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/logging.hpp>
 
@@ -199,79 +200,27 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
     p0.pose.position.x, p0.pose.position.y, tf2::getYaw(p0.pose.orientation),
     std::max(0.0, static_cast<double>(p0.longitudinal_velocity_mps))};
 
-  // Horizon references use the incoming trajectory as a **time-ordered discrete sequence** (planner
-  // sample period is implicit in the message): start_idx = index closest to x0 (typically 0 when x0
-  // is traj_points[0]), then start_idx+k for stage k. No arc-length resampling or
-  // re-parameterization.
-  const size_t n_pts = traj_points.size();
-  geometry_msgs::msg::Point x0_position;
-  x0_position.x = x0[0];
-  x0_position.y = x0[1];
-  x0_position.z = 0.0;
+  const auto refs =
+    trajectory_temporal_mpt_optimizer_utils::build_temporal_mpt_references(traj_points, x0);
 
-  const auto closest_itr = std::min_element(
-    traj_points.begin(), traj_points.end(), [&x0_position](const auto & a, const auto & b) {
-      return autoware_utils_geometry::calc_distance2d(a.pose.position, x0_position) <
-             autoware_utils_geometry::calc_distance2d(b.pose.position, x0_position);
-    });
-
-  const size_t start_idx = static_cast<size_t>(std::distance(traj_points.begin(), closest_itr));
-
-  // Shift reference yaw by k*2π so the path heading at start_idx matches x0 psi in LINEAR_LS (same
-  // idea as generators/utils.py run_closed_loop_mpc / solve_autoware_temporal_mpc). Avoids false
-  // ~2π heading error when planner yaw branches differ.
-  constexpr double two_pi = 2.0 * M_PI;
-  const double yaw_at_start = tf2::getYaw(traj_points.at(start_idx).pose.orientation);
-  const double psi_bias = std::round((x0[2] - yaw_at_start) / two_pi) * two_pi;
-
-  // Ego-centered XY for the NLP (same as generators/utils.py translate_xy_horizon_to_local):
-  // subtract x0[:2] from all position references and from the initial state passed to the solver,
-  // then add the offset back to the state trajectory (unshift_sol_x_xy).
-  const double x_off = x0[0];
-  const double y_off = x0[1];
-
-  // LINEAR_LS yref: [x, y, psi, v, a_ref, delta_ref] per path_tracking_mpc_temporal. Stage 0 uses
-  // x0 for the state part so the running cost matches the fixed initial state. Stages k>=1 and
-  // terminal use longitudinal_velocity_mps from the sampled trajectory point (non-negative).
-  {
-    const std::array<double, temporal_mpt::NY> yref_stage0 = {x0[0] - x_off, x0[1] - y_off, x0[2],
-                                                              x0[3],         0.0,           0.0};
-    acados_interface_->set_stage_reference(0, yref_stage0);
+  acados_interface_->set_stage_reference(0, refs.yref_stage0);
+  for (size_t k = 1; k < temporal_mpt::N; ++k) {
+    acados_interface_->set_stage_reference(static_cast<int>(k), refs.stage_yrefs[k - 1]);
   }
-  const size_t max_k = temporal_mpt::N;
-  for (size_t k = 1; k < max_k; ++k) {
-    const size_t idx = std::min(start_idx + k, n_pts - 1);
-    const auto & p = traj_points.at(idx);
-    const double yaw = tf2::getYaw(p.pose.orientation) + psi_bias;
-    const double v_ref = std::max(0.0, static_cast<double>(p.longitudinal_velocity_mps));
-    const std::array<double, temporal_mpt::NY> yref = {
-      p.pose.position.x - x_off, p.pose.position.y - y_off, yaw, v_ref, 0.0, 0.0};
-    acados_interface_->set_stage_reference(static_cast<int>(k), yref);
-  }
+  acados_interface_->set_terminal_reference(refs.terminal_yref);
 
-  const size_t terminal_idx = std::min(start_idx + temporal_mpt::N, n_pts - 1);
-  const auto & terminal_point = traj_points.at(terminal_idx);
-  const double terminal_yaw = tf2::getYaw(terminal_point.pose.orientation) + psi_bias;
-  const double terminal_v_ref =
-    std::max(0.0, static_cast<double>(terminal_point.longitudinal_velocity_mps));
-  acados_interface_->set_terminal_reference(
-    {terminal_point.pose.position.x - x_off, terminal_point.pose.position.y - y_off, terminal_yaw,
-     terminal_v_ref});
+  auto solution = acados_interface_->get_control(refs.x0_local);
 
-  const std::array<double, temporal_mpt::NX> x0_local = {
-    x0[0] - x_off, x0[1] - y_off, x0[2], x0[3]};
-
-  auto solution = acados_interface_->get_control(x0_local);
-
-  log_debug_info(x0, reference_snapshot, solution, start_idx, terminal_idx, data, traj_points);
+  log_debug_info(
+    x0, reference_snapshot, solution, refs.start_idx, refs.terminal_idx, data, traj_points);
 
   if (solution.status != 0) {
     return;
   }
 
   for (size_t i = 0; i <= temporal_mpt::N; ++i) {
-    solution.xtraj[i][0] += x_off;
-    solution.xtraj[i][1] += y_off;
+    solution.xtraj[i][0] += refs.x_offset;
+    solution.xtraj[i][1] += refs.y_offset;
   }
 
   const size_t n_apply = std::min(traj_points.size(), static_cast<size_t>(temporal_mpt::N + 1));
