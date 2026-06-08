@@ -67,6 +67,9 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
       const double k_us = declare_parameter<double>("understeer_gradient");
       vgr_with_us_.setCoefficients(a, b, c);
       vgr_with_us_.setUndersteerParams(k_us, vehicle_info_.wheel_base_m);
+    } else if (convert_steer_cmd_method_.value() == "understeer_compensation") {
+      const double k_us = declare_parameter<double>("understeer_gradient");
+      understeer_comp_.setUndersteerParams(k_us, vehicle_info_.wheel_base_m);
     } else if (convert_steer_cmd_method_.value() == "steer_map") {
       const auto csv_path_steer_map = declare_parameter<std::string>("csv_path_steer_map");
       if (!steer_map_.readSteerMapFromCSV(csv_path_steer_map, true)) {
@@ -214,6 +217,10 @@ void RawVehicleCommandConverterNode::publishActuationCmd()
     const double adaptive_gear_ratio =
       vgr_with_us_.calculateVariableGearRatio(vel, current_steer_wheel);
     desired_steer_cmd = steer * adaptive_gear_ratio;
+  } else if (convert_steer_cmd_method_.value() == "understeer_compensation") {
+    desired_steer_cmd = steer * understeer_comp_.calculateUndersteerRatio(vel);
+    const double max_steer_tire_angle = vehicle_info_.max_steer_angle_rad;
+    desired_steer_cmd = std::clamp(desired_steer_cmd, -max_steer_tire_angle, max_steer_tire_angle);
   } else if (convert_steer_cmd_method_.value() == "steer_map") {
     desired_steer_cmd = calculateSteerFromMap(vel, steer, steer_rate);
   }
@@ -336,6 +343,13 @@ void RawVehicleCommandConverterNode::onActuationStatus(
       pub_steering_status_->publish(steering_msg);
     } else if (convert_steer_cmd_method_.value() == "vgr_with_understeer_compensation") {
       current_steer_ptr_ = std::make_unique<double>(vgr_with_us_.calculateSteeringTireState(
+        current_odometry_->twist.twist.linear.x, actuation_status_ptr_->status.steer_status));
+      Steering steering_msg{};
+      steering_msg.stamp = this->now();
+      steering_msg.steering_tire_angle = *current_steer_ptr_;
+      pub_steering_status_->publish(steering_msg);
+    } else if (convert_steer_cmd_method_.value() == "understeer_compensation") {
+      current_steer_ptr_ = std::make_unique<double>(understeer_comp_.calculateSteeringTireState(
         current_odometry_->twist.twist.linear.x, actuation_status_ptr_->status.steer_status));
       Steering steering_msg{};
       steering_msg.stamp = this->now();

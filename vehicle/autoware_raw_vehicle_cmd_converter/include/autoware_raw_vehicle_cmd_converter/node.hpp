@@ -19,6 +19,7 @@
 #include "autoware_raw_vehicle_cmd_converter/brake_map.hpp"
 #include "autoware_raw_vehicle_cmd_converter/pid.hpp"
 #include "autoware_raw_vehicle_cmd_converter/steer_map.hpp"
+#include "autoware_raw_vehicle_cmd_converter/understeer_compensation.hpp"
 #include "autoware_raw_vehicle_cmd_converter/vehicle_adaptor/vehicle_adaptor.hpp"
 #include "autoware_raw_vehicle_cmd_converter/vgr.hpp"
 #include "autoware_raw_vehicle_cmd_converter/vgr_with_understeer_compensation.hpp"
@@ -117,6 +118,7 @@ public:
   SteerMap steer_map_;
   VGR vgr_;
   VGRWithUndersteerCompensation vgr_with_us_;
+  UndersteerCompensation understeer_comp_;
   VehicleAdaptor vehicle_adaptor_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   // TODO(tanaka): consider accel/brake pid too
