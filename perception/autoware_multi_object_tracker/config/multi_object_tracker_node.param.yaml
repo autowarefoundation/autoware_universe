@@ -24,6 +24,8 @@
       motorcycle: -0.1
       bicycle: -0.1
       pedestrian: -0.1
+      animal: -0.1
+      hazard: -0.1
     pruning_distance_thresholds:
       unknown: 9.0
       car: 5.0
@@ -33,6 +35,8 @@
       motorcycle: 4.0
       bicycle: 3.0
       pedestrian: 2.0
+      animal: 2.0
+      hazard: 2.0
     pruning_static_object_speed: 1.38  # [m/s]
     pruning_moving_object_speed: 5.5   # [m/s]
     pruning_static_iou_threshold: 0.0  # [ratio]
