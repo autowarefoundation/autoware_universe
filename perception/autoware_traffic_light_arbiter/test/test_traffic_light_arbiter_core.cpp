@@ -46,6 +46,25 @@ using TrafficLightElement = autoware_perception_msgs::msg::TrafficLightElement;
 using TrafficLightGroup = autoware_perception_msgs::msg::TrafficLightGroup;
 using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
 
+// --- Short aliases for enum values used throughout the tests ----------
+//
+// Anonymous-namespace scoped so they don't leak; keeps each test's reading
+// flow on color/shape/priority rather than on the enum-qualifying prefix.
+
+constexpr auto CONFIDENCE = SourcePriority::CONFIDENCE;
+constexpr auto EXTERNAL = SourcePriority::EXTERNAL;
+constexpr auto PERCEPTION = SourcePriority::PERCEPTION;
+
+constexpr uint8_t RED = TrafficLightElement::RED;
+constexpr uint8_t GREEN = TrafficLightElement::GREEN;
+constexpr uint8_t UNKNOWN = TrafficLightElement::UNKNOWN;
+constexpr uint8_t CIRCLE = TrafficLightElement::CIRCLE;
+constexpr uint8_t RIGHT_ARROW = TrafficLightElement::RIGHT_ARROW;
+
+const std::string & INTERNAL_ESTIMATION =
+  PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION;
+const std::string & V2I = PredictedTrafficLightState::INFORMATION_SOURCE_V2I;
+
 // --- Map construction --------------------------------------------------
 
 lanelet::Point3d make_point(lanelet::Id id, double x, double y, double z = 0.0)
@@ -152,16 +171,14 @@ TrafficLightGroup make_group(
 // Predictions ride unmodified through arbitrate(), so the body fields
 // chosen here only need to be syntactically valid.
 PredictedTrafficLightState make_prediction(
-  const rclcpp::Time & stamp,
-  const std::string & source = PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)
+  const rclcpp::Time & stamp, const std::string & source = INTERNAL_ESTIMATION)
 {
   constexpr int32_t kPredictionOffsetSec = 10;
   constexpr float kFullCertainty = 1.0f;
   PredictedTrafficLightState prediction;
   prediction.predicted_stamp = stamp;
   prediction.predicted_stamp.sec += kPredictionOffsetSec;
-  prediction.simultaneous_elements.push_back(
-    make_element(TrafficLightElement::UNKNOWN, TrafficLightElement::CIRCLE, kFullCertainty));
+  prediction.simultaneous_elements.push_back(make_element(UNKNOWN, CIRCLE, kFullCertainty));
   prediction.reliability = kFullCertainty;
   prediction.information_source = source;
   return prediction;
@@ -306,22 +323,17 @@ TrafficLightArbiterCore make_arbiter(SourcePriority priority, bool enable_signal
 // output carries the same element verbatim.
 TEST(TrafficLightArbiterCoreSignalMatching, matchedSignalsPassThrough)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
-  arbiter.ingest_perception(make_signals(
-    kBaseTime,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
 }
 
 // Agreement is decided by color/shape only — confidence does not factor
@@ -331,22 +343,17 @@ TEST(TrafficLightArbiterCoreSignalMatching, matchedSignalsPassThrough)
 // confidences did not break the match.
 TEST(TrafficLightArbiterCoreSignalMatching, differingConfidencesStillMatch)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.10f)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE, 0.10f)})}),
     kBaseTime);
-  arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::vehicle_a,
-                 {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.90f)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE, 0.90f)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
   EXPECT_NEAR(observed_confidence(result.output, map_ids::vehicle_a).value_or(-1.0f), 0.90f, 1e-5f);
 }
 
@@ -354,50 +361,37 @@ TEST(TrafficLightArbiterCoreSignalMatching, differingConfidencesStillMatch)
 // the output falls back to UNKNOWN over that shape.
 TEST(TrafficLightArbiterCoreSignalMatching, colorMismatchProducesUnknown)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_b,
-                   {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_b, {make_element(GREEN, CIRCLE)})}),
     kBaseTime);
-  arbiter.ingest_perception(make_signals(
-    kBaseTime,
-    {make_group(
-      map_ids::vehicle_b, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_b, {make_element(RED, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_b), TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_b), UNKNOWN);
 }
 
 // Shape-set mismatch: perception has CIRCLE + RIGHT_ARROW, external has
 // only CIRCLE → the output is UNKNOWN over the shape union.
 TEST(TrafficLightArbiterCoreSignalMatching, shapeSetMismatchProducesUnknown)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_b,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_b, {make_element(RED, CIRCLE)})}),
     kBaseTime);
   arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::vehicle_b,
-                 {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE),
-                  make_element(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW)})}));
+    kBaseTime,
+    {make_group(
+      map_ids::vehicle_b, {make_element(RED, CIRCLE), make_element(GREEN, RIGHT_ARROW)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(
-    observed_color_of_shape(result.output, map_ids::vehicle_b, TrafficLightElement::CIRCLE),
-    TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(
-    observed_color_of_shape(result.output, map_ids::vehicle_b, TrafficLightElement::RIGHT_ARROW),
-    TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(observed_color_of_shape(result.output, map_ids::vehicle_b, CIRCLE), UNKNOWN);
+  EXPECT_EQ(observed_color_of_shape(result.output, map_ids::vehicle_b, RIGHT_ARROW), UNKNOWN);
 }
 
 // Perception-only single source: with no external to agree with, the
@@ -405,16 +399,14 @@ TEST(TrafficLightArbiterCoreSignalMatching, shapeSetMismatchProducesUnknown)
 // unchanged instead — see singleSourcePedestrianPassesThrough.
 TEST(TrafficLightArbiterCoreSignalMatching, perceptionOnlySingleSourceYieldsUnknown)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
-  arbiter.ingest_perception(make_signals(
-    kBaseTime,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), UNKNOWN);
 }
 
 // External-only single source: symmetric counterpart — reconciliation is
@@ -422,30 +414,24 @@ TEST(TrafficLightArbiterCoreSignalMatching, perceptionOnlySingleSourceYieldsUnkn
 // perception is the missing side.
 TEST(TrafficLightArbiterCoreSignalMatching, externalOnlySingleSourceYieldsUnknown)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), UNKNOWN);
 }
 
 // Off-map id is dropped from the output and recorded in off_map_signal_ids.
 TEST(TrafficLightArbiterCoreSignalMatching, offMapIdIsDroppedAndReported)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::off_map_probe,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::off_map_probe, {make_element(RED, CIRCLE)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
@@ -466,66 +452,51 @@ TEST(TrafficLightArbiterCoreSignalMatching, offMapIdIsDroppedAndReported)
 // its confidence is lower than perception's.
 TEST(TrafficLightArbiterCorePedestrian, externalPriorityWinsForPedestrian)
 {
-  auto arbiter = make_arbiter(SourcePriority::EXTERNAL, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/true);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::pedestrian,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.1f)})}),
+    make_signals(kBaseTime, {make_group(map_ids::pedestrian, {make_element(RED, CIRCLE, 0.1f)})}),
     kBaseTime);
   arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::pedestrian,
-                 {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.9f)})}));
+    kBaseTime, {make_group(map_ids::pedestrian, {make_element(GREEN, CIRCLE, 0.9f)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), RED);
 }
 
 // PERCEPTION priority: symmetric counterpart — for pedestrian ids the
 // perception side wins even when its confidence is lower than external's.
 TEST(TrafficLightArbiterCorePedestrian, perceptionPriorityWinsForPedestrian)
 {
-  auto arbiter = make_arbiter(SourcePriority::PERCEPTION, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(PERCEPTION, /*enable_signal_matching=*/true);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::pedestrian,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.99f)})}),
+    make_signals(kBaseTime, {make_group(map_ids::pedestrian, {make_element(RED, CIRCLE, 0.99f)})}),
     kBaseTime);
   arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::pedestrian,
-                 {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.10f)})}));
+    kBaseTime, {make_group(map_ids::pedestrian, {make_element(GREEN, CIRCLE, 0.10f)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), TrafficLightElement::GREEN);
+  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), GREEN);
 }
 
 // CONFIDENCE mode: for pedestrian ids the arbiter walks each shape and
 // picks the side with the higher confidence.
 TEST(TrafficLightArbiterCorePedestrian, confidenceModePicksHigherConfidenceForPedestrian)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/true);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::pedestrian,
-                   {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.6f)})}),
+    make_signals(kBaseTime, {make_group(map_ids::pedestrian, {make_element(GREEN, CIRCLE, 0.6f)})}),
     kBaseTime);
-  arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::pedestrian,
-                 {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::pedestrian, {make_element(RED, CIRCLE, 0.9f)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), RED);
 }
 
 // Single-source pedestrian: contrast with the non-pedestrian behaviour
@@ -535,16 +506,14 @@ TEST(TrafficLightArbiterCorePedestrian, confidenceModePicksHigherConfidenceForPe
 // the absent side.
 TEST(TrafficLightArbiterCorePedestrian, singleSourcePedestrianPassesThrough)
 {
-  auto arbiter = make_arbiter(SourcePriority::EXTERNAL, /*enable_signal_matching=*/true);
+  auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/true);
 
-  arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::pedestrian,
-                 {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::pedestrian, {make_element(GREEN, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), TrafficLightElement::GREEN);
+  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), GREEN);
 }
 
 // ---------------------------------------------------------------------------
@@ -555,22 +524,17 @@ TEST(TrafficLightArbiterCorePedestrian, singleSourcePedestrianPassesThrough)
 // wins (here, perception 0.9 over external 0.7).
 TEST(TrafficLightArbiterCoreConfidencePriority, picksHigherConfidenceElement)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(GREEN, CIRCLE, 0.7f)})}),
     kBaseTime);
-  arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::vehicle_a,
-                 {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE, 0.9f)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
 }
 
 // Per-shape union: when each side contributes a different shape under
@@ -579,43 +543,32 @@ TEST(TrafficLightArbiterCoreConfidencePriority, picksHigherConfidenceElement)
 // side does not block external's RIGHT_ARROW and vice versa.
 TEST(TrafficLightArbiterCoreConfidencePriority, perShapeUnionFromBothSides)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
-  arbiter.ingest_perception(make_signals(
-    kBaseTime,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::GREEN, TrafficLightElement::RIGHT_ARROW)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(GREEN, RIGHT_ARROW)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(
-    observed_color_of_shape(result.output, map_ids::vehicle_a, TrafficLightElement::CIRCLE),
-    TrafficLightElement::RED);
-  EXPECT_EQ(
-    observed_color_of_shape(result.output, map_ids::vehicle_a, TrafficLightElement::RIGHT_ARROW),
-    TrafficLightElement::GREEN);
+  EXPECT_EQ(observed_color_of_shape(result.output, map_ids::vehicle_a, CIRCLE), RED);
+  EXPECT_EQ(observed_color_of_shape(result.output, map_ids::vehicle_a, RIGHT_ARROW), GREEN);
 }
 
 // Perception-only: with no external present, the perception element flows
 // through unchanged regardless of priority mode.
 TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPassesThrough)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
-  arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::vehicle_b,
-                 {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_b, {make_element(GREEN, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_b), TrafficLightElement::GREEN);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_b), GREEN);
 }
 
 // Off-map id is dropped before reaching priority selection too. Pins the
@@ -623,13 +576,10 @@ TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPassesThrough)
 // counterpart in offMapIdIsDroppedAndReported).
 TEST(TrafficLightArbiterCoreConfidencePriority, offMapIdIsDroppedAndReported)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::off_map_probe,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::off_map_probe, {make_element(RED, CIRCLE)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
@@ -642,25 +592,19 @@ TEST(TrafficLightArbiterCoreConfidencePriority, offMapIdIsDroppedAndReported)
 // cache; both end up in the final output with their published colors.
 TEST(TrafficLightArbiterCoreConfidencePriority, multipleExternalSourcesAccumulate)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(GREEN, CIRCLE)})}),
     kBaseTime);
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_b,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_b, {make_element(RED, CIRCLE)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::GREEN);
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_b), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_b), RED);
 }
 
 // Predictions ride alongside elements: when both sides carry one each,
@@ -669,50 +613,39 @@ TEST(TrafficLightArbiterCoreConfidencePriority, multipleExternalSourcesAccumulat
 // Confidence is a fine host for this pin.
 TEST(TrafficLightArbiterCoreConfidencePriority, predictionsFromBothSidesAreMerged)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   arbiter.ingest_perception(make_signals(
-    kBaseTime,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
-      {make_prediction(
-        kBaseTime, PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)})}));
+    kBaseTime, {make_group(
+                 map_ids::vehicle_a, {make_element(RED, CIRCLE)},
+                 {make_prediction(kBaseTime, INTERNAL_ESTIMATION)})}));
   arbiter.ingest_external(
     make_signals(
       kBaseTime,
       {make_group(
-        map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
-        {make_prediction(kBaseTime, PredictedTrafficLightState::INFORMATION_SOURCE_V2I)})}),
+        map_ids::vehicle_a, {make_element(RED, CIRCLE)}, {make_prediction(kBaseTime, V2I)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(
-    observed_prediction_source(result.output, map_ids::vehicle_a, 0),
-    PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION);
-  EXPECT_EQ(
-    observed_prediction_source(result.output, map_ids::vehicle_a, 1),
-    PredictedTrafficLightState::INFORMATION_SOURCE_V2I);
+  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 0), INTERNAL_ESTIMATION);
+  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 1), V2I);
 }
 
 // Perception-only side: when external is silent, the perception side's
 // prediction (with its information_source) still reaches the output.
 TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPredictionPropagates)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   arbiter.ingest_perception(make_signals(
-    kBaseTime,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
-      {make_prediction(
-        kBaseTime, PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)})}));
+    kBaseTime, {make_group(
+                 map_ids::vehicle_a, {make_element(RED, CIRCLE)},
+                 {make_prediction(kBaseTime, INTERNAL_ESTIMATION)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(
-    observed_prediction_source(result.output, map_ids::vehicle_a, 0),
-    PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION);
+  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 0), INTERNAL_ESTIMATION);
 }
 
 // External-only side: symmetric counterpart — when perception is silent,
@@ -720,21 +653,18 @@ TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPredictionPropagat
 // the output.
 TEST(TrafficLightArbiterCoreConfidencePriority, externalOnlyPredictionPropagates)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
     make_signals(
       kBaseTime,
       {make_group(
-        map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
-        {make_prediction(kBaseTime, PredictedTrafficLightState::INFORMATION_SOURCE_V2I)})}),
+        map_ids::vehicle_a, {make_element(RED, CIRCLE)}, {make_prediction(kBaseTime, V2I)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(
-    observed_prediction_source(result.output, map_ids::vehicle_a, 0),
-    PredictedTrafficLightState::INFORMATION_SOURCE_V2I);
+  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 0), V2I);
 }
 
 // ---------------------------------------------------------------------------
@@ -745,40 +675,32 @@ TEST(TrafficLightArbiterCoreConfidencePriority, externalOnlyPredictionPropagates
 // the external side to win over a higher-confidence perception.
 TEST(TrafficLightArbiterCoreExternalPriority, externalPriorityOverridesConfidence)
 {
-  auto arbiter = make_arbiter(SourcePriority::EXTERNAL, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.10f)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE, 0.10f)})}),
     kBaseTime);
   arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::vehicle_a,
-                 {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.99f)})}));
+    kBaseTime, {make_group(map_ids::vehicle_a, {make_element(GREEN, CIRCLE, 0.99f)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
 }
 
 // External-only: the EXTERNAL setting has no effect when only one source
 // is present.
 TEST(TrafficLightArbiterCoreExternalPriority, externalOnlyPassesThrough)
 {
-  auto arbiter = make_arbiter(SourcePriority::EXTERNAL, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
 }
 
 // Perception-only with EXTERNAL priority: with no external side present,
@@ -786,16 +708,14 @@ TEST(TrafficLightArbiterCoreExternalPriority, externalOnlyPassesThrough)
 // reaches the output.
 TEST(TrafficLightArbiterCoreExternalPriority, perceptionOnlyPassesThrough)
 {
-  auto arbiter = make_arbiter(SourcePriority::EXTERNAL, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(EXTERNAL, /*enable_signal_matching=*/false);
 
-  arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::vehicle_a,
-                 {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(GREEN, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::GREEN);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
 }
 
 // ---------------------------------------------------------------------------
@@ -806,56 +726,46 @@ TEST(TrafficLightArbiterCoreExternalPriority, perceptionOnlyPassesThrough)
 // EXTERNAL override case.
 TEST(TrafficLightArbiterCorePerceptionPriority, perceptionPriorityOverridesConfidence)
 {
-  auto arbiter = make_arbiter(SourcePriority::PERCEPTION, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(PERCEPTION, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.99f)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE, 0.99f)})}),
     kBaseTime);
   arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::vehicle_a,
-                 {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.10f)})}));
+    kBaseTime, {make_group(map_ids::vehicle_a, {make_element(GREEN, CIRCLE, 0.10f)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::GREEN);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
 }
 
 // Perception-only: the PERCEPTION setting has no effect when only one
 // source is present.
 TEST(TrafficLightArbiterCorePerceptionPriority, perceptionOnlyPassesThrough)
 {
-  auto arbiter = make_arbiter(SourcePriority::PERCEPTION, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(PERCEPTION, /*enable_signal_matching=*/false);
 
-  arbiter.ingest_perception(make_signals(
-    kBaseTime, {make_group(
-                 map_ids::vehicle_a,
-                 {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(GREEN, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::GREEN);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
 }
 
 // External-only with PERCEPTION priority: symmetric counterpart — external
 // is the only source, so it passes through.
 TEST(TrafficLightArbiterCorePerceptionPriority, externalOnlyPassesThrough)
 {
-  auto arbiter = make_arbiter(SourcePriority::PERCEPTION, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(PERCEPTION, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
 }
 
 // ---------------------------------------------------------------------------
@@ -869,13 +779,11 @@ TEST(TrafficLightArbiterCorePerceptionPriority, externalOnlyPassesThrough)
 TEST(TrafficLightArbiterCoreBoundary, arbitrateWithoutMapProducesNoOutput)
 {
   TrafficLightArbiterCore unconfigured(
-    SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false, kDefaultExternalDelayTolerance,
+    CONFIDENCE, /*enable_signal_matching=*/false, kDefaultExternalDelayTolerance,
     kDefaultExternalTimeTolerance, kDefaultPerceptionTimeTolerance);
 
-  unconfigured.ingest_perception(make_signals(
-    kBaseTime,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  unconfigured.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
 
   const auto result = unconfigured.arbitrate();
 
@@ -888,14 +796,12 @@ TEST(TrafficLightArbiterCoreBoundary, arbitrateWithoutMapProducesNoOutput)
 TEST(TrafficLightArbiterCoreBoundary, emptyMapProducesEmptyOutput)
 {
   TrafficLightArbiterCore arbiter(
-    SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false, kDefaultExternalDelayTolerance,
+    CONFIDENCE, /*enable_signal_matching=*/false, kDefaultExternalDelayTolerance,
     kDefaultExternalTimeTolerance, kDefaultPerceptionTimeTolerance);
   arbiter.set_map(build_empty_map());
 
-  arbiter.ingest_perception(make_signals(
-    kBaseTime,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
@@ -914,25 +820,20 @@ TEST(TrafficLightArbiterCoreBoundary, emptyMapProducesEmptyOutput)
 // is excluded from arbitrate() so external alone reaches the output.
 TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionIsExcludedFromOutput)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_perception =
     kBaseTime - rclcpp::Duration::from_seconds(kDefaultPerceptionTimeTolerance + 1.0);
 
-  arbiter.ingest_perception(make_signals(
-    t_perception,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(t_perception, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(GREEN, CIRCLE)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::GREEN);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
 }
 
 // Inside tolerance (perception is older but only by half the budget):
@@ -940,25 +841,20 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionIsExcludedFromOu
 // perception element over the lower-confidence external.
 TEST(TrafficLightArbiterCorePerceptionStaleness, freshPerceptionRemainsEffective)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_perception =
     kBaseTime - rclcpp::Duration::from_seconds(0.5 * kDefaultPerceptionTimeTolerance);
 
   arbiter.ingest_perception(make_signals(
-    t_perception, {make_group(
-                    map_ids::vehicle_a,
-                    {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE, 0.9f)})}));
+    t_perception, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE, 0.9f)})}));
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE, 0.7f)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(GREEN, CIRCLE, 0.7f)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
 }
 
 // External is silent: with no external stamp to compare against, the
@@ -977,19 +873,17 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, freshPerceptionRemainsEffective
 // endorse it.
 TEST(TrafficLightArbiterCorePerceptionStaleness, perceptionAloneIsNeverStale)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_perception =
     kBaseTime - rclcpp::Duration::from_seconds(kDefaultPerceptionTimeTolerance + 10.0);
 
-  arbiter.ingest_perception(make_signals(
-    t_perception,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(t_perception, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), TrafficLightElement::RED);
+  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
 }
 
 // Staleness is decided at the message level, not per id: when the
@@ -999,20 +893,15 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, perceptionAloneIsNeverStale)
 // must be absent from the output and vehicle_b must remain present.
 TEST(TrafficLightArbiterCorePerceptionStaleness, stalenessDropsEntirePerceptionMessage)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_perception =
     kBaseTime - rclcpp::Duration::from_seconds(kDefaultPerceptionTimeTolerance + 1.0);
 
-  arbiter.ingest_perception(make_signals(
-    t_perception,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(t_perception, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_b,
-                   {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_b, {make_element(GREEN, CIRCLE)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
@@ -1025,30 +914,25 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, stalenessDropsEntirePerceptionM
 // external-side prediction (V2I) survives in the output group.
 TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionPredictionsAreSkipped)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_perception =
     kBaseTime - rclcpp::Duration::from_seconds(kDefaultPerceptionTimeTolerance + 1.0);
 
   arbiter.ingest_perception(make_signals(
-    t_perception,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)},
-      {make_prediction(
-        t_perception, PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION)})}));
+    t_perception, {make_group(
+                    map_ids::vehicle_a, {make_element(RED, CIRCLE)},
+                    {make_prediction(t_perception, INTERNAL_ESTIMATION)})}));
   arbiter.ingest_external(
     make_signals(
       kBaseTime,
       {make_group(
-        map_ids::vehicle_a, {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)},
-        {make_prediction(kBaseTime, PredictedTrafficLightState::INFORMATION_SOURCE_V2I)})}),
+        map_ids::vehicle_a, {make_element(GREEN, CIRCLE)}, {make_prediction(kBaseTime, V2I)})}),
     kBaseTime);
 
   const auto result = arbiter.arbitrate();
 
-  EXPECT_EQ(
-    observed_prediction_source(result.output, map_ids::vehicle_a, 0),
-    PredictedTrafficLightState::INFORMATION_SOURCE_V2I);
+  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 0), V2I);
 }
 
 // ---------------------------------------------------------------------------
@@ -1061,19 +945,14 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionPredictionsAreSk
 
 TEST(TrafficLightArbiterCoreLatestInputTime, takesNewerOfPerceptionAndExternal)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_external_newer = kBaseTime + rclcpp::Duration::from_seconds(0.5);
 
-  arbiter.ingest_perception(make_signals(
-    kBaseTime,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
   arbiter.ingest_external(
-    make_signals(
-      t_external_newer, {make_group(
-                          map_ids::vehicle_a,
-                          {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(t_external_newer, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     t_external_newer);
 
   const auto result = arbiter.arbitrate();
@@ -1085,20 +964,15 @@ TEST(TrafficLightArbiterCoreLatestInputTime, takesNewerOfPerceptionAndExternal)
 // wins even though external is also stored.
 TEST(TrafficLightArbiterCoreLatestInputTime, perceptionWinsWhenNewer)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_perception_newer = kBaseTime + rclcpp::Duration::from_seconds(0.3);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
   arbiter.ingest_perception(make_signals(
-    t_perception_newer,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+    t_perception_newer, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
@@ -1109,14 +983,12 @@ TEST(TrafficLightArbiterCoreLatestInputTime, perceptionWinsWhenNewer)
 // latest_input_time falls back to the perception stamp.
 TEST(TrafficLightArbiterCoreLatestInputTime, perceptionStampWhenExternalIsSilent)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_perception = kBaseTime + rclcpp::Duration::from_seconds(0.5);
 
-  arbiter.ingest_perception(make_signals(
-    t_perception,
-    {make_group(
-      map_ids::vehicle_a, {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(t_perception, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
@@ -1133,16 +1005,13 @@ TEST(TrafficLightArbiterCoreLatestInputTime, perceptionStampWhenExternalIsSilent
 // is accepted.
 TEST(TrafficLightArbiterCoreTiming, ingestExternalAcceptsStampsWithinTolerance)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_past_within =
     kBaseTime - rclcpp::Duration::from_seconds(kDefaultExternalDelayTolerance - 1.0);
 
   const auto result = arbiter.ingest_external(
-    make_signals(
-      t_past_within, {make_group(
-                       map_ids::vehicle_a,
-                       {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(t_past_within, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
 
   EXPECT_TRUE(result.accepted);
@@ -1152,16 +1021,13 @@ TEST(TrafficLightArbiterCoreTiming, ingestExternalAcceptsStampsWithinTolerance)
 // is rejected.
 TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooOldStamps)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_past_beyond =
     kBaseTime - rclcpp::Duration::from_seconds(kDefaultExternalDelayTolerance + 1.0);
 
   const auto result = arbiter.ingest_external(
-    make_signals(
-      t_past_beyond, {make_group(
-                       map_ids::vehicle_a,
-                       {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(t_past_beyond, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
 
   EXPECT_FALSE(result.accepted);
@@ -1172,16 +1038,13 @@ TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooOldStamps)
 // directions.
 TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooFutureStamps)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   const auto t_future_beyond =
     kBaseTime + rclcpp::Duration::from_seconds(kDefaultExternalDelayTolerance + 1.0);
 
   const auto result = arbiter.ingest_external(
-    make_signals(
-      t_future_beyond, {make_group(
-                         map_ids::vehicle_a,
-                         {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(t_future_beyond, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
 
   EXPECT_FALSE(result.accepted);
@@ -1193,21 +1056,16 @@ TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooFutureStamps)
 // (used by the Node for DEBUG logging).
 TEST(TrafficLightArbiterCoreTiming, ingestPerceptionReportsExpiredExternalEntry)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
   const auto t_perception =
     kBaseTime + rclcpp::Duration::from_seconds(kDefaultExternalTimeTolerance + 1.0);
 
-  const auto expired = arbiter.ingest_perception(make_signals(
-    t_perception, {make_group(
-                    map_ids::vehicle_b,
-                    {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}));
+  const auto expired = arbiter.ingest_perception(
+    make_signals(t_perception, {make_group(map_ids::vehicle_b, {make_element(GREEN, CIRCLE)})}));
 
   ASSERT_EQ(expired.size(), 1u);
   EXPECT_EQ(expired.front().id, map_ids::vehicle_a);
@@ -1219,20 +1077,15 @@ TEST(TrafficLightArbiterCoreTiming, ingestPerceptionReportsExpiredExternalEntry)
 // triggering perception covers a different id.
 TEST(TrafficLightArbiterCoreTiming, evictedExternalEntryAbsentFromOutput)
 {
-  auto arbiter = make_arbiter(SourcePriority::CONFIDENCE, /*enable_signal_matching=*/false);
+  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
 
   arbiter.ingest_external(
-    make_signals(
-      kBaseTime, {make_group(
-                   map_ids::vehicle_a,
-                   {make_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)})}),
+    make_signals(kBaseTime, {make_group(map_ids::vehicle_a, {make_element(RED, CIRCLE)})}),
     kBaseTime);
   const auto t_perception =
     kBaseTime + rclcpp::Duration::from_seconds(kDefaultExternalTimeTolerance + 1.0);
-  arbiter.ingest_perception(make_signals(
-    t_perception, {make_group(
-                    map_ids::vehicle_b,
-                    {make_element(TrafficLightElement::GREEN, TrafficLightElement::CIRCLE)})}));
+  arbiter.ingest_perception(
+    make_signals(t_perception, {make_group(map_ids::vehicle_b, {make_element(GREEN, CIRCLE)})}));
 
   const auto result = arbiter.arbitrate();
 
