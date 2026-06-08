@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<library path="autoware_map_loader_host_plugins">
+  <class type="autoware::map_loader::plugin::MapProjectionLoaderPlugin"
+         base_class_type="autoware::map_loader::plugin::MapLoaderPluginBase">
+    <description>Loads and publishes map projection metadata.</description>
+  </class>
+  <class type="autoware::map_loader::plugin::PointCloudMapLoaderPlugin"
+         base_class_type="autoware::map_loader::plugin::MapLoaderPluginBase">
+    <description>Loads pointcloud map and partial/differential/selected map services.</description>
+  </class>
+  <class type="autoware::map_loader::plugin::Lanelet2MapLoaderPlugin"
+         base_class_type="autoware::map_loader::plugin::MapLoaderPluginBase">
+    <description>Loads Lanelet2 vector map.</description>
+  </class>
+  <class type="autoware::map_loader::plugin::Lanelet2VisualizationPlugin"
+         base_class_type="autoware::map_loader::plugin::MapLoaderPluginBase">
+    <description>Publishes Lanelet2 visualization markers.</description>
+  </class>
+  <class type="autoware::map_loader::plugin::VectorMapTfGeneratorPlugin"
+         base_class_type="autoware::map_loader::plugin::MapLoaderPluginBase">
+    <description>Broadcasts map viewer static TF from vector map.</description>
+  </class>
+  <class type="autoware::map_loader::plugin::MapHashGeneratorPlugin"
+         base_class_type="autoware::map_loader::plugin::MapLoaderPluginBase">
+    <description>Publishes map file hashes and lanelet XML API service.</description>
+  </class>
+</library>

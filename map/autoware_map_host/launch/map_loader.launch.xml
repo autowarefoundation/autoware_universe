@@ -1,0 +1,35 @@
+<launch>
+  <!-- map files -->
+  <arg name="pointcloud_map_path"/>
+  <arg name="pointcloud_map_metadata_path"/>
+  <arg name="lanelet2_map_path"/>
+  <arg name="map_projector_info_path"/>
+
+  <!-- Parameter files -->
+  <arg name="map_loader_host_param_path" default="$(find-pkg-share autoware_map_host)/config/map_loader_host.param.yaml"/>
+  <arg name="pointcloud_map_loader_param_path"/>
+  <arg name="lanelet2_map_loader_param_path"/>
+  <arg name="map_tf_generator_param_path"/>
+  <arg name="map_projection_loader_param_path"/>
+
+  <group>
+    <push-ros-namespace namespace="map"/>
+
+    <node pkg="autoware_map_host" exec="autoware_map_loader_host_node" name="map_loader" output="both">
+      <param from="$(var map_loader_host_param_path)"/>
+      <param from="$(var pointcloud_map_loader_param_path)"/>
+      <param from="$(var lanelet2_map_loader_param_path)"/>
+      <param from="$(var map_tf_generator_param_path)"/>
+      <param from="$(var map_projection_loader_param_path)" allow_substs="true"/>
+      <param name="pcd_paths_or_directory" value="[$(var pointcloud_map_path)]"/>
+      <param name="pcd_metadata_path" value="$(var pointcloud_map_metadata_path)"/>
+      <param name="lanelet2_map_path" value="$(var lanelet2_map_path)"/>
+      <param name="map_projector_info_path" value="$(var map_projector_info_path)"/>
+      <param name="pointcloud_map_path" value="$(var pointcloud_map_path)"/>
+      <remap from="service/get_partial_pcd_map" to="/map/get_partial_pointcloud_map"/>
+      <remap from="service/get_differential_pcd_map" to="/map/get_differential_pointcloud_map"/>
+      <remap from="service/get_selected_pcd_map" to="/map/get_selected_pointcloud_map"/>
+      <remap from="output/pointcloud_map_metadata" to="pointcloud_map_metadata"/>
+    </node>
+  </group>
+</launch>

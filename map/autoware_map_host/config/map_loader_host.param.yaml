@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    plugin_names:
+      - autoware::map_loader::plugin::MapProjectionLoaderPlugin
+      - autoware::map_loader::plugin::PointCloudMapLoaderPlugin
+      - autoware::map_loader::plugin::Lanelet2MapLoaderPlugin
+      - autoware::map_loader::plugin::Lanelet2VisualizationPlugin
+      - autoware::map_loader::plugin::VectorMapTfGeneratorPlugin
+      - autoware::map_loader::plugin::MapHashGeneratorPlugin
