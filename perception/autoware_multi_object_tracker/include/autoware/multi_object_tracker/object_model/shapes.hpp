@@ -64,6 +64,11 @@ geometry_msgs::msg::Polygon transformFootprint(
   const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
   const geometry_msgs::msg::Pose & dst_pose);
 
+// Compute the polygon union of two footprints already expressed in the same local frame.
+// Returns the exterior ring of the largest union component (handles disjoint case gracefully).
+geometry_msgs::msg::Polygon unionFootprints(
+  const geometry_msgs::msg::Polygon & a, const geometry_msgs::msg::Polygon & b);
+
 }  // namespace shapes
 }  // namespace autoware::multi_object_tracker
 

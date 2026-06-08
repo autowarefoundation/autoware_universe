@@ -233,14 +233,12 @@ void TrackerOverlapManager::merge(
         // Kinematic bbox dimensions (the structural vehicle frame) always stay with the winner.
         // Footprint points are in each tracker's own local frame, so the absorbed footprint must
         // be re-expressed in the winner's local frame before merging.
-        const bool absorbed_has_footprint = !data2.object.shape.footprint.points.empty();
-        if (absorbed_has_footprint) {
+        if (!data2.object.shape.footprint.points.empty()) {
           const auto transformed = shapes::transformFootprint(
             data2.object.shape.footprint, data2.object.pose, data1.object.pose);
           auto merged_shape = data1.object.shape;
-          merged_shape.footprint.points.insert(
-            merged_shape.footprint.points.end(), transformed.points.begin(),
-            transformed.points.end());
+          merged_shape.footprint =
+            shapes::unionFootprints(merged_shape.footprint, transformed);
           data1.tracker->setObjectShape(merged_shape);
         }
 

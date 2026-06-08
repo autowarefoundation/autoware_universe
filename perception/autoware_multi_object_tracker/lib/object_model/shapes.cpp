@@ -397,6 +397,47 @@ double get3dGeneralizedIoU(
   return iou - (convex_area - union_area) / convex_area;
 }
 
+geometry_msgs::msg::Polygon unionFootprints(
+  const geometry_msgs::msg::Polygon & a, const geometry_msgs::msg::Polygon & b)
+{
+  if (a.points.empty()) return b;
+  if (b.points.empty()) return a;
+
+  const auto to_boost = [](const geometry_msgs::msg::Polygon & fp) {
+    autoware_utils_geometry::Polygon2d poly;
+    for (const auto & p : fp.points) {
+      poly.outer().emplace_back(p.x, p.y);
+    }
+    boost::geometry::correct(poly);
+    return poly;
+  };
+
+  std::vector<autoware_utils_geometry::Polygon2d> union_result;
+  boost::geometry::union_(to_boost(a), to_boost(b), union_result);
+  if (union_result.empty()) return a;
+
+  // If the union produced multiple disjoint components, use the largest
+  const auto & best = *std::max_element(
+    union_result.begin(), union_result.end(),
+    [](const auto & p, const auto & q) {
+      return boost::geometry::area(p) < boost::geometry::area(q);
+    });
+
+  // Extract exterior ring; skip Boost's closing duplicate point
+  geometry_msgs::msg::Polygon out;
+  const auto & ring = best.outer();
+  const size_t n = ring.size() > 1u ? ring.size() - 1u : ring.size();
+  out.points.reserve(n);
+  for (size_t i = 0; i < n; ++i) {
+    geometry_msgs::msg::Point32 p;
+    p.x = static_cast<float>(ring[i].x());
+    p.y = static_cast<float>(ring[i].y());
+    p.z = 0.0f;
+    out.points.push_back(p);
+  }
+  return out;
+}
+
 geometry_msgs::msg::Polygon transformFootprint(
   const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
   const geometry_msgs::msg::Pose & dst_pose)
