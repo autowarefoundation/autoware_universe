@@ -6,11 +6,12 @@
 
 ## Algorithm Overview
 
-1. Candidate trajectories arrive on two separate input topics — `~/input/trajectories_generative` for generative planners and `~/input/trajectories_backup` for backup planners. Each received message is forwarded to the internal concatenator buffer.
-2. A 100 ms timer fires: the concatenator prunes stale entries (older than `duration_time`) and returns the merged trajectory set from all registered generators.
-3. If any mandatory sensor input (odometry, predicted objects, acceleration, or HD map) is unavailable, the timer returns early without publishing.
-4. The validator runs all loaded plugins against each trajectory. Trajectories rejected by any enforced plugin (listed in `filter_names`) are removed from the output set.
-5. The surviving trajectories are published to `~/output/trajectories`.
+1. Candidate trajectories arrive on two separate input topics. `~/input/trajectories_generative` acts as an **anchor**: receiving a message on this topic triggers an immediate concatenation and validation cycle. `~/input/trajectories_backup` messages are buffered and processed in the next cycle.
+2. A 100 ms timer also fires periodically to ensure output is published even if the anchor input is delayed or missing. The timer is reset whenever an anchor message is received.
+3. During each cycle (triggered by the anchor or the timer), the concatenator prunes stale entries (older than `duration_time`) and returns the merged trajectory set from all registered generators.
+4. If any mandatory sensor input (odometry, predicted objects, acceleration, or HD map) is unavailable, the cycle returns early without publishing.
+5. The validator runs all loaded plugins against each trajectory. Trajectories rejected by any enforced plugin (listed in `filter_names`) are removed from the output set.
+6. The surviving trajectories are published to `~/output/trajectories`.
 
 ## Interface
 
