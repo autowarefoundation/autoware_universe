@@ -106,7 +106,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     src/bev_ops/bev_pool_cuda.cu
     src/scatter_ops/segment_csr.cu
     src/unique_ops/unique.cu
-    src/ptv3_ops/serialized_pooling.cu
+    src/scatter_ops/gather_segment_csr.cu
     src/multi_scale_deform_attn_ops/ms_deform_attn_kernel.cu
     src/rotate_ops/rotate_kernel.cu
     src/select_and_pad_ops/select_and_pad_kernel.cu
@@ -131,8 +131,8 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     src/rotate_plugin_creator.cpp
     src/segment_csr_plugin_creator.cpp
     src/segment_csr_plugin.cpp
-    src/serialized_pooling_plugin.cpp
-    src/serialized_pooling_plugin_creator.cpp
+    src/gather_segment_csr_plugin.cpp
+    src/gather_segment_csr_plugin_creator.cpp
     src/select_and_pad_plugin.cpp
     src/select_and_pad_plugin_creator.cpp
     src/unique_plugin.cpp
@@ -155,7 +155,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
 
     ament_add_gtest(reference_kernels_test
       test/argsort_kernel_test.cpp
-      test/serialized_pooling_kernel_test.cpp
+      test/gather_segment_csr_kernel_test.cpp
       test/unique_kernel_test.cpp
     )
     if(TARGET reference_kernels_test)

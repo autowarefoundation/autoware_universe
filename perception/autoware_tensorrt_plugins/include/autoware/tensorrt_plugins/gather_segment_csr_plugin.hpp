@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_PLUGINS__SERIALIZED_POOLING_PLUGIN_HPP_
-#define AUTOWARE__TENSORRT_PLUGINS__SERIALIZED_POOLING_PLUGIN_HPP_
+#ifndef AUTOWARE__TENSORRT_PLUGINS__GATHER_SEGMENT_CSR_PLUGIN_HPP_
+#define AUTOWARE__TENSORRT_PLUGINS__GATHER_SEGMENT_CSR_PLUGIN_HPP_
 
-#include "autoware/ptv3_ops/serialized_pooling.hpp"
+#include "autoware/scatter_ops/gather_segment_csr.hpp"
 
 #include <NvInferRuntime.h>
 #include <NvInferRuntimePlugin.h>
@@ -26,24 +26,24 @@
 #include <string>
 #include <vector>
 
-constexpr char const * const kPTV3_SERIALIZED_POOLING_PLUGIN_NAME{"PTv3SerializedPooling"};
-constexpr char const * const kPTV3_SERIALIZED_POOLING_PLUGIN_VERSION{"1"};
+constexpr char const * const kGATHER_SEGMENT_CSR_PLUGIN_NAME{"GatherSegmentCSR"};
+constexpr char const * const kGATHER_SEGMENT_CSR_PLUGIN_VERSION{"1"};
 // Empty namespace to match every other plugin in this package: the ONNX-parser fallback importer
 // resolves custom ops (domain "autoware") against the default/empty plugin namespace.
-constexpr char const * const kPTV3_SERIALIZED_POOLING_PLUGIN_NAMESPACE{""};
+constexpr char const * const kGATHER_SEGMENT_CSR_PLUGIN_NAMESPACE{""};
 
-namespace autoware::ptv3
+namespace autoware::tensorrt_plugins
 {
 
-class PTv3SerializedPoolingPlugin : public nvinfer1::IPluginV3,
-                                    public nvinfer1::IPluginV3OneCore,
-                                    public nvinfer1::IPluginV3OneBuild,
-                                    public nvinfer1::IPluginV3OneRuntime
+class GatherSegmentCSRPlugin : public nvinfer1::IPluginV3,
+                               public nvinfer1::IPluginV3OneCore,
+                               public nvinfer1::IPluginV3OneBuild,
+                               public nvinfer1::IPluginV3OneRuntime
 {
 public:
-  PTv3SerializedPoolingPlugin(const std::string & name, const std::string & reduce);
+  GatherSegmentCSRPlugin(const std::string & name, const std::string & reduce);
 
-  ~PTv3SerializedPoolingPlugin() override = default;
+  ~GatherSegmentCSRPlugin() override = default;
 
   nvinfer1::IPluginCapability * getCapabilityInterface(
     nvinfer1::PluginCapabilityType type) noexcept override;
@@ -107,14 +107,14 @@ private:
 
   std::string layer_name_;
   std::string reduce_;
-  SerializedPoolingReduce reduce_type_;
+  scatter_ops::GatherSegmentCSRReduce reduce_type_;
   std::vector<nvinfer1::PluginField> data_to_serialize_;
   nvinfer1::PluginFieldCollection fc_to_serialize_{};
 };
 
 /// Convert the ONNX plugin `reduce` attribute into the kernel reduction mode.
-SerializedPoolingReduce parseSerializedPoolingReduce(const std::string & reduce);
+scatter_ops::GatherSegmentCSRReduce parseGatherSegmentCSRReduce(const std::string & reduce);
 
-}  // namespace autoware::ptv3
+}  // namespace autoware::tensorrt_plugins
 
-#endif  // AUTOWARE__TENSORRT_PLUGINS__SERIALIZED_POOLING_PLUGIN_HPP_
+#endif  // AUTOWARE__TENSORRT_PLUGINS__GATHER_SEGMENT_CSR_PLUGIN_HPP_

@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_plugins/serialized_pooling_plugin_creator.hpp"
+#include "autoware/tensorrt_plugins/gather_segment_csr_plugin_creator.hpp"
 
+#include "autoware/tensorrt_plugins/gather_segment_csr_plugin.hpp"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
-#include "autoware/tensorrt_plugins/serialized_pooling_plugin.hpp"
 
 #include <NvInferRuntimePlugin.h>
 
 #include <exception>
 #include <string>
 
-namespace autoware::ptv3
+namespace autoware::tensorrt_plugins
 {
 
-REGISTER_TENSORRT_PLUGIN(PTv3SerializedPoolingPluginCreator);
+REGISTER_TENSORRT_PLUGIN(GatherSegmentCSRPluginCreator);
 
-PTv3SerializedPoolingPluginCreator::PTv3SerializedPoolingPluginCreator()
+GatherSegmentCSRPluginCreator::GatherSegmentCSRPluginCreator()
 {
   plugin_attributes_.clear();
   plugin_attributes_.emplace_back("reduce", nullptr, nvinfer1::PluginFieldType::kCHAR, 1);
@@ -36,12 +36,12 @@ PTv3SerializedPoolingPluginCreator::PTv3SerializedPoolingPluginCreator()
   fc_.fields = plugin_attributes_.data();
 }
 
-nvinfer1::PluginFieldCollection const * PTv3SerializedPoolingPluginCreator::getFieldNames() noexcept
+nvinfer1::PluginFieldCollection const * GatherSegmentCSRPluginCreator::getFieldNames() noexcept
 {
   return &fc_;
 }
 
-nvinfer1::IPluginV3 * PTv3SerializedPoolingPluginCreator::createPlugin(
+nvinfer1::IPluginV3 * GatherSegmentCSRPluginCreator::createPlugin(
   char const * name, nvinfer1::PluginFieldCollection const * fc,
   [[maybe_unused]] nvinfer1::TensorRTPhase phase) noexcept
 {
@@ -55,13 +55,13 @@ nvinfer1::IPluginV3 * PTv3SerializedPoolingPluginCreator::createPlugin(
     if (null_pos != std::string::npos) {
       reduce.resize(null_pos);
     }
-    parseSerializedPoolingReduce(reduce);
+    parseGatherSegmentCSRReduce(reduce);
 
-    return new PTv3SerializedPoolingPlugin{std::string(name), reduce};
+    return new GatherSegmentCSRPlugin{std::string(name), reduce};
   } catch (std::exception const & e) {
     caughtError(e);
   }
   return nullptr;
 }
 
-}  // namespace autoware::ptv3
+}  // namespace autoware::tensorrt_plugins

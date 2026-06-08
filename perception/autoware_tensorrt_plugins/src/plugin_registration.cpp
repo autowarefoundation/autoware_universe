@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/tensorrt_plugins/argsort_plugin_creator.hpp"
+#include "autoware/tensorrt_plugins/gather_segment_csr_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/get_indices_pairs_implicit_gemm_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/get_indices_pairs_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/implicit_gemm_plugin_creator.hpp"
@@ -22,7 +23,6 @@
 #include "autoware/tensorrt_plugins/rotate_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/segment_csr_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/select_and_pad_plugin_creator.hpp"
-#include "autoware/tensorrt_plugins/serialized_pooling_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/unique_plugin_creator.hpp"
 
 #include <NvInferRuntime.h>
@@ -81,7 +81,8 @@ extern "C" nvinfer1::IPluginCreatorInterface * const * getCreators(std::int32_t 
     multi_scale_deformable_attention_plugin_creator{};
   static autoware::tensorrt_plugins::RotatePluginCreator rotate_plugin_creator{};
   static nvinfer1::plugin::SegmentCSRPluginCreator segment_csr_plugin_creator{};
-  static autoware::ptv3::PTv3SerializedPoolingPluginCreator serialized_pooling_plugin_creator{};
+  static autoware::tensorrt_plugins::GatherSegmentCSRPluginCreator
+    gather_segment_csr_plugin_creator{};
   static autoware::tensorrt_plugins::SelectAndPadPluginCreator select_and_pad_plugin_creator{};
   static nvinfer1::plugin::UniquePluginCreator unique_plugin_creator{};
 
@@ -95,7 +96,7 @@ extern "C" nvinfer1::IPluginCreatorInterface * const * getCreators(std::int32_t 
     &multi_scale_deformable_attention_plugin_creator,
     &rotate_plugin_creator,
     &segment_csr_plugin_creator,
-    &serialized_pooling_plugin_creator,
+    &gather_segment_csr_plugin_creator,
     &select_and_pad_plugin_creator,
     &unique_plugin_creator};
   return plugin_creator_list;

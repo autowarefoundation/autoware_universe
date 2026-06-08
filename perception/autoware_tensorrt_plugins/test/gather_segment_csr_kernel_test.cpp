@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/ptv3_ops/serialized_pooling.hpp"
+#include "autoware/scatter_ops/gather_segment_csr.hpp"
 #include "test_utils.hpp"
 
 #include <autoware/cuda_utils/cuda_gtest_utils.hpp>
@@ -30,32 +30,32 @@
 namespace
 {
 
-using autoware::ptv3::serialized_pooling_float;
-using autoware::ptv3::SerializedPoolingReduce;
+using autoware::scatter_ops::gather_segment_csr_float;
+using autoware::scatter_ops::GatherSegmentCSRReduce;
 using autoware::tensorrt_plugins::test::copy_to_device;
 using autoware::tensorrt_plugins::test::copy_to_host;
 using autoware::tensorrt_plugins::test::CudaStreamGuard;
 using autoware::tensorrt_plugins::test::DeviceBuffer;
 
 /// Return the neutral CPU accumulator value matching the CUDA reducer.
-float initial_value(const SerializedPoolingReduce reduce)
+float initial_value(const GatherSegmentCSRReduce reduce)
 {
-  if (reduce == SerializedPoolingReduce::kMin) {
+  if (reduce == GatherSegmentCSRReduce::kMin) {
     return std::numeric_limits<float>::max();
   }
-  if (reduce == SerializedPoolingReduce::kMax) {
+  if (reduce == GatherSegmentCSRReduce::kMax) {
     return -std::numeric_limits<float>::max();
   }
   return 0.0F;
 }
 
 /// Apply one CPU reduction step matching the CUDA reducer.
-float update_value(const float current, const float next, const SerializedPoolingReduce reduce)
+float update_value(const float current, const float next, const GatherSegmentCSRReduce reduce)
 {
-  if (reduce == SerializedPoolingReduce::kMin) {
+  if (reduce == GatherSegmentCSRReduce::kMin) {
     return std::min(current, next);
   }
-  if (reduce == SerializedPoolingReduce::kMax) {
+  if (reduce == GatherSegmentCSRReduce::kMax) {
     return std::max(current, next);
   }
   return current + next;
@@ -65,7 +65,7 @@ float update_value(const float current, const float next, const SerializedPoolin
 std::vector<float> make_feature_reference(
   const std::vector<float> & features, const std::vector<std::int64_t> & indices,
   const std::vector<std::int64_t> & indptr, const std::int32_t num_channels,
-  const SerializedPoolingReduce reduce)
+  const GatherSegmentCSRReduce reduce)
 {
   const auto num_segments = static_cast<std::int32_t>(indptr.size() - 1);
   std::vector<float> output(static_cast<std::size_t>(num_segments * num_channels), 0.0F);
@@ -82,7 +82,7 @@ std::vector<float> make_feature_reference(
       }
       if (count == 0) {
         value = 0.0F;
-      } else if (reduce == SerializedPoolingReduce::kMean) {
+      } else if (reduce == GatherSegmentCSRReduce::kMean) {
         value /= static_cast<float>(count);
       }
       output[static_cast<std::size_t>(segment * num_channels + channel)] = value;
@@ -126,12 +126,12 @@ void expect_near_vector(
   }
 }
 
-class SerializedPoolingKernelTest
-: public ::testing::TestWithParam<std::pair<std::string, SerializedPoolingReduce>>
+class GatherSegmentCSRKernelTest
+: public ::testing::TestWithParam<std::pair<std::string, GatherSegmentCSRReduce>>
 {
 };
 
-TEST_P(SerializedPoolingKernelTest, MatchesCpuCsrReference)
+TEST_P(GatherSegmentCSRKernelTest, MatchesCpuCsrReference)
 {
   SKIP_TEST_IF_CUDA_UNAVAILABLE();
 
@@ -167,7 +167,7 @@ TEST_P(SerializedPoolingKernelTest, MatchesCpuCsrReference)
   copy_to_device(indptr_d.get(), indptr);
 
   ASSERT_EQ(
-    serialized_pooling_float(
+    gather_segment_csr_float(
       features_d.get(), coords_d.get(), indices_d.get(), indptr_d.get(), feature_out_d.get(),
       coord_out_d.get(), num_segments, kNumChannels, reduce, stream.get()),
     cudaSuccess);
@@ -182,11 +182,11 @@ TEST_P(SerializedPoolingKernelTest, MatchesCpuCsrReference)
 }
 
 INSTANTIATE_TEST_SUITE_P(
-  ReduceModes, SerializedPoolingKernelTest,
+  ReduceModes, GatherSegmentCSRKernelTest,
   ::testing::Values(
-    std::make_pair("sum", SerializedPoolingReduce::kSum),
-    std::make_pair("mean", SerializedPoolingReduce::kMean),
-    std::make_pair("min", SerializedPoolingReduce::kMin),
-    std::make_pair("max", SerializedPoolingReduce::kMax)));
+    std::make_pair("sum", GatherSegmentCSRReduce::kSum),
+    std::make_pair("mean", GatherSegmentCSRReduce::kMean),
+    std::make_pair("min", GatherSegmentCSRReduce::kMin),
+    std::make_pair("max", GatherSegmentCSRReduce::kMax)));
 
 }  // namespace

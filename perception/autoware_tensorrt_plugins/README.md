@@ -25,52 +25,76 @@ We provide a wrapper for the `bev_pool` operation presented in [BEVFusion](https
 
 We provide a wrapper for the `segment_csr` operation presented in [torch_scatter](https://github.com/rusty1s/pytorch_scatter/tree/master). Please refer to the original code for specific details.
 
-### PTv3 Serialized Pooling
+### Gather Segment CSR
 
-The `PTv3SerializedPooling` plugin implements the feature reduction used by Point Transformer V3
-serialized downsampling. PTv3 groups input voxels by dropping the lowest bits from each serialized
-voxel code; the grouping metadata is precomputed outside the TensorRT engine and supplied as regular
-engine inputs. This lets TensorRT derive the output shape from `indptr.shape[0] - 1` instead of from
-a data-dependent `Unique` operation.
+The `GatherSegmentCSR` plugin reduces source rows over precomputed CSR groups. Unlike
+`SegmentCSR`, the source rows do not need to be contiguous in the input tensor: each group gathers
+its rows through `indices` and uses `indptr` only to delimit the groups. TensorRT derives the output
+row count from `indptr.shape[0] - 1`, so the operation itself does not expose a data-dependent output
+shape.
 
 **Inputs:**
 
-1. `feature`: Input voxel features `(N, C)`, either FP32 or FP16.
-2. `coord`: Input voxel coordinates `(N, 3)`, FP32. These are reduced using the first source voxel
-   in each output segment.
-3. `indices`: Source voxel indices sorted by output segment `(N)`, INT64.
+1. `feature`: Source features `(N, C)`, either FP32 or FP16.
+2. `coord`: Source coordinates `(N, 3)`, FP32. These are averaged over each output segment.
+3. `indices`: Source row indices sorted by output segment `(K)`, INT64.
 4. `indptr`: CSR segment pointers `(M + 1)`, INT64.
 
 **Outputs:**
 
-1. `pooled_feature`: Reduced output voxel features `(M, C)`.
-2. `pooled_coord`: Representative output voxel coordinates `(M, 3)`.
+1. `pooled_feature`: Reduced output features `(M, C)`.
+2. `pooled_coord`: Mean output coordinates `(M, 3)`.
 
 **Parameters:**
 
 - `reduce`: Feature reduction mode, one of `sum`, `mean`, `min`, or `max`.
 
-Example CSR grouping:
+Operation contract:
 
 ```text
-Input voxels after serialized-code downsample:
+group[m] = indices[indptr[m] : indptr[m + 1]]
 
-  input index:     0     1     2     3     4     5
-  pooled key:      A     A     B     C     C     C
-  feature:        f0    f1    f2    f3    f4    f5
-  coord:          c0    c1    c2    c3    c4    c5
+pooled_feature[m, c] = reduce(feature[group[m], c])
+pooled_coord[m, xyz] = mean(coord[group[m], xyz])
+```
+
+Example gathered CSR grouping:
+
+```text
+Input rows:
+
+  input index:       0      1      2      3      4      5
+  feature:          f0     f1     f2     f3     f4     f5
+  coord:            c0     c1     c2     c3     c4     c5
 
 Precomputed plugin inputs:
 
-  indices = [0, 1, 2, 3, 4, 5]
+  output segment:    A             B             C
+  source rows:      [0, 4]        [2]           [5, 1, 3]
+
+  indices = [0, 4, 2, 5, 1, 3]
   indptr  = [0,    2, 3,       6]
              | A | |B| |   C   |
 
 Plugin outputs:
 
-  pooled_feature[0] = reduce(f0, f1)      pooled_coord[0] = c0
-  pooled_feature[1] = reduce(f2)          pooled_coord[1] = c2
-  pooled_feature[2] = reduce(f3, f4, f5)  pooled_coord[2] = c3
+  pooled_feature[0] = reduce(f0, f4)      pooled_coord[0] = mean(c0, c4)
+  pooled_feature[1] = reduce(f2)          pooled_coord[1] = mean(c2)
+  pooled_feature[2] = reduce(f5, f1, f3)  pooled_coord[2] = mean(c5, c1, c3)
+```
+
+Point Transformer V3 uses this plugin for serialized voxel downsampling. Its preprocessing derives
+pooled voxel groups from serialized voxel codes, builds `indices` and `indptr`, and provides those
+tensors as normal TensorRT engine inputs:
+
+```text
+PTv3 preprocessing outside TensorRT:
+
+  voxel coordinates -> serialized voxel codes -> pooled voxel groups -> indices + indptr
+
+TensorRT plugin:
+
+  feature, coord, indices, indptr -> pooled_feature, pooled_coord
 ```
 
 ### Unique

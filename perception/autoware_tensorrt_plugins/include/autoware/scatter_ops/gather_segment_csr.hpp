@@ -12,46 +12,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PTV3_OPS__SERIALIZED_POOLING_HPP_
-#define AUTOWARE__PTV3_OPS__SERIALIZED_POOLING_HPP_
+#ifndef AUTOWARE__SCATTER_OPS__GATHER_SEGMENT_CSR_HPP_
+#define AUTOWARE__SCATTER_OPS__GATHER_SEGMENT_CSR_HPP_
 
 #include <cuda_fp16.h>
 #include <cuda_runtime_api.h>
 
 #include <cstdint>
 
-namespace autoware::ptv3
+namespace autoware::scatter_ops
 {
 
-/// Feature reduction applied to all input voxels that map to the same pooled voxel.
-enum class SerializedPoolingReduce : std::int32_t {
+/// Feature reduction applied to all source rows that map to the same output segment.
+enum class GatherSegmentCSRReduce : std::int32_t {
   kSum = 0,
   kMean = 1,
   kMin = 2,
   kMax = 3,
 };
 
-/// Run PTv3 serialized pooling for FP32 feature tensors.
+/// Run gather-segment CSR for FP32 feature tensors and FP32 coordinates.
 ///
-/// `indices_in` and `indptr_in` encode CSR groups over input voxels. Output segment `s` reads
+/// `indices_in` and `indptr_in` encode CSR groups over input rows. Output segment `s` reads
 /// source indices from `indices_in[indptr_in[s]:indptr_in[s + 1]]`, reduces the corresponding
 /// feature rows, and writes one output row. Coordinates are averaged over the same CSR group.
-cudaError_t serialized_pooling_float(
+cudaError_t gather_segment_csr_float(
   const float * feature_in, const float * coord_in, const std::int64_t * indices_in,
   const std::int64_t * indptr_in, float * feature_out, float * coord_out,
   std::int32_t num_segments_in, std::int32_t num_channels_in,
-  SerializedPoolingReduce feature_reduce_in, cudaStream_t stream_in);
+  GatherSegmentCSRReduce feature_reduce_in, cudaStream_t stream_in);
 
-/// Run PTv3 serialized pooling for FP16 feature tensors and FP32 coordinates.
+/// Run gather-segment CSR for FP16 feature tensors and FP32 coordinates.
 ///
-/// The grouping contract is identical to `serialized_pooling_float`; feature accumulation is done
+/// The grouping contract is identical to `gather_segment_csr_float`; feature accumulation is done
 /// in FP32 and converted back to FP16 at the output.
-cudaError_t serialized_pooling_half(
+cudaError_t gather_segment_csr_half(
   const half * feature_in, const float * coord_in, const std::int64_t * indices_in,
   const std::int64_t * indptr_in, half * feature_out, float * coord_out,
   std::int32_t num_segments_in, std::int32_t num_channels_in,
-  SerializedPoolingReduce feature_reduce_in, cudaStream_t stream_in);
+  GatherSegmentCSRReduce feature_reduce_in, cudaStream_t stream_in);
 
-}  // namespace autoware::ptv3
+}  // namespace autoware::scatter_ops
 
-#endif  // AUTOWARE__PTV3_OPS__SERIALIZED_POOLING_HPP_
+#endif  // AUTOWARE__SCATTER_OPS__GATHER_SEGMENT_CSR_HPP_

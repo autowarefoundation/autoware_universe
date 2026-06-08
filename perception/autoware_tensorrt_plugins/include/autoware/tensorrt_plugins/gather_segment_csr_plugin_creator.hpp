@@ -12,38 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__TENSORRT_PLUGINS__SERIALIZED_POOLING_PLUGIN_CREATOR_HPP_
-#define AUTOWARE__TENSORRT_PLUGINS__SERIALIZED_POOLING_PLUGIN_CREATOR_HPP_
+#ifndef AUTOWARE__TENSORRT_PLUGINS__GATHER_SEGMENT_CSR_PLUGIN_CREATOR_HPP_
+#define AUTOWARE__TENSORRT_PLUGINS__GATHER_SEGMENT_CSR_PLUGIN_CREATOR_HPP_
 
-#include "autoware/tensorrt_plugins/serialized_pooling_plugin.hpp"
+#include "autoware/tensorrt_plugins/gather_segment_csr_plugin.hpp"
 
 #include <NvInferRuntime.h>
 
 #include <vector>
 
-namespace autoware::ptv3
+namespace autoware::tensorrt_plugins
 {
 
-class PTv3SerializedPoolingPluginCreator : public nvinfer1::IPluginCreatorV3One
+class GatherSegmentCSRPluginCreator : public nvinfer1::IPluginCreatorV3One
 {
 public:
-  PTv3SerializedPoolingPluginCreator();
+  GatherSegmentCSRPluginCreator();
 
-  ~PTv3SerializedPoolingPluginCreator() override = default;
+  ~GatherSegmentCSRPluginCreator() override = default;
 
   char const * getPluginNamespace() const noexcept override
   {
-    return kPTV3_SERIALIZED_POOLING_PLUGIN_NAMESPACE;
+    return kGATHER_SEGMENT_CSR_PLUGIN_NAMESPACE;
   }
 
-  char const * getPluginName() const noexcept override
-  {
-    return kPTV3_SERIALIZED_POOLING_PLUGIN_NAME;
-  }
+  char const * getPluginName() const noexcept override { return kGATHER_SEGMENT_CSR_PLUGIN_NAME; }
 
   char const * getPluginVersion() const noexcept override
   {
-    return kPTV3_SERIALIZED_POOLING_PLUGIN_VERSION;
+    return kGATHER_SEGMENT_CSR_PLUGIN_VERSION;
   }
 
   nvinfer1::PluginFieldCollection const * getFieldNames() noexcept override;
@@ -57,6 +54,6 @@ private:
   std::vector<nvinfer1::PluginField> plugin_attributes_;
 };
 
-}  // namespace autoware::ptv3
+}  // namespace autoware::tensorrt_plugins
 
-#endif  // AUTOWARE__TENSORRT_PLUGINS__SERIALIZED_POOLING_PLUGIN_CREATOR_HPP_
+#endif  // AUTOWARE__TENSORRT_PLUGINS__GATHER_SEGMENT_CSR_PLUGIN_CREATOR_HPP_

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/ptv3_ops/serialized_pooling.hpp"
+#include "autoware/scatter_ops/gather_segment_csr.hpp"
 
 #include <cuda_fp16.h>
 #include <cuda_runtime_api.h>
 
 #include <cstdint>
 
-namespace autoware::ptv3
+namespace autoware::scatter_ops
 {
 namespace
 {
@@ -46,35 +46,35 @@ struct FeatureCast<half>
 };
 
 /// Returns the neutral accumulator value for the requested reduction mode.
-__device__ float initial_value(SerializedPoolingReduce reduce_in)
+__device__ float initial_value(GatherSegmentCSRReduce reduce_in)
 {
-  if (reduce_in == SerializedPoolingReduce::kMin) {
+  if (reduce_in == GatherSegmentCSRReduce::kMin) {
     return kFloatMax;
   }
-  if (reduce_in == SerializedPoolingReduce::kMax) {
+  if (reduce_in == GatherSegmentCSRReduce::kMax) {
     return -kFloatMax;
   }
   return 0.0F;
 }
 
 /// Merges one source value into the current accumulator for sum/mean/min/max reductions.
-__device__ float update_value(float current_in, float next_in, SerializedPoolingReduce reduce_in)
+__device__ float update_value(float current_in, float next_in, GatherSegmentCSRReduce reduce_in)
 {
-  if (reduce_in == SerializedPoolingReduce::kMin) {
+  if (reduce_in == GatherSegmentCSRReduce::kMin) {
     return fminf(current_in, next_in);
   }
-  if (reduce_in == SerializedPoolingReduce::kMax) {
+  if (reduce_in == GatherSegmentCSRReduce::kMax) {
     return fmaxf(current_in, next_in);
   }
   return current_in + next_in;
 }
 
-/// Reduces one `(output voxel, feature channel)` element from a CSR voxel group.
+/// Reduces one `(output segment, feature channel)` element from a gathered CSR group.
 template <typename Scalar>
 __global__ void reduce_features_kernel(
   const Scalar * feature_in, const std::int64_t * indices_in, const std::int64_t * indptr_in,
   Scalar * feature_out, std::int32_t num_segments_in, std::int32_t num_channels_in,
-  SerializedPoolingReduce reduce_in)
+  GatherSegmentCSRReduce reduce_in)
 {
   const auto linear_index = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
   const auto output_size =
@@ -99,14 +99,14 @@ __global__ void reduce_features_kernel(
 
   if (count == 0) {
     value = 0.0F;
-  } else if (reduce_in == SerializedPoolingReduce::kMean) {
+  } else if (reduce_in == GatherSegmentCSRReduce::kMean) {
     value /= static_cast<float>(count);
   }
 
   feature_out[linear_index] = FeatureCast<Scalar>::fromFloat(value);
 }
 
-/// Computes representative output coordinates from the same CSR groups used for features.
+/// Averages output coordinates from the same gathered CSR groups used for features.
 __global__ void reduce_coords_mean_kernel(
   const float * coord_in, const std::int64_t * indices_in, const std::int64_t * indptr_in,
   float * coord_out, std::int32_t num_segments_in)
@@ -133,13 +133,13 @@ __global__ void reduce_coords_mean_kernel(
   coord_out[linear_index] = count == 0 ? 0.0F : value / static_cast<float>(count);
 }
 
-/// Launches feature and coordinate reductions for one serialized-pooling stage.
+/// Launches feature and coordinate reductions for one gathered CSR stage.
 template <typename Scalar>
-cudaError_t serialized_pooling(
+cudaError_t gather_segment_csr(
   const Scalar * feature_in, const float * coord_in, const std::int64_t * indices_in,
   const std::int64_t * indptr_in, Scalar * feature_out, float * coord_out,
   std::int32_t num_segments_in, std::int32_t num_channels_in,
-  SerializedPoolingReduce feature_reduce_in, cudaStream_t stream_in)
+  GatherSegmentCSRReduce feature_reduce_in, cudaStream_t stream_in)
 {
   if (num_segments_in < 0 || num_channels_in <= 0) {
     return cudaErrorInvalidValue;
@@ -175,26 +175,26 @@ cudaError_t serialized_pooling(
 
 }  // namespace
 
-cudaError_t serialized_pooling_float(
+cudaError_t gather_segment_csr_float(
   const float * feature_in, const float * coord_in, const std::int64_t * indices_in,
   const std::int64_t * indptr_in, float * feature_out, float * coord_out,
   std::int32_t num_segments_in, std::int32_t num_channels_in,
-  SerializedPoolingReduce feature_reduce_in, cudaStream_t stream_in)
+  GatherSegmentCSRReduce feature_reduce_in, cudaStream_t stream_in)
 {
-  return serialized_pooling(
+  return gather_segment_csr(
     feature_in, coord_in, indices_in, indptr_in, feature_out, coord_out, num_segments_in,
     num_channels_in, feature_reduce_in, stream_in);
 }
 
-cudaError_t serialized_pooling_half(
+cudaError_t gather_segment_csr_half(
   const half * feature_in, const float * coord_in, const std::int64_t * indices_in,
   const std::int64_t * indptr_in, half * feature_out, float * coord_out,
   std::int32_t num_segments_in, std::int32_t num_channels_in,
-  SerializedPoolingReduce feature_reduce_in, cudaStream_t stream_in)
+  GatherSegmentCSRReduce feature_reduce_in, cudaStream_t stream_in)
 {
-  return serialized_pooling(
+  return gather_segment_csr(
     feature_in, coord_in, indices_in, indptr_in, feature_out, coord_out, num_segments_in,
     num_channels_in, feature_reduce_in, stream_in);
 }
 
-}  // namespace autoware::ptv3
+}  // namespace autoware::scatter_ops

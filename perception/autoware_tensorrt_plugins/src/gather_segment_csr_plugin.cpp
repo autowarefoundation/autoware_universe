@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/tensorrt_plugins/serialized_pooling_plugin.hpp"
+#include "autoware/tensorrt_plugins/gather_segment_csr_plugin.hpp"
 
-#include "autoware/ptv3_ops/serialized_pooling.hpp"
+#include "autoware/scatter_ops/gather_segment_csr.hpp"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
 
 #include <NvInferRuntime.h>
@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::ptv3
+namespace autoware::tensorrt_plugins
 {
 namespace
 {
@@ -40,31 +40,30 @@ bool isFeatureType(nvinfer1::DataType type_in)
 
 }  // namespace
 
-SerializedPoolingReduce parseSerializedPoolingReduce(const std::string & reduce)
+scatter_ops::GatherSegmentCSRReduce parseGatherSegmentCSRReduce(const std::string & reduce)
 {
   if (reduce == "sum") {
-    return SerializedPoolingReduce::kSum;
+    return scatter_ops::GatherSegmentCSRReduce::kSum;
   }
   if (reduce == "mean") {
-    return SerializedPoolingReduce::kMean;
+    return scatter_ops::GatherSegmentCSRReduce::kMean;
   }
   if (reduce == "min") {
-    return SerializedPoolingReduce::kMin;
+    return scatter_ops::GatherSegmentCSRReduce::kMin;
   }
   if (reduce == "max") {
-    return SerializedPoolingReduce::kMax;
+    return scatter_ops::GatherSegmentCSRReduce::kMax;
   }
-  throw std::invalid_argument("Unsupported PTv3SerializedPooling reduce mode: " + reduce);
+  throw std::invalid_argument("Unsupported GatherSegmentCSR reduce mode: " + reduce);
 }
 
-PTv3SerializedPoolingPlugin::PTv3SerializedPoolingPlugin(
-  const std::string & name, const std::string & reduce)
-: layer_name_{name}, reduce_{reduce}, reduce_type_{parseSerializedPoolingReduce(reduce)}
+GatherSegmentCSRPlugin::GatherSegmentCSRPlugin(const std::string & name, const std::string & reduce)
+: layer_name_{name}, reduce_{reduce}, reduce_type_{parseGatherSegmentCSRReduce(reduce)}
 {
   initFieldsToSerialize();
 }
 
-void PTv3SerializedPoolingPlugin::initFieldsToSerialize()
+void GatherSegmentCSRPlugin::initFieldsToSerialize()
 {
   data_to_serialize_.clear();
   data_to_serialize_.emplace_back(
@@ -74,7 +73,7 @@ void PTv3SerializedPoolingPlugin::initFieldsToSerialize()
   fc_to_serialize_.fields = data_to_serialize_.data();
 }
 
-nvinfer1::IPluginCapability * PTv3SerializedPoolingPlugin::getCapabilityInterface(
+nvinfer1::IPluginCapability * GatherSegmentCSRPlugin::getCapabilityInterface(
   nvinfer1::PluginCapabilityType type) noexcept
 {
   try {
@@ -92,37 +91,37 @@ nvinfer1::IPluginCapability * PTv3SerializedPoolingPlugin::getCapabilityInterfac
   return nullptr;
 }
 
-nvinfer1::IPluginV3 * PTv3SerializedPoolingPlugin::clone() noexcept
+nvinfer1::IPluginV3 * GatherSegmentCSRPlugin::clone() noexcept
 {
   try {
-    return new PTv3SerializedPoolingPlugin{layer_name_, reduce_};
+    return new GatherSegmentCSRPlugin{layer_name_, reduce_};
   } catch (std::exception const & e) {
     caughtError(e);
   }
   return nullptr;
 }
 
-char const * PTv3SerializedPoolingPlugin::getPluginName() const noexcept
+char const * GatherSegmentCSRPlugin::getPluginName() const noexcept
 {
-  return kPTV3_SERIALIZED_POOLING_PLUGIN_NAME;
+  return kGATHER_SEGMENT_CSR_PLUGIN_NAME;
 }
 
-char const * PTv3SerializedPoolingPlugin::getPluginVersion() const noexcept
+char const * GatherSegmentCSRPlugin::getPluginVersion() const noexcept
 {
-  return kPTV3_SERIALIZED_POOLING_PLUGIN_VERSION;
+  return kGATHER_SEGMENT_CSR_PLUGIN_VERSION;
 }
 
-char const * PTv3SerializedPoolingPlugin::getPluginNamespace() const noexcept
+char const * GatherSegmentCSRPlugin::getPluginNamespace() const noexcept
 {
-  return kPTV3_SERIALIZED_POOLING_PLUGIN_NAMESPACE;
+  return kGATHER_SEGMENT_CSR_PLUGIN_NAMESPACE;
 }
 
-std::int32_t PTv3SerializedPoolingPlugin::getNbOutputs() const noexcept
+std::int32_t GatherSegmentCSRPlugin::getNbOutputs() const noexcept
 {
   return 2;
 }
 
-std::int32_t PTv3SerializedPoolingPlugin::configurePlugin(
+std::int32_t GatherSegmentCSRPlugin::configurePlugin(
   nvinfer1::DynamicPluginTensorDesc const * in, std::int32_t num_inputs,
   nvinfer1::DynamicPluginTensorDesc const * out, std::int32_t num_outputs) noexcept
 {
@@ -142,7 +141,7 @@ std::int32_t PTv3SerializedPoolingPlugin::configurePlugin(
   return 0;
 }
 
-bool PTv3SerializedPoolingPlugin::supportsFormatCombination(
+bool GatherSegmentCSRPlugin::supportsFormatCombination(
   std::int32_t pos, nvinfer1::DynamicPluginTensorDesc const * in_out, std::int32_t num_inputs,
   std::int32_t num_outputs) noexcept
 {
@@ -175,7 +174,7 @@ bool PTv3SerializedPoolingPlugin::supportsFormatCombination(
   return supported;
 }
 
-std::int32_t PTv3SerializedPoolingPlugin::getOutputDataTypes(
+std::int32_t GatherSegmentCSRPlugin::getOutputDataTypes(
   nvinfer1::DataType * output_types, std::int32_t num_outputs,
   nvinfer1::DataType const * input_types, std::int32_t num_inputs) const noexcept
 {
@@ -188,7 +187,7 @@ std::int32_t PTv3SerializedPoolingPlugin::getOutputDataTypes(
   return 0;
 }
 
-std::int32_t PTv3SerializedPoolingPlugin::getOutputShapes(
+std::int32_t GatherSegmentCSRPlugin::getOutputShapes(
   nvinfer1::DimsExprs const * inputs, std::int32_t num_inputs,
   [[maybe_unused]] nvinfer1::DimsExprs const * shape_inputs,
   [[maybe_unused]] std::int32_t num_shape_inputs, nvinfer1::DimsExprs * outputs,
@@ -214,7 +213,7 @@ std::int32_t PTv3SerializedPoolingPlugin::getOutputShapes(
   return 0;
 }
 
-std::int32_t PTv3SerializedPoolingPlugin::enqueue(
+std::int32_t GatherSegmentCSRPlugin::enqueue(
   nvinfer1::PluginTensorDesc const * input_desc,
   [[maybe_unused]] nvinfer1::PluginTensorDesc const * output_desc, void const * const * inputs,
   void * const * outputs, [[maybe_unused]] void * workspace, cudaStream_t stream) noexcept
@@ -228,12 +227,12 @@ std::int32_t PTv3SerializedPoolingPlugin::enqueue(
 
   cudaError_t status = cudaErrorInvalidValue;
   if (input_desc[kFeatureInput].type == nvinfer1::DataType::kFLOAT) {
-    status = serialized_pooling_float(
+    status = scatter_ops::gather_segment_csr_float(
       static_cast<const float *>(inputs[kFeatureInput]), coord_in, indices_in, indptr_in,
       static_cast<float *>(outputs[0]), coord_out, num_segments, num_channels, reduce_type_,
       stream);
   } else if (input_desc[kFeatureInput].type == nvinfer1::DataType::kHALF) {
-    status = serialized_pooling_half(
+    status = scatter_ops::gather_segment_csr_half(
       static_cast<const half *>(inputs[kFeatureInput]), coord_in, indices_in, indptr_in,
       static_cast<half *>(outputs[0]), coord_out, num_segments, num_channels, reduce_type_, stream);
   }
@@ -241,7 +240,7 @@ std::int32_t PTv3SerializedPoolingPlugin::enqueue(
   return status == cudaSuccess ? 0 : -1;
 }
 
-std::int32_t PTv3SerializedPoolingPlugin::onShapeChange(
+std::int32_t GatherSegmentCSRPlugin::onShapeChange(
   [[maybe_unused]] nvinfer1::PluginTensorDesc const * in, [[maybe_unused]] std::int32_t num_inputs,
   [[maybe_unused]] nvinfer1::PluginTensorDesc const * out,
   [[maybe_unused]] std::int32_t num_outputs) noexcept
@@ -249,18 +248,18 @@ std::int32_t PTv3SerializedPoolingPlugin::onShapeChange(
   return 0;
 }
 
-nvinfer1::IPluginV3 * PTv3SerializedPoolingPlugin::attachToContext(
+nvinfer1::IPluginV3 * GatherSegmentCSRPlugin::attachToContext(
   [[maybe_unused]] nvinfer1::IPluginResourceContext * context) noexcept
 {
   return clone();
 }
 
-nvinfer1::PluginFieldCollection const * PTv3SerializedPoolingPlugin::getFieldsToSerialize() noexcept
+nvinfer1::PluginFieldCollection const * GatherSegmentCSRPlugin::getFieldsToSerialize() noexcept
 {
   return &fc_to_serialize_;
 }
 
-std::size_t PTv3SerializedPoolingPlugin::getWorkspaceSize(
+std::size_t GatherSegmentCSRPlugin::getWorkspaceSize(
   [[maybe_unused]] nvinfer1::DynamicPluginTensorDesc const * inputs,
   [[maybe_unused]] std::int32_t num_inputs,
   [[maybe_unused]] nvinfer1::DynamicPluginTensorDesc const * outputs,
@@ -269,4 +268,4 @@ std::size_t PTv3SerializedPoolingPlugin::getWorkspaceSize(
   return 0;
 }
 
-}  // namespace autoware::ptv3
+}  // namespace autoware::tensorrt_plugins
