@@ -32,7 +32,6 @@
 #include <tf2_ros/buffer.h>
 
 #include <functional>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -54,15 +53,10 @@ struct MultiObjectTrackerParameters
 
   std::vector<types::InputChannel> input_channels_config;
 
-  AssociatorConfig::LabelToTrackerAssociationParametersMap association_params_map;
-  std::map<std::string, std::string> tracker_type_map;
-  TrackedLabelThresholds pruning_giou_thresholds;
-  TrackedLabelThresholds pruning_distance_thresholds;
-
   // Induced parameters
   TrackerCreationConfig creation_config;
+  TrackerAssociationConfig association_config;
   TrackerOverlapManagerConfig tracker_overlap_manager_config;
-  AssociatorConfig associator_config;
 };
 
 struct MultiObjectTrackerInternalState
