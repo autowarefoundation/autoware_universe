@@ -536,30 +536,8 @@ void VehicleTracker::updateFootprint(
     return;
   }
 
-  // Transform footprint: detection local → world → tracker local.
-  //   p_trk = R_trk^T · R_det · p_det  +  R_trk^T · (t_det − t_trk)
-  // Since R_trk^T · R_det = R(det_yaw − trk_yaw), this is a rotation by Δyaw plus
-  // the origin offset projected into the tracker's local axes.
-  const double det_yaw = tf2::getYaw(object.pose.orientation);
-  const double trk_yaw = tf2::getYaw(tracker_pose.orientation);
-  const double d_yaw = det_yaw - trk_yaw;
-  const double cos_d = std::cos(d_yaw);
-  const double sin_d = std::sin(d_yaw);
-  const double cos_t = std::cos(trk_yaw);
-  const double sin_t = std::sin(trk_yaw);
-  const double dx = object.pose.position.x - tracker_pose.position.x;
-  const double dy = object.pose.position.y - tracker_pose.position.y;
-  const double t_x = cos_t * dx + sin_t * dy;
-  const double t_y = -sin_t * dx + cos_t * dy;
-
-  const auto & src = object.shape.footprint.points;
-  auto & dst = object_.shape.footprint.points;
-  dst.resize(src.size());
-  for (size_t i = 0; i < src.size(); ++i) {
-    dst[i].x = static_cast<float>(cos_d * src[i].x - sin_d * src[i].y + t_x);
-    dst[i].y = static_cast<float>(sin_d * src[i].x + cos_d * src[i].y + t_y);
-    dst[i].z = src[i].z;
-  }
+  object_.shape.footprint =
+    shapes::transformFootprint(object.shape.footprint, object.pose, tracker_pose);
   last_footprint_update_time_ = time;
 }
 

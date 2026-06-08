@@ -58,6 +58,12 @@ std::pair<double, double> getObjectZRange(const types::DynamicObject & object);
 double get3dGeneralizedIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object);
 
+// Transform polygon footprint points from src_pose's local frame into dst_pose's local frame.
+// Equivalent to: p_dst = R_dst^T * (R_src * p_src + t_src - t_dst)
+geometry_msgs::msg::Polygon transformFootprint(
+  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+  const geometry_msgs::msg::Pose & dst_pose);
+
 }  // namespace shapes
 }  // namespace autoware::multi_object_tracker
 

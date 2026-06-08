@@ -15,6 +15,7 @@
 #include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 
 #include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <tf2/utils.hpp>
@@ -234,27 +235,12 @@ void TrackerOverlapManager::merge(
         // be re-expressed in the winner's local frame before merging.
         const bool absorbed_has_footprint = !data2.object.shape.footprint.points.empty();
         if (absorbed_has_footprint) {
-          // Transform: absorbed local → world → winner local
-          const double abs_yaw = tf2::getYaw(data2.object.pose.orientation);
-          const double win_yaw = tf2::getYaw(data1.object.pose.orientation);
-          const double d_yaw = abs_yaw - win_yaw;
-          const double cos_d = std::cos(d_yaw);
-          const double sin_d = std::sin(d_yaw);
-          const double cos_w = std::cos(win_yaw);
-          const double sin_w = std::sin(win_yaw);
-          const double dx = data2.object.pose.position.x - data1.object.pose.position.x;
-          const double dy = data2.object.pose.position.y - data1.object.pose.position.y;
-          const double t_x = cos_w * dx + sin_w * dy;
-          const double t_y = -sin_w * dx + cos_w * dy;
-
+          const auto transformed = shapes::transformFootprint(
+            data2.object.shape.footprint, data2.object.pose, data1.object.pose);
           auto merged_shape = data1.object.shape;
-          for (const auto & p : data2.object.shape.footprint.points) {
-            geometry_msgs::msg::Point32 out;
-            out.x = static_cast<float>(cos_d * p.x - sin_d * p.y + t_x);
-            out.y = static_cast<float>(sin_d * p.x + cos_d * p.y + t_y);
-            out.z = p.z;
-            merged_shape.footprint.points.push_back(out);
-          }
+          merged_shape.footprint.points.insert(
+            merged_shape.footprint.points.end(), transformed.points.begin(),
+            transformed.points.end());
           data1.tracker->setObjectShape(merged_shape);
         }
 

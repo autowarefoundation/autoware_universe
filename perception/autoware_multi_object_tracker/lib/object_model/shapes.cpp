@@ -397,6 +397,33 @@ double get3dGeneralizedIoU(
   return iou - (convex_area - union_area) / convex_area;
 }
 
+geometry_msgs::msg::Polygon transformFootprint(
+  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+  const geometry_msgs::msg::Pose & dst_pose)
+{
+  const double src_yaw = tf2::getYaw(src_pose.orientation);
+  const double dst_yaw = tf2::getYaw(dst_pose.orientation);
+  const double d_yaw = src_yaw - dst_yaw;
+  const double cos_d = std::cos(d_yaw);
+  const double sin_d = std::sin(d_yaw);
+  const double cos_dst = std::cos(dst_yaw);
+  const double sin_dst = std::sin(dst_yaw);
+  const double wx = src_pose.position.x - dst_pose.position.x;
+  const double wy = src_pose.position.y - dst_pose.position.y;
+  const double t_x = cos_dst * wx + sin_dst * wy;
+  const double t_y = -sin_dst * wx + cos_dst * wy;
+
+  geometry_msgs::msg::Polygon result;
+  result.points.resize(footprint.points.size());
+  for (size_t i = 0; i < footprint.points.size(); ++i) {
+    const auto & p = footprint.points[i];
+    result.points[i].x = static_cast<float>(cos_d * p.x - sin_d * p.y + t_x);
+    result.points[i].y = static_cast<float>(sin_d * p.x + cos_d * p.y + t_y);
+    result.points[i].z = p.z;
+  }
+  return result;
+}
+
 }  // namespace shapes
 
 }  // namespace autoware::multi_object_tracker
