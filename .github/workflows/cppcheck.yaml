@@ -20,12 +20,12 @@ jobs:
           apt-get update
           apt-get install -y cppcheck
 
-      # cspell: ignore suppr Dslots
+      # cspell: ignore suppr Dslots DAUTOWARE
       - name: Run Cppcheck on all files
         continue-on-error: true
         id: cppcheck
         run: |
-          cppcheck --enable=all --inconclusive --check-level=exhaustive -D'PLUGINLIB_EXPORT_CLASS(class_type, base_class)=' -Dslots= -DQ_SLOTS= --error-exitcode=1 --xml --suppressions-list=.cppcheck_suppressions --inline-suppr . 2> cppcheck-report.xml
+          cppcheck --enable=all --inconclusive --check-level=exhaustive -D'PLUGINLIB_EXPORT_CLASS(class_type, base_class)=' -Dslots= -DQ_SLOTS= -D'AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT)=std::unique_ptr<MessageT>' -D'AUTOWARE_MESSAGE_SHARED_PTR(MessageT)=std::shared_ptr<MessageT>' -D'AUTOWARE_MESSAGE_CONST_SHARED_PTR(MessageT)=std::shared_ptr<const MessageT>' -D'AUTOWARE_SUBSCRIPTION_PTR(MessageT)=rclcpp::Subscription<MessageT>::SharedPtr' -D'AUTOWARE_PUBLISHER_PTR(MessageT)=rclcpp::Publisher<MessageT>::SharedPtr' -D'AUTOWARE_POLLING_SUBSCRIBER_PTR(MessageT)=autoware_utils_rclcpp::InterProcessPollingSubscriber<MessageT>::SharedPtr' -DAUTOWARE_TIMER_PTR=rclcpp::TimerBase::SharedPtr -D'AUTOWARE_CREATE_SUBSCRIPTION(message_type, topic, qos, callback, options)=this->create_subscription<message_type>(topic, qos, callback, options)' -D'AUTOWARE_CREATE_PUBLISHER2(message_type, arg1, arg2)=this->create_publisher<message_type>(arg1, arg2)' -D'AUTOWARE_CREATE_PUBLISHER3(message_type, arg1, arg2, arg3)=this->create_publisher<message_type>(arg1, arg2, arg3)' -D'AUTOWARE_CREATE_POLLING_SUBSCRIBER(message_type, topic, qos)=autoware_utils_rclcpp::InterProcessPollingSubscriber<message_type>::create_subscription(this, topic, qos)' -DAUTOWARE_SUBSCRIPTION_OPTIONS=rclcpp::SubscriptionOptions -DAUTOWARE_PUBLISHER_OPTIONS=rclcpp::PublisherOptions -D'ALLOCATE_OUTPUT_MESSAGE_UNIQUE(publisher)=std::make_unique<std::remove_reference<decltype(*publisher)>::type::ROSMessageType>()' -D'ALLOCATE_OUTPUT_MESSAGE_SHARED(publisher)=std::make_shared<std::remove_reference<decltype(*publisher)>::type::ROSMessageType>()' --error-exitcode=1 --xml --suppressions-list=.cppcheck_suppressions --inline-suppr . 2> cppcheck-report.xml
         shell: bash
 
       - name: Count errors by error ID and severity

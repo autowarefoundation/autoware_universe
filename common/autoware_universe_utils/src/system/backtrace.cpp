@@ -47,7 +47,7 @@ void print_backtrace()
   }
   RCLCPP_DEBUG_STREAM(rclcpp::get_logger("autoware_universe_utils"), ss.str());
 
-  free(symbol_list);
+  free(reinterpret_cast<void *>(symbol_list));
 }
 
 }  // namespace autoware::universe_utils

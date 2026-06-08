@@ -1,97 +1,80 @@
 /**:
   ros__parameters:
-    association:
-      can_assign:
-        unknown: [polygon_tracker]
-        car: [multi_vehicle_tracker]
-        truck: [multi_vehicle_tracker]
-        bus: [multi_vehicle_tracker]
-        trailer: [multi_vehicle_tracker]
-        motorcycle: [pedestrian_and_bicycle_tracker]
-        bicycle: [pedestrian_and_bicycle_tracker]
-        pedestrian: [pedestrian_and_bicycle_tracker]
+    # tracker_assignment: unified (shape, label) → {create, match}.
+    # 'create': which tracker to spawn for a new detection.
+    # 'match':  ordered list of tracker types eligible for association.
+    # Each (shape, label) should be listed explicitly.
+    # create: "null" — explicitly not accepted: silently ignored at runtime.
+    # Omitted entries — implicitly not accepted: a throttled error is emitted at runtime.
+    tracker_assignment:
+      bounding_box:
+        unknown:    {create: multi_vehicle_tracker,          match: [multi_vehicle_tracker, pedestrian_and_bicycle_tracker]}
+        car:        {create: multi_vehicle_tracker,          match: [multi_vehicle_tracker]}
+        truck:      {create: multi_vehicle_tracker,          match: [multi_vehicle_tracker]}
+        bus:        {create: multi_vehicle_tracker,          match: [multi_vehicle_tracker]}
+        trailer:    {create: multi_vehicle_tracker,          match: [multi_vehicle_tracker]}
+        motorcycle: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
+        bicycle:    {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
+        pedestrian: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
+      polygon:
+        unknown:    {create: polygon_tracker,                match: [polygon_tracker, multi_vehicle_tracker, pedestrian_and_bicycle_tracker]}
+        car:        {create: polygon_tracker,                match: [polygon_tracker, multi_vehicle_tracker]}
+        truck:      {create: polygon_tracker,                match: [polygon_tracker, multi_vehicle_tracker]}
+        bus:        {create: polygon_tracker,                match: [polygon_tracker, multi_vehicle_tracker]}
+        trailer:    {create: polygon_tracker,                match: [polygon_tracker, multi_vehicle_tracker]}
+        motorcycle: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
+        bicycle:    {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
+        pedestrian: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
+      cylinder:
+        unknown:    {create: "null"}
+        car:        {create: "null"}
+        truck:      {create: "null"}
+        bus:        {create: "null"}
+        trailer:    {create: "null"}
+        motorcycle: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
+        bicycle:    {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
+        pedestrian: {create: pedestrian_and_bicycle_tracker, match: [pedestrian_and_bicycle_tracker]}
 
-      # The effective (measurement_label, tracker_type) combination is determined by
-      # association.can_assign.<measurement_label>: [tracker_type, ...]
-      # Only listed tracker types are evaluated.
-      max_dist:
-        unknown:
-          polygon_tracker: 4.0
-          multi_vehicle_tracker: 4.0
-          pedestrian_and_bicycle_tracker: 3.0
-        car:
-          multi_vehicle_tracker: 5.0
-        truck:
-          multi_vehicle_tracker: 5.0
-        bus:
-          multi_vehicle_tracker: 5.0
-        trailer:
-          multi_vehicle_tracker: 5.0
-        motorcycle:
-          pedestrian_and_bicycle_tracker: 3.0
-        bicycle:
-          pedestrian_and_bicycle_tracker: 3.0
-        pedestrian:
-          pedestrian_and_bicycle_tracker: 2.0
-
-      max_area:
-        unknown:
-          polygon_tracker: 100.0
-          multi_vehicle_tracker: 60.0
-          pedestrian_and_bicycle_tracker: 2.5
-        car:
-          multi_vehicle_tracker: 12.10
-        truck:
-          multi_vehicle_tracker: 36.00
-        bus:
-          multi_vehicle_tracker: 60.00
-        trailer:
-          multi_vehicle_tracker: 60.00
-        motorcycle:
-          pedestrian_and_bicycle_tracker: 2.50
-        bicycle:
-          pedestrian_and_bicycle_tracker: 2.50
-        pedestrian:
-          pedestrian_and_bicycle_tracker: 2.00
-
-      min_area:
-        unknown:
-          polygon_tracker: 0.0
-          multi_vehicle_tracker: 3.6
-          pedestrian_and_bicycle_tracker: 0.001
-        car:
-          multi_vehicle_tracker: 3.6
-        truck:
-          multi_vehicle_tracker: 6.0
-        bus:
-          multi_vehicle_tracker: 10.0
-        trailer:
-          multi_vehicle_tracker: 10.0
-        motorcycle:
-          pedestrian_and_bicycle_tracker: 0.1
-        bicycle:
-          pedestrian_and_bicycle_tracker: 0.1
-        pedestrian:
-          pedestrian_and_bicycle_tracker: 0.1
-
-      min_iou:
-        unknown:
-          polygon_tracker: 0.0001
-          multi_vehicle_tracker: 0.0001
-          pedestrian_and_bicycle_tracker: 0.0001
-        car:
-          multi_vehicle_tracker: 0.0001
-        truck:
-          multi_vehicle_tracker: 0.10
-        bus:
-          multi_vehicle_tracker: 0.10
-        trailer:
-          multi_vehicle_tracker: 0.10
-        motorcycle:
-          pedestrian_and_bicycle_tracker: -0.30
-        bicycle:
-          pedestrian_and_bicycle_tracker: 0.0001
-        pedestrian:
-          pedestrian_and_bicycle_tracker: 0.0001
+    # Tracker profiles: each tracker type defines its association thresholds per label.
+    # Only labels where the tracker is actually used are listed.
+    tracker_profiles:
+      multi_vehicle_tracker:
+        bounding_box:
+          unknown:  {max_dist: 4.0, max_area: 60.0,  min_area: 3.6,   min_iou: 0.0001}
+          car:      {max_dist: 5.0, max_area: 12.10, min_area: 3.6,   min_iou: 0.0001}
+          truck:    {max_dist: 5.0, max_area: 36.00, min_area: 6.0,   min_iou: 0.10}
+          bus:      {max_dist: 5.0, max_area: 60.00, min_area: 10.0,  min_iou: 0.10}
+          trailer:  {max_dist: 5.0, max_area: 60.00, min_area: 10.0,  min_iou: 0.10}
+        polygon:
+          unknown:  {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
+          car:      {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
+          truck:    {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
+          bus:      {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
+          trailer:  {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
+      pedestrian_and_bicycle_tracker:
+        bounding_box:
+          unknown:    {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
+          motorcycle: {max_dist: 3.0, max_area: 2.5, min_area: 0.1,   min_iou: -0.30}
+          bicycle:    {max_dist: 3.0, max_area: 2.5, min_area: 0.1,   min_iou: 0.0001}
+          pedestrian: {max_dist: 2.0, max_area: 2.0, min_area: 0.1,   min_iou: 0.0001}
+        cylinder:
+          motorcycle: {max_dist: 3.0, max_area: 2.5, min_area: 0.1,   min_iou: -0.30}
+          bicycle:    {max_dist: 3.0, max_area: 2.5, min_area: 0.1,   min_iou: 0.0001}
+          pedestrian: {max_dist: 2.0, max_area: 2.0, min_area: 0.1,   min_iou: 0.0001}
+        polygon:
+          unknown:    {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
+          motorcycle: {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
+          bicycle:    {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
+          pedestrian: {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
+      polygon_tracker:
+        polygon:
+          unknown:    {max_dist: 4.0, max_area: 100.0, min_area: 0.0, min_iou: 0.0001}
+          car:        {max_dist: 5.0, max_area: 100.0, min_area: 0.0, min_iou: 0.0001}
+          truck:      {max_dist: 5.0, max_area: 100.0, min_area: 0.0, min_iou: 0.0001}
+          bus:        {max_dist: 5.0, max_area: 100.0, min_area: 0.0, min_iou: 0.0001}
+          trailer:    {max_dist: 5.0, max_area: 100.0, min_area: 0.0, min_iou: 0.0001}
+          motorcycle: {max_dist: 3.0, max_area: 2.50,  min_area: 0.0, min_iou: -0.30}
+          bicycle:    {max_dist: 3.0, max_area: 2.50,  min_area: 0.0, min_iou: 0.0001}
+          pedestrian: {max_dist: 2.0, max_area: 2.00,  min_area: 0.0, min_iou: 0.0001}
 
     unknown_association_giou_threshold: -0.8  # GIoU threshold for unknown-unknown association
