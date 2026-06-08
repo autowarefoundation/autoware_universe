@@ -321,9 +321,6 @@ bool VehicleTracker::conditionedUpdate(
   const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
   const types::InputChannel & channel_info)
 {
-  // Layer 2: update stored polygon footprint from original measurement (before alignment)
-  updateFootprint(measurement, measurement_time);
-
   // For cluster measurements, re-project the footprint onto the tracker heading before strategy
   // selection. nullopt is returned when there are no footprint points.
   const auto aligned = shapes::alignClusterToOrientation(measurement, motion_model_.getYawState());
@@ -342,6 +339,10 @@ bool VehicleTracker::conditionedUpdate(
 
     // Apply the weak measurement update using existing mechanism
     measure(pseudo_measurement, measurement_time, channel_info);
+
+    // Store measurement footprint after the weak kinematic update so the frame transform
+    // in updateFootprint() uses the post-update tracker pose.
+    updateFootprint(measurement, measurement_time);
 
     return true;
   }
@@ -364,6 +365,8 @@ bool VehicleTracker::conditionedUpdate(
       motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
   }
 
+  // Store measurement footprint after the wheel-anchor kinematic update.
+  updateFootprint(measurement, measurement_time);
   removeCache();
 
   return is_updated;
@@ -516,15 +519,48 @@ void VehicleTracker::updateFootprint(
   const types::DynamicObject & object, const rclcpp::Time & time)
 {
   using Shape = autoware_perception_msgs::msg::Shape;
-  const bool is_bbox_with_poly =
-    (object.shape.type == Shape::BOUNDING_BOX) && !object.shape.footprint.points.empty();
-  const bool is_polygon_only = (object.shape.type == Shape::POLYGON);
+  const bool has_poly =
+    ((object.shape.type == Shape::BOUNDING_BOX) && !object.shape.footprint.points.empty()) ||
+    (object.shape.type == Shape::POLYGON);
+  if (!has_poly) return;
 
-  if (is_bbox_with_poly || is_polygon_only) {
+  // Get tracker's current pose after kinematic update (dt=0 → EKF state as-is).
+  // If the motion model is not yet initialized (constructor path), fall back to direct copy
+  // because detection pose == tracker initial pose and no transform is needed.
+  geometry_msgs::msg::Pose tracker_pose;
+  std::array<double, 36> dummy_cov{};
+  geometry_msgs::msg::Twist dummy_twist;
+  if (!motion_model_.getPredictedState(time, tracker_pose, dummy_cov, dummy_twist, dummy_cov)) {
     object_.shape.footprint = object.shape.footprint;
     last_footprint_update_time_ = time;
+    return;
   }
-  // BBOX_ONLY: footprint stays in object_; exportShape() enforces time-based expiry on output
+
+  // Transform footprint: detection local → world → tracker local.
+  //   p_trk = R_trk^T · R_det · p_det  +  R_trk^T · (t_det − t_trk)
+  // Since R_trk^T · R_det = R(det_yaw − trk_yaw), this is a rotation by Δyaw plus
+  // the origin offset projected into the tracker's local axes.
+  const double det_yaw = tf2::getYaw(object.pose.orientation);
+  const double trk_yaw = tf2::getYaw(tracker_pose.orientation);
+  const double d_yaw = det_yaw - trk_yaw;
+  const double cos_d = std::cos(d_yaw);
+  const double sin_d = std::sin(d_yaw);
+  const double cos_t = std::cos(trk_yaw);
+  const double sin_t = std::sin(trk_yaw);
+  const double dx = object.pose.position.x - tracker_pose.position.x;
+  const double dy = object.pose.position.y - tracker_pose.position.y;
+  const double t_x = cos_t * dx + sin_t * dy;
+  const double t_y = -sin_t * dx + cos_t * dy;
+
+  const auto & src = object.shape.footprint.points;
+  auto & dst = object_.shape.footprint.points;
+  dst.resize(src.size());
+  for (size_t i = 0; i < src.size(); ++i) {
+    dst[i].x = static_cast<float>(cos_d * src[i].x - sin_d * src[i].y + t_x);
+    dst[i].y = static_cast<float>(sin_d * src[i].x + cos_d * src[i].y + t_y);
+    dst[i].z = src[i].z;
+  }
+  last_footprint_update_time_ = time;
 }
 
 void VehicleTracker::exportShape(types::DynamicObject & object) const
@@ -537,10 +573,10 @@ void VehicleTracker::exportShape(types::DynamicObject & object) const
     has_footprint && (object.time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
 
   if (footprint_fresh) {
-    object.shape.type = autoware_perception_msgs::msg::Shape::POLYGON;
+    // object.shape.type = autoware_perception_msgs::msg::Shape::POLYGON;
     object.shape.footprint = object_.shape.footprint;
   } else {
-    object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+    // object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
     object.shape.footprint.points.clear();
   }
 }
