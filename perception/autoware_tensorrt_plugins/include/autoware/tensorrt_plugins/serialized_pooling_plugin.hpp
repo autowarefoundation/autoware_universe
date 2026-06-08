@@ -112,6 +112,7 @@ private:
   nvinfer1::PluginFieldCollection fc_to_serialize_{};
 };
 
+/// Convert the ONNX plugin `reduce` attribute into the kernel reduction mode.
 SerializedPoolingReduce parseSerializedPoolingReduce(const std::string & reduce);
 
 }  // namespace autoware::ptv3

@@ -28,6 +28,7 @@ constexpr int kThreadsPerBlock = 256;
 constexpr int kCoordChannels = 3;
 constexpr float kFloatMax = 3.402823466e+38F;
 
+/// Converts feature values to and from the FP32 accumulator type used by all reductions.
 template <typename Scalar>
 struct FeatureCast
 {
@@ -44,6 +45,7 @@ struct FeatureCast<half>
   __device__ static half fromFloat(float value_in) { return __float2half(value_in); }
 };
 
+/// Returns the neutral accumulator value for the requested reduction mode.
 __device__ float initial_value(SerializedPoolingReduce reduce_in)
 {
   if (reduce_in == SerializedPoolingReduce::kMin) {
@@ -55,6 +57,7 @@ __device__ float initial_value(SerializedPoolingReduce reduce_in)
   return 0.0F;
 }
 
+/// Merges one source value into the current accumulator for sum/mean/min/max reductions.
 __device__ float update_value(float current_in, float next_in, SerializedPoolingReduce reduce_in)
 {
   if (reduce_in == SerializedPoolingReduce::kMin) {
@@ -66,6 +69,7 @@ __device__ float update_value(float current_in, float next_in, SerializedPooling
   return current_in + next_in;
 }
 
+/// Reduces one `(output voxel, feature channel)` element from a CSR voxel group.
 template <typename Scalar>
 __global__ void reduce_features_kernel(
   const Scalar * feature_in, const std::int64_t * indices_in, const std::int64_t * indptr_in,
@@ -102,6 +106,7 @@ __global__ void reduce_features_kernel(
   feature_out[linear_index] = FeatureCast<Scalar>::fromFloat(value);
 }
 
+/// Computes representative output coordinates from the same CSR groups used for features.
 __global__ void reduce_coords_mean_kernel(
   const float * coord_in, const std::int64_t * indices_in, const std::int64_t * indptr_in,
   float * coord_out, std::int32_t num_segments_in)
@@ -128,6 +133,7 @@ __global__ void reduce_coords_mean_kernel(
   coord_out[linear_index] = count == 0 ? 0.0F : value / static_cast<float>(count);
 }
 
+/// Launches feature and coordinate reductions for one serialized-pooling stage.
 template <typename Scalar>
 cudaError_t serialized_pooling(
   const Scalar * feature_in, const float * coord_in, const std::int64_t * indices_in,
