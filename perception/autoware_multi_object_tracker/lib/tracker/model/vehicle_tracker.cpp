@@ -82,7 +82,11 @@ VehicleTracker::VehicleTracker(
   // set maximum and minimum size
   limitObjectExtension(object_model_);
 
-  // Layer 2: initialize footprint from input
+  // Layer 2: initialize footprint before motion_model_.initialize().
+  // updateFootprint() calls getPredictedState(), which fails here (motion model not yet
+  // initialized) and takes the direct-copy path — no transform needed because detection
+  // pose == initial tracker pose. Keep this call before motion_model_.initialize().
+  footprint_valid_ = false;
   last_footprint_update_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
   updateFootprint(object, time);
 
@@ -218,7 +222,7 @@ bool VehicleTracker::measureWithPose(
   return is_updated;
 }
 
-bool VehicleTracker::measure(
+bool VehicleTracker::measureKinematics(
   const types::DynamicObject & in_object, const rclcpp::Time & time,
   const types::InputChannel & channel_info)
 {
@@ -251,15 +255,22 @@ bool VehicleTracker::measure(
   // update pose
   measureWithPose(updating_object, channel_info);
 
-  // Layer 2: update stored polygon footprint
-  updateFootprint(updating_object, time);
-
   // remove cached object
   removeCache();
 
   // reset anchor point for shape updates
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
 
+  return true;
+}
+
+bool VehicleTracker::measure(
+  const types::DynamicObject & in_object, const rclcpp::Time & time,
+  const types::InputChannel & channel_info)
+{
+  measureKinematics(in_object, time, channel_info);
+  // Layer 2: update stored polygon footprint using the original (unflipped) detection pose
+  updateFootprint(in_object, time);
   return true;
 }
 
@@ -337,11 +348,11 @@ bool VehicleTracker::conditionedUpdate(
     // Create pseudo measurement with enlarged covariance for weak update
     createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape, true);
 
-    // Apply the weak measurement update using existing mechanism
-    measure(pseudo_measurement, measurement_time, channel_info);
+    // Apply kinematic-only update via the pseudo measurement — footprint must not be taken
+    // from the fake pseudo_measurement; it is stored separately from the real measurement below.
+    measureKinematics(pseudo_measurement, measurement_time, channel_info);
 
-    // Store measurement footprint after the weak kinematic update so the frame transform
-    // in updateFootprint() uses the post-update tracker pose.
+    // Layer 2: store footprint from the REAL measurement using the post-update tracker pose.
     updateFootprint(measurement, measurement_time);
 
     return true;
@@ -504,23 +515,26 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
   // Layer 2: footprint is independent — update only when new shape carries one (never clear)
   if (!shape.footprint.points.empty()) {
     object_.shape.footprint = shape.footprint;
+    footprint_valid_ = true;
     last_footprint_update_time_ = getLatestMeasurementTime();
   }
 
   object_.area = types::getArea(shape);
 
-  // Update bicycle model wheel positions to maintain consistency with the new bbox length
-  const double new_length = shape.dimensions.x;
-  motion_model_.updateStateLength(new_length, shape_update_anchor_);
-  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
+  // Only synchronise the bicycle model length when the input is a bounding box.
+  // POLYGON shapes may carry zero or meaningless dimensions.x.
+  if (shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
+    motion_model_.updateStateLength(shape.dimensions.x, shape_update_anchor_);
+    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
+  }
 }
 
 void VehicleTracker::updateFootprint(const types::DynamicObject & object, const rclcpp::Time & time)
 {
   using Shape = autoware_perception_msgs::msg::Shape;
   const bool has_poly =
-    ((object.shape.type == Shape::BOUNDING_BOX) && !object.shape.footprint.points.empty()) ||
-    (object.shape.type == Shape::POLYGON);
+    !object.shape.footprint.points.empty() &&
+    (object.shape.type == Shape::BOUNDING_BOX || object.shape.type == Shape::POLYGON);
   if (!has_poly) return;
 
   // Get tracker's current pose after kinematic update (dt=0 → EKF state as-is).
@@ -531,29 +545,37 @@ void VehicleTracker::updateFootprint(const types::DynamicObject & object, const 
   geometry_msgs::msg::Twist dummy_twist;
   if (!motion_model_.getPredictedState(time, tracker_pose, dummy_cov, dummy_twist, dummy_cov)) {
     object_.shape.footprint = object.shape.footprint;
+    footprint_valid_ = true;
     last_footprint_update_time_ = time;
     return;
   }
 
   object_.shape.footprint =
     shapes::transformFootprint(object.shape.footprint, object.pose, tracker_pose);
+  footprint_valid_ = true;
   last_footprint_update_time_ = time;
+}
+
+void VehicleTracker::mergeFootprintFrom(
+  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose)
+{
+  if (footprint.points.empty()) return;
+  const auto transformed = shapes::transformFootprint(footprint, src_pose, object_.pose);
+  object_.shape.footprint = shapes::unionFootprints(object_.shape.footprint, transformed);
+  footprint_valid_ = true;
+  last_footprint_update_time_ = getLatestMeasurementTime();
 }
 
 void VehicleTracker::exportShape(types::DynamicObject & object) const
 {
   object.shape.dimensions.x = motion_model_.getLength();
 
-  const bool has_footprint =
-    !object_.shape.footprint.points.empty() && last_footprint_update_time_.nanoseconds() > 0;
   const bool footprint_fresh =
-    has_footprint && (object.time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
+    footprint_valid_ && (object.time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
 
   if (footprint_fresh) {
-    // object.shape.type = autoware_perception_msgs::msg::Shape::POLYGON;
     object.shape.footprint = object_.shape.footprint;
   } else {
-    // object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
     object.shape.footprint.points.clear();
   }
 }

@@ -15,12 +15,7 @@
 #include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 
 #include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
-
-#include <tf2/utils.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/box.hpp>
@@ -28,7 +23,6 @@
 #include <boost/geometry/index/rtree.hpp>
 
 #include <algorithm>
-#include <cmath>
 #include <list>
 #include <memory>
 #include <unordered_set>
@@ -230,17 +224,10 @@ void TrackerOverlapManager::merge(
           data1.tracker->updateClassification(data2.tracker->getClassification());
         }
 
-        // Shape: footprint is additive — transfer or union absorbed's footprint into winner.
-        // Kinematic bbox dimensions (the structural vehicle frame) always stay with the winner.
-        // Footprint points are in each tracker's own local frame, so the absorbed footprint must
-        // be re-expressed in the winner's local frame before merging.
-        if (!data2.object.shape.footprint.points.empty()) {
-          const auto transformed = shapes::transformFootprint(
-            data2.object.shape.footprint, data2.object.pose, data1.object.pose);
-          auto merged_shape = data1.object.shape;
-          merged_shape.footprint = shapes::unionFootprints(merged_shape.footprint, transformed);
-          data1.tracker->setObjectShape(merged_shape);
-        }
+        // Shape: footprint is additive — union absorbed tracker's footprint into winner.
+        // Frame transform and union are handled inside mergeFootprintFrom(); bbox kinematic
+        // dimensions of the winner are not touched.
+        data1.tracker->mergeFootprintFrom(data2.object.shape.footprint, data2.object.pose);
 
         data2.is_valid = false;
         to_remove.push_back(idx2);

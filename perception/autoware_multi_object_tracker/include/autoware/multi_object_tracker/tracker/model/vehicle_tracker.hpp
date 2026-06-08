@@ -51,9 +51,13 @@ private:
   BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;  // Default: CENTER
 
   // Layer 2: polygon footprint storage (independent of kinematic bbox)
+  bool footprint_valid_{false};
   rclcpp::Time last_footprint_update_time_;
   static constexpr double FOOTPRINT_TIMEOUT_S = 1.0;  // [s] footprint expiry after last polygon obs
 
+  bool measureKinematics(
+    const types::DynamicObject & object, const rclcpp::Time & time,
+    const types::InputChannel & channel_info);
   void updateFootprint(const types::DynamicObject & object, const rclcpp::Time & time);
   void exportShape(types::DynamicObject & object) const;
 
@@ -79,6 +83,9 @@ public:
     const bool to_publish = false) const override;
 
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
+  void mergeFootprintFrom(
+    const geometry_msgs::msg::Polygon & footprint,
+    const geometry_msgs::msg::Pose & src_pose) override;
 
   // Clusters (trust_extension=false) have unreliable bbox orientation — always use conditioned.
   UpdatePath selectUpdatePath(

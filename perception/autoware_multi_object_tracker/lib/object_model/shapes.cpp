@@ -412,29 +412,45 @@ geometry_msgs::msg::Polygon unionFootprints(
     return poly;
   };
 
+  // Extract exterior ring into msg::Polygon; skip Boost's closing duplicate point.
+  const auto to_msg = [](const autoware_utils_geometry::Polygon2d & poly) {
+    geometry_msgs::msg::Polygon out;
+    const auto & ring = poly.outer();
+    const size_t n = ring.size() > 1u ? ring.size() - 1u : ring.size();
+    out.points.reserve(n);
+    for (size_t i = 0; i < n; ++i) {
+      geometry_msgs::msg::Point32 p;
+      p.x = static_cast<float>(ring[i].x());
+      p.y = static_cast<float>(ring[i].y());
+      p.z = 0.0f;
+      out.points.push_back(p);
+    }
+    return out;
+  };
+
+  const auto poly_a = to_boost(a);
+  const auto poly_b = to_boost(b);
+
   std::vector<autoware_utils_geometry::Polygon2d> union_result;
-  boost::geometry::union_(to_boost(a), to_boost(b), union_result);
+  boost::geometry::union_(poly_a, poly_b, union_result);
   if (union_result.empty()) return a;
 
-  // If the union produced multiple disjoint components, use the largest
-  const auto & best =
-    *std::max_element(union_result.begin(), union_result.end(), [](const auto & p, const auto & q) {
-      return boost::geometry::area(p) < boost::geometry::area(q);
-    });
-
-  // Extract exterior ring; skip Boost's closing duplicate point
-  geometry_msgs::msg::Polygon out;
-  const auto & ring = best.outer();
-  const size_t n = ring.size() > 1u ? ring.size() - 1u : ring.size();
-  out.points.reserve(n);
-  for (size_t i = 0; i < n; ++i) {
-    geometry_msgs::msg::Point32 p;
-    p.x = static_cast<float>(ring[i].x());
-    p.y = static_cast<float>(ring[i].y());
-    p.z = 0.0f;
-    out.points.push_back(p);
+  // Single connected result — extract directly.
+  if (union_result.size() == 1u) {
+    return to_msg(union_result[0]);
   }
-  return out;
+
+  // Disjoint components: compute convex hull of all component vertices so that both
+  // footprints are covered without discarding the smaller one.
+  autoware_utils_geometry::Polygon2d all_points;
+  for (const auto & comp : union_result) {
+    for (const auto & pt : comp.outer()) {
+      all_points.outer().push_back(pt);
+    }
+  }
+  autoware_utils_geometry::Polygon2d hull;
+  boost::geometry::convex_hull(all_points, hull);
+  return to_msg(hull);
 }
 
 geometry_msgs::msg::Polygon transformFootprint(

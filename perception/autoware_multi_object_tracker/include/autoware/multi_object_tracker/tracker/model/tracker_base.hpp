@@ -99,6 +99,11 @@ public:
     object_.shape = shape;
     object_.area = types::getArea(shape);
   }
+  virtual void mergeFootprintFrom(
+    const geometry_msgs::msg::Polygon & /*footprint*/,
+    const geometry_msgs::msg::Pose & /*src_pose*/)
+  {
+  }
 
   // object life management
   uint getChannelIndex() const;
