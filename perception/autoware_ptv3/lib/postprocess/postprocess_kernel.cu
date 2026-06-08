@@ -1,4 +1,4 @@
-// Copyright 2026 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/ptv3/postprocess/seg3d_postprocess.hpp"
+#include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/utils.hpp"
 
@@ -29,10 +29,9 @@ struct OutputSegmentationPointType
   float entropy;
 } __attribute__((packed));
 
-__global__ void create_visualization_pointcloud_kernel(
-  const float4 * __restrict__ input_features, const float * __restrict__ colors,
-  const std::int64_t * __restrict__ labels, float4 * __restrict__ output_points,
-  std::size_t num_classes, std::size_t num_points)
+__global__ void createVisualizationPointcloudKernel(
+  const float4 * input_features, const float * colors, const std::int64_t * labels,
+  float4 * output_points, std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -47,10 +46,9 @@ __global__ void create_visualization_pointcloud_kernel(
     make_float4(input_features[idx].x, input_features[idx].y, input_features[idx].z, color);
 }
 
-__global__ void create_segmentation_pointcloud_kernel(
-  const float4 * __restrict__ input_features, const std::int64_t * __restrict__ labels,
-  const float * __restrict__ pred_probs, OutputSegmentationPointType * __restrict__ output_points,
-  std::size_t num_classes, std::size_t num_points)
+__global__ void createSegmentationPointcloudKernel(
+  const float4 * input_features, const std::int64_t * labels, const float * pred_probs,
+  OutputSegmentationPointType * output_points, std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -62,7 +60,7 @@ __global__ void create_segmentation_pointcloud_kernel(
   const bool has_valid_label = label >= 0 && static_cast<std::size_t>(label) < num_classes;
   float entropy = 0.0f;
   for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
-    const float probability = pred_probs[idx * num_classes + class_idx];
+    const auto probability = pred_probs[idx * num_classes + class_idx];
     if (probability > 0.0f) {
       entropy -= probability * logf(probability);
     }
@@ -78,7 +76,7 @@ __global__ void create_segmentation_pointcloud_kernel(
   output_points[idx].entropy = entropy;
 }
 
-__global__ void reconstruct_partial_kernel(
+__global__ void reconstructPartialKernel(
   const std::int64_t * __restrict__ inverse_map, const std::int64_t * __restrict__ voxel_labels,
   const float * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
   float * __restrict__ output_probs, std::size_t num_classes, std::size_t num_cropped_points,
@@ -100,7 +98,7 @@ __global__ void reconstruct_partial_kernel(
                     : 0.0f;
 }
 
-__global__ void reconstruct_full_kernel(
+__global__ void reconstructFullKernel(
   const std::uint32_t * __restrict__ crop_mask, const std::uint32_t * __restrict__ crop_indices,
   const std::int64_t * __restrict__ inverse_map, const std::int64_t * __restrict__ voxel_labels,
   const float * __restrict__ voxel_probs, std::int64_t * __restrict__ output_labels,
@@ -115,7 +113,6 @@ __global__ void reconstruct_full_kernel(
   const auto mask = crop_mask[point_idx];
   if (mask == 0) {
     if (class_idx == 0) output_labels[point_idx] = 255;
-    output_probs[point_idx * num_classes + class_idx] = 0.0f;
     return;
   }
 
@@ -123,7 +120,6 @@ __global__ void reconstruct_full_kernel(
   const auto voxel_idx = inverse_map[cropped_idx];
   if (voxel_idx < 0 || static_cast<std::size_t>(voxel_idx) >= num_voxels) {
     if (class_idx == 0) output_labels[point_idx] = 255;
-    output_probs[point_idx * num_classes + class_idx] = 0.0f;
     return;
   }
 
@@ -219,12 +215,11 @@ __device__ void set_point_from_input<CloudPointTypeXYZIRCAEDT>(
 }
 
 template <typename InputPointT, typename OutputPointT>
-__global__ void create_filtered_pointcloud_kernel(
-  const InputPointT * __restrict__ input_points, const float * __restrict__ pred_probs,
-  const std::uint32_t * __restrict__ filter_class_indices, std::size_t num_filter_classes,
+__global__ void createFilteredPointcloudKernel(
+  const InputPointT * input_points, const float * pred_probs,
+  const std::uint32_t * filter_class_indices, std::size_t num_filter_classes,
   float filter_class_probability_threshold, std::size_t num_classes,
-  std::uint32_t * __restrict__ output_num_points, OutputPointT * __restrict__ output_points,
-  std::size_t num_points)
+  std::uint32_t * output_num_points, OutputPointT * output_points, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
@@ -250,21 +245,20 @@ __global__ void create_filtered_pointcloud_kernel(
 }
 
 template <typename InputPointT, typename OutputPointT>
-void create_filtered_pointcloud_typed(
+void createFilteredPointcloudTyped(
   cudaStream_t stream, std::uint32_t threads_per_block, const void * compact_input_points,
   const float * pred_probs, const std::uint32_t * filter_class_indices,
   std::size_t num_filter_classes, float filter_class_probability_threshold, std::size_t num_classes,
   std::uint32_t * output_num_points, void * output_points, std::size_t num_points)
 {
   const auto num_blocks = divup(num_points, threads_per_block);
-  create_filtered_pointcloud_kernel<InputPointT, OutputPointT>
-    <<<num_blocks, threads_per_block, 0, stream>>>(
-      static_cast<const InputPointT *>(compact_input_points), pred_probs, filter_class_indices,
-      num_filter_classes, filter_class_probability_threshold, num_classes, output_num_points,
-      static_cast<OutputPointT *>(output_points), num_points);
+  createFilteredPointcloudKernel<<<num_blocks, threads_per_block, 0, stream>>>(
+    static_cast<const InputPointT *>(compact_input_points), pred_probs, filter_class_indices,
+    num_filter_classes, filter_class_probability_threshold, num_classes, output_num_points,
+    static_cast<OutputPointT *>(output_points), num_points);
 }
 
-Seg3dPostprocess::Seg3dPostprocess(const PTv3Config & config, cudaStream_t stream)
+PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
 : config_(config), stream_(stream)
 {
   filtered_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(1);
@@ -286,33 +280,33 @@ Seg3dPostprocess::Seg3dPostprocess(const PTv3Config & config, cudaStream_t strea
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-void Seg3dPostprocess::create_visualization_pointcloud(
+void PostprocessCuda::createVisualizationPointcloud(
   const float * input_features, const std::int64_t * labels, float * output_points,
   std::size_t num_classes, std::size_t num_points)
 {
   auto num_blocks = divup(num_points, config_.threads_per_block_);
 
-  create_visualization_pointcloud_kernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+  createVisualizationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<const float4 *>(input_features), color_map_d_.get(), labels,
     reinterpret_cast<float4 *>(output_points), num_classes, num_points);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-void Seg3dPostprocess::create_segmentation_pointcloud(
+void PostprocessCuda::createSegmentationPointcloud(
   const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
   std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points)
 {
   auto num_blocks = divup(num_points, config_.threads_per_block_);
 
-  create_segmentation_pointcloud_kernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+  createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
     reinterpret_cast<OutputSegmentationPointType *>(output_points), num_classes, num_points);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-void Seg3dPostprocess::reconstruct_partial(
+void PostprocessCuda::reconstructPartial(
   const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
   std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
   std::size_t num_cropped_points, std::size_t num_voxels)
@@ -320,14 +314,14 @@ void Seg3dPostprocess::reconstruct_partial(
   auto block = dim3(32, 8);
   auto grid = dim3(divup(num_cropped_points, block.y), divup(num_classes, block.x));
 
-  reconstruct_partial_kernel<<<grid, block, 0, stream_>>>(
+  reconstructPartialKernel<<<grid, block, 0, stream_>>>(
     inverse_map, voxel_labels, voxel_probs, output_labels, output_probs, num_classes,
     num_cropped_points, num_voxels);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-void Seg3dPostprocess::reconstruct_full(
+void PostprocessCuda::reconstructFull(
   const std::uint32_t * crop_mask, const std::uint32_t * crop_indices,
   const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
   std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
@@ -336,14 +330,14 @@ void Seg3dPostprocess::reconstruct_full(
   auto block = dim3(32, 8);
   auto grid = dim3(divup(num_points, block.y), divup(num_classes, block.x));
 
-  reconstruct_full_kernel<<<grid, block, 0, stream_>>>(
+  reconstructFullKernel<<<grid, block, 0, stream_>>>(
     crop_mask, crop_indices, inverse_map, voxel_labels, voxel_probs, output_labels, output_probs,
     num_classes, num_points, num_voxels);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-std::size_t Seg3dPostprocess::create_filtered_pointcloud(
+std::size_t PostprocessCuda::createFilteredPointcloud(
   const void * compact_input_points, CloudFormat input_format, CloudFormat output_format,
   const float * pred_probs, void * output_points, std::size_t num_classes, std::size_t num_points)
 {
@@ -353,21 +347,21 @@ std::size_t Seg3dPostprocess::create_filtered_pointcloud(
     case CloudFormat::XYZIRCAEDT:
       switch (output_format) {
         case CloudFormat::XYZIRCAEDT:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRCAEDT>(
+          createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRCAEDT>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
             output_points, num_points);
           break;
         case CloudFormat::XYZIRC:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRC>(
+          createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZIRC>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
             output_points, num_points);
           break;
         case CloudFormat::XYZI:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZI>(
+          createFilteredPointcloudTyped<CloudPointTypeXYZIRCAEDT, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
@@ -380,14 +374,14 @@ std::size_t Seg3dPostprocess::create_filtered_pointcloud(
     case CloudFormat::XYZIRADRT:
       switch (output_format) {
         case CloudFormat::XYZIRADRT:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRADRT, CloudPointTypeXYZIRADRT>(
+          createFilteredPointcloudTyped<CloudPointTypeXYZIRADRT, CloudPointTypeXYZIRADRT>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
             output_points, num_points);
           break;
         case CloudFormat::XYZI:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRADRT, CloudPointTypeXYZI>(
+          createFilteredPointcloudTyped<CloudPointTypeXYZIRADRT, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
@@ -400,14 +394,14 @@ std::size_t Seg3dPostprocess::create_filtered_pointcloud(
     case CloudFormat::XYZIRC:
       switch (output_format) {
         case CloudFormat::XYZIRC:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRC, CloudPointTypeXYZIRC>(
+          createFilteredPointcloudTyped<CloudPointTypeXYZIRC, CloudPointTypeXYZIRC>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
             output_points, num_points);
           break;
         case CloudFormat::XYZI:
-          create_filtered_pointcloud_typed<CloudPointTypeXYZIRC, CloudPointTypeXYZI>(
+          createFilteredPointcloudTyped<CloudPointTypeXYZIRC, CloudPointTypeXYZI>(
             stream_, config_.threads_per_block_, compact_input_points, pred_probs,
             filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
             config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),
@@ -421,7 +415,7 @@ std::size_t Seg3dPostprocess::create_filtered_pointcloud(
       if (output_format != CloudFormat::XYZI) {
         throw std::runtime_error("Unsupported filtered output format.");
       }
-      create_filtered_pointcloud_typed<CloudPointTypeXYZI, CloudPointTypeXYZI>(
+      createFilteredPointcloudTyped<CloudPointTypeXYZI, CloudPointTypeXYZI>(
         stream_, config_.threads_per_block_, compact_input_points, pred_probs,
         filter_class_indices_d_.get(), config_.filter_class_indices_.size(),
         config_.filter_class_probability_threshold_, num_classes, filtered_mask_d_.get(),

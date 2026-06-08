@@ -15,30 +15,23 @@
 #ifndef AUTOWARE__PTV3__UTILS_HPP_
 #define AUTOWARE__PTV3__UTILS_HPP_
 
-#include <cstddef>
 #include <stdexcept>
-#include <type_traits>
 
 namespace autoware::ptv3
 {
 
 // cspell: ignore divup
-/**
- * @brief Integer ceiling division.
- *
- * @param a Dividend.
- * @param b Divisor. Must be non-zero.
- * @return ceil(a / b) as std::size_t.
- */
 template <typename T1, typename T2>
-constexpr std::size_t divup(const T1 a, const T2 b)
+unsigned int divup(const T1 a, const T2 b)
 {
-  static_assert(
-    std::is_unsigned_v<T1> && std::is_unsigned_v<T2>, "divup: both operands must be unsigned.");
-  if (b == 0) {
-    throw std::runtime_error("divup: divisor must be non-zero.");
+  if (a == 0) {
+    throw std::runtime_error("A dividend of divup isn't positive.");
   }
-  return static_cast<std::size_t>((a + b - 1) / b);
+  if (b == 0) {
+    throw std::runtime_error("A divisor of divup isn't positive.");
+  }
+
+  return (a + b - 1) / b;
 }
 
 }  // namespace autoware::ptv3

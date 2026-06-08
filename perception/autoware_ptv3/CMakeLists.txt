@@ -80,8 +80,8 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   endif()
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
-    lib/postprocess/seg3d_postprocess.cu
-    lib/preprocess/backbone_preprocess.cu
+    lib/postprocess/postprocess_kernel.cu
+    lib/preprocess/preprocess_kernel.cu
   )
 
   target_include_directories(${PROJECT_NAME}_cuda_lib

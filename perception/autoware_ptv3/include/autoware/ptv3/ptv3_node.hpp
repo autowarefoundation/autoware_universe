@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,8 +29,6 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace autoware::ptv3
 {
@@ -40,16 +38,15 @@ class PTV3_PUBLIC PTv3Node : public rclcpp::Node
 public:
   explicit PTv3Node(const rclcpp::NodeOptions & options);
 
-  void publish_segmented_pointcloud(
+  void publishSegmentedPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
+
+  void publishVisualizationPointcloud(
     std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
 
-  void publish_visualization_pointcloud(
-    std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
-
-  void publish_filtered_pointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
+  void publishFilteredPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
 
 private:
-  void cloud_callback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
+  void cloudCallback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
 
   std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
     pointcloud_sub_;
@@ -65,7 +62,9 @@ private:
 
   std::unique_ptr<PTv3TRT> model_ptr_{nullptr};
 
-  // Debug helpers.
+  rclcpp::TimerBase::SharedPtr timer_{nullptr};
+
+  // debugger
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_pub_{nullptr};

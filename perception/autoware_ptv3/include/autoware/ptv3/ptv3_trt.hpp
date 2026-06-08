@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__PTV3__PTV3_TRT_HPP_
 #define AUTOWARE__PTV3__PTV3_TRT_HPP_
 
-#include "autoware/ptv3/postprocess/seg3d_postprocess.hpp"
-#include "autoware/ptv3/preprocess/backbone_preprocess.hpp"
+#include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
+#include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
 #include "autoware/ptv3/visibility_control.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
@@ -37,88 +37,50 @@ namespace autoware::ptv3
 
 using autoware::cuda_utils::CudaUniquePtr;
 
-/**
- * @brief Owns the PTv3 TensorRT engines and CUDA buffers used by the node.
- *
- * The backbone is always loaded. The segmentation head is loaded only when enabled.
- */
 class PTV3_PUBLIC PTv3TRT
 {
 public:
-  /**
-   * @brief Load the backbone engine and the segmentation head if enabled.
-   *
-   * @param backbone_trt_config TensorRT configuration for the backbone engine.
-   * @param seg3d_head_trt_config TensorRT configuration for the segmentation head if enabled.
-   * @param config Runtime configuration shared by preprocessing, inference, and postprocessing.
-   */
   explicit PTv3TRT(
     const tensorrt_common::TrtCommonConfig & backbone_trt_config,
     const std::optional<tensorrt_common::TrtCommonConfig> & seg3d_head_trt_config,
     const PTv3Config & config);
+  virtual ~PTv3TRT();
 
-  /** @brief Wait for CUDA work and release the stream. */
-  ~PTv3TRT();
-
-  /**
-   * @brief Run the shared backbone, then the segmentation head for the requested outputs.
-   *
-   * @param msg_ptr Input GPU point cloud message.
-   * @param should_publish_segmented_pointcloud Publish the labeled point cloud.
-   * @param should_publish_visualization_pointcloud Publish the RGB visualization cloud.
-   * @param should_publish_filtered_pointcloud Publish the probability filtered cloud.
-   * @param proc_timing Per-stage timings in milliseconds.
-   * @return true when the segmentation head finished.
-   */
-  bool infer(
+  // cSpell:ignore probs
+  bool segment(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
     bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
     bool should_publish_filtered_pointcloud, std::unordered_map<std::string, double> & proc_timing);
 
-  /**
-   * @brief Set the callback used for segmented point cloud publication.
-   *
-   * @param func Callback that takes ownership of a CudaPointCloud2.
-   */
-  void set_publish_segmented_pointcloud(
+  void setPublishSegmentedPointcloud(
+    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+  void setPublishVisualizationPointcloud(
+    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+  void setPublishFilteredPointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
 
-  /**
-   * @brief Set the callback used for visualization point cloud publication.
-   *
-   * @param func Callback that takes ownership of a CudaPointCloud2.
-   */
-  void set_publish_visualization_pointcloud(
-    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+protected:
+  void initPtr();
+  void initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  void createPointFields();
+  void allocateMessages();
+  [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
 
-  /**
-   * @brief Set the callback used for filtered point cloud publication.
-   *
-   * @param func Callback that takes ownership of a CudaPointCloud2.
-   */
-  void set_publish_filtered_pointcloud(
-    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+  bool preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
 
-private:
-  void init_ptr();
-  void init_backbone_trt(const tensorrt_common::TrtCommonConfig & trt_config);
-  void init_seg3d_head_trt(const tensorrt_common::TrtCommonConfig & trt_config);
+  bool inference();
 
-  bool pre_process(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
-  bool infer_backbone();
-  bool infer_seg3d_head();
-
-  bool post_process_seg3d(
+  bool postProcess(
     const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
     bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud);
 
   // The backbone is always present. The segmentation head is loaded only when enabled.
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> backbone_trt_ptr_{nullptr};
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> seg3d_head_trt_ptr_{nullptr};
-
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
-  std::unique_ptr<BackbonePreprocess> pre_ptr_{nullptr};
-  std::unique_ptr<Seg3dPostprocess> post_ptr_{nullptr};
+  std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
+  std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
   cudaStream_t stream_{nullptr};
 
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
@@ -127,6 +89,10 @@ private:
     publish_visualization_pointcloud_{nullptr};
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
     publish_filtered_pointcloud_{nullptr};
+
+  std::vector<sensor_msgs::msg::PointField> segmented_pointcloud_fields_;
+  std::vector<sensor_msgs::msg::PointField> visualization_pointcloud_fields_;
+  std::vector<sensor_msgs::msg::PointField> filtered_pointcloud_fields_;
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> segmented_points_msg_ptr_{nullptr};
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> visualization_points_msg_ptr_{nullptr};
@@ -137,29 +103,27 @@ private:
   CloudFormat input_format_{CloudFormat::UNKNOWN};
   CloudFormat filtered_output_format_{CloudFormat::UNKNOWN};
 
-  // Preprocess state.
+  // Preprocess outputs
   std::int64_t num_voxels_{0};
-  std::int64_t num_cropped_points_{0};
-  std::int64_t num_source_points_{0};
-  const void * current_input_data_{nullptr};
+  std::int64_t num_cropped_points_{0};        // only for partial
+  std::int64_t num_source_points_{0};         // only for full
+  const void * current_input_data_{nullptr};  // only for full
 
-  // Backbone inputs from preprocessing.
   CudaUniquePtr<std::uint8_t[]> compact_points_d_{nullptr};
-  CudaUniquePtr<std::uint8_t[]> cropped_source_points_d_{nullptr};
-  CudaUniquePtr<float[]> reconstructed_features_d_{nullptr};
-  CudaUniquePtr<std::int64_t[]> inverse_map_d_{nullptr};
-  CudaUniquePtr<std::int64_t[]> reconstructed_labels_d_{nullptr};
-  CudaUniquePtr<float[]> reconstructed_probs_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> cropped_source_points_d_{nullptr};  // only for partial
+  CudaUniquePtr<float[]> reconstructed_features_d_{nullptr};        // only for partial and full
+  CudaUniquePtr<std::int64_t[]> inverse_map_d_{nullptr};            // only for partial and full
+  CudaUniquePtr<std::int64_t[]> reconstructed_labels_d_{nullptr};   // only for partial and full
+  CudaUniquePtr<float[]> reconstructed_probs_d_{nullptr};           // only for partial and full
   CudaUniquePtr<std::int32_t[]> grid_coord_d_{nullptr};
   CudaUniquePtr<float[]> feat_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
 
-  // Backbone outputs shared by enabled heads.
+  // Backbone outputs shared with the segmentation head.
   CudaUniquePtr<float[]> bb_point_feat_d_{nullptr};
   CudaUniquePtr<std::int32_t[]> bb_point_grid_coord_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> bb_point_offset_d_{nullptr};
 
-  // Segmentation head outputs.
   CudaUniquePtr<std::int64_t[]> pred_labels_d_{nullptr};
   CudaUniquePtr<float[]> pred_probs_d_{nullptr};
 };

@@ -1,29 +1,35 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ML package parameters for PTv3",
+  "title": "Parameters for ptv3",
   "type": "object",
   "definitions": {
     "backbone": {
       "type": "object",
       "properties": {
         "voxels_num": {
-          "type": "array",
-          "items": { "type": "integer", "minimum": 1 },
-          "description": "Voxel count profile for TensorRT dynamic shape [min, opt, max].",
-          "minItems": 3,
-          "maxItems": 3
+          "items": {
+            "type": "integer"
+          },
+          "description": "Voxel ranges used during inference [min, opt, max].",
+          "default": [5000, 30000, 60000]
         },
         "point_cloud_range": {
           "type": "array",
-          "items": { "type": "number" },
-          "description": "Point cloud range [min_x, min_y, min_z, max_x, max_y, max_z] in meters.",
+          "items": {
+            "type": "number"
+          },
+          "description": "Range in meters of the pointcloud in meters [min_x, min_y, min_z, max_x, max_y, max_z].",
+          "default": [-76.8, -76.8, -3.0, 76.8, 76.8, 5.0],
           "minItems": 6,
           "maxItems": 6
         },
         "voxel_size": {
           "type": "array",
-          "items": { "type": "number", "exclusiveMinimum": 0 },
-          "description": "Voxel size [x, y, z] in meters.",
+          "items": {
+            "type": "number"
+          },
+          "description": "Voxels size [x, y, z] in meters.",
+          "default": [0.3, 0.3, 8.0],
           "minItems": 3,
           "maxItems": 3
         }

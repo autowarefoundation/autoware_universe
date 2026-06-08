@@ -14,11 +14,8 @@
 
 #include "autoware/ptv3/ptv3_node.hpp"
 
-#include <rcl_interfaces/msg/parameter_descriptor.hpp>
-
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -30,23 +27,22 @@ namespace autoware::ptv3
 PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
 {
   auto descriptor = rcl_interfaces::msg::ParameterDescriptor{}.set__read_only(true);
-  auto to_float_vector = [](const auto & values) {
-    return std::vector<float>(values.begin(), values.end());
+
+  auto to_float_vector = [](const auto & v) -> std::vector<float> {
+    return std::vector<float>(v.begin(), v.end());
   };
 
-  // Runtime parameters.
+  // TensorRT parameters
   const std::string plugins_path = this->declare_parameter<std::string>("plugins_path", descriptor);
   const std::string trt_precision =
     this->declare_parameter<std::string>("trt_precision", descriptor);
   const auto cloud_capacity = this->declare_parameter<std::int64_t>("cloud_capacity", descriptor);
 
-  // Backbone paths.
+  // Backbone parameters
   const std::string backbone_onnx_path =
     this->declare_parameter<std::string>("backbone.onnx_path", descriptor);
   const std::string backbone_engine_path =
     this->declare_parameter<std::string>("backbone.engine_path", descriptor);
-
-  // Backbone parameters from ml_package.
   const auto voxels_num =
     this->declare_parameter<std::vector<std::int64_t>>("backbone.voxels_num", descriptor);
   const auto point_cloud_range = to_float_vector(
@@ -61,10 +57,10 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     throw std::runtime_error("The size of voxel_size != 3");
   }
 
-  // Segmentation head selection and params.
+  // Segmentation head parameters
   const bool use_seg3d_head = this->declare_parameter<bool>("segmentation3d.use_head", descriptor);
   std::optional<tensorrt_common::TrtCommonConfig> seg3d_head_trt_config;
-  std::vector<std::string> class_names_seg3d;
+  std::vector<std::string> class_names;
   std::vector<std::int64_t> palette;
   float filter_class_probability_threshold = 0.0F;
   std::vector<std::string> filter_classes;
@@ -75,7 +71,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
       this->declare_parameter<std::string>("segmentation3d.onnx_path", descriptor);
     const std::string seg3d_head_engine_path =
       this->declare_parameter<std::string>("segmentation3d.engine_path", descriptor);
-    class_names_seg3d =
+    class_names =
       this->declare_parameter<std::vector<std::string>>("segmentation3d.class_names", descriptor);
     palette =
       this->declare_parameter<std::vector<std::int64_t>>("segmentation3d.palette", descriptor);
@@ -92,9 +88,9 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   }
 
   PTv3Config config(
-    plugins_path, cloud_capacity, voxels_num, point_cloud_range, voxel_size, class_names_seg3d,
-    palette, filter_class_probability_threshold, filter_classes, filter_output_format,
-    source_reconstruction, use_seg3d_head);
+    plugins_path, cloud_capacity, voxels_num, point_cloud_range, voxel_size, class_names, palette,
+    filter_class_probability_threshold, filter_classes, filter_output_format, source_reconstruction,
+    use_seg3d_head);
 
   const auto backbone_trt_config = tensorrt_common::TrtCommonConfig(
     backbone_onnx_path, trt_precision, backbone_engine_path, 1ULL << 33U);
@@ -104,7 +100,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   pointcloud_sub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",
-      std::bind(&PTv3Node::cloud_callback, this, std::placeholders::_1));
+      std::bind(&PTv3Node::cloudCallback, this, std::placeholders::_1));
 
   if (use_seg3d_head) {
     segmented_pointcloud_pub_ =
@@ -117,17 +113,17 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
       std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
         *this, "~/output/pointcloud/filtered");
 
-    model_ptr_->set_publish_segmented_pointcloud(
-      std::bind(&PTv3Node::publish_segmented_pointcloud, this, std::placeholders::_1));
-    model_ptr_->set_publish_visualization_pointcloud(
-      std::bind(&PTv3Node::publish_visualization_pointcloud, this, std::placeholders::_1));
-    model_ptr_->set_publish_filtered_pointcloud(
-      std::bind(&PTv3Node::publish_filtered_pointcloud, this, std::placeholders::_1));
+    model_ptr_->setPublishSegmentedPointcloud(
+      std::bind(&PTv3Node::publishSegmentedPointcloud, this, std::placeholders::_1));
+    model_ptr_->setPublishVisualizationPointcloud(
+      std::bind(&PTv3Node::publishVisualizationPointcloud, this, std::placeholders::_1));
+    model_ptr_->setPublishFilteredPointcloud(
+      std::bind(&PTv3Node::publishFilteredPointcloud, this, std::placeholders::_1));
   }
 
   published_time_pub_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 
-  // Initialize debug helpers.
+  // initialize debug tool
   {
     using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
@@ -143,7 +139,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   }
 }
 
-void PTv3Node::publish_segmented_pointcloud(
+void PTv3Node::publishSegmentedPointcloud(
   std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr)
 {
   if (segmented_pointcloud_pub_) {
@@ -151,7 +147,7 @@ void PTv3Node::publish_segmented_pointcloud(
   }
 }
 
-void PTv3Node::publish_visualization_pointcloud(
+void PTv3Node::publishVisualizationPointcloud(
   std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr)
 {
   if (visualization_pointcloud_pub_) {
@@ -159,7 +155,7 @@ void PTv3Node::publish_visualization_pointcloud(
   }
 }
 
-void PTv3Node::publish_filtered_pointcloud(
+void PTv3Node::publishFilteredPointcloud(
   std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr)
 {
   if (filtered_pointcloud_pub_) {
@@ -167,7 +163,7 @@ void PTv3Node::publish_filtered_pointcloud(
   }
 }
 
-void PTv3Node::cloud_callback(
+void PTv3Node::cloudCallback(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr)
 {
   const auto segmented_sub_count =
@@ -184,7 +180,7 @@ void PTv3Node::cloud_callback(
                                 filtered_pointcloud_pub_->get_intra_process_subscription_count())
                              : 0u;
 
-  if (segmented_sub_count + visualization_sub_count + filtered_sub_count == 0u) {
+  if (segmented_sub_count + visualization_sub_count + filtered_sub_count == 0) {
     return;
   }
 
@@ -193,15 +189,13 @@ void PTv3Node::cloud_callback(
   }
 
   std::unordered_map<std::string, double> proc_timing;
-
-  const bool is_success = model_ptr_->infer(
-    msg_ptr, segmented_sub_count > 0u, visualization_sub_count > 0u, filtered_sub_count > 0u,
-    proc_timing);
-
+  bool is_success = model_ptr_->segment(
+    msg_ptr, segmented_sub_count, visualization_sub_count, filtered_sub_count, proc_timing);
   if (!is_success) {
     return;
   }
 
+  // add processing time for debug
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing/total", true);

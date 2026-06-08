@@ -6,8 +6,7 @@ The `autoware_ptv3` package is used for 3D lidar segmentation.
 
 ## Inner-workings / Algorithms
 
-This package implements a TensorRT powered inference node for Point Transformers V3
-(PTv3) [1]. The backbone feeds the segmentation head.
+This package implements a TensorRT powered inference node for Point Transformers V3 (PTv3) [1].
 The sparse convolution backend corresponds to [spconv](https://github.com/traveller59/spconv).
 Autoware installs it automatically in its setup script. If needed, the user can also build it and install it following the [following instructions](https://github.com/autowarefoundation/spconv_cpp).
 
@@ -43,9 +42,8 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 {{ json_to_markdown("perception/autoware_ptv3/schema/ml_package_ptv3.schema.json") }}
 
-Runtime head enablement and filtering parameters are configured in `config/ptv3.param.yaml`. Model
-package metadata is split by artifact: `ml_package_ptv3_backbone.param.yaml`,
-`ml_package_ptv3_seg3d_head.param.yaml`.
+`filter.*` parameters are configured in `config/ptv3.param.yaml`, while class metadata and the
+visualization `palette` are configured in `config/ml_package_ptv3_seg3d_head.param.yaml`.
 
 ### The `build_only` option
 
@@ -76,13 +74,9 @@ supports:
 The filtered output cloud format is controlled by `filter.output_format`. When it is set to an
 empty string, the filtered output preserves the same format as the input cloud.
 
-If a point cloud exceeds `cloud_capacity` or voxelization exceeds the configured maximum voxel
-count, the input is clipped to the configured capacity and an error is logged.
-
 ## Trained Models
 
-The segmentation head was trained on the T4Dataset using approximately 4,000 frames. The models are
-available in the Autoware artifacts.
+The model was trained on the T4Dataset using approximately 4,000 frames and is available in the Autoware artifacts.
 
 ## Troubleshooting
 

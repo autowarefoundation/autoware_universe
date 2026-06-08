@@ -1,6 +1,8 @@
 /**:
   ros__parameters:
+    # plugins
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
+    # network
     trt_precision: fp16
     cloud_capacity: 2000000
     backbone:

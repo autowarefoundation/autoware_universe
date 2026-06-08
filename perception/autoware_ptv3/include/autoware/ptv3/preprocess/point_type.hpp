@@ -23,15 +23,8 @@
 namespace autoware::ptv3
 {
 
-/** @brief Point cloud field layouts accepted by CUDA preprocessing. */
 enum class CloudFormat { XYZIRCAEDT, XYZIRADRT, XYZIRC, XYZI, UNKNOWN };
 
-/**
- * @brief Parse a point format string.
- *
- * @param format Format name such as `xyzi` or `xyzirc`.
- * @return Parsed format, or CloudFormat::UNKNOWN when the name is not known.
- */
 inline CloudFormat parse_cloud_format_string(std::string format)
 {
   for (auto & ch : format) {
@@ -53,12 +46,6 @@ inline CloudFormat parse_cloud_format_string(std::string format)
   return CloudFormat::UNKNOWN;
 }
 
-/**
- * @brief Convert a CloudFormat value to its canonical lowercase name.
- *
- * @param format CloudFormat to convert.
- * @return Format name, or `unknown`.
- */
 inline const char * to_string(CloudFormat format)
 {
   switch (format) {
@@ -75,13 +62,6 @@ inline const char * to_string(CloudFormat format)
   }
 }
 
-/**
- * @brief Check whether this package can write the requested output layout.
- *
- * @param input_format  Layout of the source point cloud.
- * @param output_format Desired layout of the output point cloud.
- * @return true if the output layout is supported for the input layout.
- */
 inline bool can_convert_format(const CloudFormat input_format, const CloudFormat output_format)
 {
   switch (input_format) {
@@ -99,7 +79,6 @@ inline bool can_convert_format(const CloudFormat input_format, const CloudFormat
   }
 }
 
-/** @brief Packed XYZI point layout. */
 struct CloudPointTypeXYZI
 {
   float x;
@@ -108,8 +87,7 @@ struct CloudPointTypeXYZI
   float intensity;
 } __attribute__((packed));
 
-/** @brief Packed XYZIRC point layout. */
-struct CloudPointTypeXYZIRC
+struct CloudPointType
 {
   float x;
   float y;
@@ -119,7 +97,8 @@ struct CloudPointTypeXYZIRC
   std::uint16_t channel;
 } __attribute__((packed));
 
-/** @brief Packed XYZIRADRT point layout. */
+using CloudPointTypeXYZIRC = CloudPointType;
+
 struct CloudPointTypeXYZIRADRT
 {
   float x;
@@ -133,7 +112,6 @@ struct CloudPointTypeXYZIRADRT
   double time_stamp;
 } __attribute__((packed));
 
-/** @brief Packed XYZIRCAEDT point layout. */
 struct CloudPointTypeXYZIRCAEDT
 {
   float x;
@@ -148,12 +126,6 @@ struct CloudPointTypeXYZIRCAEDT
   std::uint32_t time_stamp;
 } __attribute__((packed));
 
-/**
- * @brief Return the byte size of one point for a format.
- *
- * @param format Format to query.
- * @return Byte size of one point, or 0 for CloudFormat::UNKNOWN.
- */
 inline std::size_t get_point_step(CloudFormat format)
 {
   switch (format) {
@@ -170,12 +142,6 @@ inline std::size_t get_point_step(CloudFormat format)
   }
 }
 
-/**
- * @brief Return the number of fields in a point format.
- *
- * @param format Format to query.
- * @return Number of fields, or 0 for CloudFormat::UNKNOWN.
- */
 inline std::size_t get_num_fields(CloudFormat format)
 {
   switch (format) {

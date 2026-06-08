@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for PTv3 node",
+  "title": "Parameters for ptv3",
   "type": "object",
   "definitions": {
     "filter": {
@@ -8,19 +8,19 @@
       "properties": {
         "class_probability_threshold": {
           "type": "number",
-          "description": "Points with any filter class probability above this threshold are excluded from the filtered output cloud.",
+          "description": "If any filter class probability reaches this threshold, the point is excluded from the filtered output cloud.",
           "minimum": 0.0,
           "maximum": 1.0
         },
         "classes": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Class names to filter from the output cloud when probability exceeds the threshold.",
+          "description": "Class names to filter out from the filtered output cloud when their probability exceeds the threshold.",
           "uniqueItems": true
         },
         "output_format": {
           "type": "string",
-          "description": "Output point format for the filtered cloud. Empty string preserves the input format.",
+          "description": "Filtered output point format. Empty string preserves the input format.",
           "enum": ["", "xyzi", "xyzirc", "xyziradrt", "xyzircaedt"]
         }
       },
