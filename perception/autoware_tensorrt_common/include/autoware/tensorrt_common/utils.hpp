@@ -30,6 +30,7 @@ namespace fs = ::std::experimental::filesystem;
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -40,6 +41,36 @@ namespace autoware
 namespace tensorrt_common
 {
 constexpr std::array<std::string_view, 3> valid_precisions = {"fp32", "fp16", "int8"};
+
+/**
+ * @brief Return a human-readable name for a TensorRT DataType.
+ *
+ * @param dt TensorRT data type.
+ * @return String literal describing the type.
+ */
+inline const char * dtype_name(nvinfer1::DataType dt)
+{
+  switch (dt) {
+    case nvinfer1::DataType::kFLOAT:
+      return "float32";
+    case nvinfer1::DataType::kHALF:
+      return "float16";
+    case nvinfer1::DataType::kINT8:
+      return "int8";
+    case nvinfer1::DataType::kINT32:
+      return "int32";
+    case nvinfer1::DataType::kBOOL:
+      return "bool";
+    case nvinfer1::DataType::kUINT8:
+      return "uint8";
+    case nvinfer1::DataType::kBF16:
+      return "bfloat16";
+    case nvinfer1::DataType::kINT64:
+      return "int64";
+    default:
+      return "unknown";
+  }
+}
 
 /**
  * @struct TrtCommonConfig
@@ -188,9 +219,12 @@ struct NetworkIO : public TensorInfo
    *
    * @param[in] name Tensor name.
    * @param[in] tensor_dims Tensor dimensions.
+   * @param[in] data_type If set, TRT is required to produce this dtype for the tensor.
    */
-  NetworkIO(std::string name, const nvinfer1::Dims & tensor_dims)
-  : TensorInfo(std::move(name)), dims(tensor_dims)
+  NetworkIO(
+    std::string name, const nvinfer1::Dims & tensor_dims,
+    std::optional<nvinfer1::DataType> data_type = std::nullopt)
+  : TensorInfo(std::move(name)), dims(tensor_dims), dtype(data_type)
   {
   }
 
@@ -214,6 +248,9 @@ struct NetworkIO : public TensorInfo
   {
     std::stringstream ss;
     ss << tensor_name << " {" << TensorInfo::dimsRepr(dims) << "}";
+    if (dtype) {
+      ss << " dtype=" << dtype_name(*dtype);
+    }
     return ss.str();
   }
 
@@ -252,6 +289,9 @@ struct NetworkIO : public TensorInfo
 
   //!< @brief Tensor dimensions.
   nvinfer1::Dims dims;
+
+  //!< @brief If set, forces TRT to use this dtype for the tensor (inputs and outputs).
+  std::optional<nvinfer1::DataType> dtype;
 };
 
 /**
