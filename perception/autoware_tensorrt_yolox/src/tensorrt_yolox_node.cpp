@@ -31,6 +31,43 @@
 
 namespace autoware::tensorrt_yolox
 {
+namespace
+{
+cv::Scalar getColorByClassId(const int class_id)
+{
+  using Classification = autoware_perception_msgs::msg::ObjectClassification;
+
+  switch (class_id) {
+    case Classification::UNKNOWN:
+      return cv::Scalar(160, 160, 160);  // Gray
+    case Classification::CAR:
+      return cv::Scalar(0, 200, 0);     // Green
+    case Classification::TRUCK:
+      return cv::Scalar(255, 128, 0);   // Orange
+    case Classification::BUS:
+      return cv::Scalar(0, 255, 255);   // Yellow
+    case Classification::TRAILER:
+      return cv::Scalar(128, 0, 255);   // Magenta
+    case Classification::MOTORCYCLE:
+      return cv::Scalar(255, 0, 255);   // Purple
+    case Classification::BICYCLE:
+      return cv::Scalar(255, 255, 0);   // Cyan
+    case Classification::PEDESTRIAN:
+      return cv::Scalar(0, 0, 255);     // Red
+    case Classification::ANIMAL:
+      return cv::Scalar(0, 165, 255);   // Orange-Red
+    case Classification::HAZARD:
+      return cv::Scalar(0, 255, 128);   // Spring Green
+    case Classification::OVER_DRIVABLE:
+      return cv::Scalar(255, 0, 0);     // Blue
+    case Classification::UNDER_DRIVABLE:
+      return cv::Scalar(180, 80, 80);   // Dark Brown
+    default:
+      return cv::Scalar(255, 255, 255); // White
+  }
+}
+}  // namespace
+
 TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
 : Node("tensorrt_yolox", node_options)
 {
@@ -210,9 +247,9 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
       std::min(static_cast<int>(object.feature.roi.x_offset + object.feature.roi.width), width);
     const auto bottom =
       std::min(static_cast<int>(object.feature.roi.y_offset + object.feature.roi.height), height);
+    const auto color = getColorByClassId(target_class_id);
     cv::rectangle(
-      in_image_ptr->image, cv::Point(left, top), cv::Point(right, bottom), cv::Scalar(0, 0, 255), 3,
-      8, 0);
+      in_image_ptr->image, cv::Point(left, top), cv::Point(right, bottom), color, 3, 8, 0);
     // Refine mask: replacing segmentation mask by roi class
     // This should remove when the segmentation accuracy is high
     if (is_roi_overlap_semseg_ && trt_yolox_->getMultitaskNum() > 0) {
