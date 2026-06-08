@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    rate: 10.0
+    plugin: "autoware::driving_mode_manager::DefaultPlugin"

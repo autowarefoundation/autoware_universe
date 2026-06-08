@@ -1,0 +1,3 @@
+<library path="autoware_driving_mode_manager_plugin">
+  <class base_class_type="autoware::driving_mode_manager::Plugin" type="autoware::driving_mode_manager::DefaultPlugin"/>
+</library>

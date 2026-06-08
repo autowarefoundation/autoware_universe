@@ -1,0 +1,46 @@
+// Copyright 2026 The Autoware Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "values.hpp"
+
+#include <string>
+
+namespace autoware::driving_mode_manager
+{
+
+PlatformMode to_platform_mode(const AutowareControl & autoware_control)
+{
+  // clang-format off
+  switch (autoware_control) {
+    case AutowareControl::kEnable:  return PlatformMode::kAutoware;
+    case AutowareControl::kDisable: return PlatformMode::kManual;
+    default:                        return PlatformMode::kUnknown;
+  }
+  // clang-format on
+}
+
+std::string to_string(const PlatformMode & mode)
+{
+  // clang-format off
+  switch (mode) {
+    case PlatformMode::kAutoware:         return "Autoware";
+    case PlatformMode::kAutowareSteering: return "AutowareSteering";
+    case PlatformMode::kAutowareVelocity: return "AutowareVelocity";
+    case PlatformMode::kManual:           return "Manual";
+    default:                              return "Invalid";
+  }
+  // clang-format on
+}
+
+}  // namespace autoware::driving_mode_manager
