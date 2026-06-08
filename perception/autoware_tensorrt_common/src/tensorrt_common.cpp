@@ -109,6 +109,27 @@ bool TrtCommon::setup(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
     builder_config_->addOptimizationProfile(profile);
   }
 
+  // Apply dtype overrides from NetworkIO to the parsed network inputs and outputs.
+  if (network_io_) {
+    const auto apply_dtype = [&](nvinfer1::ITensor * tensor, const char * io_type) {
+      if (!tensor) return;
+      const auto it = std::find_if(network_io_->begin(), network_io_->end(), [&](const auto & io) {
+        return io.tensor_name == tensor->getName() && io.dtype.has_value();
+      });
+      if (it == network_io_->end()) return;
+      tensor->setType(*it->dtype);
+      logger_->log(
+        nvinfer1::ILogger::Severity::kINFO, "Setting %s tensor '%s' to dtype %s", io_type,
+        tensor->getName(), dtype_name(*it->dtype));
+    };
+    for (int i = 0; i < network_->getNbInputs(); ++i) {
+      apply_dtype(network_->getInput(i), "input");
+    }
+    for (int i = 0; i < network_->getNbOutputs(); ++i) {
+      apply_dtype(network_->getOutput(i), "output");
+    }
+  }
+
   auto build_engine_with_log = [this]() -> bool {
     logger_->log(nvinfer1::ILogger::Severity::kINFO, "Starting to build engine");
     auto log_thread = logger_->log_throttle(
@@ -526,34 +547,6 @@ bool TrtCommon::initialize()
 
   if (trt_config_->profile_per_layer) {
     builder_config_->setProfilingVerbosity(nvinfer1::ProfilingVerbosity::kDETAILED);
-  }
-
-  // Apply dtype overrides from NetworkIO to the parsed network inputs and outputs
-  if (network_io_) {
-    const auto apply_dtype = [&](nvinfer1::ITensor * tensor, const char * io_type) {
-      if (!tensor) return;
-
-      const auto it = std::find_if(network_io_->begin(), network_io_->end(), [&](const auto & io) {
-        return io.tensor_name == tensor->getName() && io.dtype.has_value();
-      });
-
-      if (it != network_io_->end()) {
-        tensor->setType(*it->dtype);
-        logger_->log(
-          nvinfer1::ILogger::Severity::kINFO, "Setting %s tensor '%s' to dtype %s", io_type,
-          tensor->getName(), dtype_name(*it->dtype));
-      }
-    };
-
-    // Configure network inputs
-    for (int i = 0; i < network_->getNbInputs(); ++i) {
-      apply_dtype(network_->getInput(i), "input");
-    }
-
-    // Configure network outputs
-    for (int i = 0; i < network_->getNbOutputs(); ++i) {
-      apply_dtype(network_->getOutput(i), "output");
-    }
   }
 
   return true;
