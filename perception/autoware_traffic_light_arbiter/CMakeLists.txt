@@ -6,6 +6,7 @@ autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_arbiter.cpp
+  src/traffic_light_arbiter_core.cpp
   src/signal_match_validator.cpp
 )
 
@@ -17,6 +18,9 @@ rclcpp_components_register_node(${PROJECT_NAME}
 if(BUILD_TESTING)
   ament_auto_add_gtest(${PROJECT_NAME}_test
     test/test_node.cpp
+  )
+  ament_auto_add_gtest(${PROJECT_NAME}_characteristic_test
+    test/test_traffic_arbiter_characteristic.cpp
   )
 endif()
 
