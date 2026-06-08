@@ -15,6 +15,8 @@ target_include_directories(${LIBRARY_NAME} PUBLIC
 )
 
 find_package(Boost REQUIRED)
+find_package(Eigen3 REQUIRED)
+target_link_libraries(${LIBRARY_NAME} Eigen3::Eigen)
 
 rclcpp_components_register_node(${LIBRARY_NAME}
   PLUGIN "autoware::covariance_selector::CovarianceSelector"

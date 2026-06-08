@@ -14,6 +14,7 @@
 
 #include "covariance_selector.hpp"
 
+#include <Eigen/Geometry>
 #include <autoware/lanelet2_utils/conversion.hpp>
 
 #include <boost/geometry/geometry.hpp>
@@ -166,11 +167,16 @@ void CovarianceSelector::on_pose(
   }
 
   const auto it = param_.environment_covariance_map.find(env_id);
-  const auto & cov =
+  const auto & body_cov =
     (it != param_.environment_covariance_map.end()) ? it->second : param_.default_covariance;
 
+  // Rotate body-frame covariance to map frame using the pose orientation.
+  const auto & q_msg = msg->pose.pose.orientation;
+  const Eigen::Quaterniond q(q_msg.w, q_msg.x, q_msg.y, q_msg.z);
+  const auto map_cov = rotate_covariance(body_cov, q.normalized().toRotationMatrix());
+
   auto out = *msg;
-  for (size_t i = 0; i < 36; ++i) out.pose.covariance[i] = cov[i];
+  for (size_t i = 0; i < 36; ++i) out.pose.covariance[i] = map_cov[i];
   pub_pose_->publish(out);
 
   autoware_internal_debug_msgs::msg::Int32Stamped env_msg;
@@ -192,6 +198,27 @@ int32_t CovarianceSelector::classify_environment(
     }
   }
   return param_.default_environment_id;
+}
+
+std::array<double, 36> CovarianceSelector::rotate_covariance(
+  const std::array<double, 36> & src, const Eigen::Matrix3d & R)
+{
+  // Rotate only the 3x3 position block (top-left) of the 6x6 covariance matrix.
+  // Same approach as autoware_ndt_scan_matcher::rotate_covariance.
+  Eigen::Matrix3d src_cov;
+  src_cov << src[0], src[1], src[2],
+             src[6], src[7], src[8],
+             src[12], src[13], src[14];
+
+  const Eigen::Matrix3d rotated = R * src_cov * R.transpose();
+
+  std::array<double, 36> ret = src;
+  for (Eigen::Index i = 0; i < 3; ++i) {
+    ret[i]      = rotated(0, i);
+    ret[i + 6]  = rotated(1, i);
+    ret[i + 12] = rotated(2, i);
+  }
+  return ret;
 }
 
 }  // namespace autoware::covariance_selector

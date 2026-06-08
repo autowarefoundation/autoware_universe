@@ -28,8 +28,8 @@
     # Covariance for environment_id=1 (uniform road / tunnel)
     # Lateral (Y) covariance is enlarged to reflect degraded lateral matching confidence.
     environment_1_output_pose_covariance:
-      [0.0225, 0.0,  0.0,   0.0,      0.0,      0.0,
-       0.0,   0.16,  0.0,   0.0,      0.0,      0.0,
+      [1.0, 0.0,  0.0,   0.0,      0.0,      0.0,
+       0.0,   0.0225,  0.0,   0.0,      0.0,      0.0,
        0.0,   0.0,   0.0225, 0.0,     0.0,      0.0,
        0.0,   0.0,   0.0,   0.000625, 0.0,      0.0,
        0.0,   0.0,   0.0,   0.0,      0.000625, 0.0,
@@ -38,8 +38,8 @@
     # Covariance for environment_id=2 (feature-poor road)
     # Both X and Y are enlarged; overall confidence is low.
     environment_2_output_pose_covariance:
-      [0.16,  0.0,  0.0,   0.0,      0.0,      0.0,
-       0.0,   0.16,  0.0,   0.0,      0.0,      0.0,
+      [1.0,  0.0,  0.0,   0.0,      0.0,      0.0,
+       0.0,   1.0,  0.0,   0.0,      0.0,      0.0,
        0.0,   0.0,   0.0225, 0.0,     0.0,      0.0,
        0.0,   0.0,   0.0,   0.000625, 0.0,      0.0,
        0.0,   0.0,   0.0,   0.0,      0.000625, 0.0,

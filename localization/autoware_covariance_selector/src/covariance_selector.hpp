@@ -21,6 +21,7 @@
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 
+#include <Eigen/Core>
 #include <boost/geometry/geometry.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -45,6 +46,9 @@ private:
   void on_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg);
 
   int32_t classify_environment(const geometry_msgs::msg::Point & point) const;
+
+  static std::array<double, 36> rotate_covariance(
+    const std::array<double, 36> & src, const Eigen::Matrix3d & rotation);
 
   struct Param
   {
