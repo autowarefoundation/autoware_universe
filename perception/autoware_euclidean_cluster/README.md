@@ -18,6 +18,12 @@ This package has two clustering methods: `euclidean_cluster` and `voxel_grid_bas
 2. The centroids are clustered by `pcl::EuclideanClusterExtraction`.
 3. The input points are clustered based on the clustered centroids.
 
+### label_based_euclidean_cluster
+
+`LabelBasedEuclideanCluster` converts a semantically segmented pointcloud into `DetectedObjects`.
+
+See [docs/label-based-euclidean-cluster.md](./docs/label-based-euclidean-cluster.md) for the node-specific behavior and configuration details.
+
 ## Inputs / Outputs
 
 ### Input
