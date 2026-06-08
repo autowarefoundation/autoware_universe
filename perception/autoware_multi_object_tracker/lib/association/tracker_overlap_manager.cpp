@@ -19,6 +19,7 @@
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <tf2/utils.hpp>
+
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/geometry.hpp>
@@ -26,8 +27,8 @@
 #include <boost/geometry/geometries/point.hpp>
 #include <boost/geometry/index/rtree.hpp>
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <list>
 #include <memory>
 #include <unordered_set>
@@ -237,8 +238,7 @@ void TrackerOverlapManager::merge(
           const auto transformed = shapes::transformFootprint(
             data2.object.shape.footprint, data2.object.pose, data1.object.pose);
           auto merged_shape = data1.object.shape;
-          merged_shape.footprint =
-            shapes::unionFootprints(merged_shape.footprint, transformed);
+          merged_shape.footprint = shapes::unionFootprints(merged_shape.footprint, transformed);
           data1.tracker->setObjectShape(merged_shape);
         }
 

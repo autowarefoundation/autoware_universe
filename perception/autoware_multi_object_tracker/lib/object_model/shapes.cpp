@@ -417,9 +417,8 @@ geometry_msgs::msg::Polygon unionFootprints(
   if (union_result.empty()) return a;
 
   // If the union produced multiple disjoint components, use the largest
-  const auto & best = *std::max_element(
-    union_result.begin(), union_result.end(),
-    [](const auto & p, const auto & q) {
+  const auto & best =
+    *std::max_element(union_result.begin(), union_result.end(), [](const auto & p, const auto & q) {
       return boost::geometry::area(p) < boost::geometry::area(q);
     });
 

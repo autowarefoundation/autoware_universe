@@ -515,8 +515,7 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
 }
 
-void VehicleTracker::updateFootprint(
-  const types::DynamicObject & object, const rclcpp::Time & time)
+void VehicleTracker::updateFootprint(const types::DynamicObject & object, const rclcpp::Time & time)
 {
   using Shape = autoware_perception_msgs::msg::Shape;
   const bool has_poly =
