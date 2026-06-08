@@ -1,5 +1,7 @@
 # autoware_tensorrt_plugins
 
+<!-- cSpell:ignore indptr -->
+
 ## Purpose
 
 The `autoware_tensorrt_plugins` package extends the operations available in TensorRT via plugins.
