@@ -224,9 +224,19 @@ void TrackerOverlapManager::merge(
           data1.tracker->updateClassification(data2.tracker->getClassification());
         }
 
-        // Shape: prefer lower shape type (bounding box < cylinder < convex hull)
-        if (data1.object.shape.type > data2.object.shape.type) {
-          data1.tracker->setObjectShape(data2.object.shape);
+        // Shape: footprint is additive — transfer or union absorbed's footprint into winner.
+        // Kinematic bbox dimensions (the structural vehicle frame) always stay with the winner.
+        const bool absorbed_has_footprint = !data2.object.shape.footprint.points.empty();
+        if (absorbed_has_footprint) {
+          auto merged_shape = data1.object.shape;
+          if (data1.object.shape.footprint.points.empty()) {
+            merged_shape.footprint = data2.object.shape.footprint;
+          } else {
+            for (const auto & pt : data2.object.shape.footprint.points) {
+              merged_shape.footprint.points.push_back(pt);
+            }
+          }
+          data1.tracker->setObjectShape(merged_shape);
         }
 
         data2.is_valid = false;

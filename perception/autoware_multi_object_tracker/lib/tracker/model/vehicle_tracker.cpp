@@ -77,9 +77,14 @@ VehicleTracker::VehicleTracker(
     object_extension.z = object_model_.init_size.height;
   }
   object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  object_.shape.footprint.points.clear();
 
   // set maximum and minimum size
   limitObjectExtension(object_model_);
+
+  // Layer 2: initialize footprint from input
+  last_footprint_update_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
+  updateFootprint(object, time);
 
   // Set motion model parameters
   motion_model_.setMotionParams(
@@ -246,6 +251,9 @@ bool VehicleTracker::measure(
   // update pose
   measureWithPose(updating_object, channel_info);
 
+  // Layer 2: update stored polygon footprint
+  updateFootprint(updating_object, time);
+
   // remove cached object
   removeCache();
 
@@ -277,7 +285,8 @@ bool VehicleTracker::getTrackedObject(
     // cache object
     updateCache(object, time);
   }
-  object.shape.dimensions.x = motion_model_.getLength();  // set length
+  // Layer 3: compose bbox frame + stored footprint for output
+  exportShape(object);
 
   // if the tracker is to be published, check twist uncertainty
   // in case the twist uncertainty is large, lower the twist value
@@ -312,6 +321,9 @@ bool VehicleTracker::conditionedUpdate(
   const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
   const types::InputChannel & channel_info)
 {
+  // Layer 2: update stored polygon footprint from original measurement (before alignment)
+  updateFootprint(measurement, measurement_time);
+
   // For cluster measurements, re-project the footprint onto the tracker heading before strategy
   // selection. nullopt is returned when there are no footprint points.
   const auto aligned = shapes::alignClusterToOrientation(measurement, motion_model_.getYawState());
@@ -482,20 +494,54 @@ geometry_msgs::msg::Point VehicleTracker::calculateAnchorPoint(
 
 void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape & shape)
 {
-  // Update object shape and area (base functionality)
-  object_.shape = shape;
+  // Update bbox dimensions (kinematic frame authority); internal type is always BOUNDING_BOX
+  object_.shape.dimensions = shape.dimensions;
+  object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+
+  // Layer 2: footprint is independent — update only when new shape carries one (never clear)
+  if (!shape.footprint.points.empty()) {
+    object_.shape.footprint = shape.footprint;
+    last_footprint_update_time_ = getLatestMeasurementTime();
+  }
+
   object_.area = types::getArea(shape);
 
-  // For vehicle trackers, update bicycle model wheel positions to maintain consistency
-  // with the new bbox shape length
-  if (shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    const double new_length = shape.dimensions.x;
+  // Update bicycle model wheel positions to maintain consistency with the new bbox length
+  const double new_length = shape.dimensions.x;
+  motion_model_.updateStateLength(new_length, shape_update_anchor_);
+  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
+}
 
-    // Use stored anchor point from last update strategy
-    motion_model_.updateStateLength(new_length, shape_update_anchor_);
+void VehicleTracker::updateFootprint(
+  const types::DynamicObject & object, const rclcpp::Time & time)
+{
+  using Shape = autoware_perception_msgs::msg::Shape;
+  const bool is_bbox_with_poly =
+    (object.shape.type == Shape::BOUNDING_BOX) && !object.shape.footprint.points.empty();
+  const bool is_polygon_only = (object.shape.type == Shape::POLYGON);
 
-    // Reset to default (CENTER) after applying the shape update
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
+  if (is_bbox_with_poly || is_polygon_only) {
+    object_.shape.footprint = object.shape.footprint;
+    last_footprint_update_time_ = time;
+  }
+  // BBOX_ONLY: footprint stays in object_; exportShape() enforces time-based expiry on output
+}
+
+void VehicleTracker::exportShape(types::DynamicObject & object) const
+{
+  object.shape.dimensions.x = motion_model_.getLength();
+
+  const bool has_footprint =
+    !object_.shape.footprint.points.empty() && last_footprint_update_time_.nanoseconds() > 0;
+  const bool footprint_fresh =
+    has_footprint && (object.time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
+
+  if (footprint_fresh) {
+    object.shape.type = autoware_perception_msgs::msg::Shape::POLYGON;
+    object.shape.footprint = object_.shape.footprint;
+  } else {
+    object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+    object.shape.footprint.points.clear();
   }
 }
 

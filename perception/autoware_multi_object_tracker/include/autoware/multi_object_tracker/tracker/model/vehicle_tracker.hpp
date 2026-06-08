@@ -50,6 +50,13 @@ private:
   // determine anchor point for shape updates by last update strategy
   BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;  // Default: CENTER
 
+  // Layer 2: polygon footprint storage (independent of kinematic bbox)
+  rclcpp::Time last_footprint_update_time_;
+  static constexpr double FOOTPRINT_TIMEOUT_S = 1.0;  // [s] footprint expiry after last polygon obs
+
+  void updateFootprint(const types::DynamicObject & object, const rclcpp::Time & time);
+  void exportShape(types::DynamicObject & object) const;
+
 public:
   VehicleTracker(
     const object_model::ObjectModel & object_model, const rclcpp::Time & time,
