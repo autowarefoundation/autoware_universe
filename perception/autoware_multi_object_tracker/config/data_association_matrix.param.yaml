@@ -52,11 +52,11 @@
           bus:      {max_dist: 5.0, max_area: 60.00, min_area: 10.0,  min_iou: 0.10}
           trailer:  {max_dist: 5.0, max_area: 60.00, min_area: 10.0,  min_iou: 0.10}
         polygon:
-          unknown:  {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
-          car:      {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
-          truck:    {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
-          bus:      {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
-          trailer:  {max_dist: 4.0, max_area: 60.0,  min_area: 1.6,   min_iou: 0.0001}
+          unknown:  {max_dist: 4.0, max_area: 75.0,  min_area: 0.01,   min_iou: 0.0001}
+          car:      {max_dist: 4.0, max_area: 75.0,  min_area: 0.01,   min_iou: 0.0001}
+          truck:    {max_dist: 4.0, max_area: 75.0,  min_area: 0.01,   min_iou: 0.0001}
+          bus:      {max_dist: 4.0, max_area: 75.0,  min_area: 0.01,   min_iou: 0.0001}
+          trailer:  {max_dist: 4.0, max_area: 75.0,  min_area: 0.01,   min_iou: 0.0001}
       pedestrian_and_bicycle_tracker:
         bounding_box:
           unknown:    {max_dist: 3.0, max_area: 2.5,  min_area: 0.01, min_iou: 0.0001}
