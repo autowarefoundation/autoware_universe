@@ -14,7 +14,7 @@
         <link rel="prev" href="../autoware_elevation_map_loader/">
       
       
-        <link rel="next" href="../autoware_ground_segmentation/">
+        <link rel="next" href="docs/label-based-euclidean-cluster/">
       
       
         
@@ -7767,6 +7767,8 @@
           
         
       
+        
+      
     
     
     
@@ -7804,6 +7806,11 @@
 
             </a>
             
+              
+              <label class="md-nav__link md-nav__link--active" for="__nav_7_11" id="__nav_7_11_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
           </div>
         
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_11_label" aria-expanded="true">
@@ -7817,6 +7824,100 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_11_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_11_2" id="__nav_7_11_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_7_11_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_11_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="docs/label-based-euclidean-cluster/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Label based euclidean cluster
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
               
             
           </ul>
@@ -9108,6 +9209,8 @@
           
         
       
+        
+      
     
     
     
@@ -9147,6 +9250,11 @@
 
             </a>
             
+              
+              <label class="md-nav__link " for="__nav_7_22" id="__nav_7_22_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
           </div>
         
         <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_22_label" aria-expanded="false">
@@ -9160,6 +9268,100 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_22_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_22_2" id="__nav_7_22_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_7_22_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_22_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autoware_object_merger/docs/object_fusion_merger/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    object_fusion_merger
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
               
             
           </ul>
@@ -23079,6 +23281,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#label_based_euclidean_cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        label_based_euclidean_cluster
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -23239,6 +23452,9 @@
 <li>The centroids are clustered by <code>pcl::EuclideanClusterExtraction</code>.</li>
 <li>The input points are clustered based on the clustered centroids.</li>
 </ol>
+<h3 id="label_based_euclidean_cluster">label_based_euclidean_cluster<a class="headerlink" href="#label_based_euclidean_cluster" title="Permanent link">#</a></h3>
+<p><code>LabelBasedEuclideanCluster</code> converts a semantically segmented pointcloud into <code>DetectedObjects</code>.</p>
+<p>See <a href="docs/label-based-euclidean-cluster/">docs/label-based-euclidean-cluster.md</a> for the node-specific behavior and configuration details.</p>
 <h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
 <h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
 <table>
@@ -23490,13 +23706,13 @@ Example:
         
         
           
-          <a href="../autoware_ground_segmentation/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_ground_segmentation">
+          <a href="docs/label-based-euclidean-cluster/" class="md-footer__link md-footer__link--next" aria-label="Next: Label based euclidean cluster">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                autoware_ground_segmentation
+                Label based euclidean cluster
               </div>
             </div>
             <div class="md-footer__button md-icon">
