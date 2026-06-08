@@ -51,8 +51,8 @@
   <class type="autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"
          base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
     <description>
-      Temporal MPT optimizer plugin scaffold. Mirrors trajectory MPT optimizer behavior with an
-      independent parameter namespace and enable flag for future temporal-MPT-specific logic.
+      Temporal MPT optimizer plugin. Tracks a time-ordered reference trajectory using an acados MPC
+      on a temporal kinematic bicycle model and overwrites the first N+1 points of the trajectory.
     </description>
   </class>
 </library>
