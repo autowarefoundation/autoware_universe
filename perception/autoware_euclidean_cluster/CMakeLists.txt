@@ -4,6 +4,7 @@ project(autoware_euclidean_cluster)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(autoware_shape_estimation REQUIRED)
 find_package(PCL REQUIRED)
 find_package(autoware_agnocast_wrapper REQUIRED)
 
@@ -58,6 +59,26 @@ autoware_agnocast_wrapper_setup(${PROJECT_NAME}_voxel_grid_node_core)
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_voxel_grid_node_core
   PLUGIN "autoware::euclidean_cluster::VoxelGridBasedEuclideanClusterNode"
   EXECUTABLE voxel_grid_based_euclidean_cluster_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
+)
+
+ament_auto_add_library(${PROJECT_NAME}_label_based_node_core SHARED
+  src/label_based_euclidean_cluster_node.cpp
+)
+target_link_libraries(${PROJECT_NAME}_label_based_node_core
+  ${PCL_LIBRARIES}
+  ${PROJECT_NAME}_lib
+)
+ament_target_dependencies(${PROJECT_NAME}_label_based_node_core
+  autoware_agnocast_wrapper
+  autoware_shape_estimation
+)
+autoware_agnocast_wrapper_setup(${PROJECT_NAME}_label_based_node_core)
+
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_label_based_node_core
+  PLUGIN "autoware::euclidean_cluster::LabelBasedEuclideanClusterNode"
+  EXECUTABLE label_based_euclidean_cluster_node
   AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )

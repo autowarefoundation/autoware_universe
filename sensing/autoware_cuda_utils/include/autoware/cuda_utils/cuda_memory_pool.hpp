@@ -37,7 +37,8 @@ namespace autoware::cuda_utils
  * \param device_id The ID of the CUDA device to create the memory pool on.
  * \return A CUDA memory pool handler.
  */
-cudaMemPool_t create_memory_pool(const size_t & max_mem_pool_size_in_byte, const int device_id)
+inline cudaMemPool_t create_memory_pool(
+  const size_t & max_mem_pool_size_in_byte, const int device_id)
 {
   cudaMemPool_t mem_pool;
 
