@@ -109,6 +109,13 @@ OutT extract_labeled_param(const ParamStruct & params_struct, const std::string_
   }
 }
 
+struct EgoFootprintMargin
+{
+  double lateral{0.0};
+  double front{0.0};
+  double rear{0.0};
+};
+
 struct GlobalParams
 {
   double time_resolution{0.1};
@@ -154,6 +161,9 @@ struct DracParams
       enable_assessment &&
       extract_labeled_param<bool>(drac.assessment_trajectories.diffusion_based, key);
     ego_total_braking_delay = extract_labeled_param<double>(drac.ego_total_braking_delay, key);
+    ego_footprint_margin.lateral = drac.ego_footprint_margin.lateral;
+    ego_footprint_margin.front = drac.ego_footprint_margin.front;
+    ego_footprint_margin.rear = drac.ego_footprint_margin.rear;
     warn_threshold.ego_acceleration =
       extract_labeled_param<double>(drac.warn_threshold.ego_acceleration, key);
     error_threshold.ego_acceleration =
@@ -163,6 +173,7 @@ struct DracParams
   bool enable_assessment{false};
   AssessmentTrajectories assessment_trajectories{};
   double ego_total_braking_delay{0.4};
+  EgoFootprintMargin ego_footprint_margin{};
   Threshold warn_threshold{-2.0};
   Threshold error_threshold{};
 };
@@ -172,6 +183,7 @@ struct PetParams
   bool enable_assessment{true};
   AssessmentTrajectories assessment_trajectories{};
   double ego_total_braking_delay{0.4};
+  EgoFootprintMargin ego_footprint_margin{};
   double ego_assumed_acceleration{-5.0};
   PetThreshold warn_threshold{};
   PetThreshold error_threshold{0.6, 0.3};
@@ -190,6 +202,9 @@ struct PetParams
       enable_assessment &&
       extract_labeled_param<bool>(pet.assessment_trajectories.diffusion_based, key);
     ego_total_braking_delay = extract_labeled_param<double>(pet.ego_total_braking_delay, key);
+    ego_footprint_margin.lateral = pet.ego_footprint_margin.lateral;
+    ego_footprint_margin.front = pet.ego_footprint_margin.front;
+    ego_footprint_margin.rear = pet.ego_footprint_margin.rear;
     ego_assumed_acceleration = extract_labeled_param<double>(pet.ego_assumed_acceleration, key);
 
     warn_threshold.ego_first_passing_time_gap =
@@ -217,6 +232,9 @@ struct RssParams
     enable_assessment = extract_labeled_param<bool>(rss.enable_assessment, key);
     stop_distance_margin = extract_labeled_param<double>(rss.stop_distance_margin, key);
     ego_total_braking_delay = extract_labeled_param<double>(rss.ego_total_braking_delay, key);
+    ego_footprint_margin.lateral = rss.ego_footprint_margin.lateral;
+    ego_footprint_margin.front = rss.ego_footprint_margin.front;
+    ego_footprint_margin.rear = rss.ego_footprint_margin.rear;
     object_assumed_acceleration =
       extract_labeled_param<double>(rss.object_assumed_acceleration, key);
     error_threshold.ego_acceleration =
@@ -226,6 +244,7 @@ struct RssParams
   bool enable_assessment{true};
   double stop_distance_margin{2.0};
   double ego_total_braking_delay{0.4};
+  EgoFootprintMargin ego_footprint_margin{};
   double object_assumed_acceleration{-1.0};
   ErrorThreshold error_threshold{};
 };

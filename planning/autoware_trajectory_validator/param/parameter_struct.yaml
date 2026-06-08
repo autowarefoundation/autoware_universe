@@ -87,6 +87,22 @@ validator:
         default_value: 0.4
         description: Total ego braking delay for DRAC assessment
         read_only: false
+      ego_footprint_margin:
+        lateral:
+          type: double
+          default_value: 0.0
+          description: lateral margin added to both sides of the ego footprint for DRAC assessment
+          read_only: false
+        front:
+          type: double
+          default_value: 0.0
+          description: front margin added to the ego footprint for DRAC assessment
+          read_only: false
+        rear:
+          type: double
+          default_value: 0.0
+          description: rear margin added to the ego footprint for DRAC assessment
+          read_only: false
       warn_threshold:
         ego_acceleration:
           type: double
@@ -141,6 +157,22 @@ validator:
         default_value: 0.4
         description: Total ego braking delay for PET assessment
         read_only: false
+      ego_footprint_margin:
+        lateral:
+          type: double
+          default_value: 0.0
+          description: lateral margin added to both sides of the ego footprint for PET assessment
+          read_only: false
+        front:
+          type: double
+          default_value: 0.0
+          description: front margin added to the ego footprint for PET assessment
+          read_only: false
+        rear:
+          type: double
+          default_value: 0.0
+          description: rear margin added to the ego footprint for PET assessment
+          read_only: false
       ego_assumed_acceleration:
         type: double
         default_value: -5.0
@@ -199,6 +231,22 @@ validator:
         default_value: 0.4
         description: Total ego braking delay for RSS calculation
         read_only: false
+      ego_footprint_margin:
+        lateral:
+          type: double
+          default_value: 0.0
+          description: lateral margin added to both sides of the ego footprint for RSS assessment
+          read_only: false
+        front:
+          type: double
+          default_value: 0.0
+          description: front margin added to the ego footprint for RSS assessment
+          read_only: false
+        rear:
+          type: double
+          default_value: 0.0
+          description: rear margin added to the ego footprint for RSS assessment
+          read_only: false
       object_assumed_acceleration:
         type: double
         default_value: -1.0

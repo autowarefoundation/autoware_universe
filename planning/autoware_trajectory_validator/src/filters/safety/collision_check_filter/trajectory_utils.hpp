@@ -330,12 +330,19 @@ namespace autoware::trajectory_validator::plugin::safety::trajectory
 {
 namespace footprint
 {
+struct EgoDimensions
+{
+  double front_offset{0.0};
+  double rear_overhang{0.0};
+  double vehicle_width{0.0};
+};
+
 FootprintTrajectory compute_footprint_trajectory(
   const PoseTrajectory & pose_trajectory,
   const autoware_perception_msgs::msg::Shape & object_shape);
 
 FootprintTrajectory compute_footprint_trajectory(
-  const PoseTrajectory & pose_trajectory, const VehicleInfo & vehicle_info);
+  const PoseTrajectory & pose_trajectory, const EgoDimensions & ego_dimensions);
 }  // namespace footprint
 
 namespace detail
@@ -357,11 +364,11 @@ geometry_msgs::msg::Pose interpolate_predicted_path_pose(
 TrajectoryData generate_ego_trajectory(
   const geometry_msgs::msg::Twist & initial_twist, double braking_lag, double assumed_acceleration,
   double max_time, double time_resolution, const TrajectoryPoints & traj_points,
-  VehicleInfo & vehicle_info);
+  const footprint::EgoDimensions & ego_dimensions);
 
 TrajectoryData generate_ego_trajectory(
   const TrajectoryPoints & traj_points, const FilterContext & context, double max_time,
-  double time_resolution, VehicleInfo & vehicle_info);
+  double time_resolution, const footprint::EgoDimensions & ego_dimensions);
 
 TrajectoryData generate_predicted_path_trajectory(
   const autoware_perception_msgs::msg::PredictedObject & predicted_object, double braking_lag,
