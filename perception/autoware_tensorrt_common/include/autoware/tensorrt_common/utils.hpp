@@ -220,7 +220,6 @@ struct NetworkIO : public TensorInfo
    * @param[in] name Tensor name.
    * @param[in] tensor_dims Tensor dimensions.
    * @param[in] data_type If set, TRT is required to produce this dtype for the tensor.
-   *            Only meaningful for output tensors. Requires kOBEY_PRECISION_CONSTRAINTS.
    */
   NetworkIO(
     std::string name, const nvinfer1::Dims & tensor_dims,
