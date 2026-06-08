@@ -22,6 +22,7 @@
 
 #include <sensor_msgs/msg/point_field.hpp>
 
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
