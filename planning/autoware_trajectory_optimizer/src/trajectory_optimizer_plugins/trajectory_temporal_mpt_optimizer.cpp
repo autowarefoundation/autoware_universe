@@ -263,15 +263,15 @@ void TrajectoryTemporalMPTOptimizer::optimize_trajectory(
 
   auto solution = acados_interface_->get_control(x0_local);
 
-  for (size_t i = 0; i <= temporal_mpt::N; ++i) {
-    solution.xtraj[i][0] += x_off;
-    solution.xtraj[i][1] += y_off;
-  }
-
   log_debug_info(x0, reference_snapshot, solution, start_idx, terminal_idx, data, traj_points);
 
   if (solution.status != 0) {
     return;
+  }
+
+  for (size_t i = 0; i <= temporal_mpt::N; ++i) {
+    solution.xtraj[i][0] += x_off;
+    solution.xtraj[i][1] += y_off;
   }
 
   const size_t n_apply = std::min(traj_points.size(), static_cast<size_t>(temporal_mpt::N + 1));
