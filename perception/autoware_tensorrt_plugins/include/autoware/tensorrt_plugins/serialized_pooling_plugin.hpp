@@ -26,22 +26,24 @@
 #include <string>
 #include <vector>
 
-constexpr char const * const kSERIALIZED_POOLING_PLUGIN_NAME{"SerializedPooling"};
-constexpr char const * const kSERIALIZED_POOLING_PLUGIN_VERSION{"1"};
-constexpr char const * const kSERIALIZED_POOLING_PLUGIN_NAMESPACE{"autoware::ptv3"};
+constexpr char const * const kPTV3_SERIALIZED_POOLING_PLUGIN_NAME{"PTv3SerializedPooling"};
+constexpr char const * const kPTV3_SERIALIZED_POOLING_PLUGIN_VERSION{"1"};
+// Empty namespace to match every other plugin in this package: the ONNX-parser fallback importer
+// resolves custom ops (domain "autoware") against the default/empty plugin namespace.
+constexpr char const * const kPTV3_SERIALIZED_POOLING_PLUGIN_NAMESPACE{""};
 
 namespace autoware::ptv3
 {
 
-class SerializedPoolingPlugin : public nvinfer1::IPluginV3,
-                                public nvinfer1::IPluginV3OneCore,
-                                public nvinfer1::IPluginV3OneBuild,
-                                public nvinfer1::IPluginV3OneRuntime
+class PTv3SerializedPoolingPlugin : public nvinfer1::IPluginV3,
+                                    public nvinfer1::IPluginV3OneCore,
+                                    public nvinfer1::IPluginV3OneBuild,
+                                    public nvinfer1::IPluginV3OneRuntime
 {
 public:
-  SerializedPoolingPlugin(const std::string & name, const std::string & reduce);
+  PTv3SerializedPoolingPlugin(const std::string & name, const std::string & reduce);
 
-  ~SerializedPoolingPlugin() override = default;
+  ~PTv3SerializedPoolingPlugin() override = default;
 
   nvinfer1::IPluginCapability * getCapabilityInterface(
     nvinfer1::PluginCapabilityType type) noexcept override;

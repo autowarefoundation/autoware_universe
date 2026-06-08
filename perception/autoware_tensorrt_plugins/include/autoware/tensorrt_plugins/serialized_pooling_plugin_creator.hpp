@@ -24,23 +24,26 @@
 namespace autoware::ptv3
 {
 
-class SerializedPoolingPluginCreator : public nvinfer1::IPluginCreatorV3One
+class PTv3SerializedPoolingPluginCreator : public nvinfer1::IPluginCreatorV3One
 {
 public:
-  SerializedPoolingPluginCreator();
+  PTv3SerializedPoolingPluginCreator();
 
-  ~SerializedPoolingPluginCreator() override = default;
+  ~PTv3SerializedPoolingPluginCreator() override = default;
 
   char const * getPluginNamespace() const noexcept override
   {
-    return kSERIALIZED_POOLING_PLUGIN_NAMESPACE;
+    return kPTV3_SERIALIZED_POOLING_PLUGIN_NAMESPACE;
   }
 
-  char const * getPluginName() const noexcept override { return kSERIALIZED_POOLING_PLUGIN_NAME; }
+  char const * getPluginName() const noexcept override
+  {
+    return kPTV3_SERIALIZED_POOLING_PLUGIN_NAME;
+  }
 
   char const * getPluginVersion() const noexcept override
   {
-    return kSERIALIZED_POOLING_PLUGIN_VERSION;
+    return kPTV3_SERIALIZED_POOLING_PLUGIN_VERSION;
   }
 
   nvinfer1::PluginFieldCollection const * getFieldNames() noexcept override;

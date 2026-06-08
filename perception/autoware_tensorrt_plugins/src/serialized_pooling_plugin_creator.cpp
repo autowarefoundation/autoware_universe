@@ -25,9 +25,9 @@
 namespace autoware::ptv3
 {
 
-REGISTER_TENSORRT_PLUGIN(SerializedPoolingPluginCreator);
+REGISTER_TENSORRT_PLUGIN(PTv3SerializedPoolingPluginCreator);
 
-SerializedPoolingPluginCreator::SerializedPoolingPluginCreator()
+PTv3SerializedPoolingPluginCreator::PTv3SerializedPoolingPluginCreator()
 {
   plugin_attributes_.clear();
   plugin_attributes_.emplace_back("reduce", nullptr, nvinfer1::PluginFieldType::kCHAR, 1);
@@ -36,12 +36,12 @@ SerializedPoolingPluginCreator::SerializedPoolingPluginCreator()
   fc_.fields = plugin_attributes_.data();
 }
 
-nvinfer1::PluginFieldCollection const * SerializedPoolingPluginCreator::getFieldNames() noexcept
+nvinfer1::PluginFieldCollection const * PTv3SerializedPoolingPluginCreator::getFieldNames() noexcept
 {
   return &fc_;
 }
 
-nvinfer1::IPluginV3 * SerializedPoolingPluginCreator::createPlugin(
+nvinfer1::IPluginV3 * PTv3SerializedPoolingPluginCreator::createPlugin(
   char const * name, nvinfer1::PluginFieldCollection const * fc,
   [[maybe_unused]] nvinfer1::TensorRTPhase phase) noexcept
 {
@@ -57,7 +57,7 @@ nvinfer1::IPluginV3 * SerializedPoolingPluginCreator::createPlugin(
     }
     parseSerializedPoolingReduce(reduce);
 
-    return new SerializedPoolingPlugin{std::string(name), reduce};
+    return new PTv3SerializedPoolingPlugin{std::string(name), reduce};
   } catch (std::exception const & e) {
     caughtError(e);
   }

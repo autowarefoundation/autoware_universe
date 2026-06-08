@@ -54,17 +54,17 @@ SerializedPoolingReduce parseSerializedPoolingReduce(const std::string & reduce)
   if (reduce == "max") {
     return SerializedPoolingReduce::kMax;
   }
-  throw std::invalid_argument("Unsupported SerializedPooling reduce mode: " + reduce);
+  throw std::invalid_argument("Unsupported PTv3SerializedPooling reduce mode: " + reduce);
 }
 
-SerializedPoolingPlugin::SerializedPoolingPlugin(
+PTv3SerializedPoolingPlugin::PTv3SerializedPoolingPlugin(
   const std::string & name, const std::string & reduce)
 : layer_name_{name}, reduce_{reduce}, reduce_type_{parseSerializedPoolingReduce(reduce)}
 {
   initFieldsToSerialize();
 }
 
-void SerializedPoolingPlugin::initFieldsToSerialize()
+void PTv3SerializedPoolingPlugin::initFieldsToSerialize()
 {
   data_to_serialize_.clear();
   data_to_serialize_.emplace_back(
@@ -74,7 +74,7 @@ void SerializedPoolingPlugin::initFieldsToSerialize()
   fc_to_serialize_.fields = data_to_serialize_.data();
 }
 
-nvinfer1::IPluginCapability * SerializedPoolingPlugin::getCapabilityInterface(
+nvinfer1::IPluginCapability * PTv3SerializedPoolingPlugin::getCapabilityInterface(
   nvinfer1::PluginCapabilityType type) noexcept
 {
   try {
@@ -92,37 +92,37 @@ nvinfer1::IPluginCapability * SerializedPoolingPlugin::getCapabilityInterface(
   return nullptr;
 }
 
-nvinfer1::IPluginV3 * SerializedPoolingPlugin::clone() noexcept
+nvinfer1::IPluginV3 * PTv3SerializedPoolingPlugin::clone() noexcept
 {
   try {
-    return new SerializedPoolingPlugin{layer_name_, reduce_};
+    return new PTv3SerializedPoolingPlugin{layer_name_, reduce_};
   } catch (std::exception const & e) {
     caughtError(e);
   }
   return nullptr;
 }
 
-char const * SerializedPoolingPlugin::getPluginName() const noexcept
+char const * PTv3SerializedPoolingPlugin::getPluginName() const noexcept
 {
-  return kSERIALIZED_POOLING_PLUGIN_NAME;
+  return kPTV3_SERIALIZED_POOLING_PLUGIN_NAME;
 }
 
-char const * SerializedPoolingPlugin::getPluginVersion() const noexcept
+char const * PTv3SerializedPoolingPlugin::getPluginVersion() const noexcept
 {
-  return kSERIALIZED_POOLING_PLUGIN_VERSION;
+  return kPTV3_SERIALIZED_POOLING_PLUGIN_VERSION;
 }
 
-char const * SerializedPoolingPlugin::getPluginNamespace() const noexcept
+char const * PTv3SerializedPoolingPlugin::getPluginNamespace() const noexcept
 {
-  return kSERIALIZED_POOLING_PLUGIN_NAMESPACE;
+  return kPTV3_SERIALIZED_POOLING_PLUGIN_NAMESPACE;
 }
 
-std::int32_t SerializedPoolingPlugin::getNbOutputs() const noexcept
+std::int32_t PTv3SerializedPoolingPlugin::getNbOutputs() const noexcept
 {
   return 2;
 }
 
-std::int32_t SerializedPoolingPlugin::configurePlugin(
+std::int32_t PTv3SerializedPoolingPlugin::configurePlugin(
   nvinfer1::DynamicPluginTensorDesc const * in, std::int32_t num_inputs,
   nvinfer1::DynamicPluginTensorDesc const * out, std::int32_t num_outputs) noexcept
 {
@@ -142,7 +142,7 @@ std::int32_t SerializedPoolingPlugin::configurePlugin(
   return 0;
 }
 
-bool SerializedPoolingPlugin::supportsFormatCombination(
+bool PTv3SerializedPoolingPlugin::supportsFormatCombination(
   std::int32_t pos, nvinfer1::DynamicPluginTensorDesc const * in_out, std::int32_t num_inputs,
   std::int32_t num_outputs) noexcept
 {
@@ -175,7 +175,7 @@ bool SerializedPoolingPlugin::supportsFormatCombination(
   return supported;
 }
 
-std::int32_t SerializedPoolingPlugin::getOutputDataTypes(
+std::int32_t PTv3SerializedPoolingPlugin::getOutputDataTypes(
   nvinfer1::DataType * output_types, std::int32_t num_outputs,
   nvinfer1::DataType const * input_types, std::int32_t num_inputs) const noexcept
 {
@@ -188,7 +188,7 @@ std::int32_t SerializedPoolingPlugin::getOutputDataTypes(
   return 0;
 }
 
-std::int32_t SerializedPoolingPlugin::getOutputShapes(
+std::int32_t PTv3SerializedPoolingPlugin::getOutputShapes(
   nvinfer1::DimsExprs const * inputs, std::int32_t num_inputs,
   [[maybe_unused]] nvinfer1::DimsExprs const * shape_inputs,
   [[maybe_unused]] std::int32_t num_shape_inputs, nvinfer1::DimsExprs * outputs,
@@ -214,7 +214,7 @@ std::int32_t SerializedPoolingPlugin::getOutputShapes(
   return 0;
 }
 
-std::int32_t SerializedPoolingPlugin::enqueue(
+std::int32_t PTv3SerializedPoolingPlugin::enqueue(
   nvinfer1::PluginTensorDesc const * input_desc,
   [[maybe_unused]] nvinfer1::PluginTensorDesc const * output_desc, void const * const * inputs,
   void * const * outputs, [[maybe_unused]] void * workspace, cudaStream_t stream) noexcept
@@ -241,7 +241,7 @@ std::int32_t SerializedPoolingPlugin::enqueue(
   return status == cudaSuccess ? 0 : -1;
 }
 
-std::int32_t SerializedPoolingPlugin::onShapeChange(
+std::int32_t PTv3SerializedPoolingPlugin::onShapeChange(
   [[maybe_unused]] nvinfer1::PluginTensorDesc const * in, [[maybe_unused]] std::int32_t num_inputs,
   [[maybe_unused]] nvinfer1::PluginTensorDesc const * out,
   [[maybe_unused]] std::int32_t num_outputs) noexcept
@@ -249,18 +249,18 @@ std::int32_t SerializedPoolingPlugin::onShapeChange(
   return 0;
 }
 
-nvinfer1::IPluginV3 * SerializedPoolingPlugin::attachToContext(
+nvinfer1::IPluginV3 * PTv3SerializedPoolingPlugin::attachToContext(
   [[maybe_unused]] nvinfer1::IPluginResourceContext * context) noexcept
 {
   return clone();
 }
 
-nvinfer1::PluginFieldCollection const * SerializedPoolingPlugin::getFieldsToSerialize() noexcept
+nvinfer1::PluginFieldCollection const * PTv3SerializedPoolingPlugin::getFieldsToSerialize() noexcept
 {
   return &fc_to_serialize_;
 }
 
-std::size_t SerializedPoolingPlugin::getWorkspaceSize(
+std::size_t PTv3SerializedPoolingPlugin::getWorkspaceSize(
   [[maybe_unused]] nvinfer1::DynamicPluginTensorDesc const * inputs,
   [[maybe_unused]] std::int32_t num_inputs,
   [[maybe_unused]] nvinfer1::DynamicPluginTensorDesc const * outputs,

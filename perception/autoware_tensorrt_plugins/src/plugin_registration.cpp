@@ -81,7 +81,7 @@ extern "C" nvinfer1::IPluginCreatorInterface * const * getCreators(std::int32_t 
     multi_scale_deformable_attention_plugin_creator{};
   static autoware::tensorrt_plugins::RotatePluginCreator rotate_plugin_creator{};
   static nvinfer1::plugin::SegmentCSRPluginCreator segment_csr_plugin_creator{};
-  static autoware::ptv3::SerializedPoolingPluginCreator serialized_pooling_plugin_creator{};
+  static autoware::ptv3::PTv3SerializedPoolingPluginCreator serialized_pooling_plugin_creator{};
   static autoware::tensorrt_plugins::SelectAndPadPluginCreator select_and_pad_plugin_creator{};
   static nvinfer1::plugin::UniquePluginCreator unique_plugin_creator{};
 

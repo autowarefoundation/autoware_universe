@@ -25,6 +25,54 @@ We provide a wrapper for the `bev_pool` operation presented in [BEVFusion](https
 
 We provide a wrapper for the `segment_csr` operation presented in [torch_scatter](https://github.com/rusty1s/pytorch_scatter/tree/master). Please refer to the original code for specific details.
 
+### PTv3 Serialized Pooling
+
+The `PTv3SerializedPooling` plugin implements the feature reduction used by Point Transformer V3
+serialized downsampling. PTv3 groups input voxels by dropping the lowest bits from each serialized
+voxel code; the grouping metadata is precomputed outside the TensorRT engine and supplied as regular
+engine inputs. This lets TensorRT derive the output shape from `indptr.shape[0] - 1` instead of from
+a data-dependent `Unique` operation.
+
+**Inputs:**
+
+1. `feature`: Input voxel features `(N, C)`, either FP32 or FP16.
+2. `coord`: Input voxel coordinates `(N, 3)`, FP32. These are reduced using the first source voxel
+   in each output segment.
+3. `indices`: Source voxel indices sorted by output segment `(N)`, INT64.
+4. `indptr`: CSR segment pointers `(M + 1)`, INT64.
+
+**Outputs:**
+
+1. `pooled_feature`: Reduced output voxel features `(M, C)`.
+2. `pooled_coord`: Representative output voxel coordinates `(M, 3)`.
+
+**Parameters:**
+
+- `reduce`: Feature reduction mode, one of `sum`, `mean`, `min`, or `max`.
+
+Example CSR grouping:
+
+```text
+Input voxels after serialized-code downsample:
+
+  input index:     0     1     2     3     4     5
+  pooled key:      A     A     B     C     C     C
+  feature:        f0    f1    f2    f3    f4    f5
+  coord:          c0    c1    c2    c3    c4    c5
+
+Precomputed plugin inputs:
+
+  indices = [0, 1, 2, 3, 4, 5]
+  indptr  = [0,    2, 3,       6]
+             | A | |B| |   C   |
+
+Plugin outputs:
+
+  pooled_feature[0] = reduce(f0, f1)      pooled_coord[0] = c0
+  pooled_feature[1] = reduce(f2)          pooled_coord[1] = c2
+  pooled_feature[2] = reduce(f3, f4, f5)  pooled_coord[2] = c3
+```
+
 ### Unique
 
 While ONNX supports the unique operation, TensorRT does not provide an implementation. For this reason we implement `Unique` as `CustomUnique` to avoid name classes.
