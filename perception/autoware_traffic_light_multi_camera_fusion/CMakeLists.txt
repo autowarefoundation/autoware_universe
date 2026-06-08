@@ -15,9 +15,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/signal_validator.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::traffic_light::MultiCameraFusionNode"
   EXECUTABLE traffic_light_multi_camera_fusion_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
@@ -26,6 +28,7 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(${PROJECT_NAME}_test
     test/test_utils.cpp
     test/test_signal_validator.cpp
+    test/test_multi_camera_fusion.cpp
   )
   ament_add_ros_isolated_gtest(${PROJECT_NAME}_node_test
     test/test_traffic_light_multi_camera_fusion_node.cpp

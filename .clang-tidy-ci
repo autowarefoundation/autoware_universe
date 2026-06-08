@@ -10,7 +10,6 @@ Checks: "
   -bugprone-infinite-loop,
   -bugprone-integer-division,
   -bugprone-macro-parentheses,
-  -bugprone-multi-level-implicit-pointer-conversion,
   -bugprone-narrowing-conversions,
   -bugprone-optional-value-conversion,
   -bugprone-parent-virtual-call,
@@ -30,4 +29,3 @@ ExtraArgs:
   - -Wno-deprecated-declarations
   - -Wno-unused-private-field
   - -Wno-unused-but-set-variable
-  - -Wno-deprecated-builtins
