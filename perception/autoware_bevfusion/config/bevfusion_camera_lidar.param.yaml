@@ -25,4 +25,15 @@
     iou_nms_search_distance_2d: 10.0
     iou_nms_threshold: 0.1
     yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0] # refers to the class_names
-    score_threshold: 0.1
+
+    detection_score_thresholds:
+        # Upper bound of radial distance of 3d center_x and center_y in bounding boxes, and starting from 0
+        # [0-50m), [50.0-90m), [90.0-121.0m), [121.0-200.0m), set a very high number for the last one to be safe
+        distance_bin_upper_limits: [50.0, 90.0, 121.0, 200.0]
+        # Each list of thresholds must match with the number of upper_bounds, and each threshold corresponds to a distance bucket in the order of the upper bounds
+        min_confidence_scores:
+          CAR: [0.10, 0.10, 0.10, 0.10]
+          TRUCK: [0.10, 0.10, 0.10, 0.10]
+          BUS: [0.10, 0.10, 0.10, 0.10]
+          BICYCLE: [0.10, 0.10, 0.10, 0.10]
+          PEDESTRIAN: [0.10, 0.10, 0.10, 0.10]

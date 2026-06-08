@@ -292,6 +292,15 @@ void AEB::onImu(const Imu::ConstSharedPtr input_msg)
 void AEB::onPointCloud(const PointCloud2::ConstSharedPtr input_msg)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  if (input_msg->width == 0 || input_msg->height == 0) {
+    RCLCPP_DEBUG_SKIPFIRST_THROTTLE(
+      get_logger(), *get_clock(), 5000, "[AEB]: Received empty point cloud");
+    obstacle_ros_pointcloud_ptr_ = std::make_shared<PointCloud2>();
+    obstacle_ros_pointcloud_ptr_->header = input_msg->header;
+    return;
+  }
+
   PointCloud::Ptr pointcloud_ptr(new PointCloud);
   pcl::fromROSMsg(*input_msg, *pointcloud_ptr);
 
@@ -955,6 +964,12 @@ void AEB::cropPointCloudWithEgoFootprintPath(
   const std::vector<Polygon2d> & ego_polys, PointCloud::Ptr filtered_objects)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  if (obstacle_ros_pointcloud_ptr_->width == 0 || obstacle_ros_pointcloud_ptr_->height == 0) {
+    RCLCPP_DEBUG_SKIPFIRST_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "[AEB]: Received empty obstacle point cloud, skipping crop");
+    return;
+  }
   if (ego_polys.empty()) {
     return;
   }

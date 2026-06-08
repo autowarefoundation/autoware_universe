@@ -116,6 +116,8 @@ DetectionByTracker::DetectionByTracker(const rclcpp::NodeOptions & node_options)
   tracker_ignore_.MOTORCYCLE = declare_parameter<bool>("tracker_ignore_label.MOTORCYCLE");
   tracker_ignore_.BICYCLE = declare_parameter<bool>("tracker_ignore_label.BICYCLE");
   tracker_ignore_.PEDESTRIAN = declare_parameter<bool>("tracker_ignore_label.PEDESTRIAN");
+  tracker_ignore_.ANIMAL = declare_parameter<bool>("tracker_ignore_label.ANIMAL");
+  tracker_ignore_.HAZARD = declare_parameter<bool>("tracker_ignore_label.HAZARD");
 
   // set maximum search setting for merger/divider
   setMaxSearchRange();
