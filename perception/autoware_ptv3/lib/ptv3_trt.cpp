@@ -135,15 +135,17 @@ void PTv3TRT::init_backbone_trt(const tensorrt_common::TrtCommonConfig & trt_con
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
 
   // Inputs
-  network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}});
-  network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}});
-  network_io.emplace_back("serialized_code", nvinfer1::Dims{2, {2, -1}});
+  network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+  network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back(
+    "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
 
   // Outputs: point_feat [N,64], point_grid_coord [N,3], point_offset [1]
   network_io.emplace_back(
     "point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}}, nvinfer1::DataType::kFLOAT);
-  network_io.emplace_back("point_grid_coord", nvinfer1::Dims{2, {-1, 3}});
-  network_io.emplace_back("point_offset", nvinfer1::Dims{1, {1}});
+  network_io.emplace_back(
+    "point_grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+  network_io.emplace_back("point_offset", nvinfer1::Dims{1, {1}}, nvinfer1::DataType::kINT64);
 
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
   profile_dims.emplace_back(
@@ -178,8 +180,9 @@ void PTv3TRT::init_seg3d_head_trt(const tensorrt_common::TrtCommonConfig & trt_c
 {
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
 
-  network_io.emplace_back("point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}});
-  network_io.emplace_back("pred_labels", nvinfer1::Dims{1, {-1}});
+  network_io.emplace_back(
+    "point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back("pred_labels", nvinfer1::Dims{1, {-1}}, nvinfer1::DataType::kINT64);
   network_io.emplace_back(
     "pred_probs", nvinfer1::Dims{2, {-1, static_cast<std::int64_t>(config_.class_names_.size())}},
     nvinfer1::DataType::kFLOAT);
