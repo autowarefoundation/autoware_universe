@@ -24,4 +24,4 @@
     use_trajectory_extender: false
     use_kinematic_feasibility_enforcer: true
     use_mpt_optimizer: false
-    use_temporal_mpt_optimizer: true
+    use_temporal_mpt_optimizer: false
