@@ -16,6 +16,7 @@
 #define LANELET_FILTER__LANELET_FILTER_BASE_HPP_
 
 #include "autoware/agnocast_wrapper/node.hpp"
+#include "autoware/agnocast_wrapper/tf2.hpp"
 #include "autoware/detected_object_validation/utils/utils.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/ros/debug_publisher.hpp"
@@ -88,8 +89,8 @@ private:
   lanelet::LaneletMapPtr lanelet_map_ptr_;
   std::string lanelet_frame_id_;
 
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
+  autoware::agnocast_wrapper::Buffer tf_buffer_;
+  autoware::agnocast_wrapper::TransformListener tf_listener_;
 
   utils::FilterTargetLabel filter_target_;
   double ego_base_height_ = 0.0;

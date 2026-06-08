@@ -95,7 +95,6 @@ rclcpp_components_register_node(occupancy_grid_based_validator
   EXECUTABLE occupancy_grid_based_validator_node
 )
 
-# Tests use the plain rclcpp::Node API, so build them only when Agnocast is disabled.
 if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
   ament_auto_add_gtest(detection_object_validation_tests
     test/test_utils.cpp
