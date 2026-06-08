@@ -71,7 +71,6 @@ install(FILES
   ${TEMPORAL_GEN_DIR}/${TEMPORAL_MODEL}_model/${TEMPORAL_MODEL}_model.h
   ${TEMPORAL_GEN_DIR}/${TEMPORAL_MODEL}_constraints/${TEMPORAL_MODEL}_constraints.h
   DESTINATION include/autoware/trajectory_optimizer/c_generated_code
-  OPTIONAL
 )
 
 ament_auto_package(
