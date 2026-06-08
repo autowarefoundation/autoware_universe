@@ -6,12 +6,15 @@ autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_arbiter.cpp
+  src/traffic_light_arbiter_core.cpp
   src/signal_match_validator.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::traffic_light::TrafficLightArbiter"
   EXECUTABLE traffic_light_arbiter_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
