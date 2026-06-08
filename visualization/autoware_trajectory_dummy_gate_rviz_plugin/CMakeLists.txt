@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(autoware_trajectory_dummy_concatenator_rviz_plugin)
+project(autoware_trajectory_dummy_gate_rviz_plugin)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()

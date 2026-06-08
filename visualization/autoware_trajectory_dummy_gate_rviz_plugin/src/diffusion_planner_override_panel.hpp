@@ -24,7 +24,7 @@
 
 #include <std_msgs/msg/bool.hpp>
 
-namespace autoware::trajectory_dummy_concatenator_rviz_plugin
+namespace autoware::trajectory_dummy_gate_rviz_plugin
 {
 
 class DiffusionPlannerOverridePanel : public rviz_common::Panel
@@ -55,6 +55,6 @@ private:
   rviz_common::ros_integration::RosNodeAbstractionIface::WeakPtr rviz_ros_node_;
 };
 
-}  // namespace autoware::trajectory_dummy_concatenator_rviz_plugin
+}  // namespace autoware::trajectory_dummy_gate_rviz_plugin
 
 #endif  // DIFFUSION_PLANNER_OVERRIDE_PANEL_HPP_

@@ -20,7 +20,7 @@
 #include <rviz_common/config.hpp>
 #include <rviz_common/display_context.hpp>
 
-namespace autoware::trajectory_dummy_concatenator_rviz_plugin
+namespace autoware::trajectory_dummy_gate_rviz_plugin
 {
 
 DiffusionPlannerOverridePanel::DiffusionPlannerOverridePanel(QWidget * parent)
@@ -114,9 +114,8 @@ void DiffusionPlannerOverridePanel::load(const rviz_common::Config & config)
   }
 }
 
-}  // namespace autoware::trajectory_dummy_concatenator_rviz_plugin
+}  // namespace autoware::trajectory_dummy_gate_rviz_plugin
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::trajectory_dummy_concatenator_rviz_plugin::DiffusionPlannerOverridePanel,
-  rviz_common::Panel)
+  autoware::trajectory_dummy_gate_rviz_plugin::DiffusionPlannerOverridePanel, rviz_common::Panel)

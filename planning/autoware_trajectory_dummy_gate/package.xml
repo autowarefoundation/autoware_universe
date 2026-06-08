@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>autoware_trajectory_dummy_concatenator_rviz_plugin</name>
+  <name>autoware_trajectory_dummy_gate</name>
   <version>0.1.0</version>
-  <description>RViz2 panel plugin to toggle the DiffusionPlanner override in autoware_trajectory_dummy_concatenator</description>
+  <description>Dummy gate to pass through or block the diffusion planner candidate trajectories via an external override, for e2e experiments</description>
   <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
 
   <license>Apache License 2.0</license>
@@ -11,12 +11,9 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
-  <depend>libqt5-core</depend>
-  <depend>libqt5-gui</depend>
-  <depend>libqt5-widgets</depend>
-  <depend>pluginlib</depend>
+  <depend>autoware_internal_planning_msgs</depend>
   <depend>rclcpp</depend>
-  <depend>rviz_common</depend>
+  <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
@@ -24,6 +21,5 @@
 
   <export>
     <build_type>ament_cmake</build_type>
-    <rviz plugin="${prefix}/plugins/plugin_description.xml"/>
   </export>
 </package>
