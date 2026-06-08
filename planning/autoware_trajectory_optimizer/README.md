@@ -56,7 +56,7 @@ Each plugin can be enabled/disabled at runtime via activation flags (e.g., `use_
 
 - **Trajectory Extender positioning**: The trajectory extender has known discontinuity issues when placed early in the pipeline. It negatively affects the QP solver results and introduces artifacts. For this reason, it has been moved to near the end of the pipeline and is **disabled by default** (`use_trajectory_extender: false`). Fixing the extender's discontinuity issues is future work.
 
-- **Temporal MPT vs spatial MPT**: `TrajectoryTemporalMPTOptimizer` is independent of `TrajectoryMPTOptimizer` (different solver, no corridor bounds). It expects the incoming trajectory to already be a sensible time-ordered sequence from upstream plugins; typical placement is after path/velocity smoothing. It overwrites at most the first 81 points (8.0 s at 0.1 s spacing).
+- **Temporal MPT vs spatial MPT**: `TrajectoryTemporalMPTOptimizer` is independent of `TrajectoryMPTOptimizer` (different solver, no corridor bounds). It can replace the entire post-`TrajectoryPointFixer` plugin chain (kinematic enforcer, QP/EB/spline smoothers, velocity optimizer, spatial MPT) with a single MPC step; see [docs/temporal_mpt_optimizer.md](docs/temporal_mpt_optimizer.md). It overwrites at most the first 81 points (8.0 s at 0.1 s spacing).
 
 ## Design Specification
 
