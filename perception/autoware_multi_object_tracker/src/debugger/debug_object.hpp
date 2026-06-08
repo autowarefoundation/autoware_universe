@@ -55,6 +55,9 @@ struct ObjectData
 
   // detection channel id
   uint channel_id;
+
+  // tracker type name (e.g. "multi_vehicle_tracker", "static_tracker")
+  std::string tracker_type_str;
 };
 
 class TrackerObjectDebugger

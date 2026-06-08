@@ -46,6 +46,16 @@
           "type": "number",
           "minimum": -1.0,
           "maximum": 1.0
+        },
+        "animal": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
+        },
+        "hazard": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0
         }
       },
       "required": [
@@ -56,7 +66,9 @@
         "trailer",
         "motorcycle",
         "bicycle",
-        "pedestrian"
+        "pedestrian",
+        "animal",
+        "hazard"
       ],
       "description": "Generalized IoU threshold for each tracked class."
     },
@@ -95,6 +107,14 @@
         "pedestrian": {
           "type": "number",
           "minimum": 0.0
+        },
+        "animal": {
+          "type": "number",
+          "minimum": 0.0
+        },
+        "hazard": {
+          "type": "number",
+          "minimum": 0.0
         }
       },
       "required": [
@@ -105,7 +125,9 @@
         "trailer",
         "motorcycle",
         "bicycle",
-        "pedestrian"
+        "pedestrian",
+        "animal",
+        "hazard"
       ],
       "description": "Overlap distance threshold for each tracked class."
     },
@@ -167,7 +189,9 @@
             "trailer": -0.6,
             "motorcycle": -0.1,
             "bicycle": -0.1,
-            "pedestrian": -0.1
+            "pedestrian": -0.1,
+            "animal": -0.1,
+            "hazard": -0.1
           }
         },
         "pruning_distance_thresholds": {
@@ -180,7 +204,9 @@
             "trailer": 9.0,
             "motorcycle": 4.0,
             "bicycle": 3.0,
-            "pedestrian": 2.0
+            "pedestrian": 2.0,
+            "animal": 2.0,
+            "hazard": 2.0
           }
         },
         "pruning_static_object_speed": {

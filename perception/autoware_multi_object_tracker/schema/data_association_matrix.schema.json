@@ -15,7 +15,8 @@
         "normal_vehicle_tracker",
         "big_vehicle_tracker",
         "vehicle_tracker",
-        "polygon_tracker"
+        "polygon_tracker",
+        "static_tracker"
       ]
     },
     "tracker_assignment_entry": {
@@ -50,7 +51,9 @@
         "trailer": { "$ref": "#/definitions/tracker_assignment_entry" },
         "motorcycle": { "$ref": "#/definitions/tracker_assignment_entry" },
         "bicycle": { "$ref": "#/definitions/tracker_assignment_entry" },
-        "pedestrian": { "$ref": "#/definitions/tracker_assignment_entry" }
+        "pedestrian": { "$ref": "#/definitions/tracker_assignment_entry" },
+        "animal": { "$ref": "#/definitions/tracker_assignment_entry" },
+        "hazard": { "$ref": "#/definitions/tracker_assignment_entry" }
       },
       "additionalProperties": false
     },
@@ -94,7 +97,9 @@
         "trailer": { "$ref": "#/definitions/tracker_profile_entry" },
         "motorcycle": { "$ref": "#/definitions/tracker_profile_entry" },
         "bicycle": { "$ref": "#/definitions/tracker_profile_entry" },
-        "pedestrian": { "$ref": "#/definitions/tracker_profile_entry" }
+        "pedestrian": { "$ref": "#/definitions/tracker_profile_entry" },
+        "animal": { "$ref": "#/definitions/tracker_profile_entry" },
+        "hazard": { "$ref": "#/definitions/tracker_profile_entry" }
       },
       "additionalProperties": false
     },

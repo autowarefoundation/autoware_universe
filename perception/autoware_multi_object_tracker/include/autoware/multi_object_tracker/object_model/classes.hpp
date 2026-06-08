@@ -51,11 +51,11 @@ struct Classification
   float probability{0.0F};
 };
 
-constexpr int NUM_TRACKED_LABELS = 8;
+constexpr int NUM_TRACKED_LABELS = 10;
 
 inline constexpr std::array<Label, NUM_TRACKED_LABELS> TRACKED_LABELS = {
-  Label::UNKNOWN, Label::CAR,        Label::TRUCK,   Label::BUS,
-  Label::TRAILER, Label::MOTORCYCLE, Label::BICYCLE, Label::PEDESTRIAN};
+  Label::UNKNOWN,    Label::CAR,     Label::TRUCK,      Label::BUS,    Label::TRAILER,
+  Label::MOTORCYCLE, Label::BICYCLE, Label::PEDESTRIAN, Label::ANIMAL, Label::HAZARD};
 
 inline const std::array<Label, NUM_TRACKED_LABELS> & trackedLabels()
 {

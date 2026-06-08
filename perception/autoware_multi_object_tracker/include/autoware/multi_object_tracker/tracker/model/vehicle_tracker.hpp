@@ -108,11 +108,6 @@ private:
     const EdgePositions & meas_edges, const types::DynamicObject & prediction) const;
   geometry_msgs::msg::Point calculateAnchorPoint(
     const EdgeAlignment & alignment, const types::DynamicObject & measurement) const;
-
-  // Re-project a cluster's polygon footprint onto the tracker's current heading.
-  // Returns std::nullopt when the cluster has no footprint points.
-  std::optional<types::DynamicObject> alignClusterToTrackerOrientation(
-    const types::DynamicObject & cluster, double tracker_yaw) const;
 };
 
 }  // namespace autoware::multi_object_tracker
