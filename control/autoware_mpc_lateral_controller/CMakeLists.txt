@@ -4,6 +4,8 @@ project(autoware_mpc_lateral_controller)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+add_compile_options(-DEIGEN_DONT_PARALLELIZE)
+
 find_package(fmt REQUIRED)
 
 set(MPC_LAT_CON_LIB ${PROJECT_NAME}_lib)
