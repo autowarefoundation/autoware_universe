@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_traffic_light_arbiter)
 
 find_package(autoware_cmake REQUIRED)
-find_package(autoware_agnocast_wrapper REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
@@ -11,22 +10,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/signal_match_validator.cpp
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE
-  ${agnocastlib_INCLUDE_DIRS}
-  ${autoware_agnocast_wrapper_INCLUDE_DIRS}
-)
-
-ament_target_dependencies(${PROJECT_NAME}
-  autoware_agnocast_wrapper
-)
-
-autoware_agnocast_wrapper_setup(${PROJECT_NAME})
-
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::traffic_light::TrafficLightArbiter"
   EXECUTABLE traffic_light_arbiter_node
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 if(BUILD_TESTING AND NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
