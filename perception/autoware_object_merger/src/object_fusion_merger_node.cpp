@@ -487,7 +487,6 @@ std::vector<DetectedObject> build_fused_main_objects(
 
   return fused_main_objects;
 }
-
 }  // namespace
 
 namespace autoware::object_merger
