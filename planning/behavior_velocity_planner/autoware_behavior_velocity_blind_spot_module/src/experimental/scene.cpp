@@ -250,8 +250,8 @@ BlindSpotDecision BlindSpotModule::modifyPathVelocityDetail(
 
   const auto ego_footprint =
     planner_data.vehicle_info_.createFootprint(0.0, planner_data.current_odometry->pose);
-  const auto ego_to_blind_side_lat_gap_opt = calc_ego_to_blind_spot_lanelet_lateral_gap(
-    ego_footprint, blind_spot_lanelets_before_turning, turn_direction_);
+  const auto ego_to_blind_side_lat_gap = calc_ego_to_blind_spot_lanelet_lateral_gap(
+    ego_footprint, *blind_side_lanelets_before_turning_, turn_direction_);
 
   const auto attention_objects = filter_attention_objects(
     lanelet::utils::to2D(*attention_area).basicPolygon(),
