@@ -82,10 +82,8 @@ VehicleTracker::VehicleTracker(
   // set maximum and minimum size
   limitObjectExtension(object_model_);
 
-  // Layer 2: initialize footprint before motion_model_.initialize().
-  // updateFootprint() calls getPredictedState(), which fails here (motion model not yet
-  // initialized) and takes the direct-copy path — no transform needed because detection
-  // pose == initial tracker pose. Keep this call before motion_model_.initialize().
+  // Seed footprint before the motion model is ready — getPredictedState is unavailable, so
+  // updateFootprint takes the direct-copy path (detection pose == initial tracker pose).
   footprint_valid_ = false;
   last_footprint_update_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
   updateFootprint(object, time);
@@ -269,7 +267,7 @@ bool VehicleTracker::measure(
   const types::InputChannel & channel_info)
 {
   measureKinematics(in_object, time, channel_info);
-  // Layer 2: update stored polygon footprint using the original (unflipped) detection pose
+  // Store polygon footprint from the original (pre-flip) detection pose.
   updateFootprint(in_object, time);
   return true;
 }
@@ -296,7 +294,7 @@ bool VehicleTracker::getTrackedObject(
     // cache object
     updateCache(object, time);
   }
-  // Layer 3: compose bbox frame + stored footprint for output
+  // Compose bbox dimensions and stored footprint into the output object.
   exportShape(object);
 
   // if the tracker is to be published, check twist uncertainty
@@ -352,7 +350,7 @@ bool VehicleTracker::conditionedUpdate(
     // from the fake pseudo_measurement; it is stored separately from the real measurement below.
     measureKinematics(pseudo_measurement, measurement_time, channel_info);
 
-    // Layer 2: store footprint from the REAL measurement using the post-update tracker pose.
+    // Store footprint from the real measurement using the post-update tracker pose.
     updateFootprint(measurement, measurement_time);
 
     return true;
@@ -512,7 +510,7 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
   object_.shape.dimensions = shape.dimensions;
   object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
 
-  // Layer 2: footprint is independent — update only when new shape carries one (never clear)
+  // Footprint is stored independently — update only when the new shape carries one; never clear.
   if (!shape.footprint.points.empty()) {
     object_.shape.footprint = shape.footprint;
     footprint_valid_ = true;
