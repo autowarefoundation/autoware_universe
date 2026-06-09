@@ -21,6 +21,7 @@
     - source: .github/workflows/spell-check-daily.yaml
       pre-commands: |
         sd "        with:\n" "        with:\n          local-cspell-json: .cspell.json\n" {source}
+    - source: .github/workflows/sync-branches.yaml
     - source: .github/workflows/sync-files.yaml
     - source: .github/workflows/update-codeowners-from-packages.yaml
     - source: docs/assets/js/mathjax.js

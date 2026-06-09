@@ -2,6 +2,33 @@
 Changelog for package autoware_fault_injection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_fault_injection): wait for endpoint discovery before publishing in tests (`#12401 <https://github.com/mitsudome-r/autoware_universe/issues/12401>`_)
+  The test_receive_multiple_message_simultaneously test was failing on
+  Jazzy because messages were published before DDS endpoint discovery
+  completed. Replace the single spin_once with explicit discovery polling
+  using get_subscription_count and count_publishers.
+* feat(fault_injection): modify the mechanism for changing Diagnostics (`#11810 <https://github.com/mitsudome-r/autoware_universe/issues/11810>`_)
+  * feat(fault_injection): modify the mechanism for changing Diagnostics
+  * feat(autoware_diagnostic_graph_aggregator): parameterization of input topics
+  * chore: modify QoS settings
+  * fix: fix config file for testing
+  * docs: update image
+  * style(pre-commit): autofix
+  * Update simulator/autoware_fault_injection/include/autoware/fault_injection/fault_injection_node.hpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * Update simulator/autoware_fault_injection/src/fault_injection_node/fault_injection_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * Update simulator/autoware_fault_injection/src/fault_injection_node/fault_injection_node.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+* Contributors: Keisuke Shima, Mete Fatih Cırıt, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

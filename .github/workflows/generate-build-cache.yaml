@@ -8,10 +8,10 @@ on:
 jobs:
   generate-cache:
     runs-on: [self-hosted, Linux, X64]
-    container: ghcr.io/autowarefoundation/autoware:universe-devel
+    container: ghcr.io/autowarefoundation/autoware:universe-dependencies-humble
     env:
       rosdistro: humble
-      container-suffix: ""
+      CCACHE_DIR: /root/.ccache
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -50,12 +50,8 @@ jobs:
 
       - name: Export CUDA state as a variable for adding to cache key
         run: |
-          build_type_cuda_state=nocuda
-          if [[ "${{ env.container-suffix }}" == "-cuda" ]]; then
-            build_type_cuda_state=cuda
-          fi
-          echo "BUILD_TYPE_CUDA_STATE=$build_type_cuda_state" >> "${GITHUB_ENV}"
-          echo "::notice::BUILD_TYPE_CUDA_STATE=$build_type_cuda_state"
+          echo "BUILD_TYPE_CUDA_STATE=nocuda" >> "${GITHUB_ENV}"
+          echo "::notice::BUILD_TYPE_CUDA_STATE=nocuda"
         shell: bash
 
       - name: Prepare build_depends.repos file

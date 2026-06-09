@@ -1,0 +1,327 @@
+trajectory_modifier_params:
+  plugin_names:
+    type: string_array
+    default_value:
+      [
+        autoware::trajectory_modifier::plugin::ObstacleStop,
+        autoware::trajectory_modifier::plugin::StopPointFixer,
+      ]
+    description: List of trajectory modifier plugins to load
+    read_only: false
+  use_stop_point_fixer:
+    type: bool
+    default_value: true
+    description: Enable the use of stop point fixer
+    read_only: false
+  use_obstacle_stop:
+    type: bool
+    default_value: true
+    description: Enable the use of obstacle stop
+    read_only: false
+  trajectory_time_step:
+    type: double
+    default_value: 0.1
+    description: Time step for trajectory modification [s]
+    read_only: false
+    validation:
+      bounds<>: [0.01, 1.0]
+
+  stop_point_fixer:
+    force_stop_long_stopped_trajectories:
+      type: bool
+      default_value: true
+      description: Force zero velocity trajectory for trajectories with long stops
+      read_only: false
+    force_stop_close_stopped_trajectories:
+      type: bool
+      default_value: true
+      description: Force zero velocity trajectory for trajectories with stops close to ego
+      read_only: false
+    velocity_threshold:
+      type: double
+      default_value: 0.25
+      description: Velocity threshold below which ego vehicle is considered stationary [m/s]
+      read_only: false
+      validation:
+        bounds<>: [0.0, 100.0]
+    min_distance_threshold:
+      type: double
+      default_value: 1.0
+      description: Minimum distance threshold to trigger trajectory replacement [m]
+      read_only: false
+      validation:
+        bounds<>: [0.0, 100.0]
+    min_stop_duration:
+      type: double
+      default_value: 0.5
+      description: Minimum duration of stop to trigger trajectory replacement [s]
+      read_only: false
+      validation:
+        bounds<>: [0.0, 10.0]
+
+  obstacle_stop:
+    use_objects:
+      type: bool
+      default_value: true
+      description: Enable the use of objects for obstacle stop
+      read_only: false
+    use_pointcloud:
+      type: bool
+      default_value: true
+      description: Enable the use of pointcloud for obstacle stop
+      read_only: false
+    enable_stop_for_objects:
+      type: bool
+      default_value: true
+      description: Enable stopping behavior when object is detected as obstacle
+      read_only: false
+    enable_stop_for_pointcloud:
+      type: bool
+      default_value: false
+      description: Enable stopping behavior when pointcloud is detected as obstacle
+      read_only: false
+    stop_margin:
+      type: double
+      default_value: 6.0
+      description: Distance to maintain from an obstacle when stopped [m]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
+    nominal_stopping_decel:
+      type: double
+      default_value: 1.0
+      description: Nominal deceleration during stopping [m/s^2]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    maximum_stopping_decel:
+      type: double
+      default_value: 4.0
+      description: Maximum deceleration during stopping [m/s^2]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    stopping_jerk:
+      type: double
+      default_value: 3.0
+      description: Jerk during stopping [m/s^3]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    lateral_margin:
+      type: double
+      default_value: 0.5
+      description: Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    arrived_distance_threshold:
+      type: double
+      default_value: 0.5
+      description: Threshold to check if the ego vehicle has arrived at the stop point [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+
+    obstacle_tracking:
+      on_time_buffer:
+        type: double
+        default_value: 0.5
+        description: Continuous detection duration to consider object/pointcloud to be persistent [s]
+        validation:
+          bounds<>: [0.0, 5.0]
+        read_only: false
+      off_time_buffer:
+        type: double
+        default_value: 1.0
+        description: Continuous non-detection duration to consider object/pointcloud as not persistent [s]
+        validation:
+          bounds<>: [0.0, 5.0]
+        read_only: false
+      object_distance_th:
+        type: double
+        default_value: 1.0
+        description: Distance threshold for object tracking [m]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      object_yaw_th:
+        type: double
+        default_value: 0.1745
+        description: Yaw threshold for object tracking [rad]
+        validation:
+          bounds<>: [0.0, 3.14]
+        read_only: false
+      pcd_distance_th:
+        type: double
+        default_value: 0.5
+        description: Distance threshold for pointcloud tracking [m]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      grace_period:
+        type: double
+        default_value: 0.2
+        description: Grace period for object tracking [s]
+        validation:
+          bounds<>: [0.0, 1.0]
+        read_only: false
+
+    objects:
+      object_types:
+        type: string_array
+        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
+        description: Types of objects to consider for obstacle stop
+        read_only: false
+      max_velocity_th:
+        type: double
+        default_value: 1.0
+        description: Maximum velocity threshold for target object to be considered for obstacle stop [m/s]
+        validation:
+          bounds<>: [0.0, 100.0]
+        read_only: false
+
+    pointcloud:
+      height_buffer:
+        type: double
+        default_value: 0.5
+        description: Height buffer to add above ego height [m]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      min_height:
+        type: double
+        default_value: 0.2
+        description: Minimum height of pointcloud [m]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      voxel_grid_filter:
+        x:
+          type: double
+          default_value: 0.2
+          validation:
+            bounds<>: [0.0, 1.0]
+          read_only: false
+        y:
+          type: double
+          default_value: 0.2
+          validation:
+            bounds<>: [0.0, 1.0]
+          read_only: false
+        z:
+          type: double
+          default_value: 0.2
+          validation:
+            bounds<>: [0.0, 1.0]
+          read_only: false
+        min_size:
+          type: int
+          default_value: 3
+          validation:
+            bounds<>: [1, 100]
+          read_only: false
+      clustering:
+        tolerance:
+          type: double
+          default_value: 0.2
+          description: Distance threshold for clustering points [m]
+          validation:
+            bounds<>: [0.0, 1.0]
+          read_only: false
+        min_height:
+          type: double
+          default_value: 0.5
+          validation:
+            bounds<>: [0.0, 1.0]
+          read_only: false
+        min_size:
+          type: int
+          default_value: 10
+          validation:
+            bounds<>: [1, 10000]
+          read_only: false
+        max_size:
+          type: int
+          default_value: 10000
+          validation:
+            bounds<>: [1, 10000]
+          read_only: false
+
+    rss_params:
+      enable:
+        type: bool
+        default_value: true
+        description: Enable the use of RSS parameters for obstacle stop
+        read_only: false
+      object_decel:
+        car:
+          type: double
+          default_value: 1.5
+          description: Deceleration for car type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        truck:
+          type: double
+          default_value: 1.5
+          description: Deceleration for truck type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        bus:
+          type: double
+          default_value: 1.5
+          description: Deceleration for bus type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        trailer:
+          type: double
+          default_value: 1.5
+          description: Deceleration for trailer type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        motorcycle:
+          type: double
+          default_value: 3.0
+          description: Deceleration for motorcycle type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        bicycle:
+          type: double
+          default_value: 5.0
+          description: Deceleration for bicycle type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        pedestrian:
+          type: double
+          default_value: 5.0
+          description: Deceleration for pedestrian type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+      reaction_time:
+        type: double
+        default_value: 0.2
+        description: Reaction time to consider for RSS calculation [s]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      safety_margin:
+        type: double
+        default_value: 2.0
+        description: Safety margin to consider for RSS calculation [m]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      min_vel_th:
+        type: double
+        default_value: 0.5
+        description: Minimum velocity threshold for object to be considered for RSS calculation [m/s]
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false

@@ -11,11 +11,7 @@ on:
         required: false
       container:
         type: string
-        default: ghcr.io/autowarefoundation/autoware:universe-devel
-        required: false
-      container-suffix:
-        type: string
-        default: ""
+        default: ghcr.io/autowarefoundation/autoware:universe-dependencies-humble
         required: false
       rosdistro:
         type: string
@@ -64,16 +60,23 @@ concurrency:
 env:
   CC: /usr/lib/ccache/gcc
   CXX: /usr/lib/ccache/g++
+  CCACHE_DIR: /root/.ccache
+  BUILD_TYPE_CUDA_STATE: ${{ contains(inputs.container, '-cuda') && 'cuda' || 'nocuda' }}
 
 jobs:
   build-and-test:
     runs-on: ${{ fromJson(inputs.runner) }}
-    container: ${{ inputs.container }}${{ inputs.container-suffix }}
+    container:
+      image: ${{ inputs.container }}
+      options: --cap-add=NET_ADMIN
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+
+      - name: Tune DDS network settings
+        uses: ./.github/actions/tune-dds-network
 
       - name: Show disk space before the tasks
         run: df -h
@@ -119,16 +122,6 @@ jobs:
           ccache --zero-stats
         shell: bash
 
-      - name: Export CUDA state as a variable for adding to cache key
-        run: |
-          build_type_cuda_state=nocuda
-          if [[ "${{ inputs.container-suffix }}" == "-cuda" ]]; then
-            build_type_cuda_state=cuda
-          fi
-          echo "BUILD_TYPE_CUDA_STATE=$build_type_cuda_state" >> "${GITHUB_ENV}"
-          echo "::notice::BUILD_TYPE_CUDA_STATE=$build_type_cuda_state"
-        shell: bash
-
       - name: Prepare build_depends.repos file
         uses: ./.github/actions/combine-repos-action
         with:
@@ -151,8 +144,7 @@ jobs:
         run: du -sh ${CCACHE_DIR} && ccache -s
         shell: bash
 
-      # Only keep save the -cuda version because cuda packages covers non-cuda packages too
-      - name: Push the ccache cache (if inputs.container-suffix == '-cuda' AND inputs.push-ccache)
+      - name: Push the ccache cache
         if: ${{ inputs.push-ccache }}
         uses: actions/cache/save@v4
         with:
@@ -188,9 +180,9 @@ jobs:
 
   clang-tidy:
     needs: build-and-test
-    if: ${{ inputs.rosdistro == 'jazzy' && inputs.container-suffix == '-cuda' && inputs.arch == 'amd64' }}
+    if: ${{ inputs.rosdistro == 'jazzy' && contains(inputs.container, '-cuda') && inputs.arch == 'amd64' }}
     runs-on: ubuntu-latest
-    container: ${{ inputs.container }}${{ inputs.container-suffix }}
+    container: ${{ inputs.container }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -204,16 +196,6 @@ jobs:
       - name: Get self packages
         id: get-self-packages
         uses: autowarefoundation/autoware-github-actions/get-self-packages@v1
-
-      - name: Export CUDA state as a variable for adding to cache key
-        run: |
-          build_type_cuda_state=nocuda
-          if [[ "${{ inputs.container-suffix }}" == "-cuda" ]]; then
-            build_type_cuda_state=cuda
-          fi
-          echo "BUILD_TYPE_CUDA_STATE=$build_type_cuda_state" >> "${GITHUB_ENV}"
-          echo "::notice::BUILD_TYPE_CUDA_STATE=$build_type_cuda_state"
-        shell: bash
 
       - name: Prepare build_depends.repos file
         uses: ./.github/actions/combine-repos-action
@@ -232,7 +214,7 @@ jobs:
           clang-tidy-ignore-path: .clang-tidy-ignore
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
-          artifact-name: clang-tidy-result-${{ inputs.rosdistro }}${{ inputs.container-suffix }}
+          artifact-name: clang-tidy-result-${{ inputs.rosdistro }}${{ contains(inputs.container, '-cuda') && '-cuda' || '' }}
           use-clang-tidy-cache: true
 
       - name: Show disk space after the tasks

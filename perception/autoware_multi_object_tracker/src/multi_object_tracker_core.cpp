@@ -22,7 +22,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -56,90 +55,56 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize processor
   processor = std::make_unique<TrackerProcessor>(
-    params.processor_config, params.associator_config, params.input_channels_config);
+    params.creation_config, params.association_config, params.tracker_overlap_manager_config,
+    params.input_channels_config, node.get_logger(), node.get_clock());
 
   last_publish_time = node.now();
   last_updated_time = node.now();
   last_tracker_time = node.now();
 }
 
+namespace
+{
+std::optional<geometry_msgs::msg::PoseStamped> getEgoPoseAt(
+  const rclcpp::Time & time, const MultiObjectTrackerInternalState & state)
+{
+  if (const auto odometry_info = state.odometry->getOdometryFromTf(time)) {
+    geometry_msgs::msg::PoseStamped ps;
+    ps.header.stamp = odometry_info->header.stamp;
+    ps.pose = odometry_info->pose.pose;
+    return ps;
+  }
+  return std::nullopt;
+}
+}  // namespace
+
 namespace core
 {
 
-// Parameter processing
+//// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
-  using Label = classes::Label;
+  // For each (shape, label) in the association config, validate that its designated create
+  // tracker also appears in its own match list. Per-tracker profile validity within each
+  // match list is already guaranteed by the parser (missing entries throw at startup).
+  for (const auto & [shape_label, profile_map] : params.association_config.association_params_map) {
+    const auto default_tracker_opt =
+      get_map_value_if_exists(params.creation_config.shape_tracker_map, shape_label);
+    if (!default_tracker_opt) continue;
 
-  auto getTrackerType = [&params](const std::string & classification) -> TrackerType {
-    const auto tracker_name_it = params.tracker_type_map.find(classification);
-    const auto parameter_name = "initial_tracker." + classification;
-    if (tracker_name_it == params.tracker_type_map.end()) {
-      throw std::runtime_error("Missing tracker parameter: " + parameter_name);
-    }
-
-    const auto tracker_type = toTrackerType(tracker_name_it->second);
-    if (!tracker_type.has_value()) {
+    if (!get_map_value_if_exists(profile_map, default_tracker_opt->get())) {
+      const auto shape_str = types::toString(shape_label.first);
+      const auto label_str = classes::toString(shape_label.second);
       throw std::runtime_error(
-        "Invalid tracker type: '" + tracker_name_it->second + "' for parameter '" + parameter_name +
-        "'. Strict string match is required.");
-    }
-    return *tracker_type;
-  };
-
-  // Set the tracker map for processor config
-  params.processor_config.tracker_map = {
-    {Label::CAR, getTrackerType("car")},
-    {Label::TRUCK, getTrackerType("truck")},
-    {Label::BUS, getTrackerType("bus")},
-    {Label::TRAILER, getTrackerType("trailer")},
-    {Label::PEDESTRIAN, getTrackerType("pedestrian")},
-    {Label::BICYCLE, getTrackerType("bicycle")},
-    {Label::MOTORCYCLE, getTrackerType("motorcycle")},
-    {Label::UNKNOWN, TrackerType::POLYGON}};
-  // Set the pruning thresholds for processor config
-  params.processor_config.pruning_giou_thresholds = params.pruning_giou_thresholds.to_label_map();
-  params.processor_config.pruning_distance_thresholds =
-    params.pruning_distance_thresholds.to_label_map();
-  params.processor_config.pruning_distance_thresholds_sq.clear();
-  params.processor_config.pruning_distance_thresholds_sq.reserve(
-    params.processor_config.pruning_distance_thresholds.size());
-  for (const auto & [label, threshold] : params.processor_config.pruning_distance_thresholds) {
-    params.processor_config.pruning_distance_thresholds_sq.emplace(label, threshold * threshold);
-  }
-
-  for (const auto measurement_label : classes::trackedLabels()) {
-    const auto label_params_opt =
-      get_map_value_if_exists(params.association_params_map, measurement_label);
-    if (!label_params_opt || label_params_opt->get().empty()) {
-      throw std::runtime_error(
-        "Missing association configuration for measurement label: " +
-        classes::toString(measurement_label));
-    }
-
-    const auto & label_params = label_params_opt->get();
-
-    const auto default_tracker_type_opt =
-      get_map_value_if_exists(params.processor_config.tracker_map, measurement_label);
-    if (!default_tracker_type_opt) {
-      throw std::runtime_error(
-        "Missing default tracker mapping for measurement label: " +
-        classes::toString(measurement_label));
-    }
-
-    const auto default_tracker_type = default_tracker_type_opt->get();
-    if (!get_map_value_if_exists(label_params, default_tracker_type)) {
-      throw std::runtime_error(
-        "Inconsistent configuration: default tracker '" + toString(default_tracker_type) +
-        "' for measurement label '" + classes::toString(measurement_label) +
-        "' is not included in association.can_assign." + classes::toString(measurement_label));
+        "Inconsistent configuration: create tracker '" + toString(default_tracker_opt->get()) +
+        "' for (" + shape_str + ", " + label_str +
+        ") is not in the match list. Check tracker_assignment." + shape_str + "." + label_str +
+        ".match in the parameter file.");
     }
   }
-
-  params.associator_config.association_params_map = params.association_params_map;
 }
 
-// Utility functions
+//// Utility functions
 bool should_publish(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state)
@@ -206,7 +171,7 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
   return std::nullopt;
 }
 
-// Low-level processing functions
+//// Low-level processing functions
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
@@ -222,13 +187,22 @@ MeasurementProcessingResult process_measurement(
     return result;
   }
 
+  // Update ego pose to the measurement timestamp so association uses a fresh pose
+  const rclcpp::Time measurement_time =
+    rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
+  const auto ego_pose = getEgoPoseAt(measurement_time, state);
+  if (!ego_pose) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("multi_object_tracker"),
+      "Failed to get ego pose at measurement timestamp. Proceeding without ego pose.");
+  }
+  state.processor->updateEgoPose(ego_pose);
+
   const auto association_result = state.processor->associate(*objects);
   state.input_manager->push(channel_index, *objects, association_result);
 
   result.has_objects = true;
   result.should_process = (channel_index == state.input_manager->getTargetChannelIdx());
-
-  const auto measurement_time = rclcpp::Time(objects->header.stamp, current_time.get_clock_type());
 
   // Collect debug information - tracker list, existence probabilities, association results
   const types::AssociatedObjects associated_objects{*objects, association_result};
@@ -247,35 +221,33 @@ void process_objects_(
   const rclcpp::Time measurement_time =
     objects_with_associations.getTimestamp(current_time.get_clock_type());
 
-  std::optional<geometry_msgs::msg::Pose> ego_pose;
-  if (const auto odometry_info = state.odometry->getOdometryFromTf(measurement_time)) {
-    ego_pose = odometry_info->pose.pose;
-  }
-
-  if (!ego_pose) {
+  // Get ego pose
+  const auto ego_pose_stamped = getEgoPoseAt(measurement_time, state);
+  if (!ego_pose_stamped) {
     RCLCPP_WARN(
       logger, "No odometry information available at the measurement time: %.9f",
       measurement_time.seconds());
   }
+  state.processor->updateEgoPose(ego_pose_stamped);
 
-  /* predict trackers to the measurement time */
-  state.processor->predict(measurement_time, ego_pose);
+  /// 1. Update ego pose and predict trackers to measurement time
+  state.processor->predictTrackers(measurement_time);
 
-  /* object association */
+  /// 2. Object association
   const types::AssociatedObjects associated_objects{
     objects_with_associations.objects, objects_with_associations.association};
 
-  /* tracker update */
+  /// 3. Tracker update
   state.processor->update(associated_objects);
 
-  /* tracker pruning */
+  /// 4. Tracker pruning
   state.processor->prune(measurement_time);
 
-  /* spawn new tracker */
+  /// 5. Spawn new tracker
   state.processor->spawn(associated_objects);
 }
 
-// High-level orchestration functions
+//// High-level orchestration functions
 ObjectProcessingResult process_objects_batch(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,
@@ -324,7 +296,7 @@ PublishingData prepare_publishing_data(
   // Calculate object_time based on delay compensation setting
   result.object_time = params.enable_delay_compensation ? current_time : last_tracker_time;
 
-  /* tracker pruning*/
+  /// Tracker pruning
   state.processor->prune(last_tracker_time);
 
   // Get tracked objects

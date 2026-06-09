@@ -1,11 +1,69 @@
 /**:
   ros__parameters:
+    plugin_names:
+      - "autoware::trajectory_modifier::plugin::ObstacleStop"
+      - "autoware::trajectory_modifier::plugin::StopPointFixer"
     use_stop_point_fixer: true
+    use_obstacle_stop: true
+    trajectory_time_step: 0.1 # [s]
 
     # Stop Point Fixer Plugin Parameters
     stop_point_fixer:
       force_stop_long_stopped_trajectories: true     # Force zero velocity trajectory for trajectories with long stops
       force_stop_close_stopped_trajectories: true    # Force zero velocity trajectory for trajectories with stops close to ego
-      velocity_threshold_mps: 0.25
-      min_distance_threshold_m: 1.0
-      min_stop_duration_s: 0.5
+      velocity_threshold: 0.25 # [m/s]
+      min_distance_threshold: 1.0 # [m]
+      min_stop_duration: 0.5 # [s]
+
+    # Obstacle Stop Plugin Parameters
+    obstacle_stop:
+      use_objects: true
+      use_pointcloud: true
+      enable_stop_for_objects: true
+      enable_stop_for_pointcloud: false
+      stop_margin: 6.0 # [m]
+      nominal_stopping_decel: 1.0 # [m/s^2]
+      maximum_stopping_decel: 4.0 # [m/s^2]
+      stopping_jerk: 3.0 # [m/s^3]
+      lateral_margin: 0.0     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
+      arrived_distance_threshold: 0.5 # threshold to check if the ego vehicle has arrived at the stop point [m]
+
+      obstacle_tracking:
+        on_time_buffer: 0.5
+        off_time_buffer: 1.0
+        object_distance_th: 1.0 # [m]
+        object_yaw_th: 0.1745 # [rad] (10 degrees)
+        pcd_distance_th: 0.5 # [m]
+        grace_period: 0.2 # [s]
+
+      objects:
+        object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"] # object types to consider for obstacle stop
+        max_velocity_th: 1.0      # maximum velocity threshold for target object [m/s]
+
+      pointcloud:
+        height_buffer: 0.5  # height buffer to add above ego height [m]
+        min_height: 0.2  # minimum height of pointcloud [m]
+        voxel_grid_filter:
+          x: 0.2
+          y: 0.2
+          z: 0.2
+          min_size: 3
+        clustering:
+          tolerance: 0.5  #[m]
+          min_height: 0.5
+          min_size: 10
+          max_size: 10000
+
+      rss_params:
+        enable: true
+        object_decel:
+          car: 1.5
+          truck: 1.5
+          bus: 1.5
+          trailer: 1.5
+          motorcycle: 3.0
+          bicycle: 5.0
+          pedestrian: 5.0
+        reaction_time: 0.2 # [s]
+        safety_margin: 2.0 # [m]
+        min_vel_th: 0.5 # [m/s] minimum object velocity to consider for rss check

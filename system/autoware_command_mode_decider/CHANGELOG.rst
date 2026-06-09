@@ -2,6 +2,27 @@
 Changelog for package autoware_command_mode_decider
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(system): replace autoware_universe_utils with specific autoware_utils sub-packages (`#12424 <https://github.com/mitsudome-r/autoware_universe/issues/12424>`_)
+* feat(autoware_command_mode_decider): adopt cie (`#12324 <https://github.com/mitsudome-r/autoware_universe/issues/12324>`_)
+  * feat(autoware_detection_by_tracker): replace with agnocast sub detection by tracker (`#12314 <https://github.com/mitsudome-r/autoware_universe/issues/12314>`_)
+  * feat: replace executor
+  * feat: replace sub
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Koichi Imai <45482193+Koichi98@users.noreply.github.com>
+  * feat: adopt cie
+  * style(pre-commit): autofix
+  * fix: remove unnecessary lines
+  * fix: remove find pakcage
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Koichi Imai <45482193+Koichi98@users.noreply.github.com>
+* Contributors: Tetsuhiro Kawaguchi, Vishal Chauhan, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

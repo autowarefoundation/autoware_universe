@@ -39,6 +39,7 @@
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
+#include <cstdint>
 #include <deque>
 #include <optional>
 #include <string>
@@ -81,6 +82,7 @@ public:
     const Metric & metric, const double & metric_value, const bool & accumulate_metric = true);
   void AddLateralDeviationMetricMsg(const Trajectory & traj, const Point & ego_point);
   void AddYawDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose);
+  void AddLateralDeviationCenterlineMetricMsg(const Pose & ego_pose);
   void AddGoalDeviationMetricMsg(const Odometry & odom);
   void AddObjectMetricMsg(const Odometry & odom, const PredictedObjects & objects);
   void AddBoundaryDistanceMetricMsg(const PathWithLaneId & behavior_path, const Pose & ego_pose);
@@ -129,6 +131,7 @@ private:
   // Parameters
   bool output_metrics_;
   double distance_filter_thr_m_;
+  std::unordered_set<uint8_t> excluded_object_labels_;
 
   // Metric
   const std::vector<Metric> metrics_ = {
@@ -139,6 +142,8 @@ private:
     Metric::jerk,
     Metric::lateral_deviation,
     Metric::lateral_deviation_abs,
+    Metric::lateral_deviation_centerline,
+    Metric::lateral_deviation_centerline_abs,
     Metric::yaw_deviation,
     Metric::yaw_deviation_abs,
     Metric::goal_longitudinal_deviation,
@@ -150,7 +155,9 @@ private:
     Metric::left_boundary_distance,
     Metric::right_boundary_distance,
     Metric::left_uncrossable_boundary_distance,
+    Metric::left_uncrossable_boundary_distance_count,
     Metric::right_uncrossable_boundary_distance,
+    Metric::right_uncrossable_boundary_distance_count,
     Metric::steering_angle,
     Metric::steering_angle_abs,
     Metric::steering_rate,
@@ -175,6 +182,12 @@ private:
   // for output_metrics_only_moving
   float ego_speed_{0.0};
   std::array<bool, static_cast<size_t>(Metric::SIZE)> is_output_metrics_only_moving{};
+
+  // Uncrossable boundary: count edge events (distance <= 0), re-arm only after distance > 0
+  bool uncrossable_left_non_positive_armed_{true};
+  bool uncrossable_right_non_positive_armed_{true};
+  std::uint64_t uncrossable_left_non_positive_event_count_{0};
+  std::uint64_t uncrossable_right_non_positive_event_count_{0};
 };
 }  // namespace control_diagnostics
 

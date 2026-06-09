@@ -19,9 +19,9 @@
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/object_model/classes.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/object_model/uuid.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/unstable_shape_filter.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <Eigen/Core>
 #include <autoware_utils_geometry/msg/covariance.hpp>
@@ -41,6 +41,8 @@
 
 namespace autoware::multi_object_tracker
 {
+
+enum class UpdatePath { NORMAL, TRY_EXTENSION, CONDITIONED };
 
 class Tracker
 {
@@ -193,11 +195,24 @@ protected:
     const autoware_perception_msgs::msg::Shape & tracker_shape,
     const rclcpp::Time & measurement_time, const types::InputChannel & channel_info);
 
+  // Selects the update path for a given measurement.
+  // NORMAL      — standard Kalman update (with optional shape-filter history accumulation)
+  // TRY_EXTENSION — attempt extension update via shape filter; fall back to CONDITIONED if unstable
+  // CONDITIONED — edge-aligned / weak conditioned update; shape management is bypassed entirely
+  virtual UpdatePath selectUpdatePath(bool trust_extension, bool has_significant_shape_change) const
+  {
+    (void)trust_extension;
+    (void)has_significant_shape_change;
+    return UpdatePath::NORMAL;
+  }
+
 public:
   virtual bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
+
+  virtual void setEgoPose(const std::optional<geometry_msgs::msg::Point> &) {}
 
   virtual void setOrientationAvailability(
     const types::OrientationAvailability & orientation_availability)

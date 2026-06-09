@@ -15,7 +15,7 @@
 #ifndef DEBUGGER__DEBUGGER_HPP_
 #define DEBUGGER__DEBUGGER_HPP_
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "debug_object.hpp"
 
 #include <autoware_utils_debug/debug_publisher.hpp>

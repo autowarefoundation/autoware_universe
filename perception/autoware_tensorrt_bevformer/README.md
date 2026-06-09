@@ -50,7 +50,7 @@ The core algorithm, named `BEVFormer`, unifies multi-view images into the BEV pe
 Download the [`bevformer_small.onnx`](https://multicorewareinc1-my.sharepoint.com/:u:/g/personal/naveen_sathiyaseelan_multicorewareinc_com/ERQSpS-BoAZGh4R4zNZhITcB58aqDW_tu9aKHLpit6aLAg?e=IZ5nZN) model to:
 
 ```bash
-$HOME/autoware_data/tensorrt_bevformer
+$HOME/autoware_data/ml_models/tensorrt_bevformer
 ```
 
 > **Note:** The **BEVFormer** model was trained on the **nuScenes** dataset for 24 epochs with temporal fusion enabled.

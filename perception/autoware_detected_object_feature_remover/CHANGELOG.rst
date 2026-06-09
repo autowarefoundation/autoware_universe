@@ -2,6 +2,44 @@
 Changelog for package autoware_detected_object_feature_remover
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(detected_object_feature_remover): use CallbackIsolatedAgnocastExecutor for detected_object_feature_remover (`#12356 <https://github.com/mitsudome-r/autoware_universe/issues/12356>`_)
+  apply cie to detected_object_feature_remover
+* feat(autoware_detected_object_feature_remover): replace with agnocast subscriber (`#12313 <https://github.com/mitsudome-r/autoware_universe/issues/12313>`_)
+  * feat: replace executor
+  * feat: replace subscriber
+  * fix
+  * fix
+  * style(pre-commit): autofix
+  * fix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Koichi Imai <45482193+Koichi98@users.noreply.github.com>
+* feat(autoware_detected_object_feature_remover):  add convex hull process (`#12160 <https://github.com/mitsudome-r/autoware_universe/issues/12160>`_)
+  * feat(detected_object_feature_remover): add convex hull conversion parameter and implementation
+  * feat(detected_object_feature_remover): implement pclToConvexHull function and refactor convex hull processing
+  * refactor(pclToConvexHull): optimize scaling calculations and remove redundant comments
+  * feat(detected_object_feature_remover): add conversion functions for detected objects and refactor node implementation
+  * refactor(detected_object_feature_remover): update test structure and improve conversion logic
+  - Replaced isolated gtest with standard gtest in CMakeLists.txt.
+  - Refactored test cases to utilize conversion functions directly.
+  - Cleaned up unused code and comments in test implementation.
+  * style(pre-commit): autofix
+  * style: standardize copyright formatting across files in detected_object_feature_remover
+  * refactor(package.xml): update test dependencies for autoware_detected_object_feature_remover
+  - Replaced 'ament_cmake_ros' with 'ament_cmake_gtest' for test dependencies.
+  - Removed 'autoware_test_utils' from test dependencies.
+  * refactor(CMakeLists.txt, package.xml): update dependencies for autoware_detected_object_feature_remover
+  - Removed pcl_conversions from CMakeLists.txt.
+  - Added geometry_msgs, libopencv-dev, and pcl_conversions to package.xml dependencies.
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Taekjin LEE, Tetsuhiro Kawaguchi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

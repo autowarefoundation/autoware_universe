@@ -378,7 +378,9 @@ SegmentRtree BoundaryDepartureChecker::extractUncrossableBoundaries(
   for (const auto & ls : lanelet_map.lineStringLayer) {
     if (has_types(ls, boundary_types_to_detect)) {
       line.clear();
-      for (const auto & p : ls) line.push_back(Point2d{p.x(), p.y()});
+      for (const auto & p : ls) {
+        line.emplace_back(p.x(), p.y());
+      }
       for (auto segment_idx = 0LU; segment_idx + 1 < line.size(); ++segment_idx) {
         const Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
         if (boost::geometry::distance(segment, ego_p) < max_search_length) {

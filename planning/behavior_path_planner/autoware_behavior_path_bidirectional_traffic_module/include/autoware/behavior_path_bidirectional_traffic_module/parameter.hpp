@@ -15,9 +15,8 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__PARAMETER_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__PARAMETER_HPP_
 
-#include "autoware/universe_utils/geometry/boost_geometry.hpp"
-
 #include <autoware/behavior_path_planner_common/data_manager.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
 #include <rclcpp/node.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
@@ -52,7 +51,7 @@ struct EgoParameters
   EgoParameters(
     const double & base_link2front, const double & base_link2rear, const double & vehicle_width);
 
-  [[nodiscard]] autoware::universe_utils::Polygon2d ego_polygon(
+  [[nodiscard]] autoware_utils_geometry::Polygon2d ego_polygon(
     const geometry_msgs::msg::Pose & ego_pose) const;
 
   static EgoParameters from_planner_data(const PlannerData & planner_data);
