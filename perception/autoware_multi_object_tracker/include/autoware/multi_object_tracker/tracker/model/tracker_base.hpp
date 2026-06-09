@@ -154,10 +154,6 @@ public:
   double computeAdaptiveThreshold(
     double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
-  bool createPseudoMeasurement(
-    const types::DynamicObject & meas, types::DynamicObject & pred,
-    const autoware_perception_msgs::msg::Shape & tracker_shape,
-    const bool enlarge_covariance = false);
 
 protected:
   types::DynamicObject object_;
