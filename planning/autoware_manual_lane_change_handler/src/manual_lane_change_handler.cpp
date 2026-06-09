@@ -89,7 +89,7 @@ ManualLaneChangeHandler::sort_primitives_left_to_right(
   // Walk right lanes
   auto right = route_handler.getRightLanelet(current, true);
   while (right.has_value()) {
-    const auto right_lanelet = right.value_or(lanelet::ConstLanelet{});
+    const auto right_lanelet = right.value();
     if (auto match = find_primitive(right_lanelet.id())) {
       sorted_primitives.push_back(*match);
     }
