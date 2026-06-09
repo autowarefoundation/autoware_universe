@@ -511,7 +511,6 @@ bool PTv3TRT::inference()
     return false;
   }
 
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   return true;
 }
 
