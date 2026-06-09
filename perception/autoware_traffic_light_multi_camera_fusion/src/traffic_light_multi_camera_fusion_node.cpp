@@ -306,7 +306,7 @@ void MultiCameraFusion::updateGroupInfoForElement(
   for (const auto & element : record.signal.elements) {
     state_key.emplace_back(std::make_pair(element.color, element.shape));
   }
-  const double confidence = record.signal.elements[0].confidence;  // Same value for all elements
+  const double confidence = utils::getMinConfidence(record.signal);
   auto & group_info = group_fusion_info_map[reg_ele_id];
 
   // Update Log-Odds
@@ -351,7 +351,7 @@ void MultiCameraFusion::updateBestRecord(
     return;
   }
 
-  if (confidence > existing_record.signal.elements[0].confidence) {
+  if (confidence > utils::getMinConfidence(existing_record.signal)) {
     best_record_map[state_key] = record;
   }
 }
@@ -425,13 +425,14 @@ void MultiCameraFusion::determineBestGroupState(
 
       merged_record.signal.elements.clear();
 
+      const double min_confidence =
+        utils::getMinConfidence(group_info.best_record_for_state.at(best_state_key).signal);
       for (const auto & elem : running_state) {
         tier4_perception_msgs::msg::TrafficLightElement new_elem;
         new_elem.color = elem.first;
         new_elem.shape = elem.second;
-        // keep the confidence of the base record
-        new_elem.confidence =
-          group_info.best_record_for_state.at(best_state_key).signal.elements[0].confidence;
+        // keep the min confidence of the base record
+        new_elem.confidence = min_confidence;
 
         merged_record.signal.elements.push_back(new_elem);
       }

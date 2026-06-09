@@ -66,6 +66,7 @@ V at_or(const std::unordered_map<K, V> & map, const K & key, const V & value)
   return map.count(key) ? map.at(key) : value;
 }
 
+double getMinConfidence(const tier4_perception_msgs::msg::TrafficLight & signal);
 int compareRecord(const FusionRecord & r1, const FusionRecord & r2);
 
 autoware_perception_msgs::msg::TrafficLightElement convertT4toAutoware(

@@ -73,6 +73,16 @@ const std::unordered_map<
      {tier4_perception_msgs::msg::TrafficLightElement::FLASHING,
       autoware_perception_msgs::msg::TrafficLightElement::FLASHING}});
 
+double getMinConfidence(const tier4_perception_msgs::msg::TrafficLight & signal)
+{
+  // Normally, we should check whether the elements are empty,
+  // but we already know they are not, so we skip the check here
+  return std::min_element(
+           signal.elements.begin(), signal.elements.end(),
+           [](const auto & a, const auto & b) { return a.confidence < b.confidence; })
+    ->confidence;
+}
+
 int compareRecord(const FusionRecord & r1, const FusionRecord & r2)
 {
   /*
@@ -106,8 +116,8 @@ int compareRecord(const FusionRecord & r1, const FusionRecord & r2)
   int visible_score_1 = calVisibleScore(r1);
   int visible_score_2 = calVisibleScore(r2);
   if (visible_score_1 == visible_score_2) {
-    double confidence_1 = r1.signal.elements[0].confidence;
-    double confidence_2 = r2.signal.elements[0].confidence;
+    double confidence_1 = getMinConfidence(r1.signal);
+    double confidence_2 = getMinConfidence(r2.signal);
     return confidence_1 < confidence_2 ? -1 : 1;
   } else {
     return visible_score_1 < visible_score_2 ? -1 : 1;
