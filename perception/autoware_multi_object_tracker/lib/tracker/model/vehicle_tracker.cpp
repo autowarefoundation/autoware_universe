@@ -465,6 +465,13 @@ bool VehicleTracker::conditionedUpdate(
       normalizeYaw(pseudo_measurement, motion_model_.getYawState());
     updateKinematics(pseudo_corrected, channel_info);
 
+    // Update height from real measurement (z span of polygon cluster is reliable).
+    if (measurement.shape.dimensions.z > 0.0) {
+      constexpr double gain = 0.4;
+      object_.shape.dimensions.z =
+        (1.0 - gain) * object_.shape.dimensions.z + gain * measurement.shape.dimensions.z;
+    }
+
     // Store footprint from the real measurement using the post-update tracker pose.
     updateFootprint(measurement, measurement_time);
     removeCache();
@@ -483,6 +490,19 @@ bool VehicleTracker::conditionedUpdate(
     // Must be REAR_WHEEL_UPDATE (only remaining option after WEAK_UPDATE check)
     is_updated =
       motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
+  }
+
+  // The wheel-anchor updates above touch only x/y state; apply z LPF and height update here
+  // since updateKinematics is not called on this path.
+  {
+    constexpr double gain = 0.1;
+    object_.pose.position.z =
+      (1.0 - gain) * object_.pose.position.z + gain * measurement.pose.position.z;
+  }
+  if (measurement.shape.dimensions.z > 0.0) {
+    constexpr double gain = 0.4;
+    object_.shape.dimensions.z =
+      (1.0 - gain) * object_.shape.dimensions.z + gain * measurement.shape.dimensions.z;
   }
 
   // Store measurement footprint after the wheel-anchor kinematic update.

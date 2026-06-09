@@ -279,6 +279,7 @@ bool Tracker::createPseudoMeasurement(
   // Blend position
   pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + meas.pose.position.x * w_pose;
   pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
+  pred.pose.position.z = meas.pose.position.z;
 
   // Use smoothed shape and its area
   pred.shape = tracker_shape;
