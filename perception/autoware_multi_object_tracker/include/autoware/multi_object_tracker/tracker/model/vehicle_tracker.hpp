@@ -18,6 +18,7 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/vehicle_extend_manager.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <optional>
@@ -47,10 +48,7 @@ private:
   BicycleMotionModel motion_model_;
   using IDX = BicycleMotionModel::IDX;
 
-  // Polygon footprint storage (independent of kinematic bbox)
-  bool footprint_valid_{false};
-  rclcpp::Time last_footprint_update_time_;
-  static constexpr double FOOTPRINT_TIMEOUT_S = 1.0;  // [s] footprint expiry after last polygon obs
+  VehicleExtendManager extend_manager_;
 
   // Returns a copy of object with orientation flipped 180° if it points opposite to reference_yaw.
   types::DynamicObject normalizeYaw(
@@ -58,13 +56,9 @@ private:
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(
     const types::DynamicObject & object, const types::InputChannel & channel_info);
-  // IIR-blend shape dimensions into object_ when can_update is true.
-  void updateShapeSize(const types::DynamicObject & object, bool can_update);
   // Wheel-anchor EKF update (front or rear) plus z/height updates.
   bool updateWheelKinematics(
     const UpdateStrategy & strategy, const types::DynamicObject & measurement);
-  void updateFootprint(const types::DynamicObject & object, const rclcpp::Time & time);
-  void exportShape(types::DynamicObject & object) const;
 
 public:
   VehicleTracker(

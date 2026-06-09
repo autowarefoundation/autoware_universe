@@ -18,6 +18,7 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/ctrv_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/pedestrian_extend_manager.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
@@ -34,8 +35,9 @@ private:
   CTRVMotionModel motion_model_;
   using IDX = CTRVMotionModel::IDX;
 
+  PedestrianExtendManager extend_manager_;
+
   bool updateKinematics(const types::DynamicObject & object);
-  bool updateShapeSize(const types::DynamicObject & object);
 
 public:
   PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object);

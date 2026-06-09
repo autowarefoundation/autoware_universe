@@ -19,6 +19,7 @@
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/polygon_extend_manager.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
@@ -38,6 +39,8 @@ private:
   bool enable_motion_output_;
 
   geometry_msgs::msg::Pose last_pose_;
+
+  PolygonExtendManager extend_manager_;
 
   bool updateKinematics(const types::DynamicObject & object);
 

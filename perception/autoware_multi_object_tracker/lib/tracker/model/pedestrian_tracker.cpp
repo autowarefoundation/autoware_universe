@@ -25,24 +25,20 @@
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <bits/stdc++.h>
+#include <algorithm>
 
 namespace autoware::multi_object_tracker
 {
+
 PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object)
-: Tracker(time, object), logger_(rclcpp::get_logger("PedestrianTracker"))
+: Tracker(time, object),
+  logger_(rclcpp::get_logger("PedestrianTracker")),
+  extend_manager_(object_model_)
 {
   tracker_type_ = TrackerType::PEDESTRIAN;
 
-  if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
-    // set default initial size
-    auto & object_extension = object_.shape.dimensions;
-    object_extension.x = object_model_.init_size.length;
-    object_extension.y = object_model_.init_size.width;
-    object_extension.z = object_model_.init_size.height;
-  }
-  // set maximum and minimum size
-  limitObjectExtension(object_model_);
+  // Initialize shape manager: handles POLYGON/CYLINDER/BBOX normalization and clamping
+  extend_manager_.init(object);
 
   // Set motion model parameters
   {
@@ -58,7 +54,7 @@ PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::Dyn
   {
     const double max_vel = object_model_.process_limit.vel_long_max;
     const double max_turn_rate = object_model_.process_limit.yaw_rate_max;
-    motion_model_.setMotionLimits(max_vel, max_turn_rate);  // maximum velocity and slip angle
+    motion_model_.setMotionLimits(max_vel, max_turn_rate);
   }
 
   // Set initial state
@@ -70,7 +66,6 @@ PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::Dyn
 
     auto pose_cov = object.pose_covariance;
     if (!object.kinematics.has_position_covariance) {
-      // initial state covariance
       const auto & p0_cov_x = object_model_.initial_covariance.pos_x;
       const auto & p0_cov_y = object_model_.initial_covariance.pos_y;
       const auto & p0_cov_yaw = object_model_.initial_covariance.yaw;
@@ -99,7 +94,6 @@ PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::Dyn
       wz_cov = object.twist_covariance[XYZRPY_COV_IDX::YAW_YAW];
     }
 
-    // initialize motion model
     motion_model_.initialize(time, x, y, yaw, pose_cov, vel, vel_cov, wz, wz_cov);
   }
 }
@@ -127,46 +121,10 @@ bool PedestrianTracker::updateKinematics(const types::DynamicObject & object)
   return is_updated;
 }
 
-bool PedestrianTracker::updateShapeSize(const types::DynamicObject & object)
-{
-  if (object.shape.type != autoware_perception_msgs::msg::Shape::POLYGON) {
-    constexpr double size_max = 30.0;  // [m]
-    constexpr double size_min = 0.1;   // [m]
-    if (
-      object.shape.dimensions.x > size_max || object.shape.dimensions.x < size_min ||
-      object.shape.dimensions.y > size_max || object.shape.dimensions.y < size_min ||
-      object.shape.dimensions.z > size_max || object.shape.dimensions.z < size_min) {
-      return false;
-    }
-    constexpr double gain = 0.5;
-    constexpr double gain_inv = 1.0 - gain;
-    auto & object_extension = object_.shape.dimensions;
-    object_extension.x = gain_inv * object_extension.x + gain * object.shape.dimensions.x;
-    object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
-    object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
-
-    // update shape type, bounding box or cylinder
-    object_.shape.type = object.shape.type;
-    object_.area = types::getArea(object.shape);
-
-    // set maximum and minimum size
-    limitObjectExtension(object_model_);
-  } else {
-    // do not update polygon shape
-    return false;
-  }
-
-  // update shape type
-  object_.shape.type = object.shape.type;
-
-  return true;
-}
-
 bool PedestrianTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
   const types::InputChannel & channel_info)
 {
-  // check time gap
   const double dt = motion_model_.getDeltaTime(time);
   if (0.01 /*10msec*/ < dt) {
     RCLCPP_WARN(
@@ -177,9 +135,10 @@ bool PedestrianTracker::measure(
   }
 
   updateKinematics(object);
-  if (channel_info.trust_extension) {
-    updateShapeSize(object);
-  }
+
+  // Use current tracker heading for POLYGON branch projection
+  const double tracker_yaw = tf2::getYaw(object_.pose.orientation);
+  extend_manager_.update(object, channel_info.trust_extension, tracker_yaw);
 
   removeCache();
   return true;
@@ -188,13 +147,10 @@ bool PedestrianTracker::measure(
 bool PedestrianTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  // try to return cached object
   if (!getCachedObject(time, object)) {
-    // if there is no cached object, predict and update cache
     object = object_;
     object.time = time;
 
-    // predict from motion model
     auto & pose = object.pose;
     auto & pose_cov = object.pose_covariance;
     auto & twist = object.twist;
@@ -204,24 +160,21 @@ bool PedestrianTracker::getTrackedObject(
       return false;
     }
 
-    // cache object
     updateCache(object, time);
   }
 
-  // if the tracker is to be published, check twist uncertainty
-  // in case the twist uncertainty is large, lower the twist value
+  // Export shape from extend manager (type selection: CYLINDER vs BOUNDING_BOX)
+  extend_manager_.exportTo(object);
+
   if (to_publish) {
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    // lower the x twist magnitude 1 sigma smaller
-    // if the twist is smaller than 1 sigma, the twist is zeroed
     auto & twist = object.twist;
-    constexpr double vel_cov_buffer = 0.7;  // [m/s] buffer not to limit certain twist
-    constexpr double vel_too_low_ignore =
-      0.35;  // [m/s] if the velocity is lower than this, do not limit
+    constexpr double vel_cov_buffer = 0.7;
+    constexpr double vel_too_low_ignore = 0.35;
     const double vel_long = std::abs(twist.linear.x);
     if (vel_long > vel_too_low_ignore) {
-      const double vel_limit = std::max(
-        std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);  // [m/s]
+      const double vel_limit =
+        std::max(std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);
 
       if (vel_long < vel_limit) {
         twist.linear.x = twist.linear.x > 0 ? vel_too_low_ignore : -vel_too_low_ignore;

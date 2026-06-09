@@ -66,6 +66,10 @@ set(${PROJECT_NAME}_lib
   lib/uncertainty/uncertainty_processor.cpp
   lib/association/adaptive_threshold_cache.cpp
   lib/tracker/shape_model/unstable_shape_filter.cpp
+  lib/tracker/shape_model/vehicle_extend_manager.cpp
+  lib/tracker/shape_model/pedestrian_extend_manager.cpp
+  lib/tracker/shape_model/polygon_extend_manager.cpp
+  lib/tracker/shape_model/static_extend_manager.cpp
 )
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${${PROJECT_NAME}_src}

@@ -184,8 +184,6 @@ protected:
     cached_measurement_count_ = -1;
   }
 
-  void limitObjectExtension(const object_model::ObjectModel object_model);
-
   // virtual functions
   virtual bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,

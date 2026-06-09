@@ -16,8 +16,6 @@
 
 #include "autoware/multi_object_tracker/tracker/model/static_tracker.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
-
 #include <autoware_utils_geometry/msg/covariance.hpp>
 
 #include <autoware_perception_msgs/msg/shape.hpp>
@@ -31,6 +29,7 @@ StaticTracker::StaticTracker(const rclcpp::Time & time, const types::DynamicObje
 : Tracker(time, object), logger_(rclcpp::get_logger("StaticTracker"))
 {
   tracker_type_ = TrackerType::STATIC;
+  extend_manager_.init(object);
 
   // Set motion model parameters
   constexpr double q_stddev_x = 0.5;  // [m/s]
@@ -73,9 +72,8 @@ bool StaticTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & /*time*/,
   const types::InputChannel & /*channel_info*/)
 {
-  object_.shape = object.shape;
+  extend_manager_.update(object);
   object_.pose = object.pose;
-  object_.area = types::getArea(object.shape);
 
   updateKinematics(object);
 
@@ -103,12 +101,7 @@ bool StaticTracker::getTrackedObject(
     return false;
   }
 
-  if (to_publish && object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
-    types::DynamicObject converted;
-    if (shapes::convertConvexHullToBoundingBox(object, converted, ego_pos_)) {
-      object = converted;
-    }
-  }
+  extend_manager_.exportTo(object, to_publish);
 
   return true;
 }

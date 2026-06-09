@@ -25,8 +25,6 @@
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <bits/stdc++.h>
-
 #include <cmath>
 
 namespace autoware::multi_object_tracker
@@ -41,6 +39,7 @@ PolygonTracker::PolygonTracker(
   enable_motion_output_(enable_motion_output)
 {
   tracker_type_ = TrackerType::POLYGON;
+  extend_manager_.init(object);
 
   if (enable_velocity_estimation_) {
     // Set motion model parameters
@@ -184,10 +183,8 @@ bool PolygonTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
   const types::InputChannel & /*channel_info*/)
 {
-  // update object shape
-  object_.shape = object.shape;
+  extend_manager_.update(object);
   object_.pose = object.pose;
-  object_.area = types::getArea(object.shape);
   last_pose_ = object.pose;
 
   if (enable_velocity_estimation_) {
@@ -220,12 +217,10 @@ bool PolygonTracker::getTrackedObject(
   }
   // else, allow extrapolation
 
-  // get the object
   object = object_;
   object.time = time;
 
   if (enable_velocity_estimation_) {
-    // predict from motion model
     if (!motion_model_.getPredictedState(
           time_object, object.pose, object.pose_covariance, object.twist,
           object.twist_covariance)) {
@@ -233,7 +228,6 @@ bool PolygonTracker::getTrackedObject(
       return false;
     }
   } else {
-    // predict from static motion model
     if (!static_motion_model_.getPredictedState(
           time_object, object.pose, object.pose_covariance, object.twist,
           object.twist_covariance)) {
@@ -242,8 +236,9 @@ bool PolygonTracker::getTrackedObject(
     }
   }
 
+  extend_manager_.exportTo(object);
+
   if (to_publish) {
-    // back to the input pose to match with the polygon shape
     object.pose = last_pose_;
     if (!enable_motion_output_) {
       object.twist.linear.x = 0.0;

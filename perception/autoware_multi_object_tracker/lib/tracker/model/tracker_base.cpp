@@ -358,18 +358,6 @@ uint Tracker::getChannelIndex() const
   return index;
 }
 
-void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
-{
-  auto & object_extension = object_.shape.dimensions;
-  // set maximum and minimum size
-  object_extension.x = std::clamp(
-    object_extension.x, object_model.size_limit.length_min, object_model.size_limit.length_max);
-  object_extension.y = std::clamp(
-    object_extension.y, object_model.size_limit.width_min, object_model.size_limit.width_max);
-  object_extension.z = std::clamp(
-    object_extension.z, object_model.size_limit.height_min, object_model.size_limit.height_max);
-}
-
 void Tracker::getPositionCovarianceEigenSq(
   const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const
 {

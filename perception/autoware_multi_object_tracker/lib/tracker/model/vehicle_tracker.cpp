@@ -225,7 +225,10 @@ bool createPseudoMeasurement(
 VehicleTracker::VehicleTracker(
   const object_model::ObjectModel & object_model, const rclcpp::Time & time,
   const types::DynamicObject & object)
-: Tracker(time, object), logger_(rclcpp::get_logger("VehicleTracker")), object_model_(object_model)
+: Tracker(time, object),
+  logger_(rclcpp::get_logger("VehicleTracker")),
+  object_model_(object_model),
+  extend_manager_(object_model)
 {
   // set tracker type based on object model
   switch (object_model.type) {
@@ -249,28 +252,22 @@ VehicleTracker::VehicleTracker(
   }
 
   // velocity deviation threshold
-  //   if the predicted velocity is close to the observed velocity,
-  //   the observed velocity is used as the measurement.
   velocity_deviation_threshold_ = autoware_utils_math::kmph2mps(10);  // [m/s]
 
-  if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    // set default initial size
-    auto & object_extension = object_.shape.dimensions;
-    object_extension.x = object_model_.init_size.length;
-    object_extension.y = object_model_.init_size.width;
-    object_extension.z = object_model_.init_size.height;
-  }
-  object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-  object_.shape.footprint.points.clear();
+  // Initialize shape manager (forces BBOX, clears footprint, clamps)
+  extend_manager_.init(object);
 
-  // set maximum and minimum size
-  limitObjectExtension(object_model_);
+  // Seed footprint before the motion model is ready — no tracker pose yet, direct copy
+  extend_manager_.updateFootprint(object, time);
 
-  // Seed footprint before the motion model is ready — getPredictedState is unavailable, so
-  // updateFootprint takes the direct-copy path (detection pose == initial tracker pose).
-  footprint_valid_ = false;
-  last_footprint_update_time_ = rclcpp::Time(0, 0, RCL_ROS_TIME);
-  updateFootprint(object, time);
+  // Determine initial vehicle length for motion model initialization
+  const double initial_length =
+    (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX &&
+     object.shape.dimensions.x > 0.0)
+      ? std::clamp(
+          object.shape.dimensions.x, object_model_.size_limit.length_min,
+          object_model_.size_limit.length_max)
+      : object_model_.init_size.length;
 
   // Set motion model parameters
   motion_model_.setMotionParams(
@@ -285,7 +282,6 @@ VehicleTracker::VehicleTracker(
 
     auto pose_cov = object.pose_covariance;
     if (!object.kinematics.has_position_covariance) {
-      // initial state covariance
       const auto & p0_cov_x = object_model_.initial_covariance.pos_x;
       const auto & p0_cov_y = object_model_.initial_covariance.pos_y;
       const auto & p0_cov_yaw = object_model_.initial_covariance.yaw;
@@ -313,10 +309,8 @@ VehicleTracker::VehicleTracker(
       vel_y_cov = object.twist_covariance[XYZRPY_COV_IDX::Y_Y];
     }
 
-    const double & length = object_.shape.dimensions.x;
-
-    // initialize motion model
-    motion_model_.initialize(time, x, y, yaw, pose_cov, vel_x, vel_x_cov, vel_y, vel_y_cov, length);
+    motion_model_.initialize(
+      time, x, y, yaw, pose_cov, vel_x, vel_x_cov, vel_y, vel_y_cov, initial_length);
   }
 }
 
@@ -358,7 +352,6 @@ bool VehicleTracker::updateKinematics(
     channel_info.trust_orientation;
   const bool is_velocity_available = object.kinematics.has_twist;
 
-  // Select and run EKF update variant based on available measurement data.
   bool is_updated = false;
   {
     const double & x = object.pose.position.x;
@@ -380,14 +373,12 @@ bool VehicleTracker::updateKinematics(
     }
     const double pre_limit_yaw = motion_model_.getYawState();
     motion_model_.limitStates();
-    if (footprint_valid_) {
+    // Flip stored footprint when yaw-limit correction reverses heading by 180°
+    if (extend_manager_.isFootprintValid()) {
       const double yaw_diff =
         autoware_utils_math::normalize_radian(motion_model_.getYawState() - pre_limit_yaw);
       if (std::abs(yaw_diff) > M_PI_2) {
-        for (auto & pt : object_.shape.footprint.points) {
-          pt.x = -pt.x;
-          pt.y = -pt.y;
-        }
+        extend_manager_.flipFootprintXY();
       }
     }
   }
@@ -400,37 +391,6 @@ bool VehicleTracker::updateKinematics(
   }
 
   return is_updated;
-}
-
-void VehicleTracker::updateShapeSize(const types::DynamicObject & object, const bool can_update)
-{
-  if (!can_update) return;
-
-  // Reject measurements whose size is implausibly large or small.
-  constexpr double size_max_multiplier = 1.5;
-  constexpr double size_min_multiplier = 0.25;
-  if (
-    object.shape.dimensions.x > object_model_.size_limit.length_max * size_max_multiplier ||
-    object.shape.dimensions.x < object_model_.size_limit.length_min * size_min_multiplier ||
-    object.shape.dimensions.y > object_model_.size_limit.width_max * size_max_multiplier ||
-    object.shape.dimensions.y < object_model_.size_limit.width_min * size_min_multiplier) {
-    return;
-  }
-
-  // IIR(Infinite Impulse Response)-blend width and height; length is authoritative from the motion
-  // model.
-  {
-    constexpr double gain = 0.4;
-    constexpr double gain_inv = 1.0 - gain;
-    auto & ext = object_.shape.dimensions;
-    ext.x = motion_model_.getLength();
-    ext.y = gain_inv * ext.y + gain * object.shape.dimensions.y;
-    ext.z = gain_inv * ext.z + gain * object.shape.dimensions.z;
-  }
-
-  limitObjectExtension(object_model_);
-  object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-  object_.area = types::getArea(object_.shape);
 }
 
 bool VehicleTracker::updateWheelKinematics(
@@ -449,11 +409,7 @@ bool VehicleTracker::updateWheelKinematics(
   constexpr double z_gain = 0.4;
   object_.pose.position.z =
     (1.0 - z_gain) * object_.pose.position.z + z_gain * measurement.pose.position.z;
-  if (measurement.shape.dimensions.z > 0.0) {
-    constexpr double height_gain = 0.4;
-    object_.shape.dimensions.z = (1.0 - height_gain) * object_.shape.dimensions.z +
-                                 height_gain * measurement.shape.dimensions.z;
-  }
+  extend_manager_.updateHeight(measurement.shape.dimensions.z);
   return is_updated;
 }
 
@@ -461,7 +417,6 @@ bool VehicleTracker::measure(
   const types::DynamicObject & in_object, const rclcpp::Time & time,
   const types::InputChannel & channel_info)
 {
-  // check time gap
   const double dt = motion_model_.getDeltaTime(time);
   if (0.01 /*10msec*/ < dt) {
     RCLCPP_WARN(
@@ -471,13 +426,20 @@ bool VehicleTracker::measure(
       dt);
   }
 
-  // Flip measurement orientation 180° if it points opposite to the tracker heading.
   const types::DynamicObject corrected = normalizeYaw(in_object, motion_model_.getYawState());
 
   const bool is_bbox = (corrected.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   updateKinematics(corrected, channel_info);
-  updateShapeSize(corrected, channel_info.trust_extension && is_bbox);
-  updateFootprint(corrected, time);
+  extend_manager_.updateShape(corrected, channel_info.trust_extension && is_bbox);
+
+  // Get current tracker pose for footprint transform
+  geometry_msgs::msg::Pose tracker_pose;
+  std::array<double, 36> dummy_cov{};
+  geometry_msgs::msg::Twist dummy_twist;
+  const bool has_pose =
+    motion_model_.getPredictedState(time, tracker_pose, dummy_cov, dummy_twist, dummy_cov);
+  extend_manager_.updateFootprint(
+    corrected, time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
   removeCache();
   return true;
@@ -486,13 +448,10 @@ bool VehicleTracker::measure(
 bool VehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  // try to return cached object
   if (!getCachedObject(time, object)) {
-    // if there is no cached object, predict and update cache
     object = object_;
     object.time = time;
 
-    // predict from motion model
     auto & pose = object.pose;
     auto & pose_cov = object.pose_covariance;
     auto & twist = object.twist;
@@ -502,26 +461,20 @@ bool VehicleTracker::getTrackedObject(
       return false;
     }
 
-    // cache object
     updateCache(object, time);
   }
   // Compose bbox dimensions and stored footprint into the output object.
-  exportShape(object);
+  extend_manager_.exportTo(object, motion_model_.getLength());
 
-  // if the tracker is to be published, check twist uncertainty
-  // in case the twist uncertainty is large, lower the twist value
   if (to_publish) {
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    // lower the x twist magnitude 1 sigma smaller
-    // if the twist is smaller than 1 sigma, the twist is zeroed
     auto & twist = object.twist;
-    constexpr double vel_cov_buffer = 0.7;  // [m/s] buffer not to limit certain twist
-    constexpr double vel_too_low_ignore =
-      0.25;  // [m/s] if the velocity is lower than this, do not limit
+    constexpr double vel_cov_buffer = 0.7;
+    constexpr double vel_too_low_ignore = 0.25;
     const double vel_long = std::abs(twist.linear.x);
     if (vel_long > vel_too_low_ignore) {
-      const double vel_limit = std::max(
-        std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);  // [m/s]
+      const double vel_limit =
+        std::max(std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);
 
       if (vel_long < vel_limit) {
         twist.linear.x = twist.linear.x > 0 ? vel_too_low_ignore : -vel_too_low_ignore;
@@ -541,124 +494,61 @@ bool VehicleTracker::conditionedUpdate(
   const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
   const types::InputChannel & channel_info)
 {
-  // For cluster measurements, re-project the footprint onto the tracker heading before strategy
-  // selection. nullopt is returned when there are no footprint points.
   const auto aligned = shapes::alignClusterToOrientation(measurement, motion_model_.getYawState());
   const types::DynamicObject & meas = aligned ? *aligned : measurement;
 
-  // Determine update strategy
   UpdateStrategy strategy = determineUpdateStrategy(meas, prediction);
 
-  // Handle weak update strategy (no edge alignment - use weak update with pseudo measurement)
   if (strategy.type == UpdateStrategyType::WEAK_UPDATE) {
     types::DynamicObject pseudo_measurement = prediction;
-
-    // Create pseudo measurement with enlarged covariance for weak update
     createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape, true);
 
-    // Apply kinematic-only EKF update via the pseudo measurement; align yaw first.
-    // Footprint must not be taken from the fake pseudo_measurement.
     const types::DynamicObject pseudo_corrected =
       normalizeYaw(pseudo_measurement, motion_model_.getYawState());
     updateKinematics(pseudo_corrected, channel_info);
 
-    // Update height from real measurement (z span of polygon cluster is reliable).
-    // Width is intentionally not updated here — cluster measurements have unreliable bbox width.
-    if (measurement.shape.dimensions.z > 0.0) {
-      constexpr double gain = 0.4;
-      object_.shape.dimensions.z =
-        (1.0 - gain) * object_.shape.dimensions.z + gain * measurement.shape.dimensions.z;
-    }
+    // Only update height from real measurement (z-span of polygon cluster is reliable)
+    extend_manager_.updateHeight(measurement.shape.dimensions.z);
 
-    // Store footprint from the real measurement using the post-update tracker pose.
-    updateFootprint(measurement, measurement_time);
+    // Store footprint from the real measurement using the post-update tracker pose
+    geometry_msgs::msg::Pose tracker_pose;
+    std::array<double, 36> dummy_cov{};
+    geometry_msgs::msg::Twist dummy_twist;
+    const bool has_pose = motion_model_.getPredictedState(
+      measurement_time, tracker_pose, dummy_cov, dummy_twist, dummy_cov);
+    extend_manager_.updateFootprint(
+      measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
+
     removeCache();
     return true;
   }
 
-  // Handle wheel-based update strategies (FRONT_WHEEL_UPDATE or REAR_WHEEL_UPDATE).
-  // Width is intentionally not updated here — cluster measurements have unreliable bbox width.
   const bool is_updated = updateWheelKinematics(strategy, measurement);
 
-  // Store measurement footprint after the wheel-anchor kinematic update.
-  updateFootprint(measurement, measurement_time);
-  removeCache();
+  geometry_msgs::msg::Pose tracker_pose;
+  std::array<double, 36> dummy_cov{};
+  geometry_msgs::msg::Twist dummy_twist;
+  const bool has_pose = motion_model_.getPredictedState(
+    measurement_time, tracker_pose, dummy_cov, dummy_twist, dummy_cov);
+  extend_manager_.updateFootprint(
+    measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
+  removeCache();
   return is_updated;
 }
 
 void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape & shape)
 {
-  // Update bbox dimensions (kinematic frame authority); internal type is always BOUNDING_BOX
-  object_.shape.dimensions = shape.dimensions;
-  object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-
-  // Footprint is stored independently — update only when the new shape carries one; never clear.
-  if (!shape.footprint.points.empty()) {
-    object_.shape.footprint = shape.footprint;
-    footprint_valid_ = true;
-    last_footprint_update_time_ = getLatestMeasurementTime();
+  const auto new_len = extend_manager_.setShape(shape, getLatestMeasurementTime());
+  if (new_len) {
+    motion_model_.updateStateLength(*new_len, BicycleMotionModel::LengthUpdateAnchor::CENTER);
   }
-
-  object_.area = types::getArea(shape);
-
-  // Only sync the bicycle model length for bounding boxes — POLYGON shapes may carry
-  // zero or meaningless dimensions.x.
-  if (shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    motion_model_.updateStateLength(
-      shape.dimensions.x, BicycleMotionModel::LengthUpdateAnchor::CENTER);
-  }
-}
-
-void VehicleTracker::updateFootprint(const types::DynamicObject & object, const rclcpp::Time & time)
-{
-  using Shape = autoware_perception_msgs::msg::Shape;
-  const bool has_poly =
-    !object.shape.footprint.points.empty() &&
-    (object.shape.type == Shape::BOUNDING_BOX || object.shape.type == Shape::POLYGON);
-  if (!has_poly) return;
-
-  // Get tracker's current pose after kinematic update (dt=0 → EKF state as-is).
-  // If the motion model is not yet initialized (constructor path), fall back to direct copy
-  // because detection pose == tracker initial pose and no transform is needed.
-  geometry_msgs::msg::Pose tracker_pose;
-  std::array<double, 36> dummy_cov{};
-  geometry_msgs::msg::Twist dummy_twist;
-  if (!motion_model_.getPredictedState(time, tracker_pose, dummy_cov, dummy_twist, dummy_cov)) {
-    object_.shape.footprint = object.shape.footprint;
-    footprint_valid_ = true;
-    last_footprint_update_time_ = time;
-    return;
-  }
-
-  object_.shape.footprint =
-    shapes::transformFootprint(object.shape.footprint, object.pose, tracker_pose);
-  footprint_valid_ = true;
-  last_footprint_update_time_ = time;
 }
 
 void VehicleTracker::mergeFootprintFrom(
   const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose)
 {
-  if (footprint.points.empty()) return;
-  const auto transformed = shapes::transformFootprint(footprint, src_pose, object_.pose);
-  object_.shape.footprint = shapes::unionFootprints(object_.shape.footprint, transformed);
-  footprint_valid_ = true;
-  last_footprint_update_time_ = getLatestMeasurementTime();
-}
-
-void VehicleTracker::exportShape(types::DynamicObject & object) const
-{
-  object.shape.dimensions.x = motion_model_.getLength();
-
-  const bool footprint_fresh =
-    footprint_valid_ && (object.time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
-
-  if (footprint_fresh) {
-    object.shape.footprint = object_.shape.footprint;
-  } else {
-    object.shape.footprint.points.clear();
-  }
+  extend_manager_.mergeFrom(footprint, src_pose, object_.pose, getLatestMeasurementTime());
 }
 
 }  // namespace autoware::multi_object_tracker
