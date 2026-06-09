@@ -52,11 +52,11 @@ std::string make_elapsed_time_text(
   const std::optional<rclcpp::Time> & detection_time, const rclcpp::Time & now)
 {
   if (!detection_time) {
-    return "unavailable\\n";
+    return "unavailable\n";
   }
 
-  const auto detection_time_value = detection_time.value_or(now);
-  return std::to_string((now - detection_time_value).seconds()) + "s\\n";
+  const auto detection_time_value = *detection_time;
+  return std::to_string((now - detection_time_value).seconds()) + "s\n";
 }
 
 std::string make_collision_marker_text(
