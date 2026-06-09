@@ -58,6 +58,7 @@ set(${PROJECT_NAME}_lib
   lib/tracker/motion_model/static_motion_model.cpp
   lib/tracker/trackers/tracker_base.cpp
   lib/tracker/trackers/vehicle_tracker.cpp
+  lib/tracker/update/vehicle_update_strategy.cpp
   lib/tracker/trackers/multiple_vehicle_tracker.cpp
   lib/tracker/trackers/pedestrian_tracker.cpp
   lib/tracker/trackers/pedestrian_and_bicycle_tracker.cpp

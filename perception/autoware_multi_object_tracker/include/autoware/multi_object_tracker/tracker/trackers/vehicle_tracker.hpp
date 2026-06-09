@@ -19,22 +19,13 @@
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/vehicle_shape_model.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/update/vehicle_update_strategy.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <optional>
 
 namespace autoware::multi_object_tracker
 {
-
-// Vehicle update strategy type for conditioned updates
-enum class UpdateStrategyType { FRONT_WHEEL_UPDATE, REAR_WHEEL_UPDATE, WEAK_UPDATE };
-
-struct UpdateStrategy
-{
-  UpdateStrategyType type;
-  geometry_msgs::msg::Point anchor_point;  // Anchor point for the update (used for
-                                           // FRONT_WHEEL_UPDATE and REAR_WHEEL_UPDATE)
-};
 
 class VehicleTracker : public Tracker
 {
