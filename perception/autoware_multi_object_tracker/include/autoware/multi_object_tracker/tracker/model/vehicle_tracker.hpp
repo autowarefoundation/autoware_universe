@@ -60,6 +60,9 @@ private:
     const types::DynamicObject & object, const types::InputChannel & channel_info);
   // IIR-blend shape dimensions into object_ when can_update is true.
   void updateShapeSize(const types::DynamicObject & object, bool can_update);
+  // Wheel-anchor EKF update (front or rear) plus z/height updates.
+  bool updateWheelKinematics(
+    const UpdateStrategy & strategy, const types::DynamicObject & measurement);
   void updateFootprint(const types::DynamicObject & object, const rclcpp::Time & time);
   void exportShape(types::DynamicObject & object) const;
 

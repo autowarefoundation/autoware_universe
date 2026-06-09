@@ -28,8 +28,6 @@
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <bits/stdc++.h>
-
 #include <algorithm>
 #include <limits>
 
@@ -270,9 +268,7 @@ types::DynamicObject VehicleTracker::normalizeYaw(
 {
   types::DynamicObject corrected = object;
   const double obs_yaw = tf2::getYaw(corrected.pose.orientation);
-  double yaw_diff = obs_yaw - reference_yaw;
-  while (yaw_diff > M_PI) yaw_diff -= 2 * M_PI;
-  while (yaw_diff < -M_PI) yaw_diff += 2 * M_PI;
+  const double yaw_diff = autoware_utils_math::normalize_radian(obs_yaw - reference_yaw);
   if (std::abs(yaw_diff) > M_PI_2) {
     tf2::Quaternion q;
     q.setRPY(0, 0, obs_yaw + M_PI);
@@ -357,7 +353,31 @@ void VehicleTracker::updateShapeSize(const types::DynamicObject & object, const 
 
   limitObjectExtension(object_model_);
   object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-  object_.area = types::getArea(object.shape);
+  object_.area = types::getArea(object_.shape);
+}
+
+bool VehicleTracker::updateWheelKinematics(
+  const UpdateStrategy & strategy, const types::DynamicObject & measurement)
+{
+  std::array<double, 36> pose_cov = measurement.pose_covariance;
+  bool is_updated = false;
+  if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
+    is_updated = motion_model_.updateStatePoseFront(
+      strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
+  } else {
+    is_updated =
+      motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
+  }
+  // Wheel-anchor EKF only updates x/y; z position and height are applied here.
+  constexpr double z_gain = 0.4;
+  object_.pose.position.z =
+    (1.0 - z_gain) * object_.pose.position.z + z_gain * measurement.pose.position.z;
+  if (measurement.shape.dimensions.z > 0.0) {
+    constexpr double height_gain = 0.4;
+    object_.shape.dimensions.z = (1.0 - height_gain) * object_.shape.dimensions.z +
+                                 height_gain * measurement.shape.dimensions.z;
+  }
+  return is_updated;
 }
 
 bool VehicleTracker::measure(
@@ -467,6 +487,7 @@ bool VehicleTracker::conditionedUpdate(
     updateKinematics(pseudo_corrected, channel_info);
 
     // Update height from real measurement (z span of polygon cluster is reliable).
+    // Width is intentionally not updated here — cluster measurements have unreliable bbox width.
     if (measurement.shape.dimensions.z > 0.0) {
       constexpr double gain = 0.4;
       object_.shape.dimensions.z =
@@ -479,32 +500,9 @@ bool VehicleTracker::conditionedUpdate(
     return true;
   }
 
-  // Handle wheel-based update strategies (FRONT_WHEEL_UPDATE or REAR_WHEEL_UPDATE)
-  // Use motion model's pose covariance for anchor point uncertainty
-  std::array<double, 36> pose_cov = measurement.pose_covariance;
-
-  bool is_updated = false;
-  if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
-    is_updated = motion_model_.updateStatePoseFront(
-      strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
-  } else {
-    // Must be REAR_WHEEL_UPDATE (only remaining option after WEAK_UPDATE check)
-    is_updated =
-      motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
-  }
-
-  // The wheel-anchor updates above touch only x/y state; apply z LPF and height update here
-  // since updateKinematics is not called on this path.
-  {
-    constexpr double gain = 0.1;
-    object_.pose.position.z =
-      (1.0 - gain) * object_.pose.position.z + gain * measurement.pose.position.z;
-  }
-  if (measurement.shape.dimensions.z > 0.0) {
-    constexpr double gain = 0.4;
-    object_.shape.dimensions.z =
-      (1.0 - gain) * object_.shape.dimensions.z + gain * measurement.shape.dimensions.z;
-  }
+  // Handle wheel-based update strategies (FRONT_WHEEL_UPDATE or REAR_WHEEL_UPDATE).
+  // Width is intentionally not updated here — cluster measurements have unreliable bbox width.
+  const bool is_updated = updateWheelKinematics(strategy, measurement);
 
   // Store measurement footprint after the wheel-anchor kinematic update.
   updateFootprint(measurement, measurement_time);

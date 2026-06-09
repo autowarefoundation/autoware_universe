@@ -276,10 +276,10 @@ bool Tracker::createPseudoMeasurement(
   constexpr double min_w = 0.0;
   const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
 
-  // Blend position
+  // Blend position (x, y, z)
   pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + meas.pose.position.x * w_pose;
   pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
-  pred.pose.position.z = meas.pose.position.z;
+  pred.pose.position.z = pred.pose.position.z * (1 - w_pose) + meas.pose.position.z * w_pose;
 
   // Use smoothed shape and its area
   pred.shape = tracker_shape;
