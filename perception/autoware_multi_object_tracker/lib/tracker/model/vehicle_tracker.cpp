@@ -335,6 +335,10 @@ types::DynamicObject VehicleTracker::normalizeYaw(
     tf2::Quaternion q;
     q.setRPY(0, 0, obs_yaw + M_PI);
     corrected.pose.orientation = tf2::toMsg(q);
+    for (auto & pt : corrected.shape.footprint.points) {
+      pt.x = -pt.x;
+      pt.y = -pt.y;
+    }
   }
   return corrected;
 }
@@ -374,7 +378,18 @@ bool VehicleTracker::updateKinematics(
     } else {
       is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance, length);
     }
+    const double pre_limit_yaw = motion_model_.getYawState();
     motion_model_.limitStates();
+    if (footprint_valid_) {
+      const double yaw_diff =
+        autoware_utils_math::normalize_radian(motion_model_.getYawState() - pre_limit_yaw);
+      if (std::abs(yaw_diff) > M_PI_2) {
+        for (auto & pt : object_.shape.footprint.points) {
+          pt.x = -pt.x;
+          pt.y = -pt.y;
+        }
+      }
+    }
   }
 
   // Low-pass filter on z position (2D motion model does not track z).
@@ -462,8 +477,7 @@ bool VehicleTracker::measure(
   const bool is_bbox = (corrected.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   updateKinematics(corrected, channel_info);
   updateShapeSize(corrected, channel_info.trust_extension && is_bbox);
-  // Store polygon footprint from the original (pre-flip) detection pose.
-  updateFootprint(in_object, time);
+  updateFootprint(corrected, time);
 
   removeCache();
   return true;
