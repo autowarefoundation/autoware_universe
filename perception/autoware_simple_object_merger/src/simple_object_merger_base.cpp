@@ -53,7 +53,7 @@ using std::chrono::nanoseconds;
 template <class ObjsMsgType>
 SimpleObjectMergerBase<ObjsMsgType>::SimpleObjectMergerBase(
   const std::string & node_name, const rclcpp::NodeOptions & node_options)
-: Node(node_name, node_options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_, *this)
+: Node(node_name, node_options), tf_listener_(*this)
 {
   // Parameter Server
   set_param_res_ = this->add_on_set_parameters_callback(
