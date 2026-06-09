@@ -1,0 +1,96 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: BehaviorVelocityPlanner.node
+
+package:
+  name: autoware_behavior_velocity_planner
+  provider: autoware
+
+launch:
+  plugin: autoware::behavior_velocity_planner::experimental::BehaviorVelocityPlannerNode
+  executable: experimental_autoware_behavior_velocity_planner_node
+
+# interfaces
+subscribers:
+  - name: path_with_lane_id
+    message_type: autoware_internal_planning_msgs/msg/PathWithLaneId
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: vehicle_odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: accel
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: dynamic_objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: no_ground_pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: external_velocity_limit_mps
+    message_type: autoware_internal_planning_msgs/msg/VelocityLimit
+  - name: traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+  - name: occupancy_grid
+    message_type: nav_msgs/msg/OccupancyGrid
+
+publishers:
+  - name: path
+    message_type: autoware_planning_msgs/msg/Path
+
+# parameters
+param_files:
+  - name: common_param
+    default: $(find-pkg-share autoware_core_planning)/config/common.param.yaml
+  - name: behavior_velocity_planner_common_param
+    default: config/behavior_velocity_planner_common.param.yaml
+  - name: behavior_velocity_planner_param
+    default: config/behavior_velocity_planner.param.yaml
+  - name: crosswalk_module_param
+    default: config/crosswalk.param.yaml
+  - name: walkway_module_param
+    default: config/walkway.param.yaml
+  - name: traffic_light_module_param
+    default: config/traffic_light.param.yaml
+  - name: intersection_module_param
+    default: config/intersection.param.yaml
+  - name: roundabout_module_param
+    default: config/roundabout.param.yaml
+  - name: blind_spot_module_param
+    default: config/blind_spot.param.yaml
+  - name: detection_area_module_param
+    default: config/detection_area.param.yaml
+  - name: no_stopping_area_module_param
+    default: config/no_stopping_area.param.yaml
+  - name: stop_line_module_param
+    default: config/stop_line.param.yaml
+  - name: virtual_traffic_light_module_param
+    default: config/virtual_traffic_light.param.yaml
+  - name: occlusion_spot_module_param
+    default: config/occlusion_spot.param.yaml
+
+param_values:
+  - name: launch_modules
+    type: string_array
+    default:
+      - autoware::behavior_velocity_planner::experimental::CrosswalkModulePlugin
+      - autoware::behavior_velocity_planner::experimental::WalkwayModulePlugin
+      - autoware::behavior_velocity_planner::experimental::TrafficLightModulePlugin
+      - autoware::behavior_velocity_planner::experimental::IntersectionModulePlugin
+      - autoware::behavior_velocity_planner::experimental::BlindSpotModulePlugin
+      - autoware::behavior_velocity_planner::experimental::DetectionAreaModulePlugin
+      - autoware::behavior_velocity_planner::experimental::VirtualTrafficLightModulePlugin
+      - autoware::behavior_velocity_planner::experimental::NoStoppingAreaModulePlugin
+      - autoware::behavior_velocity_planner::experimental::StopLineModulePlugin
+  - name: enable_all_modules_auto_mode
+    type: bool
+    default: false
+  - name: is_simulation
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: plan_velocity
+    trigger_conditions:
+      - on_input: path_with_lane_id
+    outcomes:
+      - to_output: path

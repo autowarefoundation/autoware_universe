@@ -53,3 +53,7 @@
       - /planning/scenario_planning/scenario_selector/debug/processing_time_ms
       - /planning/scenario_planning/velocity_smoother/debug/processing_time_ms
       - /simulation/shape_estimation/debug/processing_time_ms
+
+    # E2E metrics
+      - /planning/trajectory_generator/neural_network_based_planner/diffusion_planner_node/debug/processing_time_ms
+      - /planning/trajectory_generator/neural_network_based_planner/trajectory_optimizer_node/debug/processing_time_ms

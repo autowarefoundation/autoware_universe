@@ -2,6 +2,12 @@
 Changelog for package autoware_fake_test_node
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_frenet_planner, autoware_auto_common): remove the autoware_auto_common dependency (`#12108 <https://github.com/mitsudome-r/autoware_universe/issues/12108>`_)
+* Contributors: Mert Yavuz, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

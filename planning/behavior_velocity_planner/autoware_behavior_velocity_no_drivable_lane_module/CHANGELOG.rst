@@ -2,6 +2,23 @@
 Changelog for package autoware_behavior_velocity_no_drivable_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_trajectory): define set stopline in Trajectory class (`#12008 <https://github.com/mitsudome-r/autoware_universe/issues/12008>`_)
+  * replace usage with set_stopline function
+  * replace additiona usage with set_stopline function
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(behavior_velocity_no_drivable_lane_module): use Trajectory instead of PathWithLaneId (`#11585 <https://github.com/mitsudome-r/autoware_universe/issues/11585>`_)
+  * use Trajectory instead of PathWithLaneId
+  * remove original implementation
+  * remove unnecessary operation
+  * replace create_point with create_marker_position
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* Contributors: Mitsuhiro Sakamoto, Sarun MUKDAPITAK, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

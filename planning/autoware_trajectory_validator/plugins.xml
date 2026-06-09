@@ -1,15 +1,9 @@
 <?xml version="1.0"?>
 <library path="autoware_trajectory_validator_plugins">
-  <class type="safety::OutOfLaneFilter"
+  <class type="safety::UncrossableBoundaryDepartureFilter"
     base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
     <description>
-      Filters trajectories that go out of lane boundaries
-    </description>
-  </class>
-  <class type="safety::CollisionFilter"
-    base_class_type="autoware::trajectory_validator::plugin::ValidatorInterface">
-    <description>
-      Filters trajectories based on Time To Collision (TTC) with predicted objects
+      Filters trajectories that cross uncrossable boundaries
     </description>
   </class>
   <class type="safety::VehicleConstraintFilter"

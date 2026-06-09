@@ -2,6 +2,20 @@
 Changelog for package autoware_topic_relay_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: adopt cie (`#12318 <https://github.com/mitsudome-r/autoware_universe/issues/12318>`_)
+  * feat: adopt cie
+  * fix: typo
+  * Potential fix for pull request finding
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+  * fix
+  * fix: remove unnecessary lines
+  ---------
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+* Contributors: Tetsuhiro Kawaguchi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

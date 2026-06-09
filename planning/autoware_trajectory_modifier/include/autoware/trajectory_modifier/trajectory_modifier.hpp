@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_HPP_
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_HPP_
 
-#include "autoware/trajectory_modifier/trajectory_modifier_plugins/stop_point_fixer.hpp"
+#include "autoware/trajectory_modifier/trajectory_modifier_context.hpp"
+#include "autoware/trajectory_modifier/trajectory_modifier_plugins/input_data.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
-#include "autoware/trajectory_modifier/trajectory_modifier_structs.hpp"
 
 #include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
@@ -60,7 +60,7 @@ private:
   void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
   void load_plugin(const std::string & name);
   void unload_plugin(const std::string & name);
-  void set_data();
+  plugin::InputData make_input_data();
   bool initialized_modifiers_{false};
 
   std::unique_ptr<trajectory_modifier_params::ParamListener> param_listener_;
@@ -88,7 +88,7 @@ private:
   pluginlib::ClassLoader<plugin::TrajectoryModifierPluginBase> plugin_loader_;
   std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> plugins_;
 
-  std::shared_ptr<TrajectoryModifierData> data_;
+  std::shared_ptr<TrajectoryModifierContext> context_;
 };
 
 }  // namespace autoware::trajectory_modifier

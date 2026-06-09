@@ -48,6 +48,12 @@
           "default": 2000000,
           "minimum": 1
         },
+        "source_reconstruction": {
+          "type": "string",
+          "description": "Controls whether voxel predictions are mapped back to source points. 'none' publishes voxel representative points; 'partial' publishes cropped source points inside point_cloud_range; 'full' publishes the full input cloud, assigning unknown label 255 and zero class probabilities to points outside point_cloud_range.",
+          "default": "full",
+          "enum": ["none", "partial", "full"]
+        },
         "onnx_path": {
           "type": "string",
           "description": "A path to ONNX model file.",
@@ -68,6 +74,7 @@
         "plugins_path",
         "trt_precision",
         "cloud_capacity",
+        "source_reconstruction",
         "onnx_path",
         "engine_path",
         "filter"

@@ -2,6 +2,13 @@
 Changelog for package autoware_radar_tracks_noise_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* docs(sensing): fix mkdocs macro rendering and links in sensing pages (`#12111 <https://github.com/mitsudome-r/autoware_universe/issues/12111>`_)
+  docs(sensing): fix mkdocs macro paths, links, and schema fields
+* Contributors: Max Schmeller, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 
