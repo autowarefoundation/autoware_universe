@@ -43,7 +43,7 @@ void SimpleDetectedObjectMergerNode::approximateMerger(
   if (node_param_.new_frame_id == object_msg0->header.frame_id) {
     transformed_objects0 = std::make_shared<DetectedObjects>(*object_msg0);
   } else {
-    auto transform0 = tf_listener_.get_transform(
+    auto transform0 = tf_listener_->get_transform(
       node_param_.new_frame_id, object_msg0->header.frame_id, object_msg0->header.stamp,
       rclcpp::Duration::from_seconds(0.01));
     if (!transform0) {
@@ -56,7 +56,7 @@ void SimpleDetectedObjectMergerNode::approximateMerger(
   if (node_param_.new_frame_id == object_msg1->header.frame_id) {
     transformed_objects1 = std::make_shared<DetectedObjects>(*object_msg1);
   } else {
-    auto transform1 = tf_listener_.get_transform(
+    auto transform1 = tf_listener_->get_transform(
       node_param_.new_frame_id, object_msg1->header.frame_id, object_msg1->header.stamp,
       rclcpp::Duration::from_seconds(0.01));
     if (!transform1) {
@@ -126,7 +126,7 @@ void SimpleDetectedObjectMergerNode::onTimer()
       if (node_param_.new_frame_id == objects_data_.at(i)->header.frame_id) {
         transformed_objects = std::make_shared<DetectedObjects>(*objects_data_.at(i));
       } else {
-        auto transform = tf_listener_.get_transform(
+        auto transform = tf_listener_->get_transform(
           node_param_.new_frame_id, objects_data_.at(i)->header.frame_id,
           objects_data_.at(i)->header.stamp, rclcpp::Duration::from_seconds(0.01));
         if (!transform) {

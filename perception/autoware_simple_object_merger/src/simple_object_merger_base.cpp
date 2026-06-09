@@ -53,8 +53,10 @@ using std::chrono::nanoseconds;
 template <class ObjsMsgType>
 SimpleObjectMergerBase<ObjsMsgType>::SimpleObjectMergerBase(
   const std::string & node_name, const rclcpp::NodeOptions & node_options)
-: Node(node_name, node_options), tf_listener_(*this)
+: Node(node_name, node_options)
 {
+  tf_listener_ = std::make_shared<autoware_utils::WrapperTransformListener>(*this);
+
   // Parameter Server
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&SimpleObjectMergerBase::onSetParam, this, std::placeholders::_1));

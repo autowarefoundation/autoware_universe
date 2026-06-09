@@ -80,7 +80,7 @@ protected:
   // Publisher
   AUTOWARE_PUBLISHER_PTR(ObjsMsgType) pub_objects_ {};
 
-  autoware_utils::WrapperTransformListener tf_listener_;
+  std::shared_ptr<autoware_utils::WrapperTransformListener> tf_listener_;
 
   // Data Buffer
   std::vector<AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType)> objects_data_{};
