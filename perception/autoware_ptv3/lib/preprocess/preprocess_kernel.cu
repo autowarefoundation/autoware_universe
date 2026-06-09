@@ -251,11 +251,11 @@ __global__ void computeGridCoordsAndSerializationKernel(
   }
 
   const float4 & point = points[idx];
-  const std::int64_t x = static_cast<std::int32_t>(std::floor(point.x / voxel_size_x) - min_x);
-  const std::int64_t y = static_cast<std::int32_t>(std::floor(point.y / voxel_size_y) - min_y);
-  const std::int64_t z = static_cast<std::int32_t>(std::floor(point.z / voxel_size_z) - min_z);
+  const auto x = static_cast<std::int32_t>(std::floor(point.x / voxel_size_x) - min_x);
+  const auto y = static_cast<std::int32_t>(std::floor(point.y / voxel_size_y) - min_y);
+  const auto z = static_cast<std::int32_t>(std::floor(point.z / voxel_size_z) - min_z);
 
-  coords[idx] = make_int3(static_cast<int>(x), static_cast<int>(y), static_cast<int>(z));
+  coords[idx] = make_int3(x, y, z);
 
   std::int64_t key1 = 0;
   std::int64_t key2 = 0;
