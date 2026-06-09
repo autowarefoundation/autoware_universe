@@ -1,0 +1,13 @@
+<launch>
+  <arg name="input_objects" default="/perception/object_recognition/objects"/>
+  <arg name="input_odometry" default="/localization/kinematic_state"/>
+  <arg name="output_hazards" default="/hmi/proximity_hazards"/>
+  <arg name="param_path" default="$(find-pkg-share autoware_proximity_hazard_object_checker)/config/proximity_hazard.yaml"/>
+
+  <node pkg="autoware_proximity_hazard_object_checker" exec="autoware_proximity_hazard_object_checker_node" name="proximity_hazard_object_checker" output="screen">
+    <remap from="~/input/odometry" to="$(var input_odometry)"/>
+    <remap from="~/input/objects" to="$(var input_objects)"/>
+    <remap from="~/output/proximity_hazards" to="$(var output_hazards)"/>
+    <param from="$(var param_path)"/>
+  </node>
+</launch>
