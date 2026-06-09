@@ -22,6 +22,7 @@
 #include <NvInferRuntime.h>
 #include <dlfcn.h>
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -106,6 +107,27 @@ bool TrtCommon::setup(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
         profile_dim.tensor_name.c_str(), nvinfer1::OptProfileSelector::kMAX, profile_dim.max_dims);
     }
     builder_config_->addOptimizationProfile(profile);
+  }
+
+  // Apply dtype overrides from NetworkIO to the parsed network inputs and outputs.
+  if (network_io_) {
+    const auto apply_dtype = [&](nvinfer1::ITensor * tensor, const char * io_type) {
+      if (!tensor) return;
+      const auto it = std::find_if(network_io_->begin(), network_io_->end(), [&](const auto & io) {
+        return io.tensor_name == tensor->getName() && io.dtype.has_value();
+      });
+      if (it == network_io_->end()) return;
+      tensor->setType(*it->dtype);
+      logger_->log(
+        nvinfer1::ILogger::Severity::kINFO, "Setting %s tensor '%s' to dtype %s", io_type,
+        tensor->getName(), dtype_name(*it->dtype));
+    };
+    for (int i = 0; i < network_->getNbInputs(); ++i) {
+      apply_dtype(network_->getInput(i), "input");
+    }
+    for (int i = 0; i < network_->getNbOutputs(); ++i) {
+      apply_dtype(network_->getOutput(i), "output");
+    }
   }
 
   auto build_engine_with_log = [this]() -> bool {
@@ -701,6 +723,17 @@ bool TrtCommon::validateNetworkIO()
         "Invalid tensor. Current configuration: %s. Cached engine: %s", io.toString().c_str(),
         tensor_from_engine.toString().c_str());
       success = false;
+    }
+    if (io.dtype) {
+      const auto actual_dtype = getTensorDataType(io.tensor_name.c_str());
+      if (!actual_dtype || *actual_dtype != *io.dtype) {
+        logger_->log(
+          nvinfer1::ILogger::Severity::kERROR,
+          "Tensor '%s' dtype mismatch. Current configuration: %s. Cached engine: %s",
+          io.tensor_name.c_str(), dtype_name(*io.dtype),
+          actual_dtype ? dtype_name(*actual_dtype) : "unknown");
+        success = false;
+      }
     }
   }
 

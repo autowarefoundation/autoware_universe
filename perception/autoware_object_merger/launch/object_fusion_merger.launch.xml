@@ -1,0 +1,16 @@
+<launch>
+  <arg name="node_name" default="object_fusion_merger"/>
+  <arg name="object_fusion_merger_param_path" default="$(find-pkg-share autoware_object_merger)/config/object_fusion_merger.param.yaml"/>
+  <arg name="input/main_objects" default="input/main_objects"/>
+  <arg name="input/sub_objects" default="input/sub_objects"/>
+  <arg name="output/objects" default="output/objects"/>
+  <arg name="output/other_objects" default="output/other_objects"/>
+
+  <node pkg="autoware_object_merger" exec="object_fusion_merger_node" name="$(var node_name)" output="screen">
+    <param from="$(var object_fusion_merger_param_path)"/>
+    <remap from="input/main_objects" to="$(var input/main_objects)"/>
+    <remap from="input/sub_objects" to="$(var input/sub_objects)"/>
+    <remap from="output/objects" to="$(var output/objects)"/>
+    <remap from="output/other_objects" to="$(var output/other_objects)"/>
+  </node>
+</launch>
