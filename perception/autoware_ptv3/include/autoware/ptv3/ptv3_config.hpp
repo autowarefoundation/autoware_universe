@@ -44,11 +44,11 @@ public:
     const std::vector<std::int64_t> & palette, const float filter_class_probability_threshold,
     const std::vector<std::string> & filter_classes, const std::string & filter_output_format,
     const std::string & source_reconstruction, const bool use_seg3d_head)
+  : use_seg3d_head_(use_seg3d_head)
   {
     plugins_path_ = plugins_path;
 
     cloud_capacity_ = cloud_capacity;
-    use_seg3d_head_ = use_seg3d_head;
 
     if (!use_seg3d_head_) {
       throw std::runtime_error("At least one head must be enabled.");
