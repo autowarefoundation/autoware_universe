@@ -47,17 +47,19 @@ private:
   BicycleMotionModel motion_model_;
   using IDX = BicycleMotionModel::IDX;
 
-  // determine anchor point for shape updates by last update strategy
-  BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;  // Default: CENTER
-
-  // Layer 2: polygon footprint storage (independent of kinematic bbox)
+  // Polygon footprint storage (independent of kinematic bbox)
   bool footprint_valid_{false};
   rclcpp::Time last_footprint_update_time_;
   static constexpr double FOOTPRINT_TIMEOUT_S = 1.0;  // [s] footprint expiry after last polygon obs
 
-  bool measureKinematics(
-    const types::DynamicObject & object, const rclcpp::Time & time,
-    const types::InputChannel & channel_info);
+  // Returns a copy of object with orientation flipped 180° if it points opposite to reference_yaw.
+  types::DynamicObject normalizeYaw(
+    const types::DynamicObject & object, double reference_yaw) const;
+  // EKF kinematic update — selects update variant based on data availability.
+  bool updateKinematics(
+    const types::DynamicObject & object, const types::InputChannel & channel_info);
+  // IIR-blend shape dimensions into object_ when can_update is true.
+  void updateShapeSize(const types::DynamicObject & object, bool can_update);
   void updateFootprint(const types::DynamicObject & object, const rclcpp::Time & time);
   void exportShape(types::DynamicObject & object) const;
 
@@ -70,8 +72,6 @@ public:
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
     const types::InputChannel & channel_info) override;
-  bool measureWithPose(
-    const types::DynamicObject & object, const types::InputChannel & channel_info);
 
   bool conditionedUpdate(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction,

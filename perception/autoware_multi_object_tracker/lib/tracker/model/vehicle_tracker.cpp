@@ -66,9 +66,6 @@ VehicleTracker::VehicleTracker(
   //   the observed velocity is used as the measurement.
   velocity_deviation_threshold_ = autoware_utils_math::kmph2mps(10);  // [m/s]
 
-  // default anchor point for shape updates
-  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
-
   if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
     // set default initial size
     auto & object_extension = object_.shape.dimensions;
@@ -141,12 +138,26 @@ bool VehicleTracker::predict(const rclcpp::Time & time)
   return motion_model_.predictState(time);
 }
 
-bool VehicleTracker::measureWithPose(
+types::DynamicObject VehicleTracker::normalizeYaw(
+  const types::DynamicObject & object, const double reference_yaw) const
+{
+  types::DynamicObject corrected = object;
+  const double obs_yaw = tf2::getYaw(corrected.pose.orientation);
+  double yaw_diff = obs_yaw - reference_yaw;
+  while (yaw_diff > M_PI) yaw_diff -= 2 * M_PI;
+  while (yaw_diff < -M_PI) yaw_diff += 2 * M_PI;
+  if (std::abs(yaw_diff) > M_PI_2) {
+    tf2::Quaternion q;
+    q.setRPY(0, 0, obs_yaw + M_PI);
+    corrected.pose.orientation = tf2::toMsg(q);
+  }
+  return corrected;
+}
+
+bool VehicleTracker::updateKinematics(
   const types::DynamicObject & object, const types::InputChannel & channel_info)
 {
-  // Shape update is only valid when the channel guarantees reliable size information
-  // AND the measurement is a bounding box.
-  // Use the measurement length only when its shape is trustworthy.
+  // Use measurement length only when the channel and shape are trustworthy.
   const bool is_bbox = (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   const bool can_update_shape = channel_info.trust_extension && is_bbox;
   constexpr double min_length = 1.0;
@@ -158,7 +169,7 @@ bool VehicleTracker::measureWithPose(
     channel_info.trust_orientation;
   const bool is_velocity_available = object.kinematics.has_twist;
 
-  // Update kinematics via EKF
+  // Select and run EKF update variant based on available measurement data.
   bool is_updated = false;
   {
     const double & x = object.pose.position.x;
@@ -181,18 +192,21 @@ bool VehicleTracker::measureWithPose(
     motion_model_.limitStates();
   }
 
-  // position z
+  // Low-pass filter on z position (2D motion model does not track z).
   {
     constexpr double gain = 0.1;
     object_.pose.position.z =
       (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
   }
 
-  if (!can_update_shape) {
-    return false;
-  }
+  return is_updated;
+}
 
-  // check object size abnormality
+void VehicleTracker::updateShapeSize(const types::DynamicObject & object, const bool can_update)
+{
+  if (!can_update) return;
+
+  // Reject measurements whose size is implausibly large or small.
   constexpr double size_max_multiplier = 1.5;
   constexpr double size_min_multiplier = 0.25;
   if (
@@ -200,27 +214,25 @@ bool VehicleTracker::measureWithPose(
     object.shape.dimensions.x < object_model_.size_limit.length_min * size_min_multiplier ||
     object.shape.dimensions.y > object_model_.size_limit.width_max * size_max_multiplier ||
     object.shape.dimensions.y < object_model_.size_limit.width_min * size_min_multiplier) {
-    return false;
+    return;
   }
 
-  // update object size
+  // IIR-blend width and height; length is authoritative from the motion model.
   {
     constexpr double gain = 0.4;
     constexpr double gain_inv = 1.0 - gain;
-    auto & object_extension = object_.shape.dimensions;
-    object_extension.x = motion_model_.getLength();  // tracked by motion model
-    object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
-    object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
+    auto & ext = object_.shape.dimensions;
+    ext.x = motion_model_.getLength();
+    ext.y = gain_inv * ext.y + gain * object.shape.dimensions.y;
+    ext.z = gain_inv * ext.z + gain * object.shape.dimensions.z;
   }
 
   limitObjectExtension(object_model_);
   object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
   object_.area = types::getArea(object.shape);
-
-  return is_updated;
 }
 
-bool VehicleTracker::measureKinematics(
+bool VehicleTracker::measure(
   const types::DynamicObject & in_object, const rclcpp::Time & time,
   const types::InputChannel & channel_info)
 {
@@ -234,41 +246,16 @@ bool VehicleTracker::measureKinematics(
       dt);
   }
 
-  // update object
-  types::DynamicObject updating_object = in_object;
-  // turn 180 deg if the updating object heads opposite direction
-  {
-    const double this_yaw = motion_model_.getYawState();
-    const double updating_yaw = tf2::getYaw(updating_object.pose.orientation);
-    double yaw_diff = updating_yaw - this_yaw;
-    while (yaw_diff > M_PI) yaw_diff -= 2 * M_PI;
-    while (yaw_diff < -M_PI) yaw_diff += 2 * M_PI;
-    if (std::abs(yaw_diff) > M_PI_2) {
-      tf2::Quaternion q;
-      q.setRPY(0, 0, updating_yaw + M_PI);
-      updating_object.pose.orientation = tf2::toMsg(q);
-    }
-  }
+  // Flip measurement orientation 180° if it points opposite to the tracker heading.
+  const types::DynamicObject corrected = normalizeYaw(in_object, motion_model_.getYawState());
 
-  // update pose
-  measureWithPose(updating_object, channel_info);
-
-  // remove cached object
-  removeCache();
-
-  // reset anchor point for shape updates
-  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
-
-  return true;
-}
-
-bool VehicleTracker::measure(
-  const types::DynamicObject & in_object, const rclcpp::Time & time,
-  const types::InputChannel & channel_info)
-{
-  measureKinematics(in_object, time, channel_info);
+  const bool is_bbox = (corrected.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
+  updateKinematics(corrected, channel_info);
+  updateShapeSize(corrected, channel_info.trust_extension && is_bbox);
   // Store polygon footprint from the original (pre-flip) detection pose.
   updateFootprint(in_object, time);
+
+  removeCache();
   return true;
 }
 
@@ -340,19 +327,20 @@ bool VehicleTracker::conditionedUpdate(
 
   // Handle weak update strategy (no edge alignment - use weak update with pseudo measurement)
   if (strategy.type == UpdateStrategyType::WEAK_UPDATE) {
-    // Use weak update strategy with pseudo measurement
     types::DynamicObject pseudo_measurement = prediction;
 
     // Create pseudo measurement with enlarged covariance for weak update
     createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape, true);
 
-    // Apply kinematic-only update via the pseudo measurement — footprint must not be taken
-    // from the fake pseudo_measurement; it is stored separately from the real measurement below.
-    measureKinematics(pseudo_measurement, measurement_time, channel_info);
+    // Apply kinematic-only EKF update via the pseudo measurement; align yaw first.
+    // Footprint must not be taken from the fake pseudo_measurement.
+    const types::DynamicObject pseudo_corrected =
+      normalizeYaw(pseudo_measurement, motion_model_.getYawState());
+    updateKinematics(pseudo_corrected, channel_info);
 
     // Store footprint from the real measurement using the post-update tracker pose.
     updateFootprint(measurement, measurement_time);
-
+    removeCache();
     return true;
   }
 
@@ -362,14 +350,10 @@ bool VehicleTracker::conditionedUpdate(
 
   bool is_updated = false;
   if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::FRONT;
-
     is_updated = motion_model_.updateStatePoseFront(
       strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
   } else {
     // Must be REAR_WHEEL_UPDATE (only remaining option after WEAK_UPDATE check)
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::REAR;
-
     is_updated =
       motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
   }
@@ -519,11 +503,11 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
 
   object_.area = types::getArea(shape);
 
-  // Only synchronise the bicycle model length when the input is a bounding box.
-  // POLYGON shapes may carry zero or meaningless dimensions.x.
+  // Only sync the bicycle model length for bounding boxes — POLYGON shapes may carry
+  // zero or meaningless dimensions.x.
   if (shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    motion_model_.updateStateLength(shape.dimensions.x, shape_update_anchor_);
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
+    motion_model_.updateStateLength(
+      shape.dimensions.x, BicycleMotionModel::LengthUpdateAnchor::CENTER);
   }
 }
 
