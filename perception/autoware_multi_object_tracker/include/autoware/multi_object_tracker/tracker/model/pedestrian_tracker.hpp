@@ -34,6 +34,9 @@ private:
   CTRVMotionModel motion_model_;
   using IDX = CTRVMotionModel::IDX;
 
+  bool updateKinematics(const types::DynamicObject & object);
+  bool updateShapeSize(const types::DynamicObject & object);
+
 public:
   PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
@@ -41,8 +44,6 @@ public:
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
     const types::InputChannel & channel_info) override;
-  bool measureWithPose(const types::DynamicObject & object);
-  bool measureWithShape(const types::DynamicObject & object);
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;

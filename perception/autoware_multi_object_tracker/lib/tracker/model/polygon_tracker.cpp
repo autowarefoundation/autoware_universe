@@ -155,12 +155,11 @@ bool PolygonTracker::predict(const rclcpp::Time & time)
   return true;
 }
 
-bool PolygonTracker::measureWithPose(const types::DynamicObject & object)
+bool PolygonTracker::updateKinematics(const types::DynamicObject & object)
 {
   bool is_updated = true;
 
   if (enable_velocity_estimation_) {
-    // update motion model
     const double x = object.pose.position.x;
     const double y = object.pose.position.y;
 
@@ -168,14 +167,13 @@ bool PolygonTracker::measureWithPose(const types::DynamicObject & object)
     motion_model_.limitStates();
 
   } else {
-    // update static motion model
     const double x = object.pose.position.x;
     const double y = object.pose.position.y;
 
     is_updated = static_motion_model_.updateStatePose(x, y, object.pose_covariance);
   }
 
-  // position z
+  // Low-pass filter on z position.
   constexpr double gain = 0.1;
   object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
@@ -204,9 +202,9 @@ bool PolygonTracker::measure(
     }
   }
 
-  // update object
-  measureWithPose(object);
+  updateKinematics(object);
 
+  removeCache();
   return true;
 }
 

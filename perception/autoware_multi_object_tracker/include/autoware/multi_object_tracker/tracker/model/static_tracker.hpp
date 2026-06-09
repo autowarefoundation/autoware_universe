@@ -32,6 +32,8 @@ private:
 
   std::optional<geometry_msgs::msg::Point> ego_pos_;
 
+  bool updateKinematics(const types::DynamicObject & object);
+
 public:
   StaticTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
@@ -41,7 +43,6 @@ public:
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
     const types::InputChannel & channel_info) override;
-  bool measureWithPose(const types::DynamicObject & object);
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;

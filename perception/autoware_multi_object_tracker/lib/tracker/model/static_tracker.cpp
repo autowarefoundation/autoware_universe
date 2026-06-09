@@ -61,7 +61,7 @@ bool StaticTracker::predict(const rclcpp::Time & time)
   return motion_model_.predictState(time);
 }
 
-bool StaticTracker::measureWithPose(const types::DynamicObject & object)
+bool StaticTracker::updateKinematics(const types::DynamicObject & object)
 {
   const double x = object.pose.position.x;
   const double y = object.pose.position.y;
@@ -77,8 +77,9 @@ bool StaticTracker::measure(
   object_.pose = object.pose;
   object_.area = types::getArea(object.shape);
 
-  measureWithPose(object);
+  updateKinematics(object);
 
+  removeCache();
   return true;
 }
 

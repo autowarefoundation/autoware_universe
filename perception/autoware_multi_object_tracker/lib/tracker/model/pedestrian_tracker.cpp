@@ -109,9 +109,8 @@ bool PedestrianTracker::predict(const rclcpp::Time & time)
   return motion_model_.predictState(time);
 }
 
-bool PedestrianTracker::measureWithPose(const types::DynamicObject & object)
+bool PedestrianTracker::updateKinematics(const types::DynamicObject & object)
 {
-  // update motion model
   bool is_updated = false;
   {
     const double x = object.pose.position.x;
@@ -121,17 +120,14 @@ bool PedestrianTracker::measureWithPose(const types::DynamicObject & object)
     motion_model_.limitStates();
   }
 
-  // position z
+  // Low-pass filter on z position.
   constexpr double gain = 0.1;
   object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
-
-  // remove cached object
-  removeCache();
 
   return is_updated;
 }
 
-bool PedestrianTracker::measureWithShape(const types::DynamicObject & object)
+bool PedestrianTracker::updateShapeSize(const types::DynamicObject & object)
 {
   if (object.shape.type != autoware_perception_msgs::msg::Shape::POLYGON) {
     constexpr double size_max = 30.0;  // [m]
@@ -180,12 +176,12 @@ bool PedestrianTracker::measure(
       dt);
   }
 
-  // update object
-  measureWithPose(object);
+  updateKinematics(object);
   if (channel_info.trust_extension) {
-    measureWithShape(object);
+    updateShapeSize(object);
   }
 
+  removeCache();
   return true;
 }
 

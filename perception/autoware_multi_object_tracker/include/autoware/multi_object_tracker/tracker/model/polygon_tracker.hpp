@@ -37,8 +37,9 @@ private:
   bool enable_velocity_estimation_;
   bool enable_motion_output_;
 
-  autoware_perception_msgs::msg::Shape last_shape_;
   geometry_msgs::msg::Pose last_pose_;
+
+  bool updateKinematics(const types::DynamicObject & object);
 
 public:
   PolygonTracker(
@@ -49,8 +50,6 @@ public:
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
     const types::InputChannel & channel_info) override;
-  bool measureWithPose(const types::DynamicObject & object);
-  bool measureWithShape(const types::DynamicObject & object);
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;

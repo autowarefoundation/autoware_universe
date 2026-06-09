@@ -344,7 +344,8 @@ void VehicleTracker::updateShapeSize(const types::DynamicObject & object, const 
     return;
   }
 
-  // IIR-blend width and height; length is authoritative from the motion model.
+  // IIR(Infinite Impulse Response)-blend width and height; length is authoritative from the motion
+  // model.
   {
     constexpr double gain = 0.4;
     constexpr double gain_inv = 1.0 - gain;
