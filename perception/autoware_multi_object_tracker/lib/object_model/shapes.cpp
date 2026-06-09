@@ -59,13 +59,7 @@ inline OrientedExtent computeOrientedExtent(
   }
   return ext;
 }
-}  // namespace
-
-namespace autoware::multi_object_tracker
-{
-namespace shapes
-{
-inline double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> & polygons)
+double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> & polygons)
 {
   return std::accumulate(
     polygons.begin(), polygons.end(), 0.0, [](double acc, autoware_utils_geometry::Polygon2d p) {
@@ -73,7 +67,7 @@ inline double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> &
     });
 }
 
-inline double getIntersectionArea(
+double getIntersectionArea(
   const autoware_utils_geometry::Polygon2d & source_polygon,
   const autoware_utils_geometry::Polygon2d & target_polygon)
 {
@@ -82,7 +76,7 @@ inline double getIntersectionArea(
   return getSumArea(intersection_polygons);
 }
 
-inline double getUnionArea(
+double getUnionArea(
   const autoware_utils_geometry::Polygon2d & source_polygon,
   const autoware_utils_geometry::Polygon2d & target_polygon)
 {
@@ -91,7 +85,7 @@ inline double getUnionArea(
   return getSumArea(union_polygons);
 }
 
-inline double getConvexShapeArea(
+double getConvexShapeArea(
   const autoware_utils_geometry::Polygon2d & source_polygon,
   const autoware_utils_geometry::Polygon2d & target_polygon)
 {
@@ -102,6 +96,12 @@ inline double getConvexShapeArea(
   boost::geometry::convex_hull(union_polygons, hull);
   return boost::geometry::area(hull);
 }
+}  // namespace
+
+namespace autoware::multi_object_tracker
+{
+namespace shapes
+{
 
 double get1dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object)
@@ -159,8 +159,6 @@ double get2dIoU(
 double get2dGeneralizedIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object)
 {
-  static const double MIN_AREA = 1e-6;
-
   const auto source_polygon =
     autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   const double source_area = boost::geometry::area(source_polygon);
@@ -181,8 +179,6 @@ bool get2dPrecisionRecallGIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   double & precision, double & recall, double & generalized_iou)
 {
-  static const double MIN_AREA = 1e-6;
-
   const auto source_polygon =
     autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   const double source_area = boost::geometry::area(source_polygon);

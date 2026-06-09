@@ -34,7 +34,7 @@ namespace autoware::multi_object_tracker
 // Vehicle length is owned by BicycleMotionModel and must be supplied at export time.
 //
 // Data flow:
-//   init()         — set from first detection; force BOUNDING_BOX, clear footprint
+//   init()         — set width/height from first detection, clear footprint
 //   updateShape()  — IIR-blend width/height each normal measure() call
 //   updateFootprint() — transform and store polygon footprint
 //   updateHeight() — blend height only (conditioned-update path)
@@ -51,8 +51,8 @@ public:
   // Initialize from first detection (before motion model is ready)
   void init(const types::DynamicObject & object);
 
-  // IIR-blend width and height; noop when can_update is false
-  void updateShape(const types::DynamicObject & object, bool can_update);
+  // IIR-blend width and height from a BOUNDING_BOX measurement
+  void updateShape(const types::DynamicObject & object);
 
   // Transform and store the polygon footprint from a measurement.
   // tracker_pose: current tracker pose after kinematic update; nullopt = constructor path

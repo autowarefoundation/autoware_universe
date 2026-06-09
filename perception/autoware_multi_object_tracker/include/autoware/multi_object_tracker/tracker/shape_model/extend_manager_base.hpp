@@ -22,8 +22,8 @@ namespace autoware::multi_object_tracker
 // Each concrete tracker holds a typed extend manager as a member alongside its motion model.
 // The tracker's measure() calls update(); getTrackedObject() calls exportTo().
 // Because exportTo() signatures differ per tracker type (vehicle needs the length from the bicycle
-// model, pedestrian needs velocity+dt), exportTo() is NOT declared here — each concrete class
-// exposes its own typed exportTo() that the tracker calls directly.
+// model; pedestrian's exportTo takes no extra parameter), exportTo() is NOT declared here — each
+// concrete class exposes its own typed exportTo() that the tracker calls directly.
 class ExtendManagerBase
 {
 public:

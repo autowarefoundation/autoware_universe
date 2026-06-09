@@ -21,8 +21,7 @@ namespace autoware::multi_object_tracker
 
 void StaticExtendManager::init(const types::DynamicObject & object)
 {
-  shape_ = object.shape;
-  area_ = types::getArea(shape_);
+  update(object);
 }
 
 void StaticExtendManager::update(const types::DynamicObject & object)

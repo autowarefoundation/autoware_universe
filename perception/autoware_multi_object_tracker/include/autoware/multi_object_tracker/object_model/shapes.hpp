@@ -17,14 +17,9 @@
 
 #include "autoware/multi_object_tracker/types.hpp"
 
-#include <Eigen/Core>
-
 #include <geometry_msgs/msg/point.hpp>
 
-#include <tf2_ros/buffer.h>
-
 #include <optional>
-#include <string>
 #include <utility>
 
 namespace autoware::multi_object_tracker

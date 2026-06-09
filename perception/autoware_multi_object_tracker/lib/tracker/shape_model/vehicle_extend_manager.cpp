@@ -46,10 +46,8 @@ void VehicleExtendManager::init(const types::DynamicObject & object)
   footprint_valid_ = false;
 }
 
-void VehicleExtendManager::updateShape(const types::DynamicObject & object, bool can_update)
+void VehicleExtendManager::updateShape(const types::DynamicObject & object)
 {
-  if (!can_update) return;
-
   constexpr double size_max_multiplier = 1.5;
   constexpr double size_min_multiplier = 0.25;
   if (

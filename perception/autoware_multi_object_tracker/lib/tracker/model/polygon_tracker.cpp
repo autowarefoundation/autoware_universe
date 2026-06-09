@@ -18,12 +18,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware_utils_geometry/boost_polygon_utils.hpp>
-#include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/utils.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <cmath>
 
@@ -150,8 +146,6 @@ bool PolygonTracker::predict(const rclcpp::Time & time)
   } else {
     return static_motion_model_.predictState(time);
   }
-
-  return true;
 }
 
 bool PolygonTracker::updateKinematics(const types::DynamicObject & object)

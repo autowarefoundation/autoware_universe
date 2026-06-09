@@ -50,9 +50,6 @@ private:
 
   VehicleExtendManager extend_manager_;
 
-  // Returns a copy of object with orientation flipped 180° if it points opposite to reference_yaw.
-  types::DynamicObject normalizeYaw(
-    const types::DynamicObject & object, double reference_yaw) const;
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(
     const types::DynamicObject & object, const types::InputChannel & channel_info);

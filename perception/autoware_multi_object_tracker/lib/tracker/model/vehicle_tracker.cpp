@@ -19,9 +19,6 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/utils.hpp>
@@ -29,7 +26,6 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
-#include <limits>
 
 namespace autoware::multi_object_tracker
 {
@@ -158,7 +154,7 @@ UpdateStrategy determineUpdateStrategy(
   return strategy;
 }
 
-bool createPseudoMeasurement(
+void createPseudoMeasurement(
   const types::DynamicObject & meas, types::DynamicObject & pred,
   const autoware_perception_msgs::msg::Shape & tracker_shape, const bool enlarge_covariance = false)
 {
@@ -216,8 +212,23 @@ bool createPseudoMeasurement(
       pred.twist_covariance[XYZRPY_COV_IDX::Y_Y] += additional_velocity_cov;
     }
   }
+}
 
-  return true;
+types::DynamicObject normalizeYaw(const types::DynamicObject & object, const double reference_yaw)
+{
+  types::DynamicObject corrected = object;
+  const double obs_yaw = tf2::getYaw(corrected.pose.orientation);
+  const double yaw_diff = autoware_utils_math::normalize_radian(obs_yaw - reference_yaw);
+  if (std::abs(yaw_diff) > M_PI_2) {
+    tf2::Quaternion q;
+    q.setRPY(0, 0, obs_yaw + M_PI);
+    corrected.pose.orientation = tf2::toMsg(q);
+    for (auto & pt : corrected.shape.footprint.points) {
+      pt.x = -pt.x;
+      pt.y = -pt.y;
+    }
+  }
+  return corrected;
 }
 
 }  // namespace
@@ -319,24 +330,6 @@ bool VehicleTracker::predict(const rclcpp::Time & time)
   return motion_model_.predictState(time);
 }
 
-types::DynamicObject VehicleTracker::normalizeYaw(
-  const types::DynamicObject & object, const double reference_yaw) const
-{
-  types::DynamicObject corrected = object;
-  const double obs_yaw = tf2::getYaw(corrected.pose.orientation);
-  const double yaw_diff = autoware_utils_math::normalize_radian(obs_yaw - reference_yaw);
-  if (std::abs(yaw_diff) > M_PI_2) {
-    tf2::Quaternion q;
-    q.setRPY(0, 0, obs_yaw + M_PI);
-    corrected.pose.orientation = tf2::toMsg(q);
-    for (auto & pt : corrected.shape.footprint.points) {
-      pt.x = -pt.x;
-      pt.y = -pt.y;
-    }
-  }
-  return corrected;
-}
-
 bool VehicleTracker::updateKinematics(
   const types::DynamicObject & object, const types::InputChannel & channel_info)
 {
@@ -430,7 +423,9 @@ bool VehicleTracker::measure(
 
   const bool is_bbox = (corrected.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX);
   updateKinematics(corrected, channel_info);
-  extend_manager_.updateShape(corrected, channel_info.trust_extension && is_bbox);
+  if (channel_info.trust_extension && is_bbox) {
+    extend_manager_.updateShape(corrected);
+  }
 
   // Get current tracker pose for footprint transform
   geometry_msgs::msg::Pose tracker_pose;
