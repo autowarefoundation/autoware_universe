@@ -1,4 +1,4 @@
-// Copyright 2026 TIER IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,36 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__STATIC_TRACKER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__STATIC_TRACKER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__PEDESTRIAN_TRACKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__PEDESTRIAN_TRACKER_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
-#include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
-#include "autoware/multi_object_tracker/tracker/shape_model/static_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/motion_model/ctrv_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/pedestrian_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
 {
 
-class StaticTracker : public Tracker
+class PedestrianTracker : public Tracker
 {
 private:
   rclcpp::Logger logger_;
 
-  StaticMotionModel motion_model_;
+  object_model::ObjectModel object_model_ = object_model::pedestrian;
 
-  StaticExtendManager extend_manager_;
+  // cspell: ignore CTRV
+  CTRVMotionModel motion_model_;
+  using IDX = CTRVMotionModel::IDX;
+
+  PedestrianExtendManager extend_manager_;
 
   bool updateKinematics(const types::DynamicObject & object);
 
 public:
-  StaticTracker(const rclcpp::Time & time, const types::DynamicObject & object);
-
-  void setEgoPose(const std::optional<geometry_msgs::msg::Point> & pos) override
-  {
-    extend_manager_.setEgoPose(pos);
-  }
+  PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
@@ -54,4 +53,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__STATIC_TRACKER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__PEDESTRIAN_TRACKER_HPP_

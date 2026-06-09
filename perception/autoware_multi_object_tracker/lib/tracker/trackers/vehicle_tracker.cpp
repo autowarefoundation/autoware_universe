@@ -14,7 +14,7 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/tracker/model/vehicle_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"

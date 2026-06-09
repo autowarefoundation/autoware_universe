@@ -1,4 +1,4 @@
-// Copyright 2020 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,29 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__STATIC_TRACKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__STATIC_TRACKER_HPP_
 
-#include "autoware/multi_object_tracker/tracker/model/pedestrian_tracker.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
-#include "autoware/multi_object_tracker/tracker/model/vehicle_tracker.hpp"
+#include "autoware/multi_object_tracker/object_model/object_model.hpp"
+#include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/static_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
 {
 
-class PedestrianAndBicycleTracker : public Tracker
+class StaticTracker : public Tracker
 {
 private:
-  PedestrianTracker pedestrian_tracker_;
-  VehicleTracker bicycle_tracker_;
+  rclcpp::Logger logger_;
+
+  StaticMotionModel motion_model_;
+
+  StaticExtendManager extend_manager_;
+
+  bool updateKinematics(const types::DynamicObject & object);
 
 public:
-  PedestrianAndBicycleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
+  StaticTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
-  types::TrackerType getTrackerType() const override
+  void setEgoPose(const std::optional<geometry_msgs::msg::Point> & pos) override
   {
-    return types::TrackerType::PEDESTRIAN_AND_BICYCLE;
+    extend_manager_.setEgoPose(pos);
   }
 
   bool predict(const rclcpp::Time & time) override;
@@ -44,11 +50,8 @@ public:
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
-  void setOrientationAvailability(
-    const types::OrientationAvailability & orientation_availability) override;
-  virtual ~PedestrianAndBicycleTracker() {}
 };
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__STATIC_TRACKER_HPP_

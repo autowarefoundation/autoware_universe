@@ -14,7 +14,7 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/tracker/model/static_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/static_tracker.hpp"
 
 #include <autoware_utils_geometry/msg/covariance.hpp>
 

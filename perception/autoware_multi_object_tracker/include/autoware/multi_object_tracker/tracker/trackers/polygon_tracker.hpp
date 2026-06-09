@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__POLYGON_TRACKER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__POLYGON_TRACKER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/polygon_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
@@ -60,4 +60,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__POLYGON_TRACKER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_

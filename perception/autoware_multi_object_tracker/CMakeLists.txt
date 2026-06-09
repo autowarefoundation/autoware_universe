@@ -56,13 +56,13 @@ set(${PROJECT_NAME}_lib
   lib/tracker/motion_model/ctrv_motion_model.cpp
   lib/tracker/motion_model/cv_motion_model.cpp
   lib/tracker/motion_model/static_motion_model.cpp
-  lib/tracker/model/tracker_base.cpp
-  lib/tracker/model/vehicle_tracker.cpp
-  lib/tracker/model/multiple_vehicle_tracker.cpp
-  lib/tracker/model/pedestrian_tracker.cpp
-  lib/tracker/model/pedestrian_and_bicycle_tracker.cpp
-  lib/tracker/model/polygon_tracker.cpp
-  lib/tracker/model/static_tracker.cpp
+  lib/tracker/trackers/tracker_base.cpp
+  lib/tracker/trackers/vehicle_tracker.cpp
+  lib/tracker/trackers/multiple_vehicle_tracker.cpp
+  lib/tracker/trackers/pedestrian_tracker.cpp
+  lib/tracker/trackers/pedestrian_and_bicycle_tracker.cpp
+  lib/tracker/trackers/polygon_tracker.cpp
+  lib/tracker/trackers/static_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
   lib/association/adaptive_threshold_cache.cpp
   lib/tracker/shape_model/unstable_shape_filter.cpp

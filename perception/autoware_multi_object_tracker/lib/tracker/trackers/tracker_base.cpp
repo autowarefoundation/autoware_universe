@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 
 #include "autoware/multi_object_tracker/object_model/uuid.hpp"
 #include "autoware/multi_object_tracker/types.hpp"

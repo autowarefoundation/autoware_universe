@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/model/pedestrian_and_bicycle_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/pedestrian_and_bicycle_tracker.hpp"
 
 namespace autoware::multi_object_tracker
 {

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__TRACKER_BASE_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__TRACKER_BASE_HPP_
 
 #define EIGEN_MPL2_ONLY
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
@@ -222,4 +222,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__TRACKER_BASE_HPP_

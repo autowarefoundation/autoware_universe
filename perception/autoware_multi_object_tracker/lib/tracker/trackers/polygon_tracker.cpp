@@ -14,7 +14,7 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/tracker/model/polygon_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/polygon_tracker.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>

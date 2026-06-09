@@ -12,35 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_TRACKER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_TRACKER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
 
-#include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
-#include "autoware/multi_object_tracker/tracker/motion_model/ctrv_motion_model.hpp"
-#include "autoware/multi_object_tracker/tracker/shape_model/pedestrian_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/pedestrian_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
 {
 
-class PedestrianTracker : public Tracker
+class PedestrianAndBicycleTracker : public Tracker
 {
 private:
-  rclcpp::Logger logger_;
-
-  object_model::ObjectModel object_model_ = object_model::pedestrian;
-
-  // cspell: ignore CTRV
-  CTRVMotionModel motion_model_;
-  using IDX = CTRVMotionModel::IDX;
-
-  PedestrianExtendManager extend_manager_;
-
-  bool updateKinematics(const types::DynamicObject & object);
+  PedestrianTracker pedestrian_tracker_;
+  VehicleTracker bicycle_tracker_;
 
 public:
-  PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object);
+  PedestrianAndBicycleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
+
+  types::TrackerType getTrackerType() const override
+  {
+    return types::TrackerType::PEDESTRIAN_AND_BICYCLE;
+  }
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
@@ -49,8 +44,11 @@ public:
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
+  void setOrientationAvailability(
+    const types::OrientationAvailability & orientation_availability) override;
+  virtual ~PedestrianAndBicycleTracker() {}
 };
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_TRACKER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_

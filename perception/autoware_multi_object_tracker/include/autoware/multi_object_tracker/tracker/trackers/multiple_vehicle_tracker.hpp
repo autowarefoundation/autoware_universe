@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__MULTIPLE_VEHICLE_TRACKER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__MULTIPLE_VEHICLE_TRACKER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__MULTIPLE_VEHICLE_TRACKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__MULTIPLE_VEHICLE_TRACKER_HPP_
 
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
-#include "autoware/multi_object_tracker/tracker/model/vehicle_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <rclcpp/time.hpp>
@@ -65,4 +65,4 @@ public:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__MULTIPLE_VEHICLE_TRACKER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__MULTIPLE_VEHICLE_TRACKER_HPP_

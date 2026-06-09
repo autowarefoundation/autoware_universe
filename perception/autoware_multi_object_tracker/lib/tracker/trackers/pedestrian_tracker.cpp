@@ -14,7 +14,7 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/tracker/model/pedestrian_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/pedestrian_tracker.hpp"
 
 #include <tf2/utils.hpp>
 
