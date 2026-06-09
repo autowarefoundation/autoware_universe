@@ -58,7 +58,8 @@ VehicleTracker::VehicleTracker(
 : Tracker(time, object),
   logger_(rclcpp::get_logger("VehicleTracker")),
   object_model_(object_model),
-  shape_model_(object_model)
+  shape_model_(object_model),
+  shape_update_anchor_(BicycleMotionModel::LengthUpdateAnchor::CENTER)
 {
   // set tracker type based on object model
   switch (object_model.type) {
@@ -211,9 +212,11 @@ bool VehicleTracker::updateWheelKinematics(
   std::array<double, 36> pose_cov = measurement.pose_covariance;
   bool is_updated = false;
   if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
+    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::FRONT;
     is_updated = motion_model_.updateStatePoseFront(
       strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
   } else {
+    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::REAR;
     is_updated =
       motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
   }
@@ -255,6 +258,7 @@ bool VehicleTracker::measure(
   shape_model_.updateFootprint(
     corrected, time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
+  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   removeCache();
   return true;
 }
@@ -333,6 +337,7 @@ bool VehicleTracker::conditionedUpdate(
     shape_model_.updateFootprint(
       measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
+    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
     removeCache();
     return true;
   }
@@ -355,8 +360,9 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
 {
   const auto new_len = shape_model_.setShape(shape, getLatestMeasurementTime());
   if (new_len) {
-    motion_model_.updateStateLength(*new_len, BicycleMotionModel::LengthUpdateAnchor::CENTER);
+    motion_model_.updateStateLength(*new_len, shape_update_anchor_);
   }
+  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
 }
 
 void VehicleTracker::mergeFootprintFrom(

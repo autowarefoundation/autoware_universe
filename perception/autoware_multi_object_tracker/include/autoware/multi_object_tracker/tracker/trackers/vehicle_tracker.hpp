@@ -41,10 +41,15 @@ private:
 
   VehicleShapeModel shape_model_;
 
+  // Tracks which end of the vehicle was used as anchor in the last conditioned update.
+  // Consumed by setObjectShape() so UnstableShapeFilter commits the new length correctly.
+  BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;
+
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(
     const types::DynamicObject & object, const types::InputChannel & channel_info);
   // Wheel-anchor EKF update (front or rear) plus z/height updates.
+  // Also records the anchor in shape_update_anchor_.
   bool updateWheelKinematics(
     const UpdateStrategy & strategy, const types::DynamicObject & measurement);
 

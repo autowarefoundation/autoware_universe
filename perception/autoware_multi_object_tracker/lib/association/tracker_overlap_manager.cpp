@@ -224,10 +224,14 @@ void TrackerOverlapManager::merge(
           data1.tracker->updateClassification(data2.tracker->getClassification());
         }
 
-        // Shape: footprint is additive — union absorbed tracker's footprint into winner.
-        // Frame transform and union are handled inside mergeFootprintFrom(); bbox kinematic
-        // dimensions of the winner are not touched.
-        data1.tracker->mergeFootprintFrom(data2.object.shape.footprint, data2.object.pose);
+        // Shape: prefer lower shape type (bounding box < cylinder < convex hull).
+        if (data1.object.shape.type > data2.object.shape.type) {
+          data1.tracker->setObjectShape(data2.object.shape);
+        }
+        // If the absorbed tracker carries polygon footprint data, union it into the winner.
+        if (data2.object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
+          data1.tracker->mergeFootprintFrom(data2.object.shape.footprint, data2.object.pose);
+        }
 
         data2.is_valid = false;
         to_remove.push_back(idx2);
