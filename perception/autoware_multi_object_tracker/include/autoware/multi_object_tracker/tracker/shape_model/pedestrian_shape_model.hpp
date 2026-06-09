@@ -44,7 +44,7 @@ public:
 
   // Update shape from new measurement.
   // trust_extension: whether the channel provides reliable size measurements.
-  // tracker_yaw: current tracker heading (from CTRVMotionModel); required for POLYGON branch.
+  // tracker_yaw: current tracker heading; required for POLYGON branch.
   // Returns false if update was rejected (implausible dimensions).
   bool update(const types::DynamicObject & object, bool trust_extension, double tracker_yaw);
 
