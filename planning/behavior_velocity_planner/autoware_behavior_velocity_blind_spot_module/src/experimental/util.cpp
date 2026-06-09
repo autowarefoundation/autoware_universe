@@ -37,16 +37,12 @@ namespace autoware::behavior_velocity_planner::experimental
 {
 
 using autoware::experimental::lanelet2_utils::from_ros;
+using autoware::experimental::lanelet2_utils::remove_const;
 using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 namespace bg = boost::geometry;
 
 namespace
 {
-
-lanelet::Point3d remove_const(const lanelet::ConstPoint3d & point)
-{
-  return lanelet::Point3d{std::const_pointer_cast<lanelet::PointData>(point.constData())};
-}
 
 /**
  * @brief return the normal direction of given `line`, multiplied by `length`
