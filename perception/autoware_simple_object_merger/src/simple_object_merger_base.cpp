@@ -105,8 +105,7 @@ SimpleObjectMergerBase<ObjsMsgType>::SimpleObjectMergerBase(
     // process callback
     const auto update_period_ns = rclcpp::Rate(node_param_.update_rate_hz).period();
     timer_ = autoware::agnocast_wrapper::create_timer(
-      this, get_clock(), update_period_ns,
-      std::bind(&SimpleObjectMergerBase::onTimer, this));
+      this, get_clock(), update_period_ns, std::bind(&SimpleObjectMergerBase::onTimer, this));
   }
 
   // Publisher

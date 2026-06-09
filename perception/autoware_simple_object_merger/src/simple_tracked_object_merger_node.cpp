@@ -101,7 +101,8 @@ void SimpleTrackedObjectMergerNode::approximateMerger(
   } else {
     auto transform0 = autoware_utils::get_transform(
       tf_buffer_, get_logger(), *get_clock(), node_param_.new_frame_id,
-      object_msg0->header.frame_id, object_msg0->header.stamp, rclcpp::Duration::from_seconds(0.01));
+      object_msg0->header.frame_id, object_msg0->header.stamp,
+      rclcpp::Duration::from_seconds(0.01));
     if (!transform0) {
       return;
     }
@@ -114,7 +115,8 @@ void SimpleTrackedObjectMergerNode::approximateMerger(
   } else {
     auto transform1 = autoware_utils::get_transform(
       tf_buffer_, get_logger(), *get_clock(), node_param_.new_frame_id,
-      object_msg1->header.frame_id, object_msg1->header.stamp, rclcpp::Duration::from_seconds(0.01));
+      object_msg1->header.frame_id, object_msg1->header.stamp,
+      rclcpp::Duration::from_seconds(0.01));
     if (!transform1) {
       return;
     }
