@@ -171,7 +171,7 @@ public:
   std::string plugins_path_;
 
   // Head selection
-  bool use_seg3d_head_{true};
+  bool use_seg3d_head_;
 
   // Preprocess parameters
   bool use_64bit_hash_{};
