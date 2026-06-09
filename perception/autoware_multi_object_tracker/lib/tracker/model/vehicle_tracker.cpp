@@ -35,6 +35,133 @@
 
 namespace autoware::multi_object_tracker
 {
+
+namespace
+{
+
+constexpr double ALIGNMENT_RATIO_THRESHOLD = 0.2;     // 20% of the larger object's length
+constexpr double ALIGNMENT_ABSOLUTE_THRESHOLD = 1.0;  // [m] minimum tolerance for small objects
+
+struct EdgePositions
+{
+  double front_x, front_y;
+  double rear_x, rear_y;
+};
+
+enum class Edge { FRONT, REAR };
+
+struct EdgeAlignment
+{
+  double min_alignment_distance;
+  Edge aligned_pred_edge;
+  Edge aligned_meas_edge;
+};
+
+EdgePositions calculateEdgeCenters(const types::DynamicObject & obj)
+{
+  const double yaw = tf2::getYaw(obj.pose.orientation);
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
+  const double half_length = obj.shape.dimensions.x * 0.5;
+
+  return {
+    obj.pose.position.x + half_length * cos_yaw,  // front_x
+    obj.pose.position.y + half_length * sin_yaw,  // front_y
+    obj.pose.position.x - half_length * cos_yaw,  // rear_x
+    obj.pose.position.y - half_length * sin_yaw   // rear_y
+  };
+}
+
+EdgeAlignment findAlignedEdges(
+  const EdgePositions & meas_edges, const types::DynamicObject & prediction)
+{
+  const double pred_yaw = tf2::getYaw(prediction.pose.orientation);
+  const double pred_cos_yaw = std::cos(pred_yaw);
+  const double pred_sin_yaw = std::sin(pred_yaw);
+
+  const auto project_to_axis = [pred_cos_yaw, pred_sin_yaw](double x, double y) {
+    return x * pred_cos_yaw + y * pred_sin_yaw;
+  };
+
+  const double meas_front_axis = project_to_axis(meas_edges.front_x, meas_edges.front_y);
+  const double meas_rear_axis = project_to_axis(meas_edges.rear_x, meas_edges.rear_y);
+
+  const double pred_center_axis =
+    prediction.pose.position.x * pred_cos_yaw + prediction.pose.position.y * pred_sin_yaw;
+  const double predicted_half_length = prediction.shape.dimensions.x * 0.5;
+  const double pred_front_axis = pred_center_axis + predicted_half_length;
+  const double pred_rear_axis = pred_center_axis - predicted_half_length;
+
+  struct Candidate
+  {
+    double distance;
+    Edge pred_edge;
+    Edge meas_edge;
+  };
+  const std::array<Candidate, 4> candidates = {
+    {{std::abs(meas_front_axis - pred_front_axis), Edge::FRONT, Edge::FRONT},
+     {std::abs(meas_rear_axis - pred_front_axis), Edge::FRONT, Edge::REAR},
+     {std::abs(meas_front_axis - pred_rear_axis), Edge::REAR, Edge::FRONT},
+     {std::abs(meas_rear_axis - pred_rear_axis), Edge::REAR, Edge::REAR}}};
+
+  const auto best = std::min_element(
+    candidates.begin(), candidates.end(),
+    [](const Candidate & a, const Candidate & b) { return a.distance < b.distance; });
+
+  return {best->distance, best->pred_edge, best->meas_edge};
+}
+
+geometry_msgs::msg::Point calculateAnchorPoint(
+  const EdgeAlignment & alignment, const types::DynamicObject & measurement)
+{
+  geometry_msgs::msg::Point anchor_point;
+
+  const double meas_yaw = tf2::getYaw(measurement.pose.orientation);
+  const double meas_cos_yaw = std::cos(meas_yaw);
+  const double meas_sin_yaw = std::sin(meas_yaw);
+  const double meas_half_length = measurement.shape.dimensions.x * 0.5;
+
+  if (alignment.aligned_meas_edge == Edge::FRONT) {
+    anchor_point.x = measurement.pose.position.x + meas_half_length * meas_cos_yaw;
+    anchor_point.y = measurement.pose.position.y + meas_half_length * meas_sin_yaw;
+  } else {
+    anchor_point.x = measurement.pose.position.x - meas_half_length * meas_cos_yaw;
+    anchor_point.y = measurement.pose.position.y - meas_half_length * meas_sin_yaw;
+  }
+
+  return anchor_point;
+}
+
+UpdateStrategy determineUpdateStrategy(
+  const types::DynamicObject & measurement, const types::DynamicObject & prediction)
+{
+  UpdateStrategy strategy;
+
+  const EdgePositions meas_edges = calculateEdgeCenters(measurement);
+  const EdgeAlignment alignment = findAlignedEdges(meas_edges, prediction);
+
+  const double predicted_length = prediction.shape.dimensions.x;
+  const double measured_length = measurement.shape.dimensions.x;
+  const double max_length = std::max(predicted_length, measured_length);
+  const double alignment_threshold =
+    std::max(ALIGNMENT_RATIO_THRESHOLD * max_length, ALIGNMENT_ABSOLUTE_THRESHOLD);
+  const bool is_edge_aligned = alignment.min_alignment_distance < alignment_threshold;
+
+  if (!is_edge_aligned) {
+    strategy.type = UpdateStrategyType::WEAK_UPDATE;
+    return strategy;
+  }
+
+  strategy.type = (alignment.aligned_pred_edge == Edge::FRONT)
+                    ? UpdateStrategyType::FRONT_WHEEL_UPDATE
+                    : UpdateStrategyType::REAR_WHEEL_UPDATE;
+  strategy.anchor_point = calculateAnchorPoint(alignment, measurement);
+
+  return strategy;
+}
+
+}  // namespace
+
 VehicleTracker::VehicleTracker(
   const object_model::ObjectModel & object_model, const rclcpp::Time & time,
   const types::DynamicObject & object)
@@ -363,129 +490,6 @@ bool VehicleTracker::conditionedUpdate(
   removeCache();
 
   return is_updated;
-}
-
-UpdateStrategy VehicleTracker::determineUpdateStrategy(
-  const types::DynamicObject & measurement, const types::DynamicObject & prediction) const
-{
-  UpdateStrategy strategy;
-
-  // 1. Calculate edge centers for measurement vehicle
-  const EdgePositions meas_edges = calculateEdgeCenters(measurement);
-
-  // 2. Calculate alignment distances between measurement and prediction edges
-  const EdgeAlignment alignment = findAlignedEdges(meas_edges, prediction);
-
-  // 3. Check if any edge is well-aligned.
-  // Use the larger of predicted and measured length so size-mismatch cases are handled
-  // symmetrically.
-  const double predicted_length = prediction.shape.dimensions.x;
-  const double measured_length = measurement.shape.dimensions.x;
-  const double max_length = std::max(predicted_length, measured_length);
-  const double alignment_threshold =
-    std::max(ALIGNMENT_RATIO_THRESHOLD * max_length, ALIGNMENT_ABSOLUTE_THRESHOLD);
-  const bool is_edge_aligned = alignment.min_alignment_distance < alignment_threshold;
-
-  // 4. If no edge is aligned, use weak update strategy
-  if (!is_edge_aligned) {
-    strategy.type = UpdateStrategyType::WEAK_UPDATE;
-    return strategy;
-  }
-
-  // 5. Determine aligned edge and calculate anchor point
-  strategy.type = (alignment.aligned_pred_edge == Edge::FRONT)
-                    ? UpdateStrategyType::FRONT_WHEEL_UPDATE
-                    : UpdateStrategyType::REAR_WHEEL_UPDATE;
-  strategy.anchor_point = calculateAnchorPoint(alignment, measurement);
-
-  return strategy;
-}
-
-VehicleTracker::EdgePositions VehicleTracker::calculateEdgeCenters(
-  const types::DynamicObject & obj) const
-{
-  const double yaw = tf2::getYaw(obj.pose.orientation);
-  const double cos_yaw = std::cos(yaw);
-  const double sin_yaw = std::sin(yaw);
-  const double half_length = obj.shape.dimensions.x * 0.5;
-
-  return {
-    obj.pose.position.x + half_length * cos_yaw,  // front_x
-    obj.pose.position.y + half_length * sin_yaw,  // front_y
-    obj.pose.position.x - half_length * cos_yaw,  // rear_x
-    obj.pose.position.y - half_length * sin_yaw   // rear_y
-  };
-}
-
-VehicleTracker::EdgeAlignment VehicleTracker::findAlignedEdges(
-  const EdgePositions & meas_edges, const types::DynamicObject & prediction) const
-{
-  // Project edges onto predicted vehicle's longitudinal axis for comparison
-  const double pred_yaw = tf2::getYaw(prediction.pose.orientation);
-  const double pred_cos_yaw = std::cos(pred_yaw);
-  const double pred_sin_yaw = std::sin(pred_yaw);
-
-  const auto project_to_axis = [pred_cos_yaw, pred_sin_yaw](double x, double y) {
-    return x * pred_cos_yaw + y * pred_sin_yaw;
-  };
-
-  // Project measurement edges onto predicted vehicle's axis
-  const double meas_front_axis = project_to_axis(meas_edges.front_x, meas_edges.front_y);
-  const double meas_rear_axis = project_to_axis(meas_edges.rear_x, meas_edges.rear_y);
-
-  // Calculate predicted edges along its longitudinal axis
-  const double pred_center_axis =
-    prediction.pose.position.x * pred_cos_yaw + prediction.pose.position.y * pred_sin_yaw;
-  const double predicted_half_length = prediction.shape.dimensions.x * 0.5;
-  const double pred_front_axis = pred_center_axis + predicted_half_length;
-  const double pred_rear_axis = pred_center_axis - predicted_half_length;
-
-  // Define all four edge alignment candidates
-  struct Candidate
-  {
-    double distance;
-    Edge pred_edge;
-    Edge meas_edge;
-  };
-  const std::array<Candidate, 4> candidates = {
-    {{std::abs(meas_front_axis - pred_front_axis), Edge::FRONT, Edge::FRONT},
-     {std::abs(meas_rear_axis - pred_front_axis), Edge::FRONT, Edge::REAR},
-     {std::abs(meas_front_axis - pred_rear_axis), Edge::REAR, Edge::FRONT},
-     {std::abs(meas_rear_axis - pred_rear_axis), Edge::REAR, Edge::REAR}}};
-
-  // Find the best aligned edge pair
-  const auto best = std::min_element(
-    candidates.begin(), candidates.end(),
-    [](const Candidate & a, const Candidate & b) { return a.distance < b.distance; });
-
-  return {best->distance, best->pred_edge, best->meas_edge};
-}
-
-geometry_msgs::msg::Point VehicleTracker::calculateAnchorPoint(
-  const EdgeAlignment & alignment, const types::DynamicObject & measurement) const
-{
-  // Calculate the anchor point (edge center) for wheel-based updates
-  // updateStatePoseRear/Front will convert edge center to wheel position internally
-
-  geometry_msgs::msg::Point anchor_point;
-
-  const double meas_yaw = tf2::getYaw(measurement.pose.orientation);
-  const double meas_cos_yaw = std::cos(meas_yaw);
-  const double meas_sin_yaw = std::sin(meas_yaw);
-  const double meas_half_length = measurement.shape.dimensions.x * 0.5;
-
-  // Calculate the matched measurement edge center directly
-  if (alignment.aligned_meas_edge == Edge::FRONT) {
-    // Use measurement front edge center
-    anchor_point.x = measurement.pose.position.x + meas_half_length * meas_cos_yaw;
-    anchor_point.y = measurement.pose.position.y + meas_half_length * meas_sin_yaw;
-  } else {
-    // Use measurement rear edge center
-    anchor_point.x = measurement.pose.position.x - meas_half_length * meas_cos_yaw;
-    anchor_point.y = measurement.pose.position.y - meas_half_length * meas_sin_yaw;
-  }
-
-  return anchor_point;
 }
 
 void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape & shape)

@@ -94,34 +94,6 @@ public:
     if (!trust_extension) return UpdatePath::CONDITIONED;
     return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
   }
-
-  const double ALIGNMENT_RATIO_THRESHOLD = 0.2;     // 20% of the larger object's length
-  const double ALIGNMENT_ABSOLUTE_THRESHOLD = 1.0;  // [m] minimum tolerance for small objects
-  UpdateStrategy determineUpdateStrategy(
-    const types::DynamicObject & measurement, const types::DynamicObject & prediction) const;
-
-private:
-  // Helper structs for determineUpdateStrategy
-  struct EdgePositions
-  {
-    double front_x, front_y;
-    double rear_x, rear_y;
-  };
-
-  enum class Edge { FRONT, REAR };
-  struct EdgeAlignment
-  {
-    double min_alignment_distance;
-    Edge aligned_pred_edge;
-    Edge aligned_meas_edge;
-  };
-
-  // Helper functions for determineUpdateStrategy
-  EdgePositions calculateEdgeCenters(const types::DynamicObject & obj) const;
-  EdgeAlignment findAlignedEdges(
-    const EdgePositions & meas_edges, const types::DynamicObject & prediction) const;
-  geometry_msgs::msg::Point calculateAnchorPoint(
-    const EdgeAlignment & alignment, const types::DynamicObject & measurement) const;
 };
 
 }  // namespace autoware::multi_object_tracker
