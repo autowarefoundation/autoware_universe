@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__STATIC_EXTEND_MANAGER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__STATIC_EXTEND_MANAGER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__STATIC_SHAPE_MODEL_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__STATIC_SHAPE_MODEL_HPP_
 
-#include "autoware/multi_object_tracker/tracker/shape_model/extend_manager_base.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/shape_model_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_perception_msgs/msg/shape.hpp>
@@ -29,10 +29,10 @@ namespace autoware::multi_object_tracker
 // Shape manager for StaticTracker.
 // Stores shape verbatim; optionally converts POLYGON to minimum-area BOUNDING_BOX at publish time
 // using ego position for the correct heading reference.
-class StaticExtendManager : public ExtendManagerBase
+class StaticShapeModel : public ShapeModelBase
 {
 public:
-  StaticExtendManager() = default;
+  StaticShapeModel() = default;
 
   // Store shape from initial detection
   void init(const types::DynamicObject & object);
@@ -55,4 +55,4 @@ private:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__STATIC_EXTEND_MANAGER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__STATIC_SHAPE_MODEL_HPP_

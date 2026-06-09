@@ -17,7 +17,7 @@
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
-#include "autoware/multi_object_tracker/tracker/shape_model/vehicle_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/vehicle_shape_model.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
@@ -48,7 +48,7 @@ private:
   BicycleMotionModel motion_model_;
   using IDX = BicycleMotionModel::IDX;
 
-  VehicleExtendManager extend_manager_;
+  VehicleShapeModel shape_model_;
 
   // EKF kinematic update — selects update variant based on data availability.
   bool updateKinematics(

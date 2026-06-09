@@ -18,7 +18,7 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
-#include "autoware/multi_object_tracker/tracker/shape_model/polygon_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/polygon_shape_model.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
@@ -40,7 +40,7 @@ private:
 
   geometry_msgs::msg::Pose last_pose_;
 
-  PolygonExtendManager extend_manager_;
+  PolygonShapeModel shape_model_;
 
   bool updateKinematics(const types::DynamicObject & object);
 

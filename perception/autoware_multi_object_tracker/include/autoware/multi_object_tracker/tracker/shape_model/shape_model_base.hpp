@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__EXTEND_MANAGER_BASE_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__EXTEND_MANAGER_BASE_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__SHAPE_MODEL_BASE_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__SHAPE_MODEL_BASE_HPP_
 
 namespace autoware::multi_object_tracker
 {
 
-// Base class for all extend (shape/size/footprint) managers.
-// Each concrete tracker holds a typed extend manager as a member alongside its motion model.
+// Base class for all shape models.
+// Each concrete tracker holds a typed shape model as a member alongside its motion model.
 // The tracker's measure() calls update(); getTrackedObject() calls exportTo().
 // Because exportTo() signatures differ per tracker type (vehicle needs the length from the bicycle
 // model; pedestrian's exportTo takes no extra parameter), exportTo() is NOT declared here — each
 // concrete class exposes its own typed exportTo() that the tracker calls directly.
-class ExtendManagerBase
+class ShapeModelBase
 {
 public:
-  virtual ~ExtendManagerBase() = default;
+  virtual ~ShapeModelBase() = default;
 
   double getArea() const { return area_; }
 
@@ -37,4 +37,4 @@ protected:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__EXTEND_MANAGER_BASE_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__SHAPE_MODEL_BASE_HPP_

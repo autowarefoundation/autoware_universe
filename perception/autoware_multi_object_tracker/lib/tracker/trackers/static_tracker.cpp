@@ -25,7 +25,7 @@ StaticTracker::StaticTracker(const rclcpp::Time & time, const types::DynamicObje
 : Tracker(time, object), logger_(rclcpp::get_logger("StaticTracker"))
 {
   tracker_type_ = TrackerType::STATIC;
-  extend_manager_.init(object);
+  shape_model_.init(object);
 
   // Set motion model parameters
   constexpr double q_stddev_x = 0.5;  // [m/s]
@@ -68,7 +68,7 @@ bool StaticTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & /*time*/,
   const types::InputChannel & /*channel_info*/)
 {
-  extend_manager_.update(object);
+  shape_model_.update(object);
   object_.pose = object.pose;
 
   updateKinematics(object);
@@ -97,7 +97,7 @@ bool StaticTracker::getTrackedObject(
     return false;
   }
 
-  extend_manager_.exportTo(object, to_publish);
+  shape_model_.exportTo(object, to_publish);
 
   return true;
 }

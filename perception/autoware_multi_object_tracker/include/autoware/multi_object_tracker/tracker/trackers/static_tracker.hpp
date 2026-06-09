@@ -17,7 +17,7 @@
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
-#include "autoware/multi_object_tracker/tracker/shape_model/static_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/static_shape_model.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
@@ -31,7 +31,7 @@ private:
 
   StaticMotionModel motion_model_;
 
-  StaticExtendManager extend_manager_;
+  StaticShapeModel shape_model_;
 
   bool updateKinematics(const types::DynamicObject & object);
 
@@ -40,7 +40,7 @@ public:
 
   void setEgoPose(const std::optional<geometry_msgs::msg::Point> & pos) override
   {
-    extend_manager_.setEgoPose(pos);
+    shape_model_.setEgoPose(pos);
   }
 
   bool predict(const rclcpp::Time & time) override;

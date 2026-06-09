@@ -26,12 +26,12 @@ namespace autoware::multi_object_tracker
 PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object)
 : Tracker(time, object),
   logger_(rclcpp::get_logger("PedestrianTracker")),
-  extend_manager_(object_model_)
+  shape_model_(object_model_)
 {
   tracker_type_ = TrackerType::PEDESTRIAN;
 
   // Initialize shape manager: handles POLYGON/CYLINDER/BBOX normalization and clamping
-  extend_manager_.init(object);
+  shape_model_.init(object);
 
   // Set motion model parameters
   {
@@ -131,7 +131,7 @@ bool PedestrianTracker::measure(
 
   // Use current tracker heading for POLYGON branch projection
   const double tracker_yaw = tf2::getYaw(object_.pose.orientation);
-  extend_manager_.update(object, channel_info.trust_extension, tracker_yaw);
+  shape_model_.update(object, channel_info.trust_extension, tracker_yaw);
 
   removeCache();
   return true;
@@ -157,7 +157,7 @@ bool PedestrianTracker::getTrackedObject(
   }
 
   // Export shape from extend manager (type selection: CYLINDER vs BOUNDING_BOX)
-  extend_manager_.exportTo(object);
+  shape_model_.exportTo(object);
 
   if (to_publish) {
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;

@@ -35,7 +35,7 @@ PolygonTracker::PolygonTracker(
   enable_motion_output_(enable_motion_output)
 {
   tracker_type_ = TrackerType::POLYGON;
-  extend_manager_.init(object);
+  shape_model_.init(object);
 
   if (enable_velocity_estimation_) {
     // Set motion model parameters
@@ -177,7 +177,7 @@ bool PolygonTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
   const types::InputChannel & /*channel_info*/)
 {
-  extend_manager_.update(object);
+  shape_model_.update(object);
   object_.pose = object.pose;
   last_pose_ = object.pose;
 
@@ -230,7 +230,7 @@ bool PolygonTracker::getTrackedObject(
     }
   }
 
-  extend_manager_.exportTo(object);
+  shape_model_.exportTo(object);
 
   if (to_publish) {
     object.pose = last_pose_;

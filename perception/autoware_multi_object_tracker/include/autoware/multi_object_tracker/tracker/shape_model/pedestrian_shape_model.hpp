@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__PEDESTRIAN_EXTEND_MANAGER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__PEDESTRIAN_EXTEND_MANAGER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__PEDESTRIAN_SHAPE_MODEL_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__PEDESTRIAN_SHAPE_MODEL_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/tracker/shape_model/extend_manager_base.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/shape_model_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_perception_msgs/msg/shape.hpp>
@@ -34,10 +34,10 @@ namespace autoware::multi_object_tracker
 //   update()  — 3-branch update by input type (BBOX / CYLINDER / POLYGON);
 //               gains differ by type and trust_extension
 //   exportTo() — assemble output with correct shape type
-class PedestrianExtendManager : public ExtendManagerBase
+class PedestrianShapeModel : public ShapeModelBase
 {
 public:
-  explicit PedestrianExtendManager(const object_model::ObjectModel & object_model);
+  explicit PedestrianShapeModel(const object_model::ObjectModel & object_model);
 
   // Initialize shape from first detection; converts any input type to internal BOUNDING_BOX
   void init(const types::DynamicObject & object);
@@ -64,4 +64,4 @@ private:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__PEDESTRIAN_EXTEND_MANAGER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__PEDESTRIAN_SHAPE_MODEL_HPP_

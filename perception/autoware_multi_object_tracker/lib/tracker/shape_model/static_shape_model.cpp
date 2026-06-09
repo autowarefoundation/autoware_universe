@@ -12,26 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/shape_model/polygon_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/static_shape_model.hpp"
+
+#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
 namespace autoware::multi_object_tracker
 {
 
-void PolygonExtendManager::init(const types::DynamicObject & object)
+void StaticShapeModel::init(const types::DynamicObject & object)
 {
   update(object);
 }
 
-void PolygonExtendManager::update(const types::DynamicObject & object)
+void StaticShapeModel::update(const types::DynamicObject & object)
 {
   shape_ = object.shape;
   area_ = types::getArea(shape_);
 }
 
-void PolygonExtendManager::exportTo(types::DynamicObject & output) const
+void StaticShapeModel::setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos)
+{
+  ego_pos_ = ego_pos;
+}
+
+void StaticShapeModel::exportTo(types::DynamicObject & output, bool to_publish) const
 {
   output.shape = shape_;
   output.area = area_;
+
+  if (to_publish && shape_.type == autoware_perception_msgs::msg::Shape::POLYGON) {
+    types::DynamicObject converted;
+    if (shapes::convertConvexHullToBoundingBox(output, converted, ego_pos_)) {
+      output.shape = converted.shape;
+      output.area = converted.area;
+    }
+  }
 }
 
 }  // namespace autoware::multi_object_tracker

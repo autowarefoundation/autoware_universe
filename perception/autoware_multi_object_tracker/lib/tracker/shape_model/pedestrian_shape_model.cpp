@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/shape_model/pedestrian_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/pedestrian_shape_model.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
@@ -24,12 +24,12 @@ namespace autoware::multi_object_tracker
 
 using Shape = autoware_perception_msgs::msg::Shape;
 
-PedestrianExtendManager::PedestrianExtendManager(const object_model::ObjectModel & object_model)
+PedestrianShapeModel::PedestrianShapeModel(const object_model::ObjectModel & object_model)
 : object_model_(object_model)
 {
 }
 
-void PedestrianExtendManager::clampToLimits()
+void PedestrianShapeModel::clampToLimits()
 {
   length_ =
     std::clamp(length_, object_model_.size_limit.length_min, object_model_.size_limit.length_max);
@@ -39,7 +39,7 @@ void PedestrianExtendManager::clampToLimits()
     std::clamp(height_, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
 }
 
-void PedestrianExtendManager::init(const types::DynamicObject & object)
+void PedestrianShapeModel::init(const types::DynamicObject & object)
 {
   if (object.shape.type == Shape::POLYGON) {
     // No reliable orientation at init — use model defaults
@@ -62,7 +62,7 @@ void PedestrianExtendManager::init(const types::DynamicObject & object)
   area_ = length_ * width_;
 }
 
-bool PedestrianExtendManager::update(
+bool PedestrianShapeModel::update(
   const types::DynamicObject & object, bool trust_extension, double tracker_yaw)
 {
   // Model-derived sanity bounds (permissive: 0.5× min … 1.5× max)
@@ -122,7 +122,7 @@ bool PedestrianExtendManager::update(
   return true;
 }
 
-void PedestrianExtendManager::exportTo(types::DynamicObject & output) const
+void PedestrianShapeModel::exportTo(types::DynamicObject & output) const
 {
   const double asymmetry = std::abs(length_ - width_) / std::max(length_, width_ + 1e-6);
 

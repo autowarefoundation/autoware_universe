@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__VEHICLE_EXTEND_MANAGER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__VEHICLE_EXTEND_MANAGER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__VEHICLE_SHAPE_MODEL_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__VEHICLE_SHAPE_MODEL_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/tracker/shape_model/extend_manager_base.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/shape_model_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -43,10 +43,10 @@ namespace autoware::multi_object_tracker
 //   mergeFrom()    — union footprint from absorbed tracker
 //   exportTo()     — write {x=vehicle_length, y, z, footprint} to output object
 //   flipFootprintXY() — flip footprint 180° when yaw-limit correction fires
-class VehicleExtendManager : public ExtendManagerBase
+class VehicleShapeModel : public ShapeModelBase
 {
 public:
-  explicit VehicleExtendManager(const object_model::ObjectModel & object_model);
+  explicit VehicleShapeModel(const object_model::ObjectModel & object_model);
 
   // Initialize from first detection (before motion model is ready)
   void init(const types::DynamicObject & object);
@@ -102,4 +102,4 @@ private:
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__VEHICLE_EXTEND_MANAGER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__VEHICLE_SHAPE_MODEL_HPP_

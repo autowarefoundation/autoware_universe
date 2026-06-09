@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/shape_model/vehicle_extend_manager.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/vehicle_shape_model.hpp"
 
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
@@ -23,12 +23,12 @@ namespace autoware::multi_object_tracker
 
 using Shape = autoware_perception_msgs::msg::Shape;
 
-VehicleExtendManager::VehicleExtendManager(const object_model::ObjectModel & object_model)
+VehicleShapeModel::VehicleShapeModel(const object_model::ObjectModel & object_model)
 : last_footprint_update_time_(rclcpp::Time(0, 0, RCL_ROS_TIME)), object_model_(object_model)
 {
 }
 
-void VehicleExtendManager::init(const types::DynamicObject & object)
+void VehicleShapeModel::init(const types::DynamicObject & object)
 {
   if (object.shape.type == Shape::BOUNDING_BOX) {
     width_ = object.shape.dimensions.y;
@@ -46,7 +46,7 @@ void VehicleExtendManager::init(const types::DynamicObject & object)
   footprint_valid_ = false;
 }
 
-void VehicleExtendManager::updateShape(const types::DynamicObject & object)
+void VehicleShapeModel::updateShape(const types::DynamicObject & object)
 {
   constexpr double size_max_multiplier = 1.5;
   constexpr double size_min_multiplier = 0.25;
@@ -69,7 +69,7 @@ void VehicleExtendManager::updateShape(const types::DynamicObject & object)
     std::clamp(height_, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
 }
 
-void VehicleExtendManager::updateFootprint(
+void VehicleShapeModel::updateFootprint(
   const types::DynamicObject & object, const rclcpp::Time & time,
   const std::optional<geometry_msgs::msg::Pose> & tracker_pose)
 {
@@ -88,7 +88,7 @@ void VehicleExtendManager::updateFootprint(
   last_footprint_update_time_ = time;
 }
 
-void VehicleExtendManager::updateHeight(double z_measurement)
+void VehicleShapeModel::updateHeight(double z_measurement)
 {
   if (z_measurement <= 0.0) return;
   constexpr double gain = 0.4;
@@ -97,7 +97,7 @@ void VehicleExtendManager::updateHeight(double z_measurement)
     std::clamp(height_, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
 }
 
-std::optional<double> VehicleExtendManager::setShape(
+std::optional<double> VehicleShapeModel::setShape(
   const autoware_perception_msgs::msg::Shape & shape, const rclcpp::Time & latest_measurement_time)
 {
   width_ = std::clamp(
@@ -117,7 +117,7 @@ std::optional<double> VehicleExtendManager::setShape(
   return std::nullopt;
 }
 
-void VehicleExtendManager::mergeFrom(
+void VehicleShapeModel::mergeFrom(
   const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
   const geometry_msgs::msg::Pose & winner_pose, const rclcpp::Time & latest_measurement_time)
 {
@@ -128,7 +128,7 @@ void VehicleExtendManager::mergeFrom(
   last_footprint_update_time_ = latest_measurement_time;
 }
 
-void VehicleExtendManager::exportTo(types::DynamicObject & output, double vehicle_length) const
+void VehicleShapeModel::exportTo(types::DynamicObject & output, double vehicle_length) const
 {
   output.shape.type = Shape::BOUNDING_BOX;
   output.shape.dimensions.x = vehicle_length;
@@ -146,7 +146,7 @@ void VehicleExtendManager::exportTo(types::DynamicObject & output, double vehicl
   output.area = types::getArea(output.shape);
 }
 
-void VehicleExtendManager::flipFootprintXY()
+void VehicleShapeModel::flipFootprintXY()
 {
   for (auto & pt : footprint_.points) {
     pt.x = -pt.x;
