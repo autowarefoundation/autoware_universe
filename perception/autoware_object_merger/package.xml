@@ -19,6 +19,8 @@
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_test_utils</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_debug</depend>
+  <depend>autoware_utils_diagnostics</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>mussp</depend>
