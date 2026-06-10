@@ -147,8 +147,7 @@ compute_passage_time_intervals(
   std::vector<std::pair<TimeInterval, autoware_perception_msgs::msg::PredictedPath>>
     passage_time_intervals{};
 
-  for (size_t i = 0; i < object.kinematics.predicted_paths.size(); ++i) {
-    const auto & predicted_path = object.kinematics.predicted_paths[i];
+  for (const auto & predicted_path : object.kinematics.predicted_paths) {
     if (predicted_path.path.size() < 2) {
       continue;
     }
