@@ -100,10 +100,12 @@ void VehicleShapeModel::updateHeight(double z_measurement)
 std::optional<double> VehicleShapeModel::setShape(
   const autoware_perception_msgs::msg::Shape & shape, const rclcpp::Time & latest_measurement_time)
 {
-  width_ = std::clamp(
-    shape.dimensions.y, object_model_.size_limit.width_min, object_model_.size_limit.width_max);
-  height_ = std::clamp(
-    shape.dimensions.z, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
+  if (shape.type == Shape::BOUNDING_BOX) {
+    width_ = std::clamp(
+      shape.dimensions.y, object_model_.size_limit.width_min, object_model_.size_limit.width_max);
+    height_ = std::clamp(
+      shape.dimensions.z, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
+  }
 
   if (!shape.footprint.points.empty()) {
     footprint_ = shape.footprint;
