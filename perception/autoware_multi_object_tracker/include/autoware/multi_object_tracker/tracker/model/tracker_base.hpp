@@ -212,6 +212,8 @@ public:
     const bool to_publish = false) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
 
+  virtual void setEgoPose(const std::optional<geometry_msgs::msg::Point> &) {}
+
   virtual void setOrientationAvailability(
     const types::OrientationAvailability & orientation_availability)
   {

@@ -56,9 +56,99 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
   std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters)
 {
-  (void)pointcloud;
-  (void)clusters;
-  return false;
+  // 1) Voxel grid filtering
+  pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_map_ptr(new pcl::PointCloud<pcl::PointXYZ>);
+  constexpr float Z_AXIS_VOXEL_SIZE = 100000.0f;
+  voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, Z_AXIS_VOXEL_SIZE);
+  voxel_grid_.setMinimumPointsNumberPerVoxel(min_points_number_per_voxel_);
+  voxel_grid_.setInputCloud(pointcloud);
+  voxel_grid_.setSaveLeafLayout(true);
+  voxel_grid_.filter(*voxel_map_ptr);
+
+  // 2) Build 2D centroid cloud
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_2d_ptr(new pcl::PointCloud<pcl::PointXYZ>);
+  for (const auto & point : voxel_map_ptr->points) {
+    pcl::PointXYZ point2d;
+    point2d.x = point.x;
+    point2d.y = point.y;
+    point2d.z = 0.0;  // Set z to 0.0 for 2D clustering
+    pointcloud_2d_ptr->push_back(point2d);
+  }
+
+  // 3) KD-tree + clustering
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+  tree->setInputCloud(pointcloud_2d_ptr);
+  std::vector<pcl::PointIndices> cluster_indices;
+  pcl::EuclideanClusterExtraction<pcl::PointXYZ> pcl_euclidean_cluster;
+  pcl_euclidean_cluster.setClusterTolerance(tolerance_);
+  pcl_euclidean_cluster.setMinClusterSize(1);
+  pcl_euclidean_cluster.setMaxClusterSize(max_cluster_size_);
+  pcl_euclidean_cluster.setSearchMethod(tree);
+  pcl_euclidean_cluster.setInputCloud(pointcloud_2d_ptr);
+  pcl_euclidean_cluster.extract(cluster_indices);
+
+  // 4) Map voxel index to cluster index
+  std::unordered_map<int, int> voxel_to_cluster_map;
+  for (size_t cluster_idx = 0; cluster_idx < cluster_indices.size(); ++cluster_idx) {
+    const auto & cluster = cluster_indices.at(cluster_idx);
+    for (const auto & point_idx : cluster.indices) {
+      voxel_to_cluster_map[point_idx] = cluster_idx;
+    }
+  }
+
+  // Precompute which clusters are large enough based on the voxel threshold.
+  std::vector<bool> is_large_cluster(cluster_indices.size(), false);
+  std::vector<bool> is_extreme_large_cluster(cluster_indices.size(), false);
+  for (size_t cluster_idx = 0; cluster_idx < cluster_indices.size(); ++cluster_idx) {
+    const int cluster_size = static_cast<int>(cluster_indices[cluster_idx].indices.size());
+    is_large_cluster[cluster_idx] = cluster_size > min_voxel_cluster_size_for_filtering_;
+    is_extreme_large_cluster[cluster_idx] = cluster_size > max_voxel_cluster_for_output_;
+  }
+
+  // 5) Prepare output clusters
+  clusters.clear();
+  clusters.resize(cluster_indices.size());
+  // Track how many points each voxel has per cluster
+  std::unordered_map<int, std::unordered_map<int, int>> point_counts_per_voxel_per_cluster;
+  std::vector<size_t> random_indices(pointcloud->points.size());
+  static std::default_random_engine rng(42);
+  std::iota(random_indices.begin(), random_indices.end(), 0);
+  std::shuffle(random_indices.begin(), random_indices.end(), rng);
+  for (size_t i = 0; i < random_indices.size(); ++i) {
+    const size_t random_index = random_indices[i];
+    const auto & point = pointcloud->points.at(random_index);
+    const Eigen::Vector3i grid_coord = voxel_grid_.getGridCoordinates(point.x, point.y, point.z);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+    const int voxel_index = voxel_grid_.getCentroidIndexAt(grid_coord);
+#pragma GCC diagnostic pop
+    auto voxel_to_cluster_map_it = voxel_to_cluster_map.find(voxel_index);
+    if (voxel_to_cluster_map_it != voxel_to_cluster_map.end()) {
+      int cluster_idx = voxel_to_cluster_map_it->second;
+      if (is_extreme_large_cluster[cluster_idx]) {
+        continue;
+      }
+      if (is_large_cluster[cluster_idx]) {
+        int & voxel_point_count = point_counts_per_voxel_per_cluster[cluster_idx][voxel_index];
+        if (voxel_point_count >= max_points_per_voxel_in_large_cluster_) {
+          continue;
+        }
+        voxel_point_count++;
+      }
+      clusters.at(cluster_idx).push_back(point);
+    }
+  }
+
+  // Remove clusters that are too small
+  clusters.erase(
+    std::remove_if(
+      clusters.begin(), clusters.end(),
+      [this](const pcl::PointCloud<pcl::PointXYZ> & cluster) {
+        return static_cast<int>(cluster.size()) < min_cluster_size_;
+      }),
+    clusters.end());
+
+  return true;
 }
 
 bool VoxelGridBasedEuclideanCluster::cluster(

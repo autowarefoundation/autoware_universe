@@ -19,8 +19,11 @@
 
 #include <Eigen/Core>
 
+#include <geometry_msgs/msg/point.hpp>
+
 #include <tf2_ros/buffer.h>
 
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -44,7 +47,11 @@ bool get2dPrecisionRecallGIoU(
   double & precision, double & recall, double & generalized_iou);
 
 bool convertConvexHullToBoundingBox(
-  const types::DynamicObject & input_object, types::DynamicObject & output_object);
+  const types::DynamicObject & input_object, types::DynamicObject & output_object,
+  const std::optional<geometry_msgs::msg::Point> & ego_pos = std::nullopt);
+
+std::optional<types::DynamicObject> alignClusterToOrientation(
+  const types::DynamicObject & cluster, double target_yaw);
 
 std::pair<double, double> getObjectZRange(const types::DynamicObject & object);
 

@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -150,7 +151,36 @@ void update_best_record(
   }
 }
 
+/**
+ * @brief Collect the traffic light ids that were observed but are not registered in the map.
+ */
+std::vector<MultiCameraFusion::IdType> find_unmapped_traffic_light_ids(
+  const std::map<MultiCameraFusion::IdType, utils::FusionRecord> & fused_record_map,
+  const std::map<lanelet::Id, std::vector<lanelet::Id>> & traffic_light_id_to_regulatory_ele_id)
+{
+  std::vector<MultiCameraFusion::IdType> unmapped_traffic_light_ids;
+  for (const auto & [traffic_light_id, record] : fused_record_map) {
+    if (
+      traffic_light_id_to_regulatory_ele_id.find(traffic_light_id) ==
+      traffic_light_id_to_regulatory_ele_id.end()) {
+      unmapped_traffic_light_ids.emplace_back(traffic_light_id);
+    }
+  }
+  return unmapped_traffic_light_ids;
+}
+
 }  // namespace
+
+std::map<MultiCameraFusion::IdType, utils::FusionRecord> multi_camera_fusion(
+  std::multiset<utils::FusionRecordArr> & record_arr_set, double message_lifespan);
+
+void update_log_odds(
+  std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence,
+  double prior_log_odds);
+
+void update_group_info_for_element(
+  GroupFusionInfoMap & group_fusion_info_map, const MultiCameraFusion::IdType & reg_ele_id,
+  const utils::FusionRecord & record, double prior_log_odds);
 
 MultiCameraFusion::MultiCameraFusion(const MultiCameraFusionConfig & config)
 : config_(config),
@@ -169,43 +199,47 @@ MultiCameraFusionResult MultiCameraFusion::fuse(
   record_arr_set_.insert(utils::FusionRecordArr{cam_info.header, cam_info, rois, signals});
 
   MultiCameraFusionResult result;
-  std::map<IdType, utils::FusionRecord> fused_record_map, grouped_record_map;
-  multi_camera_fusion(fused_record_map);
-  group_fusion(fused_record_map, grouped_record_map, result.unmapped_traffic_light_ids);
+  std::map<IdType, utils::FusionRecord> fused_record_map =
+    multi_camera_fusion(record_arr_set_, config_.message_lifespan);
+  result.unmapped_traffic_light_ids =
+    find_unmapped_traffic_light_ids(fused_record_map, traffic_light_id_to_regulatory_ele_id_);
+  GroupFusionResult group_result = group_fusion(fused_record_map);
+  result.conflicted_regulatory_element_status = group_result.conflicts;
 
   NewSignalArrayType msg_out;
-  convert_output_msg(grouped_record_map, msg_out);
+  convert_output_msg(group_result.grouped_record_map, msg_out);
   msg_out.stamp = cam_info.header.stamp;
   result.traffic_light_groups = msg_out;
 
-  result.conflicted_regulatory_element_status = conflicted_regulatory_element_status_;
   return result;
 }
 
-void MultiCameraFusion::multi_camera_fusion(
-  std::map<IdType, utils::FusionRecord> & fused_record_map)
+std::map<MultiCameraFusion::IdType, utils::FusionRecord> multi_camera_fusion(
+  std::multiset<utils::FusionRecordArr> & record_arr_set, double message_lifespan)
 {
-  fused_record_map.clear();
-  const rclcpp::Time & newest_stamp(record_arr_set_.rbegin()->header.stamp);
-  for (auto it = record_arr_set_.begin(); it != record_arr_set_.end();) {
+  std::map<MultiCameraFusion::IdType, utils::FusionRecord> fused_record_map;
+  const rclcpp::Time & newest_stamp(record_arr_set.rbegin()->header.stamp);
+  for (auto it = record_arr_set.begin(); it != record_arr_set.end();) {
     /*
     remove all old record arrays whose timestamp difference with newest record is larger than
     threshold
     */
     if (
       (newest_stamp - rclcpp::Time(it->header.stamp)) >
-      rclcpp::Duration::from_seconds(config_.message_lifespan)) {
-      it = record_arr_set_.erase(it);
+      rclcpp::Duration::from_seconds(message_lifespan)) {
+      it = record_arr_set.erase(it);
     } else {
       /*
       generate fused record result with the saved records
       */
       const utils::FusionRecordArr & record_arr = *it;
       for (size_t i = 0; i < record_arr.rois.rois.size(); i++) {
-        const RoiType & roi = record_arr.rois.rois[i];
+        const MultiCameraFusion::RoiType & roi = record_arr.rois.rois[i];
         auto signal_it = std::find_if(
           record_arr.signals.signals.begin(), record_arr.signals.signals.end(),
-          [roi](const SignalType & s1) { return roi.traffic_light_id == s1.traffic_light_id; });
+          [roi](const MultiCameraFusion::SignalType & s1) {
+            return roi.traffic_light_id == s1.traffic_light_id;
+          });
         /*
         failed to find corresponding signal. skip it
         */
@@ -226,48 +260,43 @@ void MultiCameraFusion::multi_camera_fusion(
       it++;
     }
   }
+  return fused_record_map;
 }
 
-void MultiCameraFusion::group_fusion(
-  const std::map<IdType, utils::FusionRecord> & fused_record_map,
-  std::map<IdType, utils::FusionRecord> & grouped_record_map,
-  std::vector<IdType> & unmapped_traffic_light_ids)
+GroupFusionResult MultiCameraFusion::group_fusion(
+  const std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
-  grouped_record_map.clear();
-
   // Stage 1: Accumulate evidence from all fused records
   const std::map<IdType, GroupFusionInfo> group_fusion_info_map =
-    accumulate_group_evidence(fused_record_map, unmapped_traffic_light_ids);
+    accumulate_group_evidence(fused_record_map);
 
   // Stage 2: Determine the best state for each group from the accumulated evidence
-  determine_best_group_state(group_fusion_info_map, grouped_record_map);
+  GroupFusionResult result;
+  result.conflicts = determine_best_group_state(group_fusion_info_map, result.grouped_record_map);
+  return result;
 }
 
 GroupFusionInfoMap MultiCameraFusion::accumulate_group_evidence(
-  const std::map<IdType, utils::FusionRecord> & fused_record_map,
-  std::vector<IdType> & unmapped_traffic_light_ids)
+  const std::map<IdType, utils::FusionRecord> & fused_record_map)
 {
   GroupFusionInfoMap group_fusion_info_map;
-  for (const auto & p : fused_record_map) {
-    process_fused_record(group_fusion_info_map, p.second, unmapped_traffic_light_ids);
+  for (const auto & [traffic_light_id, record] : fused_record_map) {
+    process_fused_record(group_fusion_info_map, record);
   }
   return group_fusion_info_map;
 }
 
 /**
  * @brief Processes a single fused record and updates the group_fusion_info_map.
- * (This function contains the logic from the outer loop)
  */
 void MultiCameraFusion::process_fused_record(
-  GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record,
-  std::vector<IdType> & unmapped_traffic_light_ids)
+  GroupFusionInfoMap & group_fusion_info_map, const utils::FusionRecord & record)
 {
   const IdType roi_id = record.roi.traffic_light_id;
 
   // Guard Clause 1: Check if traffic light ID is in the map
   const auto it = traffic_light_id_to_regulatory_ele_id_.find(roi_id);
   if (it == traffic_light_id_to_regulatory_ele_id_.end()) {
-    unmapped_traffic_light_ids.emplace_back(roi_id);
     return;
   }
 
@@ -281,16 +310,17 @@ void MultiCameraFusion::process_fused_record(
   // Loop over all regulatory IDs associated with this traffic light
   for (const auto & reg_ele_id : reg_ele_id_vec) {
     // Delegate the innermost logic to another helper
-    update_group_info_for_element(group_fusion_info_map, reg_ele_id, record);
+    update_group_info_for_element(
+      group_fusion_info_map, reg_ele_id, record, config_.prior_log_odds);
   }
 }
 
 /**
  * @brief Updates the map for a single (element, regulatory_id) combination.
  */
-void MultiCameraFusion::update_group_info_for_element(
-  GroupFusionInfoMap & group_fusion_info_map, const IdType & reg_ele_id,
-  const utils::FusionRecord & record) const
+void update_group_info_for_element(
+  GroupFusionInfoMap & group_fusion_info_map, const MultiCameraFusion::IdType & reg_ele_id,
+  const utils::FusionRecord & record, double prior_log_odds)
 {
   StateKey state_key;
   for (const auto & element : record.signal.elements) {
@@ -300,7 +330,7 @@ void MultiCameraFusion::update_group_info_for_element(
   auto & group_info = group_fusion_info_map[reg_ele_id];
 
   // Update Log-Odds
-  update_log_odds(group_info.accumulated_log_odds, state_key, confidence);
+  update_log_odds(group_info.accumulated_log_odds, state_key, confidence, prior_log_odds);
 
   // Update Best Record
   update_best_record(group_info.best_record_for_state, state_key, confidence, record);
@@ -309,8 +339,9 @@ void MultiCameraFusion::update_group_info_for_element(
 /**
  * @brief Handles the log-odds accumulation logic.
  */
-void MultiCameraFusion::update_log_odds(
-  std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence) const
+void update_log_odds(
+  std::map<StateKey, double> & log_odds_map, const StateKey & state_key, double confidence,
+  double prior_log_odds)
 {
   // try_emplace ensures we only add the 0.0 prior (from a 0.5 probability) once.
   log_odds_map.try_emplace(state_key, 0.0);
@@ -318,14 +349,14 @@ void MultiCameraFusion::update_log_odds(
   const double evidence_log_odds = probability_to_log_odds(confidence);
 
   // Accumulate evidence
-  log_odds_map[state_key] += evidence_log_odds - config_.prior_log_odds;
+  log_odds_map[state_key] += evidence_log_odds - prior_log_odds;
 }
 
-void MultiCameraFusion::determine_best_group_state(
+std::vector<ConflictInfo> MultiCameraFusion::determine_best_group_state(
   const std::map<IdType, GroupFusionInfo> & group_fusion_info_map,
-  std::map<IdType, utils::FusionRecord> & grouped_record_map)
+  std::map<IdType, utils::FusionRecord> & grouped_record_map) const
 {
-  conflicted_regulatory_element_status_.clear();
+  std::vector<ConflictInfo> conflicted_regulatory_element_status;
 
   for (const auto & pair : group_fusion_info_map) {
     const IdType reg_ele_id = pair.first;
@@ -409,9 +440,11 @@ void MultiCameraFusion::determine_best_group_state(
     // suppress diagnostics for comparisons with unknown
     if (conflict_result.conflict_type != ConflictType::NO_CONFLICT) {
       // record it for diagnostics
-      conflicted_regulatory_element_status_.push_back({reg_ele_id, conflict_result.conflict_type});
+      conflicted_regulatory_element_status.push_back({reg_ele_id, conflict_result.conflict_type});
     }
   }
+
+  return conflicted_regulatory_element_status;
 }
 
 }  // namespace autoware::traffic_light
