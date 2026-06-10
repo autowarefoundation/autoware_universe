@@ -8,7 +8,6 @@ find_package(onnxruntime QUIET)
 
 # Options
 option(CUDA_VERBOSE "Verbose output of CUDA modules" OFF)
-option(BUILD_TOOL "Build tools for autoware_diffusion_planner" OFF)
 
 # Find CUDA
 option(CUDA_AVAIL "CUDA available" OFF)
@@ -160,61 +159,11 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
     target_link_libraries(test_diffusion_planner autoware_diffusion_planner_component)
     ament_target_dependencies(test_diffusion_planner
-      ament_index_cpp
       autoware_lanelet2_extension
       autoware_map_msgs
       autoware_perception_msgs
       autoware_test_utils
     )
-  endif()
-
-  if(BUILD_TOOL)
-    if(onnxruntime_FOUND)
-      include(FetchContent)
-      find_package(ZLIB REQUIRED)
-      fetchcontent_declare(
-        CLI11
-        GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
-        GIT_TAG v2.4.2
-      )
-      fetchcontent_makeavailable(CLI11)
-
-      add_library(cnpy STATIC
-        tool/cnpy/cnpy.cpp
-      )
-      target_include_directories(cnpy PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/tool/cnpy
-      )
-      target_link_libraries(cnpy PUBLIC
-        ZLIB::ZLIB
-      )
-
-      add_executable(validate_inference_mode_consistency
-        tool/validate_inference_mode_consistency.cpp
-      )
-      target_include_directories(validate_inference_mode_consistency PUBLIC
-        ${CUDA_INCLUDE_DIRS}
-        ${autoware_cuda_utils_INCLUDE_DIRS}
-      )
-      target_link_libraries(validate_inference_mode_consistency
-        autoware_diffusion_planner_component
-        ${NVINFER}
-        ${NVONNXPARSER}
-        ${CUDA_LIBRARIES}
-        ${CUBLAS_LIBRARIES}
-        ${CUDNN_LIBRARY}
-        CLI11::CLI11
-        cnpy
-      )
-      ament_target_dependencies(validate_inference_mode_consistency
-        ament_index_cpp
-      )
-      install(TARGETS validate_inference_mode_consistency
-        DESTINATION lib/${PROJECT_NAME}
-      )
-    else()
-      message(WARNING "Skipping validate_inference_mode_consistency because ONNX Runtime is unavailable")
-    endif()
   endif()
 endif()
 ament_auto_package(
