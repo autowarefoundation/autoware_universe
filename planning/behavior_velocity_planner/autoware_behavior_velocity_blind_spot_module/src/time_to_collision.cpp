@@ -201,7 +201,8 @@ compute_time_interval_for_passing_line(
          ranges::views::enumerate(precise_predicted_path.path | ranges::views::reverse)) {
       const auto object_poly = autoware_utils_geometry::to_polygon2d(pose, shape);
       const double time = horizon - i * new_time_step;
-      if (entry_time && time < entry_time.value()) {
+      // entry time is checked before loop
+      if (time < entry_time.value()) {
         break;
       }
       if (boost::geometry::intersects(object_poly, line2_2d)) {

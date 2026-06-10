@@ -88,11 +88,6 @@ std::optional<std::pair<size_t, size_t>> findLaneIdInterval(
   return found ? std::make_optional(std::make_pair(start, end)) : std::nullopt;
 }
 
-[[maybe_unused]] lanelet::LineString3d remove_const(const lanelet::ConstLineString3d & line)
-{
-  return lanelet::LineString3d{std::const_pointer_cast<lanelet::LineStringData>(line.constData())};
-}
-
 /**
  * @brief return the normal direction of given `line`, multiplied by `length`
  */
