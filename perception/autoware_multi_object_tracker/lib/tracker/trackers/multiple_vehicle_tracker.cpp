@@ -63,6 +63,14 @@ void MultipleVehicleTracker::setObjectShape(const autoware_perception_msgs::msg:
   normal_vehicle_tracker_.setObjectShape(shape);
 }
 
+void MultipleVehicleTracker::mergeFootprintFrom(
+  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+  const geometry_msgs::msg::Pose & dst_pose)
+{
+  big_vehicle_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
+  normal_vehicle_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
+}
+
 bool MultipleVehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {

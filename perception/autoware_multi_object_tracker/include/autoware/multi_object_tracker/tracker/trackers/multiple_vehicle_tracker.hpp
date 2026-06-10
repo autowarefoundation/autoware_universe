@@ -47,6 +47,9 @@ public:
     const autoware_perception_msgs::msg::Shape & tracker_shape,
     const rclcpp::Time & measurement_time, const types::InputChannel & channel_info) override;
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
+  void mergeFootprintFrom(
+    const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+    const geometry_msgs::msg::Pose & dst_pose) override;
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
