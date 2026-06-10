@@ -58,15 +58,13 @@ MrmResetManager::MrmResetManager(const rclcpp::NodeOptions & options)
       apply_ready_state();
     });
   sub_route_state_ = create_subscription<RouteState>(
-    "~/input/route_state", qos,
-    [this](const RouteState::ConstSharedPtr & msg) {
+    "~/input/route_state", qos, [this](const RouteState::ConstSharedPtr & msg) {
       std::lock_guard<std::mutex> lock(state_mutex_);
       route_state_ptr_ = msg;
       apply_ready_state();
     });
   sub_operation_mode_state_ = create_subscription<OperationMode>(
-    "~/input/operation_mode_state", qos,
-    [this](const OperationMode::ConstSharedPtr & msg) {
+    "~/input/operation_mode_state", qos, [this](const OperationMode::ConstSharedPtr & msg) {
       std::lock_guard<std::mutex> lock(state_mutex_);
       operation_mode_state_ptr_ = msg;
       apply_ready_state();
@@ -86,13 +84,11 @@ MrmResetManager::MrmResetManager(const rclcpp::NodeOptions & options)
     cli_reset_diag_graph_callback_group_);
 
   init_timer_ = rclcpp::create_timer(
-    this, get_clock(), std::chrono::seconds(1),
-    [this]() { advance_init_state(); });
+    this, get_clock(), std::chrono::seconds(1), [this]() { advance_init_state(); });
 }
 
 void MrmResetManager::on_reset_mrm(
-  const ResetMrm::Request::SharedPtr /*request*/,
-  ResetMrm::Response::SharedPtr response)
+  const ResetMrm::Request::SharedPtr /*request*/, ResetMrm::Response::SharedPtr response)
 {
   using ExtApi = tier4_external_api_msgs::msg::ResponseStatus;
 
@@ -151,9 +147,8 @@ void MrmResetManager::advance_init_state()
       }
       init_state_ = InitState::DONE;
       init_timer_->cancel();
-      reset_redundancy_switcher_timer_ = rclcpp::create_timer(
-        this, get_clock(), std::chrono::seconds(5),
-        [this]() {
+      reset_redundancy_switcher_timer_ =
+        rclcpp::create_timer(this, get_clock(), std::chrono::seconds(5), [this]() {
           std::lock_guard<std::mutex> lock(state_mutex_);
           if (!is_initializing()) {
             return;
@@ -210,7 +205,8 @@ bool MrmResetManager::set_aggregator_initializing(bool initializing)
   req->data = initializing;
 
   std::string message;
-  if (!call_set_bool(cli_set_aggregator_initializing_, req, "set_aggregator_initializing", message)) {
+  if (!call_set_bool(
+        cli_set_aggregator_initializing_, req, "set_aggregator_initializing", message)) {
     return false;
   }
   is_aggregator_initializing_ = initializing;
@@ -223,10 +219,9 @@ bool MrmResetManager::set_redundancy_switcher_interface_initializing(bool initia
   req->data = initializing;
 
   std::string message;
-  if (
-    !call_set_bool(
-      cli_set_redundancy_switcher_interface_initializing_, req,
-      "set_redundancy_switcher_interface_initializing", message)) {
+  if (!call_set_bool(
+        cli_set_redundancy_switcher_interface_initializing_, req,
+        "set_redundancy_switcher_interface_initializing", message)) {
     return false;
   }
   is_redundancy_switcher_interface_initializing_ = initializing;
@@ -242,7 +237,8 @@ bool MrmResetManager::call_reset_redundancy_switcher(std::string & message)
   auto req = std::make_shared<ResetRedundancySwitcher::Request>();
   auto future = cli_reset_redundancy_switcher_->async_send_request(req).future.share();
 
-  if (future.wait_for(std::chrono::milliseconds(service_timeout_ms_)) != std::future_status::ready) {
+  if (
+    future.wait_for(std::chrono::milliseconds(service_timeout_ms_)) != std::future_status::ready) {
     message = "reset_redundancy_switcher service timeout";
     RCLCPP_ERROR(get_logger(), "%s", message.c_str());
     return false;
@@ -250,7 +246,8 @@ bool MrmResetManager::call_reset_redundancy_switcher(std::string & message)
 
   const auto res = future.get();
   if (!res->status.success) {
-    message = res->status.message.empty() ? "reset_redundancy_switcher service failed" : res->status.message;
+    message = res->status.message.empty() ? "reset_redundancy_switcher service failed"
+                                          : res->status.message;
     RCLCPP_ERROR(get_logger(), "%s", message.c_str());
     return false;
   }
@@ -268,7 +265,8 @@ bool MrmResetManager::call_reset_diag_graph(std::string & message)
   auto req = std::make_shared<ResetDiagGraph::Request>();
   auto future = cli_reset_diag_graph_->async_send_request(req).future.share();
 
-  if (future.wait_for(std::chrono::milliseconds(service_timeout_ms_)) != std::future_status::ready) {
+  if (
+    future.wait_for(std::chrono::milliseconds(service_timeout_ms_)) != std::future_status::ready) {
     message = "reset_diag_graph service timeout";
     RCLCPP_ERROR(get_logger(), "%s", message.c_str());
     return false;
@@ -284,13 +282,12 @@ bool MrmResetManager::call_reset_diag_graph(std::string & message)
 }
 
 bool MrmResetManager::call_set_bool(
-  const rclcpp::Client<SetBool>::SharedPtr & client,
-  const SetBool::Request::SharedPtr & request,
-  const char * label,
-  std::string & message)
+  const rclcpp::Client<SetBool>::SharedPtr & client, const SetBool::Request::SharedPtr & request,
+  const char * label, std::string & message)
 {
   auto future = client->async_send_request(request).future.share();
-  if (future.wait_for(std::chrono::milliseconds(service_timeout_ms_)) != std::future_status::ready) {
+  if (
+    future.wait_for(std::chrono::milliseconds(service_timeout_ms_)) != std::future_status::ready) {
     message = std::string(label) + " service timeout";
     RCLCPP_ERROR(get_logger(), "%s", message.c_str());
     return false;
