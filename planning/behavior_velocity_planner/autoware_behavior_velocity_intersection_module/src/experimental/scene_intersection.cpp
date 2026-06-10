@@ -283,8 +283,6 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(
   Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
-  auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
-
   const auto prepare_data = prepareIntersectionData(path, left_bound, right_bound, planner_data);
   if (!prepare_data) {
     return prepare_data.err();
