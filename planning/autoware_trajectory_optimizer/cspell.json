@@ -29,6 +29,7 @@
     "recentered",
     "ufeff",
     "unshift",
-    "vdot"
+    "vdot",
+    "yrefs"
   ]
 }
