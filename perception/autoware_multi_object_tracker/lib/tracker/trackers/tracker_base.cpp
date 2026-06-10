@@ -364,7 +364,7 @@ void Tracker::getPositionCovarianceEigenSq(
 {
   // estimate the covariance of the position at the given time, straight from the motion model
   // (single source of truth). getMotionState() clamps to the current state when `time` precedes
-  // the last update, reproducing the old max(state-time, time) behavior.
+  // the last update, clamping to state time when queried in the past.
   geometry_msgs::msg::Pose pose;
   geometry_msgs::msg::Twist twist;
   std::array<double, 36> pose_cov{};

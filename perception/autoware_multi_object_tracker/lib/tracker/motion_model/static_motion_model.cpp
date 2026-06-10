@@ -17,11 +17,7 @@
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
 
 #include <Eigen/Core>
-#include <Eigen/Geometry>
 #include <autoware_utils_geometry/msg/covariance.hpp>
-#include <autoware_utils_math/normalization.hpp>
-#include <autoware_utils_math/unit_conversion.hpp>
-#include <tf2/utils.hpp>
 
 namespace autoware::multi_object_tracker
 {

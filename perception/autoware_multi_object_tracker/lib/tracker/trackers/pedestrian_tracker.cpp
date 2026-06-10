@@ -132,7 +132,7 @@ bool PedestrianTracker::measure(
   updateKinematics(object);
 
   // Use the committed tracker heading (1-frame-stale, refreshed by commitState) for POLYGON-branch
-  // projection — committed_yaw_ preserves the legacy snapshot semantics.
+  // projection.
   const double tracker_yaw = committed_yaw_;
   shape_model_.update(object, channel_info.trust_extension, tracker_yaw);
 

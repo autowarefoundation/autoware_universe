@@ -52,13 +52,7 @@ public:
   virtual ~ShapeModelBase() = default;
 
   // --- read accessors (base fields) ---
-  uint8_t getShapeType() const { return shape_type_; }
-  double getLength() const { return length_; }
-  double getWidth() const { return width_; }
-  double getHeight() const { return height_; }
-  double getArea() const { return area_; }
   bool isFootprintValid() const { return footprint_valid_; }
-  const geometry_msgs::msg::Polygon & getFootprint() const { return footprint_; }
 
   // --- write interface (sensible defaults; each model overrides what it needs) ---
 

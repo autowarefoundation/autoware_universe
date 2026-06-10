@@ -82,9 +82,6 @@ VehicleTracker::VehicleTracker(
       break;
   }
 
-  // velocity deviation threshold
-  velocity_deviation_threshold_ = autoware_utils_math::kmph2mps(10);  // [m/s]
-
   // Initialize shape manager (forces BBOX, clears footprint, clamps)
   shape_model_.init(object);
 

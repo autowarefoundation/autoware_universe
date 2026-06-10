@@ -34,8 +34,6 @@ private:
 
   object_model::ObjectModel object_model_;
 
-  double velocity_deviation_threshold_;
-
   BicycleMotionModel motion_model_;
   using IDX = BicycleMotionModel::IDX;
 
