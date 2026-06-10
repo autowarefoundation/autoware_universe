@@ -1,9 +1,10 @@
 # This message represents a metric report from a trajectory validator.
 
 # Possible levels for a metric report.
-uint8 OK = 0
-uint8 WARN = 1
-uint8 ERROR = 2
+uint8 SAFE = 0
+uint8 LOW_CAUTION = 1
+uint8 HIGH_CAUTION = 2
+uint8 DANGER = 3
 
 # The name of the validator that generated this report.
 string validator_name
