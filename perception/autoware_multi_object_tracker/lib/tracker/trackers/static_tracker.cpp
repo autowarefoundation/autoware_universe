@@ -69,12 +69,24 @@ bool StaticTracker::measure(
   const types::InputChannel & /*channel_info*/)
 {
   shape_model_.update(object);
-  pose_ = object.pose;
+  // x/y come from the motion model on demand; orientation/z are the residuals stored here.
+  orientation_ = object.pose.orientation;
+  z_ = object.pose.position.z;
 
   updateKinematics(object);
 
   removeCache();
   return true;
+}
+
+bool StaticTracker::getMotionState(
+  const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+  geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
+{
+  // The static motion model estimates only x/y; orientation and z are residuals supplied here.
+  pose.orientation = orientation_;
+  pose.position.z = z_;
+  return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
 }
 
 bool StaticTracker::getTrackedObject(
@@ -87,15 +99,11 @@ bool StaticTracker::getTrackedObject(
     time_object = time.seconds() > last_measurement_time.seconds() ? last_measurement_time : time;
   }
 
-  populatePersistentFields(object);
-  object.time = time;
-  object.kinematics.is_stationary = true;
-
-  if (!motion_model_.getPredictedState(
-        time_object, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
+  if (!populateKinematicObject(time_object, time, object)) {
     RCLCPP_WARN(logger_, "StaticTracker::getTrackedObject: Failed to get predicted state.");
     return false;
   }
+  object.kinematics.is_stationary = true;
 
   assembleShapeTo(object, to_publish);
 

@@ -109,7 +109,7 @@ bool PedestrianTracker::updateKinematics(const types::DynamicObject & object)
 
   // Low-pass filter on z position.
   constexpr double gain = 0.1;
-  pose_.position.z = (1.0 - gain) * pose_.position.z + gain * object.pose.position.z;
+  z_ = (1.0 - gain) * z_ + gain * object.pose.position.z;
 
   return is_updated;
 }
@@ -129,30 +129,32 @@ bool PedestrianTracker::measure(
 
   updateKinematics(object);
 
-  // Use current tracker heading for POLYGON branch projection
-  const double tracker_yaw = tf2::getYaw(pose_.orientation);
+  // Use the committed tracker heading (1-frame-stale, refreshed by commitState) for POLYGON-branch
+  // projection — orientation_ preserves the legacy snapshot semantics.
+  const double tracker_yaw = tf2::getYaw(orientation_);
   shape_model_.update(object, channel_info.trust_extension, tracker_yaw);
 
   removeCache();
   return true;
 }
 
+bool PedestrianTracker::getMotionState(
+  const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+  geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
+{
+  // Motion model is 2D; supply the residual z. Orientation (yaw) is owned by the CTRV model.
+  pose.position.z = z_;
+  return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
+}
+
 bool PedestrianTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
   if (!getCachedObject(time, object)) {
-    populatePersistentFields(object);
-    object.time = time;
-
-    auto & pose = object.pose;
-    auto & pose_cov = object.pose_covariance;
-    auto & twist = object.twist;
-    auto & twist_cov = object.twist_covariance;
-    if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
+    if (!populateKinematicObject(time, time, object)) {
       RCLCPP_WARN(logger_, "PedestrianTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
-
     updateCache(object, time);
   }
 

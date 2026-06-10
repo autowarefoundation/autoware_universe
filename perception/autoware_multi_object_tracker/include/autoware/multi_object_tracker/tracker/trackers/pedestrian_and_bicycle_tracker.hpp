@@ -56,6 +56,15 @@ public:
   {
     activeInner().assembleShapeTo(output, to_publish);
   }
+  // Kinematics single source of truth: forward to the active inner tracker (same policy as
+  // getTrackedObject / getShapeModel).
+  bool getMotionState(
+    const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+    geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override
+  {
+    return activeInner().getMotionState(time, pose, pose_cov, twist, twist_cov);
+  }
+  rclcpp::Time getStateTime() const override { return activeInner().getStateTime(); }
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override
   {
     pedestrian_tracker_.setObjectShape(shape);

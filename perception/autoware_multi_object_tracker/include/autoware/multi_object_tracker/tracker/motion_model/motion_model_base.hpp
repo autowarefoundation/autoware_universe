@@ -54,6 +54,7 @@ public:
   virtual ~MotionModel() = default;
 
   bool checkInitialized() const noexcept { return is_initialized_; }
+  rclcpp::Time getLastUpdateTime() const noexcept { return last_update_time_; }
   double getDeltaTime(const rclcpp::Time & time) const noexcept
   {
     return (time - last_update_time_).seconds();

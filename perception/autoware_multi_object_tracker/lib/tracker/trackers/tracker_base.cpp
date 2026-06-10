@@ -61,12 +61,9 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   channel_index_(detected_object.channel_index),
   existence_probability_(detected_object.existence_probability),
   kinematics_(detected_object.kinematics),
-  pose_(detected_object.pose),
-  pose_covariance_(detected_object.pose_covariance),
-  twist_(detected_object.twist),
-  twist_covariance_(detected_object.twist_covariance),
   trust_extension_(detected_object.trust_extension),
-  time_(time)
+  z_(detected_object.pose.position.z),
+  orientation_(detected_object.pose.orientation)
 {
   // Assign a persistent tracker UUID (separate from measurement UUIDs).
   uuid_ = object_model::generate_uuid();
@@ -367,15 +364,19 @@ uint Tracker::getChannelIndex() const
 void Tracker::getPositionCovarianceEigenSq(
   const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const
 {
-  // estimate the covariance of the position at the given time
-  types::DynamicObject object;
-  populatePersistentFields(object);
-  object.time = time_;
-  if (time_.seconds() + 1e-6 < time.seconds()) {  // 1usec is allowed error
-    getTrackedObject(time, object);
+  // estimate the covariance of the position at the given time, straight from the motion model
+  // (single source of truth). getMotionState() clamps to the current state when `time` precedes
+  // the last update, reproducing the old max(state-time, time) behavior.
+  geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Twist twist;
+  std::array<double, 36> pose_cov{};
+  std::array<double, 36> twist_cov{};
+  if (!getMotionState(time, pose, pose_cov, twist, twist_cov)) {
+    major_axis_sq = 0.0;
+    minor_axis_sq = 0.0;
+    return;
   }
   using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  auto & pose_cov = object.pose_covariance;
 
   // principal component of the position covariance matrix
   const double a = pose_cov[XYZRPY_COV_IDX::X_X];
@@ -447,7 +448,15 @@ double Tracker::getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose>
   if (!ego_pose) {
     return INVALID_DISTANCE_SQ;
   }
-  const auto & p = pose_.position;
+  // Position is owned by the motion model; query it at the current state time.
+  geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Twist twist;
+  std::array<double, 36> pose_cov{};
+  std::array<double, 36> twist_cov{};
+  if (!getMotionState(getStateTime(), pose, pose_cov, twist, twist_cov)) {
+    return INVALID_DISTANCE_SQ;
+  }
+  const auto & p = pose.position;
   const auto & e = ego_pose->position;
   const double dx = p.x - e.x;
   const double dy = p.y - e.y;
@@ -480,10 +489,10 @@ bool Tracker::isConfident(
   }
   rclcpp::Time time_to_check;
   if (!time) {
-    // add 200ms extrapolation time to the latest measurement time
+    // add 200ms extrapolation time to the latest state time (motion model)
     // to consider the velocity uncertainty
     const rclcpp::Duration extrapolate_time = rclcpp::Duration::from_seconds(0.2);
-    time_to_check = time_ + extrapolate_time;
+    time_to_check = getStateTime() + extrapolate_time;
   } else {
     // use the given time
     time_to_check = *time;
@@ -570,7 +579,14 @@ float Tracker::getKnownObjectProbability() const
 double Tracker::getPositionCovarianceDeterminant() const
 {
   using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  auto & pose_cov = pose_covariance_;
+  // Covariance is owned by the motion model; query it at the current state time.
+  geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Twist twist;
+  std::array<double, 36> pose_cov{};
+  std::array<double, 36> twist_cov{};
+  if (!getMotionState(getStateTime(), pose, pose_cov, twist, twist_cov)) {
+    return std::numeric_limits<double>::max();
+  }
 
   // The covariance size is defined as the square of the dominant eigenvalue
   // of the 2x2 covariance matrix:

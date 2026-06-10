@@ -31,6 +31,7 @@
 #include <autoware_perception_msgs/msg/detected_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/quaternion.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <boost/circular_buffer.hpp>
@@ -171,25 +172,28 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
 
 protected:
-  // Committed (non-shape) tracker state. Shape is owned by the shape model (getShapeModel());
-  // kinematics (pose/twist) are owned by the motion model and supplied at getTrackedObject() time.
-  // These members hold the snapshot at time_, updated by commitState().
+  // Persistent (non-kinematic, non-shape) tracker state. Shape is owned by the shape model
+  // (getShapeModel()); kinematics (pose/twist/covariances) are owned by the motion model and
+  // supplied on demand via getMotionState() — the motion model is the single source of truth.
   unique_identifier_msgs::msg::UUID uuid_;
   uint channel_index_{0};
   float existence_probability_{types::default_existence_probability};
-  types::ObjectKinematics kinematics_{};
-  geometry_msgs::msg::Pose pose_;
-  std::array<double, 36> pose_covariance_{};
-  geometry_msgs::msg::Twist twist_;
-  std::array<double, 36> twist_covariance_{};
+  types::ObjectKinematics kinematics_{};  // output metadata flags (orientation_availability, ...)
   bool trust_extension_{false};
-  rclcpp::Time time_;
+
+  // Residual kinematic state the motion model does NOT estimate (all motion models are 2D in x/y).
+  //   z_:           low-pass-filtered height, maintained in each tracker's kinematic update.
+  //   orientation_: authoritative heading for motion models that do not estimate yaw (cv/static);
+  //                 for yaw-tracking models (bicycle/ctrv) the OUTPUT orientation comes from the
+  //                 motion model and this committed copy is used only as a shape-projection input
+  //                 (see PedestrianTracker), refreshed at commit cadence by commitState().
+  double z_{0.0};
+  geometry_msgs::msg::Quaternion orientation_;
 
   types::TrackerType tracker_type_{types::TrackerType::POLYGON};
 
-  // Fill the persistent (non-kinematic, non-shape) fields of `object` from the committed state.
-  // getTrackedObject() overlays motion (pose/twist via the motion model) and shape
-  // (assembleShapeTo()) on top of this; the low-pass z carried in pose_ is preserved.
+  // Fill the persistent (non-kinematic, non-shape) fields of `object`. getTrackedObject() overlays
+  // kinematics (getMotionState()) and shape (assembleShapeTo()) on top of this.
   void populatePersistentFields(types::DynamicObject & object) const
   {
     object.uuid = uuid_;
@@ -198,25 +202,35 @@ protected:
     object.existence_probabilities = existence_probabilities_;
     object.classification = classification_;
     object.kinematics = kinematics_;
-    object.pose = pose_;
-    object.pose_covariance = pose_covariance_;
-    object.twist = twist_;
-    object.twist_covariance = twist_covariance_;
     object.trust_extension = trust_extension_;
   }
 
-  // Snapshot the tracked state at `time` into the committed members (replaces the old
-  // getTrackedObject(time, object_) commit). Preserves the low-pass z already written to pose_.
+  // Compose the persistent fields and the motion-model kinematics into `object`: persistent fields,
+  // the output stamp, and pose/twist/covariances from getMotionState() at `motion_time`. Shared by
+  // every leaf getTrackedObject() (shape and publish-time tweaks are layered on by the caller).
+  // `motion_time` may differ from `stamp` when the publish path clamps extrapolation.
+  bool populateKinematicObject(
+    const rclcpp::Time & motion_time, const rclcpp::Time & stamp,
+    types::DynamicObject & object) const
+  {
+    populatePersistentFields(object);
+    object.time = stamp;
+    return getMotionState(
+      motion_time, object.pose, object.pose_covariance, object.twist, object.twist_covariance);
+  }
+
+  // Capture the committed heading for shape-projection consumers. Output kinematics are NOT stored
+  // (the motion model owns them); only orientation_ is snapshotted, at the legacy commit cadence,
+  // so PedestrianTracker's stale-yaw shape projection is preserved — including the standalone-vs-
+  // nested asymmetry (inner trackers of composites never receive commitState()).
   void commitState(const rclcpp::Time & time)
   {
-    types::DynamicObject committed;
-    if (!getTrackedObject(time, committed)) return;
-    pose_ = committed.pose;
-    pose_covariance_ = committed.pose_covariance;
-    twist_ = committed.twist;
-    twist_covariance_ = committed.twist_covariance;
-    kinematics_ = committed.kinematics;
-    time_ = time;
+    geometry_msgs::msg::Pose pose;
+    geometry_msgs::msg::Twist twist;
+    std::array<double, 36> pose_cov{};
+    std::array<double, 36> twist_cov{};
+    if (!getMotionState(time, pose, pose_cov, twist, twist_cov)) return;
+    orientation_ = pose.orientation;
   }
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
@@ -270,6 +284,17 @@ public:
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
+
+  // Kinematics single source of truth: fill pose/twist/covariances from the motion model at `time`
+  // (overlaying residual z_/orientation_). Excludes shape — the kinematics counterpart to
+  // assembleShapeTo(). Composite trackers forward to the active inner tracker.
+  virtual bool getMotionState(
+    const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+    geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const = 0;
+
+  // Time of the motion model's latest state (last predict or update). Used by the covariance /
+  // distance queries that evaluate the state "now". Composite trackers forward to the active inner.
+  virtual rclcpp::Time getStateTime() const = 0;
 
   virtual void setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos)
   {

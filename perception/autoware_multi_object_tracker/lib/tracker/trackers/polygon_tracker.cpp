@@ -168,7 +168,7 @@ bool PolygonTracker::updateKinematics(const types::DynamicObject & object)
 
   // Low-pass filter on z position.
   constexpr double gain = 0.1;
-  pose_.position.z = (1.0 - gain) * pose_.position.z + gain * object.pose.position.z;
+  z_ = (1.0 - gain) * z_ + gain * object.pose.position.z;
 
   return is_updated;
 }
@@ -178,7 +178,10 @@ bool PolygonTracker::measure(
   const types::InputChannel & /*channel_info*/)
 {
   shape_model_.update(object);
-  pose_ = object.pose;
+  // x/y come from the motion model on demand; only the residual orientation/z are stored here.
+  // last_pose_ keeps the raw measurement pose used as the publish-time pose.
+  orientation_ = object.pose.orientation;
+  z_ = object.pose.position.z;
   last_pose_ = object.pose;
 
   if (enable_velocity_estimation_) {
@@ -199,6 +202,20 @@ bool PolygonTracker::measure(
   return true;
 }
 
+bool PolygonTracker::getMotionState(
+  const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+  geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
+{
+  // Neither the CV nor the static motion model estimates yaw or z; supply both residuals here. The
+  // CV model additionally reads pose.orientation to rotate the twist into the object frame.
+  pose.orientation = orientation_;
+  pose.position.z = z_;
+  if (enable_velocity_estimation_) {
+    return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
+  }
+  return static_motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
+}
+
 bool PolygonTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
@@ -211,23 +228,9 @@ bool PolygonTracker::getTrackedObject(
   }
   // else, allow extrapolation
 
-  populatePersistentFields(object);
-  object.time = time;
-
-  if (enable_velocity_estimation_) {
-    if (!motion_model_.getPredictedState(
-          time_object, object.pose, object.pose_covariance, object.twist,
-          object.twist_covariance)) {
-      RCLCPP_WARN(logger_, "PolygonTracker::getTrackedObject: Failed to get predicted state.");
-      return false;
-    }
-  } else {
-    if (!static_motion_model_.getPredictedState(
-          time_object, object.pose, object.pose_covariance, object.twist,
-          object.twist_covariance)) {
-      RCLCPP_WARN(logger_, "PolygonTracker::getTrackedObject: Failed to get predicted state.");
-      return false;
-    }
+  if (!populateKinematicObject(time_object, time, object)) {
+    RCLCPP_WARN(logger_, "PolygonTracker::getTrackedObject: Failed to get predicted state.");
+    return false;
   }
 
   assembleShapeTo(object, to_publish);
