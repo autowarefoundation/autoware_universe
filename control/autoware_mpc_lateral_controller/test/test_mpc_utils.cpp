@@ -39,6 +39,36 @@ TrajectoryPoint makePoint(const double x, const double y, const float vx)
   return p;
 }
 
+autoware::motion::control::mpc_lateral_controller::MPCTrajectory makeCircularArcTrajectory(
+  const double radius, const int num_points, const double arc_length)
+{
+  using autoware::motion::control::mpc_lateral_controller::MPCTrajectory;
+
+  MPCTrajectory traj;
+  const double half_angle = arc_length / (2.0 * radius);
+  for (int i = 0; i < num_points; ++i) {
+    const double t = static_cast<double>(i) / static_cast<double>(num_points - 1);
+    const double theta = -half_angle + t * 2.0 * half_angle;
+    traj.push_back(
+      radius * std::cos(theta), radius * std::sin(theta), 0.0, 0.0, 1.0, 0.0, 0.0,
+      static_cast<double>(i) * 0.1);
+  }
+  return traj;
+}
+
+autoware::motion::control::mpc_lateral_controller::MPCTrajectory makeStraightTrajectory(
+  const int num_points, const double length)
+{
+  using autoware::motion::control::mpc_lateral_controller::MPCTrajectory;
+
+  MPCTrajectory traj;
+  for (int i = 0; i < num_points; ++i) {
+    const double s = static_cast<double>(i) / static_cast<double>(num_points - 1) * length;
+    traj.push_back(s, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, static_cast<double>(i) * 0.1);
+  }
+  return traj;
+}
+
 /* cppcheck-suppress syntaxError */
 TEST(TestMPC, CalcStopDistance)
 {
@@ -141,6 +171,61 @@ TEST(TestMPC, CalcNearestPoseInterpFallsBackWhenTimeWindowHasNoCandidates)
   ASSERT_TRUE(ok);
   EXPECT_NEAR(nearest_pose.position.x, 0.2, 1e-6);
   EXPECT_NEAR(nearest_time, 0.2, 1e-6);
+}
+
+TEST(TestMPC, ShortTrajectoryCurvatureUsesGlobalTaubinOnArc)
+{
+  constexpr int num_points = 20;
+  constexpr double radius = 10.0;
+  constexpr double arc_length = 1.5;
+  constexpr int smoothing = 15;
+  constexpr double true_kappa = 1.0 / radius;
+
+  const auto traj = makeCircularArcTrajectory(radius, num_points, arc_length);
+  const auto curvature = MPCUtils::calcTrajectoryCurvature(smoothing, traj, false);
+
+  ASSERT_EQ(curvature.size(), static_cast<size_t>(num_points));
+  for (size_t i = 0; i < curvature.size(); ++i) {
+    EXPECT_NEAR(curvature.at(i), curvature.at(0), 1e-9)
+      << "all points should share the same global Taubin curvature";
+    EXPECT_NEAR(std::abs(curvature.at(i)), true_kappa, 0.02) << "curvature at index " << i;
+  }
+}
+
+TEST(TestMPC, ShortTrajectoryCurvatureIsZeroForStraightLine)
+{
+  constexpr int num_points = 20;
+  constexpr int smoothing = 15;
+
+  const auto traj = makeStraightTrajectory(num_points, 1.5);
+  const auto curvature = MPCUtils::calcTrajectoryCurvature(smoothing, traj, false);
+
+  ASSERT_EQ(curvature.size(), static_cast<size_t>(num_points));
+  for (const double k : curvature) {
+    EXPECT_NEAR(k, 0.0, 1e-6);
+  }
+}
+
+TEST(TestMPC, LongTrajectoryCurvatureUsesPerPointThreePointFit)
+{
+  constexpr int num_points = 40;
+  constexpr double radius = 10.0;
+  constexpr double arc_length = 3.0;
+  constexpr int smoothing = 15;
+
+  // n=40 with smoothing=15 uses the standard 3-point path (max_smoothing=19 >= 15).
+  const auto traj = makeCircularArcTrajectory(radius, num_points, arc_length);
+  const auto curvature = MPCUtils::calcTrajectoryCurvature(smoothing, traj, false);
+
+  ASSERT_EQ(curvature.size(), static_cast<size_t>(num_points));
+
+  const size_t interior_idx = 20;
+  EXPECT_NEAR(std::abs(curvature.at(interior_idx)), 1.0 / radius, 0.05);
+
+  // Short trajectory on the same arc triggers Taubin fallback and should agree roughly.
+  const auto short_traj = makeCircularArcTrajectory(radius, 20, arc_length);
+  const auto short_curvature = MPCUtils::calcTrajectoryCurvature(smoothing, short_traj, false);
+  EXPECT_NEAR(std::abs(short_curvature.at(0)), std::abs(curvature.at(interior_idx)), 0.05);
 }
 
 TEST(TestMPC, TemporalYawAndCurvatureStayStableForShortSegments)
