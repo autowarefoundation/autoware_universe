@@ -1,0 +1,14 @@
+<launch>
+  <arg name="mode" default="empty"/>
+  <arg name="fixed_color" default="red"/>
+  <arg name="dummy_traffic_light_publisher_param_file" default="$(find-pkg-share autoware_dummy_traffic_light_publisher)/config/dummy_traffic_light_publisher.param.yaml"/>
+
+  <node pkg="autoware_dummy_traffic_light_publisher" exec="autoware_dummy_traffic_light_publisher_node" name="dummy_traffic_light_publisher" output="screen">
+    <param from="$(var dummy_traffic_light_publisher_param_file)"/>
+    <param name="mode" value="$(var mode)"/>
+    <param name="fixed_color" value="$(var fixed_color)"/>
+    <remap from="~/input/vector_map" to="/map/vector_map"/>
+    <remap from="~/input/traffic_signals" to="/simulator/input/traffic_signals"/>
+    <remap from="~/output/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
+  </node>
+</launch>
