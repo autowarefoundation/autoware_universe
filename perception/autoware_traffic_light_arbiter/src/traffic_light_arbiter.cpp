@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
@@ -67,18 +68,20 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
   pub_ = create_publisher<TrafficSignalArray>("~/pub/traffic_signals", rclcpp::QoS(1));
 }
 
-void TrafficLightArbiter::on_map(const LaneletMapBin::ConstSharedPtr msg)
+void TrafficLightArbiter::on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg)
 {
   core_->set_map(autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 }
 
-void TrafficLightArbiter::on_perception_msg(const TrafficSignalArray::ConstSharedPtr msg)
+void TrafficLightArbiter::on_perception_msg(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg)
 {
   log_expired_external_signals(core_->ingest_perception(*msg));
   arbitrate_and_publish(msg->stamp);
 }
 
-void TrafficLightArbiter::on_external_msg(const TrafficSignalArray::ConstSharedPtr msg)
+void TrafficLightArbiter::on_external_msg(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg)
 {
   const auto result = core_->ingest_external(*msg, this->now());
   if (!result.accepted) {
@@ -102,9 +105,10 @@ void TrafficLightArbiter::log_expired_external_signals(
 
 void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp)
 {
-  auto result = core_->arbitrate();
+  auto output_signals_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_);
+  auto result = core_->arbitrate(*output_signals_msg_ptr);
 
-  if (!result.output.has_value()) {
+  if (!result.has_output) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "Received traffic signal messages before a map");
     return;
@@ -118,8 +122,8 @@ void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::T
 
   // Stamp inheritance is the Node's I/O contract with downstream consumers:
   // the published output carries the trigger msg's stamp for time alignment.
-  result.output->stamp = stamp;
-  pub_->publish(*result.output);
+  output_signals_msg_ptr->stamp = stamp;
+  pub_->publish(std::move(output_signals_msg_ptr));
 
   if (rclcpp::Time(stamp) < result.latest_input_time) {
     RCLCPP_WARN_THROTTLE(
