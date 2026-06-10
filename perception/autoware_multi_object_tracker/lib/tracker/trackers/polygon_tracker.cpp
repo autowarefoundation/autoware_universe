@@ -137,6 +137,11 @@ PolygonTracker::PolygonTracker(
     }
     static_motion_model_.initialize(time, object.pose.position.x, object.pose.position.y, pose_cov);
   }
+  // Seed z/orientation into both models (only the active model is used, but both are safe to set).
+  motion_model_.setZ(object.pose.position.z);
+  motion_model_.setOrientation(object.pose.orientation);
+  static_motion_model_.setZ(object.pose.position.z);
+  static_motion_model_.setOrientation(object.pose.orientation);
 }
 
 bool PolygonTracker::predict(const rclcpp::Time & time)
@@ -168,7 +173,8 @@ bool PolygonTracker::updateKinematics(const types::DynamicObject & object)
 
   // Low-pass filter on z position.
   constexpr double gain = 0.1;
-  z_ = (1.0 - gain) * z_ + gain * object.pose.position.z;
+  motion_model_.updateZ(object.pose.position.z, gain);
+  static_motion_model_.updateZ(object.pose.position.z, gain);
 
   return is_updated;
 }
@@ -178,10 +184,12 @@ bool PolygonTracker::measure(
   const types::InputChannel & /*channel_info*/)
 {
   shape_model_.update(object);
-  // x/y come from the motion model on demand; only the residual orientation/z are stored here.
+  // x/y come from the motion model on demand; orientation/z are stored in both motion models.
   // last_pose_ keeps the raw measurement pose used as the publish-time pose.
-  orientation_ = object.pose.orientation;
-  z_ = object.pose.position.z;
+  motion_model_.setOrientation(object.pose.orientation);
+  motion_model_.setZ(object.pose.position.z);
+  static_motion_model_.setOrientation(object.pose.orientation);
+  static_motion_model_.setZ(object.pose.position.z);
   last_pose_ = object.pose;
 
   if (enable_velocity_estimation_) {
@@ -206,10 +214,6 @@ bool PolygonTracker::getMotionState(
   const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
   geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
 {
-  // Neither the CV nor the static motion model estimates yaw or z; supply both residuals here. The
-  // CV model additionally reads pose.orientation to rotate the twist into the object frame.
-  pose.orientation = orientation_;
-  pose.position.z = z_;
   if (enable_velocity_estimation_) {
     return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
   }

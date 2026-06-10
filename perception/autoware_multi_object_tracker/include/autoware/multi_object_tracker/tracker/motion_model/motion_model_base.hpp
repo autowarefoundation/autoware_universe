@@ -20,6 +20,7 @@
 #include <Eigen/Core>
 #include <rclcpp/rclcpp.hpp>
 
+#include <geometry_msgs/msg/quaternion.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -40,7 +41,16 @@ protected:
   // Dimensionality constants (accessible to derived classes)
   static constexpr int DIM = StateSize;
 
+  // Residual kinematic state not estimated by the EKF (all models are 2D in x/y).
+  double z_{0.0};
+  geometry_msgs::msg::Quaternion orientation_;
+
 public:
+  void setZ(double z) noexcept { z_ = z; }
+  void updateZ(double z, double gain) noexcept { z_ = (1.0 - gain) * z_ + gain * z; }
+  void setOrientation(const geometry_msgs::msg::Quaternion & q) noexcept { orientation_ = q; }
+  double getZ() const noexcept { return z_; }
+  const geometry_msgs::msg::Quaternion & getOrientation() const noexcept { return orientation_; }
   // Add these type aliases for convenience
   using KalmanFilter = KalmanFilterTemplate<StateSize, MeasurementSize>;
   using StateVec = typename KalmanFilter::StateVec;

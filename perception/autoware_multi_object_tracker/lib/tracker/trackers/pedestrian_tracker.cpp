@@ -88,6 +88,8 @@ PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::Dyn
     }
 
     motion_model_.initialize(time, x, y, yaw, pose_cov, vel, vel_cov, wz, wz_cov);
+    motion_model_.setZ(object.pose.position.z);
+    committed_yaw_ = yaw;
   }
 }
 
@@ -109,7 +111,7 @@ bool PedestrianTracker::updateKinematics(const types::DynamicObject & object)
 
   // Low-pass filter on z position.
   constexpr double gain = 0.1;
-  z_ = (1.0 - gain) * z_ + gain * object.pose.position.z;
+  motion_model_.updateZ(object.pose.position.z, gain);
 
   return is_updated;
 }
@@ -130,8 +132,8 @@ bool PedestrianTracker::measure(
   updateKinematics(object);
 
   // Use the committed tracker heading (1-frame-stale, refreshed by commitState) for POLYGON-branch
-  // projection — orientation_ preserves the legacy snapshot semantics.
-  const double tracker_yaw = tf2::getYaw(orientation_);
+  // projection — committed_yaw_ preserves the legacy snapshot semantics.
+  const double tracker_yaw = committed_yaw_;
   shape_model_.update(object, channel_info.trust_extension, tracker_yaw);
 
   removeCache();
@@ -142,8 +144,6 @@ bool PedestrianTracker::getMotionState(
   const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
   geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
 {
-  // Motion model is 2D; supply the residual z. Orientation (yaw) is owned by the CTRV model.
-  pose.position.z = z_;
   return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
 }
 

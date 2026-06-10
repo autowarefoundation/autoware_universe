@@ -31,7 +31,6 @@
 #include <autoware_perception_msgs/msg/detected_object.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 #include <geometry_msgs/msg/point.hpp>
-#include <geometry_msgs/msg/quaternion.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <boost/circular_buffer.hpp>
@@ -181,15 +180,6 @@ protected:
   types::ObjectKinematics kinematics_{};  // output metadata flags (orientation_availability, ...)
   bool trust_extension_{false};
 
-  // Residual kinematic state the motion model does NOT estimate (all motion models are 2D in x/y).
-  //   z_:           low-pass-filtered height, maintained in each tracker's kinematic update.
-  //   orientation_: authoritative heading for motion models that do not estimate yaw (cv/static);
-  //                 for yaw-tracking models (bicycle/ctrv) the OUTPUT orientation comes from the
-  //                 motion model and this committed copy is used only as a shape-projection input
-  //                 (see PedestrianTracker), refreshed at commit cadence by commitState().
-  double z_{0.0};
-  geometry_msgs::msg::Quaternion orientation_;
-
   types::TrackerType tracker_type_{types::TrackerType::POLYGON};
 
   // Fill the persistent (non-kinematic, non-shape) fields of `object`. getTrackedObject() overlays
@@ -219,19 +209,9 @@ protected:
       motion_time, object.pose, object.pose_covariance, object.twist, object.twist_covariance);
   }
 
-  // Capture the committed heading for shape-projection consumers. Output kinematics are NOT stored
-  // (the motion model owns them); only orientation_ is snapshotted, at the legacy commit cadence,
-  // so PedestrianTracker's stale-yaw shape projection is preserved — including the standalone-vs-
-  // nested asymmetry (inner trackers of composites never receive commitState()).
-  void commitState(const rclcpp::Time & time)
-  {
-    geometry_msgs::msg::Pose pose;
-    geometry_msgs::msg::Twist twist;
-    std::array<double, 36> pose_cov{};
-    std::array<double, 36> twist_cov{};
-    if (!getMotionState(time, pose, pose_cov, twist, twist_cov)) return;
-    orientation_ = pose.orientation;
-  }
+  // Called after each predict/update cycle. Default is a no-op; concrete trackers that maintain
+  // per-frame snapshots (e.g. PedestrianTracker's committed_yaw_) override this.
+  virtual void commitState(const rclcpp::Time & /*time*/) {}
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {
@@ -285,9 +265,9 @@ public:
     const bool to_publish = false) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
 
-  // Kinematics single source of truth: fill pose/twist/covariances from the motion model at `time`
-  // (overlaying residual z_/orientation_). Excludes shape — the kinematics counterpart to
-  // assembleShapeTo(). Composite trackers forward to the active inner tracker.
+  // Kinematics single source of truth: fill pose/twist/covariances from the motion model at `time`.
+  // Excludes shape — the kinematics counterpart to assembleShapeTo().
+  // Composite trackers forward to the active inner tracker.
   virtual bool getMotionState(
     const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
     geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const = 0;

@@ -61,9 +61,7 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   channel_index_(detected_object.channel_index),
   existence_probability_(detected_object.existence_probability),
   kinematics_(detected_object.kinematics),
-  trust_extension_(detected_object.trust_extension),
-  z_(detected_object.pose.position.z),
-  orientation_(detected_object.pose.orientation)
+  trust_extension_(detected_object.trust_extension)
 {
   // Assign a persistent tracker UUID (separate from measurement UUIDs).
   uuid_ = object_model::generate_uuid();

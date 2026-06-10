@@ -152,7 +152,8 @@ bool StaticMotionModel::getPredictedState(
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  // do not change z
+  pose.position.z = z_;
+  pose.orientation = orientation_;
 
   // set twist
   twist.linear.x = 0.0;

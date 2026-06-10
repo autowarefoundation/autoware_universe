@@ -49,6 +49,8 @@ StaticTracker::StaticTracker(const rclcpp::Time & time, const types::DynamicObje
   }
 
   motion_model_.initialize(time, object.pose.position.x, object.pose.position.y, pose_cov);
+  motion_model_.setZ(object.pose.position.z);
+  motion_model_.setOrientation(object.pose.orientation);
 }
 
 bool StaticTracker::predict(const rclcpp::Time & time)
@@ -69,9 +71,9 @@ bool StaticTracker::measure(
   const types::InputChannel & /*channel_info*/)
 {
   shape_model_.update(object);
-  // x/y come from the motion model on demand; orientation/z are the residuals stored here.
-  orientation_ = object.pose.orientation;
-  z_ = object.pose.position.z;
+  // x/y come from the motion model on demand; orientation/z are stored in the motion model.
+  motion_model_.setOrientation(object.pose.orientation);
+  motion_model_.setZ(object.pose.position.z);
 
   updateKinematics(object);
 
@@ -83,9 +85,6 @@ bool StaticTracker::getMotionState(
   const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
   geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
 {
-  // The static motion model estimates only x/y; orientation and z are residuals supplied here.
-  pose.orientation = orientation_;
-  pose.position.z = z_;
   return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
 }
 

@@ -231,13 +231,14 @@ bool CVMotionModel::getPredictedState(
     return false;
   }
 
-  // get yaw from pose
-  const double yaw = tf2::getYaw(pose.orientation);
-
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  // do not change z
+  pose.position.z = z_;
+  pose.orientation = orientation_;
+
+  // get yaw for twist rotation from own orientation member
+  const double yaw = tf2::getYaw(orientation_);
 
   // set twist
   twist.linear.x = X(IDX::VX) * std::cos(-yaw) - X(IDX::VY) * std::sin(-yaw);

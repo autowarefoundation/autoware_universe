@@ -142,6 +142,7 @@ VehicleTracker::VehicleTracker(
 
     motion_model_.initialize(
       time, x, y, yaw, pose_cov, vel_x, vel_x_cov, vel_y, vel_y_cov, initial_length);
+    motion_model_.setZ(object.pose.position.z);
   }
 }
 
@@ -199,7 +200,7 @@ bool VehicleTracker::updateKinematics(
   // Low-pass filter on z position (2D motion model does not track z).
   {
     constexpr double gain = 0.1;
-    z_ = (1.0 - gain) * z_ + gain * object.pose.position.z;
+    motion_model_.updateZ(object.pose.position.z, gain);
   }
 
   return is_updated;
@@ -221,7 +222,7 @@ bool VehicleTracker::updateWheelKinematics(
   }
   // Wheel-anchor EKF only updates x/y; z position and height are applied here.
   constexpr double z_gain = 0.4;
-  z_ = (1.0 - z_gain) * z_ + z_gain * measurement.pose.position.z;
+  motion_model_.updateZ(measurement.pose.position.z, z_gain);
   shape_model_.updateHeight(measurement.shape.dimensions.z);
   return is_updated;
 }
@@ -265,9 +266,6 @@ bool VehicleTracker::getMotionState(
   const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
   geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
 {
-  // Motion model is 2D; supply the residual z. Orientation is owned by the bicycle model (it
-  // overwrites pose.orientation), so it is not seeded here.
-  pose.position.z = z_;
   return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
 }
 
