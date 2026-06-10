@@ -14,10 +14,13 @@
 
 import launch
 from launch.actions import DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
 from launch.conditions import IfCondition
 from launch.conditions import UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.actions import LoadComposableNodes
 from launch_ros.descriptions import ComposableNode
@@ -49,11 +52,14 @@ def launch_setup(context, *args, **kwargs):
     container = ComposableNodeContainer(
         name="label_based_euclidean_cluster_container",
         namespace=ns,
-        package="rclcpp_components",
-        executable="component_container",
+        package=LaunchConfiguration("container_package"),
+        executable=LaunchConfiguration("container_executable"),
         composable_node_descriptions=[],
         output="screen",
         condition=UnlessCondition(LaunchConfiguration("use_pointcloud_container")),
+        additional_env={
+            "LD_PRELOAD": LaunchConfiguration("ld_preload_value"),
+        },
     )
 
     target_container = (
@@ -74,8 +80,22 @@ def generate_launch_description():
     def add_launch_arg(name: str, default_value=None):
         return DeclareLaunchArgument(name, default_value=default_value)
 
+    # Resolve LD_PRELOAD / container package / container executable based on ENABLE_AGNOCAST.
+    agnocast_env = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("autoware_agnocast_wrapper"),
+                    "launch",
+                    "agnocast_env.launch.py",
+                ]
+            )
+        ),
+    )
+
     return launch.LaunchDescription(
         [
+            agnocast_env,
             add_launch_arg("input_pointcloud", "/perception/ptv3/segmented/pointcloud"),
             add_launch_arg("output_objects", "objects"),
             add_launch_arg("use_pointcloud_container", "false"),

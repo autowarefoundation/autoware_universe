@@ -17,6 +17,7 @@
 #include "autoware/euclidean_cluster/euclidean_cluster_interface.hpp"
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/shape_estimation/shape_estimator.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -60,7 +61,7 @@ private:
     const std::vector<std::pair<std::string, std::string>> & class_mappings);
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) objects_pub_;
 
   std::shared_ptr<EuclideanClusterInterface> cluster_;
   std::unique_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator_;
