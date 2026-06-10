@@ -8,14 +8,16 @@
     # class based priority mode for PriorityMode::ClassBased,
     # The value should be one of 0: Object0, 1: Object1, 2: Confidence
     class_based_priority_matrix:
-    #UNKNOWN, CAR, TRUCK, BUS,  TRAILER, MOTORBIKE, BICYCLE,PEDESTRIAN -> Object0
-      [2,       0,   0,     0,    0,       0,         0,      0,         #UNKNOWN
-       0,       0,   0,     0,    0,       0,         0,      0,         #CAR
-       0,       0,   0,     0,    0,       0,         0,      0,         #TRUCK
-       0,       0,   0,     0,    0,       0,         0,      0,         #BUS
-       0,       0,   0,     0,    0,       0,         0,      0,         #TRAILER
-       0,       0,   0,     0,    0,       0,         1,      1,         #MOTORBIKE
-       0,       0,   0,     0,    0,       0,         0,      1,         #BICYCLE
-       0,       0,   0,     0,    0,       0,         0,      0]         #PEDESTRIAN -> object1
+    #UNKNOWN, CAR, TRUCK, BUS,  TRAILER, MOTORBIKE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD -> Object0
+      [2,       0,   0,     0,    0,       0,         0,       0,          0,      0,      #UNKNOWN
+       0,       0,   0,     0,    0,       0,         0,       0,          0,      0,      #CAR
+       0,       0,   0,     0,    0,       0,         0,       0,          0,      0,      #TRUCK
+       0,       0,   0,     0,    0,       0,         0,       0,          0,      0,      #BUS
+       0,       0,   0,     0,    0,       0,         0,       0,          0,      0,      #TRAILER
+       0,       0,   0,     0,    0,       0,         1,       1,          1,      0,      #MOTORBIKE
+       0,       0,   0,     0,    0,       0,         0,       1,          1,      0,      #BICYCLE
+       0,       0,   0,     0,    0,       0,         0,       0,          1,      0,      #PEDESTRIAN
+       0,       0,   0,     0,    0,       0,         0,       0,          0,      0,      #ANIMAL
+       0,       0,   0,     0,    0,       0,         0,       0,          0,      0]      #HAZARD -> object1
     message_timeout_sec: 1.0
     initialization_timeout_sec: 10.0
