@@ -17,6 +17,7 @@
 
 #include <autoware/agnocast_wrapper/message_filters.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_utils/ros/transform_listener.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -80,7 +81,10 @@ protected:
   // Publisher
   AUTOWARE_PUBLISHER_PTR(ObjsMsgType) pub_objects_ {};
 
-  std::shared_ptr<autoware_utils::WrapperTransformListener> tf_listener_;
+  using TfListener = autoware_utils::TransformListenerT<
+    autoware::agnocast_wrapper::Node, autoware::agnocast_wrapper::Buffer,
+    autoware::agnocast_wrapper::TransformListener>;
+  std::shared_ptr<TfListener> tf_listener_;
 
   // Data Buffer
   std::vector<AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType)> objects_data_{};
