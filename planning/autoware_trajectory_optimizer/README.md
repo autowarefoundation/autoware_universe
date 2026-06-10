@@ -10,6 +10,7 @@ The `autoware_trajectory_optimizer` package generates smooth and feasible trajec
   - Akima spline interpolation for smooth path interpolation
   - QP-based smoother with quadratic programming for path smoothing with jerk constraints
 - **Velocity optimization** - Jerk-filtered velocity smoothing from `autoware_velocity_smoother`
+- **Temporal MPT optimization** - acados MPC (8 s / 0.1 s horizon) on a kinematic bicycle with x, y, yaw, and speed states
 - **Trajectory validation** - Removes invalid points and fixes trajectory orientation
 - **Backward trajectory extension** - Extends trajectory using past ego states
 - **Dynamic parameter reconfiguration** - Runtime parameter updates supported
@@ -40,9 +41,10 @@ plugin_names:
 3. **TrajectoryEBSmootherOptimizer** - Elastic Band path smoothing
 4. **TrajectorySplineSmoother** - Akima spline interpolation
 5. **TrajectoryMPTOptimizer** - Model predictive trajectory optimization with adaptive corridor bounds. Uses bicycle kinematics model for trajectory refinement. Disabled by default (experimental). See [docs/mpt_optimizer.md](docs/mpt_optimizer.md) for details.
-6. **TrajectoryVelocityOptimizer** - Velocity profile optimization with lateral acceleration limits
-7. **TrajectoryExtender** - Extends trajectory backward using past ego states
-8. **TrajectoryKinematicFeasibilityEnforcer** - Enforces Ackermann steering and yaw rate constraints
+6. **TrajectoryTemporalMPTOptimizer** - Temporal acados MPC path tracking on a time-ordered reference (8.0 s horizon, 0.1 s discretization). Must be listed in `plugin_names` and enabled via `use_temporal_mpt_optimizer`. See [docs/temporal_mpt_optimizer.md](docs/temporal_mpt_optimizer.md) for details.
+7. **TrajectoryVelocityOptimizer** - Velocity profile optimization with lateral acceleration limits
+8. **TrajectoryExtender** - Extends trajectory backward using past ego states
+9. **TrajectoryKinematicFeasibilityEnforcer** - Enforces Ackermann steering and yaw rate constraints
 
 Each plugin can be enabled/disabled at runtime via activation flags (e.g., `use_qp_smoother`) and manages its own configuration independently.
 
@@ -53,6 +55,8 @@ Each plugin can be enabled/disabled at runtime via activation flags (e.g., `use_
 - **QP Smoother must run before EB/Akima smoothers**: The QP solver relies on constant time intervals (Δt) between trajectory points (default: 0.1s). Both Elastic Band and Akima spline smoothers resample trajectories without preserving the time domain structure, which breaks the QP solver's assumptions. Therefore, when using multiple smoothers together, the QP smoother must execute first.
 
 - **Trajectory Extender positioning**: The trajectory extender has known discontinuity issues when placed early in the pipeline. It negatively affects the QP solver results and introduces artifacts. For this reason, it has been moved to near the end of the pipeline and is **disabled by default** (`use_trajectory_extender: false`). Fixing the extender's discontinuity issues is future work.
+
+- **Temporal MPT vs spatial MPT**: `TrajectoryTemporalMPTOptimizer` is independent of `TrajectoryMPTOptimizer` (different solver, no corridor bounds). It can replace the entire post-`TrajectoryPointFixer` plugin chain (kinematic enforcer, QP/EB/spline smoothers, velocity optimizer, spatial MPT) with a single MPC step; see [docs/temporal_mpt_optimizer.md](docs/temporal_mpt_optimizer.md). It overwrites at most the first 81 points (8.0 s at 0.1 s spacing).
 
 ## Design Specification
 
@@ -80,6 +84,7 @@ The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory 
 
 ## Dependencies
 
+- [acados](https://github.com/acados/acados) - Required to build the temporal MPT solver (`acados_interface_temporal`)
 - `autoware_motion_utils` - Trajectory manipulation utilities
 - `autoware_osqp_interface` - QP solver interface for QP smoother
 - `autoware_path_smoother` - Elastic Band smoother
@@ -96,7 +101,7 @@ Parameters can be set via YAML configuration files in the `config/` directory.
 ### Parameter Types
 
 1. **Plugin Loading** (`plugin_names`) - Array of plugin class names determining load order and execution sequence
-2. **Activation Flags** - Boolean flags for runtime enable/disable (e.g., `use_qp_smoother`, `use_akima_spline_interpolation`)
+2. **Activation Flags** - Boolean flags for runtime enable/disable (e.g., `use_qp_smoother`, `use_temporal_mpt_optimizer`)
 3. **Plugin-Specific Parameters** - Namespaced parameters for each plugin (e.g., `trajectory_qp_smoother.weight_smoothness`)
 
 ### Configuring Plugin Order
