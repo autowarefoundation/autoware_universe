@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__MULTIPLE_VEHICLE_TRACKER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__MULTIPLE_VEHICLE_TRACKER_HPP_
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/model/vehicle_tracker.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <rclcpp/time.hpp>
 
@@ -53,6 +53,14 @@ public:
   void setOrientationAvailability(
     const types::OrientationAvailability & orientation_availability) override;
   virtual ~MultipleVehicleTracker() {}
+
+  // Same policy as VehicleTracker: bicycle model owns shape; clusters use conditioned update.
+  UpdatePath selectUpdatePath(
+    bool trust_extension, bool has_significant_shape_change) const override
+  {
+    if (!trust_extension) return UpdatePath::CONDITIONED;
+    return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
+  }
 };
 
 }  // namespace autoware::multi_object_tracker

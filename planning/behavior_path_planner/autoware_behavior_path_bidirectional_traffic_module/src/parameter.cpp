@@ -14,7 +14,7 @@
 
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
+#include <autoware_utils_geometry/boost_polygon_utils.hpp>
 
 #include <string>
 #include <string_view>
@@ -44,10 +44,10 @@ EgoParameters::EgoParameters(
 {
 }
 
-[[nodiscard]] autoware::universe_utils::Polygon2d EgoParameters::ego_polygon(
+[[nodiscard]] autoware_utils_geometry::Polygon2d EgoParameters::ego_polygon(
   const geometry_msgs::msg::Pose & ego_pose) const
 {
-  return autoware::universe_utils::toFootprint(
+  return autoware_utils_geometry::to_footprint(
     ego_pose, base_link2front, base_link2rear, vehicle_width);
 }
 

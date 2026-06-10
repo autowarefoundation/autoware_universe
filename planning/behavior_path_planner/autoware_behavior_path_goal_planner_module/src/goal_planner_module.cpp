@@ -1465,6 +1465,14 @@ void GoalPlannerModule::setModifiedGoal(
 void GoalPlannerModule::setTurnSignalInfo(
   const PullOverContextData & context_data, BehaviorModuleOutput & output)
 {
+  if (output.path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000,
+      "setTurnSignalInfo() received empty path. Keeping previous turn signal.");
+    output.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
+    return;
+  }
+
   const auto original_signal = getPreviousModuleOutput().turn_signal_info;
   const auto new_signal = calcTurnSignalInfo(context_data);
   const auto current_seg_idx = planner_data_->findEgoSegmentIndex(output.path.points);
@@ -1478,6 +1486,14 @@ void GoalPlannerModule::setTurnSignalInfoForStopPath(
   const BehaviorModuleOutput & stop_path, const Pose & decel_start_pose,
   const std::optional<Pose> & stop_pose, BehaviorModuleOutput & output)
 {
+  if (stop_path.path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000,
+      "setTurnSignalInfoForStopPath() received empty stop path. Keeping previous turn signal.");
+    output.turn_signal_info = getPreviousModuleOutput().turn_signal_info;
+    return;
+  }
+
   const auto original_signal = getPreviousModuleOutput().turn_signal_info;
   const auto current_seg_idx = planner_data_->findEgoSegmentIndex(stop_path.path.points);
   auto preempt_turn_signal =

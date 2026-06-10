@@ -14,7 +14,7 @@
 
 #include "data_structs.hpp"
 
-#include <autoware/boundary_departure_checker/parameters.hpp>
+#include <autoware/deprecated/boundary_departure_checker/parameters.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 
 #include <string>

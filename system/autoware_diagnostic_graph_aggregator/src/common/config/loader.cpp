@@ -208,7 +208,7 @@ void ConfigLoader::resolve_links()
   for (const auto & node : nodes_) {
     const auto path = node->path();
     if (!path.empty()) {
-      const auto [iter, success] = paths.insert(std::make_pair(path, node.get()));
+      const auto [iter, success] = paths.emplace(path, node.get());
       if (!success) {
         throw PathConflict(path);
       }
@@ -217,7 +217,7 @@ void ConfigLoader::resolve_links()
   for (const auto & link : links_) {
     const auto path = link->path();
     if (!path.empty()) {
-      const auto [iter, success] = paths.insert(std::make_pair(path, link.get()));
+      const auto [iter, success] = paths.emplace(path, link.get());
       if (!success) {
         throw PathConflict(path);
       }

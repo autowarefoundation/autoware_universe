@@ -20,7 +20,7 @@
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 
-#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
+#include <autoware/deprecated/boundary_departure_checker/boundary_departure_checker.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>

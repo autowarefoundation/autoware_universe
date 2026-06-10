@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    mode: "empty"  # "standalone", "empty" or "fixed"
+    publish_rate: 10.0  # Hz
+    green_duration: 30.0  # seconds
+    yellow_duration: 3.0  # seconds
+    red_duration: 30.0  # seconds
+    passthrough_timeout: 1.0  # seconds
+    fixed_color: "red"  # used in "fixed" mode: "green", "yellow" or "red"

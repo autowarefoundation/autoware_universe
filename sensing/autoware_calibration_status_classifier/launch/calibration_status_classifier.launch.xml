@@ -4,7 +4,7 @@
   <arg name="input_angular_velocity" default="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
   <arg name="input_objects" default="/perception/object_recognition/objects"/>
   <arg name="validate_calibration_srv" default="validate_calibration"/>
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
   <arg name="model_name" default="calibration_status_classifier" description="options: `calibration_status_classifier"/>
   <arg name="model_path" default="$(var data_path)/calibration_status_classifier"/>
   <arg name="model_param_path" default="$(find-pkg-share autoware_calibration_status_classifier)/config/$(var model_name).param.yaml"/>

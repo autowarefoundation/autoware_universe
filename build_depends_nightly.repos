@@ -1,4 +1,4 @@
-# Expected usage: first import build_depends_$ROS_DISTRO.repos, then import this.
+# Expected usage: first import build_depends_stable.repos, then import this.
 
 repositories:
   # core
@@ -21,6 +21,10 @@ repositories:
   core/autoware_internal_msgs:
     type: git
     url: https://github.com/autowarefoundation/autoware_internal_msgs.git
+    version: main
+  core/autoware_system_designer:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_system_designer.git
     version: main
   # universe
   universe/external/tier4_autoware_msgs:

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       workflow_run_id_or_url:
-        description: The target workflow run ID or URL of the build-and-test-differential workflow
+        description: The target workflow run ID or URL of the build-test-tidy-pr workflow
         required: true
 
 concurrency:
@@ -13,14 +13,10 @@ concurrency:
 
 jobs:
   clang-tidy-pr-comments-manually:
-    runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        rosdistro: [humble, jazzy]
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Extract workflow run ID
         id: extract-run-id
@@ -29,14 +25,14 @@ jobs:
 
       - name: Download analysis results
         run: |
-          gh run download "${{ steps.extract-run-id.outputs.workflow-run-id }}" -D /tmp -p 'clang-tidy-result-${{ matrix.rosdistro }}*' || true
+          gh run download "${{ steps.extract-run-id.outputs.workflow-run-id }}" -D /tmp -p 'clang-tidy-result-*' || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Find clang-tidy result directory
         id: find-result-dir
         run: |
-          result_dir=$(find /tmp -maxdepth 1 -type d -name 'clang-tidy-result-${{ matrix.rosdistro }}*' | head -1)
+          result_dir=$(find /tmp -maxdepth 1 -type d -name 'clang-tidy-result-*' | head -1)
           echo "result-dir=$result_dir" >> $GITHUB_OUTPUT
         shell: bash
 
@@ -58,7 +54,7 @@ jobs:
 
       - name: Check out PR head
         if: ${{ steps.check-fixes-yaml-existence.outputs.exists == 'true' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ steps.set-variables.outputs.pr-head-repo }}
           ref: ${{ steps.set-variables.outputs.pr-head-ref }}

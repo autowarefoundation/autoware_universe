@@ -2,6 +2,16 @@
 Changelog for package autoware_universe_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* perf(common): use emplace/emplace_back to avoid temporary object creation (`#12238 <https://github.com/mitsudome-r/autoware_universe/issues/12238>`_)
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(autoware_universe_utils): fix test for boost geometry (`#12372 <https://github.com/mitsudome-r/autoware_universe/issues/12372>`_)
+  * fix(autoware_universe_utils): fix test for boost geometry
+* chore(universe_utils): disable convex_hull flaky tests (`#12276 <https://github.com/mitsudome-r/autoware_universe/issues/12276>`_)
+* Contributors: Mamoru Sobue, Ryohsuke Mitsudome, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

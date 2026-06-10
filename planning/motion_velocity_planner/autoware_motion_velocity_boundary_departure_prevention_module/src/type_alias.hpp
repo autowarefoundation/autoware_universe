@@ -15,9 +15,9 @@
 #ifndef TYPE_ALIAS_HPP_
 #define TYPE_ALIAS_HPP_
 
-#include <autoware/boundary_departure_checker/parameters.hpp>
-#include <autoware/boundary_departure_checker/uncrossable_boundary_departure_checker.hpp>
-#include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/deprecated/boundary_departure_checker/parameters.hpp>
+#include <autoware/deprecated/boundary_departure_checker/uncrossable_boundary_checker.hpp>
+#include <autoware/deprecated/boundary_departure_checker/utils.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware/trajectory/trajectory_point.hpp>
 #include <autoware_utils/geometry/geometry.hpp>

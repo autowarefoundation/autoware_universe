@@ -16,9 +16,9 @@
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_TRACKER_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/ctrv_motion_model.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
 {

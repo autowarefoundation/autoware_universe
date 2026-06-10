@@ -15,7 +15,7 @@
 #ifndef DEBUG_HPP_
 #define DEBUG_HPP_
 
-#include "autoware/boundary_departure_checker/debug.hpp"
+#include "autoware/deprecated/boundary_departure_checker/debug.hpp"
 #include "parameters.hpp"
 
 namespace autoware::motion_velocity_planner::experimental::debug

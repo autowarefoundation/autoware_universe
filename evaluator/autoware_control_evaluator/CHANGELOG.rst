@@ -2,6 +2,35 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(control_evaluator): add `uncrossable_boundary_distance_count` metrics (`#12503 <https://github.com/mitsudome-r/autoware_universe/issues/12503>`_)
+  feat(control_evaluator): add
+  tmp
+  fix pre-commit
+  archive
+  fix for archive
+  fix spell-check
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* fix(control_evaluator): enable recording uncrossable_boundary_distance (`#12468 <https://github.com/mitsudome-r/autoware_universe/issues/12468>`_)
+  * enable recording uncrossable_boundary_distance
+  * feat(build_depends_stable.repos): minor update autowarefoundation/autoware_cmake to 1.2.0 (`#12466 <https://github.com/mitsudome-r/autoware_universe/issues/12466>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+  ---------
+  Co-authored-by: awf-autoware-bot[bot] <94889083+awf-autoware-bot[bot]@users.noreply.github.com>
+  Co-authored-by: github-actions <github-actions@github.com>
+* chore(localization, evaluator): remove unused lanelet2_extension header (`#12297 <https://github.com/mitsudome-r/autoware_universe/issues/12297>`_)
+  * unused lanelet2_extension in localization component
+  * unused lanelet2_extension in evaluator component
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - evaluator component  (`#12086 <https://github.com/mitsudome-r/autoware_universe/issues/12086>`_)
+  replace getArcCoordinates in evaluator component
+* Contributors: Kazunori-Nakajima, Kem (TiankuiXian), Sarun MUKDAPITAK, Zulfaqar Azmi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

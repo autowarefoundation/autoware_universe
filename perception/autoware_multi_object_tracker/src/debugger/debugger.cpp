@@ -205,7 +205,7 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::determineOverallTimingStatus
   return {message, max_level};
 }
 
-// Time measurement functions
+//// Time measurement functions
 void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   // Check initialization status
@@ -306,7 +306,7 @@ void TrackerDebugger::collectObjectInfo(
   object_debugger_.collect(message_time, list_tracker, associated_objects);
 }
 
-// ObjectDebugger
+//// ObjectDebugger
 void TrackerDebugger::publishObjectsMarkers()
 {
   if (!debug_settings_.publish_debug_markers) return;

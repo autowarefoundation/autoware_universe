@@ -8,6 +8,5 @@
     max_detection_range: 200.0
     min_timestamp_offset: -0.3
     max_timestamp_offset: 0.0
-    timestamp_sample_len: 0.02
     car_traffic_light_max_angle_range: 40.0
     pedestrian_traffic_light_max_angle_range: 80.0

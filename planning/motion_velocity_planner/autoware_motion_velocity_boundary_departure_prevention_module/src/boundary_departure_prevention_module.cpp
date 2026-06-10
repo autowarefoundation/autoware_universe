@@ -18,9 +18,9 @@
 #include "slow_down_interpolator.hpp"
 #include "utils.hpp"
 
-#include <autoware/boundary_departure_checker/data_structs.hpp>
-#include <autoware/boundary_departure_checker/parameters.hpp>
-#include <autoware/boundary_departure_checker/utils.hpp>
+#include <autoware/deprecated/boundary_departure_checker/data_structs.hpp>
+#include <autoware/deprecated/boundary_departure_checker/parameters.hpp>
+#include <autoware/deprecated/boundary_departure_checker/utils.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>

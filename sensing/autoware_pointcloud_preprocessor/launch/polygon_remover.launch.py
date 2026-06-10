@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-from ament_index_python.packages import get_package_share_directory
 import launch
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 from launch_ros.parameter_descriptions import ParameterFile
+from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
     ns = "pointcloud_preprocessor"
     pkg = "autoware_pointcloud_preprocessor"
 
-    param_file = os.path.join(
-        get_package_share_directory("autoware_vehicle_info_utils"), "config/polygon_remover.yaml"
+    param_file = PathJoinSubstitution(
+        [FindPackageShare("autoware_vehicle_info_utils"), "config", "polygon_remover.yaml"]
     )
 
     my_component = ComposableNode(

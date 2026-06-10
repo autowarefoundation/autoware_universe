@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_motion_velocity_boundary_departure_prevention_module</name>
-  <version>0.50.0</version>
+  <version>0.51.0</version>
   <description>boundary departure prevention feature in motion_velocity_planner</description>
 
   <maintainer email="zulfaqar.azmi@tier4.jp">Zulfaqar Azmi</maintainer>
@@ -15,7 +15,7 @@
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
-  <depend>autoware_boundary_departure_checker</depend>
+  <depend>autoware_deprecated_boundary_departure_checker</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_motion_velocity_planner_common</depend>
   <depend>autoware_trajectory</depend>

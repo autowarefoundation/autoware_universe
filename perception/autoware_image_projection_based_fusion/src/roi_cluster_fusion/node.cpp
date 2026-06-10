@@ -53,6 +53,8 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   iou_threshold_.PEDESTRIAN = declare_parameter<double>("iou_threshold.PEDESTRIAN");
   iou_threshold_.TRUCK = declare_parameter<double>("iou_threshold.TRUCK");
   iou_threshold_.UNKNOWN = declare_parameter<double>("iou_threshold.UNKNOWN");
+  iou_threshold_.ANIMAL = declare_parameter<double>("iou_threshold.ANIMAL");
+  iou_threshold_.HAZARD = declare_parameter<double>("iou_threshold.HAZARD");
 
   remove_unknown_ = declare_parameter<bool>("remove_unknown");
   fusion_distance_ = declare_parameter<double>("fusion_distance");
@@ -80,7 +82,15 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
       auto ros2_msg = std::make_shared<const ClusterMsgType>(*msg);
       this->sub_callback(ros2_msg);
     },
-    AUTOWARE_SUBSCRIPTION_OPTIONS{});
+    [this]() {
+      AUTOWARE_SUBSCRIPTION_OPTIONS opts;
+      // Use a dedicated callback group because this subscription may run as an agnocast
+      // subscription, which should be separated from other callbacks. This would not cause
+      // any issue after migrating to agnocast::Node, but is planned to be removed then.
+      opts.callback_group =
+        this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+      return opts;
+    }());
 
   // publisher
   // TODO(Koichi98): replace pub_ptr_ in FusionNode with agnocast_wrapper

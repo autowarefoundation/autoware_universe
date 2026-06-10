@@ -2,6 +2,20 @@
 Changelog for package autoware_behavior_velocity_detection_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(behavior_velocity_planner): remove unused lanelet2_extension header (`#12293 <https://github.com/mitsudome-r/autoware_universe/issues/12293>`_)
+  unused lanelet2_extension in bvp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(autoware_trajectory): define set stopline in Trajectory class (`#12008 <https://github.com/mitsudome-r/autoware_universe/issues/12008>`_)
+  * replace usage with set_stopline function
+  * replace additiona usage with set_stopline function
+  ---------
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12141 <https://github.com/mitsudome-r/autoware_universe/issues/12141>`_)
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
