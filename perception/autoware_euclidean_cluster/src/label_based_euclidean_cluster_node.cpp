@@ -351,10 +351,57 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   const auto max_voxel_cluster_for_output =
     static_cast<int>(autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(
       *this, "max_voxel_cluster_for_output"));
-  cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
+  default_cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
     max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
+
+  // Build per-label cluster overrides from label_cluster_params.<label_name>.* parameters.
+  // Any omitted sub-key falls back to the global default above.
+  {
+    using OC = autoware_perception_msgs::msg::ObjectClassification;
+    static const std::vector<std::pair<std::string, std::uint8_t>> kLabels = {
+      {"unknown", OC::UNKNOWN},   {"car", OC::CAR},         {"bus", OC::BUS},
+      {"truck", OC::TRUCK},       {"motorcycle", OC::MOTORCYCLE}, {"bicycle", OC::BICYCLE},
+      {"pedestrian", OC::PEDESTRIAN}, {"animal", OC::ANIMAL}, {"trailer", OC::TRAILER},
+      {"hazard", OC::HAZARD},
+    };
+
+    for (const auto & [label_name, label] : kLabels) {
+      const std::string prefix = "label_cluster_params." + label_name + ".";
+      auto has = [&](const std::string & key) { return this->has_parameter(prefix + key); };
+      // Skip labels with no overrides at all
+      if (!has("tolerance") && !has("min_cluster_size") && !has("max_cluster_size") &&
+          !has("use_height") && !has("voxel_leaf_size") && !has("min_points_number_per_voxel") &&
+          !has("min_voxel_cluster_size_for_filtering") &&
+          !has("max_points_per_voxel_in_large_cluster") && !has("max_voxel_cluster_for_output")) {
+        continue;
+      }
+
+      auto get_bool = [&](const std::string & key, bool def) -> bool {
+        return has(key) ? this->get_parameter(prefix + key).as_bool() : def;
+      };
+      auto get_int = [&](const std::string & key, int def) -> int {
+        return has(key) ? static_cast<int>(this->get_parameter(prefix + key).as_int()) : def;
+      };
+      auto get_float = [&](const std::string & key, float def) -> float {
+        return has(key) ? static_cast<float>(this->get_parameter(prefix + key).as_double()) : def;
+      };
+
+      label_clusterers_[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
+        get_bool("use_height", use_height),
+        get_int("min_cluster_size", min_cluster_size),
+        get_int("max_cluster_size", max_cluster_size),
+        get_float("tolerance", tolerance),
+        get_float("voxel_leaf_size", voxel_leaf_size),
+        get_int("min_points_number_per_voxel", min_points_number_per_voxel),
+        get_int("min_voxel_cluster_size_for_filtering", min_voxel_cluster_size_for_filtering),
+        get_int("max_points_per_voxel_in_large_cluster", max_points_per_voxel_in_large_cluster),
+        get_int("max_voxel_cluster_for_output", max_voxel_cluster_for_output));
+
+      RCLCPP_INFO(get_logger(), "Using custom cluster params for label '%s'", label_name.c_str());
+    }
+  }
 
   {
     // Initialize the shape estimator
@@ -380,6 +427,13 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   debug_publisher_ = std::make_unique<autoware_utils::DebugPublisher>(this, "~/debug");
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
+}
+
+EuclideanClusterInterface & LabelBasedEuclideanClusterNode::get_clusterer(
+  const std::uint8_t label) const
+{
+  const auto it = label_clusterers_.find(label);
+  return (it != label_clusterers_.end()) ? *it->second : *default_cluster_;
 }
 
 bool LabelBasedEuclideanClusterNode::update_target_label_map(
@@ -436,7 +490,7 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
     }
 
     std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters;
-    cluster_->cluster(label_cloud, clusters);
+    get_clusterer(label).cluster(label_cloud, clusters);
 
     // TODO(ktro2828): This probability is averaged per segmented label bucket before clustering,
     // not per individual cluster. Consider to refine the probability assignment to reflect

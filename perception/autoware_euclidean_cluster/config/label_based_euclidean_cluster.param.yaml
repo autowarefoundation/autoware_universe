@@ -10,6 +10,32 @@
     min_voxel_cluster_size_for_filtering: 10
     max_points_per_voxel_in_large_cluster: 100
     max_voxel_cluster_for_output: 1000
+    # Per-label clustering parameter overrides.
+    # Any omitted key falls back to the global default above.
+    # Tuning guide:
+    #   tolerance         — merge distance between voxels; smaller = finer separation
+    #   voxel_leaf_size   — down-sample resolution; smaller = more detail for compact objects
+    #   min/max_cluster_size — raw-point bounds (post reconstruction)
+    #   max_voxel_cluster_for_output — voxel-count hard cap; clusters above this are dropped
+    label_cluster_params:
+      pedestrian:
+        tolerance: 0.3                          # tight — avoid merging adjacent pedestrians
+        voxel_leaf_size: 0.1                    # finer voxels for compact bodies
+        min_cluster_size: 3
+        max_cluster_size: 400
+        min_points_number_per_voxel: 1
+        min_voxel_cluster_size_for_filtering: 5
+        max_points_per_voxel_in_large_cluster: 30
+        max_voxel_cluster_for_output: 200
+      bicycle:
+        tolerance: 0.4
+        voxel_leaf_size: 0.15
+        min_cluster_size: 5
+        max_cluster_size: 600
+        min_points_number_per_voxel: 1
+        min_voxel_cluster_size_for_filtering: 5
+        max_points_per_voxel_in_large_cluster: 50
+        max_voxel_cluster_for_output: 300
 
     # Point filtering by semantic confidence
     min_probability: 0.3
