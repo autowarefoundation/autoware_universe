@@ -361,9 +361,15 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   {
     using OC = autoware_perception_msgs::msg::ObjectClassification;
     static const std::vector<std::pair<std::string, std::uint8_t>> kLabels = {
-      {"unknown", OC::UNKNOWN},   {"car", OC::CAR},         {"bus", OC::BUS},
-      {"truck", OC::TRUCK},       {"motorcycle", OC::MOTORCYCLE}, {"bicycle", OC::BICYCLE},
-      {"pedestrian", OC::PEDESTRIAN}, {"animal", OC::ANIMAL}, {"trailer", OC::TRAILER},
+      {"unknown", OC::UNKNOWN},
+      {"car", OC::CAR},
+      {"bus", OC::BUS},
+      {"truck", OC::TRUCK},
+      {"motorcycle", OC::MOTORCYCLE},
+      {"bicycle", OC::BICYCLE},
+      {"pedestrian", OC::PEDESTRIAN},
+      {"animal", OC::ANIMAL},
+      {"trailer", OC::TRAILER},
       {"hazard", OC::HAZARD},
     };
 
@@ -371,10 +377,11 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       const std::string prefix = "label_cluster_params." + label_name + ".";
       auto has = [&](const std::string & key) { return this->has_parameter(prefix + key); };
       // Skip labels with no overrides at all
-      if (!has("tolerance") && !has("min_cluster_size") && !has("max_cluster_size") &&
-          !has("use_height") && !has("voxel_leaf_size") && !has("min_points_number_per_voxel") &&
-          !has("min_voxel_cluster_size_for_filtering") &&
-          !has("max_points_per_voxel_in_large_cluster") && !has("max_voxel_cluster_for_output")) {
+      if (
+        !has("tolerance") && !has("min_cluster_size") && !has("max_cluster_size") &&
+        !has("use_height") && !has("voxel_leaf_size") && !has("min_points_number_per_voxel") &&
+        !has("min_voxel_cluster_size_for_filtering") &&
+        !has("max_points_per_voxel_in_large_cluster") && !has("max_voxel_cluster_for_output")) {
         continue;
       }
 
@@ -389,10 +396,8 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       };
 
       label_clusterers_[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
-        get_bool("use_height", use_height),
-        get_int("min_cluster_size", min_cluster_size),
-        get_int("max_cluster_size", max_cluster_size),
-        get_float("tolerance", tolerance),
+        get_bool("use_height", use_height), get_int("min_cluster_size", min_cluster_size),
+        get_int("max_cluster_size", max_cluster_size), get_float("tolerance", tolerance),
         get_float("voxel_leaf_size", voxel_leaf_size),
         get_int("min_points_number_per_voxel", min_points_number_per_voxel),
         get_int("min_voxel_cluster_size_for_filtering", min_voxel_cluster_size_for_filtering),

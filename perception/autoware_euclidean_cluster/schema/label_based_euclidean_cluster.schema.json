@@ -120,16 +120,16 @@
           "type": "object",
           "description": "Optional per-label overrides. Keys are label names (car, truck, bus, trailer, motorcycle, bicycle, pedestrian, animal, hazard, unknown).",
           "properties": {
-            "unknown":    { "$ref": "#/definitions/cluster_override_params" },
-            "car":        { "$ref": "#/definitions/cluster_override_params" },
-            "bus":        { "$ref": "#/definitions/cluster_override_params" },
-            "truck":      { "$ref": "#/definitions/cluster_override_params" },
-            "trailer":    { "$ref": "#/definitions/cluster_override_params" },
+            "unknown": { "$ref": "#/definitions/cluster_override_params" },
+            "car": { "$ref": "#/definitions/cluster_override_params" },
+            "bus": { "$ref": "#/definitions/cluster_override_params" },
+            "truck": { "$ref": "#/definitions/cluster_override_params" },
+            "trailer": { "$ref": "#/definitions/cluster_override_params" },
             "motorcycle": { "$ref": "#/definitions/cluster_override_params" },
-            "bicycle":    { "$ref": "#/definitions/cluster_override_params" },
+            "bicycle": { "$ref": "#/definitions/cluster_override_params" },
             "pedestrian": { "$ref": "#/definitions/cluster_override_params" },
-            "animal":     { "$ref": "#/definitions/cluster_override_params" },
-            "hazard":     { "$ref": "#/definitions/cluster_override_params" }
+            "animal": { "$ref": "#/definitions/cluster_override_params" },
+            "hazard": { "$ref": "#/definitions/cluster_override_params" }
           },
           "additionalProperties": false
         }
