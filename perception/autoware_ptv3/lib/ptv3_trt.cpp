@@ -504,11 +504,13 @@ bool PTv3TRT::inference()
     return false;
   }
 
-  seg3d_head_trt_ptr_->setInputShape(
-    "point_feat", nvinfer1::Dims{2, {num_voxels_, config_.backbone_feat_dim_}});
-  if (!seg3d_head_trt_ptr_->enqueueV3(stream_)) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue seg3d head and skip to detect.");
-    return false;
+  if (seg3d_head_trt_ptr_) {
+    seg3d_head_trt_ptr_->setInputShape(
+      "point_feat", nvinfer1::Dims{2, {num_voxels_, config_.backbone_feat_dim_}});
+    if (!seg3d_head_trt_ptr_->enqueueV3(stream_)) {
+      RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue seg3d head and skip to detect.");
+      return false;
+    }
   }
 
   return true;
