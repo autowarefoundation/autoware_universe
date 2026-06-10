@@ -53,7 +53,7 @@ TrackerType parseTrackerType(const std::string & name, const std::string & param
 }  // namespace
 
 MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
-: rclcpp::Node("multi_object_tracker", node_options)
+: autoware::agnocast_wrapper::Node("multi_object_tracker", node_options)
 {
   ////// Get parameters
   params_.publish_rate = declare_parameter<double>("publish_rate");  // [hz]
@@ -266,13 +266,12 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     oss << "~/input/detection" << std::setfill('0') << std::setw(2) << (index + 1) << "/objects";
     std::string input_channel_topic = oss.str();
 
-    std::function<void(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)>
-      func = std::bind(
-        &MultiObjectTracker::onMeasurement, this, input_channel.index, std::placeholders::_1);
-
     sub_objects_array_.at(index) =
       create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
-        input_channel_topic, rclcpp::QoS{1}, func);
+        input_channel_topic, rclcpp::QoS{1},
+        [this,
+         index](AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects)
+                  msg) { this->onMeasurement(index, std::move(msg)); });
   }
 
   // publishers
@@ -288,7 +287,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   if (params_.enable_delay_compensation) {
     constexpr double timer_multiplier = 10.0;  // 10 times frequent for publish timing check
     const auto timer_period = rclcpp::Rate(params_.publish_rate * timer_multiplier).period();
-    publish_timer_ = rclcpp::create_timer(
+    publish_timer_ = autoware::agnocast_wrapper::create_timer(
       this, get_clock(), timer_period, std::bind(&MultiObjectTracker::onTimer, this));
   }
 
@@ -296,7 +295,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   debugger_ = std::make_unique<TrackerDebugger>(
     get_logger(), get_clock(), params_.world_frame_id, params_.input_channels_config);
   debugger_->init(*this);
-  published_time_publisher_ = std::make_unique<autoware_utils_debug::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(this);
 
   if (params_.publish_processing_time_detail) {
     detailed_processing_time_publisher_ =
@@ -310,7 +310,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
 void MultiObjectTracker::onMeasurement(
   const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
