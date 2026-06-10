@@ -100,8 +100,7 @@ void expect_float_vectors_equal(
 }
 
 template <ReductionType REDUCE>
-void run_segment_csr_case(
-  const SegmentCsrCase & test_case, const std::vector<float> & reference)
+void run_segment_csr_case(const SegmentCsrCase & test_case, const std::vector<float> & reference)
 {
   SKIP_TEST_IF_CUDA_UNAVAILABLE();
 
@@ -162,25 +161,25 @@ INSTANTIATE_TEST_SUITE_P(
       "NonEmptySegments",
       6U,
       2U,
-      {1.0F, 2.0F, 3.0F, 4.0F,  5.0F,  6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F},
+      {1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F},
       {0, 2, 5, 6}},
     SegmentCsrCase{
       "EmptyMiddleSegment",
       6U,
       2U,
-      {1.0F, 2.0F, 3.0F, 4.0F,  5.0F,  6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F},
+      {1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F},
       {0, 2, 2, 5, 6}},
     SegmentCsrCase{
       "EmptyBoundarySegments",
       6U,
       2U,
-      {1.0F, 2.0F, 3.0F, 4.0F,  5.0F,  6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F},
+      {1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F},
       {0, 0, 3, 6, 6}},
     SegmentCsrCase{
       "NoSegmentsWithRows",
       6U,
       2U,
-      {1.0F, 2.0F, 3.0F, 4.0F,  5.0F,  6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F},
+      {1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F},
       {0}},
     SegmentCsrCase{"EmptyInputNoSegments", 0U, 2U, {}, {0}},
     SegmentCsrCase{"EmptyInputEmptySegments", 0U, 2U, {}, {0, 0, 0}},
