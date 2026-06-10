@@ -16,7 +16,6 @@
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKER_HPP_
 
 #include "model/multiple_vehicle_tracker.hpp"
-#include "model/pass_through_tracker.hpp"
 #include "model/pedestrian_and_bicycle_tracker.hpp"
 #include "model/pedestrian_tracker.hpp"
 #include "model/polygon_tracker.hpp"

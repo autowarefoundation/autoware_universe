@@ -1,15 +1,5 @@
 /**:
   ros__parameters:
-    # initial tracker models for each class
-    initial_tracker:
-      car: "multi_vehicle_tracker"
-      truck: "multi_vehicle_tracker"
-      bus: "multi_vehicle_tracker"
-      trailer: "multi_vehicle_tracker"
-      pedestrian: "pedestrian_and_bicycle_tracker"
-      bicycle: "pedestrian_and_bicycle_tracker"
-      motorcycle: "pedestrian_and_bicycle_tracker"
-
     # default tracker node parameters
     publish_rate: 10.0
     world_frame_id: map
@@ -34,6 +24,8 @@
       motorcycle: -0.1
       bicycle: -0.1
       pedestrian: -0.1
+      animal: -0.1
+      hazard: -0.1
     pruning_distance_thresholds:
       unknown: 9.0
       car: 5.0
@@ -43,6 +35,8 @@
       motorcycle: 4.0
       bicycle: 3.0
       pedestrian: 2.0
+      animal: 2.0
+      hazard: 2.0
     pruning_static_object_speed: 1.38  # [m/s]
     pruning_moving_object_speed: 5.5   # [m/s]
     pruning_static_iou_threshold: 0.0  # [ratio]
