@@ -24,6 +24,9 @@ if(BUILD_TESTING AND NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
   ament_auto_add_gtest(${PROJECT_NAME}_characteristic_test
     test/test_traffic_arbiter_characteristic.cpp
   )
+  ament_auto_add_gtest(${PROJECT_NAME}_core_test
+    test/test_traffic_light_arbiter_core.cpp
+  )
 endif()
 
 autoware_ament_auto_package(INSTALL_TO_SHARE launch config)
