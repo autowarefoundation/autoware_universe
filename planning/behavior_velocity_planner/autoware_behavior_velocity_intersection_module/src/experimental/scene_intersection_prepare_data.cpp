@@ -180,8 +180,11 @@ std::optional<double> IntersectionModule::getStopLineIndexFromMap(
   const auto extended_stopline = planning_utils::extendSegmentToBounds(
     {p_start.basicPoint2d(), p_end.basicPoint2d()}, left_bound, right_bound);
 
-  const auto intersections = autoware::experimental::trajectory::crossed(
-    path, extended_stopline, lane_id_interval.start, lane_id_interval.end);
+  auto cropped_path = path;
+  cropped_path.crop(lane_id_interval.start, lane_id_interval.end);
+
+  const auto intersections =
+    autoware::experimental::trajectory::crossed(cropped_path, extended_stopline);
   if (!intersections.empty()) {
     return intersections.front();
   }
