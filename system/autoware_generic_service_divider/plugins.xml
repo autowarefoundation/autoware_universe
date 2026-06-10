@@ -1,0 +1,26 @@
+<library path="autoware_generic_service_divider_plugins">
+  <class type="generic_service_divider::ChangeOperationModeDivider"
+         base_class_type="generic_service_divider::ServiceDividerPluginBase">
+    <description>Divider plugin for autoware_system_msgs/srv/ChangeOperationMode</description>
+  </class>
+  <class type="generic_service_divider::ChangeAutowareControlDivider"
+         base_class_type="generic_service_divider::ServiceDividerPluginBase">
+    <description>Divider plugin for autoware_system_msgs/srv/ChangeAutowareControl</description>
+  </class>
+  <class type="generic_service_divider::ResetDiagGraphDivider"
+         base_class_type="generic_service_divider::ServiceDividerPluginBase">
+    <description>Divider plugin for tier4_system_msgs/srv/ResetDiagGraph</description>
+  </class>
+  <class type="generic_service_divider::ResetRedundancySwitcherDivider"
+         base_class_type="generic_service_divider::ServiceDividerPluginBase">
+    <description>Divider plugin for tier4_system_msgs/srv/ResetRedundancySwitcher</description>
+  </class>
+  <class type="generic_service_divider::SetAggregatorInitializingDivider"
+         base_class_type="generic_service_divider::ServiceDividerPluginBase">
+    <description>Divider plugin for std_srvs/srv/SetBool (aggregator initializing)</description>
+  </class>
+  <class type="generic_service_divider::SetRedundancySwitcherInterfaceInitializingDivider"
+         base_class_type="generic_service_divider::ServiceDividerPluginBase">
+    <description>Divider plugin for std_srvs/srv/SetBool (redundancy switcher interface initializing)</description>
+  </class>
+</library>
