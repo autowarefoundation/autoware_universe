@@ -366,9 +366,10 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
 }
 
 void VehicleTracker::mergeFootprintFrom(
-  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose)
+  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+  const geometry_msgs::msg::Pose & dst_pose)
 {
-  shape_model_.mergeFrom(footprint, src_pose, object_.pose, getLatestMeasurementTime());
+  shape_model_.mergeFrom(footprint, src_pose, dst_pose, getLatestMeasurementTime());
 }
 
 }  // namespace autoware::multi_object_tracker

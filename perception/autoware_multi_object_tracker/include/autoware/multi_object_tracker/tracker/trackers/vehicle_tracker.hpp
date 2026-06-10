@@ -75,7 +75,8 @@ public:
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
   void mergeFootprintFrom(
     const geometry_msgs::msg::Polygon & footprint,
-    const geometry_msgs::msg::Pose & src_pose) override;
+    const geometry_msgs::msg::Pose & src_pose,
+    const geometry_msgs::msg::Pose & dst_pose) override;
 
   // Clusters (trust_extension=false) have unreliable bbox orientation — always use conditioned.
   UpdatePath selectUpdatePath(

@@ -101,7 +101,8 @@ public:
   }
   virtual void mergeFootprintFrom(
     const geometry_msgs::msg::Polygon & /*footprint*/,
-    const geometry_msgs::msg::Pose & /*src_pose*/)
+    const geometry_msgs::msg::Pose & /*src_pose*/,
+    const geometry_msgs::msg::Pose & /*dst_pose*/)
   {
   }
 
