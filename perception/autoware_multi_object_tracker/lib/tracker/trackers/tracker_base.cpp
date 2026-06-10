@@ -237,9 +237,6 @@ bool Tracker::updateWithMeasurement(
       object, predicted_object, predicted_object.shape, measurement_time, channel_info);
   }
 
-  // Commit the updated state (pose/twist/covariances/kinematics at measurement_time).
-  commitState(measurement_time);
-
   return true;
 }
 
@@ -256,9 +253,6 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
     }
     total_existence_probability_ = decayProbability(total_existence_probability_, delta_time);
   }
-
-  // Commit the predicted state (pose/twist/covariances/kinematics at timestamp).
-  commitState(timestamp);
 
   return true;
 }

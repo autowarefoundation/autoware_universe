@@ -89,7 +89,6 @@ PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::Dyn
 
     motion_model_.initialize(time, x, y, yaw, pose_cov, vel, vel_cov, wz, wz_cov);
     motion_model_.setZ(object.pose.position.z);
-    committed_yaw_ = yaw;
   }
 }
 
@@ -131,10 +130,7 @@ bool PedestrianTracker::measure(
 
   updateKinematics(object);
 
-  // Use the committed tracker heading (1-frame-stale, refreshed by commitState) for POLYGON-branch
-  // projection.
-  const double tracker_yaw = committed_yaw_;
-  shape_model_.update(object, channel_info.trust_extension, tracker_yaw);
+  shape_model_.update(object, channel_info.trust_extension, motion_model_.getYawState());
 
   removeCache();
   return true;

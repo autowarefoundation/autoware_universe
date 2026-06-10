@@ -156,26 +156,20 @@ bool PolygonTracker::predict(const rclcpp::Time & time)
 bool PolygonTracker::updateKinematics(const types::DynamicObject & object)
 {
   bool is_updated = true;
+  constexpr double z_gain = 0.1;
 
   if (enable_velocity_estimation_) {
     const double x = object.pose.position.x;
     const double y = object.pose.position.y;
-
     is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
     motion_model_.limitStates();
-
+    motion_model_.updateZ(object.pose.position.z, z_gain);
   } else {
     const double x = object.pose.position.x;
     const double y = object.pose.position.y;
-
     is_updated = static_motion_model_.updateStatePose(x, y, object.pose_covariance);
+    static_motion_model_.updateZ(object.pose.position.z, z_gain);
   }
-
-  // Low-pass filter on z position.
-  constexpr double gain = 0.1;
-  motion_model_.updateZ(object.pose.position.z, gain);
-  static_motion_model_.updateZ(object.pose.position.z, gain);
-
   return is_updated;
 }
 
@@ -186,10 +180,9 @@ bool PolygonTracker::measure(
   shape_model_.update(object);
   // x/y come from the motion model on demand; orientation/z are stored in both motion models.
   // last_pose_ keeps the raw measurement pose used as the publish-time pose.
+  // z is updated via the low-pass filter in updateKinematics(); do not hard-set here.
   motion_model_.setOrientation(object.pose.orientation);
-  motion_model_.setZ(object.pose.position.z);
   static_motion_model_.setOrientation(object.pose.orientation);
-  static_motion_model_.setZ(object.pose.position.z);
   last_pose_ = object.pose;
 
   if (enable_velocity_estimation_) {

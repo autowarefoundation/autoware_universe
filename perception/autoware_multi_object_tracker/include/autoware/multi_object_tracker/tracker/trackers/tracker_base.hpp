@@ -209,10 +209,6 @@ protected:
       motion_time, object.pose, object.pose_covariance, object.twist, object.twist_covariance);
   }
 
-  // Called after each predict/update cycle. Default is a no-op; concrete trackers that maintain
-  // per-frame snapshots (e.g. PedestrianTracker's committed_yaw_) override this.
-  virtual void commitState(const rclcpp::Time & /*time*/) {}
-
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {
     cached_time_ = time;

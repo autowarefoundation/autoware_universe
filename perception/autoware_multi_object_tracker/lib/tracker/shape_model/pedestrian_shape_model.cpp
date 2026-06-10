@@ -89,6 +89,7 @@ bool PedestrianShapeModel::update(
   } else if (object.shape.type == Shape::CYLINDER) {
     const double diameter = std::max(object.shape.dimensions.x, object.shape.dimensions.y);
     if (diameter > wid_max || diameter < wid_min) return false;
+    if (object.shape.dimensions.z > hgt_max || object.shape.dimensions.z < hgt_min) return false;
     const double gain = trust_extension ? 0.5 : 0.0;
     const double gain_inv = 1.0 - gain;
     length_ = gain_inv * length_ + gain * diameter;
@@ -124,7 +125,7 @@ bool PedestrianShapeModel::update(
 
 void PedestrianShapeModel::exportTo(types::DynamicObject & output) const
 {
-  const double asymmetry = std::abs(length_ - width_) / std::max(length_, width_ + 1e-6);
+  const double asymmetry = std::abs(length_ - width_) / std::max({length_, width_, 1e-6});
 
   if (asymmetry < 0.15) {
     // Nearly circular → CYLINDER

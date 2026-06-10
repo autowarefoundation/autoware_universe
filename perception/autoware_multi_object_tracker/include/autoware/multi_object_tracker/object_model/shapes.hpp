@@ -60,7 +60,8 @@ geometry_msgs::msg::Polygon transformFootprint(
   const geometry_msgs::msg::Pose & dst_pose);
 
 // Compute the polygon union of two footprints already expressed in the same local frame.
-// Returns the exterior ring of the largest union component (handles disjoint case gracefully).
+// Returns the exterior ring of the union polygon, or the convex hull of all vertices when
+// the inputs are disjoint.
 geometry_msgs::msg::Polygon unionFootprints(
   const geometry_msgs::msg::Polygon & a, const geometry_msgs::msg::Polygon & b);
 

@@ -37,10 +37,6 @@ private:
 
   PedestrianShapeModel shape_model_;
 
-  // 1-frame-stale yaw snapshot used for POLYGON-branch shape projection in measure().
-  // Refreshed by commitState() after each predict/update cycle.
-  double committed_yaw_{0.0};
-
   bool updateKinematics(const types::DynamicObject & object);
 
 public:
@@ -53,11 +49,6 @@ public:
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
-
-  void commitState(const rclcpp::Time & /*time*/) override
-  {
-    committed_yaw_ = motion_model_.getYawState();
-  }
 
   bool getMotionState(
     const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,

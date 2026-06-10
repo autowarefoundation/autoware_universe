@@ -77,7 +77,6 @@ public:
     pedestrian_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
     bicycle_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
   }
-
   virtual ~PedestrianAndBicycleTracker() {}
 
 private:

@@ -74,18 +74,7 @@ void MultipleVehicleTracker::mergeFootprintFrom(
 bool MultipleVehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  const auto label = getHighestProbLabel();
-
-  if (label == classes::Label::CAR) {
-    normal_vehicle_tracker_.getTrackedObject(time, object, to_publish);
-  } else if (
-    label == classes::Label::BUS || label == classes::Label::TRUCK ||
-    label == classes::Label::TRAILER) {
-    big_vehicle_tracker_.getTrackedObject(time, object, to_publish);
-  } else {
-    // If the label is others, use the normal vehicle tracker as a fallback
-    normal_vehicle_tracker_.getTrackedObject(time, object, to_publish);
-  }
+  activeInner().getTrackedObject(time, object, to_publish);
   object.uuid = uuid_;
   return true;
 }

@@ -43,7 +43,11 @@ protected:
 
   // Residual kinematic state not estimated by the EKF (all models are 2D in x/y).
   double z_{0.0};
-  geometry_msgs::msg::Quaternion orientation_;
+  geometry_msgs::msg::Quaternion orientation_{[] {
+    geometry_msgs::msg::Quaternion q;
+    q.w = 1.0;
+    return q;
+  }()};
 
 public:
   void setZ(double z) noexcept { z_ = z; }
