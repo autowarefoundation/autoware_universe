@@ -79,6 +79,7 @@ TrajectoryGate::TrajectoryGate(const rclcpp::NodeOptions & options)
 void TrajectoryGate::publish_source() const
 {
   TrajectorySourceStatus msg;
+  msg.stamp = now();
   msg.source = selector_.source();
   pub_source_->publish(msg);
 }
