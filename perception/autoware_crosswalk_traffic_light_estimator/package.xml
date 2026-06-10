@@ -22,6 +22,7 @@
   <depend>autoware_map_msgs</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_debug</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tier4_perception_msgs</depend>
