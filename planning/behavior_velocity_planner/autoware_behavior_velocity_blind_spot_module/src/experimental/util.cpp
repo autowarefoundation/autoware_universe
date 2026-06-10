@@ -297,7 +297,7 @@ std::optional<StopLinePositions> generate_stop_points(
   const autoware_utils::LinearRing2d & footprint, const double ego_length, const double ego_s,
   const lanelet::ConstLanelet & intersection_lanelet,
   const lanelet::ConstLineString3d & virtual_ego_straight_path_after_turning,
-  const double braking_distance, const double critical_stop_line_margin, Trajectory & path)
+  const double braking_distance, const double critical_stopline_margin, Trajectory & path)
 {
   StopLinePositions stop_line_positions;
 
@@ -358,7 +358,7 @@ std::optional<StopLinePositions> generate_stop_points(
     if (intersect_line) {
       if (s > second_start) {
         // subtract this position by the margin
-        stop_line_positions.critical_s = std::max(0., s - critical_stop_line_margin);
+        stop_line_positions.critical_s = std::max(0., s - critical_stopline_margin);
         critical_stop_line_found = true;
       }
       break;

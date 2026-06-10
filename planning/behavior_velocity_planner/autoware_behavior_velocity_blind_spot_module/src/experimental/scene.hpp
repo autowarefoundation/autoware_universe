@@ -165,7 +165,7 @@ private:
   std::vector<UnsafeObject> collect_unsafe_objects(
     const std::vector<autoware_perception_msgs::msg::PredictedObject> & attention_objects,
     const lanelet::ConstLanelet & ego_path_polygon,
-    const TimeInterval & ego_passage_time_interval) const;
+    const TimeInterval & ego_passage_interval) const;
 
   /**
    * @brief filter objects whose position is inside the attention_area and whose type is target type
