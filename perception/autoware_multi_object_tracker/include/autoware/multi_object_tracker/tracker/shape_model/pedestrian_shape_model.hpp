@@ -54,9 +54,7 @@ public:
   void exportTo(types::DynamicObject & output) const;
 
 private:
-  double length_{0.0};
-  double width_{0.0};
-  double height_{0.0};
+  // length_, width_, height_, area_ live in ShapeModelBase.
   object_model::ObjectModel object_model_;
 
   void clampToLimits();

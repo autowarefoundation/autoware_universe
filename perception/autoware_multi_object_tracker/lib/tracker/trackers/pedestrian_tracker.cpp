@@ -109,7 +109,7 @@ bool PedestrianTracker::updateKinematics(const types::DynamicObject & object)
 
   // Low-pass filter on z position.
   constexpr double gain = 0.1;
-  object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
+  pose_.position.z = (1.0 - gain) * pose_.position.z + gain * object.pose.position.z;
 
   return is_updated;
 }
@@ -130,7 +130,7 @@ bool PedestrianTracker::measure(
   updateKinematics(object);
 
   // Use current tracker heading for POLYGON branch projection
-  const double tracker_yaw = tf2::getYaw(object_.pose.orientation);
+  const double tracker_yaw = tf2::getYaw(pose_.orientation);
   shape_model_.update(object, channel_info.trust_extension, tracker_yaw);
 
   removeCache();
@@ -141,7 +141,7 @@ bool PedestrianTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
   if (!getCachedObject(time, object)) {
-    object = object_;
+    populatePersistentFields(object);
     object.time = time;
 
     auto & pose = object.pose;
@@ -157,7 +157,7 @@ bool PedestrianTracker::getTrackedObject(
   }
 
   // Export shape from extend manager (type selection: CYLINDER vs BOUNDING_BOX)
-  shape_model_.exportTo(object);
+  assembleShapeTo(object, to_publish);
 
   if (to_publish) {
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;

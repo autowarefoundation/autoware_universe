@@ -69,7 +69,7 @@ bool StaticTracker::measure(
   const types::InputChannel & /*channel_info*/)
 {
   shape_model_.update(object);
-  object_.pose = object.pose;
+  pose_ = object.pose;
 
   updateKinematics(object);
 
@@ -87,7 +87,7 @@ bool StaticTracker::getTrackedObject(
     time_object = time.seconds() > last_measurement_time.seconds() ? last_measurement_time : time;
   }
 
-  object = object_;
+  populatePersistentFields(object);
   object.time = time;
   object.kinematics.is_stationary = true;
 
@@ -97,7 +97,7 @@ bool StaticTracker::getTrackedObject(
     return false;
   }
 
-  shape_model_.exportTo(object, to_publish);
+  assembleShapeTo(object, to_publish);
 
   return true;
 }

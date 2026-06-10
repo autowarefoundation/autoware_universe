@@ -49,6 +49,13 @@ public:
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
+
+  ShapeModelBase & getShapeModel() override { return shape_model_; }
+  const ShapeModelBase & getShapeModel() const override { return shape_model_; }
+  void assembleShapeTo(types::DynamicObject & output, bool /*to_publish*/) const override
+  {
+    shape_model_.exportTo(output);
+  }
 };
 
 }  // namespace autoware::multi_object_tracker

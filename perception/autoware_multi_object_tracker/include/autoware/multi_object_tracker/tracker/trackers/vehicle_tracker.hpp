@@ -72,11 +72,13 @@ public:
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
 
+  ShapeModelBase & getShapeModel() override { return shape_model_; }
+  const ShapeModelBase & getShapeModel() const override { return shape_model_; }
+  void assembleShapeTo(types::DynamicObject & output, bool to_publish) const override;
+
+  // Overridden because the committed shape also drives the motion-model length (and anchor).
+  // mergeFootprintFrom() is handled by the base via getShapeModel().mergeFrom().
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
-  void mergeFootprintFrom(
-    const geometry_msgs::msg::Polygon & footprint,
-    const geometry_msgs::msg::Pose & src_pose,
-    const geometry_msgs::msg::Pose & dst_pose) override;
 
   // Clusters (trust_extension=false) have unreliable bbox orientation — always use conditioned.
   UpdatePath selectUpdatePath(

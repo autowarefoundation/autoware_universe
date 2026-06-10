@@ -24,7 +24,7 @@ namespace autoware::multi_object_tracker
 {
 
 // Passthrough shape manager for PolygonTracker.
-// Stores the latest shape verbatim and exports it unchanged.
+// Stores the latest shape (decomposed into the base fields) and exports it unchanged.
 class PolygonShapeModel : public ShapeModelBase
 {
 public:
@@ -38,9 +38,6 @@ public:
 
   // Write stored shape to output
   void exportTo(types::DynamicObject & output) const;
-
-private:
-  autoware_perception_msgs::msg::Shape shape_;
 };
 
 }  // namespace autoware::multi_object_tracker

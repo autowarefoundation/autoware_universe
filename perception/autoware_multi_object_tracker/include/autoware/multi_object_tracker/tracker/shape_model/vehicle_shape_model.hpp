@@ -69,7 +69,7 @@ public:
   // (caller should sync motion model length with the returned value).
   std::optional<double> setShape(
     const autoware_perception_msgs::msg::Shape & shape,
-    const rclcpp::Time & latest_measurement_time);
+    const rclcpp::Time & latest_measurement_time) override;
 
   // Union polygon footprint from an absorbed tracker.
   // footprint: absorbed tracker's stored footprint, expressed relative to src_pose.
@@ -77,7 +77,8 @@ public:
   // winner_pose: this tracker's current pose (transform target).
   void mergeFrom(
     const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
-    const geometry_msgs::msg::Pose & winner_pose, const rclcpp::Time & latest_measurement_time);
+    const geometry_msgs::msg::Pose & winner_pose,
+    const rclcpp::Time & latest_measurement_time) override;
 
   // Write {x=vehicle_length, y=width, z=height, footprint} into output.shape.
   // Also updates output.area. vehicle_length comes from BicycleMotionModel::getLength().
@@ -86,13 +87,8 @@ public:
   // Flip all footprint points 180° around tracker center (yaw-limit correction)
   void flipFootprintXY();
 
-  bool isFootprintValid() const { return footprint_valid_; }
-
 private:
-  double width_{0.0};
-  double height_{0.0};
-  geometry_msgs::msg::Polygon footprint_;
-  bool footprint_valid_{false};
+  // width_, height_, footprint_, footprint_valid_, area_ live in ShapeModelBase.
   rclcpp::Time last_footprint_update_time_;
 
   static constexpr double FOOTPRINT_TIMEOUT_S = 1.0;  // [s] footprint expiry

@@ -30,6 +30,28 @@ private:
   VehicleTracker normal_vehicle_tracker_;
   VehicleTracker big_vehicle_tracker_;
 
+  // Inner tracker that backs the published object for the current highest-prob label.
+  VehicleTracker & activeInner()
+  {
+    const auto label = getHighestProbLabel();
+    if (
+      label == classes::Label::BUS || label == classes::Label::TRUCK ||
+      label == classes::Label::TRAILER) {
+      return big_vehicle_tracker_;
+    }
+    return normal_vehicle_tracker_;
+  }
+  const VehicleTracker & activeInner() const
+  {
+    const auto label = getHighestProbLabel();
+    if (
+      label == classes::Label::BUS || label == classes::Label::TRUCK ||
+      label == classes::Label::TRAILER) {
+      return big_vehicle_tracker_;
+    }
+    return normal_vehicle_tracker_;
+  }
+
 public:
   MultipleVehicleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
@@ -55,6 +77,17 @@ public:
     const bool to_publish = false) const override;
   void setOrientationAvailability(
     const types::OrientationAvailability & orientation_availability) override;
+
+  // Returns the active inner tracker's shape model, selected by the current highest-prob label
+  // (same policy as getTrackedObject). setObjectShape()/mergeFootprintFrom() are overridden
+  // separately to forward to BOTH inner trackers.
+  ShapeModelBase & getShapeModel() override { return activeInner().getShapeModel(); }
+  const ShapeModelBase & getShapeModel() const override { return activeInner().getShapeModel(); }
+  void assembleShapeTo(types::DynamicObject & output, bool to_publish) const override
+  {
+    activeInner().assembleShapeTo(output, to_publish);
+  }
+
   virtual ~MultipleVehicleTracker() {}
 
   // Same policy as VehicleTracker: bicycle model owns shape; clusters use conditioned update.

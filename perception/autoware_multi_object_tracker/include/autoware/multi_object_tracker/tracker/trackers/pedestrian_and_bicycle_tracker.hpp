@@ -46,7 +46,43 @@ public:
     const bool to_publish = false) const override;
   void setOrientationAvailability(
     const types::OrientationAvailability & orientation_availability) override;
+
+  // Composite tracker: both inner trackers are kept in sync by measure(), so shape writes forward
+  // to BOTH. getShapeModel() returns the active inner (selected by label, same as
+  // getTrackedObject).
+  ShapeModelBase & getShapeModel() override { return activeInner().getShapeModel(); }
+  const ShapeModelBase & getShapeModel() const override { return activeInner().getShapeModel(); }
+  void assembleShapeTo(types::DynamicObject & output, bool to_publish) const override
+  {
+    activeInner().assembleShapeTo(output, to_publish);
+  }
+  void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override
+  {
+    pedestrian_tracker_.setObjectShape(shape);
+    bicycle_tracker_.setObjectShape(shape);
+  }
+  void mergeFootprintFrom(
+    const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+    const geometry_msgs::msg::Pose & dst_pose) override
+  {
+    pedestrian_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
+    bicycle_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
+  }
+
   virtual ~PedestrianAndBicycleTracker() {}
+
+private:
+  // Inner tracker that backs the published object for the current highest-prob label.
+  Tracker & activeInner()
+  {
+    if (getHighestProbLabel() == classes::Label::PEDESTRIAN) return pedestrian_tracker_;
+    return bicycle_tracker_;
+  }
+  const Tracker & activeInner() const
+  {
+    if (getHighestProbLabel() == classes::Label::PEDESTRIAN) return pedestrian_tracker_;
+    return bicycle_tracker_;
+  }
 };
 
 }  // namespace autoware::multi_object_tracker

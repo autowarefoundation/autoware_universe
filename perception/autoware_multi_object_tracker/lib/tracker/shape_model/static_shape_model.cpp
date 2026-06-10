@@ -26,8 +26,14 @@ void StaticShapeModel::init(const types::DynamicObject & object)
 
 void StaticShapeModel::update(const types::DynamicObject & object)
 {
-  shape_ = object.shape;
-  area_ = types::getArea(shape_);
+  const auto & shape = object.shape;
+  shape_type_ = shape.type;
+  length_ = shape.dimensions.x;
+  width_ = shape.dimensions.y;
+  height_ = shape.dimensions.z;
+  footprint_ = shape.footprint;
+  footprint_valid_ = !shape.footprint.points.empty();
+  area_ = types::getArea(shape);
 }
 
 void StaticShapeModel::setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos)
@@ -37,10 +43,10 @@ void StaticShapeModel::setEgoPose(const std::optional<geometry_msgs::msg::Point>
 
 void StaticShapeModel::exportTo(types::DynamicObject & output, bool to_publish) const
 {
-  output.shape = shape_;
+  output.shape = assembleShapeMsg();
   output.area = area_;
 
-  if (to_publish && shape_.type == autoware_perception_msgs::msg::Shape::POLYGON) {
+  if (to_publish && shape_type_ == autoware_perception_msgs::msg::Shape::POLYGON) {
     types::DynamicObject converted;
     if (shapes::convertConvexHullToBoundingBox(output, converted, ego_pos_)) {
       output.shape = converted.shape;

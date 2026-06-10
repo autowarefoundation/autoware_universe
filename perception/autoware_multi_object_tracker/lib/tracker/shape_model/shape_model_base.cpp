@@ -12,19 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/shape_model/polygon_shape_model.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/shape_model_base.hpp"
+
+#include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
 {
 
-void PolygonShapeModel::init(const types::DynamicObject & object)
+std::optional<double> ShapeModelBase::setShape(
+  const autoware_perception_msgs::msg::Shape & shape, const rclcpp::Time & /*time*/)
 {
-  update(object);
-}
-
-void PolygonShapeModel::update(const types::DynamicObject & object)
-{
-  const auto & shape = object.shape;
   shape_type_ = shape.type;
   length_ = shape.dimensions.x;
   width_ = shape.dimensions.y;
@@ -32,12 +29,18 @@ void PolygonShapeModel::update(const types::DynamicObject & object)
   footprint_ = shape.footprint;
   footprint_valid_ = !shape.footprint.points.empty();
   area_ = types::getArea(shape);
+  return std::nullopt;
 }
 
-void PolygonShapeModel::exportTo(types::DynamicObject & output) const
+autoware_perception_msgs::msg::Shape ShapeModelBase::assembleShapeMsg() const
 {
-  output.shape = assembleShapeMsg();
-  output.area = area_;
+  autoware_perception_msgs::msg::Shape shape;
+  shape.type = shape_type_;
+  shape.dimensions.x = length_;
+  shape.dimensions.y = width_;
+  shape.dimensions.z = height_;
+  shape.footprint = footprint_;
+  return shape;
 }
 
 }  // namespace autoware::multi_object_tracker

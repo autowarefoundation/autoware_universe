@@ -86,7 +86,7 @@ bool MultipleVehicleTracker::getTrackedObject(
     // If the label is others, use the normal vehicle tracker as a fallback
     normal_vehicle_tracker_.getTrackedObject(time, object, to_publish);
   }
-  object.uuid = object_.uuid;
+  object.uuid = uuid_;
   return true;
 }
 

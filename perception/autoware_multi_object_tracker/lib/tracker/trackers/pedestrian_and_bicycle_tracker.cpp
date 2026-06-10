@@ -55,7 +55,7 @@ bool PedestrianAndBicycleTracker::getTrackedObject(
     // If the label is others, use the bicycle tracker as a fallback
     bicycle_tracker_.getTrackedObject(time, object, to_publish);
   }
-  object.uuid = object_.uuid;
+  object.uuid = uuid_;
   return true;
 }
 

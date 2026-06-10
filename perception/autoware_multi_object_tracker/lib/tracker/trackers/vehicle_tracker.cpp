@@ -199,8 +199,7 @@ bool VehicleTracker::updateKinematics(
   // Low-pass filter on z position (2D motion model does not track z).
   {
     constexpr double gain = 0.1;
-    object_.pose.position.z =
-      (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
+    pose_.position.z = (1.0 - gain) * pose_.position.z + gain * object.pose.position.z;
   }
 
   return is_updated;
@@ -222,8 +221,7 @@ bool VehicleTracker::updateWheelKinematics(
   }
   // Wheel-anchor EKF only updates x/y; z position and height are applied here.
   constexpr double z_gain = 0.4;
-  object_.pose.position.z =
-    (1.0 - z_gain) * object_.pose.position.z + z_gain * measurement.pose.position.z;
+  pose_.position.z = (1.0 - z_gain) * pose_.position.z + z_gain * measurement.pose.position.z;
   shape_model_.updateHeight(measurement.shape.dimensions.z);
   return is_updated;
 }
@@ -267,7 +265,7 @@ bool VehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
   if (!getCachedObject(time, object)) {
-    object = object_;
+    populatePersistentFields(object);
     object.time = time;
 
     auto & pose = object.pose;
@@ -282,7 +280,7 @@ bool VehicleTracker::getTrackedObject(
     updateCache(object, time);
   }
   // Compose bbox dimensions and stored footprint into the output object.
-  shape_model_.exportTo(object, motion_model_.getLength());
+  assembleShapeTo(object, to_publish);
 
   if (to_publish) {
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
@@ -356,6 +354,12 @@ bool VehicleTracker::conditionedUpdate(
   return is_updated;
 }
 
+void VehicleTracker::assembleShapeTo(types::DynamicObject & output, bool /*to_publish*/) const
+{
+  // Vehicle length is owned by the motion model and supplied at export time.
+  shape_model_.exportTo(output, motion_model_.getLength());
+}
+
 void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape & shape)
 {
   const auto new_len = shape_model_.setShape(shape, getLatestMeasurementTime());
@@ -363,13 +367,6 @@ void VehicleTracker::setObjectShape(const autoware_perception_msgs::msg::Shape &
     motion_model_.updateStateLength(*new_len, shape_update_anchor_);
   }
   shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
-}
-
-void VehicleTracker::mergeFootprintFrom(
-  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
-  const geometry_msgs::msg::Pose & dst_pose)
-{
-  shape_model_.mergeFrom(footprint, src_pose, dst_pose, getLatestMeasurementTime());
 }
 
 }  // namespace autoware::multi_object_tracker

@@ -41,7 +41,7 @@ public:
   void update(const types::DynamicObject & object);
 
   // Update ego position for polygon-to-bbox conversion
-  void setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos);
+  void setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos) override;
 
   // Write shape to output.
   // When to_publish is true and shape is POLYGON, convert to minimum-area BOUNDING_BOX if
@@ -49,7 +49,7 @@ public:
   void exportTo(types::DynamicObject & output, bool to_publish) const;
 
 private:
-  autoware_perception_msgs::msg::Shape shape_;
+  // shape_type_, dimensions, footprint_, area_ live in ShapeModelBase.
   std::optional<geometry_msgs::msg::Point> ego_pos_;
 };
 

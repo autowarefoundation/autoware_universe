@@ -38,10 +38,7 @@ private:
 public:
   StaticTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
-  void setEgoPose(const std::optional<geometry_msgs::msg::Point> & pos) override
-  {
-    shape_model_.setEgoPose(pos);
-  }
+  // setEgoPose() is handled by the base via getShapeModel().setEgoPose().
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
@@ -50,6 +47,13 @@ public:
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
+
+  ShapeModelBase & getShapeModel() override { return shape_model_; }
+  const ShapeModelBase & getShapeModel() const override { return shape_model_; }
+  void assembleShapeTo(types::DynamicObject & output, bool to_publish) const override
+  {
+    shape_model_.exportTo(output, to_publish);
+  }
 };
 
 }  // namespace autoware::multi_object_tracker

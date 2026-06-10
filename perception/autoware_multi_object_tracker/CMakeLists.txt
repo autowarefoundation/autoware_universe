@@ -67,6 +67,7 @@ set(${PROJECT_NAME}_lib
   lib/uncertainty/uncertainty_processor.cpp
   lib/association/adaptive_threshold_cache.cpp
   lib/tracker/shape_model/unstable_shape_filter.cpp
+  lib/tracker/shape_model/shape_model_base.cpp
   lib/tracker/shape_model/vehicle_shape_model.cpp
   lib/tracker/shape_model/pedestrian_shape_model.cpp
   lib/tracker/shape_model/polygon_shape_model.cpp

@@ -168,7 +168,7 @@ bool PolygonTracker::updateKinematics(const types::DynamicObject & object)
 
   // Low-pass filter on z position.
   constexpr double gain = 0.1;
-  object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
+  pose_.position.z = (1.0 - gain) * pose_.position.z + gain * object.pose.position.z;
 
   return is_updated;
 }
@@ -178,7 +178,7 @@ bool PolygonTracker::measure(
   const types::InputChannel & /*channel_info*/)
 {
   shape_model_.update(object);
-  object_.pose = object.pose;
+  pose_ = object.pose;
   last_pose_ = object.pose;
 
   if (enable_velocity_estimation_) {
@@ -211,7 +211,7 @@ bool PolygonTracker::getTrackedObject(
   }
   // else, allow extrapolation
 
-  object = object_;
+  populatePersistentFields(object);
   object.time = time;
 
   if (enable_velocity_estimation_) {
@@ -230,7 +230,7 @@ bool PolygonTracker::getTrackedObject(
     }
   }
 
-  shape_model_.exportTo(object);
+  assembleShapeTo(object, to_publish);
 
   if (to_publish) {
     object.pose = last_pose_;
