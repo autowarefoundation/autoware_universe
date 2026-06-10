@@ -230,7 +230,8 @@ void TrackerOverlapManager::merge(
         }
         // If the absorbed tracker carries polygon footprint data, union it into the winner.
         if (data2.object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
-          data1.tracker->mergeFootprintFrom(data2.object.shape.footprint, data2.object.pose, data1.object.pose);
+          data1.tracker->mergeFootprintFrom(
+            data2.object.shape.footprint, data2.object.pose, data1.object.pose);
         }
 
         data2.is_valid = false;
