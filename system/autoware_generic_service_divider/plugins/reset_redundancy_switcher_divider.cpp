@@ -61,8 +61,7 @@ public:
   bool is_response_success(const void * response) const override
   {
     const auto * r =
-      static_cast<const tier4_system_msgs::srv::ResetRedundancySwitcher::Response *>(
-        response);
+      static_cast<const tier4_system_msgs::srv::ResetRedundancySwitcher::Response *>(response);
     return r->status.success;
   }
 
