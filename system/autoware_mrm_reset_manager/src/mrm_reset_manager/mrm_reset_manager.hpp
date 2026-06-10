@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_MRM_RESET_MANAGER__MRM_RESET_MANAGER_HPP_
-#define AUTOWARE_MRM_RESET_MANAGER__MRM_RESET_MANAGER_HPP_
+#ifndef MRM_RESET_MANAGER__MRM_RESET_MANAGER_HPP_
+#define MRM_RESET_MANAGER__MRM_RESET_MANAGER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -54,8 +54,7 @@ private:
   };
 
   void on_reset_mrm(
-    const ResetMrm::Request::SharedPtr request,
-    ResetMrm::Response::SharedPtr response);
+    const ResetMrm::Request::SharedPtr request, ResetMrm::Response::SharedPtr response);
   void advance_init_state();
   void apply_ready_state();
 
@@ -65,10 +64,8 @@ private:
   bool call_reset_redundancy_switcher();
   bool call_reset_diag_graph(std::string & message);
   bool call_set_bool(
-    const rclcpp::Client<SetBool>::SharedPtr & client,
-    const SetBool::Request::SharedPtr & request,
-    const char * label,
-    std::string & message);
+    const rclcpp::Client<SetBool>::SharedPtr & client, const SetBool::Request::SharedPtr & request,
+    const char * label, std::string & message);
 
   bool is_autoware_ready() const;
   bool is_initializing() const;
@@ -79,7 +76,8 @@ private:
 
   rclcpp::CallbackGroup::SharedPtr service_callback_group_;
   rclcpp::CallbackGroup::SharedPtr cli_set_aggregator_initializing_callback_group_;
-  rclcpp::CallbackGroup::SharedPtr cli_set_redundancy_switcher_interface_initializing_callback_group_;
+  rclcpp::CallbackGroup::SharedPtr
+    cli_set_redundancy_switcher_interface_initializing_callback_group_;
   rclcpp::CallbackGroup::SharedPtr cli_reset_redundancy_switcher_callback_group_;
   rclcpp::CallbackGroup::SharedPtr cli_reset_diag_graph_callback_group_;
 
@@ -108,4 +106,4 @@ private:
 
 }  // namespace autoware::mrm_reset_manager
 
-#endif  // AUTOWARE_MRM_RESET_MANAGER__MRM_RESET_MANAGER_HPP_
+#endif  // MRM_RESET_MANAGER__MRM_RESET_MANAGER_HPP_
