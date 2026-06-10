@@ -5,10 +5,13 @@
   <arg name="output/object" default="out_objects"/>
   <arg name="filtering_range_param" default="$(find-pkg-share autoware_detected_object_validation)/config/tracked_object_lanelet_filter.param.yaml"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_detected_object_validation" exec="tracked_object_lanelet_filter_node" name="tracked_object_lanelet_filter" output="screen">
     <remap from="input/vector_map" to="$(var vector_map_topic)"/>
     <remap from="input/object" to="$(var input/object)"/>
     <remap from="output/object" to="$(var output/object)"/>
     <param from="$(var filtering_range_param)"/>
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
   </node>
 </launch>
