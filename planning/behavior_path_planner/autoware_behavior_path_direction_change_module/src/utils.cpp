@@ -186,7 +186,8 @@ void snapPathEndToGoal(PathWithLaneId * path, const geometry_msgs::msg::Pose & g
 } */
 }  // namespace
 
-std::vector<size_t> getCuspPointIndices(const PathWithLaneId & path, const double angle_threshold_deg)
+std::vector<size_t> getCuspPointIndices(
+  const PathWithLaneId & path, const double angle_threshold_deg)
 {
   std::vector<size_t> cusp_indices;
   if (path.points.size() < 2) {
@@ -229,16 +230,15 @@ std::vector<CuspPoint> detectCuspPointsFromPath(
   return cusp_points;
 }
 
-bool isSameCuspPoint(
-  const CuspPoint & a, const CuspPoint & b, const double position_threshold_m)
+bool isSameCuspPoint(const CuspPoint & a, const CuspPoint & b, const double position_threshold_m)
 {
   return autoware_utils::calc_distance2d(a.pose.position, b.pose.position) < position_threshold_m;
 }
 
 void mergeNewCuspPointsAheadOfEgo(
-  std::vector<CuspPoint> & tracked_cusp_points,
-  const std::vector<CuspPoint> & detected_cusp_points, const PathWithLaneId & path,
-  const geometry_msgs::msg::Pose & ego_pose, const double dedup_distance_m)
+  std::vector<CuspPoint> & tracked_cusp_points, const std::vector<CuspPoint> & detected_cusp_points,
+  const PathWithLaneId & path, const geometry_msgs::msg::Pose & ego_pose,
+  const double dedup_distance_m)
 {
   if (detected_cusp_points.empty()) {
     return;
@@ -271,8 +271,7 @@ double calcDistanceAlongPathToPose(
     return std::numeric_limits<double>::max();
   }
 
-  const auto ego_idx_opt =
-    autoware::motion_utils::findNearestIndex(path.points, ego_pose);
+  const auto ego_idx_opt = autoware::motion_utils::findNearestIndex(path.points, ego_pose);
   const size_t target_idx =
     autoware::motion_utils::findNearestIndex(path.points, target_pose.position);
   if (!ego_idx_opt) {
@@ -280,8 +279,7 @@ double calcDistanceAlongPathToPose(
   }
 
   if (target_idx >= *ego_idx_opt) {
-    return autoware::motion_utils::calcSignedArcLength(
-      path.points, *ego_idx_opt, target_idx);
+    return autoware::motion_utils::calcSignedArcLength(path.points, *ego_idx_opt, target_idx);
   }
 
   return autoware_utils::calc_distance2d(ego_pose.position, target_pose.position);
@@ -329,8 +327,12 @@ PathWithLaneId getReferencePathFromDirectionChangeLanelets(
   out = raw_path;
   out.header = route_handler->getRouteHeader();
 
-  std::cout << "[Debug2 DirectionChangeModule] getReferencePathFromDirectionChangeLanelets: out.points.size(): " << out.points.size() << std::endl;
-  std::cout << "[Debug2 DirectionChangeModule] getReferencePathFromDirectionChangeLanelets: lanelets: " << lanelet_sequence << std::endl;
+  std::cout << "[Debug2 DirectionChangeModule] getReferencePathFromDirectionChangeLanelets: "
+               "out.points.size(): "
+            << out.points.size() << std::endl;
+  std::cout
+    << "[Debug2 DirectionChangeModule] getReferencePathFromDirectionChangeLanelets: lanelets: "
+    << lanelet_sequence << std::endl;
 
   try {
     const auto goal_pose = route_handler->getGoalPose();
@@ -450,8 +452,7 @@ double calcDistanceToPathEnd(const PathWithLaneId & path, const geometry_msgs::m
 
 namespace
 {
-void flipPathPointYawByPi(
-  autoware_internal_planning_msgs::msg::PathPointWithLaneId & point)
+void flipPathPointYawByPi(autoware_internal_planning_msgs::msg::PathPointWithLaneId & point)
 {
   double yaw = tf2::getYaw(point.point.pose.orientation);
   yaw = autoware_utils::normalize_radian(yaw + M_PI);

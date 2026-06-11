@@ -40,7 +40,8 @@ struct DirectionChangeParameters
   double cusp_detection_angle_threshold_deg;
 
   // State transition parameters
-  double cusp_detection_distance_start_approaching;  // [m] Distance to zero terminal velocity at cusp
+  double
+    cusp_detection_distance_start_approaching;  // [m] Distance to zero terminal velocity at cusp
   double stop_velocity_threshold;  // [m/s] Velocity threshold to determine vehicle has stopped
   double th_stopped_time;  // [s] Duration velocity must stay below stop_velocity_threshold before
                            // direction switch at cusp

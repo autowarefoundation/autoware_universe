@@ -40,7 +40,8 @@ using autoware_internal_planning_msgs::msg::PathWithLaneId;
 /**
  * @brief Detects cusp points in the path where direction changes occur (legacy geometric fallback).
  */
-std::vector<size_t> getCuspPointIndices(const PathWithLaneId & path, const double angle_threshold_deg);
+std::vector<size_t> getCuspPointIndices(
+  const PathWithLaneId & path, const double angle_threshold_deg);
 
 /**
  * @brief Detect cusp poses (x, y, orientation) from yaw discontinuities on @p path.
@@ -51,8 +52,7 @@ std::vector<CuspPoint> detectCuspPointsFromPath(
 /**
  * @brief True when two cusp poses refer to the same transition point.
  */
-bool isSameCuspPoint(
-  const CuspPoint & a, const CuspPoint & b, const double position_threshold_m);
+bool isSameCuspPoint(const CuspPoint & a, const CuspPoint & b, const double position_threshold_m);
 
 /**
  * @brief Append newly visible cusp poses ahead of ego; skip duplicates already tracked.

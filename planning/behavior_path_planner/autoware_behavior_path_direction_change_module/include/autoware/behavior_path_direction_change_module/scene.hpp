@@ -119,7 +119,8 @@ private:
   /// Initialize maneuver direction from ego pose and reference path.
   void initializeManeuverState();
 
-  /// Update state machine from ego pose, maneuver direction, and distance to next cusp (or path end).
+  /// Update state machine from ego pose, maneuver direction, and distance to next cusp (or path
+  /// end).
   void updateManeuverStateMachine(const PathWithLaneId & reference_path);
 
   /// Detect new cusp poses on the current reference path and append to the tracked list.
@@ -130,13 +131,15 @@ private:
   double calcDistanceToNextCusp(
     const PathWithLaneId & reference_path, const geometry_msgs::msg::Pose & ego_pose) const;
 
-  /// Build output path from @p start_cusp_pose (or path begin) up to @p end_cusp_pose on @p source_path.
+  /// Build output path from @p start_cusp_pose (or path begin) up to @p end_cusp_pose on @p
+  /// source_path.
   PathWithLaneId slicePathBetweenCusps(
     const PathWithLaneId & source_path, const geometry_msgs::msg::Pose & ego_pose,
     const std::optional<geometry_msgs::msg::Pose> & start_cusp_pose,
     const geometry_msgs::msg::Pose & end_cusp_pose) const;
 
-  /// Build final segment from last visited cusp (or path begin) through @p goal_pose on @p source_path.
+  /// Build final segment from last visited cusp (or path begin) through @p goal_pose on @p
+  /// source_path.
   PathWithLaneId slicePathToGoal(
     const PathWithLaneId & source_path, const geometry_msgs::msg::Pose & ego_pose,
     const std::optional<geometry_msgs::msg::Pose> & start_cusp_pose,

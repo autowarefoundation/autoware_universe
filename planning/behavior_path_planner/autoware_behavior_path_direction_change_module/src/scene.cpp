@@ -184,8 +184,8 @@ void DirectionChangeModule::initVariables()
 void DirectionChangeModule::getCuspPointsFromReferencePath(
   const PathWithLaneId & reference_path, const geometry_msgs::msg::Pose & ego_pose)
 {
-  const auto detected = detectCuspPointsFromPath(
-    reference_path, parameters_->cusp_detection_angle_threshold_deg);
+  const auto detected =
+    detectCuspPointsFromPath(reference_path, parameters_->cusp_detection_angle_threshold_deg);
   const size_t before = cusp_points_.size();
   mergeNewCuspPointsAheadOfEgo(
     cusp_points_, detected, reference_path, ego_pose,
@@ -245,16 +245,16 @@ const CuspPoint * DirectionChangeModule::getLastVisitedCusp() const
 
 bool DirectionChangeModule::allCuspsVisited() const
 {
-  return cusp_points_.empty() ||
-         std::all_of(cusp_points_.begin(), cusp_points_.end(), [](const CuspPoint & cusp) {
-           return cusp.visited;
-         });
+  return cusp_points_.empty() || std::all_of(
+                                   cusp_points_.begin(), cusp_points_.end(),
+                                   [](const CuspPoint & cusp) { return cusp.visited; });
 }
 
 size_t DirectionChangeModule::countUnvisitedCusps() const
 {
   return static_cast<size_t>(std::count_if(
-    cusp_points_.begin(), cusp_points_.end(), [](const CuspPoint & cusp) { return !cusp.visited; }));
+    cusp_points_.begin(), cusp_points_.end(),
+    [](const CuspPoint & cusp) { return !cusp.visited; }));
 }
 
 double DirectionChangeModule::calcDistanceToNextCusp(
@@ -286,8 +286,8 @@ PathWithLaneId DirectionChangeModule::slicePathBetweenCusps(
 
   std::optional<size_t> start_cusp_idx;
   if (start_cusp_pose) {
-    start_cusp_idx = autoware::motion_utils::findNearestIndex(
-      source_path.points, start_cusp_pose->position);
+    start_cusp_idx =
+      autoware::motion_utils::findNearestIndex(source_path.points, start_cusp_pose->position);
   }
 
   size_t start_idx = start_cusp_idx.value_or(0);
@@ -353,8 +353,8 @@ PathWithLaneId DirectionChangeModule::slicePathToGoal(
 
   std::optional<size_t> start_cusp_idx;
   if (start_cusp_pose) {
-    start_cusp_idx = autoware::motion_utils::findNearestIndex(
-      source_path.points, start_cusp_pose->position);
+    start_cusp_idx =
+      autoware::motion_utils::findNearestIndex(source_path.points, start_cusp_pose->position);
   }
 
   const size_t end_idx = goal_idx + 1;
@@ -388,8 +388,7 @@ void DirectionChangeModule::updateManeuverStateMachine(const PathWithLaneId & re
 {
   const auto & ego_pose = planner_data_->self_odometry->pose.pose;
   const double dist_to_cusp = calcDistanceToNextCusp(reference_path, ego_pose);
-  const double vehicle_velocity =
-    std::abs(planner_data_->self_odometry->twist.twist.linear.x);
+  const double vehicle_velocity = std::abs(planner_data_->self_odometry->twist.twist.linear.x);
 
   const PathSegmentState base_following_state = is_ego_driving_forward_wrt_lane_
                                                   ? PathSegmentState::FORWARD_FOLLOWING
@@ -400,9 +399,13 @@ void DirectionChangeModule::updateManeuverStateMachine(const PathWithLaneId & re
   if (dist_to_cusp > parameters_->cusp_detection_distance_threshold) {
     new_state = base_following_state;
     cusp_stopped_since_.reset();
-    std::cout << "[Debug2 DirectionChangeModule] updateManeuverStateMachine: cusp_detection_distance_threshold: " << parameters_->cusp_detection_distance_threshold << std::endl;
-    std::cout << "[Debug2 DirectionChangeModule] updateManeuverStateMachine: distance to cusp: " << dist_to_cusp << std::endl;
-    std::cout << "[Debug2 DirectionChangeModule] updateManeuverStateMachine: far From Cusp" << std::endl;
+    std::cout << "[Debug2 DirectionChangeModule] updateManeuverStateMachine: "
+                 "cusp_detection_distance_threshold: "
+              << parameters_->cusp_detection_distance_threshold << std::endl;
+    std::cout << "[Debug2 DirectionChangeModule] updateManeuverStateMachine: distance to cusp: "
+              << dist_to_cusp << std::endl;
+    std::cout << "[Debug2 DirectionChangeModule] updateManeuverStateMachine: far From Cusp"
+              << std::endl;
   } else {
     new_state = PathSegmentState::AT_CUSP;
 
@@ -410,8 +413,7 @@ void DirectionChangeModule::updateManeuverStateMachine(const PathWithLaneId & re
       if (!cusp_stopped_since_.has_value()) {
         cusp_stopped_since_ = clock_->now();
       }
-      const double stopped_duration =
-        (clock_->now() - cusp_stopped_since_.value()).seconds();
+      const double stopped_duration = (clock_->now() - cusp_stopped_since_.value()).seconds();
       if (stopped_duration >= parameters_->th_stopped_time) {
         cusp_stopped_since_.reset();
         is_ego_driving_forward_wrt_lane_ = !is_ego_driving_forward_wrt_lane_;
@@ -421,8 +423,8 @@ void DirectionChangeModule::updateManeuverStateMachine(const PathWithLaneId & re
           }
           const auto & passed = cusp.pose.position;
           RCLCPP_INFO_EXPRESSION(
-            getLogger(), parameters_->print_debug_info,
-            "Passed cusp at (%.2f, %.2f) after stop", passed.x, passed.y);
+            getLogger(), parameters_->print_debug_info, "Passed cusp at (%.2f, %.2f) after stop",
+            passed.x, passed.y);
           cusp.visited = true;
           break;
         }
@@ -588,27 +590,24 @@ void DirectionChangeModule::filterLaneletsAtCusp(BehaviorModuleOutput & output)
 
 void DirectionChangeModule::updateDrivableAreaInfo(BehaviorModuleOutput & output)
 {
-  // TODO: This check might not be necessary, but keep it for reference. 
+  // TODO: This check might not be necessary, but keep it for reference.
   //    Clean once confirmation of results.
-  const bool is_active_segment =
-    current_segment_state_ == PathSegmentState::FORWARD_FOLLOWING ||
-    current_segment_state_ == PathSegmentState::AT_CUSP ||
-    current_segment_state_ == PathSegmentState::REVERSE_FOLLOWING;
+  const bool is_active_segment = current_segment_state_ == PathSegmentState::FORWARD_FOLLOWING ||
+                                 current_segment_state_ == PathSegmentState::AT_CUSP ||
+                                 current_segment_state_ == PathSegmentState::REVERSE_FOLLOWING;
 
   const auto prev_drivable_info = getPreviousModuleOutput().drivable_area_info;
 
   if (is_active_segment && !output.path.points.empty()) {
-    const auto lanelets =
-      utils::getLaneletsFromPath(output.path, planner_data_->route_handler);
+    const auto lanelets = utils::getLaneletsFromPath(output.path, planner_data_->route_handler);
     std::cout << "[Debug2 DirectionChangeModule] updateDrivableAreaInfo: path_lane_ids="
               << format_unique_path_lane_ids(output.path) << std::endl;
     std::cout << "[Debug2 DirectionChangeModule] updateDrivableAreaInfo: lanelets.size()="
               << lanelets.size() << " lanelet_ids=" << format_lanelet_ids(lanelets) << std::endl;
     output.drivable_area_info.drivable_lanes = utils::generateDrivableLanes(lanelets);
     std::cout << "[Debug2 DirectionChangeModule] updateDrivableAreaInfo: drivable_lanes.size()="
-              << output.drivable_area_info.drivable_lanes.size()
-              << " drivable_lane_ids=" << format_drivable_lanes_ids(output.drivable_area_info.drivable_lanes)
-              << std::endl;
+              << output.drivable_area_info.drivable_lanes.size() << " drivable_lane_ids="
+              << format_drivable_lanes_ids(output.drivable_area_info.drivable_lanes) << std::endl;
     return;
   }
 
@@ -671,8 +670,9 @@ BehaviorModuleOutput DirectionChangeModule::plan()
           slicePathToGoal(current_reference_path, ego_pose, start_cusp_pose, goal_pose);
 
         if (!is_ego_driving_forward_wrt_lane_ && parameters_->enable_goal_lateral_shift) {
-          if (const auto shifted = applyGoalLateralShift(
-                final_segment, goal_pose, *parameters_, planner_data_->route_handler)) {
+          if (
+            const auto shifted = applyGoalLateralShift(
+              final_segment, goal_pose, *parameters_, planner_data_->route_handler)) {
             final_segment = *shifted;
           }
         }
@@ -691,8 +691,8 @@ BehaviorModuleOutput DirectionChangeModule::plan()
     if (last_visited) {
       start_cusp_pose = last_visited->pose;
     }
-    output.path = slicePathBetweenCusps(
-      current_reference_path, ego_pose, start_cusp_pose, next_cusp->pose);
+    output.path =
+      slicePathBetweenCusps(current_reference_path, ego_pose, start_cusp_pose, next_cusp->pose);
 
     if (!is_ego_driving_forward_wrt_lane_) {
       flipPathPointOrientation(output.path);
