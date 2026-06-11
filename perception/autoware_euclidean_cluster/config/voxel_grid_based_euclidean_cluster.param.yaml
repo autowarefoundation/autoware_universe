@@ -17,4 +17,7 @@
     # Its full footprint covers about 100 voxels (0.3m x 0.3m grid),
     # but LiDAR typically captures only ~60–70% due to occlusion.
     max_points_per_voxel_in_large_cluster: 10  # Max points allowed per voxel in a large cluster
+    max_cluster_diagonal_size: 0.0  # [m] Split any cluster whose 2D footprint AABB diagonal exceeds this into smaller axis-aligned pieces. 0.0 disables splitting.
+    # For accurate footprint measurement the voxel_leaf_size should be small relative to this value
+    # (the footprint is measured on voxel centroids, so resolution is bounded by voxel_leaf_size).
     use_height: false

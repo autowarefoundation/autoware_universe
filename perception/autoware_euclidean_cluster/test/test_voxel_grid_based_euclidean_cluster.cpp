@@ -23,7 +23,9 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <iostream>
+#include <limits>
 #include <memory>
 
 using autoware::point_types::PointXYZI;
@@ -97,6 +99,44 @@ sensor_msgs::msg::PointCloud2 generateClusterWithinVoxelUniform(const int nb_poi
   pointcloud.width = total_points;
   pointcloud.row_step = pointcloud.point_step * total_points;
   return pointcloud;
+}
+
+// Generate a single elongated cluster: a line of points of the given length along x (narrow in y),
+// densely sampled so consecutive voxels are connected.
+sensor_msgs::msg::PointCloud2 generateLongCluster(const double length_m, const double spacing_m)
+{
+  sensor_msgs::msg::PointCloud2 pointcloud;
+  setPointCloud2Fields(pointcloud);
+  const int nb_points = static_cast<int>(length_m / spacing_m) + 1;
+  pointcloud.data.resize(nb_points * pointcloud.point_step);
+  for (int i = 0; i < nb_points; ++i) {
+    PointXYZI point;
+    point.x = i * spacing_m;
+    point.y = 0.0;
+    point.z = 0.0;
+    point.intensity = 0.0;
+    memcpy(&pointcloud.data[i * pointcloud.point_step], &point, pointcloud.point_step);
+  }
+  pointcloud.width = nb_points;
+  pointcloud.row_step = pointcloud.point_step * nb_points;
+  return pointcloud;
+}
+
+// Compute the 2D AABB diagonal [m] of a cluster point cloud.
+double clusterDiagonal(const sensor_msgs::msg::PointCloud2 & cluster)
+{
+  float min_x = std::numeric_limits<float>::max();
+  float max_x = std::numeric_limits<float>::lowest();
+  float min_y = std::numeric_limits<float>::max();
+  float max_y = std::numeric_limits<float>::lowest();
+  for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(cluster, "x"), iter_y(cluster, "y");
+       iter_x != iter_x.end(); ++iter_x, ++iter_y) {
+    min_x = std::min(min_x, *iter_x);
+    max_x = std::max(max_x, *iter_x);
+    min_y = std::min(min_y, *iter_y);
+    max_y = std::max(max_y, *iter_y);
+  }
+  return std::hypot(max_x - min_x, max_y - min_y);
 }
 
 // Test case 1: Test case when the input pointcloud has only one cluster with points number equal to
@@ -235,6 +275,59 @@ TEST(VoxelGridBasedEuclideanClusterTest, EmptyPointCloud)
   // Should not crash and should return empty output
   EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
   EXPECT_EQ(output.feature_objects.size(), 0);
+}
+
+// Test case 5: A single elongated cluster is split into smaller pieces when
+// max_cluster_diagonal_size is set, and each piece respects the diagonal limit.
+TEST(VoxelGridBasedEuclideanClusterTest, testcase5_footprint_split)
+{
+  const double length_m = 6.0;
+  const double spacing_m = 0.15;
+  sensor_msgs::msg::PointCloud2 pointcloud = generateLongCluster(length_m, spacing_m);
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_msg =
+    std::make_shared<sensor_msgs::msg::PointCloud2>(pointcloud);
+
+  const float tolerance = 0.7;
+  const float voxel_leaf_size = 0.3;
+  const int min_points_number_per_voxel = 1;
+  const int min_cluster_size = 1;
+  const int max_cluster_size = 1000;
+  const int min_voxel_cluster_size_for_filtering = 1000;
+  const int max_points_per_voxel_in_large_cluster = 10;
+  const int max_voxel_cluster_for_output = 1000;
+  const bool use_height = false;
+
+  // Splitting disabled (max_cluster_diagonal_size == 0): the whole line stays one cluster.
+  {
+    auto cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
+      use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
+      min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+      max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output, 0.0f);
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature output;
+    cluster_->cluster(pointcloud_msg, output);
+    EXPECT_EQ(output.feature_objects.size(), 1u);
+  }
+
+  // Splitting enabled: the ~6 m line is split into multiple pieces, each within the diagonal limit.
+  {
+    const float max_cluster_diagonal_size = 2.0f;
+    auto cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
+      use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
+      min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+      max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output,
+      max_cluster_diagonal_size);
+    tier4_perception_msgs::msg::DetectedObjectsWithFeature output;
+    cluster_->cluster(pointcloud_msg, output);
+    std::cout << "split into " << output.feature_objects.size() << " clusters" << std::endl;
+    EXPECT_GT(output.feature_objects.size(), 1u);
+    // Each output cluster's footprint diagonal should be within the limit. The split is computed on
+    // voxel centroids, while raw points can extend up to half a leaf beyond each boundary centroid,
+    // so allow two voxels of slack.
+    for (const auto & obj : output.feature_objects) {
+      EXPECT_LE(
+        clusterDiagonal(obj.feature.cluster), max_cluster_diagonal_size + 2.0f * voxel_leaf_size);
+    }
+  }
 }
 
 int main(int argc, char ** argv)

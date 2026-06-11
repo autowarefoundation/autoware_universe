@@ -20,6 +20,8 @@
 #include <pcl/segmentation/extract_clusters.h>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <random>
 #include <string>
 #include <unordered_map>
@@ -27,6 +29,62 @@
 
 namespace autoware::euclidean_cluster
 {
+namespace
+{
+// Recursively split a set of voxel-centroid indices so that every resulting sub-cluster has a 2D
+// axis-aligned bounding-box diagonal no larger than max_diagonal. Splitting is axis-aligned: at
+// each step the longer extent (x or y) is bisected at its midpoint. cloud_2d holds the voxel
+// centroids (z already flattened to 0); indices reference into it.
+void splitClusterByFootprint(
+  const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & cloud_2d, const std::vector<int> & indices,
+  float max_diagonal, std::vector<pcl::PointIndices> & out_clusters)
+{
+  float min_x = std::numeric_limits<float>::max();
+  float max_x = std::numeric_limits<float>::lowest();
+  float min_y = std::numeric_limits<float>::max();
+  float max_y = std::numeric_limits<float>::lowest();
+  for (const int idx : indices) {
+    const auto & p = cloud_2d->points[idx];
+    min_x = std::min(min_x, p.x);
+    max_x = std::max(max_x, p.x);
+    min_y = std::min(min_y, p.y);
+    max_y = std::max(max_y, p.y);
+  }
+  const float w = max_x - min_x;
+  const float l = max_y - min_y;
+
+  if (std::hypot(w, l) <= max_diagonal) {
+    pcl::PointIndices pi;
+    pi.indices = indices;
+    out_clusters.push_back(std::move(pi));
+    return;
+  }
+
+  // Bisect the longer axis at its midpoint.
+  const bool split_x = (w >= l);
+  const float mid = split_x ? (min_x + max_x) * 0.5f : (min_y + max_y) * 0.5f;
+  std::vector<int> lo;
+  std::vector<int> hi;
+  lo.reserve(indices.size());
+  hi.reserve(indices.size());
+  for (const int idx : indices) {
+    const auto & p = cloud_2d->points[idx];
+    const float v = split_x ? p.x : p.y;
+    (v < mid ? lo : hi).push_back(idx);
+  }
+
+  // Degenerate guard: all points coincide on the split axis (cannot reduce further).
+  if (lo.empty() || hi.empty()) {
+    pcl::PointIndices pi;
+    pi.indices = indices;
+    out_clusters.push_back(std::move(pi));
+    return;
+  }
+
+  splitClusterByFootprint(cloud_2d, lo, max_diagonal, out_clusters);
+  splitClusterByFootprint(cloud_2d, hi, max_diagonal, out_clusters);
+}
+}  // namespace
 VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster()
 {
 }
@@ -40,14 +98,16 @@ VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
 VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
   bool use_height, int min_cluster_size, int max_cluster_size, float tolerance,
   float voxel_leaf_size, int min_points_number_per_voxel, int min_voxel_cluster_size_for_filtering,
-  int max_points_per_voxel_in_large_cluster, int max_voxel_cluster_for_output)
+  int max_points_per_voxel_in_large_cluster, int max_voxel_cluster_for_output,
+  float max_cluster_diagonal_size)
 : EuclideanClusterInterface(use_height, min_cluster_size, max_cluster_size),
   tolerance_(tolerance),
   voxel_leaf_size_(voxel_leaf_size),
   min_points_number_per_voxel_(min_points_number_per_voxel),
   min_voxel_cluster_size_for_filtering_(min_voxel_cluster_size_for_filtering),
   max_points_per_voxel_in_large_cluster_(max_points_per_voxel_in_large_cluster),
-  max_voxel_cluster_for_output_(max_voxel_cluster_for_output)
+  max_voxel_cluster_for_output_(max_voxel_cluster_for_output),
+  max_cluster_diagonal_size_(max_cluster_diagonal_size)
 {
 }
 // TODO(badai-nguyen): remove this function when field copying also implemented for
@@ -86,6 +146,17 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   pcl_euclidean_cluster.setSearchMethod(tree);
   pcl_euclidean_cluster.setInputCloud(pointcloud_2d_ptr);
   pcl_euclidean_cluster.extract(cluster_indices);
+
+  // 3.5) Split clusters whose 2D footprint diagonal exceeds the limit (axis-aligned bisection).
+  if (max_cluster_diagonal_size_ > 0.0f) {
+    std::vector<pcl::PointIndices> split_cluster_indices;
+    split_cluster_indices.reserve(cluster_indices.size());
+    for (const auto & cluster : cluster_indices) {
+      splitClusterByFootprint(
+        pointcloud_2d_ptr, cluster.indices, max_cluster_diagonal_size_, split_cluster_indices);
+    }
+    cluster_indices = std::move(split_cluster_indices);
+  }
 
   // 4) Map voxel index to cluster index
   std::unordered_map<int, int> voxel_to_cluster_map;
@@ -191,6 +262,17 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   pcl_euclidean_cluster.setSearchMethod(tree);
   pcl_euclidean_cluster.setInputCloud(pointcloud_2d_ptr);
   pcl_euclidean_cluster.extract(cluster_indices);
+
+  // 4.5) Split clusters whose 2D footprint diagonal exceeds the limit (axis-aligned bisection).
+  if (max_cluster_diagonal_size_ > 0.0f) {
+    std::vector<pcl::PointIndices> split_cluster_indices;
+    split_cluster_indices.reserve(cluster_indices.size());
+    for (const auto & cluster : cluster_indices) {
+      splitClusterByFootprint(
+        pointcloud_2d_ptr, cluster.indices, max_cluster_diagonal_size_, split_cluster_indices);
+    }
+    cluster_indices = std::move(split_cluster_indices);
+  }
 
   // 5) Buffer preparation
   // Map to store the mapping between voxel grid indices and their corresponding cluster indices
