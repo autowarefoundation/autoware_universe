@@ -113,6 +113,13 @@ void BEVFusionTRT::initPtr()
 
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_, true);
   post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
+
+  // trainStation/DDS removal: owns the stable rulebook buffers bound as engine inputs.
+  if (config_.sparse_remove_trainstation_) {
+    sparse_rulebook_ptr_ = std::make_unique<SparseRulebookPrecompute>(
+      static_cast<int>(config_.sparse_out_indices_num_limit_),
+      default_bevfusion_downsample_stages(), stream_);
+  }
 }
 
 void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
@@ -131,6 +138,9 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
 
   // Camera branch (only for fusion mode)
   addCameraNetworkIO(network_io);
+
+  // trainStation/DDS removal: precomputed rulebook graph inputs (no-op unless enabled)
+  addSparseRulebookNetworkIO(network_io);
 
   // Outputs
   network_io.emplace_back(
@@ -162,6 +172,9 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
   // Camera branch (only for fusion mode)
   addCameraProfileDims(profile_dims);
 
+  // trainStation/DDS removal: profiles for the rulebook inputs (no-op unless enabled)
+  addSparseRulebookProfileDims(profile_dims);
+
   auto network_io_ptr =
     std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io);
   auto profile_dims_ptr =
@@ -180,6 +193,9 @@ void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
   network_trt_ptr_->setTensorAddress("coors", voxel_coords_d_.get());
 
   setSensorFusionTensorAddresses();
+
+  // trainStation/DDS removal: bind the stable rulebook buffers (no-op unless enabled)
+  bindSparseRulebookAddresses();
 
   network_trt_ptr_->setTensorAddress("label_pred", label_pred_output_d_.get());
   network_trt_ptr_->setTensorAddress("bbox_pred", bbox_pred_output_d_.get());
@@ -347,6 +363,82 @@ void BEVFusionTRT::setSensorFusionTensorAddresses()
   network_trt_ptr_->setTensorAddress("kept", kept_d_.get());
   network_trt_ptr_->setTensorAddress("ranks", ranks_d_.get());
   network_trt_ptr_->setTensorAddress("indices", indices_d_.get());
+}
+
+void BEVFusionTRT::addSparseRulebookNetworkIO(
+  std::vector<autoware::tensorrt_common::NetworkIO> & network_io)
+{
+  if (!sparse_rulebook_ptr_) {
+    return;
+  }
+  for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
+    const auto & s = sparse_rulebook_ptr_->stage(i);
+    const std::int64_t kv = s.kernel_volume;
+    network_io.emplace_back(s.onnx_base + "_output_0", nvinfer1::Dims{2, {-1, 4}});   // out_indices
+    network_io.emplace_back(s.onnx_base + "_output_1", nvinfer1::Dims{2, {kv, -1}});  // pair_fwd
+    network_io.emplace_back(s.onnx_base + "_output_2", nvinfer1::Dims{2, {-1, 1}});   // pair_mask
+    network_io.emplace_back(s.onnx_base + "_output_3", nvinfer1::Dims{1, {-1}});  // mask_argsort
+  }
+}
+
+void BEVFusionTRT::addSparseRulebookProfileDims(
+  std::vector<autoware::tensorrt_common::ProfileDims> & profile_dims)
+{
+  if (!sparse_rulebook_ptr_) {
+    return;
+  }
+  const std::int64_t n_min = 1;
+  const std::int64_t n_opt = config_.voxels_num_[1];
+  const std::int64_t n_max = config_.sparse_out_indices_num_limit_;
+  for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
+    const auto & s = sparse_rulebook_ptr_->stage(i);
+    const std::int64_t kv = s.kernel_volume;
+    profile_dims.emplace_back(
+      s.onnx_base + "_output_0", nvinfer1::Dims{2, {n_min, 4}}, nvinfer1::Dims{2, {n_opt, 4}},
+      nvinfer1::Dims{2, {n_max, 4}});
+    profile_dims.emplace_back(
+      s.onnx_base + "_output_1", nvinfer1::Dims{2, {kv, n_min}}, nvinfer1::Dims{2, {kv, n_opt}},
+      nvinfer1::Dims{2, {kv, n_max}});
+    profile_dims.emplace_back(
+      s.onnx_base + "_output_2", nvinfer1::Dims{2, {n_min, 1}}, nvinfer1::Dims{2, {n_opt, 1}},
+      nvinfer1::Dims{2, {n_max, 1}});
+    profile_dims.emplace_back(
+      s.onnx_base + "_output_3", nvinfer1::Dims{1, {n_min}}, nvinfer1::Dims{1, {n_opt}},
+      nvinfer1::Dims{1, {n_max}});
+  }
+}
+
+void BEVFusionTRT::bindSparseRulebookAddresses()
+{
+  if (!sparse_rulebook_ptr_) {
+    return;
+  }
+  for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
+    const auto & s = sparse_rulebook_ptr_->stage(i);
+    network_trt_ptr_->setTensorAddress(
+      s.onnx_base + "_output_0", sparse_rulebook_ptr_->outIndices(i));
+    network_trt_ptr_->setTensorAddress(s.onnx_base + "_output_1", sparse_rulebook_ptr_->pairFwd(i));
+    network_trt_ptr_->setTensorAddress(
+      s.onnx_base + "_output_2", sparse_rulebook_ptr_->pairMask(i));
+    network_trt_ptr_->setTensorAddress(
+      s.onnx_base + "_output_3", sparse_rulebook_ptr_->maskArgsort(i));
+  }
+}
+
+void BEVFusionTRT::setSparseRulebookInputShapes()
+{
+  if (!sparse_rulebook_ptr_) {
+    return;
+  }
+  for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
+    const auto & s = sparse_rulebook_ptr_->stage(i);
+    const std::int64_t n = sparse_rulebook_ptr_->stageCount(i);
+    const std::int64_t kv = s.kernel_volume;
+    network_trt_ptr_->setInputShape(s.onnx_base + "_output_0", nvinfer1::Dims{2, {n, 4}});
+    network_trt_ptr_->setInputShape(s.onnx_base + "_output_1", nvinfer1::Dims{2, {kv, n}});
+    network_trt_ptr_->setInputShape(s.onnx_base + "_output_2", nvinfer1::Dims{2, {n, 1}});
+    network_trt_ptr_->setInputShape(s.onnx_base + "_output_3", nvinfer1::Dims{1, {n}});
+  }
 }
 
 bool BEVFusionTRT::detect(
@@ -583,6 +675,9 @@ void BEVFusionTRT::configureTensorRTInputs(std::int64_t num_voxels, std::size_t 
   network_trt_ptr_->setInputShape(
     "coors", nvinfer1::Dims{2, {num_voxels, BEVFusionConfig::kNum3DCoords}});
 
+  // trainStation/DDS removal: set the rulebook input shapes from the precomputed per-stage counts.
+  setSparseRulebookInputShapes();
+
   if (!config_.sensor_fusion_) {
     return;
   }
@@ -666,6 +761,14 @@ bool BEVFusionTRT::preProcess(
     processPointCloudVoxelization(num_points, is_num_voxels_within_range);
   if (num_voxels < 0) {
     return false;
+  }
+
+  // trainStation/DDS removal: precompute the 4 down-sample rulebooks from the voxel coords on the
+  // GPU (single host sync for the per-stage counts), so the engine has no in-graph DDS / sync.
+  if (sparse_rulebook_ptr_) {
+    sparse_rulebook_ptr_->compute(
+      voxel_coords_d_.get(), static_cast<int>(num_voxels), BEVFusionConfig::kNum3DCoords,
+      config_.sparse_coors_is_zyx_);
   }
 
   configureTensorRTInputs(num_voxels, num_points);

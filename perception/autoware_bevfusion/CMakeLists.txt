@@ -101,6 +101,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     lib/postprocess/circle_nms_kernel.cu
     lib/postprocess/postprocess_kernel.cu
     lib/preprocess/preprocess_kernel.cu
+    lib/preprocess/sparse_rulebook_precompute.cu
     lib/camera/camera_preprocess_kernel.cu
   )
 

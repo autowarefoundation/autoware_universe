@@ -19,6 +19,7 @@
 #include "autoware/bevfusion/postprocess/postprocess_kernel.hpp"
 #include "autoware/bevfusion/preprocess/pointcloud_densification.hpp"
 #include "autoware/bevfusion/preprocess/preprocess_kernel.hpp"
+#include "autoware/bevfusion/preprocess/sparse_rulebook_precompute.hpp"
 #include "autoware/bevfusion/preprocess/voxel_generator.hpp"
 #include "autoware/bevfusion/utils.hpp"
 #include "autoware/bevfusion/visibility_control.hpp"
@@ -132,6 +133,15 @@ protected:
 
   void setSensorFusionTensorAddresses();
 
+  // trainStation/DDS removal: declare the 16 rulebook graph inputs, bind their stable device
+  // buffers, and set their per-stage runtime shapes. No-ops unless
+  // config_.sparse_remove_trainstation_ is set. See sparse_rulebook_precompute.hpp.
+  void addSparseRulebookNetworkIO(std::vector<autoware::tensorrt_common::NetworkIO> & network_io);
+  void addSparseRulebookProfileDims(
+    std::vector<autoware::tensorrt_common::ProfileDims> & profile_dims);
+  void bindSparseRulebookAddresses();
+  void setSparseRulebookInputShapes();
+
   bool inference();
 
   bool postProcess(std::vector<Box3D> & det_boxes3d);
@@ -143,6 +153,7 @@ protected:
     nullptr};
   std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
   std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
+  std::unique_ptr<SparseRulebookPrecompute> sparse_rulebook_ptr_{nullptr};
   cudaStream_t stream_{nullptr};
 
   BEVFusionConfig config_;
