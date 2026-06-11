@@ -23,4 +23,8 @@
          base_class_type="generic_service_divider::ServiceDividerPluginBase">
     <description>Divider plugin for std_srvs/srv/SetBool (redundancy switcher interface initializing)</description>
   </class>
+  <class type="generic_service_divider::EkfTriggerNodeDivider"
+         base_class_type="generic_service_divider::ServiceDividerPluginBase">
+    <description>Divider plugin for std_srvs/srv/SetBool (ekf_localizer trigger_node)</description>
+  </class>
 </library>
