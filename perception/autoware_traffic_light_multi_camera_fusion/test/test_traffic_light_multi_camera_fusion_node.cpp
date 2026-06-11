@@ -49,12 +49,12 @@ using tier4_perception_msgs::msg::TrafficLightElement;
 using tier4_perception_msgs::msg::TrafficLightRoi;
 using tier4_perception_msgs::msg::TrafficLightRoiArray;
 
-// IDs assigned to map elements. The two traffic-light line strings (*_TRAFFIC_LIGHT_ID) are
-// bound to the same regulatory element (REGULATORY_ELEMENT_ID); the node groups them into a
+// IDs assigned to map elements. The two traffic-light line strings (*_traffic_light_id) are
+// bound to the same regulatory element (regulatory_element_id); the node groups them into a
 // single output.
-constexpr lanelet::Id LEFT_TRAFFIC_LIGHT_ID = 11;
-constexpr lanelet::Id RIGHT_TRAFFIC_LIGHT_ID = 12;
-constexpr lanelet::Id REGULATORY_ELEMENT_ID = 100;
+constexpr lanelet::Id left_traffic_light_id = 11;
+constexpr lanelet::Id right_traffic_light_id = 12;
+constexpr lanelet::Id regulatory_element_id = 100;
 
 struct FusionNodeOptions
 {
@@ -285,19 +285,19 @@ LaneletMapBin create_map()
   Point3d left_traffic_light_left_end(7, 19.5, 0.5, 3.5);
   Point3d left_traffic_light_right_end(8, 19.5, -0.5, 3.5);
   LineString3d left_traffic_light(
-    LEFT_TRAFFIC_LIGHT_ID, {left_traffic_light_left_end, left_traffic_light_right_end});
+    left_traffic_light_id, {left_traffic_light_left_end, left_traffic_light_right_end});
   left_traffic_light.attributes()["subtype"] = "red_yellow_green";
   left_traffic_light.attributes()["height"] = "1.0";
 
   Point3d right_traffic_light_left_end(9, 20.5, 0.5, 3.5);
   Point3d right_traffic_light_right_end(10, 20.5, -0.5, 3.5);
   LineString3d right_traffic_light(
-    RIGHT_TRAFFIC_LIGHT_ID, {right_traffic_light_left_end, right_traffic_light_right_end});
+    right_traffic_light_id, {right_traffic_light_left_end, right_traffic_light_right_end});
   right_traffic_light.attributes()["subtype"] = "red_yellow_green";
   right_traffic_light.attributes()["height"] = "1.0";
 
   auto traffic_light_regulatory_element = lanelet::autoware::AutowareTrafficLight::make(
-    REGULATORY_ELEMENT_ID, lanelet::AttributeMap(), {left_traffic_light, right_traffic_light});
+    regulatory_element_id, lanelet::AttributeMap(), {left_traffic_light, right_traffic_light});
   road_lanelet.addRegulatoryElement(traffic_light_regulatory_element);
 
   auto lanelet_map = std::make_shared<lanelet::LaneletMap>();
@@ -322,8 +322,8 @@ TEST_F(MultiCameraFusionIntegrationTest, ConflictingObservationsPublishOutputAnd
   publish_map(create_map());
 
   // Act
-  publish_camera_detection(0, LEFT_TRAFFIC_LIGHT_ID, TrafficLightElement::RED, 0.9f);
-  publish_camera_detection(1, RIGHT_TRAFFIC_LIGHT_ID, TrafficLightElement::GREEN, 0.9f);
+  publish_camera_detection(0, left_traffic_light_id, TrafficLightElement::RED, 0.9f);
+  publish_camera_detection(1, right_traffic_light_id, TrafficLightElement::GREEN, 0.9f);
 
   // Assert
   ASSERT_TRUE(wait_for_messages());
