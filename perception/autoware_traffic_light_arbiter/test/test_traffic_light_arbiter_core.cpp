@@ -45,6 +45,7 @@ using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTraff
 using TrafficLightElement = autoware_perception_msgs::msg::TrafficLightElement;
 using TrafficLightGroup = autoware_perception_msgs::msg::TrafficLightGroup;
 using TrafficLightGroupArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
+using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
 
 // --- Short aliases for enum values used throughout the tests ----------
 //
@@ -329,9 +330,10 @@ TEST(TrafficLightArbiterCoreSignalMatching, matchedSignalsPassThrough)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), RED);
 }
 
 // Agreement is decided by color/shape only — confidence does not factor
@@ -348,10 +350,11 @@ TEST(TrafficLightArbiterCoreSignalMatching, differingConfidencesStillMatch)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE, 0.90f)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
-  EXPECT_NEAR(observed_confidence(result.output, map_ids::vehicle_a).value_or(-1.0f), 0.90f, 1e-5f);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), RED);
+  EXPECT_NEAR(observed_confidence(output, map_ids::vehicle_a).value_or(-1.0f), 0.90f, 1e-5f);
 }
 
 // Color mismatch: when both sides share the shape but disagree on color,
@@ -365,9 +368,10 @@ TEST(TrafficLightArbiterCoreSignalMatching, colorMismatchProducesUnknown)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_b, {make_element(RED, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_b), UNKNOWN);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_b), UNKNOWN);
 }
 
 // Shape-set mismatch: perception has CIRCLE + RIGHT_ARROW, external has
@@ -381,10 +385,11 @@ TEST(TrafficLightArbiterCoreSignalMatching, shapeSetMismatchProducesUnknown)
   arbiter.ingest_perception(make_signal(
     base_time, map_ids::vehicle_b, {make_element(RED, CIRCLE), make_element(GREEN, RIGHT_ARROW)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color_of_shape(result.output, map_ids::vehicle_b, CIRCLE), UNKNOWN);
-  EXPECT_EQ(observed_color_of_shape(result.output, map_ids::vehicle_b, RIGHT_ARROW), UNKNOWN);
+  EXPECT_EQ(observed_color_of_shape(output, map_ids::vehicle_b, CIRCLE), UNKNOWN);
+  EXPECT_EQ(observed_color_of_shape(output, map_ids::vehicle_b, RIGHT_ARROW), UNKNOWN);
 }
 
 // Perception-only single source: with no external to agree with, the
@@ -397,9 +402,10 @@ TEST(TrafficLightArbiterCoreSignalMatching, perceptionOnlySingleSourceYieldsUnkn
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), UNKNOWN);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), UNKNOWN);
 }
 
 // External-only single source: symmetric counterpart — reconciliation is
@@ -412,9 +418,10 @@ TEST(TrafficLightArbiterCoreSignalMatching, externalOnlySingleSourceYieldsUnknow
   arbiter.ingest_external(
     make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), UNKNOWN);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), UNKNOWN);
 }
 
 // Off-map id is dropped from the output and recorded in off_map_signal_ids.
@@ -425,9 +432,10 @@ TEST(TrafficLightArbiterCoreSignalMatching, offMapIdIsDroppedAndReported)
   arbiter.ingest_external(
     make_signal(base_time, map_ids::off_map_probe, {make_element(RED, CIRCLE)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(find_group(result.output, map_ids::off_map_probe), nullptr);
+  EXPECT_EQ(find_group(output, map_ids::off_map_probe), nullptr);
   EXPECT_EQ(result.off_map_signal_ids, std::vector<lanelet::Id>{map_ids::off_map_probe});
 }
 
@@ -450,9 +458,10 @@ TEST(TrafficLightArbiterCorePedestrian, externalPriorityWinsForPedestrian)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::pedestrian, {make_element(GREEN, CIRCLE, 0.9f)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), RED);
+  EXPECT_EQ(observed_color(output, map_ids::pedestrian), RED);
 }
 
 // PERCEPTION priority: symmetric counterpart — for pedestrian ids the
@@ -466,9 +475,10 @@ TEST(TrafficLightArbiterCorePedestrian, perceptionPriorityWinsForPedestrian)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::pedestrian, {make_element(GREEN, CIRCLE, 0.10f)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), GREEN);
+  EXPECT_EQ(observed_color(output, map_ids::pedestrian), GREEN);
 }
 
 // CONFIDENCE mode: for pedestrian ids the arbiter walks each shape and
@@ -482,9 +492,10 @@ TEST(TrafficLightArbiterCorePedestrian, confidenceModePicksHigherConfidenceForPe
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::pedestrian, {make_element(RED, CIRCLE, 0.9f)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), RED);
+  EXPECT_EQ(observed_color(output, map_ids::pedestrian), RED);
 }
 
 // Single-source pedestrian: contrast with the non-pedestrian behaviour
@@ -499,9 +510,10 @@ TEST(TrafficLightArbiterCorePedestrian, singleSourcePedestrianPassesThrough)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::pedestrian, {make_element(GREEN, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::pedestrian), GREEN);
+  EXPECT_EQ(observed_color(output, map_ids::pedestrian), GREEN);
 }
 
 // ---------------------------------------------------------------------------
@@ -519,9 +531,10 @@ TEST(TrafficLightArbiterCoreConfidencePriority, picksHigherConfidenceElement)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE, 0.9f)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), RED);
 }
 
 // Per-shape union: when each side contributes a different shape under
@@ -537,10 +550,11 @@ TEST(TrafficLightArbiterCoreConfidencePriority, perShapeUnionFromBothSides)
   arbiter.ingest_external(
     make_signal(base_time, map_ids::vehicle_a, {make_element(GREEN, RIGHT_ARROW)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color_of_shape(result.output, map_ids::vehicle_a, CIRCLE), RED);
-  EXPECT_EQ(observed_color_of_shape(result.output, map_ids::vehicle_a, RIGHT_ARROW), GREEN);
+  EXPECT_EQ(observed_color_of_shape(output, map_ids::vehicle_a, CIRCLE), RED);
+  EXPECT_EQ(observed_color_of_shape(output, map_ids::vehicle_a, RIGHT_ARROW), GREEN);
 }
 
 // Perception-only: with no external present, the perception element flows
@@ -552,9 +566,10 @@ TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPassesThrough)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_b, {make_element(GREEN, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_b), GREEN);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_b), GREEN);
 }
 
 // Off-map id is dropped before reaching priority selection too. Pins the
@@ -567,9 +582,10 @@ TEST(TrafficLightArbiterCoreConfidencePriority, offMapIdIsDroppedAndReported)
   arbiter.ingest_external(
     make_signal(base_time, map_ids::off_map_probe, {make_element(RED, CIRCLE)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(find_group(result.output, map_ids::off_map_probe), nullptr);
+  EXPECT_EQ(find_group(output, map_ids::off_map_probe), nullptr);
   EXPECT_EQ(result.off_map_signal_ids, std::vector<lanelet::Id>{map_ids::off_map_probe});
 }
 
@@ -584,10 +600,11 @@ TEST(TrafficLightArbiterCoreConfidencePriority, multipleExternalSourcesAccumulat
   arbiter.ingest_external(
     make_signal(base_time, map_ids::vehicle_b, {make_element(RED, CIRCLE)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_b), RED);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), GREEN);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_b), RED);
 }
 
 // Predictions ride alongside elements: when both sides carry one each,
@@ -607,10 +624,11 @@ TEST(TrafficLightArbiterCoreConfidencePriority, predictionsFromBothSidesAreMerge
       {make_prediction(base_time, V2I)}),
     base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 0), INTERNAL_ESTIMATION);
-  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 1), V2I);
+  EXPECT_EQ(observed_prediction_source(output, map_ids::vehicle_a, 0), INTERNAL_ESTIMATION);
+  EXPECT_EQ(observed_prediction_source(output, map_ids::vehicle_a, 1), V2I);
 }
 
 // Perception-only side: when external is silent, the perception side's
@@ -623,9 +641,10 @@ TEST(TrafficLightArbiterCoreConfidencePriority, perceptionOnlyPredictionPropagat
     base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE)},
     {make_prediction(base_time, INTERNAL_ESTIMATION)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 0), INTERNAL_ESTIMATION);
+  EXPECT_EQ(observed_prediction_source(output, map_ids::vehicle_a, 0), INTERNAL_ESTIMATION);
 }
 
 // External-only side: symmetric counterpart — when perception is silent,
@@ -641,9 +660,10 @@ TEST(TrafficLightArbiterCoreConfidencePriority, externalOnlyPredictionPropagates
       {make_prediction(base_time, V2I)}),
     base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 0), V2I);
+  EXPECT_EQ(observed_prediction_source(output, map_ids::vehicle_a, 0), V2I);
 }
 
 // ---------------------------------------------------------------------------
@@ -661,9 +681,10 @@ TEST(TrafficLightArbiterCoreExternalPriority, externalPriorityOverridesConfidenc
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(GREEN, CIRCLE, 0.99f)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), RED);
 }
 
 // External-only: the EXTERNAL setting has no effect when only one source
@@ -675,9 +696,10 @@ TEST(TrafficLightArbiterCoreExternalPriority, externalOnlyPassesThrough)
   arbiter.ingest_external(
     make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), RED);
 }
 
 // Perception-only with EXTERNAL priority: with no external side present,
@@ -690,9 +712,10 @@ TEST(TrafficLightArbiterCoreExternalPriority, perceptionOnlyPassesThrough)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(GREEN, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), GREEN);
 }
 
 // ---------------------------------------------------------------------------
@@ -710,9 +733,10 @@ TEST(TrafficLightArbiterCorePerceptionPriority, perceptionPriorityOverridesConfi
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(GREEN, CIRCLE, 0.10f)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), GREEN);
 }
 
 // Perception-only: the PERCEPTION setting has no effect when only one
@@ -724,9 +748,10 @@ TEST(TrafficLightArbiterCorePerceptionPriority, perceptionOnlyPassesThrough)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(GREEN, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), GREEN);
 }
 
 // External-only with PERCEPTION priority: symmetric counterpart — external
@@ -738,9 +763,10 @@ TEST(TrafficLightArbiterCorePerceptionPriority, externalOnlyPassesThrough)
   arbiter.ingest_external(
     make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), RED);
 }
 
 // ---------------------------------------------------------------------------
@@ -760,9 +786,10 @@ TEST(TrafficLightArbiterCoreBoundary, arbitrateWithoutMapProducesNoOutput)
   unconfigured.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE)}));
 
-  const auto result = unconfigured.arbitrate();
+  TrafficSignalArray output;
+  const auto result = unconfigured.arbitrate(output);
 
-  EXPECT_FALSE(result.output.has_value());
+  EXPECT_FALSE(result.has_output);
 }
 
 // A map with no TrafficLight regulatory elements yields an output that is
@@ -778,9 +805,10 @@ TEST(TrafficLightArbiterCoreBoundary, emptyMapProducesEmptyOutput)
   arbiter.ingest_perception(
     make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_group_count(result.output), 0u);
+  EXPECT_EQ(observed_group_count(output), 0u);
 }
 
 // ---------------------------------------------------------------------------
@@ -805,9 +833,10 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionIsExcludedFromOu
   arbiter.ingest_external(
     make_signal(base_time, map_ids::vehicle_a, {make_element(GREEN, CIRCLE)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), GREEN);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), GREEN);
 }
 
 // Inside tolerance (perception is older but only by half the budget):
@@ -825,9 +854,10 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, freshPerceptionRemainsEffective
   arbiter.ingest_external(
     make_signal(base_time, map_ids::vehicle_a, {make_element(GREEN, CIRCLE, 0.7f)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), RED);
 }
 
 // External is silent: with no external stamp to compare against, the
@@ -854,9 +884,10 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, perceptionAloneIsNeverStale)
   arbiter.ingest_perception(
     make_signal(t_perception, map_ids::vehicle_a, {make_element(RED, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_color(result.output, map_ids::vehicle_a), RED);
+  EXPECT_EQ(observed_color(output, map_ids::vehicle_a), RED);
 }
 
 // Staleness is decided at the message level, not per id: when the
@@ -876,10 +907,11 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, stalenessDropsEntirePerceptionM
   arbiter.ingest_external(
     make_signal(base_time, map_ids::vehicle_b, {make_element(GREEN, CIRCLE)}), base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(find_group(result.output, map_ids::vehicle_a), nullptr);
-  EXPECT_NE(find_group(result.output, map_ids::vehicle_b), nullptr);
+  EXPECT_EQ(find_group(output, map_ids::vehicle_a), nullptr);
+  EXPECT_NE(find_group(output, map_ids::vehicle_b), nullptr);
 }
 
 // Stale perception drops its predictions from the merge too, so only the
@@ -900,9 +932,10 @@ TEST(TrafficLightArbiterCorePerceptionStaleness, stalePerceptionPredictionsAreSk
       {make_prediction(base_time, V2I)}),
     base_time);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(observed_prediction_source(result.output, map_ids::vehicle_a, 0), V2I);
+  EXPECT_EQ(observed_prediction_source(output, map_ids::vehicle_a, 0), V2I);
 }
 
 // ---------------------------------------------------------------------------
@@ -925,7 +958,8 @@ TEST(TrafficLightArbiterCoreLatestInputTime, takesNewerOfPerceptionAndExternal)
     make_signal(t_external_newer, map_ids::vehicle_a, {make_element(RED, CIRCLE)}),
     t_external_newer);
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
   EXPECT_EQ(result.latest_input_time, t_external_newer);
 }
@@ -943,7 +977,8 @@ TEST(TrafficLightArbiterCoreLatestInputTime, perceptionWinsWhenNewer)
   arbiter.ingest_perception(
     make_signal(t_perception_newer, map_ids::vehicle_a, {make_element(RED, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
   EXPECT_EQ(result.latest_input_time, t_perception_newer);
 }
@@ -959,7 +994,8 @@ TEST(TrafficLightArbiterCoreLatestInputTime, perceptionStampWhenExternalIsSilent
   arbiter.ingest_perception(
     make_signal(t_perception, map_ids::vehicle_a, {make_element(RED, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
   EXPECT_EQ(result.latest_input_time, t_perception);
 }
@@ -1051,9 +1087,10 @@ TEST(TrafficLightArbiterCoreTiming, evictedExternalEntryAbsentFromOutput)
   arbiter.ingest_perception(
     make_signal(t_perception, map_ids::vehicle_b, {make_element(GREEN, CIRCLE)}));
 
-  const auto result = arbiter.arbitrate();
+  TrafficSignalArray output;
+  const auto result = arbiter.arbitrate(output);
 
-  EXPECT_EQ(find_group(result.output, map_ids::vehicle_a), nullptr);
+  EXPECT_EQ(find_group(output, map_ids::vehicle_a), nullptr);
 }
 
 }  // namespace
