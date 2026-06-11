@@ -37,6 +37,8 @@ def launch_setup(context, *args, **kwargs):
         remappings=[
             ("~/input/mrm/emergency_stop/operate", "/system/mrm/emergency_stop/operate"),
             ("~/input/control/control_cmd", "/control/command/control_cmd"),
+            ("~/input/driving_mode_request", "/system/driving_mode/request"),
+            ("~/output/mrm_state", "/system/driving_mode/mrm_state"),
             ("~/output/mrm/emergency_stop/status", "/system/mrm/emergency_stop/status"),
             ("~/output/mrm/emergency_stop/control_cmd", "/system/emergency/control_cmd"),
         ],
