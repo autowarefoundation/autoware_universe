@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc., Leo Drive Teknoloji A.Ş.
+// Copyright 2025 Tier IV, Inc., Leo Drive Teknoloji A.Ş.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,33 +14,95 @@
 
 #include "scene.hpp"
 
-#include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware_utils/geometry/geometry.hpp"
-#include "util.hpp"
+#include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
-#include <rclcpp/rclcpp.hpp>
-
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
 using autoware::motion_utils::calcSignedArcLength;
-using autoware_utils::create_point;
-
+using autoware_utils::append_marker_array;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_scale;
+using autoware_utils_geometry::calc_offset_pose;
+using autoware_utils_geometry::create_point;
 using geometry_msgs::msg::Point32;
+using visualization_msgs::msg::Marker;
+
+namespace
+{
+visualization_msgs::msg::MarkerArray createSpeedBumpMarkers(
+  const SpeedBumpModule::DebugData & debug_data, const rclcpp::Time & now,
+  const lanelet::Id module_id)
+{
+  visualization_msgs::msg::MarkerArray msg;
+  const int32_t uid = planning_utils::bitShift(module_id);
+
+  // Speed bump polygon
+  if (!debug_data.speed_bump_polygon.empty()) {
+    auto marker = create_default_marker(
+      "map", now, "speed_bump polygon", uid, Marker::LINE_STRIP, create_marker_scale(0.1, 0.0, 0.0),
+      create_marker_color(0.0, 0.0, 1.0, 0.999));
+    for (const auto & p : debug_data.speed_bump_polygon) {
+      marker.points.push_back(create_point(p.x, p.y, p.z));
+    }
+    marker.points.push_back(marker.points.front());
+    msg.markers.push_back(marker);
+  }
+
+  // Slow start point
+  if (debug_data.slow_start_pose) {
+    auto marker = create_default_marker(
+      "map", now, "slow start point", uid, Marker::POINTS, create_marker_scale(0.25, 0.25, 0.0),
+      create_marker_color(1.0, 1.0, 0.0, 0.999));
+    marker.points.push_back(debug_data.slow_start_pose->position);
+    msg.markers.push_back(marker);
+  }
+
+  // Slow end point
+  if (debug_data.slow_end_point) {
+    auto marker = create_default_marker(
+      "map", now, "slow end point", uid, Marker::POINTS, create_marker_scale(0.25, 0.25, 0.0),
+      create_marker_color(0.2, 0.8, 1.0, 0.999));
+    marker.points.push_back(*debug_data.slow_end_point);
+    msg.markers.push_back(marker);
+  }
+
+  // Path - polygon intersection points
+  {
+    auto marker = create_default_marker(
+      "map", now, "path_polygon intersection points", uid, Marker::POINTS,
+      create_marker_scale(0.25, 0.25, 0.0), create_marker_color(1.0, 0.0, 0.0, 0.999));
+    const auto & p_first = debug_data.first_intersection_point;
+    if (p_first) {
+      marker.points.push_back(*p_first);
+    }
+    const auto & p_second = debug_data.second_intersection_point;
+    if (p_second) {
+      marker.points.push_back(*p_second);
+    }
+    if (!marker.points.empty()) msg.markers.push_back(marker);
+  }
+
+  return msg;
+}
+}  // namespace
 
 SpeedBumpModule::SpeedBumpModule(
-  const int64_t module_id, const int64_t lane_id,
-  const lanelet::autoware::SpeedBump & speed_bump_reg_elem, const PlannerParam & planner_param,
-  const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
+  const lanelet::Id module_id, const lanelet::autoware::SpeedBump & speed_bump_reg_elem,
+  const PlannerParam & planner_param, const rclcpp::Logger & logger,
+  const rclcpp::Clock::SharedPtr clock,
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
   module_id_(module_id),
-  lane_id_(lane_id),
   speed_bump_reg_elem_(std::move(speed_bump_reg_elem)),
   planner_param_(planner_param),
   debug_data_()
@@ -77,103 +139,108 @@ SpeedBumpModule::SpeedBumpModule(
   }
 }
 
-bool SpeedBumpModule::modifyPathVelocity(PathWithLaneId * path)
+bool SpeedBumpModule::modifyPathVelocity(
+  experimental::Trajectory & path,
+  [[maybe_unused]] const std::vector<geometry_msgs::msg::Point> & left_bound,
+  [[maybe_unused]] const std::vector<geometry_msgs::msg::Point> & right_bound,
+  const PlannerData & planner_data)
 {
-  if (path->points.empty()) {
-    return false;
-  }
-
   debug_data_ = DebugData();
-  debug_data_.base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
+  debug_data_.base_link2front = planner_data.vehicle_info_.max_longitudinal_offset_m;
 
-  const auto & ego_pos = planner_data_->current_odometry->pose.position;
+  const auto & ego_pos = planner_data.current_odometry->pose.position;
   const auto & speed_bump = speed_bump_reg_elem_.speedBump();
   const auto & speed_bump_polygon = lanelet::utils::to2D(speed_bump).basicPolygon();
 
-  const auto & ego_path = *path;
-  const auto & path_polygon_intersection_status =
-    getPathPolygonIntersectionStatus(ego_path, speed_bump_polygon, ego_pos, 2);
+  const auto & path_polygon_intersection =
+    speed_bump::getPathIntersectionWithSpeedBumpPolygon(path, speed_bump_polygon, 2);
 
-  debug_data_.path_polygon_intersection_status = path_polygon_intersection_status;
+  if (path_polygon_intersection.first_intersection_s) {
+    debug_data_.first_intersection_point =
+      path.compute(*path_polygon_intersection.first_intersection_s).point.pose.position;
+  }
+  if (path_polygon_intersection.second_intersection_s) {
+    debug_data_.second_intersection_point =
+      path.compute(*path_polygon_intersection.second_intersection_s).point.pose.position;
+  }
 
   for (const auto & p : speed_bump_reg_elem_.speedBump().basicPolygon()) {
     debug_data_.speed_bump_polygon.push_back(create_point(p.x(), p.y(), ego_pos.z));
   }
 
-  return applySlowDownSpeed(*path, speed_bump_slow_down_speed_, path_polygon_intersection_status);
-}
-
-bool SpeedBumpModule::applySlowDownSpeed(
-  PathWithLaneId & output, const float speed_bump_speed,
-  const PathPolygonIntersectionStatus & path_polygon_intersection_status)
-{
-  if (isNoRelation(path_polygon_intersection_status)) {
+  if (!applySlowDownSpeed(path, path_polygon_intersection, planner_data)) {
     return false;
   }
 
-  // decide slow_start_point index
-  size_t slow_start_point_idx{};
+  return true;
+}
+
+bool SpeedBumpModule::applySlowDownSpeed(
+  experimental::Trajectory & path,
+  const speed_bump::PolygonIntersection & path_polygon_intersection,
+  const PlannerData & planner_data)
+{
+  if (isNoRelation(path_polygon_intersection)) {
+    return false;
+  }
+
+  // decide slow start position
+  auto slow_start_s = 0.0;
   // if first intersection point exists
-  if (path_polygon_intersection_status.first_intersection_point) {
-    // calculate & insert slow_start_point position wrt the first intersection point between
+  if (path_polygon_intersection.first_intersection_s) {
+    // calculate slow start position wrt the first intersection point between
     // path and the speed bump polygon
-    const auto & src_point = *path_polygon_intersection_status.first_intersection_point;
     const auto & slow_start_margin_to_base_link =
       -1 *
-      (planner_data_->vehicle_info_.max_longitudinal_offset_m + planner_param_.slow_start_margin);
-    auto slow_start_point_idx_candidate =
-      insertPointWithOffset(src_point, slow_start_margin_to_base_link, output.points, 5e-2);
-    if (slow_start_point_idx_candidate) {
-      slow_start_point_idx = *slow_start_point_idx_candidate;
-      debug_data_.slow_start_poses.push_back(output.points.at(slow_start_point_idx).point.pose);
-    } else if (calcSignedArcLength(output.points, src_point, 0) > slow_start_margin_to_base_link) {
-      // There is first intersection point but slow_start_point can not be inserted because it is
-      // behind the first path point (assign virtual slow_start_point_idx)
-      slow_start_point_idx = 0;
-    } else {
-      return false;
-    }
-  } else if (
-    path_polygon_intersection_status.second_intersection_point ||
-    path_polygon_intersection_status.is_path_inside_of_polygon) {
-    // assign virtual slow_start_point_idx
-    slow_start_point_idx = 0;
+      (planner_data.vehicle_info_.max_longitudinal_offset_m + planner_param_.slow_start_margin);
+    slow_start_s = std::max(
+      0.0, *path_polygon_intersection.first_intersection_s + slow_start_margin_to_base_link);
+    debug_data_.slow_start_pose = path.compute(slow_start_s).point.pose;
   }
 
-  // decide slow_end_point index
-  size_t slow_end_point_idx{};
+  // decide slow end position
+  auto slow_end_s = path.length();
   // if second intersection point exists
-  if (path_polygon_intersection_status.second_intersection_point) {
-    // calculate & insert slow_end_point position wrt the second intersection point between path
+  if (path_polygon_intersection.second_intersection_s) {
+    // calculate slow end position wrt the second intersection point between path
     // and the speed bump polygon
-    const auto & src_point = *path_polygon_intersection_status.second_intersection_point;
     const auto & slow_end_margin_to_base_link =
-      planner_data_->vehicle_info_.rear_overhang_m + planner_param_.slow_end_margin;
-    auto slow_end_point_idx_candidate =
-      insertPointWithOffset(src_point, slow_end_margin_to_base_link, output.points, 5e-2);
-    if (slow_end_point_idx_candidate) {
-      slow_end_point_idx = *slow_end_point_idx_candidate;
-      debug_data_.slow_end_points.push_back(
-        output.points.at(slow_end_point_idx).point.pose.position);
-    } else if (
-      calcSignedArcLength(output.points, src_point, output.points.size() - 1) <
-      slow_end_margin_to_base_link) {
-      // There is second intersection point but slow_end_point can not be inserted because it is in
-      // front of the last path point (assign virtual slow_end_point_idx)
-      slow_end_point_idx = output.points.size() - 1;
-    } else {
-      return false;
-    }
-  } else if (
-    path_polygon_intersection_status.first_intersection_point ||
-    path_polygon_intersection_status.is_path_inside_of_polygon) {
-    // assign virtual slow_end_point_idx
-    slow_end_point_idx = output.points.size() - 1;
+      planner_data.vehicle_info_.rear_overhang_m + planner_param_.slow_end_margin;
+    slow_end_s = *path_polygon_intersection.second_intersection_s + slow_end_margin_to_base_link;
+    debug_data_.slow_end_point = path.compute(slow_end_s).point.pose.position;
   }
 
-  // insert constant speed to path points that intersects with speed bump area
-  return insertConstSpeedToPathSection(
-    output.points, slow_start_point_idx, slow_end_point_idx, speed_bump_speed);
+  // clamp speed at path points that intersects with speed bump area
+  path.longitudinal_velocity_mps()
+    .range(slow_start_s, slow_end_s)
+    .clamp(speed_bump_slow_down_speed_);
+
+  return true;
+}
+
+autoware::motion_utils::VirtualWalls SpeedBumpModule::createVirtualWalls()
+{
+  autoware::motion_utils::VirtualWalls virtual_walls;
+  autoware::motion_utils::VirtualWall wall;
+  wall.text = "speed_bump";
+  wall.ns = std::to_string(module_id_) + "_";
+  wall.style = autoware::motion_utils::VirtualWallType::slowdown;
+  if (debug_data_.slow_start_pose) {
+    wall.pose =
+      calc_offset_pose(*debug_data_.slow_start_pose, debug_data_.base_link2front, 0.0, 0.0);
+    virtual_walls.push_back(wall);
+  }
+  return virtual_walls;
+}
+
+visualization_msgs::msg::MarkerArray SpeedBumpModule::createDebugMarkerArray()
+{
+  visualization_msgs::msg::MarkerArray debug_marker_array;
+
+  append_marker_array(
+    createSpeedBumpMarkers(debug_data_, this->clock_->now(), module_id_), &debug_marker_array);
+
+  return debug_marker_array;
 }
 
 }  // namespace autoware::behavior_velocity_planner

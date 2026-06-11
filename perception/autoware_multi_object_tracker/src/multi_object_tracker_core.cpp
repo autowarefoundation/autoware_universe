@@ -14,15 +14,12 @@
 
 #include "multi_object_tracker_core.hpp"
 
-#include <tf2_ros/create_timer_interface.hpp>
-
-#include <tf2_ros/create_timer_ros.h>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 
 #include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -37,14 +34,10 @@ MultiObjectTrackerInternalState::MultiObjectTrackerInternalState()
 }
 
 void MultiObjectTrackerInternalState::init(
-  const MultiObjectTrackerParameters & params, rclcpp::Node & node,
+  const MultiObjectTrackerParameters & params, autoware::agnocast_wrapper::Node & node,
   const std::function<void(size_t)> & trigger_function)
 {
-  tf_buffer = std::make_shared<tf2_ros::Buffer>(node.get_clock());
-  auto cti = std::make_shared<tf2_ros::CreateTimerROS>(
-    node.get_node_base_interface(), node.get_node_timers_interface());
-  tf_buffer->setCreateTimerInterface(cti);
-
+  auto tf_buffer = std::make_shared<autoware::agnocast_wrapper::Buffer>(node.get_clock());
   odometry = std::make_shared<Odometry>(
     node.get_logger(), node.get_clock(), tf_buffer, params.world_frame_id, params.ego_frame_id,
     params.enable_odometry_uncertainty);
@@ -56,8 +49,8 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize processor
   processor = std::make_unique<TrackerProcessor>(
-    params.creation_config, params.associator_config, params.tracker_overlap_manager_config,
-    params.input_channels_config);
+    params.creation_config, params.association_config, params.tracker_overlap_manager_config,
+    params.input_channels_config, node.get_logger(), node.get_clock());
 
   last_publish_time = node.now();
   last_updated_time = node.now();
@@ -85,77 +78,24 @@ namespace core
 //// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params)
 {
-  using Label = classes::Label;
+  // For each (shape, label) in the association config, validate that its designated create
+  // tracker also appears in its own match list. Per-tracker profile validity within each
+  // match list is already guaranteed by the parser (missing entries throw at startup).
+  for (const auto & [shape_label, profile_map] : params.association_config.association_params_map) {
+    const auto default_tracker_opt =
+      get_map_value_if_exists(params.creation_config.shape_tracker_map, shape_label);
+    if (!default_tracker_opt) continue;
 
-  auto getTrackerType = [&params](const std::string & classification) -> TrackerType {
-    const auto tracker_name_it = params.tracker_type_map.find(classification);
-    const auto parameter_name = "initial_tracker." + classification;
-    if (tracker_name_it == params.tracker_type_map.end()) {
-      throw std::runtime_error("Missing tracker parameter: " + parameter_name);
-    }
-
-    const auto tracker_type = toTrackerType(tracker_name_it->second);
-    if (!tracker_type.has_value()) {
+    if (!get_map_value_if_exists(profile_map, default_tracker_opt->get())) {
+      const auto shape_str = types::toString(shape_label.first);
+      const auto label_str = classes::toString(shape_label.second);
       throw std::runtime_error(
-        "Invalid tracker type: '" + tracker_name_it->second + "' for parameter '" + parameter_name +
-        "'. Strict string match is required.");
-    }
-    return *tracker_type;
-  };
-
-  // Set the tracker map for creation config
-  params.creation_config.tracker_map = {
-    {Label::CAR, getTrackerType("car")},
-    {Label::TRUCK, getTrackerType("truck")},
-    {Label::BUS, getTrackerType("bus")},
-    {Label::TRAILER, getTrackerType("trailer")},
-    {Label::PEDESTRIAN, getTrackerType("pedestrian")},
-    {Label::BICYCLE, getTrackerType("bicycle")},
-    {Label::MOTORCYCLE, getTrackerType("motorcycle")},
-    {Label::UNKNOWN, TrackerType::POLYGON}};
-  // Set the pruning thresholds for tracker overlap manager config
-  params.tracker_overlap_manager_config.pruning_giou_thresholds =
-    params.pruning_giou_thresholds.to_label_map();
-  params.tracker_overlap_manager_config.pruning_distance_thresholds =
-    params.pruning_distance_thresholds.to_label_map();
-  params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.clear();
-  params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.reserve(
-    params.tracker_overlap_manager_config.pruning_distance_thresholds.size());
-  for (const auto & [label, threshold] :
-       params.tracker_overlap_manager_config.pruning_distance_thresholds) {
-    params.tracker_overlap_manager_config.pruning_distance_thresholds_sq.emplace(
-      label, threshold * threshold);
-  }
-
-  for (const auto measurement_label : classes::trackedLabels()) {
-    const auto label_params_opt =
-      get_map_value_if_exists(params.association_params_map, measurement_label);
-    if (!label_params_opt || label_params_opt->get().empty()) {
-      throw std::runtime_error(
-        "Missing association configuration for measurement label: " +
-        classes::toString(measurement_label));
-    }
-
-    const auto & label_params = label_params_opt->get();
-
-    const auto default_tracker_type_opt =
-      get_map_value_if_exists(params.creation_config.tracker_map, measurement_label);
-    if (!default_tracker_type_opt) {
-      throw std::runtime_error(
-        "Missing default tracker mapping for measurement label: " +
-        classes::toString(measurement_label));
-    }
-
-    const auto default_tracker_type = default_tracker_type_opt->get();
-    if (!get_map_value_if_exists(label_params, default_tracker_type)) {
-      throw std::runtime_error(
-        "Inconsistent configuration: default tracker '" + toString(default_tracker_type) +
-        "' for measurement label '" + classes::toString(measurement_label) +
-        "' is not included in association.can_assign." + classes::toString(measurement_label));
+        "Inconsistent configuration: create tracker '" + toString(default_tracker_opt->get()) +
+        "' for (" + shape_str + ", " + label_str +
+        ") is not in the match list. Check tracker_assignment." + shape_str + "." + label_str +
+        ".match in the parameter file.");
     }
   }
-
-  params.associator_config.association_params_map = params.association_params_map;
 }
 
 //// Utility functions
@@ -228,7 +168,7 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
 //// Low-level processing functions
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg,
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
   TrackerDebugger & debugger)
 {

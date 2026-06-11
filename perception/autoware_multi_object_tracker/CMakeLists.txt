@@ -62,7 +62,7 @@ set(${PROJECT_NAME}_lib
   lib/tracker/model/pedestrian_tracker.cpp
   lib/tracker/model/pedestrian_and_bicycle_tracker.cpp
   lib/tracker/model/polygon_tracker.cpp
-  lib/tracker/model/pass_through_tracker.cpp
+  lib/tracker/model/static_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
   lib/association/adaptive_threshold_cache.cpp
   lib/tracker/shape_model/unstable_shape_filter.cpp
@@ -82,7 +82,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::multi_object_tracker::MultiObjectTracker"
   EXECUTABLE multi_object_tracker_node
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ## Tests
