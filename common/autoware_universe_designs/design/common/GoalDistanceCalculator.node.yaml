@@ -40,7 +40,7 @@ publishers:
 # parameters
 param_files:
   - name: goal_distance_calculator_param
-    default: $(find-pkg-share autoware_goal_distance_calculator)/config/goal_distance_calculator.param.yaml
+    default: config/goal_distance_calculator.param.yaml
 
 param_values: []
 
