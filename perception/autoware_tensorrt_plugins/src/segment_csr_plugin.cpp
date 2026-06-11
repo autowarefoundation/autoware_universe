@@ -26,7 +26,6 @@
 #include <cstdint>
 #include <exception>
 #include <string>
-#include <tuple>
 #include <vector>
 namespace nvinfer1::plugin
 {
@@ -187,24 +186,20 @@ std::int32_t SegmentCSRPlugin::enqueue(
   if (input_desc[0].type == nvinfer1::DataType::kFLOAT) {
     const float * src_ptr = reinterpret_cast<const float *>(inputs[0]);
     const std::int64_t * indptr_ptr = reinterpret_cast<const std::int64_t *>(inputs[1]);
-
-    std::tuple<float *, std::int64_t *> out =
-      std::make_tuple(static_cast<float *>(outputs[0]), nullptr);
+    float * out_ptr = static_cast<float *>(outputs[0]);
 
     AT_DISPATCH_REDUCTION_TYPES(reduce_, [&] {
-      result =
-        segment_csr_launch<float, REDUCE>(src_ptr, src_size, indptr_ptr, indptr_size, out, stream);
+      result = segment_csr_launch<float, REDUCE>(
+        src_ptr, src_size, indptr_ptr, indptr_size, out_ptr, nullptr, stream);
     });
   } else if (input_desc[0].type == nvinfer1::DataType::kHALF) {
     const half * src_ptr = reinterpret_cast<const half *>(inputs[0]);
     const std::int64_t * indptr_ptr = reinterpret_cast<const std::int64_t *>(inputs[1]);
-
-    std::tuple<half *, std::int64_t *> out =
-      std::make_tuple(static_cast<half *>(outputs[0]), nullptr);
+    half * out_ptr = static_cast<half *>(outputs[0]);
 
     AT_DISPATCH_REDUCTION_TYPES(reduce_, [&] {
-      result =
-        segment_csr_launch<half, REDUCE>(src_ptr, src_size, indptr_ptr, indptr_size, out, stream);
+      result = segment_csr_launch<half, REDUCE>(
+        src_ptr, src_size, indptr_ptr, indptr_size, out_ptr, nullptr, stream);
     });
   }
 
