@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_JERK_CONSTANT_DECELERATION_CONTROLLER_HPP_
-#define AUTOWARE_JERK_CONSTANT_DECELERATION_CONTROLLER_HPP_
+#ifndef JERK_CONSTANT_DECELERATION_CONTROLLER_HPP_
+#define JERK_CONSTANT_DECELERATION_CONTROLLER_HPP_
 
 // include
 #include <rclcpp/rclcpp.hpp>
@@ -38,13 +38,11 @@ private:
 
   // Subscriber
   rclcpp::Subscription<autoware_control_msgs::msg::Control>::SharedPtr sub_control_;
-  rclcpp::Subscription<
-    tier4_control_msgs::msg::JerkConstantDecelerationTrigger>::SharedPtr
+  rclcpp::Subscription<tier4_control_msgs::msg::JerkConstantDecelerationTrigger>::SharedPtr
     sub_trigger_;
 
   void onControl(const autoware_control_msgs::msg::Control::SharedPtr msg);
-  void onTrigger(const tier4_control_msgs::msg::
-                   JerkConstantDecelerationTrigger::SharedPtr msg);
+  void onTrigger(const tier4_control_msgs::msg::JerkConstantDecelerationTrigger::SharedPtr msg);
 
   // Publisher
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr pub_control_;
@@ -72,4 +70,4 @@ private:
 };
 }  // namespace autoware::jerk_constant_deceleration_controller
 
-#endif  // AUTOWARE_JERK_CONSTANT_DECELERATION_CONTROLLER_HPP_
+#endif  // JERK_CONSTANT_DECELERATION_CONTROLLER_HPP_

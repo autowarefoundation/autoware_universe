@@ -30,10 +30,10 @@ JerkConstantDecelerationController::JerkConstantDecelerationController(
   sub_control_ = this->create_subscription<autoware_control_msgs::msg::Control>(
     "~/input/control", rclcpp::QoS{1},
     std::bind(&JerkConstantDecelerationController::onControl, this, _1));
-  sub_trigger_ = this->create_subscription<
-    tier4_control_msgs::msg::JerkConstantDecelerationTrigger>(
-    "~/input/jerk_constant_deceleration_trigger", rclcpp::QoS{1},
-    std::bind(&JerkConstantDecelerationController::onTrigger, this, _1));
+  sub_trigger_ =
+    this->create_subscription<tier4_control_msgs::msg::JerkConstantDecelerationTrigger>(
+      "~/input/jerk_constant_deceleration_trigger", rclcpp::QoS{1},
+      std::bind(&JerkConstantDecelerationController::onTrigger, this, _1));
 
   // Publisher
   pub_control_ =

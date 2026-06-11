@@ -39,19 +39,19 @@ jerk         = target_jerk  (0 once target_acceleration is reached)
 
 ### Subscriptions
 
-| Topic | Type | Description |
-|---|---|---|
-| `~/input/control` | `autoware_control_msgs/Control` | Upstream control command |
+| Topic                                        | Type                                                 | Description                         |
+| -------------------------------------------- | ---------------------------------------------------- | ----------------------------------- |
+| `~/input/control`                            | `autoware_control_msgs/Control`                      | Upstream control command            |
 | `~/input/jerk_constant_deceleration_trigger` | `tier4_control_msgs/JerkConstantDecelerationTrigger` | Trigger and deceleration parameters |
 
 ### Publications
 
-| Topic | Type | Description |
-|---|---|---|
-| `~/output/control` | `autoware_control_msgs/Control` | Overridden (or passed-through) control command |
-| `~/output/gear_command` | `autoware_vehicle_msgs/GearCommand` | Always DRIVE |
-| `~/output/hazard_lights_command` | `autoware_vehicle_msgs/HazardLightsCommand` | Always ENABLE |
-| `~/output/turn_indicators_command` | `autoware_vehicle_msgs/TurnIndicatorsCommand` | Always DISABLE |
+| Topic                              | Type                                          | Description                                    |
+| ---------------------------------- | --------------------------------------------- | ---------------------------------------------- |
+| `~/output/control`                 | `autoware_control_msgs/Control`               | Overridden (or passed-through) control command |
+| `~/output/gear_command`            | `autoware_vehicle_msgs/GearCommand`           | Always DRIVE                                   |
+| `~/output/hazard_lights_command`   | `autoware_vehicle_msgs/HazardLightsCommand`   | Always ENABLE                                  |
+| `~/output/turn_indicators_command` | `autoware_vehicle_msgs/TurnIndicatorsCommand` | Always DISABLE                                 |
 
 ### Parameters
 
@@ -71,11 +71,11 @@ No parameters are currently defined.
 
 ### Launch Arguments
 
-| Argument | Default | Description |
-|---|---|---|
-| `input_control` | `/control/trajectory_follower/control_cmd` | Upstream control command topic |
-| `input_jerk_constant_deceleration_trigger` | `/control/jerk_constant_deceleration_trigger` | Trigger topic |
-| `output_control` | `/control/control_command_gate/inputs/in_lane_stop/control` | Output control command topic |
-| `output_gear_command` | `/control/control_command_gate/inputs/in_lane_stop/gear` | Output gear command topic |
-| `output_hazard_lights_command` | `/control/control_command_gate/inputs/in_lane_stop/hazard_lights` | Output hazard lights topic |
-| `output_turn_indicators_command` | `/control/control_command_gate/inputs/in_lane_stop/turn_indicators` | Output turn indicators topic |
+| Argument                                   | Default                                                             | Description                    |
+| ------------------------------------------ | ------------------------------------------------------------------- | ------------------------------ |
+| `input_control`                            | `/control/trajectory_follower/control_cmd`                          | Upstream control command topic |
+| `input_jerk_constant_deceleration_trigger` | `/control/jerk_constant_deceleration_trigger`                       | Trigger topic                  |
+| `output_control`                           | `/control/control_command_gate/inputs/in_lane_stop/control`         | Output control command topic   |
+| `output_gear_command`                      | `/control/control_command_gate/inputs/in_lane_stop/gear`            | Output gear command topic      |
+| `output_hazard_lights_command`             | `/control/control_command_gate/inputs/in_lane_stop/hazard_lights`   | Output hazard lights topic     |
+| `output_turn_indicators_command`           | `/control/control_command_gate/inputs/in_lane_stop/turn_indicators` | Output turn indicators topic   |
