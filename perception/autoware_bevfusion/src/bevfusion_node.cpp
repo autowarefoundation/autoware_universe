@@ -219,6 +219,19 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   diagnostics_detector_trt_ =
     std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(this, "bevfusion_trt");
 
+  // processing time diagnostics
+  max_allowed_processing_time_ms_ =
+    this->declare_parameter<double>("diagnostics.max_allowed_processing_time_ms");
+  max_acceptable_consecutive_delay_ms_ =
+    this->declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
+  const double validation_callback_interval_ms =
+    this->declare_parameter<double>("diagnostics.validation_callback_interval_ms");
+
+  diagnostic_processing_time_updater_.setHardwareID("bevfusion");
+  diagnostic_processing_time_updater_.add(
+    "processing_time_status", this, &BEVFusionNode::diagnoseProcessingTime);
+  diagnostic_processing_time_updater_.setPeriod(validation_callback_interval_ms / 1000.0);
+
   cloud_sub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",
