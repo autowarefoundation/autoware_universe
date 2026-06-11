@@ -20,6 +20,7 @@ ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   plugins/reset_redundancy_switcher_divider.cpp
   plugins/set_aggregator_initializing_divider.cpp
   plugins/set_redundancy_switcher_interface_initializing_divider.cpp
+  plugins/ekf_trigger_node_divider.cpp
 )
 target_link_libraries(${PROJECT_NAME}_plugins ${PROJECT_NAME}_core)
 

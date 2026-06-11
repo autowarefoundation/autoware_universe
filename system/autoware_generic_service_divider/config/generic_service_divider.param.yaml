@@ -81,3 +81,19 @@
         timeouts_ms:
           - 200
           - 500
+
+    trigger_node:
+      input_service: /localization/pose_twist_fusion_filter/trigger_node
+      output_services:
+        names:
+          - /main/localization/pose_twist_fusion_filter/trigger_node
+          - /sub/localization/pose_twist_fusion_filter/trigger_node
+          - /sub2/localization/pose_twist_fusion_filter/trigger_node
+        primaries:
+          - true
+          - false
+          - false
+        timeouts_ms:
+          - 500
+          - 500
+          - 500

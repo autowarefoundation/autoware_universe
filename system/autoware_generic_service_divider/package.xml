@@ -5,7 +5,7 @@
   <version>0.1.0</version>
   <description>Plugin-based generic service divider node</description>
   <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>
-  <maintainer email="tetsuhiro.kawaguchi@tier4.jp>">Tetsuhiro Kawaguchi</maintainer>
+  <maintainer email="tetsuhiro.kawaguchi@tier4.jp">Tetsuhiro Kawaguchi</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
