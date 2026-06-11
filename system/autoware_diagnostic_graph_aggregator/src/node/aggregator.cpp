@@ -26,6 +26,8 @@ namespace autoware::diagnostic_graph_aggregator
 
 AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggregator", options)
 {
+  allow_override_ = declare_parameter<bool>("allow_override_for_debugging");
+
   const auto stamp = now();
 
   // Init diagnostics graph.
@@ -67,10 +69,14 @@ AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggr
     srv_reset_ = create_service<ResetDiagGraph>(
       "~/reset",
       std::bind(&AggregatorNode::on_reset, this, std::placeholders::_1, std::placeholders::_2));
-    srv_set_initializing_ = create_service<SetBool>(
+    srv_set_initializing_ = create_service<SetInitializing>(
       "~/set_initializing",
       std::bind(
         &AggregatorNode::on_set_initializing, this, std::placeholders::_1, std::placeholders::_2));
+    srv_set_override_ = create_service<SetOverride>(
+      "~/set_override",
+      std::bind(
+        &AggregatorNode::on_set_override, this, std::placeholders::_1, std::placeholders::_2));
 
     const auto rate = rclcpp::Rate(declare_parameter<double>("rate"));
     timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
@@ -112,10 +118,35 @@ void AggregatorNode::on_reset(
 }
 
 void AggregatorNode::on_set_initializing(
-  const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response)
+  const SetInitializing::Request::SharedPtr request,
+  const SetInitializing::Response::SharedPtr response)
 {
   graph_->set_initializing(request->data);
   response->success = true;
+}
+
+void AggregatorNode::on_set_override(
+  const SetOverride::Request::SharedPtr request, const SetOverride::Response::SharedPtr response)
+{
+  if (!allow_override_) {
+    response->status.success = false;
+    response->status.message = "override not allowed";
+    return;
+  }
+  if (request->level == SetOverride::Request::CLEAR) {
+    const auto error = graph_->set_override(request->path, std::nullopt);
+    response->status.success = error.empty();
+    response->status.message = error;
+    return;
+  }
+  if (request->level <= DiagnosticStatus::ERROR) {
+    const auto error = graph_->set_override(request->path, request->level);
+    response->status.success = error.empty();
+    response->status.message = error;
+    return;
+  }
+  response->status.success = false;
+  response->status.message = "invalid level: " + std::to_string(request->level);
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator

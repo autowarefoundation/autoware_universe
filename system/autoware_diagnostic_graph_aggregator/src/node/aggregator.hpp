@@ -21,6 +21,8 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <std_srvs/srv/set_bool.hpp>
+#include <tier4_system_msgs/srv/reset_diag_graph.hpp>
+#include <tier4_system_msgs/srv/set_diag_graph_override.hpp>
 
 #include <memory>
 #include <string>
@@ -38,15 +40,19 @@ public:
 private:
   std::unique_ptr<Graph> graph_;
   std::unique_ptr<CommandModeMapping> availability_;
+  bool allow_override_;
 
-  using SetBool = std_srvs::srv::SetBool;
+  using ResetDiagGraph = tier4_system_msgs::srv::ResetDiagGraph;
+  using SetInitializing = std_srvs::srv::SetBool;
+  using SetOverride = tier4_system_msgs::srv::SetDiagGraphOverride;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Subscription<DiagnosticArray>::SharedPtr sub_input_;
   rclcpp::Publisher<DiagGraphStruct>::SharedPtr pub_struct_;
   rclcpp::Publisher<DiagGraphStatus>::SharedPtr pub_status_;
   rclcpp::Publisher<DiagnosticArray>::SharedPtr pub_unknown_;
   rclcpp::Service<ResetDiagGraph>::SharedPtr srv_reset_;
-  rclcpp::Service<SetBool>::SharedPtr srv_set_initializing_;
+  rclcpp::Service<SetInitializing>::SharedPtr srv_set_initializing_;
+  rclcpp::Service<SetOverride>::SharedPtr srv_set_override_;
 
   void on_timer();
   void on_diag(const DiagnosticArray & msg);
@@ -54,7 +60,10 @@ private:
     const ResetDiagGraph::Request::SharedPtr request,
     const ResetDiagGraph::Response::SharedPtr response);
   void on_set_initializing(
-    const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response);
+    const SetInitializing::Request::SharedPtr request,
+    const SetInitializing::Response::SharedPtr response);
+  void on_set_override(
+    const SetOverride::Request::SharedPtr request, const SetOverride::Response::SharedPtr response);
 };
 
 }  // namespace autoware::diagnostic_graph_aggregator
