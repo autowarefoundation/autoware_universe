@@ -208,7 +208,10 @@ int32_t segment_csr_launch(
   auto status = segment_csr_launch<scalar_t, REDUCE>(
     src_in, src_size_in, indptr_in, indptr_size_in, base_values, reduced_values_out,
     arg_indices_out, stream_in);
-  if (status != 0) return status;
+  if (status != 0) {
+    cudaFreeAsync(base_values, stream_in);
+    return status;
+  }
 
   cudaFreeAsync(base_values, stream_in);
   return 0;
