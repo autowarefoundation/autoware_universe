@@ -1,4 +1,5 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="param_file" default="$(find-pkg-share autoware_lidar_marker_localizer)/config/lidar_marker_localizer.param.yaml"/>
 
   <!-- Topic names -->
@@ -11,6 +12,7 @@
   <arg name="service_trigger_node_srv" default="~/service/trigger_node_srv"/>
 
   <node pkg="autoware_lidar_marker_localizer" exec="autoware_lidar_marker_localizer_node" output="both">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
     <remap from="~/input/ekf_pose" to="$(var input_ekf_pose)"/>
     <remap from="~/input/lanelet2_map" to="$(var input_lanelet2_map)"/>
