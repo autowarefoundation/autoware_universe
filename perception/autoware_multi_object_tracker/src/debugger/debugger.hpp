@@ -18,6 +18,9 @@
 #include "autoware/multi_object_tracker/types.hpp"
 #include "debug_object.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/published_time_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -48,7 +51,7 @@ public:
     rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock, const std::string & frame_id,
     const std::vector<types::InputChannel> & channels_config);
 
-  void init(rclcpp::Node & node);
+  void init(autoware::agnocast_wrapper::Node & node);
 
 private:
   // Timing check utilities
@@ -85,12 +88,13 @@ private:
   // ROS node, publishers
   rclcpp::Logger logger_;
   rclcpp::Clock::SharedPtr clock_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr
-    debug_tentative_objects_pub_;
-  std::unique_ptr<autoware_utils_debug::DebugPublisher> processing_time_publisher_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_objects_markers_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::TrackedObjects)
+  debug_tentative_objects_pub_;
+  std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    processing_time_publisher_;
+  AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray) debug_objects_markers_pub_;
 
-  std::unique_ptr<diagnostic_updater::Updater> diagnostic_updater_;
+  std::unique_ptr<autoware::agnocast_wrapper::diagnostic_updater::Updater> diagnostic_updater_;
   // Object debugger
   TrackerObjectDebugger object_debugger_;
   // Time measurement
@@ -104,8 +108,8 @@ private:
   rclcpp::Time last_non_warning_timestamp_;
 
   // Configuration
-  void setupDiagnostics(rclcpp::Node & node);
-  void loadParameters(rclcpp::Node & node);
+  void setupDiagnostics(autoware::agnocast_wrapper::Node & node);
+  void loadParameters(autoware::agnocast_wrapper::Node & node);
 
 public:
   // Single update method for all diagnostic values

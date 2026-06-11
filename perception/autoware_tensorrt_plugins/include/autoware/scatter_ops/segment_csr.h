@@ -25,19 +25,19 @@
 
 #include <cuda_runtime.h>
 
-#include <tuple>
+#include <cstdint>
 #include <vector>
 
 template <typename scalar_t, ReductionType REDUCE>
 int32_t segment_csr_launch(
-  const scalar_t * src, const std::vector<int32_t> & src_size, const int64_t * indptr,
-  const std::vector<int32_t> & indptr_size, const scalar_t * base,
-  std::tuple<scalar_t *, int64_t *> out, cudaStream_t stream);
+  const scalar_t * src_in, const std::vector<int32_t> & src_size_in, const int64_t * indptr_in,
+  const std::vector<int32_t> & indptr_size_in, const scalar_t * base_values_in,
+  scalar_t * reduced_values_out, int64_t * arg_indices_out, cudaStream_t stream_in);
 
 template <typename scalar_t, ReductionType REDUCE>
 int32_t segment_csr_launch(
-  const scalar_t * src, const std::vector<int32_t> & src_size, const int64_t * indptr,
-  const std::vector<int32_t> & indptr_size, std::tuple<scalar_t *, int64_t *> out,
-  cudaStream_t stream);
+  const scalar_t * src_in, const std::vector<int32_t> & src_size_in, const int64_t * indptr_in,
+  const std::vector<int32_t> & indptr_size_in, scalar_t * reduced_values_out,
+  int64_t * arg_indices_out, cudaStream_t stream_in);
 
 #endif  // AUTOWARE__SCATTER_OPS__SEGMENT_CSR_H_
