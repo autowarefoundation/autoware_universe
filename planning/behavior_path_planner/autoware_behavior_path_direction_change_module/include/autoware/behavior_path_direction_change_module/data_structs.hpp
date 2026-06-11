@@ -16,7 +16,7 @@
 #define AUTOWARE__BEHAVIOR_PATH_DIRECTION_CHANGE_MODULE__DATA_STRUCTS_HPP_
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 
 #include <memory>
 #include <string>
@@ -26,6 +26,13 @@ namespace autoware::behavior_path_planner
 {
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
+/// Map-fixed transition point between forward and reverse maneuver lanelets.
+struct CuspPoint
+{
+  geometry_msgs::msg::Pose pose{};
+  bool visited{false};
+};
+
 struct DirectionChangeParameters
 {
   // Cusp detection parameters
@@ -33,21 +40,10 @@ struct DirectionChangeParameters
   double cusp_detection_angle_threshold_deg;
 
   // State transition parameters
-  double cusp_detection_distance_start_approaching;  // [m] Distance to start approaching cusp
-                                                     // (transition to APPROACHING_CUSP)
+  double cusp_detection_distance_start_approaching;  // [m] Distance to zero terminal velocity at cusp
   double stop_velocity_threshold;  // [m/s] Velocity threshold to determine vehicle has stopped
   double th_stopped_time;  // [s] Duration velocity must stay below stop_velocity_threshold before
                            // direction switch at cusp
-
-  // Direction change parameters
-  double reverse_initial_speed;
-  double reverse_speed_limit;
-
-  // Path densification parameters
-  double reverse_path_densify_max_yaw_step_deg;   // [deg] Maximum yaw angle step for reverse path
-                                                  // densification
-  double reverse_path_densify_max_distance_step;  // [m] Maximum distance step for reverse path
-                                                  // densification
 
   // Goal lateral shift parameters (cubic polynomial blend toward route goal)
   bool enable_goal_lateral_shift{true};
@@ -55,19 +51,9 @@ struct DirectionChangeParameters
     20.0};  // [deg] Max heading change rate limit for shift maneuver length
 
   // General parameters
-  bool enable_cusp_detection;
-  bool enable_reverse_following;
-  bool publish_debug_marker;
   bool print_debug_info{false};
   double th_arrived_distance;  // [m] If ego is within this distance of route goal, do not activate
                                // (avoid re-entry after completion)
-};
-
-struct DirectionChangeDebugData
-{
-  std::vector<geometry_msgs::msg::Point> cusp_points{};
-  PathWithLaneId forward_path{};
-  PathWithLaneId reverse_path{};
 };
 
 }  // namespace autoware::behavior_path_planner

@@ -39,7 +39,6 @@ void DirectionChangeModuleManager::init(rclcpp::Node * node)
     node->declare_parameter<double>(ns + "cusp_detection_distance_threshold");
   p.cusp_detection_angle_threshold_deg =
     node->declare_parameter<double>(ns + "cusp_detection_angle_threshold_deg");
-  p.reverse_initial_speed = node->declare_parameter<double>(ns + "reverse_initial_speed");
 
   // State transition parameters
   p.cusp_detection_distance_start_approaching =
@@ -47,19 +46,7 @@ void DirectionChangeModuleManager::init(rclcpp::Node * node)
   p.stop_velocity_threshold = node->declare_parameter<double>(ns + "stop_velocity_threshold");
   p.th_stopped_time = node->declare_parameter<double>(ns + "th_stopped_time");
 
-  // Reverse lane following parameters
-  p.reverse_speed_limit = node->declare_parameter<double>(ns + "reverse_speed_limit");
-
-  // Path densification parameters
-  p.reverse_path_densify_max_yaw_step_deg =
-    node->declare_parameter<double>(ns + "reverse_path_densify_max_yaw_step_deg");
-  p.reverse_path_densify_max_distance_step =
-    node->declare_parameter<double>(ns + "reverse_path_densify_max_distance_step");
-
   // General parameters
-  p.enable_cusp_detection = node->declare_parameter<bool>(ns + "enable_cusp_detection");
-  p.enable_reverse_following = node->declare_parameter<bool>(ns + "enable_reverse_following");
-  p.publish_debug_marker = node->declare_parameter<bool>(ns + "publish_debug_marker");
   p.print_debug_info = node->declare_parameter<bool>(ns + "print_debug_info");
   p.th_arrived_distance = node->declare_parameter<double>(ns + "th_arrived_distance");
 

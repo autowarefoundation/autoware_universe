@@ -21,8 +21,8 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 
-#include <deque>
 #include <memory>
 #include <optional>
 #include <string>
@@ -43,6 +43,26 @@ enum class PathSegmentState {
   REVERSE_FOLLOWING,  // Following path in reverse direction
   COMPLETED           // Module has completed processing
 };
+
+inline const char * pathSegmentStateToString(const PathSegmentState state)
+{
+  switch (state) {
+    case PathSegmentState::IDLE:
+      return "IDLE";
+    case PathSegmentState::FORWARD_FOLLOWING:
+      return "FORWARD_FOLLOWING";
+    case PathSegmentState::APPROACHING_CUSP:
+      return "APPROACHING_CUSP";
+    case PathSegmentState::AT_CUSP:
+      return "AT_CUSP";
+    case PathSegmentState::REVERSE_FOLLOWING:
+      return "REVERSE_FOLLOWING";
+    case PathSegmentState::COMPLETED:
+      return "COMPLETED";
+    default:
+      return "UNKNOWN";
+  }
+}
 
 class DirectionChangeModule : public SceneModuleInterface
 {
@@ -86,36 +106,60 @@ private:
 
   // Helper functions
   bool shouldActivateModule() const;
-  /// Push current odometry and return true if velocity has been below stop_velocity_threshold for
-  /// at least th_stopped_time
-  bool isSustainedStoppedForDirectionSwitch();
+
+  /// Set drivable_area_info on output based on current segment state and published path.
+  void updateDrivableAreaInfo(BehaviorModuleOutput & output);
+
+  /// Keep cusp terminal point on the current segment lanelet for drivable area generation.
+  void filterLaneletsAtCusp(BehaviorModuleOutput & output);
+
+  /// Set turn_signal_info on output based on current segment state and published path.
+  void updateTurnSignalInfo(BehaviorModuleOutput & output);
+
+  /// Initialize maneuver direction from ego pose and reference path.
+  void initializeManeuverState();
+
+  /// Update state machine from ego pose, maneuver direction, and distance to next cusp (or path end).
+  void updateManeuverStateMachine(const PathWithLaneId & reference_path);
+
+  /// Detect new cusp poses on the current reference path and append to the tracked list.
+  void getCuspPointsFromReferencePath(
+    const PathWithLaneId & reference_path, const geometry_msgs::msg::Pose & ego_pose);
+
+  /// Distance from ego to the next cusp pose, or to path end when no cusps remain.
+  double calcDistanceToNextCusp(
+    const PathWithLaneId & reference_path, const geometry_msgs::msg::Pose & ego_pose) const;
+
+  /// Build output path from @p start_cusp_pose (or path begin) up to @p end_cusp_pose on @p source_path.
+  PathWithLaneId slicePathBetweenCusps(
+    const PathWithLaneId & source_path, const geometry_msgs::msg::Pose & ego_pose,
+    const std::optional<geometry_msgs::msg::Pose> & start_cusp_pose,
+    const geometry_msgs::msg::Pose & end_cusp_pose) const;
+
+  /// Build final segment from last visited cusp (or path begin) through @p goal_pose on @p source_path.
+  PathWithLaneId slicePathToGoal(
+    const PathWithLaneId & source_path, const geometry_msgs::msg::Pose & ego_pose,
+    const std::optional<geometry_msgs::msg::Pose> & start_cusp_pose,
+    const geometry_msgs::msg::Pose & goal_pose) const;
+
+  const CuspPoint * getFirstUnvisitedCusp() const;
+  const CuspPoint * getLastVisitedCusp() const;
+  bool allCuspsVisited() const;
+  size_t countUnvisitedCusps() const;
 
   // Member variables
   PathWithLaneId reference_path_{};
   PathWithLaneId modified_path_{};
   std::shared_ptr<DirectionChangeParameters> parameters_;
 
-  // Direction change data
-  std::vector<size_t> cusp_point_indices_{};
+  // Cusp transition poses discovered from reference_path; visited after stop at AT_CUSP
+  std::vector<CuspPoint> cusp_points_{};
 
-  // Path segment state tracking for separate forward/backward publishing (multi-cusp)
-  PathSegmentState current_segment_state_{PathSegmentState::FORWARD_FOLLOWING};
-  size_t current_segment_index_{0};  // Segment index (0 = first forward, 1 = first reverse, ...)
-  geometry_msgs::msg::Point
-    first_cusp_position_;  // Position of current segment end (cusp) for debug/log
-  bool has_valid_cusp_{false};
+  PathSegmentState current_segment_state_{PathSegmentState::IDLE};
+  bool is_ego_driving_forward_wrt_lane_{true};
 
-  // Sustained stop: timestamp when velocity first dropped below stop_velocity_threshold at cusp
   std::optional<rclcpp::Time> cusp_stopped_since_{};
 
-  // Sustained stop: buffer (timestamp, velocity) for direction switch at cusp
-  std::deque<std::pair<rclcpp::Time, double>> odometry_buffer_direction_switch_{};
-
-  // Debug data
-  mutable DirectionChangeDebugData debug_data_;
-  void setDebugMarkersVisualization() const;
-
-  // Publisher for processed path with reversed orientations
   rclcpp::Publisher<autoware_internal_planning_msgs::msg::PathWithLaneId>::SharedPtr
     path_publisher_;
 };
