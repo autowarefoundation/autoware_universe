@@ -18,11 +18,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::traffic_light::MultiCameraFusionNode"
   EXECUTABLE traffic_light_multi_camera_fusion_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_cmake_ros REQUIRED)
   ament_auto_add_gtest(${PROJECT_NAME}_test

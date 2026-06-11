@@ -186,12 +186,19 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   }
 
   // --- ROS subscriptions ---
-  sub_objects_ = this->create_subscription<TrackedObjects>(
-    "~/input/objects", 1,
-    [this](const TrackedObjects::ConstSharedPtr msg) { objects_callback_->objectsCallback(msg); });
-  sub_map_ = this->create_subscription<LaneletMapBin>(
-    "/vector_map", rclcpp::QoS{1}.transient_local(),
-    [this](const LaneletMapBin::ConstSharedPtr msg) { map_callback_->mapCallback(msg); });
+  AUTOWARE_SUBSCRIPTION_OPTIONS sub_options{};
+  sub_objects_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    TrackedObjects, "~/input/objects", 1,
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & msg) {
+      objects_callback_->objectsCallback(msg);
+    },
+    sub_options);
+  sub_map_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    LaneletMapBin, "/vector_map", rclcpp::QoS{1}.transient_local(),
+    [this](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg) {
+      map_callback_->mapCallback(msg);
+    },
+    sub_options);
 
   // --- Dynamic reconfigure ---
   set_param_res_ = this->add_on_set_parameters_callback(

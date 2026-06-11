@@ -77,7 +77,6 @@ struct MultiCameraFusionConfig
 
 struct MultiCameraFusionResult
 {
-  autoware_perception_msgs::msg::TrafficLightGroupArray traffic_light_groups;
   std::vector<ConflictInfo> conflicted_regulatory_element_status;
   // Traffic light IDs that were observed by a camera but are not registered in the loaded map.
   // The Node logs a warning for each entry.
@@ -101,7 +100,8 @@ public:
   MultiCameraFusion() = default;
 
   MultiCameraFusionResult fuse(
-    const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals);
+    const CamInfoType & cam_info, const RoiArrayType & rois, const SignalArrayType & signals,
+    NewSignalArrayType & output_groups);
 
 private:
   GroupFusionResult group_fusion(const std::map<IdType, utils::FusionRecord> & fused_record_map);
