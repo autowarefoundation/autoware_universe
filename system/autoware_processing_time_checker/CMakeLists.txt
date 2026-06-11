@@ -9,7 +9,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
     src/processing_time_checker.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::processing_time_checker::ProcessingTimeChecker"
   EXECUTABLE processing_time_checker_node
 )
