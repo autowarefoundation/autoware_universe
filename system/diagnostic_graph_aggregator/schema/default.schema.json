@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "diagnostic_graph_aggregator parameters",
+  "type": "object",
+  "definitions": {
+    "default": {
+      "type": "object",
+      "properties": {
+        "use_operation_mode_availability": {
+          "type": "boolean",
+          "description": "Enable or disable operation mode availability.",
+          "default": true
+        },
+        "rate": {
+          "type": "number",
+          "description": "Rate of operation in Hz.",
+          "default": 10.0
+        },
+        "input_qos_depth": {
+          "type": "integer",
+          "description": "Depth of the input QoS queue.",
+          "default": 1000
+        },
+        "graph_qos_depth": {
+          "type": "integer",
+          "description": "Depth of the graph QoS queue.",
+          "default": 1
+        },
+        "graph_file": {
+          "type": "string",
+          "description": "Path of the config file.",
+          "default": "string"
+        }
+      },
+      "required": [
+        "use_operation_mode_availability",
+        "rate",
+        "input_qos_depth",
+        "graph_qos_depth",
+        "graph_file"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/default"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
