@@ -147,8 +147,7 @@ ArTagBasedLocalizer::ArTagBasedLocalizer(const rclcpp::NodeOptions & options)
 void ArTagBasedLocalizer::map_bin_callback(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg)
 {
-  landmark_manager_.parse_landmarks(
-    std::make_shared<LaneletMapBin>(*msg), "apriltag_16h5");
+  landmark_manager_.parse_landmarks(std::make_shared<LaneletMapBin>(*msg), "apriltag_16h5");
   auto marker_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(mapped_tag_pose_pub_);
   *marker_msg = landmark_manager_.get_landmarks_as_marker_array_msg();
   mapped_tag_pose_pub_->publish(std::move(marker_msg));
