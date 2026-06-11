@@ -20,6 +20,7 @@ import launch
 from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
@@ -78,14 +79,27 @@ def launch_setup(context, *args, **kwargs):
         plugin="autoware::component_state_monitor::StateMonitor",
         parameters=[{"topic_monitor_names": topic_monitor_names}, topic_monitor_param],
     )
+    agnocast_env = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("autoware_agnocast_wrapper"),
+                    "launch",
+                    "agnocast_env.launch.py",
+                ]
+            )
+        ),
+        launch_arguments={"use_multithread": "true"}.items(),
+    )
     container = ComposableNodeContainer(
         namespace="component_state_monitor",
         name="container",
-        package="rclcpp_components",
-        executable="component_container",
+        package=LaunchConfiguration("container_package"),
+        executable=LaunchConfiguration("container_executable"),
         composable_node_descriptions=[component],
+        additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
     )
-    return [container, *topic_monitor_nodes]
+    return [agnocast_env, container, *topic_monitor_nodes]
 
 
 def generate_launch_description():
