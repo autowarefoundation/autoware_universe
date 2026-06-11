@@ -14,6 +14,7 @@
 #ifndef POSE_COVARIANCE_MODIFIER_HPP_
 #define POSE_COVARIANCE_MODIFIER_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
@@ -22,7 +23,7 @@
 
 namespace autoware::pose_covariance_modifier
 {
-class PoseCovarianceModifierNode : public rclcpp::Node
+class PoseCovarianceModifierNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit PoseCovarianceModifierNode(const rclcpp::NodeOptions & node_options);
@@ -51,24 +52,27 @@ private:
   bool debug_mode_;
 
   rclcpp::Time gnss_pose_received_time_last_;
-  geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr gnss_pose_with_cov_last_;
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped)
+  gnss_pose_with_cov_last_;
   PoseSource pose_source_;
 
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
-    sub_gnss_pose_with_cov_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
-    sub_ndt_pose_with_cov_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
-    pub_pose_with_covariance_stamped_;
-  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_str_pose_source_;
-  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_double_ndt_position_stddev_;
-  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr pub_double_gnss_position_stddev_;
+  AUTOWARE_SUBSCRIPTION_PTR(geometry_msgs::msg::PoseWithCovarianceStamped)
+  sub_gnss_pose_with_cov_;
+  AUTOWARE_SUBSCRIPTION_PTR(geometry_msgs::msg::PoseWithCovarianceStamped)
+  sub_ndt_pose_with_cov_;
+  AUTOWARE_PUBLISHER_PTR(geometry_msgs::msg::PoseWithCovarianceStamped)
+  pub_pose_with_covariance_stamped_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::String) pub_str_pose_source_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::Float64) pub_double_ndt_position_stddev_;
+  AUTOWARE_PUBLISHER_PTR(std_msgs::msg::Float64) pub_double_gnss_position_stddev_;
 
   void callback_gnss_pose_with_cov(
-    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr & msg_pose_with_cov_in);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
+      msg_pose_with_cov_in);
 
   void callback_ndt_pose_with_cov(
-    const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr & msg_pose_with_cov_in);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
+      msg_pose_with_cov_in);
 
   bool gnss_pose_has_timed_out(const rclcpp::Time & gnss_pose_received_time_last);
 
