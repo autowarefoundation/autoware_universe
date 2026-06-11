@@ -60,8 +60,8 @@ LocalizationErrorMonitor::LocalizationErrorMonitor(const rclcpp::NodeOptions & o
     this, "ellipse_error_status");
 }
 
-void LocalizationErrorMonitor::on_odom(
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry) input_msg)
+void LocalizationErrorMonitor::on_odom(AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry)
+                                         input_msg)
 {
   diagnostics_error_monitor_->clear();
 
