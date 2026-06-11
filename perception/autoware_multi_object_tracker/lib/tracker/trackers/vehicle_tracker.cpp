@@ -347,6 +347,7 @@ bool VehicleTracker::conditionedUpdate(
   shape_model_.updateFootprint(
     measurement, measurement_time, has_pose ? std::make_optional(tracker_pose) : std::nullopt);
 
+  shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::CENTER;
   removeCache();
   return is_updated;
 }

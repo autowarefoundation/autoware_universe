@@ -150,6 +150,11 @@ public:
   }
   rclcpp::Time getLatestMeasurementTime() const { return last_update_with_measurement_time_; }
 
+  // Composite trackers call inner tracker methods directly (bypassing updateWithMeasurement),
+  // so the inner's last_update_with_measurement_time_ is never set by the normal path.
+  // Call this after each inner measure()/conditionedUpdate() to keep it current.
+  void setLatestMeasurementTime(const rclcpp::Time & t) { last_update_with_measurement_time_ = t; }
+
   unique_identifier_msgs::msg::UUID getUUID() const { return uuid_; }
 
   std::string getUuidString() const

@@ -125,7 +125,12 @@ void VehicleShapeModel::mergeFrom(
 {
   if (footprint.points.empty()) return;
   const auto transformed = shapes::transformFootprint(footprint, src_pose, winner_pose);
-  footprint_ = shapes::unionFootprints(footprint_, transformed);
+  // Only union with the existing footprint if it is still within the freshness window; otherwise
+  // discard the stale stored geometry and start fresh with the incoming footprint.
+  const bool existing_fresh =
+    footprint_valid_ &&
+    (latest_measurement_time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
+  footprint_ = existing_fresh ? shapes::unionFootprints(footprint_, transformed) : transformed;
   footprint_valid_ = true;
   last_footprint_update_time_ = latest_measurement_time;
 }

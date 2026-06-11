@@ -38,6 +38,8 @@ bool PedestrianAndBicycleTracker::measure(
 {
   pedestrian_tracker_.measure(object, time, channel_info);
   bicycle_tracker_.measure(object, time, channel_info);
+  pedestrian_tracker_.setLatestMeasurementTime(time);
+  bicycle_tracker_.setLatestMeasurementTime(time);
 
   return true;
 }

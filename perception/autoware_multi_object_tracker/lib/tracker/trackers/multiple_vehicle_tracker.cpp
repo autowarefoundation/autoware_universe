@@ -40,6 +40,8 @@ bool MultipleVehicleTracker::measure(
 {
   big_vehicle_tracker_.measure(object, time, channel_info);
   normal_vehicle_tracker_.measure(object, time, channel_info);
+  big_vehicle_tracker_.setLatestMeasurementTime(time);
+  normal_vehicle_tracker_.setLatestMeasurementTime(time);
 
   return true;
 }
@@ -53,6 +55,8 @@ bool MultipleVehicleTracker::conditionedUpdate(
     measurement, prediction, tracker_shape, measurement_time, channel_info);
   normal_vehicle_tracker_.conditionedUpdate(
     measurement, prediction, tracker_shape, measurement_time, channel_info);
+  big_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
+  normal_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
 
   return true;
 }
