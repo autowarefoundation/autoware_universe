@@ -75,8 +75,8 @@ PoseInstabilityDetector::PoseInstabilityDetector(const rclcpp::NodeOptions & opt
   diagnostics_pub_ = this->create_publisher<DiagnosticArray>("/diagnostics", 10);
 }
 
-void PoseInstabilityDetector::callback_odometry(
-  AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry) odometry_msg_ptr)
+void PoseInstabilityDetector::callback_odometry(AUTOWARE_MESSAGE_CONST_SHARED_PTR(Odometry)
+                                                  odometry_msg_ptr)
 {
   latest_odometry_ = *odometry_msg_ptr;
 }
