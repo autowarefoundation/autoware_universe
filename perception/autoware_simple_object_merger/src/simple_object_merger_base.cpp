@@ -99,7 +99,7 @@ SimpleObjectMergerBase<ObjsMsgType>::SimpleObjectMergerBase(
     for (size_t i = 0; i < input_topic_size_; i++) {
       std::function<void(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & msg)> func =
         std::bind(&SimpleObjectMergerBase::onData, this, std::placeholders::_1, i);
-      sub_objects_array.at(i) = this->create_subscription<ObjsMsgType>(
+      sub_objects_array.at(i) = create_subscription<ObjsMsgType>(
         node_param_.topic_names.at(i), rclcpp::QoS{1}.best_effort(), func);
     }
 
@@ -110,7 +110,7 @@ SimpleObjectMergerBase<ObjsMsgType>::SimpleObjectMergerBase(
   }
 
   // Publisher
-  pub_objects_ = this->create_publisher<ObjsMsgType>("~/output/objects", rclcpp::QoS{1}.reliable());
+  pub_objects_ = create_publisher<ObjsMsgType>("~/output/objects", rclcpp::QoS{1}.reliable());
 }
 
 template <class ObjsMsgType>
