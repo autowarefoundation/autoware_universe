@@ -41,9 +41,13 @@ Since driving mode integrates these modes, conversion from API IDs is required.
 | Fail-safe      | 2   | 2001            | EmergencyStop   |
 | Fail-safe      | 3   | 2002            | ComfortableStop |
 
-## Implementation Overview
+## Interface
 
-![data-flow](./doc/data-flow.drawio.svg)
+![data-flow-external](./doc/data-flow-external.drawio.svg)
+
+## Implementation
+
+![data-flow-internal](./doc/data-flow-internal.drawio.svg)
 
 ## Drive Mode Status
 

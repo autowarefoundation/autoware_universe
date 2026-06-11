@@ -57,7 +57,7 @@ public:
   std::optional<PlatformMode> platform_mode;
 
 private:
-  void publish_debug_status() const;
+  void publish_debug() const;
   std::optional<TrajectorySource> trajectory_source;
   std::optional<CommandSource> command_source;
   std::optional<CommandFilter> command_filter;

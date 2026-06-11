@@ -6,7 +6,8 @@ autoware_package()
 
 rosidl_generate_interfaces(
   ${PROJECT_NAME}
-  "msg/DebugRequestModes.msg"
+  "msg/DebugModeRequest.msg"
+  "msg/DebugModeFlag.msg"
   DEPENDENCIES builtin_interfaces
 )
 rosidl_get_typesupport_target(

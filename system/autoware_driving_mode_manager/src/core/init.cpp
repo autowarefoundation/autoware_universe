@@ -56,7 +56,7 @@ GateStatusItem ManagerInit::gates() const
 void ManagerInit::update()
 {
   status_->update(interface_->now(), 1.0);
-  publish_debug_status();
+  publish_debug();
 }
 
 void ManagerInit::on_trajectory_source(const TrajectorySource & source)
@@ -120,15 +120,17 @@ ServiceResponse ManagerInit::change_mrm_request(const MrmRequest &)
   return ServiceResponse{false, "driving mode manager is not ready"};
 }
 
-void ManagerInit::publish_debug_status() const
+void ManagerInit::publish_debug() const
 {
   DebugStatus debug;
   for (const auto & mode : config_->autoware_modes()) {
-    debug.availables[mode] = status_->is_available(mode);
-    debug.stables[mode] = status_->is_stable(mode);
-    debug.continuables[mode] = status_->is_continuable(mode);
+    DebugStatus::Flag flag;
+    flag.available = status_->is_available(mode);
+    flag.stable = status_->is_stable(mode);
+    flag.continuable = status_->is_continuable(mode);
+    debug.flags[mode] = flag;
   }
-  interface_->publish_debug_status(debug);
+  interface_->publish_debug(debug);
 }
 
 }  // namespace autoware::driving_mode_manager
