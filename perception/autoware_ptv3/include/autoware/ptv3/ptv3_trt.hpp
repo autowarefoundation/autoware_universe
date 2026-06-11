@@ -15,8 +15,10 @@
 #ifndef AUTOWARE__PTV3__PTV3_TRT_HPP_
 #define AUTOWARE__PTV3__PTV3_TRT_HPP_
 
+#include "autoware/ptv3/postprocess/detection3d_postprocess.hpp"
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
+#include "autoware/ptv3/utils.hpp"
 #include "autoware/ptv3/visibility_control.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
@@ -43,14 +45,17 @@ public:
   explicit PTv3TRT(
     const tensorrt_common::TrtCommonConfig & backbone_trt_config,
     const std::optional<tensorrt_common::TrtCommonConfig> & seg3d_head_trt_config,
+    const std::optional<tensorrt_common::TrtCommonConfig> & det3d_head_trt_config,
     const PTv3Config & config);
   virtual ~PTv3TRT();
 
   // cSpell:ignore probs
-  bool segment(
+  bool infer(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
     bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
-    bool should_publish_filtered_pointcloud, std::unordered_map<std::string, double> & proc_timing);
+    bool should_publish_filtered_pointcloud, bool should_detect_objects,
+    std::optional<std::vector<Box3D>> & det_boxes3d,
+    std::unordered_map<std::string, double> & proc_timing);
 
   void setPublishSegmentedPointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
@@ -63,6 +68,7 @@ protected:
   void initPtr();
   void initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  void initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();
   void allocateMessages();
   void allocateSerializedPoolingBuffers();
@@ -71,20 +77,27 @@ protected:
   bool setSerializedPoolingInputShapes();
   [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
 
-  bool preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
+  bool preProcess(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr, bool should_run_seg3d);
 
-  bool inference();
+  bool inferenceBackbone();
+  bool inferenceSeg3dHead();
+  bool inferenceDetection3DHead();
 
   bool postProcess(
     const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
     bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud);
 
-  // The backbone is always present. The segmentation head is loaded only when enabled.
+  bool postProcessDetection3D(std::vector<Box3D> & detection_boxes);
+
+  // The backbone is always present. The heads are loaded only when enabled.
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> backbone_trt_ptr_{nullptr};
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> seg3d_head_trt_ptr_{nullptr};
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> detection3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
   std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
+  std::unique_ptr<Detection3DPostprocess> detection3d_post_ptr_{nullptr};
   cudaStream_t stream_{nullptr};
 
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
@@ -140,13 +153,25 @@ protected:
   CudaUniquePtr<float[]> feat_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
 
-  // Backbone outputs shared with the segmentation head.
+  // Backbone outputs shared with all the heads
   CudaUniquePtr<float[]> bb_point_feat_d_{nullptr};
   CudaUniquePtr<std::int32_t[]> bb_point_grid_coord_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> bb_point_offset_d_{nullptr};
 
+  // Segmentation head outputs
   CudaUniquePtr<std::int64_t[]> pred_labels_d_{nullptr};
   CudaUniquePtr<float[]> pred_probs_d_{nullptr};
+
+  // Detection3D head outputs
+  CudaUniquePtr<float[]> dense_heatmap_d_{nullptr};
+  CudaUniquePtr<float[]> query_heatmap_score_d_{nullptr};
+  CudaUniquePtr<std::int64_t[]> query_labels_d_{nullptr};
+  CudaUniquePtr<float[]> heatmap_d_{nullptr};
+  CudaUniquePtr<float[]> center_d_{nullptr};
+  CudaUniquePtr<float[]> height_d_{nullptr};
+  CudaUniquePtr<float[]> dim_d_{nullptr};
+  CudaUniquePtr<float[]> rot_d_{nullptr};
+  CudaUniquePtr<float[]> vel_d_{nullptr};
 };
 
 }  // namespace autoware::ptv3

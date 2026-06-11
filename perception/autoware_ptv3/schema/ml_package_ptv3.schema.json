@@ -80,6 +80,49 @@
       },
       "required": ["class_names", "palette"],
       "additionalProperties": false
+    },
+    "detection3d": {
+      "type": "object",
+      "properties": {
+        "bbox_voxel_size": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "bbox_downsample_factor": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "has_twist": {
+          "type": "boolean"
+        },
+        "num_proposals": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "post_center_range": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "class_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "bbox_voxel_size",
+        "bbox_downsample_factor",
+        "has_twist",
+        "num_proposals",
+        "post_center_range",
+        "class_names"
+      ],
+      "additionalProperties": false
     }
   },
   "properties": {
@@ -90,7 +133,8 @@
           "type": "object",
           "properties": {
             "backbone": { "$ref": "#/definitions/backbone" },
-            "segmentation3d": { "$ref": "#/definitions/segmentation3d" }
+            "segmentation3d": { "$ref": "#/definitions/segmentation3d" },
+            "detection3d": { "$ref": "#/definitions/detection3d" }
           },
           "additionalProperties": false
         }
