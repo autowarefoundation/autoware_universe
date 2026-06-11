@@ -26,21 +26,20 @@
 #include <algorithm>
 #include <numeric>
 #include <string>
-#include <tuple>
 #include <vector>
 
 #define THREADS 256
 #define BLOCKS(TB, N) (TB * N + THREADS - 1) / THREADS
 #define FULL_MASK 0xffffffff
-#define SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, R)                                             \
-  template int32_t segment_csr_launch<T, R>(                                                  \
-    const T * src, const std::vector<int32_t> & src_size, const int64_t * indptr,             \
-    const std::vector<int32_t> & indptr_size, std::tuple<T *, int64_t *> out,                 \
-    cudaStream_t stream);                                                                     \
-  template int32_t segment_csr_launch<T, R>(                                                  \
-    const T * src, const std::vector<int32_t> & src_size, const int64_t * indptr,             \
-    const std::vector<int32_t> & indptr_size, const T * base, std::tuple<T *, int64_t *> out, \
-    cudaStream_t stream);
+#define SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, R)                                                  \
+  template int32_t segment_csr_launch<T, R>(                                                       \
+    const T * src_in, const std::vector<int32_t> & src_size_in, const int64_t * indptr_in,         \
+    const std::vector<int32_t> & indptr_size_in, T * reduced_values_out,                           \
+    int64_t * arg_indices_out, cudaStream_t stream_in);                                            \
+  template int32_t segment_csr_launch<T, R>(                                                       \
+    const T * src_in, const std::vector<int32_t> & src_size_in, const int64_t * indptr_in,         \
+    const std::vector<int32_t> & indptr_size_in, const T * base_values_in, T * reduced_values_out, \
+    int64_t * arg_indices_out, cudaStream_t stream_in);
 #define SEGMENT_CSR_LAUNCH_INSTANTIATION(T)                   \
   SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, ReductionType::SUM)  \
   SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, ReductionType::MEAN) \
@@ -138,76 +137,83 @@ __global__ void segment_csr_broadcast_kernel(
 //! \todo expand index
 template <typename scalar_t, ReductionType REDUCE>
 int32_t segment_csr_launch(
-  const scalar_t * src, const std::vector<int32_t> & src_size, const int64_t * indptr,
-  const std::vector<int32_t> & indptr_size, const scalar_t * base,
-  std::tuple<scalar_t *, int64_t *> out, cudaStream_t stream)
+  const scalar_t * src_in, const std::vector<int32_t> & src_size_in, const int64_t * indptr_in,
+  const std::vector<int32_t> & indptr_size_in, const scalar_t * base_values_in,
+  scalar_t * reduced_values_out, int64_t * arg_indices_out, cudaStream_t stream_in)
 {
-  if (indptr_size.empty() || src_size.size() < indptr_size.size()) return -1;
+  if (indptr_size_in.empty() || src_size_in.size() < indptr_size_in.size()) return -1;
 
-  if (!std::equal(indptr_size.begin(), indptr_size.end() - 1, src_size.begin())) return -1;
+  if (!std::equal(indptr_size_in.begin(), indptr_size_in.end() - 1, src_size_in.begin())) return -1;
 
-  auto dim = indptr_size.size() - 1;
+  auto dim = indptr_size_in.size() - 1;
 
   auto _mul = [](int a, int b) { return a * b; };
-  auto src_numel = std::accumulate(src_size.begin(), src_size.end(), 1, _mul);
-  auto indptr_numel = std::accumulate(indptr_size.begin(), indptr_size.end(), 1, _mul);
-  auto out_numel = get_output_numel(src_size, indptr_size, dim);
+  auto src_numel = std::accumulate(src_size_in.begin(), src_size_in.end(), 1, _mul);
+  auto indptr_numel = std::accumulate(indptr_size_in.begin(), indptr_size_in.end(), 1, _mul);
+  auto out_numel = get_output_numel(src_size_in, indptr_size_in, dim);
 
   if (out_numel == 0) return 0;
 
   cudaMemcpyAsync(
-    std::get<0>(out), base, sizeof(scalar_t) * out_numel, cudaMemcpyDeviceToDevice, stream);
+    reduced_values_out, base_values_in, sizeof(scalar_t) * out_numel, cudaMemcpyDeviceToDevice,
+    stream_in);
 
-  if ((REDUCE == ReductionType::MIN || REDUCE == ReductionType::MAX) && std::get<1>(out) != nullptr)
-    fill_kernel<int64_t>
-      <<<BLOCKS(1, out_numel), THREADS, 0, stream>>>(std::get<1>(out), out_numel, src_size[dim]);
+  if ((REDUCE == ReductionType::MIN || REDUCE == ReductionType::MAX) && arg_indices_out != nullptr)
+    fill_kernel<int64_t><<<BLOCKS(1, out_numel), THREADS, 0, stream_in>>>(
+      arg_indices_out, out_numel, src_size_in[dim]);
 
   if (src_numel == 0) return 0;
 
-  auto N = max(indptr_size[dim] - 1, 0) * (indptr_numel / indptr_size[dim]);
+  auto N = max(indptr_size_in[dim] - 1, 0) * (indptr_numel / indptr_size_in[dim]);
   auto K = out_numel / N;
-  auto E = src_size[dim];
+  auto E = src_size_in[dim];
   int64_t * indptr_size_dev;
-  cudaMallocAsync(&indptr_size_dev, sizeof(int64_t) * indptr_size.size(), stream);
+  cudaMallocAsync(&indptr_size_dev, sizeof(int64_t) * indptr_size_in.size(), stream_in);
   cudaMemcpyAsync(
-    indptr_size_dev, indptr_size.data(), sizeof(int64_t) * indptr_size.size(),
-    cudaMemcpyHostToDevice, stream);
+    indptr_size_dev, indptr_size_in.data(), sizeof(int64_t) * indptr_size_in.size(),
+    cudaMemcpyHostToDevice, stream_in);
 
   if (K == 1)
-    segment_csr_kernel<scalar_t, REDUCE, 1><<<BLOCKS(32, N), THREADS, 0, stream>>>(
-      src, indptr, indptr_size_dev, indptr_size.size(), std::get<0>(out), std::get<1>(out), N, E);
+    segment_csr_kernel<scalar_t, REDUCE, 1><<<BLOCKS(32, N), THREADS, 0, stream_in>>>(
+      src_in, indptr_in, indptr_size_dev, indptr_size_in.size(), reduced_values_out,
+      arg_indices_out, N, E);
   else
-    segment_csr_broadcast_kernel<scalar_t, REDUCE><<<BLOCKS(1, N * K), THREADS, 0, stream>>>(
-      src, indptr, indptr_size_dev, indptr_size.size(), std::get<0>(out), std::get<1>(out), N, K,
-      E);
+    segment_csr_broadcast_kernel<scalar_t, REDUCE><<<BLOCKS(1, N * K), THREADS, 0, stream_in>>>(
+      src_in, indptr_in, indptr_size_dev, indptr_size_in.size(), reduced_values_out,
+      arg_indices_out, N, K, E);
 
-  cudaFreeAsync(indptr_size_dev, stream);
+  cudaFreeAsync(indptr_size_dev, stream_in);
   return 0;
 }
 
 template <typename scalar_t, ReductionType REDUCE>
 int32_t segment_csr_launch(
-  const scalar_t * src, const std::vector<int32_t> & src_size, const int64_t * indptr,
-  const std::vector<int32_t> & indptr_size, std::tuple<scalar_t *, int64_t *> out,
-  cudaStream_t stream)
+  const scalar_t * src_in, const std::vector<int32_t> & src_size_in, const int64_t * indptr_in,
+  const std::vector<int32_t> & indptr_size_in, scalar_t * reduced_values_out,
+  int64_t * arg_indices_out, cudaStream_t stream_in)
 {
-  if (indptr_size.empty() || src_size.size() < indptr_size.size()) return -1;
+  if (indptr_size_in.empty() || src_size_in.size() < indptr_size_in.size()) return -1;
 
-  if (!std::equal(indptr_size.begin(), indptr_size.end() - 1, src_size.begin())) return -1;
+  if (!std::equal(indptr_size_in.begin(), indptr_size_in.end() - 1, src_size_in.begin())) return -1;
 
-  auto dim = indptr_size.size() - 1;
-  auto out_numel = get_output_numel(src_size, indptr_size, dim);
+  auto dim = indptr_size_in.size() - 1;
+  auto out_numel = get_output_numel(src_size_in, indptr_size_in, dim);
   if (out_numel == 0) return 0;
 
-  scalar_t * base;
-  cudaMallocAsync(&base, sizeof(scalar_t) * out_numel, stream);
-  fill_kernel<scalar_t><<<BLOCKS(1, out_numel), THREADS, 0, stream>>>(base, out_numel, (scalar_t)0);
+  scalar_t * base_values;
+  cudaMallocAsync(&base_values, sizeof(scalar_t) * out_numel, stream_in);
+  fill_kernel<scalar_t><<<BLOCKS(1, out_numel), THREADS, 0, stream_in>>>(
+    base_values, out_numel, static_cast<scalar_t>(0));
 
-  auto status =
-    segment_csr_launch<scalar_t, REDUCE>(src, src_size, indptr, indptr_size, base, out, stream);
-  if (status != 0) return status;
+  auto status = segment_csr_launch<scalar_t, REDUCE>(
+    src_in, src_size_in, indptr_in, indptr_size_in, base_values, reduced_values_out,
+    arg_indices_out, stream_in);
+  if (status != 0) {
+    cudaFreeAsync(base_values, stream_in);
+    return status;
+  }
 
-  cudaFreeAsync(base, stream);
+  cudaFreeAsync(base_values, stream_in);
   return 0;
 }
 
