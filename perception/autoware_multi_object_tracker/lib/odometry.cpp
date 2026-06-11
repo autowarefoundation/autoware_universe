@@ -25,9 +25,9 @@ namespace autoware::multi_object_tracker
 {
 
 Odometry::Odometry(
-  rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock, std::shared_ptr<tf2_ros::Buffer> tf_buffer,
-  const std::string & world_frame_id, const std::string & ego_frame_id,
-  bool enable_odometry_uncertainty)
+  rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
+  std::shared_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer, const std::string & world_frame_id,
+  const std::string & ego_frame_id, bool enable_odometry_uncertainty)
 : logger_(logger),
   clock_(clock),
   ego_frame_id_(ego_frame_id),
