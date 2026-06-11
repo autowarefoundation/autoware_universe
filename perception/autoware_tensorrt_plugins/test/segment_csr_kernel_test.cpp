@@ -26,7 +26,6 @@
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <tuple>
 #include <vector>
 
 namespace
@@ -119,8 +118,8 @@ void run_segment_csr_case(const SegmentCsrCase & test_case, const std::vector<fl
 
   ASSERT_EQ(
     (segment_csr_launch<float, REDUCE>(
-      src_d.get(), src_size, indptr_d.get(), indptr_size,
-      std::make_tuple(out_d.get(), static_cast<std::int64_t *>(nullptr)), stream.get())),
+      src_d.get(), src_size, indptr_d.get(), indptr_size, out_d.get(),
+      static_cast<std::int64_t *>(nullptr), stream.get())),
     0);
   ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
 
