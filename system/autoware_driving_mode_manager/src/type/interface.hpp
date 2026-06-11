@@ -63,9 +63,13 @@ struct MrmRequest
 
 struct DebugStatus
 {
-  std::unordered_map<AutowareMode, bool> availables;
-  std::unordered_map<AutowareMode, bool> stables;
-  std::unordered_map<AutowareMode, bool> continuables;
+  struct Flag
+  {
+    bool available;
+    bool stable;
+    bool continuable;
+  };
+  std::unordered_map<AutowareMode, Flag> flags;
 };
 
 class MainLogic;
@@ -83,8 +87,8 @@ public:
   virtual void publish_operation_mode(const OperationModeState & state) const = 0;
   virtual void publish_mrm_state(const MrmState & state) const = 0;
   virtual void publish_driving_mode_request(const AutowareMode & mode) const = 0;
-  virtual void publish_debug_status(const DebugStatus & status) const = 0;
-  virtual void publish_debug_status(const RequestModes & request) const = 0;
+  virtual void publish_debug(const DebugStatus & status) const = 0;
+  virtual void publish_debug(const RequestModes & request) const = 0;
 };
 
 class MainLogic

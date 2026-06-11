@@ -8,7 +8,9 @@
     <remap from="~/system/operation_mode_state" to="/system/operation_mode/state"/>
     <remap from="~/system/mrm_state" to="/system/fail_safe/mrm_state"/>
     <remap from="~/system/driving_mode/request" to="/system/driving_mode/request"/>
-    <remap from="~/system/driving_mode/status" to="/system/driving_mode/status"/>
+    <remap from="~/system/driving_mode/available" to="/system/driving_mode/available"/>
+    <remap from="~/system/driving_mode/stable" to="/system/driving_mode/stable"/>
+    <remap from="~/system/driving_mode/continuable" to="/system/driving_mode/continuable"/>
     <remap from="~/system/driving_mode/mrm_state" to="/system/driving_mode/mrm_state"/>
     <remap from="~/trajectory/source/status" to="/planning/trajectory_gate/source/status"/>
     <remap from="~/trajectory/source/change" to="/planning/trajectory_gate/source/change"/>

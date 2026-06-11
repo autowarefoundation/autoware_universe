@@ -17,7 +17,8 @@
 
 #include "type/interface.hpp"
 
-#include <autoware_driving_mode_manager/msg/debug_request_modes.hpp>
+#include <autoware_driving_mode_manager/msg/debug_mode_flag.hpp>
+#include <autoware_driving_mode_manager/msg/debug_mode_request.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
@@ -27,9 +28,9 @@
 #include <autoware_vehicle_msgs/srv/control_mode_command.hpp>
 #include <tier4_system_msgs/msg/command_filter_status.hpp>
 #include <tier4_system_msgs/msg/command_source_status.hpp>
+#include <tier4_system_msgs/msg/driving_mode_flag.hpp>
 #include <tier4_system_msgs/msg/driving_mode_mrm_state.hpp>
 #include <tier4_system_msgs/msg/driving_mode_request.hpp>
-#include <tier4_system_msgs/msg/driving_mode_status.hpp>
 #include <tier4_system_msgs/msg/trajectory_source_status.hpp>
 #include <tier4_system_msgs/srv/change_command_filter.hpp>
 #include <tier4_system_msgs/srv/change_command_source.hpp>
@@ -53,8 +54,8 @@ public:
   void publish_operation_mode(const OperationModeState & state) const override;
   void publish_mrm_state(const MrmState & state) const override;
   void publish_driving_mode_request(const AutowareMode & mode) const override;
-  void publish_debug_status(const DebugStatus & status) const override;
-  void publish_debug_status(const RequestModes & request) const override;
+  void publish_debug(const DebugStatus & status) const override;
+  void publish_debug(const RequestModes & request) const override;
 
 private:
   using TrajectorySourceSrv = tier4_system_msgs::srv::ChangeTrajectorySource;
@@ -65,7 +66,7 @@ private:
   using MrmStateMsg = autoware_adapi_v1_msgs::msg::MrmState;
 
   using DrivingModeRequest = tier4_system_msgs::msg::DrivingModeRequest;
-  using DrivingModeStatus = tier4_system_msgs::msg::DrivingModeStatus;
+  using DrivingModeFlag = tier4_system_msgs::msg::DrivingModeFlag;
   using DrivingModeMrmState = tier4_system_msgs::msg::DrivingModeMrmState;
   using TrajectorySourceMsg = tier4_system_msgs::msg::TrajectorySourceStatus;
   using CommandSourceMsg = tier4_system_msgs::msg::CommandSourceStatus;
@@ -75,7 +76,8 @@ private:
   using ChangeAutowareControl = autoware_system_msgs::srv::ChangeAutowareControl;
   using ChangeMrmRequest = tier4_system_msgs::srv::ChangeMrmRequest;
 
-  using DebugRequestModes = autoware_driving_mode_manager::msg::DebugRequestModes;
+  using DebugModeFlag = autoware_driving_mode_manager::msg::DebugModeFlag;
+  using DebugModeRequest = autoware_driving_mode_manager::msg::DebugModeRequest;
 
   MainLogic * logic_;
 
@@ -87,7 +89,9 @@ private:
   rclcpp::Publisher<OperationModeStateMsg>::SharedPtr pub_operation_mode_;
   rclcpp::Publisher<MrmStateMsg>::SharedPtr pub_mrm_state_;
 
-  rclcpp::Subscription<DrivingModeStatus>::SharedPtr sub_driving_mode_status_;
+  rclcpp::Subscription<DrivingModeFlag>::SharedPtr sub_driving_mode_available_;
+  rclcpp::Subscription<DrivingModeFlag>::SharedPtr sub_driving_mode_stable_;
+  rclcpp::Subscription<DrivingModeFlag>::SharedPtr sub_driving_mode_continuable_;
   rclcpp::Subscription<DrivingModeMrmState>::SharedPtr sub_driving_mode_mrm_state_;
   rclcpp::Subscription<TrajectorySourceMsg>::SharedPtr sub_trajectory_source_;
   rclcpp::Subscription<CommandSourceMsg>::SharedPtr sub_command_source_;
@@ -97,10 +101,12 @@ private:
   rclcpp::Service<ChangeAutowareControl>::SharedPtr srv_autoware_control_;
   rclcpp::Service<ChangeMrmRequest>::SharedPtr srv_mrm_request_;
   rclcpp::Publisher<DrivingModeRequest>::SharedPtr pub_driving_mode_request_;
-  rclcpp::Publisher<DrivingModeStatus>::SharedPtr pub_driving_mode_status_;
-  rclcpp::Publisher<DebugRequestModes>::SharedPtr pub_debug_request_;
+  rclcpp::Publisher<DebugModeFlag>::SharedPtr pub_debug_status_;
+  rclcpp::Publisher<DebugModeRequest>::SharedPtr pub_debug_request_;
 
-  void on_driving_mode_status(const DrivingModeStatus & msg);
+  void on_driving_mode_available(const DrivingModeFlag & msg);
+  void on_driving_mode_stable(const DrivingModeFlag & msg);
+  void on_driving_mode_continuable(const DrivingModeFlag & msg);
   void on_driving_mode_mrm_state(const DrivingModeMrmState & msg);
   void on_trajectory_source(const TrajectorySourceMsg & msg);
   void on_command_source(const CommandSourceMsg & msg);

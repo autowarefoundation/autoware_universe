@@ -35,9 +35,15 @@ RosInterface::RosInterface(rclcpp::Node * node) : node_(node)
   pub_mrm_state_ =
     node->create_publisher<MrmStateMsg>("~/system/mrm_state", rclcpp::QoS(1).transient_local());
 
-  sub_driving_mode_status_ = node->create_subscription<DrivingModeStatus>(
-    "~/system/driving_mode/status", rclcpp::QoS(10),
-    std::bind(&RosInterface::on_driving_mode_status, this, _1));
+  sub_driving_mode_available_ = node->create_subscription<DrivingModeFlag>(
+    "~/system/driving_mode/available", rclcpp::QoS(10),
+    std::bind(&RosInterface::on_driving_mode_available, this, _1));
+  sub_driving_mode_stable_ = node->create_subscription<DrivingModeFlag>(
+    "~/system/driving_mode/stable", rclcpp::QoS(10),
+    std::bind(&RosInterface::on_driving_mode_stable, this, _1));
+  sub_driving_mode_continuable_ = node->create_subscription<DrivingModeFlag>(
+    "~/system/driving_mode/continuable", rclcpp::QoS(10),
+    std::bind(&RosInterface::on_driving_mode_continuable, this, _1));
   sub_driving_mode_mrm_state_ = node->create_subscription<DrivingModeMrmState>(
     "~/system/driving_mode/mrm_state", rclcpp::QoS(10),
     std::bind(&RosInterface::on_driving_mode_mrm_state, this, _1));
@@ -66,9 +72,8 @@ RosInterface::RosInterface(rclcpp::Node * node) : node_(node)
   pub_driving_mode_request_ =
     node->create_publisher<DrivingModeRequest>("~/system/driving_mode/request", rclcpp::QoS(1));
 
-  pub_driving_mode_status_ =
-    node->create_publisher<DrivingModeStatus>("~/debug/driving_mode/status", rclcpp::QoS(1));
-  pub_debug_request_ = node->create_publisher<DebugRequestModes>("~/debug/request", rclcpp::QoS(1));
+  pub_debug_status_ = node->create_publisher<DebugModeFlag>("~/debug/status", rclcpp::QoS(1));
+  pub_debug_request_ = node->create_publisher<DebugModeRequest>("~/debug/request", rclcpp::QoS(1));
 }
 
 rclcpp::Time RosInterface::now() const
@@ -170,32 +175,22 @@ void RosInterface::publish_mrm_state(const MrmState & state) const
   pub_mrm_state_->publish(msg);
 }
 
-void RosInterface::publish_debug_status(const DebugStatus & status) const
+void RosInterface::publish_debug(const DebugStatus & status) const
 {
-  using tier4_system_msgs::msg::DrivingModeStatusItem;
-  const auto types_and_flags = {
-    std::make_pair(DrivingModeStatusItem::AVAILABLE, status.availables),
-    std::make_pair(DrivingModeStatusItem::STABLE, status.stables),
-    std::make_pair(DrivingModeStatusItem::CONTINUABLE, status.continuables),
-  };
-
-  DrivingModeStatus msg;
+  DebugModeFlag msg;
   msg.stamp = now();
-  for (const auto & [type, flags] : types_and_flags) {
-    for (const auto & [mode, flag] : flags) {
-      DrivingModeStatusItem item;
-      item.mode = mode.id;
-      item.type = type;
-      item.status = flag;
-      msg.items.push_back(item);
-    }
+  for (const auto & [mode, flag] : status.flags) {
+    msg.mode.push_back(mode.id);
+    msg.available.push_back(flag.available);
+    msg.stable.push_back(flag.stable);
+    msg.continuable.push_back(flag.continuable);
   }
-  pub_driving_mode_status_->publish(msg);
+  pub_debug_status_->publish(msg);
 }
 
-void RosInterface::publish_debug_status(const RequestModes & request) const
+void RosInterface::publish_debug(const RequestModes & request) const
 {
-  DebugRequestModes msg;
+  DebugModeRequest msg;
   msg.stamp = now();
   msg.operation_mode = request.operation_mode.id;
   msg.platform_mode = static_cast<std::underlying_type_t<PlatformMode>>(request.platform_mode);
@@ -205,25 +200,24 @@ void RosInterface::publish_debug_status(const RequestModes & request) const
   pub_debug_request_->publish(msg);
 }
 
-void RosInterface::on_driving_mode_status(const DrivingModeStatus & msg)
+void RosInterface::on_driving_mode_available(const DrivingModeFlag & msg)
 {
-  using DrivingModeStatusItem = tier4_system_msgs::msg::DrivingModeStatusItem;
-
   for (const auto & item : msg.items) {
-    switch (item.type) {
-      case DrivingModeStatusItem::AVAILABLE:
-        logic_->on_available_flag(AutowareMode{item.mode}, item.status);
-        break;
-      case DrivingModeStatusItem::STABLE:
-        logic_->on_stable_flag(AutowareMode{item.mode}, item.status);
-        break;
-      case DrivingModeStatusItem::CONTINUABLE:
-        logic_->on_continuable_flag(AutowareMode{item.mode}, item.status);
-        break;
-      default:
-        RCLCPP_WARN_STREAM(node_->get_logger(), "unknown status type: " << item.type);
-        break;
-    }
+    logic_->on_available_flag(AutowareMode{item.mode}, item.flag);
+  }
+}
+
+void RosInterface::on_driving_mode_stable(const DrivingModeFlag & msg)
+{
+  for (const auto & item : msg.items) {
+    logic_->on_stable_flag(AutowareMode{item.mode}, item.flag);
+  }
+}
+
+void RosInterface::on_driving_mode_continuable(const DrivingModeFlag & msg)
+{
+  for (const auto & item : msg.items) {
+    logic_->on_continuable_flag(AutowareMode{item.mode}, item.flag);
   }
 }
 

@@ -55,8 +55,8 @@ AutowareMode DefaultPlugin::decide(const RequestModes & modes, const AutowareMod
     candidates.push_back(modes.operation_mode);
   }
 
-  candidates.push_back(EmergencyStop);
   candidates.push_back(ComfortableStop);
+  candidates.push_back(EmergencyStop);
   // print_modes("Candidates", candidates);
 
   std::vector<AutowareMode> result;

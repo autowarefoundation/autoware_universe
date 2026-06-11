@@ -55,7 +55,7 @@ private:
   void publish_operation_mode() const;
   void publish_mrm_state() const;
   void publish_driving_mode_request() const;
-  void publish_debug_status() const;
+  void publish_debug() const;
   void change_autoware_mode(const AutowareMode & mode);
 
   std::unique_ptr<Interface> interface_;

@@ -89,7 +89,7 @@ void Manager::update()
   publish_operation_mode();
   publish_mrm_state();
   publish_driving_mode_request();
-  publish_debug_status();
+  publish_debug();
 }
 
 void Manager::execute_tasks()
@@ -183,16 +183,18 @@ void Manager::publish_driving_mode_request() const
   interface_->publish_driving_mode_request(request_.autoware_mode);
 }
 
-void Manager::publish_debug_status() const
+void Manager::publish_debug() const
 {
   DebugStatus debug;
   for (const auto & mode : config_->autoware_modes()) {
-    debug.availables[mode] = status_->is_available(mode);
-    debug.stables[mode] = status_->is_stable(mode);
-    debug.continuables[mode] = status_->is_continuable(mode);
+    DebugStatus::Flag flag;
+    flag.available = status_->is_available(mode);
+    flag.stable = status_->is_stable(mode);
+    flag.continuable = status_->is_continuable(mode);
+    debug.flags[mode] = flag;
   }
-  interface_->publish_debug_status(debug);
-  interface_->publish_debug_status(request_);
+  interface_->publish_debug(debug);
+  interface_->publish_debug(request_);
 }
 
 void Manager::on_trajectory_source(const TrajectorySource & source)
