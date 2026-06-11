@@ -68,11 +68,11 @@ private:
 
   void callback_gnss_pose_with_cov(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
-      msg_pose_with_cov_in);
+    msg_pose_with_cov_in);
 
   void callback_ndt_pose_with_cov(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
-      msg_pose_with_cov_in);
+    msg_pose_with_cov_in);
 
   bool gnss_pose_has_timed_out(const rclcpp::Time & gnss_pose_received_time_last);
 

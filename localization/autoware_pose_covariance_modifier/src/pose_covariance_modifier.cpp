@@ -74,7 +74,7 @@ PoseCovarianceModifierNode::PoseCovarianceModifierNode(const rclcpp::NodeOptions
 
 void PoseCovarianceModifierNode::callback_gnss_pose_with_cov(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
-    msg_pose_with_cov_in)
+  msg_pose_with_cov_in)
 {
   // will be used to check if GNSS pose has timed out in the NDT pose callback
   gnss_pose_received_time_last_ = this->now();
@@ -115,7 +115,7 @@ void PoseCovarianceModifierNode::callback_gnss_pose_with_cov(
 
 void PoseCovarianceModifierNode::callback_ndt_pose_with_cov(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
-    msg_pose_with_cov_in)
+  msg_pose_with_cov_in)
 {
   if (pose_source_ == PoseSource::GNSS) {
     // if the pose source is only gnss, GNSS pose will be used in the GNSS pose callback
