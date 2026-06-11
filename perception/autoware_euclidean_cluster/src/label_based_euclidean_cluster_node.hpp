@@ -41,6 +41,17 @@ enum ShapePolicy : uint8_t {
   LABEL_DEPEND = 1,
 };
 
+struct ConfusableLabelGroup
+{
+  std::vector<std::uint8_t> labels;
+  /// @brief True minimum point-to-point XY gap (m) below which two cross-label clusters may merge.
+  float cross_label_tolerance{};
+  /// @brief Maximum oriented length (m) of a merged component; caps chaining into oversized blobs.
+  float max_merged_length{25.0F};
+  /// @brief Maximum oriented width (m) of a merged component.
+  float max_merged_width{3.5F};
+};
+
 /// @brief ROS 2 node that performs euclidean clustering on semantic point clouds grouped by label.
 class LabelBasedEuclideanClusterNode : public rclcpp::Node
 {
@@ -76,5 +87,8 @@ private:
   float min_probability_;
 
   ShapePolicy shape_policy_;
+
+  std::vector<ConfusableLabelGroup> confusable_groups_;
+  std::unordered_map<std::uint8_t, std::size_t> label_to_group_idx_;
 };
 }  // namespace autoware::euclidean_cluster

@@ -132,6 +132,37 @@
             "hazard": { "$ref": "#/definitions/cluster_override_params" }
           },
           "additionalProperties": false
+        },
+        "confusable_label_groups": {
+          "type": "object",
+          "description": "Optional post-clustering merge groups for confusable label pairs (e.g. truck/trailer). Each key is a user-defined group name.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "labels": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 2,
+                "description": "Label names in this confusable group."
+              },
+              "cross_label_tolerance": {
+                "type": "number",
+                "description": "Maximum true minimum point-to-point XY gap in meters between clusters of different labels to trigger a merge."
+              },
+              "max_merged_length": {
+                "type": "number",
+                "description": "Oriented length cap in meters for a merged component; unions exceeding it are refused, bounding chaining.",
+                "default": 25.0
+              },
+              "max_merged_width": {
+                "type": "number",
+                "description": "Oriented width cap in meters for a merged component.",
+                "default": 3.5
+              }
+            },
+            "required": ["labels", "cross_label_tolerance"],
+            "additionalProperties": false
+          }
         }
       },
       "required": [

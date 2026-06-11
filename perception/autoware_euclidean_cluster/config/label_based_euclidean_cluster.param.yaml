@@ -71,6 +71,17 @@
       other_stuff: ignore
       noise+ghost_point: ignore
 
+    # Post-clustering merge for confusable label pairs (e.g. truck/trailer over-segmentation).
+    # Groups are optional — omit this block entirely to disable the feature.
+    # Merge pipeline: AABB broad-phase prune -> true point-to-point gap ->
+    # size-bounded greedy union-find (closest pairs first; refuses unions that exceed the size cap).
+    # confusable_label_groups:
+    #   truck_trailer:
+    #     labels: ["truck", "trailer"]
+    #     cross_label_tolerance: 0.5   # m — true min point-to-point XY gap to merge adjacent clusters
+    #     max_merged_length: 25.0      # m — oriented length cap for a merged object (full trailer + margin)
+    #     max_merged_width: 3.5        # m — oriented width cap for a merged object
+
     # Shape estimation behavior
     use_shape_estimation_corrector: false
     use_shape_estimation_filter: false

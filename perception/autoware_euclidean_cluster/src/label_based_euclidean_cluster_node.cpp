@@ -16,6 +16,8 @@
 
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
+#include <Eigen/Core>
+#include <Eigen/Eigenvalues>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/parameter_map.hpp>
 
@@ -29,9 +31,12 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <pcl/common/common.h>
+#include <pcl/kdtree/kdtree_flann.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -314,6 +319,296 @@ float average_probability(const std::vector<SemanticPoint> & points)
     [](const float acc, const auto & point) { return acc + point.probability; });
   return sum / static_cast<float>(points.size());
 }
+
+struct ClusterEntry
+{
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  std::uint8_t label{};
+  float prob{};
+};
+
+struct Aabb2d
+{
+  float xmin{}, xmax{}, ymin{}, ymax{};
+};
+
+Aabb2d compute_aabb2d(const pcl::PointCloud<pcl::PointXYZ> & cloud)
+{
+  Eigen::Vector4f mn, mx;
+  pcl::getMinMax3D(cloud, mn, mx);
+  return {mn.x(), mx.x(), mn.y(), mx.y()};
+}
+
+/// @brief XY gap between two axis-aligned boxes. This is a lower bound on the true point-to-point
+///        gap (both boxes contain their points), so it is safe to use as a broad-phase prune.
+float aabb2d_gap(const Aabb2d & a, const Aabb2d & b)
+{
+  const float dx = std::max(0.0f, std::max(a.xmin, b.xmin) - std::min(a.xmax, b.xmax));
+  const float dy = std::max(0.0f, std::max(a.ymin, b.ymin) - std::min(a.ymax, b.ymax));
+  return std::sqrt(dx * dx + dy * dy);
+}
+
+/// @brief Oriented 2D footprint of a cluster, from principal-component analysis in the XY plane.
+struct OrientedExtent
+{
+  float length{};  ///< extent along the major axis (m)
+  float width{};   ///< extent along the minor axis (m)
+};
+
+/// @brief Estimate the oriented footprint of a cluster via XY PCA (cheap, gating-grade accuracy).
+OrientedExtent compute_oriented_extent(const pcl::PointCloud<pcl::PointXYZ> & cloud)
+{
+  OrientedExtent ext;
+  const auto n = cloud.size();
+  if (n == 0) {
+    return ext;
+  }
+
+  Eigen::Vector2f mean = Eigen::Vector2f::Zero();
+  for (const auto & p : cloud) {
+    mean += Eigen::Vector2f(p.x, p.y);
+  }
+  mean /= static_cast<float>(n);
+
+  Eigen::Matrix2f cov = Eigen::Matrix2f::Zero();
+  for (const auto & p : cloud) {
+    const Eigen::Vector2f d(p.x - mean.x(), p.y - mean.y());
+    cov += d * d.transpose();
+  }
+  cov /= static_cast<float>(n);
+
+  // SelfAdjointEigenSolver returns eigenvalues in ascending order; column 1 is the major axis.
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix2f> solver(cov);
+  const Eigen::Vector2f major = solver.eigenvectors().col(1);
+  const Eigen::Vector2f minor = solver.eigenvectors().col(0);
+
+  float min_major = std::numeric_limits<float>::max();
+  float max_major = std::numeric_limits<float>::lowest();
+  float min_minor = std::numeric_limits<float>::max();
+  float max_minor = std::numeric_limits<float>::lowest();
+  for (const auto & p : cloud) {
+    const Eigen::Vector2f d(p.x - mean.x(), p.y - mean.y());
+    const float a = d.dot(major);
+    const float b = d.dot(minor);
+    min_major = std::min(min_major, a);
+    max_major = std::max(max_major, a);
+    min_minor = std::min(min_minor, b);
+    max_minor = std::max(max_minor, b);
+  }
+
+  ext.length = max_major - min_major;
+  ext.width = max_minor - min_minor;
+  return ext;
+}
+
+/// @brief Exact minimum point-to-point distance between two clusters in the XY plane (KD-tree).
+float true_min_gap_xy(
+  const pcl::PointCloud<pcl::PointXYZ> & a, const pcl::PointCloud<pcl::PointXYZ> & b)
+{
+  // Flatten to XY (z = 0) so the search measures planar separation regardless of use_height.
+  const auto flatten = [](const pcl::PointCloud<pcl::PointXYZ> & in) {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr out(new pcl::PointCloud<pcl::PointXYZ>);
+    out->reserve(in.size());
+    for (const auto & p : in) {
+      out->push_back(pcl::PointXYZ(p.x, p.y, 0.0F));
+    }
+    return out;
+  };
+
+  // Build the tree on the smaller cloud, query with the larger one.
+  const bool a_smaller = a.size() <= b.size();
+  const auto tree_cloud = flatten(a_smaller ? a : b);
+  const auto query_cloud = flatten(a_smaller ? b : a);
+  if (tree_cloud->empty() || query_cloud->empty()) {
+    return std::numeric_limits<float>::max();
+  }
+
+  pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+  kdtree.setInputCloud(tree_cloud);
+
+  float min_sq = std::numeric_limits<float>::max();
+  std::vector<int> idx(1);
+  std::vector<float> dist_sq(1);
+  for (const auto & q : *query_cloud) {
+    if (kdtree.nearestKSearch(q, 1, idx, dist_sq) > 0) {
+      min_sq = std::min(min_sq, dist_sq[0]);
+    }
+  }
+  return std::sqrt(min_sq);
+}
+
+/// @brief Cross-label confusable merge: AABB broad-phase prune -> true-gap narrow phase ->
+///        size-bounded greedy union-find (closest pairs first) to prevent chaining.
+std::vector<ClusterEntry> merge_confusable_clusters(
+  std::vector<ClusterEntry> entries, const ConfusableLabelGroup & group)
+{
+  const auto n = entries.size();
+  if (n <= 1) {
+    return entries;
+  }
+
+  std::vector<Aabb2d> aabbs;
+  aabbs.reserve(n);
+  for (const auto & e : entries) {
+    aabbs.push_back(compute_aabb2d(e.cloud));
+  }
+
+  // Phase 1 (broad) + Phase 2 (narrow): collect surviving candidate edges with their true gap.
+  struct Edge
+  {
+    float gap{};
+    int i{};
+    int j{};
+  };
+  std::vector<Edge> edges;
+  for (size_t i = 0; i < n; ++i) {
+    for (size_t j = i + 1; j < n; ++j) {
+      if (entries[i].label == entries[j].label) {
+        continue;
+      }
+      // Broad phase: AABB gap is a lower bound, so this prune never drops a true-adjacent pair.
+      if (aabb2d_gap(aabbs[i], aabbs[j]) >= group.cross_label_tolerance) {
+        continue;
+      }
+      // Narrow phase: exact min point-to-point XY gap rejects the false positives AABB admits.
+      const float gap = true_min_gap_xy(entries[i].cloud, entries[j].cloud);
+      if (gap >= group.cross_label_tolerance) {
+        continue;
+      }
+      edges.push_back({gap, static_cast<int>(i), static_cast<int>(j)});
+    }
+  }
+
+  // Phase 3: size-bounded greedy union-find. Merge the closest pairs first and refuse any union
+  // whose resulting oriented footprint would exceed the physical size cap — this bounds component
+  // growth so a chain of adjacencies cannot collapse a dense scene into one oversized blob.
+  std::sort(
+    edges.begin(), edges.end(), [](const Edge & a, const Edge & b) { return a.gap < b.gap; });
+
+  std::vector<int> parent(n);
+  std::iota(parent.begin(), parent.end(), 0);
+  auto find = [&](int x) {
+    while (parent[x] != x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  };
+
+  std::vector<std::vector<int>> members(n);
+  for (int i = 0; i < static_cast<int>(n); ++i) {
+    members[i] = {i};
+  }
+
+  for (const auto & e : edges) {
+    const int ri = find(e.i);
+    const int rj = find(e.j);
+    if (ri == rj) {
+      continue;
+    }
+    pcl::PointCloud<pcl::PointXYZ> tentative;
+    for (const int m : members[ri]) {
+      tentative += entries[m].cloud;
+    }
+    for (const int m : members[rj]) {
+      tentative += entries[m].cloud;
+    }
+    const OrientedExtent merged_ext = compute_oriented_extent(tentative);
+    if (merged_ext.length > group.max_merged_length || merged_ext.width > group.max_merged_width) {
+      continue;  // would create an implausibly large object — keep them separate
+    }
+    parent[ri] = rj;
+    members[rj].insert(members[rj].end(), members[ri].begin(), members[ri].end());
+    members[ri].clear();
+  }
+
+  std::unordered_map<int, std::vector<int>> groups;
+  for (int i = 0; i < static_cast<int>(n); ++i) {
+    groups[find(i)].push_back(i);
+  }
+
+  std::vector<ClusterEntry> result;
+  result.reserve(groups.size());
+  for (auto & [root, indices] : groups) {
+    if (indices.size() == 1) {
+      result.push_back(std::move(entries[indices[0]]));
+      continue;
+    }
+    ClusterEntry merged;
+    std::unordered_map<std::uint8_t, size_t> label_counts;
+    size_t total_points = 0;
+    float weighted_prob = 0.0f;
+    for (const int idx : indices) {
+      const auto & e = entries[idx];
+      const auto npts = e.cloud.size();
+      merged.cloud += e.cloud;
+      label_counts[e.label] += npts;
+      weighted_prob += e.prob * static_cast<float>(npts);
+      total_points += npts;
+    }
+    merged.label = std::max_element(
+                     label_counts.begin(), label_counts.end(),
+                     [](const auto & a, const auto & b) { return a.second < b.second; })
+                     ->first;
+    merged.prob = total_points > 0 ? weighted_prob / static_cast<float>(total_points) : 0.0f;
+    result.push_back(std::move(merged));
+  }
+  return result;
+}
+
+/// @brief Parse confusable_label_groups.* parameters from NodeOptions overrides.
+std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptions & options)
+{
+  constexpr std::string_view prefix = "confusable_label_groups.";
+  std::unordered_map<std::string, ConfusableLabelGroup> groups_map;
+  std::unordered_map<std::string, bool> has_tolerance;
+
+  for (const auto & param : options.parameter_overrides()) {
+    const auto & name = param.get_name();
+    if (name.rfind(prefix, 0) != 0) {
+      continue;
+    }
+
+    const auto rest = name.substr(prefix.size());
+    const auto dot = rest.find('.');
+    if (dot == std::string::npos) {
+      continue;
+    }
+
+    const auto group_name = rest.substr(0, dot);
+    const auto key = rest.substr(dot + 1);
+    auto & group = groups_map[group_name];
+
+    if (
+      key == "cross_label_tolerance" &&
+      param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
+      group.cross_label_tolerance = static_cast<float>(param.as_double());
+      has_tolerance[group_name] = true;
+    } else if (
+      key == "max_merged_length" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
+      group.max_merged_length = static_cast<float>(param.as_double());
+    } else if (
+      key == "max_merged_width" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
+      group.max_merged_width = static_cast<float>(param.as_double());
+    } else if (
+      key == "labels" && param.get_type() == rclcpp::ParameterType::PARAMETER_STRING_ARRAY) {
+      for (const auto & label_name : param.as_string_array()) {
+        const auto label_id = to_object_label(label_name);
+        if (label_id.has_value()) {
+          group.labels.push_back(label_id.value());
+        }
+      }
+    }
+  }
+
+  std::vector<ConfusableLabelGroup> result;
+  for (auto & [name, group] : groups_map) {
+    if (group.labels.size() >= 2 && has_tolerance.count(name)) {
+      result.push_back(std::move(group));
+    }
+  }
+  return result;
+}
 }  // namespace
 
 LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::NodeOptions & options)
@@ -432,6 +727,13 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   debug_publisher_ = std::make_unique<autoware_utils::DebugPublisher>(this, "~/debug");
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
+
+  confusable_groups_ = load_confusable_groups(options);
+  for (std::size_t g = 0; g < confusable_groups_.size(); ++g) {
+    for (const auto label : confusable_groups_[g].labels) {
+      label_to_group_idx_[label] = g;
+    }
+  }
 }
 
 EuclideanClusterInterface & LabelBasedEuclideanClusterNode::get_clusterer(
@@ -487,30 +789,50 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
   auto output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(objects_pub_);
   output_msg->header = input_msg->header;
 
+  // 2. Run per-label clustering and collect all cluster entries
+  // TODO(ktro2828): Probability is averaged per label bucket before clustering, not per cluster.
+  std::vector<ClusterEntry> all_entries;
   for (const auto & [label, semantic_points] : split_points) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr label_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     label_cloud->reserve(semantic_points.size());
-    for (const auto & semantic_point : semantic_points) {
-      label_cloud->push_back(semantic_point.point);
+    for (const auto & sp : semantic_points) {
+      label_cloud->push_back(sp.point);
     }
 
     std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters;
     get_clusterer(label).cluster(label_cloud, clusters);
 
-    // TODO(ktro2828): This probability is averaged per segmented label bucket before clustering,
-    // not per individual cluster. Consider to refine the probability assignment to reflect
-    // cluster-level confidence.
-    // Or uncertainty aware clustering can be applied to propagate point-level probabilities into
-    // clusters using 'entropy' field values.
-    const float label_probability = average_probability(semantic_points);
-    for (const auto & cluster : clusters) {
-      if (cluster.empty()) {
-        continue;
+    const float prob = average_probability(semantic_points);
+    for (auto & cluster : clusters) {
+      if (!cluster.empty()) {
+        all_entries.push_back({std::move(cluster), label, prob});
       }
-
-      output_msg->objects.push_back(create_detected_object(
-        cluster, label, label_probability, shape_policy_, *shape_estimator_));
     }
+  }
+
+  // 3. Post-merge clusters that belong to the same confusable label group
+  std::vector<std::vector<ClusterEntry>> per_group(confusable_groups_.size());
+  std::vector<ClusterEntry> output_entries;
+  output_entries.reserve(all_entries.size());
+
+  for (auto & e : all_entries) {
+    const auto it = label_to_group_idx_.find(e.label);
+    if (it != label_to_group_idx_.end()) {
+      per_group[it->second].push_back(std::move(e));
+    } else {
+      output_entries.push_back(std::move(e));
+    }
+  }
+  for (std::size_t g = 0; g < confusable_groups_.size(); ++g) {
+    for (auto & e : merge_confusable_clusters(std::move(per_group[g]), confusable_groups_[g])) {
+      output_entries.push_back(std::move(e));
+    }
+  }
+
+  // 4. Build detected objects from final entries
+  for (const auto & e : output_entries) {
+    output_msg->objects.push_back(
+      create_detected_object(e.cloud, e.label, e.prob, shape_policy_, *shape_estimator_));
   }
 
   objects_pub_->publish(std::move(output_msg));
