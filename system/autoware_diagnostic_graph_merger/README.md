@@ -37,25 +37,25 @@ If all conditions are met the statuses are concatenated in the same order as the
 
 ### Inputs
 
-| Topic               | Type                                    | QoS             | Description                              |
-| ------------------- | --------------------------------------- | --------------- | ---------------------------------------- |
-| `~/input1/struct`   | `tier4_system_msgs/msg/DiagGraphStruct` | Transient-local | Graph topology from ECU 1                |
-| `~/input1/status`   | `tier4_system_msgs/msg/DiagGraphStatus` | Reliable        | Runtime health status from ECU 1         |
-| `~/input2/struct`   | `tier4_system_msgs/msg/DiagGraphStruct` | Transient-local | Graph topology from ECU 2                |
-| `~/input2/status`   | `tier4_system_msgs/msg/DiagGraphStatus` | Reliable        | Runtime health status from ECU 2         |
+| Topic             | Type                                    | QoS             | Description                      |
+| ----------------- | --------------------------------------- | --------------- | -------------------------------- |
+| `~/input1/struct` | `tier4_system_msgs/msg/DiagGraphStruct` | Transient-local | Graph topology from ECU 1        |
+| `~/input1/status` | `tier4_system_msgs/msg/DiagGraphStatus` | Reliable        | Runtime health status from ECU 1 |
+| `~/input2/struct` | `tier4_system_msgs/msg/DiagGraphStruct` | Transient-local | Graph topology from ECU 2        |
+| `~/input2/status` | `tier4_system_msgs/msg/DiagGraphStatus` | Reliable        | Runtime health status from ECU 2 |
 
 ### Outputs
 
-| Topic               | Type                                    | QoS             | Description                              |
-| ------------------- | --------------------------------------- | --------------- | ---------------------------------------- |
-| `~/output/struct`   | `tier4_system_msgs/msg/DiagGraphStruct` | Transient-local | Merged graph topology                    |
-| `~/output/status`   | `tier4_system_msgs/msg/DiagGraphStatus` | Reliable        | Merged runtime health status             |
+| Topic             | Type                                    | QoS             | Description                  |
+| ----------------- | --------------------------------------- | --------------- | ---------------------------- |
+| `~/output/struct` | `tier4_system_msgs/msg/DiagGraphStruct` | Transient-local | Merged graph topology        |
+| `~/output/status` | `tier4_system_msgs/msg/DiagGraphStatus` | Reliable        | Merged runtime health status |
 
 ## Parameters
 
-| Parameter | Type   | Default | Description                              |
-| --------- | ------ | ------- | ---------------------------------------- |
-| `rate`    | double | `10.0`  | Status publish rate [Hz]                 |
+| Parameter | Type   | Default | Description              |
+| --------- | ------ | ------- | ------------------------ |
+| `rate`    | double | `10.0`  | Status publish rate [Hz] |
 
 ## Launch
 
@@ -69,4 +69,3 @@ If all conditions are met the statuses are concatenated in the same order as the
   <arg name="~/output/status" value="/diagnostics_graph/status"/>
 </include>
 ```
-

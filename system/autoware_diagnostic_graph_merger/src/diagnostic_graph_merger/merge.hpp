@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE_DIAGNOSTIC_GRAPH_MERGER__MERGE_HPP_
-#define AUTOWARE_DIAGNOSTIC_GRAPH_MERGER__MERGE_HPP_
+#ifndef DIAGNOSTIC_GRAPH_MERGER__MERGE_HPP_
+#define DIAGNOSTIC_GRAPH_MERGER__MERGE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -56,4 +56,4 @@ private:
 
 }  // namespace autoware::diagnostic_graph_merger
 
-#endif  // AUTOWARE_DIAGNOSTIC_GRAPH_MERGER__MERGE_HPP_
+#endif  // DIAGNOSTIC_GRAPH_MERGER__MERGE_HPP_
