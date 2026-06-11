@@ -15,6 +15,7 @@
     "HPIPM",
     "idxbu",
     "idxsh",
+    "indptr",
     "ineq",
     "lacados",
     "lambdify",
