@@ -1569,8 +1569,8 @@ std::vector<geometry_msgs::msg::Point> postProcess(
   }
 
   if (!is_driving_forward) {
-    const bool has_direction_change_tag = std::any_of(
-      lanelets.begin(), lanelets.end(), [](const lanelet::ConstLanelet & lanelet) {
+    const bool has_direction_change_tag =
+      std::any_of(lanelets.begin(), lanelets.end(), [](const lanelet::ConstLanelet & lanelet) {
         return lanelet.attributeOr("direction_change", "none") == std::string("yes");
       });
     if (!has_direction_change_tag) {
