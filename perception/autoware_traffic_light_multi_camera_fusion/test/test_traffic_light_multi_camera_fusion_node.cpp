@@ -20,6 +20,7 @@
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
@@ -39,6 +40,8 @@
 using autoware::traffic_light::MultiCameraFusionNode;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::TrafficLightGroupArray;
+using diagnostic_msgs::msg::DiagnosticArray;
+using diagnostic_msgs::msg::DiagnosticStatus;
 using sensor_msgs::msg::CameraInfo;
 using tier4_perception_msgs::msg::TrafficLight;
 using tier4_perception_msgs::msg::TrafficLightArray;
@@ -94,6 +97,12 @@ protected:
         received_message_ = message;
         message_received_ = true;
       });
+
+    diagnostics_subscription_ = test_node_->create_subscription<DiagnosticArray>(
+      "/diagnostics", rclcpp::QoS(10), [this](const DiagnosticArray::SharedPtr message) {
+        received_diagnostics_ = message;
+        diagnostics_received_ = true;
+      });
   }
 
   void initialize_fusion_node(const FusionNodeOptions & options)
@@ -117,6 +126,7 @@ protected:
   {
     executor_.reset();
     output_subscription_.reset();
+    diagnostics_subscription_.reset();
     camera_info_publishers_.clear();
     roi_publishers_.clear();
     signal_publishers_.clear();
@@ -126,11 +136,13 @@ protected:
     rclcpp::shutdown();
   }
 
-  bool wait_for_message(std::chrono::milliseconds timeout = std::chrono::milliseconds(3000))
+  // Spin until both the fused output and the diagnostics message have been received.
+  bool wait_for_messages(std::chrono::milliseconds timeout = std::chrono::milliseconds(3000))
   {
     auto start = std::chrono::steady_clock::now();
     message_received_ = false;
-    while (!message_received_) {
+    diagnostics_received_ = false;
+    while (!message_received_ || !diagnostics_received_) {
       if (std::chrono::steady_clock::now() - start > timeout) {
         return false;
       }
@@ -230,9 +242,12 @@ protected:
   std::vector<rclcpp::Publisher<TrafficLightRoiArray>::SharedPtr> roi_publishers_;
   std::vector<rclcpp::Publisher<TrafficLightArray>::SharedPtr> signal_publishers_;
   rclcpp::Subscription<TrafficLightGroupArray>::SharedPtr output_subscription_;
+  rclcpp::Subscription<DiagnosticArray>::SharedPtr diagnostics_subscription_;
 
   TrafficLightGroupArray::SharedPtr received_message_;
+  DiagnosticArray::SharedPtr received_diagnostics_;
   bool message_received_ = false;
+  bool diagnostics_received_ = false;
 };
 
 /// @brief Create a lanelet map with two traffic-light line strings sharing a single
@@ -293,58 +308,12 @@ LaneletMapBin create_map()
   return map_bin;
 }
 
-// Two cameras observe two distinct traffic lights that belong to the same regulatory element.
-// Per-camera fusion picks the only record per traffic-light id, and group fusion accumulates
-// evidence across the two ids and outputs a single GREEN group.
-TEST_F(MultiCameraFusionIntegrationTest, TwoCamerasOneRegulatoryElementOutputsGreenGroup)
-{
-  // Arrange
-  initialize_fusion_node(FusionNodeOptions{});
-  publish_map(create_map());
-
-  // Act
-  publish_camera_detection(0, LEFT_TRAFFIC_LIGHT_ID, TrafficLightElement::GREEN, 0.9f);
-  publish_camera_detection(1, RIGHT_TRAFFIC_LIGHT_ID, TrafficLightElement::GREEN, 0.9f);
-
-  // Assert
-  ASSERT_TRUE(wait_for_message());
-  ASSERT_EQ(received_message_->traffic_light_groups.size(), 1u);
-  const auto & group = received_message_->traffic_light_groups.front();
-  EXPECT_EQ(group.traffic_light_group_id, REGULATORY_ELEMENT_ID);
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(
-    group.elements.front().color, autoware_perception_msgs::msg::TrafficLightElement::GREEN);
-  EXPECT_EQ(
-    group.elements.front().shape, autoware_perception_msgs::msg::TrafficLightElement::CIRCLE);
-}
-
-// Two cameras observe different traffic lights in the same regulatory element with
-// conflicting colors and different confidences. With consistency check disabled,
-// the node selects the color from the higher-confidence observation.
-TEST_F(MultiCameraFusionIntegrationTest, HigherConfidenceColorWinsAmongConflictingObservations)
-{
-  // Arrange
-  initialize_fusion_node(FusionNodeOptions{});
-  publish_map(create_map());
-
-  // Act
-  publish_camera_detection(0, LEFT_TRAFFIC_LIGHT_ID, TrafficLightElement::RED, 0.6f);
-  publish_camera_detection(1, RIGHT_TRAFFIC_LIGHT_ID, TrafficLightElement::GREEN, 0.9f);
-
-  // Assert
-  ASSERT_TRUE(wait_for_message());
-  ASSERT_EQ(received_message_->traffic_light_groups.size(), 1u);
-  const auto & group = received_message_->traffic_light_groups.front();
-  EXPECT_EQ(group.traffic_light_group_id, REGULATORY_ELEMENT_ID);
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(
-    group.elements.front().color, autoware_perception_msgs::msg::TrafficLightElement::GREEN);
-}
-
 // Two cameras observe the same regulatory element with conflicting colors (RED vs GREEN).
-// With consistency check enabled and partial-match publishing disabled, the node detects
-// a CONFLICT between the two state keys and emits a fail-safe UNKNOWN group.
-TEST_F(MultiCameraFusionIntegrationTest, TwoCamerasConflictingColorsOutputsFailsafeUnknown)
+// With the consistency check enabled, the node detects the conflict, so it publishes both an
+// output group array and a WARN diagnostics message. This exercises the node's subscribers,
+// map handling, output publisher, and diagnostics publishing path; the fusion logic itself is
+// covered by the unit tests.
+TEST_F(MultiCameraFusionIntegrationTest, ConflictingObservationsPublishOutputAndDiagnostics)
 {
   // Arrange
   FusionNodeOptions options;
@@ -357,15 +326,11 @@ TEST_F(MultiCameraFusionIntegrationTest, TwoCamerasConflictingColorsOutputsFails
   publish_camera_detection(1, RIGHT_TRAFFIC_LIGHT_ID, TrafficLightElement::GREEN, 0.9f);
 
   // Assert
-  ASSERT_TRUE(wait_for_message());
-  ASSERT_EQ(received_message_->traffic_light_groups.size(), 1u);
-  const auto & group = received_message_->traffic_light_groups.front();
-  EXPECT_EQ(group.traffic_light_group_id, REGULATORY_ELEMENT_ID);
-  ASSERT_EQ(group.elements.size(), 1u);
-  EXPECT_EQ(
-    group.elements.front().color, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(
-    group.elements.front().shape, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN);
+  ASSERT_TRUE(wait_for_messages());
+  EXPECT_EQ(received_message_->traffic_light_groups.size(), 1u);
+
+  ASSERT_FALSE(received_diagnostics_->status.empty());
+  EXPECT_EQ(received_diagnostics_->status.front().level, DiagnosticStatus::WARN);
 }
 
 int main(int argc, char ** argv)
