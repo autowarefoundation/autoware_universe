@@ -86,7 +86,8 @@ StateMonitor::StateMonitor(const rclcpp::NodeOptions & options) : Node("state", 
     "/diagnostics", 100, std::bind(&StateMonitor::on_diag, this, std::placeholders::_1));
 
   const auto rate = rclcpp::Rate(10.0);
-  timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this] { on_timer(); });
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), rate.period(), [this] { on_timer(); });
 }
 
 void StateMonitor::update_state(const StateType & type, const Module & module, bool state)
@@ -118,7 +119,7 @@ void StateMonitor::on_timer()
   }
 }
 
-void StateMonitor::on_diag(const DiagnosticArray::ConstSharedPtr msg)
+void StateMonitor::on_diag(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DiagnosticArray) & msg)
 {
   for (const auto & status : msg->status) {
     if (status.hardware_id == "topic_state_monitor") {
