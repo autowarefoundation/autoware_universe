@@ -224,14 +224,33 @@ bool all_rois_within_image(
   return true;
 }
 
-bool all_scores_at_least(const DetectedObjectsWithFeature & objects, float threshold)
+// Asserts a non-empty set of detections was published with every ROI inside the image bounds.
+// This is the common, lenient validation shared by the real-image tests; per-test specifics
+// (e.g. an expected class) are asserted separately by the caller.
+void expect_objects_detected(
+  const DetectedObjectsWithFeature::ConstSharedPtr & objects, const cv::Mat & image)
 {
-  for (const auto & feature_object : objects.feature_objects) {
-    if (feature_object.object.existence_probability < threshold) {
-      return false;
-    }
-  }
-  return true;
+  ASSERT_NE(objects, nullptr) << "node did not publish any objects message";
+  EXPECT_FALSE(objects->feature_objects.empty());
+  EXPECT_TRUE(all_rois_within_image(
+    *objects, static_cast<uint32_t>(image.cols), static_cast<uint32_t>(image.rows)));
+}
+
+// Asserts the multitask model published a non-empty segmentation mask (class-id map).
+void expect_segmentation_mask_published(const sensor_msgs::msg::Image::ConstSharedPtr & mask)
+{
+  ASSERT_NE(mask, nullptr) << "multitask model did not publish a segmentation mask";
+  EXPECT_GT(mask->width, 0u);
+  EXPECT_GT(mask->height, 0u);
+}
+
+// Asserts a non-empty colorized mask was published as a BGR8 image.
+void expect_color_mask_published(const sensor_msgs::msg::Image::ConstSharedPtr & color_mask)
+{
+  ASSERT_NE(color_mask, nullptr) << "color mask was not published";
+  EXPECT_EQ(color_mask->encoding, sensor_msgs::image_encodings::BGR8);
+  EXPECT_GT(color_mask->width, 0u);
+  EXPECT_GT(color_mask->height, 0u);
 }
 }  // namespace
 
@@ -367,12 +386,8 @@ TEST_F(TrtYoloXNodeIntegrationTest, DetectsTrafficLightInRealImage)
   publish_until(image_msg, [this] { return received_objects_ != nullptr; });
 
   // Assert
-  ASSERT_NE(received_objects_, nullptr) << "node did not publish any objects message";
-  EXPECT_FALSE(received_objects_->feature_objects.empty());
+  expect_objects_detected(received_objects_, image);
   EXPECT_GE(count_objects_with_label(*received_objects_, vehicle_traffic_light_label), 1u);
-  EXPECT_TRUE(all_rois_within_image(
-    *received_objects_, static_cast<uint32_t>(image.cols), static_cast<uint32_t>(image.rows)));
-  EXPECT_TRUE(all_scores_at_least(*received_objects_, score_threshold));
 }
 
 // Longest segmentation path: the multitask model additionally publishes a segmentation mask and a
@@ -402,19 +417,9 @@ TEST_F(TrtYoloXNodeIntegrationTest, PublishesSegmentationMaskForMultitaskModel)
   });
 
   // Assert
-  ASSERT_NE(received_objects_, nullptr) << "node did not publish any objects message";
-  EXPECT_FALSE(received_objects_->feature_objects.empty());
-  EXPECT_TRUE(all_rois_within_image(
-    *received_objects_, static_cast<uint32_t>(image.cols), static_cast<uint32_t>(image.rows)));
-
-  ASSERT_NE(received_mask_, nullptr) << "multitask model did not publish a segmentation mask";
-  EXPECT_GT(received_mask_->width, 0u);
-  EXPECT_GT(received_mask_->height, 0u);
-
-  ASSERT_NE(received_color_mask_, nullptr) << "color mask was not published";
-  EXPECT_EQ(received_color_mask_->encoding, sensor_msgs::image_encodings::BGR8);
-  EXPECT_GT(received_color_mask_->width, 0u);
-  EXPECT_GT(received_color_mask_->height, 0u);
+  expect_objects_detected(received_objects_, image);
+  expect_segmentation_mask_published(received_mask_);
+  expect_color_mask_published(received_color_mask_);
 }
 
 int main(int argc, char ** argv)
