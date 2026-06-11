@@ -56,7 +56,7 @@ autoware_agnocast_wrapper_register_node(aggregator
 autoware_agnocast_wrapper_register_node(converter
   PLUGIN "autoware::diagnostic_graph_aggregator::ConverterNode"
   EXECUTABLE "converter_node"
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
