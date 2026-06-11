@@ -84,7 +84,7 @@ protected:
   using TfListener = autoware_utils::TransformListenerT<
     autoware::agnocast_wrapper::Node, autoware::agnocast_wrapper::Buffer,
     autoware::agnocast_wrapper::TransformListener>;
-  std::shared_ptr<TfListener> tf_listener_;
+  std::shared_ptr<TfListener> transform_listener_;
 
   // Data Buffer
   std::vector<AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType)> objects_data_{};
