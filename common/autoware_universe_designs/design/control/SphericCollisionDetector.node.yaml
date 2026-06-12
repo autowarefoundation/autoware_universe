@@ -15,12 +15,15 @@ subscribers:
   - name: ros_transform_static
     message_type: tf2_msgs/msg/TFMessage
     global: /tf_static
-  - name: input/object_recognition
+  - name: object_recognition
     message_type: autoware_perception_msgs/msg/DetectedObjects
-  - name: input/predicted_trajectory
+    remap_target: input/object_recognition
+  - name: predicted_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-  - name: input/odometry
+    remap_target: input/predicted_trajectory
+  - name: odometry
     message_type: nav_msgs/msg/Odometry
+    remap_target: input/odometry
 publishers:
   - name: diagnostics
     message_type: diagnostic_msgs/msg/DiagnosticArray
@@ -28,8 +31,9 @@ publishers:
   - name: marker_array
     message_type: visualization_msgs/msg/MarkerArray
     remap_target: debug/marker/marker_array
-  - name: debug/processing_time_ms
+  - name: processing_time_ms
     message_type: diagnostic_msgs/msg/DiagnosticStatus
+    remap_target: ~/debug/processing_time_ms
 # parameters
 param_files:
   - name: spheric_collision_detector_param
@@ -43,4 +47,4 @@ processes:
     outcomes:
       - to_output: diagnostics
       - to_output: marker_array
-      - to_output: debug/processing_time_ms
+      - to_output: processing_time_ms

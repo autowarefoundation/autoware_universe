@@ -12,12 +12,16 @@ launch:
 subscribers:
   - name: kinematics
     message_type: nav_msgs/msg/Odometry
+    remap_target: kinematics
   - name: trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: trajectory
   - name: control_cmd
     message_type: autoware_control_msgs/msg/Control
+    remap_target: control_cmd
   - name: trajectory_follower_control_cmd
     message_type: autoware_control_msgs/msg/Control
+    remap_target: trajectory_follower_control_cmd
 publishers:
   - name: transition_available
     message_type: tier4_system_msgs/msg/ModeChangeAvailable
@@ -27,6 +31,7 @@ publishers:
     global: /system/command_mode/transition/completed
   - name: debug_info
     message_type: autoware_operation_mode_transition_manager/msg/OperationModeTransitionManagerDebug
+    remap_target: ~/debug_info
 # parameters
 param_files:
   - name: operation_mode_transition_manager_param

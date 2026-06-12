@@ -9,18 +9,18 @@ launch:
   executable: autoware_control_performance_analysis_node
 # interfaces
 subscribers:
-  - name: input/reference_trajectory
+  - name: reference_trajectory
     message_type: autoware_planning_msgs/msg/Trajectory
-  - name: input/control_raw
+  - name: control_raw
     message_type: autoware_control_msgs/msg/Control
-  - name: input/measured_steering
+  - name: measured_steering
     message_type: autoware_vehicle_msgs/msg/SteeringReport
-  - name: input/odometry
+  - name: odometry
     message_type: nav_msgs/msg/Odometry
 publishers:
-  - name: output/error_stamped
+  - name: error_stamped
     message_type: autoware_control_performance_analysis/msg/ErrorStamped
-  - name: output/driving_status_stamped
+  - name: driving_status_stamped
     message_type: autoware_control_performance_analysis/msg/DrivingMonitorStamped
 # parameters
 param_files:
@@ -31,7 +31,7 @@ param_values: []
 processes:
   - name: analyze_control_performance
     trigger_conditions:
-      - on_input: input/odometry
+      - on_input: odometry
     outcomes:
-      - to_output: output/error_stamped
-      - to_output: output/driving_status_stamped
+      - to_output: error_stamped
+      - to_output: driving_status_stamped
