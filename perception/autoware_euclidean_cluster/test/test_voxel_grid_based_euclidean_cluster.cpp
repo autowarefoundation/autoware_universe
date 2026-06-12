@@ -23,7 +23,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <iostream>
+#include <limits>
 #include <memory>
 
 using autoware::point_types::PointXYZI;
@@ -92,6 +94,37 @@ sensor_msgs::msg::PointCloud2 generateClusterWithinVoxelUniform(const int nb_poi
       point.intensity = 0.0;
       const int idx = (i * nb_points + j) * pointcloud.point_step;
       memcpy(&pointcloud.data[idx], &point, pointcloud.point_step);
+    }
+  }
+  pointcloud.width = total_points;
+  pointcloud.row_step = pointcloud.point_step * total_points;
+  return pointcloud;
+}
+
+// Generate a solid rectangular blob spanning nx by ny voxels (leaf-sized cells), with
+// points_per_voxel distinct points inside each voxel. Produces one connected cluster of nx*ny
+// occupied voxels under a tolerance >= leaf.
+sensor_msgs::msg::PointCloud2 generateVoxelRectangle(
+  const int nx, const int ny, const float leaf, const int points_per_voxel)
+{
+  sensor_msgs::msg::PointCloud2 pointcloud;
+  setPointCloud2Fields(pointcloud);
+  const int total_points = nx * ny * points_per_voxel;
+  pointcloud.data.resize(total_points * pointcloud.point_step);
+
+  int n = 0;
+  for (int ix = 0; ix < nx; ++ix) {
+    for (int iy = 0; iy < ny; ++iy) {
+      for (int p = 0; p < points_per_voxel; ++p) {
+        PointXYZI point;
+        // Spread the points across the interior of voxel (ix, iy) so they stay in the same cell.
+        point.x = leaf * (ix + 0.3f + 0.4f * static_cast<float>(p) / points_per_voxel);
+        point.y = leaf * (iy + 0.5f);
+        point.z = 0.0;
+        point.intensity = 0.0;
+        memcpy(&pointcloud.data[n * pointcloud.point_step], &point, pointcloud.point_step);
+        ++n;
+      }
     }
   }
   pointcloud.width = total_points;
@@ -171,12 +204,13 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase2)
   EXPECT_EQ(output.feature_objects.size(), 0);
 }
 
-// Test case 3: Test case when the input pointcloud has cluster with voxel greater than
-// max_voxel_cluster_for_output
+// Test case 3: A cluster whose voxel count exceeds max_voxel_cluster_for_output is now SPLIT into
+// smaller sub-clusters (not dropped), and no point is lost.
 TEST(VoxelGridBasedEuclideanClusterTest, testcase3)
 {
   int nb_generated_points = 10;
   sensor_msgs::msg::PointCloud2 pointcloud = generateClusterWithinVoxelUniform(nb_generated_points);
+  const int total_points = nb_generated_points * nb_generated_points;  // 100
 
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_msg =
     std::make_shared<sensor_msgs::msg::PointCloud2>(pointcloud);
@@ -187,23 +221,26 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase3)
   int min_points_number_per_voxel = 1;
   int min_cluster_size = 1;
   int max_cluster_size = 99;
-  int min_voxel_cluster_size_for_filtering = 150;
+  int min_voxel_cluster_size_for_filtering = 150;  // disable per-voxel point capping
   int max_points_per_voxel_in_large_cluster = 10;
   int max_voxel_cluster_for_output =
-    8;  // voxel num is 0.3*0.3/0.1^2 = 9, so max_voxel_cluster_for_output = 8 will be filtered out
+    8;  // voxel num is 0.3*0.3/0.1^2 = 9, so the single 9-voxel cluster is split into pieces <= 8
   bool use_height = false;
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
     max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
-  if (cluster_->cluster(pointcloud_msg, output)) {
-    std::cout << "cluster success" << std::endl;
-  } else {
-    std::cout << "cluster failed" << std::endl;
-  }
+  EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
   std::cout << "number of output clusters " << output.feature_objects.size() << std::endl;
-  // the output clusters should be emtpy
-  EXPECT_EQ(output.feature_objects.size(), 0);
+
+  // 9 voxels split at the median into 4 + 5 -> exactly 2 sub-clusters, both within the bound.
+  EXPECT_EQ(output.feature_objects.size(), 2);
+  size_t total_output_points = 0;
+  for (const auto & feature_object : output.feature_objects) {
+    total_output_points += feature_object.feature.cluster.width;
+  }
+  // No point is dropped: every input point is preserved across the split sub-clusters.
+  EXPECT_EQ(total_output_points, static_cast<size_t>(total_points));
 }
 
 // Test case 4: Test case when the input pointcloud is empty
@@ -235,6 +272,106 @@ TEST(VoxelGridBasedEuclideanClusterTest, EmptyPointCloud)
   // Should not crash and should return empty output
   EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
   EXPECT_EQ(output.feature_objects.size(), 0);
+}
+
+// Test case 5: A large blob is split so that every output cluster is within the voxel bound, and
+// all points are conserved (nothing dropped).
+TEST(VoxelGridBasedEuclideanClusterTest, SplitRespectsBoundAndConservesPoints)
+{
+  const int nx = 20;
+  const int ny = 5;  // 100 occupied voxels
+  const float voxel_leaf_size = 0.3;
+  const int points_per_voxel = 4;
+  sensor_msgs::msg::PointCloud2 pointcloud =
+    generateVoxelRectangle(nx, ny, voxel_leaf_size, points_per_voxel);
+  const int total_points = nx * ny * points_per_voxel;
+
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_msg =
+    std::make_shared<sensor_msgs::msg::PointCloud2>(pointcloud);
+  tier4_perception_msgs::msg::DetectedObjectsWithFeature output;
+
+  float tolerance = 0.7;
+  int min_points_number_per_voxel = 1;
+  int min_cluster_size = 1;
+  int max_cluster_size = 99999;
+  int min_voxel_cluster_size_for_filtering = 100000;  // disable per-voxel point capping
+  int max_points_per_voxel_in_large_cluster = 10;
+  int max_voxel_cluster_for_output = 16;  // split bound in voxels
+  bool use_height = false;
+  auto cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
+    use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
+    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
+  EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
+
+  // 100 voxels with a bound of 16 must produce several sub-clusters.
+  EXPECT_GE(output.feature_objects.size(), 100u / 16u);
+
+  size_t total_output_points = 0;
+  for (const auto & feature_object : output.feature_objects) {
+    const size_t cluster_points = feature_object.feature.cluster.width;
+    // Capping is disabled, so all points of each voxel are kept; voxel count = points / per-voxel.
+    const size_t voxel_count = cluster_points / points_per_voxel;
+    EXPECT_LE(voxel_count, static_cast<size_t>(max_voxel_cluster_for_output));
+    total_output_points += cluster_points;
+  }
+  // Nothing dropped: every input point survives the split.
+  EXPECT_EQ(total_output_points, static_cast<size_t>(total_points));
+}
+
+// Test case 6: An elongated wall is bisected along its long axis, so each sub-cluster covers a
+// shorter span of the long (x) axis while still spanning the full short (y) axis.
+TEST(VoxelGridBasedEuclideanClusterTest, SplitsAlongPrincipalAxis)
+{
+  const int nx = 40;  // long axis
+  const int ny = 2;   // short axis
+  const float voxel_leaf_size = 0.3;
+  const int points_per_voxel = 2;
+  sensor_msgs::msg::PointCloud2 pointcloud =
+    generateVoxelRectangle(nx, ny, voxel_leaf_size, points_per_voxel);
+
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_msg =
+    std::make_shared<sensor_msgs::msg::PointCloud2>(pointcloud);
+  tier4_perception_msgs::msg::DetectedObjectsWithFeature output;
+
+  float tolerance = 0.7;
+  int min_points_number_per_voxel = 1;
+  int min_cluster_size = 1;
+  int max_cluster_size = 99999;
+  int min_voxel_cluster_size_for_filtering = 100000;
+  int max_points_per_voxel_in_large_cluster = 10;
+  int max_voxel_cluster_for_output = 20;  // 80 voxels -> several pieces
+  bool use_height = false;
+  auto cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
+    use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
+    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
+  EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
+  EXPECT_GT(output.feature_objects.size(), 1u);
+
+  const float full_x_span = voxel_leaf_size * nx;  // ~12 m
+  const float full_y_span = voxel_leaf_size * ny;  // ~0.6 m
+  for (const auto & feature_object : output.feature_objects) {
+    const auto & cloud = feature_object.feature.cluster;
+    sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud, "x");
+    sensor_msgs::PointCloud2ConstIterator<float> iter_y(cloud, "y");
+    float min_x = std::numeric_limits<float>::max();
+    float max_x = std::numeric_limits<float>::lowest();
+    float min_y = std::numeric_limits<float>::max();
+    float max_y = std::numeric_limits<float>::lowest();
+    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y) {
+      min_x = std::min(min_x, *iter_x);
+      max_x = std::max(max_x, *iter_x);
+      min_y = std::min(min_y, *iter_y);
+      max_y = std::max(max_y, *iter_y);
+    }
+    const float x_span = max_x - min_x;
+    const float y_span = max_y - min_y;
+    // Cuts are along the long axis: each piece is shorter in x than the whole wall...
+    EXPECT_LT(x_span, full_x_span);
+    // ...while still spanning (nearly) the full short axis, i.e. it was not cut along y.
+    EXPECT_GE(y_span, full_y_span - voxel_leaf_size);
+  }
 }
 
 int main(int argc, char ** argv)

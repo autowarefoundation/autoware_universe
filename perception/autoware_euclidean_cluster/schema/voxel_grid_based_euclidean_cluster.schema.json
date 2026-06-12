@@ -28,12 +28,12 @@
         },
         "max_cluster_size": {
           "type": "integer",
-          "description": "Maximum cluster size in number of voxels, passed to the PCL Euclidean cluster extraction as its upper bound. Voxel groups larger than this are not formed as a single cluster.",
+          "description": "Deprecated / superseded. Previously the PCL Euclidean cluster extraction upper bound; oversized groups are now split (see max_voxel_cluster_for_output) rather than dropped, so the PCL upper bound is left unbounded and this value is no longer used to limit clusters.",
           "default": 3000
         },
         "max_voxel_cluster_for_output": {
           "type": "integer",
-          "description": "Voxel-count threshold above which a cluster is treated as too large to be a valid object (e.g. a wall or building) and is dropped entirely from the output.",
+          "description": "Voxel-count split bound. Any cluster whose voxel count exceeds this is recursively bisected along its principal (longest) axis into smaller sub-clusters until every piece is at or below this size. No cluster is dropped for being large; large groups are exported as multiple bounded sections.",
           "default": 800
         },
         "min_voxel_cluster_size_for_filtering": {

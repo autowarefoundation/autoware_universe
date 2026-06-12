@@ -18,7 +18,9 @@
 
 #include <rclcpp/node.hpp>
 
+#include <pcl/PointIndices.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
 #include <vector>
@@ -49,6 +51,14 @@ public:
   }
 
 private:
+  // Recursively split any cluster whose voxel count exceeds max_voxel_cluster_for_output_ into
+  // smaller sub-clusters by bisecting along the principal (longest) axis of its 2D voxel centroids.
+  // Guarantees every returned group has at most max_voxel_cluster_for_output_ voxels without
+  // dropping any point. Indices in the returned groups index into `centroids`.
+  std::vector<pcl::PointIndices> splitOversizedClusters(
+    const std::vector<pcl::PointIndices> & cluster_indices,
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & centroids) const;
+
   pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
   float tolerance_;
   float voxel_leaf_size_;
