@@ -55,7 +55,9 @@ public:
     double time_count_threshold_s = 60.0;  // [s] time threshold to count a stop as a new one
     double dist_count_threshold_m = 5.0;   // [m] distance threshold to count a stop as a new one
     double abnormal_deceleration_threshold_mps2 =
-      2.0;       // [m/s^2] deceleration threshold for a stop to be considered as abnormal
+      2.0;  // [m/s^2] deceleration threshold for a stop to be considered as abnormal
+    double initial_span_duration_s =
+      0.1;      // [s] default duration on the first frame of a stop decision span
   } parameters;  // struct Parameters
 
   PlanningFactorAccumulator() = default;
@@ -136,6 +138,7 @@ private:
         // set new stop decision
         last_decision_time = cur_time;
         clear_current_stop_decision();
+        stop_decision_keep_time = parameters.initial_span_duration_s;
 
       } else {
         // keep the last stop decision
