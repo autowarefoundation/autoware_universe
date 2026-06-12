@@ -59,17 +59,8 @@ ImplicitGemmPlugin::ImplicitGemmPlugin(
 void ImplicitGemmPlugin::initFieldsToSerialize()
 {
   data_to_serialize_.clear();
-  data_to_serialize_.emplace_back("act_alpha", &params_.act_alpha, PluginFieldType::kFLOAT32, 1);
-  data_to_serialize_.emplace_back("act_alpha", &params_.act_beta, PluginFieldType::kFLOAT32, 1);
-
   data_to_serialize_.emplace_back(
-    "is_subm", &params_.is_subm, PluginFieldType::kINT32, 1);  // cSpell:ignore subm
-  data_to_serialize_.emplace_back("is_train", &params_.is_train, PluginFieldType::kINT32, 1);
-
-  data_to_serialize_.emplace_back(
-    "output_add_scale", &params_.output_add_scale, PluginFieldType::kFLOAT32, 1);
-  data_to_serialize_.emplace_back(
-    "output_scale", &params_.output_scale, PluginFieldType::kFLOAT32, 1);
+    "parameters", &params_, PluginFieldType::kUNKNOWN, sizeof(ImplicitGemmParameters));
 
   fc_to_serialize_.nbFields = data_to_serialize_.size();
   fc_to_serialize_.fields = data_to_serialize_.data();
@@ -128,6 +119,8 @@ std::int32_t ImplicitGemmPlugin::configurePlugin(
   std::int32_t num_outputs) noexcept
 {
   // Validate input arguments.
+  PLUGIN_ASSERT(in != nullptr);
+  PLUGIN_ASSERT(out != nullptr);
   PLUGIN_ASSERT(num_inputs == 5);
   PLUGIN_ASSERT(num_outputs == 1);
   PLUGIN_ASSERT(in[INOUT_IN_FEATURES_INDEX].desc.dims.nbDims == 2);
@@ -158,21 +151,32 @@ bool ImplicitGemmPlugin::supportsFormatCombination(
   std::int32_t pos, DynamicPluginTensorDesc const * in_out, std::int32_t num_inputs,
   std::int32_t num_outputs) noexcept
 {
+  PLUGIN_ASSERT(in_out != nullptr);
   PLUGIN_ASSERT(num_inputs == 5);
   PLUGIN_ASSERT(num_outputs == 1);
+  PLUGIN_ASSERT(pos >= 0 && pos < num_inputs + num_outputs);
 
+  // spconv only supports contiguous (LINEAR) layout for all tensors.
   bool supported = in_out[pos].desc.format == nvinfer1::TensorFormat::kLINEAR;
 
+  // Output features must match the input features dtype.
+  if (pos == INOUT_OUT_FEATURES_INDEX) {
+    supported &= in_out[pos].desc.type == in_out[INOUT_IN_FEATURES_INDEX].desc.type;
+    return supported;
+  }
+
   switch (pos) {
+    // Input features: fp32 or fp16 (spconv supports both precisions).
     case INOUT_IN_FEATURES_INDEX:
       supported &=
         (in_out[pos].desc.type == nvinfer1::DataType::kFLOAT ||
          in_out[pos].desc.type == nvinfer1::DataType::kHALF);
       break;
+    // Filter weights must match input features dtype for mixed-precision-free GEMM.
     case INOUT_FILTERS_INDEX:
-    case INOUT_OUT_FEATURES_INDEX:
       supported &= in_out[pos].desc.type == in_out[INOUT_IN_FEATURES_INDEX].desc.type;
       break;
+    // Index / mask tensors are always int32 regardless of activation dtype.
     case INOUT_PAIR_FWD_INDEX:
     case INOUT_PAIR_MASK_FWD_SPLITS_INDEX:
     case INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX:
@@ -190,6 +194,8 @@ std::int32_t ImplicitGemmPlugin::getOutputDataTypes(
   DataType * output_types, std::int32_t num_outputs, DataType const * input_types,
   std::int32_t num_inputs) const noexcept
 {
+  PLUGIN_ASSERT(output_types != nullptr);
+  PLUGIN_ASSERT(input_types != nullptr);
   PLUGIN_ASSERT(num_inputs == 5);
   PLUGIN_ASSERT(num_outputs == 1);
 
@@ -204,6 +210,8 @@ std::int32_t ImplicitGemmPlugin::getOutputShapes(
   DimsExprs * outputs, std::int32_t num_outputs,
   [[maybe_unused]] IExprBuilder & expr_builder) noexcept
 {
+  PLUGIN_ASSERT(inputs != nullptr);
+  PLUGIN_ASSERT(outputs != nullptr);
   PLUGIN_ASSERT(num_inputs == 5);
   PLUGIN_ASSERT(num_outputs == 1);
   PLUGIN_ASSERT(inputs[0].nbDims == 2);
@@ -216,7 +224,7 @@ std::int32_t ImplicitGemmPlugin::getOutputShapes(
 }
 
 std::int32_t ImplicitGemmPlugin::enqueue(
-  PluginTensorDesc const * input_desc, [[maybe_unused]] PluginTensorDesc const * output_desc,
+  PluginTensorDesc const * input_desc, PluginTensorDesc const * output_desc,
   void const * const * inputs, void * const * outputs, [[maybe_unused]] void * workspace,
   cudaStream_t stream) noexcept
 {
@@ -231,10 +239,10 @@ std::int32_t ImplicitGemmPlugin::enqueue(
 
   auto in_features_type = input_desc[INOUT_IN_FEATURES_INDEX].type;
   [[maybe_unused]] auto filters_type = input_desc[INOUT_FILTERS_INDEX].type;
-  [[maybe_unused]] auto out_features_type = input_desc[INOUT_OUT_FEATURES_INDEX].type;
+  [[maybe_unused]] auto out_features_type = output_desc[0].type;
 
-  assert(in_features_type == filters_type);
-  assert(in_features_type == out_features_type);
+  PLUGIN_ASSERT(in_features_type == filters_type);
+  PLUGIN_ASSERT(in_features_type == out_features_type);
 
   auto dtype = in_features_type == DataType::kFLOAT ? tv::float32 : tv::float16;
 
@@ -286,9 +294,9 @@ std::int32_t ImplicitGemmPlugin::enqueue(
 
   auto & tuner_ptr = dtype == tv::float32 ? tuner_fp32_ptr_ : tuner_fp16_ptr_;
 
-  auto conv_run_status = ConvGemmOps::implicit_gemm(
+  [[maybe_unused]] auto const conv_run_status = ConvGemmOps::implicit_gemm(
     alloc2, *tuner_ptr, input_features, weights, pair_fwd, pair_mask_splits, mask_argsort_splits,
-    num_act_out, mask_tensor_, arch_, false, params_.is_subm,
+    num_act_out, mask_tensor_, arch_, false, params_.is_subm,  // cSpell:ignore subm
     reinterpret_cast<std::uintptr_t>(stream), tv::CUDAKernelTimer(false), true, false, tv::Tensor(),
     0.0, 0.0, tv::gemm::Activation::kNone, false, 1.0, tv::Tensor(), tv::Tensor(), 0.0, -1);
 

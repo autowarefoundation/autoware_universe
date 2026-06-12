@@ -37,12 +37,12 @@ namespace nvinfer1::plugin
 
 struct ImplicitGemmParameters
 {
-  float act_alpha;
-  float act_beta;
-  std::int64_t is_subm;  // cSpell:ignore subm
-  std::int64_t is_train;
-  float output_add_scale;
-  float output_scale;
+  float act_alpha{0.0F};
+  float act_beta{0.0F};
+  std::int32_t is_subm{0};  // cSpell:ignore subm
+  std::int32_t is_train{0};
+  float output_add_scale{1.0F};
+  float output_scale{1.0F};
 };
 
 class ImplicitGemmPlugin : public IPluginV3,
