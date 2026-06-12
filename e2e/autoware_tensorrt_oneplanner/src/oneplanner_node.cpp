@@ -102,6 +102,7 @@ void OnePlannerNode::set_up_params()
   bev_params_.voxel_size = std::vector<float>(voxel_size_double.begin(), voxel_size_double.end());
   bev_params_.out_size_factor = this->declare_parameter<int64_t>("out_size_factor", 8);
   bev_params_.bev_feature_channels = this->declare_parameter<int64_t>("bev_feature_channels", 512);
+  bev_params_.use_intensity = this->declare_parameter<bool>("use_intensity", true);
 
   // Planner head params
   planner_onnx_path_ = this->declare_parameter<std::string>("planner.onnx_path", "");

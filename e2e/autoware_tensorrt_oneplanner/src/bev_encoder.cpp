@@ -90,9 +90,9 @@ void BevEncoder::init_config()
     /*circle_nms_dist_threshold=*/0.0f, /*yaw_norm_thresholds=*/std::vector<double>{},
     /*score_thresholds=*/std::vector<float>{},
     /*distance_bin_upper_limits=*/std::vector<float>{},
-    // OnePlanner is trained on 4-dim points (x, y, z, time_lag), matching the
-    // autoware_bevfusion lidar-only deployment.
-    /*use_intensity=*/false);
+    // 4-dim (x, y, z, time_lag) or 5-dim (+intensity) points; must match the
+    // point dimension the OnePlanner checkpoint was trained on.
+    params_.use_intensity);
 }
 
 void BevEncoder::init_trt()

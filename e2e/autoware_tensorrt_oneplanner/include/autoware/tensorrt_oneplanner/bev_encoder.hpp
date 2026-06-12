@@ -50,6 +50,7 @@ struct BevEncoderParams
   std::vector<float> voxel_size;         // [x, y, z]
   int64_t out_size_factor;
   int64_t bev_feature_channels;
+  bool use_intensity;
 };
 
 /**

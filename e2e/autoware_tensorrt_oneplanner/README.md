@@ -75,7 +75,26 @@ Place the following under `$(env HOME)/autoware_data/ml_models/oneplanner/`:
 
 Both ONNX files are produced by `scripts/export_onnx.py` in the
 [tier4/OnePlanner](https://github.com/tier4/OnePlanner) repository from a trained E2E
-checkpoint. TensorRT engines are built on the first launch (or with `build_only:=true`)
+checkpoint (run with `uv run` inside that repository):
+
+```bash
+# Planner head + normalization json (self-contained)
+uv run --with onnx --with onnxscript --with onnxsim --with onnxruntime \
+  python scripts/export_onnx.py planner \
+  --ckpt <e2e_ckpt> --output-dir ~/autoware_data/ml_models/oneplanner --device cpu
+
+# BEV encoder (spconv ONNX symbolics come from an AWML checkout)
+uv run --extra gpu --with onnx --with onnxscript --with onnxsim --with onnxruntime \
+  python scripts/export_onnx.py bev-encoder \
+  --ckpt <e2e_ckpt> --perception-config configs/perception/model/<matching_config>.yaml \
+  --awml-path <AWML checkout> --point-dim 5 \
+  --output-dir ~/autoware_data/ml_models/oneplanner --device cuda
+```
+
+`use_intensity` (and `--point-dim`) must match the checkpoint's point dimension —
+the jpntaxi checkpoint uses 5-dim points (x, y, z, intensity, time_lag).
+
+TensorRT engines are built on the first launch (or with `build_only:=true`)
 and cached next to the ONNX files.
 
 ```bash

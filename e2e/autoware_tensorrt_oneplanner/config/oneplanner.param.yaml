@@ -24,6 +24,7 @@
     voxel_size: [0.17, 0.17, 0.2] # [x, y, z]
     out_size_factor: 8
     bev_feature_channels: 512
+    use_intensity: true # jpntaxi model: 5-dim points (x, y, z, intensity, time_lag)
 
     # Planner parameters (mirroring autoware_diffusion_planner)
     temperature: 0.0
