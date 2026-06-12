@@ -22,7 +22,7 @@ from casadi import vertcat
 from utils.symbolic_cubic_spline import SymbolicCubicSpline
 
 
-def bicycle_model_spatial_with_body_points(n_points: int, n_circles: int = 0):
+def bicycle_model_spatial(n_points: int, n_circles: int = 0):
     # define structs
     constraint = types.SimpleNamespace()
     model = types.SimpleNamespace()

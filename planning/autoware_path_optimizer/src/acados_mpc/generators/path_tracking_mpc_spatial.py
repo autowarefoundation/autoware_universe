@@ -15,11 +15,11 @@
 from acados_template import AcadosModel
 from acados_template import AcadosOcp
 from acados_template import AcadosOcpSolver
-from generators.bicycle_model_spatial_with_body_points import bicycle_model_spatial_with_body_points
+from generators.bicycle_model_spatial import bicycle_model_spatial
 import numpy as np
 
 
-class PathTrackingMPCSpatialWithBodyPoints:
+class PathTrackingMPCSpatial:
     def __init__(self, Tf, N, n_points, n_circles=0, build=True, generate=True):
         self.Tf = Tf
         self.N = N
@@ -33,7 +33,7 @@ class PathTrackingMPCSpatialWithBodyPoints:
         ocp = AcadosOcp()
 
         # export model
-        model, constraint = bicycle_model_spatial_with_body_points(self.n_points, self.n_circles)
+        model, constraint = bicycle_model_spatial(self.n_points, self.n_circles)
 
         # define acados ODE
         model_ac = AcadosModel()
@@ -160,9 +160,7 @@ def main():
 
     # Set build=False and generate=True to only generate the C code
     # without trying to compile the solver inside the Python process.
-    _ = PathTrackingMPCSpatialWithBodyPoints(
-        Sf, N, N, n_circles=n_circles, build=False, generate=True
-    )
+    _ = PathTrackingMPCSpatial(Sf, N, N, n_circles=n_circles, build=False, generate=True)
 
 
 if __name__ == "__main__":
