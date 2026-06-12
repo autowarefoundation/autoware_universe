@@ -195,7 +195,7 @@ void PTv3TRT::allocateSerializedPoolingBuffers()
     stage.indptr = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels + 1);
     stage.head_indices = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
     stage.cluster = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
-    stage.grid_coord = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * 3);
+    stage.grid_coord = autoware::cuda_utils::make_unique<std::int32_t[]>(max_num_voxels * 3);
     stage.serialized_code =
       autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * num_orders);
     stage.serialized_order =
@@ -288,8 +288,10 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
   const auto add_pooling_io = [&network_io, &profile_dims](
                                 const std::string & name, const nvinfer1::Dims & io_dims,
                                 const nvinfer1::Dims & min_dims, const nvinfer1::Dims & opt_dims,
-                                const nvinfer1::Dims & max_dims) {
-    network_io.emplace_back(name, io_dims);
+                                const nvinfer1::Dims & max_dims,
+                                const std::optional<nvinfer1::DataType> data_type =
+                                  std::nullopt) {
+    network_io.emplace_back(name, io_dims, data_type);
     profile_dims.emplace_back(name, min_dims, opt_dims, max_dims);
   };
 
@@ -318,7 +320,8 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
       nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}});
     add_pooling_io(
       prefix + "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::Dims{2, {1, 3}},
-      nvinfer1::Dims{2, {opt_voxels, 3}}, nvinfer1::Dims{2, {max_voxels, 3}});
+      nvinfer1::Dims{2, {opt_voxels, 3}}, nvinfer1::Dims{2, {max_voxels, 3}},
+      nvinfer1::DataType::kINT32);
     add_pooling_io(
       prefix + "serialized_order", nvinfer1::Dims{2, {num_orders, -1}},
       nvinfer1::Dims{2, {num_orders, 1}}, nvinfer1::Dims{2, {num_orders, opt_voxels}},
@@ -345,6 +348,7 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
   backbone_trt_ptr_->setTensorAddress("point_feat", bb_point_feat_d_.get());
   backbone_trt_ptr_->setTensorAddress("point_grid_coord", bb_point_grid_coord_d_.get());
   backbone_trt_ptr_->setTensorAddress("point_offset", bb_point_offset_d_.get());
+  bindSerializedPoolingAddresses();
 }
 
 void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config)
@@ -377,8 +381,6 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
   seg3d_head_trt_ptr_->setTensorAddress("point_feat", bb_point_feat_d_.get());
   seg3d_head_trt_ptr_->setTensorAddress("pred_labels", pred_labels_d_.get());
   seg3d_head_trt_ptr_->setTensorAddress("pred_probs", pred_probs_d_.get());
-
-  bindSerializedPoolingAddresses();
 }
 
 void PTv3TRT::bindSerializedPoolingAddresses()
@@ -390,15 +392,15 @@ void PTv3TRT::bindSerializedPoolingAddresses()
   for (std::size_t stage = 0; stage < serialized_pooling_stages_d_.size(); ++stage) {
     const auto prefix = "serialized_pooling_" + std::to_string(stage) + "_";
     auto & buffers = serialized_pooling_stages_d_[stage];
-    network_trt_ptr_->setTensorAddress((prefix + "indices").c_str(), buffers.indices.get());
-    network_trt_ptr_->setTensorAddress((prefix + "indptr").c_str(), buffers.indptr.get());
-    network_trt_ptr_->setTensorAddress(
+    backbone_trt_ptr_->setTensorAddress((prefix + "indices").c_str(), buffers.indices.get());
+    backbone_trt_ptr_->setTensorAddress((prefix + "indptr").c_str(), buffers.indptr.get());
+    backbone_trt_ptr_->setTensorAddress(
       (prefix + "head_indices").c_str(), buffers.head_indices.get());
-    network_trt_ptr_->setTensorAddress((prefix + "cluster").c_str(), buffers.cluster.get());
-    network_trt_ptr_->setTensorAddress((prefix + "grid_coord").c_str(), buffers.grid_coord.get());
-    network_trt_ptr_->setTensorAddress(
+    backbone_trt_ptr_->setTensorAddress((prefix + "cluster").c_str(), buffers.cluster.get());
+    backbone_trt_ptr_->setTensorAddress((prefix + "grid_coord").c_str(), buffers.grid_coord.get());
+    backbone_trt_ptr_->setTensorAddress(
       (prefix + "serialized_order").c_str(), buffers.serialized_order.get());
-    network_trt_ptr_->setTensorAddress(
+    backbone_trt_ptr_->setTensorAddress(
       (prefix + "serialized_inverse").c_str(), buffers.serialized_inverse.get());
   }
 }
@@ -441,18 +443,18 @@ bool PTv3TRT::setSerializedPoolingInputShapes()
     const auto in_count = serialized_pooling_num_voxels_[stage];
     const auto out_count = serialized_pooling_num_voxels_[stage + 1];
     success &=
-      network_trt_ptr_->setInputShape((prefix + "indices").c_str(), nvinfer1::Dims{1, {in_count}});
+      backbone_trt_ptr_->setInputShape((prefix + "indices").c_str(), nvinfer1::Dims{1, {in_count}});
     success &=
-      network_trt_ptr_->setInputShape((prefix + "cluster").c_str(), nvinfer1::Dims{1, {in_count}});
-    success &= network_trt_ptr_->setInputShape(
+      backbone_trt_ptr_->setInputShape((prefix + "cluster").c_str(), nvinfer1::Dims{1, {in_count}});
+    success &= backbone_trt_ptr_->setInputShape(
       (prefix + "indptr").c_str(), nvinfer1::Dims{1, {out_count + 1}});
-    success &= network_trt_ptr_->setInputShape(
+    success &= backbone_trt_ptr_->setInputShape(
       (prefix + "head_indices").c_str(), nvinfer1::Dims{1, {out_count}});
-    success &= network_trt_ptr_->setInputShape(
+    success &= backbone_trt_ptr_->setInputShape(
       (prefix + "grid_coord").c_str(), nvinfer1::Dims{2, {out_count, 3}});
-    success &= network_trt_ptr_->setInputShape(
+    success &= backbone_trt_ptr_->setInputShape(
       (prefix + "serialized_order").c_str(), nvinfer1::Dims{2, {num_orders, out_count}});
-    success &= network_trt_ptr_->setInputShape(
+    success &= backbone_trt_ptr_->setInputShape(
       (prefix + "serialized_inverse").c_str(), nvinfer1::Dims{2, {num_orders, out_count}});
   }
 

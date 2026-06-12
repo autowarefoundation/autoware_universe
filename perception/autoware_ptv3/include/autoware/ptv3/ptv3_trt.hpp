@@ -113,7 +113,7 @@ protected:
     CudaUniquePtr<std::int64_t[]> indptr{nullptr};
     CudaUniquePtr<std::int64_t[]> head_indices{nullptr};
     CudaUniquePtr<std::int64_t[]> cluster{nullptr};
-    CudaUniquePtr<std::int64_t[]> grid_coord{nullptr};
+    CudaUniquePtr<std::int32_t[]> grid_coord{nullptr};
     CudaUniquePtr<std::int64_t[]> serialized_code{nullptr};
     CudaUniquePtr<std::int64_t[]> serialized_order{nullptr};
     CudaUniquePtr<std::int64_t[]> serialized_inverse{nullptr};

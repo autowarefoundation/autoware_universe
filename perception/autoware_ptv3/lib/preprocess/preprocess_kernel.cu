@@ -335,13 +335,13 @@ __global__ void markPoolingRunsKernel(
 }
 
 __global__ void fillPoolingStageKernel(
-  const std::int64_t * __restrict__ grid_coord_in,
+  const std::int32_t * __restrict__ grid_coord_in,
   const std::int64_t * __restrict__ serialized_code_in,
   const std::int64_t * __restrict__ sorted_keys, const std::int64_t * __restrict__ sorted_indices,
   const std::int64_t * __restrict__ run_flags, const std::int64_t * __restrict__ run_ids,
   std::int64_t * __restrict__ indices_out, std::int64_t * __restrict__ indptr_out,
   std::int64_t * __restrict__ head_indices_out, std::int64_t * __restrict__ cluster_out,
-  std::int64_t * __restrict__ grid_coord_out, std::int64_t * __restrict__ serialized_code_out,
+  std::int32_t * __restrict__ grid_coord_out, std::int64_t * __restrict__ serialized_code_out,
   std::int64_t * __restrict__ stage_counts, std::int32_t stage_index, std::int32_t pooling_depth,
   std::int32_t num_orders, std::int64_t capacity)
 {
@@ -432,7 +432,7 @@ std::int32_t poolingDepth(const std::int64_t stride)
 }
 
 void PreprocessCuda::generateSerializedPoolingMetadata(
-  const std::int64_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
+  const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
   const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts)
 {
   if (stages.size() != config_.pooling_strides_.size()) {
@@ -446,7 +446,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
-  const std::int64_t * current_grid_coord = grid_coord;
+  const std::int32_t * current_grid_coord = grid_coord;
   const std::int64_t * current_serialized_code = serialized_code;
 
   for (std::size_t stage_index = 0; stage_index < stages.size(); ++stage_index) {

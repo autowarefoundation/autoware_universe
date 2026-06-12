@@ -143,7 +143,7 @@ struct DeviceStage
   DeviceBuffer<std::int64_t> indptr;
   DeviceBuffer<std::int64_t> head_indices;
   DeviceBuffer<std::int64_t> cluster;
-  DeviceBuffer<std::int64_t> grid_coord;
+  DeviceBuffer<std::int32_t> grid_coord;
   DeviceBuffer<std::int64_t> serialized_code;
   DeviceBuffer<std::int64_t> serialized_order;
   DeviceBuffer<std::int64_t> serialized_inverse;
@@ -155,7 +155,7 @@ struct CpuStage
   std::vector<std::int64_t> indptr;
   std::vector<std::int64_t> head_indices;
   std::vector<std::int64_t> cluster;
-  std::vector<std::int64_t> grid_coord;
+  std::vector<std::int32_t> grid_coord;
   std::vector<std::int64_t> serialized_code;
   std::vector<std::int64_t> serialized_order;
   std::vector<std::int64_t> serialized_inverse;
@@ -190,7 +190,7 @@ std::int64_t serialize_coord(
 }
 
 std::vector<std::int64_t> make_serialized_code(
-  const std::vector<std::int64_t> & grid_coord, const std::int32_t depth)
+  const std::vector<std::int32_t> & grid_coord, const std::int32_t depth)
 {
   const auto count = grid_coord.size() / 3;
   std::vector<std::int64_t> code(2 * count);
@@ -215,7 +215,7 @@ std::vector<std::int64_t> stable_argsort(const std::vector<std::int64_t> & value
 }
 
 CpuStage make_stage_reference(
-  const std::vector<std::int64_t> & grid_coord_in,
+  const std::vector<std::int32_t> & grid_coord_in,
   const std::vector<std::int64_t> & serialized_code_in, const std::size_t num_orders,
   const std::int64_t stride)
 {
@@ -288,12 +288,12 @@ PTv3Config make_test_config()
 {
   return PTv3Config(
     "", 64, {1, 16, 32}, {0.0F, 0.0F, 0.0F, 64.0F, 64.0F, 64.0F}, {1.0F, 1.0F, 1.0F}, {"class"},
-    {"z", "z-trans"}, {2, 2}, {0, 0, 0}, 0.0F, {}, "XYZI", "none");
+    {"z", "z-trans"}, {2, 2}, {0, 0, 0}, 0.0F, {}, "XYZI", "none", true);
 }
 
+template <typename T>
 void expect_equal(
-  const std::vector<std::int64_t> & actual, const std::vector<std::int64_t> & expected,
-  const std::string & name)
+  const std::vector<T> & actual, const std::vector<T> & expected, const std::string & name)
 {
   EXPECT_EQ(actual, expected) << name;
 }
@@ -304,14 +304,14 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
 
   const auto config = make_test_config();
   constexpr std::size_t kNumOrders = 2;
-  const std::vector<std::int64_t> grid_coord{5, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 3,  0, 1,
+  const std::vector<std::int32_t> grid_coord{5, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 3,  0, 1,
                                              4, 4, 0, 5, 4, 1, 8, 0, 0, 9, 0, 0, 10, 2, 0};
   const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
   const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
 
   CudaStreamGuard stream;
   PreprocessCuda preprocess(config, stream.get());
-  DeviceBuffer<std::int64_t> grid_coord_d(grid_coord.size());
+  DeviceBuffer<std::int32_t> grid_coord_d(grid_coord.size());
   DeviceBuffer<std::int64_t> serialized_code_d(serialized_code.size());
   DeviceBuffer<std::int64_t> stage_counts_d(config.pooling_strides_.size() + 1);
   std::vector<DeviceStage> device_stages;

@@ -34,7 +34,7 @@ struct SerializedPoolingDeviceStageView
   std::int64_t * indptr{};
   std::int64_t * head_indices{};
   std::int64_t * cluster{};
-  std::int64_t * grid_coord{};
+  std::int32_t * grid_coord{};
   std::int64_t * serialized_code{};
   std::int64_t * serialized_order{};
   std::int64_t * serialized_inverse{};
@@ -52,7 +52,7 @@ public:
     std::int64_t * inverse_map, std::size_t * num_cropped_points);
 
   void generateSerializedPoolingMetadata(
-    const std::int64_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
+    const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
     const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
 
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
