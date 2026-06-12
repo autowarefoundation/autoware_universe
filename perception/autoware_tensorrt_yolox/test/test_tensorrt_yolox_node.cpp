@@ -34,8 +34,8 @@
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
-#include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -196,7 +196,11 @@ cv::Mat load_test_image()
 {
   const std::string path = ament_index_cpp::get_package_share_directory("autoware_tensorrt_yolox") +
                            "/test/test_image.jpg";
-  return cv::imread(path, cv::IMREAD_COLOR);
+  const cv::Mat image = cv::imread(path, cv::IMREAD_COLOR);
+  if (image.empty()) {
+    throw std::runtime_error("failed to load test image: " + path);
+  }
+  return image;
 }
 
 size_t count_objects_with_label(const DetectedObjectsWithFeature & objects, uint8_t label)
@@ -308,21 +312,38 @@ protected:
     return true;
   }
 
+  void spin_for(std::chrono::milliseconds duration)
+  {
+    const auto deadline = std::chrono::steady_clock::now() + duration;
+    while (std::chrono::steady_clock::now() < deadline) {
+      executor_->spin_some();
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+  }
+
   // Publish the image repeatedly (best-effort QoS may drop early messages, and the node only
-  // subscribes lazily once it sees our output subscriber) while spinning, until `done` is
-  // satisfied or the timeout elapses.
-  void publish_until(
-    const sensor_msgs::msg::Image & image, const std::function<bool()> & done,
+  // subscribes lazily once it sees our output subscriber) while spinning, until the node publishes
+  // a detected-objects message or the timeout elapses.
+  void publish_until_detected_objects_received(
+    const sensor_msgs::msg::Image & image,
     std::chrono::milliseconds timeout = std::chrono::milliseconds(30000))
   {
     const auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (!done() && std::chrono::steady_clock::now() < deadline) {
+    while (!received_objects_ && std::chrono::steady_clock::now() < deadline) {
       image_publisher_->publish(image);
-      const auto slice_end = std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
-      while (std::chrono::steady_clock::now() < slice_end) {
-        executor_->spin_some();
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-      }
+      spin_for(std::chrono::milliseconds(100));
+    }
+  }
+
+  // Wait for the segmentation and color masks. The multitask model publishes them from the same
+  // onImage call that produced the detections, so once objects have arrived we only need to keep
+  // spinning until those (reliable) messages are delivered.
+  void wait_for_mask_messages(std::chrono::milliseconds timeout = std::chrono::milliseconds(5000))
+  {
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while ((!received_mask_ || !received_color_mask_) &&
+           std::chrono::steady_clock::now() < deadline) {
+      spin_for(std::chrono::milliseconds(20));
     }
   }
 
@@ -357,7 +378,7 @@ TEST_F(TrtYoloXNodeIntegrationTest, PublishesEmptyObjectsForBlankImage)
   const auto blank_image = to_image_msg(make_black_image(1280, 827), test_node_->now());
 
   // Act
-  publish_until(blank_image, [this] { return received_objects_ != nullptr; });
+  publish_until_detected_objects_received(blank_image);
 
   // Assert
   ASSERT_NE(received_objects_, nullptr) << "node did not publish any objects message";
@@ -379,11 +400,10 @@ TEST_F(TrtYoloXNodeIntegrationTest, DetectsTrafficLightInRealImage)
     GTEST_SKIP() << "GPU is not available for inference.";
   }
   const cv::Mat image = load_test_image();
-  ASSERT_FALSE(image.empty()) << "failed to load test/test_image.jpg";
   const auto image_msg = to_image_msg(image, test_node_->now());
 
   // Act
-  publish_until(image_msg, [this] { return received_objects_ != nullptr; });
+  publish_until_detected_objects_received(image_msg);
 
   // Assert
   expect_objects_detected(received_objects_, image);
@@ -407,14 +427,11 @@ TEST_F(TrtYoloXNodeIntegrationTest, PublishesSegmentationMaskForMultitaskModel)
     GTEST_SKIP() << "GPU is not available for inference.";
   }
   const cv::Mat image = load_test_image();
-  ASSERT_FALSE(image.empty()) << "failed to load test/test_image.jpg";
   const auto image_msg = to_image_msg(image, test_node_->now());
 
   // Act
-  publish_until(image_msg, [this] {
-    return received_objects_ != nullptr && received_mask_ != nullptr &&
-           received_color_mask_ != nullptr;
-  });
+  publish_until_detected_objects_received(image_msg);
+  wait_for_mask_messages();
 
   // Assert
   expect_objects_detected(received_objects_, image);
