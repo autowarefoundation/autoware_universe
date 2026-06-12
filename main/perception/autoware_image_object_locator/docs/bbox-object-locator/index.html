@@ -23423,55 +23423,69 @@
 <td>detection_target_class.UNKNOWN</td>
 <td>boolean</td>
 <td>If true, objects with the 'UNKNOWN' label will be ignored during processing.</td>
-<td>True</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>detection_target_class.CAR</td>
 <td>boolean</td>
 <td>If true, objects with the 'CAR' label will be ignored during processing.</td>
-<td>True</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>detection_target_class.TRUCK</td>
 <td>boolean</td>
 <td>If true, objects with the 'TRUCK' label will be ignored during processing.</td>
-<td>True</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>detection_target_class.BUS</td>
 <td>boolean</td>
 <td>If true, objects with the 'BUS' label will be ignored during processing.</td>
-<td>True</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>detection_target_class.TRAILER</td>
 <td>boolean</td>
 <td>If true, objects with the 'TRAILER' label will be ignored during processing.</td>
-<td>True</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>detection_target_class.MOTORCYCLE</td>
 <td>boolean</td>
 <td>If true, objects with the 'MOTORCYCLE' label will be ignored during processing.</td>
-<td>True</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>detection_target_class.BICYCLE</td>
 <td>boolean</td>
 <td>If true, objects with the 'BICYCLE' label will be ignored during processing.</td>
-<td>True</td>
+<td>False</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>detection_target_class.PEDESTRIAN</td>
 <td>boolean</td>
 <td>If true, objects with the 'PEDESTRIAN' label will be ignored during processing.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.ANIMAL</td>
+<td>boolean</td>
+<td>If true, objects with the 'ANIMAL' label will be ignored during processing.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>detection_target_class.HAZARD</td>
+<td>boolean</td>
+<td>If true, objects with the 'HAZARD' label will be ignored during processing.</td>
 <td>False</td>
 <td>N/A</td>
 </tr>
@@ -23486,14 +23500,14 @@
 <td>roi_truncation_validation.enabled</td>
 <td>array</td>
 <td>Flags to enable validation for each ROI. Must have the same number as the input ROIs.</td>
-<td>[False, False, False, False, False, False, False, False]</td>
+<td>[False, False, False, False, False, False, False, False, False, False]</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>roi_truncation_validation.remove_truncated</td>
 <td>array</td>
 <td>If this is true, the object will be removed when its ROI is evaluated as truncated. Must have the same number as the input ROIs.</td>
-<td>[False, False, False, False, False, False, False, False]</td>
+<td>[False, False, False, False, False, False, False, False, False, False]</td>
 <td>N/A</td>
 </tr>
 <tr>
