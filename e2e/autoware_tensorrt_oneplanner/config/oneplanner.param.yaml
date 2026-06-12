@@ -1,0 +1,38 @@
+/**:
+  ros__parameters:
+    # plugins (spconv etc. for the BEV encoder)
+    plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
+
+    # BEV encoder network (BEVFusion lidar branch up to the SECOND-FPN neck)
+    bev_encoder:
+      onnx_path: $(var model_path)/oneplanner_bev_encoder.onnx
+      engine_path: $(var model_path)/oneplanner_bev_encoder.engine
+      trt_precision: fp16
+
+    # Planner head network (diffusion-planner head conditioned on the BEV feature map)
+    planner:
+      onnx_path: $(var model_path)/oneplanner_planner.onnx
+    args_path: $(var model_path)/oneplanner.param.json
+
+    # LiDAR preprocessing (must match the training configuration)
+    densification_world_frame_id: map
+    densification_num_past_frames: 1
+    cloud_capacity: 2000000
+    max_points_per_voxel: 10
+    voxels_num: [1, 128000, 256000] # [min, opt, max]
+    point_cloud_range: [-122.4, -122.4, -3.0, 122.4, 122.4, 5.0] # [x_min, y_min, z_min, x_max, y_max, z_max]
+    voxel_size: [0.17, 0.17, 0.2] # [x, y, z]
+    out_size_factor: 8
+    bev_feature_channels: 512
+
+    # Planner parameters (mirroring autoware_diffusion_planner)
+    temperature: 0.0
+    velocity_smoothing_window: 8
+    stopping_threshold: 0.3
+    turn_indicator_keep_offset: -1.25
+    turn_indicator_hold_duration: 1.0
+    shift_x: false
+    delay_step: 0
+    line_string_max_step_m: 5.0
+    use_time_interpolation: false
+    traffic_light_group_msg_timeout_seconds: 0.2
