@@ -61,6 +61,8 @@ public:
   struct Parameters
   {
     bool count_warn_as_error = false;
+    double initial_span_duration_s =
+      0.1;  // [s] default duration on the first frame of an error span
   } parameters;
 
   TrajectoryValidationAccumulator() = default;
@@ -102,7 +104,7 @@ private:
     std::optional<double> last_update_time_s_;
 
     /// `current_time_s` is ValidationReport.trajectory_stamp for this step; dt is derived inside.
-    void update(bool is_error, double current_time_s);
+    void update(bool is_error, double current_time_s, double initial_span_duration_s);
     /// Move ongoing error duration into the accumulator (e.g. before final JSON export).
     void flushOpenErrorForJson();
   };
