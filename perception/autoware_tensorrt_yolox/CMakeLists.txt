@@ -175,6 +175,23 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(test_label
     test/test_label.cpp
   )
+
+  # Characterization test that drives the node end-to-end through ROS topics. It needs an NVIDIA
+  # GPU, TensorRT and the ONNX model, so it is gated here and additionally self-skips at runtime
+  # (GTEST_SKIP) when the GPU or model is unavailable. The TIMEOUT covers the first-time TensorRT
+  # engine build (a few minutes) on machines without a cached engine.
+  if(TRT_AVAIL AND CUDA_AVAIL)
+    ament_auto_add_gtest(test_tensorrt_yolox_node
+      test/test_tensorrt_yolox_node.cpp
+      TIMEOUT 600
+    )
+    target_link_libraries(test_tensorrt_yolox_node
+      ${PROJECT_NAME}
+      ${PROJECT_NAME}_node
+      ${OpenCV_LIBRARIES}
+    )
+    install(FILES test/test_image.jpg DESTINATION share/${PROJECT_NAME}/test)
+  endif()
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
