@@ -96,13 +96,12 @@ Parameters are loaded from [config/label_based_euclidean_cluster.param.yaml](../
 | --------------------------------------- | ----- | ------------------------------------------------------------------- |
 | `use_height`                            | bool  | Use the `z` coordinate during clustering.                           |
 | `tolerance`                             | float | Euclidean clustering tolerance.                                     |
-| `min_cluster_size`                      | int   | Minimum number of points required to keep a cluster.                |
-| `max_cluster_size`                      | int   | Maximum number of points allowed in a cluster.                      |
+| `min_points_per_cluster`                      | int   | Minimum number of points required to keep a cluster.                |
 | `voxel_leaf_size`                       | float | Voxel size used by the internal voxel-grid-based cluster.           |
-| `min_points_number_per_voxel`           | int   | Minimum number of points required to keep a voxel centroid.         |
-| `min_voxel_cluster_size_for_filtering`  | int   | Minimum voxel-cluster size before applying large-cluster filtering. |
+| `min_points_per_voxel`           | int   | Minimum number of points required to keep a voxel centroid.         |
+| `point_capping_voxel_threshold`         | int   | Voxel count above which a cluster is "large" and has its points capped per voxel. |
 | `max_points_per_voxel_in_large_cluster` | int   | Maximum number of points kept per voxel for large clusters.         |
-| `max_voxel_cluster_for_output`          | int   | Maximum number of voxel clusters emitted by the internal cluster.   |
+| `max_voxels_per_cluster`                | int   | Voxel-count split bound; clusters above this are split into smaller sections (not dropped). |
 
 ### Semantic Filtering Parameters
 

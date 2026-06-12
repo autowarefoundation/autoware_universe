@@ -3,48 +3,44 @@
     # Euclidean clustering
     use_height: false
     tolerance: 0.65
-    min_cluster_size: 10
-    max_cluster_size: 3000
     voxel_leaf_size: 0.15
-    min_points_number_per_voxel: 1
-    min_voxel_cluster_size_for_filtering: 10
+    min_points_per_voxel: 1
+    min_points_per_cluster: 10
+    point_capping_voxel_threshold: 10
     max_points_per_voxel_in_large_cluster: 100
-    max_voxel_cluster_for_output: 1000
+    max_voxels_per_cluster: 1000
     # Per-label clustering parameter overrides.
     # Any omitted key falls back to the global default above.
     # Tuning guide:
     #   tolerance         — merge distance between voxels; smaller = finer separation
     #   voxel_leaf_size   — down-sample resolution; smaller = more detail for compact objects
-    #   min/max_cluster_size — raw-point bounds (post reconstruction)
-    #   max_voxel_cluster_for_output — voxel-count hard cap; clusters above this are dropped
+    #   min_points_per_cluster  — raw-point lower bound (post reconstruction)
+    #   max_voxels_per_cluster — voxel-count split bound; clusters above this are split, not dropped
     label_cluster_params:
       pedestrian:
         tolerance: 0.3                          # tight — avoid merging adjacent pedestrians
         voxel_leaf_size: 0.1                    # finer voxels for compact bodies
-        min_cluster_size: 3
-        max_cluster_size: 400
-        min_points_number_per_voxel: 1
-        min_voxel_cluster_size_for_filtering: 5
+        min_points_per_cluster: 3
+        min_points_per_voxel: 1
+        point_capping_voxel_threshold: 5
         max_points_per_voxel_in_large_cluster: 30
-        max_voxel_cluster_for_output: 200
+        max_voxels_per_cluster: 200
       bicycle:
         tolerance: 0.4
         voxel_leaf_size: 0.15
-        min_cluster_size: 5
-        max_cluster_size: 600
-        min_points_number_per_voxel: 1
-        min_voxel_cluster_size_for_filtering: 5
+        min_points_per_cluster: 5
+        min_points_per_voxel: 1
+        point_capping_voxel_threshold: 5
         max_points_per_voxel_in_large_cluster: 50
-        max_voxel_cluster_for_output: 300
+        max_voxels_per_cluster: 300
       hazard:
         tolerance: 0.3
         voxel_leaf_size: 0.1
-        min_cluster_size: 3
-        max_cluster_size: 400
-        min_points_number_per_voxel: 1
-        min_voxel_cluster_size_for_filtering: 5
+        min_points_per_cluster: 3
+        min_points_per_voxel: 1
+        point_capping_voxel_threshold: 5
         max_points_per_voxel_in_large_cluster: 30
-        max_voxel_cluster_for_output: 200
+        max_voxels_per_cluster: 200
 
     # Post-clustering merge for confusable label pairs (e.g. truck/trailer over-segmentation).
     # Groups are optional — omit this block entirely to disable the feature.

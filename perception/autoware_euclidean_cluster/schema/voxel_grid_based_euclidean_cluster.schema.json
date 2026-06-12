@@ -16,34 +16,29 @@
           "description": "Voxel leaf size in x and y [m]. The z leaf is effectively infinite, so the grid is 2D and all heights collapse into a single x-y cell. This value bounds the footprint resolution used for clustering and splitting.",
           "default": 0.3
         },
-        "min_points_number_per_voxel": {
+        "min_points_per_voxel": {
           "type": "integer",
           "description": "Minimum number of raw points a voxel must contain to be kept. Voxels with fewer points are discarded before clustering, rejecting sparse noise.",
           "default": 1
         },
-        "min_cluster_size": {
+        "min_points_per_cluster": {
           "type": "integer",
           "description": "Minimum number of raw points a cluster must contain to be included in the output. Smaller clusters are dropped at the final filtering stage.",
           "default": 10
         },
-        "max_cluster_size": {
-          "type": "integer",
-          "description": "Deprecated / superseded. Previously the PCL Euclidean cluster extraction upper bound; oversized groups are now split (see max_voxel_cluster_for_output) rather than dropped, so the PCL upper bound is left unbounded and this value is no longer used to limit clusters.",
-          "default": 3000
-        },
-        "max_voxel_cluster_for_output": {
+        "max_voxels_per_cluster": {
           "type": "integer",
           "description": "Voxel-count split bound. Any cluster whose voxel count exceeds this is recursively bisected along its principal (longest) axis into smaller sub-clusters until every piece is at or below this size. No cluster is dropped for being large; large groups are exported as multiple bounded sections.",
           "default": 800
         },
-        "min_voxel_cluster_size_for_filtering": {
+        "point_capping_voxel_threshold": {
           "type": "integer",
           "description": "Voxel-count threshold above which a cluster is considered 'large' and subject to per-voxel point capping (see max_points_per_voxel_in_large_cluster). Clusters at or below this size keep all their points.",
           "default": 65
         },
         "max_points_per_voxel_in_large_cluster": {
           "type": "integer",
-          "description": "Maximum number of points kept per voxel within a large cluster (one whose voxel count exceeds min_voxel_cluster_size_for_filtering). Excess points are dropped to bound downstream cost; points are processed in a deterministically shuffled order so the kept points sample uniformly across each voxel.",
+          "description": "Maximum number of points kept per voxel within a large cluster (one whose voxel count exceeds point_capping_voxel_threshold). Excess points are dropped to bound downstream cost; points are processed in a deterministically shuffled order so the kept points sample uniformly across each voxel.",
           "default": 10
         },
         "use_height": {
@@ -55,11 +50,10 @@
       "required": [
         "tolerance",
         "voxel_leaf_size",
-        "min_points_number_per_voxel",
-        "min_cluster_size",
-        "max_cluster_size",
-        "max_voxel_cluster_for_output",
-        "min_voxel_cluster_size_for_filtering",
+        "min_points_per_voxel",
+        "min_points_per_cluster",
+        "max_voxels_per_cluster",
+        "point_capping_voxel_threshold",
         "max_points_per_voxel_in_large_cluster",
         "use_height"
       ],

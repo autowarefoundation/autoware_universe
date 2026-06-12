@@ -11,7 +11,7 @@
           "description": "The maximum number of points that a cluster needs to contain in order to be considered valid.",
           "default": 1000
         },
-        "min_cluster_size": {
+        "min_points_per_cluster": {
           "type": "integer",
           "description": "The minimum number of points that a cluster needs to contain in order to be considered valid.",
           "default": 10
@@ -27,7 +27,7 @@
           "default": false
         }
       },
-      "required": ["max_cluster_size", "min_cluster_size", "tolerance", "use_height"],
+      "required": ["max_cluster_size", "min_points_per_cluster", "tolerance", "use_height"],
       "additionalProperties": false
     }
   },
