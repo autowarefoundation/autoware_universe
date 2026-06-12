@@ -48,9 +48,11 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 
-  ament_auto_add_gtest(object_fusion_merger_node_tests
-    test/test_object_fusion_merger_node.cpp
-  )
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_auto_add_gtest(object_fusion_merger_node_tests
+      test/test_object_fusion_merger_node.cpp
+    )
+  endif()
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
