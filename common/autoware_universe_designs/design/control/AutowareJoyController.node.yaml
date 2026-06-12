@@ -1,0 +1,55 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: AutowareJoyController.node
+package:
+  name: autoware_joy_controller
+  provider: autoware
+launch:
+  plugin: autoware::joy_controller::AutowareJoyControllerNode
+  executable: autoware_joy_controller
+# interfaces
+subscribers:
+  - name: input/joy
+    message_type: sensor_msgs/msg/Joy
+  - name: input/odometry
+    message_type: nav_msgs/msg/Odometry
+publishers:
+  - name: output/control_command
+    message_type: autoware_control_msgs/msg/Control
+  - name: output/external_control_command
+    message_type: tier4_external_api_msgs/msg/ControlCommandStamped
+  - name: output/shift
+    message_type: tier4_external_api_msgs/msg/GearShiftStamped
+  - name: output/turn_signal
+    message_type: tier4_external_api_msgs/msg/TurnSignalStamped
+  - name: output/gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+  - name: output/heartbeat
+    message_type: tier4_external_api_msgs/msg/Heartbeat
+  - name: output/vehicle_engage
+    message_type: autoware_vehicle_msgs/msg/Engage
+clients:
+  - name: emergency_stop
+    message_type: tier4_external_api_msgs/srv/SetEmergency
+    remap_target: service/emergency_stop
+  - name: autoware_engage
+    message_type: tier4_external_api_msgs/srv/Engage
+    remap_target: service/autoware_engage
+# parameters
+param_files:
+  - name: joy_controller_param
+    default: config/joy_controller_ds4.param.yaml
+param_values: []
+# processes
+processes:
+  - name: publish_joy_commands
+    trigger_conditions:
+      - periodic: 10.0 # Hz
+    outcomes:
+      - to_output: output/control_command
+      - to_output: output/external_control_command
+      - to_output: output/shift
+      - to_output: output/turn_signal
+      - to_output: output/gate_mode
+      - to_output: output/heartbeat
+      - to_output: output/vehicle_engage
