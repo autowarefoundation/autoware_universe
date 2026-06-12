@@ -53,7 +53,13 @@
           "minItems": 1
         }
       },
-      "required": ["voxels_num", "point_cloud_range", "voxel_size", "serialization_orders", "pooling_strides"],
+      "required": [
+        "voxels_num",
+        "point_cloud_range",
+        "voxel_size",
+        "serialization_orders",
+        "pooling_strides"
+      ],
       "additionalProperties": false
     },
     "segmentation3d": {

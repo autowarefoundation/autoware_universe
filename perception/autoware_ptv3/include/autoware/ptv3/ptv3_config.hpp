@@ -44,7 +44,8 @@ public:
     const std::vector<std::string> & serialization_orders,
     const std::vector<std::int64_t> & pooling_strides, const std::vector<std::int64_t> & palette,
     const float filter_class_probability_threshold, const std::vector<std::string> & filter_classes,
-    const std::string & filter_output_format, const std::string & source_reconstruction, const bool use_seg3d_head)
+    const std::string & filter_output_format, const std::string & source_reconstruction,
+    const bool use_seg3d_head)
   : use_seg3d_head_(use_seg3d_head)
   {
     plugins_path_ = plugins_path;

@@ -289,8 +289,7 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
                                 const std::string & name, const nvinfer1::Dims & io_dims,
                                 const nvinfer1::Dims & min_dims, const nvinfer1::Dims & opt_dims,
                                 const nvinfer1::Dims & max_dims,
-                                const std::optional<nvinfer1::DataType> data_type =
-                                  std::nullopt) {
+                                const std::optional<nvinfer1::DataType> data_type = std::nullopt) {
     network_io.emplace_back(name, io_dims, data_type);
     profile_dims.emplace_back(name, min_dims, opt_dims, max_dims);
   };
