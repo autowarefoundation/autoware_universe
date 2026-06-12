@@ -23,9 +23,22 @@
 #include <cuda_runtime_api.h>
 
 #include <cstdint>
+#include <vector>
 
 namespace autoware::ptv3
 {
+
+struct SerializedPoolingDeviceStageView
+{
+  std::int64_t * indices{};
+  std::int64_t * indptr{};
+  std::int64_t * head_indices{};
+  std::int64_t * cluster{};
+  std::int64_t * grid_coord{};
+  std::int64_t * serialized_code{};
+  std::int64_t * serialized_order{};
+  std::int64_t * serialized_inverse{};
+};
 
 class PreprocessCuda
 {
@@ -37,6 +50,10 @@ public:
     float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
     void * compact_points, float * reconstruction_features, void * cropped_source_points,
     std::int64_t * inverse_map, std::size_t * num_cropped_points);
+
+  void generateSerializedPoolingMetadata(
+    const std::int64_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
+    const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
 
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
   [[nodiscard]] const std::uint32_t * cropIndices() const { return crop_indices_d_.get(); }
@@ -67,6 +84,15 @@ private:
 
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> sort_workspace_d_{nullptr};
   std::size_t sort_workspace_size_{0};
+
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_keys_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_sorted_keys_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_indices_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_sorted_indices_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_run_flags_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_run_ids_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
+  std::size_t pooling_workspace_size_{0};
 };
 }  // namespace autoware::ptv3
 
