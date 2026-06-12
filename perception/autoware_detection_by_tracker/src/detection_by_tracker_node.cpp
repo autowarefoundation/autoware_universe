@@ -124,7 +124,8 @@ DetectionByTracker::DetectionByTracker(const rclcpp::NodeOptions & node_options)
 
   shape_estimator_ = std::make_shared<autoware::shape_estimation::ShapeEstimator>(true, true);
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
-    false, 10, 0.7, 0.3, 0, std::numeric_limits<int>::max(), std::numeric_limits<int>::max(), 10000);
+    false, 10, 0.7, 0.3, 0, std::numeric_limits<int>::max(), std::numeric_limits<int>::max(),
+    10000);
   debugger_ = std::make_shared<Debugger>(this);
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
@@ -290,9 +291,8 @@ float DetectionByTracker::optimizeUnderSegmentedObject(
 
   // initialize clustering parameters
   autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster cluster(
-    false, 4, initial_cluster_range, initial_voxel_size, 0,
-    min_voxel_cluster_size_for_filtering, max_points_per_voxel_in_large_cluster,
-    max_voxel_cluster_for_output);
+    false, 4, initial_cluster_range, initial_voxel_size, 0, min_voxel_cluster_size_for_filtering,
+    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
 
   // convert to pcl
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cluster(new pcl::PointCloud<pcl::PointXYZ>);

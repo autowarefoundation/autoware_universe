@@ -25,14 +25,16 @@ EuclideanCluster::EuclideanCluster()
 {
 }
 
-EuclideanCluster::EuclideanCluster(bool use_height, int min_points_per_cluster, int max_cluster_size)
+EuclideanCluster::EuclideanCluster(
+  bool use_height, int min_points_per_cluster, int max_cluster_size)
 : EuclideanClusterInterface(use_height, min_points_per_cluster, max_cluster_size)
 {
 }
 
 EuclideanCluster::EuclideanCluster(
   bool use_height, int min_points_per_cluster, int max_cluster_size, float tolerance)
-: EuclideanClusterInterface(use_height, min_points_per_cluster, max_cluster_size), tolerance_(tolerance)
+: EuclideanClusterInterface(use_height, min_points_per_cluster, max_cluster_size),
+  tolerance_(tolerance)
 {
 }
 // TODO(badai-nguyen): implement input field copy for euclidean_cluster.cpp

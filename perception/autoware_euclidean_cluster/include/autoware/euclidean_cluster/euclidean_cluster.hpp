@@ -28,7 +28,8 @@ class EuclideanCluster : public EuclideanClusterInterface
 public:
   EuclideanCluster();
   EuclideanCluster(bool use_height, int min_points_per_cluster, int max_cluster_size);
-  EuclideanCluster(bool use_height, int min_points_per_cluster, int max_cluster_size, float tolerance);
+  EuclideanCluster(
+    bool use_height, int min_points_per_cluster, int max_cluster_size, float tolerance);
   bool cluster(
     const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
     std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters) override;

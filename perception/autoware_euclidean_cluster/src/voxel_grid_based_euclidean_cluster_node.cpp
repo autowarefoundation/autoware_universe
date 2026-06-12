@@ -29,14 +29,12 @@ VoxelGridBasedEuclideanClusterNode::VoxelGridBasedEuclideanClusterNode(
   const int min_points_per_cluster = this->declare_parameter<int>("min_points_per_cluster");
   const float tolerance = this->declare_parameter<float>("tolerance");
   const float voxel_leaf_size = this->declare_parameter<float>("voxel_leaf_size");
-  const int min_points_per_voxel =
-    this->declare_parameter<int>("min_points_per_voxel");
+  const int min_points_per_voxel = this->declare_parameter<int>("min_points_per_voxel");
   const int point_capping_voxel_threshold =
     this->declare_parameter<int>("point_capping_voxel_threshold");
   const int max_points_per_voxel_in_large_cluster =
     this->declare_parameter<int>("max_points_per_voxel_in_large_cluster");
-  const int max_voxels_per_cluster =
-    this->declare_parameter<int>("max_voxels_per_cluster");
+  const int max_voxels_per_cluster = this->declare_parameter<int>("max_voxels_per_cluster");
   cluster_ = std::make_shared<VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
     point_capping_voxel_threshold, max_points_per_voxel_in_large_cluster, max_voxels_per_cluster);

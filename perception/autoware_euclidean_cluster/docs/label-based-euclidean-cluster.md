@@ -92,15 +92,15 @@ Parameters are loaded from [config/label_based_euclidean_cluster.param.yaml](../
 
 ### Clustering Parameters
 
-| Name                                    | Type  | Description                                                         |
-| --------------------------------------- | ----- | ------------------------------------------------------------------- |
-| `use_height`                            | bool  | Use the `z` coordinate during clustering.                           |
-| `tolerance`                             | float | Euclidean clustering tolerance.                                     |
-| `min_points_per_cluster`                      | int   | Minimum number of points required to keep a cluster.                |
-| `voxel_leaf_size`                       | float | Voxel size used by the internal voxel-grid-based cluster.           |
-| `min_points_per_voxel`           | int   | Minimum number of points required to keep a voxel centroid.         |
-| `point_capping_voxel_threshold`         | int   | Voxel count above which a cluster is "large" and has its points capped per voxel. |
-| `max_points_per_voxel_in_large_cluster` | int   | Maximum number of points kept per voxel for large clusters.         |
+| Name                                    | Type  | Description                                                                                 |
+| --------------------------------------- | ----- | ------------------------------------------------------------------------------------------- |
+| `use_height`                            | bool  | Use the `z` coordinate during clustering.                                                   |
+| `tolerance`                             | float | Euclidean clustering tolerance.                                                             |
+| `min_points_per_cluster`                | int   | Minimum number of points required to keep a cluster.                                        |
+| `voxel_leaf_size`                       | float | Voxel size used by the internal voxel-grid-based cluster.                                   |
+| `min_points_per_voxel`                  | int   | Minimum number of points required to keep a voxel centroid.                                 |
+| `point_capping_voxel_threshold`         | int   | Voxel count above which a cluster is "large" and has its points capped per voxel.           |
+| `max_points_per_voxel_in_large_cluster` | int   | Maximum number of points kept per voxel for large clusters.                                 |
 | `max_voxels_per_cluster`                | int   | Voxel-count split bound; clusters above this are split into smaller sections (not dropped). |
 
 ### Semantic Filtering Parameters
