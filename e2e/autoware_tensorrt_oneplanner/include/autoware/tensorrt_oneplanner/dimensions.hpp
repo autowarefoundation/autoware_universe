@@ -24,10 +24,13 @@ namespace autoware::tensorrt_oneplanner
 {
 
 // The planner-conditioning tensors are identical to the diffusion planner's
-// (autoware::diffusion_planner::*_SHAPE). Only the prediction output differs:
-// OnePlanner is ego-only (P=1), no neighbor-prediction head.
+// (autoware::diffusion_planner::*_SHAPE), with the ego-only (P=1) differences below.
+// The exported graph also has no neighbor_agents_past / static_objects inputs:
+// the neighbor encoder was removed at training time and ONNX export prunes them.
 inline constexpr std::array<int64_t, 4> EGO_PREDICTION_SHAPE = {
   1, 1, autoware::diffusion_planner::OUTPUT_T, autoware::diffusion_planner::POSE_DIM};
+inline constexpr std::array<int64_t, 4> EGO_SAMPLED_TRAJECTORIES_SHAPE = {
+  1, 1, autoware::diffusion_planner::OUTPUT_T + 1, autoware::diffusion_planner::POSE_DIM};
 
 // Expected major_version in the OnePlanner normalization JSON (args file).
 inline constexpr int WEIGHT_MAJOR_VERSION = 1;

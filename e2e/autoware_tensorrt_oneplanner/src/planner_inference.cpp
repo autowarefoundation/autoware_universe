@@ -49,13 +49,10 @@ using autoware::diffusion_planner::LANES_HAS_SPEED_LIMIT_SHAPE;
 using autoware::diffusion_planner::LANES_SHAPE;
 using autoware::diffusion_planner::LANES_SPEED_LIMIT_SHAPE;
 using autoware::diffusion_planner::LINE_STRINGS_SHAPE;
-using autoware::diffusion_planner::NEIGHBOR_SHAPE;
 using autoware::diffusion_planner::POLYGONS_SHAPE;
 using autoware::diffusion_planner::ROUTE_LANES_HAS_SPEED_LIMIT_SHAPE;
 using autoware::diffusion_planner::ROUTE_LANES_SHAPE;
 using autoware::diffusion_planner::ROUTE_LANES_SPEED_LIMIT_SHAPE;
-using autoware::diffusion_planner::SAMPLED_TRAJECTORIES_SHAPE;
-using autoware::diffusion_planner::STATIC_OBJECTS_SHAPE;
 using autoware::diffusion_planner::TURN_INDICATOR_LOGIT_SHAPE;
 using autoware::diffusion_planner::TURN_INDICATORS_SHAPE;
 
@@ -88,15 +85,11 @@ PlannerInference::PlannerInference(
   const size_t turn_indicator_logit_size = batch_size_ * num_elements(TURN_INDICATOR_LOGIT_SHAPE);
 
   sampled_trajectories_d_ = autoware::cuda_utils::make_unique<float[]>(
-    batch_size_ * num_elements(SAMPLED_TRAJECTORIES_SHAPE));
+    batch_size_ * num_elements(EGO_SAMPLED_TRAJECTORIES_SHAPE));
   ego_history_d_ =
     autoware::cuda_utils::make_unique<float[]>(batch_size_ * num_elements(EGO_HISTORY_SHAPE));
   ego_current_state_d_ =
     autoware::cuda_utils::make_unique<float[]>(batch_size_ * num_elements(EGO_CURRENT_STATE_SHAPE));
-  neighbor_agents_past_d_ =
-    autoware::cuda_utils::make_unique<float[]>(batch_size_ * num_elements(NEIGHBOR_SHAPE));
-  static_objects_d_ =
-    autoware::cuda_utils::make_unique<float[]>(batch_size_ * num_elements(STATIC_OBJECTS_SHAPE));
   lanes_d_ = autoware::cuda_utils::make_unique<float[]>(batch_size_ * num_elements(LANES_SHAPE));
   lanes_has_speed_limit_d_ = autoware::cuda_utils::make_unique<bool[]>(
     batch_size_ * num_elements(LANES_HAS_SPEED_LIMIT_SHAPE));
@@ -156,11 +149,9 @@ void PlannerInference::load_engine(const std::string & model_path)
   const nvinfer1::Dims bev_dims{4, {1, bev_channels_, bev_size_, bev_size_}};
 
   std::vector<NetworkIO> network_io;
-  network_io.emplace_back("sampled_trajectories", to_dims(SAMPLED_TRAJECTORIES_SHAPE));
+  network_io.emplace_back("sampled_trajectories", to_dims(EGO_SAMPLED_TRAJECTORIES_SHAPE));
   network_io.emplace_back("ego_agent_past", to_dims(EGO_HISTORY_SHAPE));
   network_io.emplace_back("ego_current_state", to_dims(EGO_CURRENT_STATE_SHAPE));
-  network_io.emplace_back("neighbor_agents_past", to_dims(NEIGHBOR_SHAPE));
-  network_io.emplace_back("static_objects", to_dims(STATIC_OBJECTS_SHAPE));
   network_io.emplace_back("lanes", to_dims(LANES_SHAPE));
   network_io.emplace_back("lanes_has_speed_limit", to_dims(LANES_HAS_SPEED_LIMIT_SHAPE));
   network_io.emplace_back("lanes_speed_limit", to_dims(LANES_SPEED_LIMIT_SHAPE));
@@ -201,8 +192,6 @@ void PlannerInference::bind_buffers()
   network_trt_ptr_->setTensorAddress("sampled_trajectories", sampled_trajectories_d_.get());
   network_trt_ptr_->setTensorAddress("ego_agent_past", ego_history_d_.get());
   network_trt_ptr_->setTensorAddress("ego_current_state", ego_current_state_d_.get());
-  network_trt_ptr_->setTensorAddress("neighbor_agents_past", neighbor_agents_past_d_.get());
-  network_trt_ptr_->setTensorAddress("static_objects", static_objects_d_.get());
   network_trt_ptr_->setTensorAddress("lanes", lanes_d_.get());
   network_trt_ptr_->setTensorAddress("lanes_has_speed_limit", lanes_has_speed_limit_d_.get());
   network_trt_ptr_->setTensorAddress("lanes_speed_limit", lanes_speed_limit_d_.get());
@@ -233,8 +222,6 @@ void PlannerInference::transfer_inputs_to_device(const InputDataMap & input_data
   h2d(input_data_map.at("sampled_trajectories"), sampled_trajectories_d_);
   h2d(input_data_map.at("ego_agent_past"), ego_history_d_);
   h2d(input_data_map.at("ego_current_state"), ego_current_state_d_);
-  h2d(input_data_map.at("neighbor_agents_past"), neighbor_agents_past_d_);
-  h2d(input_data_map.at("static_objects"), static_objects_d_);
   h2d(input_data_map.at("lanes"), lanes_d_);
   h2d(input_data_map.at("lanes_speed_limit"), lanes_speed_limit_d_);
   h2d(input_data_map.at("route_lanes"), route_lanes_d_);

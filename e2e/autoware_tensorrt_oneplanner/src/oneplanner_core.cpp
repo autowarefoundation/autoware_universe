@@ -45,12 +45,10 @@ namespace utils = autoware::diffusion_planner::utils;
 using dp::EGO_HISTORY_SHAPE;
 using dp::INPUT_T;
 using dp::MAX_NUM_AGENTS;
-using dp::NEIGHBOR_SHAPE;
 using dp::NUM_SEGMENTS_IN_LANE;
 using dp::NUM_SEGMENTS_IN_ROUTE;
 using dp::OUTPUT_T;
 using dp::POSE_DIM;
-using dp::STATIC_OBJECTS_SHAPE;
 using dp::TURN_INDICATOR_OUTPUT_DIM;
 using dp::TURN_INDICATORS_SHAPE;
 
@@ -186,8 +184,11 @@ InputDataMap OnePlannerCore::create_input_data(const OnePlannerFrameContext & fr
     const int64_t copy_steps = std::clamp<int64_t>(params_.delay_step, 0, OUTPUT_T / 2);
     const bool has_previous_output = !last_agent_poses_map_.empty();
 
+    // create_sampled_trajectories returns the 33-agent diffusion-planner layout;
+    // OnePlanner is ego-only (P=1), so keep only the first agent block.
     std::vector<float> sampled_trajectories =
       preprocess::create_sampled_trajectories(params_.temperature);
+    sampled_trajectories.resize((OUTPUT_T + 1) * POSE_DIM);
 
     if (has_previous_output) {
       constexpr int64_t agent_idx = 0;
@@ -224,18 +225,8 @@ InputDataMap OnePlannerCore::create_input_data(const OnePlannerFrameContext & fr
       frame_context.ego_kinematic_state, frame_context.ego_acceleration,
       static_cast<float>(vehicle_spec_.wheel_base));
   }
-  // Neighbor agents: zeros. OnePlanner conditions on the LiDAR BEV feature map instead of
-  // tracked objects; the tensor is kept only for graph compatibility.
-  {
-    std::vector<int64_t> single_batch_shape(NEIGHBOR_SHAPE.begin() + 1, NEIGHBOR_SHAPE.end());
-    input_data_map["neighbor_agents_past"] = utils::create_float_data(single_batch_shape, 0.0f);
-  }
-  // Static objects: zeros (same as the diffusion planner)
-  {
-    std::vector<int64_t> single_batch_shape(
-      STATIC_OBJECTS_SHAPE.begin() + 1, STATIC_OBJECTS_SHAPE.end());
-    input_data_map["static_objects"] = utils::create_float_data(single_batch_shape, 0.0f);
-  }
+  // No neighbor_agents_past / static_objects: the exported graph has neither input
+  // (OnePlanner conditions on the LiDAR BEV feature map instead of tracked objects).
 
   // map data on ego reference frame
   {
