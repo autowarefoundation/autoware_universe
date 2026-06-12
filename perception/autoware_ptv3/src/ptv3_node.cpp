@@ -49,6 +49,10 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     this->declare_parameter<std::vector<double>>("backbone.point_cloud_range", descriptor));
   const auto voxel_size = to_float_vector(
     this->declare_parameter<std::vector<double>>("backbone.voxel_size", descriptor));
+  const auto serialization_orders =
+    this->declare_parameter<std::vector<std::string>>("backbone.serialization_orders", descriptor);
+  const auto pooling_strides =
+    this->declare_parameter<std::vector<std::int64_t>>("backbone.pooling_strides", descriptor);
 
   if (point_cloud_range.size() != 6) {
     throw std::runtime_error("The size of point_cloud_range != 6");
@@ -88,9 +92,9 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   }
 
   PTv3Config config(
-    plugins_path, cloud_capacity, voxels_num, point_cloud_range, voxel_size, class_names, palette,
-    filter_class_probability_threshold, filter_classes, filter_output_format, source_reconstruction,
-    use_seg3d_head);
+    plugins_path, cloud_capacity, voxels_num, point_cloud_range, voxel_size, class_names,
+    serialization_orders, pooling_strides, palette, filter_class_probability_threshold,
+    filter_classes, filter_output_format, source_reconstruction, use_seg3d_head);
 
   const auto backbone_trt_config = tensorrt_common::TrtCommonConfig(
     backbone_onnx_path, trt_precision, backbone_engine_path, 1ULL << 33U);

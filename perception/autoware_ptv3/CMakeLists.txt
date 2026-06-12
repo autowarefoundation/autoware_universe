@@ -132,6 +132,24 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     DESTINATION lib
   )
 
+  if(BUILD_TESTING)
+    find_package(ament_cmake_gtest REQUIRED)
+
+    ament_add_gtest(serialized_pooling_metadata_test
+      test/serialized_pooling_metadata_test.cpp
+    )
+    if(TARGET serialized_pooling_metadata_test)
+      target_link_libraries(serialized_pooling_metadata_test
+        CUDA::cudart
+        ${PROJECT_NAME}_cuda_lib
+      )
+      target_include_directories(serialized_pooling_metadata_test PRIVATE
+        include
+        ${CUDA_INCLUDE_DIRS}
+      )
+    endif()
+  endif()
+
   ament_auto_package(
     INSTALL_TO_SHARE
       launch
