@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -36,7 +37,10 @@
 namespace autoware::ptv3
 {
 
-PTv3TRT::PTv3TRT(const tensorrt_common::TrtCommonConfig & trt_config, const PTv3Config & config)
+PTv3TRT::PTv3TRT(
+  const tensorrt_common::TrtCommonConfig & backbone_trt_config,
+  const std::optional<tensorrt_common::TrtCommonConfig> & seg3d_head_trt_config,
+  const PTv3Config & config)
 : config_(config)
 {
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
@@ -44,7 +48,13 @@ PTv3TRT::PTv3TRT(const tensorrt_common::TrtCommonConfig & trt_config, const PTv3
 
   createPointFields();
   initPtr();
-  initTrt(trt_config);
+  initBackboneTrt(backbone_trt_config);
+  if (config_.use_seg3d_head_) {
+    if (!seg3d_head_trt_config.has_value()) {
+      throw std::runtime_error("seg3d_head_trt_config is required when segmentation3d.use_head.");
+    }
+    initSeg3dHeadTrt(*seg3d_head_trt_config);
+  }
 
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
 }
@@ -121,10 +131,18 @@ PTv3TRT::~PTv3TRT()
 
 void PTv3TRT::initPtr()
 {
-  grid_coord_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_ * 3);
+  grid_coord_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_ * 3);
   feat_d_ = autoware::cuda_utils::make_unique<float[]>(config_.max_num_voxels_ * 4);
   serialized_code_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_ * 2);
+
+  // Backbone outputs shared with the segmentation head.
+  bb_point_feat_d_ = autoware::cuda_utils::make_unique<float[]>(
+    config_.max_num_voxels_ * config_.backbone_feat_dim_);
+  bb_point_grid_coord_d_ =
+    autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_ * 3);
+  bb_point_offset_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(1);
+
   pred_labels_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
   pred_probs_d_ = autoware::cuda_utils::make_unique<float[]>(
     config_.max_num_voxels_ * config_.class_names_.size());
@@ -184,19 +202,22 @@ void PTv3TRT::createPointFields()
     make_point_field("rgb", 12, sensor_msgs::msg::PointField::FLOAT32, 1));
 }
 
-void PTv3TRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
+void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_config)
 {
   std::vector<autoware::tensorrt_common::NetworkIO> network_io;
 
   // Inputs
-  network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}});
-  network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}});
-  network_io.emplace_back("serialized_code", nvinfer1::Dims{2, {2, -1}});
-
-  // Outputs
-  network_io.emplace_back("pred_labels", nvinfer1::Dims{1, {-1}});
+  network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+  network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
   network_io.emplace_back(
-    "pred_probs", nvinfer1::Dims{2, {-1, static_cast<std::int64_t>(config_.class_names_.size())}});
+    "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
+
+  // Outputs: point_feat [N, backbone_feat_dim], point_grid_coord [N, 3], point_offset [1]
+  network_io.emplace_back(
+    "point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back(
+    "point_grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+  network_io.emplace_back("point_offset", nvinfer1::Dims{1, {1}}, nvinfer1::DataType::kINT64);
 
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
 
@@ -212,24 +233,54 @@ void PTv3TRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
     "serialized_code", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
     nvinfer1::Dims{2, {2, config_.voxels_num_[1]}}, nvinfer1::Dims{2, {2, config_.voxels_num_[2]}});
 
-  auto network_io_ptr =
-    std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io);
-  auto profile_dims_ptr =
-    std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims);
-
-  network_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
+  backbone_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
     trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
     std::vector<std::string>{config_.plugins_path_});
 
-  if (!network_trt_ptr_->setup(std::move(profile_dims_ptr), std::move(network_io_ptr))) {
-    throw std::runtime_error("Failed to setup TRT engine." + config_.plugins_path_);
+  if (!backbone_trt_ptr_->setup(
+        std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims),
+        std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io))) {
+    throw std::runtime_error("Failed to setup backbone TRT engine.");
   }
 
-  network_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
-  network_trt_ptr_->setTensorAddress("feat", feat_d_.get());
-  network_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
-  network_trt_ptr_->setTensorAddress("pred_labels", pred_labels_d_.get());
-  network_trt_ptr_->setTensorAddress("pred_probs", pred_probs_d_.get());
+  backbone_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
+  backbone_trt_ptr_->setTensorAddress("feat", feat_d_.get());
+  backbone_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
+  backbone_trt_ptr_->setTensorAddress("point_feat", bb_point_feat_d_.get());
+  backbone_trt_ptr_->setTensorAddress("point_grid_coord", bb_point_grid_coord_d_.get());
+  backbone_trt_ptr_->setTensorAddress("point_offset", bb_point_offset_d_.get());
+}
+
+void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config)
+{
+  std::vector<autoware::tensorrt_common::NetworkIO> network_io;
+
+  network_io.emplace_back(
+    "point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back("pred_labels", nvinfer1::Dims{1, {-1}}, nvinfer1::DataType::kINT64);
+  network_io.emplace_back(
+    "pred_probs", nvinfer1::Dims{2, {-1, static_cast<std::int64_t>(config_.class_names_.size())}},
+    nvinfer1::DataType::kFLOAT);
+
+  std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
+  profile_dims.emplace_back(
+    "point_feat", nvinfer1::Dims{2, {config_.voxels_num_[0], config_.backbone_feat_dim_}},
+    nvinfer1::Dims{2, {config_.voxels_num_[1], config_.backbone_feat_dim_}},
+    nvinfer1::Dims{2, {config_.voxels_num_[2], config_.backbone_feat_dim_}});
+
+  seg3d_head_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
+    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
+    std::vector<std::string>{config_.plugins_path_});
+
+  if (!seg3d_head_trt_ptr_->setup(
+        std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims),
+        std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io))) {
+    throw std::runtime_error("Failed to setup seg3d_head TRT engine.");
+  }
+
+  seg3d_head_trt_ptr_->setTensorAddress("point_feat", bb_point_feat_d_.get());
+  seg3d_head_trt_ptr_->setTensorAddress("pred_labels", pred_labels_d_.get());
+  seg3d_head_trt_ptr_->setTensorAddress("pred_probs", pred_probs_d_.get());
 }
 
 CloudFormat PTv3TRT::detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const
@@ -439,21 +490,27 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
     num_voxels_ = config_.max_num_voxels_;
   }
 
-  network_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
-  network_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});
-  network_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
+  backbone_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
+  backbone_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});
+  backbone_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
 
   return true;
 }
 
 bool PTv3TRT::inference()
 {
-  auto status = network_trt_ptr_->enqueueV3(stream_);
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-
-  if (!status) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue and skip to detect.");
+  if (!backbone_trt_ptr_->enqueueV3(stream_)) {
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue backbone and skip to detect.");
     return false;
+  }
+
+  if (seg3d_head_trt_ptr_) {
+    seg3d_head_trt_ptr_->setInputShape(
+      "point_feat", nvinfer1::Dims{2, {num_voxels_, config_.backbone_feat_dim_}});
+    if (!seg3d_head_trt_ptr_->enqueueV3(stream_)) {
+      RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue seg3d head and skip to detect.");
+      return false;
+    }
   }
 
   return true;

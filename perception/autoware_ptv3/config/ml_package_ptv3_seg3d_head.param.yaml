@@ -1,0 +1,37 @@
+/**:
+  ros__parameters:
+    segmentation3d:
+      class_names: [
+          "car",
+          "truck",
+          "bus",
+          "bicycle",
+          "pedestrian",
+          "traffic_cone",
+          "barrier",
+          "debris",
+          "drivable_flat",
+          "non_drivable_flat",
+          "vegetation",
+          "building",
+          "vertical_thin",
+          "static_clutter",
+          "noise"
+        ]
+      palette: [
+        0, 150, 245,    # Blue - car
+        160, 32, 240,   # Purple - truck
+        255, 255, 0,    # Yellow - bus
+        255, 192, 203,  # Pink - bicycle
+        255, 0, 0,      # Red - pedestrian
+        255, 240, 150,  # Light Yellow - traffic_cone
+        255, 127, 0,    # Orange - barrier
+        210, 180, 140,  # Tan - debris
+        255, 0, 255,    # Magenta - drivable_flat
+        139, 137, 137,  # Grey - non_drivable_flat
+        0, 175, 0,      # Green - vegetation
+        230, 230, 250,  # Lavender - building
+        153, 50, 204,   # Dark Orchid - vertical_thin
+        188, 143, 143,  # Rosy Brown - static_clutter
+        64, 224, 208,   # Turquoise - noise
+      ]

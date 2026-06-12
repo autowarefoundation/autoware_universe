@@ -43,11 +43,16 @@ public:
     const std::vector<float> & voxel_size, const std::vector<std::string> & class_names,
     const std::vector<std::int64_t> & palette, const float filter_class_probability_threshold,
     const std::vector<std::string> & filter_classes, const std::string & filter_output_format,
-    const std::string & source_reconstruction)
+    const std::string & source_reconstruction, const bool use_seg3d_head)
+  : use_seg3d_head_(use_seg3d_head)
   {
     plugins_path_ = plugins_path;
 
     cloud_capacity_ = cloud_capacity;
+
+    if (!use_seg3d_head_) {
+      throw std::runtime_error("At least one head must be enabled.");
+    }
 
     if (voxels_num.size() == 3) {
       min_num_voxels_ = voxels_num[0];
@@ -165,6 +170,9 @@ public:
   // TensorRT parameters
   std::string plugins_path_;
 
+  // Head selection
+  bool use_seg3d_head_;
+
   // Preprocess parameters
   bool use_64bit_hash_{};
   std::int32_t serialization_depth_{};
@@ -184,6 +192,7 @@ public:
   std::int64_t min_num_voxels_{};
   std::int64_t max_num_voxels_{};
   const std::int64_t num_point_feature_size_{4};  // x, y, z, intensity
+  const std::int64_t backbone_feat_dim_{64};      // backbone output feature dimension
 
   // Pointcloud range in meters
   float min_x_range_{};

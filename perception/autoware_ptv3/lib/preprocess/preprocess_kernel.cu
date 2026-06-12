@@ -240,22 +240,22 @@ __global__ void voxelizationHash32Kernel(
 }
 
 __global__ void computeGridCoordsAndSerializationKernel(
-  const float4 * __restrict__ points, longlong3 * __restrict__ coords,
+  const float4 * __restrict__ points, int3 * __restrict__ coords,
   std::int64_t * __restrict__ hashes, int num_points, float voxel_size_x, float voxel_size_y,
   float voxel_size_z, std::int32_t min_x, std::int32_t min_y, std::int32_t min_z, int depth)
 {
-  static_assert(sizeof(longlong3) == sizeof(std::uint64_t) * 3, "longlong3 must be 24 bytes");
+  static_assert(sizeof(int3) == sizeof(std::int32_t) * 3, "int3 must be 12 bytes");
   auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }
 
   const float4 & point = points[idx];
-  const std::int64_t x = static_cast<std::int32_t>(std::floor(point.x / voxel_size_x) - min_x);
-  const std::int64_t y = static_cast<std::int32_t>(std::floor(point.y / voxel_size_y) - min_y);
-  const std::int64_t z = static_cast<std::int32_t>(std::floor(point.z / voxel_size_z) - min_z);
+  const auto x = static_cast<std::int32_t>(std::floor(point.x / voxel_size_x) - min_x);
+  const auto y = static_cast<std::int32_t>(std::floor(point.y / voxel_size_y) - min_y);
+  const auto z = static_cast<std::int32_t>(std::floor(point.z / voxel_size_z) - min_z);
 
-  coords[idx] = make_longlong3(x, y, z);
+  coords[idx] = make_int3(x, y, z);
 
   std::int64_t key1 = 0;
   std::int64_t key2 = 0;
@@ -277,7 +277,7 @@ __global__ void computeGridCoordsAndSerializationKernel(
 
 std::size_t PreprocessCuda::generateFeatures(
   const void * input_data, CloudFormat input_format, unsigned int num_points,
-  float * voxel_features, std::int64_t * voxel_coords, std::int64_t * voxel_hashes,
+  float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
   void * compact_points, float * reconstruction_features, void * cropped_source_points,
   std::int64_t * inverse_map, std::size_t * output_num_cropped_points)
 {
@@ -577,7 +577,7 @@ std::size_t PreprocessCuda::generateFeatures(
 
   computeGridCoordsAndSerializationKernel<<<
     num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-    reinterpret_cast<float4 *>(voxel_features), reinterpret_cast<longlong3 *>(voxel_coords),
+    reinterpret_cast<float4 *>(voxel_features), reinterpret_cast<int3 *>(voxel_coords),
     voxel_hashes, num_unique_points, config_.voxel_x_size_, config_.voxel_y_size_,
     config_.voxel_z_size_, min_x, min_y, min_z, config_.serialization_depth_);
 
