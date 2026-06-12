@@ -40,6 +40,8 @@
 #include <thread>
 #include <vector>
 
+// cspell: ignore semseg
+
 // Characterization test for TrtYoloXNode driven end-to-end through ROS topics: an image is
 // published on ~/in/image and the resulting detections / segmentation masks are verified on
 // ~/out/objects, ~/out/mask and ~/out/color_mask.
