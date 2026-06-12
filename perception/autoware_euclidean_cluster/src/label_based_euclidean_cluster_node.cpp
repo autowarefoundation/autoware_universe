@@ -646,13 +646,10 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   const auto max_voxel_cluster_for_output =
     static_cast<int>(autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(
       *this, "max_voxel_cluster_for_output"));
-  const auto max_cluster_diagonal_size = static_cast<float>(
-    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "max_cluster_diagonal_size"));
   default_cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
-    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output,
-    max_cluster_diagonal_size);
+    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
 
   // Build per-label cluster overrides from label_cluster_params.<label_name>.* parameters.
   // Any omitted sub-key falls back to the global default above.
@@ -679,8 +676,7 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
         !has("tolerance") && !has("min_cluster_size") && !has("max_cluster_size") &&
         !has("use_height") && !has("voxel_leaf_size") && !has("min_points_number_per_voxel") &&
         !has("min_voxel_cluster_size_for_filtering") &&
-        !has("max_points_per_voxel_in_large_cluster") && !has("max_voxel_cluster_for_output") &&
-        !has("max_cluster_diagonal_size")) {
+        !has("max_points_per_voxel_in_large_cluster") && !has("max_voxel_cluster_for_output")) {
         continue;
       }
 
@@ -701,8 +697,7 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
         get_int("min_points_number_per_voxel", min_points_number_per_voxel),
         get_int("min_voxel_cluster_size_for_filtering", min_voxel_cluster_size_for_filtering),
         get_int("max_points_per_voxel_in_large_cluster", max_points_per_voxel_in_large_cluster),
-        get_int("max_voxel_cluster_for_output", max_voxel_cluster_for_output),
-        get_float("max_cluster_diagonal_size", max_cluster_diagonal_size));
+        get_int("max_voxel_cluster_for_output", max_voxel_cluster_for_output));
 
       RCLCPP_INFO(get_logger(), "Using custom cluster params for label '%s'", label_name.c_str());
     }

@@ -46,11 +46,6 @@
           "description": "The maximum points per voxel allowed in large clusters (used for filtering dense clusters).",
           "default": 10
         },
-        "max_cluster_diagonal_size": {
-          "type": "number",
-          "description": "Maximum 2D footprint AABB diagonal [m]. Clusters exceeding this are split into smaller axis-aligned pieces. 0.0 disables splitting.",
-          "default": 0.0
-        },
         "use_height": {
           "type": "boolean",
           "description": "Use point.z for clustering.",
@@ -66,7 +61,6 @@
         "max_voxel_cluster_for_output",
         "min_voxel_cluster_size_for_filtering",
         "max_points_per_voxel_in_large_cluster",
-        "max_cluster_diagonal_size",
         "use_height"
       ],
       "additionalProperties": false

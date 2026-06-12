@@ -10,7 +10,6 @@
     min_voxel_cluster_size_for_filtering: 10
     max_points_per_voxel_in_large_cluster: 100
     max_voxel_cluster_for_output: 1000
-    max_cluster_diagonal_size: 30.0
     # Per-label clustering parameter overrides.
     # Any omitted key falls back to the global default above.
     # Tuning guide:
@@ -18,7 +17,6 @@
     #   voxel_leaf_size   — down-sample resolution; smaller = more detail for compact objects
     #   min/max_cluster_size — raw-point bounds (post reconstruction)
     #   max_voxel_cluster_for_output — voxel-count hard cap; clusters above this are dropped
-    #   max_cluster_diagonal_size — [m] split clusters whose 2D footprint diagonal exceeds this; 0.0 disables
     label_cluster_params:
       pedestrian:
         tolerance: 0.3                          # tight — avoid merging adjacent pedestrians
@@ -29,7 +27,6 @@
         min_voxel_cluster_size_for_filtering: 5
         max_points_per_voxel_in_large_cluster: 30
         max_voxel_cluster_for_output: 200
-        max_cluster_diagonal_size: 1.8
       bicycle:
         tolerance: 0.4
         voxel_leaf_size: 0.15
@@ -39,7 +36,6 @@
         min_voxel_cluster_size_for_filtering: 5
         max_points_per_voxel_in_large_cluster: 50
         max_voxel_cluster_for_output: 300
-        max_cluster_diagonal_size: 4.0
       hazard:
         tolerance: 0.3
         voxel_leaf_size: 0.1
@@ -49,7 +45,6 @@
         min_voxel_cluster_size_for_filtering: 5
         max_points_per_voxel_in_large_cluster: 30
         max_voxel_cluster_for_output: 200
-        max_cluster_diagonal_size: 1.0
 
     # Post-clustering merge for confusable label pairs (e.g. truck/trailer over-segmentation).
     # Groups are optional — omit this block entirely to disable the feature.
