@@ -29,9 +29,11 @@ target_compile_options(${trajectory_validator_lib_target} PUBLIC
   -Wno-error=deprecated-declarations
 )
 
-rclcpp_components_register_node(${trajectory_validator_lib_target}
+autoware_agnocast_wrapper_register_node(${trajectory_validator_lib_target}
   PLUGIN "autoware::trajectory_validator::TrajectoryValidator"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 ament_auto_add_library(autoware_trajectory_validator_plugins SHARED
