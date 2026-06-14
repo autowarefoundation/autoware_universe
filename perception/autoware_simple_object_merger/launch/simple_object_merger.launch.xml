@@ -1,9 +1,11 @@
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
   <arg name="input_topics" default="['/input1', '/input2']"/>
   <arg name="output/objects" default="~/output/objects"/>
   <arg name="param_path" default="$(find-pkg-share autoware_simple_object_merger)/config/simple_object_merger.param.yaml"/>
 
   <node pkg="autoware_simple_object_merger" exec="simple_object_merger_node" name="simple_object_merger" output="screen">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <param name="input_topics" value="$(var input_topics)"/>
     <remap from="~/output/objects" to="$(var output/objects)"/>
     <param from="$(var param_path)"/>
