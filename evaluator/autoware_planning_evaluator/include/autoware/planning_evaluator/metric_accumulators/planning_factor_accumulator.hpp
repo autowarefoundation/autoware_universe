@@ -57,7 +57,7 @@ public:
     double abnormal_deceleration_threshold_mps2 =
       2.0;  // [m/s^2] deceleration threshold for a stop to be considered as abnormal
     double initial_span_duration_s =
-      0.1;      // [s] default duration on the first frame of a stop decision span
+      0.1;       // [s] default duration on the first frame of a stop decision span
   } parameters;  // struct Parameters
 
   PlanningFactorAccumulator() = default;
