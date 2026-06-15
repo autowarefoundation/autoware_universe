@@ -47,6 +47,15 @@ void DrivingModeConfig::define_command_source(const CommandSource & source)
   command_sources_.insert(source);
 }
 
+void DrivingModeConfig::bind_name(const AutowareMode & mode, const std::string & name)
+{
+  if (autoware_modes_.count(mode) == 0) {
+    const auto id = std::to_string(mode.id);
+    throw std::invalid_argument("unknown autoware mode: " + id);
+  }
+  autoware_mode_names_[mode] = name;
+}
+
 void DrivingModeConfig::bind_gates(const AutowareMode & mode, const Gates & gates)
 {
   if (autoware_modes_.count(mode) == 0) {
@@ -76,6 +85,12 @@ std::vector<AutowareMode> DrivingModeConfig::autoware_modes() const
 bool DrivingModeConfig::exists(const AutowareMode & mode) const
 {
   return autoware_modes_.count(mode) != 0;
+}
+
+std::string DrivingModeConfig::name(const AutowareMode & mode) const
+{
+  const auto iter = autoware_mode_names_.find(mode);
+  return iter == autoware_mode_names_.end() ? "" : iter->second;
 }
 
 DrivingModeConfig::Gates DrivingModeConfig::gates(const AutowareMode & mode) const

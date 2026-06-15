@@ -71,6 +71,8 @@ RosInterface::RosInterface(rclcpp::Node * node) : node_(node)
 
   pub_driving_mode_request_ =
     node->create_publisher<DrivingModeRequest>("~/system/driving_mode/request", rclcpp::QoS(1));
+  pub_driving_mode_info_ = node->create_publisher<DrivingModeInfo>(
+    "~/system/driving_mode/info", rclcpp::QoS(1).transient_local());
 
   pub_debug_status_ = node->create_publisher<DebugModeFlag>("~/debug/status", rclcpp::QoS(1));
   pub_debug_request_ = node->create_publisher<DebugModeRequest>("~/debug/request", rclcpp::QoS(1));
@@ -186,6 +188,19 @@ void RosInterface::publish_debug(const DebugStatus & status) const
     msg.continuable.push_back(flag.continuable);
   }
   pub_debug_status_->publish(msg);
+}
+
+void RosInterface::publish_driving_mode_info(const ModeInfo & info) const
+{
+  DrivingModeInfo msg;
+  msg.stamp = now();
+  for (const auto & [mode, name] : info.names) {
+    tier4_system_msgs::msg::DrivingModeInfoItem item;
+    item.mode = mode.id;
+    item.name = name;
+    msg.items.push_back(item);
+  }
+  pub_driving_mode_info_->publish(msg);
 }
 
 void RosInterface::publish_debug(const RequestModes & request) const

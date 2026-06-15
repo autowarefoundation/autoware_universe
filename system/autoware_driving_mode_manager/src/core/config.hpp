@@ -17,6 +17,7 @@
 
 #include <autoware_driving_mode_manager/config.hpp>
 
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -31,11 +32,13 @@ public:
   void define_autoware_mode(const AutowareMode & mode, const MrmBehavior & behavior) override;
   void define_trajectory_source(const TrajectorySource & source) override;
   void define_command_source(const CommandSource & source) override;
+  void bind_name(const AutowareMode & mode, const std::string & name) override;
   void bind_gates(const AutowareMode & mode, const Gates & gates) override;
 
   void validate() const;
 
   std::vector<AutowareMode> autoware_modes() const;
+  std::string name(const AutowareMode & mode) const;
   bool exists(const AutowareMode & mode) const;
   Gates gates(const AutowareMode & mode) const;
   AutowareMode to_autoware_mode(const OperationMode & operation) const;
@@ -47,6 +50,7 @@ private:
   std::unordered_set<AutowareMode> autoware_modes_;
   std::unordered_set<TrajectorySource> trajectory_sources_;
   std::unordered_set<CommandSource> command_sources_;
+  std::unordered_map<AutowareMode, std::string> autoware_mode_names_;
   std::unordered_map<AutowareMode, Gates> gates_mapping_;
   std::unordered_map<OperationMode, AutowareMode> operation_to_autoware_;
   std::unordered_map<AutowareMode, OperationMode> autoware_to_operation_;

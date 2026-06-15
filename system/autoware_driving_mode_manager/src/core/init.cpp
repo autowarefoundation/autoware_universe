@@ -30,6 +30,8 @@ ManagerInit::ManagerInit(std::unique_ptr<Interface> && interface, std::shared_pt
   plugin_->setup(*config_);
   config_->validate();
   status_ = std::make_unique<DrivingModeStatus>(config_->autoware_modes());
+
+  publish_driving_mode_info();
 }
 
 bool ManagerInit::is_ready() const
@@ -118,6 +120,18 @@ ServiceResponse ManagerInit::change_autoware_control(const AutowareControl &)
 ServiceResponse ManagerInit::change_mrm_request(const MrmRequest &)
 {
   return ServiceResponse{false, "driving mode manager is not ready"};
+}
+
+void ManagerInit::publish_driving_mode_info() const
+{
+  ModeInfo info;
+  for (const auto & mode : config_->autoware_modes()) {
+    const auto name = config_->name(mode);
+    if (!name.empty()) {
+      info.names[mode] = name;
+    }
+  }
+  interface_->publish_driving_mode_info(info);
 }
 
 void ManagerInit::publish_debug() const

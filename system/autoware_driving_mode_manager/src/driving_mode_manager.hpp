@@ -16,7 +16,7 @@
 #define DRIVING_MODE_MANAGER_HPP_
 
 #include "core/init.hpp"
-#include "core/manager.hpp"
+#include "core/main.hpp"
 
 #include <autoware_driving_mode_manager/plugin.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -41,7 +41,7 @@ private:
 
   pluginlib::ClassLoader<Plugin> loader_;
   std::unique_ptr<ManagerInit> init_;
-  std::unique_ptr<Manager> main_;
+  std::unique_ptr<ManagerMain> main_;
 };
 
 }  // namespace autoware::driving_mode_manager
