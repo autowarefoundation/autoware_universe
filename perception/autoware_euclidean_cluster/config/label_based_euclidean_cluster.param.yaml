@@ -10,16 +10,10 @@
     large_cluster_max_points_per_voxel: 100
     max_voxels_per_cluster: 2000
     # Per-label clustering parameter overrides.
-    # Any omitted key falls back to the global default above.
-    # Tuning guide:
-    #   tolerance_m         — merge distance between voxels; smaller = finer separation
-    #   voxel_leaf_size_m   — down-sample resolution; smaller = more detail for compact objects
-    #   min_points_per_cluster  — raw-point lower bound (post reconstruction)
-    #   max_voxels_per_cluster — voxel-count split bound; clusters above this are split, not dropped
     label_cluster_params:
       pedestrian:
-        tolerance_m: 0.3                          # tight — avoid merging adjacent pedestrians
-        voxel_leaf_size_m: 0.1                    # finer voxels for compact bodies
+        tolerance_m: 0.3
+        voxel_leaf_size_m: 0.1
         min_points_per_voxel: 1
         min_points_per_cluster: 3
         large_cluster_voxel_count_threshold: 5
@@ -43,12 +37,11 @@
         max_voxels_per_cluster: 200
 
     # Post-clustering merge for confusable label pairs (e.g. truck/trailer over-segmentation).
-    # Groups are optional — omit this block entirely to disable the feature.
     confusable_label_groups:
       truck_trailer:
         labels: ["truck", "trailer"]
-        cross_label_tolerance_m: 0.5   # true min point-to-point XY gap to merge adjacent clusters
-        max_merged_size_m: 25.0        # bounding-circle diameter cap for a merged blob (orientation-free)
+        cross_label_tolerance_m: 0.5
+        max_merged_size_m: 25.0
 
     # Point filtering by semantic confidence
     min_probability: 0.3
