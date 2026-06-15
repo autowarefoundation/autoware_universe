@@ -17,7 +17,7 @@
 
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

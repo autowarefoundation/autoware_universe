@@ -14,18 +14,12 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/tracker/model/polygon_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/polygon_tracker.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware_utils_geometry/boost_polygon_utils.hpp>
-#include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/utils.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <bits/stdc++.h>
 
 #include <cmath>
 
@@ -41,6 +35,7 @@ PolygonTracker::PolygonTracker(
   enable_motion_output_(enable_motion_output)
 {
   tracker_type_ = TrackerType::POLYGON;
+  shape_model_.init(object);
 
   if (enable_velocity_estimation_) {
     // Set motion model parameters
@@ -142,6 +137,11 @@ PolygonTracker::PolygonTracker(
     }
     static_motion_model_.initialize(time, object.pose.position.x, object.pose.position.y, pose_cov);
   }
+  // Seed z/orientation into both models (only the active model is used, but both are safe to set).
+  motion_model_.setZ(object.pose.position.z);
+  motion_model_.setOrientation(object.pose.orientation);
+  static_motion_model_.setZ(object.pose.position.z);
+  static_motion_model_.setOrientation(object.pose.orientation);
 }
 
 bool PolygonTracker::predict(const rclcpp::Time & time)
@@ -151,34 +151,25 @@ bool PolygonTracker::predict(const rclcpp::Time & time)
   } else {
     return static_motion_model_.predictState(time);
   }
-
-  return true;
 }
 
-bool PolygonTracker::measureWithPose(const types::DynamicObject & object)
+bool PolygonTracker::updateKinematics(const types::DynamicObject & object)
 {
   bool is_updated = true;
+  constexpr double z_gain = 0.1;
 
   if (enable_velocity_estimation_) {
-    // update motion model
     const double x = object.pose.position.x;
     const double y = object.pose.position.y;
-
     is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
     motion_model_.limitStates();
-
+    motion_model_.updateZ(object.pose.position.z, z_gain);
   } else {
-    // update static motion model
     const double x = object.pose.position.x;
     const double y = object.pose.position.y;
-
     is_updated = static_motion_model_.updateStatePose(x, y, object.pose_covariance);
+    static_motion_model_.updateZ(object.pose.position.z, z_gain);
   }
-
-  // position z
-  constexpr double gain = 0.1;
-  object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
-
   return is_updated;
 }
 
@@ -186,10 +177,12 @@ bool PolygonTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
   const types::InputChannel & /*channel_info*/)
 {
-  // update object shape
-  object_.shape = object.shape;
-  object_.pose = object.pose;
-  object_.area = types::getArea(object.shape);
+  shape_model_.update(object);
+  // x/y come from the motion model on demand; orientation/z are stored in both motion models.
+  // last_pose_ keeps the raw measurement pose used as the publish-time pose.
+  // z is updated via the low-pass filter in updateKinematics(); do not hard-set here.
+  motion_model_.setOrientation(object.pose.orientation);
+  static_motion_model_.setOrientation(object.pose.orientation);
   last_pose_ = object.pose;
 
   if (enable_velocity_estimation_) {
@@ -204,10 +197,20 @@ bool PolygonTracker::measure(
     }
   }
 
-  // update object
-  measureWithPose(object);
+  updateKinematics(object);
 
+  removeCache();
   return true;
+}
+
+bool PolygonTracker::getMotionState(
+  const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+  geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
+{
+  if (enable_velocity_estimation_) {
+    return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
+  }
+  return static_motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
 }
 
 bool PolygonTracker::getTrackedObject(
@@ -222,30 +225,14 @@ bool PolygonTracker::getTrackedObject(
   }
   // else, allow extrapolation
 
-  // get the object
-  object = object_;
-  object.time = time;
-
-  if (enable_velocity_estimation_) {
-    // predict from motion model
-    if (!motion_model_.getPredictedState(
-          time_object, object.pose, object.pose_covariance, object.twist,
-          object.twist_covariance)) {
-      RCLCPP_WARN(logger_, "PolygonTracker::getTrackedObject: Failed to get predicted state.");
-      return false;
-    }
-  } else {
-    // predict from static motion model
-    if (!static_motion_model_.getPredictedState(
-          time_object, object.pose, object.pose_covariance, object.twist,
-          object.twist_covariance)) {
-      RCLCPP_WARN(logger_, "PolygonTracker::getTrackedObject: Failed to get predicted state.");
-      return false;
-    }
+  if (!populateKinematicObject(time_object, time, object)) {
+    RCLCPP_WARN(logger_, "PolygonTracker::getTrackedObject: Failed to get predicted state.");
+    return false;
   }
 
+  assembleShapeTo(object, to_publish);
+
   if (to_publish) {
-    // back to the input pose to match with the polygon shape
     object.pose = last_pose_;
     if (!enable_motion_output_) {
       object.twist.linear.x = 0.0;

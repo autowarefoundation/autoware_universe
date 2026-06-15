@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/model/multiple_vehicle_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/multiple_vehicle_tracker.hpp"
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 
@@ -40,6 +40,8 @@ bool MultipleVehicleTracker::measure(
 {
   big_vehicle_tracker_.measure(object, time, channel_info);
   normal_vehicle_tracker_.measure(object, time, channel_info);
+  big_vehicle_tracker_.setLatestMeasurementTime(time);
+  normal_vehicle_tracker_.setLatestMeasurementTime(time);
 
   return true;
 }
@@ -53,6 +55,8 @@ bool MultipleVehicleTracker::conditionedUpdate(
     measurement, prediction, tracker_shape, measurement_time, channel_info);
   normal_vehicle_tracker_.conditionedUpdate(
     measurement, prediction, tracker_shape, measurement_time, channel_info);
+  big_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
+  normal_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
 
   return true;
 }
@@ -63,22 +67,19 @@ void MultipleVehicleTracker::setObjectShape(const autoware_perception_msgs::msg:
   normal_vehicle_tracker_.setObjectShape(shape);
 }
 
+void MultipleVehicleTracker::mergeFootprintFrom(
+  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+  const geometry_msgs::msg::Pose & dst_pose)
+{
+  big_vehicle_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
+  normal_vehicle_tracker_.mergeFootprintFrom(footprint, src_pose, dst_pose);
+}
+
 bool MultipleVehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  const auto label = getHighestProbLabel();
-
-  if (label == classes::Label::CAR) {
-    normal_vehicle_tracker_.getTrackedObject(time, object, to_publish);
-  } else if (
-    label == classes::Label::BUS || label == classes::Label::TRUCK ||
-    label == classes::Label::TRAILER) {
-    big_vehicle_tracker_.getTrackedObject(time, object, to_publish);
-  } else {
-    // If the label is others, use the normal vehicle tracker as a fallback
-    normal_vehicle_tracker_.getTrackedObject(time, object, to_publish);
-  }
-  object.uuid = object_.uuid;
+  activeInner().getTrackedObject(time, object, to_publish);
+  object.uuid = uuid_;
   return true;
 }
 

@@ -14,15 +14,9 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/tracker/model/static_tracker.hpp"
-
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/static_tracker.hpp"
 
 #include <autoware_utils_geometry/msg/covariance.hpp>
-
-#include <autoware_perception_msgs/msg/shape.hpp>
-
-#include <cmath>
 
 namespace autoware::multi_object_tracker
 {
@@ -31,6 +25,7 @@ StaticTracker::StaticTracker(const rclcpp::Time & time, const types::DynamicObje
 : Tracker(time, object), logger_(rclcpp::get_logger("StaticTracker"))
 {
   tracker_type_ = TrackerType::STATIC;
+  shape_model_.init(object);
 
   // Set motion model parameters
   constexpr double q_stddev_x = 0.5;  // [m/s]
@@ -54,6 +49,8 @@ StaticTracker::StaticTracker(const rclcpp::Time & time, const types::DynamicObje
   }
 
   motion_model_.initialize(time, object.pose.position.x, object.pose.position.y, pose_cov);
+  motion_model_.setZ(object.pose.position.z);
+  motion_model_.setOrientation(object.pose.orientation);
 }
 
 bool StaticTracker::predict(const rclcpp::Time & time)
@@ -61,7 +58,7 @@ bool StaticTracker::predict(const rclcpp::Time & time)
   return motion_model_.predictState(time);
 }
 
-bool StaticTracker::measureWithPose(const types::DynamicObject & object)
+bool StaticTracker::updateKinematics(const types::DynamicObject & object)
 {
   const double x = object.pose.position.x;
   const double y = object.pose.position.y;
@@ -73,13 +70,22 @@ bool StaticTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & /*time*/,
   const types::InputChannel & /*channel_info*/)
 {
-  object_.shape = object.shape;
-  object_.pose = object.pose;
-  object_.area = types::getArea(object.shape);
+  shape_model_.update(object);
+  // x/y come from the motion model on demand; orientation/z are stored in the motion model.
+  motion_model_.setOrientation(object.pose.orientation);
+  motion_model_.setZ(object.pose.position.z);
 
-  measureWithPose(object);
+  updateKinematics(object);
 
+  removeCache();
   return true;
+}
+
+bool StaticTracker::getMotionState(
+  const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+  geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
+{
+  return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
 }
 
 bool StaticTracker::getTrackedObject(
@@ -92,22 +98,13 @@ bool StaticTracker::getTrackedObject(
     time_object = time.seconds() > last_measurement_time.seconds() ? last_measurement_time : time;
   }
 
-  object = object_;
-  object.time = time;
-  object.kinematics.is_stationary = true;
-
-  if (!motion_model_.getPredictedState(
-        time_object, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
+  if (!populateKinematicObject(time_object, time, object)) {
     RCLCPP_WARN(logger_, "StaticTracker::getTrackedObject: Failed to get predicted state.");
     return false;
   }
+  object.kinematics.is_stationary = true;
 
-  if (to_publish && object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
-    types::DynamicObject converted;
-    if (shapes::convertConvexHullToBoundingBox(object, converted, ego_pos_)) {
-      object = converted;
-    }
-  }
+  assembleShapeTo(object, to_publish);
 
   return true;
 }

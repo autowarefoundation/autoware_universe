@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 
 #include "autoware/multi_object_tracker/object_model/uuid.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_utils_geometry/geometry.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -60,10 +58,13 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
   total_no_measurement_count_(0),
   total_measurement_count_(1),
   last_update_with_measurement_time_(time),
-  object_(detected_object)
+  channel_index_(detected_object.channel_index),
+  existence_probability_(detected_object.existence_probability),
+  kinematics_(detected_object.kinematics),
+  trust_extension_(detected_object.trust_extension)
 {
   // Assign a persistent tracker UUID (separate from measurement UUIDs).
-  object_.uuid = object_model::generate_uuid();
+  uuid_ = object_model::generate_uuid();
 
   // Initialize existence probabilities
   total_existence_probability_ = 0.001;
@@ -190,15 +191,15 @@ bool Tracker::updateWithMeasurement(
   // Update orientation availability
   if (object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE) {
     // if the incoming object is AVAILABLE, set the orientation availability to AVAILABLE
-    object_.kinematics.orientation_availability = types::OrientationAvailability::AVAILABLE;
+    kinematics_.orientation_availability = types::OrientationAvailability::AVAILABLE;
   } else if (
     object.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN &&
-    object_.kinematics.orientation_availability == types::OrientationAvailability::UNAVAILABLE) {
+    kinematics_.orientation_availability == types::OrientationAvailability::UNAVAILABLE) {
     // if the incoming object is SIGN_UNKNOWN and the tracker is UNAVAILABLE, set the orientation
     // availability to SIGN_UNKNOWN
-    object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
+    kinematics_.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
-  setOrientationAvailability(object_.kinematics.orientation_availability);
+  setOrientationAvailability(kinematics_.orientation_availability);
 
   // Select update path: NORMAL / TRY_EXTENSION / CONDITIONED
   const UpdatePath path =
@@ -207,7 +208,7 @@ bool Tracker::updateWithMeasurement(
   if (path == UpdatePath::NORMAL) {
     unstable_shape_filter_.processNormalMeasurement(object);
     measure(object, measurement_time, channel_info);
-    object_.trust_extension = object.trust_extension;
+    trust_extension_ = object.trust_extension;
 
   } else if (path == UpdatePath::TRY_EXTENSION) {
     unstable_shape_filter_.processNoisyMeasurement(object);
@@ -218,28 +219,23 @@ bool Tracker::updateWithMeasurement(
       auto smoothed_object = object;
       smoothed_object.shape = smoothed_shape;
       measure(smoothed_object, measurement_time, channel_info);
-      object_.trust_extension = smoothed_object.trust_extension;
+      trust_extension_ = smoothed_object.trust_extension;
       unstable_shape_filter_.clear();
     } else {
-      // Filter not yet stable — fall back to conditioned update
-      const auto tracker_shape = object_.shape;
+      // Filter not yet stable — fall back to conditioned update.
+      // The current (assembled) shape serves as the conditioned-update reference shape.
       types::DynamicObject predicted_object;
       getTrackedObject(measurement_time, predicted_object);
-      conditionedUpdate(object, predicted_object, tracker_shape, measurement_time, channel_info);
+      conditionedUpdate(
+        object, predicted_object, predicted_object.shape, measurement_time, channel_info);
     }
 
   } else {  // UpdatePath::CONDITIONED
-    const auto tracker_shape = object_.shape;
     types::DynamicObject predicted_object;
     getTrackedObject(measurement_time, predicted_object);
-    conditionedUpdate(object, predicted_object, tracker_shape, measurement_time, channel_info);
+    conditionedUpdate(
+      object, predicted_object, predicted_object.shape, measurement_time, channel_info);
   }
-
-  // Update object status
-  getTrackedObject(measurement_time, object_);
-
-  // update time
-  object_.time = measurement_time;
 
   return true;
 }
@@ -256,72 +252,6 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
       prob.existence_probability = decayProbability(prob.existence_probability, delta_time);
     }
     total_existence_probability_ = decayProbability(total_existence_probability_, delta_time);
-  }
-
-  // Update object status
-  getTrackedObject(timestamp, object_);
-
-  return true;
-}
-
-bool Tracker::createPseudoMeasurement(
-  const types::DynamicObject & meas, types::DynamicObject & pred,
-  const autoware_perception_msgs::msg::Shape & tracker_shape, const bool enlarge_covariance)
-{
-  // Apply linear fall‑off weight on dist square
-  const double dx = meas.pose.position.x - pred.pose.position.x;
-  const double dy = meas.pose.position.y - pred.pose.position.y;
-  const double dist2 = dx * dx + dy * dy;
-  constexpr double d_max_square_inv = 1 / 2.0;  // saturate when distance overs 1.414 m
-  constexpr double min_w = 0.0;
-  const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
-
-  // Blend position
-  pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + meas.pose.position.x * w_pose;
-  pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
-
-  // Use smoothed shape and its area
-  pred.shape = tracker_shape;
-  pred.area = types::getArea(tracker_shape);
-
-  // Blend orientation
-  if (meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE) {
-    double yaw_pred = tf2::getYaw(pred.pose.orientation);
-    double yaw_meas = tf2::getYaw(meas.pose.orientation);
-
-    double yaw_diff = yaw_meas - yaw_pred;
-    // Normalize yaw_diff to [-π, π] using fmod
-    yaw_diff = std::fmod(yaw_diff + M_PI, 2 * M_PI) - M_PI;
-    // Handle SIGN_UNKNOWN: limit yaw difference to [-90°, 90°]
-    if (meas.kinematics.orientation_availability == types::OrientationAvailability::SIGN_UNKNOWN) {
-      if (yaw_diff > M_PI_2) {
-        yaw_diff -= M_PI;
-      } else if (yaw_diff < -M_PI_2) {
-        yaw_diff += M_PI;
-      }
-    }
-    double yaw_fused = yaw_pred + yaw_diff * w_pose;
-    tf2::Quaternion q;
-    q.setRPY(0, 0, yaw_fused);
-    pred.pose.orientation = tf2::toMsg(q);
-  }
-
-  // Enlarge covariance if requested (for weak updates)
-  if (enlarge_covariance) {
-    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    constexpr double additional_position_cov = 9.0;     // [m^2] additional variance
-    constexpr double additional_orientation_cov = 0.5;  // [rad^2] additional variance
-    constexpr double additional_velocity_cov = 25.0;    // [m^2/s^2] additional variance
-
-    pred.pose_covariance[XYZRPY_COV_IDX::X_X] += additional_position_cov;
-    pred.pose_covariance[XYZRPY_COV_IDX::Y_Y] += additional_position_cov;
-    pred.pose_covariance[XYZRPY_COV_IDX::YAW_YAW] += additional_orientation_cov;
-
-    // Enlarge velocity covariance if available
-    if (pred.kinematics.has_twist_covariance) {
-      pred.twist_covariance[XYZRPY_COV_IDX::X_X] += additional_velocity_cov;
-      pred.twist_covariance[XYZRPY_COV_IDX::Y_Y] += additional_velocity_cov;
-    }
   }
 
   return true;
@@ -423,28 +353,22 @@ uint Tracker::getChannelIndex() const
   return index;
 }
 
-void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
-{
-  auto & object_extension = object_.shape.dimensions;
-  // set maximum and minimum size
-  object_extension.x = std::clamp(
-    object_extension.x, object_model.size_limit.length_min, object_model.size_limit.length_max);
-  object_extension.y = std::clamp(
-    object_extension.y, object_model.size_limit.width_min, object_model.size_limit.width_max);
-  object_extension.z = std::clamp(
-    object_extension.z, object_model.size_limit.height_min, object_model.size_limit.height_max);
-}
-
 void Tracker::getPositionCovarianceEigenSq(
   const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const
 {
-  // estimate the covariance of the position at the given time
-  types::DynamicObject object = object_;
-  if (object.time.seconds() + 1e-6 < time.seconds()) {  // 1usec is allowed error
-    getTrackedObject(time, object);
+  // estimate the covariance of the position at the given time, straight from the motion model
+  // (single source of truth). getMotionState() clamps to the current state when `time` precedes
+  // the last update, clamping to state time when queried in the past.
+  geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Twist twist;
+  std::array<double, 36> pose_cov{};
+  std::array<double, 36> twist_cov{};
+  if (!getMotionState(time, pose, pose_cov, twist, twist_cov)) {
+    major_axis_sq = 0.0;
+    minor_axis_sq = 0.0;
+    return;
   }
   using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  auto & pose_cov = object.pose_covariance;
 
   // principal component of the position covariance matrix
   const double a = pose_cov[XYZRPY_COV_IDX::X_X];
@@ -497,7 +421,16 @@ void Tracker::getPositionCovarianceEigenSq(
 
 double Tracker::getBEVArea() const
 {
-  const auto & dims = object_.shape.dimensions;
+  // Bird's-eye-view bounding area (length x width) of the current shape. Assembled from the shape
+  // model rather than read from a stored shape; to_publish=false avoids any publish-time shape
+  // conversion. Note this is intentionally the bbox-dimension product (used for adaptive gating),
+  // which differs from getArea()/output.area (true area, used for association scoring).
+  types::DynamicObject scratch;
+  // Use the last measurement time so footprint freshness checks (which subtract ROS-clock times)
+  // do not mix clock types with a default-constructed timestamp.
+  scratch.time = getLatestMeasurementTime();
+  assembleShapeTo(scratch, false);
+  const auto & dims = scratch.shape.dimensions;
   return dims.x * dims.y;
 }
 
@@ -507,7 +440,15 @@ double Tracker::getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose>
   if (!ego_pose) {
     return INVALID_DISTANCE_SQ;
   }
-  const auto & p = object_.pose.position;
+  // Position is owned by the motion model; query it at the current state time.
+  geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Twist twist;
+  std::array<double, 36> pose_cov{};
+  std::array<double, 36> twist_cov{};
+  if (!getMotionState(getStateTime(), pose, pose_cov, twist, twist_cov)) {
+    return INVALID_DISTANCE_SQ;
+  }
+  const auto & p = pose.position;
   const auto & e = ego_pose->position;
   const double dx = p.x - e.x;
   const double dy = p.y - e.y;
@@ -540,10 +481,10 @@ bool Tracker::isConfident(
   }
   rclcpp::Time time_to_check;
   if (!time) {
-    // add 200ms extrapolation time to the latest measurement time
+    // add 200ms extrapolation time to the latest state time (motion model)
     // to consider the velocity uncertainty
     const rclcpp::Duration extrapolate_time = rclcpp::Duration::from_seconds(0.2);
-    time_to_check = object_.time + extrapolate_time;
+    time_to_check = getStateTime() + extrapolate_time;
   } else {
     // use the given time
     time_to_check = *time;
@@ -617,7 +558,7 @@ float Tracker::getKnownObjectProbability() const
 {
   // find unknown probability
   float unknown_probability = 0.0;
-  for (const auto & a_class : object_.classification) {
+  for (const auto & a_class : classification_) {
     if (a_class.label == classes::Label::UNKNOWN) {
       unknown_probability = a_class.probability;
       break;
@@ -630,7 +571,14 @@ float Tracker::getKnownObjectProbability() const
 double Tracker::getPositionCovarianceDeterminant() const
 {
   using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  auto & pose_cov = object_.pose_covariance;
+  // Covariance is owned by the motion model; query it at the current state time.
+  geometry_msgs::msg::Pose pose;
+  geometry_msgs::msg::Twist twist;
+  std::array<double, 36> pose_cov{};
+  std::array<double, 36> twist_cov{};
+  if (!getMotionState(getStateTime(), pose, pose_cov, twist, twist_cov)) {
+    return std::numeric_limits<double>::max();
+  }
 
   // The covariance size is defined as the square of the dominant eigenvalue
   // of the 2x2 covariance matrix:
@@ -663,17 +611,6 @@ bool Tracker::conditionedUpdate(
     rclcpp::get_logger("Tracker"),
     "Tracker::conditionedUpdate: Base class method is NOT expected to be called.");
   return false;
-
-  // NOTE: The following default implementation is commented out as it not well-tested yet.
-  //
-  // // For non-vehicle trackers, create pseudo measurement
-  // types::DynamicObject pseudo_measurement = prediction;
-  // createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape);
-  //
-  // // Apply the measurement update directly
-  // measure(pseudo_measurement, measurement_time, channel_info);
-  //
-  // return true;
 }
 
 }  // namespace autoware::multi_object_tracker

@@ -19,8 +19,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware_utils_geometry/msg/covariance.hpp>
-#include <autoware_utils_math/normalization.hpp>
-#include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/utils.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -231,13 +229,14 @@ bool CVMotionModel::getPredictedState(
     return false;
   }
 
-  // get yaw from pose
-  const double yaw = tf2::getYaw(pose.orientation);
-
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  // do not change z
+  pose.position.z = z_;
+  pose.orientation = orientation_;
+
+  // get yaw for twist rotation from own orientation member
+  const double yaw = tf2::getYaw(orientation_);
 
   // set twist
   twist.linear.x = X(IDX::VX) * std::cos(-yaw) - X(IDX::VY) * std::sin(-yaw);

@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__POLYGON_TRACKER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__POLYGON_TRACKER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/polygon_shape_model.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 namespace autoware::multi_object_tracker
@@ -37,8 +38,11 @@ private:
   bool enable_velocity_estimation_;
   bool enable_motion_output_;
 
-  autoware_perception_msgs::msg::Shape last_shape_;
   geometry_msgs::msg::Pose last_pose_;
+
+  PolygonShapeModel shape_model_;
+
+  bool updateKinematics(const types::DynamicObject & object);
 
 public:
   PolygonTracker(
@@ -49,13 +53,27 @@ public:
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
     const types::InputChannel & channel_info) override;
-  bool measureWithPose(const types::DynamicObject & object);
-  bool measureWithShape(const types::DynamicObject & object);
   bool getTrackedObject(
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
+
+  bool getMotionState(
+    const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+    geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override;
+  rclcpp::Time getStateTime() const override
+  {
+    return enable_velocity_estimation_ ? motion_model_.getLastUpdateTime()
+                                       : static_motion_model_.getLastUpdateTime();
+  }
+
+  ShapeModelBase & getShapeModel() override { return shape_model_; }
+  const ShapeModelBase & getShapeModel() const override { return shape_model_; }
+  void assembleShapeTo(types::DynamicObject & output, bool /*to_publish*/) const override
+  {
+    shape_model_.exportTo(output);
+  }
 };
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__POLYGON_TRACKER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_

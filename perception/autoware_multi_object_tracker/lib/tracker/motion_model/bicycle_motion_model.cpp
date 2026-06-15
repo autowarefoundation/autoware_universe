@@ -673,7 +673,7 @@ bool BicycleMotionModel::getPredictedState(
                     motion_params_.wheel_base_ratio_inv;
   pose.position.y = (X(IDX::Y1) * motion_params_.lf_ratio + X(IDX::Y2) * motion_params_.lr_ratio) *
                     motion_params_.wheel_base_ratio_inv;
-  // do not change z
+  pose.position.z = z_;
 
   // set orientation
   tf2::Quaternion quaternion;

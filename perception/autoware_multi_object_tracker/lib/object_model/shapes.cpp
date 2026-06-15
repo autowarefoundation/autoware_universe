@@ -59,13 +59,7 @@ inline OrientedExtent computeOrientedExtent(
   }
   return ext;
 }
-}  // namespace
-
-namespace autoware::multi_object_tracker
-{
-namespace shapes
-{
-inline double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> & polygons)
+double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> & polygons)
 {
   return std::accumulate(
     polygons.begin(), polygons.end(), 0.0, [](double acc, autoware_utils_geometry::Polygon2d p) {
@@ -73,7 +67,7 @@ inline double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> &
     });
 }
 
-inline double getIntersectionArea(
+double getIntersectionArea(
   const autoware_utils_geometry::Polygon2d & source_polygon,
   const autoware_utils_geometry::Polygon2d & target_polygon)
 {
@@ -82,7 +76,7 @@ inline double getIntersectionArea(
   return getSumArea(intersection_polygons);
 }
 
-inline double getUnionArea(
+double getUnionArea(
   const autoware_utils_geometry::Polygon2d & source_polygon,
   const autoware_utils_geometry::Polygon2d & target_polygon)
 {
@@ -91,7 +85,7 @@ inline double getUnionArea(
   return getSumArea(union_polygons);
 }
 
-inline double getConvexShapeArea(
+double getConvexShapeArea(
   const autoware_utils_geometry::Polygon2d & source_polygon,
   const autoware_utils_geometry::Polygon2d & target_polygon)
 {
@@ -102,6 +96,12 @@ inline double getConvexShapeArea(
   boost::geometry::convex_hull(union_polygons, hull);
   return boost::geometry::area(hull);
 }
+}  // namespace
+
+namespace autoware::multi_object_tracker
+{
+namespace shapes
+{
 
 double get1dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object)
@@ -159,8 +159,6 @@ double get2dIoU(
 double get2dGeneralizedIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object)
 {
-  static const double MIN_AREA = 1e-6;
-
   const auto source_polygon =
     autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   const double source_area = boost::geometry::area(source_polygon);
@@ -181,8 +179,6 @@ bool get2dPrecisionRecallGIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   double & precision, double & recall, double & generalized_iou)
 {
-  static const double MIN_AREA = 1e-6;
-
   const auto source_polygon =
     autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   const double source_area = boost::geometry::area(source_polygon);
@@ -395,6 +391,89 @@ double get3dGeneralizedIoU(
     std::clamp((intersection_area * height_overlap) / (union_area * total_height), 0.0, 1.0);
 
   return iou - (convex_area - union_area) / convex_area;
+}
+
+geometry_msgs::msg::Polygon unionFootprints(
+  const geometry_msgs::msg::Polygon & a, const geometry_msgs::msg::Polygon & b)
+{
+  if (a.points.empty()) return b;
+  if (b.points.empty()) return a;
+
+  const auto to_boost = [](const geometry_msgs::msg::Polygon & fp) {
+    autoware_utils_geometry::Polygon2d poly;
+    for (const auto & p : fp.points) {
+      poly.outer().emplace_back(p.x, p.y);
+    }
+    boost::geometry::correct(poly);
+    return poly;
+  };
+
+  // Extract exterior ring into msg::Polygon; skip Boost's closing duplicate point.
+  const auto to_msg = [](const autoware_utils_geometry::Polygon2d & poly) {
+    geometry_msgs::msg::Polygon out;
+    const auto & ring = poly.outer();
+    const size_t n = ring.size() > 1u ? ring.size() - 1u : ring.size();
+    out.points.reserve(n);
+    for (size_t i = 0; i < n; ++i) {
+      geometry_msgs::msg::Point32 p;
+      p.x = static_cast<float>(ring[i].x());
+      p.y = static_cast<float>(ring[i].y());
+      p.z = 0.0f;
+      out.points.push_back(p);
+    }
+    return out;
+  };
+
+  const auto poly_a = to_boost(a);
+  const auto poly_b = to_boost(b);
+
+  std::vector<autoware_utils_geometry::Polygon2d> union_result;
+  boost::geometry::union_(poly_a, poly_b, union_result);
+  if (union_result.empty()) return a;
+
+  // Single connected result — extract directly.
+  if (union_result.size() == 1u) {
+    return to_msg(union_result[0]);
+  }
+
+  // Disjoint components: compute convex hull of all component vertices so that both
+  // footprints are covered without discarding the smaller one.
+  autoware_utils_geometry::Polygon2d all_points;
+  for (const auto & comp : union_result) {
+    for (const auto & pt : comp.outer()) {
+      all_points.outer().push_back(pt);
+    }
+  }
+  autoware_utils_geometry::Polygon2d hull;
+  boost::geometry::convex_hull(all_points, hull);
+  return to_msg(hull);
+}
+
+geometry_msgs::msg::Polygon transformFootprint(
+  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+  const geometry_msgs::msg::Pose & dst_pose)
+{
+  const double src_yaw = tf2::getYaw(src_pose.orientation);
+  const double dst_yaw = tf2::getYaw(dst_pose.orientation);
+  const double d_yaw = src_yaw - dst_yaw;
+  const double cos_d = std::cos(d_yaw);
+  const double sin_d = std::sin(d_yaw);
+  const double cos_dst = std::cos(dst_yaw);
+  const double sin_dst = std::sin(dst_yaw);
+  const double wx = src_pose.position.x - dst_pose.position.x;
+  const double wy = src_pose.position.y - dst_pose.position.y;
+  const double t_x = cos_dst * wx + sin_dst * wy;
+  const double t_y = -sin_dst * wx + cos_dst * wy;
+
+  geometry_msgs::msg::Polygon result;
+  result.points.resize(footprint.points.size());
+  for (size_t i = 0; i < footprint.points.size(); ++i) {
+    const auto & p = footprint.points[i];
+    result.points[i].x = static_cast<float>(cos_d * p.x - sin_d * p.y + t_x);
+    result.points[i].y = static_cast<float>(sin_d * p.x + cos_d * p.y + t_y);
+    result.points[i].z = p.z;
+  }
+  return result;
 }
 
 }  // namespace shapes

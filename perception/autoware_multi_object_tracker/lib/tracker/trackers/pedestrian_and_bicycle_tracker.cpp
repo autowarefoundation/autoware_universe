@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/multi_object_tracker/tracker/model/pedestrian_and_bicycle_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/pedestrian_and_bicycle_tracker.hpp"
 
 namespace autoware::multi_object_tracker
 {
@@ -38,6 +38,8 @@ bool PedestrianAndBicycleTracker::measure(
 {
   pedestrian_tracker_.measure(object, time, channel_info);
   bicycle_tracker_.measure(object, time, channel_info);
+  pedestrian_tracker_.setLatestMeasurementTime(time);
+  bicycle_tracker_.setLatestMeasurementTime(time);
 
   return true;
 }
@@ -55,7 +57,7 @@ bool PedestrianAndBicycleTracker::getTrackedObject(
     // If the label is others, use the bicycle tracker as a fallback
     bicycle_tracker_.getTrackedObject(time, object, to_publish);
   }
-  object.uuid = object_.uuid;
+  object.uuid = uuid_;
   return true;
 }
 

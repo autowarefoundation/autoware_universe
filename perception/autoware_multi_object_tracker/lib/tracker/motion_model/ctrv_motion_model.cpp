@@ -323,7 +323,7 @@ bool CTRVMotionModel::getPredictedState(
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  // do not change z
+  pose.position.z = z_;
 
   // set orientation
   tf2::Quaternion quaternion;

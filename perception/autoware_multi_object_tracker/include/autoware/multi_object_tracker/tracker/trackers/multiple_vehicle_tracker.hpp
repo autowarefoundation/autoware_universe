@@ -1,0 +1,114 @@
+// Copyright 2020 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__MULTIPLE_VEHICLE_TRACKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__MULTIPLE_VEHICLE_TRACKER_HPP_
+
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
+
+#include <rclcpp/time.hpp>
+
+namespace autoware::multi_object_tracker
+{
+
+class MultipleVehicleTracker : public Tracker
+{
+private:
+  VehicleTracker normal_vehicle_tracker_;
+  VehicleTracker big_vehicle_tracker_;
+
+  // Inner tracker that backs the published object for the current highest-prob label.
+  VehicleTracker & activeInner()
+  {
+    const auto label = getHighestProbLabel();
+    if (
+      label == classes::Label::BUS || label == classes::Label::TRUCK ||
+      label == classes::Label::TRAILER) {
+      return big_vehicle_tracker_;
+    }
+    return normal_vehicle_tracker_;
+  }
+  const VehicleTracker & activeInner() const
+  {
+    const auto label = getHighestProbLabel();
+    if (
+      label == classes::Label::BUS || label == classes::Label::TRUCK ||
+      label == classes::Label::TRAILER) {
+      return big_vehicle_tracker_;
+    }
+    return normal_vehicle_tracker_;
+  }
+
+public:
+  MultipleVehicleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
+
+  types::TrackerType getTrackerType() const override
+  {
+    return types::TrackerType::MULTIPLE_VEHICLE;
+  }
+
+  bool predict(const rclcpp::Time & time) override;
+  bool measure(
+    const types::DynamicObject & object, const rclcpp::Time & time,
+    const types::InputChannel & channel_info) override;
+  bool conditionedUpdate(
+    const types::DynamicObject & measurement, const types::DynamicObject & prediction,
+    const autoware_perception_msgs::msg::Shape & tracker_shape,
+    const rclcpp::Time & measurement_time, const types::InputChannel & channel_info) override;
+  void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
+  void mergeFootprintFrom(
+    const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+    const geometry_msgs::msg::Pose & dst_pose) override;
+  bool getTrackedObject(
+    const rclcpp::Time & time, types::DynamicObject & object,
+    const bool to_publish = false) const override;
+  void setOrientationAvailability(
+    const types::OrientationAvailability & orientation_availability) override;
+
+  // Returns the active inner tracker's shape model, selected by the current highest-prob label
+  // (same policy as getTrackedObject). setObjectShape()/mergeFootprintFrom() are overridden
+  // separately to forward to BOTH inner trackers.
+  ShapeModelBase & getShapeModel() override { return activeInner().getShapeModel(); }
+  const ShapeModelBase & getShapeModel() const override { return activeInner().getShapeModel(); }
+  void assembleShapeTo(types::DynamicObject & output, bool to_publish) const override
+  {
+    activeInner().assembleShapeTo(output, to_publish);
+  }
+
+  // Kinematics single source of truth: forward to the active inner tracker (same policy as
+  // getTrackedObject / getShapeModel).
+  bool getMotionState(
+    const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+    geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override
+  {
+    return activeInner().getMotionState(time, pose, pose_cov, twist, twist_cov);
+  }
+  rclcpp::Time getStateTime() const override { return activeInner().getStateTime(); }
+
+  virtual ~MultipleVehicleTracker() {}
+
+  // Same policy as VehicleTracker: bicycle model owns shape; clusters use conditioned update.
+  UpdatePath selectUpdatePath(
+    bool trust_extension, bool has_significant_shape_change) const override
+  {
+    if (!trust_extension) return UpdatePath::CONDITIONED;
+    return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
+  }
+};
+
+}  // namespace autoware::multi_object_tracker
+
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__MULTIPLE_VEHICLE_TRACKER_HPP_

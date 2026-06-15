@@ -224,9 +224,15 @@ void TrackerOverlapManager::merge(
           data1.tracker->updateClassification(data2.tracker->getClassification());
         }
 
-        // Shape: prefer lower shape type (bounding box < cylinder < convex hull)
+        // Shape: prefer lower shape type (bounding box < cylinder < convex hull).
         if (data1.object.shape.type > data2.object.shape.type) {
           data1.tracker->setObjectShape(data2.object.shape);
+        }
+        // If the absorbed tracker carries footprint data (BBOX or POLYGON), union it into the
+        // winner.
+        if (!data2.object.shape.footprint.points.empty()) {
+          data1.tracker->mergeFootprintFrom(
+            data2.object.shape.footprint, data2.object.pose, data1.object.pose);
         }
 
         data2.is_valid = false;

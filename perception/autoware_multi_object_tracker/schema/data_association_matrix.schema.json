@@ -137,7 +137,7 @@
         },
         "tracker_profiles": {
           "type": "object",
-          "description": "Per-tracker-type association thresholds keyed by shape then label. Keys are tracker type names (e.g. multi_vehicle_tracker). Every (tracker, shape, label) triple listed in tracker_assignment.match must have an explicit entry here.",
+          "description": "Per-tracker-type association thresholds keyed by shape then label. Keys are tracker type names (e.g. general_vehicle_tracker). Every (tracker, shape, label) triple listed in tracker_assignment.match must have an explicit entry here.",
           "additionalProperties": { "$ref": "#/definitions/tracker_type_profile" }
         },
         "unknown_association_giou_threshold": {
