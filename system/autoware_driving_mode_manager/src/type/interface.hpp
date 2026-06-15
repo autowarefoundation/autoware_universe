@@ -61,6 +61,11 @@ struct MrmRequest
   MrmBehavior behavior;
 };
 
+struct ModeInfo
+{
+  std::unordered_map<AutowareMode, std::string> names;
+};
+
 struct DebugStatus
 {
   struct Flag
@@ -87,6 +92,7 @@ public:
   virtual void publish_operation_mode(const OperationModeState & state) const = 0;
   virtual void publish_mrm_state(const MrmState & state) const = 0;
   virtual void publish_driving_mode_request(const AutowareMode & mode) const = 0;
+  virtual void publish_driving_mode_info(const ModeInfo & info) const = 0;
   virtual void publish_debug(const DebugStatus & status) const = 0;
   virtual void publish_debug(const RequestModes & request) const = 0;
 };

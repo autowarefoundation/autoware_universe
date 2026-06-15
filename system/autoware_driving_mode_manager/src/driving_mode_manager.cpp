@@ -48,11 +48,10 @@ void DrivingModeManager::on_timer_init()
   init_->update();
   if (!init_->is_ready()) return;
 
-  main_ = std::make_unique<Manager>(*init_);
+  main_ = std::make_unique<ManagerMain>(*init_);
   init_.reset();
 
-  // const auto period = rclcpp::Rate(10.0).period();
-  const auto period = rclcpp::Rate(2.0).period();
+  const auto period = rclcpp::Rate(10.0).period();
   timer_->cancel();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer_main(); });
 

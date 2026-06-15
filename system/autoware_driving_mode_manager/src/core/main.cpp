@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "manager.hpp"
+#include "main.hpp"
 
 #include "values.hpp"
 
@@ -27,7 +27,7 @@
 namespace autoware::driving_mode_manager
 {
 
-const auto logger = rclcpp::get_logger("Manager");
+const auto logger = rclcpp::get_logger("ManagerMain");
 constexpr AutowareMode unknown_mode = AutowareMode{0};
 
 template <typename ModeIterable>
@@ -40,7 +40,7 @@ void print_modes(const std::string & title, const ModeIterable & modes)
   RCLCPP_INFO_STREAM(logger, title << ":" << text);
 }
 
-Manager::Manager(ManagerInit & init)
+ManagerMain::ManagerMain(ManagerInit & init)
 {
   interface_ = std::move(init.interface_);
   interface_->init(this);
@@ -60,13 +60,13 @@ Manager::Manager(ManagerInit & init)
   request_.autoware_mode = unknown_mode;
 }
 
-bool Manager::is_ready() const
+bool ManagerMain::is_ready() const
 {
   if (!status_->is_ready()) return false;
   return true;
 }
 
-void Manager::update()
+void ManagerMain::update()
 {
   // Detect status timeout.
   status_->update(interface_->now(), 1.0);
@@ -92,7 +92,7 @@ void Manager::update()
   publish_debug();
 }
 
-void Manager::execute_tasks()
+void ManagerMain::execute_tasks()
 {
   while (!tasks_.empty()) {
     const auto result = tasks_.front()->execute(*interface_, gates_);
@@ -149,7 +149,7 @@ void Manager::execute_tasks()
   }
 }
 
-void Manager::publish_operation_mode() const
+void ManagerMain::publish_operation_mode() const
 {
   const auto is_available = [this](const OperationMode & mode) {
     return status_->is_available(config_->to_autoware_mode(mode));
@@ -166,7 +166,7 @@ void Manager::publish_operation_mode() const
   interface_->publish_operation_mode(state);
 }
 
-void Manager::publish_mrm_state() const
+void ManagerMain::publish_mrm_state() const
 {
   const auto behavior = config_->to_mrm_behavior(request_.autoware_mode);
   if (behavior) {
@@ -178,12 +178,12 @@ void Manager::publish_mrm_state() const
   }
 }
 
-void Manager::publish_driving_mode_request() const
+void ManagerMain::publish_driving_mode_request() const
 {
   interface_->publish_driving_mode_request(request_.autoware_mode);
 }
 
-void Manager::publish_debug() const
+void ManagerMain::publish_debug() const
 {
   DebugStatus debug;
   for (const auto & mode : config_->autoware_modes()) {
@@ -197,7 +197,7 @@ void Manager::publish_debug() const
   interface_->publish_debug(request_);
 }
 
-void Manager::on_trajectory_source(const TrajectorySource & source)
+void ManagerMain::on_trajectory_source(const TrajectorySource & source)
 {
   if (gates_.expect.trajectory_source != source) {
     RCLCPP_WARN_STREAM(logger, "trajectory source override: " << source.id);
@@ -207,7 +207,7 @@ void Manager::on_trajectory_source(const TrajectorySource & source)
   execute_tasks();
 }
 
-void Manager::on_command_source(const CommandSource & source)
+void ManagerMain::on_command_source(const CommandSource & source)
 {
   if (gates_.expect.command_source != source) {
     RCLCPP_WARN_STREAM(logger, "command source override: " << source.id);
@@ -217,7 +217,7 @@ void Manager::on_command_source(const CommandSource & source)
   execute_tasks();
 }
 
-void Manager::on_command_filter(const CommandFilter & filter)
+void ManagerMain::on_command_filter(const CommandFilter & filter)
 {
   if (gates_.expect.command_filter != filter) {
     RCLCPP_WARN_STREAM(logger, "command filter override: " << filter.flag);
@@ -227,7 +227,7 @@ void Manager::on_command_filter(const CommandFilter & filter)
   execute_tasks();
 }
 
-void Manager::on_vehicle_control_mode(const PlatformMode & mode)
+void ManagerMain::on_vehicle_control_mode(const PlatformMode & mode)
 {
   if (gates_.expect.platform_mode != mode) {
     RCLCPP_WARN_STREAM(logger, "platform mode override: " << to_string(mode));
@@ -242,33 +242,33 @@ void Manager::on_vehicle_control_mode(const PlatformMode & mode)
   execute_tasks();
 }
 
-void Manager::on_available_flag(const AutowareMode & mode, bool flag)
+void ManagerMain::on_available_flag(const AutowareMode & mode, bool flag)
 {
   if (const auto & data = status_->data(mode)) {
     data->available.update(interface_->now(), flag);
   }
 }
 
-void Manager::on_stable_flag(const AutowareMode & mode, bool flag)
+void ManagerMain::on_stable_flag(const AutowareMode & mode, bool flag)
 {
   if (const auto & data = status_->data(mode)) {
     data->stable.update(interface_->now(), flag);
   }
 }
 
-void Manager::on_continuable_flag(const AutowareMode & mode, bool flag)
+void ManagerMain::on_continuable_flag(const AutowareMode & mode, bool flag)
 {
   if (const auto & data = status_->data(mode)) {
     data->continuable.update(interface_->now(), flag);
   }
 }
 
-void Manager::on_mrm_state(const AutowareMode & mode, const MrmState::State & state)
+void ManagerMain::on_mrm_state(const AutowareMode & mode, const MrmState::State & state)
 {
   mrm_states_[mode] = state;
 }
 
-ServiceResponse Manager::change_mrm_request(const MrmRequest & request)
+ServiceResponse ManagerMain::change_mrm_request(const MrmRequest & request)
 {
   if (request.strategy == MrmStrategy::kNone || request.strategy == MrmStrategy::kDelegate) {
     request_.mrm_strategy = request.strategy;
@@ -287,7 +287,7 @@ ServiceResponse Manager::change_mrm_request(const MrmRequest & request)
   return ServiceResponse{false, "unknown strategy"};
 }
 
-ServiceResponse Manager::change_operation_mode(const OperationMode & operation_mode)
+ServiceResponse ManagerMain::change_operation_mode(const OperationMode & operation_mode)
 {
   const auto mode = config_->to_autoware_mode(operation_mode);
 
@@ -299,7 +299,7 @@ ServiceResponse Manager::change_operation_mode(const OperationMode & operation_m
   return ServiceResponse{true, ""};
 }
 
-ServiceResponse Manager::change_autoware_control(const AutowareControl & autoware_control)
+ServiceResponse ManagerMain::change_autoware_control(const AutowareControl & autoware_control)
 {
   const auto platform_mode = to_platform_mode(autoware_control);
 
@@ -328,7 +328,7 @@ ServiceResponse Manager::change_autoware_control(const AutowareControl & autowar
   return ServiceResponse{true, ""};
 }
 
-void Manager::change_autoware_mode(const AutowareMode & mode)
+void ManagerMain::change_autoware_mode(const AutowareMode & mode)
 {
   AutowareMode & prev = request_.autoware_mode;
   if (prev.id == mode.id) {

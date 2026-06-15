@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CORE__MANAGER_HPP_
-#define CORE__MANAGER_HPP_
+#ifndef CORE__MAIN_HPP_
+#define CORE__MAIN_HPP_
 
 #include "core/config.hpp"
 #include "core/init.hpp"
@@ -31,10 +31,10 @@
 namespace autoware::driving_mode_manager
 {
 
-class Manager : public MainLogic
+class ManagerMain : public MainLogic
 {
 public:
-  explicit Manager(ManagerInit & init);
+  explicit ManagerMain(ManagerInit & init);
   bool is_ready() const;
 
   void update() override;
@@ -75,4 +75,4 @@ private:
 
 }  // namespace autoware::driving_mode_manager
 
-#endif  // CORE__MANAGER_HPP_
+#endif  // CORE__MAIN_HPP_

@@ -18,6 +18,7 @@
 #include "types.hpp"
 
 #include <optional>
+#include <string>
 
 namespace autoware::driving_mode_manager
 {
@@ -35,6 +36,7 @@ struct DrivingModeConfigInterface
   virtual void define_autoware_mode(const AutowareMode & mode, const MrmBehavior & behavior) = 0;
   virtual void define_trajectory_source(const TrajectorySource & source) = 0;
   virtual void define_command_source(const CommandSource & source) = 0;
+  virtual void bind_name(const AutowareMode & mode, const std::string & name) = 0;
   virtual void bind_gates(const AutowareMode & mode, const Gates & gates) = 0;
 };
 

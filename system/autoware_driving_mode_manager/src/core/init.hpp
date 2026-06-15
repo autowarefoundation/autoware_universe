@@ -57,6 +57,7 @@ public:
   std::optional<PlatformMode> platform_mode;
 
 private:
+  void publish_driving_mode_info() const;
   void publish_debug() const;
   std::optional<TrajectorySource> trajectory_source;
   std::optional<CommandSource> command_source;
