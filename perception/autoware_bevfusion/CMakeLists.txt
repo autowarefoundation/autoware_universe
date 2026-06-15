@@ -155,9 +155,14 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     ${PROJECT_NAME}_lib
   )
 
-  rclcpp_components_register_node(${PROJECT_NAME}_component
+  find_package(autoware_agnocast_wrapper REQUIRED)
+  autoware_agnocast_wrapper_setup(${PROJECT_NAME}_component)
+
+  autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
     PLUGIN "autoware::bevfusion::BEVFusionNode"
     EXECUTABLE ${PROJECT_NAME}_node
+    AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
+    ROS2_EXECUTOR SingleThreadedExecutor
   )
 
   install(

@@ -23,6 +23,7 @@
 #include "autoware/bevfusion/visibility_control.hpp"
 
 #include <Eigen/Core>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/published_time_publisher.hpp>
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
@@ -78,7 +79,7 @@ private:
   void precomputeIntrinsicsExtrinsics();
   void computeCameraMasks(double lidar_stamp);
   void publishDetectionResults(
-    const autoware_perception_msgs::msg::DetectedObjects & output_msg,
+    AUTOWARE_MESSAGE_UNIQUE_PTR(autoware_perception_msgs::msg::DetectedObjects) output_msg,
     const std_msgs::msg::Header & header);
   void publishDebugInfo(
     const std::unordered_map<std::string, double> & proc_timing,
@@ -99,8 +100,7 @@ private:
     cloud_sub_;
   std::vector<image_transport::Subscriber> image_subs_;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::ConstSharedPtr> camera_info_subs_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_{
-    nullptr};
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) objects_pub_{nullptr};
   // unique_ptr to avoid copying the actual camera data in memory since there's gpu buffer in the
   // camera data
   std::vector<std::unique_ptr<CameraData>> camera_data_ptrs_;

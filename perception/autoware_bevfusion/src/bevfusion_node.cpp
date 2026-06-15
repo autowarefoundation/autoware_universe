@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // Contains implementations of constructor, destructor, topic callbacks for BEVFusionNode.
@@ -237,8 +238,8 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
       *this, "~/input/pointcloud",
       std::bind(&BEVFusionNode::cloudCallback, this, std::placeholders::_1));
 
-  objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "~/output/objects", rclcpp::QoS(1));
+  objects_pub_ = AUTOWARE_CREATE_PUBLISHER2(
+    autoware_perception_msgs::msg::DetectedObjects, "~/output/objects", rclcpp::QoS(1));
 
   initializeSensorFusionSubscribers(config.num_cameras_, image_pre_processing_params);
 
@@ -313,14 +314,14 @@ void BEVFusionNode::cloudCallback(
     raw_objects.emplace_back(obj);
   }
 
-  autoware_perception_msgs::msg::DetectedObjects output_msg;
-  output_msg.header = pc_msg_ptr->header;
-  output_msg.objects = iou_bev_nms_.apply(raw_objects);
+  auto output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(objects_pub_);
+  output_msg->header = pc_msg_ptr->header;
+  output_msg->objects = iou_bev_nms_.apply(raw_objects);
 
-  detection_class_remapper_.mapClasses(output_msg);
+  detection_class_remapper_.mapClasses(*output_msg);
 
-  publishDetectionResults(output_msg, pc_msg_ptr->header);
-  publishDebugInfo(proc_timing, output_msg.header);
+  publishDetectionResults(std::move(output_msg), pc_msg_ptr->header);
+  publishDebugInfo(proc_timing, pc_msg_ptr->header);
 }
 
 void BEVFusionNode::imageCallback(
