@@ -435,10 +435,22 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
         return has(key) ? this->get_parameter(prefix + key).as_bool() : def;
       };
       auto get_int = [&](const std::string & key, int def) -> int {
-        return has(key) ? static_cast<int>(this->get_parameter(prefix + key).as_int()) : def;
+        if (!has(key)) {
+          return def;
+        }
+        const auto param = this->get_parameter(prefix + key);
+        return param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE
+                 ? static_cast<int>(param.as_double())
+                 : static_cast<int>(param.as_int());
       };
       auto get_float = [&](const std::string & key, float def) -> float {
-        return has(key) ? static_cast<float>(this->get_parameter(prefix + key).as_double()) : def;
+        if (!has(key)) {
+          return def;
+        }
+        const auto param = this->get_parameter(prefix + key);
+        return param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER
+                 ? static_cast<float>(param.as_int())
+                 : static_cast<float>(param.as_double());
       };
 
       label_cluster_executers_[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
