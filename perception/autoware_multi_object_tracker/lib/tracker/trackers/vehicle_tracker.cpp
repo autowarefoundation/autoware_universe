@@ -283,20 +283,15 @@ bool VehicleTracker::getTrackedObject(
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
     auto & twist = object.twist;
     constexpr double vel_cov_buffer = 0.7;
-    constexpr double vel_too_low_ignore = 0.25;
-    const double vel_long = std::abs(twist.linear.x);
-    if (vel_long > vel_too_low_ignore) {
-      const double vel_limit =
-        std::max(std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);
-
-      if (vel_long < vel_limit) {
-        twist.linear.x = twist.linear.x > 0 ? vel_too_low_ignore : -vel_too_low_ignore;
-      } else {
-        double vel_suppressed = vel_long - vel_limit;
-        vel_suppressed = std::max(vel_suppressed, vel_too_low_ignore);
-        twist.linear.x = twist.linear.x > 0 ? vel_suppressed : -vel_suppressed;
-      }
+    const double vel_limit =
+      std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer;
+    if (vel_limit > 0.0) {
+      // Continuous gain in [0, 1]: 0 when |v| <= vel_limit (too uncertain -> zero), ramps
+      // linearly, and reaches 1 when |v| >= 2 * vel_limit (large enough -> export as is).
+      const double gain = std::clamp((std::abs(twist.linear.x) - vel_limit) / vel_limit, 0.0, 1.0);
+      twist.linear.x *= gain;
     }
+    // vel_limit <= 0: uncertainty within the buffer -> velocity is trustworthy, export as is.
   }
 
   return true;

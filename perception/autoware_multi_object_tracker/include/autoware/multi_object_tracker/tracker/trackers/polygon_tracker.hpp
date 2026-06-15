@@ -46,6 +46,11 @@ private:
 
   bool updateKinematics(const types::DynamicObject & object);
 
+  // Continuously attenuate the published velocity by its direction-projected uncertainty
+  // (mirrors VehicleTracker): zero when too uncertain, unchanged when large enough, rescaling
+  // the 2D twist so the velocity direction is preserved.
+  void suppressUncertainVelocity(types::DynamicObject & object) const;
+
 public:
   PolygonTracker(
     const rclcpp::Time & time, const types::DynamicObject & object,
