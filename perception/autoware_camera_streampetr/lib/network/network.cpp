@@ -44,8 +44,8 @@ std::uint8_t getSemanticType(const std::string & class_name)
     {"MOTORCYCLE", Label::MOTORCYCLE},
     {"BICYCLE", Label::BICYCLE},
     {"PEDESTRIAN", Label::PEDESTRIAN},
-    {"ANIMAL", Label::ANIMAL},
-    {"HAZARD", Label::HAZARD}};
+    {"TRAFFIC_CONE", Label::HAZARD},
+    {"BARRIER", Label::HAZARD}};
 
   const auto it = class_mapping.find(class_name);
   return (it != class_mapping.end()) ? it->second : Label::UNKNOWN;
