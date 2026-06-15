@@ -14,7 +14,7 @@
         "min_points_per_voxel": { "type": "integer" },
         "large_cluster_voxel_count_threshold": { "type": "integer" },
         "large_cluster_max_points_per_voxel": { "type": "integer" },
-        "max_voxels_per_cluster": { "type": "integer" }
+        "max_voxels_per_cluster": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": false
     },
@@ -78,6 +78,7 @@
         },
         "max_voxels_per_cluster": {
           "type": "integer",
+          "minimum": 1,
           "description": "Maximum number of voxels in a cluster when outputted.",
           "default": 1000
         },

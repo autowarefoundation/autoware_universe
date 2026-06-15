@@ -28,6 +28,7 @@
         },
         "max_voxels_per_cluster": {
           "type": "integer",
+          "minimum": 1,
           "description": "Voxel-count split bound. Any cluster whose voxel count exceeds this is recursively bisected along its principal (longest) axis into smaller sub-clusters until every piece is at or below this size. No cluster is dropped for being large; large groups are exported as multiple bounded sections.",
           "default": 800
         },

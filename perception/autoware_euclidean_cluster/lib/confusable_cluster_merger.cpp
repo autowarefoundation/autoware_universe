@@ -230,11 +230,6 @@ std::vector<ClusterEntry> merge_confusable_clusters(
   // Per-root merged bounding circle; valid only at roots (seeded from the per-cluster circles).
   std::vector<BoundingCircle> root_circle = circles;
 
-  std::vector<std::vector<int>> members(n);
-  for (int i = 0; i < static_cast<int>(n); ++i) {
-    members[i] = {i};
-  }
-
   for (const auto & e : edges) {
     const int ri = find(e.i);
     const int rj = find(e.j);
@@ -247,8 +242,6 @@ std::vector<ClusterEntry> merge_confusable_clusters(
     }
     parent[ri] = rj;
     root_circle[rj] = merged;
-    members[rj].insert(members[rj].end(), members[ri].begin(), members[ri].end());
-    members[ri].clear();
   }
 
   std::unordered_map<int, std::vector<int>> groups;

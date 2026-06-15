@@ -50,6 +50,10 @@ std::vector<pcl::PointIndices> VoxelGridBasedEuclideanCluster::splitOversizedClu
   std::vector<pcl::PointIndices> result;
   result.reserve(cluster_indices.size());
 
+  // Clamp the bound to at least 1: a non-positive bound would make even a size-1 group "oversized"
+  // and bisect it forever (half == 0 re-pushes the same group). At least 1 guarantees termination.
+  const int max_voxels = std::max(1, max_voxels_per_cluster_);
+
   // Work stack of voxel-index groups still to be checked/split.
   std::vector<std::vector<int>> stack;
   stack.reserve(cluster_indices.size());
@@ -62,7 +66,7 @@ std::vector<pcl::PointIndices> VoxelGridBasedEuclideanCluster::splitOversizedClu
     stack.pop_back();
 
     // Small enough: emit as a final cluster.
-    if (static_cast<int>(group.size()) <= max_voxels_per_cluster_) {
+    if (static_cast<int>(group.size()) <= max_voxels) {
       pcl::PointIndices pi;
       pi.indices = std::move(group);
       result.push_back(std::move(pi));

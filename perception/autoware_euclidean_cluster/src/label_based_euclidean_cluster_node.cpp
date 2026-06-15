@@ -120,40 +120,32 @@ std::vector<std::pair<std::string, std::string>> extract_class_mappings(
   return class_mappings;
 }
 
+/// @brief Canonical ordered mapping from configured label name to Autoware object classification.
+///        Single source of truth shared by name->label lookup and per-label override parsing.
+const std::vector<std::pair<std::string, std::uint8_t>> & label_name_table()
+{
+  static const std::vector<std::pair<std::string, std::uint8_t>> table = {
+    {"unknown", ObjectClassification::UNKNOWN},
+    {"car", ObjectClassification::CAR},
+    {"bus", ObjectClassification::BUS},
+    {"truck", ObjectClassification::TRUCK},
+    {"motorcycle", ObjectClassification::MOTORCYCLE},
+    {"bicycle", ObjectClassification::BICYCLE},
+    {"pedestrian", ObjectClassification::PEDESTRIAN},
+    {"animal", ObjectClassification::ANIMAL},
+    {"trailer", ObjectClassification::TRAILER},
+    {"hazard", ObjectClassification::HAZARD},
+  };
+  return table;
+}
+
 /// @brief Map a configured label name to an Autoware object classification label.
 std::optional<std::uint8_t> to_object_label(const std::string & mapped_label)
 {
-  if (mapped_label == "unknown") {
-    return ObjectClassification::UNKNOWN;
-  }
-  if (mapped_label == "car") {
-    return ObjectClassification::CAR;
-  }
-  if (mapped_label == "bus") {
-    return ObjectClassification::BUS;
-  }
-  if (mapped_label == "truck") {
-    return ObjectClassification::TRUCK;
-  }
-  if (mapped_label == "motorcycle") {
-    return ObjectClassification::MOTORCYCLE;
-  }
-  if (mapped_label == "bicycle") {
-    return ObjectClassification::BICYCLE;
-  }
-  if (mapped_label == "pedestrian") {
-    return ObjectClassification::PEDESTRIAN;
-  }
-  if (mapped_label == "animal") {
-    return ObjectClassification::ANIMAL;
-  }
-  if (mapped_label == "trailer") {
-    return ObjectClassification::TRAILER;
-  }
-  if (mapped_label == "hazard") {
-    return ObjectClassification::HAZARD;
-  }
-  return std::nullopt;
+  const auto & table = label_name_table();
+  const auto it = std::find_if(
+    table.begin(), table.end(), [&](const auto & entry) { return entry.first == mapped_label; });
+  return it != table.end() ? std::optional<std::uint8_t>(it->second) : std::nullopt;
 }
 
 /// @brief Create fallback shape and pose from the cluster axis-aligned bounding box.
@@ -409,21 +401,7 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   // Build per-label cluster overrides from label_cluster_params.<label_name>.* parameters.
   // Any omitted sub-key falls back to the global default above.
   {
-    using OC = autoware_perception_msgs::msg::ObjectClassification;
-    static const std::vector<std::pair<std::string, std::uint8_t>> kLabels = {
-      {"unknown", OC::UNKNOWN},
-      {"car", OC::CAR},
-      {"bus", OC::BUS},
-      {"truck", OC::TRUCK},
-      {"motorcycle", OC::MOTORCYCLE},
-      {"bicycle", OC::BICYCLE},
-      {"pedestrian", OC::PEDESTRIAN},
-      {"animal", OC::ANIMAL},
-      {"trailer", OC::TRAILER},
-      {"hazard", OC::HAZARD},
-    };
-
-    for (const auto & [label_name, label] : kLabels) {
+    for (const auto & [label_name, label] : label_name_table()) {
       const std::string prefix = "label_cluster_params." + label_name + ".";
       auto has = [&](const std::string & key) { return this->has_parameter(prefix + key); };
       // Skip labels with no overrides at all
