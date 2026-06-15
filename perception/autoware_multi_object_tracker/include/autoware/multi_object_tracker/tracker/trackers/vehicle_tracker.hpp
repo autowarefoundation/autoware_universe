@@ -12,28 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__VEHICLE_TRACKER_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__VEHICLE_TRACKER_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__VEHICLE_TRACKER_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__VEHICLE_TRACKER_HPP_
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/vehicle_shape_model.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/update/vehicle_update_strategy.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <optional>
 
 namespace autoware::multi_object_tracker
 {
-
-// Vehicle update strategy type for conditioned updates
-enum class UpdateStrategyType { FRONT_WHEEL_UPDATE, REAR_WHEEL_UPDATE, WEAK_UPDATE };
-
-struct UpdateStrategy
-{
-  UpdateStrategyType type;
-  geometry_msgs::msg::Point anchor_point;  // Anchor point for the update (used for
-                                           // FRONT_WHEEL_UPDATE and REAR_WHEEL_UPDATE)
-};
 
 class VehicleTracker : public Tracker
 {
@@ -42,13 +34,22 @@ private:
 
   object_model::ObjectModel object_model_;
 
-  double velocity_deviation_threshold_;
-
   BicycleMotionModel motion_model_;
   using IDX = BicycleMotionModel::IDX;
 
-  // determine anchor point for shape updates by last update strategy
-  BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;  // Default: CENTER
+  VehicleShapeModel shape_model_;
+
+  // Tracks which end of the vehicle was used as anchor in the last conditioned update.
+  // Consumed by setObjectShape() so UnstableShapeFilter commits the new length correctly.
+  BicycleMotionModel::LengthUpdateAnchor shape_update_anchor_;
+
+  // EKF kinematic update — selects update variant based on data availability.
+  bool updateKinematics(
+    const types::DynamicObject & object, const types::InputChannel & channel_info);
+  // Wheel-anchor EKF update (front or rear) plus z/height updates.
+  // Also records the anchor in shape_update_anchor_.
+  bool updateWheelKinematics(
+    const UpdateStrategy & strategy, const types::DynamicObject & measurement);
 
 public:
   VehicleTracker(
@@ -59,8 +60,6 @@ public:
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
     const types::InputChannel & channel_info) override;
-  bool measureWithPose(
-    const types::DynamicObject & object, const types::InputChannel & channel_info);
 
   bool conditionedUpdate(
     const types::DynamicObject & measurement, const types::DynamicObject & prediction,
@@ -71,6 +70,17 @@ public:
     const rclcpp::Time & time, types::DynamicObject & object,
     const bool to_publish = false) const override;
 
+  bool getMotionState(
+    const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+    geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const override;
+  rclcpp::Time getStateTime() const override { return motion_model_.getLastUpdateTime(); }
+
+  ShapeModelBase & getShapeModel() override { return shape_model_; }
+  const ShapeModelBase & getShapeModel() const override { return shape_model_; }
+  void assembleShapeTo(types::DynamicObject & output, bool to_publish) const override;
+
+  // Overridden because the committed shape also drives the motion-model length (and anchor).
+  // mergeFootprintFrom() is handled by the base via getShapeModel().mergeFrom().
   void setObjectShape(const autoware_perception_msgs::msg::Shape & shape) override;
 
   // Clusters (trust_extension=false) have unreliable bbox orientation — always use conditioned.
@@ -80,36 +90,8 @@ public:
     if (!trust_extension) return UpdatePath::CONDITIONED;
     return has_significant_shape_change ? UpdatePath::TRY_EXTENSION : UpdatePath::NORMAL;
   }
-
-  const double ALIGNMENT_RATIO_THRESHOLD = 0.2;     // 20% of the larger object's length
-  const double ALIGNMENT_ABSOLUTE_THRESHOLD = 1.0;  // [m] minimum tolerance for small objects
-  UpdateStrategy determineUpdateStrategy(
-    const types::DynamicObject & measurement, const types::DynamicObject & prediction) const;
-
-private:
-  // Helper structs for determineUpdateStrategy
-  struct EdgePositions
-  {
-    double front_x, front_y;
-    double rear_x, rear_y;
-  };
-
-  enum class Edge { FRONT, REAR };
-  struct EdgeAlignment
-  {
-    double min_alignment_distance;
-    Edge aligned_pred_edge;
-    Edge aligned_meas_edge;
-  };
-
-  // Helper functions for determineUpdateStrategy
-  EdgePositions calculateEdgeCenters(const types::DynamicObject & obj) const;
-  EdgeAlignment findAlignedEdges(
-    const EdgePositions & meas_edges, const types::DynamicObject & prediction) const;
-  geometry_msgs::msg::Point calculateAnchorPoint(
-    const EdgeAlignment & alignment, const types::DynamicObject & measurement) const;
 };
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__VEHICLE_TRACKER_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__VEHICLE_TRACKER_HPP_
