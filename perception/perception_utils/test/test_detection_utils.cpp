@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 
@@ -90,6 +91,31 @@ TEST(IouBevNmsTest, DoesNotSuppressPedestrianAgainstAnotherClass)
     make_object(0.0, 0.0, 2.0F, 2.0F, ObjectClassification::PEDESTRIAN, 0.8F)};
 
   EXPECT_EQ(nms.apply(objects).size(), 2U);
+}
+
+TEST(IouBevNmsTest, KeepsSourceObjectsIntactWhileSuppressing)
+{
+  perception_utils::IouBevNms nms;
+  nms.setParameters({10.0, 0.0});
+
+  // Three overlapping pedestrians: the first is retained and then reused as the
+  // source object when evaluating the others. If the retained object were moved
+  // out, its emptied classification would break the same-class check and let the
+  // overlapping pedestrians survive.
+  const std::vector<DetectedObject> objects{
+    make_object(0.0, 0.0, 2.0F, 2.0F, ObjectClassification::PEDESTRIAN, 0.9F),
+    make_object(0.1, 0.0, 2.0F, 2.0F, ObjectClassification::PEDESTRIAN, 0.8F),
+    make_object(0.2, 0.0, 2.0F, 2.0F, ObjectClassification::PEDESTRIAN, 0.7F)};
+
+  EXPECT_EQ(nms.apply(objects).size(), 1U);
+}
+
+TEST(IouBevNmsTest, RejectsNonFiniteParameters)
+{
+  perception_utils::IouBevNms nms;
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  EXPECT_THROW(nms.setParameters({nan, 0.2}), std::invalid_argument);
+  EXPECT_THROW(nms.setParameters({10.0, nan}), std::invalid_argument);
 }
 
 TEST(DetectionClassRemapperTest, RemapsEveryClassificationByBevArea)

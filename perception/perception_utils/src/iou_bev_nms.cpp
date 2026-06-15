@@ -19,8 +19,8 @@
 #include <autoware_utils_geometry/geometry.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
-#include <utility>
 #include <vector>
 
 namespace perception_utils
@@ -35,11 +35,12 @@ using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 void IouBevNms::setParameters(const IouBevNmsParams & params)
 {
-  if (params.search_distance_2d < 0.0) {
-    throw std::invalid_argument("search_distance_2d must be non-negative.");
+  if (!std::isfinite(params.search_distance_2d) || params.search_distance_2d < 0.0) {
+    throw std::invalid_argument("search_distance_2d must be a finite non-negative value.");
   }
-  if (params.iou_threshold < 0.0 || params.iou_threshold > 1.0) {
-    throw std::invalid_argument("iou_threshold must be between 0 and 1.");
+  if (!std::isfinite(params.iou_threshold) || params.iou_threshold < 0.0 ||
+      params.iou_threshold > 1.0) {
+    throw std::invalid_argument("iou_threshold must be a finite value between 0 and 1.");
   }
 
   params_ = params;
@@ -94,7 +95,7 @@ std::vector<DetectedObject> IouBevNms::apply(
     }
 
     if (max_iou <= params_.iou_threshold) {
-      output_objects.emplace_back(std::move(ordered_objects.at(target_i)));
+      output_objects.emplace_back(ordered_objects.at(target_i));
     }
   }
 
