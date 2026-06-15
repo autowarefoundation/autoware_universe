@@ -234,7 +234,12 @@ bool PolygonTracker::getTrackedObject(
 
   if (to_publish) {
     object.pose = last_pose_;
-    if (!enable_motion_output_) {
+    // Gate motion output on the track's current classification (object.classification was
+    // populated above by populateKinematicObject). Absent/false label => suppress velocity.
+    const auto label = classes::getHighestProbLabel(object.classification);
+    const auto it = enable_motion_output_.find(label);
+    const bool motion_output_enabled = it != enable_motion_output_.end() && it->second;
+    if (!motion_output_enabled) {
       object.twist.linear.x = 0.0;
       object.twist.linear.y = 0.0;
     }

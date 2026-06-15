@@ -146,7 +146,7 @@ std::shared_ptr<mot::Tracker> makePolygonTracker(
 {
   mot::PolygonTrackerConfig polygon_config;
   polygon_config.enable_velocity_estimation = false;
-  polygon_config.enable_motion_output = false;
+  // enable_motion_output left empty => motion output disabled for all labels
   auto tracker = std::make_shared<mot::PolygonTracker>(time, obj, polygon_config);
   tracker->initializeExistenceProbabilities(channel.index, obj.existence_probability);
   spinUp(tracker, obj, time, n_updates, channel);

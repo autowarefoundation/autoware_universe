@@ -241,8 +241,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Per-tracker-type configuration (tracker_configs.<tracker>.<member>)
   params_.tracker_configs.polygon_tracker.enable_velocity_estimation =
     declare_parameter<bool>("tracker_configs.polygon_tracker.enable_velocity_estimation");
-  params_.tracker_configs.polygon_tracker.enable_motion_output =
-    declare_parameter<bool>("tracker_configs.polygon_tracker.enable_motion_output");
+  for (const auto label : classes::trackedLabels()) {
+    params_.tracker_configs.polygon_tracker.enable_motion_output[label] = declare_parameter<bool>(
+      "tracker_configs.polygon_tracker.enable_motion_output." + classes::toString(label));
+  }
   params_.tracker_configs.static_tracker.convert_polygon_to_bbox =
     declare_parameter<bool>("tracker_configs.static_tracker.convert_polygon_to_bbox");
 

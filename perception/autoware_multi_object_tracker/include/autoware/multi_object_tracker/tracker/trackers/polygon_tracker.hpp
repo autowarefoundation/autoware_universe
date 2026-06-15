@@ -37,7 +37,8 @@ private:
   StaticMotionModel static_motion_model_;
 
   bool enable_velocity_estimation_;
-  bool enable_motion_output_;
+  // Per-label motion-output gate, evaluated at publish time against the track's current label.
+  LabelBoolMap enable_motion_output_;
 
   geometry_msgs::msg::Pose last_pose_;
 

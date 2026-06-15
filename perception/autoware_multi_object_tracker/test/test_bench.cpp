@@ -31,7 +31,7 @@ autoware::multi_object_tracker::TrackerConfigs createTrackerConfigs()
 {
   autoware::multi_object_tracker::TrackerConfigs config;
   config.polygon_tracker.enable_velocity_estimation = false;
-  config.polygon_tracker.enable_motion_output = false;
+  // enable_motion_output left empty => motion output disabled for all labels
   return config;
 }
 

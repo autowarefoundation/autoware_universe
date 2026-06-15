@@ -47,6 +47,7 @@ struct AssociationProfile
 };
 
 using LabelDoubleMap = std::unordered_map<classes::Label, double, EnumClassHash>;
+using LabelBoolMap = std::unordered_map<classes::Label, bool, EnumClassHash>;
 
 using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
 struct ShapeLabelKeyHash
@@ -71,7 +72,15 @@ using ShapeLabelToTrackerTypeMap =
 struct PolygonTrackerConfig
 {
   bool enable_velocity_estimation{true};
-  bool enable_motion_output{false};
+  // Whether to publish estimated velocity, per object classification.
+  // A label absent from the map (or set false) means motion output is suppressed for that label.
+  LabelBoolMap enable_motion_output;
+
+  bool motionOutputEnabled(classes::Label label) const
+  {
+    const auto it = enable_motion_output.find(label);
+    return it != enable_motion_output.end() && it->second;
+  }
 };
 
 struct StaticTrackerConfig
