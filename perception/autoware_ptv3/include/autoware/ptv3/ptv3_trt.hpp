@@ -65,6 +65,10 @@ protected:
   void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();
   void allocateMessages();
+  void allocateSerializedPoolingBuffers();
+  void bindSerializedPoolingAddresses();
+  void precomputeSerializedPoolingMetadata();
+  bool setSerializedPoolingInputShapes();
   [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
 
   bool preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
@@ -102,6 +106,23 @@ protected:
   std::once_flag init_cloud_;
   CloudFormat input_format_{CloudFormat::UNKNOWN};
   CloudFormat filtered_output_format_{CloudFormat::UNKNOWN};
+
+  struct SerializedPoolingDeviceStage
+  {
+    CudaUniquePtr<std::int64_t[]> indices{nullptr};
+    CudaUniquePtr<std::int64_t[]> indptr{nullptr};
+    CudaUniquePtr<std::int64_t[]> head_indices{nullptr};
+    CudaUniquePtr<std::int64_t[]> cluster{nullptr};
+    CudaUniquePtr<std::int32_t[]> grid_coord{nullptr};
+    CudaUniquePtr<std::int64_t[]> serialized_code{nullptr};
+    CudaUniquePtr<std::int64_t[]> serialized_order{nullptr};
+    CudaUniquePtr<std::int64_t[]> serialized_inverse{nullptr};
+  };
+
+  std::vector<SerializedPoolingDeviceStage> serialized_pooling_stages_d_;
+  CudaUniquePtr<std::int64_t[]> serialized_pooling_num_voxels_d_{nullptr};
+  std::vector<std::int64_t> serialized_pooling_num_voxels_;
+  std::vector<std::int64_t> serialized_pooling_depths_;
 
   // Preprocess outputs
   std::int64_t num_voxels_{0};

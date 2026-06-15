@@ -14,35 +14,24 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/multi_object_tracker/tracker/model/pedestrian_tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/pedestrian_tracker.hpp"
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <autoware_utils_geometry/boost_polygon_utils.hpp>
-#include <autoware_utils_math/normalization.hpp>
-#include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/utils.hpp>
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
-#include <bits/stdc++.h>
+#include <algorithm>
 
 namespace autoware::multi_object_tracker
 {
+
 PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object)
-: Tracker(time, object), logger_(rclcpp::get_logger("PedestrianTracker"))
+: Tracker(time, object),
+  logger_(rclcpp::get_logger("PedestrianTracker")),
+  shape_model_(object_model_)
 {
   tracker_type_ = TrackerType::PEDESTRIAN;
 
-  if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
-    // set default initial size
-    auto & object_extension = object_.shape.dimensions;
-    object_extension.x = object_model_.init_size.length;
-    object_extension.y = object_model_.init_size.width;
-    object_extension.z = object_model_.init_size.height;
-  }
-  // set maximum and minimum size
-  limitObjectExtension(object_model_);
+  // Initialize shape manager: handles POLYGON/CYLINDER/BBOX normalization and clamping
+  shape_model_.init(object);
 
   // Set motion model parameters
   {
@@ -58,7 +47,7 @@ PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::Dyn
   {
     const double max_vel = object_model_.process_limit.vel_long_max;
     const double max_turn_rate = object_model_.process_limit.yaw_rate_max;
-    motion_model_.setMotionLimits(max_vel, max_turn_rate);  // maximum velocity and slip angle
+    motion_model_.setMotionLimits(max_vel, max_turn_rate);
   }
 
   // Set initial state
@@ -70,7 +59,6 @@ PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::Dyn
 
     auto pose_cov = object.pose_covariance;
     if (!object.kinematics.has_position_covariance) {
-      // initial state covariance
       const auto & p0_cov_x = object_model_.initial_covariance.pos_x;
       const auto & p0_cov_y = object_model_.initial_covariance.pos_y;
       const auto & p0_cov_yaw = object_model_.initial_covariance.yaw;
@@ -99,8 +87,8 @@ PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::Dyn
       wz_cov = object.twist_covariance[XYZRPY_COV_IDX::YAW_YAW];
     }
 
-    // initialize motion model
     motion_model_.initialize(time, x, y, yaw, pose_cov, vel, vel_cov, wz, wz_cov);
+    motion_model_.setZ(object.pose.position.z);
   }
 }
 
@@ -109,9 +97,8 @@ bool PedestrianTracker::predict(const rclcpp::Time & time)
   return motion_model_.predictState(time);
 }
 
-bool PedestrianTracker::measureWithPose(const types::DynamicObject & object)
+bool PedestrianTracker::updateKinematics(const types::DynamicObject & object)
 {
-  // update motion model
   bool is_updated = false;
   {
     const double x = object.pose.position.x;
@@ -121,56 +108,17 @@ bool PedestrianTracker::measureWithPose(const types::DynamicObject & object)
     motion_model_.limitStates();
   }
 
-  // position z
+  // Low-pass filter on z position.
   constexpr double gain = 0.1;
-  object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
-
-  // remove cached object
-  removeCache();
+  motion_model_.updateZ(object.pose.position.z, gain);
 
   return is_updated;
-}
-
-bool PedestrianTracker::measureWithShape(const types::DynamicObject & object)
-{
-  if (object.shape.type != autoware_perception_msgs::msg::Shape::POLYGON) {
-    constexpr double size_max = 30.0;  // [m]
-    constexpr double size_min = 0.1;   // [m]
-    if (
-      object.shape.dimensions.x > size_max || object.shape.dimensions.x < size_min ||
-      object.shape.dimensions.y > size_max || object.shape.dimensions.y < size_min ||
-      object.shape.dimensions.z > size_max || object.shape.dimensions.z < size_min) {
-      return false;
-    }
-    constexpr double gain = 0.5;
-    constexpr double gain_inv = 1.0 - gain;
-    auto & object_extension = object_.shape.dimensions;
-    object_extension.x = gain_inv * object_extension.x + gain * object.shape.dimensions.x;
-    object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
-    object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
-
-    // update shape type, bounding box or cylinder
-    object_.shape.type = object.shape.type;
-    object_.area = types::getArea(object.shape);
-
-    // set maximum and minimum size
-    limitObjectExtension(object_model_);
-  } else {
-    // do not update polygon shape
-    return false;
-  }
-
-  // update shape type
-  object_.shape.type = object.shape.type;
-
-  return true;
 }
 
 bool PedestrianTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
   const types::InputChannel & channel_info)
 {
-  // check time gap
   const double dt = motion_model_.getDeltaTime(time);
   if (0.01 /*10msec*/ < dt) {
     RCLCPP_WARN(
@@ -180,52 +128,44 @@ bool PedestrianTracker::measure(
       dt);
   }
 
-  // update object
-  measureWithPose(object);
-  if (channel_info.trust_extension) {
-    measureWithShape(object);
-  }
+  updateKinematics(object);
 
+  shape_model_.update(object, channel_info.trust_extension, motion_model_.getYawState());
+
+  removeCache();
   return true;
+}
+
+bool PedestrianTracker::getMotionState(
+  const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+  geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
+{
+  return motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov);
 }
 
 bool PedestrianTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  // try to return cached object
   if (!getCachedObject(time, object)) {
-    // if there is no cached object, predict and update cache
-    object = object_;
-    object.time = time;
-
-    // predict from motion model
-    auto & pose = object.pose;
-    auto & pose_cov = object.pose_covariance;
-    auto & twist = object.twist;
-    auto & twist_cov = object.twist_covariance;
-    if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
+    if (!populateKinematicObject(time, time, object)) {
       RCLCPP_WARN(logger_, "PedestrianTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
-
-    // cache object
     updateCache(object, time);
   }
 
-  // if the tracker is to be published, check twist uncertainty
-  // in case the twist uncertainty is large, lower the twist value
+  // Export shape from extend manager (type selection: CYLINDER vs BOUNDING_BOX)
+  assembleShapeTo(object, to_publish);
+
   if (to_publish) {
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    // lower the x twist magnitude 1 sigma smaller
-    // if the twist is smaller than 1 sigma, the twist is zeroed
     auto & twist = object.twist;
-    constexpr double vel_cov_buffer = 0.7;  // [m/s] buffer not to limit certain twist
-    constexpr double vel_too_low_ignore =
-      0.35;  // [m/s] if the velocity is lower than this, do not limit
+    constexpr double vel_cov_buffer = 0.7;
+    constexpr double vel_too_low_ignore = 0.35;
     const double vel_long = std::abs(twist.linear.x);
     if (vel_long > vel_too_low_ignore) {
-      const double vel_limit = std::max(
-        std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);  // [m/s]
+      const double vel_limit =
+        std::max(std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);
 
       if (vel_long < vel_limit) {
         twist.linear.x = twist.linear.x > 0 ? vel_too_low_ignore : -vel_too_low_ignore;

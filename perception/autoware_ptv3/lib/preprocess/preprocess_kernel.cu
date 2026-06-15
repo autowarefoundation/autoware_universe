@@ -27,7 +27,9 @@
 #include <thrust/sequence.h>
 #include <thrust/unique.h>
 
+#include <algorithm>
 #include <limits>
+#include <stdexcept>
 
 namespace autoware::ptv3
 {
@@ -83,6 +85,27 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
     config_.cloud_capacity_, 0, 64, nullptr);
 
   sort_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(sort_workspace_size_);
+
+  pooling_keys_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+  pooling_sorted_keys_d_ =
+    autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+  pooling_indices_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+  pooling_sorted_indices_d_ =
+    autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+  pooling_run_flags_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+  pooling_run_ids_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+
+  std::size_t pooling_sort_workspace_size = 0;
+  std::size_t pooling_scan_workspace_size = 0;
+  std::int64_t * int64_nullptr = nullptr;
+  cub::DeviceRadixSort::SortPairs(
+    nullptr, pooling_sort_workspace_size, int64_nullptr, int64_nullptr, int64_nullptr,
+    int64_nullptr, config_.max_num_voxels_, 0, 63, nullptr);
+  cub::DeviceScan::InclusiveSum(
+    nullptr, pooling_scan_workspace_size, int64_nullptr, int64_nullptr, config_.max_num_voxels_,
+    nullptr);
+  pooling_workspace_size_ = std::max(pooling_sort_workspace_size, pooling_scan_workspace_size);
+  pooling_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(pooling_workspace_size_);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
@@ -273,6 +296,213 @@ __global__ void computeGridCoordsAndSerializationKernel(
 
   hashes[idx] = key1;
   hashes[idx + num_points] = key2;
+}
+
+constexpr std::int64_t kInvalidPoolingKey = std::numeric_limits<std::int64_t>::max();
+
+__global__ void setInitialStageCountKernel(
+  std::int64_t * __restrict__ stage_counts, std::int64_t num_voxels)
+{
+  *stage_counts = num_voxels;
+}
+
+__global__ void preparePoolingSortInputKernel(
+  const std::int64_t * __restrict__ serialized_code, const std::int64_t * __restrict__ stage_counts,
+  std::int64_t * __restrict__ keys, std::int64_t * __restrict__ indices, std::int32_t stage_index,
+  std::int32_t pooling_depth, std::int64_t capacity)
+{
+  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= capacity) {
+    return;
+  }
+
+  const auto input_count = stage_counts[stage_index];
+  keys[idx] = idx < input_count ? serialized_code[idx] >> (pooling_depth * 3) : kInvalidPoolingKey;
+  indices[idx] = idx;
+}
+
+__global__ void markPoolingRunsKernel(
+  const std::int64_t * __restrict__ sorted_keys, std::int64_t * __restrict__ run_flags,
+  std::int64_t capacity)
+{
+  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= capacity) {
+    return;
+  }
+
+  const auto key = sorted_keys[idx];
+  run_flags[idx] = key != kInvalidPoolingKey && (idx == 0 || key != sorted_keys[idx - 1]) ? 1 : 0;
+}
+
+__global__ void fillPoolingStageKernel(
+  const std::int32_t * __restrict__ grid_coord_in,
+  const std::int64_t * __restrict__ serialized_code_in,
+  const std::int64_t * __restrict__ sorted_keys, const std::int64_t * __restrict__ sorted_indices,
+  const std::int64_t * __restrict__ run_flags, const std::int64_t * __restrict__ run_ids,
+  std::int64_t * __restrict__ indices_out, std::int64_t * __restrict__ indptr_out,
+  std::int64_t * __restrict__ head_indices_out, std::int64_t * __restrict__ cluster_out,
+  std::int32_t * __restrict__ grid_coord_out, std::int64_t * __restrict__ serialized_code_out,
+  std::int64_t * __restrict__ stage_counts, std::int32_t stage_index, std::int32_t pooling_depth,
+  std::int32_t num_orders, std::int64_t capacity)
+{
+  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= capacity) {
+    return;
+  }
+
+  // The order-major (per-serialization-order) tensors are stored densely so they can be bound
+  // directly to the engine inputs of shape [num_orders, count]: the input is strided by the
+  // stage's input count (the original serialized_code is laid out [2, num_voxels]) and the output
+  // by the stage's output count. Using `capacity` as the stride here would both misread the
+  // dense input and produce a non-dense output that TensorRT cannot consume.
+  const auto input_count = stage_counts[stage_index];
+  const auto next_count = run_ids[capacity - 1];
+  if (idx == 0) {
+    stage_counts[stage_index + 1] = next_count;
+    indptr_out[next_count] = input_count;
+  }
+
+  if (sorted_keys[idx] == kInvalidPoolingKey) {
+    return;
+  }
+
+  const auto input_index = sorted_indices[idx];
+  const auto segment_index = run_ids[idx] - 1;
+  indices_out[idx] = input_index;
+  cluster_out[input_index] = segment_index;
+
+  if (run_flags[idx] == 0) {
+    return;
+  }
+
+  indptr_out[segment_index] = idx;
+  head_indices_out[segment_index] = input_index;
+  for (std::int32_t coord_index = 0; coord_index < 3; ++coord_index) {
+    grid_coord_out[segment_index * 3 + coord_index] =
+      grid_coord_in[input_index * 3 + coord_index] >> pooling_depth;
+  }
+  for (std::int32_t order_index = 0; order_index < num_orders; ++order_index) {
+    serialized_code_out[order_index * next_count + segment_index] =
+      serialized_code_in[order_index * input_count + input_index] >> (pooling_depth * 3);
+  }
+}
+
+__global__ void prepareOrderSortInputKernel(
+  const std::int64_t * __restrict__ serialized_code, const std::int64_t * __restrict__ stage_counts,
+  std::int64_t * __restrict__ keys, std::int64_t * __restrict__ indices, std::int32_t stage_index,
+  std::int32_t order_index, std::int64_t capacity)
+{
+  const auto idx = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (idx >= capacity) {
+    return;
+  }
+
+  const auto input_count = stage_counts[stage_index];
+  // serialized_code is stored densely as [num_orders, input_count] (see fillPoolingStageKernel).
+  keys[idx] =
+    idx < input_count ? serialized_code[order_index * input_count + idx] : kInvalidPoolingKey;
+  indices[idx] = idx;
+}
+
+__global__ void fillOrderAndInverseKernel(
+  const std::int64_t * __restrict__ sorted_keys, const std::int64_t * __restrict__ sorted_indices,
+  const std::int64_t * __restrict__ stage_counts, std::int64_t * __restrict__ order_out,
+  std::int64_t * __restrict__ inverse_out, std::int32_t stage_index, std::int32_t order_index,
+  std::int64_t capacity)
+{
+  const auto count = stage_counts[stage_index];
+  const auto rank = static_cast<std::int64_t>(blockIdx.x) * blockDim.x + threadIdx.x;
+  if (rank >= capacity || rank >= count || sorted_keys[rank] == kInvalidPoolingKey) {
+    return;
+  }
+
+  // order/inverse are stored densely as [num_orders, count] to match the engine input layout.
+  const auto input_index = sorted_indices[rank];
+  order_out[order_index * count + rank] = input_index;
+  inverse_out[order_index * count + input_index] = rank;
+}
+
+std::int32_t poolingDepth(const std::int64_t stride)
+{
+  std::int32_t depth = 0;
+  for (auto value = stride; value > 1; value >>= 1) {
+    ++depth;
+  }
+  return depth;
+}
+
+void PreprocessCuda::generateSerializedPoolingMetadata(
+  const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
+  const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts)
+{
+  if (stages.size() != config_.pooling_strides_.size()) {
+    throw std::runtime_error("Serialized pooling stage buffer count does not match config.");
+  }
+
+  const auto capacity = config_.max_num_voxels_;
+  const auto num_orders = static_cast<std::int32_t>(config_.serialization_orders_.size());
+  const auto num_blocks = divup(static_cast<std::size_t>(capacity), config_.threads_per_block_);
+
+  setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, num_voxels);
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+  const std::int32_t * current_grid_coord = grid_coord;
+  const std::int64_t * current_serialized_code = serialized_code;
+
+  for (std::size_t stage_index = 0; stage_index < stages.size(); ++stage_index) {
+    const auto & stage = stages[stage_index];
+    const auto pooling_depth = poolingDepth(config_.pooling_strides_[stage_index]);
+
+    preparePoolingSortInputKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      current_serialized_code, stage_counts, pooling_keys_d_.get(), pooling_indices_d_.get(),
+      static_cast<std::int32_t>(stage_index), pooling_depth, capacity);
+    CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+    CHECK_CUDA_ERROR(
+      cub::DeviceRadixSort::SortPairs(
+        pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
+        pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
+        capacity, 0, 63, stream_));
+
+    markPoolingRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      pooling_sorted_keys_d_.get(), pooling_run_flags_d_.get(), capacity);
+    CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+    CHECK_CUDA_ERROR(
+      cub::DeviceScan::InclusiveSum(
+        pooling_workspace_d_.get(), pooling_workspace_size_, pooling_run_flags_d_.get(),
+        pooling_run_ids_d_.get(), capacity, stream_));
+
+    fillPoolingStageKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      current_grid_coord, current_serialized_code, pooling_sorted_keys_d_.get(),
+      pooling_sorted_indices_d_.get(), pooling_run_flags_d_.get(), pooling_run_ids_d_.get(),
+      stage.indices, stage.indptr, stage.head_indices, stage.cluster, stage.grid_coord,
+      stage.serialized_code, stage_counts, static_cast<std::int32_t>(stage_index), pooling_depth,
+      num_orders, capacity);
+    CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+    for (std::int32_t order_index = 0; order_index < num_orders; ++order_index) {
+      prepareOrderSortInputKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+        stage.serialized_code, stage_counts, pooling_keys_d_.get(), pooling_indices_d_.get(),
+        static_cast<std::int32_t>(stage_index + 1), order_index, capacity);
+      CHECK_CUDA_ERROR(cudaPeekAtLastError());
+
+      CHECK_CUDA_ERROR(
+        cub::DeviceRadixSort::SortPairs(
+          pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
+          pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
+          capacity, 0, 63, stream_));
+
+      fillOrderAndInverseKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+        pooling_sorted_keys_d_.get(), pooling_sorted_indices_d_.get(), stage_counts,
+        stage.serialized_order, stage.serialized_inverse,
+        static_cast<std::int32_t>(stage_index + 1), order_index, capacity);
+      CHECK_CUDA_ERROR(cudaPeekAtLastError());
+    }
+
+    current_grid_coord = stage.grid_coord;
+    current_serialized_code = stage.serialized_code;
+  }
 }
 
 std::size_t PreprocessCuda::generateFeatures(
