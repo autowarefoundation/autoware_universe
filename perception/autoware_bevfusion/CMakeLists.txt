@@ -161,7 +161,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
   autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
     PLUGIN "autoware::bevfusion::BEVFusionNode"
     EXECUTABLE ${PROJECT_NAME}_node
-    AGNOCAST_EXECUTOR SingleThreadedAgnocastExecutor
+    AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
     ROS2_EXECUTOR SingleThreadedExecutor
   )
 
