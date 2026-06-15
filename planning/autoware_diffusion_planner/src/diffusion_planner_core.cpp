@@ -136,6 +136,23 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
     *ego_kinematic_state, *ego_acceleration, ego_to_map_transform, processed_neighbor_histories,
     frame_time};
 
+  const auto & ego_position = frame_context.ego_kinematic_state.pose.pose.position;
+  const auto & ego_orientation = frame_context.ego_kinematic_state.pose.pose.orientation;
+  RCLCPP_DEBUG_STREAM(
+    rclcpp::get_logger("diffusion_planner_core"),
+    "FrameContext: "                                                               //
+      << "frame_time_ns=" << frame_time.nanoseconds()                              //
+      << ", ego_pos_x=" << ego_position.x                                          //
+      << ", ego_pos_y=" << ego_position.y                                          //
+      << ", ego_pos_z=" << ego_position.z                                          //
+      << ", ego_quat_x=" << ego_orientation.x                                      //
+      << ", ego_quat_y=" << ego_orientation.y                                      //
+      << ", ego_quat_z=" << ego_orientation.z                                      //
+      << ", ego_quat_w=" << ego_orientation.w                                      //
+      << ", ego_vel_x=" << frame_context.ego_kinematic_state.twist.twist.linear.x  //
+      << ", ego_acc_x=" << frame_context.ego_acceleration.accel.accel.linear.x     //
+      << ", neighbors=" << frame_context.ego_centric_neighbor_histories.size());
+
   return frame_context;
 }
 
