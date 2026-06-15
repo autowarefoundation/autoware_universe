@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
-#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
+#ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__TRACKER_BASE_HPP_
+#define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__TRACKER_BASE_HPP_
 
 #define EIGEN_MPL2_ONLY
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/object_model/classes.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/uuid.hpp"
+#include "autoware/multi_object_tracker/tracker/shape_model/shape_model_base.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/unstable_shape_filter.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
@@ -94,10 +95,29 @@ public:
     const types::InputChannel & channel_info, bool has_significant_shape_change = false);
   bool updateWithoutMeasurement(const rclcpp::Time & now);
   void updateClassification(const std::vector<classes::Classification> & classification);
+
+  // Returns the shape model that owns this tracker's extension (single source of truth).
+  // Composite trackers return the active inner tracker's model (selected by highest-prob label).
+  virtual ShapeModelBase & getShapeModel() = 0;
+  virtual const ShapeModelBase & getShapeModel() const = 0;
+
+  // Assemble this tracker's shape (and area) into the output object. Replaces the per-tracker
+  // shape_model_.exportTo() calls so the base owns shape composition (used by getBEVArea() and the
+  // getTrackedObject() implementations). to_publish enables publish-time shape conversion.
+  virtual void assembleShapeTo(types::DynamicObject & output, bool to_publish) const = 0;
+
+  // Apply a shape (e.g. from overlap-merge) by routing it to the shape model.
+  // VehicleTracker overrides to also sync the motion-model length; composite trackers override to
+  // forward to both inner trackers.
   virtual void setObjectShape(const autoware_perception_msgs::msg::Shape & shape)
   {
-    object_.shape = shape;
-    object_.area = types::getArea(shape);
+    getShapeModel().setShape(shape, getLatestMeasurementTime());
+  }
+  virtual void mergeFootprintFrom(
+    const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+    const geometry_msgs::msg::Pose & dst_pose)
+  {
+    getShapeModel().mergeFrom(footprint, src_pose, dst_pose, getLatestMeasurementTime());
   }
 
   // object life management
@@ -117,7 +137,7 @@ public:
 
   classes::Label getHighestProbLabel() const
   {
-    return classes::getHighestProbLabel(object_.classification);
+    return classes::getHighestProbLabel(classification_);
   }
 
   // existence states
@@ -130,11 +150,16 @@ public:
   }
   rclcpp::Time getLatestMeasurementTime() const { return last_update_with_measurement_time_; }
 
-  unique_identifier_msgs::msg::UUID getUUID() const { return object_.uuid; }
+  // Composite trackers call inner tracker methods directly (bypassing updateWithMeasurement),
+  // so the inner's last_update_with_measurement_time_ is never set by the normal path.
+  // Call this after each inner measure()/conditionedUpdate() to keep it current.
+  void setLatestMeasurementTime(const rclcpp::Time & t) { last_update_with_measurement_time_ = t; }
+
+  unique_identifier_msgs::msg::UUID getUUID() const { return uuid_; }
 
   std::string getUuidString() const
   {
-    const auto uuid_msg = object_.uuid;
+    const auto uuid_msg = uuid_;
     std::stringstream ss;
     constexpr size_t UUID_SIZE = 16;
     ss << std::hex << std::setfill('0');
@@ -149,14 +174,45 @@ public:
   double computeAdaptiveThreshold(
     double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
-  bool createPseudoMeasurement(
-    const types::DynamicObject & meas, types::DynamicObject & pred,
-    const autoware_perception_msgs::msg::Shape & tracker_shape,
-    const bool enlarge_covariance = false);
 
 protected:
-  types::DynamicObject object_;
+  // Persistent (non-kinematic, non-shape) tracker state. Shape is owned by the shape model
+  // (getShapeModel()); kinematics (pose/twist/covariances) are owned by the motion model and
+  // supplied on demand via getMotionState() — the motion model is the single source of truth.
+  unique_identifier_msgs::msg::UUID uuid_;
+  uint channel_index_{0};
+  float existence_probability_{types::default_existence_probability};
+  types::ObjectKinematics kinematics_{};  // output metadata flags (orientation_availability, ...)
+  bool trust_extension_{false};
+
   types::TrackerType tracker_type_{types::TrackerType::POLYGON};
+
+  // Fill the persistent (non-kinematic, non-shape) fields of `object`. getTrackedObject() overlays
+  // kinematics (getMotionState()) and shape (assembleShapeTo()) on top of this.
+  void populatePersistentFields(types::DynamicObject & object) const
+  {
+    object.uuid = uuid_;
+    object.channel_index = channel_index_;
+    object.existence_probability = existence_probability_;
+    object.existence_probabilities = existence_probabilities_;
+    object.classification = classification_;
+    object.kinematics = kinematics_;
+    object.trust_extension = trust_extension_;
+  }
+
+  // Compose the persistent fields and the motion-model kinematics into `object`: persistent fields,
+  // the output stamp, and pose/twist/covariances from getMotionState() at `motion_time`. Shared by
+  // every leaf getTrackedObject() (shape and publish-time tweaks are layered on by the caller).
+  // `motion_time` may differ from `stamp` when the publish path clamps extrapolation.
+  bool populateKinematicObject(
+    const rclcpp::Time & motion_time, const rclcpp::Time & stamp,
+    types::DynamicObject & object) const
+  {
+    populatePersistentFields(object);
+    object.time = stamp;
+    return getMotionState(
+      motion_time, object.pose, object.pose_covariance, object.twist, object.twist_covariance);
+  }
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {
@@ -182,8 +238,6 @@ protected:
     cached_object_ = types::DynamicObject();
     cached_measurement_count_ = -1;
   }
-
-  void limitObjectExtension(const object_model::ObjectModel object_model);
 
   // virtual functions
   virtual bool measure(
@@ -212,15 +266,29 @@ public:
     const bool to_publish = false) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
 
-  virtual void setEgoPose(const std::optional<geometry_msgs::msg::Point> &) {}
+  // Kinematics single source of truth: fill pose/twist/covariances from the motion model at `time`.
+  // Excludes shape — the kinematics counterpart to assembleShapeTo().
+  // Composite trackers forward to the active inner tracker.
+  virtual bool getMotionState(
+    const rclcpp::Time & time, geometry_msgs::msg::Pose & pose, std::array<double, 36> & pose_cov,
+    geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const = 0;
+
+  // Time of the motion model's latest state (last predict or update). Used by the covariance /
+  // distance queries that evaluate the state "now". Composite trackers forward to the active inner.
+  virtual rclcpp::Time getStateTime() const = 0;
+
+  virtual void setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos)
+  {
+    getShapeModel().setEgoPose(ego_pos);
+  }
 
   virtual void setOrientationAvailability(
     const types::OrientationAvailability & orientation_availability)
   {
-    object_.kinematics.orientation_availability = orientation_availability;
+    kinematics_.orientation_availability = orientation_availability;
   }
 };
 
 }  // namespace autoware::multi_object_tracker
 
-#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
+#endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__TRACKER_BASE_HPP_
