@@ -41,6 +41,7 @@ ImplicitGemmPluginCreator::ImplicitGemmPluginCreator()
   plugin_attributes_.emplace_back("is_train", nullptr, PluginFieldType::kINT32, 1);
   plugin_attributes_.emplace_back("output_add_scale", nullptr, PluginFieldType::kFLOAT32, 1);
   plugin_attributes_.emplace_back("output_scale", nullptr, PluginFieldType::kFLOAT32, 1);
+  plugin_attributes_.emplace_back("act_type", nullptr, PluginFieldType::kINT32, 1);
 
   fc_.nbFields = plugin_attributes_.size();
   fc_.fields = plugin_attributes_.data();
@@ -58,7 +59,8 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
   auto parse_fields = [](
                         nvinfer1::PluginField const * fields, std::int32_t num_fields,
                         ImplicitGemmParameters & parameters) {
-    PLUGIN_VALIDATE(num_fields == 6);
+    // Accept 6 (legacy without act_type) or 7 (with act_type).
+    PLUGIN_VALIDATE(num_fields == 6 || num_fields == 7);
     for (std::int32_t i{0}; i < num_fields; ++i) {
       const std::string attr_name = fields[i].name;
       const nvinfer1::PluginFieldType type = fields[i].type;
@@ -81,6 +83,10 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
       } else if (attr_name == "output_scale") {
         PLUGIN_VALIDATE(type == nvinfer1::PluginFieldType::kFLOAT32);
         parameters.output_scale = static_cast<float const *>(fields[i].data)[0];
+      } else if (attr_name == "act_type") {
+        PLUGIN_VALIDATE(type == nvinfer1::PluginFieldType::kINT32);
+        parameters.act_type = static_cast<std::int32_t const *>(fields[i].data)[0];
+        PLUGIN_VALIDATE(parameters.act_type >= 0 && parameters.act_type <= 3);
       }
     }
   };
@@ -101,7 +107,7 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
          << " act_alpha=" << parameters.act_alpha << " act_beta=" << parameters.act_beta
          << " is_subm=" << parameters.is_subm << " is_train=" << parameters.is_train
          << " output_add_scale=" << parameters.output_add_scale
-         << " output_scale=" << parameters.output_scale;
+         << " output_scale=" << parameters.output_scale << " act_type=" << parameters.act_type;
       logDebug(ss.str().c_str());
 
       ImplicitGemmPlugin * const plugin{new ImplicitGemmPlugin{std::string(name), parameters}};
