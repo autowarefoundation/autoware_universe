@@ -12,8 +12,8 @@
         "min_points_per_cluster": { "type": "integer" },
         "voxel_leaf_size": { "type": "number" },
         "min_points_per_voxel": { "type": "integer" },
-        "point_capping_voxel_threshold": { "type": "integer" },
-        "max_points_per_voxel_in_large_cluster": { "type": "integer" },
+        "large_cluster_voxel_count_threshold": { "type": "integer" },
+        "large_cluster_max_points_per_voxel": { "type": "integer" },
         "max_voxels_per_cluster": { "type": "integer" }
       },
       "additionalProperties": false
@@ -66,12 +66,12 @@
           "description": "The minimum number of points required per voxel.",
           "default": 1
         },
-        "point_capping_voxel_threshold": {
+        "large_cluster_voxel_count_threshold": {
           "type": "integer",
           "description": "The minimum voxel cluster size for a cluster to be checked for being a large cluster.",
           "default": 10
         },
-        "max_points_per_voxel_in_large_cluster": {
+        "large_cluster_max_points_per_voxel": {
           "type": "integer",
           "description": "The maximum points per voxel allowed in large clusters.",
           "default": 100
@@ -165,8 +165,8 @@
         "min_points_per_cluster",
         "voxel_leaf_size",
         "min_points_per_voxel",
-        "point_capping_voxel_threshold",
-        "max_points_per_voxel_in_large_cluster",
+        "large_cluster_voxel_count_threshold",
+        "large_cluster_max_points_per_voxel",
         "max_voxels_per_cluster",
         "min_probability",
         "class_names",

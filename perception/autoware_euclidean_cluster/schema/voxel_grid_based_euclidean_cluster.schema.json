@@ -31,14 +31,14 @@
           "description": "Voxel-count split bound. Any cluster whose voxel count exceeds this is recursively bisected along its principal (longest) axis into smaller sub-clusters until every piece is at or below this size. No cluster is dropped for being large; large groups are exported as multiple bounded sections.",
           "default": 800
         },
-        "point_capping_voxel_threshold": {
+        "large_cluster_voxel_count_threshold": {
           "type": "integer",
-          "description": "Voxel-count threshold above which a cluster is considered 'large' and subject to per-voxel point capping (see max_points_per_voxel_in_large_cluster). Clusters at or below this size keep all their points.",
+          "description": "Voxel-count threshold above which a cluster is considered 'large' and subject to per-voxel point capping (see large_cluster_max_points_per_voxel). Clusters at or below this size keep all their points.",
           "default": 65
         },
-        "max_points_per_voxel_in_large_cluster": {
+        "large_cluster_max_points_per_voxel": {
           "type": "integer",
-          "description": "Maximum number of points kept per voxel within a large cluster (one whose voxel count exceeds point_capping_voxel_threshold). Excess points are dropped to bound downstream cost; points are processed in a deterministically shuffled order so the kept points sample uniformly across each voxel.",
+          "description": "Maximum number of points kept per voxel within a large cluster (one whose voxel count exceeds large_cluster_voxel_count_threshold). Excess points are dropped to bound downstream cost; points are processed in a deterministically shuffled order so the kept points sample uniformly across each voxel.",
           "default": 10
         },
         "use_height": {
@@ -53,8 +53,8 @@
         "min_points_per_voxel",
         "min_points_per_cluster",
         "max_voxels_per_cluster",
-        "point_capping_voxel_threshold",
-        "max_points_per_voxel_in_large_cluster",
+        "large_cluster_voxel_count_threshold",
+        "large_cluster_max_points_per_voxel",
         "use_height"
       ],
       "additionalProperties": false

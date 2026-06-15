@@ -635,17 +635,18 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
     autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "voxel_leaf_size"));
   const auto min_points_per_voxel = static_cast<int>(
     autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_points_per_voxel"));
-  const auto point_capping_voxel_threshold =
+  const auto large_cluster_voxel_count_threshold =
     static_cast<int>(autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(
-      *this, "point_capping_voxel_threshold"));
-  const auto max_points_per_voxel_in_large_cluster =
+      *this, "large_cluster_voxel_count_threshold"));
+  const auto large_cluster_max_points_per_voxel =
     static_cast<int>(autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(
-      *this, "max_points_per_voxel_in_large_cluster"));
+      *this, "large_cluster_max_points_per_voxel"));
   const auto max_voxels_per_cluster = static_cast<int>(
     autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_voxels_per_cluster"));
   default_cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
-    point_capping_voxel_threshold, max_points_per_voxel_in_large_cluster, max_voxels_per_cluster);
+    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+    max_voxels_per_cluster);
 
   // Build per-label cluster overrides from label_cluster_params.<label_name>.* parameters.
   // Any omitted sub-key falls back to the global default above.
@@ -671,7 +672,7 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       if (
         !has("tolerance") && !has("min_points_per_cluster") && !has("use_height") &&
         !has("voxel_leaf_size") && !has("min_points_per_voxel") &&
-        !has("point_capping_voxel_threshold") && !has("max_points_per_voxel_in_large_cluster") &&
+        !has("large_cluster_voxel_count_threshold") && !has("large_cluster_max_points_per_voxel") &&
         !has("max_voxels_per_cluster")) {
         continue;
       }
@@ -691,8 +692,8 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
         get_int("min_points_per_cluster", min_points_per_cluster),
         get_float("tolerance", tolerance), get_float("voxel_leaf_size", voxel_leaf_size),
         get_int("min_points_per_voxel", min_points_per_voxel),
-        get_int("point_capping_voxel_threshold", point_capping_voxel_threshold),
-        get_int("max_points_per_voxel_in_large_cluster", max_points_per_voxel_in_large_cluster),
+        get_int("large_cluster_voxel_count_threshold", large_cluster_voxel_count_threshold),
+        get_int("large_cluster_max_points_per_voxel", large_cluster_max_points_per_voxel),
         get_int("max_voxels_per_cluster", max_voxels_per_cluster));
 
       RCLCPP_INFO(get_logger(), "Using custom cluster params for label '%s'", label_name.c_str());

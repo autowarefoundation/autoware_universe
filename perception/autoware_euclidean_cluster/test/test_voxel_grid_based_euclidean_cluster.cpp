@@ -147,13 +147,14 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase1)
   float voxel_leaf_size = 0.3;
   int min_points_per_voxel = 1;
   int min_points_per_cluster = 1;
-  int point_capping_voxel_threshold = 150;
-  int max_points_per_voxel_in_large_cluster = 10;
+  int large_cluster_voxel_count_threshold = 150;
+  int large_cluster_max_points_per_voxel = 10;
   int max_voxels_per_cluster = 500;
   bool use_height = false;
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
-    point_capping_voxel_threshold, max_points_per_voxel_in_large_cluster, max_voxels_per_cluster);
+    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+    max_voxels_per_cluster);
   if (cluster_->cluster(pointcloud_msg, output)) {
     std::cout << "cluster success" << std::endl;
   } else {
@@ -183,13 +184,14 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase2)
   float voxel_leaf_size = 0.3;
   int min_points_per_voxel = 1;
   int min_points_per_cluster = 2;
-  int point_capping_voxel_threshold = 150;
-  int max_points_per_voxel_in_large_cluster = 10;
+  int large_cluster_voxel_count_threshold = 150;
+  int large_cluster_max_points_per_voxel = 10;
   int max_voxels_per_cluster = 500;
   bool use_height = false;
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
-    point_capping_voxel_threshold, max_points_per_voxel_in_large_cluster, max_voxels_per_cluster);
+    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+    max_voxels_per_cluster);
   if (cluster_->cluster(pointcloud_msg, output)) {
     std::cout << "cluster success" << std::endl;
   } else {
@@ -216,14 +218,15 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase3)
   float voxel_leaf_size = 0.1;
   int min_points_per_voxel = 1;
   int min_points_per_cluster = 1;
-  int point_capping_voxel_threshold = 150;  // disable per-voxel point capping
-  int max_points_per_voxel_in_large_cluster = 10;
+  int large_cluster_voxel_count_threshold = 150;  // disable per-voxel point capping
+  int large_cluster_max_points_per_voxel = 10;
   int max_voxels_per_cluster =
     8;  // voxel num is 0.3*0.3/0.1^2 = 9, so the single 9-voxel cluster is split into pieces <= 8
   bool use_height = false;
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
-    point_capping_voxel_threshold, max_points_per_voxel_in_large_cluster, max_voxels_per_cluster);
+    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+    max_voxels_per_cluster);
   EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
   std::cout << "number of output clusters " << output.feature_objects.size() << std::endl;
 
@@ -253,13 +256,14 @@ TEST(VoxelGridBasedEuclideanClusterTest, EmptyPointCloud)
   float voxel_leaf_size = 0.3;
   int min_points_per_voxel = 1;
   int min_points_per_cluster = 1;
-  int point_capping_voxel_threshold = 150;
-  int max_points_per_voxel_in_large_cluster = 10;
+  int large_cluster_voxel_count_threshold = 150;
+  int large_cluster_max_points_per_voxel = 10;
   int max_voxels_per_cluster = 500;
   bool use_height = false;
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
-    point_capping_voxel_threshold, max_points_per_voxel_in_large_cluster, max_voxels_per_cluster);
+    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+    max_voxels_per_cluster);
 
   // Should not crash and should return empty output
   EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
@@ -285,13 +289,14 @@ TEST(VoxelGridBasedEuclideanClusterTest, SplitRespectsBoundAndConservesPoints)
   float tolerance = 0.7;
   int min_points_per_voxel = 1;
   int min_points_per_cluster = 1;
-  int point_capping_voxel_threshold = 100000;  // disable per-voxel point capping
-  int max_points_per_voxel_in_large_cluster = 10;
+  int large_cluster_voxel_count_threshold = 100000;  // disable per-voxel point capping
+  int large_cluster_max_points_per_voxel = 10;
   int max_voxels_per_cluster = 16;  // split bound in voxels
   bool use_height = false;
   auto cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
-    point_capping_voxel_threshold, max_points_per_voxel_in_large_cluster, max_voxels_per_cluster);
+    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+    max_voxels_per_cluster);
   EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
 
   // 100 voxels with a bound of 16 must produce several sub-clusters.
@@ -327,13 +332,14 @@ TEST(VoxelGridBasedEuclideanClusterTest, SplitsAlongPrincipalAxis)
   float tolerance = 0.7;
   int min_points_per_voxel = 1;
   int min_points_per_cluster = 1;
-  int point_capping_voxel_threshold = 100000;
-  int max_points_per_voxel_in_large_cluster = 10;
+  int large_cluster_voxel_count_threshold = 100000;
+  int large_cluster_max_points_per_voxel = 10;
   int max_voxels_per_cluster = 20;  // 80 voxels -> several pieces
   bool use_height = false;
   auto cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
-    point_capping_voxel_threshold, max_points_per_voxel_in_large_cluster, max_voxels_per_cluster);
+    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+    max_voxels_per_cluster);
   EXPECT_TRUE(cluster_->cluster(pointcloud_msg, output));
   EXPECT_GT(output.feature_objects.size(), 1u);
 

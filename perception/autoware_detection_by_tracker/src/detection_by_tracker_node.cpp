@@ -284,7 +284,7 @@ float DetectionByTracker::optimizeUnderSegmentedObject(
   float voxel_size = initial_voxel_size;
   // set clustering parameters to max values to keep the original behavior here
   constexpr int min_voxel_cluster_size_for_filtering = std::numeric_limits<int>::max();
-  constexpr int max_points_per_voxel_in_large_cluster = std::numeric_limits<int>::max();
+  constexpr int large_cluster_max_points_per_voxel = std::numeric_limits<int>::max();
   constexpr int max_voxel_cluster_for_output = 10000;
 
   const auto & label = target_object.classification.front().label;
@@ -292,7 +292,7 @@ float DetectionByTracker::optimizeUnderSegmentedObject(
   // initialize clustering parameters
   autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster cluster(
     false, 4, initial_cluster_range, initial_voxel_size, 0, min_voxel_cluster_size_for_filtering,
-    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
+    large_cluster_max_points_per_voxel, max_voxel_cluster_for_output);
 
   // convert to pcl
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cluster(new pcl::PointCloud<pcl::PointXYZ>);
