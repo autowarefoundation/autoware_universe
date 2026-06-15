@@ -133,6 +133,9 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   if(BUILD_TESTING)
+    find_package(ament_lint_auto REQUIRED)
+    ament_lint_auto_find_test_dependencies()
+
     find_package(ament_cmake_gtest REQUIRED)
 
     ament_add_gtest(serialized_pooling_metadata_test
@@ -148,6 +151,21 @@ if(TRT_AVAIL AND CUDA_AVAIL)
         ${CUDA_INCLUDE_DIRS}
       )
     endif()
+
+    add_executable(test_preprocess_kernel
+      test/test_preprocess_kernel.cpp
+    )
+    target_link_libraries(test_preprocess_kernel
+      ${PROJECT_NAME}_cuda_lib
+      ${CUDA_LIBRARIES}
+      gtest
+      gtest_main
+    )
+    ament_add_test(test_preprocess_kernel
+      GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+      COMMAND "$<TARGET_FILE:test_preprocess_kernel>"
+    )
+
   endif()
 
   ament_auto_package(
