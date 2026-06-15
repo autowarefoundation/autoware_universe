@@ -100,7 +100,7 @@ private:
     cloud_sub_;
   std::vector<image_transport::Subscriber> image_subs_;
   std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::ConstSharedPtr> camera_info_subs_;
-  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) objects_pub_{nullptr};
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) objects_pub_ { nullptr };
   // unique_ptr to avoid copying the actual camera data in memory since there's gpu buffer in the
   // camera data
   std::vector<std::unique_ptr<CameraData>> camera_data_ptrs_;
