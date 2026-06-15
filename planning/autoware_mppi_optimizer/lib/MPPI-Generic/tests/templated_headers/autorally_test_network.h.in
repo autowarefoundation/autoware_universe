@@ -1,0 +1,19 @@
+#ifndef TESTS_COST_FUNCTIONS_AUTORALLY_TEST_NETWORK_H_
+#define TESTS_COST_FUNCTIONS_AUTORALLY_TEST_NETWORK_H_
+
+#include <string>
+
+namespace mppi {
+namespace tests {
+  const std::string test_load_nn_file = "@TEST_NETWORK_FOLDER@/neuralNetLoadTest.npz";
+  const std::string test_compute_nn_file = "@TEST_NETWORK_FOLDER@/neuralNetComputeTest.npz";
+  const std::string old_autorally_network_file = "@PROJECT_SOURCE_DIR@/resources/autorally_nnet_09_12_2018.npz";
+  // const std::string autorally_lstm_network_file = "@PROJECT_SOURCE_DIR@/resources/integrator_FNN_LSTM_25_step_10_pre_no_out_20_1.npz";
+  // const std::string autorally_lstm_network_file = "@PROJECT_SOURCE_DIR@/resources/bogdan.npz";
+  const std::string autorally_lstm_network_file = "@PROJECT_SOURCE_DIR@/resources/lstm.npz";
+  const std::string autorally_hidden_network_file = "@PROJECT_SOURCE_DIR@/resources/hidden_init.npz";
+  const std::string autorally_cell_network_file = "@PROJECT_SOURCE_DIR@/resources/cell_init.npz";
+  const std::string autorally_output_network_file = "@PROJECT_SOURCE_DIR@/resources/output.npz";
+}
+}
+#endif // TESTS_COST_FUNCTIONS_AUTORALLY_TEST_NETWORK_H_

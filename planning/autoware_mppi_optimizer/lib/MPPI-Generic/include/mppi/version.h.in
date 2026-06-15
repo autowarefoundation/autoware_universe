@@ -1,0 +1,15 @@
+/**
+ * @file version.h
+ * @brief Templated File for MPPI-Generic Version
+ * @author Bogdan Vlahov
+ * @version 0.0.1
+ * @date 2026-04-14
+ */
+#pragma once
+
+#define MPPI_GENERIC_VERSION @PROJECT_VERSION@
+#define MPPI_GENERIC_VERSION_STRING "@PROJECT_VERSION@"
+
+#define MPPI_GENERIC_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define MPPI_GENERIC_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define MPPI_GENERIC_VERSION_PATCH @PROJECT_VERSION_PATCH@

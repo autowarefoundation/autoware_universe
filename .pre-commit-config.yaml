@@ -2,6 +2,8 @@
 # https://github.com/autowarefoundation/sync-file-templates
 # To make changes, update the source repository and follow the guidelines in its README.
 
+# Vendored MPPI-Generic under planning/autoware_mppi_optimizer/lib/ is excluded from lint hooks.
+
 # https://pre-commit.ci/#configuration
 ci:
   autofix_commit_msg: "style(pre-commit): autofix"
@@ -18,28 +20,35 @@ repos:
       - id: check-xml
       - id: check-yaml
         args: [--unsafe]
+        exclude: ^planning/autoware_mppi_optimizer/lib/
       - id: detect-private-key
       - id: end-of-file-fixer
+        exclude: ^planning/autoware_mppi_optimizer/lib/
       - id: mixed-line-ending
+        exclude: ^planning/autoware_mppi_optimizer/lib/
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
+        exclude: ^planning/autoware_mppi_optimizer/lib/
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.47.0
     hooks:
       - id: markdownlint
         args: [-c, .markdownlint.yaml, --fix]
+        exclude: ^planning/autoware_mppi_optimizer/lib/
 
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         args: [--no-error-on-unmatched-pattern]
+        exclude: ^planning/autoware_mppi_optimizer/lib/
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.38.0
     hooks:
       - id: yamllint
+        exclude: ^planning/autoware_mppi_optimizer/lib/
 
   - repo: https://github.com/autowarefoundation/autoware-guideline-check
     rev: 0.2.0
@@ -50,47 +59,54 @@ repos:
     rev: v0.10.2
     hooks:
       - id: flake8-ros
+        exclude: ^planning/autoware_mppi_optimizer/lib/
       - id: prettier-xacro
       - id: prettier-launch-xml
       - id: prettier-package-xml
       - id: ros-include-guard
+        exclude: ^planning/autoware_mppi_optimizer/lib/
       - id: sort-package-xml
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
+        exclude: ^planning/autoware_mppi_optimizer/lib/
 
   - repo: https://github.com/scop/pre-commit-shfmt
     rev: v3.12.0-2
     hooks:
       - id: shfmt
         args: [-w, -s, -i=4]
+        exclude: ^planning/autoware_mppi_optimizer/lib/
 
   - repo: https://github.com/pycqa/isort
     rev: 7.0.0
     hooks:
       - id: isort
         args: [--profile=black, --line-length=100]
+        exclude: ^planning/autoware_mppi_optimizer/lib/
 
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 26.1.0
     hooks:
       - id: black
         args: [--line-length=100]
+        exclude: ^planning/autoware_mppi_optimizer/lib/
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v21.1.8
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]
+        exclude: ^planning/autoware_mppi_optimizer/lib/
 
   - repo: https://github.com/cpplint/cpplint
     rev: 2.0.2
     hooks:
       - id: cpplint
         args: [--quiet]
-        exclude: .cu
+        exclude: (^planning/autoware_mppi_optimizer/lib/|\.cu$)
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.36.2

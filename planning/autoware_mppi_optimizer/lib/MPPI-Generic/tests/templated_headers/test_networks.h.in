@@ -1,0 +1,12 @@
+#ifndef TESTS_COST_FUNCTIONS_AUTORALLY_TEST_NETWORK_H_
+#define TESTS_COST_FUNCTIONS_AUTORALLY_TEST_NETWORK_H_
+
+#include <string>
+
+namespace mppi {
+namespace tests {
+  const std::string test_load_nn_file = "@TEST_NETWORK_FOLDER@/neuralNetLoadTest.npz";
+  const std::string test_lstm_lstm = "@PROJECT_SOURCE_DIR@/resources/lstm_lstm_test.npz";
+}
+}
+#endif // TESTS_COST_FUNCTIONS_AUTORALLY_TEST_NETWORK_H_

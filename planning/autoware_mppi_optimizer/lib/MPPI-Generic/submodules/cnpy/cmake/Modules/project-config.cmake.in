@@ -1,0 +1,16 @@
+# - Config file for the FooBar package
+# It defines the following variables
+#  CNPY_INCLUDE_DIRS - include directories for FooBar
+#  CNPY_LIBRARIES    - libraries to link against
+
+@PACKAGE_INIT@
+
+set_and_check(CNPY_INCLUDE_DIR "@PACKAGE_TMP_INCLUDE_INSTALL_DIR@")
+
+if(NOT TARGET @PROJECT_NAME@)
+  include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@-targets.cmake")
+endif()
+
+set(CNPY_INCLUDE_DIRS ${CNPY_INCLUDE_DIR})
+
+set(CNPY_LIBRARIES "@LIBRARY_NAME@")

@@ -1,0 +1,20 @@
+#ifndef TESTS_COST_FUNCTIONS_AUTORALLY_TEST_NETWORK_H_
+#define TESTS_COST_FUNCTIONS_AUTORALLY_TEST_NETWORK_H_
+
+#include <string>
+
+namespace mppi {
+namespace tests {
+  //const std::string steering_lstm = "@PROJECT_SOURCE_DIR@/resources/lstm_lstm_steering.npz";
+  const std::string steering_lstm = "@PROJECT_SOURCE_DIR@/resources/lstm_lstm_steering_accel.npz";
+  const std::string brake_delay_lstm = "@PROJECT_SOURCE_DIR@/resources/lstm_lstm_brake_delay.npz";
+  const std::string ackerman_lstm = "@PROJECT_SOURCE_DIR@/resources/lstm_lstm_ackerman.npz";
+  const std::string ackerman_test = "@PROJECT_SOURCE_DIR@/resources/ackerman_test.npz";
+  const std::string bicycle_slip_hybrid_test = "@PROJECT_SOURCE_DIR@/resources/bicycle_slip_hybrid_test.npz";
+  const std::string bicycle_slip_hybrid_true = "@PROJECT_SOURCE_DIR@/resources/bicycle_slip_hybrid.npz";
+  const std::string bicycle_slip_kinematic_test = "@PROJECT_SOURCE_DIR@/resources/bicycle_slip_kinematic_test.npz";
+  const std::string bicycle_slip_kinematic_true = "@PROJECT_SOURCE_DIR@/resources/lstm_lstm_bicycle_slip_kinematic.npz";
+  const std::string racer_dubins_elevation_uncertainty_test = "@PROJECT_SOURCE_DIR@/resources/network_rde_test.npz";
+}
+}
+#endif // TESTS_COST_FUNCTIONS_AUTORALLY_TEST_NETWORK_H_
