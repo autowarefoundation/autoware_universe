@@ -27,6 +27,14 @@
 #include <vector>
 
 // Configuration creation functions
+autoware::multi_object_tracker::TrackerConfigs createTrackerConfigs()
+{
+  autoware::multi_object_tracker::TrackerConfigs config;
+  config.polygon_tracker.enable_velocity_estimation = false;
+  config.polygon_tracker.enable_motion_output = false;
+  return config;
+}
+
 autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfig()
 {
   autoware::multi_object_tracker::TrackerCreationConfig config;
@@ -43,9 +51,6 @@ autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfi
     config.setCreation(shape_type, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
     config.setCreation(shape_type, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
   }
-
-  config.enable_unknown_object_velocity_estimation = false;
-  config.enable_unknown_object_motion_output = false;
 
   return config;
 }

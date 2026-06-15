@@ -238,10 +238,13 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
        params_.tracker_overlap_manager_config.pruning_distance_thresholds) {
     params_.tracker_overlap_manager_config.pruning_distance_thresholds_sq[label] = dist * dist;
   }
-  params_.creation_config.enable_unknown_object_velocity_estimation =
-    declare_parameter<bool>("enable_unknown_object_velocity_estimation");
-  params_.creation_config.enable_unknown_object_motion_output =
-    declare_parameter<bool>("enable_unknown_object_motion_output");
+  // Per-tracker-type configuration (tracker_configs.<tracker>.<member>)
+  params_.tracker_configs.polygon_tracker.enable_velocity_estimation =
+    declare_parameter<bool>("tracker_configs.polygon_tracker.enable_velocity_estimation");
+  params_.tracker_configs.polygon_tracker.enable_motion_output =
+    declare_parameter<bool>("tracker_configs.polygon_tracker.enable_motion_output");
+  params_.tracker_configs.static_tracker.convert_polygon_to_bbox =
+    declare_parameter<bool>("tracker_configs.static_tracker.convert_polygon_to_bbox");
 
   // Set the unknown-unknown association GIoU threshold
   params_.association_config.unknown_association_giou_threshold =

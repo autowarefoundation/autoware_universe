@@ -67,12 +67,27 @@ using AssociationMap = std::unordered_map<ShapeLabelKey, AssociationProfileMap, 
 using ShapeLabelToTrackerTypeMap =
   std::unordered_map<ShapeLabelKey, types::TrackerType, ShapeLabelKeyHash>;
 
+//// Per-tracker-type configuration (parallels tracker_profiles: keyed by tracker type)
+struct PolygonTrackerConfig
+{
+  bool enable_velocity_estimation{true};
+  bool enable_motion_output{false};
+};
+
+struct StaticTrackerConfig
+{
+  bool convert_polygon_to_bbox{true};
+};
+
+struct TrackerConfigs
+{
+  PolygonTrackerConfig polygon_tracker;
+  StaticTrackerConfig static_tracker;
+};
+
 //// Tracker creation (spawning, type mapping)
 struct TrackerCreationConfig
 {
-  bool enable_unknown_object_velocity_estimation{false};
-  bool enable_unknown_object_motion_output{false};
-
   ShapeLabelToTrackerTypeMap shape_tracker_map;
   std::unordered_set<ShapeLabelKey, ShapeLabelKeyHash> explicit_null_combos;
 

@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_
 
+#include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
@@ -47,7 +48,7 @@ private:
 public:
   PolygonTracker(
     const rclcpp::Time & time, const types::DynamicObject & object,
-    const bool enable_velocity_estimation, const bool enable_motion_output);
+    const PolygonTrackerConfig & config);
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(

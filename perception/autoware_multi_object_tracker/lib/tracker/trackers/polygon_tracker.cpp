@@ -28,11 +28,11 @@ namespace autoware::multi_object_tracker
 
 PolygonTracker::PolygonTracker(
   const rclcpp::Time & time, const types::DynamicObject & object,
-  const bool enable_velocity_estimation, const bool enable_motion_output)
+  const PolygonTrackerConfig & config)
 : Tracker(time, object),
   logger_(rclcpp::get_logger("PolygonTracker")),
-  enable_velocity_estimation_(enable_velocity_estimation),
-  enable_motion_output_(enable_motion_output)
+  enable_velocity_estimation_(config.enable_velocity_estimation),
+  enable_motion_output_(config.enable_motion_output)
 {
   tracker_type_ = TrackerType::POLYGON;
   shape_model_.init(object);
