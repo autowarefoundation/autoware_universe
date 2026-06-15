@@ -95,8 +95,8 @@ Parameters are loaded from [config/label_based_euclidean_cluster.param.yaml](../
 | Name                                  | Type  | Description                                                                                 |
 | ------------------------------------- | ----- | ------------------------------------------------------------------------------------------- |
 | `use_height`                          | bool  | Use the `z` coordinate during clustering.                                                   |
-| `tolerance`                           | float | Euclidean clustering tolerance.                                                             |
-| `voxel_leaf_size`                     | float | Voxel size used by the internal voxel-grid-based cluster.                                   |
+| `tolerance_m`                         | float | Euclidean clustering tolerance.                                                             |
+| `voxel_leaf_size_m`                   | float | Voxel size used by the internal voxel-grid-based cluster.                                   |
 | `min_points_per_cluster`              | int   | Minimum number of points required to keep a cluster.                                        |
 | `min_points_per_voxel`                | int   | Minimum number of points required to keep a voxel centroid.                                 |
 | `large_cluster_voxel_count_threshold` | int   | Voxel count above which a cluster is "large" and has its points capped per voxel.           |

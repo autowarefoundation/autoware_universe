@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
-    tolerance: 0.7
-    voxel_leaf_size: 0.3
+    tolerance_m: 0.7
+    voxel_leaf_size_m: 0.3
     min_points_per_voxel: 1
     min_points_per_cluster: 10
     max_voxels_per_cluster: 800  # split bound: clusters above this voxel count are split into smaller sections (not dropped)

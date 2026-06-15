@@ -8,9 +8,9 @@
       "description": "Per-label overrides for VoxelGridBasedEuclideanCluster. Omitted keys fall back to the global default.",
       "properties": {
         "use_height": { "type": "boolean" },
-        "tolerance": { "type": "number" },
+        "tolerance_m": { "type": "number" },
         "min_points_per_cluster": { "type": "integer" },
-        "voxel_leaf_size": { "type": "number" },
+        "voxel_leaf_size_m": { "type": "number" },
         "min_points_per_voxel": { "type": "integer" },
         "large_cluster_voxel_count_threshold": { "type": "integer" },
         "large_cluster_max_points_per_voxel": { "type": "integer" },
@@ -46,7 +46,7 @@
           "description": "Use point.z for clustering.",
           "default": false
         },
-        "tolerance": {
+        "tolerance_m": {
           "type": "number",
           "description": "The spatial cluster tolerance as a measure in the L2 Euclidean space.",
           "default": 0.7
@@ -56,7 +56,7 @@
           "description": "The minimum number of points that a cluster needs to contain in order to be considered valid.",
           "default": 10
         },
-        "voxel_leaf_size": {
+        "voxel_leaf_size_m": {
           "type": "number",
           "description": "The voxel leaf size of x and y.",
           "default": 0.2
@@ -139,31 +139,31 @@
                 "minItems": 2,
                 "description": "Label names in this confusable group."
               },
-              "cross_label_tolerance": {
+              "cross_label_tolerance_m": {
                 "type": "number",
-                "description": "Maximum true minimum point-to-point XY gap in meters between clusters of different labels to trigger a merge."
+                "description": "Maximum true minimum point-to-point XY gap between clusters of different labels to trigger a merge."
               },
-              "max_merged_length": {
+              "max_merged_length_m": {
                 "type": "number",
-                "description": "Oriented length cap in meters for a merged component; unions exceeding it are refused, bounding chaining.",
+                "description": "Oriented length cap for a merged component; unions exceeding it are refused, bounding chaining.",
                 "default": 25.0
               },
-              "max_merged_width": {
+              "max_merged_width_m": {
                 "type": "number",
-                "description": "Oriented width cap in meters for a merged component.",
+                "description": "Oriented width cap for a merged component.",
                 "default": 3.5
               }
             },
-            "required": ["labels", "cross_label_tolerance"],
+            "required": ["labels", "cross_label_tolerance_m"],
             "additionalProperties": false
           }
         }
       },
       "required": [
         "use_height",
-        "tolerance",
+        "tolerance_m",
         "min_points_per_cluster",
-        "voxel_leaf_size",
+        "voxel_leaf_size_m",
         "min_points_per_voxel",
         "large_cluster_voxel_count_threshold",
         "large_cluster_max_points_per_voxel",

@@ -6,14 +6,14 @@
     "voxel_grid_based_euclidean_cluster": {
       "type": "object",
       "properties": {
-        "tolerance": {
+        "tolerance_m": {
           "type": "number",
-          "description": "Euclidean cluster tolerance [m]. Two occupied voxels are merged into the same cluster when their 2D (x-y) centroid distance is within this value (applied transitively). Clustering is performed on voxel centroids with z flattened to 0.",
+          "description": "Euclidean cluster tolerance. Two occupied voxels are merged into the same cluster when their 2D (x-y) centroid distance is within this value (applied transitively). Clustering is performed on voxel centroids with z flattened to 0.",
           "default": 0.7
         },
-        "voxel_leaf_size": {
+        "voxel_leaf_size_m": {
           "type": "number",
-          "description": "Voxel leaf size in x and y [m]. The z leaf is effectively infinite, so the grid is 2D and all heights collapse into a single x-y cell. This value bounds the footprint resolution used for clustering and splitting.",
+          "description": "Voxel leaf size in x and y. The z leaf is effectively infinite, so the grid is 2D and all heights collapse into a single x-y cell. This value bounds the footprint resolution used for clustering and splitting.",
           "default": 0.3
         },
         "min_points_per_voxel": {
@@ -48,8 +48,8 @@
         }
       },
       "required": [
-        "tolerance",
-        "voxel_leaf_size",
+        "tolerance_m",
+        "voxel_leaf_size_m",
         "min_points_per_voxel",
         "min_points_per_cluster",
         "max_voxels_per_cluster",

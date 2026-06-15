@@ -580,15 +580,15 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
     auto & group = groups_map[group_name];
 
     if (
-      key == "cross_label_tolerance" &&
+      key == "cross_label_tolerance_m" &&
       param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
       group.cross_label_tolerance = static_cast<float>(param.as_double());
       has_tolerance[group_name] = true;
     } else if (
-      key == "max_merged_length" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
+      key == "max_merged_length_m" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
       group.max_merged_length = static_cast<float>(param.as_double());
     } else if (
-      key == "max_merged_width" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
+      key == "max_merged_width_m" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
       group.max_merged_width = static_cast<float>(param.as_double());
     } else if (
       key == "labels" && param.get_type() == rclcpp::ParameterType::PARAMETER_STRING_ARRAY) {
@@ -629,10 +629,10 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
     autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_height");
   const auto min_points_per_cluster = static_cast<int>(
     autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_points_per_cluster"));
-  const auto tolerance =
-    static_cast<float>(autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "tolerance"));
+  const auto tolerance = static_cast<float>(
+    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "tolerance_m"));
   const auto voxel_leaf_size = static_cast<float>(
-    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "voxel_leaf_size"));
+    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "voxel_leaf_size_m"));
   const auto min_points_per_voxel = static_cast<int>(
     autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_points_per_voxel"));
   const auto large_cluster_voxel_count_threshold =
@@ -670,8 +670,8 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       auto has = [&](const std::string & key) { return this->has_parameter(prefix + key); };
       // Skip labels with no overrides at all
       if (
-        !has("tolerance") && !has("min_points_per_cluster") && !has("use_height") &&
-        !has("voxel_leaf_size") && !has("min_points_per_voxel") &&
+        !has("tolerance_m") && !has("min_points_per_cluster") && !has("use_height") &&
+        !has("voxel_leaf_size_m") && !has("min_points_per_voxel") &&
         !has("large_cluster_voxel_count_threshold") && !has("large_cluster_max_points_per_voxel") &&
         !has("max_voxels_per_cluster")) {
         continue;
@@ -690,7 +690,7 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       label_clusterers_[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
         get_bool("use_height", use_height),
         get_int("min_points_per_cluster", min_points_per_cluster),
-        get_float("tolerance", tolerance), get_float("voxel_leaf_size", voxel_leaf_size),
+        get_float("tolerance_m", tolerance), get_float("voxel_leaf_size_m", voxel_leaf_size),
         get_int("min_points_per_voxel", min_points_per_voxel),
         get_int("large_cluster_voxel_count_threshold", large_cluster_voxel_count_threshold),
         get_int("large_cluster_max_points_per_voxel", large_cluster_max_points_per_voxel),

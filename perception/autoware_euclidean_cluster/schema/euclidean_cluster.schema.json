@@ -16,7 +16,7 @@
           "description": "The minimum number of points that a cluster needs to contain in order to be considered valid.",
           "default": 10
         },
-        "tolerance": {
+        "tolerance_m": {
           "type": "number",
           "description": "The spatial cluster tolerance as a measure in the L2 Euclidean space.",
           "default": 0.7
@@ -27,7 +27,7 @@
           "default": false
         }
       },
-      "required": ["max_cluster_size", "min_points_per_cluster", "tolerance", "use_height"],
+      "required": ["max_cluster_size", "min_points_per_cluster", "tolerance_m", "use_height"],
       "additionalProperties": false
     }
   },
