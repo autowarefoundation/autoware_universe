@@ -423,7 +423,7 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
         return has(key) ? static_cast<float>(this->get_parameter(prefix + key).as_double()) : def;
       };
 
-      label_clusterers_[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
+      label_cluster_executers_[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
         get_bool("use_height", use_height),
         get_int("min_points_per_cluster", min_points_per_cluster),
         get_float("tolerance_m", tolerance), get_float("voxel_leaf_size_m", voxel_leaf_size),
@@ -476,11 +476,11 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   }
 }
 
-EuclideanClusterInterface & LabelBasedEuclideanClusterNode::get_clusterer(
+EuclideanClusterInterface & LabelBasedEuclideanClusterNode::get_cluster_executer(
   const std::uint8_t label) const
 {
-  const auto it = label_clusterers_.find(label);
-  return (it != label_clusterers_.end()) ? *it->second : *default_cluster_;
+  const auto it = label_cluster_executers_.find(label);
+  return (it != label_cluster_executers_.end()) ? *it->second : *default_cluster_;
 }
 
 bool LabelBasedEuclideanClusterNode::update_target_label_map(
@@ -540,7 +540,7 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
     }
 
     std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters;
-    get_clusterer(label).cluster(label_cloud, clusters);
+    get_cluster_executer(label).cluster(label_cloud, clusters);
 
     const float prob = average_probability(semantic_points);
     for (auto & cluster : clusters) {

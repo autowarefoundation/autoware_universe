@@ -150,12 +150,12 @@ std::vector<ClusterEntry> merge_confusable_clusters(
   // Per-cluster broad-phase AABBs and bounding circles, computed once. The flattened (XY) clouds
   // and their KD-trees back the narrow phase and are built lazily, then reused across every
   // candidate pair a cluster takes part in — instead of rebuilt per pair as before.
-  std::vector<Aabb2d> aabbs;
+  std::vector<Aabb2d> bounding_boxes;
   std::vector<BoundingCircle> circles;
-  aabbs.reserve(n);
+  bounding_boxes.reserve(n);
   circles.reserve(n);
   for (const auto & e : entries) {
-    aabbs.push_back(compute_aabb2d(e.cloud));
+    bounding_boxes.push_back(compute_aabb2d(e.cloud));
     circles.push_back(compute_bounding_circle(e.cloud));
   }
 
@@ -190,7 +190,7 @@ std::vector<ClusterEntry> merge_confusable_clusters(
         continue;
       }
       // Broad phase: AABB gap is a lower bound, so this prune never drops a true-adjacent pair.
-      if (aabb2d_gap(aabbs[i], aabbs[j]) >= group.cross_label_tolerance) {
+      if (aabb2d_gap(bounding_boxes[i], bounding_boxes[j]) >= group.cross_label_tolerance) {
         continue;
       }
       // Narrow phase: exact min point-to-point XY gap rejects the false positives AABB admits.
@@ -262,11 +262,11 @@ std::vector<ClusterEntry> merge_confusable_clusters(
     float weighted_prob = 0.0f;
     for (const int idx : indices) {
       const auto & e = entries[idx];
-      const auto npts = e.cloud.size();
+      const auto num_points = e.cloud.size();
       merged.cloud += e.cloud;
-      label_counts[e.label] += npts;
-      weighted_prob += e.prob * static_cast<float>(npts);
-      total_points += npts;
+      label_counts[e.label] += num_points;
+      weighted_prob += e.prob * static_cast<float>(num_points);
+      total_points += num_points;
     }
     merged.label = std::max_element(
                      label_counts.begin(), label_counts.end(),
