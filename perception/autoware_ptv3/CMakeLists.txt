@@ -152,19 +152,19 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       )
     endif()
 
-    add_executable(test_preprocess_kernel
+    ament_add_gtest(test_preprocess_kernel
       test/test_preprocess_kernel.cpp
     )
-    target_link_libraries(test_preprocess_kernel
-      ${PROJECT_NAME}_cuda_lib
-      ${CUDA_LIBRARIES}
-      gtest
-      gtest_main
-    )
-    ament_add_test(test_preprocess_kernel
-      GENERATE_RESULT_FOR_RETURN_CODE_ZERO
-      COMMAND "$<TARGET_FILE:test_preprocess_kernel>"
-    )
+    if(TARGET test_preprocess_kernel)
+      target_link_libraries(test_preprocess_kernel
+        CUDA::cudart
+        ${PROJECT_NAME}_cuda_lib
+      )
+      target_include_directories(test_preprocess_kernel PRIVATE
+        include
+        ${CUDA_INCLUDE_DIRS}
+      )
+    endif()
 
   endif()
 
