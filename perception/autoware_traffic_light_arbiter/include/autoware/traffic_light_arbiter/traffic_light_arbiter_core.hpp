@@ -47,10 +47,8 @@ public:
     SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
     double external_time_tolerance, double perception_time_tolerance);
 
-  // Load map-derived state from a parsed LaneletMap. Core extracts the
-  // regulatory-element IDs it needs (vehicle traffic lights and, when
-  // signal matching is enabled, pedestrian traffic lights) internally so
-  // callers don't have to know which subsets matter.
+  // Extracts and stores the regulatory-element IDs the Core needs from the map
+  // (vehicle traffic lights, plus pedestrian ones when signal matching is on).
   void set_map(const lanelet::LaneletMapConstPtr & map);
 
   struct ExpiredExternalSignal
@@ -59,42 +57,28 @@ public:
     double age;
   };
 
-  // Update perception buffer, then sweep external cache against msg.stamp
-  // using external_time_tolerance_. Returns expired entries for caller logging.
+  // Stores the latest perception msg, then evicts external cache entries that
+  // are stale relative to its stamp; returns the evicted entries for logging.
   std::vector<ExpiredExternalSignal> ingest_perception(const TrafficSignalArray & msg);
 
-  // Outcome of an external-msg ingest. `accepted == false` means the msg's
-  // stamp differed from current_time by more than external_delay_tolerance_
-  // and was rejected without touching internal state. When accepted,
-  // `expired` carries any cache entries that the bundled sweep evicted.
+  // Outcome of ingest_external: `accepted` is false when the msg's stamp was
+  // too far from current_time to use; `expired` lists cache entries the
+  // accepted ingest evicted, for caller logging.
   struct ExternalIngestResult
   {
     bool accepted;
     std::vector<ExpiredExternalSignal> expired;
   };
 
-  // Admission-control + update + sweep for an external msg:
-  //   1. Reject (return {false, {}}) when the msg arrival is too far from
-  //      current_time, using external_delay_tolerance_.
-  //   2. Otherwise update external cache entries with msg.stamp, sweep
-  //      external cache against current_time using external_delay_tolerance_,
-  //      and return expired entries.
-  // Perception staleness is evaluated non-destructively inside arbitrate()
-  // using perception_time_tolerance_; ingest_external no longer touches
-  // latest_perception_msg_.
+  // Rejects the msg when its stamp is too far from current_time; otherwise
+  // refreshes the external cache and returns any entries the sweep evicted.
   ExternalIngestResult ingest_external(
     const TrafficSignalArray & msg, const rclcpp::Time & current_time);
 
-  // Result of one arbitration cycle. arbitrate() returns the arbitrated signals
-  // by value in `output`; std::nullopt means no map has arrived yet, so the Node
-  // skips the publish. The arbiter intentionally does not stamp the output: stamp
-  // inheritance is an I/O concern owned by the Node (e.g. "publish carries the
-  // trigger msg's stamp"). The Node assigns `output->stamp` before publishing and
-  // compares its trigger stamp against `latest_input_time` for staleness logging.
-  //
-  // latest_input_time defaults to epoch on RCL_ROS_TIME so the Node can compare
-  // it against rclcpp::Time(msg->stamp) (also RCL_ROS_TIME) regardless of which
-  // arbitrate() branch was taken.
+  // Result of one arbitration cycle. `output` holds the arbitrated signals by
+  // value; std::nullopt means no map has arrived yet, so the Node skips the
+  // publish. The Core leaves output unstamped — the Node owns stamp inheritance
+  // and uses latest_input_time for staleness logging.
   struct ArbitrationResult
   {
     std::optional<TrafficSignalArray> output;  // stamp left default; Node fills it in.
@@ -104,11 +88,6 @@ public:
   ArbitrationResult arbitrate() const;
 
 private:
-  // One element paired with whether it came from the prioritized source.
-  // Accumulated per regulatory-element id while routing signals, then reduced
-  // to one element per shape by get_highest_confidence_elements().
-  using ElementAndPriority = std::pair<Element, bool>;
-
   // True when |current_time - msg_stamp| exceeds external_delay_tolerance_.
   // Used by ingest_external for admission control.
   bool is_external_outdated(
@@ -118,19 +97,6 @@ private:
   // from `reference_time` beyond `tolerance`, returning the removed entries.
   std::vector<ExpiredExternalSignal> sweep_expired_external_signals(
     const rclcpp::Time & reference_time, double tolerance);
-
-  // Routes one signal's elements into `signals_map` under its regulatory-element
-  // id, tagging each with `priority`. Ids absent from map_regulatory_elements_set_
-  // are recorded in `off_map_signal_ids` and dropped.
-  void route_signal(
-    const TrafficSignal & signal, bool priority,
-    std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> & signals_map,
-    std::vector<lanelet::Id> & off_map_signal_ids) const;
-
-  // Reduces the accumulated (element, priority) pairs for one regulatory element
-  // to a single element per shape, keeping the highest (priority, confidence).
-  static std::vector<Element> get_highest_confidence_elements(
-    const std::vector<ElementAndPriority> & elements_and_priority);
 
   SourcePriority source_priority_;
   bool enable_signal_matching_;
