@@ -86,6 +86,8 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
     declare_parameter<bool>("roi_overlay_segmentation_label.PEDESTRIAN");
   roi_overlay_semseg_labels_.ANIMAL =
     declare_parameter<bool>("roi_overlay_segmentation_label.ANIMAL");
+  roi_overlay_semseg_labels_.HAZARD =
+    declare_parameter<bool>("roi_overlay_segmentation_label.HAZARD");
 
   if (is_publish_color_mask_ && semseg_color_map_path.empty()) {
     std::stringstream error_msg;

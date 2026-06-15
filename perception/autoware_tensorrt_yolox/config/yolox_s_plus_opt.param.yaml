@@ -20,6 +20,7 @@
       BICYCLE : true
       PEDESTRIAN : true
       ANIMAL: true
+      HAZARD: true
 
     score_threshold: 0.35
     nms_threshold: 0.7
