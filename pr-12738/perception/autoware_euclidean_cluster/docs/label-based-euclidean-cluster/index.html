@@ -25,7 +25,7 @@
     
     
       
-        <title>Macro Rendering Error - Autoware Universe Documentation</title>
+        <title>Label based euclidean cluster - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#label_based_euclidean_cluster" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Macro Rendering Error
+              Label based euclidean cluster
             
           </span>
         </div>
@@ -7900,6 +7900,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Label based euclidean cluster
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -7907,7 +7925,7 @@
   <span class="md-ellipsis">
     
   
-    Macro Rendering Error
+    Label based euclidean cluster
   
 
     
@@ -7916,6 +7934,130 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs / Outputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs / Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#processing-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Processing Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#label-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Label Mapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shape-estimation-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape Estimation Behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-label-clustering-parameter-overrides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Label Clustering Parameter Overrides
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -23240,6 +23382,119 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs / Outputs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs / Outputs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#processing-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Processing Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#label-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Label Mapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shape-estimation-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape Estimation Behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#per-label-clustering-parameter-overrides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Label Clustering Parameter Overrides
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -23258,26 +23513,306 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>perception/autoware_euclidean_cluster/docs/label-based-euclidean-cluster.md</code></p>
-<p><em>KeyError</em>: 'description'</p>
-<p>```
-Traceback (most recent call last):
-  File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 703, in render
-    return md_template.render(**page_variables)
-  File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "<template>", line 94, in top-level template code
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
-    return format_json(data)
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
-    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 52, in extract_parameter_info
-    param["Description"] = v["description"]
-KeyError: 'description'</template></p>
-<p>```</p></div>
+<div><h1 id="label_based_euclidean_cluster">label_based_euclidean_cluster<a class="headerlink" href="#label_based_euclidean_cluster" title="Permanent link">#</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
+<p><code>label_based_euclidean_cluster</code> converts a semantically segmented pointcloud into <code>DetectedObjects</code>.
+It groups points by semantic class, clusters each label bucket independently, and estimates a shape for every resulting cluster.</p>
+<p>This node is intended for segmented pointcloud inputs that provide semantic labels as <code>class_id</code>, and optionally per-point confidence as <code>probability</code>.</p>
+<h2 id="inputs-outputs">Inputs / Outputs<a class="headerlink" href="#inputs-outputs" title="Permanent link">#</a></h2>
+<h3 id="input">Input<a class="headerlink" href="#input" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>input</code></td>
+<td><code>sensor_msgs::msg::PointCloud2</code></td>
+<td>segmented pointcloud with <code>x</code>, <code>y</code>, and <code>z</code></td>
+</tr>
+</tbody>
+</table>
+<p>Optional input fields used by the node:</p>
+<ul>
+<li><code>class_id</code> (<code>uint8</code>): semantic class index for each point.</li>
+<li><code>probability</code> (<code>float32</code>): semantic confidence for each point.</li>
+</ul>
+<h3 id="output">Output<a class="headerlink" href="#output" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>output</code></td>
+<td><code>autoware_perception_msgs::msg::DetectedObjects</code></td>
+<td>detected objects estimated per cluster</td>
+</tr>
+</tbody>
+</table>
+<p>The packaged launch file remaps these by default to the following topics:</p>
+<ul>
+<li><code>input</code> -&gt; <code>/perception/ptv3/segmented/pointcloud</code></li>
+<li><code>output</code> -&gt; <code>objects</code></li>
+</ul>
+<h2 id="processing-flow">Processing Flow<a class="headerlink" href="#processing-flow" title="Permanent link">#</a></h2>
+<ol>
+<li>Validate that the incoming pointcloud contains <code>x</code>, <code>y</code>, and <code>z</code>.</li>
+<li>Read the configured <code>class_names.*</code> mapping in YAML declaration order and treat that order as the incoming <code>class_id</code> index.</li>
+<li>Drop points whose mapped class is configured as <code>ignore</code>.</li>
+<li>If the pointcloud has a <code>probability</code> field, drop points with <code>probability &lt; min_probability</code>.</li>
+<li>Split the remaining points into buckets keyed by the mapped Autoware object label.</li>
+<li>Run <code>VoxelGridBasedEuclideanCluster</code> independently for each label bucket, using the per-label parameter overrides from <code>label_cluster_params.*</code> where configured and the global defaults otherwise.</li>
+<li>Merge over-segmented clusters across labels that belong to the same confusable label group (<code>confusable_label_groups.*</code>).</li>
+<li>Estimate a shape and pose for each cluster with <code>ShapeEstimator</code>.</li>
+<li>If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.</li>
+<li>Publish one <code>DetectedObject</code> per cluster.</li>
+</ol>
+<h2 id="label-mapping">Label Mapping<a class="headerlink" href="#label-mapping" title="Permanent link">#</a></h2>
+<p><code>class_names.&lt;original_class_name&gt;</code> maps each incoming semantic class to an Autoware object class.</p>
+<ul>
+<li>YAML declaration order defines the <code>class_id</code> expected in the input pointcloud.</li>
+<li>Entries mapped to <code>ignore</code> are skipped before clustering.</li>
+<li>Unsupported mapped labels are ignored with a warning.</li>
+</ul>
+<p>Supported mapped labels are:</p>
+<ul>
+<li><code>unknown</code></li>
+<li><code>car</code></li>
+<li><code>bus</code></li>
+<li><code>truck</code></li>
+<li><code>motorcycle</code></li>
+<li><code>bicycle</code></li>
+<li><code>pedestrian</code></li>
+<li><code>animal</code></li>
+<li><code>trailer</code></li>
+<li><code>hazard</code></li>
+<li><code>ignore</code></li>
+</ul>
+<p>If no supported non-ignored mapping remains after parsing <code>class_names.*</code>, the node throws during startup.</p>
+<h2 id="shape-estimation-behavior">Shape Estimation Behavior<a class="headerlink" href="#shape-estimation-behavior" title="Permanent link">#</a></h2>
+<p>After clustering, the node converts each cluster into a <code>DetectedObject</code>.</p>
+<ul>
+<li>The output classification label is the mapped object label for that bucket.</li>
+<li>The output existence probability is the average of the bucket point probabilities.</li>
+<li>Shape estimation is delegated to <code>autoware::shape_estimation::ShapeEstimator</code>.</li>
+<li><code>shape_policy=0</code> (<code>ALL_POLYGON</code>) estimates whole shapes as polygon.</li>
+<li><code>shape_policy=1</code> (<code>LABEL_DEPEND</code>) estimates shapes with the mapped object label.</li>
+</ul>
+<p>If the estimator does not return a usable shape:</p>
+<ul>
+<li><code>pedestrian</code> falls back to <code>CYLINDER</code></li>
+<li>all other labels fall back to <code>BOUNDING_BOX</code></li>
+</ul>
+<p>The fallback shape uses the cluster axis-aligned min/max extents, with each dimension clamped to at least <code>0.1</code> m.</p>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<p>Parameters are loaded from <a href="../config/label_based_euclidean_cluster.param.yaml">config/label_based_euclidean_cluster.param.yaml</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>use_height</td>
+<td>boolean</td>
+<td>Use point.z for clustering.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>tolerance_m</td>
+<td>float</td>
+<td>The spatial cluster tolerance as a measure in the L2 Euclidean space.</td>
+<td>0.7</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_points_per_cluster</td>
+<td>integer</td>
+<td>The minimum number of points that a cluster needs to contain in order to be considered valid.</td>
+<td>10</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>voxel_leaf_size_m</td>
+<td>float</td>
+<td>The voxel leaf size of x and y.</td>
+<td>0.2</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>min_points_per_voxel</td>
+<td>integer</td>
+<td>The minimum number of points required per voxel.</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>large_cluster_voxel_count_threshold</td>
+<td>integer</td>
+<td>The minimum voxel cluster size for a cluster to be checked for being a large cluster.</td>
+<td>10</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>large_cluster_max_points_per_voxel</td>
+<td>integer</td>
+<td>The maximum points per voxel allowed in large clusters.</td>
+<td>100</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>max_voxels_per_cluster</td>
+<td>integer</td>
+<td>Maximum number of voxels in a cluster when outputted.</td>
+<td>1000</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>min_probability</td>
+<td>float</td>
+<td>Minimum semantic probability required for a point to be used.</td>
+<td>0.3</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_shape_estimation_corrector</td>
+<td>boolean</td>
+<td>Enable the shape estimation corrector.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_shape_estimation_filter</td>
+<td>boolean</td>
+<td>Enable the shape estimation filter.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_boost_bbox_optimizer</td>
+<td>boolean</td>
+<td>Enable the boost bounding-box optimizer.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>shape_policy</td>
+<td>integer</td>
+<td>Shape estimation policy. 0: ALL_POLYGON, 1: LABEL_DEPEND.</td>
+<td>0</td>
+<td>[0, 1]</td>
+</tr>
+</tbody>
+</table>
+<h2 id="per-label-clustering-parameter-overrides">Per-Label Clustering Parameter Overrides<a class="headerlink" href="#per-label-clustering-parameter-overrides" title="Permanent link">#</a></h2>
+<p>The clustering parameters at the top level (<code>use_height</code>, <code>tolerance_m</code>, <code>voxel_leaf_size_m</code>,
+<code>min_points_per_voxel</code>, <code>min_points_per_cluster</code>, <code>large_cluster_voxel_count_threshold</code>,
+<code>large_cluster_max_points_per_voxel</code>, <code>max_voxels_per_cluster</code>) define a single global
+<code>VoxelGridBasedEuclideanCluster</code> that is used for every label bucket by default.</p>
+<p><code>label_cluster_params.&lt;label&gt;</code> lets each label run with its own tuned clustering instance instead.
+This is useful because the spatial density and size of objects differ by class: pedestrians and
+hazards need a tighter tolerance and finer voxels than cars or trucks.</p>
+<ul>
+<li><code>&lt;label&gt;</code> must be one of the supported Autoware object labels (<code>unknown</code>, <code>car</code>, <code>bus</code>, <code>truck</code>,
+  <code>trailer</code>, <code>motorcycle</code>, <code>bicycle</code>, <code>pedestrian</code>, <code>animal</code>, <code>hazard</code>).</li>
+<li>Each override block accepts the same keys as the global clustering parameters.</li>
+<li>Any key omitted inside an override block falls back to the corresponding global value, so a block
+  only needs to list the parameters that differ.</li>
+<li>A label with no override block (or an empty one) keeps using the global default cluster.</li>
+<li>When a label-specific cluster is created, the node logs <code>Using custom cluster params for label '&lt;label&gt;'</code> at startup.</li>
+</ul>
+<p>Example: give pedestrians a tighter tolerance and finer voxels while leaving everything else on the
+global defaults.</p>
+<p>```yaml
+tolerance_m: 0.65
+voxel_leaf_size_m: 0.2</p>
+<h1 id="other-global-defaults">... other global defaults ...<a class="headerlink" href="#other-global-defaults" title="Permanent link">#</a></h1>
+<p>label_cluster_params:
+  pedestrian:
+    tolerance_m: 0.3
+    voxel_leaf_size_m: 0.1
+    min_points_per_voxel: 1
+    min_points_per_cluster: 3
+    large_cluster_voxel_count_threshold: 5
+    large_cluster_max_points_per_voxel: 30
+    max_voxels_per_cluster: 200
+```</p>
+<h2 id="confusable-label-merge">Confusable-Label Merge<a class="headerlink" href="#confusable-label-merge" title="Permanent link">#</a></h2>
+<p>Because each label bucket is clustered independently, a single physical object whose points carry two
+semantically confusable labels (for example a truck and its trailer, where the segmentation model
+splits one vehicle across the <code>truck</code> and <code>trailer</code> classes) is split into separate clusters.
+<code>confusable_label_groups.*</code> performs an optional post-clustering merge that stitches such pieces back
+together.</p>
+<p>Each entry under <code>confusable_label_groups</code> is a user-named group:</p>
+<ul>
+<li><code>labels</code>: the list of labels (two or more) that may be merged with each other. Only clusters of
+  <strong>different</strong> labels within the same group are considered for merging; clusters that share a label
+  are never merged here.</li>
+<li><code>cross_label_tolerance_m</code>: the maximum point-to-point XY gap between two clusters for them to be
+  joined. The gap is the true minimum distance between the closest points of the two clusters
+  (measured in the XY plane, height is ignored).</li>
+<li><code>max_merged_size_m</code> (default <code>25.0</code>): an upper bound on the diameter of a merged component. A union
+  that would produce a bounding circle larger than this is refused, so a chain of nearby clusters
+  cannot collapse a dense scene into one oversized blob.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>A label may appear in at most one group. If it is listed in several, the first group wins and a
+  warning is logged.</li>
+<li>Labels not listed in any group are passed through unchanged.</li>
+</ul>
+<p>Example: merge <code>truck</code> and <code>trailer</code> fragments that are within 0.5 m of each other, capping the
+merged object at a 25 m diameter.</p>
+<p><code>yaml
+confusable_label_groups:
+  truck_trailer:
+    labels: ["truck", "trailer"]
+    cross_label_tolerance_m: 0.5
+    max_merged_size_m: 25.0</code></p>
+<h2 id="default-configuration-notes">Default Configuration Notes<a class="headerlink" href="#default-configuration-notes" title="Permanent link">#</a></h2>
+<p>The default parameter file keeps common road users and filters out map/background classes.</p>
+<ul>
+<li><code>car</code>, <code>bus</code>, <code>truck</code>, <code>motorcycle</code>, <code>bicycle</code>, and <code>pedestrian</code> are preserved directly.</li>
+<li><code>tractor_unit</code> and <code>semi_trailer</code> are mapped to <code>trailer</code>.</li>
+<li>several small or ambiguous classes such as <code>train</code>, <code>pushable_pullable</code>, <code>traffic_cone</code>, and <code>debris</code> are mapped to <code>unknown</code>.</li>
+<li>ground and background classes such as <code>drivable_surface</code>, <code>vegetation</code>, and <code>other_stuff</code> are mapped to <code>ignore</code>.</li>
+</ul>
+<h2 id="assumptions-known-limits">Assumptions / Known Limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
+<ul>
+<li>The node assumes the incoming pointcloud already represents semantically segmented points.</li>
+<li><code>class_id</code> is interpreted only by order in <code>class_names.*</code>; changing YAML order changes the expected semantic index mapping.</li>
+<li>When the input has no <code>class_id</code> field, all points are clustered together as <code>UNKNOWN</code>.</li>
+<li>When the input has no <code>probability</code> field, every point is treated as confidence <code>1.0</code>.</li>
+<li>The current existence probability is averaged per label bucket before clustering, not per individual cluster.</li>
+<li>Clustering is spatial only; there is no temporal association or tracking.</li>
+</ul>
+<h2 id="intended-usage">Intended Usage<a class="headerlink" href="#intended-usage" title="Permanent link">#</a></h2>
+<p>Use this node when a segmentation model already separates obstacle classes in the pointcloud and the next step is to produce object-level <code>DetectedObjects</code> without mixing points from different semantic classes into the same cluster.</p>
+<h2 id="future-extensions-follow-up-works">Future Extensions / Follow-up Works<a class="headerlink" href="#future-extensions-follow-up-works" title="Permanent link">#</a></h2>
+<p>The following items came up during PR review as acceptable short-term trade-offs, but they remain good candidates for follow-up work.</p>
+<ul>
+<li>Load semantic label order from the segmentation model artifact, such as <code>label.txt</code>, and keep the ROS parameter file focused on label selection and Autoware label remapping instead of treating YAML declaration order as the source of truth.</li>
+<li>Preserve source point indices through clustering so <code>existence_probability</code> can be computed per output cluster rather than once per semantic bucket.<ul>
+<li>Or uncertainty aware clustering can be applied to propagate point-level probabilities into clusters using entropy field values.</li>
+</ul>
+</li>
+<li>Improve large-cluster downsampling in the internal voxel-grid-based cluster with deterministic voxel-wise, spatially uniform, or edge-preserving sampling so shape estimation keeps outline points more reliably.</li>
+</ul></div>
 
 
 
