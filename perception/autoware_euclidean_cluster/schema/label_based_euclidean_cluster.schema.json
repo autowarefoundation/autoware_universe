@@ -143,15 +143,10 @@
                 "type": "number",
                 "description": "Maximum true minimum point-to-point XY gap between clusters of different labels to trigger a merge."
               },
-              "max_merged_length_m": {
+              "max_merged_size_m": {
                 "type": "number",
-                "description": "Oriented length cap for a merged component; unions exceeding it are refused, bounding chaining.",
+                "description": "Bounding-circle diameter cap (m) for a merged component; unions exceeding it are refused, bounding chaining. Orientation-independent.",
                 "default": 25.0
-              },
-              "max_merged_width_m": {
-                "type": "number",
-                "description": "Oriented width cap for a merged component.",
-                "default": 3.5
               }
             },
             "required": ["labels", "cross_label_tolerance_m"],

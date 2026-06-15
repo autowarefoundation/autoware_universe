@@ -17,7 +17,6 @@
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
 #include <Eigen/Core>
-#include <Eigen/Eigenvalues>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/parameter_map.hpp>
 
@@ -348,20 +347,22 @@ float aabb2d_gap(const Aabb2d & a, const Aabb2d & b)
   return std::sqrt(dx * dx + dy * dy);
 }
 
-/// @brief Oriented 2D footprint of a cluster, from principal-component analysis in the XY plane.
-struct OrientedExtent
+/// @brief 2D bounding circle (XY) of a cluster or merged component. Orientation-independent size
+///        proxy: a single diameter, so the merge cap does not assume a (partial-view) heading.
+struct BoundingCircle
 {
-  float length{};  ///< extent along the major axis (m)
-  float width{};   ///< extent along the minor axis (m)
+  Eigen::Vector2f center{Eigen::Vector2f::Zero()};
+  float radius{};        ///< max XY distance from center to any member point (m)
+  std::size_t count{0};  ///< point count (centroid weight for incremental merging)
 };
 
-/// @brief Estimate the oriented footprint of a cluster via XY PCA (cheap, gating-grade accuracy).
-OrientedExtent compute_oriented_extent(const pcl::PointCloud<pcl::PointXYZ> & cloud)
+/// @brief Bounding circle of a single cluster: centroid plus its farthest-point radius (one pass).
+BoundingCircle compute_bounding_circle(const pcl::PointCloud<pcl::PointXYZ> & cloud)
 {
-  OrientedExtent ext;
+  BoundingCircle bc;
   const auto n = cloud.size();
   if (n == 0) {
-    return ext;
+    return bc;
   }
 
   Eigen::Vector2f mean = Eigen::Vector2f::Zero();
@@ -370,67 +371,59 @@ OrientedExtent compute_oriented_extent(const pcl::PointCloud<pcl::PointXYZ> & cl
   }
   mean /= static_cast<float>(n);
 
-  Eigen::Matrix2f cov = Eigen::Matrix2f::Zero();
+  float max_sq = 0.0F;
   for (const auto & p : cloud) {
-    const Eigen::Vector2f d(p.x - mean.x(), p.y - mean.y());
-    cov += d * d.transpose();
-  }
-  cov /= static_cast<float>(n);
-
-  // SelfAdjointEigenSolver returns eigenvalues in ascending order; column 1 is the major axis.
-  Eigen::SelfAdjointEigenSolver<Eigen::Matrix2f> solver(cov);
-  const Eigen::Vector2f major = solver.eigenvectors().col(1);
-  const Eigen::Vector2f minor = solver.eigenvectors().col(0);
-
-  float min_major = std::numeric_limits<float>::max();
-  float max_major = std::numeric_limits<float>::lowest();
-  float min_minor = std::numeric_limits<float>::max();
-  float max_minor = std::numeric_limits<float>::lowest();
-  for (const auto & p : cloud) {
-    const Eigen::Vector2f d(p.x - mean.x(), p.y - mean.y());
-    const float a = d.dot(major);
-    const float b = d.dot(minor);
-    min_major = std::min(min_major, a);
-    max_major = std::max(max_major, a);
-    min_minor = std::min(min_minor, b);
-    max_minor = std::max(max_minor, b);
+    max_sq = std::max(max_sq, (Eigen::Vector2f(p.x, p.y) - mean).squaredNorm());
   }
 
-  ext.length = max_major - min_major;
-  ext.width = max_minor - min_minor;
-  return ext;
+  bc.center = mean;
+  bc.radius = std::sqrt(max_sq);
+  bc.count = n;
+  return bc;
 }
 
-/// @brief Exact minimum point-to-point distance between two clusters in the XY plane (KD-tree).
-float true_min_gap_xy(
-  const pcl::PointCloud<pcl::PointXYZ> & a, const pcl::PointCloud<pcl::PointXYZ> & b)
+/// @brief Conservative union of two XY bounding circles: point-weighted center and a
+///        triangle-inequality radius bound. O(1) — keeps the chaining size-check off the per-edge
+///        point scan, so component growth is bounded without re-measuring all member points.
+BoundingCircle merge_circles(const BoundingCircle & a, const BoundingCircle & b)
 {
-  // Flatten to XY (z = 0) so the search measures planar separation regardless of use_height.
-  const auto flatten = [](const pcl::PointCloud<pcl::PointXYZ> & in) {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr out(new pcl::PointCloud<pcl::PointXYZ>);
-    out->reserve(in.size());
-    for (const auto & p : in) {
-      out->push_back(pcl::PointXYZ(p.x, p.y, 0.0F));
-    }
-    return out;
-  };
-
-  // Build the tree on the smaller cloud, query with the larger one.
-  const bool a_smaller = a.size() <= b.size();
-  const auto tree_cloud = flatten(a_smaller ? a : b);
-  const auto query_cloud = flatten(a_smaller ? b : a);
-  if (tree_cloud->empty() || query_cloud->empty()) {
-    return std::numeric_limits<float>::max();
+  if (a.count == 0) {
+    return b;
   }
+  if (b.count == 0) {
+    return a;
+  }
+  BoundingCircle m;
+  m.count = a.count + b.count;
+  m.center = (a.center * static_cast<float>(a.count) + b.center * static_cast<float>(b.count)) /
+             static_cast<float>(m.count);
+  m.radius = std::max(
+    (m.center - a.center).norm() + a.radius, (m.center - b.center).norm() + b.radius);
+  return m;
+}
 
-  pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-  kdtree.setInputCloud(tree_cloud);
+/// @brief XY-flattened (z = 0) copy of a cluster, so planar gap searches ignore height.
+pcl::PointCloud<pcl::PointXYZ>::Ptr flatten_xy(const pcl::PointCloud<pcl::PointXYZ> & in)
+{
+  pcl::PointCloud<pcl::PointXYZ>::Ptr out(new pcl::PointCloud<pcl::PointXYZ>);
+  out->reserve(in.size());
+  for (const auto & p : in) {
+    out->push_back(pcl::PointXYZ(p.x, p.y, 0.0F));
+  }
+  return out;
+}
 
+/// @brief Exact minimum point-to-point XY distance between a query cloud and a prebuilt KD-tree.
+///        Querying the smaller cloud against the larger cloud's tree keeps the search cheap; the
+///        tree is built once per cluster by the caller and reused across all its candidate pairs.
+float min_gap_xy(
+  const pcl::PointCloud<pcl::PointXYZ> & query, const pcl::KdTreeFLANN<pcl::PointXYZ> & tree)
+{
   float min_sq = std::numeric_limits<float>::max();
   std::vector<int> idx(1);
   std::vector<float> dist_sq(1);
-  for (const auto & q : *query_cloud) {
-    if (kdtree.nearestKSearch(q, 1, idx, dist_sq) > 0) {
+  for (const auto & q : query) {
+    if (tree.nearestKSearch(q, 1, idx, dist_sq) > 0) {
       min_sq = std::min(min_sq, dist_sq[0]);
     }
   }
@@ -438,7 +431,8 @@ float true_min_gap_xy(
 }
 
 /// @brief Cross-label confusable merge: AABB broad-phase prune -> true-gap narrow phase ->
-///        size-bounded greedy union-find (closest pairs first) to prevent chaining.
+///        size-bounded greedy union-find (closest pairs first, bounding-circle diameter cap) to
+///        prevent chaining.
 std::vector<ClusterEntry> merge_confusable_clusters(
   std::vector<ClusterEntry> entries, const ConfusableLabelGroup & group)
 {
@@ -447,11 +441,34 @@ std::vector<ClusterEntry> merge_confusable_clusters(
     return entries;
   }
 
+  // Per-cluster broad-phase AABBs and bounding circles, computed once. The flattened (XY) clouds
+  // and their KD-trees back the narrow phase and are built lazily, then reused across every
+  // candidate pair a cluster takes part in — instead of rebuilt per pair as before.
   std::vector<Aabb2d> aabbs;
+  std::vector<BoundingCircle> circles;
   aabbs.reserve(n);
+  circles.reserve(n);
   for (const auto & e : entries) {
     aabbs.push_back(compute_aabb2d(e.cloud));
+    circles.push_back(compute_bounding_circle(e.cloud));
   }
+
+  std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> flat(n);
+  std::vector<std::shared_ptr<pcl::KdTreeFLANN<pcl::PointXYZ>>> trees(n);
+  const auto flat_of = [&](size_t i) {
+    if (!flat[i]) {
+      flat[i] = flatten_xy(entries[i].cloud);
+    }
+    return flat[i];
+  };
+  const auto tree_of = [&](size_t i) {
+    if (!trees[i]) {
+      auto t = std::make_shared<pcl::KdTreeFLANN<pcl::PointXYZ>>();
+      t->setInputCloud(flat_of(i));
+      trees[i] = t;
+    }
+    return trees[i];
+  };
 
   // Phase 1 (broad) + Phase 2 (narrow): collect surviving candidate edges with their true gap.
   struct Edge
@@ -471,7 +488,14 @@ std::vector<ClusterEntry> merge_confusable_clusters(
         continue;
       }
       // Narrow phase: exact min point-to-point XY gap rejects the false positives AABB admits.
-      const float gap = true_min_gap_xy(entries[i].cloud, entries[j].cloud);
+      // Query the smaller cloud against the larger cloud's (reusable) tree to keep the search cheap.
+      const bool i_smaller = entries[i].cloud.size() <= entries[j].cloud.size();
+      const size_t q = i_smaller ? i : j;
+      const size_t t = i_smaller ? j : i;
+      if (flat_of(q)->empty() || flat_of(t)->empty()) {
+        continue;
+      }
+      const float gap = min_gap_xy(*flat_of(q), *tree_of(t));
       if (gap >= group.cross_label_tolerance) {
         continue;
       }
@@ -480,8 +504,9 @@ std::vector<ClusterEntry> merge_confusable_clusters(
   }
 
   // Phase 3: size-bounded greedy union-find. Merge the closest pairs first and refuse any union
-  // whose resulting oriented footprint would exceed the physical size cap — this bounds component
-  // growth so a chain of adjacencies cannot collapse a dense scene into one oversized blob.
+  // whose merged bounding-circle diameter would exceed the size cap — this bounds component growth
+  // so a chain of adjacencies cannot collapse a dense scene into one oversized blob. The circle is
+  // tracked incrementally (per-root, O(1) per union), so no per-edge scan over member points.
   std::sort(
     edges.begin(), edges.end(), [](const Edge & a, const Edge & b) { return a.gap < b.gap; });
 
@@ -495,6 +520,9 @@ std::vector<ClusterEntry> merge_confusable_clusters(
     return x;
   };
 
+  // Per-root merged bounding circle; valid only at roots (seeded from the per-cluster circles).
+  std::vector<BoundingCircle> root_circle = circles;
+
   std::vector<std::vector<int>> members(n);
   for (int i = 0; i < static_cast<int>(n); ++i) {
     members[i] = {i};
@@ -506,18 +534,12 @@ std::vector<ClusterEntry> merge_confusable_clusters(
     if (ri == rj) {
       continue;
     }
-    pcl::PointCloud<pcl::PointXYZ> tentative;
-    for (const int m : members[ri]) {
-      tentative += entries[m].cloud;
-    }
-    for (const int m : members[rj]) {
-      tentative += entries[m].cloud;
-    }
-    const OrientedExtent merged_ext = compute_oriented_extent(tentative);
-    if (merged_ext.length > group.max_merged_length || merged_ext.width > group.max_merged_width) {
+    const BoundingCircle merged = merge_circles(root_circle[ri], root_circle[rj]);
+    if (2.0F * merged.radius > group.max_merged_size) {
       continue;  // would create an implausibly large object — keep them separate
     }
     parent[ri] = rj;
+    root_circle[rj] = merged;
     members[rj].insert(members[rj].end(), members[ri].begin(), members[ri].end());
     members[ri].clear();
   }
@@ -585,11 +607,8 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
       group.cross_label_tolerance = static_cast<float>(param.as_double());
       has_tolerance[group_name] = true;
     } else if (
-      key == "max_merged_length_m" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
-      group.max_merged_length = static_cast<float>(param.as_double());
-    } else if (
-      key == "max_merged_width_m" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
-      group.max_merged_width = static_cast<float>(param.as_double());
+      key == "max_merged_size_m" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
+      group.max_merged_size = static_cast<float>(param.as_double());
     } else if (
       key == "labels" && param.get_type() == rclcpp::ParameterType::PARAMETER_STRING_ARRAY) {
       for (const auto & label_name : param.as_string_array()) {

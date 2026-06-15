@@ -48,8 +48,7 @@
       truck_trailer:
         labels: ["truck", "trailer"]
         cross_label_tolerance_m: 0.5   # true min point-to-point XY gap to merge adjacent clusters
-        max_merged_length_m: 25.0      # oriented length cap for a merged object (full trailer + margin)
-        max_merged_width_m: 3.5        # oriented width cap for a merged object
+        max_merged_size_m: 25.0        # bounding-circle diameter cap for a merged blob (orientation-free)
 
     # Point filtering by semantic confidence
     min_probability: 0.3
