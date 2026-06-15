@@ -105,10 +105,9 @@ void TrafficLightArbiter::log_expired_external_signals(
 
 void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp)
 {
-  auto output_signals_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_);
-  auto result = core_->arbitrate(*output_signals_msg_ptr);
+  auto result = core_->arbitrate();
 
-  if (!result.has_output) {
+  if (!result.output) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "Received traffic signal messages before a map");
     return;
@@ -120,6 +119,8 @@ void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::T
       "Received a traffic signal not present in the current map (%lu)", id);
   }
 
+  auto output_signals_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_);
+  *output_signals_msg_ptr = std::move(*result.output);
   // Stamp inheritance is the Node's I/O contract with downstream consumers:
   // the published output carries the trigger msg's stamp for time alignment.
   output_signals_msg_ptr->stamp = stamp;

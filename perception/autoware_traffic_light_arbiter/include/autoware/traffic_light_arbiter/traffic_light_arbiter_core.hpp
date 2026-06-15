@@ -24,6 +24,7 @@
 #include <lanelet2_core/Forward.h>
 
 #include <memory>
+#include <optional>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -84,23 +85,23 @@ public:
   ExternalIngestResult ingest_external(
     const TrafficSignalArray & msg, const rclcpp::Time & current_time);
 
-  // Result of one arbitration cycle. arbitrate() writes the arbitrated signals
-  // into the caller-provided `output`. The arbiter intentionally does not stamp
-  // the output: stamp inheritance is an I/O concern owned by the Node (e.g.
-  // "publish carries the trigger msg's stamp"). The Node assigns
-  // `output.stamp` before publishing and compares its trigger stamp against
-  // `latest_input_time` for staleness logging.
+  // Result of one arbitration cycle. arbitrate() returns the arbitrated signals
+  // by value in `output`; std::nullopt means no map has arrived yet, so the Node
+  // skips the publish. The arbiter intentionally does not stamp the output: stamp
+  // inheritance is an I/O concern owned by the Node (e.g. "publish carries the
+  // trigger msg's stamp"). The Node assigns `output->stamp` before publishing and
+  // compares its trigger stamp against `latest_input_time` for staleness logging.
   //
   // latest_input_time defaults to epoch on RCL_ROS_TIME so the Node can compare
   // it against rclcpp::Time(msg->stamp) (also RCL_ROS_TIME) regardless of which
   // arbitrate() branch was taken.
   struct ArbitrationResult
   {
-    bool has_output = false;  // false when no map yet (skip publish); true otherwise.
+    std::optional<TrafficSignalArray> output;  // stamp left default; Node fills it in.
     std::vector<lanelet::Id> off_map_signal_ids;
     rclcpp::Time latest_input_time{0, 0, RCL_ROS_TIME};
   };
-  ArbitrationResult arbitrate(TrafficSignalArray & output);
+  ArbitrationResult arbitrate() const;
 
 private:
   // True when |current_time - msg_stamp| exceeds external_delay_tolerance_.

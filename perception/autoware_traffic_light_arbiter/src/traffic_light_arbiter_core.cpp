@@ -137,8 +137,7 @@ TrafficLightArbiterCore::ExternalIngestResult TrafficLightArbiterCore::ingest_ex
   return {true, sweep_expired_external_signals(current_time, external_delay_tolerance_)};
 }
 
-TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
-  TrafficSignalArray & output)
+TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() const
 {
   ArbitrationResult result;
 
@@ -184,10 +183,11 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
     return result;
   }
 
+  TrafficSignalArray output_signals_msg;
   // stamp deliberately left default — the Node owns stamp inheritance.
-  result.has_output = true;
 
   if (map_regulatory_elements_set_->empty()) {
+    result.output = std::move(output_signals_msg);
     return result;
   }
 
@@ -250,14 +250,14 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
       return highest_score_elements_vector;
     };
 
-  output.traffic_light_groups.reserve(regulatory_element_signals_map.size());
+  output_signals_msg.traffic_light_groups.reserve(regulatory_element_signals_map.size());
 
   for (const auto & [regulatory_element_id, elements] : regulatory_element_signals_map) {
     TrafficSignal signal_msg;
     signal_msg.traffic_light_group_id = regulatory_element_id;
     signal_msg.elements = get_highest_confidence_elements(elements);
     signal_msg.predictions = predictions_map[regulatory_element_id];
-    output.traffic_light_groups.emplace_back(signal_msg);
+    output_signals_msg.traffic_light_groups.emplace_back(signal_msg);
   }
 
   // Latest input stamp across stored sources. The Node compares this against
@@ -267,6 +267,7 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
                                ? max_external_stamp
                                : perception_stamp;
 
+  result.output = std::move(output_signals_msg);
   return result;
 }
 
