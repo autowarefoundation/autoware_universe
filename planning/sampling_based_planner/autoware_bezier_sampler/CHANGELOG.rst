@@ -2,6 +2,13 @@
 Changelog for package autoware_bezier_sampler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_universe): use autoware_ament_auto_package in planning packages (`#12291 <https://github.com/mitsudome-r/autoware_universe/issues/12291>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* Contributors: Vishal Chauhan, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

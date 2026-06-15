@@ -20,6 +20,7 @@
 #include <autoware/deprecated/boundary_departure_checker/utils.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
@@ -28,6 +29,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -36,12 +39,42 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace control_diagnostics
 {
 namespace bg = boost::geometry;
+
+namespace
+{
+using autoware_perception_msgs::msg::ObjectClassification;
+
+const std::unordered_map<std::string, uint8_t> kObjectLabelNameToValue = {
+  {"unknown", ObjectClassification::UNKNOWN},
+  {"car", ObjectClassification::CAR},
+  {"truck", ObjectClassification::TRUCK},
+  {"bus", ObjectClassification::BUS},
+  {"trailer", ObjectClassification::TRAILER},
+  {"motorcycle", ObjectClassification::MOTORCYCLE},
+  {"bicycle", ObjectClassification::BICYCLE},
+  {"pedestrian", ObjectClassification::PEDESTRIAN},
+  {"animal", ObjectClassification::ANIMAL},
+  {"hazard", ObjectClassification::HAZARD},
+  {"over_drivable", ObjectClassification::OVER_DRIVABLE},
+  {"under_drivable", ObjectClassification::UNDER_DRIVABLE},
+};
+
+std::optional<uint8_t> label_from_string(const std::string & label_name)
+{
+  const auto it = kObjectLabelNameToValue.find(label_name);
+  if (it == kObjectLabelNameToValue.end()) {
+    return std::nullopt;
+  }
+  return it->second;
+}
+}  // namespace
 
 ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_options)
 : Node("control_evaluator", node_options),
@@ -74,6 +107,18 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   // Parameters
   output_metrics_ = declare_parameter<bool>("output_metrics");
   distance_filter_thr_m_ = declare_parameter<double>("object_metrics.distance_filter_thr_m");
+  const std::vector<std::string> excluded_labels = declare_parameter<std::vector<std::string>>(
+    "object_metrics.excluded_labels", std::vector<std::string>{"unknown"});
+  for (const auto & label_name : excluded_labels) {
+    const auto label = label_from_string(label_name);
+    if (label) {
+      excluded_object_labels_.insert(*label);
+    } else {
+      RCLCPP_ERROR(
+        get_logger(), "Unknown object label '%s' in object_metrics.excluded_labels",
+        label_name.c_str());
+    }
+  }
 
   // Setting about Output metrics only when the vehicle is moving
   const bool output_metrics_only_moving_enabled =
@@ -258,9 +303,7 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
   const PathWithLaneId & behavior_path, const Pose & ego_pose)
 {
   const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
-  const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-  const auto current_vehicle_footprint = autoware_utils::transform_vector(
-    local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
+  const auto current_vehicle_footprint = vehicle_info_.createFootprint(0.0, ego_pose);
 
   if (behavior_path.left_bound.size() >= 1) {
     LineString2d left_boundary;
@@ -307,45 +350,63 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
       route_handler_.getLaneletMapPtr(), ego_pose, search_distance)) {
     const auto & nearby_uncrossable_lines = *nearby_uncrossable_lines_opt;
 
-    const auto transformed_pose = autoware_utils::pose2transform(ego_pose);
-    const auto local_fp = vehicle_info_.createFootprint();
-    const auto current_fp = autoware_utils::transform_vector(local_fp, transformed_pose);
+    const auto current_fp = vehicle_info_.createFootprint(0.0, ego_pose);
     const auto side = bdc_utils::get_footprint_sides(current_fp, false, false);
 
-    auto is_overlapping{false};
     for (const auto & nearby_ls : nearby_uncrossable_lines) {
-      LineString2d boundary;
       const auto & basic_ls = nearby_ls.basicLineString();
-      boundary.reserve(basic_ls.size());
       for (size_t idx = 0; idx + 1 < basic_ls.size(); ++idx) {
         const auto segment = bdc_utils::to_segment_2d(basic_ls[idx], basic_ls[idx + 1]);
 
-        is_overlapping = !boost::geometry::disjoint(current_fp, segment);
-
-        if (is_overlapping) {
-          nearest_left = 0.0;
-          nearest_right = 0.0;
-          break;
-        }
-
         const auto dist_to_left = boost::geometry::distance(segment, side.left);
         const auto dist_to_right = boost::geometry::distance(segment, side.right);
-        if (dist_to_left < dist_to_right) {
-          nearest_left = std::min(dist_to_left, nearest_left);
-        } else {
-          nearest_right = std::min(dist_to_right, nearest_right);
+
+        // Update the nearest distance to the boundary.
+        bool left_touched = dist_to_left <= 0.0;
+        bool right_touched = dist_to_right <= 0.0;
+        if (left_touched) nearest_left = 0.0;
+        if (right_touched) nearest_right = 0.0;
+
+        if (!left_touched && !right_touched) {
+          if (dist_to_left < dist_to_right) {
+            nearest_left = std::min(dist_to_left, nearest_left);
+          } else {
+            nearest_right = std::min(dist_to_right, nearest_right);
+          }
         }
+
+        if (nearest_left == 0.0 && nearest_right == 0.0) break;
       }
-      if (is_overlapping) {
-        break;
-      }
+      if (nearest_left == 0.0 && nearest_right == 0.0) break;
     }
   }
+
+  const auto update_non_positive_event_count =
+    [](const double distance, bool & armed, std::uint64_t & event_count) {
+      if (distance > 0.0) {
+        armed = true;
+      } else if (armed) {
+        ++event_count;
+        armed = false;
+      }
+    };
+  update_non_positive_event_count(
+    nearest_left, uncrossable_left_non_positive_armed_, uncrossable_left_non_positive_event_count_);
+  update_non_positive_event_count(
+    nearest_right, uncrossable_right_non_positive_armed_,
+    uncrossable_right_non_positive_event_count_);
+
   const Metric metric_left = Metric::left_uncrossable_boundary_distance;
+  const Metric metric_left_count = Metric::left_uncrossable_boundary_distance_count;
   AddMetricMsg(metric_left, nearest_left);
+  AddMetricMsg(
+    metric_left_count, static_cast<double>(uncrossable_left_non_positive_event_count_), true);
 
   const Metric metric_right = Metric::right_uncrossable_boundary_distance;
+  const Metric metric_right_count = Metric::right_uncrossable_boundary_distance_count;
   AddMetricMsg(metric_right, nearest_right);
+  AddMetricMsg(
+    metric_right_count, static_cast<double>(uncrossable_right_non_positive_event_count_), true);
 }
 
 void ControlEvaluatorNode::AddKinematicStateMetricMsg(
@@ -437,6 +498,18 @@ void ControlEvaluatorNode::AddYawDeviationMetricMsg(const Trajectory & traj, con
 
   AddMetricMsg(Metric::yaw_deviation, metric_value);
   AddMetricMsg(Metric::yaw_deviation_abs, metric_value_abs);
+}
+
+void ControlEvaluatorNode::AddLateralDeviationCenterlineMetricMsg(const Pose & ego_pose)
+{
+  const auto current_lanelets = metrics::utils::get_current_lanes(route_handler_, ego_pose);
+  const auto arc_coordinates =
+    autoware::experimental::lanelet2_utils::get_arc_coordinates(current_lanelets, ego_pose);
+  const double metric_value = arc_coordinates.distance;
+  const double metric_value_abs = std::abs(metric_value);
+
+  AddMetricMsg(Metric::lateral_deviation_centerline, metric_value);
+  AddMetricMsg(Metric::lateral_deviation_centerline_abs, metric_value_abs);
 }
 
 void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
@@ -540,9 +613,8 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
   }
 
   const auto ego_polygon = [&]() -> autoware_utils::Polygon2d {
-    const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info_.createFootprint();
-    const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
-      local_ego_footprint, autoware_utils::pose2transform(odom.pose.pose));
+    const autoware_utils::LinearRing2d ego_footprint =
+      vehicle_info_.createFootprint(0.0, odom.pose.pose);
 
     autoware_utils::Polygon2d ego_polygon;
     ego_polygon.outer() = ego_footprint;
@@ -552,6 +624,12 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
 
   double minimum_distance = std::numeric_limits<double>::max();
   for (const auto & object : objects.objects) {
+    const auto label =
+      autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    if (excluded_object_labels_.find(label) != excluded_object_labels_.end()) {
+      continue;
+    }
+
     const double center_distance = autoware_utils::calc_distance2d(
       odom.pose.pose.position, object.kinematics.initial_pose_with_covariance.pose.position);
     if (center_distance > distance_filter_thr_m_) {
@@ -617,6 +695,7 @@ void ControlEvaluatorNode::onTimer()
     if (route_handler_.isHandlerReady()) {
       // add goal deviation metrics
       AddLaneletInfoMsg(ego_pose);
+      AddLateralDeviationCenterlineMetricMsg(ego_pose);
       AddGoalDeviationMetricMsg(*odom);
 
       // add boundary distance metrics

@@ -15,13 +15,15 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_INTERFACE_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_INTERFACE_HPP_
 
-#include "autoware/trajectory_validator/filter_context.hpp"
+#include "autoware/trajectory_validator/detail/validator_context.hpp"
 
 #include <autoware_trajectory_validator/autoware_trajectory_validator_param.hpp>
+#include <autoware_trajectory_validator/msg/metric_report.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <tl_expected/expected.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <memory>
 #include <string>
@@ -33,10 +35,25 @@ namespace autoware::trajectory_validator::plugin
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using VehicleInfo = autoware::vehicle_info_utils::VehicleInfo;
+using autoware_trajectory_validator::msg::MetricReport;
 
+/** @brief Result of a single plugin's feasibility check. */
+struct ValidationResult
+{
+  bool is_feasible{true};
+  std::vector<MetricReport> metrics{};
+};
+
+/** @brief Base class for trajectory validator plugins. */
 class ValidatorInterface
 {
 public:
+  using result_t = tl::expected<ValidationResult, std::string>;
+
+  /**
+   * @brief Constructs the plugin with the given registered name.
+   * @param name Registered plugin name.
+   */
   explicit ValidatorInterface(std::string name) : name_(std::move(name)) {}
 
   virtual ~ValidatorInterface() = default;
@@ -45,25 +62,76 @@ public:
   ValidatorInterface(ValidatorInterface &&) = delete;
   ValidatorInterface & operator=(ValidatorInterface &&) = delete;
 
-  // Main filter method with context for plugin-specific data
-  virtual tl::expected<void, std::string> is_feasible(
+  /**
+   * @brief Returns whether the trajectory is feasible given the current world context.
+   * @param traj_points Trajectory points to evaluate.
+   * @param context Current world state snapshot.
+   */
+  virtual result_t is_feasible(
     const TrajectoryPoints & traj_points, const FilterContext & context) = 0;
 
+  /**
+   * @brief Updates the plugin's internal configuration from the latest parameter values.
+   * @param params Latest parameter values.
+   */
   virtual void update_parameters(const validator::Params & params) = 0;
 
-  // Set vehicle info
+  /**
+   * @brief Stores the ego vehicle dimensions used by the plugin.
+   * @param vehicle_info Ego vehicle dimensions.
+   */
   virtual void set_vehicle_info(const VehicleInfo & vehicle_info)
   {
     vehicle_info_ptr_ = std::make_shared<VehicleInfo>(vehicle_info);
   }
 
+  /**
+   * @brief Sets whether this plugin runs in shadow mode (results logged but not enforced).
+   * @param is_shadow_mode True to enable shadow mode.
+   */
+  void set_shadow_mode(const bool is_shadow_mode) { is_shadow_mode_ = is_shadow_mode; }
+
+  /**
+   * @brief Sets the plugin's category string.
+   * @param category Category label.
+   */
+  void set_category(const std::string & category) { category_ = category; }
+
+  /** @brief Returns the plugin's category string. */
+  [[nodiscard]] std::string category() const { return category_; }
+
+  /** @brief Returns the plugin's registered name. */
   [[nodiscard]] std::string get_name() const { return name_; }
+
+  /** @brief Returns true if this plugin is in shadow mode. */
+  [[nodiscard]] bool is_shadow_mode() const { return is_shadow_mode_; }
+
+  /** @brief Returns and clears the plugin's accumulated debug markers. */
+  [[nodiscard]] visualization_msgs::msg::MarkerArray take_debug_markers()
+  {
+    visualization_msgs::msg::MarkerArray output_markers;
+    output_markers.markers.reserve(debug_markers_.markers.size() + 1);
+
+    visualization_msgs::msg::Marker delete_all_marker;
+    delete_all_marker.action = visualization_msgs::msg::Marker::DELETEALL;
+    output_markers.markers.push_back(delete_all_marker);
+
+    std::move(
+      debug_markers_.markers.begin(), debug_markers_.markers.end(),
+      std::back_inserter(output_markers.markers));
+
+    debug_markers_.markers.clear();
+
+    return output_markers;
+  }
 
 protected:
   std::string name_;
+  bool is_shadow_mode_{false};
+  std::string category_;
   std::shared_ptr<VehicleInfo> vehicle_info_ptr_;
+  visualization_msgs::msg::MarkerArray debug_markers_;
 };
 }  // namespace autoware::trajectory_validator::plugin
 
-// NOLINTNEXTLINE
 #endif  // AUTOWARE__TRAJECTORY_VALIDATOR__VALIDATOR_INTERFACE_HPP_

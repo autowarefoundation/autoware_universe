@@ -19,6 +19,7 @@
 
 #include <array>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::trajectory_validator::plugin::safety
@@ -30,8 +31,6 @@ namespace autoware::trajectory_validator::plugin::safety
 class VehicleConstraintFilter final : public plugin::ValidatorInterface
 {
 public:
-  using result_t = tl::expected<void, std::string>;
-
   VehicleConstraintFilter();
 
   result_t is_feasible(const TrajectoryPoints & traj_points, const FilterContext & context) final;
@@ -39,13 +38,13 @@ public:
   void update_parameters(const validator::Params & params) final;
 
 private:
-  result_t check_speed(const TrajectoryPoints & traj_points) const;
-  result_t check_acceleration(const TrajectoryPoints & traj_points) const;
-  result_t check_deceleration(const TrajectoryPoints & traj_points) const;
-  result_t check_steering_angle(const TrajectoryPoints & traj_points) const;
-  result_t check_steering_rate(const TrajectoryPoints & traj_points) const;
+  MetricReport check_speed(const TrajectoryPoints & traj_points) const;
+  MetricReport check_acceleration(const TrajectoryPoints & traj_points) const;
+  MetricReport check_deceleration(const TrajectoryPoints & traj_points) const;
+  MetricReport check_steering_angle(const TrajectoryPoints & traj_points) const;
+  MetricReport check_steering_rate(const TrajectoryPoints & traj_points) const;
 
-  using Checker = result_t (VehicleConstraintFilter::*)(const TrajectoryPoints &) const;
+  using Checker = MetricReport (VehicleConstraintFilter::*)(const TrajectoryPoints &) const;
 
   inline static const std::array<Checker, 5> checkers_ = {{
     &VehicleConstraintFilter::check_speed,
@@ -65,18 +64,19 @@ private:
  *
  * @param traj_points Vector of trajectory points to check
  * @param max_speed Maximum allowed speed (m/s)
- * @return Return true if the trajectory respects the speed constraint, false otherwise
+ * @return Pair of max observation and a boolean indicating if no point violated
  */
-bool is_speed_ok(const TrajectoryPoints & traj_points, double max_speed);
+std::pair<double, bool> is_speed_ok(const TrajectoryPoints & traj_points, double max_speed);
 
 /**
  * @brief Check if the trajectory respects the maximum acceleration constraint.
  *
  * @param traj_points Vector of trajectory points to check
  * @param max_acceleration Maximum allowed acceleration (m/s^2)
- * @return Return true if the trajectory respects the acceleration constraint, false otherwise
+ * @return Pair of max observation and a boolean indicating if no point violated
  */
-bool is_acceleration_ok(const TrajectoryPoints & traj_points, double max_acceleration);
+std::pair<double, bool> is_acceleration_ok(
+  const TrajectoryPoints & traj_points, double max_acceleration);
 
 /**
  * @brief Check if the trajectory respects the maximum deceleration constraint.
@@ -84,9 +84,10 @@ bool is_acceleration_ok(const TrajectoryPoints & traj_points, double max_acceler
  * @param traj_points Vector of trajectory points to check
  * @param max_deceleration Maximum allowed deceleration (m/s^2, positive value representing
  * deceleration)
- * @return Return true if the trajectory respects the deceleration constraint, false otherwise
+ * @return Pair of max observation and a boolean indicating if no point violated
  */
-bool is_deceleration_ok(const TrajectoryPoints & traj_points, double max_deceleration);
+std::pair<double, bool> is_deceleration_ok(
+  const TrajectoryPoints & traj_points, double max_deceleration);
 
 /**
  * @brief Check if the trajectory respects the maximum steering angle constraint.
@@ -94,9 +95,9 @@ bool is_deceleration_ok(const TrajectoryPoints & traj_points, double max_deceler
  * @param traj_points Vector of trajectory points to check
  * @param vehicle_info Vehicle information needed to calculate steering angle
  * @param max_steering_angle Maximum allowed steering angle (rad)
- * @return Return true if the trajectory respects the steering angle constraint, false otherwise
+ * @return Pair of max observation and a boolean indicating if no point violated
  */
-bool is_steering_angle_ok(
+std::pair<double, bool> is_steering_angle_ok(
   const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info,
   double max_steering_angle);
 
@@ -106,10 +107,9 @@ bool is_steering_angle_ok(
  * @param traj_points Vector of trajectory points to check
  * @param vehicle_info Vehicle information needed to calculate steering rate
  * @param max_steering_rate Maximum allowed steering rate (rad/s)
- * @return Return true if the trajectory respects the steering rate constraint, false
- * otherwise
+ * @return Pair of max observation and a boolean indicating if no point violated
  */
-bool is_steering_rate_ok(
+std::pair<double, bool> is_steering_rate_ok(
   const TrajectoryPoints & traj_points, const VehicleInfo & vehicle_info, double max_steering_rate);
 }  // namespace autoware::trajectory_validator::plugin::safety
 #endif  // AUTOWARE__TRAJECTORY_VALIDATOR__FILTERS__SAFETY__VEHICLE_CONSTRAINT_FILTER_HPP_

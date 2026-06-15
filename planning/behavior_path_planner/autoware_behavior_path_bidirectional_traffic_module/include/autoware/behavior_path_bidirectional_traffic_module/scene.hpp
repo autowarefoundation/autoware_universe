@@ -21,7 +21,7 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
 
 #include <lanelet2_core/Forward.h>
 

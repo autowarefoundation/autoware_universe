@@ -2,6 +2,12 @@
 Changelog for package autoware_mrm_handler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(mrm_handler): remove @veqcc from maintainers (`#12519 <https://github.com/mitsudome-r/autoware_universe/issues/12519>`_)
+* Contributors: Ryuta Kambe, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

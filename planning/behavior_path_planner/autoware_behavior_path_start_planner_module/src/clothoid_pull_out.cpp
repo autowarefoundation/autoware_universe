@@ -23,8 +23,6 @@
 #include "autoware/behavior_path_start_planner_module/pull_out_path.hpp"
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/math/normalization.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
@@ -32,6 +30,8 @@
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_math/normalization.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
 #include <tf2/utils.hpp>
 
@@ -57,9 +57,9 @@ using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
 namespace autoware::behavior_path_planner
 {
-using autoware::universe_utils::normalizeRadian;
 using autoware_utils::deg2rad;
 using autoware_utils::rad2deg;
+using autoware_utils_math::normalize_radian;
 using start_planner_utils::get_lane_ids_from_pose;
 using start_planner_utils::getPullOutLanes;
 using start_planner_utils::set_lane_ids_to_path_point;
@@ -96,7 +96,7 @@ std::vector<geometry_msgs::msg::Point> correct_clothoid_by_rigid_transform(
   const double target_angle = std::atan2(target_dy, target_dx);
   double rotation_angle = target_angle - clothoid_angle;
 
-  rotation_angle = normalizeRadian(rotation_angle);
+  rotation_angle = normalize_radian(rotation_angle);
 
   // Choose shorter rotation if over 180 degrees
   if (std::abs(rotation_angle) > M_PI) {
@@ -164,7 +164,7 @@ generate_clothoid_entry_with_yaw(
     pose.position.y = current_y;
     pose.position.z = 0.0;  // This is temporarily set to 0.0. The z value will be overwritten from
                             // the lanelet when generating the final path.
-    pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+    pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
     poses.push_back(pose);
 
     // If not the last point, perform integration calculation to the next point
@@ -189,7 +189,7 @@ generate_clothoid_entry_with_yaw(
   end_pose.position.y = current_y;
   end_pose.position.z = 0.0;  // This is temporarily set to 0.0. The z value will be overwritten
                               // from the lanelet when generating the final path.
-  end_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+  end_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
 
   return {poses, end_pose};
 }
@@ -221,7 +221,7 @@ generate_circular_segment_with_yaw(
     pose.position.x = center_x + radius * std::cos(angle_from_center);
     pose.position.y = center_y + radius * std::sin(angle_from_center);
     pose.position.z = 0.0;
-    pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+    pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
 
     poses.push_back(pose);
   }
@@ -231,7 +231,7 @@ generate_circular_segment_with_yaw(
 
   geometry_msgs::msg::Pose end_pose;
   end_pose.position = poses.back().position;
-  end_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(final_psi);
+  end_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(final_psi);
 
   return {poses, end_pose};
 }
@@ -260,7 +260,7 @@ generate_clothoid_exit_with_yaw(
     pose.position.x = current_x;
     pose.position.y = current_y;
     pose.position.z = 0.0;
-    pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+    pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
     poses.push_back(pose);
 
     // If not the last point, perform integration calculation to the next point
@@ -286,7 +286,7 @@ generate_clothoid_exit_with_yaw(
   end_pose.position.y = current_y;
   end_pose.position.z = 0.0;  // This is temporarily set to 0.0. The z value will be overwritten
                               // from the lanelet when generating the final path.
-  end_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(current_psi);
+  end_pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(current_psi);
 
   return {poses, end_pose};
 }

@@ -15,24 +15,24 @@
 #ifndef MULTI_OBJECT_TRACKER_CORE_HPP_
 #define MULTI_OBJECT_TRACKER_CORE_HPP_
 
-#include "autoware/multi_object_tracker/association/association.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/association/bev_association.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "debugger/debugger.hpp"
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
-#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform.hpp>
 
 #include <tf2_ros/buffer.h>
 
 #include <functional>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -54,14 +54,10 @@ struct MultiObjectTrackerParameters
 
   std::vector<types::InputChannel> input_channels_config;
 
-  AssociatorConfig::LabelToTrackerAssociationParametersMap association_params_map;
-  std::map<std::string, std::string> tracker_type_map;
-  TrackedLabelThresholds pruning_giou_thresholds;
-  TrackedLabelThresholds pruning_distance_thresholds;
-
   // Induced parameters
-  TrackerProcessorConfig processor_config;
-  AssociatorConfig associator_config;
+  TrackerCreationConfig creation_config;
+  TrackerAssociationConfig association_config;
+  TrackerOverlapManagerConfig tracker_overlap_manager_config;
 };
 
 struct MultiObjectTrackerInternalState
@@ -77,16 +73,14 @@ struct MultiObjectTrackerInternalState
   MultiObjectTrackerInternalState();
 
   void init(
-    const MultiObjectTrackerParameters & params, rclcpp::Node & node,
+    const MultiObjectTrackerParameters & params, autoware::agnocast_wrapper::Node & node,
     const std::function<void(size_t)> & trigger_function);
-
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer;
 };
 
 namespace core
 {
 
-// Result structs for core functions
+//// Result structs for core functions
 struct MeasurementProcessingResult
 {
   bool has_objects;     // true if objects were accepted from InputManager
@@ -112,10 +106,10 @@ struct OptionalPublishingData
   std::optional<autoware_perception_msgs::msg::TrackedObjects> tentative_objects;
 };
 
-// Parameter processing
+//// Parameter processing
 void process_parameters(MultiObjectTrackerParameters & params);
 
-// Utility functions
+//// Utility functions
 bool should_publish(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state);
@@ -128,10 +122,10 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
   const rclcpp::Time & object_time, const MultiObjectTrackerParameters & params,
   const MultiObjectTrackerInternalState & state, const rclcpp::Logger & logger);
 
-// Low-level processing functions
+//// Low-level processing functions
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg,
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
   TrackerDebugger & debugger);
 
@@ -140,7 +134,7 @@ void process_objects_(
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
   const rclcpp::Logger & logger);
 
-// High-level orchestration functions
+//// High-level orchestration functions
 ObjectProcessingResult process_objects_batch(
   const rclcpp::Time & current_time, const MultiObjectTrackerParameters & params,
   MultiObjectTrackerInternalState & state, TrackerDebugger & debugger,

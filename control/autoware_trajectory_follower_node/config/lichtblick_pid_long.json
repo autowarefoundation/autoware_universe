@@ -1,0 +1,244 @@
+{
+  "configById": {
+    "Plot!long_0": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[2]",
+          "enabled": true,
+          "color": "#17becf",
+          "label": "target"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[1]",
+          "enabled": true,
+          "color": "#9467bd",
+          "label": "current"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[4]",
+          "enabled": true,
+          "color": "#bcbd22",
+          "label": "closest"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[24]",
+          "enabled": true,
+          "color": "#1f77b4",
+          "label": "predicted"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "lichtblickPanelTitle": "Velocity"
+    },
+    "Plot!long_1": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[3]",
+          "enabled": true,
+          "color": "#1ac938",
+          "label": "FF"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[19]",
+          "enabled": true,
+          "color": "#f14cc1",
+          "label": "FB-P"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[20]",
+          "enabled": true,
+          "color": "#1f77b4",
+          "label": "FB-I"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[14]",
+          "enabled": true,
+          "color": "#ff7f0e",
+          "label": "FF+FB"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[16]",
+          "enabled": true,
+          "color": "#1f77b4",
+          "label": "jerk filtered"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[17]",
+          "enabled": true,
+          "color": "#d62728",
+          "label": "slope added"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[18]",
+          "enabled": true,
+          "color": "#004eff",
+          "label": "final"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[25]",
+          "enabled": true,
+          "color": "#ff7f0e",
+          "label": "calculated"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "lichtblickPanelTitle": "Longitudinal Controller Info"
+    },
+    "Plot!long_2": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[7]",
+          "enabled": true,
+          "color": "#1f77b4",
+          "label": "using pitch"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[26]",
+          "enabled": true,
+          "color": "#1ac938",
+          "label": "trajectory_pitch"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[8]",
+          "enabled": true,
+          "color": "#d62728",
+          "label": "localization_pitch"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[34]",
+          "enabled": true,
+          "color": "#ff7f0e",
+          "label": "localization_pitch_lpf"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "lichtblickPanelTitle": "Slope Pitch"
+    },
+    "Plot!long_3": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[25]",
+          "enabled": true,
+          "color": "#d62728",
+          "label": "measured acc (1/0.1s+1)"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[31]",
+          "enabled": true,
+          "color": "#ff7f0e",
+          "label": "error acc "
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[32]",
+          "enabled": true,
+          "color": "#f14cc1",
+          "label": "error acc filtered"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[33]",
+          "enabled": true,
+          "color": "#9467bd",
+          "label": "acc cmd output"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[16]",
+          "enabled": true,
+          "color": "#17becf",
+          "label": "desired acc"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "lichtblickPanelTitle": "Accel Feedback"
+    },
+    "Plot!long_4": {
+      "paths": [
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[13]",
+          "timestampMethod": "receiveTime",
+          "label": "0:Drive 1:Stopping 2:Stopped 3:Emergency"
+        },
+        {
+          "value": "/control/trajectory_follower/longitudinal/diagnostic.data[36]",
+          "timestampMethod": "receiveTime",
+          "label": "smooth stop mode 0:Strong 1:Weak 2:Weak Stop 3:Strong Stop (0.05 offset)"
+        }
+      ],
+      "isSynced": true
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "Plot!long_0",
+      "second": "Plot!long_1",
+      "direction": "column",
+      "splitPercentage": 50
+    },
+    "second": {
+      "first": "Plot!long_2",
+      "second": {
+        "first": "Plot!long_3",
+        "second": "Plot!long_4",
+        "direction": "column",
+        "splitPercentage": 41.322314049586794
+      },
+      "direction": "column",
+      "splitPercentage": 40.29605263157894
+    },
+    "direction": "column",
+    "splitPercentage": 63.895486935866984
+  }
+}

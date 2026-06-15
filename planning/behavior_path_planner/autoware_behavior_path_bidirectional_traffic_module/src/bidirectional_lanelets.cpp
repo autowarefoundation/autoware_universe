@@ -17,11 +17,11 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/utils.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
-#include "autoware/universe_utils/geometry/boost_geometry.hpp"
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
 #include "autoware_utils_system/lru_cache.hpp"
 
 #include <Eigen/Core>
+#include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/boost_polygon_utils.hpp>
 
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
@@ -223,7 +223,7 @@ bool is_same_direction(
 
 bool ConnectedBidirectionalLanelets::is_object_on_this_lane(
   const geometry_msgs::msg::Pose & obj_pose,
-  const autoware::universe_utils::Polygon2d & obj_polygon) const
+  const autoware_utils_geometry::Polygon2d & obj_polygon) const
 {
   Eigen::Vector2d obj_direction = calc_pose_direction(obj_pose);
 
@@ -243,7 +243,7 @@ bool ConnectedBidirectionalLanelets::is_object_on_this_lane(
 bool ConnectedBidirectionalLanelets::is_object_on_this_lane(
   const autoware_perception_msgs::msg::PredictedObject & obj) const
 {
-  autoware::universe_utils::Polygon2d obj_polygon = autoware::universe_utils::toPolygon2d(obj);
+  autoware_utils_geometry::Polygon2d obj_polygon = autoware_utils_geometry::to_polygon2d(obj);
   const geometry_msgs::msg::Pose obj_pose = obj.kinematics.initial_pose_with_covariance.pose;
   return is_object_on_this_lane(obj_pose, obj_polygon);
 }

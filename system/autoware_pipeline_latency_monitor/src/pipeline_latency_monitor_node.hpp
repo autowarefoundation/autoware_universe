@@ -15,7 +15,7 @@
 #ifndef PIPELINE_LATENCY_MONITOR_NODE_HPP_
 #define PIPELINE_LATENCY_MONITOR_NODE_HPP_
 
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -79,7 +79,7 @@ private:
     total_latency_pub_;
 
   // Debug publisher
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils_debug::DebugPublisher> debug_publisher_;
 
   // Diagnostic updater
   diagnostic_updater::Updater diagnostic_updater_;

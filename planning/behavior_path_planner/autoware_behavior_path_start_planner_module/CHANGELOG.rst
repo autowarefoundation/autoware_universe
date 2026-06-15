@@ -2,6 +2,69 @@
 Changelog for package autoware_behavior_path_start_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(planning): replace autoware_universe_utils with specific autoware_utils sub-packagesr (`#12443 <https://github.com/mitsudome-r/autoware_universe/issues/12443>`_)
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* chore(behavior_path_planner): remove unused lanelet2_extension header (`#12292 <https://github.com/mitsudome-r/autoware_universe/issues/12292>`_)
+  unused lanelet2_extension in bpp modules
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(lanelet2_extension): replace ported lanelet2_extension utilities functions (final) (`#12173 <https://github.com/mitsudome-r/autoware_universe/issues/12173>`_)
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* feat(start_planner): turn signal  at centerline (`#12152 <https://github.com/mitsudome-r/autoware_universe/issues/12152>`_)
+  * fix: turn signal when enabling pull out in centerline
+  * fix: revert initial blinker's state
+  * Revert "docs: parameter description"
+  This reverts commit 37a555d452e9348b1d99e3349a9a5b0b71496e8c.
+  * fix: add parameters
+  * docs: add description
+  * revert changes
+  ---------
+* feat(start_planner):  allow start planner to start from the centerline (`#11986 <https://github.com/mitsudome-r/autoware_universe/issues/11986>`_)
+  * temp
+  * Revert "temp"
+  This reverts commit 2033ec3864005ff7206140e85a9a1bc473b515fa.
+  * fix: consider vehicle speed and shift length when performing initial safety check
+  * fix: shift length wrongly computed
+  * fix: set epsilon when comparing distance between  point
+  * fix: ignore all object check when shift length less than threshold
+  * fix: rename parameter
+  * fix: move to start planner utils and add enable back check
+  * fix: precommit
+  * fix: cache object polygon
+  * docs: parameter description
+  * fix: parameter update
+  ---------
+* fix(start_planner): computing shift length when creating path (`#11955 <https://github.com/mitsudome-r/autoware_universe/issues/11955>`_)
+  * fix(start_planner): computing shift length when creating path
+  * fix: precommit
+  * fix: use experimental::lanelet2_utils to get shift length
+  ---------
+* feat(autoware_lanelet2_extension): replace remaining lanelet2_extension utilities functions - bpp packages (`#12085 <https://github.com/mitsudome-r/autoware_universe/issues/12085>`_)
+  * replace getArcCoordinates in bpp packages
+  * replace getArcCoordinates usage in bpp packages (2)
+  * replace getArcCoordinates in bpp package (3)
+  (autoware_behavior_path_goal_planner_module)
+  * replace getArcCoordinates in bpp package(4)
+  (autoware_behavior_path_start_planner_module)
+  * replace getLateralDistanceToClosestLanelet in bpp package
+  * replace getExpandedLanelet(s) in bpp package
+  * replace combineLaneletsShape in bpp packages
+  * fix wrong condition in bpp
+  * style(pre-commit): autofix
+  * remove directly dereference opt for combine_lanelet
+  * remove log if lanelet is empty
+  * bind reference to optional value for combine_lanelets_shape
+  * remove log and simply return outside else in get_dirty_expanded_lanelets opt
+  * remove .has_value in lane_change_module for consistency
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
+* chore: organize maintainer (`#12121 <https://github.com/mitsudome-r/autoware_universe/issues/12121>`_)
+* Contributors: Sarun MUKDAPITAK, Satoshi OTA, Vishal Chauhan, Zulfaqar Azmi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

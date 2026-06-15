@@ -1,6 +1,6 @@
 <launch>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
-  <arg name="model_path" default="$(env HOME)/autoware_data/camera_streampetr"/>
+  <arg name="model_path" default="$(env HOME)/autoware_data/ml_models/camera_streampetr"/>
 
   <arg name="model_param_path" default="$(var model_path)/ml_package_camera_streampetr.param.yaml"/>
   <arg name="node_param_path" default="$(find-pkg-share autoware_camera_streampetr)/config/camera_streampetr.param.yaml"/>

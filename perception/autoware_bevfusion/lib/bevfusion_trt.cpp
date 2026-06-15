@@ -22,7 +22,7 @@
 
 #include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware/point_types/memory.hpp>
-#include <autoware/universe_utils/math/constants.hpp>
+#include <autoware_utils_math/constants.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -47,8 +47,7 @@ BEVFusionTRT::BEVFusionTRT(
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
   vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
 
-  stop_watch_ptr_ =
-    std::make_unique<autoware::universe_utils::StopWatch<std::chrono::milliseconds>>();
+  stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("processing/inner");
 
   initPtr();
