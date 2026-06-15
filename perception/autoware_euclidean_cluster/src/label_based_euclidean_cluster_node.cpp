@@ -728,7 +728,14 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   confusable_groups_ = load_confusable_groups(options);
   for (std::size_t g = 0; g < confusable_groups_.size(); ++g) {
     for (const auto label : confusable_groups_[g].labels) {
-      label_to_group_idx_[label] = g;
+      const auto [it, inserted] = label_to_group_idx_.emplace(label, g);
+      if (!inserted) {
+        RCLCPP_WARN(
+          get_logger(),
+          "Label %u is listed in multiple confusable_label_groups; keeping the first assignment "
+          "(group index %zu) and ignoring group index %zu.",
+          static_cast<unsigned>(label), it->second, g);
+      }
     }
   }
 }

@@ -30,8 +30,6 @@ namespace autoware::euclidean_cluster
 class VoxelGridBasedEuclideanCluster : public EuclideanClusterInterface
 {
 public:
-  VoxelGridBasedEuclideanCluster();
-  VoxelGridBasedEuclideanCluster(bool use_height, int min_points_per_cluster);
   VoxelGridBasedEuclideanCluster(
     bool use_height, int min_points_per_cluster, float tolerance, float voxel_leaf_size,
     int min_points_per_voxel, int large_cluster_voxel_count_threshold,

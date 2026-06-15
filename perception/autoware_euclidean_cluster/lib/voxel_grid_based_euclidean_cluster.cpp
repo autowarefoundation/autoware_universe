@@ -29,17 +29,6 @@
 
 namespace autoware::euclidean_cluster
 {
-VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster()
-{
-}
-
-VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
-  bool use_height, int min_points_per_cluster)
-// max cluster size is unused by this clusterer (oversized groups are split, not dropped).
-: EuclideanClusterInterface(use_height, min_points_per_cluster, 0)
-{
-}
-
 VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
   bool use_height, int min_points_per_cluster, float tolerance, float voxel_leaf_size,
   int min_points_per_voxel, int large_cluster_voxel_count_threshold,
