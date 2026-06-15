@@ -40,6 +40,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -314,7 +315,9 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
 {
   constexpr std::string_view prefix = "confusable_label_groups.";
   std::unordered_map<std::string, ConfusableLabelGroup> groups_map;
-  std::unordered_map<std::string, bool> has_tolerance;
+  // Records which "<group>.<key>" overrides were actually provided, so required keys can be
+  // validated without per-key tracking containers.
+  std::unordered_set<std::string> provided_keys;
 
   for (const auto & param : options.parameter_overrides()) {
     const auto & name = param.get_name();
@@ -336,10 +339,11 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
       key == "cross_label_tolerance_m" &&
       param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
       group.cross_label_tolerance = static_cast<float>(param.as_double());
-      has_tolerance[group_name] = true;
+      provided_keys.insert(group_name + ".cross_label_tolerance_m");
     } else if (
       key == "max_merged_size_m" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
       group.max_merged_size = static_cast<float>(param.as_double());
+      provided_keys.insert(group_name + ".max_merged_size_m");
     } else if (
       key == "labels" && param.get_type() == rclcpp::ParameterType::PARAMETER_STRING_ARRAY) {
       for (const auto & label_name : param.as_string_array()) {
@@ -353,9 +357,23 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
 
   std::vector<ConfusableLabelGroup> result;
   for (auto & [name, group] : groups_map) {
-    if (group.labels.size() >= 2 && has_tolerance.count(name)) {
-      result.push_back(std::move(group));
+    // A group needs at least 2 labels to be confusable with each other; smaller groups are
+    // meaningless and silently skipped.
+    if (group.labels.size() < 2) {
+      continue;
     }
+    // cross_label_tolerance_m and max_merged_size_m must both be set explicitly; without them the
+    // group would silently fall back to the default-constructed value (0). Treat a missing required
+    // field as a hard configuration error.
+    if (!provided_keys.count(name + ".cross_label_tolerance_m")) {
+      throw std::runtime_error(
+        "Confusable label group '" + name + "' is missing required 'cross_label_tolerance_m'.");
+    }
+    if (!provided_keys.count(name + ".max_merged_size_m")) {
+      throw std::runtime_error(
+        "Confusable label group '" + name + "' is missing required 'max_merged_size_m'.");
+    }
+    result.push_back(std::move(group));
   }
   return result;
 }

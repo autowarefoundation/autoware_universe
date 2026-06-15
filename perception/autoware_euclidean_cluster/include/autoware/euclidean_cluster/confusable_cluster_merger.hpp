@@ -28,11 +28,11 @@ struct ConfusableLabelGroup
 {
   std::vector<std::uint8_t> labels;
   /// @brief True minimum point-to-point XY gap (m) below which two cross-label clusters may merge.
-  float cross_label_tolerance{};
+  float cross_label_tolerance;
   /// @brief Maximum diameter (m) of a merged component's XY bounding circle; caps chaining into
   ///        oversized blobs. Orientation-independent — clusters are partial views, so a per-axis
   ///        (length/width) cap would presuppose a heading we cannot reliably estimate.
-  float max_merged_size{25.0F};
+  float max_merged_size;
 };
 
 /// @brief A clustered point cloud tagged with its object label and averaged semantic probability.
