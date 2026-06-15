@@ -107,9 +107,6 @@ void run_segment_csr_case(const SegmentCsrCase & test_case, const std::vector<fl
   DeviceBuffer<float> src_d(std::max<std::size_t>(test_case.src.size(), 1U));
   DeviceBuffer<std::int64_t> indptr_d(test_case.indptr.size());
   DeviceBuffer<float> out_d(std::max<std::size_t>(reference.size(), 1U));
-  const std::vector<std::int32_t> src_size{
-    static_cast<std::int32_t>(test_case.rows), static_cast<std::int32_t>(test_case.cols)};
-  const std::vector<std::int32_t> indptr_size{static_cast<std::int32_t>(test_case.indptr.size())};
 
   if (!test_case.src.empty()) {
     copy_to_device(src_d.get(), test_case.src);
@@ -118,7 +115,9 @@ void run_segment_csr_case(const SegmentCsrCase & test_case, const std::vector<fl
 
   ASSERT_EQ(
     (segment_csr_launch<float, REDUCE>(
-      src_d.get(), src_size, indptr_d.get(), indptr_size, out_d.get(),
+      src_d.get(), static_cast<std::int32_t>(test_case.rows),
+      static_cast<std::int32_t>(test_case.cols), indptr_d.get(),
+      static_cast<std::int32_t>(test_case.indptr.size()), out_d.get(),
       static_cast<std::int64_t *>(nullptr), stream.get())),
     0);
   ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
@@ -146,6 +145,47 @@ TEST_P(SegmentCsrTest, MaxMatchesCpuReference)
   const auto reference =
     make_segment_reference_max(test_case.src, test_case.rows, test_case.cols, test_case.indptr);
   run_segment_csr_case<MAX>(test_case, reference);
+}
+
+TEST(SegmentCsrZeroOutputTest, MaxWithArgIndicesAcceptsZeroOutputShape)
+{
+  SKIP_TEST_IF_CUDA_UNAVAILABLE();
+
+  const std::vector<SegmentCsrCase> test_cases{
+    SegmentCsrCase{
+      "NoSegmentsWithRows",
+      6U,
+      2U,
+      {1.0F, 2.0F, 3.0F, 4.0F, 5.0F, 6.0F, 7.0F, 8.0F, 9.0F, 10.0F, 11.0F, 12.0F},
+      {0}},
+    SegmentCsrCase{"ZeroColumns", 3U, 0U, {}, {0, 1, 3}},
+    SegmentCsrCase{"EmptyIndptr", 0U, 2U, {}, {}}};
+
+  for (const auto & test_case : test_cases) {
+    SCOPED_TRACE(test_case.name);
+
+    CudaStreamGuard stream;
+    DeviceBuffer<float> src_d(std::max<std::size_t>(test_case.src.size(), 1U));
+    DeviceBuffer<std::int64_t> indptr_d(std::max<std::size_t>(test_case.indptr.size(), 1U));
+    DeviceBuffer<float> out_d(1U);
+    DeviceBuffer<std::int64_t> arg_indices_d(1U);
+
+    if (!test_case.src.empty()) {
+      copy_to_device(src_d.get(), test_case.src);
+    }
+    if (!test_case.indptr.empty()) {
+      copy_to_device(indptr_d.get(), test_case.indptr);
+    }
+
+    ASSERT_EQ(
+      (segment_csr_launch<float, MAX>(
+        src_d.get(), static_cast<std::int32_t>(test_case.rows),
+        static_cast<std::int32_t>(test_case.cols), indptr_d.get(),
+        static_cast<std::int32_t>(test_case.indptr.size()), out_d.get(), arg_indices_d.get(),
+        stream.get())),
+      0);
+    ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
+  }
 }
 
 std::string segment_csr_case_name(const testing::TestParamInfo<SegmentCsrCase> & info)
