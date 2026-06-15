@@ -3,41 +3,6 @@
   "title": "autoware_label_based_euclidean_cluster Parameters",
   "type": "object",
   "definitions": {
-    "cluster_override_params": {
-      "type": "object",
-      "description": "Per-label overrides for VoxelGridBasedEuclideanCluster. Omitted keys fall back to the global default.",
-      "properties": {
-        "use_height": { "type": "boolean" },
-        "tolerance_m": { "type": "number" },
-        "min_points_per_cluster": { "type": "integer" },
-        "voxel_leaf_size_m": { "type": "number" },
-        "min_points_per_voxel": { "type": "integer" },
-        "large_cluster_voxel_count_threshold": { "type": "integer" },
-        "large_cluster_max_points_per_voxel": { "type": "integer" },
-        "max_voxels_per_cluster": { "type": "integer", "minimum": 1 }
-      },
-      "additionalProperties": false
-    },
-    "class_names": {
-      "type": "object",
-      "description": "Ordered mapping from input semantic class name to clustering target label. YAML declaration order is treated as class_id order.",
-      "additionalProperties": {
-        "type": "string",
-        "enum": [
-          "ignore",
-          "unknown",
-          "car",
-          "truck",
-          "bus",
-          "trailer",
-          "motorcycle",
-          "bicycle",
-          "pedestrian",
-          "animal",
-          "hazard"
-        ]
-      }
-    },
     "label_based_euclidean_cluster": {
       "type": "object",
       "properties": {
@@ -129,30 +94,7 @@
           "additionalProperties": false
         },
         "confusable_label_groups": {
-          "type": "object",
-          "description": "Optional post-clustering merge groups for confusable label pairs (e.g. truck/trailer). Each key is a user-defined group name.",
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "labels": {
-                "type": "array",
-                "items": { "type": "string" },
-                "minItems": 2,
-                "description": "Label names in this confusable group."
-              },
-              "cross_label_tolerance_m": {
-                "type": "number",
-                "description": "Maximum true minimum point-to-point XY gap between clusters of different labels to trigger a merge."
-              },
-              "max_merged_size_m": {
-                "type": "number",
-                "description": "Bounding-circle diameter cap (m) for a merged component; unions exceeding it are refused, bounding chaining. Orientation-independent.",
-                "default": 25.0
-              }
-            },
-            "required": ["labels", "cross_label_tolerance_m"],
-            "additionalProperties": false
-          }
+          "$ref": "#/definitions/confusable_label_groups"
         }
       },
       "required": [
@@ -172,6 +114,67 @@
         "shape_policy"
       ],
       "additionalProperties": false
+    },
+    "cluster_override_params": {
+      "type": "object",
+      "description": "Per-label overrides for VoxelGridBasedEuclideanCluster. Omitted keys fall back to the global default.",
+      "properties": {
+        "use_height": { "type": "boolean" },
+        "tolerance_m": { "type": "number" },
+        "min_points_per_cluster": { "type": "integer" },
+        "voxel_leaf_size_m": { "type": "number" },
+        "min_points_per_voxel": { "type": "integer" },
+        "large_cluster_voxel_count_threshold": { "type": "integer" },
+        "large_cluster_max_points_per_voxel": { "type": "integer" },
+        "max_voxels_per_cluster": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "class_names": {
+      "type": "object",
+      "description": "Ordered mapping from input semantic class name to clustering target label. YAML declaration order is treated as class_id order.",
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "ignore",
+          "unknown",
+          "car",
+          "truck",
+          "bus",
+          "trailer",
+          "motorcycle",
+          "bicycle",
+          "pedestrian",
+          "animal",
+          "hazard"
+        ]
+      }
+    },
+    "confusable_label_groups": {
+      "type": "object",
+      "description": "Optional post-clustering merge groups for confusable label pairs (e.g. truck/trailer). Each key is a user-defined group name.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 2,
+            "description": "Label names in this confusable group."
+          },
+          "cross_label_tolerance_m": {
+            "type": "number",
+            "description": "Maximum true minimum point-to-point XY gap between clusters of different labels to trigger a merge."
+          },
+          "max_merged_size_m": {
+            "type": "number",
+            "description": "Bounding-circle diameter cap (m) for a merged component; unions exceeding it are refused, bounding chaining. Orientation-independent.",
+            "default": 25.0
+          }
+        },
+        "required": ["labels", "cross_label_tolerance_m"],
+        "additionalProperties": false
+      }
     }
   },
   "properties": {
