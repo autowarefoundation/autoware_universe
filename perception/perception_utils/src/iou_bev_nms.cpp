@@ -38,8 +38,9 @@ void IouBevNms::setParameters(const IouBevNmsParams & params)
   if (!std::isfinite(params.search_distance_2d) || params.search_distance_2d < 0.0) {
     throw std::invalid_argument("search_distance_2d must be a finite non-negative value.");
   }
-  if (!std::isfinite(params.iou_threshold) || params.iou_threshold < 0.0 ||
-      params.iou_threshold > 1.0) {
+  if (
+    !std::isfinite(params.iou_threshold) || params.iou_threshold < 0.0 ||
+    params.iou_threshold > 1.0) {
     throw std::invalid_argument("iou_threshold must be a finite value between 0 and 1.");
   }
 
