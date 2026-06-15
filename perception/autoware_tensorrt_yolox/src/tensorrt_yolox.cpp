@@ -778,8 +778,8 @@ bool TrtYoloX::feedforward(const std::vector<cv::Mat> & images, ObjectArrays & o
       const auto y1 = out_boxes[i * max_detections_ * 4 + j * 4 + 1] / scales_[i];
       const auto x2 = out_boxes[i * max_detections_ * 4 + j * 4 + 2] / scales_[i];
       const auto y2 = out_boxes[i * max_detections_ * 4 + j * 4 + 3] / scales_[i];
-      object.x_offset = std::clamp(0, static_cast<int32_t>(x1), images[i].cols);
-      object.y_offset = std::clamp(0, static_cast<int32_t>(y1), images[i].rows);
+      object.x_offset = std::clamp(static_cast<int32_t>(x1), 0, images[i].cols);
+      object.y_offset = std::clamp(static_cast<int32_t>(y1), 0, images[i].rows);
       object.width = static_cast<int32_t>(std::max(0.0F, x2 - x1));
       object.height = static_cast<int32_t>(std::max(0.0F, y2 - y1));
       object.score = out_scores[i * max_detections_ + j];
@@ -906,8 +906,8 @@ bool TrtYoloX::multiScaleFeedforward(const cv::Mat & image, int batch_size, Obje
       const auto y1 = out_boxes[i * max_detections_ * 4 + j * 4 + 1] / scales_[i];
       const auto x2 = out_boxes[i * max_detections_ * 4 + j * 4 + 2] / scales_[i];
       const auto y2 = out_boxes[i * max_detections_ * 4 + j * 4 + 3] / scales_[i];
-      object.x_offset = std::clamp(0, static_cast<int32_t>(x1), image.cols);
-      object.y_offset = std::clamp(0, static_cast<int32_t>(y1), image.rows);
+      object.x_offset = std::clamp(static_cast<int32_t>(x1), 0, image.cols);
+      object.y_offset = std::clamp(static_cast<int32_t>(y1), 0, image.rows);
       object.width = static_cast<int32_t>(std::max(0.0F, x2 - x1));
       object.height = static_cast<int32_t>(std::max(0.0F, y2 - y1));
       object.score = out_scores[i * max_detections_ + j];
