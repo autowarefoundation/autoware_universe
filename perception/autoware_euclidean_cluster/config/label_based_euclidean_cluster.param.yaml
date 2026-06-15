@@ -4,9 +4,9 @@
     use_height: false
     tolerance_m: 0.65
     voxel_leaf_size_m: 0.2
-    min_points_per_voxel: 1
+    min_points_per_voxel: 3
     min_points_per_cluster: 10
-    large_cluster_voxel_count_threshold: 10
+    large_cluster_voxel_count_threshold: 50
     large_cluster_max_points_per_voxel: 100
     max_voxels_per_cluster: 2000
     # Per-label clustering parameter overrides.
