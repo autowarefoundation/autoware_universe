@@ -182,16 +182,16 @@
         "pruning_generalized_iou_thresholds": {
           "$ref": "#/definitions/pruning_generalized_iou_thresholds",
           "default": {
-            "unknown": -0.3,
-            "car": -0.4,
-            "truck": -0.6,
-            "bus": -0.6,
-            "trailer": -0.6,
-            "motorcycle": -0.1,
-            "bicycle": -0.1,
-            "pedestrian": -0.1,
-            "animal": -0.1,
-            "hazard": -0.1
+            "unknown": 0.1,
+            "car": 0.1,
+            "truck": 0.1,
+            "bus": 0.1,
+            "trailer": 0.1,
+            "motorcycle": 0.1,
+            "bicycle": 0.1,
+            "pedestrian": 0.1,
+            "animal": 0.1,
+            "hazard": 0.1
           }
         },
         "pruning_distance_thresholds": {
