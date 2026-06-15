@@ -374,6 +374,24 @@ void DiffusionPlanner::on_timer()
   }
 
   const rclcpp::Time frame_time(frame_context->frame_time);
+
+  const auto & ego_position = frame_context->ego_kinematic_state.pose.pose.position;
+  const auto & ego_orientation = frame_context->ego_kinematic_state.pose.pose.orientation;
+  RCLCPP_DEBUG_STREAM(
+    this->get_logger(),
+    "FrameContext: "                                                                //
+      << "frame_time_ns=" << frame_time.nanoseconds()                               //
+      << ", ego_pos_x=" << ego_position.x                                           //
+      << ", ego_pos_y=" << ego_position.y                                           //
+      << ", ego_pos_z=" << ego_position.z                                           //
+      << ", ego_quat_x=" << ego_orientation.x                                       //
+      << ", ego_quat_y=" << ego_orientation.y                                       //
+      << ", ego_quat_z=" << ego_orientation.z                                       //
+      << ", ego_quat_w=" << ego_orientation.w                                       //
+      << ", ego_vel_x=" << frame_context->ego_kinematic_state.twist.twist.linear.x  //
+      << ", ego_acc_x=" << frame_context->ego_acceleration.accel.accel.linear.x     //
+      << ", neighbors=" << frame_context->ego_centric_neighbor_histories.size());
+
   InputDataMap input_data_map = core_->create_input_data(*frame_context);
 
   publish_debug_markers(input_data_map, frame_context->ego_to_map_transform, frame_time);
