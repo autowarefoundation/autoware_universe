@@ -18,7 +18,6 @@
 
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
@@ -119,12 +118,16 @@ void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::T
       "Received a traffic signal not present in the current map (%lu)", id);
   }
 
-  auto output_signals_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_);
-  *output_signals_msg_ptr = std::move(*result.output);
   // Stamp inheritance is the Node's I/O contract with downstream consumers:
   // the published output carries the trigger msg's stamp for time alignment.
-  output_signals_msg_ptr->stamp = stamp;
-  pub_->publish(std::move(output_signals_msg_ptr));
+  result.output->stamp = stamp;
+
+  // Publish by const-ref so the wrapper copies into a freshly borrowed message:
+  // agnocast's heaphook only routes allocations into the shared-memory pool
+  // while a publisher message is borrowed. The Core builds its output on the
+  // regular heap, so moving that buffer into a loaned message would leave the
+  // payload outside the segment subscribers map. The copy keeps it in shmem.
+  pub_->publish(*result.output);
 
   if (rclcpp::Time(stamp) < result.latest_input_time) {
     RCLCPP_WARN_THROTTLE(
