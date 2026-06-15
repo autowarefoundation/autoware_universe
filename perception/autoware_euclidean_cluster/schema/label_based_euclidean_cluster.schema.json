@@ -172,7 +172,7 @@
             "default": 25.0
           }
         },
-        "required": ["labels", "cross_label_tolerance_m"],
+        "required": ["labels", "cross_label_tolerance_m", "max_merged_size_m"],
         "additionalProperties": false
       }
     }
