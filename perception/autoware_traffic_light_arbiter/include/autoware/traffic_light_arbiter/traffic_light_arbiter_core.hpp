@@ -104,6 +104,11 @@ public:
   ArbitrationResult arbitrate() const;
 
 private:
+  // One element paired with whether it came from the prioritized source.
+  // Accumulated per regulatory-element id while routing signals, then reduced
+  // to one element per shape by get_highest_confidence_elements().
+  using ElementAndPriority = std::pair<Element, bool>;
+
   // True when |current_time - msg_stamp| exceeds external_delay_tolerance_.
   // Used by ingest_external for admission control.
   bool is_external_outdated(
@@ -113,6 +118,19 @@ private:
   // from `reference_time` beyond `tolerance`, returning the removed entries.
   std::vector<ExpiredExternalSignal> sweep_expired_external_signals(
     const rclcpp::Time & reference_time, double tolerance);
+
+  // Routes one signal's elements into `signals_map` under its regulatory-element
+  // id, tagging each with `priority`. Ids absent from map_regulatory_elements_set_
+  // are recorded in `off_map_signal_ids` and dropped.
+  void route_signal(
+    const TrafficSignal & signal, bool priority,
+    std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> & signals_map,
+    std::vector<lanelet::Id> & off_map_signal_ids) const;
+
+  // Reduces the accumulated (element, priority) pairs for one regulatory element
+  // to a single element per shape, keeping the highest (priority, confidence).
+  static std::vector<Element> get_highest_confidence_elements(
+    const std::vector<ElementAndPriority> & elements_and_priority);
 
   SourcePriority source_priority_;
   bool enable_signal_matching_;
