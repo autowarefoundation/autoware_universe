@@ -11,7 +11,7 @@
     # - Semi-trailer: 16.5m x 2.5m = ~458 voxels
     # - Full trailer: 25m x 2.5m = ~694 voxels
     # Adding 15% margin for safety: 694 * 1.15 ~ 800
-    # Lower this to force large groups to be cut into smaller sections.
+    # Lower max_voxels_per_cluster (above) to force large groups to be cut into smaller sections.
     large_cluster_voxel_count_threshold: 65  # Clusters below this number of voxels are exempt from per-voxel filtering
     # This threshold is based on a medium-sized truck (5.0m x 1.8m).
     # Its full footprint covers about 100 voxels (0.3m x 0.3m grid),

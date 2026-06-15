@@ -32,13 +32,13 @@
 #include <pcl/common/common.h>
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
