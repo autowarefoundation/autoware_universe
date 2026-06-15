@@ -21,6 +21,7 @@
 
 // Autoware
 #include <autoware_control_msgs/msg/control.hpp>
+#include <tier4_system_msgs/msg/driving_mode_info.hpp>
 #include <tier4_system_msgs/msg/driving_mode_mrm_state.hpp>
 #include <tier4_system_msgs/msg/driving_mode_request.hpp>
 #include <tier4_system_msgs/msg/mrm_behavior_status.hpp>
@@ -33,6 +34,7 @@
 namespace autoware::mrm_emergency_stop_operator
 {
 using autoware_control_msgs::msg::Control;
+using tier4_system_msgs::msg::DrivingModeInfo;
 using tier4_system_msgs::msg::DrivingModeMrmState;
 using tier4_system_msgs::msg::DrivingModeRequest;
 using tier4_system_msgs::msg::MrmBehaviorStatus;
@@ -40,7 +42,6 @@ using tier4_system_msgs::srv::OperateMrm;
 
 struct Parameters
 {
-  uint32_t driving_mode_id;
   int update_rate;             // [Hz]
   double target_acceleration;  // [m/s^2]
   double target_jerk;          // [m/s^3]
@@ -62,9 +63,11 @@ private:
   // Subscriber
   rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
   rclcpp::Subscription<DrivingModeRequest>::SharedPtr sub_driving_mode_request_;
+  rclcpp::Subscription<DrivingModeInfo>::SharedPtr sub_driving_mode_info_;
 
   void onControlCommand(Control::ConstSharedPtr msg);
   void onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg);
+  void onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg);
 
   // Server
   rclcpp::Service<OperateMrm>::SharedPtr service_operation_;
@@ -78,6 +81,7 @@ private:
   rclcpp::Publisher<DrivingModeMrmState>::SharedPtr pub_mrm_state_;
 
   void publishStatus() const;
+  void publishMrmState() const;
   void publishControlCommand(const Control & command) const;
 
   // Timer
@@ -89,6 +93,9 @@ private:
   MrmBehaviorStatus status_;
   Control prev_control_cmd_;
   bool is_prev_control_cmd_subscribed_;
+
+  // Driving mode
+  std::optional<uint32_t> driving_mode_id;
 
   // Algorithm
   Control calcTargetAcceleration(const Control & prev_control_cmd) const;

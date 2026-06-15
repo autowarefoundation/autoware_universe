@@ -25,7 +25,6 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
 : Node("mrm_emergency_stop_operator", node_options)
 {
   // Parameter
-  params_.driving_mode_id = declare_parameter<int>("driving_mode_id");
   params_.update_rate = declare_parameter<int>("update_rate");
   params_.target_acceleration = declare_parameter<double>("target_acceleration");
   params_.target_jerk = declare_parameter<double>("target_jerk");
@@ -37,6 +36,9 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
   sub_driving_mode_request_ = create_subscription<DrivingModeRequest>(
     "~/input/driving_mode_request", 1,
     std::bind(&MrmEmergencyStopOperator::onDrivingModeRequest, this, std::placeholders::_1));
+  sub_driving_mode_info_ = create_subscription<DrivingModeInfo>(
+    "~/input/driving_mode_info", rclcpp::QoS(1).transient_local(),
+    std::bind(&MrmEmergencyStopOperator::onDrivingModeInfo, this, std::placeholders::_1));
 
   // Server
   service_operation_ = create_service<OperateMrm>(
@@ -86,10 +88,20 @@ void MrmEmergencyStopOperator::onControlCommand(Control::ConstSharedPtr msg)
 
 void MrmEmergencyStopOperator::onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg)
 {
-  if (msg->mode == params_.driving_mode_id) {
+  if (msg->mode == driving_mode_id) {
     status_.state = MrmBehaviorStatus::OPERATING;
   } else {
     status_.state = MrmBehaviorStatus::AVAILABLE;
+  }
+}
+
+void MrmEmergencyStopOperator::onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg)
+{
+  for (const auto & item : msg->items) {
+    if (item.name == "emergency_stop") {
+      driving_mode_id = item.mode;
+      break;
+    }
   }
 }
 
@@ -107,6 +119,13 @@ void MrmEmergencyStopOperator::operateEmergencyStop(
 
 void MrmEmergencyStopOperator::publishStatus() const
 {
+  auto status = status_;
+  status.stamp = this->now();
+  pub_status_->publish(status);
+}
+
+void MrmEmergencyStopOperator::publishMrmState() const
+{
   using tier4_system_msgs::msg::DrivingModeMrmStateItem;
   const auto convert_mrm_state = [](const uint8_t state) {
     // clang-format off
@@ -118,12 +137,12 @@ void MrmEmergencyStopOperator::publishStatus() const
     // clang-format on
   };
 
-  auto status = status_;
-  status.stamp = this->now();
-  pub_status_->publish(status);
+  if (!driving_mode_id) {
+    return;
+  }
 
   DrivingModeMrmStateItem item;
-  item.mode = params_.driving_mode_id;
+  item.mode = driving_mode_id.value();
   item.state = convert_mrm_state(status_.state);
 
   DrivingModeMrmState msg;
@@ -147,6 +166,7 @@ void MrmEmergencyStopOperator::onTimer()
     publishControlCommand(prev_control_cmd_);
   }
   publishStatus();
+  publishMrmState();
 }
 
 Control MrmEmergencyStopOperator::calcTargetAcceleration(const Control & prev_control_cmd) const

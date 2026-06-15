@@ -1,6 +1,5 @@
 /**:
   ros__parameters:
-    driving_mode_id: 2001
     update_rate: 30
     target_acceleration: -2.5
     target_jerk: -1.5
