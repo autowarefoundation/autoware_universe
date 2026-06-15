@@ -130,13 +130,8 @@ int32_t segment_csr_launch(
     fill_kernel<int64_t>
       <<<BLOCKS(1, out_numel), THREADS, 0, stream_in>>>(arg_indices_out, out_numel, num_rows_in);
 
-  scalar_t * base_values{nullptr};
-  cudaMallocAsync(&base_values, sizeof(scalar_t) * out_numel, stream_in);
   fill_kernel<scalar_t><<<BLOCKS(1, out_numel), THREADS, 0, stream_in>>>(
-    base_values, out_numel, static_cast<scalar_t>(0));
-  cudaMemcpyAsync(
-    reduced_values_out, base_values, sizeof(scalar_t) * out_numel, cudaMemcpyDeviceToDevice,
-    stream_in);
+    reduced_values_out, out_numel, static_cast<scalar_t>(0));
 
   if (num_cols_in == 1)
     segment_csr_kernel<scalar_t, REDUCE, 1><<<BLOCKS(32, num_segments), THREADS, 0, stream_in>>>(
@@ -145,8 +140,6 @@ int32_t segment_csr_launch(
     segment_csr_broadcast_kernel<scalar_t, REDUCE>
       <<<BLOCKS(1, num_segments * num_cols_in), THREADS, 0, stream_in>>>(
         src_in, indptr_in, reduced_values_out, arg_indices_out, num_segments, num_cols_in);
-
-  cudaFreeAsync(base_values, stream_in);
   return 0;
 }
 
