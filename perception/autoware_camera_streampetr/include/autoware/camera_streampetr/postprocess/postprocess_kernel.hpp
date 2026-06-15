@@ -39,24 +39,25 @@ public:
     circle_nms_dist_threshold_(circle_nms_dist_threshold),
     detection_range_(detection_range)
   {
-    if (static_cast<int32_t>(yaw_norm_thresholds.size()) != num_classes) {
+    if (static_cast<int32_t>(yaw_norm_thresholds.size()) < num_classes) {
       throw std::invalid_argument(
         "yaw_norm_thresholds size (" + std::to_string(yaw_norm_thresholds.size()) +
-        ") must equal num_classes (" + std::to_string(num_classes) + ")");
+        ") must be at least num_classes (" + std::to_string(num_classes) + ")");
     }
-    if (static_cast<int32_t>(score_thresholds.size()) != num_classes) {
+    if (static_cast<int32_t>(score_thresholds.size()) < num_classes) {
       throw std::invalid_argument(
         "score_thresholds size (" + std::to_string(score_thresholds.size()) +
-        ") must equal num_classes (" + std::to_string(num_classes) + ")");
+        ") must be at least num_classes (" + std::to_string(num_classes) + ")");
     }
 
     yaw_norm_thresholds_ =
-      std::vector<float>(yaw_norm_thresholds.begin(), yaw_norm_thresholds.end());
+      std::vector<float>(yaw_norm_thresholds.begin(), yaw_norm_thresholds.begin() + num_classes);
     for (auto & yaw_norm_threshold : yaw_norm_thresholds_) {
       yaw_norm_threshold =
         (yaw_norm_threshold >= 0.0 && yaw_norm_threshold < 1.0) ? yaw_norm_threshold : 0.0;
     }
-    score_thresholds_ = std::vector<float>(score_thresholds.begin(), score_thresholds.end());
+    score_thresholds_ =
+      std::vector<float>(score_thresholds.begin(), score_thresholds.begin() + num_classes);
   }
 
   ///// NETWORK PARAMETERS /////
