@@ -135,6 +135,29 @@ std::vector<std::pair<std::string, std::string>> extract_class_mappings(
   return class_mappings;
 }
 
+struct NestedOverrideName
+{
+  std::string group_name;
+  std::string key;
+};
+
+/// @brief Parse a nested override name in the form "<prefix><group>.<key>".
+std::optional<NestedOverrideName> parse_nested_override_name(
+  const std::string & parameter_name, const std::string_view prefix)
+{
+  if (parameter_name.rfind(prefix, 0) != 0) {
+    return std::nullopt;
+  }
+
+  const std::string rest = parameter_name.substr(prefix.size());
+  const auto dot_pos = rest.find('.');
+  if (dot_pos == std::string::npos) {
+    return std::nullopt;
+  }
+
+  return NestedOverrideName{rest.substr(0, dot_pos), rest.substr(dot_pos + 1)};
+}
+
 /// @brief Extract per-label parameter prefixes from nested overrides.
 ///        Example: "label_cluster_params.car.tolerance_m" -> {"car", "label_cluster_params.car."}
 std::unordered_map<std::string, std::string> load_label_cluster_parameter_prefixes(
@@ -146,18 +169,12 @@ std::unordered_map<std::string, std::string> load_label_cluster_parameter_prefix
   std::unordered_map<std::string, std::string> outputs;
 
   for (const auto & parameter : options.parameter_overrides()) {
-    const auto & name = parameter.get_name();
-
-    if (name.rfind(prefix, 0) != 0) {
+    const auto nested_name = parse_nested_override_name(parameter.get_name(), prefix);
+    if (!nested_name) {
       continue;
     }
 
-    const std::string rest = name.substr(prefix.size());
-
-    const auto dot_pos = rest.find('.');
-    if (dot_pos != std::string::npos) {
-      outputs.emplace(rest.substr(0, dot_pos), std::string(prefix) + rest.substr(0, dot_pos) + ".");
-    }
+    outputs.emplace(nested_name->group_name, std::string(prefix) + nested_name->group_name + ".");
   }
 
   return outputs;
@@ -334,19 +351,13 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
   std::unordered_set<std::string> provided_keys;
 
   for (const auto & param : options.parameter_overrides()) {
-    const auto & name = param.get_name();
-    if (name.rfind(prefix, 0) != 0) {
+    const auto nested_name = parse_nested_override_name(param.get_name(), prefix);
+    if (!nested_name) {
       continue;
     }
 
-    const auto rest = name.substr(prefix.size());
-    const auto dot = rest.find('.');
-    if (dot == std::string::npos) {
-      continue;
-    }
-
-    const auto group_name = rest.substr(0, dot);
-    const auto key = rest.substr(dot + 1);
+    const auto & group_name = nested_name->group_name;
+    const auto & key = nested_name->key;
     auto & group = groups_map[group_name];
 
     if (
