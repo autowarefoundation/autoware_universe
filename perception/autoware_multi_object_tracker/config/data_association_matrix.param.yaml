@@ -93,22 +93,4 @@
           hazard:     {max_dist: 2.0, max_area: 2.6, min_area: 0.001, min_iou: 0.0001}
           unknown:    {max_dist: 2.0, max_area: 2.6, min_area: 0.001, min_iou: 0.0001}
 
-    # Per-tracker-type configuration: behavior knobs scoped to a single tracker type.
-    tracker_configs:
-      polygon_tracker:
-        enable_velocity_estimation: true   # estimate velocity for polygon tracks
-        enable_motion_output:              # publish estimated velocity on polygon tracks, per classification
-          unknown:    false
-          car:        true
-          truck:      true
-          bus:        true
-          trailer:    true
-          motorcycle: true
-          bicycle:    true
-          pedestrian: true
-          animal:     true
-          hazard:     false
-      static_tracker:
-        convert_polygon_to_bbox: true      # convert POLYGON shape to BOUNDING_BOX at publish time
-
     unknown_association_giou_threshold: -0.8  # GIoU threshold for unknown-unknown association

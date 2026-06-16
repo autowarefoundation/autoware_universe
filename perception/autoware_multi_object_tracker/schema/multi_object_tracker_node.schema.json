@@ -131,6 +131,70 @@
       ],
       "description": "Overlap distance threshold for each tracked class."
     },
+    "enable_motion_output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unknown": { "type": "boolean" },
+        "car": { "type": "boolean" },
+        "truck": { "type": "boolean" },
+        "bus": { "type": "boolean" },
+        "trailer": { "type": "boolean" },
+        "motorcycle": { "type": "boolean" },
+        "bicycle": { "type": "boolean" },
+        "pedestrian": { "type": "boolean" },
+        "animal": { "type": "boolean" },
+        "hazard": { "type": "boolean" }
+      },
+      "required": [
+        "unknown",
+        "car",
+        "truck",
+        "bus",
+        "trailer",
+        "motorcycle",
+        "bicycle",
+        "pedestrian",
+        "animal",
+        "hazard"
+      ],
+      "description": "Whether to publish estimated velocity on polygon tracks, per classification."
+    },
+    "tracker_configs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-tracker-type configuration: behavior knobs scoped to a single tracker type.",
+      "properties": {
+        "polygon_tracker": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enable_velocity_estimation": {
+              "type": "boolean",
+              "description": "Estimate velocity for polygon tracks.",
+              "default": true
+            },
+            "enable_motion_output": {
+              "$ref": "#/definitions/enable_motion_output"
+            }
+          },
+          "required": ["enable_velocity_estimation", "enable_motion_output"]
+        },
+        "static_tracker": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "convert_polygon_to_bbox": {
+              "type": "boolean",
+              "description": "Convert POLYGON shape to BOUNDING_BOX at publish time.",
+              "default": true
+            }
+          },
+          "required": ["convert_polygon_to_bbox"]
+        }
+      },
+      "required": ["polygon_tracker", "static_tracker"]
+    },
     "multi_object_tracker_node": {
       "type": "object",
       "properties": {
@@ -158,6 +222,9 @@
           "type": "boolean",
           "description": "If True, consider odometry uncertainty in tracking.",
           "default": false
+        },
+        "tracker_configs": {
+          "$ref": "#/definitions/tracker_configs"
         },
         "min_known_object_removal_iou": {
           "type": "number",
@@ -261,6 +328,7 @@
         "ego_frame_id",
         "enable_delay_compensation",
         "consider_odometry_uncertainty",
+        "tracker_configs",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
         "pruning_generalized_iou_thresholds",
