@@ -64,6 +64,11 @@ public:
   void setPublishFilteredPointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
 
+  // CUDA stream on which the input point cloud is consumed (pre-/post-process and inference). It is
+  // handed to the CudaBlackboardSubscriber so the blackboard can order the producer/consumer and
+  // the buffer free at the stream level instead of synchronizing the whole process.
+  cudaStream_t stream() const { return stream_; }
+
 protected:
   void initPtr();
   void initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_config);
