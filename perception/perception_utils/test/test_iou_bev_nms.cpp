@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "perception_utils/detection_class_remapper.hpp"
 #include "perception_utils/iou_bev_nms.hpp"
 
 #include <autoware_utils_geometry/geometry.hpp>
@@ -28,7 +27,6 @@ namespace
 {
 
 using autoware_perception_msgs::msg::DetectedObject;
-using autoware_perception_msgs::msg::DetectedObjects;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::Shape;
 
@@ -93,15 +91,13 @@ TEST(IouBevNmsTest, DoesNotSuppressPedestrianAgainstAnotherClass)
   EXPECT_EQ(nms.apply(objects).size(), 2U);
 }
 
-TEST(IouBevNmsTest, KeepsSourceObjectsIntactWhileSuppressing)
+TEST(IouBevNmsTest, SuppressesOverlappingSameClassPedestrians)
 {
   perception_utils::IouBevNms nms;
   nms.setParameters({10.0, 0.0});
 
-  // Three overlapping pedestrians: the first is retained and then reused as the
-  // source object when evaluating the others. If the retained object were moved
-  // out, its emptied classification would break the same-class check and let the
-  // overlapping pedestrians survive.
+  // Pedestrians are exempt only from cross-class suppression; overlapping
+  // same-class pedestrians are still reduced to the highest-scoring one.
   const std::vector<DetectedObject> objects{
     make_object(0.0, 0.0, 2.0F, 2.0F, ObjectClassification::PEDESTRIAN, 0.9F),
     make_object(0.1, 0.0, 2.0F, 2.0F, ObjectClassification::PEDESTRIAN, 0.8F),
@@ -116,35 +112,6 @@ TEST(IouBevNmsTest, RejectsNonFiniteParameters)
   const double nan = std::numeric_limits<double>::quiet_NaN();
   EXPECT_THROW(nms.setParameters({nan, 0.2}), std::invalid_argument);
   EXPECT_THROW(nms.setParameters({10.0, nan}), std::invalid_argument);
-}
-
-TEST(DetectionClassRemapperTest, RemapsEveryClassificationByBevArea)
-{
-  perception_utils::DetectionClassRemapper remapper;
-  const std::vector<std::int64_t> allow{0, 0, 0,  //
-                                        0, 0, 1,  //
-                                        0, 1, 0};
-  const std::vector<double> min_area{0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0};
-  const std::vector<double> max_area{0.0, 0.0, 0.0, 0.0, 0.0, 999.0, 0.0, 10.0, 0.0};
-  remapper.setParameters(allow, min_area, max_area);
-
-  DetectedObjects objects;
-  objects.objects = {
-    make_object(0.0, 0.0, 2.0F, 2.0F, 0, 1.0F), make_object(0.0, 0.0, 8.0F, 2.0F, 1, 1.0F),
-    make_object(0.0, 0.0, 3.0F, 3.0F, 2, 1.0F), make_object(0.0, 0.0, 4.0F, 3.0F, 2, 1.0F)};
-
-  remapper.mapClasses(objects);
-
-  EXPECT_EQ(objects.objects.at(0).classification.at(0).label, 0);
-  EXPECT_EQ(objects.objects.at(1).classification.at(0).label, 2);
-  EXPECT_EQ(objects.objects.at(2).classification.at(0).label, 1);
-  EXPECT_EQ(objects.objects.at(3).classification.at(0).label, 2);
-}
-
-TEST(DetectionClassRemapperTest, RejectsInvalidMatrixDimensions)
-{
-  perception_utils::DetectionClassRemapper remapper;
-  EXPECT_THROW(remapper.setParameters({0, 0}, {0.0, 0.0}, {0.0, 0.0}), std::invalid_argument);
 }
 
 }  // namespace

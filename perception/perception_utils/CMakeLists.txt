@@ -21,8 +21,11 @@ install(
 )
 
 if(BUILD_TESTING)
-  ament_auto_add_gtest(test_detection_utils
-    test/test_detection_utils.cpp
+  ament_auto_add_gtest(test_iou_bev_nms
+    test/test_iou_bev_nms.cpp
+  )
+  ament_auto_add_gtest(test_detection_class_remapper
+    test/test_detection_class_remapper.cpp
   )
   ament_auto_add_gtest(test_utils
     test/test_utils.cpp
