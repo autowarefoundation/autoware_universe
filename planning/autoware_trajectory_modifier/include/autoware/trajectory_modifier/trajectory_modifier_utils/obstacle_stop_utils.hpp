@@ -91,14 +91,17 @@ struct CollisionPoint
   double arc_length;
   rclcpp::Time start_time;
   bool is_active{false};
+  bool is_dynamic{false};
 
   /**
    * @brief Construct a collision sample from a point and its arc length along the reference path.
    * @param point Collision position in map frame.
    * @param arc_length Signed arc length from the start of the trajectory to the collision point.
+   * @param is_dynamic Whether this collision is dynamic.
    */
-  CollisionPoint(const geometry_msgs::msg::Point & point, const double arc_length)
-  : point(point), arc_length(arc_length)
+  CollisionPoint(
+    const geometry_msgs::msg::Point & point, const double arc_length, const bool is_dynamic = false)
+  : point(point), arc_length(arc_length), is_dynamic(is_dynamic)
   {
   }
 
@@ -113,7 +116,8 @@ struct CollisionPoint
   : point(collision_point.point),
     arc_length(collision_point.arc_length),
     start_time(start_time),
-    is_active(active)
+    is_active(active),
+    is_dynamic(collision_point.is_dynamic)
   {
   }
 };
@@ -299,6 +303,7 @@ struct ObjectFilter
    */
   void filter_by_target_area(
     PredictedObjects & objects, const TrajectoryPoints & trajectory_points,
+    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
     const MultiPolygon2d & target_area, MultiPolygon2d & target_polygons);
 
   /**

@@ -29,13 +29,13 @@
       enable_stop_for_objects: true
       enable_stop_for_pointcloud: false
       stop_margin: 6.0 # [m]
-      lateral_margin: 0.0     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
+      lateral_margin: 0.2     # lateral margin on top of ego width from trajectory to consider for obstacle stop [m]
       duplicate_check_threshold: 0.5 # threshold to check if the stop point is already in the trajectory [m]
       arrived_distance_threshold: 0.5 # threshold to check if the ego vehicle has arrived at the stop point [m]
 
       obstacle_tracking:
         on_time_buffer: 0.5
-        off_time_buffer: 1.0
+        off_time_buffer: 0.7
         object_distance_th: 1.0 # [m]
         object_yaw_th: 0.1745 # [rad] (10 degrees)
         pcd_distance_th: 1.0 # [m]
@@ -43,10 +43,10 @@
 
       objects:
         object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"] # object types to consider for obstacle stop
-        max_velocity_th: 5.0      # maximum velocity threshold for target object [m/s]
-        stopped_velocity_th: 0.25 # [m/s]
+        max_velocity_th: 3.0      # maximum velocity threshold for target object [m/s]
+        stopped_velocity_th: 0.3 # [m/s]
         max_lateral_velocity_th: 1.0 # [m/s] max lateral velocity (w.r.t ego traj) to consider for obstacle stop
-        safety_buffer: 0.0 # [m] safety buffer to expand object shape
+        safety_buffer: 0.1 # [m] safety buffer to expand object shape
 
       pointcloud:
         height_buffer: 0.5  # height buffer to add above ego height [m]
@@ -69,10 +69,10 @@
           truck: 1.5
           bus: 1.5
           trailer: 1.5
-          motorcycle: 3.0
-          bicycle: 5.0
+          motorcycle: 2.0
+          bicycle: 3.0
           pedestrian: 5.0
-        ego_decel: 4.0 # [m/s^2]
+        ego_decel: 2.5 # [m/s^2]
         reaction_time: 0.2 # [s]
         safety_margin: 2.0 # [m]
         lookahead_horizon: 1.5 # [s]

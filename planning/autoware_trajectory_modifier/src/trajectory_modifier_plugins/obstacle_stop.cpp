@@ -379,7 +379,8 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
     debug_data_.filtered_objects, active_objects, get_clock()->now());
 
   object_filter_->filter_by_target_area(
-    active_objects, traj_points, debug_data_.trajectory_shape.polygon, debug_data_.target_polygons);
+    active_objects, traj_points, context_->vehicle_info, debug_data_.trajectory_shape.polygon,
+    debug_data_.target_polygons);
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
   auto collision_point = std::invoke([&]() -> std::optional<CollisionPoint> {
@@ -495,6 +496,9 @@ void ObstacleStop::publish_debug_string(bool is_safe) const
      << debug_data_.target_pcd_points.size() << "\n";
   if (nearest_collision_point_) {
     ss << "\t\t" << "DISTANCE TO COLLISION: " << nearest_collision_point_->arc_length << " m"
+       << "\n";
+    ss << "\t\t"
+       << "OBSTACLE TYPE: " << (nearest_collision_point_->is_dynamic ? "DYNAMIC" : "STATIC")
        << "\n";
   }
 
