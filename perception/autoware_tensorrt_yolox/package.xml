@@ -33,6 +33,7 @@
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
   <depend>tier4_perception_msgs</depend>
+  <depend>tl_expected</depend>
 
   <exec_depend>autoware_image_transport_decompressor</exec_depend>
 
