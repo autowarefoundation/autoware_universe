@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -72,22 +73,6 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   is_roi_overlap_semseg_ = declare_parameter<bool>("is_roi_overlap_segmentation");
   is_publish_color_mask_ = declare_parameter<bool>("is_publish_color_mask");
   overlap_roi_score_threshold_ = declare_parameter<float>("overlap_roi_score_threshold");
-  roi_overlay_semseg_labels_.UNKNOWN =
-    declare_parameter<bool>("roi_overlay_segmentation_label.UNKNOWN");
-  roi_overlay_semseg_labels_.CAR = declare_parameter<bool>("roi_overlay_segmentation_label.CAR");
-  roi_overlay_semseg_labels_.TRUCK =
-    declare_parameter<bool>("roi_overlay_segmentation_label.TRUCK");
-  roi_overlay_semseg_labels_.BUS = declare_parameter<bool>("roi_overlay_segmentation_label.BUS");
-  roi_overlay_semseg_labels_.MOTORCYCLE =
-    declare_parameter<bool>("roi_overlay_segmentation_label.MOTORCYCLE");
-  roi_overlay_semseg_labels_.BICYCLE =
-    declare_parameter<bool>("roi_overlay_segmentation_label.BICYCLE");
-  roi_overlay_semseg_labels_.PEDESTRIAN =
-    declare_parameter<bool>("roi_overlay_segmentation_label.PEDESTRIAN");
-  roi_overlay_semseg_labels_.ANIMAL =
-    declare_parameter<bool>("roi_overlay_segmentation_label.ANIMAL");
-  roi_overlay_semseg_labels_.HAZARD =
-    declare_parameter<bool>("roi_overlay_segmentation_label.HAZARD");
 
   if (is_publish_color_mask_ && semseg_color_map_path.empty()) {
     std::stringstream error_msg;
@@ -105,6 +90,7 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
 
   // setup the label information and process the remappings
   setupLabel(label_path, semseg_color_map_path, roi_remap_path, roi_to_semseg_remap_path);
+  loadOverlaySegmentationLabels();
 
   TrtCommonConfig trt_config(
     model_path, precision, "", (1ULL << 30U), dla_core_id, profile_per_layer);
@@ -138,6 +124,32 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   if (declare_parameter("build_only", false)) {
     RCLCPP_INFO(this->get_logger(), "TensorRT engine file is built and exit.");
     rclcpp::shutdown();
+  }
+}
+
+void TrtYoloXNode::loadOverlaySegmentationLabels()
+{
+  constexpr std::string_view prefix = "roi_overlay_segmentation_label.";
+
+  roi_overlay_semseg_labels_.clear();
+
+  for (const auto & [param_name, param_value] :
+       get_node_parameters_interface()->get_parameter_overrides()) {
+    if (param_name.rfind(prefix, 0) != 0) {
+      continue;
+    }
+
+    if (param_value.get_type() != rclcpp::ParameterType::PARAMETER_BOOL) {
+      std::ostringstream error_msg;
+      error_msg << "Parameter '" << param_name << "' must be a boolean.";
+      throw std::runtime_error{error_msg.str()};
+    }
+
+    const std::string label_name = param_name.substr(prefix.length());
+    const auto label_id = autoware::object_recognition_utils::toLabel(label_name);
+    const bool enabled = param_value.get<bool>();
+
+    roi_overlay_semseg_labels_.setOverlay(label_id, enabled);
   }
 }
 
