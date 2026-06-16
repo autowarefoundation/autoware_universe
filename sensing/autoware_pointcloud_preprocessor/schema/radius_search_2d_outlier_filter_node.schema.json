@@ -6,6 +6,16 @@
     "radius_search_2d_outlier_filter": {
       "type": "object",
       "properties": {
+        "input_frame": {
+          "type": "string",
+          "description": "input frame id for point cloud data",
+          "default": "base_link"
+        },
+        "output_frame": {
+          "type": "string",
+          "description": "output frame id for point cloud data",
+          "default": "base_link"
+        },
         "min_neighbors": {
           "type": "integer",
           "description": "If points in the circle centered on reference point is less than min_neighbors, a reference point is judged as outlier",

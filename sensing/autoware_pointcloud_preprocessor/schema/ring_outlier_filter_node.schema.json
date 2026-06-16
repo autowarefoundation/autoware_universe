@@ -6,6 +6,16 @@
     "ring_outlier_filter": {
       "type": "object",
       "properties": {
+        "input_frame": {
+          "type": "string",
+          "description": "input frame id for point cloud data",
+          "default": ""
+        },
+        "output_frame": {
+          "type": "string",
+          "description": "output frame id for point cloud data",
+          "default": ""
+        },
         "distance_ratio": {
           "type": "number",
           "description": "distance_ratio",

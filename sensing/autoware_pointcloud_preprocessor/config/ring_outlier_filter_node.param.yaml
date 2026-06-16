@@ -1,5 +1,8 @@
 /**:
   ros__parameters:
+    input_frame: ""
+    output_frame: ""
+
     distance_ratio: 1.03
     object_length_threshold: 0.05
     max_rings_num: 128

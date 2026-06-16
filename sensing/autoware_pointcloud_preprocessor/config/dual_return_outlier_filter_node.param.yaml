@@ -1,5 +1,7 @@
 /**:
   ros__parameters:
+    input_frame: ""
+    output_frame: ""
     x_max: 18.0
     x_min: -12.0
     y_max: 2.0

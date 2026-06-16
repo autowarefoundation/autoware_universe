@@ -6,6 +6,16 @@
     "voxel_grid_downsample_filter": {
       "type": "object",
       "properties": {
+        "input_frame": {
+          "type": "string",
+          "description": "input frame id for point cloud data",
+          "default": "base_link"
+        },
+        "output_frame": {
+          "type": "string",
+          "description": "output frame id for point cloud data",
+          "default": "base_link"
+        },
         "voxel_size_x": {
           "type": "number",
           "description": "the voxel size along x-axis [m]",

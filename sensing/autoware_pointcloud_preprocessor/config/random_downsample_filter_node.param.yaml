@@ -1,3 +1,5 @@
 /**:
   ros__parameters:
+    input_frame: ""
+    output_frame: ""
     sample_num: 1500

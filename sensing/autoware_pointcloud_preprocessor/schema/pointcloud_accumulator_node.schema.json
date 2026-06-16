@@ -6,6 +6,16 @@
     "pointcloud_accumulator": {
       "type": "object",
       "properties": {
+        "input_frame": {
+          "type": "string",
+          "description": "input frame id for point cloud data",
+          "default": "base_link"
+        },
+        "output_frame": {
+          "type": "string",
+          "description": "output frame id for point cloud data",
+          "default": "base_link"
+        },
         "accumulation_time_sec": {
           "type": "number",
           "description": "accumulation period [s]",

@@ -6,6 +6,16 @@
     "dual_return_outlier_filter": {
       "type": "object",
       "properties": {
+        "input_frame": {
+          "type": "string",
+          "description": "input frame id for point cloud data",
+          "default": ""
+        },
+        "output_frame": {
+          "type": "string",
+          "description": "output frame id for point cloud data",
+          "default": ""
+        },
         "x_max": {
           "type": "number",
           "description": "Maximum of x in meters for `Fixed_xyz_ROI` mode",

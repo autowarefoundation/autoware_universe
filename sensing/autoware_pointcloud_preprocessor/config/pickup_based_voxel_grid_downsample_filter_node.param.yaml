@@ -1,5 +1,7 @@
 /**:
   ros__parameters:
+    input_frame: ""
+    output_frame: ""
     voxel_size_x: 1.0
     voxel_size_y: 1.0
     voxel_size_z: 1.0
