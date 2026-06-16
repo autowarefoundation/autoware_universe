@@ -13,12 +13,10 @@
 // limitations under the License.
 
 #include "perception_utils/iou_bev_nms.hpp"
-
-#include <autoware_utils_geometry/geometry.hpp>
+#include "test_utils.hpp"
 
 #include <gtest/gtest.h>
 
-#include <cstdint>
 #include <limits>
 #include <stdexcept>
 #include <vector>
@@ -28,23 +26,7 @@ namespace
 
 using autoware_perception_msgs::msg::DetectedObject;
 using autoware_perception_msgs::msg::ObjectClassification;
-using autoware_perception_msgs::msg::Shape;
-
-DetectedObject make_object(
-  const double x, const double y, const float length, const float width, const std::uint8_t label,
-  const float score)
-{
-  DetectedObject object;
-  object.existence_probability = score;
-  object.classification.push_back(ObjectClassification{}.set__label(label).set__probability(1.0F));
-  object.kinematics.pose_with_covariance.pose.position =
-    autoware_utils_geometry::create_point(x, y, 0.0);
-  object.kinematics.pose_with_covariance.pose.orientation =
-    autoware_utils_geometry::create_quaternion_from_yaw(0.0);
-  object.shape.type = Shape::BOUNDING_BOX;
-  object.shape.dimensions = autoware_utils_geometry::create_translation(length, width, 1.0);
-  return object;
-}
+using perception_utils::test::make_object;
 
 TEST(IouBevNmsTest, PreservesLegacySuppressionBehavior)
 {
