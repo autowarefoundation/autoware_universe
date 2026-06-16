@@ -43,7 +43,7 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 {{ json_to_markdown("perception/autoware_ptv3/schema/ml_package_ptv3.schema.json") }}
 
 `filter.*` parameters are configured in `config/ptv3.param.yaml`, while class metadata and the
-visualization `palette` are configured in `config/ml_package_ptv3.param.yaml`.
+visualization `palette` are configured in `config/ml_package_ptv3_seg3d_head.param.yaml`.
 
 ### The `build_only` option
 

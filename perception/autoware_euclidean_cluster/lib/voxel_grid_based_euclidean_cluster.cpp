@@ -20,36 +20,118 @@
 #include <pcl/segmentation/extract_clusters.h>
 
 #include <algorithm>
+#include <cmath>
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::euclidean_cluster
 {
-VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster()
-{
-}
-
 VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
-  bool use_height, int min_cluster_size, int max_cluster_size)
-: EuclideanClusterInterface(use_height, min_cluster_size, max_cluster_size)
-{
-}
-
-VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
-  bool use_height, int min_cluster_size, int max_cluster_size, float tolerance,
-  float voxel_leaf_size, int min_points_number_per_voxel, int min_voxel_cluster_size_for_filtering,
-  int max_points_per_voxel_in_large_cluster, int max_voxel_cluster_for_output)
-: EuclideanClusterInterface(use_height, min_cluster_size, max_cluster_size),
+  bool use_height, int min_points_per_cluster, float tolerance, float voxel_leaf_size,
+  int min_points_per_voxel, int large_cluster_voxel_count_threshold,
+  int large_cluster_max_points_per_voxel, int max_voxels_per_cluster)
+// max cluster size is unused by this cluster executer (oversized groups are split, not dropped).
+: EuclideanClusterInterface(use_height, min_points_per_cluster, 0),
   tolerance_(tolerance),
   voxel_leaf_size_(voxel_leaf_size),
-  min_points_number_per_voxel_(min_points_number_per_voxel),
-  min_voxel_cluster_size_for_filtering_(min_voxel_cluster_size_for_filtering),
-  max_points_per_voxel_in_large_cluster_(max_points_per_voxel_in_large_cluster),
-  max_voxel_cluster_for_output_(max_voxel_cluster_for_output)
+  min_points_per_voxel_(min_points_per_voxel),
+  large_cluster_voxel_count_threshold_(large_cluster_voxel_count_threshold),
+  large_cluster_max_points_per_voxel_(large_cluster_max_points_per_voxel),
+  max_voxels_per_cluster_(max_voxels_per_cluster)
 {
 }
+std::vector<pcl::PointIndices> VoxelGridBasedEuclideanCluster::splitOversizedClusters(
+  const std::vector<pcl::PointIndices> & cluster_indices,
+  const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & centroids) const
+{
+  std::vector<pcl::PointIndices> result;
+  result.reserve(cluster_indices.size());
+
+  // Clamp the bound to at least 1: a non-positive bound would make even a size-1 group "oversized"
+  // and bisect it forever (half == 0 re-pushes the same group). At least 1 guarantees termination.
+  const int max_voxels = std::max(1, max_voxels_per_cluster_);
+
+  // Work stack of voxel-index groups still to be checked/split.
+  std::vector<std::vector<int>> stack;
+  stack.reserve(cluster_indices.size());
+  for (const auto & ci : cluster_indices) {
+    stack.push_back(ci.indices);
+  }
+
+  while (!stack.empty()) {
+    std::vector<int> group = std::move(stack.back());
+    stack.pop_back();
+
+    // Small enough: emit as a final cluster.
+    if (static_cast<int>(group.size()) <= max_voxels) {
+      pcl::PointIndices pi;
+      pi.indices = std::move(group);
+      result.push_back(std::move(pi));
+      continue;
+    }
+
+    // Compute the 2D centroid mean and covariance of the group.
+    double mean_x = 0.0;
+    double mean_y = 0.0;
+    for (const int idx : group) {
+      mean_x += centroids->points[idx].x;
+      mean_y += centroids->points[idx].y;
+    }
+    mean_x /= static_cast<double>(group.size());
+    mean_y /= static_cast<double>(group.size());
+
+    double cov_xx = 0.0;
+    double cov_xy = 0.0;
+    double cov_yy = 0.0;
+    for (const int idx : group) {
+      const double dx = centroids->points[idx].x - mean_x;
+      const double dy = centroids->points[idx].y - mean_y;
+      cov_xx += dx * dx;
+      cov_xy += dx * dy;
+      cov_yy += dy * dy;
+    }
+
+    // Principal eigenvector of the symmetric 2x2 covariance [[cov_xx, cov_xy], [cov_xy, cov_yy]].
+    const double trace = cov_xx + cov_yy;
+    const double det = cov_xx * cov_yy - cov_xy * cov_xy;
+    const double lambda = trace / 2.0 + std::sqrt(std::max(0.0, trace * trace / 4.0 - det));
+    double axis_x = 0.0;
+    double axis_y = 0.0;
+    if (std::abs(cov_xy) > 1e-9) {
+      axis_x = lambda - cov_yy;
+      axis_y = cov_xy;
+    } else {
+      // Diagonal covariance: principal axis is whichever of x/y has the larger spread.
+      axis_x = (cov_xx >= cov_yy) ? 1.0 : 0.0;
+      axis_y = (cov_xx >= cov_yy) ? 0.0 : 1.0;
+    }
+    const double norm = std::hypot(axis_x, axis_y);
+    axis_x /= norm;
+    axis_y /= norm;
+
+    // Sort by projection onto the principal axis; break ties by index for determinism.
+    std::sort(group.begin(), group.end(), [&](const int a, const int b) {
+      const double proj_a = centroids->points[a].x * axis_x + centroids->points[a].y * axis_y;
+      const double proj_b = centroids->points[b].x * axis_x + centroids->points[b].y * axis_y;
+      if (proj_a != proj_b) {
+        return proj_a < proj_b;
+      }
+      return a < b;
+    });
+
+    // Split at the median rank. Splitting by rank (not value) guarantees both halves are strictly
+    // smaller than the parent, so recursion always terminates with every piece <= the bound.
+    const size_t half = group.size() / 2;
+    stack.emplace_back(group.begin(), group.begin() + half);
+    stack.emplace_back(group.begin() + half, group.end());
+  }
+
+  return result;
+}
+
 // TODO(badai-nguyen): remove this function when field copying also implemented for
 // euclidean_cluster.cpp
 bool VoxelGridBasedEuclideanCluster::cluster(
@@ -60,7 +142,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_map_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   constexpr float Z_AXIS_VOXEL_SIZE = 100000.0f;
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, Z_AXIS_VOXEL_SIZE);
-  voxel_grid_.setMinimumPointsNumberPerVoxel(min_points_number_per_voxel_);
+  voxel_grid_.setMinimumPointsNumberPerVoxel(min_points_per_voxel_);
   voxel_grid_.setInputCloud(pointcloud);
   voxel_grid_.setSaveLeafLayout(true);
   voxel_grid_.filter(*voxel_map_ptr);
@@ -82,10 +164,16 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> pcl_euclidean_cluster;
   pcl_euclidean_cluster.setClusterTolerance(tolerance_);
   pcl_euclidean_cluster.setMinClusterSize(1);
-  pcl_euclidean_cluster.setMaxClusterSize(max_cluster_size_);
+  // Do not let PCL drop large connected components: oversized groups are split (not dropped) by
+  // splitOversizedClusters() below, which enforces the per-cluster voxel bound.
+  pcl_euclidean_cluster.setMaxClusterSize(static_cast<int>(pointcloud_2d_ptr->size()));
   pcl_euclidean_cluster.setSearchMethod(tree);
   pcl_euclidean_cluster.setInputCloud(pointcloud_2d_ptr);
   pcl_euclidean_cluster.extract(cluster_indices);
+
+  // Split any cluster larger than max_voxels_per_cluster_ into bounded sub-clusters instead
+  // of dropping it, so large groups are still exported as smaller sections.
+  cluster_indices = splitOversizedClusters(cluster_indices, pointcloud_2d_ptr);
 
   // 4) Map voxel index to cluster index
   std::unordered_map<int, int> voxel_to_cluster_map;
@@ -98,11 +186,9 @@ bool VoxelGridBasedEuclideanCluster::cluster(
 
   // Precompute which clusters are large enough based on the voxel threshold.
   std::vector<bool> is_large_cluster(cluster_indices.size(), false);
-  std::vector<bool> is_extreme_large_cluster(cluster_indices.size(), false);
   for (size_t cluster_idx = 0; cluster_idx < cluster_indices.size(); ++cluster_idx) {
     const int cluster_size = static_cast<int>(cluster_indices[cluster_idx].indices.size());
-    is_large_cluster[cluster_idx] = cluster_size > min_voxel_cluster_size_for_filtering_;
-    is_extreme_large_cluster[cluster_idx] = cluster_size > max_voxel_cluster_for_output_;
+    is_large_cluster[cluster_idx] = cluster_size > large_cluster_voxel_count_threshold_;
   }
 
   // 5) Prepare output clusters
@@ -125,12 +211,9 @@ bool VoxelGridBasedEuclideanCluster::cluster(
     auto voxel_to_cluster_map_it = voxel_to_cluster_map.find(voxel_index);
     if (voxel_to_cluster_map_it != voxel_to_cluster_map.end()) {
       int cluster_idx = voxel_to_cluster_map_it->second;
-      if (is_extreme_large_cluster[cluster_idx]) {
-        continue;
-      }
       if (is_large_cluster[cluster_idx]) {
         int & voxel_point_count = point_counts_per_voxel_per_cluster[cluster_idx][voxel_index];
-        if (voxel_point_count >= max_points_per_voxel_in_large_cluster_) {
+        if (voxel_point_count >= large_cluster_max_points_per_voxel_) {
           continue;
         }
         voxel_point_count++;
@@ -144,7 +227,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
     std::remove_if(
       clusters.begin(), clusters.end(),
       [this](const pcl::PointCloud<pcl::PointXYZ> & cluster) {
-        return static_cast<int>(cluster.size()) < min_cluster_size_;
+        return static_cast<int>(cluster.size()) < min_points_per_cluster_;
       }),
     clusters.end());
 
@@ -164,7 +247,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_map_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   constexpr float Z_AXIS_VOXEL_SIZE = 100000.0f;
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, Z_AXIS_VOXEL_SIZE);
-  voxel_grid_.setMinimumPointsNumberPerVoxel(min_points_number_per_voxel_);
+  voxel_grid_.setMinimumPointsNumberPerVoxel(min_points_per_voxel_);
   voxel_grid_.setInputCloud(pointcloud);
   voxel_grid_.setSaveLeafLayout(true);
   voxel_grid_.filter(*voxel_map_ptr);
@@ -187,10 +270,16 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> pcl_euclidean_cluster;
   pcl_euclidean_cluster.setClusterTolerance(tolerance_);
   pcl_euclidean_cluster.setMinClusterSize(1);
-  pcl_euclidean_cluster.setMaxClusterSize(max_cluster_size_);
+  // Do not let PCL drop large connected components: oversized groups are split (not dropped) by
+  // splitOversizedClusters() below, which enforces the per-cluster voxel bound.
+  pcl_euclidean_cluster.setMaxClusterSize(static_cast<int>(pointcloud_2d_ptr->size()));
   pcl_euclidean_cluster.setSearchMethod(tree);
   pcl_euclidean_cluster.setInputCloud(pointcloud_2d_ptr);
   pcl_euclidean_cluster.extract(cluster_indices);
+
+  // Split any cluster larger than max_voxels_per_cluster_ into bounded sub-clusters instead
+  // of dropping it, so large groups are still exported as smaller sections.
+  cluster_indices = splitOversizedClusters(cluster_indices, pointcloud_2d_ptr);
 
   // 5) Buffer preparation
   // Map to store the mapping between voxel grid indices and their corresponding cluster indices
@@ -213,12 +302,10 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   // Precompute which clusters are large enough based on the voxel threshold.
   // This avoids repeatedly checking the size during per-point processing.
   std::vector<bool> is_large_cluster(cluster_indices.size(), false);
-  std::vector<bool> is_extreme_large_cluster(cluster_indices.size(), false);
 
   for (size_t cluster_idx = 0; cluster_idx < cluster_indices.size(); ++cluster_idx) {
     const int cluster_size = static_cast<int>(cluster_indices[cluster_idx].indices.size());
-    is_large_cluster[cluster_idx] = cluster_size > min_voxel_cluster_size_for_filtering_;
-    is_extreme_large_cluster[cluster_idx] = cluster_size > max_voxel_cluster_for_output_;
+    is_large_cluster[cluster_idx] = cluster_size > large_cluster_voxel_count_threshold_;
   }
 
   // 6) Data copy
@@ -246,12 +333,9 @@ bool VoxelGridBasedEuclideanCluster::cluster(
     if (voxel_to_cluster_map_it != voxel_to_cluster_map.end()) {
       // Track point count per voxel per cluster
       int cluster_idx = voxel_to_cluster_map_it->second;
-      if (is_extreme_large_cluster[cluster_idx]) {
-        continue;
-      }
       if (is_large_cluster[cluster_idx]) {
         int & voxel_point_count = point_counts_per_voxel_per_cluster[cluster_idx][voxel_index];
-        if (voxel_point_count >= max_points_per_voxel_in_large_cluster_) {
+        if (voxel_point_count >= large_cluster_max_points_per_voxel_) {
           continue;  // Skip adding this point
         }
         voxel_point_count++;
@@ -274,7 +358,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
     for (size_t i = 0; i < temporary_clusters.size(); ++i) {
       auto & i_cluster_data_size = clusters_data_size.at(i);
       int cluster_size = static_cast<int>(i_cluster_data_size / point_step);
-      if (cluster_size < min_cluster_size_) {
+      if (cluster_size < min_points_per_cluster_) {
         // Cluster size is below the minimum threshold; skip without messaging.
         continue;
       }
