@@ -62,12 +62,15 @@ class TrtYoloXNode : public rclcpp::Node
     bool BICYCLE;
     bool PEDESTRIAN;
     bool ANIMAL;
+    bool HAZARD;
+
     bool isOverlay(const uint8_t label) const
     {
       return (label == Label::UNKNOWN && UNKNOWN) || (label == Label::CAR && CAR) ||
              (label == Label::TRUCK && TRUCK) || (label == Label::BUS && BUS) ||
              (label == Label::ANIMAL && ANIMAL) || (label == Label::MOTORBIKE && MOTORCYCLE) ||
-             (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN);
+             (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN) ||
+             (label == Label::HAZARD && HAZARD);
     };
   };  // struct RoiOverlaySemsegLabel
 
