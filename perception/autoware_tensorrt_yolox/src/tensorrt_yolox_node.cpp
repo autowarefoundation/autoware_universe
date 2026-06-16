@@ -41,29 +41,29 @@ cv::Scalar getColorByClassId(const int class_id)
     case Classification::UNKNOWN:
       return cv::Scalar(160, 160, 160);  // Gray
     case Classification::CAR:
-      return cv::Scalar(0, 200, 0);     // Green
+      return cv::Scalar(0, 200, 0);  // Green
     case Classification::TRUCK:
-      return cv::Scalar(255, 128, 0);   // Orange
+      return cv::Scalar(255, 128, 0);  // Orange
     case Classification::BUS:
-      return cv::Scalar(0, 255, 255);   // Yellow
+      return cv::Scalar(0, 255, 255);  // Yellow
     case Classification::TRAILER:
-      return cv::Scalar(128, 0, 255);   // Magenta
+      return cv::Scalar(128, 0, 255);  // Magenta
     case Classification::MOTORCYCLE:
-      return cv::Scalar(255, 0, 255);   // Purple
+      return cv::Scalar(255, 0, 255);  // Purple
     case Classification::BICYCLE:
-      return cv::Scalar(255, 255, 0);   // Cyan
+      return cv::Scalar(255, 255, 0);  // Cyan
     case Classification::PEDESTRIAN:
-      return cv::Scalar(0, 0, 255);     // Red
+      return cv::Scalar(0, 0, 255);  // Red
     case Classification::ANIMAL:
-      return cv::Scalar(0, 165, 255);   // Orange-Red
+      return cv::Scalar(0, 165, 255);  // Orange-Red
     case Classification::HAZARD:
-      return cv::Scalar(0, 255, 128);   // Spring Green
+      return cv::Scalar(0, 255, 128);  // Spring Green
     case Classification::OVER_DRIVABLE:
-      return cv::Scalar(255, 0, 0);     // Blue
+      return cv::Scalar(255, 0, 0);  // Blue
     case Classification::UNDER_DRIVABLE:
-      return cv::Scalar(180, 80, 80);   // Dark Brown
+      return cv::Scalar(180, 80, 80);  // Dark Brown
     default:
-      return cv::Scalar(255, 255, 255); // White
+      return cv::Scalar(255, 255, 255);  // White
   }
 }
 }  // namespace
