@@ -15,8 +15,6 @@
 #ifndef AUTOWARE__PTV3__PTV3_NODE_HPP_
 #define AUTOWARE__PTV3__PTV3_NODE_HPP_
 
-#include "autoware/ptv3/postprocess/detection_class_remapper.hpp"
-#include "autoware/ptv3/postprocess/non_maximum_suppression.hpp"
 #include "autoware/ptv3/ptv3_trt.hpp"
 #include "autoware/ptv3/visibility_control.hpp"
 
@@ -26,6 +24,8 @@
 #include <cuda_blackboard/cuda_blackboard_publisher.hpp>
 #include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
+#include <perception_utils/detection_class_remapper.hpp>
+#include <perception_utils/iou_bev_nms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -72,8 +72,8 @@ private:
 
   rclcpp::TimerBase::SharedPtr timer_{nullptr};
 
-  std::unique_ptr<NonMaximumSuppression> iou_bev_nms_{nullptr};
-  DetectionClassRemapper detection_class_remapper_;
+  perception_utils::IouBevNms iou_bev_nms_;
+  perception_utils::DetectionClassRemapper detection_class_remapper_;
   std::vector<std::string> detection_class_names_;
   bool has_twist_{false};
 

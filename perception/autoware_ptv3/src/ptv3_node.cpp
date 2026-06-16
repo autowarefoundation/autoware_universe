@@ -101,7 +101,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   std::vector<float> distance_bin_upper_limits;
   std::vector<float> detection_score_thresholds;
   std::vector<float> yaw_norm_thresholds;
-  NMSParams nms_params;
+  perception_utils::IouBevNmsParams nms_params;
   std::size_t num_proposals{};
   std::vector<float> post_center_range;
   if (use_det3d_head) {
@@ -129,8 +129,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     const auto max_area_matrix =
       this->declare_parameter<std::vector<double>>("detection3d.max_area_matrix", descriptor);
     detection_class_remapper_.setParameters(
-      allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix,
-      detection_class_names_.size());
+      allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
     distance_bin_upper_limits = to_float_vector(this->declare_parameter<std::vector<double>>(
       "detection3d.detection_score_thresholds.distance_bin_upper_limits", descriptor));
@@ -162,9 +161,9 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     yaw_norm_thresholds = to_float_vector(this->declare_parameter<std::vector<double>>(
       "detection3d.post_process_params.yaw_norm_thresholds", descriptor));
 
-    nms_params.search_distance_2d_ = this->declare_parameter<double>(
+    nms_params.search_distance_2d = this->declare_parameter<double>(
       "detection3d.post_process_params.iou_nms_search_distance_2d", descriptor);
-    nms_params.iou_threshold_ = this->declare_parameter<double>(
+    nms_params.iou_threshold = this->declare_parameter<double>(
       "detection3d.post_process_params.iou_nms_threshold", descriptor);
 
     const auto num_proposals_param =
@@ -220,8 +219,7 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   if (use_det3d_head) {
     detected_objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
       "~/output/objects", rclcpp::QoS{1});
-    iou_bev_nms_ = std::make_unique<NonMaximumSuppression>();
-    iou_bev_nms_->setParameters(nms_params);
+    iou_bev_nms_.setParameters(nms_params);
   }
 
   published_time_pub_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
@@ -305,7 +303,6 @@ void PTv3Node::cloudCallback(
   }
 
   if (objects_sub_count > 0u && detected_objects_pub_ && det_boxes3d.has_value()) {
-    detection_class_remapper_.mapClasses(*det_boxes3d);
     std::vector<autoware_perception_msgs::msg::DetectedObject> raw_objects;
     raw_objects.reserve(det_boxes3d->size());
     for (const auto & box3d : *det_boxes3d) {
@@ -316,7 +313,8 @@ void PTv3Node::cloudCallback(
 
     autoware_perception_msgs::msg::DetectedObjects output_msg;
     output_msg.header = msg_ptr->header;
-    output_msg.objects = iou_bev_nms_->apply(raw_objects);
+    output_msg.objects = iou_bev_nms_.apply(raw_objects);
+    detection_class_remapper_.mapClasses(output_msg);
     detected_objects_pub_->publish(output_msg);
     published_time_pub_->publish_if_subscribed(detected_objects_pub_, output_msg.header.stamp);
   }

@@ -21,6 +21,7 @@
   <depend>autoware_utils</depend>
   <depend>cuda_blackboard</depend>
   <depend>launch_ros</depend>
+  <depend>perception_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tf2_sensor_msgs</depend>
