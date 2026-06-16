@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "autoware/euclidean_cluster/confusable_cluster_merger.hpp"
 #include "autoware/euclidean_cluster/euclidean_cluster_interface.hpp"
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
@@ -60,10 +61,16 @@ private:
   bool update_target_label_map(
     const std::vector<std::pair<std::string, std::string>> & class_mappings);
 
+  /// @brief Return the cluster executer for the given label, or the default if no override is
+  /// configured.
+  EuclideanClusterInterface & get_cluster_executer(std::uint8_t label) const;
+
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
   AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) objects_pub_;
 
-  std::shared_ptr<EuclideanClusterInterface> cluster_;
+  std::shared_ptr<EuclideanClusterInterface> default_cluster_;
+  std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>>
+    label_cluster_executers_;
   std::unique_ptr<autoware::shape_estimation::ShapeEstimator> shape_estimator_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
@@ -72,5 +79,8 @@ private:
   float min_probability_;
 
   ShapePolicy shape_policy_;
+
+  std::vector<ConfusableLabelGroup> confusable_groups_;
+  std::unordered_map<std::uint8_t, std::size_t> label_to_group_idx_;
 };
 }  // namespace autoware::euclidean_cluster
