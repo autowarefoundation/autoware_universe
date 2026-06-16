@@ -66,7 +66,7 @@ void box3d_to_detected_object(
  * @param class_name Detection class name.
  * @return Matching ObjectClassification label, or UNKNOWN.
  */
-std::uint8_t get_semantic_type(const std::string & class_name);
+std::uint8_t get_classification_type(const std::string & class_name);
 
 }  // namespace autoware::ptv3
 

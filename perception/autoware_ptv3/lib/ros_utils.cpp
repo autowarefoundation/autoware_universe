@@ -37,7 +37,7 @@ void box3d_to_detected_object(
   Label classification;
   classification.probability = 1.0F;
   if (box3d.label >= 0 && static_cast<std::size_t>(box3d.label) < class_names.size()) {
-    classification.label = get_semantic_type(class_names[box3d.label]);
+    classification.label = get_classification_type(class_names[box3d.label]);
   } else {
     classification.label = Label::UNKNOWN;
   }
@@ -67,7 +67,7 @@ void box3d_to_detected_object(
   }
 }
 
-std::uint8_t get_semantic_type(const std::string & class_name)
+std::uint8_t get_classification_type(const std::string & class_name)
 {
   if (class_name == "CAR") {
     return Label::CAR;
