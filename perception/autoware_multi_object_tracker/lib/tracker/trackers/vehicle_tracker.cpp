@@ -281,13 +281,13 @@ bool VehicleTracker::getTrackedObject(
 
   if (to_publish) {
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    auto & twist = object.twist;
     constexpr double vel_cov_buffer = 0.7;
     const double vel_limit =
       std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer;
     if (vel_limit > 0.0) {
       // Continuous gain in [0, 1]: 0 when |v| <= vel_limit (too uncertain -> zero), ramps
       // linearly, and reaches 1 when |v| >= 2 * vel_limit (large enough -> export as is).
+      auto & twist = object.twist;
       const double gain = std::clamp((std::abs(twist.linear.x) - vel_limit) / vel_limit, 0.0, 1.0);
       twist.linear.x *= gain;
     }
