@@ -14,12 +14,6 @@
 
 #include "autoware/tensorrt_yolox/tensorrt_yolox_node.hpp"
 
-#if __has_include(<cv_bridge/cv_bridge.hpp>)
-#include <cv_bridge/cv_bridge.hpp>
-#else
-#include <cv_bridge/cv_bridge.h>
-#endif
-
 #include <memory>
 #include <optional>
 #include <string>
@@ -131,15 +125,9 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
 
-  std::optional<TrtYoloXDetectorResult> result;
-  try {
-    result = detector_->detect(*msg);
-  } catch (cv_bridge::Exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
-    return;
-  }
+  const auto result = detector_->detect(*msg);
   if (!result) {
-    RCLCPP_WARN(this->get_logger(), "Fail to inference");
+    RCLCPP_ERROR(this->get_logger(), "detection failed: %s", result.error().c_str());
     return;
   }
 

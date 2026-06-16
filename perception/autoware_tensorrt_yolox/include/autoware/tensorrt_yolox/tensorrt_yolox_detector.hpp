@@ -19,6 +19,7 @@
 
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
 #include <opencv2/opencv.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <sensor_msgs/msg/image.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
@@ -126,10 +127,11 @@ public:
    * @brief run inference and post-process for a single image message
    * @param[in] image_msg input image message (BGR8 expected); its header is propagated to all
    * output messages
-   * @return detection result, or std::nullopt when inference fails
-   * @throws cv_bridge::Exception when the input image cannot be converted
+   * @return detection result on success, or an error message describing why the operation failed
+   * (input image conversion failure or inference failure)
    */
-  std::optional<TrtYoloXDetectorResult> detect(const sensor_msgs::msg::Image & image_msg);
+  tl::expected<TrtYoloXDetectorResult, std::string> detect(
+    const sensor_msgs::msg::Image & image_msg);
 
 private:
   void setupLabel(

@@ -83,11 +83,15 @@ bool TrtYoloXDetector::isGPUInitialized() const
   return trt_yolox_->isGPUInitialized();
 }
 
-std::optional<TrtYoloXDetectorResult> TrtYoloXDetector::detect(
+tl::expected<TrtYoloXDetectorResult, std::string> TrtYoloXDetector::detect(
   const sensor_msgs::msg::Image & image_msg)
 {
-  cv_bridge::CvImagePtr in_image_ptr =
-    cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
+  cv_bridge::CvImagePtr in_image_ptr;
+  try {
+    in_image_ptr = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
+  } catch (const cv_bridge::Exception & e) {
+    return tl::make_unexpected(std::string("cv_bridge exception: ") + e.what());
+  }
   const auto width = in_image_ptr->image.cols;
   const auto height = in_image_ptr->image.rows;
 
@@ -97,7 +101,7 @@ std::optional<TrtYoloXDetectorResult> TrtYoloXDetector::detect(
     cv::Mat(cv::Size(height, width), CV_8UC3, cv::Scalar(0, 0, 0))};
 
   if (!trt_yolox_->doInference({in_image_ptr->image}, objects, masks, color_masks)) {
-    return std::nullopt;
+    return tl::make_unexpected(std::string("failed to run inference"));
   }
   auto & mask = masks.at(0);
 
