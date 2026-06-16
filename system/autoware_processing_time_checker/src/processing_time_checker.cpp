@@ -85,7 +85,7 @@ ProcessingTimeChecker::ProcessingTimeChecker(const rclcpp::NodeOptions & node_op
     processing_time_subscribers_.push_back(
       create_subscription<Float64Stamped>(
         processing_time_topic_name, 1,
-        [this, &module_name](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Float64Stamped) & msg) {
+        [this, module_name](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Float64Stamped) & msg) {
           processing_time_map_.insert_or_assign(module_name, msg->data);
           processing_time_accumulator_map_.at(module_name).add(msg->data);
           processing_time_tdigest_map_.at(module_name).insert(msg->data);
