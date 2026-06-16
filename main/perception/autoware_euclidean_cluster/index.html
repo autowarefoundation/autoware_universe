@@ -23517,14 +23517,14 @@
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_cluster_size</td>
+<td>min_points_per_cluster</td>
 <td>integer</td>
 <td>The minimum number of points that a cluster needs to contain in order to be considered valid.</td>
 <td>10</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>tolerance</td>
+<td>tolerance_m</td>
 <td>float</td>
 <td>The spatial cluster tolerance as a measure in the L2 Euclidean space.</td>
 <td>0.7</td>
@@ -23552,65 +23552,58 @@
 </thead>
 <tbody>
 <tr>
-<td>tolerance</td>
+<td>tolerance_m</td>
 <td>float</td>
-<td>The spatial cluster tolerance as a measure in the L2 Euclidean space.</td>
+<td>Euclidean cluster tolerance. Two occupied voxels are merged into the same cluster when their 2D (x-y) centroid distance is within this value (applied transitively). Clustering is performed on voxel centroids with z flattened to 0.</td>
 <td>0.7</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>voxel_leaf_size</td>
+<td>voxel_leaf_size_m</td>
 <td>float</td>
-<td>The voxel leaf size of x and y.</td>
+<td>Voxel leaf size in x and y. The z leaf is effectively infinite, so the grid is 2D and all heights collapse into a single x-y cell. This value bounds the footprint resolution used for clustering and splitting.</td>
 <td>0.3</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_points_number_per_voxel</td>
+<td>min_points_per_voxel</td>
 <td>integer</td>
-<td>The minimum number of points required per voxel.</td>
+<td>Minimum number of raw points a voxel must contain to be kept. Voxels with fewer points are discarded before clustering, rejecting sparse noise.</td>
 <td>1</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>min_cluster_size</td>
+<td>min_points_per_cluster</td>
 <td>integer</td>
-<td>The minimum number of points that a cluster needs to contain in order to be considered valid.</td>
+<td>Minimum number of raw points a cluster must contain to be included in the output. Smaller clusters are dropped at the final filtering stage.</td>
 <td>10</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_cluster_size</td>
+<td>max_voxels_per_cluster</td>
 <td>integer</td>
-<td>The maximum number of points that a cluster needs to contain in order to be considered valid.</td>
-<td>3000</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>max_voxel_cluster_for_output</td>
-<td>integer</td>
-<td>Maximum number of voxels in a cluster when outputted.</td>
+<td>Voxel-count split bound. Any cluster whose voxel count exceeds this is recursively bisected along its principal (longest) axis into smaller sub-clusters until every piece is at or below this size. No cluster is dropped for being large; large groups are exported as multiple bounded sections.</td>
 <td>800</td>
-<td>N/A</td>
+<td>≥1</td>
 </tr>
 <tr>
-<td>min_voxel_cluster_size_for_filtering</td>
+<td>large_cluster_voxel_count_threshold</td>
 <td>integer</td>
-<td>The minimum voxel cluster size for a cluster to be checked for being a large cluster.</td>
+<td>Voxel-count threshold above which a cluster is considered 'large' and subject to per-voxel point capping (see large_cluster_max_points_per_voxel). Clusters at or below this size keep all their points.</td>
 <td>65</td>
 <td>N/A</td>
 </tr>
 <tr>
-<td>max_points_per_voxel_in_large_cluster</td>
+<td>large_cluster_max_points_per_voxel</td>
 <td>integer</td>
-<td>The maximum points per voxel allowed in large clusters (used for filtering dense clusters).</td>
+<td>Maximum number of points kept per voxel within a large cluster (one whose voxel count exceeds large_cluster_voxel_count_threshold). Excess points are dropped to bound downstream cost; points are processed in a deterministically shuffled order so the kept points sample uniformly across each voxel.</td>
 <td>10</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_height</td>
 <td>boolean</td>
-<td>Use point.z for clustering.</td>
+<td>Use point.z for clustering. Currently only the 2D (false) path is implemented.</td>
 <td>0</td>
 <td>N/A</td>
 </tr>
