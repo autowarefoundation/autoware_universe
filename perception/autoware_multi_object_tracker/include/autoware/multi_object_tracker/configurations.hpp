@@ -75,12 +75,6 @@ struct PolygonTrackerConfig
   // Whether to publish estimated velocity, per object classification.
   // A label absent from the map (or set false) means motion output is suppressed for that label.
   LabelBoolMap enable_motion_output;
-
-  bool motionOutputEnabled(classes::Label label) const
-  {
-    const auto it = enable_motion_output.find(label);
-    return it != enable_motion_output.end() && it->second;
-  }
 };
 
 struct StaticTrackerConfig
