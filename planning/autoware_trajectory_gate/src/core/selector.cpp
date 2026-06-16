@@ -15,6 +15,7 @@
 #include "selector.hpp"
 
 #include <memory>
+#include <stdexcept>
 
 namespace autoware::trajectory_gate
 {
