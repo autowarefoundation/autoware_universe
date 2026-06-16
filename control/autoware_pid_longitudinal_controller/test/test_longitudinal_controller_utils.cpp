@@ -553,6 +553,29 @@ TEST(TestLongitudinalControllerUtils, estimateTrajectoryTimeFromPoseWithinWindow
   EXPECT_LE(*estimated_time, 2.2);
 }
 
+TEST(TestLongitudinalControllerUtils, estimateTrajectoryTimeFromPoseFallsBackToSpatialNearest)
+{
+  using autoware_planning_msgs::msg::TrajectoryPoint;
+  std::vector<TrajectoryPoint> points;
+
+  for (size_t i = 0; i < 4; ++i) {
+    TrajectoryPoint p;
+    p.pose.position.x = static_cast<double>(i);
+    p.pose.orientation.w = 1.0;
+    p.time_from_start = rclcpp::Duration::from_seconds(static_cast<double>(i));
+    points.push_back(p);
+  }
+
+  geometry_msgs::msg::Pose pose;
+  pose.position.x = 0.2;
+  pose.orientation.w = 1.0;
+
+  const auto estimated_time =
+    longitudinal_utils::estimateTrajectoryTimeFromPose(points, pose, 10.0, M_PI, 1.8, 2.2);
+  ASSERT_TRUE(estimated_time.has_value());
+  EXPECT_NEAR(*estimated_time, 0.2, 1e-6);
+}
+
 TEST(TestLongitudinalControllerUtils, estimateLocalTrajectoryTimeStep)
 {
   using autoware_planning_msgs::msg::TrajectoryPoint;
