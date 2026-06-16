@@ -255,7 +255,7 @@ void PolygonTracker::suppressUncertainVelocity(types::DynamicObject & object) co
 {
   using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   auto & twist = object.twist;
-  constexpr double vel_cov_buffer = 0.7;
+  constexpr double vel_cov_buffer = 0.3;
 
   const double vx = twist.linear.x;
   const double vy = twist.linear.y;
