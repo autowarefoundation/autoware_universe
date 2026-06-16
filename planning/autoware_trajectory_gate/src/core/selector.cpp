@@ -48,6 +48,8 @@ void TrajectorySelector::set_output(TrajectoryReceiver * output)
 
 bool TrajectorySelector::select(uint32_t target_id)
 {
+  // NOTE: Switch to the invalid source if an unknown source is requested.
+
   if (current_source_id_ != invalid_source_id) {
     inputs_.at(current_source_id_)->set_output(nullptr);
     current_source_id_ = invalid_source_id;
@@ -57,6 +59,7 @@ bool TrajectorySelector::select(uint32_t target_id)
   if (iter == inputs_.end()) {
     return false;
   }
+
   iter->second->set_output(output_);
   current_source_id_ = target_id;
   return true;
