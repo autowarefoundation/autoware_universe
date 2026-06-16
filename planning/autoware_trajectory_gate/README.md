@@ -2,8 +2,8 @@
 
 ## Overview
 
-This package subscribes to multiple trajectory, selects one and publish it.
-The selector node monitors the interval of each trajectory topic, and publishes it as diagnostics.
+This package subscribes to multiple trajectories, selects one, and publishes it.
+The selector node monitors the interval of each trajectory topic and publishes diagnostics.
 
 ![overview](./doc/overview.drawio.svg)
 
