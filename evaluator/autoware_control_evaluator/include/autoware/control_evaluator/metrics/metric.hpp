@@ -175,7 +175,7 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
    "Absolute deviation to the stop line when the ego stop by a module[m]"},
   {Metric::closest_object_distance,
    "Distance to the closest object[m], the objects outside of the distance_filter_thr_m (default: "
-   "30m) are ignored"},
+   "30m) or in object_metrics.excluded_labels are ignored"},
   {Metric::longitudinal_velocity_deviation,
    "Longitudinal velocity deviation from the reference trajectory[m], positive value means the "
    "actual velocity is larger than the planned velocity."},

@@ -48,4 +48,11 @@
       MPT (Model Predictive Trajectory) optimizer. Optimizes trajectory geometry using QP-based optimization with adaptive corridor bounds. Refines paths within vehicle-centric constraints after kinematic feasibility and QP smoothing.
     </description>
   </class>
+  <class type="autoware::trajectory_optimizer::plugin::TrajectoryTemporalMPTOptimizer"
+         base_class_type="autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase">
+    <description>
+      Temporal MPT optimizer plugin. Tracks a time-ordered reference trajectory using an acados MPC
+      on a temporal kinematic bicycle model and overwrites the first N+1 points of the trajectory.
+    </description>
+  </class>
 </library>
