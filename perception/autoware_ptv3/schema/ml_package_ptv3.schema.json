@@ -88,30 +88,36 @@
           "type": "array",
           "items": { "type": "number", "exclusiveMinimum": 0 },
           "minItems": 3,
-          "maxItems": 3
+          "maxItems": 3,
+          "description": "Voxel size [x, y, z] in meters of the BEV grid on which the detection head regresses box centers."
         },
         "bbox_downsample_factor": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Spatial stride of the detection head's output grid relative to the BEV voxel grid: one output cell measures this many voxels along the x and y axes."
         },
         "has_twist": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Whether the model predicts per-object velocity (twist). When false, the velocity of each detection is set to zero."
         },
         "num_proposals": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Number of detection candidates the head outputs and that are evaluated during post-processing."
         },
         "post_center_range": {
           "type": "array",
           "items": { "type": "number" },
           "minItems": 6,
-          "maxItems": 6
+          "maxItems": 6,
+          "description": "Bounds [x_min, y_min, z_min, x_max, y_max, z_max] in meters applied to decoded detection centers during post-processing. Any detection whose center lies outside is dropped."
         },
         "class_names": {
           "type": "array",
           "items": { "type": "string" },
           "minItems": 1,
-          "uniqueItems": true
+          "uniqueItems": true,
+          "description": "Detection class names in the model's output label order."
         }
       },
       "required": [
