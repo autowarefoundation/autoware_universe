@@ -43,60 +43,60 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   using std::placeholders::_1;
   using std::chrono_literals::operator""ms;
 
-  const std::string model_path = this->declare_parameter<std::string>("model_path");
-  const std::string precision = this->declare_parameter<std::string>("precision");
-  const float score_threshold =
-    static_cast<float>(this->declare_parameter<double>("score_threshold"));
-  const float nms_threshold = static_cast<float>(this->declare_parameter<double>("nms_threshold"));
-  const std::string calibration_algorithm =
-    this->declare_parameter<std::string>("calibration_algorithm");
-  const int dla_core_id = this->declare_parameter<int>("dla_core_id");
-  const bool quantize_first_layer = this->declare_parameter<bool>("quantize_first_layer");
-  const bool quantize_last_layer = this->declare_parameter<bool>("quantize_last_layer");
-  const bool profile_per_layer = this->declare_parameter<bool>("profile_per_layer");
-  const double clip_value = this->declare_parameter<double>("clip_value");
-  const bool preprocess_on_gpu = this->declare_parameter<bool>("preprocess_on_gpu");
-  const std::string calibration_image_list_path =
+  config_.model_path = this->declare_parameter<std::string>("model_path");
+  config_.precision = this->declare_parameter<std::string>("precision");
+  config_.score_threshold = static_cast<float>(this->declare_parameter<double>("score_threshold"));
+  config_.nms_threshold = static_cast<float>(this->declare_parameter<double>("nms_threshold"));
+  config_.calibration_algorithm = this->declare_parameter<std::string>("calibration_algorithm");
+  config_.dla_core_id = this->declare_parameter<int>("dla_core_id");
+  config_.quantize_first_layer = this->declare_parameter<bool>("quantize_first_layer");
+  config_.quantize_last_layer = this->declare_parameter<bool>("quantize_last_layer");
+  config_.profile_per_layer = this->declare_parameter<bool>("profile_per_layer");
+  config_.clip_value = this->declare_parameter<double>("clip_value");
+  config_.preprocess_on_gpu = this->declare_parameter<bool>("preprocess_on_gpu");
+  config_.calibration_image_list_path =
     this->declare_parameter<std::string>("calibration_image_list_path");
-  const uint8_t gpu_id = this->declare_parameter<uint8_t>("gpu_id");
+  config_.gpu_id = this->declare_parameter<uint8_t>("gpu_id");
 
-  const std::string label_path = this->declare_parameter<std::string>("label_path");
-  const std::string semseg_color_map_path =
+  config_.label_path = this->declare_parameter<std::string>("label_path");
+  config_.semseg_color_map_path =
     this->declare_parameter<std::string>("semantic_segmentation_color_map_path", "");
 
   // if the remap file path is an empty string, it will not do remap the labels
-  const std::string roi_remap_path = this->declare_parameter<std::string>("roi_remap_path", "");
-  const std::string roi_to_semseg_remap_path =
+  config_.roi_remap_path = this->declare_parameter<std::string>("roi_remap_path", "");
+  config_.roi_to_semseg_remap_path =
     this->declare_parameter<std::string>("roi_to_semantic_segmentation_remap_path", "");
 
-  is_roi_overlap_semseg_ = declare_parameter<bool>("is_roi_overlap_segmentation");
-  is_publish_color_mask_ = declare_parameter<bool>("is_publish_color_mask");
-  overlap_roi_score_threshold_ = declare_parameter<float>("overlap_roi_score_threshold");
-  roi_overlay_semseg_labels_.UNKNOWN =
+  config_.is_roi_overlap_semseg = declare_parameter<bool>("is_roi_overlap_segmentation");
+  config_.is_publish_color_mask = declare_parameter<bool>("is_publish_color_mask");
+  config_.overlap_roi_score_threshold = declare_parameter<float>("overlap_roi_score_threshold");
+  config_.roi_overlay_semseg_labels.UNKNOWN =
     declare_parameter<bool>("roi_overlay_segmentation_label.UNKNOWN");
-  roi_overlay_semseg_labels_.CAR = declare_parameter<bool>("roi_overlay_segmentation_label.CAR");
-  roi_overlay_semseg_labels_.TRUCK =
+  config_.roi_overlay_semseg_labels.CAR =
+    declare_parameter<bool>("roi_overlay_segmentation_label.CAR");
+  config_.roi_overlay_semseg_labels.TRUCK =
     declare_parameter<bool>("roi_overlay_segmentation_label.TRUCK");
-  roi_overlay_semseg_labels_.BUS = declare_parameter<bool>("roi_overlay_segmentation_label.BUS");
-  roi_overlay_semseg_labels_.MOTORCYCLE =
+  config_.roi_overlay_semseg_labels.BUS =
+    declare_parameter<bool>("roi_overlay_segmentation_label.BUS");
+  config_.roi_overlay_semseg_labels.MOTORCYCLE =
     declare_parameter<bool>("roi_overlay_segmentation_label.MOTORCYCLE");
-  roi_overlay_semseg_labels_.BICYCLE =
+  config_.roi_overlay_semseg_labels.BICYCLE =
     declare_parameter<bool>("roi_overlay_segmentation_label.BICYCLE");
-  roi_overlay_semseg_labels_.PEDESTRIAN =
+  config_.roi_overlay_semseg_labels.PEDESTRIAN =
     declare_parameter<bool>("roi_overlay_segmentation_label.PEDESTRIAN");
-  roi_overlay_semseg_labels_.ANIMAL =
+  config_.roi_overlay_semseg_labels.ANIMAL =
     declare_parameter<bool>("roi_overlay_segmentation_label.ANIMAL");
-  roi_overlay_semseg_labels_.HAZARD =
+  config_.roi_overlay_semseg_labels.HAZARD =
     declare_parameter<bool>("roi_overlay_segmentation_label.HAZARD");
 
-  if (is_publish_color_mask_ && semseg_color_map_path.empty()) {
+  if (config_.is_publish_color_mask && config_.semseg_color_map_path.empty()) {
     std::stringstream error_msg;
     error_msg << "semantic_segmentation_color_map_path must be specified "
               << "when `is_publish_color_mask` is true.";
     throw std::runtime_error{error_msg.str()};
   }
 
-  if (is_roi_overlap_semseg_ && roi_to_semseg_remap_path.empty()) {
+  if (config_.is_roi_overlap_semseg && config_.roi_to_semseg_remap_path.empty()) {
     std::stringstream error_msg;
     error_msg << "roi_to_semantic_segmentation_remap_path must be specified "
               << "when `is_roi_overlap_segmentation` is true.";
@@ -104,27 +104,32 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   }
 
   // setup the label information and process the remappings
-  setupLabel(label_path, semseg_color_map_path, roi_remap_path, roi_to_semseg_remap_path);
+  setupLabel(
+    config_.label_path, config_.semseg_color_map_path, config_.roi_remap_path,
+    config_.roi_to_semseg_remap_path);
 
   TrtCommonConfig trt_config(
-    model_path, precision, "", (1ULL << 30U), dla_core_id, profile_per_layer);
+    config_.model_path, config_.precision, "", (1ULL << 30U), config_.dla_core_id,
+    config_.profile_per_layer);
 
   CalibrationConfig calib_config(
-    calibration_algorithm, quantize_first_layer, quantize_last_layer, clip_value);
+    config_.calibration_algorithm, config_.quantize_first_layer, config_.quantize_last_layer,
+    config_.clip_value);
 
   const double norm_factor = 1.0;
   const std::string cache_dir = "";
 
   trt_yolox_ = std::make_unique<tensorrt_yolox::TrtYoloX>(
-    trt_config, roi_class_name_list_.size(), score_threshold, nms_threshold, preprocess_on_gpu,
-    gpu_id, calibration_image_list_path, norm_factor, cache_dir, calib_config);
+    trt_config, roi_class_name_list_.size(), config_.score_threshold, config_.nms_threshold,
+    config_.preprocess_on_gpu, config_.gpu_id, config_.calibration_image_list_path, norm_factor,
+    cache_dir, calib_config);
 
   if (!trt_yolox_->isGPUInitialized()) {
-    RCLCPP_ERROR(this->get_logger(), "GPU %d does not exist or is not suitable.", gpu_id);
+    RCLCPP_ERROR(this->get_logger(), "GPU %d does not exist or is not suitable.", config_.gpu_id);
     rclcpp::shutdown();
     return;
   }
-  RCLCPP_INFO(this->get_logger(), "GPU %d is selected for the inference!", gpu_id);
+  RCLCPP_INFO(this->get_logger(), "GPU %d is selected for the inference!", config_.gpu_id);
 
   timer_ =
     rclcpp::create_timer(this, get_clock(), 100ms, std::bind(&TrtYoloXNode::onConnect, this));
@@ -217,7 +222,7 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
       8, 0);
     // Refine mask: replacing segmentation mask by roi class
     // This should remove when the segmentation accuracy is high
-    if (is_roi_overlap_semseg_ && trt_yolox_->getMultitaskNum() > 0) {
+    if (config_.is_roi_overlap_semseg && trt_yolox_->getMultitaskNum() > 0) {
       overlapSegmentByRoi(yolox_object, mask, width, height);
     }
   }
@@ -259,7 +264,7 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
 
-  if (is_publish_color_mask_ && trt_yolox_->getMultitaskNum() > 0) {
+  if (config_.is_publish_color_mask && trt_yolox_->getMultitaskNum() > 0) {
     cv::Mat color_mask = cv::Mat::zeros(mask.rows, mask.cols, CV_8UC3);
     getColorizedMask(mask, color_mask);
 
@@ -363,7 +368,7 @@ void TrtYoloXNode::setupLabel(
 
 int TrtYoloXNode::mapRoiLabel2SegLabel(const int32_t roi_label_index)
 {
-  if (roi_overlay_semseg_labels_.isOverlay(static_cast<uint8_t>(roi_label_index))) {
+  if (config_.roi_overlay_semseg_labels.isOverlay(static_cast<uint8_t>(roi_label_index))) {
     return roi_id_to_semseg_id_map_[roi_label_index];
   }
   return -1;
@@ -373,7 +378,7 @@ void TrtYoloXNode::overlapSegmentByRoi(
   const tensorrt_yolox::Object & roi_object, cv::Mat & mask, const int orig_width,
   const int orig_height)
 {
-  if (roi_object.score < overlap_roi_score_threshold_) return;
+  if (roi_object.score < config_.overlap_roi_score_threshold) return;
   int seg_class_index = mapRoiLabel2SegLabel(roi_object.type);
   if (seg_class_index < 0) return;
 

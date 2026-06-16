@@ -37,6 +37,7 @@
 #endif
 
 #include <chrono>
+#include <cstdint>
 #include <fstream>
 #include <map>
 #include <memory>
@@ -45,35 +46,71 @@
 #include <utility>
 #include <vector>
 
+// cspell: ignore Semseg semseg
+
 namespace autoware::tensorrt_yolox
 {
-// cspell: ignore Semseg
 using Label = tier4_perception_msgs::msg::Semantic;
+
+struct RoiOverlaySemsegLabel
+{
+  bool UNKNOWN;
+  bool CAR;
+  bool TRUCK;
+  bool BUS;
+  bool MOTORCYCLE;
+  bool BICYCLE;
+  bool PEDESTRIAN;
+  bool ANIMAL;
+  bool HAZARD;
+
+  bool isOverlay(const uint8_t label) const
+  {
+    return (label == Label::UNKNOWN && UNKNOWN) || (label == Label::CAR && CAR) ||
+           (label == Label::TRUCK && TRUCK) || (label == Label::BUS && BUS) ||
+           (label == Label::ANIMAL && ANIMAL) || (label == Label::MOTORBIKE && MOTORCYCLE) ||
+           (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN) ||
+           (label == Label::HAZARD && HAZARD);
+  };
+};  // struct RoiOverlaySemsegLabel
+
+/**
+ * @struct TrtYoloXDetectorConfig
+ * @brief Configuration that does not change frame-by-frame. The detector is reconstructed when any
+ * of these values change.
+ */
+struct TrtYoloXDetectorConfig
+{
+  // TensorRT engine
+  std::string model_path;
+  std::string precision;
+  float score_threshold;
+  float nms_threshold;
+  std::string calibration_algorithm;
+  int dla_core_id;
+  bool quantize_first_layer;
+  bool quantize_last_layer;
+  bool profile_per_layer;
+  double clip_value;
+  bool preprocess_on_gpu;
+  std::string calibration_image_list_path;
+  uint8_t gpu_id;
+
+  // label / remap files
+  std::string label_path;
+  std::string semseg_color_map_path;
+  std::string roi_remap_path;
+  std::string roi_to_semseg_remap_path;
+
+  // behavior
+  bool is_roi_overlap_semseg;
+  bool is_publish_color_mask;
+  float overlap_roi_score_threshold;
+  RoiOverlaySemsegLabel roi_overlay_semseg_labels;
+};
 
 class TrtYoloXNode : public rclcpp::Node
 {
-  struct RoiOverlaySemsegLabel
-  {
-    bool UNKNOWN;
-    bool CAR;
-    bool TRUCK;
-    bool BUS;
-    bool MOTORCYCLE;
-    bool BICYCLE;
-    bool PEDESTRIAN;
-    bool ANIMAL;
-    bool HAZARD;
-
-    bool isOverlay(const uint8_t label) const
-    {
-      return (label == Label::UNKNOWN && UNKNOWN) || (label == Label::CAR && CAR) ||
-             (label == Label::TRUCK && TRUCK) || (label == Label::BUS && BUS) ||
-             (label == Label::ANIMAL && ANIMAL) || (label == Label::MOTORBIKE && MOTORCYCLE) ||
-             (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN) ||
-             (label == Label::HAZARD && HAZARD);
-    };
-  };  // struct RoiOverlaySemsegLabel
-
 public:
   explicit TrtYoloXNode(const rclcpp::NodeOptions & node_options);
 
@@ -99,9 +136,7 @@ private:
 
   std::unique_ptr<tensorrt_yolox::TrtYoloX> trt_yolox_;
 
-  bool is_roi_overlap_semseg_;
-  bool is_publish_color_mask_;
-  float overlap_roi_score_threshold_;
+  TrtYoloXDetectorConfig config_;
 
   // using -1 to represent labels that be ignored
   static constexpr int unmapped_class_id_ = -1;
@@ -110,7 +145,6 @@ private:
   std::vector<int> roi_id_to_semseg_id_map_;
 
   std::vector<autoware::tensorrt_yolox::Colormap> semseg_color_map_;
-  RoiOverlaySemsegLabel roi_overlay_semseg_labels_;
 
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
