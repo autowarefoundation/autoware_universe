@@ -65,7 +65,7 @@ public:
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
 
   /// CUDA stream used for pointcloud processing and inference.
-  /// Pass this to CudaBlackboardSubscriber for stream-level producer/consumer ordering.
+  /// Enables stream-ordered producer/consumer lifetime handling.
   cudaStream_t stream() const { return stream_; }
 
 protected:
