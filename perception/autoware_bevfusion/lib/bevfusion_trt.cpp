@@ -416,12 +416,13 @@ void BEVFusionTRT::bindSparseRulebookAddresses()
   for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
     const auto & s = sparse_rulebook_ptr_->stage(i);
     network_trt_ptr_->setTensorAddress(
-      s.onnx_base + "_output_0", sparse_rulebook_ptr_->outIndices(i));
-    network_trt_ptr_->setTensorAddress(s.onnx_base + "_output_1", sparse_rulebook_ptr_->pairFwd(i));
+      (s.onnx_base + "_output_0").c_str(), sparse_rulebook_ptr_->outIndices(i));
     network_trt_ptr_->setTensorAddress(
-      s.onnx_base + "_output_2", sparse_rulebook_ptr_->pairMask(i));
+      (s.onnx_base + "_output_1").c_str(), sparse_rulebook_ptr_->pairFwd(i));
     network_trt_ptr_->setTensorAddress(
-      s.onnx_base + "_output_3", sparse_rulebook_ptr_->maskArgsort(i));
+      (s.onnx_base + "_output_2").c_str(), sparse_rulebook_ptr_->pairMask(i));
+    network_trt_ptr_->setTensorAddress(
+      (s.onnx_base + "_output_3").c_str(), sparse_rulebook_ptr_->maskArgsort(i));
   }
 }
 
@@ -434,10 +435,10 @@ void BEVFusionTRT::setSparseRulebookInputShapes()
     const auto & s = sparse_rulebook_ptr_->stage(i);
     const std::int64_t n = sparse_rulebook_ptr_->stageCount(i);
     const std::int64_t kv = s.kernel_volume;
-    network_trt_ptr_->setInputShape(s.onnx_base + "_output_0", nvinfer1::Dims{2, {n, 4}});
-    network_trt_ptr_->setInputShape(s.onnx_base + "_output_1", nvinfer1::Dims{2, {kv, n}});
-    network_trt_ptr_->setInputShape(s.onnx_base + "_output_2", nvinfer1::Dims{2, {n, 1}});
-    network_trt_ptr_->setInputShape(s.onnx_base + "_output_3", nvinfer1::Dims{1, {n}});
+    network_trt_ptr_->setInputShape((s.onnx_base + "_output_0").c_str(), nvinfer1::Dims{2, {n, 4}});
+    network_trt_ptr_->setInputShape((s.onnx_base + "_output_1").c_str(), nvinfer1::Dims{2, {kv, n}});
+    network_trt_ptr_->setInputShape((s.onnx_base + "_output_2").c_str(), nvinfer1::Dims{2, {n, 1}});
+    network_trt_ptr_->setInputShape((s.onnx_base + "_output_3").c_str(), nvinfer1::Dims{1, {n}});
   }
 }
 

@@ -151,6 +151,15 @@ void SparseRulebookPrecompute::allocateStageBuffers()
 
   int max_kv = 0;
   bool any_int64_hash = false;
+  // Worst-case max_act_out_in_theory over all stages at the maximum input count (N). Each runtime
+  // stage uses get_handcrafted_max_act_out(num_in, ...) with num_in <= N, so this bounds the largest
+  // workspace any stage can carve (the per-stage carving below must fit in the buffer allocated here).
+  int max_act_out_theory = 0;
+  for (const auto & s : stages_) {
+    max_act_out_theory = std::max(
+      max_act_out_theory, SpconvOps::get_handcrafted_max_act_out(
+                            static_cast<std::size_t>(N), s.ksize, s.stride, s.padding, s.dilation));
+  }
   for (const auto & s : stages_) {
     max_kv = std::max(max_kv, s.kernel_volume);
     any_int64_hash =
@@ -180,7 +189,7 @@ void SparseRulebookPrecompute::allocateStageBuffers()
   // Sized for the largest stage (max kernel_volume) and reused across stages.
   const bool use_direct_table = true;  // non-subm
   std::size_t spconv_ws = static_cast<std::size_t>(SpconvOps::get_indice_gen_workspace_size(
-    max_kv, N, N, N, /*is_subm=*/false, any_int64_hash, use_direct_table));
+    max_kv, N, N, max_act_out_theory, /*is_subm=*/false, any_int64_hash, use_direct_table));
   std::size_t sz = spconv_ws;
   sz += static_cast<std::size_t>(max_kv) * sizeof(std::int32_t);          // indices_kernel_num
   sz += static_cast<std::size_t>(max_kv) * N * sizeof(std::int32_t);      // pair_bwd
@@ -203,13 +212,20 @@ int SparseRulebookPrecompute::computeStage(int i, const std::int32_t * coords_in
   const bool use_direct_table = true;
   const bool use_int64_hash_k = useInt64HashK(s.spatial_shape, ksize, stride, padding, dilation);
 
+  // max_act_out_in_theory must mirror the plugin (get_indices_pairs_implicit_gemm_plugin.cpp): it
+  // sizes the internal indice_pairs_uniq buffer (~max_act_out_in_theory * 1.1). Using N here (as the
+  // earlier code did) under-allocates for the large down-sample stages and trips the StaticAllocator
+  // "tensor size too small" assert. Derive it from the actual stage input count, like the plugin.
+  const int max_act_out_theory = SpconvOps::get_handcrafted_max_act_out(
+    static_cast<std::size_t>(num_in), ksize, stride, padding, dilation);
+
   // Carve the workspace exactly like the plugin.
   std::uint8_t * ws = spconv_workspace_d_.get();
   std::size_t spconv_ws_size = static_cast<std::size_t>(SpconvOps::get_indice_gen_workspace_size(
-    kv, N, N, N, /*is_subm=*/false, use_int64_hash_k, use_direct_table));
+    kv, N, N, max_act_out_theory, /*is_subm=*/false, use_int64_hash_k, use_direct_table));
 
   auto ws_tensors = SpconvOps::get_indice_gen_tensors_from_workspace(
-    ws, kv, N, N, /*max_act_out_theory=*/N, /*is_subm=*/false, use_int64_hash_k, use_direct_table);
+    ws, kv, N, N, max_act_out_theory, /*is_subm=*/false, use_int64_hash_k, use_direct_table);
 
   std::uint8_t * indice_num_ptr = ws + spconv_ws_size;
   tv::Tensor indices_kernel_num = tv::from_blob(indice_num_ptr, {kv}, tv::int32, 0);
