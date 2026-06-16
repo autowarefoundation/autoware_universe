@@ -21,6 +21,7 @@
 #include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
 #include "autoware/map_based_prediction/predictor_vru/predictor_vru.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/transform_listener.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -51,7 +52,7 @@ class MapCallback
 public:
   explicit MapCallback(rclcpp::Node * node, NodeState & state);
 
-  void mapCallback(const LaneletMapBin::ConstSharedPtr msg);
+  void mapCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg);
 
 private:
   rclcpp::Node * node_;
@@ -68,13 +69,13 @@ public:
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_debug_markers);
   void setDiagnostics(Diagnostics * diagnostics);
 
-  void objectsCallback(const TrackedObjects::ConstSharedPtr in_objects);
+  void objectsCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & in_objects);
 
 private:
   rclcpp::Node * node_;
   NodeState & state_;
 
-  autoware_utils::InterProcessPollingSubscriber<TrafficLightGroupArray> sub_traffic_signals_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(TrafficLightGroupArray) sub_traffic_signals_;
   autoware_utils::TransformListener transform_listener_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
 
@@ -83,7 +84,8 @@ private:
 
   Diagnostics * diagnostics_{};
 
-  void trafficSignalsCallback(const TrafficLightGroupArray::ConstSharedPtr msg);
+  void trafficSignalsCallback(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & msg);
   void publish(
     const PredictedObjects & output,
     const visualization_msgs::msg::MarkerArray & debug_markers) const;
