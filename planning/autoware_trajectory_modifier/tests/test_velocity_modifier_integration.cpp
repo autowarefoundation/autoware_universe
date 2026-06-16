@@ -25,6 +25,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <thread>
@@ -82,7 +83,7 @@ TrajectoryPoints create_constant_deceleration_trajectory(
   const auto accel = -1.0 * initial_velocity * initial_velocity / (2.0 * length);
   TrajectoryPoints trajectory;
   for (double x = 0.0; x <= length + 1e-6; x += spacing) {
-    auto velocity = sqrt(initial_velocity * initial_velocity + 2.0 * accel * x);
+    auto velocity = std::sqrt(initial_velocity * initial_velocity + 2.0 * accel * x);
     trajectory.push_back(create_trajectory_point(x, 0.0, velocity, accel));
   }
   return trajectory;

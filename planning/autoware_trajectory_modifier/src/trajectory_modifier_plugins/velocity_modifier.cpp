@@ -19,6 +19,7 @@
 #include <autoware/trajectory/trajectory_point.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace autoware::trajectory_modifier::plugin

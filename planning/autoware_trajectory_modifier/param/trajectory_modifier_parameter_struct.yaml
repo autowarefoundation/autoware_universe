@@ -2,11 +2,9 @@ trajectory_modifier_params:
   plugin_names:
     type: string_array
     default_value:
-      [
-        autoware::trajectory_modifier::plugin::ObstacleStop,
-        autoware::trajectory_modifier::plugin::StopPointFixer,
-        autoware::trajectory_modifier::plugin::VelocityModifier,
-      ]
+      - autoware::trajectory_modifier::plugin::ObstacleStop
+      - autoware::trajectory_modifier::plugin::StopPointFixer
+      - autoware::trajectory_modifier::plugin::VelocityModifier
     description: List of plugin names to load
     read_only: false
   use_stop_point_fixer:
