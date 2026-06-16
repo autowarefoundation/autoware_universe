@@ -195,9 +195,8 @@ public:
     set_return_types(primary_types, primary_return_type_dev_);
   }
 
-  // CUDA stream on which the input point cloud is consumed. It is handed to the
-  // CudaBlackboardSubscriber so the blackboard can order the producer/consumer and the buffer free
-  // at the stream level instead of synchronizing the whole process.
+  /// CUDA stream used by this filter to consume input pointclouds.
+  /// Pass this to CudaBlackboardSubscriber for stream-level producer/consumer ordering.
   cudaStream_t stream() const { return stream_; }
 
 protected:

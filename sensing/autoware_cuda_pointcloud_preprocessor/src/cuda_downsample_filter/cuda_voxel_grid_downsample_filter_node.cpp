@@ -35,7 +35,6 @@ CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
     return;
   }
 
-  // Construct the filter first so its CUDA stream can be handed to the subscriber below.
   cuda_voxel_grid_downsample_filter_ = std::make_unique<CudaVoxelGridDownsampleFilter>(
     voxel_size_x, voxel_size_y, voxel_size_z, max_mem_pool_size_in_byte);
 
