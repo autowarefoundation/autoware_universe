@@ -323,6 +323,9 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   // (6) occlusion peeking stop line position on interpolated path
   // static position
   const auto static_occlusion_peeking_line_s = [&]() -> std::optional<double> {
+    if (!intersection_stoplines.default_stopline) {
+      return std::nullopt;
+    }
     // NOTE: if footprints[0] is already inside the attention area, invalid
     const auto & base_pose0 =
       path.compute(intersection_stoplines.default_stopline.value()).point.pose;
