@@ -8042,85 +8042,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Parameters">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#clustering-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Clustering Parameters
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#semantic-filtering-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Semantic Filtering Parameters
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#shape-estimation-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Shape Estimation Parameters
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#default-configuration-notes" class="md-nav__link">
+  <a href="#per-label-clustering-parameter-overrides" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Default Configuration Notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#assumptions-known-limits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Assumptions / Known Limits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#intended-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Intended Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#future-extensions-follow-up-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Future Extensions / Follow-up Works
+        Per-Label Clustering Parameter Overrides
       
     </span>
   </a>
@@ -23552,85 +23480,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Parameters">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#clustering-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Clustering Parameters
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#semantic-filtering-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Semantic Filtering Parameters
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#shape-estimation-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Shape Estimation Parameters
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#default-configuration-notes" class="md-nav__link">
+  <a href="#per-label-clustering-parameter-overrides" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Default Configuration Notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#assumptions-known-limits" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Assumptions / Known Limits
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#intended-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Intended Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#future-extensions-follow-up-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Future Extensions / Follow-up Works
+        Per-Label Clustering Parameter Overrides
       
     </span>
   </a>
@@ -23714,7 +23570,8 @@ It groups points by semantic class, clusters each label bucket independently, an
 <li>Drop points whose mapped class is configured as <code>ignore</code>.</li>
 <li>If the pointcloud has a <code>probability</code> field, drop points with <code>probability &lt; min_probability</code>.</li>
 <li>Split the remaining points into buckets keyed by the mapped Autoware object label.</li>
-<li>Run <code>VoxelGridBasedEuclideanCluster</code> independently for each label bucket.</li>
+<li>Run <code>VoxelGridBasedEuclideanCluster</code> independently for each label bucket, using the per-label parameter overrides from <code>label_cluster_params.*</code> where configured and the global defaults otherwise.</li>
+<li>Merge over-segmented clusters across labels that belong to the same confusable label group (<code>confusable_label_groups.*</code>).</li>
 <li>Estimate a shape and pose for each cluster with <code>ShapeEstimator</code>.</li>
 <li>If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.</li>
 <li>Publish one <code>DetectedObject</code> per cluster.</li>
@@ -23758,117 +23615,175 @@ It groups points by semantic class, clusters each label bucket independently, an
 <p>The fallback shape uses the cluster axis-aligned min/max extents, with each dimension clamped to at least <code>0.1</code> m.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <p>Parameters are loaded from <a href="../config/label_based_euclidean_cluster.param.yaml">config/label_based_euclidean_cluster.param.yaml</a>.</p>
-<h3 id="clustering-parameters">Clustering Parameters<a class="headerlink" href="#clustering-parameters" title="Permanent link">#</a></h3>
 <table>
 <thead>
 <tr>
 <th>Name</th>
 <th>Type</th>
 <th>Description</th>
+<th>Default</th>
+<th>Range</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>use_height</code></td>
-<td>bool</td>
-<td>Use the <code>z</code> coordinate during clustering.</td>
+<td>use_height</td>
+<td>boolean</td>
+<td>Use point.z for clustering.</td>
+<td>0</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>tolerance</code></td>
+<td>tolerance_m</td>
 <td>float</td>
-<td>Euclidean clustering tolerance.</td>
+<td>The spatial cluster tolerance as a measure in the L2 Euclidean space.</td>
+<td>0.7</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>min_cluster_size</code></td>
-<td>int</td>
-<td>Minimum number of points required to keep a cluster.</td>
+<td>min_points_per_cluster</td>
+<td>integer</td>
+<td>The minimum number of points that a cluster needs to contain in order to be considered valid.</td>
+<td>10</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>max_cluster_size</code></td>
-<td>int</td>
-<td>Maximum number of points allowed in a cluster.</td>
-</tr>
-<tr>
-<td><code>voxel_leaf_size</code></td>
+<td>voxel_leaf_size_m</td>
 <td>float</td>
-<td>Voxel size used by the internal voxel-grid-based cluster.</td>
+<td>The voxel leaf size of x and y.</td>
+<td>0.2</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>min_points_number_per_voxel</code></td>
-<td>int</td>
-<td>Minimum number of points required to keep a voxel centroid.</td>
+<td>min_points_per_voxel</td>
+<td>integer</td>
+<td>The minimum number of points required per voxel.</td>
+<td>1</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>min_voxel_cluster_size_for_filtering</code></td>
-<td>int</td>
-<td>Minimum voxel-cluster size before applying large-cluster filtering.</td>
+<td>large_cluster_voxel_count_threshold</td>
+<td>integer</td>
+<td>The minimum voxel cluster size for a cluster to be checked for being a large cluster.</td>
+<td>10</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>max_points_per_voxel_in_large_cluster</code></td>
-<td>int</td>
-<td>Maximum number of points kept per voxel for large clusters.</td>
+<td>large_cluster_max_points_per_voxel</td>
+<td>integer</td>
+<td>The maximum points per voxel allowed in large clusters.</td>
+<td>100</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>max_voxel_cluster_for_output</code></td>
-<td>int</td>
-<td>Maximum number of voxel clusters emitted by the internal cluster.</td>
+<td>max_voxels_per_cluster</td>
+<td>integer</td>
+<td>Maximum number of voxels in a cluster when outputted.</td>
+<td>1000</td>
+<td>≥1</td>
+</tr>
+<tr>
+<td>min_probability</td>
+<td>float</td>
+<td>Minimum semantic probability required for a point to be used.</td>
+<td>0.3</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_shape_estimation_corrector</td>
+<td>boolean</td>
+<td>Enable the shape estimation corrector.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_shape_estimation_filter</td>
+<td>boolean</td>
+<td>Enable the shape estimation filter.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_boost_bbox_optimizer</td>
+<td>boolean</td>
+<td>Enable the boost bounding-box optimizer.</td>
+<td>0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>shape_policy</td>
+<td>integer</td>
+<td>Shape estimation policy. 0: ALL_POLYGON, 1: LABEL_DEPEND.</td>
+<td>0</td>
+<td>[0, 1]</td>
 </tr>
 </tbody>
 </table>
-<h3 id="semantic-filtering-parameters">Semantic Filtering Parameters<a class="headerlink" href="#semantic-filtering-parameters" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>min_probability</code></td>
-<td>float</td>
-<td>Minimum per-point semantic confidence when the input contains a <code>probability</code> field.</td>
-</tr>
-<tr>
-<td><code>class_names.*</code></td>
-<td>string</td>
-<td>Semantic class remapping table. YAML order is treated as input <code>class_id</code>.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="shape-estimation-parameters">Shape Estimation Parameters<a class="headerlink" href="#shape-estimation-parameters" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>shape_policy</code></td>
-<td>int</td>
-<td>Shape estimation mode: <code>0</code> for <code>ALL_POLYGON</code>, <code>1</code> for <code>LABEL_DEPEND</code>.</td>
-</tr>
-<tr>
-<td><code>use_shape_estimation_corrector</code></td>
-<td>bool</td>
-<td>Enable the standard shape estimation corrector.</td>
-</tr>
-<tr>
-<td><code>use_shape_estimation_filter</code></td>
-<td>bool</td>
-<td>Enable the standard shape estimation filter.</td>
-</tr>
-<tr>
-<td><code>use_boost_bbox_optimizer</code></td>
-<td>bool</td>
-<td>Enable the boost-based bounding box optimizer in shape estimation.</td>
-</tr>
-</tbody>
-</table>
+<h2 id="per-label-clustering-parameter-overrides">Per-Label Clustering Parameter Overrides<a class="headerlink" href="#per-label-clustering-parameter-overrides" title="Permanent link">#</a></h2>
+<p>The clustering parameters at the top level (<code>use_height</code>, <code>tolerance_m</code>, <code>voxel_leaf_size_m</code>,
+<code>min_points_per_voxel</code>, <code>min_points_per_cluster</code>, <code>large_cluster_voxel_count_threshold</code>,
+<code>large_cluster_max_points_per_voxel</code>, <code>max_voxels_per_cluster</code>) define a single global
+<code>VoxelGridBasedEuclideanCluster</code> that is used for every label bucket by default.</p>
+<p><code>label_cluster_params.&lt;label&gt;</code> lets each label run with its own tuned clustering instance instead.
+This is useful because the spatial density and size of objects differ by class: pedestrians and
+hazards need a tighter tolerance and finer voxels than cars or trucks.</p>
+<ul>
+<li><code>&lt;label&gt;</code> must be one of the supported Autoware object labels (<code>unknown</code>, <code>car</code>, <code>bus</code>, <code>truck</code>,
+  <code>trailer</code>, <code>motorcycle</code>, <code>bicycle</code>, <code>pedestrian</code>, <code>animal</code>, <code>hazard</code>).</li>
+<li>Each override block accepts the same keys as the global clustering parameters.</li>
+<li>Any key omitted inside an override block falls back to the corresponding global value, so a block
+  only needs to list the parameters that differ.</li>
+<li>A label with no override block (or an empty one) keeps using the global default cluster.</li>
+<li>When a label-specific cluster is created, the node logs <code>Using custom cluster params for label '&lt;label&gt;'</code> at startup.</li>
+</ul>
+<p>Example: give pedestrians a tighter tolerance and finer voxels while leaving everything else on the
+global defaults.</p>
+<p>```yaml
+tolerance_m: 0.65
+voxel_leaf_size_m: 0.2</p>
+<h1 id="other-global-defaults">... other global defaults ...<a class="headerlink" href="#other-global-defaults" title="Permanent link">#</a></h1>
+<p>label_cluster_params:
+  pedestrian:
+    tolerance_m: 0.3
+    voxel_leaf_size_m: 0.1
+    min_points_per_voxel: 1
+    min_points_per_cluster: 3
+    large_cluster_voxel_count_threshold: 5
+    large_cluster_max_points_per_voxel: 30
+    max_voxels_per_cluster: 200
+```</p>
+<h2 id="confusable-label-merge">Confusable-Label Merge<a class="headerlink" href="#confusable-label-merge" title="Permanent link">#</a></h2>
+<p>Because each label bucket is clustered independently, a single physical object whose points carry two
+semantically confusable labels (for example a truck and its trailer, where the segmentation model
+splits one vehicle across the <code>truck</code> and <code>trailer</code> classes) is split into separate clusters.
+<code>confusable_label_groups.*</code> performs an optional post-clustering merge that stitches such pieces back
+together.</p>
+<p>Each entry under <code>confusable_label_groups</code> is a user-named group:</p>
+<ul>
+<li><code>labels</code>: the list of labels (two or more) that may be merged with each other. Only clusters of
+  <strong>different</strong> labels within the same group are considered for merging; clusters that share a label
+  are never merged here.</li>
+<li><code>cross_label_tolerance_m</code>: the maximum point-to-point XY gap between two clusters for them to be
+  joined. The gap is the true minimum distance between the closest points of the two clusters
+  (measured in the XY plane, height is ignored).</li>
+<li><code>max_merged_size_m</code> (default <code>25.0</code>): an upper bound on the diameter of a merged component. A union
+  that would produce a bounding circle larger than this is refused, so a chain of nearby clusters
+  cannot collapse a dense scene into one oversized blob.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>A label may appear in at most one group. If it is listed in several, the first group wins and a
+  warning is logged.</li>
+<li>Labels not listed in any group are passed through unchanged.</li>
+</ul>
+<p>Example: merge <code>truck</code> and <code>trailer</code> fragments that are within 0.5 m of each other, capping the
+merged object at a 25 m diameter.</p>
+<p><code>yaml
+confusable_label_groups:
+  truck_trailer:
+    labels: ["truck", "trailer"]
+    cross_label_tolerance_m: 0.5
+    max_merged_size_m: 25.0</code></p>
 <h2 id="default-configuration-notes">Default Configuration Notes<a class="headerlink" href="#default-configuration-notes" title="Permanent link">#</a></h2>
 <p>The default parameter file keeps common road users and filters out map/background classes.</p>
 <ul>
