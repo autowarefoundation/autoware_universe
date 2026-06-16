@@ -120,6 +120,7 @@ struct DiffusionPlannerParams
   int64_t delay_step;
   double line_string_max_step_m;
   bool use_time_interpolation;
+  double neighbor_vehicle_extended_width_margin_m;
 };
 
 /**

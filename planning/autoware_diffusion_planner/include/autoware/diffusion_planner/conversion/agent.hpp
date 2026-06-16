@@ -16,6 +16,7 @@
 #define AUTOWARE__DIFFUSION_PLANNER__CONVERSION__AGENT_HPP_
 
 #include "Eigen/Dense"
+#include "autoware/diffusion_planner/dimensions.hpp"
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
@@ -47,7 +48,6 @@ namespace autoware::diffusion_planner
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
-constexpr size_t AGENT_STATE_DIM = 11;
 
 enum AgentLabel { VEHICLE = 0, PEDESTRIAN = 1, BICYCLE = 2 };
 

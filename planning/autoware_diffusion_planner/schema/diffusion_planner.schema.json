@@ -106,6 +106,12 @@
           "default": false,
           "description": "Whether to interpolate ego past trajectory at regular time intervals"
         },
+        "neighbor_vehicle_extended_width_margin_m": {
+          "type": "number",
+          "default": 0.0,
+          "minimum": 0.0,
+          "description": "Extra margin added to the width of VEHICLE-label neighbor agents before inference, used to encourage larger clearance [m]"
+        },
         "planning_factor": {
           "type": "object",
           "properties": {
@@ -166,9 +172,12 @@
         }
       },
       "required": [
+        "plugins_path",
         "onnx_model_path",
         "args_path",
         "planning_frequency_hz",
+        "ignore_neighbors",
+        "ignore_unknown_neighbors",
         "traffic_light_group_msg_timeout_seconds",
         "batch_size",
         "temperature",
@@ -176,6 +185,11 @@
         "stopping_threshold",
         "turn_indicator_keep_offset",
         "turn_indicator_hold_duration",
+        "shift_x",
+        "delay_step",
+        "line_string_max_step_m",
+        "use_time_interpolation",
+        "neighbor_vehicle_extended_width_margin_m",
         "planning_factor",
         "debug_params"
       ]

@@ -159,6 +159,8 @@ void DiffusionPlanner::set_up_params()
   params_.delay_step = this->declare_parameter<int64_t>("delay_step", 0);
   params_.line_string_max_step_m = this->declare_parameter<double>("line_string_max_step_m", 5.0);
   params_.use_time_interpolation = this->declare_parameter<bool>("use_time_interpolation", false);
+  params_.neighbor_vehicle_extended_width_margin_m =
+    this->declare_parameter<double>("neighbor_vehicle_extended_width_margin_m", 0.0);
 
   // planning factor params
   planning_factor_params_.enable_stop =
@@ -228,6 +230,9 @@ SetParametersResult DiffusionPlanner::on_parameter(
     update_param<int64_t>(parameters, "delay_step", temp_params.delay_step);
     update_param<double>(parameters, "line_string_max_step_m", temp_params.line_string_max_step_m);
     update_param<bool>(parameters, "use_time_interpolation", temp_params.use_time_interpolation);
+    update_param<double>(
+      parameters, "neighbor_vehicle_extended_width_margin_m",
+      temp_params.neighbor_vehicle_extended_width_margin_m);
     const bool args_path_changed = temp_params.args_path != previous_args_path;
     const bool model_path_changed = temp_params.model_path != previous_model_path;
     const bool batch_size_changed = temp_params.batch_size != previous_batch_size;

@@ -18,6 +18,7 @@
 #include "autoware/diffusion_planner/conversion/lanelet.hpp"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -40,6 +41,23 @@ inline constexpr int64_t EGO_AGENT_PAST_IDX_X = 0;
 inline constexpr int64_t EGO_AGENT_PAST_IDX_Y = 1;
 inline constexpr int64_t EGO_AGENT_PAST_IDX_COS = 2;
 inline constexpr int64_t EGO_AGENT_PAST_IDX_SIN = 3;
+
+// Index for each field in a neighbor agent state (matches AgentState::as_array() layout).
+enum class NeighborStateIdx : size_t {
+  X = 0,
+  Y = 1,
+  COS_YAW = 2,
+  SIN_YAW = 3,
+  VX = 4,
+  VY = 5,
+  WIDTH = 6,
+  LENGTH = 7,
+  IS_VEHICLE = 8,
+  IS_PEDESTRIAN = 9,
+  IS_BICYCLE = 10,
+  STATE_DIM = 11,  // must be last; total number of fields
+};
+inline constexpr size_t AGENT_STATE_DIM = static_cast<size_t>(NeighborStateIdx::STATE_DIM);
 
 // Index for each field
 inline constexpr int64_t X = 0;
@@ -78,7 +96,8 @@ inline constexpr std::array<int64_t, 4> SAMPLED_TRAJECTORIES_SHAPE = {
   1, MAX_NUM_AGENTS, OUTPUT_T + 1, POSE_DIM};
 inline constexpr std::array<int64_t, 3> EGO_HISTORY_SHAPE = {1, INPUT_T + 1, POSE_DIM};
 inline constexpr std::array<int64_t, 2> EGO_CURRENT_STATE_SHAPE = {1, 10};
-inline constexpr std::array<int64_t, 4> NEIGHBOR_SHAPE = {1, MAX_NUM_NEIGHBORS, INPUT_T + 1, 11};
+inline constexpr std::array<int64_t, 4> NEIGHBOR_SHAPE = {
+  1, MAX_NUM_NEIGHBORS, INPUT_T + 1, static_cast<int64_t>(AGENT_STATE_DIM)};
 inline constexpr std::array<int64_t, 3> STATIC_OBJECTS_SHAPE = {1, 5, 10};
 inline constexpr std::array<int64_t, 4> LANES_SHAPE = {
   1, NUM_SEGMENTS_IN_LANE, POINTS_PER_SEGMENT, SEGMENT_POINT_DIM};
