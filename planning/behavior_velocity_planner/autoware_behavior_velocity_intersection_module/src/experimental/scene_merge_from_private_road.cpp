@@ -14,9 +14,11 @@
 
 #include "scene_merge_from_private_road.hpp"
 
-#include "autoware/behavior_velocity_intersection_module/util.hpp"
+#include "autoware/behavior_velocity_intersection_module/experimental/util.hpp"
 
 #include <autoware/lanelet2_utils/topology.hpp>
+#include <autoware/trajectory/utils/crop.hpp>
+#include <autoware/trajectory/utils/find_nearest.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
@@ -94,22 +96,24 @@ MergeFromPrivateRoadModule::MergeFromPrivateRoadModule(
 }
 
 static std::optional<lanelet::ConstLanelet> getFirstConflictingLanelet(
-  const lanelet::ConstLanelets & conflicting_lanelets,
-  const InterpolatedPathInfo & interpolated_path_info,
+  const lanelet::ConstLanelets & conflicting_lanelets, const Trajectory & path,
+  const autoware::experimental::trajectory::Interval & lane_ids_interval,
   const autoware_utils::LinearRing2d & footprint, const double vehicle_length)
 {
-  const auto & path_ip = interpolated_path_info.path;
-  const auto [lane_start, end] = interpolated_path_info.lane_id_interval.value();
-  const size_t vehicle_length_idx = static_cast<size_t>(vehicle_length / interpolated_path_info.ds);
-  const size_t start =
-    static_cast<size_t>(std::max<int>(0, static_cast<int>(lane_start) - vehicle_length_idx));
+  static constexpr auto ds = 0.2;
+  const auto start = std::max<double>(0.0, lane_ids_interval.start - vehicle_length);
 
-  for (size_t i = start; i <= end; ++i) {
-    const auto & pose = path_ip.points.at(i).point.pose;
+  const auto intersection_path =
+    autoware::experimental::trajectory::crop(path, start, lane_ids_interval.end);
+
+  // start from beginning of the Trajectory
+  for (const auto s : intersection_path.base_arange(ds)) {
+    const auto & pose = intersection_path.compute(s).point.pose;
     const auto path_footprint =
       autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(pose));
     for (const auto & conflicting_lanelet : conflicting_lanelets) {
       const auto polygon_2d = conflicting_lanelet.polygon2d().basicPolygon();
+      // TODO(sarun): can use crossed_with_footprint
       const bool intersects = bg::intersects(polygon_2d, path_footprint);
       if (intersects) {
         return std::make_optional(conflicting_lanelet);
@@ -123,11 +127,10 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(
   Trajectory & path, const std::vector<geometry_msgs::msg::Point> & left_bound,
   const std::vector<geometry_msgs::msg::Point> & right_bound, const PlannerData & planner_data)
 {
+  // dummy for passing unused left_bound, right_bound variables
   auto path_msg = planning_utils::fromTrajectory(path, left_bound, right_bound);
 
   debug_data_ = DebugData();
-
-  const auto input_path = path_msg;
 
   StateMachine::State current_state = state_machine_.getState();
   RCLCPP_DEBUG(
@@ -140,16 +143,9 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(
   const auto lanelet_map_ptr = planner_data.route_handler_->getLaneletMapPtr();
   const auto routing_graph_ptr = planner_data.route_handler_->getRoutingGraphPtr();
 
-  /* spline interpolation */
-  const auto interpolated_path_info_opt = util::generateInterpolatedPath(
-    lane_id_, associative_ids_, path_msg, planner_param_.path_interpolation_ds, logger_);
-  if (!interpolated_path_info_opt) {
-    RCLCPP_DEBUG_SKIPFIRST_THROTTLE(logger_, *clock_, 1000 /* ms */, "splineInterpolate failed");
-    RCLCPP_DEBUG(logger_, "===== plan end =====");
-    return false;
-  }
-  const auto & interpolated_path_info = interpolated_path_info_opt.value();
-  if (!interpolated_path_info.lane_id_interval) {
+  const auto lane_ids_interval_opt = util::findLaneIdsInterval(path, associative_ids_);
+
+  if (!lane_ids_interval_opt) {
     RCLCPP_WARN(logger_, "Path has no interval on intersection lane %ld", lane_id_);
     RCLCPP_DEBUG(logger_, "===== plan end =====");
     return false;
@@ -160,15 +156,16 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(
   if (!first_conflicting_lanelet_) {
     const auto conflicting_lanelets = getAttentionLanelets(planner_data);
     first_conflicting_lanelet_ = getFirstConflictingLanelet(
-      conflicting_lanelets, interpolated_path_info, local_footprint, baselink2front);
+      conflicting_lanelets, path, *lane_ids_interval_opt, local_footprint, baselink2front);
   }
   if (!first_conflicting_lanelet_) {
     return false;
   }
   const auto first_conflicting_lanelet = first_conflicting_lanelet_.value();
 
-  const auto first_conflicting_idx_opt = util::getLastPointOutsidePolygonByFootprint(
-    first_conflicting_lanelet.polygon3d(), interpolated_path_info, local_footprint, baselink2front);
+  const auto first_conflicting_idx_opt = util::getFirstIndexInsidePolygonByFootprint(
+    path, *lane_ids_interval_opt, first_conflicting_lanelet.polygon3d(), local_footprint,
+    baselink2front);
   if (!first_conflicting_idx_opt) {
     return false;
   }
@@ -176,38 +173,30 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(
   // first_conflicting_idx is calculated considering baselink2front already, so there is no need
   // to subtract baselink2front/ds here
   // ==========================================================================================
-  const auto stopline_idx_ip = static_cast<size_t>(std::max<int>(
-    0, static_cast<int>(first_conflicting_idx_opt.value()) -
-         static_cast<int>(planner_param_.stopline_margin / planner_param_.path_interpolation_ds)));
+  const auto stopline_s = std::max<double>(
+    0.0, first_conflicting_idx_opt.value() -
+           planner_param_.stopline_margin / planner_param_.path_interpolation_ds);
 
-  const auto stopline_idx_opt = util::insertPointIndex(
-    interpolated_path_info.path.points.at(stopline_idx_ip).point.pose, &path_msg,
-    planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
-  if (!stopline_idx_opt) {
-    RCLCPP_DEBUG(logger_, "failed to insert stopline, ignore planning.");
-    return true;
-  }
-  const auto stopline_idx = stopline_idx_opt.value();
-
-  debug_data_.virtual_wall_pose =
-    planning_utils::getAheadPose(stopline_idx, baselink2front, path_msg);
-  debug_data_.stop_point_pose = path_msg.points.at(stopline_idx).point.pose;
+  debug_data_.virtual_wall_pose = path.compute(stopline_s + baselink2front).point.pose;
+  debug_data_.stop_point_pose = path.compute(stopline_s).point.pose;
 
   /* set stop speed */
   if (state_machine_.getState() == StateMachine::State::STOP) {
-    constexpr double v = 0.0;
-    planning_utils::setVelocityFromIndex(stopline_idx, v, &path_msg);
+    // original function set 0.0, only positive velocity, but set_stopline set velocity 0.0 for all
+    // values.
+    path.set_stopline(stopline_s);
 
     /* get stop point and stop factor */
-    const auto & stop_pose = path_msg.points.at(stopline_idx).point.pose;
+    const auto & stop_pose = path.compute(stopline_s).point.pose;
     planning_factor_interface_->add(
-      path_msg.points, planner_data.current_odometry->pose, stop_pose,
+      path.restore(), planner_data.current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "merge_from_private");
 
-    const double signed_arc_dist_to_stop_point = autoware::motion_utils::calcSignedArcLength(
-      path_msg.points, current_pose.position, path_msg.points.at(stopline_idx).point.pose.position);
+    const double signed_arc_dist_to_stop_point =
+      stopline_s -
+      autoware::experimental::trajectory::find_nearest_index(path, current_pose.position);
 
     if (
       signed_arc_dist_to_stop_point < planner_param_.stop_distance_threshold &&
@@ -218,11 +207,9 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(
       }
     }
 
-    planning_utils::toTrajectory(path_msg, path);
     return true;
   }
 
-  planning_utils::toTrajectory(path_msg, path);
   return true;
 }
 
