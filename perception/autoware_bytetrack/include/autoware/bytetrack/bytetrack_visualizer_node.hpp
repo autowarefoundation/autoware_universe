@@ -31,39 +31,11 @@
 
 #include <algorithm>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace autoware::bytetrack
 {
-// A helper class to generate bright color instance
-class ColorMapper
-{
-public:
-  const size_t kColorNum = 512;
-  ColorMapper()
-  {
-    // generate bright color map
-    cv::Mat src = cv::Mat::zeros(cv::Size(kColorNum, 1), CV_8UC1);
-    for (size_t i = 0; i < kColorNum; i++) {
-      src.at<unsigned char>(0, i) = i;
-    }
-    cv::applyColorMap(src, color_table_, cv::COLORMAP_HSV);
-  }
-
-  cv::Scalar operator()(size_t idx)
-  {
-    if (kColorNum <= idx) {
-      throw std::runtime_error("idx should be between [0, 255]");
-    }
-    return color_table_.at<cv::Vec3b>(0, idx);
-  }
-
-protected:
-  cv::Mat color_table_;
-};
-
 class ByteTrackVisualizerNode : public rclcpp::Node
 {
 public:
@@ -79,7 +51,7 @@ protected:
     const tier4_perception_msgs::msg::DetectedObjectsWithFeature::SharedPtr & rect_msg,
     const tier4_perception_msgs::msg::DynamicObjectArray::SharedPtr & uuid_msg);
   void draw(
-    cv::Mat & image, const std::vector<cv::Rect> & bboxes,
+    cv::Mat & image, const std::vector<cv::Rect> & bboxes, const std::vector<int> & class_ids,
     const std::vector<boost::uuids::uuid> & uuids);
 
   image_transport::SubscriberFilter image_sub_;
@@ -97,7 +69,6 @@ protected:
   rclcpp::TimerBase::SharedPtr timer_;
 
   bool use_raw_;
-  ColorMapper color_map_;
 };
 }  // namespace autoware::bytetrack
 

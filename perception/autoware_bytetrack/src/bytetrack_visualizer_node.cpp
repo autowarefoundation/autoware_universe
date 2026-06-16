@@ -14,6 +14,8 @@
 
 #include "autoware/bytetrack/bytetrack_visualizer_node.hpp"
 
+#include <autoware_perception_msgs/msg/object_classification.hpp>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
@@ -32,6 +34,42 @@
 
 namespace autoware::bytetrack
 {
+namespace
+{
+cv::Scalar getColorByClassId(const int class_id)
+{
+  using Classification = autoware_perception_msgs::msg::ObjectClassification;
+
+  switch (class_id) {
+    case Classification::UNKNOWN:
+      return cv::Scalar(160, 160, 160);
+    case Classification::CAR:
+      return cv::Scalar(0, 200, 0);
+    case Classification::TRUCK:
+      return cv::Scalar(255, 128, 0);
+    case Classification::BUS:
+      return cv::Scalar(0, 255, 255);
+    case Classification::TRAILER:
+      return cv::Scalar(128, 0, 255);
+    case Classification::MOTORCYCLE:
+      return cv::Scalar(255, 0, 255);
+    case Classification::BICYCLE:
+      return cv::Scalar(255, 255, 0);
+    case Classification::PEDESTRIAN:
+      return cv::Scalar(0, 0, 255);
+    case Classification::ANIMAL:
+      return cv::Scalar(0, 165, 255);
+    case Classification::HAZARD:
+      return cv::Scalar(0, 255, 128);
+    case Classification::OVER_DRIVABLE:
+      return cv::Scalar(255, 0, 0);
+    case Classification::UNDER_DRIVABLE:
+      return cv::Scalar(180, 80, 80);
+    default:
+      return cv::Scalar(255, 255, 255);
+  }
+}
+}  // namespace
 
 ByteTrackVisualizerNode::ByteTrackVisualizerNode(const rclcpp::NodeOptions & node_options)
 : Node("bytetrack_visualizer", node_options)
@@ -132,10 +170,16 @@ void ByteTrackVisualizerNode::callback(
   }
 
   std::vector<cv::Rect> bboxes;
+  std::vector<int> class_ids;
   for (const auto & feat_obj : rect_msg->feature_objects) {
     auto roi_msg = feat_obj.feature.roi;
     cv::Rect rect(roi_msg.x_offset, roi_msg.y_offset, roi_msg.width, roi_msg.height);
     bboxes.push_back(rect);
+    if (feat_obj.object.classification.empty()) {
+      class_ids.push_back(autoware_perception_msgs::msg::ObjectClassification::UNKNOWN);
+    } else {
+      class_ids.push_back(feat_obj.object.classification.front().label);
+    }
   }
 
   std::vector<boost::uuids::uuid> uuids;
@@ -148,7 +192,7 @@ void ByteTrackVisualizerNode::callback(
 
   // Draw results and publish it
   cv::Mat image = in_image_ptr->image;
-  draw(image, bboxes, uuids);
+  draw(image, bboxes, class_ids, uuids);
 
   cv_bridge::CvImage pub_image_msg;
   pub_image_msg.header = image_msg->header;
@@ -158,38 +202,33 @@ void ByteTrackVisualizerNode::callback(
 }
 
 void ByteTrackVisualizerNode::draw(
-  cv::Mat & image, const std::vector<cv::Rect> & bboxes,
+  cv::Mat & image, const std::vector<cv::Rect> & bboxes, const std::vector<int> & class_ids,
   const std::vector<boost::uuids::uuid> & uuids)
 {
-  // helper function to generate unique index from uuid
-  auto GeneratePseudoIndex = [](boost::uuids::uuid id, size_t num_color) {
-    size_t pseudo_idx = boost::uuids::hash_value(id);
-    return pseudo_idx % num_color;  // round in range [0, num_color]
-  };
-
   for (size_t idx = 0; idx < bboxes.size(); idx++) {
     auto bbox = bboxes[idx];
+    auto class_id = class_ids[idx];
     auto uuid = uuids[idx];
 
     auto uuid_str = boost::lexical_cast<std::string>(uuid);
     // Take sub string because full UUID is too long to display
     uuid_str = uuid_str.substr(0, 5);
-    // Generate unique index in range [0, color_num] to determine bounding box color
-    auto pseudo_id = GeneratePseudoIndex(uuid, this->color_map_.kColorNum);
-    auto color = color_map_(pseudo_id);
+    auto color = getColorByClassId(class_id);
 
     const auto left = std::max(0, static_cast<int>(bbox.x));
     const auto top = std::max(0, static_cast<int>(bbox.y));
     const auto right = std::min(static_cast<int>(bbox.x + bbox.width), image.size().width);
     const auto bottom = std::min(static_cast<int>(bbox.y + bbox.height), image.size().height);
 
-    cv::rectangle(image, cv::Point(left, top), cv::Point(right, bottom), color);
+    constexpr uint font_thickness = 1;
+    constexpr uint bbox_thickness = 2;
+    cv::rectangle(image, cv::Point(left, top), cv::Point(right, bottom), color, bbox_thickness);
     cv::putText(
       image, cv::format("ID: %s", uuid_str.c_str()), cv::Point(left, top - 5),
       cv::FONT_HERSHEY_SIMPLEX,
       1,  // font scale
       color,
-      1,  // thickness
+      font_thickness,  // thickness
       cv::LINE_AA);
   }
 }
