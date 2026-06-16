@@ -14,14 +14,23 @@
 
 #include "autoware/tensorrt_yolox/tensorrt_yolox_node.hpp"
 
-#include "autoware/object_recognition_utils/object_classification.hpp"
 #include "autoware/tensorrt_yolox/label.hpp"
 #include "perception_utils/run_length_encoder.hpp"
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
+#if __has_include(<cv_bridge/cv_bridge.hpp>)
+#include <cv_bridge/cv_bridge.hpp>
+#else
+#include <cv_bridge/cv_bridge.h>
+#endif
+
 #include <algorithm>
+#include <cstring>
 #include <memory>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -43,52 +52,79 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   using std::placeholders::_1;
   using std::chrono_literals::operator""ms;
 
-  config_.model_path = this->declare_parameter<std::string>("model_path");
-  config_.precision = this->declare_parameter<std::string>("precision");
-  config_.score_threshold = static_cast<float>(this->declare_parameter<double>("score_threshold"));
-  config_.nms_threshold = static_cast<float>(this->declare_parameter<double>("nms_threshold"));
-  config_.calibration_algorithm = this->declare_parameter<std::string>("calibration_algorithm");
-  config_.dla_core_id = this->declare_parameter<int>("dla_core_id");
-  config_.quantize_first_layer = this->declare_parameter<bool>("quantize_first_layer");
-  config_.quantize_last_layer = this->declare_parameter<bool>("quantize_last_layer");
-  config_.profile_per_layer = this->declare_parameter<bool>("profile_per_layer");
-  config_.clip_value = this->declare_parameter<double>("clip_value");
-  config_.preprocess_on_gpu = this->declare_parameter<bool>("preprocess_on_gpu");
-  config_.calibration_image_list_path =
+  TrtYoloXDetectorConfig config;
+  config.model_path = this->declare_parameter<std::string>("model_path");
+  config.precision = this->declare_parameter<std::string>("precision");
+  config.score_threshold = static_cast<float>(this->declare_parameter<double>("score_threshold"));
+  config.nms_threshold = static_cast<float>(this->declare_parameter<double>("nms_threshold"));
+  config.calibration_algorithm = this->declare_parameter<std::string>("calibration_algorithm");
+  config.dla_core_id = this->declare_parameter<int>("dla_core_id");
+  config.quantize_first_layer = this->declare_parameter<bool>("quantize_first_layer");
+  config.quantize_last_layer = this->declare_parameter<bool>("quantize_last_layer");
+  config.profile_per_layer = this->declare_parameter<bool>("profile_per_layer");
+  config.clip_value = this->declare_parameter<double>("clip_value");
+  config.preprocess_on_gpu = this->declare_parameter<bool>("preprocess_on_gpu");
+  config.calibration_image_list_path =
     this->declare_parameter<std::string>("calibration_image_list_path");
-  config_.gpu_id = this->declare_parameter<uint8_t>("gpu_id");
+  config.gpu_id = this->declare_parameter<uint8_t>("gpu_id");
 
-  config_.label_path = this->declare_parameter<std::string>("label_path");
-  config_.semseg_color_map_path =
+  config.label_path = this->declare_parameter<std::string>("label_path");
+  config.semseg_color_map_path =
     this->declare_parameter<std::string>("semantic_segmentation_color_map_path", "");
 
   // if the remap file path is an empty string, it will not do remap the labels
-  config_.roi_remap_path = this->declare_parameter<std::string>("roi_remap_path", "");
-  config_.roi_to_semseg_remap_path =
+  config.roi_remap_path = this->declare_parameter<std::string>("roi_remap_path", "");
+  config.roi_to_semseg_remap_path =
     this->declare_parameter<std::string>("roi_to_semantic_segmentation_remap_path", "");
 
-  config_.is_roi_overlap_semseg = declare_parameter<bool>("is_roi_overlap_segmentation");
-  config_.is_publish_color_mask = declare_parameter<bool>("is_publish_color_mask");
-  config_.overlap_roi_score_threshold = declare_parameter<float>("overlap_roi_score_threshold");
-  config_.roi_overlay_semseg_labels.UNKNOWN =
+  config.is_roi_overlap_semseg = declare_parameter<bool>("is_roi_overlap_segmentation");
+  config.is_publish_color_mask = declare_parameter<bool>("is_publish_color_mask");
+  config.overlap_roi_score_threshold = declare_parameter<float>("overlap_roi_score_threshold");
+  config.roi_overlay_semseg_labels.UNKNOWN =
     declare_parameter<bool>("roi_overlay_segmentation_label.UNKNOWN");
-  config_.roi_overlay_semseg_labels.CAR =
+  config.roi_overlay_semseg_labels.CAR =
     declare_parameter<bool>("roi_overlay_segmentation_label.CAR");
-  config_.roi_overlay_semseg_labels.TRUCK =
+  config.roi_overlay_semseg_labels.TRUCK =
     declare_parameter<bool>("roi_overlay_segmentation_label.TRUCK");
-  config_.roi_overlay_semseg_labels.BUS =
+  config.roi_overlay_semseg_labels.BUS =
     declare_parameter<bool>("roi_overlay_segmentation_label.BUS");
-  config_.roi_overlay_semseg_labels.MOTORCYCLE =
+  config.roi_overlay_semseg_labels.MOTORCYCLE =
     declare_parameter<bool>("roi_overlay_segmentation_label.MOTORCYCLE");
-  config_.roi_overlay_semseg_labels.BICYCLE =
+  config.roi_overlay_semseg_labels.BICYCLE =
     declare_parameter<bool>("roi_overlay_segmentation_label.BICYCLE");
-  config_.roi_overlay_semseg_labels.PEDESTRIAN =
+  config.roi_overlay_semseg_labels.PEDESTRIAN =
     declare_parameter<bool>("roi_overlay_segmentation_label.PEDESTRIAN");
-  config_.roi_overlay_semseg_labels.ANIMAL =
+  config.roi_overlay_semseg_labels.ANIMAL =
     declare_parameter<bool>("roi_overlay_segmentation_label.ANIMAL");
-  config_.roi_overlay_semseg_labels.HAZARD =
+  config.roi_overlay_semseg_labels.HAZARD =
     declare_parameter<bool>("roi_overlay_segmentation_label.HAZARD");
 
+  detector_ = std::make_unique<TrtYoloXDetector>(config);
+
+  if (!detector_->isGPUInitialized()) {
+    RCLCPP_ERROR(this->get_logger(), "GPU %d does not exist or is not suitable.", config.gpu_id);
+    rclcpp::shutdown();
+    return;
+  }
+  RCLCPP_INFO(this->get_logger(), "GPU %d is selected for the inference!", config.gpu_id);
+
+  timer_ =
+    rclcpp::create_timer(this, get_clock(), 100ms, std::bind(&TrtYoloXNode::onConnect, this));
+
+  objects_pub_ = this->create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
+    "~/out/objects", 1);
+  mask_pub_ = image_transport::create_publisher(this, "~/out/mask");
+  color_mask_pub_ = image_transport::create_publisher(this, "~/out/color_mask");
+  image_pub_ = image_transport::create_publisher(this, "~/out/image");
+
+  if (declare_parameter("build_only", false)) {
+    RCLCPP_INFO(this->get_logger(), "TensorRT engine file is built and exit.");
+    rclcpp::shutdown();
+  }
+}
+
+TrtYoloXDetector::TrtYoloXDetector(const TrtYoloXDetectorConfig & config) : config_(config)
+{
   if (config_.is_publish_color_mask && config_.semseg_color_map_path.empty()) {
     std::stringstream error_msg;
     error_msg << "semantic_segmentation_color_map_path must be specified "
@@ -123,27 +159,11 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
     trt_config, roi_class_name_list_.size(), config_.score_threshold, config_.nms_threshold,
     config_.preprocess_on_gpu, config_.gpu_id, config_.calibration_image_list_path, norm_factor,
     cache_dir, calib_config);
+}
 
-  if (!trt_yolox_->isGPUInitialized()) {
-    RCLCPP_ERROR(this->get_logger(), "GPU %d does not exist or is not suitable.", config_.gpu_id);
-    rclcpp::shutdown();
-    return;
-  }
-  RCLCPP_INFO(this->get_logger(), "GPU %d is selected for the inference!", config_.gpu_id);
-
-  timer_ =
-    rclcpp::create_timer(this, get_clock(), 100ms, std::bind(&TrtYoloXNode::onConnect, this));
-
-  objects_pub_ = this->create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
-    "~/out/objects", 1);
-  mask_pub_ = image_transport::create_publisher(this, "~/out/mask");
-  color_mask_pub_ = image_transport::create_publisher(this, "~/out/color_mask");
-  image_pub_ = image_transport::create_publisher(this, "~/out/image");
-
-  if (declare_parameter("build_only", false)) {
-    RCLCPP_INFO(this->get_logger(), "TensorRT engine file is built and exit.");
-    rclcpp::shutdown();
-  }
+bool TrtYoloXDetector::isGPUInitialized() const
+{
+  return trt_yolox_->isGPUInitialized();
 }
 
 void TrtYoloXNode::onConnect()
@@ -165,15 +185,53 @@ void TrtYoloXNode::onConnect()
 void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
-  tier4_perception_msgs::msg::DetectedObjectsWithFeature out_objects;
 
-  cv_bridge::CvImagePtr in_image_ptr;
+  std::optional<TrtYoloXDetectorResult> result;
   try {
-    in_image_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    result = detector_->detect(*msg);
   } catch (cv_bridge::Exception & e) {
     RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
     return;
   }
+  if (!result) {
+    RCLCPP_WARN(this->get_logger(), "Fail to inference");
+    return;
+  }
+
+  if (result->mask) {
+    mask_pub_.publish(*result->mask);
+  }
+
+  image_pub_.publish(result->image);
+
+  objects_pub_->publish(result->objects);
+
+  if (debug_publisher_) {
+    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+    const double pipeline_latency_ms =
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (this->get_clock()->now() - result->objects.header.stamp).nanoseconds()))
+        .count();
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/cyclic_time_ms", cyclic_time_ms);
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/processing_time_ms", processing_time_ms);
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/pipeline_latency_ms", pipeline_latency_ms);
+  }
+
+  if (result->color_mask) {
+    color_mask_pub_.publish(*result->color_mask);
+  }
+}
+
+std::optional<TrtYoloXDetectorResult> TrtYoloXDetector::detect(
+  const sensor_msgs::msg::Image & image_msg)
+{
+  cv_bridge::CvImagePtr in_image_ptr =
+    cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
   const auto width = in_image_ptr->image.cols;
   const auto height = in_image_ptr->image.rows;
 
@@ -183,11 +241,11 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
     cv::Mat(cv::Size(height, width), CV_8UC3, cv::Scalar(0, 0, 0))};
 
   if (!trt_yolox_->doInference({in_image_ptr->image}, objects, masks, color_masks)) {
-    RCLCPP_WARN(this->get_logger(), "Fail to inference");
-    return;
+    return std::nullopt;
   }
   auto & mask = masks.at(0);
 
+  tier4_perception_msgs::msg::DetectedObjectsWithFeature out_objects;
   for (const auto & yolox_object : objects.at(0)) {
     tier4_perception_msgs::msg::DetectedObjectWithFeature object;
     object.feature.roi.x_offset = yolox_object.x_offset;
@@ -227,11 +285,13 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
     }
   }
 
+  TrtYoloXDetectorResult result;
+
   if (trt_yolox_->getMultitaskNum() > 0) {
     sensor_msgs::msg::Image::SharedPtr out_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), sensor_msgs::image_encodings::MONO8, mask)
         .toImageMsg();
-    out_mask_msg->header = msg->header;
+    out_mask_msg->header = image_msg.header;
 
     std::vector<std::pair<uint8_t, int>> compressed_data = perception_utils::runLengthEncoder(mask);
     int step = sizeof(uint8_t) + sizeof(int);
@@ -241,28 +301,12 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
       std::memcpy(&out_mask_msg->data[i * step + 1], &compressed_data.at(i).second, sizeof(int));
     }
 
-    mask_pub_.publish(out_mask_msg);
+    result.mask = *out_mask_msg;
   }
 
-  image_pub_.publish(in_image_ptr->toImageMsg());
-  out_objects.header = msg->header;
-  objects_pub_->publish(out_objects);
-
-  if (debug_publisher_) {
-    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
-    const double pipeline_latency_ms =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds(
-          (this->get_clock()->now() - out_objects.header.stamp).nanoseconds()))
-        .count();
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/processing_time_ms", processing_time_ms);
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/pipeline_latency_ms", pipeline_latency_ms);
-  }
+  result.image = *in_image_ptr->toImageMsg();
+  out_objects.header = image_msg.header;
+  result.objects = out_objects;
 
   if (config_.is_publish_color_mask && trt_yolox_->getMultitaskNum() > 0) {
     cv::Mat color_mask = cv::Mat::zeros(mask.rows, mask.cols, CV_8UC3);
@@ -271,9 +315,11 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
     sensor_msgs::msg::Image::SharedPtr output_color_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), sensor_msgs::image_encodings::BGR8, color_mask)
         .toImageMsg();
-    output_color_mask_msg->header = msg->header;
-    color_mask_pub_.publish(output_color_mask_msg);
+    output_color_mask_msg->header = image_msg.header;
+    result.color_mask = *output_color_mask_msg;
   }
+
+  return result;
 }
 
 /**
@@ -294,7 +340,7 @@ void TrtYoloXNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
  * @param[in] roi_label_remap_path file path of remap file for ROI
  * @param[in] roi_to_semseg_remap_path file path of remap file for segmentation
  */
-void TrtYoloXNode::setupLabel(
+void TrtYoloXDetector::setupLabel(
   const std::string & roi_label_path, const std::string & semseg_color_map_path,
   const std::string & roi_label_remap_path, const std::string & roi_to_semseg_remap_path)
 {
@@ -361,12 +407,11 @@ void TrtYoloXNode::setupLabel(
       }
     }
   } catch (const std::exception & e) {
-    RCLCPP_ERROR(this->get_logger(), "Label initialization failed: %s", e.what());
-    throw;
+    throw std::runtime_error(std::string("Label initialization failed: ") + e.what());
   }
 }
 
-int TrtYoloXNode::mapRoiLabel2SegLabel(const int32_t roi_label_index)
+int TrtYoloXDetector::mapRoiLabel2SegLabel(const int32_t roi_label_index)
 {
   if (config_.roi_overlay_semseg_labels.isOverlay(static_cast<uint8_t>(roi_label_index))) {
     return roi_id_to_semseg_id_map_[roi_label_index];
@@ -374,7 +419,7 @@ int TrtYoloXNode::mapRoiLabel2SegLabel(const int32_t roi_label_index)
   return -1;
 }
 
-void TrtYoloXNode::overlapSegmentByRoi(
+void TrtYoloXDetector::overlapSegmentByRoi(
   const tensorrt_yolox::Object & roi_object, cv::Mat & mask, const int orig_width,
   const int orig_height)
 {
@@ -401,7 +446,7 @@ void TrtYoloXNode::overlapSegmentByRoi(
  * @param[in] index multitask index
  * @param[in] colormap colormap for masks
  */
-void TrtYoloXNode::getColorizedMask(const cv::Mat & mask, cv::Mat & cmask)
+void TrtYoloXDetector::getColorizedMask(const cv::Mat & mask, cv::Mat & cmask)
 {
   int width = mask.cols;
   int height = mask.rows;

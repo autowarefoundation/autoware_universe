@@ -109,6 +109,64 @@ struct TrtYoloXDetectorConfig
   RoiOverlaySemsegLabel roi_overlay_semseg_labels;
 };
 
+/**
+ * @struct TrtYoloXDetectorResult
+ * @brief Output of a single inference as ROS messages, ready to publish (headers already stamped).
+ * mask/color_mask are present only when the model has a segmentation head (and color mask is
+ * enabled), so they are optional.
+ */
+struct TrtYoloXDetectorResult
+{
+  tier4_perception_msgs::msg::DetectedObjectsWithFeature objects;
+  sensor_msgs::msg::Image image;
+  std::optional<sensor_msgs::msg::Image> mask;
+  std::optional<sensor_msgs::msg::Image> color_mask;
+};
+
+/**
+ * @class TrtYoloXDetector
+ * @brief Frame-by-frame YOLOX detection pipeline decoupled from rclcpp::Node. It owns the TensorRT
+ * inference engine and the label remapping, and converts an input image into the detection result.
+ */
+class TrtYoloXDetector
+{
+public:
+  explicit TrtYoloXDetector(const TrtYoloXDetectorConfig & config);
+
+  /**
+   * @brief whether the underlying GPU has been initialized successfully
+   */
+  bool isGPUInitialized() const;
+
+  /**
+   * @brief run inference and post-process for a single image message
+   * @param[in] image_msg input image message (BGR8 expected); its header is propagated to all
+   * output messages
+   * @return detection result, or std::nullopt when inference fails
+   * @throws cv_bridge::Exception when the input image cannot be converted
+   */
+  std::optional<TrtYoloXDetectorResult> detect(const sensor_msgs::msg::Image & image_msg);
+
+private:
+  void setupLabel(
+    const std::string & roi_label_path, const std::string & semseg_color_map_path,
+    const std::string & roi_label_remap_path, const std::string & roi_to_semseg_remap_path);
+  int mapRoiLabel2SegLabel(const int32_t roi_label_index);
+  void overlapSegmentByRoi(
+    const tensorrt_yolox::Object & object, cv::Mat & mask, const int width, const int height);
+  void getColorizedMask(const cv::Mat & mask, cv::Mat & cmask);
+
+  std::unique_ptr<tensorrt_yolox::TrtYoloX> trt_yolox_;
+  TrtYoloXDetectorConfig config_;
+
+  // using -1 to represent labels that be ignored
+  static constexpr int unmapped_class_id_ = -1;
+  std::vector<std::string> roi_class_name_list_;
+  std::vector<int> roi_id_to_class_id_map_;
+  std::vector<int> roi_id_to_semseg_id_map_;
+  std::vector<autoware::tensorrt_yolox::Colormap> semseg_color_map_;
+};
+
 class TrtYoloXNode : public rclcpp::Node
 {
 public:
@@ -117,13 +175,6 @@ public:
 private:
   void onConnect();
   void onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg);
-  void overlapSegmentByRoi(
-    const tensorrt_yolox::Object & object, cv::Mat & mask, const int width, const int height);
-  int mapRoiLabel2SegLabel(const int32_t roi_label_index);
-  void setupLabel(
-    const std::string & roi_label_file_path, const std::string & segment_color_map_file_path,
-    const std::string & roi_label_remap_file_path, const std::string & roi_segment_remap_path);
-  void getColorizedMask(const cv::Mat & mask, cv::Mat & cmask);
 
   image_transport::Publisher image_pub_;
   image_transport::Publisher mask_pub_;
@@ -134,17 +185,7 @@ private:
 
   rclcpp::TimerBase::SharedPtr timer_;
 
-  std::unique_ptr<tensorrt_yolox::TrtYoloX> trt_yolox_;
-
-  TrtYoloXDetectorConfig config_;
-
-  // using -1 to represent labels that be ignored
-  static constexpr int unmapped_class_id_ = -1;
-  std::vector<std::string> roi_class_name_list_;
-  std::vector<int> roi_id_to_class_id_map_;
-  std::vector<int> roi_id_to_semseg_id_map_;
-
-  std::vector<autoware::tensorrt_yolox::Colormap> semseg_color_map_;
+  std::unique_ptr<TrtYoloXDetector> detector_;
 
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
