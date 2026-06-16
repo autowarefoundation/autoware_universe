@@ -97,10 +97,8 @@ public:
     std::vector<sensor_msgs::msg::CameraInfo> & camera_info_vector,
     std::vector<Matrix4fRowM> & lidar2camera_vector);
 
-  // Main CUDA stream on which the input point cloud is consumed (voxelization, pre-/post-process
-  // and inference). It is handed to the CudaBlackboardSubscriber so the blackboard can order the
-  // producer/consumer and the buffer free at the stream level instead of synchronizing the whole
-  // process.
+  /// CUDA stream used for pointcloud processing and inference.
+  /// Pass this to CudaBlackboardSubscriber for stream-level producer/consumer ordering.
   cudaStream_t stream() const { return stream_; }
 
 protected:
