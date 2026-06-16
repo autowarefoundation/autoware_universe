@@ -76,6 +76,8 @@ public:
 
   bool limitStates();
 
+  double getYawState() const noexcept { return getStateElement(IDX::YAW); }
+
   bool predictStateStep(const double dt, KalmanFilter & ekf) const override;
 
   bool getPredictedState(

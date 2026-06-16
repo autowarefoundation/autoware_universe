@@ -11,18 +11,6 @@ validator:
     description: List of filter names that run in which results are logged but do not affect trajectory feasibility.
     read_only: false
 
-  out_of_lane:
-    time:
-      type: double
-      default_value: 3.0
-      description: The time range to check
-      read_only: false
-    min_value:
-      type: double
-      default_value: 0.0
-      description: Minimum distance to lane boundary
-      read_only: false
-
   vehicle_constraint:
     max_speed:
       type: double

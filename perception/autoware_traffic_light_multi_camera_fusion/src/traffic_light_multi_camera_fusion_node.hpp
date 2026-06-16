@@ -17,6 +17,7 @@
 
 #include "multi_camera_fusion.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -81,7 +82,7 @@ private:
   std::vector<std::unique_ptr<ApproximateSync>> approximate_sync_subs_;
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_sub_;
 
-  rclcpp::Publisher<NewSignalArrayType>::SharedPtr signal_pub_;
+  AUTOWARE_PUBLISHER_PTR(NewSignalArrayType) signal_pub_;
 
   MultiCameraFusionConfig fusion_config_{};
   MultiCameraFusion fusion_{};

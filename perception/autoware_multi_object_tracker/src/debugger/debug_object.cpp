@@ -104,6 +104,7 @@ void TrackerObjectDebugger::collect(
 
     object_data.existence_vector = (*tracker_itr)->getExistenceProbabilityVector();
     object_data.total_existence_probability = (*tracker_itr)->getTotalExistenceProbability();
+    object_data.tracker_type_str = types::toShortString((*tracker_itr)->getTrackerType());
 
     auto & group = object_data_map_[object_data.uuid];
     group.push_back(std::move(object_data));
@@ -239,6 +240,7 @@ void TrackerObjectDebugger::draw(
       std::string text = oss.str();
       if (!text.empty()) text.pop_back();
       text += "\n" + object_data_front.uuid_str.substr(0, 6);
+      text += "\n" + object_data_front.tracker_type_str;
       text_marker.text = std::move(text);
     }
 

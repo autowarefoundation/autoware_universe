@@ -20,7 +20,7 @@
 #include "autoware/multi_object_tracker/association/scoring/polar_assignment_scoring.hpp"
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
@@ -45,7 +45,7 @@ namespace autoware::multi_object_tracker
 class PolarAssociation : public AssociationBase
 {
 public:
-  explicit PolarAssociation(const AssociatorConfig & config);
+  explicit PolarAssociation(const TrackerAssociationConfig & config);
   ~PolarAssociation() override = default;
 
   /// AssociationBase implementation.
@@ -73,7 +73,7 @@ private:
     double x, y, z, yaw;
   };
 
-  AssociatorConfig config_;
+  TrackerAssociationConfig config_;
   const double score_threshold_;
   std::unique_ptr<gnn_solver::GnnSolverInterface> gnn_solver_ptr_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
