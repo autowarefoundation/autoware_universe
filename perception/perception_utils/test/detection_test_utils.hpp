@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TEST_UTILS_HPP_
-#define TEST_UTILS_HPP_
+#ifndef DETECTION_TEST_UTILS_HPP_
+#define DETECTION_TEST_UTILS_HPP_
 
 #include <autoware_utils_geometry/geometry.hpp>
 
@@ -46,4 +46,4 @@ inline autoware_perception_msgs::msg::DetectedObject make_object(
 
 }  // namespace perception_utils::test
 
-#endif  // TEST_UTILS_HPP_
+#endif  // DETECTION_TEST_UTILS_HPP_

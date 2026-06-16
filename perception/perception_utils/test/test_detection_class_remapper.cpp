@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "detection_test_utils.hpp"
 #include "perception_utils/detection_class_remapper.hpp"
-#include "test_utils.hpp"
 
 #include <gtest/gtest.h>
 
