@@ -92,7 +92,7 @@ public:
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points);
 
   /// CUDA stream used by this filter to consume input pointclouds.
-  /// Pass this to CudaBlackboardSubscriber for stream-level producer/consumer ordering.
+  /// Enables stream-ordered producer/consumer lifetime handling.
   cudaStream_t stream() const { return stream_; }
 
 private:
