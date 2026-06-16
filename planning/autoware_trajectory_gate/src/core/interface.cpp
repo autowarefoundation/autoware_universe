@@ -24,6 +24,7 @@ void TrajectorySender::set_output(TrajectoryReceiver * output)
 
 void TrajectorySender::send(const Trajectory & msg)
 {
+  if (!output_) return;
   output_->receive(msg);
 }
 
