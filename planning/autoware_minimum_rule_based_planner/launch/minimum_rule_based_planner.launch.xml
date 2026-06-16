@@ -40,6 +40,7 @@
 
   <node pkg="autoware_minimum_rule_based_planner" exec="autoware_minimum_rule_based_planner_node" name="minimum_rule_based_planner_node" output="both">
     <!-- Load parameter files -->
+    <env name="LD_LIBRARY_PATH" value="/opt/acados/lib:$(env LD_LIBRARY_PATH)"/>
     <param from="$(var common_param_path)"/>
     <param from="$(var minimum_rule_base_planner_param_path)" allow_substs="true"/>
     <param from="$(var minimum_rule_base_planner_elastic_band_smoother_param_path)" allow_substs="true"/>
