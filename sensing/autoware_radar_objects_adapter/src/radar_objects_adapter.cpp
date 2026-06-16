@@ -56,11 +56,13 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     "~/input/radar_info", rclcpp::SensorDataQoS(),
     std::bind(&RadarObjectsAdapter::radar_info_callback, this, std::placeholders::_1));
 
-  detections_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "~/output/detections", rclcpp::QoS(10).reliable().transient_local());
+  detections_pub_ = AUTOWARE_CREATE_PUBLISHER2(
+    autoware_perception_msgs::msg::DetectedObjects, "~/output/detections",
+    rclcpp::QoS(10).reliable().transient_local());
 
-  tracks_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
-    "~/output/tracks", rclcpp::QoS(10).reliable().transient_local());
+  tracks_pub_ = AUTOWARE_CREATE_PUBLISHER2(
+    autoware_perception_msgs::msg::TrackedObjects, "~/output/tracks",
+    rclcpp::QoS(10).reliable().transient_local());
 
   default_position_z_ = this->declare_parameter<float>("default_position_z");
   default_velocity_z_ = this->declare_parameter<float>("default_velocity_z");
@@ -290,7 +292,7 @@ void RadarObjectsAdapter::populate_classifications(
 void RadarObjectsAdapter::parse_as_detections(
   const autoware_sensing_msgs::msg::RadarObjects & input_msg)
 {
-  auto output_msg_ptr = std::make_unique<autoware_perception_msgs::msg::DetectedObjects>();
+  auto output_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(detections_pub_);
   auto & output_msg = *output_msg_ptr;
 
   output_msg.header = input_msg.header;
@@ -322,7 +324,7 @@ void RadarObjectsAdapter::parse_as_detections(
 void RadarObjectsAdapter::parse_as_tracks(
   const autoware_sensing_msgs::msg::RadarObjects & input_msg)
 {
-  auto output_msg_ptr = std::make_unique<autoware_perception_msgs::msg::TrackedObjects>();
+  auto output_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(tracks_pub_);
   auto & output_msg = *output_msg_ptr;
 
   output_msg.header = input_msg.header;
