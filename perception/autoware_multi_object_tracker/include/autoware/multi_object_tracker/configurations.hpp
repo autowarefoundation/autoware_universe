@@ -146,12 +146,9 @@ struct TrackerOverlapManagerConfig
 {
   float min_known_object_removal_iou{0.0f};
   float min_unknown_object_removal_iou{0.0f};
-  LabelDoubleMap pruning_giou_thresholds;
+  double pruning_giou_threshold{0.0};
   LabelDoubleMap pruning_distance_thresholds;
   LabelDoubleMap pruning_distance_thresholds_sq;
-  double pruning_static_object_speed{0.0};
-  double pruning_moving_object_speed{0.0};
-  double pruning_static_iou_threshold{0.0};
 };
 
 //// Utility: safe map lookup

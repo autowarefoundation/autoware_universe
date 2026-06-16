@@ -3,75 +3,6 @@
   "title": "Parameters for Multi Object Tracker Node",
   "type": "object",
   "definitions": {
-    "pruning_generalized_iou_thresholds": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "unknown": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "car": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "truck": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "bus": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "trailer": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "motorcycle": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "bicycle": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "pedestrian": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "animal": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "hazard": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        }
-      },
-      "required": [
-        "unknown",
-        "car",
-        "truck",
-        "bus",
-        "trailer",
-        "motorcycle",
-        "bicycle",
-        "pedestrian",
-        "animal",
-        "hazard"
-      ],
-      "description": "Generalized IoU threshold for each tracked class."
-    },
     "pruning_distance_thresholds": {
       "type": "object",
       "additionalProperties": false,
@@ -236,20 +167,12 @@
           "description": "Minimum IOU between associated objects with unknown label to remove unknown tracker.",
           "default": 0.001
         },
-        "pruning_generalized_iou_thresholds": {
-          "$ref": "#/definitions/pruning_generalized_iou_thresholds",
-          "default": {
-            "unknown": 0.1,
-            "car": 0.1,
-            "truck": 0.1,
-            "bus": 0.1,
-            "trailer": 0.1,
-            "motorcycle": 0.1,
-            "bicycle": 0.1,
-            "pedestrian": 0.1,
-            "animal": 0.1,
-            "hazard": 0.1
-          }
+        "pruning_generalized_iou_threshold": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0,
+          "description": "Generalized IoU threshold applied to all tracked classes.",
+          "default": 0.1
         },
         "pruning_distance_thresholds": {
           "$ref": "#/definitions/pruning_distance_thresholds",
@@ -265,21 +188,6 @@
             "animal": 2.0,
             "hazard": 2.0
           }
-        },
-        "pruning_static_object_speed": {
-          "type": "number",
-          "description": "Speed threshold to consider an object as static. Below this speed, nearby unknown objects should always be detected.",
-          "default": 1.38
-        },
-        "pruning_moving_object_speed": {
-          "type": "number",
-          "description": "Speed threshold to consider an object as moving. Above this speed, nearby unknown objects should always be merged to avoid false unknown detections.",
-          "default": 5.5
-        },
-        "pruning_static_iou_threshold": {
-          "type": "number",
-          "description": "Generalized IoU threshold for a static object.",
-          "default": 0.0
         },
         "publish_processing_time": {
           "type": "boolean",
@@ -331,11 +239,8 @@
         "tracker_configs",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
-        "pruning_generalized_iou_thresholds",
+        "pruning_generalized_iou_threshold",
         "pruning_distance_thresholds",
-        "pruning_static_object_speed",
-        "pruning_moving_object_speed",
-        "pruning_static_iou_threshold",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_tentative_objects",

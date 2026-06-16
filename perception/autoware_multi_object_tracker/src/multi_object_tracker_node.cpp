@@ -223,14 +223,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   };
 
   // pruning parameters
-  params_.tracker_overlap_manager_config.pruning_giou_thresholds =
-    parse_label_double_map("pruning_generalized_iou_thresholds");
-  params_.tracker_overlap_manager_config.pruning_static_object_speed =
-    declare_parameter<double>("pruning_static_object_speed");
-  params_.tracker_overlap_manager_config.pruning_moving_object_speed =
-    declare_parameter<double>("pruning_moving_object_speed");
-  params_.tracker_overlap_manager_config.pruning_static_iou_threshold =
-    declare_parameter<double>("pruning_static_iou_threshold");
+  params_.tracker_overlap_manager_config.pruning_giou_threshold =
+    declare_parameter<double>("pruning_generalized_iou_threshold");
 
   params_.tracker_overlap_manager_config.pruning_distance_thresholds =
     parse_label_double_map("pruning_distance_thresholds");

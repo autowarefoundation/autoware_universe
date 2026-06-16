@@ -30,18 +30,8 @@
     min_unknown_object_removal_iou: 0.001  # [ratio]
 
     # pruning parameters
-    # generalized IoU thresholds for tracked classes
-    pruning_generalized_iou_thresholds:
-      unknown: 0.1
-      car: 0.1
-      truck: 0.1
-      bus: 0.1
-      trailer: 0.1
-      motorcycle: 0.1
-      bicycle: 0.1
-      pedestrian: 0.1
-      animal: 0.1
-      hazard: 0.1
+    # generalized IoU threshold applied to all tracked classes
+    pruning_generalized_iou_threshold: 0.1  # [ratio]
     pruning_distance_thresholds:
       unknown: 9.0
       car: 5.0
@@ -53,11 +43,6 @@
       pedestrian: 2.0
       animal: 2.0
       hazard: 2.0
-    pruning_static_object_speed: 1.38  # [m/s]
-    pruning_moving_object_speed: 5.5   # [m/s]
-    pruning_static_iou_threshold: 0.0  # [ratio]
-
-
 
     # debug parameters
     publish_processing_time: false
