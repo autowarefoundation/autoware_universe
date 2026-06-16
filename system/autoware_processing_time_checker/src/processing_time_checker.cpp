@@ -161,7 +161,7 @@ ProcessingTimeChecker::~ProcessingTimeChecker()
 void ProcessingTimeChecker::on_timer()
 {
   // create MetricArrayMsg
-  MetricArrayMsg metrics_msg;
+  auto metrics_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(metrics_pub_);
   for (const auto & processing_time_iterator : processing_time_map_) {
     const auto processing_time_topic_name = processing_time_iterator.first;
     const double processing_time = processing_time_iterator.second;
@@ -171,12 +171,12 @@ void ProcessingTimeChecker::on_timer()
     metric.name = "processing_time/" + processing_time_topic_name;
     metric.value = std::to_string(processing_time);
     metric.unit = "millisecond";
-    metrics_msg.metric_array.push_back(metric);
+    metrics_msg->metric_array.push_back(metric);
   }
 
   // publish
-  metrics_msg.stamp = now();
-  metrics_pub_->publish(metrics_msg);
+  metrics_msg->stamp = now();
+  metrics_pub_->publish(std::move(metrics_msg));
 }
 }  // namespace autoware::processing_time_checker
 
