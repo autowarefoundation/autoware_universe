@@ -19,15 +19,8 @@
 namespace autoware::trajectory_gate
 {
 
-class TrajectoryIgnore : public TrajectoryReceiver
-{
-public:
-  void receive(const Trajectory &) override {}
-};
-
 TrajectorySelector::TrajectorySelector()
 {
-  ignore_ = std::make_unique<TrajectoryIgnore>();
   output_ = nullptr;
   current_source_id_ = invalid_source_id;
 }
@@ -42,7 +35,6 @@ void TrajectorySelector::add_input(TrajectorySender * input, uint32_t source_id)
   if (!success) {
     throw std::runtime_error("trajectory input already exists: " + std::to_string(source_id));
   }
-  input->set_output(ignore_.get());
 }
 
 void TrajectorySelector::set_output(TrajectoryReceiver * output)
@@ -56,7 +48,7 @@ void TrajectorySelector::set_output(TrajectoryReceiver * output)
 bool TrajectorySelector::select(uint32_t target_id)
 {
   if (current_source_id_ != invalid_source_id) {
-    inputs_.at(current_source_id_)->set_output(ignore_.get());
+    inputs_.at(current_source_id_)->set_output(nullptr);
     current_source_id_ = invalid_source_id;
   }
 
