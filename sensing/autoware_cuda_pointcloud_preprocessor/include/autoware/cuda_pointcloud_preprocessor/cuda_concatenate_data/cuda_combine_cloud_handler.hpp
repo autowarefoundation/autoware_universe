@@ -55,10 +55,15 @@ public:
 
   void allocate_pointclouds() override;
 
+<<<<<<< HEAD
   // Per-topic CUDA stream on which that topic's point cloud is consumed during concatenation. It is
   // handed to the topic's CudaBlackboardSubscriber so the blackboard can order the
   // producer/consumer and the buffer free at the stream level instead of synchronizing the whole
   // process.
+=======
+  /// Returns the per-topic CUDA stream used while consuming that topic's cloud.
+  /// Use this stream when constructing the topic's CudaBlackboardSubscriber.
+>>>>>>> 9030ff412f (sensing/cuda_pp: shorten stream docstrings and drop constructor comment)
   cudaStream_t get_stream(const std::string & topic) const
   {
     return cuda_concat_struct_map_.at(topic).stream;
