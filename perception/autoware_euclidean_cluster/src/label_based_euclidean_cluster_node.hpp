@@ -51,6 +51,9 @@ public:
   explicit LabelBasedEuclideanClusterNode(const rclcpp::NodeOptions & options);
 
 private:
+  friend class LabelClusterConfigBehavior_AcceptsLowercaseConfiguredLabels_Test;
+  friend class LabelClusterConfigBehavior_CreatesExecuterForDynamicOverrideLabel_Test;
+
   /// @brief Process an input semantic point cloud and publish detected objects.
   /// @param input_msg Input point cloud containing xyz and optionally class_id / probability.
   void on_pointcloud(sensor_msgs::msg::PointCloud2::ConstSharedPtr input_msg);
