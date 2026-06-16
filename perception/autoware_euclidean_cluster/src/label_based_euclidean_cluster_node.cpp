@@ -17,6 +17,7 @@
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
 #include <Eigen/Core>
+#include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/parameter_map.hpp>
 
@@ -32,6 +33,7 @@
 #include <pcl/common/common.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cstdint>
 #include <memory>
 #include <numeric>
@@ -84,6 +86,18 @@ bool is_ignored_mapping(const std::string & mapped_label)
   return mapped_label == "ignore";
 }
 
+/// @brief Normalize configured label names to the uppercase form expected by toLabel().
+/// NOTE: This should be unnecessary once
+/// https://github.com/autowarefoundation/autoware_core/pull/1184 has been merged.
+std::string normalize_object_label_name(const std::string & label_name)
+{
+  std::string normalized = label_name;
+  std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](unsigned char c) {
+    return static_cast<char>(std::toupper(c));
+  });
+  return normalized;
+}
+
 /// @brief Convert an integer parameter into a validated shape policy.
 ShapePolicy to_shape_policy(const std::uint8_t value)
 {
@@ -121,32 +135,32 @@ std::vector<std::pair<std::string, std::string>> extract_class_mappings(
   return class_mappings;
 }
 
-/// @brief Canonical ordered mapping from configured label name to Autoware object classification.
-///        Single source of truth shared by name->label lookup and per-label override parsing.
-const std::vector<std::pair<std::string, std::uint8_t>> & label_name_table()
+/// @brief Extract per-label parameter prefixes from nested overrides.
+///        Example: "label_cluster_params.car.tolerance_m" -> {"car", "label_cluster_params.car."}
+std::unordered_map<std::string, std::string> load_label_cluster_parameter_prefixes(
+  const rclcpp::NodeOptions & options)
 {
-  static const std::vector<std::pair<std::string, std::uint8_t>> table = {
-    {"unknown", ObjectClassification::UNKNOWN},
-    {"car", ObjectClassification::CAR},
-    {"bus", ObjectClassification::BUS},
-    {"truck", ObjectClassification::TRUCK},
-    {"motorcycle", ObjectClassification::MOTORCYCLE},
-    {"bicycle", ObjectClassification::BICYCLE},
-    {"pedestrian", ObjectClassification::PEDESTRIAN},
-    {"animal", ObjectClassification::ANIMAL},
-    {"trailer", ObjectClassification::TRAILER},
-    {"hazard", ObjectClassification::HAZARD},
-  };
-  return table;
-}
+  constexpr std::string_view prefix = "label_cluster_params.";
 
-/// @brief Map a configured label name to an Autoware object classification label.
-std::optional<std::uint8_t> to_object_label(const std::string & mapped_label)
-{
-  const auto & table = label_name_table();
-  const auto it = std::find_if(
-    table.begin(), table.end(), [&](const auto & entry) { return entry.first == mapped_label; });
-  return it != table.end() ? std::optional<std::uint8_t>(it->second) : std::nullopt;
+  // first: label name, second: parameter prefix including the label name and trailing dot
+  std::unordered_map<std::string, std::string> outputs;
+
+  for (const auto & parameter : options.parameter_overrides()) {
+    const auto & name = parameter.get_name();
+
+    if (name.rfind(prefix, 0) != 0) {
+      continue;
+    }
+
+    const std::string rest = name.substr(prefix.size());
+
+    const auto dot_pos = rest.find('.');
+    if (dot_pos != std::string::npos) {
+      outputs.emplace(rest.substr(0, dot_pos), std::string(prefix) + rest.substr(0, dot_pos) + ".");
+    }
+  }
+
+  return outputs;
 }
 
 /// @brief Create fallback shape and pose from the cluster axis-aligned bounding box.
@@ -347,10 +361,8 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
     } else if (
       key == "labels" && param.get_type() == rclcpp::ParameterType::PARAMETER_STRING_ARRAY) {
       for (const auto & label_name : param.as_string_array()) {
-        const auto label_id = to_object_label(label_name);
-        if (label_id.has_value()) {
-          group.labels.push_back(label_id.value());
-        }
+        group.labels.push_back(
+          object_recognition_utils::toLabel(normalize_object_label_name(label_name)));
       }
     }
   }
@@ -419,9 +431,10 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   // Build per-label cluster overrides from label_cluster_params.<label_name>.* parameters.
   // Any omitted sub-key falls back to the global default above.
   {
-    for (const auto & [label_name, label] : label_name_table()) {
-      const std::string prefix = "label_cluster_params." + label_name + ".";
-      auto has = [&](const std::string & key) { return this->has_parameter(prefix + key); };
+    for (const auto & entry : load_label_cluster_parameter_prefixes(options)) {
+      const auto & label_name = entry.first;
+      const auto & label_prefix = entry.second;
+      auto has = [&](const std::string & key) { return this->has_parameter(label_prefix + key); };
       // Skip labels with no overrides at all
       if (
         !has("tolerance_m") && !has("min_points_per_cluster") && !has("use_height") &&
@@ -432,13 +445,13 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       }
 
       auto get_bool = [&](const std::string & key, bool def) -> bool {
-        return has(key) ? this->get_parameter(prefix + key).as_bool() : def;
+        return has(key) ? this->get_parameter(label_prefix + key).as_bool() : def;
       };
       auto get_int = [&](const std::string & key, int def) -> int {
         if (!has(key)) {
           return def;
         }
-        const auto param = this->get_parameter(prefix + key);
+        const auto param = this->get_parameter(label_prefix + key);
         return param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE
                  ? static_cast<int>(param.as_double())
                  : static_cast<int>(param.as_int());
@@ -447,12 +460,13 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
         if (!has(key)) {
           return def;
         }
-        const auto param = this->get_parameter(prefix + key);
+        const auto param = this->get_parameter(label_prefix + key);
         return param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER
                  ? static_cast<float>(param.as_int())
                  : static_cast<float>(param.as_double());
       };
 
+      const auto label = object_recognition_utils::toLabel(normalize_object_label_name(label_name));
       label_cluster_executers_[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
         get_bool("use_height", use_height),
         get_int("min_points_per_cluster", min_points_per_cluster),
@@ -525,15 +539,8 @@ bool LabelBasedEuclideanClusterNode::update_target_label_map(
       continue;
     }
 
-    const auto mapped_label = to_object_label(mapped_label_name);
-    if (!mapped_label.has_value()) {
-      RCLCPP_WARN(
-        get_logger(), "Ignoring unsupported mapped label '%s' for class '%s'",
-        mapped_label_name.c_str(), original_class_name.c_str());
-      continue;
-    }
-
-    class_id_to_object_label_[class_id] = mapped_label.value();
+    class_id_to_object_label_[class_id] =
+      object_recognition_utils::toLabel(normalize_object_label_name(mapped_label_name));
   }
 
   return !class_id_to_object_label_.empty();
