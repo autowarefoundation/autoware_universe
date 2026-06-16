@@ -23,7 +23,7 @@
           animal:     true
           hazard:     false
       static_tracker:
-        convert_polygon_to_bbox: true # convert POLYGON shape to BOUNDING_BOX at publish time
+        convert_polygon_to_bbox: false # convert POLYGON shape to BOUNDING_BOX at publish time
 
     # pruning parameters
     min_known_object_removal_iou: 0.1  # [ratio]

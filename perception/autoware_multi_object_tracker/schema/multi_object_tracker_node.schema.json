@@ -118,7 +118,7 @@
             "convert_polygon_to_bbox": {
               "type": "boolean",
               "description": "Convert POLYGON shape to BOUNDING_BOX at publish time.",
-              "default": true
+              "default": false
             }
           },
           "required": ["convert_polygon_to_bbox"]
