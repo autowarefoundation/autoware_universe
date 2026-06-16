@@ -195,6 +195,11 @@ public:
     set_return_types(primary_types, primary_return_type_dev_);
   }
 
+  // CUDA stream on which the input point cloud is consumed. It is handed to the
+  // CudaBlackboardSubscriber so the blackboard can order the producer/consumer and the buffer free
+  // at the stream level instead of synchronizing the whole process.
+  cudaStream_t stream() const { return stream_; }
+
 protected:
   enum class ReductionType : uint8_t { Min, Max, Sum };
 
