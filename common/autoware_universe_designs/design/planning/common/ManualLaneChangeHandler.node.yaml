@@ -1,0 +1,51 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ManualLaneChangeHandler.node
+
+package:
+  name: autoware_manual_lane_change_handler
+  provider: autoware
+
+launch:
+  plugin: autoware::manual_lane_change_handler::ManualLaneChangeHandler
+  executable: autoware_manual_lane_change_handler_node
+
+# interfaces
+subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+    remap_target: /planning/mission_planning/route
+  - name: reroute_availability
+    message_type: tier4_planning_msgs/msg/RerouteAvailability
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+
+publishers: []
+
+servers:
+  - name: set_preferred_lane
+    message_type: tier4_external_api_msgs/srv/SetPreferredLane
+    remap_target: ~/set_preferred_lane
+
+clients:
+  - name: set_preferred_primitive
+    message_type: autoware_planning_msgs/srv/SetPreferredPrimitive
+    remap_target: /planning/mission_planning/mission_planner/set_preferred_primitive
+
+# parameters
+param_files:
+  - name: manual_lane_change_handler_param
+    default: config/manual_lane_change_handler.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: handle_request
+    trigger_conditions:
+      - periodic: 10.0
+    outcomes:
+      - terminal: null
