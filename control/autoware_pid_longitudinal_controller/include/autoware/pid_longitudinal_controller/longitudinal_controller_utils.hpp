@@ -146,7 +146,8 @@ std::pair<TrajectoryPoint, size_t> lerpTrajectoryPointByTime(
  * @param [in] max_yaw nearest-search yaw threshold
  * @param [in] min_time_window_sec lower bound of search window [s]
  * @param [in] max_time_window_sec upper bound of search window [s]
- * @return estimated trajectory time if a candidate exists in the window
+ * @return estimated trajectory time; if the bounded window has no candidates, falls back to the
+ * global spatial nearest point (same behavior as temporal MPC)
  */
 std::optional<double> estimateTrajectoryTimeFromPose(
   const std::vector<TrajectoryPoint> & points, const Pose & pose, const double max_dist,
