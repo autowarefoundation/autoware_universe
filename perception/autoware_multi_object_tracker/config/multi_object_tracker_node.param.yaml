@@ -25,12 +25,9 @@
       static_tracker:
         convert_polygon_to_bbox: true # convert POLYGON shape to BOUNDING_BOX at publish time
 
-    # tracker parameters
+    # pruning parameters
     min_known_object_removal_iou: 0.1  # [ratio]
     min_unknown_object_removal_iou: 0.001  # [ratio]
-
-    # pruning parameters
-    # generalized IoU threshold applied to all tracked classes
     pruning_generalized_iou_threshold: 0.1  # [ratio]
     pruning_distance_thresholds:
       unknown: 9.0
