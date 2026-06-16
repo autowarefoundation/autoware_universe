@@ -19,6 +19,7 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/transform/transforms.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <range/v3/view.hpp>
 
 #include <boost/geometry.hpp>
@@ -265,17 +266,40 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   return CollisionPoint(nearest_collision_point, min_arc_length);
 }
 
+geometry_msgs::msg::Pose extrapolate_object_pose_from_kinematics(
+  const PredictedObject & object, const double t)
+{
+  const auto & initial_pose = object.kinematics.initial_pose_with_covariance.pose;
+  if (t <= 0.0) return initial_pose;
+
+  const auto obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear.x;
+  const auto obj_accel = object.kinematics.initial_acceleration_with_covariance.accel.linear.x;
+  const auto dist = obj_vel * t + 0.5 * obj_accel * t * t;
+  return autoware_utils::calc_offset_pose(initial_pose, dist, 0, 0);
+}
+
 geometry_msgs::msg::Pose get_predicted_obj_pose_at_time(
   const PredictedObject & object, const double t)
 {
-  if (object.kinematics.predicted_paths.empty())
-    return object.kinematics.initial_pose_with_covariance.pose;
+  if (object.kinematics.predicted_paths.empty()) {
+    return extrapolate_object_pose_from_kinematics(object, t);
+  }
+
   const auto & pred_path = object.kinematics.predicted_paths.front();
-  if (pred_path.path.empty()) return object.kinematics.initial_pose_with_covariance.pose;
+  if (pred_path.path.size() < 2) {
+    return extrapolate_object_pose_from_kinematics(object, t);
+  }
+
   const auto dt = std::max(rclcpp::Duration(pred_path.time_step).seconds(), 1e-3);
-  size_t pred_pose_index = (t + 1e-6) / dt;
-  pred_pose_index = std::min(pred_pose_index, pred_path.path.size() - 1);
-  return pred_path.path.at(pred_pose_index);
+  const double max_time = dt * static_cast<double>(pred_path.path.size() - 1);
+  const double clamped_t = std::clamp(t, 0.0, max_time);
+
+  const auto index = static_cast<size_t>(std::floor(clamped_t / dt));
+  const size_t next_index = std::min(index + 1, pred_path.path.size() - 1);
+  const double ratio = (clamped_t - static_cast<double>(index) * dt) / dt;
+
+  return autoware_utils_geometry::calc_interpolated_pose(
+    pred_path.path.at(index), pred_path.path.at(next_index), ratio, false);
 }
 
 ObjectState get_object_state_at_time(
@@ -345,22 +369,23 @@ std::optional<CollisionPoint> get_nearest_object_collision(
 
   auto is_safe = [&](
                    const auto & object, const double obj_arc_length, const double obj_lon_vel,
-                   const double ego_arc_length, const double ego_vel) -> bool {
-    if (object.classification.empty()) return false;
+                   const double ego_arc_length, const double ego_vel) -> std::pair<bool, bool> {
+    if (object.classification.empty()) return {false, false};
     const auto obj_type = classification_to_object_type.at(object.classification.front().label);
-    if (!object_decel_map.count(obj_type)) return false;
+    if (!object_decel_map.count(obj_type)) return {false, false};
     const auto obj_decel = object_decel_map.at(obj_type);
-    if (obj_lon_vel < stopped_vel_th) return false;
+    if (obj_lon_vel < stopped_vel_th) return {false, false};
     const auto safe_dist =
       get_safe_distance(ego_vel, obj_lon_vel, ego_decel, obj_decel, reaction_time, safety_margin);
     const auto ego_front_arc_length = ego_arc_length + ego_front_offset;
     const auto relative_arc_length = std::max(0.0, obj_arc_length - ego_front_arc_length);
-    return relative_arc_length - safe_dist > 1e-3;
+    return {relative_arc_length - safe_dist > 1e-3, true};
   };
 
   auto min_obj_arc_length = std::numeric_limits<double>::max();
   geometry_msgs::msg::Point nearest_collision_point;
   bool found_collision = false;
+  bool is_dynamic_collision = false;
   auto curr_arc_length = 0.0;
 
   for (const auto & object : target_objects.objects) {
@@ -371,13 +396,15 @@ std::optional<CollisionPoint> get_nearest_object_collision(
       curr_arc_length += autoware_utils::calc_distance2d(last_p, traj_p.pose.position);
       const auto target_ego_vel = traj_p.longitudinal_velocity_mps;
       const auto obj_state = get_object_state_at_time(trajectory_points, object, t);
-      if (is_safe(object, obj_state.arc_length, obj_state.lon_vel, curr_arc_length, target_ego_vel))
-        continue;
+      const auto [safe, dynamic] =
+        is_safe(object, obj_state.arc_length, obj_state.lon_vel, curr_arc_length, target_ego_vel);
+      if (safe) continue;
       found_collision = true;
       if (obj_state.arc_length < min_obj_arc_length) {
         min_obj_arc_length = obj_state.arc_length;
         colliding_object = object;
         nearest_collision_point = obj_state.nearest_point;
+        is_dynamic_collision = dynamic;
       }
       last_p = traj_p.pose.position;
       break;
@@ -385,7 +412,7 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   }
 
   if (!found_collision) return std::nullopt;
-  return CollisionPoint(nearest_collision_point, min_obj_arc_length);
+  return CollisionPoint(nearest_collision_point, min_obj_arc_length, is_dynamic_collision);
 }
 
 void PointCloudFilter::filter_pointcloud(
@@ -474,19 +501,22 @@ void PointCloudFilter::filter_pointcloud_by_object(
 
 void ObjectFilter::filter_by_target_area(
   PredictedObjects & objects, const TrajectoryPoints & trajectory_points,
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
   const MultiPolygon2d & target_area, MultiPolygon2d & target_polygons)
 {
-  constexpr double time_buffer = 1.0;
+  const auto ego_front_offset = vehicle_info.max_longitudinal_offset_m;
+  constexpr double time_buffer = 0.5;
   auto time_to_obj_current_pos =
     [&](const auto & object_pose, const size_t nearest_seg_idx) -> double {
     const auto t_to_nearest_seg =
       rclcpp::Duration(trajectory_points.at(nearest_seg_idx).time_from_start).seconds();
-    if (nearest_seg_idx < trajectory_points.size() - 2) return t_to_nearest_seg - time_buffer;
     const auto lon_offset_dist =
       motion_utils::calcSignedArcLength(trajectory_points, nearest_seg_idx, object_pose.position);
     const auto nearest_seg_vel = trajectory_points.at(nearest_seg_idx).longitudinal_velocity_mps;
-    const auto t_to_obj = t_to_nearest_seg + lon_offset_dist / nearest_seg_vel;
-    return t_to_obj - time_buffer;
+    const auto ego_front_time_offset = ego_front_offset / nearest_seg_vel;
+    const auto t_to_obj =
+      t_to_nearest_seg + (lon_offset_dist / nearest_seg_vel) - ego_front_time_offset - time_buffer;
+    return std::max(0.0, t_to_obj);
   };
 
   auto get_object_polygon = [&](const auto & pose, const auto & shape) {
@@ -509,7 +539,6 @@ void ObjectFilter::filter_by_target_area(
     const auto obj_lon_vel = std::abs(obj_vel_vector.dot(traj_dir));
     const auto obj_lat_vel = std::abs(obj_vel_vector.dot(traj_lat_dir));
     if (obj_lat_vel < max_lateral_velocity_th_ && obj_lat_vel < obj_lon_vel) return false;
-    if (object.kinematics.predicted_paths.empty()) return true;
     const auto t_to_obj_current_pos = time_to_obj_current_pos(object_pose, nearest_seg);
     const auto obj_pred_pose = get_predicted_obj_pose_at_time(object, t_to_obj_current_pos);
     const auto obj_pred_polygon = get_object_polygon(obj_pred_pose, object.shape);

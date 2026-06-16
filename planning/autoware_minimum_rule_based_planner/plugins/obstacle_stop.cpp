@@ -156,7 +156,7 @@ std::optional<CollisionPoint> ObstacleStop::check_predicted_objects(
 
   object_filter_->filter_objects(predicted_objects);
   object_filter_->filter_by_target_area(
-    predicted_objects, traj_points, debug_data_.trajectory_shape.polygon,
+    predicted_objects, traj_points, vehicle_info_, debug_data_.trajectory_shape.polygon,
     debug_data_.target_polygons);
 
   autoware_perception_msgs::msg::PredictedObject colliding_object;
