@@ -42,6 +42,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -54,24 +55,30 @@ class TrtYoloXNode : public rclcpp::Node
 {
   struct RoiOverlaySemsegLabel
   {
-    bool UNKNOWN;
-    bool CAR;
-    bool TRUCK;
-    bool BUS;
-    bool MOTORCYCLE;
-    bool BICYCLE;
-    bool PEDESTRIAN;
-    bool ANIMAL;
-    bool HAZARD;
+    /// @brief Clear all overlay label settings.
+    void clear() { label_to_overlay_index_map_.clear(); }
 
+    /// @brief Set whether to overlay the segmentation mask for a specific label.
+    /// @param label_id the label ID defined in Autoware object classification (e.g. CAR=1,
+    /// PEDESTRIAN=6)
+    /// @param enabled whether to overlay
+    void setOverlay(const uint8_t label_id, const bool enabled)
+    {
+      label_to_overlay_index_map_[label_id] = enabled;
+    }
+
+    /// @brief Check whether to overlay the segmentation mask for a specific label.
+    /// @param label_id the label ID defined in Autoware object classification (e.g. CAR=1,
+    /// PEDESTRIAN=6)
+    /// @return true if the segmentation mask should be overlayed for the label, false otherwise
     bool isOverlay(const uint8_t label) const
     {
-      return (label == Label::UNKNOWN && UNKNOWN) || (label == Label::CAR && CAR) ||
-             (label == Label::TRUCK && TRUCK) || (label == Label::BUS && BUS) ||
-             (label == Label::ANIMAL && ANIMAL) || (label == Label::MOTORBIKE && MOTORCYCLE) ||
-             (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN) ||
-             (label == Label::HAZARD && HAZARD);
+      return label_to_overlay_index_map_.count(label) > 0 && label_to_overlay_index_map_.at(label);
     };
+
+  private:
+    /// @brief store the label ID and whether to overlay the segmentation mask for the label
+    std::unordered_map<uint8_t, bool> label_to_overlay_index_map_;
   };  // struct RoiOverlaySemsegLabel
 
 public:
@@ -86,6 +93,7 @@ private:
   void setupLabel(
     const std::string & roi_label_file_path, const std::string & segment_color_map_file_path,
     const std::string & roi_label_remap_file_path, const std::string & roi_segment_remap_path);
+  void loadOverlaySegmentationLabels();
   void getColorizedMask(const cv::Mat & mask, cv::Mat & cmask);
 
   image_transport::Publisher image_pub_;
