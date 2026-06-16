@@ -53,8 +53,8 @@ __global__ void decodeDetection3DToBoxesKernel(
   const float * __restrict__ query_heatmap_score, const std::int64_t * __restrict__ query_labels,
   const float * __restrict__ heatmap, const float * __restrict__ center,
   const float * __restrict__ height, const float * __restrict__ dim, const float * __restrict__ rot,
-  const float * __restrict__ vel, int num_proposals, int num_classes, float bbox_downsample_factor,
-  float bbox_voxel_x_size, float bbox_voxel_y_size, float min_x_range, float min_y_range,
+  const float * __restrict__ vel, int num_proposals, int num_classes, float bbox_voxel_x_size,
+  float bbox_voxel_y_size, float min_x_range, float min_y_range,
   const float * __restrict__ post_center_range, const float * __restrict__ score_thresholds,
   const float * __restrict__ dist_bin_limits, int num_dist_bins,
   const float * __restrict__ yaw_norm_thresholds, bool has_twist, Box3D * __restrict__ out_boxes)
@@ -75,9 +75,8 @@ __global__ void decodeDetection3DToBoxesKernel(
   const float score =
     (1.0f / (1.0f + expf(-heatmap[class_offset + i]))) * query_heatmap_score[class_offset + i];
 
-  const float x = center[i] * bbox_downsample_factor * bbox_voxel_x_size + min_x_range;
-  const float y =
-    center[num_proposals + i] * bbox_downsample_factor * bbox_voxel_y_size + min_y_range;
+  const float x = center[i] * bbox_voxel_x_size + min_x_range;
+  const float y = center[num_proposals + i] * bbox_voxel_y_size + min_y_range;
   const float length = expf(dim[i]);
   const float width = expf(dim[num_proposals + i]);
   const float box_h = expf(dim[2 * num_proposals + i]);
@@ -124,18 +123,17 @@ __global__ void decodeDetection3DToBoxesKernel(
 void launchDecodeDetection3DToBoxes(
   const float * query_heatmap_score_d, const std::int64_t * query_labels_d, const float * heatmap_d,
   const float * center_d, const float * height_d, const float * dim_d, const float * rot_d,
-  const float * vel_d, int num_proposals, int num_classes, float bbox_downsample_factor,
-  float bbox_voxel_x_size, float bbox_voxel_y_size, float min_x_range, float min_y_range,
-  const float * post_center_range_d, const float * score_thresholds_d,
-  const float * dist_bin_limits_d, int num_dist_bins, const float * yaw_norm_thresholds_d,
-  bool has_twist, Box3D * out_boxes_d, cudaStream_t stream)
+  const float * vel_d, int num_proposals, int num_classes, float bbox_voxel_x_size,
+  float bbox_voxel_y_size, float min_x_range, float min_y_range, const float * post_center_range_d,
+  const float * score_thresholds_d, const float * dist_bin_limits_d, int num_dist_bins,
+  const float * yaw_norm_thresholds_d, bool has_twist, Box3D * out_boxes_d, cudaStream_t stream)
 {
   const int grid = (num_proposals + k_block_size - 1) / k_block_size;
   decodeDetection3DToBoxesKernel<<<grid, k_block_size, 0, stream>>>(
     query_heatmap_score_d, query_labels_d, heatmap_d, center_d, height_d, dim_d, rot_d, vel_d,
-    num_proposals, num_classes, bbox_downsample_factor, bbox_voxel_x_size, bbox_voxel_y_size,
-    min_x_range, min_y_range, post_center_range_d, score_thresholds_d, dist_bin_limits_d,
-    num_dist_bins, yaw_norm_thresholds_d, has_twist, out_boxes_d);
+    num_proposals, num_classes, bbox_voxel_x_size, bbox_voxel_y_size, min_x_range, min_y_range,
+    post_center_range_d, score_thresholds_d, dist_bin_limits_d, num_dist_bins,
+    yaw_norm_thresholds_d, has_twist, out_boxes_d);
 }
 }  // namespace
 
@@ -173,8 +171,7 @@ cudaError_t Detection3DPostprocess::process(
   launchDecodeDetection3DToBoxes(
     query_heatmap_score_d, query_labels_d, heatmap_d, center_d, height_d, dim_d, rot_d, vel_d,
     static_cast<int>(config_.num_proposals_),
-    static_cast<int>(config_.detection_class_names_.size()),
-    static_cast<float>(config_.bbox_downsample_factor_), config_.bbox_voxel_x_size_,
+    static_cast<int>(config_.detection_class_names_.size()), config_.bbox_voxel_x_size_,
     config_.bbox_voxel_y_size_, config_.min_x_range_, config_.min_y_range_,
     post_center_range_d_.get(), score_thresholds_d_.get(), dist_bin_limits_d_.get(),
     static_cast<int>(config_.distance_bin_upper_limits_.size()),

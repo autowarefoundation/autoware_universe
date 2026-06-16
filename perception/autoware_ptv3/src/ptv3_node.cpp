@@ -97,7 +97,6 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
   const bool use_det3d_head = this->declare_parameter<bool>("detection3d.use_head", descriptor);
   std::optional<tensorrt_common::TrtCommonConfig> det3d_head_trt_config;
   std::vector<float> bbox_voxel_size;
-  std::size_t bbox_downsample_factor{};
   std::vector<float> distance_bin_upper_limits;
   std::vector<float> detection_score_thresholds;
   std::vector<float> yaw_norm_thresholds;
@@ -114,12 +113,6 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
       this->declare_parameter<std::vector<std::string>>("detection3d.class_names", descriptor);
     bbox_voxel_size = to_float_vector(
       this->declare_parameter<std::vector<double>>("detection3d.bbox_voxel_size", descriptor));
-    const auto bbox_downsample_factor_param =
-      this->declare_parameter<std::int64_t>("detection3d.bbox_downsample_factor", descriptor);
-    if (bbox_downsample_factor_param <= 0) {
-      throw std::runtime_error("detection3d.bbox_downsample_factor must be positive.");
-    }
-    bbox_downsample_factor = static_cast<std::size_t>(bbox_downsample_factor_param);
     has_twist_ = this->declare_parameter<bool>("detection3d.has_twist", descriptor);
 
     const auto allow_remapping_by_area_matrix = this->declare_parameter<std::vector<std::int64_t>>(
@@ -183,8 +176,8 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     use_seg3d_head, use_det3d_head, plugins_path, cloud_capacity, voxels_num, point_cloud_range,
     voxel_size, segmentation_class_names, serialization_orders, pooling_strides, palette,
     filter_class_probability_threshold, filter_classes, filter_output_format, source_reconstruction,
-    detection_class_names_, bbox_voxel_size, bbox_downsample_factor, distance_bin_upper_limits,
-    detection_score_thresholds, yaw_norm_thresholds, has_twist_, num_proposals, post_center_range);
+    detection_class_names_, bbox_voxel_size, distance_bin_upper_limits, detection_score_thresholds,
+    yaw_norm_thresholds, has_twist_, num_proposals, post_center_range);
 
   const auto backbone_trt_config = tensorrt_common::TrtCommonConfig(
     backbone_onnx_path, trt_precision, backbone_engine_path, 1ULL << 33U);

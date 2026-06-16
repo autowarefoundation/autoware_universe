@@ -50,7 +50,7 @@ public:
     const std::vector<std::string> & filter_classes = {},
     const std::string & filter_output_format = {}, const std::string & source_reconstruction = {},
     const std::vector<std::string> & detection_class_names = {},
-    const std::vector<float> & bbox_voxel_size = {}, std::size_t bbox_downsample_factor = {},
+    const std::vector<float> & bbox_voxel_size = {},
     const std::vector<float> & distance_bin_upper_limits = {},
     const std::vector<float> & detection_score_thresholds = {},
     const std::vector<float> & yaw_norm_thresholds = {}, const bool has_twist = {},
@@ -130,9 +130,6 @@ public:
       if (bbox_voxel_size[0] <= 0.0F || bbox_voxel_size[1] <= 0.0F || bbox_voxel_size[2] <= 0.0F) {
         throw std::runtime_error("bbox_voxel_size values must be positive.");
       }
-      if (bbox_downsample_factor == 0) {
-        throw std::runtime_error("bbox_downsample_factor must be positive.");
-      }
       if (distance_bin_upper_limits.empty()) {
         throw std::runtime_error("distance_bin_upper_limits must not be empty.");
       }
@@ -165,7 +162,6 @@ public:
       detection_class_names_ = detection_class_names;
       bbox_voxel_x_size_ = bbox_voxel_size[0];
       bbox_voxel_y_size_ = bbox_voxel_size[1];
-      bbox_downsample_factor_ = bbox_downsample_factor;
       distance_bin_upper_limits_ = distance_bin_upper_limits;
       detection_score_thresholds_ = detection_score_thresholds;
       yaw_norm_thresholds_ = yaw_norm_thresholds;
@@ -178,13 +174,8 @@ public:
       if (bbox_grid_x_size == 0 || bbox_grid_y_size == 0) {
         throw std::runtime_error("bbox_voxel_size produces an empty detection grid.");
       }
-      if (
-        bbox_grid_x_size % bbox_downsample_factor_ != 0 ||
-        bbox_grid_y_size % bbox_downsample_factor_ != 0) {
-        throw std::runtime_error("bbox grid size must be divisible by bbox_downsample_factor.");
-      }
-      det_grid_x_size_ = bbox_grid_x_size / bbox_downsample_factor_;
-      det_grid_y_size_ = bbox_grid_y_size / bbox_downsample_factor_;
+      det_grid_x_size_ = bbox_grid_x_size;
+      det_grid_y_size_ = bbox_grid_y_size;
 
       if (num_proposals == 0) {
         throw std::runtime_error("num_proposals must be positive.");
@@ -323,7 +314,6 @@ public:
   std::vector<std::string> detection_class_names_;
   float bbox_voxel_x_size_{};
   float bbox_voxel_y_size_{};
-  std::size_t bbox_downsample_factor_{};
   bool has_twist_{};
   std::size_t num_proposals_{};
   std::vector<float> post_center_range_;
