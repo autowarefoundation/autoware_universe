@@ -106,8 +106,7 @@ CudaPolarVoxelOutlierFilterNode::CudaPolarVoxelOutlierFilterNode(
   pointcloud_sub_ =
     std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",
-      std::bind(
-        &CudaPolarVoxelOutlierFilterNode::pointcloud_callback, this, std::placeholders::_1),
+      std::bind(&CudaPolarVoxelOutlierFilterNode::pointcloud_callback, this, std::placeholders::_1),
       cuda_polar_voxel_outlier_filter_->stream());
 
   filtered_cloud_pub_ =
