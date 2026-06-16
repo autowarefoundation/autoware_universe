@@ -48,7 +48,6 @@ bool isRedundant(
   const float source_known_prob, const float target_known_prob,
   const TrackerOverlapManagerConfig & config)
 {
-  constexpr double min_union_iou_area = 1e-2;
   constexpr float min_known_prob = 0.2;
   constexpr double min_valid_iou = 1e-6;
   constexpr double precision_threshold = 0.;
@@ -71,9 +70,26 @@ bool isRedundant(
     if (iou < min_valid_iou) return false;
     return iou > config.min_known_object_removal_iou;
   } else if (is_target_known && is_source_known) {
-    double iou = shapes::get2dIoU(source_object, target_object, min_union_iou_area);
-    if (iou < min_valid_iou) return false;
-    return iou > config.min_known_object_removal_iou;
+    // Both known. Plain IoU misses over-segmented fragments that carry a classification
+    // (e.g. semantic-segmentation clusters): a small fragment inside a full-size object has
+    // low IoU. Add a containment criterion limited to clearly smaller targets so two adjacent
+    // full-size objects are not merged by containment alone.
+    double precision = 0.0;
+    double recall = 0.0;
+    double generalized_iou = 0.0;
+    if (!shapes::get2dPrecisionRecallGIoU(
+          source_object, target_object, precision, recall, generalized_iou)) {
+      return false;
+    }
+    if (precision < min_valid_iou || recall < min_valid_iou) return false;
+    // IoU recovered from precision (I/src) and recall (I/tgt): U = I*(1/p + 1/r - 1)
+    const double iou = 1.0 / (1.0 / precision + 1.0 / recall - 1.0);
+    if (iou > config.min_known_object_removal_iou) return true;
+    // Containment: target mostly covered by source, and target area (= source area * p/r)
+    // less than half of source area
+    constexpr double containment_recall_threshold = 0.5;
+    constexpr double max_fragment_area_ratio = 0.5;
+    return recall > containment_recall_threshold && precision < max_fragment_area_ratio * recall;
   } else if (is_target_known || is_source_known) {
     // One object is unknown (typically the target)
     double precision = 0.0;

@@ -30,14 +30,25 @@
 namespace autoware::multi_object_tracker
 {
 
-/// Detects and merges spatially overlapping trackers produced by different sensors or detectors.
-/// Higher-priority trackers absorb lower-priority ones when sufficient overlap is confirmed.
+/// Detects and merges spatially overlapping trackers produced by different sensors or detectors
+/// (including over-segmented detections that one-to-one association cannot fuse).
+///
+/// Guarantees:
+/// - The merge outcome is a pure function of the tracker states: pair direction comes from a
+///   lexicographic dominance comparison ending in the tracker UUID, so results do not depend on
+///   tracker_list order.
+/// - The winner of a merge must be confident and carry a parametric shape (bounding box or
+///   cylinder); polygon-only trackers may only be absorbed — two polygon-only trackers never
+///   merge.
+/// - Applied merges form a star forest per cycle (no tracker both absorbs and is absorbed);
+///   longer chains converge over subsequent cycles with direct geometry checks.
 class TrackerOverlapManager
 {
 public:
   explicit TrackerOverlapManager(const TrackerOverlapManagerConfig & config);
 
-  /// Scans tracker_list for overlapping pairs and merges the lower-priority one into the higher.
+  /// Scans tracker_list for overlapping pairs and merges each redundant tracker into its
+  /// dominant counterpart.
   void merge(
     std::list<std::shared_ptr<Tracker>> & tracker_list, const rclcpp::Time & time,
     const AdaptiveThresholdCache & threshold_cache,
@@ -45,12 +56,6 @@ public:
 
 private:
   TrackerOverlapManagerConfig config_;
-
-  /// Returns true if target may be merged (absorbed) into other.
-  bool canMergeTarget(
-    const Tracker & target, const Tracker & other, const rclcpp::Time & time,
-    const AdaptiveThresholdCache & threshold_cache,
-    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
 };
 
 }  // namespace autoware::multi_object_tracker
