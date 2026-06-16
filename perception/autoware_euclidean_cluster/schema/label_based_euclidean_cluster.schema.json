@@ -1,0 +1,194 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_label_based_euclidean_cluster Parameters",
+  "type": "object",
+  "definitions": {
+    "label_based_euclidean_cluster": {
+      "type": "object",
+      "properties": {
+        "use_height": {
+          "type": "boolean",
+          "description": "Use point.z for clustering.",
+          "default": false
+        },
+        "tolerance_m": {
+          "type": "number",
+          "description": "The spatial cluster tolerance as a measure in the L2 Euclidean space.",
+          "default": 0.7
+        },
+        "min_points_per_cluster": {
+          "type": "integer",
+          "description": "The minimum number of points that a cluster needs to contain in order to be considered valid.",
+          "default": 10
+        },
+        "voxel_leaf_size_m": {
+          "type": "number",
+          "description": "The voxel leaf size of x and y.",
+          "default": 0.2
+        },
+        "min_points_per_voxel": {
+          "type": "integer",
+          "description": "The minimum number of points required per voxel.",
+          "default": 1
+        },
+        "large_cluster_voxel_count_threshold": {
+          "type": "integer",
+          "description": "The minimum voxel cluster size for a cluster to be checked for being a large cluster.",
+          "default": 10
+        },
+        "large_cluster_max_points_per_voxel": {
+          "type": "integer",
+          "description": "The maximum points per voxel allowed in large clusters.",
+          "default": 100
+        },
+        "max_voxels_per_cluster": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum number of voxels in a cluster when outputted.",
+          "default": 1000
+        },
+        "min_probability": {
+          "type": "number",
+          "description": "Minimum semantic probability required for a point to be used.",
+          "default": 0.3
+        },
+        "class_names": {
+          "$ref": "#/definitions/class_names"
+        },
+        "use_shape_estimation_corrector": {
+          "type": "boolean",
+          "description": "Enable the shape estimation corrector.",
+          "default": false
+        },
+        "use_shape_estimation_filter": {
+          "type": "boolean",
+          "description": "Enable the shape estimation filter.",
+          "default": false
+        },
+        "use_boost_bbox_optimizer": {
+          "type": "boolean",
+          "description": "Enable the boost bounding-box optimizer.",
+          "default": false
+        },
+        "shape_policy": {
+          "type": "integer",
+          "description": "Shape estimation policy. 0: ALL_POLYGON, 1: LABEL_DEPEND.",
+          "default": 0,
+          "enum": [0, 1]
+        },
+        "label_cluster_params": {
+          "type": "object",
+          "description": "Optional per-label overrides. Keys are label names (car, truck, bus, trailer, motorcycle, bicycle, pedestrian, animal, hazard, unknown).",
+          "properties": {
+            "unknown": { "$ref": "#/definitions/cluster_override_params" },
+            "car": { "$ref": "#/definitions/cluster_override_params" },
+            "bus": { "$ref": "#/definitions/cluster_override_params" },
+            "truck": { "$ref": "#/definitions/cluster_override_params" },
+            "trailer": { "$ref": "#/definitions/cluster_override_params" },
+            "motorcycle": { "$ref": "#/definitions/cluster_override_params" },
+            "bicycle": { "$ref": "#/definitions/cluster_override_params" },
+            "pedestrian": { "$ref": "#/definitions/cluster_override_params" },
+            "animal": { "$ref": "#/definitions/cluster_override_params" },
+            "hazard": { "$ref": "#/definitions/cluster_override_params" }
+          },
+          "additionalProperties": false
+        },
+        "confusable_label_groups": {
+          "$ref": "#/definitions/confusable_label_groups"
+        }
+      },
+      "required": [
+        "use_height",
+        "tolerance_m",
+        "min_points_per_cluster",
+        "voxel_leaf_size_m",
+        "min_points_per_voxel",
+        "large_cluster_voxel_count_threshold",
+        "large_cluster_max_points_per_voxel",
+        "max_voxels_per_cluster",
+        "min_probability",
+        "class_names",
+        "use_shape_estimation_corrector",
+        "use_shape_estimation_filter",
+        "use_boost_bbox_optimizer",
+        "shape_policy"
+      ],
+      "additionalProperties": false
+    },
+    "cluster_override_params": {
+      "type": "object",
+      "description": "Per-label overrides for VoxelGridBasedEuclideanCluster. Omitted keys fall back to the global default.",
+      "properties": {
+        "use_height": { "type": "boolean" },
+        "tolerance_m": { "type": "number" },
+        "min_points_per_cluster": { "type": "integer" },
+        "voxel_leaf_size_m": { "type": "number" },
+        "min_points_per_voxel": { "type": "integer" },
+        "large_cluster_voxel_count_threshold": { "type": "integer" },
+        "large_cluster_max_points_per_voxel": { "type": "integer" },
+        "max_voxels_per_cluster": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "class_names": {
+      "type": "object",
+      "description": "Ordered mapping from input semantic class name to clustering target label. YAML declaration order is treated as class_id order.",
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "ignore",
+          "unknown",
+          "car",
+          "truck",
+          "bus",
+          "trailer",
+          "motorcycle",
+          "bicycle",
+          "pedestrian",
+          "animal",
+          "hazard"
+        ]
+      }
+    },
+    "confusable_label_groups": {
+      "type": "object",
+      "description": "Optional post-clustering merge groups for confusable label pairs (e.g. truck/trailer). Each key is a user-defined group name.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "labels": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 2,
+            "description": "Label names in this confusable group."
+          },
+          "cross_label_tolerance_m": {
+            "type": "number",
+            "description": "Maximum true minimum point-to-point XY gap between clusters of different labels to trigger a merge."
+          },
+          "max_merged_size_m": {
+            "type": "number",
+            "description": "Bounding-circle diameter cap (m) for a merged component; unions exceeding it are refused, bounding chaining. Orientation-independent.",
+            "default": 25.0
+          }
+        },
+        "required": ["labels", "cross_label_tolerance_m", "max_merged_size_m"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/label_based_euclidean_cluster"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

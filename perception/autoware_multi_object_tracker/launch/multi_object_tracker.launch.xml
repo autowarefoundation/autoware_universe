@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <arg name="input/detection01/objects" default="input/objects01"/>
   <arg name="input/detection02/objects" default="input/objects02"/>
   <arg name="input/detection03/objects" default="input/objects03"/>
@@ -33,6 +35,7 @@
   <arg name="publish_merged_objects" default="false"/>
 
   <node pkg="autoware_multi_object_tracker" exec="multi_object_tracker_node" name="multi_object_tracker" output="both">
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
     <remap from="~/input/detection01/objects" to="$(var input/detection01/objects)"/>
     <remap from="~/input/detection02/objects" to="$(var input/detection02/objects)"/>
     <remap from="~/input/detection03/objects" to="$(var input/detection03/objects)"/>

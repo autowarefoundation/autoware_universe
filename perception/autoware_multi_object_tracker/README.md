@@ -107,10 +107,6 @@ Up to 12 detection inputs can be configured (detection01 through detection12). E
 
 {{ json_to_markdown("perception/autoware_multi_object_tracker/schema/data_association_matrix.schema.json") }}
 
-#### Simulation parameters
-
-{{ json_to_markdown("perception/autoware_multi_object_tracker/schema/simulation_tracker.schema.json") }}
-
 ## Assumptions / Known limits
 
 See the [model explanations](models.md).
