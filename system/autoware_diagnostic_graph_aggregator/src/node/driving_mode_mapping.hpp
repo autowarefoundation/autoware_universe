@@ -34,7 +34,6 @@ public:
 
 private:
   using DrivingModeFlag = tier4_system_msgs::msg::DrivingModeFlag;
-  rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<DrivingModeFlag>::SharedPtr pub_available_;
   rclcpp::Publisher<DrivingModeFlag>::SharedPtr pub_continuable_;
 
