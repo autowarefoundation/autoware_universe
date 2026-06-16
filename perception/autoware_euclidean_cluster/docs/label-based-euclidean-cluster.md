@@ -40,10 +40,11 @@ The packaged launch file remaps these by default to the following topics:
 3. Drop points whose mapped class is configured as `ignore`.
 4. If the pointcloud has a `probability` field, drop points with `probability < min_probability`.
 5. Split the remaining points into buckets keyed by the mapped Autoware object label.
-6. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket.
-7. Estimate a shape and pose for each cluster with `ShapeEstimator`.
-8. If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.
-9. Publish one `DetectedObject` per cluster.
+6. Run `VoxelGridBasedEuclideanCluster` independently for each label bucket, using the per-label parameter overrides from `label_cluster_params.*` where configured and the global defaults otherwise.
+7. Merge over-segmented clusters across labels that belong to the same confusable label group (`confusable_label_groups.*`).
+8. Estimate a shape and pose for each cluster with `ShapeEstimator`.
+9. If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.
+10. Publish one `DetectedObject` per cluster.
 
 ## Label Mapping
 
@@ -90,35 +91,81 @@ The fallback shape uses the cluster axis-aligned min/max extents, with each dime
 
 Parameters are loaded from [config/label_based_euclidean_cluster.param.yaml](../config/label_based_euclidean_cluster.param.yaml).
 
-### Clustering Parameters
+{{ json_to_markdown("perception/autoware_euclidean_cluster/schema/label_based_euclidean_cluster.schema.json") }}
 
-| Name                                    | Type  | Description                                                         |
-| --------------------------------------- | ----- | ------------------------------------------------------------------- |
-| `use_height`                            | bool  | Use the `z` coordinate during clustering.                           |
-| `tolerance`                             | float | Euclidean clustering tolerance.                                     |
-| `min_cluster_size`                      | int   | Minimum number of points required to keep a cluster.                |
-| `max_cluster_size`                      | int   | Maximum number of points allowed in a cluster.                      |
-| `voxel_leaf_size`                       | float | Voxel size used by the internal voxel-grid-based cluster.           |
-| `min_points_number_per_voxel`           | int   | Minimum number of points required to keep a voxel centroid.         |
-| `min_voxel_cluster_size_for_filtering`  | int   | Minimum voxel-cluster size before applying large-cluster filtering. |
-| `max_points_per_voxel_in_large_cluster` | int   | Maximum number of points kept per voxel for large clusters.         |
-| `max_voxel_cluster_for_output`          | int   | Maximum number of voxel clusters emitted by the internal cluster.   |
+## Per-Label Clustering Parameter Overrides
 
-### Semantic Filtering Parameters
+The clustering parameters at the top level (`use_height`, `tolerance_m`, `voxel_leaf_size_m`,
+`min_points_per_voxel`, `min_points_per_cluster`, `large_cluster_voxel_count_threshold`,
+`large_cluster_max_points_per_voxel`, `max_voxels_per_cluster`) define a single global
+`VoxelGridBasedEuclideanCluster` that is used for every label bucket by default.
 
-| Name              | Type   | Description                                                                          |
-| ----------------- | ------ | ------------------------------------------------------------------------------------ |
-| `min_probability` | float  | Minimum per-point semantic confidence when the input contains a `probability` field. |
-| `class_names.*`   | string | Semantic class remapping table. YAML order is treated as input `class_id`.           |
+`label_cluster_params.<label>` lets each label run with its own tuned clustering instance instead.
+This is useful because the spatial density and size of objects differ by class: pedestrians and
+hazards need a tighter tolerance and finer voxels than cars or trucks.
 
-### Shape Estimation Parameters
+- `<label>` must be one of the supported Autoware object labels (`unknown`, `car`, `bus`, `truck`,
+  `trailer`, `motorcycle`, `bicycle`, `pedestrian`, `animal`, `hazard`).
+- Each override block accepts the same keys as the global clustering parameters.
+- Any key omitted inside an override block falls back to the corresponding global value, so a block
+  only needs to list the parameters that differ.
+- A label with no override block (or an empty one) keeps using the global default cluster.
+- When a label-specific cluster is created, the node logs `Using custom cluster params for label '<label>'` at startup.
 
-| Name                             | Type | Description                                                           |
-| -------------------------------- | ---- | --------------------------------------------------------------------- |
-| `shape_policy`                   | int  | Shape estimation mode: `0` for `ALL_POLYGON`, `1` for `LABEL_DEPEND`. |
-| `use_shape_estimation_corrector` | bool | Enable the standard shape estimation corrector.                       |
-| `use_shape_estimation_filter`    | bool | Enable the standard shape estimation filter.                          |
-| `use_boost_bbox_optimizer`       | bool | Enable the boost-based bounding box optimizer in shape estimation.    |
+Example: give pedestrians a tighter tolerance and finer voxels while leaving everything else on the
+global defaults.
+
+```yaml
+tolerance_m: 0.65
+voxel_leaf_size_m: 0.2
+# ... other global defaults ...
+label_cluster_params:
+  pedestrian:
+    tolerance_m: 0.3
+    voxel_leaf_size_m: 0.1
+    min_points_per_voxel: 1
+    min_points_per_cluster: 3
+    large_cluster_voxel_count_threshold: 5
+    large_cluster_max_points_per_voxel: 30
+    max_voxels_per_cluster: 200
+```
+
+## Confusable-Label Merge
+
+Because each label bucket is clustered independently, a single physical object whose points carry two
+semantically confusable labels (for example a truck and its trailer, where the segmentation model
+splits one vehicle across the `truck` and `trailer` classes) is split into separate clusters.
+`confusable_label_groups.*` performs an optional post-clustering merge that stitches such pieces back
+together.
+
+Each entry under `confusable_label_groups` is a user-named group:
+
+- `labels`: the list of labels (two or more) that may be merged with each other. Only clusters of
+  **different** labels within the same group are considered for merging; clusters that share a label
+  are never merged here.
+- `cross_label_tolerance_m`: the maximum point-to-point XY gap between two clusters for them to be
+  joined. The gap is the true minimum distance between the closest points of the two clusters
+  (measured in the XY plane, height is ignored).
+- `max_merged_size_m` (default `25.0`): an upper bound on the diameter of a merged component. A union
+  that would produce a bounding circle larger than this is refused, so a chain of nearby clusters
+  cannot collapse a dense scene into one oversized blob.
+
+Notes:
+
+- A label may appear in at most one group. If it is listed in several, the first group wins and a
+  warning is logged.
+- Labels not listed in any group are passed through unchanged.
+
+Example: merge `truck` and `trailer` fragments that are within 0.5 m of each other, capping the
+merged object at a 25 m diameter.
+
+```yaml
+confusable_label_groups:
+  truck_trailer:
+    labels: ["truck", "trailer"]
+    cross_label_tolerance_m: 0.5
+    max_merged_size_m: 25.0
+```
 
 ## Default Configuration Notes
 

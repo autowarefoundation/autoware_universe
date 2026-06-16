@@ -25,14 +25,16 @@ EuclideanCluster::EuclideanCluster()
 {
 }
 
-EuclideanCluster::EuclideanCluster(bool use_height, int min_cluster_size, int max_cluster_size)
-: EuclideanClusterInterface(use_height, min_cluster_size, max_cluster_size)
+EuclideanCluster::EuclideanCluster(
+  bool use_height, int min_points_per_cluster, int max_cluster_size)
+: EuclideanClusterInterface(use_height, min_points_per_cluster, max_cluster_size)
 {
 }
 
 EuclideanCluster::EuclideanCluster(
-  bool use_height, int min_cluster_size, int max_cluster_size, float tolerance)
-: EuclideanClusterInterface(use_height, min_cluster_size, max_cluster_size), tolerance_(tolerance)
+  bool use_height, int min_points_per_cluster, int max_cluster_size, float tolerance)
+: EuclideanClusterInterface(use_height, min_points_per_cluster, max_cluster_size),
+  tolerance_(tolerance)
 {
 }
 // TODO(badai-nguyen): implement input field copy for euclidean_cluster.cpp
@@ -73,7 +75,7 @@ bool EuclideanCluster::cluster(
   std::vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> pcl_euclidean_cluster;
   pcl_euclidean_cluster.setClusterTolerance(tolerance_);
-  pcl_euclidean_cluster.setMinClusterSize(min_cluster_size_);
+  pcl_euclidean_cluster.setMinClusterSize(min_points_per_cluster_);
   pcl_euclidean_cluster.setMaxClusterSize(max_cluster_size_);
   pcl_euclidean_cluster.setSearchMethod(tree);
   pcl_euclidean_cluster.setInputCloud(pointcloud_ptr);

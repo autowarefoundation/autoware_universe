@@ -30,15 +30,15 @@ class EuclideanClusterInterface
 {
 public:
   EuclideanClusterInterface() = default;
-  EuclideanClusterInterface(bool use_height, int min_cluster_size, int max_cluster_size)
+  EuclideanClusterInterface(bool use_height, int min_points_per_cluster, int max_cluster_size)
   : use_height_(use_height),
-    min_cluster_size_(min_cluster_size),
+    min_points_per_cluster_(min_points_per_cluster),
     max_cluster_size_(max_cluster_size)
   {
   }
   virtual ~EuclideanClusterInterface() = default;
   void setUseHeight(bool use_height) { use_height_ = use_height; }
-  void setMinClusterSize(int size) { min_cluster_size_ = size; }
+  void setMinClusterSize(int size) { min_points_per_cluster_ = size; }
   void setMaxClusterSize(int size) { max_cluster_size_ = size; }
   virtual bool cluster(
     const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
@@ -50,7 +50,7 @@ public:
 
 protected:
   bool use_height_ = true;
-  int min_cluster_size_;
+  int min_points_per_cluster_;
   int max_cluster_size_;
 };
 

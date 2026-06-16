@@ -16,6 +16,7 @@
 
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
+#include <Eigen/Core>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/parameter_map.hpp>
 
@@ -37,7 +38,9 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -118,40 +121,32 @@ std::vector<std::pair<std::string, std::string>> extract_class_mappings(
   return class_mappings;
 }
 
+/// @brief Canonical ordered mapping from configured label name to Autoware object classification.
+///        Single source of truth shared by name->label lookup and per-label override parsing.
+const std::vector<std::pair<std::string, std::uint8_t>> & label_name_table()
+{
+  static const std::vector<std::pair<std::string, std::uint8_t>> table = {
+    {"unknown", ObjectClassification::UNKNOWN},
+    {"car", ObjectClassification::CAR},
+    {"bus", ObjectClassification::BUS},
+    {"truck", ObjectClassification::TRUCK},
+    {"motorcycle", ObjectClassification::MOTORCYCLE},
+    {"bicycle", ObjectClassification::BICYCLE},
+    {"pedestrian", ObjectClassification::PEDESTRIAN},
+    {"animal", ObjectClassification::ANIMAL},
+    {"trailer", ObjectClassification::TRAILER},
+    {"hazard", ObjectClassification::HAZARD},
+  };
+  return table;
+}
+
 /// @brief Map a configured label name to an Autoware object classification label.
 std::optional<std::uint8_t> to_object_label(const std::string & mapped_label)
 {
-  if (mapped_label == "unknown") {
-    return ObjectClassification::UNKNOWN;
-  }
-  if (mapped_label == "car") {
-    return ObjectClassification::CAR;
-  }
-  if (mapped_label == "bus") {
-    return ObjectClassification::BUS;
-  }
-  if (mapped_label == "truck") {
-    return ObjectClassification::TRUCK;
-  }
-  if (mapped_label == "motorcycle") {
-    return ObjectClassification::MOTORCYCLE;
-  }
-  if (mapped_label == "bicycle") {
-    return ObjectClassification::BICYCLE;
-  }
-  if (mapped_label == "pedestrian") {
-    return ObjectClassification::PEDESTRIAN;
-  }
-  if (mapped_label == "animal") {
-    return ObjectClassification::ANIMAL;
-  }
-  if (mapped_label == "trailer") {
-    return ObjectClassification::TRAILER;
-  }
-  if (mapped_label == "hazard") {
-    return ObjectClassification::HAZARD;
-  }
-  return std::nullopt;
+  const auto & table = label_name_table();
+  const auto it = std::find_if(
+    table.begin(), table.end(), [&](const auto & entry) { return entry.first == mapped_label; });
+  return it != table.end() ? std::optional<std::uint8_t>(it->second) : std::nullopt;
 }
 
 /// @brief Create fallback shape and pose from the cluster axis-aligned bounding box.
@@ -314,6 +309,74 @@ float average_probability(const std::vector<SemanticPoint> & points)
     [](const float acc, const auto & point) { return acc + point.probability; });
   return sum / static_cast<float>(points.size());
 }
+
+/// @brief Parse confusable_label_groups.* parameters from NodeOptions overrides.
+std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptions & options)
+{
+  constexpr std::string_view prefix = "confusable_label_groups.";
+  std::unordered_map<std::string, ConfusableLabelGroup> groups_map;
+  // Records which "<group>.<key>" overrides were actually provided, so required keys can be
+  // validated without per-key tracking containers.
+  std::unordered_set<std::string> provided_keys;
+
+  for (const auto & param : options.parameter_overrides()) {
+    const auto & name = param.get_name();
+    if (name.rfind(prefix, 0) != 0) {
+      continue;
+    }
+
+    const auto rest = name.substr(prefix.size());
+    const auto dot = rest.find('.');
+    if (dot == std::string::npos) {
+      continue;
+    }
+
+    const auto group_name = rest.substr(0, dot);
+    const auto key = rest.substr(dot + 1);
+    auto & group = groups_map[group_name];
+
+    if (
+      key == "cross_label_tolerance_m" &&
+      param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
+      group.cross_label_tolerance = static_cast<float>(param.as_double());
+      provided_keys.insert(group_name + ".cross_label_tolerance_m");
+    } else if (
+      key == "max_merged_size_m" && param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE) {
+      group.max_merged_size = static_cast<float>(param.as_double());
+      provided_keys.insert(group_name + ".max_merged_size_m");
+    } else if (
+      key == "labels" && param.get_type() == rclcpp::ParameterType::PARAMETER_STRING_ARRAY) {
+      for (const auto & label_name : param.as_string_array()) {
+        const auto label_id = to_object_label(label_name);
+        if (label_id.has_value()) {
+          group.labels.push_back(label_id.value());
+        }
+      }
+    }
+  }
+
+  std::vector<ConfusableLabelGroup> result;
+  for (auto & [name, group] : groups_map) {
+    // A group needs at least 2 labels to be confusable with each other; smaller groups are
+    // meaningless and silently skipped.
+    if (group.labels.size() < 2) {
+      continue;
+    }
+    // cross_label_tolerance_m and max_merged_size_m must both be set explicitly; without them the
+    // group would silently fall back to the default-constructed value (0). Treat a missing required
+    // field as a hard configuration error.
+    if (!provided_keys.count(name + ".cross_label_tolerance_m")) {
+      throw std::runtime_error(
+        "Confusable label group '" + name + "' is missing required 'cross_label_tolerance_m'.");
+    }
+    if (!provided_keys.count(name + ".max_merged_size_m")) {
+      throw std::runtime_error(
+        "Confusable label group '" + name + "' is missing required 'max_merged_size_m'.");
+    }
+    result.push_back(std::move(group));
+  }
+  return result;
+}
 }  // namespace
 
 LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::NodeOptions & options)
@@ -332,29 +395,76 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   // Initialize the voxel grid based euclidean cluster
   const auto use_height =
     autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_height");
-  const auto min_cluster_size = static_cast<int>(
-    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_cluster_size"));
-  const auto max_cluster_size = static_cast<int>(
-    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_cluster_size"));
-  const auto tolerance =
-    static_cast<float>(autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "tolerance"));
+  const auto min_points_per_cluster = static_cast<int>(
+    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_points_per_cluster"));
+  const auto tolerance = static_cast<float>(
+    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "tolerance_m"));
   const auto voxel_leaf_size = static_cast<float>(
-    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "voxel_leaf_size"));
-  const auto min_points_number_per_voxel = static_cast<int>(
-    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_points_number_per_voxel"));
-  const auto min_voxel_cluster_size_for_filtering =
+    autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "voxel_leaf_size_m"));
+  const auto min_points_per_voxel = static_cast<int>(
+    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "min_points_per_voxel"));
+  const auto large_cluster_voxel_count_threshold =
     static_cast<int>(autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(
-      *this, "min_voxel_cluster_size_for_filtering"));
-  const auto max_points_per_voxel_in_large_cluster =
+      *this, "large_cluster_voxel_count_threshold"));
+  const auto large_cluster_max_points_per_voxel =
     static_cast<int>(autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(
-      *this, "max_points_per_voxel_in_large_cluster"));
-  const auto max_voxel_cluster_for_output =
-    static_cast<int>(autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(
-      *this, "max_voxel_cluster_for_output"));
-  cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
-    use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
-    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
-    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
+      *this, "large_cluster_max_points_per_voxel"));
+  const auto max_voxels_per_cluster = static_cast<int>(
+    autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_voxels_per_cluster"));
+  default_cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
+    use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
+    large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
+    max_voxels_per_cluster);
+
+  // Build per-label cluster overrides from label_cluster_params.<label_name>.* parameters.
+  // Any omitted sub-key falls back to the global default above.
+  {
+    for (const auto & [label_name, label] : label_name_table()) {
+      const std::string prefix = "label_cluster_params." + label_name + ".";
+      auto has = [&](const std::string & key) { return this->has_parameter(prefix + key); };
+      // Skip labels with no overrides at all
+      if (
+        !has("tolerance_m") && !has("min_points_per_cluster") && !has("use_height") &&
+        !has("voxel_leaf_size_m") && !has("min_points_per_voxel") &&
+        !has("large_cluster_voxel_count_threshold") && !has("large_cluster_max_points_per_voxel") &&
+        !has("max_voxels_per_cluster")) {
+        continue;
+      }
+
+      auto get_bool = [&](const std::string & key, bool def) -> bool {
+        return has(key) ? this->get_parameter(prefix + key).as_bool() : def;
+      };
+      auto get_int = [&](const std::string & key, int def) -> int {
+        if (!has(key)) {
+          return def;
+        }
+        const auto param = this->get_parameter(prefix + key);
+        return param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE
+                 ? static_cast<int>(param.as_double())
+                 : static_cast<int>(param.as_int());
+      };
+      auto get_float = [&](const std::string & key, float def) -> float {
+        if (!has(key)) {
+          return def;
+        }
+        const auto param = this->get_parameter(prefix + key);
+        return param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER
+                 ? static_cast<float>(param.as_int())
+                 : static_cast<float>(param.as_double());
+      };
+
+      label_cluster_executers_[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
+        get_bool("use_height", use_height),
+        get_int("min_points_per_cluster", min_points_per_cluster),
+        get_float("tolerance_m", tolerance), get_float("voxel_leaf_size_m", voxel_leaf_size),
+        get_int("min_points_per_voxel", min_points_per_voxel),
+        get_int("large_cluster_voxel_count_threshold", large_cluster_voxel_count_threshold),
+        get_int("large_cluster_max_points_per_voxel", large_cluster_max_points_per_voxel),
+        get_int("max_voxels_per_cluster", max_voxels_per_cluster));
+
+      RCLCPP_INFO(get_logger(), "Using custom cluster params for label '%s'", label_name.c_str());
+    }
+  }
 
   {
     // Initialize the shape estimator
@@ -380,6 +490,27 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   debug_publisher_ = std::make_unique<autoware_utils::DebugPublisher>(this, "~/debug");
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
+
+  confusable_groups_ = load_confusable_groups(options);
+  for (std::size_t g = 0; g < confusable_groups_.size(); ++g) {
+    for (const auto label : confusable_groups_[g].labels) {
+      const auto [it, inserted] = label_to_group_idx_.emplace(label, g);
+      if (!inserted) {
+        RCLCPP_WARN(
+          get_logger(),
+          "Label %u is listed in multiple confusable_label_groups; keeping the first assignment "
+          "(group index %zu) and ignoring group index %zu.",
+          static_cast<unsigned>(label), it->second, g);
+      }
+    }
+  }
+}
+
+EuclideanClusterInterface & LabelBasedEuclideanClusterNode::get_cluster_executer(
+  const std::uint8_t label) const
+{
+  const auto it = label_cluster_executers_.find(label);
+  return (it != label_cluster_executers_.end()) ? *it->second : *default_cluster_;
 }
 
 bool LabelBasedEuclideanClusterNode::update_target_label_map(
@@ -428,30 +559,50 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
   auto output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(objects_pub_);
   output_msg->header = input_msg->header;
 
+  // 2. Run per-label clustering and collect all cluster entries
+  // TODO(ktro2828): Probability is averaged per label bucket before clustering, not per cluster.
+  std::vector<ClusterEntry> all_entries;
   for (const auto & [label, semantic_points] : split_points) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr label_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     label_cloud->reserve(semantic_points.size());
-    for (const auto & semantic_point : semantic_points) {
-      label_cloud->push_back(semantic_point.point);
+    for (const auto & sp : semantic_points) {
+      label_cloud->push_back(sp.point);
     }
 
     std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters;
-    cluster_->cluster(label_cloud, clusters);
+    get_cluster_executer(label).cluster(label_cloud, clusters);
 
-    // TODO(ktro2828): This probability is averaged per segmented label bucket before clustering,
-    // not per individual cluster. Consider to refine the probability assignment to reflect
-    // cluster-level confidence.
-    // Or uncertainty aware clustering can be applied to propagate point-level probabilities into
-    // clusters using 'entropy' field values.
-    const float label_probability = average_probability(semantic_points);
-    for (const auto & cluster : clusters) {
-      if (cluster.empty()) {
-        continue;
+    const float prob = average_probability(semantic_points);
+    for (auto & cluster : clusters) {
+      if (!cluster.empty()) {
+        all_entries.push_back({std::move(cluster), label, prob});
       }
-
-      output_msg->objects.push_back(create_detected_object(
-        cluster, label, label_probability, shape_policy_, *shape_estimator_));
     }
+  }
+
+  // 3. Post-merge clusters that belong to the same confusable label group
+  std::vector<std::vector<ClusterEntry>> per_group(confusable_groups_.size());
+  std::vector<ClusterEntry> output_entries;
+  output_entries.reserve(all_entries.size());
+
+  for (auto & e : all_entries) {
+    const auto it = label_to_group_idx_.find(e.label);
+    if (it != label_to_group_idx_.end()) {
+      per_group[it->second].push_back(std::move(e));
+    } else {
+      output_entries.push_back(std::move(e));
+    }
+  }
+  for (std::size_t g = 0; g < confusable_groups_.size(); ++g) {
+    for (auto & e : merge_confusable_clusters(std::move(per_group[g]), confusable_groups_[g])) {
+      output_entries.push_back(std::move(e));
+    }
+  }
+
+  // 4. Build detected objects from final entries
+  for (const auto & e : output_entries) {
+    output_msg->objects.push_back(
+      create_detected_object(e.cloud, e.label, e.prob, shape_policy_, *shape_estimator_));
   }
 
   objects_pub_->publish(std::move(output_msg));
