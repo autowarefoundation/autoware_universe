@@ -200,6 +200,10 @@ void PlannerInference::bind_buffers()
   network_trt_ptr_->setTensorAddress("turn_indicators", turn_indicators_d_.get());
   network_trt_ptr_->setTensorAddress("delay", delay_d_.get());
   // Bound directly to the BevEncoder output buffer: device-to-device, no host round trip.
+  // The engine only reads this tensor, so dropping const is safe (TensorRT takes void*).
+  // The pointer is owned by BevEncoder, which must outlive PlannerInference — guaranteed
+  // by the member declaration order in OnePlannerNode (bev_encoder_ before planner_inference_,
+  // so it is destroyed after).
   network_trt_ptr_->setTensorAddress("bev_feature_map", const_cast<float *>(bev_feature_d_));
   network_trt_ptr_->setTensorAddress("prediction", output_d_.get());
   network_trt_ptr_->setTensorAddress("turn_indicator_logit", turn_indicator_logit_d_.get());

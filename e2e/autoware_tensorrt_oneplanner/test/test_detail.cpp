@@ -38,6 +38,9 @@ TEST(OnePlannerDetail, NumElementsSkipsBatchDimension)
   EXPECT_EQ(detail::num_elements(std::array<int64_t, 2>{5, 9}), 9u);
   // Matches the per-sample element count of the ego prediction tensor.
   EXPECT_EQ(detail::num_elements(EGO_PREDICTION_SHAPE), kAgentStride);
+  // Degenerate shapes are well-defined (no dereference past the end).
+  EXPECT_EQ(detail::num_elements(std::array<int64_t, 1>{4}), 1u);
+  EXPECT_EQ(detail::num_elements(std::vector<int64_t>{}), 1u);
 }
 
 TEST(OnePlannerDetail, ExpandEgoPredictionLayout)

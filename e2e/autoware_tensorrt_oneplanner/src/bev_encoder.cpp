@@ -231,7 +231,9 @@ void BevEncoder::swap_coord_columns(int64_t num_voxels)
   // The buffer is row-major [num_voxels, 3] int32: row pitch = 3 elements, the
   // first column is at offset 0 and the last at offset 2. Use strided 2D copies
   // (1 element wide, num_voxels tall) to exchange the two columns via a scratch
-  // column, entirely on stream_.
+  // column, entirely on stream_. cudaMemcpy2DAsync keeps this header-only (no extra
+  // .cu / CUDA-compiled kernel in this package); num_voxels is already clamped to
+  // <= max_num_voxels (the scratch capacity) before this is called.
   constexpr size_t kElem = sizeof(std::int32_t);
   constexpr size_t kRowPitch = 3 * kElem;
   const auto height = static_cast<size_t>(num_voxels);

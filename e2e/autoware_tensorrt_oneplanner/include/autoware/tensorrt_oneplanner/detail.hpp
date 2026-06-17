@@ -39,9 +39,14 @@ inline constexpr float kEgoPositionXMean = 10.0f;
 inline constexpr float kEgoPositionStd = 20.0f;
 
 /// @brief Number of elements in a tensor shape, excluding the leading batch dimension.
+/// Returns 1 for a shape with no non-batch dimensions (size <= 1), so an empty
+/// container is well-defined rather than dereferencing past the end.
 template <class Container>
 std::size_t num_elements(const Container & shape)
 {
+  if (shape.size() <= 1) {
+    return 1;
+  }
   return std::accumulate(
     shape.begin() + 1, shape.end(), std::size_t{1}, std::multiplies<std::size_t>());
 }
