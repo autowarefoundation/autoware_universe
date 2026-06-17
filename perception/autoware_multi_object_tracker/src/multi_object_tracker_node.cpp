@@ -297,8 +297,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   ////// callback timer
-  // The publish timer is an independent trigger: when disabled, tracks are published on measurement;
-  // when enabled, the timer drives publishing. The export reference (delay_compensation) is orthogonal.
+  // The publish timer is an independent trigger: when disabled, tracks are published on
+  // measurement; when enabled, the timer drives publishing. The export reference
+  // (delay_compensation) is orthogonal.
   if (params_.publish_on_timer) {
     constexpr double timer_multiplier = 10.0;  // 10 times frequent for publish timing check
     const auto timer_period = rclcpp::Rate(params_.publish_rate * timer_multiplier).period();
