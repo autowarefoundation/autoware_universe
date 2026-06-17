@@ -49,8 +49,9 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize processor
   processor = std::make_unique<TrackerProcessor>(
-    params.creation_config, params.association_config, params.tracker_overlap_manager_config,
-    params.input_channels_config, node.get_logger(), node.get_clock());
+    params.tracker_configs, params.creation_config, params.association_config,
+    params.tracker_overlap_manager_config, params.input_channels_config, node.get_logger(),
+    node.get_clock());
 
   last_publish_time = node.now();
   last_updated_time = node.now();

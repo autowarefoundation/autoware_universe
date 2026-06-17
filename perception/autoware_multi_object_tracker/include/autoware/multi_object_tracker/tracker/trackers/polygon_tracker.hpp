@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__POLYGON_TRACKER_HPP_
 
+#include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
@@ -36,7 +37,8 @@ private:
   StaticMotionModel static_motion_model_;
 
   bool enable_velocity_estimation_;
-  bool enable_motion_output_;
+  // Per-label motion-output gate, evaluated at publish time against the track's current label.
+  LabelBoolMap enable_motion_output_;
 
   geometry_msgs::msg::Pose last_pose_;
 
@@ -44,10 +46,15 @@ private:
 
   bool updateKinematics(const types::DynamicObject & object);
 
+  // Continuously attenuate the published velocity by its direction-projected uncertainty
+  // (mirrors VehicleTracker): zero when too uncertain, unchanged when large enough, rescaling
+  // the 2D twist so the velocity direction is preserved.
+  void suppressUncertainVelocity(types::DynamicObject & object) const;
+
 public:
   PolygonTracker(
     const rclcpp::Time & time, const types::DynamicObject & object,
-    const bool enable_velocity_estimation, const bool enable_motion_output);
+    const PolygonTrackerConfig & config);
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(

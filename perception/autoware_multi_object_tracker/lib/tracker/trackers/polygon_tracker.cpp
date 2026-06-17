@@ -21,6 +21,7 @@
 #include <autoware_utils_math/unit_conversion.hpp>
 #include <tf2/utils.hpp>
 
+#include <algorithm>
 #include <cmath>
 
 namespace autoware::multi_object_tracker
@@ -28,11 +29,11 @@ namespace autoware::multi_object_tracker
 
 PolygonTracker::PolygonTracker(
   const rclcpp::Time & time, const types::DynamicObject & object,
-  const bool enable_velocity_estimation, const bool enable_motion_output)
+  const PolygonTrackerConfig & config)
 : Tracker(time, object),
   logger_(rclcpp::get_logger("PolygonTracker")),
-  enable_velocity_estimation_(enable_velocity_estimation),
-  enable_motion_output_(enable_motion_output)
+  enable_velocity_estimation_(config.enable_velocity_estimation),
+  enable_motion_output_(config.enable_motion_output)
 {
   tracker_type_ = TrackerType::POLYGON;
   shape_model_.init(object);
@@ -234,13 +235,54 @@ bool PolygonTracker::getTrackedObject(
 
   if (to_publish) {
     object.pose = last_pose_;
-    if (!enable_motion_output_) {
+    // Gate motion output on the track's current classification (object.classification was
+    // populated above by populateKinematicObject). Absent/false label => suppress velocity.
+    const auto label = classes::getHighestProbLabel(object.classification);
+    const auto it = enable_motion_output_.find(label);
+    const bool motion_output_enabled = it != enable_motion_output_.end() && it->second;
+    if (!motion_output_enabled) {
       object.twist.linear.x = 0.0;
       object.twist.linear.y = 0.0;
+    } else {
+      suppressUncertainVelocity(object);
     }
   }
 
   return true;
+}
+
+void PolygonTracker::suppressUncertainVelocity(types::DynamicObject & object) const
+{
+  using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  auto & twist = object.twist;
+  constexpr double vel_cov_buffer = 0.3;
+
+  const double vx = twist.linear.x;
+  const double vy = twist.linear.y;
+  const double speed = std::hypot(vx, vy);  // absolute velocity (rotation-invariant)
+  if (speed <= 0.0) {
+    return;
+  }
+
+  // Velocity uncertainty (std-dev) projected onto the velocity direction. Reduces to the
+  // longitudinal std-dev used by VehicleTracker when the lateral component is zero.
+  const double sxx = object.twist_covariance[XYZRPY_COV_IDX::X_X];
+  const double syy = object.twist_covariance[XYZRPY_COV_IDX::Y_Y];
+  const double sxy = object.twist_covariance[XYZRPY_COV_IDX::X_Y];
+  const double dir_var = (vx * vx * sxx + 2.0 * vx * vy * sxy + vy * vy * syy) / (speed * speed);
+  const double dir_stddev = std::sqrt(std::max(0.0, dir_var));
+
+  const double vel_limit = dir_stddev - vel_cov_buffer;
+  if (vel_limit <= 0.0) {
+    return;  // uncertainty within the buffer -> velocity is trustworthy, export as is
+  }
+
+  // Continuous gain in [0, 1]: 0 when speed <= vel_limit (too uncertain -> zero), ramps linearly,
+  // and reaches 1 when speed >= 2 * vel_limit (large enough -> export as is). Applying the same
+  // gain to both components rescales the magnitude while preserving the velocity direction.
+  const double gain = std::clamp((speed - vel_limit) / vel_limit, 0.0, 1.0);
+  twist.linear.x = vx * gain;
+  twist.linear.y = vy * gain;
 }
 
 }  // namespace autoware::multi_object_tracker

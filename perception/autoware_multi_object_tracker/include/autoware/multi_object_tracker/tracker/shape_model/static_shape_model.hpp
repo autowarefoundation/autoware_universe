@@ -43,6 +43,9 @@ public:
   // Update ego position for polygon-to-bbox conversion
   void setEgoPose(const std::optional<geometry_msgs::msg::Point> & ego_pos) override;
 
+  // Enable/disable the publish-time POLYGON -> BOUNDING_BOX conversion
+  void setConvertPolygonToBbox(bool enable) { convert_polygon_to_bbox_ = enable; }
+
   // Write shape to output.
   // When to_publish is true and shape is POLYGON, convert to minimum-area BOUNDING_BOX if
   // ego_pos_ is available.
@@ -51,6 +54,7 @@ public:
 private:
   // shape_type_, dimensions, footprint_, area_ live in ShapeModelBase.
   std::optional<geometry_msgs::msg::Point> ego_pos_;
+  bool convert_polygon_to_bbox_{true};
 };
 
 }  // namespace autoware::multi_object_tracker

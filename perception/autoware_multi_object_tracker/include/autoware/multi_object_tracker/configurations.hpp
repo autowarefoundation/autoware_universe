@@ -47,6 +47,7 @@ struct AssociationProfile
 };
 
 using LabelDoubleMap = std::unordered_map<classes::Label, double, EnumClassHash>;
+using LabelBoolMap = std::unordered_map<classes::Label, bool, EnumClassHash>;
 
 using ShapeLabelKey = std::pair<types::ShapeType, classes::Label>;
 struct ShapeLabelKeyHash
@@ -67,12 +68,29 @@ using AssociationMap = std::unordered_map<ShapeLabelKey, AssociationProfileMap, 
 using ShapeLabelToTrackerTypeMap =
   std::unordered_map<ShapeLabelKey, types::TrackerType, ShapeLabelKeyHash>;
 
+//// Per-tracker-type configuration (parallels tracker_profiles: keyed by tracker type)
+struct PolygonTrackerConfig
+{
+  bool enable_velocity_estimation{true};
+  // Whether to publish estimated velocity, per object classification.
+  // A label absent from the map (or set false) means motion output is suppressed for that label.
+  LabelBoolMap enable_motion_output;
+};
+
+struct StaticTrackerConfig
+{
+  bool convert_polygon_to_bbox{false};
+};
+
+struct TrackerConfigs
+{
+  PolygonTrackerConfig polygon_tracker;
+  StaticTrackerConfig static_tracker;
+};
+
 //// Tracker creation (spawning, type mapping)
 struct TrackerCreationConfig
 {
-  bool enable_unknown_object_velocity_estimation{false};
-  bool enable_unknown_object_motion_output{false};
-
   ShapeLabelToTrackerTypeMap shape_tracker_map;
   std::unordered_set<ShapeLabelKey, ShapeLabelKeyHash> explicit_null_combos;
 
@@ -122,12 +140,9 @@ struct TrackerOverlapManagerConfig
 {
   float min_known_object_removal_iou{0.0f};
   float min_unknown_object_removal_iou{0.0f};
-  LabelDoubleMap pruning_giou_thresholds;
+  double pruning_giou_threshold{0.0};
   LabelDoubleMap pruning_distance_thresholds;
   LabelDoubleMap pruning_distance_thresholds_sq;
-  double pruning_static_object_speed{0.0};
-  double pruning_moving_object_speed{0.0};
-  double pruning_static_iou_threshold{0.0};
 };
 
 //// Utility: safe map lookup

@@ -164,8 +164,9 @@ bool PedestrianTracker::getTrackedObject(
     constexpr double vel_too_low_ignore = 0.35;
     const double vel_long = std::abs(twist.linear.x);
     if (vel_long > vel_too_low_ignore) {
-      const double vel_limit =
-        std::max(std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);
+      const double vel_limit = std::max(
+        std::sqrt(std::max(0.0, object.twist_covariance[XYZRPY_COV_IDX::X_X])) - vel_cov_buffer,
+        0.0);
 
       if (vel_long < vel_limit) {
         twist.linear.x = twist.linear.x > 0 ? vel_too_low_ignore : -vel_too_low_ignore;

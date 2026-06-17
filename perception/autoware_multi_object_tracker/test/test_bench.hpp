@@ -133,6 +133,7 @@ struct ScenarioParams
 };
 
 // Configuration creation functions
+autoware::multi_object_tracker::TrackerConfigs createTrackerConfigs();
 autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfig();
 autoware::multi_object_tracker::TrackerAssociationConfig createTrackerAssociationConfig();
 autoware::multi_object_tracker::TrackerOverlapManagerConfig createTrackerOverlapManagerConfig();
