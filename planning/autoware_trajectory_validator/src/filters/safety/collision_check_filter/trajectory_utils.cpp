@@ -297,14 +297,15 @@ std::vector<Point2d> create_base_polygon(const autoware_perception_msgs::msg::Sh
   throw std::logic_error("The shape type is not supported in autoware_utils.");
 }
 
-std::vector<Point2d> create_base_polygon(const VehicleInfo & vehicle_info)
+std::vector<Point2d> create_base_polygon(
+  const trajectory::footprint::EgoDimensions & ego_dimensions)
 {
-  const double half_width = vehicle_info.vehicle_width_m / 2.0;
+  const double half_width = ego_dimensions.vehicle_width / 2.0;
   return {
-    Point2d{vehicle_info.max_longitudinal_offset_m, half_width},
-    Point2d{vehicle_info.max_longitudinal_offset_m, -half_width},
-    Point2d{vehicle_info.min_longitudinal_offset_m, -half_width},
-    Point2d{vehicle_info.min_longitudinal_offset_m, half_width}};
+    Point2d{ego_dimensions.front_offset, half_width},
+    Point2d{ego_dimensions.front_offset, -half_width},
+    Point2d{-ego_dimensions.rear_overhang, -half_width},
+    Point2d{-ego_dimensions.rear_overhang, half_width}};
 }
 
 Polygon2d to_polygon2d(
@@ -374,9 +375,10 @@ FootprintTrajectory compute_footprint_trajectory(
 }
 
 FootprintTrajectory compute_footprint_trajectory(
-  const PoseTrajectory & pose_trajectory, const VehicleInfo & vehicle_info)
+  const PoseTrajectory & pose_trajectory, const EgoDimensions & ego_dimensions)
 {
-  return compute_footprint_trajectory(pose_trajectory, geometry::create_base_polygon(vehicle_info));
+  return compute_footprint_trajectory(
+    pose_trajectory, geometry::create_base_polygon(ego_dimensions));
 }
 }  // namespace footprint
 
@@ -496,7 +498,7 @@ geometry_msgs::msg::Pose interpolate_predicted_path_pose(
 TrajectoryData generate_ego_trajectory(
   const geometry_msgs::msg::Twist & initial_twist, double braking_lag, double assumed_acceleration,
   double max_time, double time_resolution, const TrajectoryPoints & traj_points,
-  VehicleInfo & vehicle_info)
+  const footprint::EgoDimensions & ego_dimensions)
 {
   auto [times, distances] = time_distance::compute_motion_profile_1d(
     initial_twist, braking_lag, assumed_acceleration, 0.0, max_time, time_resolution);
@@ -507,7 +509,7 @@ TrajectoryData generate_ego_trajectory(
     val += distance_offset;
   }
   auto poses = pose::compute_pose_trajectory(traj_points, distances);
-  auto footprints = footprint::compute_footprint_trajectory(poses, vehicle_info);
+  auto footprints = footprint::compute_footprint_trajectory(poses, ego_dimensions);
 
   return TrajectoryData(
     TrajectoryIdentification{"EGO"}, std::move(times), std::move(distances), std::move(poses),
@@ -516,7 +518,7 @@ TrajectoryData generate_ego_trajectory(
 
 TrajectoryData generate_ego_trajectory(
   const TrajectoryPoints & traj_points, const FilterContext & context, double max_time,
-  double time_resolution, VehicleInfo & vehicle_info)
+  double time_resolution, const footprint::EgoDimensions & ego_dimensions)
 {
   if (traj_points.empty()) {
     throw std::invalid_argument("points must not be empty");
@@ -538,7 +540,7 @@ TrajectoryData generate_ego_trajectory(
 
   auto poses = pose::compute_pose_trajectory_from_time(traj_points, absolute_times);
   auto distances = detail::compute_cumulative_distances(poses);
-  auto footprints = footprint::compute_footprint_trajectory(poses, vehicle_info);
+  auto footprints = footprint::compute_footprint_trajectory(poses, ego_dimensions);
 
   return TrajectoryData(
     TrajectoryIdentification{"EGO"}, std::move(relative_times), std::move(distances),

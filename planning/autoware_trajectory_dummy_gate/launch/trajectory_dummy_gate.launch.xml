@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="gate_input_trajectories" default="/planning/candidate/trajectories"/>
+  <arg name="gate_output_trajectories" default="/planning/trajectory_selector/concatenate/trajectories"/>
+  <arg name="override_topic" default="/planning/trajectory_selector/diffusion_planner_override"/>
+
+  <node pkg="autoware_trajectory_dummy_gate" exec="autoware_trajectory_dummy_gate_node" name="trajectory_dummy_gate_node" output="screen">
+    <remap from="~/input/trajectories" to="$(var gate_input_trajectories)"/>
+    <remap from="~/output/trajectories" to="$(var gate_output_trajectories)"/>
+    <remap from="~/input/override" to="$(var override_topic)"/>
+  </node>
+</launch>

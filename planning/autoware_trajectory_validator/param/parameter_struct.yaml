@@ -11,18 +11,6 @@ validator:
     description: List of filter names that run in which results are logged but do not affect trajectory feasibility.
     read_only: false
 
-  out_of_lane:
-    time:
-      type: double
-      default_value: 3.0
-      description: The time range to check
-      read_only: false
-    min_value:
-      type: double
-      default_value: 0.0
-      description: Minimum distance to lane boundary
-      read_only: false
-
   vehicle_constraint:
     max_speed:
       type: double
@@ -99,6 +87,22 @@ validator:
         default_value: 0.4
         description: Total ego braking delay for DRAC assessment
         read_only: false
+      ego_footprint_margin:
+        lateral:
+          type: double
+          default_value: 0.0
+          description: lateral margin added to both sides of the ego footprint for DRAC assessment
+          read_only: false
+        front:
+          type: double
+          default_value: 0.0
+          description: front margin added to the ego footprint for DRAC assessment
+          read_only: false
+        rear:
+          type: double
+          default_value: 0.0
+          description: rear margin added to the ego footprint for DRAC assessment
+          read_only: false
       warn_threshold:
         ego_acceleration:
           type: double
@@ -153,6 +157,22 @@ validator:
         default_value: 0.4
         description: Total ego braking delay for PET assessment
         read_only: false
+      ego_footprint_margin:
+        lateral:
+          type: double
+          default_value: 0.0
+          description: lateral margin added to both sides of the ego footprint for PET assessment
+          read_only: false
+        front:
+          type: double
+          default_value: 0.0
+          description: front margin added to the ego footprint for PET assessment
+          read_only: false
+        rear:
+          type: double
+          default_value: 0.0
+          description: rear margin added to the ego footprint for PET assessment
+          read_only: false
       ego_assumed_acceleration:
         type: double
         default_value: -5.0
@@ -211,6 +231,22 @@ validator:
         default_value: 0.4
         description: Total ego braking delay for RSS calculation
         read_only: false
+      ego_footprint_margin:
+        lateral:
+          type: double
+          default_value: 0.0
+          description: lateral margin added to both sides of the ego footprint for RSS assessment
+          read_only: false
+        front:
+          type: double
+          default_value: 0.0
+          description: front margin added to the ego footprint for RSS assessment
+          read_only: false
+        rear:
+          type: double
+          default_value: 0.0
+          description: rear margin added to the ego footprint for RSS assessment
+          read_only: false
       object_assumed_acceleration:
         type: double
         default_value: -1.0
@@ -248,6 +284,11 @@ validator:
       type: bool
       default_value: true
       description: when true, amber lights are handled like red lights
+      read_only: false
+    treat_unknown_light_as_red_light:
+      type: bool
+      default_value: false
+      description: when true, unknown lights are handled like red lights
       read_only: false
     stop_overshoot_margin:
       type: double

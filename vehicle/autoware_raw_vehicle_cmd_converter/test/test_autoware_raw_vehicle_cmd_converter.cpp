@@ -17,6 +17,7 @@
 #include "autoware_raw_vehicle_cmd_converter/brake_map.hpp"
 #include "autoware_raw_vehicle_cmd_converter/pid.hpp"
 #include "autoware_raw_vehicle_cmd_converter/steer_map.hpp"
+#include "autoware_raw_vehicle_cmd_converter/understeer_compensation.hpp"
 #include "autoware_raw_vehicle_cmd_converter/vgr.hpp"
 #include "gtest/gtest.h"
 
@@ -53,6 +54,7 @@ using autoware::raw_vehicle_cmd_converter::AccelMap;
 using autoware::raw_vehicle_cmd_converter::BrakeMap;
 using autoware::raw_vehicle_cmd_converter::PIDController;
 using autoware::raw_vehicle_cmd_converter::SteerMap;
+using autoware::raw_vehicle_cmd_converter::UndersteerCompensation;
 using autoware::raw_vehicle_cmd_converter::VGR;
 double epsilon = 1e-4;
 // may throw PackageNotFoundError exception for invalid package
@@ -372,4 +374,23 @@ TEST(VGRTests, zeroCoefficients)
   const double steer = vgr.calculateSteeringTireState(vel, steer_wheel);
   const double steer_wheel2 = steer * gear_ratio;
   EXPECT_NEAR(steer_wheel, steer_wheel2, epsilon);
+}
+
+TEST(UndersteerCompensationTests, ratioFormula)
+{
+  UndersteerCompensation us;
+  const double k_us = 0.020;
+  const double wheelbase = 4.76012;
+  us.setUndersteerParams(k_us, wheelbase);
+
+  // ratio = 1 + k_us * v^2 / L, so it is >= 1 and grows with speed.
+  const double vel = 10.0;
+  const double expected = 1.0 + k_us * vel * vel / wheelbase;
+  EXPECT_NEAR(us.calculateUndersteerRatio(vel), expected, epsilon);
+
+  // at standstill there is no understeer to compensate -> unity factor
+  EXPECT_NEAR(us.calculateUndersteerRatio(0.0), 1.0, epsilon);
+
+  // compensation is disables at negative velocities
+  EXPECT_NEAR(us.calculateUndersteerRatio(-1.0), 1.0, epsilon);
 }

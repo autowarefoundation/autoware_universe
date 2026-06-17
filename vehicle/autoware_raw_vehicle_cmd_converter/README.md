@@ -45,6 +45,22 @@ vgr_coef_c: 0.042
 When `convert_steer_cmd_method: "vgr"` is selected, the node receives the control command from the controller as the desired tire angle and calculates the desired steering angle to output.
 Also, when `convert_actuation_to_steering_status: true`, this node receives the `actuation_status` topic and calculates the steer tire angle from the `steer_wheel_angle` and publishes it.
 
+### Understeer Compensation
+
+At non-zero lateral acceleration the kinematic bicycle model underestimates the
+tire angle required to follow a curve, because the tires slip (understeer). Using
+a linear understeer model `δ_real = δ_Ackermann + K_us · a_y` and `a_y ≈ v² · δ / L`,
+the required tire angle is the commanded one scaled by a speed-dependent factor:
+
+$$
+\delta_{cmd} = \delta \times \left(1 + K_{us} \times \frac{v^2}{L}\right)
+$$
+
+where `K_us` is the understeer gradient (`understeer_gradient` [rad·s²/m]) and `L`
+is the wheelbase. Two methods apply this factor:
+
+`convert_steer_cmd_method: "understeer_compensation"` applies the understeer factor, leaving the output as a (compensated) tire angle `δ · (1 + K_us · v² / L)`. Use this when the tire-to-wheel gear ratio is handled elsewhere (e.g. by the vehicle firmware). Because the factor depends only on the vehicle speed, this method does **not** require the `actuation_status` topic. Since the factor inflates the tire angle, the output is clamped to `±max_steer_angle` [rad], taken from `vehicle_info` (the vehicle's physical max steer angle). Note that the `max_steer` / `min_steer` parameters only bound the `steer_map` output and do **not** apply to this method.
+
 ### Vehicle Adaptor
 
 **Under development**

@@ -6,14 +6,9 @@
     shadow_mode_filter_names:
       [
         "safety::UncrossableBoundaryDepartureFilter",
-        "safety::OutOfLaneFilter",
         "safety::VehicleConstraintFilter",
         "traffic_rule::TrafficLightFilter",
       ]
-
-    out_of_lane:
-      time: 2.0
-      min_value: 0.0
 
     collision_check:
       global_setting:
@@ -27,6 +22,10 @@
           constant_curvature: true
           diffusion_based: true
         ego_total_braking_delay: 0.4
+        ego_footprint_margin:
+          lateral: 0.0
+          front: 0.0
+          rear: 0.0
         warn_threshold:
           ego_acceleration: -2.0
         error_threshold:
@@ -40,6 +39,10 @@
           constant_curvature: true
           diffusion_based: true
         ego_total_braking_delay: 0.4
+        ego_footprint_margin:
+          lateral: 0.0
+          front: 0.0
+          rear: 0.0
         ego_assumed_acceleration: -4.0
         warn_threshold:
           ego_first_passing_time_gap: 1.0
@@ -53,6 +56,10 @@
           unknown: false
         stop_distance_margin: 2.0
         ego_total_braking_delay: 0.4
+        ego_footprint_margin:
+          lateral: 0.0
+          front: 0.0
+          rear: 0.0
         object_assumed_acceleration: -4.0
         error_threshold:
           ego_acceleration: -4.0

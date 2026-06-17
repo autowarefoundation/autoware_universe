@@ -12,6 +12,7 @@ ament_auto_add_library(actuation_map_converter SHARED
   src/pid.cpp
   src/vgr.cpp
   src/vgr_with_understeer_compensation.cpp
+  src/understeer_compensation.cpp
 )
 
 ament_auto_add_library(vehicle_adaptor SHARED

@@ -331,9 +331,15 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
   const PredictedObjects & target_objects, const ObjectDecelMap & object_decel_map,
   const double ego_decel, const double reaction_time, const double safety_margin,
-  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object)
+  const double stopped_vel_th, const double lookahead_horizon, PredictedObject & colliding_object,
+  const bool use_rss_check)
 {
   if (target_objects.objects.empty() || trajectory_points.size() < 2) return std::nullopt;
+
+  // If RSS check is disabled, get the nearest object collision by pure geometric overlap.
+  if (!use_rss_check) {
+    return get_nearest_object_collision(trajectory_points, target_objects, colliding_object);
+  }
 
   const auto ego_front_offset = vehicle_info.max_longitudinal_offset_m;
 
@@ -356,13 +362,14 @@ std::optional<CollisionPoint> get_nearest_object_collision(
   geometry_msgs::msg::Point nearest_collision_point;
   bool found_collision = false;
   auto curr_arc_length = 0.0;
-  auto last_p = trajectory_points.front().pose.position;
-  for (const auto & traj_p : trajectory_points) {
-    const auto t = rclcpp::Duration(traj_p.time_from_start).seconds();
-    if (t > lookahead_horizon) break;
-    curr_arc_length += autoware_utils::calc_distance2d(last_p, traj_p.pose.position);
-    const auto target_ego_vel = traj_p.longitudinal_velocity_mps;
-    for (const auto & object : target_objects.objects) {
+
+  for (const auto & object : target_objects.objects) {
+    auto last_p = trajectory_points.front().pose.position;
+    for (const auto & traj_p : trajectory_points) {
+      const auto t = rclcpp::Duration(traj_p.time_from_start).seconds();
+      if (t > lookahead_horizon) break;
+      curr_arc_length += autoware_utils::calc_distance2d(last_p, traj_p.pose.position);
+      const auto target_ego_vel = traj_p.longitudinal_velocity_mps;
       const auto obj_state = get_object_state_at_time(trajectory_points, object, t);
       if (is_safe(object, obj_state.arc_length, obj_state.lon_vel, curr_arc_length, target_ego_vel))
         continue;
@@ -372,8 +379,9 @@ std::optional<CollisionPoint> get_nearest_object_collision(
         colliding_object = object;
         nearest_collision_point = obj_state.nearest_point;
       }
+      last_p = traj_p.pose.position;
+      break;
     }
-    last_p = traj_p.pose.position;
   }
 
   if (!found_collision) return std::nullopt;

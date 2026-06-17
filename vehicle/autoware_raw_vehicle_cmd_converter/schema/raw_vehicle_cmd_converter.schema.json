@@ -159,7 +159,12 @@
           "type": "string",
           "description": "method for converting steer command",
           "default": "vgr",
-          "enum": ["vgr", "vgr_with_understeer_compensation", "steer_map"]
+          "enum": [
+            "vgr",
+            "vgr_with_understeer_compensation",
+            "understeer_compensation",
+            "steer_map"
+          ]
         },
         "vgr_coef_a": {
           "type": "number",
