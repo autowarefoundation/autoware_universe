@@ -1,5 +1,5 @@
 <launch>
-  <arg name="container_type" default="component_container_mt"/>
+  <arg name="container_type" default="component_container"/>
   <let name="use_agnocast" value="$(env ENABLE_AGNOCAST 0)"/>
   <let name="container_package" value="rclcpp_components" unless="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
   <let name="container_package" value="agnocast_components" if="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
