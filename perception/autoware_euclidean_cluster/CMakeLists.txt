@@ -89,6 +89,15 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(test_voxel_grid_based_euclidean_cluster_fusion
     test/test_voxel_grid_based_euclidean_cluster.cpp
   )
+  ament_auto_add_gtest(test_label_based_euclidean_cluster_node
+    test/test_label_based_euclidean_cluster_node.cpp
+  )
+  target_include_directories(test_label_based_euclidean_cluster_node PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+  )
+  target_link_libraries(test_label_based_euclidean_cluster_node
+    ${PROJECT_NAME}_label_based_node_core
+  )
 endif()
 
 autoware_ament_auto_package(INSTALL_TO_SHARE
