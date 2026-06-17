@@ -274,8 +274,9 @@ ObjectProcessingResult process_objects_batch(
   // process end - end measurement time after processing
   debugger.endMeasurementTime(current_time);
 
-  // Publish immediately when exporting at the detection time; otherwise the timer drives publishing
-  result.should_publish = (params.delay_compensation == DelayReference::DETECTION);
+  // Publish immediately when the timer is disabled; otherwise the periodic timer drives publishing.
+  // This is independent of delay_compensation, which only selects the export reference time.
+  result.should_publish = !params.publish_on_timer;
 
   return result;
 }

@@ -155,10 +155,15 @@
           "description": "Backend used to obtain the time-varying ego pose: 'tf' looks it up from the TF tree (legacy), 'odometry' interpolates it from the subscribed ~/input/odometry buffer (TF fallback on miss).",
           "default": "tf"
         },
+        "publish_on_timer": {
+          "type": "boolean",
+          "description": "Publish trigger, independent of delay_compensation. false publishes tracks on measurement; true publishes them from the periodic timer at publish_rate.",
+          "default": false
+        },
         "delay_compensation": {
           "type": "string",
           "enum": ["detection", "now", "latest_odometry"],
-          "description": "Object-export reference time the published tracks are predicted to. 'detection' publishes on measurement with no timer (no compensation); 'now' uses a publish timer to extrapolate to the current time; 'latest_odometry' extrapolates to the newest buffered odometry stamp.",
+          "description": "Object-export reference time the published tracks are predicted to (independent of publish_on_timer). 'detection' uses the latest detection/update stamp (no forward compensation); 'now' extrapolates to the current time; 'latest_odometry' extrapolates to the newest buffered odometry stamp.",
           "default": "detection"
         },
         "tracker_configs": {
@@ -243,6 +248,7 @@
         "ego_frame_id",
         "consider_odometry_uncertainty",
         "ego_source",
+        "publish_on_timer",
         "delay_compensation",
         "tracker_configs",
         "min_known_object_removal_iou",

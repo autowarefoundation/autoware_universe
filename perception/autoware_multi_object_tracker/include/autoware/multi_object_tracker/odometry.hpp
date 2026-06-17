@@ -43,7 +43,7 @@ enum class EgoSource {
 
 /// Reference time the exported objects are predicted/published to (object-export side).
 enum class DelayReference {
-  DETECTION,        ///< the latest measurement/detection stamp (publish on measurement, no timer)
+  DETECTION,        ///< the latest detection/update stamp (no forward compensation)
   NOW,              ///< the current wall-clock time
   LATEST_ODOMETRY,  ///< the stamp of the newest buffered odometry sample
 };

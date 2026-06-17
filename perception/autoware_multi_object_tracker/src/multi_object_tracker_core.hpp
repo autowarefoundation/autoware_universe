@@ -53,6 +53,8 @@ struct MultiObjectTrackerParameters
 
   // ego pose sourcing
   EgoSource ego_source;
+  // publish-trigger side: false publishes on measurement, true publishes from the periodic timer
+  bool publish_on_timer;
   // object-export side: which timestamp the published tracks are predicted to
   DelayReference delay_compensation;
 

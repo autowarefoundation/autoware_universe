@@ -4,13 +4,18 @@
     publish_rate: 10.0
     world_frame_id: map
     ego_frame_id: base_link
-    consider_odometry_uncertainty: false
 
     # ego pose source: "tf" (look up from TF tree) or "odometry" (interpolate from ~/input/odometry)
-    ego_source: tf
+    # publish-trigger side: false publishes on measurement, true publishes from the periodic timer.
     # object-export side: timestamp the published tracks are predicted to.
-    # "detection" (publish on measurement, no timer) | "now" | "latest_odometry"
+    publish_rate: 10.0
+    publish_on_timer: true
+
+    # "detection" (latest detection/update time) | "now" | "latest_odometry"
+    ego_source: odometry
     delay_compensation: detection
+
+    consider_odometry_uncertainty: false
 
     # Per-tracker-type configuration
     tracker_configs:
