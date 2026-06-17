@@ -269,8 +269,8 @@ void PolygonTracker::suppressUncertainVelocity(types::DynamicObject & object) co
   const double sxx = object.twist_covariance[XYZRPY_COV_IDX::X_X];
   const double syy = object.twist_covariance[XYZRPY_COV_IDX::Y_Y];
   const double sxy = object.twist_covariance[XYZRPY_COV_IDX::X_Y];
-  const double dir_stddev =
-    std::sqrt((vx * vx * sxx + 2.0 * vx * vy * sxy + vy * vy * syy) / (speed * speed));
+  const double dir_var = (vx * vx * sxx + 2.0 * vx * vy * sxy + vy * vy * syy) / (speed * speed);
+  const double dir_stddev = std::sqrt(std::max(0.0, dir_var));
 
   const double vel_limit = dir_stddev - vel_cov_buffer;
   if (vel_limit <= 0.0) {
