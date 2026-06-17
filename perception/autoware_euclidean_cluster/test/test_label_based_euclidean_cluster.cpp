@@ -116,23 +116,19 @@ protected:
 
     // Write data
     for (size_t i = 0; i < x.size(); ++i) {
-      float * x_ptr = reinterpret_cast<float *>(&msg.data[i * msg.point_step + 0]);
-      float * y_ptr = reinterpret_cast<float *>(&msg.data[i * msg.point_step + 4]);
-      float * z_ptr = reinterpret_cast<float *>(&msg.data[i * msg.point_step + 8]);
-      *x_ptr = x[i];
-      *y_ptr = y[i];
-      *z_ptr = z[i];
+      const size_t base = i * msg.point_step;
+      std::memcpy(&msg.data[base + 0], &x[i], sizeof(float));
+      std::memcpy(&msg.data[base + 4], &y[i], sizeof(float));
+      std::memcpy(&msg.data[base + 8], &z[i], sizeof(float));
 
-      offset = 12;
+      uint32_t local_offset = 12;
       if (!class_ids.empty()) {
-        uint8_t * class_ptr = reinterpret_cast<uint8_t *>(&msg.data[i * msg.point_step + offset]);
-        *class_ptr = class_ids[i];
-        offset += 1;
+        msg.data[base + local_offset] = class_ids[i];
+        local_offset += 1;
       }
 
       if (!probabilities.empty()) {
-        float * prob_ptr = reinterpret_cast<float *>(&msg.data[i * msg.point_step + offset]);
-        *prob_ptr = probabilities[i];
+        std::memcpy(&msg.data[base + local_offset], &probabilities[i], sizeof(float));
       }
     }
 
@@ -240,7 +236,8 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsAreGroupedByLabel)
     }
   }
   // At least one of each label should be present
-  EXPECT_TRUE(has_car || has_ped);
+  EXPECT_TRUE(has_car);
+  EXPECT_TRUE(has_ped);
 }
 
 // ============================================================================
