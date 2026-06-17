@@ -6,7 +6,7 @@
       backend: "tensorrt" # "tensorrt" "ort_cpu" "ort_cuda" "ort_tensorrt"
       precision: "fp32"
       use_cuda_graph: false
-      args_path: $(var data_path)/diffusion_planner/v5.0/args.json
+      args_path: $(var data_path)/diffusion_planner/v5.0/diffusion_planner.param.json
       single_step_model:
         onnx_model_path: $(var data_path)/diffusion_planner/v5.0/diffusion_planner.onnx
       multi_step_model:

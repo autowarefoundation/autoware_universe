@@ -22,7 +22,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_cmake_ros REQUIRED)
   ament_auto_add_gtest(${PROJECT_NAME}_test

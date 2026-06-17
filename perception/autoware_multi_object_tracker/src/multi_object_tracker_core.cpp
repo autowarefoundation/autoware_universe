@@ -14,9 +14,7 @@
 
 #include "multi_object_tracker_core.hpp"
 
-#include <tf2_ros/create_timer_interface.hpp>
-
-#include <tf2_ros/create_timer_ros.h>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 
 #include <functional>
 #include <memory>
@@ -36,14 +34,10 @@ MultiObjectTrackerInternalState::MultiObjectTrackerInternalState()
 }
 
 void MultiObjectTrackerInternalState::init(
-  const MultiObjectTrackerParameters & params, rclcpp::Node & node,
+  const MultiObjectTrackerParameters & params, autoware::agnocast_wrapper::Node & node,
   const std::function<void(size_t)> & trigger_function)
 {
-  tf_buffer = std::make_shared<tf2_ros::Buffer>(node.get_clock());
-  auto cti = std::make_shared<tf2_ros::CreateTimerROS>(
-    node.get_node_base_interface(), node.get_node_timers_interface());
-  tf_buffer->setCreateTimerInterface(cti);
-
+  auto tf_buffer = std::make_shared<autoware::agnocast_wrapper::Buffer>(node.get_clock());
   odometry = std::make_shared<Odometry>(
     node.get_logger(), node.get_clock(), tf_buffer, params.world_frame_id, params.ego_frame_id,
     params.enable_odometry_uncertainty);
@@ -55,8 +49,9 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize processor
   processor = std::make_unique<TrackerProcessor>(
-    params.creation_config, params.association_config, params.tracker_overlap_manager_config,
-    params.input_channels_config, node.get_logger(), node.get_clock());
+    params.tracker_configs, params.creation_config, params.association_config,
+    params.tracker_overlap_manager_config, params.input_channels_config, node.get_logger(),
+    node.get_clock());
 
   last_publish_time = node.now();
   last_updated_time = node.now();
@@ -174,7 +169,7 @@ std::optional<autoware_perception_msgs::msg::DetectedObjects> get_merged_objects
 //// Low-level processing functions
 MeasurementProcessingResult process_measurement(
   const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg,
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg,
   const rclcpp::Time & current_time, MultiObjectTrackerInternalState & state,
   TrackerDebugger & debugger)
 {
