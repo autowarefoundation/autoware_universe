@@ -2,10 +2,10 @@
   ros__parameters:
     plugins_path: $(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so
     model:
-      type: "single_step"
+      type: "multi_step"
       backend: "tensorrt" # "tensorrt" "ort_cpu" "ort_cuda" "ort_tensorrt"
       precision: "fp32"
-      use_cuda_graph: true
+      use_cuda_graph: false
       args_path: $(var data_path)/diffusion_planner/v5.0/args.json
       single_step_model:
         onnx_model_path: $(var data_path)/diffusion_planner/v5.0/diffusion_planner.onnx
