@@ -15,6 +15,7 @@
 #ifndef RADAR_OBJECTS_ADAPTER_HPP_
 #define RADAR_OBJECTS_ADAPTER_HPP_
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -66,8 +67,8 @@ private:
 
   rclcpp::Subscription<autoware_sensing_msgs::msg::RadarObjects>::SharedPtr radar_objects_sub_;
   rclcpp::Subscription<autoware_sensing_msgs::msg::RadarInfo>::SharedPtr radar_info_sub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr detections_pub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracks_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) detections_pub_;
+  AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::TrackedObjects) tracks_pub_;
 
   std::unordered_map<std::string, autoware_sensing_msgs::msg::RadarFieldInfo> field_info_map_;
 

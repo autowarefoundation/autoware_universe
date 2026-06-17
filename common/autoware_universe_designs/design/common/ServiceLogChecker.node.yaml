@@ -1,0 +1,36 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: ServiceLogChecker.node
+
+package:
+  name: autoware_component_interface_tools
+  provider: autoware
+
+launch:
+  plugin: autoware::component_interface_tools::ServiceLogChecker
+  executable: service_log_checker_node
+
+# interfaces
+subscribers:
+  - name: service_log
+    message_type: tier4_system_msgs/msg/ServiceLog
+    global: /service_log
+
+publishers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: check_service_response_status
+    trigger_conditions:
+      - on_input: service_log
+    outcomes:
+      - to_output: diagnostics
