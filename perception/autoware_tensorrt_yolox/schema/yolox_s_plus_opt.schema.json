@@ -74,11 +74,6 @@
           "description": "Maximum clipping value for layer output. Valid only for int8 precision.",
           "default": 6.0
         },
-        "preprocess_on_gpu": {
-          "type": "boolean",
-          "description": "Enable preprocessing on GPU.",
-          "default": true
-        },
         "gpu_id": {
           "type": "integer",
           "description": "GPU ID for selecting CUDA device.",
@@ -104,7 +99,6 @@
         "quantize_last_layer",
         "profile_per_layer",
         "clip_value",
-        "preprocess_on_gpu",
         "gpu_id",
         "calibration_image_list_path"
       ],
