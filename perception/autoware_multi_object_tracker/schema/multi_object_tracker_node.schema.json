@@ -3,75 +3,6 @@
   "title": "Parameters for Multi Object Tracker Node",
   "type": "object",
   "definitions": {
-    "pruning_generalized_iou_thresholds": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "unknown": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "car": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "truck": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "bus": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "trailer": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "motorcycle": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "bicycle": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "pedestrian": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "animal": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        },
-        "hazard": {
-          "type": "number",
-          "minimum": -1.0,
-          "maximum": 1.0
-        }
-      },
-      "required": [
-        "unknown",
-        "car",
-        "truck",
-        "bus",
-        "trailer",
-        "motorcycle",
-        "bicycle",
-        "pedestrian",
-        "animal",
-        "hazard"
-      ],
-      "description": "Generalized IoU threshold for each tracked class."
-    },
     "pruning_distance_thresholds": {
       "type": "object",
       "additionalProperties": false,
@@ -131,6 +62,70 @@
       ],
       "description": "Overlap distance threshold for each tracked class."
     },
+    "enable_motion_output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unknown": { "type": "boolean" },
+        "car": { "type": "boolean" },
+        "truck": { "type": "boolean" },
+        "bus": { "type": "boolean" },
+        "trailer": { "type": "boolean" },
+        "motorcycle": { "type": "boolean" },
+        "bicycle": { "type": "boolean" },
+        "pedestrian": { "type": "boolean" },
+        "animal": { "type": "boolean" },
+        "hazard": { "type": "boolean" }
+      },
+      "required": [
+        "unknown",
+        "car",
+        "truck",
+        "bus",
+        "trailer",
+        "motorcycle",
+        "bicycle",
+        "pedestrian",
+        "animal",
+        "hazard"
+      ],
+      "description": "Whether to publish estimated velocity on polygon tracks, per classification."
+    },
+    "tracker_configs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-tracker-type configuration: behavior knobs scoped to a single tracker type.",
+      "properties": {
+        "polygon_tracker": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enable_velocity_estimation": {
+              "type": "boolean",
+              "description": "Estimate velocity for polygon tracks.",
+              "default": true
+            },
+            "enable_motion_output": {
+              "$ref": "#/definitions/enable_motion_output"
+            }
+          },
+          "required": ["enable_velocity_estimation", "enable_motion_output"]
+        },
+        "static_tracker": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "convert_polygon_to_bbox": {
+              "type": "boolean",
+              "description": "Convert POLYGON shape to BOUNDING_BOX at publish time.",
+              "default": false
+            }
+          },
+          "required": ["convert_polygon_to_bbox"]
+        }
+      },
+      "required": ["polygon_tracker", "static_tracker"]
+    },
     "multi_object_tracker_node": {
       "type": "object",
       "properties": {
@@ -159,15 +154,8 @@
           "description": "If True, consider odometry uncertainty in tracking.",
           "default": false
         },
-        "enable_unknown_object_velocity_estimation": {
-          "type": "boolean",
-          "description": "If True, enable velocity estimation for unknown objects.",
-          "default": true
-        },
-        "enable_unknown_object_motion_output": {
-          "type": "boolean",
-          "description": "If True, export unknown object velocity.",
-          "default": false
+        "tracker_configs": {
+          "$ref": "#/definitions/tracker_configs"
         },
         "min_known_object_removal_iou": {
           "type": "number",
@@ -179,20 +167,12 @@
           "description": "Minimum IOU between associated objects with unknown label to remove unknown tracker.",
           "default": 0.001
         },
-        "pruning_generalized_iou_thresholds": {
-          "$ref": "#/definitions/pruning_generalized_iou_thresholds",
-          "default": {
-            "unknown": 0.1,
-            "car": 0.1,
-            "truck": 0.1,
-            "bus": 0.1,
-            "trailer": 0.1,
-            "motorcycle": 0.1,
-            "bicycle": 0.1,
-            "pedestrian": 0.1,
-            "animal": 0.1,
-            "hazard": 0.1
-          }
+        "pruning_generalized_iou_threshold": {
+          "type": "number",
+          "minimum": -1.0,
+          "maximum": 1.0,
+          "description": "Generalized IoU threshold applied to all tracked classes.",
+          "default": 0.1
         },
         "pruning_distance_thresholds": {
           "$ref": "#/definitions/pruning_distance_thresholds",
@@ -208,21 +188,6 @@
             "animal": 2.0,
             "hazard": 2.0
           }
-        },
-        "pruning_static_object_speed": {
-          "type": "number",
-          "description": "Speed threshold to consider an object as static. Below this speed, nearby unknown objects should always be detected.",
-          "default": 1.38
-        },
-        "pruning_moving_object_speed": {
-          "type": "number",
-          "description": "Speed threshold to consider an object as moving. Above this speed, nearby unknown objects should always be merged to avoid false unknown detections.",
-          "default": 5.5
-        },
-        "pruning_static_iou_threshold": {
-          "type": "number",
-          "description": "Generalized IoU threshold for a static object.",
-          "default": 0.0
         },
         "publish_processing_time": {
           "type": "boolean",
@@ -271,15 +236,11 @@
         "ego_frame_id",
         "enable_delay_compensation",
         "consider_odometry_uncertainty",
-        "enable_unknown_object_velocity_estimation",
-        "enable_unknown_object_motion_output",
+        "tracker_configs",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
-        "pruning_generalized_iou_thresholds",
+        "pruning_generalized_iou_threshold",
         "pruning_distance_thresholds",
-        "pruning_static_object_speed",
-        "pruning_moving_object_speed",
-        "pruning_static_iou_threshold",
         "publish_processing_time",
         "publish_processing_time_detail",
         "publish_tentative_objects",
