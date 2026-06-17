@@ -75,7 +75,7 @@ CudaUniquePtr<T> make_unique(cudaStream_t stream)
   if (detail::is_default_stream(stream)) {
     throw std::invalid_argument("Stream cannot be null or legacy.");
   }
-  
+
   T * p{nullptr};
   CHECK_CUDA_ERROR(::cudaMallocAsync(reinterpret_cast<void **>(&p), sizeof(T), stream));
   return CudaUniquePtr<T>{p, CudaDeleter{stream}};
