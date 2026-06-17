@@ -96,7 +96,8 @@ PathWithLaneId buildCenterlinePathForLaneIds(
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler);
 
 /**
- * @brief Decide whether to prepend prefix lanes, use tagged centerline only, or append suffix lanes.
+ * @brief Decide whether to prepend prefix lanes, use tagged centerline only, or append suffix
+ * lanes.
  */
 ReferencePathAssemblyPhase determineReferencePathAssemblyPhase(
   const std::shared_ptr<autoware::route_handler::RouteHandler> & route_handler,

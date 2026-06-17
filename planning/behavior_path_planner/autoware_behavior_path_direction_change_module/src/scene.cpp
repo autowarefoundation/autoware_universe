@@ -171,8 +171,7 @@ bool DirectionChangeModule::buildRouteContextIfNeeded() const
     return false;
   }
 
-  const auto route_context =
-    buildDirectionChangeRouteContext(planner_data_->route_handler);
+  const auto route_context = buildDirectionChangeRouteContext(planner_data_->route_handler);
   if (!route_context) {
     return false;
   }
@@ -198,8 +197,7 @@ void DirectionChangeModule::initializeCuspPointsFromTaggedCenterline()
   }
 
   cusp_points_ = detectCuspPointsOnPathWithIndices(
-    route_context_.tagged_lanelet_centerline_path,
-    parameters_->cusp_detection_angle_threshold_deg);
+    route_context_.tagged_lanelet_centerline_path, parameters_->cusp_detection_angle_threshold_deg);
 
   if (parameters_->print_debug_info) {
     for (size_t i = 0; i < cusp_points_.size(); ++i) {
@@ -291,8 +289,9 @@ bool DirectionChangeModule::allCuspsVisited() const
 
 bool DirectionChangeModule::isManeuverCompletedForCurrentRoute() const
 {
-  if (!persistent_state_ || !persistent_state_->maneuver_completed || !planner_data_ ||
-      !planner_data_->route_handler) {
+  if (
+    !persistent_state_ || !persistent_state_->maneuver_completed || !planner_data_ ||
+    !planner_data_->route_handler) {
     return false;
   }
 
@@ -343,10 +342,10 @@ void DirectionChangeModule::updateManeuverStateMachine(const PathWithLaneId & ma
   if (allCuspsVisited()) {
     cusp_stopped_since_.reset();
 
-    if (route_context_.is_valid &&
-        isDirectionChangeManeuverFinished(
-          ego_pose, planner_data_->route_handler, route_context_, parameters_->th_arrived_distance,
-          true)) {
+    if (
+      route_context_.is_valid && isDirectionChangeManeuverFinished(
+                                   ego_pose, planner_data_->route_handler, route_context_,
+                                   parameters_->th_arrived_distance, true)) {
       if (current_segment_state_ != PathSegmentState::COMPLETED) {
         current_segment_state_ = PathSegmentState::COMPLETED;
         RCLCPP_INFO(
@@ -471,8 +470,9 @@ bool DirectionChangeModule::isReadyForNextRequest(
 
 void DirectionChangeModule::updateData()
 {
-  if (persistent_state_ && persistent_state_->maneuver_completed && planner_data_ &&
-      planner_data_->route_handler) {
+  if (
+    persistent_state_ && persistent_state_->maneuver_completed && planner_data_ &&
+    planner_data_->route_handler) {
     try {
       if (planner_data_->route_handler->getRouteUuid() != persistent_state_->completed_route_uuid) {
         persistent_state_->maneuver_completed = false;
@@ -678,8 +678,8 @@ BehaviorModuleOutput DirectionChangeModule::plan()
     if (planner_data_->route_handler) {
       try {
         const auto goal_pose = planner_data_->route_handler->getGoalPose();
-        final_segment = slicePathToGoalFromCuspIndex(
-          tagged_centerline_path, start_after_cusp_index, goal_pose);
+        final_segment =
+          slicePathToGoalFromCuspIndex(tagged_centerline_path, start_after_cusp_index, goal_pose);
 
         if (!is_ego_driving_forward_wrt_lane_ && parameters_->enable_goal_lateral_shift) {
           if (
@@ -717,8 +717,8 @@ BehaviorModuleOutput DirectionChangeModule::plan()
         "slicePathBetweenCuspIndices returned empty path; falling back to tagged centerline tail");
       const auto ego_idx_opt = findNearestIndex(tagged_centerline_path.points, ego_pose);
       const size_t ego_idx = ego_idx_opt ? *ego_idx_opt : 0;
-      const size_t end_idx = std::min(
-        next_cusp->tagged_centerline_index + 1, tagged_centerline_path.points.size());
+      const size_t end_idx =
+        std::min(next_cusp->tagged_centerline_index + 1, tagged_centerline_path.points.size());
       const size_t start_idx = std::min(ego_idx, end_idx > 0 ? end_idx - 1 : 0);
       output.path.header = tagged_centerline_path.header;
       if (end_idx > start_idx) {
