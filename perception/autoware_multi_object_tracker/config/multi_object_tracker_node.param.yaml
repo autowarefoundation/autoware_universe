@@ -4,8 +4,13 @@
     publish_rate: 10.0
     world_frame_id: map
     ego_frame_id: base_link
-    enable_delay_compensation: false
     consider_odometry_uncertainty: false
+
+    # ego pose source: "tf" (look up from TF tree) or "odometry" (interpolate from ~/input/odometry)
+    ego_source: tf
+    # object-export side: timestamp the published tracks are predicted to.
+    # "detection" (publish on measurement, no timer) | "now" | "latest_odometry"
+    delay_compensation: detection
 
     # Per-tracker-type configuration
     tracker_configs:

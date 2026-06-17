@@ -144,15 +144,22 @@
           "description": "Vehicle's ego frame.",
           "default": "base_link"
         },
-        "enable_delay_compensation": {
-          "type": "boolean",
-          "description": "If True, tracker uses timers to schedule publishers and uses prediction step to extrapolate object state at desired timestamp.",
-          "default": false
-        },
         "consider_odometry_uncertainty": {
           "type": "boolean",
           "description": "If True, consider odometry uncertainty in tracking.",
           "default": false
+        },
+        "ego_source": {
+          "type": "string",
+          "enum": ["tf", "odometry"],
+          "description": "Backend used to obtain the time-varying ego pose: 'tf' looks it up from the TF tree (legacy), 'odometry' interpolates it from the subscribed ~/input/odometry buffer (TF fallback on miss).",
+          "default": "tf"
+        },
+        "delay_compensation": {
+          "type": "string",
+          "enum": ["detection", "now", "latest_odometry"],
+          "description": "Object-export reference time the published tracks are predicted to. 'detection' publishes on measurement with no timer (no compensation); 'now' uses a publish timer to extrapolate to the current time; 'latest_odometry' extrapolates to the newest buffered odometry stamp.",
+          "default": "detection"
         },
         "tracker_configs": {
           "$ref": "#/definitions/tracker_configs"
@@ -234,8 +241,9 @@
         "publish_rate",
         "world_frame_id",
         "ego_frame_id",
-        "enable_delay_compensation",
         "consider_odometry_uncertainty",
+        "ego_source",
+        "delay_compensation",
         "tracker_configs",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",

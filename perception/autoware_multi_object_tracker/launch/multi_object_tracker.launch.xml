@@ -14,6 +14,7 @@
   <arg name="input/detection10/objects" default="input/objects10"/>
   <arg name="input/detection11/objects" default="input/objects11"/>
   <arg name="input/detection12/objects" default="input/objects12"/>
+  <arg name="input/odometry" default="/localization/kinematic_state"/>
   <arg name="output/objects" default="objects"/>
   <arg name="output/merged_objects" default="merged_objects"/>
 
@@ -48,6 +49,7 @@
     <remap from="~/input/detection10/objects" to="$(var input/detection10/objects)"/>
     <remap from="~/input/detection11/objects" to="$(var input/detection11/objects)"/>
     <remap from="~/input/detection12/objects" to="$(var input/detection12/objects)"/>
+    <remap from="~/input/odometry" to="$(var input/odometry)"/>
     <remap from="~/output/objects" to="$(var output/objects)"/>
     <remap from="~/output/merged_objects" to="$(var output/merged_objects)"/>
     <param name="input/detection01/channel" value="$(var input/detection01/channel)"/>

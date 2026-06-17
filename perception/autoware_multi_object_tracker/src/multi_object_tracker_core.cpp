@@ -40,7 +40,7 @@ void MultiObjectTrackerInternalState::init(
   auto tf_buffer = std::make_shared<autoware::agnocast_wrapper::Buffer>(node.get_clock());
   odometry = std::make_shared<Odometry>(
     node.get_logger(), node.get_clock(), tf_buffer, params.world_frame_id, params.ego_frame_id,
-    params.enable_odometry_uncertainty);
+    params.enable_odometry_uncertainty, params.ego_source);
 
   // Initialize input manager
   input_manager = std::make_unique<InputManager>(odometry, node.get_logger(), node.get_clock());
@@ -274,8 +274,8 @@ ObjectProcessingResult process_objects_batch(
   // process end - end measurement time after processing
   debugger.endMeasurementTime(current_time);
 
-  // Publish immediately if delay compensation is disabled
-  result.should_publish = !params.enable_delay_compensation;
+  // Publish immediately when exporting at the detection time; otherwise the timer drives publishing
+  result.should_publish = (params.delay_compensation == DelayReference::DETECTION);
 
   return result;
 }
@@ -288,8 +288,18 @@ PublishingData prepare_publishing_data(
 
   const auto & last_tracker_time = state.last_tracker_time;
 
-  // Calculate object_time based on delay compensation setting
-  result.object_time = params.enable_delay_compensation ? current_time : last_tracker_time;
+  // Calculate object_time based on the export-time reference
+  switch (params.delay_compensation) {
+    case DelayReference::DETECTION:
+      result.object_time = last_tracker_time;
+      break;
+    case DelayReference::NOW:
+      result.object_time = current_time;
+      break;
+    case DelayReference::LATEST_ODOMETRY:
+      result.object_time = state.odometry->getLatestOdometryTime().value_or(current_time);
+      break;
+  }
 
   /// Tracker pruning
   state.processor->prune(last_tracker_time);
