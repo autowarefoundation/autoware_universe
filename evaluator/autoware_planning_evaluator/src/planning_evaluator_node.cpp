@@ -90,6 +90,12 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
   metrics_accumulator_.planning_factor_accumulator.parameters.abnormal_deceleration_threshold_mps2 =
     declare_parameter<double>("stop_decision.abnormal_deceleration_threshold_mps2");
 
+  const auto initial_span_duration_s = declare_parameter<double>("initial_span_duration_s");
+  metrics_accumulator_.planning_factor_accumulator.parameters.initial_span_duration_s =
+    initial_span_duration_s;
+  metrics_accumulator_.trajectory_validation_accumulator.parameters.initial_span_duration_s =
+    initial_span_duration_s;
+
   metrics_accumulator_.steer_accumulator.parameters.window_duration_s =
     declare_parameter<double>("steer_change_count.window_duration_s");
   metrics_accumulator_.steer_accumulator.parameters.steer_rate_margin =

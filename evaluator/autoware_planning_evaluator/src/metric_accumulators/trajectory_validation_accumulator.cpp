@@ -47,7 +47,7 @@ bool isMetricScopeUnderGenerator(const std::string & scope, const std::string & 
 }  // namespace
 
 void TrajectoryValidationAccumulator::ErrorSpanStats::update(
-  const bool is_error, const double current_time_s)
+  const bool is_error, const double current_time_s, const double initial_span_duration_s)
 {
   double dt = 0.0;
   if (last_update_time_s_.has_value()) {
@@ -62,7 +62,7 @@ void TrajectoryValidationAccumulator::ErrorSpanStats::update(
     if (!in_error_) {
       in_error_ = true;
       error_count++;
-      current_error_duration_s = 0.0;
+      current_error_duration_s = initial_span_duration_s;
     } else {
       current_error_duration_s += dt;
     }
@@ -99,8 +99,9 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
       static_cast<double>(stamp.sec) + static_cast<double>(stamp.nanosec) * 1e-9;
 
     const bool warn_as_err = parameters.count_warn_as_error;
+    const double initial_span_duration_s = parameters.initial_span_duration_s;
     const bool traj_err = levelIndicatesError(report.level, warn_as_err);
-    stats_by_scope_[gen].update(traj_err, report_time_s);
+    stats_by_scope_[gen].update(traj_err, report_time_s, initial_span_duration_s);
 
     // Rows in this report (last row wins if the same scope appears more than once).
     std::unordered_map<std::string, bool> present_error_by_scope;
@@ -113,7 +114,7 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
     }
 
     for (const auto & [scope, m_err] : present_error_by_scope) {
-      stats_by_scope_[scope].update(m_err, report_time_s);
+      stats_by_scope_[scope].update(m_err, report_time_s, initial_span_duration_s);
     }
 
     for (const auto & entry : stats_by_scope_) {
@@ -124,7 +125,7 @@ void TrajectoryValidationAccumulator::update(const ValidationReportArray & msg)
       if (present_error_by_scope.count(scope) != 0) {
         continue;
       }
-      stats_by_scope_[scope].update(false, report_time_s);
+      stats_by_scope_[scope].update(false, report_time_s, initial_span_duration_s);
     }
   }
 }

@@ -11,7 +11,7 @@
   <arg name="input/route_topic" default="/planning/mission_planning/route"/>
   <arg name="input/turn_indicators_status" default="/vehicle/status/turn_indicators_status"/>
   <arg name="input/steering_status" default="/vehicle/status/steering_status"/>
-  <arg name="input/validation_reports" default="/planning/trajectory_selector/trajectory_validator_node/debug/validation_reports"/>
+  <arg name="input/validation_reports" default="/planning/trajectory_selector/trajectory_selector_node/debug/validator/validation_reports"/>
 
   <!-- planning evaluator -->
   <group>
