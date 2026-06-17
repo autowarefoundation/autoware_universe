@@ -28,25 +28,73 @@
 
 namespace autoware::cuda_utils
 {
+namespace detail
+{
+inline bool is_default_stream(cudaStream_t stream)
+{
+  return stream == nullptr || stream == cudaStreamLegacy;
+}
+}  // namespace detail
+
 struct CudaDeleter
 {
-  void operator()(void * p) const { CHECK_CUDA_ERROR(::cudaFree(p)); }
+  void operator()(void * p) const
+  {
+    if (!p) {
+      return;
+    }
+    if (stream_ != nullptr) {
+      CHECK_CUDA_ERROR(::cudaFreeAsync(p, stream_));
+    } else {
+      CHECK_CUDA_ERROR(::cudaFree(p));
+    }
+  }
+
+  cudaStream_t stream_{nullptr};
 };
 template <typename T>
 using CudaUniquePtr = std::unique_ptr<T, CudaDeleter>;
 
 template <typename T>
 typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtr<T>> make_unique(
+  const std::size_t n, cudaStream_t stream)
+{
+  if (detail::is_default_stream(stream)) {
+    throw std::invalid_argument("Stream cannot be null or legacy.");
+  }
+
+  using U = typename std::remove_extent_t<T>;
+  U * p{nullptr};
+  CHECK_CUDA_ERROR(::cudaMallocAsync(reinterpret_cast<void **>(&p), sizeof(U) * n, stream));
+  return CudaUniquePtr<T>{p, CudaDeleter{stream}};
+}
+
+template <typename T>
+CudaUniquePtr<T> make_unique(cudaStream_t stream)
+{
+  if (detail::is_default_stream(stream)) {
+    throw std::invalid_argument("Stream cannot be null or legacy.");
+  }
+  
+  T * p{nullptr};
+  CHECK_CUDA_ERROR(::cudaMallocAsync(reinterpret_cast<void **>(&p), sizeof(T), stream));
+  return CudaUniquePtr<T>{p, CudaDeleter{stream}};
+}
+
+template <typename T>
+[[deprecated("Use make_unique<T[]>(n, cudaStream_t) for stream-ordered allocation")]]
+typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtr<T>> make_unique(
   const std::size_t n)
 {
   using U = typename std::remove_extent_t<T>;
-  U * p;
+  U * p{nullptr};
   CHECK_CUDA_ERROR(::cudaMalloc(reinterpret_cast<void **>(&p), sizeof(U) * n));
   return CudaUniquePtr<T>{p};
 }
 
 template <typename T>
-CudaUniquePtr<T> make_unique()
+[[deprecated("Use make_unique<T>(cudaStream_t) for stream-ordered allocation")]] CudaUniquePtr<T>
+make_unique()
 {
   T * p;
   CHECK_CUDA_ERROR(::cudaMalloc(reinterpret_cast<void **>(&p), sizeof(T)));
