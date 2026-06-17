@@ -122,29 +122,6 @@ std::string format_lanelet_ids(const lanelet::ConstLanelets & lanelets)
   ss << "]";
   return ss.str();
 }
-
-std::string format_drivable_lanes_ids(
-  const std::vector<autoware::behavior_path_planner::DrivableLanes> & drivable_lanes)
-{
-  std::ostringstream ss;
-  ss << "[";
-  for (size_t i = 0; i < drivable_lanes.size(); ++i) {
-    if (i > 0) {
-      ss << "; ";
-    }
-    const auto & dl = drivable_lanes.at(i);
-    ss << "{right=" << dl.right_lane.id() << ", left=" << dl.left_lane.id() << ", middle=[";
-    for (size_t j = 0; j < dl.middle_lanes.size(); ++j) {
-      if (j > 0) {
-        ss << ", ";
-      }
-      ss << dl.middle_lanes.at(j).id();
-    }
-    ss << "]}";
-  }
-  ss << "]";
-  return ss.str();
-}
 }  // namespace
 
 namespace autoware::behavior_path_planner
@@ -156,12 +133,14 @@ using autoware_utils::calc_distance2d;
 DirectionChangeModule::DirectionChangeModule(
   const std::string & name, rclcpp::Node & node,
   const std::shared_ptr<DirectionChangeParameters> & parameters,
+  const std::shared_ptr<DirectionChangePersistentState> & persistent_state,
   const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
 : SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
-  parameters_{parameters}
+  parameters_{parameters},
+  persistent_state_{persistent_state}
 {
   path_publisher_ = node.create_publisher<autoware_internal_planning_msgs::msg::PathWithLaneId>(
     "~/output/direction_change/path", 1);
@@ -172,6 +151,8 @@ void DirectionChangeModule::initVariables()
 {
   reference_path_ = PathWithLaneId();
   modified_path_ = PathWithLaneId();
+  route_context_ = DirectionChangeRouteContext();
+  is_route_context_initialized_ = false;
   cusp_points_.clear();
   current_segment_state_ = PathSegmentState::IDLE;
   is_ego_driving_forward_wrt_lane_ = true;
@@ -179,6 +160,63 @@ void DirectionChangeModule::initVariables()
   // NOTE: from base class
   resetPathCandidate();
   resetPathReference();
+}
+
+bool DirectionChangeModule::buildRouteContextIfNeeded() const
+{
+  if (is_route_context_initialized_) {
+    return route_context_.is_valid;
+  }
+  if (!planner_data_ || !planner_data_->route_handler) {
+    return false;
+  }
+
+  const auto route_context =
+    buildDirectionChangeRouteContext(planner_data_->route_handler);
+  if (!route_context) {
+    return false;
+  }
+
+  route_context_ = *route_context;
+  is_route_context_initialized_ = true;
+
+  RCLCPP_INFO_EXPRESSION(
+    getLogger(), parameters_->print_debug_info,
+    "Built direction_change route context: tagged_lanelets=%zu, tagged_centerline_points=%zu, "
+    "prefix_lanelets=%zu, suffix_lanelets=%zu",
+    route_context_.tagged_lanelet_ids_ordered.size(),
+    route_context_.tagged_lanelet_centerline_path.points.size(),
+    route_context_.prefix_lanelet_ids.size(), route_context_.suffix_lanelet_ids.size());
+
+  return route_context_.is_valid;
+}
+
+void DirectionChangeModule::initializeCuspPointsFromTaggedCenterline()
+{
+  if (!route_context_.is_valid) {
+    return;
+  }
+
+  cusp_points_ = detectCuspPointsOnPathWithIndices(
+    route_context_.tagged_lanelet_centerline_path,
+    parameters_->cusp_detection_angle_threshold_deg);
+
+  if (parameters_->print_debug_info) {
+    for (size_t i = 0; i < cusp_points_.size(); ++i) {
+      const auto & cusp = cusp_points_.at(i);
+      RCLCPP_INFO(
+        getLogger(), "Tagged centerline cusp[%zu]: idx=%zu, x=%.2f, y=%.2f", i,
+        cusp.tagged_centerline_index, cusp.pose.position.x, cusp.pose.position.y);
+    }
+  }
+}
+
+const PathWithLaneId & DirectionChangeModule::getTaggedLaneletCenterlinePath() const
+{
+  if (route_context_.is_valid) {
+    return route_context_.tagged_lanelet_centerline_path;
+  }
+  return reference_path_;
 }
 
 void DirectionChangeModule::getCuspPointsFromReferencePath(
@@ -203,14 +241,15 @@ void DirectionChangeModule::getCuspPointsFromReferencePath(
 
 void DirectionChangeModule::initializeManeuverState()
 {
-  if (!planner_data_ || !planner_data_->self_odometry || reference_path_.points.empty()) {
+  const auto & maneuver_path = getTaggedLaneletCenterlinePath();
+  if (!planner_data_ || !planner_data_->self_odometry || maneuver_path.points.empty()) {
     is_ego_driving_forward_wrt_lane_ = true;
     current_segment_state_ = PathSegmentState::IDLE;
     return;
   }
 
   const auto & ego_pose = planner_data_->self_odometry->pose.pose;
-  is_ego_driving_forward_wrt_lane_ = isEgoDrivingForwardWrtLane(ego_pose, reference_path_);
+  is_ego_driving_forward_wrt_lane_ = isEgoDrivingForwardWrtLane(ego_pose, maneuver_path);
 
   current_segment_state_ = is_ego_driving_forward_wrt_lane_ ? PathSegmentState::FORWARD_FOLLOWING
                                                             : PathSegmentState::REVERSE_FOLLOWING;
@@ -250,6 +289,33 @@ bool DirectionChangeModule::allCuspsVisited() const
                                    [](const CuspPoint & cusp) { return cusp.visited; });
 }
 
+bool DirectionChangeModule::isManeuverCompletedForCurrentRoute() const
+{
+  if (!persistent_state_ || !persistent_state_->maneuver_completed || !planner_data_ ||
+      !planner_data_->route_handler) {
+    return false;
+  }
+
+  try {
+    return planner_data_->route_handler->getRouteUuid() == persistent_state_->completed_route_uuid;
+  } catch (...) {
+    return false;
+  }
+}
+
+void DirectionChangeModule::markManeuverCompletedForCurrentRoute()
+{
+  if (!persistent_state_ || !planner_data_ || !planner_data_->route_handler) {
+    return;
+  }
+
+  try {
+    persistent_state_->maneuver_completed = true;
+    persistent_state_->completed_route_uuid = planner_data_->route_handler->getRouteUuid();
+  } catch (...) {
+  }
+}
+
 size_t DirectionChangeModule::countUnvisitedCusps() const
 {
   return static_cast<size_t>(std::count_if(
@@ -258,137 +324,48 @@ size_t DirectionChangeModule::countUnvisitedCusps() const
 }
 
 double DirectionChangeModule::calcDistanceToNextCusp(
-  const PathWithLaneId & reference_path, const geometry_msgs::msg::Pose & ego_pose) const
+  const PathWithLaneId & maneuver_path, const geometry_msgs::msg::Pose & ego_pose) const
 {
   const auto * next_cusp = getFirstUnvisitedCusp();
   if (!next_cusp) {
-    return calcDistanceToPathEnd(reference_path, ego_pose);
+    return calcDistanceToPathEnd(maneuver_path, ego_pose);
   }
 
-  return calcDistanceAlongPathToPose(reference_path, ego_pose, next_cusp->pose);
+  return calcDistanceAlongPathToPose(maneuver_path, ego_pose, next_cusp->pose);
 }
 
-PathWithLaneId DirectionChangeModule::slicePathBetweenCusps(
-  const PathWithLaneId & source_path, const geometry_msgs::msg::Pose & ego_pose,
-  const std::optional<geometry_msgs::msg::Pose> & start_cusp_pose,
-  const geometry_msgs::msg::Pose & end_cusp_pose) const
-{
-  PathWithLaneId sliced;
-  if (source_path.points.empty()) {
-    return sliced;
-  }
-
-  const auto ego_idx_opt = findNearestIndex(source_path.points, ego_pose);
-  const size_t ego_idx = ego_idx_opt ? *ego_idx_opt : 0;
-
-  const size_t end_cusp_idx =
-    autoware::motion_utils::findNearestIndex(source_path.points, end_cusp_pose.position);
-
-  std::optional<size_t> start_cusp_idx;
-  if (start_cusp_pose) {
-    start_cusp_idx =
-      autoware::motion_utils::findNearestIndex(source_path.points, start_cusp_pose->position);
-  }
-
-  size_t start_idx = start_cusp_idx.value_or(0);
-  if (start_cusp_idx) {
-    const size_t after_cusp_idx = *start_cusp_idx + 1;
-    if (after_cusp_idx < end_cusp_idx) {
-      start_idx = after_cusp_idx;
-    }
-  }
-  const size_t end_idx = end_cusp_idx;
-  const bool reset_start_to_zero = start_idx >= end_idx;
-  if (reset_start_to_zero) {
-    start_idx = 0;
-  }
-
-  std::cout << "[Debug2 DirectionChangeModule] slicePathBetweenCusps:"
-            << " ego_idx=" << ego_idx
-            << " start_cusp_idx=" << (start_cusp_idx ? std::to_string(*start_cusp_idx) : "none")
-            << " end_cusp_idx=" << end_cusp_idx << " start_idx=" << start_idx
-            << " end_idx=" << end_idx << " reset_start_to_zero=" << reset_start_to_zero
-            << " output_size=" << (end_idx > start_idx ? end_idx - start_idx : 0) << std::endl;
-
-  if (parameters_->print_debug_info) {
-    if (start_cusp_idx) {
-      RCLCPP_INFO(
-        getLogger(),
-        "slicePathBetweenCusps: ego_idx=%zu, start_cusp_idx=%zu, end_cusp_idx=%zu, start_idx=%zu, "
-        "end_idx=%zu, reset_start_to_zero=%d, output_size=%zu",
-        ego_idx, *start_cusp_idx, end_cusp_idx, start_idx, end_idx,
-        static_cast<int>(reset_start_to_zero), end_idx > start_idx ? end_idx - start_idx : 0);
-    } else {
-      RCLCPP_INFO(
-        getLogger(),
-        "slicePathBetweenCusps: ego_idx=%zu, start_cusp_idx=none, end_cusp_idx=%zu, start_idx=%zu, "
-        "end_idx=%zu, reset_start_to_zero=%d, output_size=%zu",
-        ego_idx, end_cusp_idx, start_idx, end_idx, static_cast<int>(reset_start_to_zero),
-        end_idx > start_idx ? end_idx - start_idx : 0);
-    }
-  }
-
-  sliced.header = source_path.header;
-  sliced.points.assign(
-    source_path.points.begin() + static_cast<std::ptrdiff_t>(start_idx),
-    source_path.points.begin() + static_cast<std::ptrdiff_t>(end_idx));  // end cusp is not included
-  return sliced;
-}
-
-PathWithLaneId DirectionChangeModule::slicePathToGoal(
-  const PathWithLaneId & source_path, const geometry_msgs::msg::Pose & ego_pose,
-  const std::optional<geometry_msgs::msg::Pose> & start_cusp_pose,
-  const geometry_msgs::msg::Pose & goal_pose) const
-{
-  PathWithLaneId sliced;
-  if (source_path.points.empty()) {
-    return sliced;
-  }
-
-  const auto ego_idx_opt = findNearestIndex(source_path.points, ego_pose);
-  const size_t ego_idx = ego_idx_opt ? *ego_idx_opt : 0;
-
-  const size_t goal_idx =
-    autoware::motion_utils::findNearestIndex(source_path.points, goal_pose.position);
-
-  std::optional<size_t> start_cusp_idx;
-  if (start_cusp_pose) {
-    start_cusp_idx =
-      autoware::motion_utils::findNearestIndex(source_path.points, start_cusp_pose->position);
-  }
-
-  const size_t end_idx = goal_idx + 1;
-  size_t start_idx = start_cusp_idx.value_or(0);
-  if (start_cusp_idx) {
-    const size_t after_cusp_idx = *start_cusp_idx + 1;
-    if (after_cusp_idx < end_idx) {
-      start_idx = after_cusp_idx;
-    }
-  }
-  const bool reset_start_to_zero = start_idx >= end_idx;
-  if (reset_start_to_zero) {
-    start_idx = 0;
-  }
-
-  std::cout << "[Debug2 DirectionChangeModule] slicePathToGoal:"
-            << " ego_idx=" << ego_idx
-            << " start_cusp_idx=" << (start_cusp_idx ? std::to_string(*start_cusp_idx) : "none")
-            << " goal_idx=" << goal_idx << " start_idx=" << start_idx << " end_idx=" << end_idx
-            << " reset_start_to_zero=" << reset_start_to_zero
-            << " output_size=" << (end_idx > start_idx ? end_idx - start_idx : 0) << std::endl;
-
-  sliced.header = source_path.header;
-  sliced.points.assign(
-    source_path.points.begin() + static_cast<std::ptrdiff_t>(start_idx),
-    source_path.points.begin() + static_cast<std::ptrdiff_t>(end_idx));  // goal point is included
-  return sliced;
-}
-
-void DirectionChangeModule::updateManeuverStateMachine(const PathWithLaneId & reference_path)
+void DirectionChangeModule::updateManeuverStateMachine(const PathWithLaneId & maneuver_path)
 {
   const auto & ego_pose = planner_data_->self_odometry->pose.pose;
-  const double dist_to_cusp = calcDistanceToNextCusp(reference_path, ego_pose);
+  const double dist_to_cusp = calcDistanceToNextCusp(maneuver_path, ego_pose);
   const double vehicle_velocity = std::abs(planner_data_->self_odometry->twist.twist.linear.x);
+
+  if (allCuspsVisited()) {
+    cusp_stopped_since_.reset();
+
+    if (route_context_.is_valid &&
+        isDirectionChangeManeuverFinished(
+          ego_pose, planner_data_->route_handler, route_context_, parameters_->th_arrived_distance,
+          true)) {
+      if (current_segment_state_ != PathSegmentState::COMPLETED) {
+        current_segment_state_ = PathSegmentState::COMPLETED;
+        RCLCPP_INFO(
+          getLogger(),
+          "Direction change maneuver finished (left tagged corridor or at goal), state=COMPLETED");
+      }
+      return;
+    }
+
+    if (current_segment_state_ == PathSegmentState::COMPLETED) {
+      return;
+    }
+
+    if (current_segment_state_ != PathSegmentState::FORWARD_FOLLOWING) {
+      is_ego_driving_forward_wrt_lane_ = true;
+      current_segment_state_ = PathSegmentState::FORWARD_FOLLOWING;
+    }
+    return;
+  }
 
   const PathSegmentState base_following_state = is_ego_driving_forward_wrt_lane_
                                                   ? PathSegmentState::FORWARD_FOLLOWING
@@ -399,13 +376,10 @@ void DirectionChangeModule::updateManeuverStateMachine(const PathWithLaneId & re
   if (dist_to_cusp > parameters_->cusp_detection_distance_threshold) {
     new_state = base_following_state;
     cusp_stopped_since_.reset();
-    std::cout << "[Debug2 DirectionChangeModule] updateManeuverStateMachine: "
-                 "cusp_detection_distance_threshold: "
-              << parameters_->cusp_detection_distance_threshold << std::endl;
-    std::cout << "[Debug2 DirectionChangeModule] updateManeuverStateMachine: distance to cusp: "
-              << dist_to_cusp << std::endl;
-    std::cout << "[Debug2 DirectionChangeModule] updateManeuverStateMachine: far From Cusp"
-              << std::endl;
+    RCLCPP_DEBUG_EXPRESSION(
+      getLogger(), parameters_->print_debug_info,
+      "updateManeuverStateMachine: far from cusp, dist=%.2f, threshold=%.2f", dist_to_cusp,
+      parameters_->cusp_detection_distance_threshold);
   } else {
     new_state = PathSegmentState::AT_CUSP;
 
@@ -454,6 +428,8 @@ void DirectionChangeModule::processOnEntry()
 {
   RCLCPP_DEBUG(getLogger(), "Module entry - initializing variables");
   initVariables();
+  buildRouteContextIfNeeded();
+  initializeCuspPointsFromTaggedCenterline();
   updateData();
   initializeManeuverState();
 }
@@ -476,6 +452,7 @@ bool DirectionChangeModule::isExecutionRequested() const
     return true;
   }
 
+  buildRouteContextIfNeeded();
   return shouldActivateModule();
 }
 
@@ -494,86 +471,94 @@ bool DirectionChangeModule::isReadyForNextRequest(
 
 void DirectionChangeModule::updateData()
 {
+  if (persistent_state_ && persistent_state_->maneuver_completed && planner_data_ &&
+      planner_data_->route_handler) {
+    try {
+      if (planner_data_->route_handler->getRouteUuid() != persistent_state_->completed_route_uuid) {
+        persistent_state_->maneuver_completed = false;
+      }
+    } catch (...) {
+    }
+  }
+
   const auto previous_output = getPreviousModuleOutput();
   if (previous_output.path.points.empty()) {
     RCLCPP_WARN(getLogger(), "Previous module output path is empty. Cannot update data.");
     return;
   }
 
-  if (planner_data_ && planner_data_->route_handler) {
-    const auto centerline_path = getReferencePathFromDirectionChangeLanelets(
-      previous_output.path, planner_data_->route_handler, *parameters_);
-    if (!centerline_path.points.empty()) {
-      reference_path_ = centerline_path;
-      RCLCPP_INFO_EXPRESSION(
-        getLogger(), parameters_->print_debug_info,
-        "Using centerline from direction_change lanelets (%zu points)",
-        reference_path_.points.size());
-      return;
-    }
+  if (!buildRouteContextIfNeeded()) {
+    reference_path_ = previous_output.path;
+    return;
   }
-  // Fallback: use previous module output when not in direction_change area, or when
-  // centerline from lanelets is unavailable (no route_handler, no tagged lane_ids, or empty path).
-  reference_path_ = previous_output.path;
+
+  if (!planner_data_->self_odometry) {
+    reference_path_ = route_context_.tagged_lanelet_centerline_path;
+    return;
+  }
+
+  const auto & ego_pose = planner_data_->self_odometry->pose.pose;
+  const auto assembly_phase = determineReferencePathAssemblyPhase(
+    planner_data_->route_handler, ego_pose, route_context_, allCuspsVisited());
+
+  reference_path_ = assembleReferencePathWithLaneStitching(
+    route_context_, previous_output.path, planner_data_->route_handler, assembly_phase);
+
+  RCLCPP_INFO_EXPRESSION(
+    getLogger(), parameters_->print_debug_info,
+    "Assembled reference path: phase=%s, points=%zu, tagged_centerline_points=%zu",
+    referencePathAssemblyPhaseToString(assembly_phase), reference_path_.points.size(),
+    route_context_.tagged_lanelet_centerline_path.points.size());
 }
 
 bool DirectionChangeModule::shouldActivateModule() const
 {
-  if (reference_path_.points.empty()) {
-    RCLCPP_DEBUG_EXPRESSION(
-      getLogger(), parameters_->print_debug_info,
-      "shouldActivateModule: Path empty, module inactive");
+  if (!planner_data_ || !planner_data_->route_handler || !planner_data_->self_odometry) {
     return false;
   }
 
-  if (planner_data_->route_handler) {
-    std::set<int64_t> checked_lane_ids;
-    for (const auto & path_point : reference_path_.points) {
-      for (const auto & lane_id : path_point.lane_ids) {
-        if (checked_lane_ids.find(lane_id) != checked_lane_ids.end()) {
-          continue;
-        }
-        checked_lane_ids.insert(lane_id);
-
-        try {
-          const auto lanelet = planner_data_->route_handler->getLaneletsFromId(lane_id);
-          if (hasDirectionChangeAreaTag(lanelet)) {
-            // Activate only when in tag area and away from goal (avoid re-entry after completion).
-            // Goal planner and start planner also follow similar checks for goal arrival
-            if (planner_data_->self_odometry) {
-              try {
-                const auto goal_pose = planner_data_->route_handler->getGoalPose();
-                const double dist_to_goal = autoware_utils::calc_distance2d(
-                  planner_data_->self_odometry->pose.pose.position, goal_pose.position);
-                if (dist_to_goal < parameters_->th_arrived_distance) {
-                  RCLCPP_WARN(
-                    getLogger(), "shouldActivateModule: at goal (dist=%.2f m), module INACTIVE",
-                    dist_to_goal);
-                  return false;
-                }
-              } catch (...) {
-                // No goal or getGoalPose failed; allow activation
-              }
-            }
-            RCLCPP_DEBUG_EXPRESSION(
-              getLogger(), parameters_->print_debug_info,
-              "shouldActivateModule: direction_change_lane tag found in lane_id=%ld, module ACTIVE",
-              static_cast<int64_t>(lane_id));
-            return true;  // Tag found and away from goal, activate module
-          }
-        } catch (...) {
-          // Lanelet not found, skip
-          continue;
-        }
-      }
-    }
+  if (isManeuverCompletedForCurrentRoute()) {
+    RCLCPP_DEBUG_EXPRESSION(
+      getLogger(), parameters_->print_debug_info,
+      "shouldActivateModule: maneuver already completed for this route, module INACTIVE");
+    return false;
   }
 
-  // No direction_change_lane tag found, module inactive
+  if (!route_context_.is_valid || route_context_.tagged_lanelet_ids_ordered.empty()) {
+    RCLCPP_DEBUG_EXPRESSION(
+      getLogger(), parameters_->print_debug_info,
+      "shouldActivateModule: route has no direction_change tagged lanelets, module INACTIVE");
+    return false;
+  }
+
+  const auto & ego_pose = planner_data_->self_odometry->pose.pose;
+
+  if (isEgoNearRouteGoal(
+        ego_pose, planner_data_->route_handler, parameters_->th_arrived_distance,
+        route_context_.suffix_lanelet_ids)) {
+    RCLCPP_DEBUG_EXPRESSION(
+      getLogger(), parameters_->print_debug_info,
+      "shouldActivateModule: ego at route goal, module INACTIVE");
+    return false;
+  }
+
+  const bool on_prefix = isEgoOnPrefixLanelets(
+    ego_pose, planner_data_->route_handler, route_context_.prefix_lanelet_ids);
+  const bool on_tagged = isEgoOnTaggedLanelets(
+    ego_pose, planner_data_->route_handler, route_context_.tagged_lanelet_ids_ordered);
+
+  if (!on_prefix && !on_tagged) {
+    RCLCPP_DEBUG_EXPRESSION(
+      getLogger(), parameters_->print_debug_info,
+      "shouldActivateModule: ego not on prefix/tagged lanes, module INACTIVE");
+    return false;
+  }
+
   RCLCPP_DEBUG_EXPRESSION(
     getLogger(), parameters_->print_debug_info,
-    "shouldActivateModule: No direction_change_lane tag found, module INACTIVE");
-  return false;
+    "shouldActivateModule: route has tagged lanelets and ego on %s, module ACTIVE",
+    on_tagged ? "tagged lane" : "prefix lane");
+  return true;
 }
 
 void DirectionChangeModule::filterLaneletsAtCusp(BehaviorModuleOutput & output)
@@ -600,14 +585,11 @@ void DirectionChangeModule::updateDrivableAreaInfo(BehaviorModuleOutput & output
 
   if (is_active_segment && !output.path.points.empty()) {
     const auto lanelets = utils::getLaneletsFromPath(output.path, planner_data_->route_handler);
-    std::cout << "[Debug2 DirectionChangeModule] updateDrivableAreaInfo: path_lane_ids="
-              << format_unique_path_lane_ids(output.path) << std::endl;
-    std::cout << "[Debug2 DirectionChangeModule] updateDrivableAreaInfo: lanelets.size()="
-              << lanelets.size() << " lanelet_ids=" << format_lanelet_ids(lanelets) << std::endl;
+    RCLCPP_DEBUG_EXPRESSION(
+      getLogger(), parameters_->print_debug_info,
+      "updateDrivableAreaInfo: path_lane_ids=%s, lanelet_ids=%s",
+      format_unique_path_lane_ids(output.path).c_str(), format_lanelet_ids(lanelets).c_str());
     output.drivable_area_info.drivable_lanes = utils::generateDrivableLanes(lanelets);
-    std::cout << "[Debug2 DirectionChangeModule] updateDrivableAreaInfo: drivable_lanes.size()="
-              << output.drivable_area_info.drivable_lanes.size() << " drivable_lane_ids="
-              << format_drivable_lanes_ids(output.drivable_area_info.drivable_lanes) << std::endl;
     return;
   }
 
@@ -621,53 +603,83 @@ void DirectionChangeModule::updateTurnSignalInfo(BehaviorModuleOutput & output)
 
 BehaviorModuleOutput DirectionChangeModule::plan()
 {
-  // Note: updateData() is already called by SceneModuleInterface::run() before plan()
   BehaviorModuleOutput output;
-  //  output.reference_path = reference_path_;
 
-  // Copy reference_path_ to local variable for stability
+  buildRouteContextIfNeeded();
+
   const auto current_reference_path = reference_path_;
-  if (current_reference_path.points.empty()) {
-    RCLCPP_WARN(getLogger(), "Reference path is empty in plan()");
+  const auto & tagged_centerline_path = getTaggedLaneletCenterlinePath();
+  if (tagged_centerline_path.points.empty()) {
+    RCLCPP_WARN(getLogger(), "Tagged lanelet centerline is empty in plan()");
     return output;
   }
 
   const auto & ego_pose = planner_data_->self_odometry->pose.pose;
 
-  // Update state machine before cusp detection so passed cusps are recorded first
-  updateManeuverStateMachine(current_reference_path);
-
-  getCuspPointsFromReferencePath(current_reference_path, ego_pose);
+  updateManeuverStateMachine(tagged_centerline_path);
 
   RCLCPP_INFO_EXPRESSION(
     getLogger(), parameters_->print_debug_info,
-    "plan(): path_points=%zu, unvisited_cusps=%zu, state=%s, forward_wrt_lane=%d",
-    current_reference_path.points.size(), countUnvisitedCusps(),
-    pathSegmentStateToString(current_segment_state_),
+    "plan(): reference_points=%zu, tagged_centerline_points=%zu, unvisited_cusps=%zu, state=%s, "
+    "forward_wrt_lane=%d",
+    current_reference_path.points.size(), tagged_centerline_path.points.size(),
+    countUnvisitedCusps(), pathSegmentStateToString(current_segment_state_),
     static_cast<int>(is_ego_driving_forward_wrt_lane_));
 
-  const double dist_to_cusp = calcDistanceToNextCusp(current_reference_path, ego_pose);
+  const double dist_to_cusp = calcDistanceToNextCusp(tagged_centerline_path, ego_pose);
   const bool approaching_cusp =
     getFirstUnvisitedCusp() != nullptr &&
     dist_to_cusp <= parameters_->cusp_detection_distance_start_approaching;
 
-  std::cout << "[Debug2 DirectionChangeModule] plan: unvisited_cusps: " << countUnvisitedCusps()
-            << std::endl;
+  const auto appendSuffixLanesIfNeeded = [&](PathWithLaneId path_segment) {
+    if (!route_context_.is_valid || route_context_.suffix_lanelet_ids.empty()) {
+      return path_segment;
+    }
+    auto suffix_path = extractPathPointsForLaneIds(
+      getPreviousModuleOutput().path, route_context_.suffix_lanelet_ids);
+    if (suffix_path.points.empty()) {
+      suffix_path = buildCenterlinePathForLaneIds(
+        route_context_.suffix_lanelet_ids, planner_data_->route_handler);
+    }
+    if (suffix_path.points.empty()) {
+      return path_segment;
+    }
+    return utils::combinePath(path_segment, suffix_path);
+  };
+
+  const auto assembly_phase = determineReferencePathAssemblyPhase(
+    planner_data_->route_handler, ego_pose, route_context_, allCuspsVisited());
+
+  const auto prependPrefixLanesIfApproaching = [&](PathWithLaneId path_segment) {
+    if (
+      assembly_phase != ReferencePathAssemblyPhase::APPROACHING_TAGGED_AREA ||
+      route_context_.prefix_lanelet_ids.empty()) {
+      return path_segment;
+    }
+
+    auto prefix_path = buildPrefixPathForStitching(
+      route_context_, getPreviousModuleOutput().path, planner_data_->route_handler);
+    if (prefix_path.points.empty()) {
+      return path_segment;
+    }
+
+    auto combined_path = utils::combinePath(prefix_path, path_segment);
+    return cropPathFromEgo(combined_path, ego_pose);
+  };
 
   if (allCuspsVisited()) {
-    // Final segment from last visited cusp (or path start) to goal on reference path
-    PathWithLaneId final_segment = current_reference_path;
+    PathWithLaneId final_segment = tagged_centerline_path;
     const auto * last_visited = getLastVisitedCusp();
-    std::optional<geometry_msgs::msg::Pose> start_cusp_pose;
+    std::optional<size_t> start_after_cusp_index;
     if (last_visited) {
-      start_cusp_pose = last_visited->pose;
+      start_after_cusp_index = last_visited->tagged_centerline_index;
     }
 
     if (planner_data_->route_handler) {
       try {
         const auto goal_pose = planner_data_->route_handler->getGoalPose();
-        final_segment =
-          slicePathToGoal(current_reference_path, ego_pose, start_cusp_pose, goal_pose);
+        final_segment = slicePathToGoalFromCuspIndex(
+          tagged_centerline_path, start_after_cusp_index, goal_pose);
 
         if (!is_ego_driving_forward_wrt_lane_ && parameters_->enable_goal_lateral_shift) {
           if (
@@ -680,6 +692,8 @@ BehaviorModuleOutput DirectionChangeModule::plan()
       }
     }
 
+    final_segment = appendSuffixLanesIfNeeded(final_segment);
+    final_segment = cropPathFromEgo(final_segment, ego_pose);
     output.path = final_segment;
     if (!is_ego_driving_forward_wrt_lane_) {
       flipPathPointOrientation(output.path);
@@ -687,12 +701,32 @@ BehaviorModuleOutput DirectionChangeModule::plan()
   } else {
     const auto * next_cusp = getFirstUnvisitedCusp();
     const auto * last_visited = getLastVisitedCusp();
-    std::optional<geometry_msgs::msg::Pose> start_cusp_pose;
+    std::optional<size_t> start_after_cusp_index;
     if (last_visited) {
-      start_cusp_pose = last_visited->pose;
+      start_after_cusp_index = last_visited->tagged_centerline_index;
     }
-    output.path =
-      slicePathBetweenCusps(current_reference_path, ego_pose, start_cusp_pose, next_cusp->pose);
+
+    output.path = slicePathBetweenCuspIndices(
+      tagged_centerline_path, start_after_cusp_index, next_cusp->tagged_centerline_index);
+
+    output.path = prependPrefixLanesIfApproaching(output.path);
+
+    if (output.path.points.empty()) {
+      RCLCPP_WARN(
+        getLogger(),
+        "slicePathBetweenCuspIndices returned empty path; falling back to tagged centerline tail");
+      const auto ego_idx_opt = findNearestIndex(tagged_centerline_path.points, ego_pose);
+      const size_t ego_idx = ego_idx_opt ? *ego_idx_opt : 0;
+      const size_t end_idx = std::min(
+        next_cusp->tagged_centerline_index + 1, tagged_centerline_path.points.size());
+      const size_t start_idx = std::min(ego_idx, end_idx > 0 ? end_idx - 1 : 0);
+      output.path.header = tagged_centerline_path.header;
+      if (end_idx > start_idx) {
+        output.path.points.assign(
+          tagged_centerline_path.points.begin() + static_cast<std::ptrdiff_t>(start_idx),
+          tagged_centerline_path.points.begin() + static_cast<std::ptrdiff_t>(end_idx));
+      }
+    }
 
     if (!is_ego_driving_forward_wrt_lane_) {
       flipPathPointOrientation(output.path);
@@ -758,36 +792,28 @@ CandidateOutput DirectionChangeModule::planCandidate() const
 
 bool DirectionChangeModule::canTransitSuccessState()
 {
-  if (!allCuspsVisited()) {
+  if (!allCuspsVisited() || cusp_points_.empty()) {
     return false;
   }
 
-  if (
-    current_segment_state_ != PathSegmentState::REVERSE_FOLLOWING &&
-    current_segment_state_ != PathSegmentState::FORWARD_FOLLOWING) {
-    return false;
-  }
-
-  if (!planner_data_ || !planner_data_->self_odometry || modified_path_.points.empty()) {
+  if (!planner_data_ || !planner_data_->self_odometry || !route_context_.is_valid) {
     return false;
   }
 
   const auto & ego_pose = planner_data_->self_odometry->pose.pose;
-  const auto ego_nearest_idx_opt = findNearestIndex(modified_path_.points, ego_pose);
-  if (!ego_nearest_idx_opt || *ego_nearest_idx_opt >= modified_path_.points.size()) {
+
+  if (!isDirectionChangeManeuverFinished(
+        ego_pose, planner_data_->route_handler, route_context_, parameters_->th_arrived_distance,
+        true)) {
     return false;
   }
 
-  const double remaining_distance = calcSignedArcLength(
-    modified_path_.points, *ego_nearest_idx_opt, modified_path_.points.size() - 1);
-
-  if (remaining_distance < parameters_->th_arrived_distance) {
-    current_segment_state_ = PathSegmentState::COMPLETED;
-    RCLCPP_DEBUG(
-      getLogger(), "Ego completed final segment, state=COMPLETED, module can transit to SUCCESS");
-    return true;
-  }
-  return false;
+  markManeuverCompletedForCurrentRoute();
+  current_segment_state_ = PathSegmentState::COMPLETED;
+  RCLCPP_INFO(
+    getLogger(),
+    "Direction change maneuver finished (left tagged corridor or at goal), transiting to SUCCESS");
+  return true;
 }
 
 }  // namespace autoware::behavior_path_planner

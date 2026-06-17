@@ -38,7 +38,7 @@ public:
   std::unique_ptr<SceneModuleInterface> createNewSceneModuleInstance() override
   {
     return std::make_unique<DirectionChangeModule>(
-      name_, *node_, parameters_, rtc_interface_ptr_map_,
+      name_, *node_, parameters_, persistent_state_, rtc_interface_ptr_map_,
       objects_of_interest_marker_interface_ptr_map_, planning_factor_interface_);
   }
 
@@ -46,6 +46,8 @@ public:
 
 private:
   std::shared_ptr<DirectionChangeParameters> parameters_;
+  std::shared_ptr<DirectionChangePersistentState> persistent_state_{
+    std::make_shared<DirectionChangePersistentState>()};
 };
 
 }  // namespace autoware::behavior_path_planner

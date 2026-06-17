@@ -17,6 +17,7 @@
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <memory>
 #include <string>
@@ -30,7 +31,53 @@ using autoware_internal_planning_msgs::msg::PathWithLaneId;
 struct CuspPoint
 {
   geometry_msgs::msg::Pose pose{};
+  /// Index on tagged_lanelet_centerline_path where this cusp was detected.
+  size_t tagged_centerline_index{0};
   bool visited{false};
+};
+
+/// How prefix (non-tagged) and suffix (non-tagged) lanes attach to the tagged centerline.
+enum class ReferencePathAssemblyPhase {
+  APPROACHING_TAGGED_AREA,
+  INSIDE_TAGGED_CORRIDOR,
+  EXITING_TAGGED_AREA,
+};
+
+inline const char * referencePathAssemblyPhaseToString(const ReferencePathAssemblyPhase phase)
+{
+  switch (phase) {
+    case ReferencePathAssemblyPhase::APPROACHING_TAGGED_AREA:
+      return "APPROACHING_TAGGED_AREA";
+    case ReferencePathAssemblyPhase::INSIDE_TAGGED_CORRIDOR:
+      return "INSIDE_TAGGED_CORRIDOR";
+    case ReferencePathAssemblyPhase::EXITING_TAGGED_AREA:
+      return "EXITING_TAGGED_AREA";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+/// Route-ordered lanelet groups and the stable centerline through direction_change tagged lanes.
+struct DirectionChangeRouteContext
+{
+  std::vector<int64_t> route_lanelet_ids_ordered;
+  std::vector<int64_t> tagged_lanelet_ids_ordered;
+  std::vector<int64_t> prefix_lanelet_ids;
+  std::vector<int64_t> suffix_lanelet_ids;
+  PathWithLaneId tagged_lanelet_centerline_path;
+  bool is_valid{false};
+
+  DirectionChangeRouteContext()
+  : tagged_lanelet_centerline_path(autoware_internal_planning_msgs::msg::PathWithLaneId())
+  {
+  }
+};
+
+/// Shared across module instances so completion survives SUCCESS / re-instantiation.
+struct DirectionChangePersistentState
+{
+  bool maneuver_completed{false};
+  unique_identifier_msgs::msg::UUID completed_route_uuid{};
 };
 
 struct DirectionChangeParameters
