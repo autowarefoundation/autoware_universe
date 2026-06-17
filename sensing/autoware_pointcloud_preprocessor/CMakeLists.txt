@@ -320,6 +320,15 @@ if(BUILD_TESTING)
     test/test_utilities.cpp
   )
 
+  ament_add_gtest(test_conversion
+    test/test_conversion.cpp
+  )
+  ament_target_dependencies(test_conversion
+    builtin_interfaces
+    geometry_msgs
+    tf2
+  )
+
   ament_add_gtest(test_distortion_corrector_node
     test/test_distortion_corrector_node.cpp
   )
