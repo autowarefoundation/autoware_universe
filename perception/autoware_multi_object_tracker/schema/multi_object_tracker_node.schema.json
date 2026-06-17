@@ -162,9 +162,9 @@
         },
         "delay_compensation": {
           "type": "string",
-          "enum": ["detection", "elapsed", "latest_odometry", "now"],
-          "description": "Object-export reference time the published tracks are predicted to (independent of publish_on_timer), ordered from least to most forward compensation. 'detection' uses the latest detection/update stamp (no forward compensation); 'elapsed' advances the detection stamp by the wall-clock time elapsed since the last tracker update (compensates publish-side latency without over-extrapolating the sensor pipeline delay); 'latest_odometry' extrapolates to the newest buffered odometry stamp; 'now' extrapolates to the current time.",
-          "default": "detection"
+          "enum": ["none", "publish_delay", "odometry", "full"],
+          "description": "Object-export delay compensation applied to the published tracks (independent of publish_on_timer), ordered from least to most. 'none': no compensation, use the latest detection/update stamp; 'publish_delay': advance the detection stamp by the update->publish delay; 'odometry': compensate up to the newest buffered odometry stamp; 'full': full compensation to the current time.",
+          "default": "none"
         },
         "tracker_configs": {
           "$ref": "#/definitions/tracker_configs"

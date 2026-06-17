@@ -134,13 +134,13 @@ EgoSource toEgoSource(const std::string & name)
 
 DelayReference toDelayReference(const std::string & name)
 {
-  if (name == "detection") return DelayReference::DETECTION;
-  if (name == "elapsed") return DelayReference::ELAPSED;
-  if (name == "latest_odometry") return DelayReference::LATEST_ODOMETRY;
-  if (name == "now") return DelayReference::NOW;
+  if (name == "none") return DelayReference::NONE;
+  if (name == "publish_delay") return DelayReference::PUBLISH_DELAY;
+  if (name == "odometry") return DelayReference::ODOMETRY;
+  if (name == "full") return DelayReference::FULL;
   throw std::invalid_argument(
     "Invalid delay_compensation: '" + name +
-    "'. Expected 'detection', 'elapsed', 'latest_odometry', or 'now'.");
+    "'. Expected 'none', 'publish_delay', 'odometry', or 'full'.");
 }
 
 Odometry::Odometry(

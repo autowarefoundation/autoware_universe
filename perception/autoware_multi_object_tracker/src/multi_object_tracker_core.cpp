@@ -291,22 +291,22 @@ PublishingData prepare_publishing_data(
 
   // Calculate object_time based on the export-time reference
   switch (params.delay_compensation) {
-    case DelayReference::DETECTION:
+    case DelayReference::NONE:
       result.object_time = last_tracker_time;
       break;
-    case DelayReference::ELAPSED: {
-      // Advance the detection stamp by the wall-clock time elapsed since the last tracker update.
-      // This compensates for the publish-side latency without over-extrapolating by the
-      // sensor->tracker pipeline delay (as 'now' would).
+    case DelayReference::PUBLISH_DELAY: {
+      // Advance the detection stamp by the update->publish delay (wall-clock elapsed since the last
+      // tracker update). Compensates the publish-side latency without over-extrapolating by the
+      // sensor->tracker pipeline delay (as FULL would).
       const auto elapsed = current_time - state.last_updated_time;
       result.object_time =
         last_tracker_time + (elapsed.seconds() > 0.0 ? elapsed : rclcpp::Duration(0, 0));
       break;
     }
-    case DelayReference::LATEST_ODOMETRY:
+    case DelayReference::ODOMETRY:
       result.object_time = state.odometry->getLatestOdometryTime().value_or(current_time);
       break;
-    case DelayReference::NOW:
+    case DelayReference::FULL:
       result.object_time = current_time;
       break;
   }
