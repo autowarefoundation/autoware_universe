@@ -1,0 +1,56 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# clion ide
+.idea
+cmake-build-debug*
+cmake-build-release*
+.clion*
+
+# vscode ide
+.vscode
+
+# Build directories
+build
+
+# clangd build
+.clangd
+compile_commands.json
+.cache
+
+# resouces folder
+resource
+
+# video files
+*.mp4
+*.mpeg

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_diffusion_planner)
 
 find_package(autoware_cmake REQUIRED)
+find_package(autoware_mppi_optimizer REQUIRED)
 autoware_package()
 
 # Options
@@ -77,6 +78,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
   )
+  ament_target_dependencies(autoware_diffusion_planner_component autoware_mppi_optimizer)
 
   autoware_agnocast_wrapper_register_node(autoware_diffusion_planner_component
     PLUGIN "autoware::diffusion_planner::DiffusionPlanner"

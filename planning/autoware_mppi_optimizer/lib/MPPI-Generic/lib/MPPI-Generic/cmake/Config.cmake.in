@@ -1,0 +1,23 @@
+# - Config file for the MPPI-Generic package
+# It defines the following variables
+#  MPPI_INCLUDE_DIRS - include directories for MPPI-Generic
+#  MPPI_INCLUDE_DIR  - include directories for MPPI-Generic
+#  MPPI_LIBRARIES    - libraries to link against
+
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+
+set(MPPI_LIBRARIES "MPPI::MPPI")
+set_and_check(MPPI_INCLUDE_DIRS "@PACKAGE_TMP_MPPI_INCLUDE_DIRS@")
+set_and_check(MPPI_TARGET_CMAKE_FILE "@PACKAGE_TMP_MPPI_TARGET_CMAKE_FILE@")
+
+# Find dependencies of MPPI-Generic
+find_dependency(cnpy REQUIRED HINTS ${PACKAGE_PREFIX_DIR})
+find_dependency(Eigen3 REQUIRED)
+
+# Set up cmake targets and autodetection for CUDA architectures
+include(${MPPI_TARGET_CMAKE_FILE})
+include("${CMAKE_CURRENT_LIST_DIR}/MPPIGenericToolsConfig.cmake")
+
+set(MPPI_INCLUDE_DIR ${MPPI_INCLUDE_DIRS})
+check_required_components(@PROJECT_NAME@)
