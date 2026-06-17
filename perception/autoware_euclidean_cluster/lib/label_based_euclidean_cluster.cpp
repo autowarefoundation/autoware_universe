@@ -205,11 +205,18 @@ LabelBasedEuclideanCluster::LabelBasedEuclideanCluster(
 : class_id_to_object_label_(class_id_to_object_label),
   min_probability_(min_probability),
   shape_policy_(shape_policy),
-  default_cluster_(default_cluster),
+  default_cluster_(std::move(default_cluster)),
   label_cluster_executers_(label_cluster_executers),
-  shape_estimator_(shape_estimator),
+  shape_estimator_(std::move(shape_estimator)),
   confusable_groups_(confusable_groups)
 {
+  if (!default_cluster_) {
+    throw std::invalid_argument("LabelBasedEuclideanCluster: default_cluster is null");
+  }
+  if (!shape_estimator_) {
+    throw std::invalid_argument("LabelBasedEuclideanCluster: shape_estimator is null");
+  }
+
   // Build label-to-group index for confusable merging
   for (std::size_t g = 0; g < confusable_groups_.size(); ++g) {
     for (const auto label : confusable_groups_[g].labels) {
