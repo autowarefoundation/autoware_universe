@@ -31,16 +31,22 @@ publishers:
     global: /diagnostics
   - name: string
     message_type: std_msgs/msg/String
+    remap_target: ~/debug/string
   - name: marker_array
     message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/marker_array
   - name: ndt_pointcloud
     message_type: sensor_msgs/msg/PointCloud2
+    remap_target: ~/output/ndt/pointcloud
   - name: yabloc_image
     message_type: sensor_msgs/msg/Image
+    remap_target: ~/output/yabloc/image
   - name: eagleye_pose_with_covariance
     message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: ~/output/eagleye/pose_with_covariance
   - name: artag_image
     message_type: sensor_msgs/msg/Image
+    remap_target: ~/output/artag/image
 clients:
   - name: yabloc_trigger_srv
     message_type: std_srvs/srv/SetBool

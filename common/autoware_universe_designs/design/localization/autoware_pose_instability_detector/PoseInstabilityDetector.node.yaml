@@ -16,6 +16,7 @@ subscribers:
 publishers:
   - name: diff_pose
     message_type: geometry_msgs/msg/PoseStamped
+    remap_target: ~/debug/diff_pose
   - name: diagnostics
     message_type: diagnostic_msgs/msg/DiagnosticArray
     global: /diagnostics

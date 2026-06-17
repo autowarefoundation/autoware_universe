@@ -23,8 +23,10 @@ publishers:
     message_type: std_msgs/msg/String
   - name: ndt_position_stddev
     message_type: std_msgs/msg/Float64
+    remap_target: ~/debug/ndt_position_stddev
   - name: gnss_position_stddev
     message_type: std_msgs/msg/Float64
+    remap_target: ~/debug/gnss_position_stddev
 # parameters
 param_files:
   - name: pose_covariance_modifier_param

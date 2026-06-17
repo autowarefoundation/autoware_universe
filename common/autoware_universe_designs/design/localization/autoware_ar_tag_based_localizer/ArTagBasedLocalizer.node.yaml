@@ -22,10 +22,13 @@ publishers:
     message_type: geometry_msgs/msg/PoseWithCovarianceStamped
   - name: image
     message_type: sensor_msgs/msg/Image
+    remap_target: ~/debug/image
   - name: mapped_tag
     message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/mapped_tag
   - name: detected_tag
     message_type: geometry_msgs/msg/PoseArray
+    remap_target: ~/debug/detected_tag
   - name: diagnostics
     message_type: diagnostic_msgs/msg/DiagnosticArray
     global: /diagnostics
