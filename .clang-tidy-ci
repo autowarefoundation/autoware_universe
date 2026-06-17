@@ -27,5 +27,4 @@ ExtraArgs:
   - -Wno-c11-extensions
   - -Wno-unknown-warning-option
   - -Wno-deprecated-declarations
-  - -Wno-unused-private-field
   - -Wno-unused-but-set-variable
