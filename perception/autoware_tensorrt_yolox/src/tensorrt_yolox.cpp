@@ -21,12 +21,9 @@
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
 #include <experimental/filesystem>
 
-#include <assert.h>
-
 #include <algorithm>
 #include <fstream>
 #include <functional>
-#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <numeric>

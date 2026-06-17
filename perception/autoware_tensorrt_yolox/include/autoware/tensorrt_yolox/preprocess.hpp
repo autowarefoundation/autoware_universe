@@ -15,11 +15,9 @@
 #ifndef AUTOWARE__TENSORRT_YOLOX__PREPROCESS_HPP_
 #define AUTOWARE__TENSORRT_YOLOX__PREPROCESS_HPP_
 
-#include <cublas_v2.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
-#include <curand.h>
 
 namespace autoware
 {
