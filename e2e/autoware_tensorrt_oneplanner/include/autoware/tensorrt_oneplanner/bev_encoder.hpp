@@ -88,6 +88,12 @@ private:
   void init_config();
   void init_trt();
 
+  /**
+   * @brief Swap the first and last column of the [num_voxels, 3] device coord
+   * buffer (z, y, x) -> (x, y, z), in place, on stream_ with no host round-trip.
+   */
+  void swap_coord_columns(int64_t num_voxels);
+
   BevEncoderParams params_;
   cudaStream_t stream_;
 
@@ -103,6 +109,7 @@ private:
   CudaUniquePtr<float[]> voxel_features_d_;
   CudaUniquePtr<std::int32_t[]> voxel_coords_d_;
   CudaUniquePtr<std::int32_t[]> num_points_per_voxel_d_;
+  CudaUniquePtr<std::int32_t[]> coords_axis_scratch_d_;  // scratch column for on-device coord swap
   CudaUniquePtr<float[]> bev_feature_d_;
 };
 

@@ -54,6 +54,8 @@ BevEncoder::BevEncoder(const BevEncoderParams & params, cudaStream_t stream)
   voxel_coords_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(3 * config_->max_num_voxels_);
   num_points_per_voxel_d_ =
     autoware::cuda_utils::make_unique<std::int32_t[]>(config_->max_num_voxels_);
+  coords_axis_scratch_d_ =
+    autoware::cuda_utils::make_unique<std::int32_t[]>(config_->max_num_voxels_);
 
   const int64_t grid_xy = static_cast<int64_t>(
     (params_.point_cloud_range[3] - params_.point_cloud_range[0]) / params_.voxel_size[0]);
@@ -192,24 +194,15 @@ bool BevEncoder::encode(
 
   // autoware_bevfusion voxelization emits voxel coords as (z, y, x), but the
   // OnePlanner BEV encoder was trained/exported with (x, y, z) coords and
-  // sparse_shape [X, Y, Z] = [1440, 1440, 41]. Reverse the three columns so the
-  // Z index lands in the last column (size 41); otherwise strided sparse convs
-  // drop every point ("points vanished") because the X index (0..1439) is
-  // validated against the Z extent (41).
-  {
-    std::vector<std::int32_t> coords_host(3 * num_voxels);
-    CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      coords_host.data(), voxel_coords_d_.get(), 3 * num_voxels * sizeof(std::int32_t),
-      cudaMemcpyDeviceToHost, stream_));
-    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-    for (int64_t i = 0; i < num_voxels; ++i) {
-      std::swap(coords_host[i * 3 + 0], coords_host[i * 3 + 2]);
-    }
-    CHECK_CUDA_ERROR(cudaMemcpyAsync(
-      voxel_coords_d_.get(), coords_host.data(), 3 * num_voxels * sizeof(std::int32_t),
-      cudaMemcpyHostToDevice, stream_));
-    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-  }
+  // sparse_shape [X, Y, Z] = [1440, 1440, 41]. Swap the first and last of the
+  // three coord columns so the Z index lands in the last column (size 41);
+  // otherwise the first strided sparse conv drops every point ("points
+  // vanished") because the X index (0..1439) is validated against the Z extent.
+  //
+  // Done fully on the device as three strided (column) copies queued on stream_
+  // — no host round-trip and no synchronization — so it overlaps with the rest
+  // of the pipeline and adds negligible latency.
+  swap_coord_columns(num_voxels);
 
   network_trt_ptr_->setInputShape(
     "voxels", nvinfer1::Dims{
@@ -225,6 +218,29 @@ bool BevEncoder::encode(
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   return true;
+}
+
+void BevEncoder::swap_coord_columns(int64_t num_voxels)
+{
+  // The buffer is row-major [num_voxels, 3] int32: row pitch = 3 elements, the
+  // first column is at offset 0 and the last at offset 2. Use strided 2D copies
+  // (1 element wide, num_voxels tall) to exchange the two columns via a scratch
+  // column, entirely on stream_.
+  constexpr size_t kElem = sizeof(std::int32_t);
+  constexpr size_t kRowPitch = 3 * kElem;
+  const auto height = static_cast<size_t>(num_voxels);
+  std::int32_t * coords = voxel_coords_d_.get();
+  std::int32_t * scratch = coords_axis_scratch_d_.get();
+
+  // scratch <- column 0
+  CHECK_CUDA_ERROR(cudaMemcpy2DAsync(
+    scratch, kElem, coords, kRowPitch, kElem, height, cudaMemcpyDeviceToDevice, stream_));
+  // column 0 <- column 2
+  CHECK_CUDA_ERROR(cudaMemcpy2DAsync(
+    coords, kRowPitch, coords + 2, kRowPitch, kElem, height, cudaMemcpyDeviceToDevice, stream_));
+  // column 2 <- scratch
+  CHECK_CUDA_ERROR(cudaMemcpy2DAsync(
+    coords + 2, kRowPitch, scratch, kElem, kElem, height, cudaMemcpyDeviceToDevice, stream_));
 }
 
 }  // namespace autoware::tensorrt_oneplanner
