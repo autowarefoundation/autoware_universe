@@ -68,6 +68,12 @@ BevEncoder::BevEncoder(const BevEncoderParams & params, cudaStream_t stream)
 
 void BevEncoder::init_config()
 {
+  // Camera depth-discretization bound [min, max, step] (m). Unused in this lidar-only
+  // configuration (num_cameras = 0); passed only to satisfy the BEVFusionConfig constructor.
+  const std::vector<float> unused_camera_d_bound{1.0f, 166.2f, 1.4f};
+  // BEV z extent [min, max, size] (m): a single z bin covering the full vertical range.
+  const std::vector<float> z_bound{-10.0f, 10.0f, 20.0f};
+
   // Build a lidar-only BEVFusionConfig. All camera-related fields are zero / empty and the
   // detection postprocessing fields are unused because the encoder graph ends at the neck.
   config_ = std::make_unique<BEVFusionConfig>(
@@ -75,7 +81,7 @@ void BevEncoder::init_config()
     /*image_backbone_onnx_path=*/"", /*image_backbone_engine_path=*/"",
     /*image_backbone_trt_precision=*/"", params_.out_size_factor, params_.cloud_capacity,
     params_.max_points_per_voxel, params_.voxels_num, params_.point_cloud_range, params_.voxel_size,
-    /*d_bound=*/std::vector<float>{1.0f, 166.2f, 1.4f},
+    /*d_bound=*/unused_camera_d_bound,
     /*x_bound=*/
     std::vector<float>{
       params_.point_cloud_range[0], params_.point_cloud_range[3],
@@ -84,7 +90,7 @@ void BevEncoder::init_config()
     std::vector<float>{
       params_.point_cloud_range[1], params_.point_cloud_range[4],
       params_.voxel_size[1] * static_cast<float>(params_.out_size_factor)},
-    /*z_bound=*/std::vector<float>{-10.0f, 10.0f, 20.0f},
+    /*z_bound=*/z_bound,
     /*num_cameras=*/0, /*raw_image_height=*/0, /*raw_image_width=*/0,
     /*img_aug_scale_x=*/0.0f, /*img_aug_scale_y=*/0.0f, /*roi_height=*/0, /*roi_width=*/0,
     /*features_height=*/0, /*features_width=*/0, /*num_depth_features=*/0,

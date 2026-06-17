@@ -14,6 +14,7 @@
 
 #include "autoware/tensorrt_oneplanner/planner_inference.hpp"
 
+#include "autoware/tensorrt_oneplanner/detail.hpp"
 #include "autoware/tensorrt_oneplanner/dimensions.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
@@ -56,14 +57,7 @@ using autoware::diffusion_planner::ROUTE_LANES_SPEED_LIMIT_SHAPE;
 using autoware::diffusion_planner::TURN_INDICATOR_LOGIT_SHAPE;
 using autoware::diffusion_planner::TURN_INDICATORS_SHAPE;
 
-namespace
-{
-template <class Container>
-size_t num_elements(const Container & shape)
-{
-  return std::accumulate(shape.begin() + 1, shape.end(), size_t{1}, std::multiplies<>());
-}
-}  // namespace
+using detail::num_elements;
 
 PlannerInference::PlannerInference(
   const std::string & model_path, const std::string & plugins_path, int batch_size,

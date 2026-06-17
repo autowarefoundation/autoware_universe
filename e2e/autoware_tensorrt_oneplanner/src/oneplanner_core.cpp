@@ -14,6 +14,7 @@
 
 #include "autoware/tensorrt_oneplanner/oneplanner_core.hpp"
 
+#include "autoware/tensorrt_oneplanner/detail.hpp"
 #include "autoware/tensorrt_oneplanner/dimensions.hpp"
 
 #include <autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp>
@@ -51,27 +52,6 @@ using dp::OUTPUT_T;
 using dp::POSE_DIM;
 using dp::TURN_INDICATOR_OUTPUT_DIM;
 using dp::TURN_INDICATORS_SHAPE;
-
-namespace
-{
-/**
- * @brief Expand the ego-only prediction [1, 1, T, 4] to the diffusion-planner layout
- *        [1, MAX_NUM_AGENTS, T, 4] (neighbors zero-filled) so that the diffusion-planner
- *        postprocessing utilities can be reused unchanged.
- */
-std::vector<float> expand_ego_prediction(const std::vector<float> & ego_prediction)
-{
-  const size_t agent_stride = OUTPUT_T * POSE_DIM;
-  if (ego_prediction.size() != agent_stride) {
-    throw std::runtime_error(
-      "Unexpected ego prediction size: " + std::to_string(ego_prediction.size()) + " (expected " +
-      std::to_string(agent_stride) + ")");
-  }
-  std::vector<float> expanded(MAX_NUM_AGENTS * agent_stride, 0.0f);
-  std::copy(ego_prediction.begin(), ego_prediction.end(), expanded.begin());
-  return expanded;
-}
-}  // namespace
 
 OnePlannerCore::OnePlannerCore(const OnePlannerParams & params, const VehicleInfo & vehicle_info)
 : params_(params),
@@ -202,8 +182,9 @@ InputDataMap OnePlannerCore::create_input_data(const OnePlannerFrameContext & fr
         const auto [shifted_cos, shifted_sin] =
           utils::rotation_matrix_to_cos_sin(pose_ego.block<3, 3>(0, 0));
 
-        sampled_trajectories[dst_base + 0] = (shifted_x - 10.0f) / 20.0f;
-        sampled_trajectories[dst_base + 1] = shifted_y / 20.0f;
+        sampled_trajectories[dst_base + 0] =
+          (shifted_x - detail::kEgoPositionXMean) / detail::kEgoPositionStd;
+        sampled_trajectories[dst_base + 1] = shifted_y / detail::kEgoPositionStd;
         sampled_trajectories[dst_base + 2] = shifted_cos;
         sampled_trajectories[dst_base + 3] = shifted_sin;
       }
@@ -296,7 +277,7 @@ OnePlannerOutput OnePlannerCore::create_planner_output(
   const OnePlannerFrameContext & frame_context, const rclcpp::Time & timestamp,
   const UUID & generator_uuid)
 {
-  const auto predictions = expand_ego_prediction(ego_prediction);
+  const auto predictions = detail::expand_ego_prediction(ego_prediction);
   const auto agent_poses =
     postprocess::parse_predictions(predictions, frame_context.ego_to_map_transform);
   last_agent_poses_map_ = agent_poses;
