@@ -79,7 +79,7 @@ struct PolygonTrackerConfig
 
 struct StaticTrackerConfig
 {
-  bool convert_polygon_to_bbox{true};
+  bool convert_polygon_to_bbox{false};
 };
 
 struct TrackerConfigs
