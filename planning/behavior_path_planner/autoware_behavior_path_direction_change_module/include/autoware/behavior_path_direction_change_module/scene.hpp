@@ -36,12 +36,11 @@ using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
 // State for tracking which path segment to publish
 enum class PathSegmentState {
-  IDLE = 0,           // Module is idle/inactive
-  FORWARD_FOLLOWING,  // Following path in forward direction
-  APPROACHING_CUSP,   // Approaching a cusp point
-  AT_CUSP,            // At a cusp point
-  REVERSE_FOLLOWING,  // Following path in reverse direction
-  COMPLETED           // Module has completed processing
+  IDLE = 0,
+  FORWARD_FOLLOWING,
+  AT_CUSP,
+  REVERSE_FOLLOWING,
+  COMPLETED
 };
 
 inline const char * pathSegmentStateToString(const PathSegmentState state)
@@ -51,8 +50,6 @@ inline const char * pathSegmentStateToString(const PathSegmentState state)
       return "IDLE";
     case PathSegmentState::FORWARD_FOLLOWING:
       return "FORWARD_FOLLOWING";
-    case PathSegmentState::APPROACHING_CUSP:
-      return "APPROACHING_CUSP";
     case PathSegmentState::AT_CUSP:
       return "AT_CUSP";
     case PathSegmentState::REVERSE_FOLLOWING:
@@ -123,18 +120,10 @@ private:
   /// Set turn_signal_info on output based on current segment state and published path.
   void updateTurnSignalInfo(BehaviorModuleOutput & output);
 
-  /// Initialize maneuver direction from ego pose and reference path.
   void initializeManeuverState();
 
-  /// Update state machine from ego pose, maneuver direction, and distance to next cusp (or path
-  /// end).
   void updateManeuverStateMachine(const PathWithLaneId & reference_path);
 
-  /// Detect new cusp poses on the current reference path and append to the tracked list.
-  void getCuspPointsFromReferencePath(
-    const PathWithLaneId & reference_path, const geometry_msgs::msg::Pose & ego_pose);
-
-  /// Distance from ego to the next cusp pose, or to path end when no cusps remain.
   double calcDistanceToNextCusp(
     const PathWithLaneId & maneuver_path, const geometry_msgs::msg::Pose & ego_pose) const;
 

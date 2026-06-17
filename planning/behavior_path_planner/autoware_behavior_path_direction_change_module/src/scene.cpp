@@ -217,40 +217,14 @@ const PathWithLaneId & DirectionChangeModule::getTaggedLaneletCenterlinePath() c
   return reference_path_;
 }
 
-void DirectionChangeModule::getCuspPointsFromReferencePath(
-  const PathWithLaneId & reference_path, const geometry_msgs::msg::Pose & ego_pose)
-{
-  const auto detected =
-    detectCuspPointsFromPath(reference_path, parameters_->cusp_detection_angle_threshold_deg);
-  const size_t before = cusp_points_.size();
-  mergeNewCuspPointsAheadOfEgo(
-    cusp_points_, detected, reference_path, ego_pose,
-    parameters_->cusp_detection_distance_threshold);
-
-  if (parameters_->print_debug_info && cusp_points_.size() > before) {
-    for (size_t i = before; i < cusp_points_.size(); ++i) {
-      const auto & p = cusp_points_.at(i).pose.position;
-      const double yaw_deg = tf2::getYaw(cusp_points_.at(i).pose.orientation) * 180.0 / M_PI;
-      RCLCPP_INFO(
-        getLogger(), "Tracked new cusp[%zu]: x=%.2f, y=%.2f, yaw=%.1f deg", i, p.x, p.y, yaw_deg);
-    }
-  }
-}
-
 void DirectionChangeModule::initializeManeuverState()
 {
-  const auto & maneuver_path = getTaggedLaneletCenterlinePath();
-  if (!planner_data_ || !planner_data_->self_odometry || maneuver_path.points.empty()) {
-    is_ego_driving_forward_wrt_lane_ = true;
+  is_ego_driving_forward_wrt_lane_ = true;
+  current_segment_state_ = PathSegmentState::FORWARD_FOLLOWING;
+
+  if (!planner_data_ || !planner_data_->self_odometry || getTaggedLaneletCenterlinePath().points.empty()) {
     current_segment_state_ = PathSegmentState::IDLE;
-    return;
   }
-
-  const auto & ego_pose = planner_data_->self_odometry->pose.pose;
-  is_ego_driving_forward_wrt_lane_ = isEgoDrivingForwardWrtLane(ego_pose, maneuver_path);
-
-  current_segment_state_ = is_ego_driving_forward_wrt_lane_ ? PathSegmentState::FORWARD_FOLLOWING
-                                                            : PathSegmentState::REVERSE_FOLLOWING;
 
   RCLCPP_INFO_EXPRESSION(
     getLogger(), parameters_->print_debug_info,
@@ -542,9 +516,9 @@ bool DirectionChangeModule::shouldActivateModule() const
     return false;
   }
 
-  const bool on_prefix = isEgoOnPrefixLanelets(
+  const bool on_prefix = isEgoOnRouteLanelets(
     ego_pose, planner_data_->route_handler, route_context_.prefix_lanelet_ids);
-  const bool on_tagged = isEgoOnTaggedLanelets(
+  const bool on_tagged = isEgoOnRouteLanelets(
     ego_pose, planner_data_->route_handler, route_context_.tagged_lanelet_ids_ordered);
 
   if (!on_prefix && !on_tagged) {
@@ -635,12 +609,9 @@ BehaviorModuleOutput DirectionChangeModule::plan()
     if (!route_context_.is_valid || route_context_.suffix_lanelet_ids.empty()) {
       return path_segment;
     }
-    auto suffix_path = extractPathPointsForLaneIds(
-      getPreviousModuleOutput().path, route_context_.suffix_lanelet_ids);
-    if (suffix_path.points.empty()) {
-      suffix_path = buildCenterlinePathForLaneIds(
-        route_context_.suffix_lanelet_ids, planner_data_->route_handler);
-    }
+    const auto suffix_path = buildPathForLaneIds(
+      getPreviousModuleOutput().path, route_context_.suffix_lanelet_ids,
+      planner_data_->route_handler);
     if (suffix_path.points.empty()) {
       return path_segment;
     }
@@ -657,14 +628,14 @@ BehaviorModuleOutput DirectionChangeModule::plan()
       return path_segment;
     }
 
-    auto prefix_path = buildPrefixPathForStitching(
-      route_context_, getPreviousModuleOutput().path, planner_data_->route_handler);
+    const auto prefix_path = buildPathForLaneIds(
+      getPreviousModuleOutput().path, route_context_.prefix_lanelet_ids,
+      planner_data_->route_handler);
     if (prefix_path.points.empty()) {
       return path_segment;
     }
 
-    auto combined_path = utils::combinePath(prefix_path, path_segment);
-    return cropPathFromEgo(combined_path, ego_pose);
+    return utils::combinePath(prefix_path, path_segment);
   };
 
   if (allCuspsVisited()) {
@@ -693,7 +664,6 @@ BehaviorModuleOutput DirectionChangeModule::plan()
     }
 
     final_segment = appendSuffixLanesIfNeeded(final_segment);
-    final_segment = cropPathFromEgo(final_segment, ego_pose);
     output.path = final_segment;
     if (!is_ego_driving_forward_wrt_lane_) {
       flipPathPointOrientation(output.path);
@@ -735,6 +705,13 @@ BehaviorModuleOutput DirectionChangeModule::plan()
     if (approaching_cusp || current_segment_state_ == PathSegmentState::AT_CUSP) {
       setPathPointVelocityToZero(output.path, 1);
     }
+  }
+
+  if (!output.path.points.empty()) {
+    clipPathAroundEgo(
+      output.path, ego_pose,
+      planner_data_->parameters.backward_path_length + planner_data_->parameters.input_path_interval,
+      planner_data_->parameters.forward_path_length);
   }
 
   modified_path_ = output.path;
