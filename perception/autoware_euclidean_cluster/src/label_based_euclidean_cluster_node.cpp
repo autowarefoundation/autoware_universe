@@ -16,27 +16,16 @@
 
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
-#include <Eigen/Core>
 #include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware_utils_rclcpp/parameter.hpp>
 #include <rclcpp/parameter_map.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
-#include <autoware_perception_msgs/msg/detected_object.hpp>
-#include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
-#include <autoware_perception_msgs/msg/object_classification.hpp>
-#include <autoware_perception_msgs/msg/shape.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/msg/point_field.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
-
-#include <pcl/common/common.h>
 
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <memory>
-#include <numeric>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -50,27 +39,6 @@ namespace autoware::euclidean_cluster
 {
 namespace
 {
-using autoware_perception_msgs::msg::DetectedObject;
-using autoware_perception_msgs::msg::DetectedObjects;
-using autoware_perception_msgs::msg::ObjectClassification;
-using autoware_perception_msgs::msg::Shape;
-
-struct SemanticPoint
-{
-  pcl::PointXYZ point;
-  float probability{};
-};
-
-/// @brief Check whether a point cloud contains a field with the expected datatype.
-bool has_field(
-  const sensor_msgs::msg::PointCloud2 & pointcloud, const std::string & name,
-  const std::uint8_t datatype)
-{
-  return std::any_of(pointcloud.fields.begin(), pointcloud.fields.end(), [&](const auto & field) {
-    return field.name == name && field.datatype == datatype;
-  });
-}
-
 /// @brief Enable automatic declaration for nested parameters provided via YAML overrides.
 rclcpp::NodeOptions allow_dynamic_params(const rclcpp::NodeOptions & original_options)
 {
@@ -87,8 +55,6 @@ bool is_ignored_mapping(const std::string & mapped_label)
 }
 
 /// @brief Normalize configured label names to the uppercase form expected by toLabel().
-/// NOTE: This should be unnecessary once
-/// https://github.com/autowarefoundation/autoware_core/pull/1184 has been merged.
 std::string normalize_object_label_name(const std::string & label_name)
 {
   std::string normalized = label_name;
@@ -135,6 +101,27 @@ std::vector<std::pair<std::string, std::string>> extract_class_mappings(
   return class_mappings;
 }
 
+/// @brief Build class-id to object-label map from ordered class mappings.
+std::unordered_map<std::uint8_t, std::uint8_t> build_target_label_map(
+  const std::vector<std::pair<std::string, std::string>> & class_mappings)
+{
+  std::unordered_map<std::uint8_t, std::uint8_t> class_id_to_object_label;
+
+  for (size_t class_id_value = 0; class_id_value < class_mappings.size(); ++class_id_value) {
+    const auto & [original_class_name, mapped_label_name] = class_mappings.at(class_id_value);
+    static_cast<void>(original_class_name);
+    const auto class_id = static_cast<std::uint8_t>(class_id_value);
+    if (is_ignored_mapping(mapped_label_name)) {
+      continue;
+    }
+
+    class_id_to_object_label[class_id] =
+      object_recognition_utils::toLabel(normalize_object_label_name(mapped_label_name));
+  }
+
+  return class_id_to_object_label;
+}
+
 struct NestedOverrideName
 {
   std::string group_name;
@@ -159,13 +146,11 @@ std::optional<NestedOverrideName> parse_nested_override_name(
 }
 
 /// @brief Extract per-label parameter prefixes from nested overrides.
-///        Example: "label_cluster_params.car.tolerance_m" -> {"car", "label_cluster_params.car."}
 std::unordered_map<std::string, std::string> load_label_cluster_parameter_prefixes(
   const rclcpp::NodeOptions & options)
 {
   constexpr std::string_view prefix = "label_cluster_params.";
 
-  // first: label name, second: parameter prefix including the label name and trailing dot
   std::unordered_map<std::string, std::string> outputs;
 
   for (const auto & parameter : options.parameter_overrides()) {
@@ -180,174 +165,11 @@ std::unordered_map<std::string, std::string> load_label_cluster_parameter_prefix
   return outputs;
 }
 
-/// @brief Create fallback shape and pose from the cluster axis-aligned bounding box.
-std::pair<Shape, geometry_msgs::msg::Pose> create_fallback_shape_and_pose(
-  const pcl::PointCloud<pcl::PointXYZ> & cluster, const std::uint8_t label)
-{
-  Shape shape;
-  geometry_msgs::msg::Pose pose;
-  pose.orientation.w = 1.0;
-
-  Eigen::Vector4f min_point;
-  Eigen::Vector4f max_point;
-  pcl::getMinMax3D(cluster, min_point, max_point);
-
-  pose.position.x = 0.5 * (min_point.x() + max_point.x());
-  pose.position.y = 0.5 * (min_point.y() + max_point.y());
-  pose.position.z = 0.5 * (min_point.z() + max_point.z());
-
-  const float dx = std::max(max_point.x() - min_point.x(), 0.1F);
-  const float dy = std::max(max_point.y() - min_point.y(), 0.1F);
-  const float dz = std::max(max_point.z() - min_point.z(), 0.1F);
-
-  if (label == ObjectClassification::PEDESTRIAN) {
-    shape.type = Shape::CYLINDER;
-    shape.dimensions.x = std::max(dx, dy);
-    shape.dimensions.y = std::max(dx, dy);
-    shape.dimensions.z = dz;
-  } else {
-    shape.type = Shape::BOUNDING_BOX;
-    shape.dimensions.x = dx;
-    shape.dimensions.y = dy;
-    shape.dimensions.z = dz;
-  }
-
-  return {shape, pose};
-}
-
-/// @brief Return true when the estimator populated a usable shape output.
-bool has_usable_estimated_shape(const Shape & shape)
-{
-  switch (shape.type) {
-    case Shape::BOUNDING_BOX:
-    case Shape::CYLINDER:
-      return shape.dimensions.x > 0.0 && shape.dimensions.y > 0.0 && shape.dimensions.z > 0.0;
-    case Shape::POLYGON:
-      return !shape.footprint.points.empty() && shape.dimensions.z > 0.0;
-    default:
-      return false;
-  }
-}
-
-/// @brief Build a detected object with estimated or fallback shape and pose.
-DetectedObject create_detected_object(
-  const pcl::PointCloud<pcl::PointXYZ> & cluster, const std::uint8_t label, const float probability,
-  const ShapePolicy shape_policy, autoware::shape_estimation::ShapeEstimator & shape_estimator)
-{
-  DetectedObject object;
-  autoware_perception_msgs::msg::Shape shape;
-  geometry_msgs::msg::Pose pose;
-  // UNKNOWN uses the convex hull model, which is the polygon path in ShapeEstimator.
-  const std::uint8_t shape_label =
-    (shape_policy == ShapePolicy::LABEL_DEPEND) ? label : ObjectClassification::UNKNOWN;
-  shape_estimator.estimateShapeAndPose(
-    shape_label, cluster, boost::none, boost::none, boost::none, shape, pose);
-
-  if (!has_usable_estimated_shape(shape)) {
-    std::tie(shape, pose) = create_fallback_shape_and_pose(cluster, label);
-  }
-
-  object.shape = shape;
-  object.existence_probability = probability;
-  object.classification.push_back(
-    autoware_perception_msgs::build<ObjectClassification>().label(label).probability(probability));
-  object.kinematics.pose_with_covariance.pose = pose;
-  object.kinematics.orientation_availability =
-    autoware_perception_msgs::msg::DetectedObjectKinematics::UNAVAILABLE;
-
-  return object;
-}
-
-/// @brief Split semantic points into buckets keyed by mapped object label.
-std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> split_pointcloud(
-  const sensor_msgs::msg::PointCloud2 & pointcloud,
-  const std::unordered_map<std::uint8_t, std::uint8_t> & class_id_to_object_label,
-  const float min_probability)
-{
-  std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> buckets;
-
-  sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_y(pointcloud, "y");
-  sensor_msgs::PointCloud2ConstIterator<float> iter_z(pointcloud, "z");
-
-  const bool has_class_id = has_field(pointcloud, "class_id", sensor_msgs::msg::PointField::UINT8);
-  const bool has_probability =
-    has_field(pointcloud, "probability", sensor_msgs::msg::PointField::FLOAT32);
-
-  if (has_class_id && has_probability) {
-    sensor_msgs::PointCloud2ConstIterator<std::uint8_t> iter_class(pointcloud, "class_id");
-    sensor_msgs::PointCloud2ConstIterator<float> iter_probability(pointcloud, "probability");
-    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_class, ++iter_probability) {
-      if (*iter_probability < min_probability) {
-        continue;
-      }
-
-      const auto mapping = class_id_to_object_label.find(*iter_class);
-      if (mapping == class_id_to_object_label.end()) {
-        continue;
-      }
-
-      buckets[mapping->second].push_back(
-        SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), *iter_probability});
-    }
-    return buckets;
-  }
-
-  if (has_class_id) {
-    sensor_msgs::PointCloud2ConstIterator<std::uint8_t> iter_class(pointcloud, "class_id");
-    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_class) {
-      const auto mapping = class_id_to_object_label.find(*iter_class);
-      if (mapping == class_id_to_object_label.end()) {
-        continue;
-      }
-
-      buckets[mapping->second].push_back(
-        SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), 1.0F});
-    }
-    return buckets;
-  }
-
-  if (has_probability) {
-    sensor_msgs::PointCloud2ConstIterator<float> iter_probability(pointcloud, "probability");
-    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_probability) {
-      if (*iter_probability < min_probability) {
-        continue;
-      }
-
-      buckets[ObjectClassification::UNKNOWN].push_back(
-        SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), *iter_probability});
-    }
-    return buckets;
-  }
-
-  for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
-    buckets[ObjectClassification::UNKNOWN].push_back(
-      SemanticPoint{pcl::PointXYZ(*iter_x, *iter_y, *iter_z), 1.0F});
-  }
-
-  return buckets;
-}
-
-/// @brief Compute the average semantic probability for a set of points.
-float average_probability(const std::vector<SemanticPoint> & points)
-{
-  if (points.empty()) {
-    return 0.0F;
-  }
-
-  const float sum = std::accumulate(
-    points.begin(), points.end(), 0.0F,
-    [](const float acc, const auto & point) { return acc + point.probability; });
-  return sum / static_cast<float>(points.size());
-}
-
 /// @brief Parse confusable_label_groups.* parameters from NodeOptions overrides.
 std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptions & options)
 {
   constexpr std::string_view prefix = "confusable_label_groups.";
   std::unordered_map<std::string, ConfusableLabelGroup> groups_map;
-  // Records which "<group>.<key>" overrides were actually provided, so required keys can be
-  // validated without per-key tracking containers.
   std::unordered_set<std::string> provided_keys;
 
   for (const auto & param : options.parameter_overrides()) {
@@ -380,14 +202,9 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
 
   std::vector<ConfusableLabelGroup> result;
   for (auto & [name, group] : groups_map) {
-    // A group needs at least 2 labels to be confusable with each other; smaller groups are
-    // meaningless and silently skipped.
     if (group.labels.size() < 2) {
       continue;
     }
-    // cross_label_tolerance_m and max_merged_size_m must both be set explicitly; without them the
-    // group would silently fall back to the default-constructed value (0). Treat a missing required
-    // field as a hard configuration error.
     if (!provided_keys.count(name + ".cross_label_tolerance_m")) {
       throw std::runtime_error(
         "Confusable label group '" + name + "' is missing required 'cross_label_tolerance_m'.");
@@ -405,17 +222,19 @@ std::vector<ConfusableLabelGroup> load_confusable_groups(const rclcpp::NodeOptio
 LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::NodeOptions & options)
 : Node("label_based_euclidean_cluster_node", allow_dynamic_params(options))
 {
-  min_probability_ = static_cast<float>(
+  // Load parameters
+  const auto min_probability = static_cast<float>(
     autoware_utils_rclcpp::get_or_declare_parameter<double>(*this, "min_probability"));
-  shape_policy_ = to_shape_policy(
+  const auto shape_policy = to_shape_policy(
     autoware_utils_rclcpp::get_or_declare_parameter<uint8_t>(*this, "shape_policy"));
 
   const auto class_mappings = extract_class_mappings(options);
-  if (!update_target_label_map(class_mappings)) {
+  const auto class_id_to_object_label = build_target_label_map(class_mappings);
+  if (class_id_to_object_label.empty()) {
     throw std::runtime_error("No supported classes were configured for clustering");
   }
 
-  // Initialize the voxel grid based euclidean cluster
+  // Initialize the default voxel grid based euclidean cluster
   const auto use_height =
     autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_height");
   const auto min_points_per_cluster = static_cast<int>(
@@ -434,19 +253,20 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       *this, "large_cluster_max_points_per_voxel"));
   const auto max_voxels_per_cluster = static_cast<int>(
     autoware_utils_rclcpp::get_or_declare_parameter<int64_t>(*this, "max_voxels_per_cluster"));
-  default_cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
+
+  auto default_cluster = std::make_shared<VoxelGridBasedEuclideanCluster>(
     use_height, min_points_per_cluster, tolerance, voxel_leaf_size, min_points_per_voxel,
     large_cluster_voxel_count_threshold, large_cluster_max_points_per_voxel,
     max_voxels_per_cluster);
 
-  // Build per-label cluster overrides from label_cluster_params.<label_name>.* parameters.
-  // Any omitted sub-key falls back to the global default above.
+  // Build per-label cluster overrides from label_cluster_params.<label_name>.* parameters
+  std::unordered_map<std::uint8_t, std::shared_ptr<EuclideanClusterInterface>>
+    label_cluster_executers;
   {
     for (const auto & entry : load_label_cluster_parameter_prefixes(options)) {
       const auto & label_name = entry.first;
       const auto & label_prefix = entry.second;
       auto has = [&](const std::string & key) { return this->has_parameter(label_prefix + key); };
-      // Skip labels with no overrides at all
       if (
         !has("tolerance_m") && !has("min_points_per_cluster") && !has("use_height") &&
         !has("voxel_leaf_size_m") && !has("min_points_per_voxel") &&
@@ -478,7 +298,7 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
       };
 
       const auto label = object_recognition_utils::toLabel(normalize_object_label_name(label_name));
-      label_cluster_executers_[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
+      label_cluster_executers[label] = std::make_shared<VoxelGridBasedEuclideanCluster>(
         get_bool("use_height", use_height),
         get_int("min_points_per_cluster", min_points_per_cluster),
         get_float("tolerance_m", tolerance), get_float("voxel_leaf_size_m", voxel_leaf_size),
@@ -491,70 +311,33 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
     }
   }
 
-  {
-    // Initialize the shape estimator
-    const auto use_shape_estimation_corrector =
-      autoware_utils_rclcpp::get_or_declare_parameter<bool>(
-        *this, "use_shape_estimation_corrector");
-    const auto use_shape_estimation_filter =
-      autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_shape_estimation_filter");
-    const auto use_boost_bbox_optimizer =
-      autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_boost_bbox_optimizer");
+  // Initialize the shape estimator
+  auto shape_estimator = std::make_shared<autoware::shape_estimation::ShapeEstimator>(
+    autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_shape_estimation_corrector"),
+    autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_shape_estimation_filter"),
+    autoware_utils_rclcpp::get_or_declare_parameter<bool>(*this, "use_boost_bbox_optimizer"));
 
-    shape_estimator_ = std::make_unique<autoware::shape_estimation::ShapeEstimator>(
-      use_shape_estimation_corrector, use_shape_estimation_filter, use_boost_bbox_optimizer);
-  }
+  // Load confusable label groups
+  const auto confusable_groups = load_confusable_groups(options);
 
+  // Create the core clustering processor
+  processor_ = std::make_unique<LabelBasedEuclideanCluster>(
+    class_id_to_object_label, min_probability, shape_policy, default_cluster,
+    label_cluster_executers, shape_estimator, confusable_groups);
+
+  // Set up ROS pub/sub
   using std::placeholders::_1;
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "input", rclcpp::SensorDataQoS().keep_last(1),
     std::bind(&LabelBasedEuclideanClusterNode::on_pointcloud, this, _1));
-  objects_pub_ = AUTOWARE_CREATE_PUBLISHER2(DetectedObjects, "output", rclcpp::QoS{1});
+  objects_pub_ = AUTOWARE_CREATE_PUBLISHER2(
+    autoware_perception_msgs::msg::DetectedObjects, "output", rclcpp::QoS{1});
 
+  // Initialize timing and debug
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   debug_publisher_ = std::make_unique<autoware_utils::DebugPublisher>(this, "~/debug");
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
-
-  confusable_groups_ = load_confusable_groups(options);
-  for (std::size_t g = 0; g < confusable_groups_.size(); ++g) {
-    for (const auto label : confusable_groups_[g].labels) {
-      const auto [it, inserted] = label_to_group_idx_.emplace(label, g);
-      if (!inserted) {
-        RCLCPP_WARN(
-          get_logger(),
-          "Label %u is listed in multiple confusable_label_groups; keeping the first assignment "
-          "(group index %zu) and ignoring group index %zu.",
-          static_cast<unsigned>(label), it->second, g);
-      }
-    }
-  }
-}
-
-EuclideanClusterInterface & LabelBasedEuclideanClusterNode::get_cluster_executer(
-  const std::uint8_t label) const
-{
-  const auto it = label_cluster_executers_.find(label);
-  return (it != label_cluster_executers_.end()) ? *it->second : *default_cluster_;
-}
-
-bool LabelBasedEuclideanClusterNode::update_target_label_map(
-  const std::vector<std::pair<std::string, std::string>> & class_mappings)
-{
-  class_id_to_object_label_.clear();
-
-  for (size_t class_id_value = 0; class_id_value < class_mappings.size(); ++class_id_value) {
-    const auto & [original_class_name, mapped_label_name] = class_mappings.at(class_id_value);
-    const auto class_id = static_cast<std::uint8_t>(class_id_value);
-    if (is_ignored_mapping(mapped_label_name)) {
-      continue;
-    }
-
-    class_id_to_object_label_[class_id] =
-      object_recognition_utils::toLabel(normalize_object_label_name(mapped_label_name));
-  }
-
-  return !class_id_to_object_label_.empty();
 }
 
 void LabelBasedEuclideanClusterNode::on_pointcloud(
@@ -562,69 +345,16 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
 {
   stop_watch_ptr_->toc("processing_time", true);
 
-  if (
-    !has_field(*input_msg, "x", sensor_msgs::msg::PointField::FLOAT32) ||
-    !has_field(*input_msg, "y", sensor_msgs::msg::PointField::FLOAT32) ||
-    !has_field(*input_msg, "z", sensor_msgs::msg::PointField::FLOAT32)) {
-    RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), 5000, "Skipping pointcloud without required fields: x, y, z");
-    return;
-  }
+  // Process the point cloud using the core cluster
+  auto output_msg = processor_->process(*input_msg);
 
-  // 1. Split points by label and filter by probability
-  auto split_points = split_pointcloud(*input_msg, class_id_to_object_label_, min_probability_);
+  // Populate ROS-specific fields
+  output_msg.header = input_msg->header;
 
-  auto output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(objects_pub_);
-  output_msg->header = input_msg->header;
-
-  // 2. Run per-label clustering and collect all cluster entries
-  // TODO(ktro2828): Probability is averaged per label bucket before clustering, not per cluster.
-  std::vector<ClusterEntry> all_entries;
-  for (const auto & [label, semantic_points] : split_points) {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr label_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    label_cloud->reserve(semantic_points.size());
-    for (const auto & sp : semantic_points) {
-      label_cloud->push_back(sp.point);
-    }
-
-    std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters;
-    get_cluster_executer(label).cluster(label_cloud, clusters);
-
-    const float prob = average_probability(semantic_points);
-    for (auto & cluster : clusters) {
-      if (!cluster.empty()) {
-        all_entries.push_back({std::move(cluster), label, prob});
-      }
-    }
-  }
-
-  // 3. Post-merge clusters that belong to the same confusable label group
-  std::vector<std::vector<ClusterEntry>> per_group(confusable_groups_.size());
-  std::vector<ClusterEntry> output_entries;
-  output_entries.reserve(all_entries.size());
-
-  for (auto & e : all_entries) {
-    const auto it = label_to_group_idx_.find(e.label);
-    if (it != label_to_group_idx_.end()) {
-      per_group[it->second].push_back(std::move(e));
-    } else {
-      output_entries.push_back(std::move(e));
-    }
-  }
-  for (std::size_t g = 0; g < confusable_groups_.size(); ++g) {
-    for (auto & e : merge_confusable_clusters(std::move(per_group[g]), confusable_groups_[g])) {
-      output_entries.push_back(std::move(e));
-    }
-  }
-
-  // 4. Build detected objects from final entries
-  for (const auto & e : output_entries) {
-    output_msg->objects.push_back(
-      create_detected_object(e.cloud, e.label, e.prob, shape_policy_, *shape_estimator_));
-  }
-
+  // Publish the result
   objects_pub_->publish(std::move(output_msg));
 
+  // Handle timing and debug output
   if (debug_publisher_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);

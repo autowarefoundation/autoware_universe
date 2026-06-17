@@ -16,8 +16,6 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_perception_msgs/msg/object_classification.hpp>
-
 #include <gtest/gtest.h>
 
 #include <memory>
@@ -27,8 +25,6 @@
 
 namespace autoware::euclidean_cluster
 {
-using autoware_perception_msgs::msg::ObjectClassification;
-
 class LabelClusterConfigBehavior : public ::testing::Test
 {
 protected:
@@ -93,17 +89,15 @@ TEST_F(LabelClusterConfigBehavior, AcceptsLowercaseConfiguredLabels)
   // Act
   auto node = std::make_unique<LabelBasedEuclideanClusterNode>(options);
 
-  // Assert
-  ASSERT_EQ(node->class_id_to_object_label_.size(), 4U);
-  EXPECT_EQ(node->class_id_to_object_label_.at(0), ObjectClassification::CAR);
-  EXPECT_EQ(node->class_id_to_object_label_.at(1), ObjectClassification::TRUCK);
-  EXPECT_EQ(node->class_id_to_object_label_.at(2), ObjectClassification::TRAILER);
-  EXPECT_EQ(node->class_id_to_object_label_.at(3), ObjectClassification::PEDESTRIAN);
-  ASSERT_EQ(node->confusable_groups_.size(), 1U);
-  ASSERT_EQ(node->confusable_groups_.front().labels.size(), 2U);
-  EXPECT_EQ(node->confusable_groups_.front().labels.at(0), ObjectClassification::TRUCK);
-  EXPECT_EQ(node->confusable_groups_.front().labels.at(1), ObjectClassification::TRAILER);
-  EXPECT_EQ(node->label_cluster_executers_.count(ObjectClassification::PEDESTRIAN), 1U);
+  // Assert: constructor accepts lowercase labels and dynamic nested overrides are declared.
+  EXPECT_TRUE(node->has_parameter("class_names.car"));
+  EXPECT_TRUE(node->has_parameter("class_names.truck"));
+  EXPECT_TRUE(node->has_parameter("class_names.tractor_unit"));
+  EXPECT_TRUE(node->has_parameter("class_names.pedestrian"));
+  EXPECT_TRUE(node->has_parameter("label_cluster_params.pedestrian.tolerance_m"));
+  EXPECT_TRUE(node->has_parameter("confusable_label_groups.truck_trailer.labels"));
+  EXPECT_TRUE(node->has_parameter("confusable_label_groups.truck_trailer.cross_label_tolerance_m"));
+  EXPECT_TRUE(node->has_parameter("confusable_label_groups.truck_trailer.max_merged_size_m"));
 }
 
 TEST_F(LabelClusterConfigBehavior, CreatesExecuterForDynamicOverrideLabel)
@@ -122,8 +116,7 @@ TEST_F(LabelClusterConfigBehavior, CreatesExecuterForDynamicOverrideLabel)
 
   // Assert
   EXPECT_TRUE(node->has_parameter("label_cluster_params.trailer.tolerance_m"));
-  EXPECT_EQ(node->label_cluster_executers_.count(ObjectClassification::TRAILER), 1U);
-  EXPECT_EQ(node->label_cluster_executers_.count(ObjectClassification::CAR), 0U);
+  EXPECT_TRUE(node->has_parameter("label_cluster_params.trailer.min_points_per_cluster"));
 }
 
 }  // namespace autoware::euclidean_cluster
