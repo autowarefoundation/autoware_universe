@@ -177,10 +177,27 @@ void Odometry::updateOdometryBuffer(const nav_msgs::msg::Odometry & odometry)
 
 std::optional<rclcpp::Time> Odometry::getLatestOdometryTime() const
 {
-  if (odom_buffer_.empty()) {
+  // ODOMETRY backend: newest buffered odometry sample.
+  if (ego_source_ == EgoSource::ODOMETRY) {
+    if (!odom_buffer_.empty()) {
+      return rclcpp::Time(odom_buffer_.rbegin()->first);
+    }
+  }
+
+  // TF backend (and odometry fallback): stamp of the latest available transform.
+  try {
+    std::string errstr;  // suppresses error msg from being printed to the terminal
+    if (!tf_buffer_->canTransform(
+          world_frame_id_, ego_frame_id_, tf2::TimePointZero, tf2::Duration::zero(), &errstr)) {
+      return std::nullopt;
+    }
+    const auto latest =
+      tf_buffer_->lookupTransform(world_frame_id_, ego_frame_id_, tf2::TimePointZero);
+    return rclcpp::Time(latest.header.stamp);
+  } catch (tf2::TransformException & ex) {
+    RCLCPP_WARN_STREAM(logger_, ex.what());
     return std::nullopt;
   }
-  return rclcpp::Time(odom_buffer_.rbegin()->first);
 }
 
 std::optional<nav_msgs::msg::Odometry> Odometry::interpolateOdometry(

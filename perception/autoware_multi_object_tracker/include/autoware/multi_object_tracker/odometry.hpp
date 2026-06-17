@@ -65,7 +65,7 @@ public:
   /// Feed a new odometry sample (world <- ego) into the interpolation buffer.
   void updateOdometryBuffer(const nav_msgs::msg::Odometry & odometry);
 
-  /// Stamp of the newest buffered odometry sample (nullopt if the buffer is empty).
+  /// Get the latest odometry time in the buffer (nullopt if empty).
   std::optional<rclcpp::Time> getLatestOdometryTime() const;
 
   std::optional<geometry_msgs::msg::Transform> getTransform(
