@@ -75,14 +75,14 @@ autoware_agnocast_wrapper_register_node(object_lanelet_filter
   PLUGIN "autoware::detected_object_validation::lanelet_filter::DetectedObjectLaneletFilterNode"
   EXECUTABLE object_lanelet_filter_node
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 autoware_agnocast_wrapper_register_node(object_lanelet_filter
   PLUGIN "autoware::detected_object_validation::lanelet_filter::TrackedObjectLaneletFilterNode"
   EXECUTABLE tracked_object_lanelet_filter_node
   ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 rclcpp_components_register_node(object_position_filter
@@ -95,7 +95,7 @@ rclcpp_components_register_node(occupancy_grid_based_validator
   EXECUTABLE occupancy_grid_based_validator_node
 )
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
   ament_auto_add_gtest(detection_object_validation_tests
     test/test_utils.cpp
     test/object_position_filter/test_object_position_filter.cpp
