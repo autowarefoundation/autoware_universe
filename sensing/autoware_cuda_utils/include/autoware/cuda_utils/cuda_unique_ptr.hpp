@@ -36,21 +36,25 @@ inline bool is_default_stream(cudaStream_t stream)
 }
 }  // namespace detail
 
-struct CudaDeleter
+class CudaDeleter
 {
+public:
+  explicit CudaDeleter(cudaStream_t stream = nullptr) : stream_(stream) {}
+
   void operator()(void * p) const
   {
     if (!p) {
       return;
     }
-    if (stream_ != nullptr) {
+    if (!detail::is_default_stream(stream_)) {
       CHECK_CUDA_ERROR(::cudaFreeAsync(p, stream_));
     } else {
       CHECK_CUDA_ERROR(::cudaFree(p));
     }
   }
 
-  cudaStream_t stream_{nullptr};
+private:
+  cudaStream_t stream_;
 };
 template <typename T>
 using CudaUniquePtr = std::unique_ptr<T, CudaDeleter>;
@@ -96,7 +100,7 @@ template <typename T>
 [[deprecated("Use make_unique<T>(cudaStream_t) for stream-ordered allocation")]] CudaUniquePtr<T>
 make_unique()
 {
-  T * p;
+  T * p{nullptr};
   CHECK_CUDA_ERROR(::cudaMalloc(reinterpret_cast<void **>(&p), sizeof(T)));
   return CudaUniquePtr<T>{p};
 }
@@ -108,7 +112,7 @@ template <typename T>
 CudaPooledUniquePtr<T> make_unique(const std::size_t n, cudaStream_t stream, cudaMemPool_t pool)
 {
   using U = typename std::remove_extent_t<T>;
-  T * ptr = nullptr;
+  T * ptr{nullptr};
 
   CHECK_CUDA_ERROR(
     cudaMallocFromPoolAsync(reinterpret_cast<void **>(&ptr), sizeof(U) * n, pool, stream));
@@ -144,7 +148,7 @@ typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtrHost<T>> make_un
   const std::size_t n, unsigned int flag)
 {
   using U = typename std::remove_extent_t<T>;
-  U * p;
+  U * p{nullptr};
   CHECK_CUDA_ERROR(::cudaHostAlloc(reinterpret_cast<void **>(&p), sizeof(U) * n, flag));
   return CudaUniquePtrHost<T>{p};
 }
@@ -152,7 +156,7 @@ typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtrHost<T>> make_un
 template <typename T>
 CudaUniquePtrHost<T> make_unique_host(unsigned int flag = cudaHostAllocDefault)
 {
-  T * p;
+  T * p{nullptr};
   CHECK_CUDA_ERROR(::cudaHostAlloc(reinterpret_cast<void **>(&p), sizeof(T), flag));
   return CudaUniquePtrHost<T>{p};
 }
