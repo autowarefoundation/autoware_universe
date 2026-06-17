@@ -190,6 +190,27 @@ bool BevEncoder::encode(
     num_voxels = config_->max_num_voxels_;
   }
 
+  // autoware_bevfusion voxelization emits voxel coords as (z, y, x), but the
+  // OnePlanner BEV encoder was trained/exported with (x, y, z) coords and
+  // sparse_shape [X, Y, Z] = [1440, 1440, 41]. Reverse the three columns so the
+  // Z index lands in the last column (size 41); otherwise strided sparse convs
+  // drop every point ("points vanished") because the X index (0..1439) is
+  // validated against the Z extent (41).
+  {
+    std::vector<std::int32_t> coords_host(3 * num_voxels);
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      coords_host.data(), voxel_coords_d_.get(), 3 * num_voxels * sizeof(std::int32_t),
+      cudaMemcpyDeviceToHost, stream_));
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    for (int64_t i = 0; i < num_voxels; ++i) {
+      std::swap(coords_host[i * 3 + 0], coords_host[i * 3 + 2]);
+    }
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      voxel_coords_d_.get(), coords_host.data(), 3 * num_voxels * sizeof(std::int32_t),
+      cudaMemcpyHostToDevice, stream_));
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  }
+
   network_trt_ptr_->setInputShape(
     "voxels", nvinfer1::Dims{
                 3, {num_voxels, config_->max_points_per_voxel_, config_->num_point_feature_size_}});
