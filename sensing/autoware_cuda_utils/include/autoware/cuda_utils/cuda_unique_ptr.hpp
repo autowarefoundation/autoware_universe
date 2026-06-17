@@ -60,7 +60,7 @@ template <typename T>
 using CudaUniquePtr = std::unique_ptr<T, CudaDeleter>;
 
 template <typename T>
-typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtr<T>> make_unique(
+typename std::enable_if_t<std::is_array_v<T>, CudaUniquePtr<T>> make_unique(
   const std::size_t n, cudaStream_t stream)
 {
   if (detail::is_default_stream(stream)) {
@@ -74,7 +74,7 @@ typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtr<T>> make_unique
 }
 
 template <typename T>
-CudaUniquePtr<T> make_unique(cudaStream_t stream)
+typename std::enable_if_t<!std::is_array_v<T>, CudaUniquePtr<T>> make_unique(cudaStream_t stream)
 {
   if (detail::is_default_stream(stream)) {
     throw std::invalid_argument("Stream cannot be null or legacy.");
@@ -87,7 +87,7 @@ CudaUniquePtr<T> make_unique(cudaStream_t stream)
 
 template <typename T>
 [[deprecated("Use make_unique<T[]>(n, cudaStream_t) for stream-ordered allocation")]]
-typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtr<T>> make_unique(
+typename std::enable_if_t<std::is_array_v<T>, CudaUniquePtr<T>> make_unique(
   const std::size_t n)
 {
   using U = typename std::remove_extent_t<T>;
@@ -97,8 +97,8 @@ typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtr<T>> make_unique
 }
 
 template <typename T>
-[[deprecated("Use make_unique<T>(cudaStream_t) for stream-ordered allocation")]] CudaUniquePtr<T>
-make_unique()
+[[deprecated("Use make_unique<T>(cudaStream_t) for stream-ordered allocation")]]
+typename std::enable_if_t<!std::is_array_v<T>, CudaUniquePtr<T>> make_unique()
 {
   T * p{nullptr};
   CHECK_CUDA_ERROR(::cudaMalloc(reinterpret_cast<void **>(&p), sizeof(T)));
@@ -144,7 +144,7 @@ template <typename T>
 using CudaUniquePtrHost = std::unique_ptr<T, CudaDeleterHost>;
 
 template <typename T>
-typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtrHost<T>> make_unique_host(
+typename std::enable_if_t<std::is_array_v<T>, CudaUniquePtrHost<T>> make_unique_host(
   const std::size_t n, unsigned int flag)
 {
   using U = typename std::remove_extent_t<T>;
@@ -154,7 +154,7 @@ typename std::enable_if_t<std::is_array<T>::value, CudaUniquePtrHost<T>> make_un
 }
 
 template <typename T>
-CudaUniquePtrHost<T> make_unique_host(unsigned int flag = cudaHostAllocDefault)
+typename std::enable_if_t<!std::is_array_v<T>, CudaUniquePtrHost<T>> make_unique_host(unsigned int flag = cudaHostAllocDefault)
 {
   T * p{nullptr};
   CHECK_CUDA_ERROR(::cudaHostAlloc(reinterpret_cast<void **>(&p), sizeof(T), flag));
