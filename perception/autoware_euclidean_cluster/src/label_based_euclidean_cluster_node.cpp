@@ -55,6 +55,8 @@ bool is_ignored_mapping(const std::string & mapped_label)
 }
 
 /// @brief Normalize configured label names to the uppercase form expected by toLabel().
+/// NOTE: This function no longer uses once
+/// https://github.com/autowarefoundation/autoware_core/pull/1184 has been merged.
 std::string normalize_object_label_name(const std::string & label_name)
 {
   std::string normalized = label_name;
