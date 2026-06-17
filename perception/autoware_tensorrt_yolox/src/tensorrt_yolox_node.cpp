@@ -15,7 +15,6 @@
 #include "autoware/tensorrt_yolox/tensorrt_yolox_node.hpp"
 
 #include <memory>
-#include <optional>
 #include <string>
 
 // cspell: ignore semseg
@@ -45,7 +44,6 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   config.quantize_last_layer = this->declare_parameter<bool>("quantize_last_layer");
   config.profile_per_layer = this->declare_parameter<bool>("profile_per_layer");
   config.clip_value = this->declare_parameter<double>("clip_value");
-  config.preprocess_on_gpu = this->declare_parameter<bool>("preprocess_on_gpu");
   config.calibration_image_list_path =
     this->declare_parameter<std::string>("calibration_image_list_path");
   config.gpu_id = this->declare_parameter<uint8_t>("gpu_id");

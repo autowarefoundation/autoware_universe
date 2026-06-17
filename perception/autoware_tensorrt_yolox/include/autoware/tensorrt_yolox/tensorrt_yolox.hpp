@@ -76,7 +76,6 @@ public:
    * @param[in] num_class classifier-ed num
    * @param[in] score_threshold threshold for detection
    * @param[in] nms_threshold threshold for NMS
-   * @param[in] use_gpu_preprocess whether use cuda gpu for preprocessing
    * @param[in] gpu_id GPU id for inference
    * @param[in] calibration_image_list_path path for calibration files (only require for
    * quantization)
@@ -86,9 +85,9 @@ public:
    */
   TrtYoloX(
     TrtCommonConfig & trt_config, const int num_class = 8, const float score_threshold = 0.3,
-    const float nms_threshold = 0.7, const bool use_gpu_preprocess = false,
-    const uint8_t gpu_id = 0, std::string calibration_image_list_path = std::string(),
-    const double norm_factor = 1.0, [[maybe_unused]] const std::string & cache_dir = "",
+    const float nms_threshold = 0.7, const uint8_t gpu_id = 0,
+    std::string calibration_image_list_path = std::string(), const double norm_factor = 1.0,
+    [[maybe_unused]] const std::string & cache_dir = "",
     const CalibrationConfig & calib_config = CalibrationConfig());
   /**
    * @brief Deconstruct TrtYoloX
@@ -151,23 +150,10 @@ public:
 
 private:
   /**
-   * @brief run preprocess including resizing, letterbox, NHWC2NCHW and toFloat on CPU
-   * @param[in] images batching images
-   */
-  void preprocess(const std::vector<cv::Mat> & images);
-
-  /**
    * @brief run preprocess on GPU
    * @param[in] images batching images
    */
   void preprocessGpu(const std::vector<cv::Mat> & images);
-
-  /**
-   * @brief run multi-scale preprocess including resizing, letterbox, NHWC2NCHW and toFloat on CPU
-   * @param[in] images batching images
-   * @param[in] rois region of interest
-   */
-  void multiScalePreprocess(const cv::Mat & image, const std::vector<cv::Rect> & rois);
 
   /**
    * @brief run multi-scale preprocess including resizing, letterbox, NHWC2NCHW and toFloat on GPU
@@ -213,16 +199,6 @@ private:
     const ObjectArray & face_objects, std::vector<int> & picked, float nms_threshold) const;
 
   /**
-   * @brief get a mask image for a segmentation head
-   * @param[out] argmax argmax results
-   * @param[in] prob probability map
-   * @param[in] dims dimension for probability map
-   * @param[in] out_w mask width excluding letterbox
-   * @param[in] out_h mask height excluding letterbox
-   */
-  cv::Mat getMaskImage(float * prob, nvinfer1::Dims dims, int out_w, int out_h);
-
-  /**
    * @brief get a mask image on GPUs for a segmentation head
    * @param[out] mask image
    * @param[in] prob probability map on device
@@ -234,7 +210,6 @@ private:
 
   std::unique_ptr<TrtConvCalib> trt_common_;
 
-  std::vector<float> input_h_;
   CudaUniquePtr<float[]> input_d_;
   CudaUniquePtr<int32_t[]> out_num_detections_d_;
   CudaUniquePtr<float[]> out_boxes_d_;
@@ -257,8 +232,6 @@ private:
   int32_t batch_size_;
   CudaUniquePtrHost<float[]> out_prob_h_;
 
-  // flag whether preprocess are performed on GPU
-  bool use_gpu_preprocess_;
   // GPU id for inference
   const uint8_t gpu_id_;
   // flag for gpu initialization
@@ -284,7 +257,6 @@ private:
   int multitask_;
   // buff size for segmentation heads
   CudaUniquePtr<float[]> segmentation_out_prob_d_;
-  CudaUniquePtrHost<float[]> segmentation_out_prob_h_;
   size_t segmentation_out_elem_num_;
   size_t segmentation_out_elem_num_per_batch_;
   std::vector<cv::Mat> segmentation_masks_;

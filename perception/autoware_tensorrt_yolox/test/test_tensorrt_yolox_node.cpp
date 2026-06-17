@@ -115,7 +115,6 @@ void append_common_overrides(rclcpp::NodeOptions & options)
   options.append_parameter_override("quantize_last_layer", false);
   options.append_parameter_override("profile_per_layer", false);
   options.append_parameter_override("clip_value", 6.0);
-  options.append_parameter_override("preprocess_on_gpu", true);
   options.append_parameter_override("calibration_image_list_path", std::string(""));
   options.append_parameter_override("gpu_id", 0);
 }
