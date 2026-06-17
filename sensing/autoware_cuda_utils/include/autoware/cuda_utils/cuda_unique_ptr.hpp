@@ -85,8 +85,9 @@ typename std::enable_if_t<!std::is_array_v<T>, CudaUniquePtr<T>> make_unique(cud
   return CudaUniquePtr<T>{p, CudaDeleter{stream}};
 }
 
+// TODO(mojomex): Deprecate once https://github.com/orgs/autowarefoundation/discussions/7167 is
+// resolved
 template <typename T>
-[[deprecated("Use make_unique<T[]>(n, cudaStream_t) for stream-ordered allocation")]]
 typename std::enable_if_t<std::is_array_v<T>, CudaUniquePtr<T>> make_unique(const std::size_t n)
 {
   using U = typename std::remove_extent_t<T>;
@@ -95,8 +96,9 @@ typename std::enable_if_t<std::is_array_v<T>, CudaUniquePtr<T>> make_unique(cons
   return CudaUniquePtr<T>{p};
 }
 
+// TODO(mojomex): Deprecate once https://github.com/orgs/autowarefoundation/discussions/7167 is
+// resolved
 template <typename T>
-[[deprecated("Use make_unique<T>(cudaStream_t) for stream-ordered allocation")]]
 typename std::enable_if_t<!std::is_array_v<T>, CudaUniquePtr<T>> make_unique()
 {
   T * p{nullptr};
