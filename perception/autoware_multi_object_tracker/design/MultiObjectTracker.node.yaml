@@ -106,7 +106,7 @@ param_values:
     default: false
   - name: ego_source
     type: string
-    default: odometry
+    default: tf
 
 # processes
 processes:

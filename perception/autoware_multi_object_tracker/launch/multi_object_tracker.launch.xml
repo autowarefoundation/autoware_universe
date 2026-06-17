@@ -34,7 +34,7 @@
   <arg name="data_association_matrix_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/data_association_matrix.param.yaml"/>
   <arg name="input_channels_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/input_channels.param.yaml"/>
   <arg name="publish_merged_objects" default="false"/>
-  <arg name="ego_source" default="odometry" description="ego pose source: tf (look up from TF tree) or odometry (interpolate from input/odometry)"/>
+  <arg name="ego_source" default="tf" description="ego pose source: tf (look up from TF tree) or odometry (interpolate from input/odometry)"/>
 
   <node pkg="autoware_multi_object_tracker" exec="multi_object_tracker_node" name="multi_object_tracker" output="both">
     <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>

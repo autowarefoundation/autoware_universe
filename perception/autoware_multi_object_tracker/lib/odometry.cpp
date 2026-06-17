@@ -160,6 +160,18 @@ Odometry::Odometry(
 
 void Odometry::updateOdometryBuffer(const nav_msgs::msg::Odometry & odometry)
 {
+  // The odometry pose is consumed as the world <- ego transform without re-projection, so the
+  // incoming frames must match the configured ones. Warn (throttled) on mismatch instead of
+  // silently producing wrong poses.
+  if (odometry.header.frame_id != world_frame_id_ || odometry.child_frame_id != ego_frame_id_) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 2000,
+      "Odometry frames ('%s' <- '%s') do not match the configured frames ('%s' <- '%s'); "
+      "ego poses from the odometry backend may be wrong.",
+      odometry.header.frame_id.c_str(), odometry.child_frame_id.c_str(), world_frame_id_.c_str(),
+      ego_frame_id_.c_str());
+  }
+
   const rclcpp::Time stamp(odometry.header.stamp);
   odom_buffer_[stamp] = odometry;
 
