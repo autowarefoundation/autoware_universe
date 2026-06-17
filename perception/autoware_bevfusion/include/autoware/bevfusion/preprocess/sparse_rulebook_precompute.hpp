@@ -56,11 +56,6 @@ struct SparseDownsampleStage
   int kernel_volume{0};            // prod(ksize); filled by ctor if 0
 };
 
-// Default stage descriptors for the BEVFusion-L sparse encoder (sparse_shape [1440,1440,41]).
-// Matches the down-sample layers in projects/BEVFusion/bevfusion/sparse_encoder.py and the ONNX
-// node attributes used by the export-side transform.
-std::vector<SparseDownsampleStage> default_bevfusion_downsample_stages();
-
 class SparseRulebookPrecompute
 {
 public:

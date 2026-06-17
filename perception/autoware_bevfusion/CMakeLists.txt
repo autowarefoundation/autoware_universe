@@ -77,6 +77,8 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
   # Find Eigen3
   find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
+  find_package(nlohmann_json REQUIRED)
+
   add_definitions("-DTV_CUDA")
 
   # cSpell:ignore expt
@@ -137,6 +139,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     ${CUBLAS_LIBRARIES}
     ${CUDA_curand_LIBRARY}
     ${PROJECT_NAME}_cuda_lib
+    nlohmann_json::nlohmann_json
   )
 
   # To suppress unknown-pragmas error. The root-cause is CUB library in CUDA 11.6.

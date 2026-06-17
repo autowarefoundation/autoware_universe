@@ -89,49 +89,6 @@ bool useInt64HashK(
 }
 }  // namespace
 
-std::vector<SparseDownsampleStage> default_bevfusion_downsample_stages()
-{
-  // Matches the ONNX node attributes of the 4 stride>1 GetIndicePairsImplicitGemm nodes
-  // (BEVFusion-L, sparse_shape [1440,1440,41]). Spatial cascade 1440->720->360->180.
-  // onnx_base is the clean "rulebook/<tag>" prefix; the 4 bound tensors are
-  // "<onnx_base>/{out_indices,pair_fwd,pair_mask,mask_argsort}" (see
-  // export/sparse_trainstation_transform.py:rulebook_input_name()).
-  std::vector<SparseDownsampleStage> stages = {
-    {"rulebook/l1",
-     {3, 3, 3},
-     {2, 2, 2},
-     {1, 1, 1},
-     {1, 1, 1},
-     {1440, 1440, 41},
-     0},
-    {"rulebook/l2",
-     {3, 3, 3},
-     {2, 2, 2},
-     {1, 1, 1},
-     {1, 1, 1},
-     {720, 720, 21},
-     0},
-    {"rulebook/l3",
-     {3, 3, 3},
-     {2, 2, 2},
-     {1, 1, 0},
-     {1, 1, 1},
-     {360, 360, 11},
-     0},
-    {"rulebook/out",
-     {1, 1, 3},
-     {1, 1, 2},
-     {0, 0, 0},
-     {1, 1, 1},
-     {180, 180, 5},
-     0},
-  };
-  for (auto & s : stages) {
-    s.kernel_volume = std::accumulate(s.ksize.begin(), s.ksize.end(), 1, std::multiplies<int>());
-  }
-  return stages;
-}
-
 SparseRulebookPrecompute::SparseRulebookPrecompute(
   int out_indices_num_limit, std::vector<SparseDownsampleStage> stages, cudaStream_t stream)
 : out_indices_num_limit_(out_indices_num_limit), stages_(std::move(stages)), stream_(stream)

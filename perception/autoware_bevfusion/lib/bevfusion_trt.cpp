@@ -24,12 +24,16 @@
 #include <autoware/point_types/memory.hpp>
 #include <autoware_utils_math/constants.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
 #include <memory>
+#include <string_view>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -37,6 +41,134 @@
 
 namespace autoware::bevfusion
 {
+
+namespace
+{
+// Minimal protobuf field scanner: reads a varint from the stream.
+// Returns false on EOF or read error.
+bool read_varint(std::ifstream & f, std::uint64_t & out)
+{
+  out = 0;
+  int shift = 0;
+  std::uint8_t b;
+  do {
+    if (!f.read(reinterpret_cast<char *>(&b), 1)) {
+      return false;
+    }
+    out |= static_cast<std::uint64_t>(b & 0x7FU) << shift;
+    shift += 7;
+  } while (b & 0x80U);
+  return true;
+}
+
+// Load SparseDownsampleStage descriptors from the "rulebook_stages" metadata_props entry
+// embedded in the ONNX by AWML sparse_trainstation_transform.embed_rulebook_stages_metadata().
+//
+// Parses only the top-level protobuf fields of ModelProto, skipping the large graph field
+// (field 7) via fseek — total I/O is a few KB regardless of model size.
+// Returns an empty vector if the path is empty, the file is missing, the key is absent,
+// or the JSON is malformed.
+std::vector<SparseDownsampleStage> load_stages_from_onnx(const std::string & onnx_path)
+{
+  if (onnx_path.empty()) {
+    return {};
+  }
+  std::ifstream f(onnx_path, std::ios::binary);
+  if (!f.is_open()) {
+    return {};
+  }
+
+  // ONNX ModelProto (protobuf3) top-level field numbers:
+  //   1  ir_version       (varint)
+  //   7  graph            (length-delimited, large — skip via seekg)
+  //   8  opset_import     (length-delimited, repeated)
+  //   14 metadata_props   (length-delimited, repeated StringStringEntryProto)
+  //      └── 1 key (string), 2 value (string)
+  constexpr int kFieldMetadataProps = 14;
+  constexpr std::uint32_t kWireVarint = 0;
+  constexpr std::uint32_t kWireLenDelim = 2;
+  constexpr std::string_view kMetaKey = "rulebook_stages";
+
+  while (f.good()) {
+    std::uint64_t tag_u64;
+    if (!read_varint(f, tag_u64)) {
+      break;
+    }
+    const int field_num = static_cast<int>(tag_u64 >> 3U);
+    const std::uint32_t wire_type = static_cast<std::uint32_t>(tag_u64 & 0x7ULL);
+
+    if (wire_type == kWireVarint) {
+      std::uint64_t dummy;
+      if (!read_varint(f, dummy)) {
+        break;
+      }
+    } else if (wire_type == kWireLenDelim) {
+      std::uint64_t length;
+      if (!read_varint(f, length)) {
+        break;
+      }
+      if (field_num != kFieldMetadataProps) {
+        // Skip non-metadata fields (including the large graph) with a single seek.
+        f.seekg(static_cast<std::streamoff>(length), std::ios::cur);
+        continue;
+      }
+      // Parse StringStringEntryProto: field 1 = key, field 2 = value.
+      std::string key, value;
+      const std::streampos entry_start = f.tellg();
+      const std::streampos entry_end = entry_start + static_cast<std::streamoff>(length);
+      while (f.tellg() < entry_end) {
+        std::uint64_t sub_tag;
+        if (!read_varint(f, sub_tag)) {
+          break;
+        }
+        const int sub_field = static_cast<int>(sub_tag >> 3U);
+        const std::uint32_t sub_wire = static_cast<std::uint32_t>(sub_tag & 0x7ULL);
+        if (sub_wire != kWireLenDelim) {
+          break;
+        }
+        std::uint64_t sub_len;
+        if (!read_varint(f, sub_len)) {
+          break;
+        }
+        std::string buf(sub_len, '\0');
+        if (!f.read(buf.data(), static_cast<std::streamsize>(sub_len))) {
+          break;
+        }
+        if (sub_field == 1) {
+          key = std::move(buf);
+        } else if (sub_field == 2) {
+          value = std::move(buf);
+        }
+      }
+      f.seekg(entry_end);  // ensure we're at the correct position after the entry
+      if (key != kMetaKey) {
+        continue;
+      }
+      // Found the entry — parse the JSON value.
+      try {
+        auto j = nlohmann::json::parse(value);
+        std::vector<SparseDownsampleStage> stages;
+        for (const auto & entry : j) {
+          SparseDownsampleStage s;
+          s.onnx_base = entry.at("onnx_base").get<std::string>();
+          s.ksize = entry.at("ksize").get<std::vector<int>>();
+          s.stride = entry.at("stride").get<std::vector<int>>();
+          s.padding = entry.at("padding").get<std::vector<int>>();
+          s.dilation = entry.at("dilation").get<std::vector<int>>();
+          s.spatial_shape = entry.at("spatial_shape").get<std::vector<int>>();
+          stages.push_back(std::move(s));
+        }
+        return stages;
+      } catch (const std::exception &) {
+        return {};
+      }
+    } else {
+      break;  // unexpected wire type — stop parsing
+    }
+  }
+  return {};
+}
+}  // namespace
 
 BEVFusionTRT::BEVFusionTRT(
   const TrtBEVFusionConfig & trt_config, const DensificationParam & densification_param,
@@ -51,6 +183,22 @@ BEVFusionTRT::BEVFusionTRT(
   stop_watch_ptr_->tic("processing/inner");
 
   initPtr();
+
+  // trainStation/DDS removal: owns the stable rulebook buffers bound as engine inputs.
+  // Reads stage geometry from the "rulebook_stages" metadata_props embedded in the ONNX by AWML.
+  if (config_.sparse_remove_trainstation_) {
+    const std::string onnx_path = trt_config.common.onnx_path.string();
+    auto stages = load_stages_from_onnx(onnx_path);
+    if (stages.empty()) {
+      throw std::runtime_error(
+        "sparse_remove_trainstation is enabled but the ONNX at '" + onnx_path +
+        "' has no 'rulebook_stages' metadata. "
+        "Re-export the model with AWML spconv_remove_trainstation=True.");
+    }
+    sparse_rulebook_ptr_ = std::make_unique<SparseRulebookPrecompute>(
+      static_cast<int>(config_.sparse_out_indices_num_limit_), std::move(stages), stream_);
+  }
+
   initTrt(trt_config);
 }
 
@@ -114,12 +262,6 @@ void BEVFusionTRT::initPtr()
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_, true);
   post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
 
-  // trainStation/DDS removal: owns the stable rulebook buffers bound as engine inputs.
-  if (config_.sparse_remove_trainstation_) {
-    sparse_rulebook_ptr_ = std::make_unique<SparseRulebookPrecompute>(
-      static_cast<int>(config_.sparse_out_indices_num_limit_),
-      default_bevfusion_downsample_stages(), stream_);
-  }
 }
 
 void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
