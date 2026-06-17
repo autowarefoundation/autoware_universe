@@ -17,7 +17,6 @@
 #include "autoware/behavior_velocity_intersection_module/experimental/util.hpp"
 
 #include <autoware/lanelet2_utils/topology.hpp>
-#include <autoware/trajectory/utils/crop.hpp>
 #include <autoware/trajectory/utils/find_nearest.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
 
@@ -103,12 +102,9 @@ static std::optional<lanelet::ConstLanelet> getFirstConflictingLanelet(
   static constexpr auto ds = 0.2;
   const auto start = std::max<double>(0.0, lane_ids_interval.start - vehicle_length);
 
-  const auto intersection_path =
-    autoware::experimental::trajectory::crop(path, start, lane_ids_interval.end);
-
   // start from beginning of the Trajectory
-  for (const auto s : intersection_path.base_arange(ds)) {
-    const auto & pose = intersection_path.compute(s).point.pose;
+  for (const auto s : path.base_arange({start, lane_ids_interval.end}, ds)) {
+    const auto & pose = path.compute(s).point.pose;
     const auto path_footprint =
       autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(pose));
     for (const auto & conflicting_lanelet : conflicting_lanelets) {
