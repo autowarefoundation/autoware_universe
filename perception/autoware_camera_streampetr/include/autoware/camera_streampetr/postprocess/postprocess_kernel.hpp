@@ -61,13 +61,13 @@ public:
   }
 
   ///// NETWORK PARAMETERS /////
-  int32_t num_classes_{5};
+  int32_t num_classes_{7};
   int32_t num_proposals_{5400};
 
   // Post processing parameters
-  std::vector<float> score_thresholds_{0.1, 0.1, 0.1, 0.1, 0.1};
+  std::vector<float> score_thresholds_{0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
   float circle_nms_dist_threshold_{0.5};
-  std::vector<float> yaw_norm_thresholds_{0.3, 0.3, 0.3, 0.3, 0.0};
+  std::vector<float> yaw_norm_thresholds_{0.3, 0.3, 0.3, 0.3, 0.0, 0.0, 0.0};
   std::vector<float> detection_range_{-61.2, -61.2, -10.0, 61.2, 61.2, 10.0};
 };
 
