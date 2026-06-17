@@ -156,7 +156,8 @@ TEST_F(LabelBasedEuclideanClusterTest, EmptyPointCloudReturnsEmptyObjects)
   auto result = cluster.process(pc);
 
   // Assert
-  EXPECT_EQ(result.objects.size(), 0U);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->objects.size(), 0U);
 }
 
 TEST_F(LabelBasedEuclideanClusterTest, PointCloudWithoutClassIdUsesDefaultLabel)
@@ -183,9 +184,10 @@ TEST_F(LabelBasedEuclideanClusterTest, PointCloudWithoutClassIdUsesDefaultLabel)
   auto result = cluster.process(pc);
 
   // Assert
+  ASSERT_TRUE(result.has_value());
   // Even if no clusters form, the processing should complete without errors
   // If clusters do form, they should use UNKNOWN label (default when no class_id field)
-  for (const auto & obj : result.objects) {
+  for (const auto & obj : result->objects) {
     EXPECT_EQ(obj.classification[0].label, ObjectClassification::UNKNOWN);
   }
 }
@@ -226,9 +228,10 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsAreGroupedByLabel)
   auto result = cluster.process(pc);
 
   // Assert - should have clusters for both classes
+  ASSERT_TRUE(result.has_value());
   bool has_car = false;
   bool has_ped = false;
-  for (const auto & obj : result.objects) {
+  for (const auto & obj : result->objects) {
     if (obj.classification[0].label == ObjectClassification::CAR) {
       has_car = true;
     } else if (obj.classification[0].label == ObjectClassification::PEDESTRIAN) {
@@ -268,7 +271,8 @@ TEST_F(LabelBasedEuclideanClusterTest, PointsBelowMinProbabilityAreFiltered)
 
   // Assert - only points with prob >= 0.8 should be kept (indices 1, 3)
   // These should form a cluster or be filtered out if too small
-  EXPECT_LE(result.objects.size(), 2U);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_LE(result->objects.size(), 2U);
 }
 
 TEST_F(LabelBasedEuclideanClusterTest, AverageProbabilityIsCorrect)
@@ -300,10 +304,11 @@ TEST_F(LabelBasedEuclideanClusterTest, AverageProbabilityIsCorrect)
   auto result = cluster.process(pc);
 
   // Assert - if any clusters form, check probability is reasonable
-  if (result.objects.size() > 0) {
+  ASSERT_TRUE(result.has_value());
+  if (!result->objects.empty()) {
     // Probability should be some reasonable value between 0 and 1
-    EXPECT_GE(result.objects[0].existence_probability, 0.0f);
-    EXPECT_LE(result.objects[0].existence_probability, 1.0f);
+    EXPECT_GE(result->objects[0].existence_probability, 0.0f);
+    EXPECT_LE(result->objects[0].existence_probability, 1.0f);
   }
 }
 
@@ -337,8 +342,9 @@ TEST_F(LabelBasedEuclideanClusterTest, ShapeIsPopulated)
   auto result = cluster.process(pc);
 
   // Assert
-  if (result.objects.size() > 0) {
-    auto & shape = result.objects[0].shape;
+  ASSERT_TRUE(result.has_value());
+  if (!result->objects.empty()) {
+    auto & shape = result->objects[0].shape;
     // Shape should have dimensions set
     EXPECT_GE(shape.dimensions.x, 0.0);
     EXPECT_GE(shape.dimensions.y, 0.0);
@@ -374,9 +380,30 @@ TEST_F(LabelBasedEuclideanClusterTest, UnmappedLabelsAreIgnored)
   auto result = cluster.process(pc);
 
   // Assert - only the mapped class (CAR) should produce objects
-  for (const auto & obj : result.objects) {
+  ASSERT_TRUE(result.has_value());
+  for (const auto & obj : result->objects) {
     EXPECT_EQ(obj.classification[0].label, ObjectClassification::CAR);
   }
+}
+
+TEST_F(LabelBasedEuclideanClusterTest, ReturnsErrorWhenRequiredFieldsAreMissing)
+{
+  std::unordered_map<uint8_t, uint8_t> class_map;
+  class_map[0] = ObjectClassification::CAR;
+
+  LabelBasedEuclideanCluster cluster(
+    class_map, 0.0f, ShapePolicy::ALL_POLYGON, default_cluster_,
+    std::unordered_map<uint8_t, std::shared_ptr<EuclideanClusterInterface>>{}, shape_estimator_);
+
+  sensor_msgs::msg::PointCloud2 pc;
+  pc.height = 1;
+  pc.width = 1;
+  pc.is_dense = true;
+  // Intentionally missing x/y/z field definitions
+
+  const auto result = cluster.process(pc);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_FALSE(result.error().empty());
 }
 
 }  // namespace autoware::euclidean_cluster

@@ -236,7 +236,7 @@ EuclideanClusterInterface & LabelBasedEuclideanCluster::get_cluster_executer(
   return (it != label_cluster_executers_.end()) ? *it->second : *default_cluster_;
 }
 
-autoware_perception_msgs::msg::DetectedObjects LabelBasedEuclideanCluster::process(
+LabelBasedEuclideanCluster::result_t LabelBasedEuclideanCluster::process(
   const sensor_msgs::msg::PointCloud2 & input_msg)
 {
   DetectedObjects output_msg;
@@ -247,7 +247,7 @@ autoware_perception_msgs::msg::DetectedObjects LabelBasedEuclideanCluster::proce
     !has_field(input_msg, "x", sensor_msgs::msg::PointField::FLOAT32) ||
     !has_field(input_msg, "y", sensor_msgs::msg::PointField::FLOAT32) ||
     !has_field(input_msg, "z", sensor_msgs::msg::PointField::FLOAT32)) {
-    return output_msg;  // Return empty if required fields missing
+    return tl::unexpected(std::string("Input pointcloud missing required float32 fields: x, y, z"));
   }
 
   // 1. Split points by label and filter by probability

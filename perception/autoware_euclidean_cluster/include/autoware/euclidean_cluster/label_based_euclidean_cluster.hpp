@@ -18,12 +18,14 @@
 #include "autoware/euclidean_cluster/euclidean_cluster_interface.hpp"
 
 #include <autoware/shape_estimation/shape_estimator.hpp>
+#include <tl/expected.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -49,6 +51,8 @@ enum ShapePolicy : uint8_t {
 class LabelBasedEuclideanCluster
 {
 public:
+  using result_t = tl::expected<autoware_perception_msgs::msg::DetectedObjects, std::string>;
+
   /// @brief Construct with full configuration for clustering and shape estimation.
   /// @param class_id_to_object_label Mapping from input class ID to Autoware object label.
   /// @param min_probability Minimum confidence threshold for points.
@@ -72,9 +76,8 @@ public:
   /// The caller (ROS node) must populate these fields from the input message.
   ///
   /// @param input_msg Input point cloud with xyz, and optionally class_id / probability.
-  /// @return Detected objects without frame_id or timestamp populated.
-  autoware_perception_msgs::msg::DetectedObjects process(
-    const sensor_msgs::msg::PointCloud2 & input_msg);
+  /// @return Detected objects without frame_id or timestamp populated, or an error string.
+  [[nodiscard]] result_t process(const sensor_msgs::msg::PointCloud2 & input_msg);
 
 private:
   std::unordered_map<std::uint8_t, std::uint8_t> class_id_to_object_label_;

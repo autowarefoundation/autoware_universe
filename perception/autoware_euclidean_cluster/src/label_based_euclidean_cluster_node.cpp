@@ -348,7 +348,14 @@ void LabelBasedEuclideanClusterNode::on_pointcloud(
   stop_watch_ptr_->toc("processing_time", true);
 
   // Process the point cloud using the core cluster
-  auto output_msg = processor_->process(*input_msg);
+  auto result = processor_->process(*input_msg);
+  if (!result) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 5000, "Skipping pointcloud: %s", result.error().c_str());
+    return;
+  }
+
+  auto output_msg = std::move(result.value());
 
   // Populate ROS-specific fields
   output_msg.header = input_msg->header;
