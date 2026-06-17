@@ -45,11 +45,14 @@ else()
   set(SPCONV_AVAIL OFF)
 endif()
 
-# The BEVFusion CUDA library (voxelization kernels) is installed but not exported
-# by ament, so locate it explicitly.
+# The BEVFusion CUDA library (voxelization kernels) and the diffusion-planner
+# component library (lane preprocessing, postprocessing, turn-indicator manager)
+# are installed but not exported as linkable targets by ament, so locate them
+# explicitly.
 find_library(BEVFUSION_CUDA_LIB autoware_bevfusion_cuda_lib)
+find_library(DIFFUSION_PLANNER_LIB autoware_diffusion_planner_component)
 
-if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL AND BEVFUSION_CUDA_LIB)
+if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL AND BEVFUSION_CUDA_LIB AND DIFFUSION_PLANNER_LIB)
   add_compile_options(-Wno-narrowing)
 
   ament_auto_add_library(${PROJECT_NAME}_component SHARED
@@ -70,6 +73,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL AND BEVFUSION_CUDA_LIB)
     ${CUDA_LIBRARIES}
     ${CUBLAS_LIBRARIES}
     ${BEVFUSION_CUDA_LIB}
+    ${DIFFUSION_PLANNER_LIB}
   )
 
   rclcpp_components_register_node(${PROJECT_NAME}_component
@@ -85,7 +89,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL AND BEVFUSION_CUDA_LIB)
 else()
   message(WARNING
     "Skipping ${PROJECT_NAME} build (TRT_AVAIL=${TRT_AVAIL}, CUDA_AVAIL=${CUDA_AVAIL}, "
-    "SPCONV_AVAIL=${SPCONV_AVAIL}, BEVFUSION_CUDA_LIB=${BEVFUSION_CUDA_LIB})")
+    "SPCONV_AVAIL=${SPCONV_AVAIL}, BEVFUSION_CUDA_LIB=${BEVFUSION_CUDA_LIB}, DIFFUSION_PLANNER_LIB=${DIFFUSION_PLANNER_LIB})")
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
