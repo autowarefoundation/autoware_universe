@@ -1,0 +1,217 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for autoware_tensorrt_oneplanner",
+  "$comment": "This schema is not considered in CI workflow. See https://github.com/autowarefoundation/autoware.universe/pull/8205#issuecomment-2255074224.",
+  "type": "object",
+  "definitions": {
+    "oneplanner": {
+      "type": "object",
+      "properties": {
+        "plugins_path": {
+          "type": "string",
+          "description": "Path to the TensorRT plugins (spconv ops) required by the BEV encoder.",
+          "default": "$(find-pkg-share autoware_tensorrt_plugins)/plugins/libautoware_tensorrt_plugins.so",
+          "pattern": "\\.so$"
+        },
+        "bev_encoder": {
+          "type": "object",
+          "description": "BEVFusion LiDAR-branch encoder (up to the SECOND-FPN neck).",
+          "properties": {
+            "onnx_path": {
+              "type": "string",
+              "description": "Path to the BEV encoder ONNX model.",
+              "default": "$(var model_path)/oneplanner_bev_encoder.onnx",
+              "pattern": "\\.onnx$"
+            },
+            "engine_path": {
+              "type": "string",
+              "description": "Path to the cached BEV encoder TensorRT engine.",
+              "default": "$(var model_path)/oneplanner_bev_encoder.engine",
+              "pattern": "\\.engine$"
+            },
+            "trt_precision": {
+              "type": "string",
+              "description": "TensorRT precision of the BEV encoder engine.",
+              "default": "fp16",
+              "enum": ["fp16", "fp32"]
+            }
+          },
+          "required": ["onnx_path", "engine_path", "trt_precision"],
+          "additionalProperties": false
+        },
+        "planner": {
+          "type": "object",
+          "description": "Diffusion-planner head conditioned on the BEV feature map.",
+          "properties": {
+            "onnx_path": {
+              "type": "string",
+              "description": "Path to the planner head ONNX model (sampling loop unrolled).",
+              "default": "$(var model_path)/oneplanner_planner.onnx",
+              "pattern": "\\.onnx$"
+            }
+          },
+          "required": ["onnx_path"],
+          "additionalProperties": false
+        },
+        "args_path": {
+          "type": "string",
+          "description": "Path to the normalization-statistics JSON exported with the model.",
+          "default": "$(var model_path)/oneplanner.param.json",
+          "pattern": "\\.json$"
+        },
+        "densification_world_frame_id": {
+          "type": "string",
+          "description": "World frame used to densify (ego-motion compensate) past LiDAR sweeps.",
+          "default": "map"
+        },
+        "densification_num_past_frames": {
+          "type": "integer",
+          "description": "Number of past LiDAR frames concatenated into the current sweep.",
+          "default": 1,
+          "minimum": 0
+        },
+        "cloud_capacity": {
+          "type": "integer",
+          "description": "Capacity of the point-cloud buffer (>= the maximum expected number of points).",
+          "default": 2000000,
+          "minimum": 1
+        },
+        "max_points_per_voxel": {
+          "type": "integer",
+          "description": "Maximum number of points accumulated per voxel.",
+          "default": 10,
+          "minimum": 1
+        },
+        "voxels_num": {
+          "type": "array",
+          "description": "TensorRT optimization profile for the voxel count, [min, opt, max].",
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 3,
+          "maxItems": 3,
+          "default": [1, 128000, 256000]
+        },
+        "point_cloud_range": {
+          "type": "array",
+          "description": "Point-cloud crop range [x_min, y_min, z_min, x_max, y_max, z_max] (m). Must match training.",
+          "items": { "type": "number" },
+          "minItems": 6,
+          "maxItems": 6,
+          "default": [-122.4, -122.4, -3.0, 122.4, 122.4, 5.0]
+        },
+        "voxel_size": {
+          "type": "array",
+          "description": "Voxel size [x, y, z] (m). Must match training.",
+          "items": { "type": "number", "exclusiveMinimum": 0.0 },
+          "minItems": 3,
+          "maxItems": 3,
+          "default": [0.17, 0.17, 0.2]
+        },
+        "out_size_factor": {
+          "type": "integer",
+          "description": "Downsample factor from the voxel grid to the BEV feature map.",
+          "default": 8,
+          "minimum": 1
+        },
+        "bev_feature_channels": {
+          "type": "integer",
+          "description": "Channel count of the BEV feature map produced by the encoder.",
+          "default": 512,
+          "minimum": 1
+        },
+        "use_intensity": {
+          "type": "boolean",
+          "description": "If true, points are 5-dim (x, y, z, intensity, time_lag); else 4-dim. Must match the checkpoint.",
+          "default": true
+        },
+        "temperature": {
+          "type": "number",
+          "description": "Sampling temperature of the diffusion planner (0 = deterministic).",
+          "default": 0.0,
+          "minimum": 0.0
+        },
+        "velocity_smoothing_window": {
+          "type": "integer",
+          "description": "Moving-average window (in trajectory points) used to smooth the longitudinal velocity.",
+          "default": 8,
+          "minimum": 1
+        },
+        "stopping_threshold": {
+          "type": "number",
+          "description": "Speed below which the trajectory is treated as stopping (m/s).",
+          "default": 0.3,
+          "minimum": 0.0
+        },
+        "turn_indicator_keep_offset": {
+          "type": "number",
+          "description": "Longitudinal offset (m) from which a predicted turn indicator is kept.",
+          "default": -1.25
+        },
+        "turn_indicator_hold_duration": {
+          "type": "number",
+          "description": "Minimum duration (s) a turn-indicator command is held.",
+          "default": 1.0,
+          "minimum": 0.0
+        },
+        "shift_x": {
+          "type": "boolean",
+          "description": "Whether to shift the ego frame by the rear-axle to base-link offset along x.",
+          "default": false
+        },
+        "delay_step": {
+          "type": "integer",
+          "description": "Number of trajectory steps dropped from the start to compensate for inference/actuation delay.",
+          "default": 0,
+          "minimum": 0
+        },
+        "line_string_max_step_m": {
+          "type": "number",
+          "description": "Maximum spacing (m) when resampling lanelet line strings for the planner input.",
+          "default": 5.0,
+          "exclusiveMinimum": 0.0
+        },
+        "use_time_interpolation": {
+          "type": "boolean",
+          "description": "Whether to time-interpolate the output trajectory onto a uniform time grid.",
+          "default": false
+        },
+        "traffic_light_group_msg_timeout_seconds": {
+          "type": "number",
+          "description": "Timeout (s) after which a traffic-light-group message is considered stale.",
+          "default": 0.2,
+          "minimum": 0.0
+        }
+      },
+      "required": [
+        "plugins_path",
+        "bev_encoder",
+        "planner",
+        "args_path",
+        "densification_world_frame_id",
+        "densification_num_past_frames",
+        "cloud_capacity",
+        "max_points_per_voxel",
+        "voxels_num",
+        "point_cloud_range",
+        "voxel_size",
+        "out_size_factor",
+        "bev_feature_channels",
+        "use_intensity"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/oneplanner"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

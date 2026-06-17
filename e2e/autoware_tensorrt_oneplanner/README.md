@@ -103,10 +103,14 @@ ros2 launch autoware_tensorrt_oneplanner oneplanner.launch.xml build_only:=true
 
 ## Parameters
 
-See `config/oneplanner.param.yaml`. The LiDAR preprocessing parameters
-(`point_cloud_range`, `voxel_size`, `voxels_num`, …) must match the training configuration
-(±122.4 m, 0.17 m voxels, 4-dim points without intensity — identical to the
-`autoware_bevfusion` lidar-only deployment).
+Defaults live in `config/oneplanner.param.yaml`; every parameter is documented in
+`schema/oneplanner.schema.json`.
+
+{{ json_to_markdown("e2e/autoware_tensorrt_oneplanner/schema/oneplanner.schema.json") }}
+
+The LiDAR preprocessing parameters (`point_cloud_range`, `voxel_size`, `voxels_num`, …) must
+match the training configuration (±122.4 m, 0.17 m voxels; `use_intensity` must match the
+checkpoint's point dimension — identical to the `autoware_bevfusion` lidar-only deployment).
 
 ## Limitations
 
