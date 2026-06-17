@@ -36,15 +36,18 @@
   <depend>autoware_utils_geometry</depend>
   <depend>autoware_utils_uuid</depend>
   <depend>autoware_vehicle_info_utils</depend>
+  <depend>boost</depend>
   <depend>geometry_msgs</depend>
   <depend>lanelet2_core</depend>
   <depend>lanelet2_routing</depend>
   <depend>lanelet2_traffic_rules</depend>
+  <depend>libexpected-dev</depend>
   <depend>nav_msgs</depend>
   <depend>nlohmann-json-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>visualization_msgs</depend>
 
   <exec_depend>autoware_tensorrt_plugins</exec_depend>
