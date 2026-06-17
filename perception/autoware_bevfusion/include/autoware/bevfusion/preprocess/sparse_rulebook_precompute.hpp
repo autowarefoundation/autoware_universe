@@ -44,8 +44,9 @@ using autoware::cuda_utils::CudaUniquePtr;
 // One stride>1 (down-sampling) sparse convolution whose rulebook is precomputed.
 struct SparseDownsampleStage
 {
-  // ONNX graph-input base name; the 4 bound tensors are ``<onnx_base>_output_{0,1,2,3}``
-  // (out_indices, pair_fwd, pair_mask, mask_argsort).
+  // ONNX graph-input base name (e.g. ``rulebook/l1``); the 4 bound tensors are
+  // ``<onnx_base>/{out_indices,pair_fwd,pair_mask,mask_argsort}`` — matches
+  // export/sparse_trainstation_transform.py:rulebook_input_name().
   std::string onnx_base;
   std::vector<int> ksize;          // e.g. {3,3,3} ; conv_out {1,1,3}
   std::vector<int> stride;         // e.g. {2,2,2} ; conv_out {1,1,2}
@@ -110,6 +111,11 @@ private:
   // spconv index-generation workspace + indices_kernel_num + thrust temp (per the plugin layout).
   CudaUniquePtr<std::uint8_t[]> spconv_workspace_d_{nullptr};
   std::size_t spconv_workspace_size_{0};
+  // Frame-invariant worst-case theoretical max active-output (max over stages at the N upper bound).
+  // computeStage() carves the workspace with this constant instead of a per-frame value, so the
+  // workspace layout / offsets do not vary frame to frame (num_in <= N => this always bounds the
+  // per-frame need). Avoids a per-frame get_handcrafted_max_act_out() call.
+  int max_act_out_theory_worst_{0};
 };
 
 }  // namespace autoware::bevfusion

@@ -374,10 +374,10 @@ void BEVFusionTRT::addSparseRulebookNetworkIO(
   for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
     const auto & s = sparse_rulebook_ptr_->stage(i);
     const std::int64_t kv = s.kernel_volume;
-    network_io.emplace_back(s.onnx_base + "_output_0", nvinfer1::Dims{2, {-1, 4}});   // out_indices
-    network_io.emplace_back(s.onnx_base + "_output_1", nvinfer1::Dims{2, {kv, -1}});  // pair_fwd
-    network_io.emplace_back(s.onnx_base + "_output_2", nvinfer1::Dims{2, {-1, 1}});   // pair_mask
-    network_io.emplace_back(s.onnx_base + "_output_3", nvinfer1::Dims{1, {-1}});  // mask_argsort
+    network_io.emplace_back(s.onnx_base + "/out_indices", nvinfer1::Dims{2, {-1, 4}});   // out_indices
+    network_io.emplace_back(s.onnx_base + "/pair_fwd", nvinfer1::Dims{2, {kv, -1}});  // pair_fwd
+    network_io.emplace_back(s.onnx_base + "/pair_mask", nvinfer1::Dims{2, {-1, 1}});   // pair_mask
+    network_io.emplace_back(s.onnx_base + "/mask_argsort", nvinfer1::Dims{1, {-1}});  // mask_argsort
   }
 }
 
@@ -394,16 +394,16 @@ void BEVFusionTRT::addSparseRulebookProfileDims(
     const auto & s = sparse_rulebook_ptr_->stage(i);
     const std::int64_t kv = s.kernel_volume;
     profile_dims.emplace_back(
-      s.onnx_base + "_output_0", nvinfer1::Dims{2, {n_min, 4}}, nvinfer1::Dims{2, {n_opt, 4}},
+      s.onnx_base + "/out_indices", nvinfer1::Dims{2, {n_min, 4}}, nvinfer1::Dims{2, {n_opt, 4}},
       nvinfer1::Dims{2, {n_max, 4}});
     profile_dims.emplace_back(
-      s.onnx_base + "_output_1", nvinfer1::Dims{2, {kv, n_min}}, nvinfer1::Dims{2, {kv, n_opt}},
+      s.onnx_base + "/pair_fwd", nvinfer1::Dims{2, {kv, n_min}}, nvinfer1::Dims{2, {kv, n_opt}},
       nvinfer1::Dims{2, {kv, n_max}});
     profile_dims.emplace_back(
-      s.onnx_base + "_output_2", nvinfer1::Dims{2, {n_min, 1}}, nvinfer1::Dims{2, {n_opt, 1}},
+      s.onnx_base + "/pair_mask", nvinfer1::Dims{2, {n_min, 1}}, nvinfer1::Dims{2, {n_opt, 1}},
       nvinfer1::Dims{2, {n_max, 1}});
     profile_dims.emplace_back(
-      s.onnx_base + "_output_3", nvinfer1::Dims{1, {n_min}}, nvinfer1::Dims{1, {n_opt}},
+      s.onnx_base + "/mask_argsort", nvinfer1::Dims{1, {n_min}}, nvinfer1::Dims{1, {n_opt}},
       nvinfer1::Dims{1, {n_max}});
   }
 }
@@ -416,13 +416,13 @@ void BEVFusionTRT::bindSparseRulebookAddresses()
   for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
     const auto & s = sparse_rulebook_ptr_->stage(i);
     network_trt_ptr_->setTensorAddress(
-      (s.onnx_base + "_output_0").c_str(), sparse_rulebook_ptr_->outIndices(i));
+      (s.onnx_base + "/out_indices").c_str(), sparse_rulebook_ptr_->outIndices(i));
     network_trt_ptr_->setTensorAddress(
-      (s.onnx_base + "_output_1").c_str(), sparse_rulebook_ptr_->pairFwd(i));
+      (s.onnx_base + "/pair_fwd").c_str(), sparse_rulebook_ptr_->pairFwd(i));
     network_trt_ptr_->setTensorAddress(
-      (s.onnx_base + "_output_2").c_str(), sparse_rulebook_ptr_->pairMask(i));
+      (s.onnx_base + "/pair_mask").c_str(), sparse_rulebook_ptr_->pairMask(i));
     network_trt_ptr_->setTensorAddress(
-      (s.onnx_base + "_output_3").c_str(), sparse_rulebook_ptr_->maskArgsort(i));
+      (s.onnx_base + "/mask_argsort").c_str(), sparse_rulebook_ptr_->maskArgsort(i));
   }
 }
 
@@ -435,10 +435,10 @@ void BEVFusionTRT::setSparseRulebookInputShapes()
     const auto & s = sparse_rulebook_ptr_->stage(i);
     const std::int64_t n = sparse_rulebook_ptr_->stageCount(i);
     const std::int64_t kv = s.kernel_volume;
-    network_trt_ptr_->setInputShape((s.onnx_base + "_output_0").c_str(), nvinfer1::Dims{2, {n, 4}});
-    network_trt_ptr_->setInputShape((s.onnx_base + "_output_1").c_str(), nvinfer1::Dims{2, {kv, n}});
-    network_trt_ptr_->setInputShape((s.onnx_base + "_output_2").c_str(), nvinfer1::Dims{2, {n, 1}});
-    network_trt_ptr_->setInputShape((s.onnx_base + "_output_3").c_str(), nvinfer1::Dims{1, {n}});
+    network_trt_ptr_->setInputShape((s.onnx_base + "/out_indices").c_str(), nvinfer1::Dims{2, {n, 4}});
+    network_trt_ptr_->setInputShape((s.onnx_base + "/pair_fwd").c_str(), nvinfer1::Dims{2, {kv, n}});
+    network_trt_ptr_->setInputShape((s.onnx_base + "/pair_mask").c_str(), nvinfer1::Dims{2, {n, 1}});
+    network_trt_ptr_->setInputShape((s.onnx_base + "/mask_argsort").c_str(), nvinfer1::Dims{1, {n}});
   }
 }
 

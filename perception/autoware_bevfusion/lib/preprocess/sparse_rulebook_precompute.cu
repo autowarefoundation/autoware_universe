@@ -93,32 +93,32 @@ std::vector<SparseDownsampleStage> default_bevfusion_downsample_stages()
 {
   // Matches the ONNX node attributes of the 4 stride>1 GetIndicePairsImplicitGemm nodes
   // (BEVFusion-L, sparse_shape [1440,1440,41]). Spatial cascade 1440->720->360->180.
+  // onnx_base is the clean "rulebook/<tag>" prefix; the 4 bound tensors are
+  // "<onnx_base>/{out_indices,pair_fwd,pair_mask,mask_argsort}" (see
+  // export/sparse_trainstation_transform.py:rulebook_input_name()).
   std::vector<SparseDownsampleStage> stages = {
-    {"/pts_middle_encoder/encoder_layer1/encoder_layer1.2/encoder_layer1.2.0/"
-     "GetIndicePairsImplicitGemm",
+    {"rulebook/l1",
      {3, 3, 3},
      {2, 2, 2},
      {1, 1, 1},
      {1, 1, 1},
      {1440, 1440, 41},
      0},
-    {"/pts_middle_encoder/encoder_layer2/encoder_layer2.2/encoder_layer2.2.0/"
-     "GetIndicePairsImplicitGemm",
+    {"rulebook/l2",
      {3, 3, 3},
      {2, 2, 2},
      {1, 1, 1},
      {1, 1, 1},
      {720, 720, 21},
      0},
-    {"/pts_middle_encoder/encoder_layer3/encoder_layer3.2/encoder_layer3.2.0/"
-     "GetIndicePairsImplicitGemm",
+    {"rulebook/l3",
      {3, 3, 3},
      {2, 2, 2},
      {1, 1, 0},
      {1, 1, 1},
      {360, 360, 11},
      0},
-    {"/pts_middle_encoder/conv_out/conv_out.0/GetIndicePairsImplicitGemm",
+    {"rulebook/out",
      {1, 1, 3},
      {1, 1, 2},
      {0, 0, 0},
@@ -152,14 +152,17 @@ void SparseRulebookPrecompute::allocateStageBuffers()
   int max_kv = 0;
   bool any_int64_hash = false;
   // Worst-case max_act_out_in_theory over all stages at the maximum input count (N). Each runtime
-  // stage uses get_handcrafted_max_act_out(num_in, ...) with num_in <= N, so this bounds the largest
-  // workspace any stage can carve (the per-stage carving below must fit in the buffer allocated here).
-  int max_act_out_theory = 0;
+  // stage uses num_in <= N, so this bounds the largest workspace any stage can carve. Stored as a
+  // member and reused by computeStage() every frame so the workspace layout/offsets are frame-
+  // invariant (no per-frame get_handcrafted_max_act_out()).
+  max_act_out_theory_worst_ = 0;
   for (const auto & s : stages_) {
-    max_act_out_theory = std::max(
-      max_act_out_theory, SpconvOps::get_handcrafted_max_act_out(
-                            static_cast<std::size_t>(N), s.ksize, s.stride, s.padding, s.dilation));
+    max_act_out_theory_worst_ = std::max(
+      max_act_out_theory_worst_, SpconvOps::get_handcrafted_max_act_out(
+                                   static_cast<std::size_t>(N), s.ksize, s.stride, s.padding,
+                                   s.dilation));
   }
+  const int max_act_out_theory = max_act_out_theory_worst_;
   for (const auto & s : stages_) {
     max_kv = std::max(max_kv, s.kernel_volume);
     any_int64_hash =
@@ -212,12 +215,14 @@ int SparseRulebookPrecompute::computeStage(int i, const std::int32_t * coords_in
   const bool use_direct_table = true;
   const bool use_int64_hash_k = useInt64HashK(s.spatial_shape, ksize, stride, padding, dilation);
 
-  // max_act_out_in_theory must mirror the plugin (get_indices_pairs_implicit_gemm_plugin.cpp): it
-  // sizes the internal indice_pairs_uniq buffer (~max_act_out_in_theory * 1.1). Using N here (as the
-  // earlier code did) under-allocates for the large down-sample stages and trips the StaticAllocator
-  // "tensor size too small" assert. Derive it from the actual stage input count, like the plugin.
-  const int max_act_out_theory = SpconvOps::get_handcrafted_max_act_out(
-    static_cast<std::size_t>(num_in), ksize, stride, padding, dilation);
+  // max_act_out_in_theory sizes the internal indice_pairs_uniq buffer (~max_act_out_in_theory * 1.1).
+  // Using N here (as the earliest code did) under-allocates for the large down-sample stages and trips
+  // the StaticAllocator "tensor size too small" assert. The plugin derives it from the per-call input
+  // count; we instead reuse the frame-invariant worst case (max over stages at the N upper bound,
+  // computed once in allocateStageBuffers). Since num_in <= N and get_handcrafted_max_act_out is
+  // non-decreasing in the input count, this always bounds the per-frame need, while keeping the
+  // workspace carving/offsets identical every frame (no per-frame get_handcrafted_max_act_out()).
+  const int max_act_out_theory = max_act_out_theory_worst_;
 
   // Carve the workspace exactly like the plugin.
   std::uint8_t * ws = spconv_workspace_d_.get();
