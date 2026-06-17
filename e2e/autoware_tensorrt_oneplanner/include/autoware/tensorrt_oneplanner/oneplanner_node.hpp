@@ -121,7 +121,6 @@ private:
     debug_processing_time_pub_;
 
   std::unique_ptr<DiagnosticsInterface> diagnostics_inference_;
-  std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_{tf_buffer_};

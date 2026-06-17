@@ -256,10 +256,11 @@ PlannerInference::InferenceResult PlannerInference::infer(const InputDataMap & i
 {
   transfer_inputs_to_device(input_data_map);
 
-  const bool status = network_trt_ptr_->enqueueV3(stream_);
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-
-  if (!status) {
+  // enqueueV3 returns the enqueue status synchronously; the inference itself runs
+  // on the stream. The output D2H copies are queued on the same stream, so they
+  // are ordered after inference without a separate synchronization — a single
+  // sync at the end suffices (one fewer host/GPU round-trip per frame).
+  if (!network_trt_ptr_->enqueueV3(stream_)) {
     InferenceResult result;
     result.error_msg = "Failed to enqueue and do inference.";
     return result;

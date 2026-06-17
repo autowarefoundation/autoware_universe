@@ -144,8 +144,8 @@ void OnePlannerNode::on_map(const LaneletMapBin::ConstSharedPtr map_msg)
 void OnePlannerNode::on_pointcloud(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr)
 {
-  stop_watch_ptr_ = std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
-  stop_watch_ptr_->tic("processing_time");
+  autoware_utils_system::StopWatch<std::chrono::milliseconds> stop_watch;
+  stop_watch.tic("processing_time");
 
   diagnostics_inference_->clear();
   const rclcpp::Time current_time(get_clock()->now());
@@ -237,7 +237,7 @@ void OnePlannerNode::on_pointcloud(
   diagnostics_inference_->publish(frame_time);
   autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
   processing_time_msg.stamp = get_clock()->now();
-  processing_time_msg.data = stop_watch_ptr_->toc("processing_time", true);
+  processing_time_msg.data = stop_watch.toc("processing_time", true);
   debug_processing_time_pub_->publish(processing_time_msg);
 }
 
