@@ -20,10 +20,15 @@ ament_auto_add_library(${PROJECT_NAME}_lib SHARED
   lib/voxel_grid_based_euclidean_cluster.cpp
   lib/utils.cpp
   lib/confusable_cluster_merger.cpp
+  lib/label_based_euclidean_cluster.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_lib
   ${PCL_LIBRARIES}
+)
+
+ament_target_dependencies(${PROJECT_NAME}_lib
+  autoware_shape_estimation
 )
 
 target_include_directories(${PROJECT_NAME}_lib
@@ -88,6 +93,12 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_auto_add_gtest(test_voxel_grid_based_euclidean_cluster_fusion
     test/test_voxel_grid_based_euclidean_cluster.cpp
+  )
+  ament_auto_add_gtest(test_label_based_euclidean_cluster
+    test/test_label_based_euclidean_cluster.cpp
+  )
+  target_link_libraries(test_label_based_euclidean_cluster
+    ${PROJECT_NAME}_lib
   )
   ament_auto_add_gtest(test_label_based_euclidean_cluster_node
     test/test_label_based_euclidean_cluster_node.cpp
