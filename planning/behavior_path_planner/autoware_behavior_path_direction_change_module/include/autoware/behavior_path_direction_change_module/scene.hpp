@@ -35,13 +35,7 @@ namespace autoware::behavior_path_planner
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
 // State for tracking which path segment to publish
-enum class PathSegmentState {
-  IDLE = 0,
-  FORWARD_FOLLOWING,
-  AT_CUSP,
-  REVERSE_FOLLOWING,
-  COMPLETED
-};
+enum class PathSegmentState { IDLE = 0, FORWARD_FOLLOWING, AT_CUSP, REVERSE_FOLLOWING, COMPLETED };
 
 inline const char * pathSegmentStateToString(const PathSegmentState state)
 {

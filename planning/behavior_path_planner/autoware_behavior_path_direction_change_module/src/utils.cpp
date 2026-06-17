@@ -447,15 +447,13 @@ PathWithLaneId assembleReferencePathWithLaneStitching(
 
   switch (assembly_phase) {
     case ReferencePathAssemblyPhase::APPROACHING_TAGGED_AREA:
-      return prefix_path.points.empty()
-               ? tagged_centerline
-               : utils::combinePath(prefix_path, tagged_centerline);
+      return prefix_path.points.empty() ? tagged_centerline
+                                        : utils::combinePath(prefix_path, tagged_centerline);
     case ReferencePathAssemblyPhase::INSIDE_TAGGED_CORRIDOR:
       return tagged_centerline;
     case ReferencePathAssemblyPhase::EXITING_TAGGED_AREA:
-      return suffix_path.points.empty()
-               ? tagged_centerline
-               : utils::combinePath(tagged_centerline, suffix_path);
+      return suffix_path.points.empty() ? tagged_centerline
+                                        : utils::combinePath(tagged_centerline, suffix_path);
   }
 
   return tagged_centerline;
@@ -614,8 +612,8 @@ bool isDirectionChangeManeuverFinished(
 
   const bool near_goal = isEgoNearRouteGoal(
     ego_pose, route_handler, th_arrived_distance, route_context.suffix_lanelet_ids);
-  const bool on_tagged = isEgoOnRouteLanelets(
-    ego_pose, route_handler, route_context.tagged_lanelet_ids_ordered);
+  const bool on_tagged =
+    isEgoOnRouteLanelets(ego_pose, route_handler, route_context.tagged_lanelet_ids_ordered);
 
   return near_goal || !on_tagged;
 }

@@ -77,8 +77,8 @@ void flipPathPointOrientation(PathWithLaneId & path);
 void setPathPointVelocityToZero(PathWithLaneId & path, size_t point_count = 1);
 
 void clipPathAroundEgo(
-  PathWithLaneId & path, const geometry_msgs::msg::Pose & ego_pose,
-  double backward_path_length, double forward_path_length);
+  PathWithLaneId & path, const geometry_msgs::msg::Pose & ego_pose, double backward_path_length,
+  double forward_path_length);
 
 std::optional<PathWithLaneId> applyGoalLateralShift(
   const PathWithLaneId & path, const geometry_msgs::msg::Pose & goal_pose,

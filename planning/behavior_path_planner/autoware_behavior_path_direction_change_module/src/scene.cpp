@@ -222,7 +222,9 @@ void DirectionChangeModule::initializeManeuverState()
   is_ego_driving_forward_wrt_lane_ = true;
   current_segment_state_ = PathSegmentState::FORWARD_FOLLOWING;
 
-  if (!planner_data_ || !planner_data_->self_odometry || getTaggedLaneletCenterlinePath().points.empty()) {
+  if (
+    !planner_data_ || !planner_data_->self_odometry ||
+    getTaggedLaneletCenterlinePath().points.empty()) {
     current_segment_state_ = PathSegmentState::IDLE;
   }
 
@@ -516,8 +518,8 @@ bool DirectionChangeModule::shouldActivateModule() const
     return false;
   }
 
-  const bool on_prefix = isEgoOnRouteLanelets(
-    ego_pose, planner_data_->route_handler, route_context_.prefix_lanelet_ids);
+  const bool on_prefix =
+    isEgoOnRouteLanelets(ego_pose, planner_data_->route_handler, route_context_.prefix_lanelet_ids);
   const bool on_tagged = isEgoOnRouteLanelets(
     ego_pose, planner_data_->route_handler, route_context_.tagged_lanelet_ids_ordered);
 
@@ -710,7 +712,8 @@ BehaviorModuleOutput DirectionChangeModule::plan()
   if (!output.path.points.empty()) {
     clipPathAroundEgo(
       output.path, ego_pose,
-      planner_data_->parameters.backward_path_length + planner_data_->parameters.input_path_interval,
+      planner_data_->parameters.backward_path_length +
+        planner_data_->parameters.input_path_interval,
       planner_data_->parameters.forward_path_length);
   }
 
