@@ -52,6 +52,13 @@ endif()
 find_library(BEVFUSION_CUDA_LIB autoware_bevfusion_cuda_lib)
 find_library(DIFFUSION_PLANNER_LIB autoware_diffusion_planner_component)
 
+# CPU-only unit tests for the GPU-free helpers (detail.hpp). Built and run on CI
+# regardless of CUDA/TensorRT availability; the GPU/TensorRT inference paths are
+# covered by the open-loop integration runs.
+if(BUILD_TESTING)
+  ament_auto_add_gtest(test_${PROJECT_NAME} test/test_detail.cpp)
+endif()
+
 if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL AND BEVFUSION_CUDA_LIB AND DIFFUSION_PLANNER_LIB)
   add_compile_options(-Wno-narrowing)
 
