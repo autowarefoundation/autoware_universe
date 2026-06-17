@@ -116,15 +116,6 @@ public:
     std::vector<cv::Mat> & color_masks);
 
   /**
-   * @brief run inference including pre-process and post-process
-   * @param[out] objects results for object detection
-   * @param[in] images batched images
-   * @param[in] rois region of interest for inference
-   */
-  bool doInferenceWithRoi(
-    const std::vector<cv::Mat> & images, ObjectArrays & objects, const std::vector<cv::Rect> & roi);
-
-  /**
    * @brief run multi-scale inference including pre-process and post-process
    * @param[out] objects results for object detection
    * @param[in] image
@@ -170,21 +161,6 @@ private:
    * @param[in] images batching images
    */
   void preprocessGpu(const std::vector<cv::Mat> & images);
-
-  /**
-   * @brief run preprocess including resizing, letterbox, NHWC2NCHW and toFloat on CPU
-   * @param[in] images batching images
-   * @param[in] rois region of interest
-   */
-  void preprocessWithRoi(const std::vector<cv::Mat> & images, const std::vector<cv::Rect> & rois);
-
-  /**
-   * @brief run preprocess on GPU
-   * @param[in] images batching images
-   * @param[in] rois region of interest
-   */
-  void preprocessWithRoiGpu(
-    const std::vector<cv::Mat> & images, const std::vector<cv::Rect> & rois);
 
   /**
    * @brief run multi-scale preprocess including resizing, letterbox, NHWC2NCHW and toFloat on CPU
