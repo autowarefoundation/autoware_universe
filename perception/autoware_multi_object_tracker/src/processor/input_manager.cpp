@@ -68,7 +68,7 @@ void InputStream::push(
 }
 
 std::optional<types::DynamicObjectList> InputStream::processMessage(
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg)
 {
   const autoware_perception_msgs::msg::DetectedObjects & objects = *msg;
   const rclcpp::Time timestamp = objects.header.stamp;
@@ -277,7 +277,7 @@ void InputManager::push(
 
 std::optional<types::DynamicObjectList> InputManager::processMessage(
   const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg)
 {
   if (channel_index >= input_streams_.size()) {
     RCLCPP_WARN(

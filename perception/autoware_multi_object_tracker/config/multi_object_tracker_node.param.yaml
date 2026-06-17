@@ -6,26 +6,29 @@
     ego_frame_id: base_link
     enable_delay_compensation: false
     consider_odometry_uncertainty: false
-    enable_unknown_object_velocity_estimation: true
-    enable_unknown_object_motion_output: false
 
-    # tracker parameters
-    min_known_object_removal_iou: 0.1  # [ratio]
-    min_unknown_object_removal_iou: 0.001  # [ratio]
+    # Per-tracker-type configuration
+    tracker_configs:
+      polygon_tracker:
+        enable_velocity_estimation: true
+        enable_motion_output:
+          unknown:    false
+          car:        true
+          truck:      true
+          bus:        true
+          trailer:    true
+          motorcycle: true
+          bicycle:    true
+          pedestrian: true
+          animal:     true
+          hazard:     false
+      static_tracker:
+        convert_polygon_to_bbox: false # convert POLYGON shape to BOUNDING_BOX at publish time
 
     # pruning parameters
-    # generalized IoU thresholds for tracked classes
-    pruning_generalized_iou_thresholds:
-      unknown: -0.3
-      car: -0.4
-      truck: -0.6
-      bus: -0.6
-      trailer: -0.6
-      motorcycle: -0.1
-      bicycle: -0.1
-      pedestrian: -0.1
-      animal: -0.1
-      hazard: -0.1
+    min_known_object_removal_iou: 0.1  # [ratio]
+    min_unknown_object_removal_iou: 0.001  # [ratio]
+    pruning_generalized_iou_threshold: 0.1  # [ratio]
     pruning_distance_thresholds:
       unknown: 9.0
       car: 5.0
@@ -37,9 +40,6 @@
       pedestrian: 2.0
       animal: 2.0
       hazard: 2.0
-    pruning_static_object_speed: 1.38  # [m/s]
-    pruning_moving_object_speed: 5.5   # [m/s]
-    pruning_static_iou_threshold: 0.0  # [ratio]
 
     # debug parameters
     publish_processing_time: false

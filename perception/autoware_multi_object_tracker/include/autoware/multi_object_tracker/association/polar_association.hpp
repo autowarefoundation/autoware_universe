@@ -20,7 +20,7 @@
 #include "autoware/multi_object_tracker/association/scoring/polar_assignment_scoring.hpp"
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/configurations.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>

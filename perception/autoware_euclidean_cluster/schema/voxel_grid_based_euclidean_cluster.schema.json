@@ -6,61 +6,56 @@
     "voxel_grid_based_euclidean_cluster": {
       "type": "object",
       "properties": {
-        "tolerance": {
+        "tolerance_m": {
           "type": "number",
-          "description": "The spatial cluster tolerance as a measure in the L2 Euclidean space.",
+          "description": "Euclidean cluster tolerance. Two occupied voxels are merged into the same cluster when their 2D (x-y) centroid distance is within this value (applied transitively). Clustering is performed on voxel centroids with z flattened to 0.",
           "default": 0.7
         },
-        "voxel_leaf_size": {
+        "voxel_leaf_size_m": {
           "type": "number",
-          "description": "The voxel leaf size of x and y.",
+          "description": "Voxel leaf size in x and y. The z leaf is effectively infinite, so the grid is 2D and all heights collapse into a single x-y cell. This value bounds the footprint resolution used for clustering and splitting.",
           "default": 0.3
         },
-        "min_points_number_per_voxel": {
+        "min_points_per_voxel": {
           "type": "integer",
-          "description": "The minimum number of points required per voxel.",
+          "description": "Minimum number of raw points a voxel must contain to be kept. Voxels with fewer points are discarded before clustering, rejecting sparse noise.",
           "default": 1
         },
-        "min_cluster_size": {
+        "min_points_per_cluster": {
           "type": "integer",
-          "description": "The minimum number of points that a cluster needs to contain in order to be considered valid.",
+          "description": "Minimum number of raw points a cluster must contain to be included in the output. Smaller clusters are dropped at the final filtering stage.",
           "default": 10
         },
-        "max_cluster_size": {
+        "max_voxels_per_cluster": {
           "type": "integer",
-          "description": "The maximum number of points that a cluster needs to contain in order to be considered valid.",
-          "default": 3000
-        },
-        "max_voxel_cluster_for_output": {
-          "type": "integer",
-          "description": "Maximum number of voxels in a cluster when outputted.",
+          "minimum": 1,
+          "description": "Voxel-count split bound. Any cluster whose voxel count exceeds this is recursively bisected along its principal (longest) axis into smaller sub-clusters until every piece is at or below this size. No cluster is dropped for being large; large groups are exported as multiple bounded sections.",
           "default": 800
         },
-        "min_voxel_cluster_size_for_filtering": {
+        "large_cluster_voxel_count_threshold": {
           "type": "integer",
-          "description": "The minimum voxel cluster size for a cluster to be checked for being a large cluster.",
+          "description": "Voxel-count threshold above which a cluster is considered 'large' and subject to per-voxel point capping (see large_cluster_max_points_per_voxel). Clusters at or below this size keep all their points.",
           "default": 65
         },
-        "max_points_per_voxel_in_large_cluster": {
+        "large_cluster_max_points_per_voxel": {
           "type": "integer",
-          "description": "The maximum points per voxel allowed in large clusters (used for filtering dense clusters).",
+          "description": "Maximum number of points kept per voxel within a large cluster (one whose voxel count exceeds large_cluster_voxel_count_threshold). Excess points are dropped to bound downstream cost; points are processed in a deterministically shuffled order so the kept points sample uniformly across each voxel.",
           "default": 10
         },
         "use_height": {
           "type": "boolean",
-          "description": "Use point.z for clustering.",
+          "description": "Use point.z for clustering. Currently only the 2D (false) path is implemented.",
           "default": false
         }
       },
       "required": [
-        "tolerance",
-        "voxel_leaf_size",
-        "min_points_number_per_voxel",
-        "min_cluster_size",
-        "max_cluster_size",
-        "max_voxel_cluster_for_output",
-        "min_voxel_cluster_size_for_filtering",
-        "max_points_per_voxel_in_large_cluster",
+        "tolerance_m",
+        "voxel_leaf_size_m",
+        "min_points_per_voxel",
+        "min_points_per_cluster",
+        "max_voxels_per_cluster",
+        "large_cluster_voxel_count_threshold",
+        "large_cluster_max_points_per_voxel",
         "use_height"
       ],
       "additionalProperties": false

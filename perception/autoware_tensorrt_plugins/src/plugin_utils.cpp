@@ -20,6 +20,33 @@
 #include <cstring>
 #include <sstream>
 
+namespace
+{
+void logAssertionFailure(
+  char const * msg, char const * detail, char const * file, std::int32_t line)
+{
+  std::ostringstream stream;
+  stream << "Assertion failed: " << msg << '\n';
+  if (detail != nullptr && std::strlen(detail) > 0) {
+    stream << detail << '\n';
+  }
+  stream << file << ':' << line << '\n' << "Aborting..." << '\n';
+  getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, stream.str().c_str());
+}
+
+void logValidationFailure(
+  char const * msg, char const * detail, char const * file, std::int32_t line)
+{
+  std::ostringstream stream;
+  stream << "Validation failed: " << msg << '\n';
+  if (detail != nullptr && std::strlen(detail) > 0) {
+    stream << detail << '\n';
+  }
+  stream << file << ':' << line << '\n';
+  getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, stream.str().c_str());
+}
+}  // namespace
+
 void caughtError(std::exception const & e)
 {
   getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, e.what());
@@ -51,11 +78,16 @@ cudaError_t reportCudaStatus(
 void reportAssertion(bool success, char const * msg, char const * file, std::int32_t line)
 {
   if (!success) {
-    std::ostringstream stream;
-    stream << "Assertion failed: " << msg << std::endl
-           << file << ':' << line << std::endl
-           << "Aborting..." << std::endl;
-    getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, stream.str().c_str());
+    logAssertionFailure(msg, nullptr, file, line);
+    std::abort();
+  }
+}
+
+void reportAssertionMsg(
+  bool success, char const * msg, char const * detail, char const * file, std::int32_t line)
+{
+  if (!success) {
+    logAssertionFailure(msg, detail, file, line);
     std::abort();
   }
 }
@@ -63,8 +95,14 @@ void reportAssertion(bool success, char const * msg, char const * file, std::int
 void reportValidation(bool success, char const * msg, char const * file, std::int32_t line)
 {
   if (!success) {
-    std::ostringstream stream;
-    stream << "Validation failed: " << msg << std::endl << file << ':' << line << std::endl;
-    getLogger()->log(nvinfer1::ILogger::Severity::kINTERNAL_ERROR, stream.str().c_str());
+    logValidationFailure(msg, nullptr, file, line);
+  }
+}
+
+void reportValidationMsg(
+  bool success, char const * msg, char const * detail, char const * file, std::int32_t line)
+{
+  if (!success) {
+    logValidationFailure(msg, detail, file, line);
   }
 }
