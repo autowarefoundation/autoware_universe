@@ -1,19 +1,24 @@
 /**:
   ros__parameters:
-    # MPPI sampling parameters
+    # MPPI sampling parameters (not yet wired to controller)
     num_samples: 1000
     num_iterations: 1
     time_horizon_s: 3.0
     time_step_s: 0.1
 
-    # Control limits
+    # Control limits (not yet wired; vehicle_info used for dynamics limits)
     max_steering_angle_rad: 0.6
     max_acceleration_mps2: 2.0
 
-    # Cost coefficients (FirstOrderDubinsBicycleCostParams defaults; two_lane_double_park example)
-    track_coeff: 1000.0
+    # FirstOrderDubinsBicycleCostParams (see first_order_dubins_bicycle_cost.cuh)
+    desired_speed: 2.5
     speed_coeff: 500.0
+    track_coeff: 1000.0
+    heading_coeff: 500.0
     crash_coeff: 100000.0
+    boundary_threshold: 0.8
+    boundary_threshold_left: -1.0
+    boundary_threshold_right: -1.0
     lateral_acceleration_coeff: 300.0
     lateral_jerk_coeff: 300.0
     longitudinal_jerk_coeff: 10.0
@@ -21,6 +26,6 @@
     steer_cmd_coeff: 0.0
     goal_pos_coeff: 2000.0
     goal_speed_coeff: 0.0
-    goal_yaw_coeff: 0.0
+    goal_yaw_coeff: 10.0
     goal_terminal_scale: 10.0
     obstacle_collision_margin: 0.2

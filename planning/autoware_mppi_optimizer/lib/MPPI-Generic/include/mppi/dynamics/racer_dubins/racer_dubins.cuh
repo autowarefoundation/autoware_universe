@@ -77,11 +77,11 @@ struct RacerDubinsParams : public DynamicsParams
     NUM_OUTPUTS
   };
 
-  // engine model component
-  float c_t[3] = { 1.3, 2.6, 3.9 };
-  float c_b[3] = { 2.5, 3.5, 4.5 };
-  float c_v[3] = { 3.7, 4.7, 5.7 };
-  float c_0 = 4.9;
+  // engine model: d(vel)/dt = c_t*u - c_v*vel + c_0  →  v_ss ≈ (c_t[0]+c_0)/c_v[0] at u=1
+  float c_t[3] = { 4.0F, 8.0F, 12.0F };
+  float c_b[3] = { 2.5F, 3.5F, 4.5F };
+  float c_v[3] = { 3.7F, 4.7F, 5.7F };
+  float c_0 = 16.4F;
   // steering component
   float steering_constant = .6;
   float steer_command_angle_scale = 5;

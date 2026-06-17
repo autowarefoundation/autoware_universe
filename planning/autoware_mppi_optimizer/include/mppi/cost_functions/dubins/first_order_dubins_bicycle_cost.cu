@@ -10,7 +10,9 @@ namespace
 using O = FirstOrderDubinsBicycleParams::OutputIndex;
 using C = FirstOrderDubinsBicycleParams::ControlIndex;
 using mppi::cost::detail::distancePointToSegment;
+using mppi::cost::detail::orientedBoxCorners;
 using mppi::cost::detail::orientedBoxesOverlap;
+using mppi::cost::detail::pointInPolygon;
 using mppi::cost::detail::signedLateralOffsetPointToSegment;
 using mppi::cost::detail::vectorLength;
 
@@ -109,6 +111,15 @@ void FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAM
   HANDLE_ERROR(cudaMemcpyAsync(
     this->cost_d_->obs_half_width_, obs_half_width_, sizeof(obs_half_width_),
     cudaMemcpyHostToDevice, this->stream_));
+  HANDLE_ERROR(cudaMemcpyAsync(
+    &this->cost_d_->num_drivable_vertices_, &num_drivable_vertices_, sizeof(num_drivable_vertices_),
+    cudaMemcpyHostToDevice, this->stream_));
+  HANDLE_ERROR(cudaMemcpyAsync(
+    this->cost_d_->drivable_poly_x_, drivable_poly_x_, sizeof(drivable_poly_x_),
+    cudaMemcpyHostToDevice, this->stream_));
+  HANDLE_ERROR(cudaMemcpyAsync(
+    this->cost_d_->drivable_poly_y_, drivable_poly_y_, sizeof(drivable_poly_y_),
+    cudaMemcpyHostToDevice, this->stream_));
 }
 
 template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
@@ -201,6 +212,27 @@ void FirstOrderDubinsBicycleCostImpl<
 }
 
 template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
+void FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>::
+  setDrivableAreaPolygon(const float * x, const float * y, const int count)
+{
+  const int n = std::max(0, std::min(count, kMaxDrivablePolygonVertices));
+  num_drivable_vertices_ = n;
+  for (int i = 0; i < n; ++i) {
+    drivable_poly_x_[i] = x[i];
+    drivable_poly_y_[i] = y[i];
+  }
+  dataToDevice();
+}
+
+template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
+void FirstOrderDubinsBicycleCostImpl<
+  CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>::clearDrivableArea()
+{
+  num_drivable_vertices_ = 0;
+  dataToDevice();
+}
+
+template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
 __host__ __device__ float
 FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>::computeTrackValue(
   float x, float y) const
@@ -222,6 +254,22 @@ FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>:
   }
 
   return min_dist;
+}
+
+template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
+__host__ __device__ float FirstOrderDubinsBicycleCostImpl<
+  CLASS_T, NUM_TIMESTEPS, PARAMS_T,
+  DYN_PARAMS_T>::computeHeadingValue(const float yaw, const int timestep) const
+{
+  int t = timestep;
+  if (t < 0) {
+    t = 0;
+  } else if (t >= NUM_TIMESTEPS) {
+    t = NUM_TIMESTEPS - 1;
+  }
+
+  const float yaw_diff = angle_utils::shortestAngularDistance(yaw, ref_yaw_[t]);
+  return yaw_diff * yaw_diff;
 }
 
 template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
@@ -305,6 +353,25 @@ FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>:
 }
 
 template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
+__host__ __device__ bool FirstOrderDubinsBicycleCostImpl<
+  CLASS_T, NUM_TIMESTEPS, PARAMS_T,
+  DYN_PARAMS_T>::isEgoOutsideDrivableArea(const float x, const float y, const float yaw) const
+{
+  (void)yaw;
+  if (num_drivable_vertices_ < 3) {
+    return isOffRoad(x, y);
+  }
+
+  // Rear-axle containment in the drivable polygon. Corner checks are too strict on tight curves.
+  if (pointInPolygon(x, y, drivable_poly_x_, drivable_poly_y_, num_drivable_vertices_)) {
+    return false;
+  }
+
+  // Polygon boundary is piecewise-linear; defer to ref lateral offset near the corridor edge.
+  return isOffRoad(x, y);
+}
+
+template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
 __host__ __device__ bool
 FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>::
   egoIntersectsObstacleAtStep(
@@ -364,7 +431,7 @@ FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>:
   detectAndLatchCrash(
     const float x, const float y, const float yaw, const int timestep, int * crash_status) const
 {
-  const bool off_road = isOffRoad(x, y);
+  const bool off_road = isEgoOutsideDrivableArea(x, y, yaw);
   const bool hit_car = egoIntersectsObstacleAtStep(x, y, yaw, timestep);
   const int violations = static_cast<int>(off_road) + static_cast<int>(hit_car);
   if (violations > 0) {
@@ -402,13 +469,14 @@ FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>:
   const float vel_diff = vel - ref_v_[timestep];
   const float speed_cost = this->params_.speed_coeff * (vel_diff * vel_diff);
   const float track_cost = this->params_.track_coeff * track_val;
+  const float heading_cost = this->params_.heading_coeff * computeHeadingValue(yaw, timestep);
   const float goal_cost = computeGoalCost(x_pos, y_pos, yaw, vel);
   const float crash_cost =
     isCrashLatched(crash_status) || detectAndLatchCrash(x_pos, y_pos, yaw, timestep, crash_status)
       ? latchedCrashCost(crash_status)
       : 0.0F;
 
-  return speed_cost + track_cost + goal_cost + crash_cost;
+  return speed_cost + track_cost + heading_cost + goal_cost + crash_cost;
 }
 
 template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
@@ -424,13 +492,14 @@ float FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARA
   const float vel_diff = vel - ref_v_[timestep];
   const float speed_cost = this->params_.speed_coeff * (vel_diff * vel_diff);
   const float track_cost = this->params_.track_coeff * track_val;
+  const float heading_cost = this->params_.heading_coeff * computeHeadingValue(yaw, timestep);
   const float goal_cost = computeGoalCost(x_pos, y_pos, yaw, vel);
   const float crash_cost =
     isCrashLatched(crash_status) || detectAndLatchCrash(x_pos, y_pos, yaw, timestep, crash_status)
       ? latchedCrashCost(crash_status)
       : 0.0F;
 
-  return speed_cost + track_cost + goal_cost + crash_cost;
+  return speed_cost + track_cost + heading_cost + goal_cost + crash_cost;
 }
 
 template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
@@ -471,9 +540,11 @@ FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>:
   const float vel = y[static_cast<int>(O::TOTAL_VELOCITY)];
   const float track_val = computeTrackValue(x_pos, y_pos);
   const float track_cost = this->params_.track_coeff * track_val * 10.0F;
+  const float heading_cost =
+    this->params_.heading_coeff * computeHeadingValue(yaw, NUM_TIMESTEPS - 1) * 10.0F;
   const float goal_cost =
     computeGoalCost(x_pos, y_pos, yaw, vel) * this->params_.goal_terminal_scale;
-  return track_cost + goal_cost;
+  return track_cost + heading_cost + goal_cost;
 }
 
 template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
@@ -549,3 +620,6 @@ FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>:
 template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
 constexpr int
   FirstOrderDubinsBicycleCostImpl<CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>::kMaxObstacles;
+template <class CLASS_T, int NUM_TIMESTEPS, class PARAMS_T, class DYN_PARAMS_T>
+constexpr int FirstOrderDubinsBicycleCostImpl<
+  CLASS_T, NUM_TIMESTEPS, PARAMS_T, DYN_PARAMS_T>::kMaxDrivablePolygonVertices;

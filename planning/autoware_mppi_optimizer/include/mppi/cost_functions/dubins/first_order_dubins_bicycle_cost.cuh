@@ -15,6 +15,8 @@ struct FirstOrderDubinsBicycleCostParams : public CostParams<2>
   float desired_speed = 2.5F;
   float speed_coeff = 500.0F;
   float track_coeff = 1000.0F;
+  /** Pull toward ref heading at each horizon step: coeff * (yaw - ref_yaw[t])^2; 0 disables. */
+  float heading_coeff = 500.0F;
   /** Per-violation crash penalty; latched crash_status counts violations (1=off-road or hit,
    * 2=both). */
   float crash_coeff = 100000.0F;
@@ -38,11 +40,11 @@ struct FirstOrderDubinsBicycleCostParams : public CostParams<2>
   /** Added to ego half-length/width in OBB collision test (~standoff to obstacle surfaces). */
   float obstacle_collision_margin = 0.2F;
   /** Pull toward ref end position (Euclidean distance [m]); 0 disables. */
-  float goal_pos_coeff = 2000.0F;
+  float goal_pos_coeff = 1000.0F;
   /** Pull toward ref end speed: coeff * (v - ref_v_end)^2; 0 disables. */
   float goal_speed_coeff = 0.0F;
   /** Pull toward ref end heading: coeff * |yaw - ref_yaw_end|; 0 disables. */
-  float goal_yaw_coeff = 0.0F;
+  float goal_yaw_coeff = 500.0F;
   /** Multiplier on goal terms in terminalCost (running state cost uses scale 1). */
   float goal_terminal_scale = 10.0F;
 };
@@ -55,6 +57,7 @@ class FirstOrderDubinsBicycleCostImpl : public Cost<CLASS_T, PARAMS_T, DYN_PARAM
 {
 public:
   static constexpr int kMaxObstacles = 64;
+  static constexpr int kMaxDrivablePolygonVertices = 1024;
 
   using PARENT_CLASS = Cost<CLASS_T, PARAMS_T, DYN_PARAMS_T>;
   using output_array = typename PARENT_CLASS::output_array;
@@ -78,7 +81,13 @@ public:
 
   void clearObstacles();
 
+  void setDrivableAreaPolygon(const float * x, const float * y, int count);
+
+  void clearDrivableArea();
+
   __host__ __device__ float computeTrackValue(float x, float y) const;
+
+  __host__ __device__ float computeHeadingValue(float yaw, int timestep) const;
 
   /** Distance-to-goal cost vs ref[NUM_TIMESTEPS - 1] (position, speed, yaw). */
   __host__ __device__ float computeGoalCost(float x, float y, float yaw, float vel) const;
@@ -86,6 +95,11 @@ public:
   __host__ __device__ float computeSignedLateralOffset(float x, float y) const;
 
   __host__ __device__ bool isOffRoad(const float x, const float y) const;
+
+  /** True when outside drivable polygon (rear axle); falls back to ref lateral offset near the poly
+   * boundary. */
+  __host__ __device__ bool isEgoOutsideDrivableArea(
+    const float x, const float y, const float yaw) const;
 
   __host__ __device__ bool egoIntersectsObstacleAtStep(
     const float x, const float y, const float yaw, int timestep) const;
@@ -131,6 +145,9 @@ public:
   float obs_yaw_[kMaxObstacles][NUM_TIMESTEPS] = {};
   float obs_half_length_[kMaxObstacles] = {};
   float obs_half_width_[kMaxObstacles] = {};
+  int num_drivable_vertices_ = 0;
+  float drivable_poly_x_[kMaxDrivablePolygonVertices] = {};
+  float drivable_poly_y_[kMaxDrivablePolygonVertices] = {};
 
 private:
   void dataToDevice();

@@ -59,13 +59,41 @@ set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 #################################################################
 # Autodetect Cuda Architecture on system and add to executables #
 #################################################################
+
+# CUDA_SELECT_NVCC_ARCH_FLAGS (CMake < 3.24) expects names like 7.5, 8.6 — not bare 75/86.
+# Also accepts Auto, All, Kepler, etc. unchanged.
+function(mppi_normalize_cuda_arch_list_for_select_nvcc arch_in arch_out)
+  set(_result "")
+  string(STRIP "${arch_in}" _stripped)
+  if (_stripped STREQUAL "")
+    set(${arch_out} "" PARENT_SCOPE)
+    return()
+  endif()
+  string(REPLACE ";" " " _tokens "${_stripped}")
+  separate_arguments(_archs UNIX_COMMAND "${_tokens}")
+  foreach (_a IN LISTS _archs)
+    if (_a MATCHES "^[0-9][0-9]$")
+      string(SUBSTRING "${_a}" 0 1 _major)
+      string(SUBSTRING "${_a}" 1 1 _minor)
+      set(_a "${_major}.${_minor}")
+    endif()
+    list(APPEND _result "${_a}")
+  endforeach()
+  set(${arch_out} "${_result}" PARENT_SCOPE)
+endfunction()
+
 # CMake 3.24 added '-arch=native' support so until that version, we need to use the old method of autodetection
 if (CMAKE_VERSION VERSION_LESS 3.24)
   # Don't rerun autodetection when used as a submodule
   if (NOT DEFINED MPPI_ARCH_FLAGS)
     # More info for autodetection:
     # https://stackoverflow.com/questions/35485087/determining-which-gencode-compute-arch-values-i-need-for-nvcc-within-cmak
-    CUDA_SELECT_NVCC_ARCH_FLAGS(MPPI_ARCH_FLAGS ${MPPI_CUDA_ARCH_LIST})
+    mppi_normalize_cuda_arch_list_for_select_nvcc("${MPPI_CUDA_ARCH_LIST}" _mppi_nvcc_arch_list)
+    if ("${_mppi_nvcc_arch_list}" STREQUAL "" AND MPPI_USE_CUDA_BARRIERS)
+      set(_mppi_nvcc_arch_list "Auto")
+      message(STATUS "MPPI_USE_CUDA_BARRIERS=ON: limiting CUDA arch autodetection to local GPU(s)")
+    endif()
+    CUDA_SELECT_NVCC_ARCH_FLAGS(MPPI_ARCH_FLAGS ${_mppi_nvcc_arch_list})
 
     if (MPPI_ARCH_FLAGS STREQUAL "")
       set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -maxrregcount=32 -arch=sm_35")

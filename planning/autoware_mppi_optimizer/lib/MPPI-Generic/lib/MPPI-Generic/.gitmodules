@@ -1,0 +1,3 @@
+[submodule "submodules/cnpy"]
+  path = submodules/cnpy
+  url = https://github.com/ACDSLab/cnpy.git

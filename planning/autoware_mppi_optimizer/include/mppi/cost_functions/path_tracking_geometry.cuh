@@ -130,6 +130,52 @@ __host__ __device__ inline bool orientedBoxesOverlap(
 #undef MPPI_COST_ABS
   return true;
 }
+
+/** Four corners in body frame order: front-left, front-right, rear-right, rear-left. */
+__host__ __device__ inline void orientedBoxCorners(
+  const float cx, const float cy, const float cos_yaw, const float sin_yaw, const float half_length,
+  const float half_width, float corners_x[4], float corners_y[4])
+{
+  const float fx = cos_yaw;
+  const float fy = sin_yaw;
+  const float lx = -sin_yaw;
+  const float ly = cos_yaw;
+
+  corners_x[0] = cx + half_length * fx + half_width * lx;
+  corners_y[0] = cy + half_length * fy + half_width * ly;
+  corners_x[1] = cx + half_length * fx - half_width * lx;
+  corners_y[1] = cy + half_length * fy - half_width * ly;
+  corners_x[2] = cx - half_length * fx - half_width * lx;
+  corners_y[2] = cy - half_length * fy - half_width * ly;
+  corners_x[3] = cx - half_length * fx + half_width * lx;
+  corners_y[3] = cy - half_length * fy + half_width * ly;
+}
+
+/** Ray-casting point-in-polygon (closed boundary; vertices in order). */
+__host__ __device__ inline bool pointInPolygon(
+  const float px, const float py, const float * vertices_x, const float * vertices_y,
+  const int vertex_count)
+{
+  if (vertex_count < 3) {
+    return false;
+  }
+
+  bool inside = false;
+  int j = vertex_count - 1;
+  for (int i = 0; i < vertex_count; ++i) {
+    const float xi = vertices_x[i];
+    const float yi = vertices_y[i];
+    const float xj = vertices_x[j];
+    const float yj = vertices_y[j];
+    const bool intersects =
+      ((yi > py) != (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi + 1.0E-12F) + xi);
+    if (intersects) {
+      inside = !inside;
+    }
+    j = i;
+  }
+  return inside;
+}
 }  // namespace detail
 }  // namespace cost
 }  // namespace mppi
