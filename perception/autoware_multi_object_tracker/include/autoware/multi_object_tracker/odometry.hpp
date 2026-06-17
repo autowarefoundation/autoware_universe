@@ -44,8 +44,9 @@ enum class EgoSource {
 /// Reference time the exported objects are predicted/published to (object-export side).
 enum class DelayReference {
   DETECTION,        ///< the latest detection/update stamp (no forward compensation)
-  NOW,              ///< the current wall-clock time
+  ELAPSED,          ///< detection stamp advanced by the wall-clock elapsed since the last update
   LATEST_ODOMETRY,  ///< the stamp of the newest buffered odometry sample
+  NOW,              ///< the current wall-clock time
 };
 
 /// Parse helpers (strict string match; throw std::invalid_argument on mismatch).

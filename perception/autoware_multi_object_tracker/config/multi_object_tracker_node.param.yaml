@@ -11,7 +11,7 @@
     publish_rate: 10.0
     publish_on_timer: true
 
-    # "detection" (latest detection/update time) | "now" | "latest_odometry"
+    # "detection" (no compensation) | "elapsed" (detection + publish delay) | "latest_odometry" | "now"
     ego_source: odometry
     delay_compensation: detection
 

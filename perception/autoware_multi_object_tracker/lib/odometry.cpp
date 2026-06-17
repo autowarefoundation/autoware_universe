@@ -16,9 +16,10 @@
 
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/utils.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <array>
 #include <cmath>
@@ -35,8 +36,8 @@ namespace autoware::multi_object_tracker
 namespace
 {
 // Buffering / interpolation limits for the odometry backend.
-constexpr double kMaxOdomBufferAge = 2.0;     // [s] keep at most this much history
-constexpr double kMaxExtrapolation = 1.0;     // [s] bounded extrapolation beyond buffer edges
+constexpr double kMaxOdomBufferAge = 2.0;  // [s] keep at most this much history
+constexpr double kMaxExtrapolation = 1.0;  // [s] bounded extrapolation beyond buffer edges
 
 double toSeconds(const rclcpp::Duration & d)
 {
@@ -134,11 +135,12 @@ EgoSource toEgoSource(const std::string & name)
 DelayReference toDelayReference(const std::string & name)
 {
   if (name == "detection") return DelayReference::DETECTION;
-  if (name == "now") return DelayReference::NOW;
+  if (name == "elapsed") return DelayReference::ELAPSED;
   if (name == "latest_odometry") return DelayReference::LATEST_ODOMETRY;
+  if (name == "now") return DelayReference::NOW;
   throw std::invalid_argument(
     "Invalid delay_compensation: '" + name +
-    "'. Expected 'detection', 'now', or 'latest_odometry'.");
+    "'. Expected 'detection', 'elapsed', 'latest_odometry', or 'now'.");
 }
 
 Odometry::Odometry(
@@ -181,7 +183,8 @@ std::optional<rclcpp::Time> Odometry::getLatestOdometryTime() const
   return rclcpp::Time(odom_buffer_.rbegin()->first);
 }
 
-std::optional<nav_msgs::msg::Odometry> Odometry::interpolateOdometry(const rclcpp::Time & time) const
+std::optional<nav_msgs::msg::Odometry> Odometry::interpolateOdometry(
+  const rclcpp::Time & time) const
 {
   if (odom_buffer_.empty()) {
     return std::nullopt;
@@ -289,8 +292,8 @@ std::optional<geometry_msgs::msg::Transform> Odometry::getTransform(
         std::string errstr;
         if (tf_buffer_->canTransform(
               ego_frame_id_, source_frame_id, tf2::TimePointZero, tf2::Duration::zero(), &errstr)) {
-          const auto ego_to_source = tf_buffer_->lookupTransform(
-            ego_frame_id_, source_frame_id, tf2::TimePointZero);
+          const auto ego_to_source =
+            tf_buffer_->lookupTransform(ego_frame_id_, source_frame_id, tf2::TimePointZero);
           tf2::Transform tf_world_to_ego;
           tf2::Transform tf_ego_to_source;
           tf2::fromMsg(*world_to_ego, tf_world_to_ego);
