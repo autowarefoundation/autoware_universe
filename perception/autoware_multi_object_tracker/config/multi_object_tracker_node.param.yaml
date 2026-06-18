@@ -1,10 +1,19 @@
 /**:
   ros__parameters:
     # default tracker node parameters
-    publish_rate: 10.0
     world_frame_id: map
     ego_frame_id: base_link
-    enable_delay_compensation: false
+
+    # publish-trigger
+    publish_on_timer: false
+    publish_rate: 10.0
+
+    # ego pose source: "tf" (look up from TF tree) or "odometry" (interpolate from ~/input/odometry)
+    ego_source: tf
+    # delay compensation, least -> most:
+    # "none" | "publish_delay" (detection + update->publish delay) | "odometry" (up to latest odometry) | "full" (to now)
+    delay_compensation: none
+
     consider_odometry_uncertainty: false
 
     # Per-tracker-type configuration
