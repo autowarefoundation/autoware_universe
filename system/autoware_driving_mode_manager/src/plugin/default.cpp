@@ -38,15 +38,6 @@ constexpr auto LocalCommand = CommandSource{13};
 constexpr auto RemoteCommand = CommandSource{14};
 constexpr auto EmergencyStopCommand = CommandSource{21};
 
-void print_modes(const std::string & title, const std::vector<AutowareMode> & modes)
-{
-  std::string text;
-  for (const auto & mode : modes) {
-    text = text + " " + std::to_string(mode.id);
-  }
-  RCLCPP_INFO_STREAM(logger, title << ":" << text);
-}
-
 AutowareMode DefaultPlugin::decide(const RequestModes & modes, const AutowareModeSet & availables)
 {
   std::vector<AutowareMode> candidates;
@@ -57,14 +48,12 @@ AutowareMode DefaultPlugin::decide(const RequestModes & modes, const AutowareMod
 
   candidates.push_back(ComfortableStop);
   candidates.push_back(EmergencyStop);
-  // print_modes("Candidates", candidates);
 
   std::vector<AutowareMode> result;
   for (const auto & mode : candidates) {
     if (availables.count(mode)) result.push_back(mode);
   }
 
-  // print_modes("Availables", result);
   return result.empty() ? EmergencyStop : result.front();
 };
 

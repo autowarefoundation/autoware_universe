@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CORE__VALUES_HPP_
-#define CORE__VALUES_HPP_
+#ifndef CORE__DEBUG_HPP_
+#define CORE__DEBUG_HPP_
 
 #include <autoware_driving_mode_manager/types.hpp>
 
@@ -22,10 +22,8 @@
 namespace autoware::driving_mode_manager
 {
 
-PlatformMode to_platform_mode(const AutowareControl & report);
-
 std::string to_string(const PlatformMode & mode);
 
 }  // namespace autoware::driving_mode_manager
 
-#endif  // CORE__VALUES_HPP_
+#endif  // CORE__DEBUG_HPP_

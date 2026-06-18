@@ -54,8 +54,6 @@ void DrivingModeManager::on_timer_init()
   const auto period = rclcpp::Rate(10.0).period();
   timer_->cancel();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer_main(); });
-
-  RCLCPP_INFO_STREAM(get_logger(), "DrivingModeManager is ready.");
 }
 
 void DrivingModeManager::on_timer_main()

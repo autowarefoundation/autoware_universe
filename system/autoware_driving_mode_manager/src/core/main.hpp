@@ -43,6 +43,7 @@ public:
   void on_command_filter(const CommandFilter & filter) override;
   void on_vehicle_control_mode(const PlatformMode & mode) override;
   void on_available_flag(const AutowareMode & mode, bool flag) override;
+  void on_active_flag(const AutowareMode & mode, bool flag) override;
   void on_stable_flag(const AutowareMode & mode, bool flag) override;
   void on_continuable_flag(const AutowareMode & mode, bool flag) override;
   void on_mrm_state(const AutowareMode & mode, const MrmState::State & state) override;
@@ -51,12 +52,12 @@ public:
   ServiceResponse change_autoware_control(const AutowareControl & autoware_control) override;
 
 private:
+  void update_autoware_mode();
   void execute_tasks();
   void publish_operation_mode() const;
   void publish_mrm_state() const;
   void publish_driving_mode_request() const;
   void publish_debug() const;
-  void change_autoware_mode(const AutowareMode & mode);
 
   std::unique_ptr<Interface> interface_;
   std::shared_ptr<Plugin> plugin_;
@@ -68,9 +69,9 @@ private:
 
   RequestModes request_;
   GateStatus gates_;
+  TaskList tasks_;
 
-  TaskPhase phase_ = TaskPhase::kCompleted;
-  std::queue<std::unique_ptr<Task>> tasks_;
+  static constexpr AutowareMode unknown_mode = AutowareMode{0};
 };
 
 }  // namespace autoware::driving_mode_manager

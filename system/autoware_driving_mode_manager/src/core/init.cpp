@@ -41,7 +41,6 @@ bool ManagerInit::is_ready() const
   if (!command_filter) return false;
   if (!platform_mode) return false;
   if (!status_->is_ready()) return false;
-  // TODO(isamu-takagi): check all mrm state
   return true;
 }
 
@@ -85,6 +84,13 @@ void ManagerInit::on_available_flag(const AutowareMode & mode, bool flag)
 {
   if (const auto & data = status_->data(mode)) {
     data->available.update(interface_->now(), flag);
+  }
+}
+
+void ManagerInit::on_active_flag(const AutowareMode & mode, bool flag)
+{
+  if (const auto & data = status_->data(mode)) {
+    data->active.update(interface_->now(), flag);
   }
 }
 
@@ -140,6 +146,7 @@ void ManagerInit::publish_debug() const
   for (const auto & mode : config_->autoware_modes()) {
     DebugStatus::Flag flag;
     flag.available = status_->is_available(mode);
+    flag.active = status_->is_active(mode);
     flag.stable = status_->is_stable(mode);
     flag.continuable = status_->is_continuable(mode);
     debug.flags[mode] = flag;

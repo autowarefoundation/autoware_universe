@@ -17,7 +17,6 @@
 
 #include "core/config.hpp"
 #include "core/status.hpp"
-#include "type/data.hpp"
 #include "type/interface.hpp"
 
 #include <autoware_driving_mode_manager/plugin.hpp>
@@ -42,6 +41,7 @@ public:
   void on_command_filter(const CommandFilter & filter) override;
   void on_vehicle_control_mode(const PlatformMode & mode) override;
   void on_available_flag(const AutowareMode & mode, bool flag) override;
+  void on_active_flag(const AutowareMode & mode, bool flag) override;
   void on_stable_flag(const AutowareMode & mode, bool flag) override;
   void on_continuable_flag(const AutowareMode & mode, bool flag) override;
   void on_mrm_state(const AutowareMode & mode, const MrmState::State & state) override;

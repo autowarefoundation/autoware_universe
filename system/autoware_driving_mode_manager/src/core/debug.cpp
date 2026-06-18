@@ -12,23 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "values.hpp"
+#include "debug.hpp"
 
 #include <string>
 
 namespace autoware::driving_mode_manager
 {
-
-PlatformMode to_platform_mode(const AutowareControl & autoware_control)
-{
-  // clang-format off
-  switch (autoware_control) {
-    case AutowareControl::kEnable:  return PlatformMode::kAutoware;
-    case AutowareControl::kDisable: return PlatformMode::kManual;
-    default:                        return PlatformMode::kUnknown;
-  }
-  // clang-format on
-}
 
 std::string to_string(const PlatformMode & mode)
 {

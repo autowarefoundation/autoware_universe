@@ -1,6 +1,0 @@
-builtin_interfaces/Time stamp
-uint32 operation_mode
-uint32 platform_mode
-uint32 mrm_strategy
-uint32 mrm_behavior
-uint32 autoware_mode
