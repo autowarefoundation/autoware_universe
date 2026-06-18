@@ -252,40 +252,31 @@ bool BicycleMotionModel::updateStatePoseRear(
   // check if the state is initialized
   if (!checkInitialized()) return false;
 
-  // get the current state to extract renovate deviation
   StateVec X_t;
-  StateMat P_t;
   ekf_.getX(X_t);
-  ekf_.getP(P_t);
 
+  // The heading is used only to map the rear face center to the rear axle position.
   const double yaw = getYawState();
   const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
   const double x1 = xr + wheel_base * motion_params_.wheel_gamma_rear * std::cos(yaw);
   const double y1 = yr + wheel_base * motion_params_.wheel_gamma_rear * std::sin(yaw);
-  const double delta_x = x1 - X_t(IDX::X1);
-  const double delta_y = y1 - X_t(IDX::Y1);
 
-  // update state
-  constexpr int DIM_Y = 4;
+  // Measure ONLY the observed (rear) axle. The front axle is not measured; it follows through the
+  // EKF cross-covariance, so the body may rotate about the observed end instead of being rigidly
+  // translated (the old 4-row form copied the rear shift onto the front, freezing yaw).
+  constexpr int DIM_Y = 2;
   Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << x1, y1, X_t(IDX::X2) + delta_x, X_t(IDX::Y2) + delta_y;
+  Y << x1, y1;
 
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X1) = 1.0;
   C(1, IDX::Y1) = 1.0;
-  C(2, IDX::X2) = 1.0;
-  C(3, IDX::Y2) = 1.0;
 
-  constexpr double uncertainty_multiplier = 9.0;  // additional uncertainty for unmeasured position
   Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
   R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
-  R(2, 2) = pose_cov[XYZRPY_COV_IDX::X_X] * uncertainty_multiplier;
-  R(2, 3) = pose_cov[XYZRPY_COV_IDX::X_Y] * uncertainty_multiplier;
-  R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X] * uncertainty_multiplier;
-  R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y] * uncertainty_multiplier;
 
   return ekf_.update(Y, C, R);
 }
@@ -296,40 +287,29 @@ bool BicycleMotionModel::updateStatePoseFront(
   // check if the state is initialized
   if (!checkInitialized()) return false;
 
-  // get the current state to extract renovate deviation
   StateVec X_t;
-  StateMat P_t;
   ekf_.getX(X_t);
-  ekf_.getP(P_t);
 
+  // The heading is used only to map the front face center to the front axle position.
   const double yaw = getYawState();
   const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
   const double x2 = xf - wheel_base * motion_params_.wheel_gamma_front * std::cos(yaw);
   const double y2 = yf - wheel_base * motion_params_.wheel_gamma_front * std::sin(yaw);
-  const double delta_x = x2 - X_t(IDX::X2);
-  const double delta_y = y2 - X_t(IDX::Y2);
 
-  // update state
-  constexpr int DIM_Y = 4;
+  // Measure ONLY the observed (front) axle; the rear axle follows through the cross-covariance.
+  constexpr int DIM_Y = 2;
   Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << X_t(IDX::X1) + delta_x, X_t(IDX::Y1) + delta_y, x2, y2;
+  Y << x2, y2;
 
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
-  C(0, IDX::X1) = 1.0;
-  C(1, IDX::Y1) = 1.0;
-  C(2, IDX::X2) = 1.0;
-  C(3, IDX::Y2) = 1.0;
+  C(0, IDX::X2) = 1.0;
+  C(1, IDX::Y2) = 1.0;
 
-  constexpr double uncertainty_multiplier = 9.0;  // additional uncertainty for unmeasured position
   Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
-  R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X] * uncertainty_multiplier;
-  R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y] * uncertainty_multiplier;
-  R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X] * uncertainty_multiplier;
-  R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y] * uncertainty_multiplier;
-  R(2, 2) = pose_cov[XYZRPY_COV_IDX::X_X];
-  R(2, 3) = pose_cov[XYZRPY_COV_IDX::X_Y];
-  R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X];
-  R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y];
+  R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
+  R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
+  R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
+  R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
 
   return ekf_.update(Y, C, R);
 }
