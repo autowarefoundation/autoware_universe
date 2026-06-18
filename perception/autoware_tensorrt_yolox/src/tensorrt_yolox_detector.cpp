@@ -74,8 +74,7 @@ TrtYoloXDetector::TrtYoloXDetector(const TrtYoloXDetectorConfig & config) : conf
 
   trt_yolox_ = std::make_unique<tensorrt_yolox::TrtYoloX>(
     trt_config, roi_class_name_list_.size(), config_.score_threshold, config_.nms_threshold,
-    config_.preprocess_on_gpu, config_.gpu_id, config_.calibration_image_list_path, norm_factor,
-    cache_dir, calib_config);
+    config_.gpu_id, config_.calibration_image_list_path, norm_factor, cache_dir, calib_config);
 }
 
 bool TrtYoloXDetector::isGPUInitialized() const

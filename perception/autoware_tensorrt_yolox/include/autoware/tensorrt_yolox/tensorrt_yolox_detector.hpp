@@ -77,7 +77,6 @@ struct TrtYoloXDetectorConfig
   bool quantize_last_layer;
   bool profile_per_layer;
   double clip_value;
-  bool preprocess_on_gpu;
   std::string calibration_image_list_path;
   uint8_t gpu_id;
 
