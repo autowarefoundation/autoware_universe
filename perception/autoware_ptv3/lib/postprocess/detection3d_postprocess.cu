@@ -37,7 +37,7 @@ struct IsScoreNonZero
   __device__ bool operator()(const Box3D & box) const { return box.score > 0.0f; }
 };
 
-struct ScoreGreater
+struct IsScoreGreaterThan
 {
   __device__ bool operator()(const Box3D & lhs, const Box3D & rhs) const
   {
@@ -188,7 +188,7 @@ cudaError_t Detection3DPostprocess::process(
 
   const auto passing_end = thrust::copy_if(
     policy, raw_boxes_d_.begin(), raw_boxes_d_.end(), passing_boxes_d_.begin(), IsScoreNonZero{});
-  thrust::sort(policy, passing_boxes_d_.begin(), passing_end, ScoreGreater{});
+  thrust::sort(policy, passing_boxes_d_.begin(), passing_end, IsScoreGreaterThan{});
 
   num_boxes_ = static_cast<std::size_t>(num_passing);
   return cudaGetLastError();
