@@ -162,6 +162,22 @@ public:
       detection_class_names_ = detection_class_names;
       bbox_voxel_x_size_ = bbox_voxel_size[0];
       bbox_voxel_y_size_ = bbox_voxel_size[1];
+
+      auto is_integer_multiple = [](const float numerator, const float denominator) {
+        constexpr float eps = 1e-3F;
+        const float remainder = std::fmod(numerator, denominator);
+        return std::abs(remainder) < eps || std::abs(remainder - denominator) < eps;
+      };
+
+      if (!is_integer_multiple(bbox_voxel_x_size_, voxel_x_size_)) {
+        throw std::runtime_error(
+          "x component of bbox_voxel_size must be a positive integer multiple of voxel_size.");
+      }
+      if (!is_integer_multiple(bbox_voxel_y_size_, voxel_y_size_)) {
+        throw std::runtime_error(
+          "y component of bbox_voxel_size must be a positive integer multiple of voxel_size.");
+      }
+
       distance_bin_upper_limits_ = distance_bin_upper_limits;
       detection_score_thresholds_ = detection_score_thresholds;
       yaw_norm_thresholds_ = yaw_norm_thresholds;
