@@ -106,10 +106,12 @@ public:
     const double & vel_long, const double & vel_lat, const std::array<double, 36> & twist_cov,
     const double & length);
 
-  // Rear/front wheel-anchor update. Only the observed axle is measured (the edge face center is
-  // mapped to that axle along the current heading); the opposite axle is NOT measured and is left
-  // to the EKF prior, responding through the state cross-covariance. This lets the body rotate in
-  // response to the observed end instead of being rigidly translated (which froze yaw).
+  // Rear/front wheel-anchor update. The observed edge FACE center is measured directly as an exact
+  // linear function of the two-point state (face = (1 +/- gamma) * p_near -/+ gamma * p_far, since
+  // the body-axis offset gamma * L * u_hat equals gamma * (p2 - p1)). The measurement constrains a
+  // blend of both endpoints, so the gain splits the correction between translation and rotation via
+  // the prior covariance, letting the body rotate about the observed end instead of being rigidly
+  // translated (which froze yaw).
   bool updateStatePoseRear(
     const double & xr, const double & yr, const std::array<double, 36> & pose_cov);
 
