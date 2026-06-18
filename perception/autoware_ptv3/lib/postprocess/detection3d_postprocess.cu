@@ -72,8 +72,8 @@ __global__ void decodeDetection3DToBoxesKernel(
   }
 
   const int class_offset = label * num_proposals;
-  const float score =
-    (1.0f / (1.0f + expf(-heatmap[class_offset + i]))) * query_heatmap_score[class_offset + i];
+  auto sigmoid = [](float logit) { return 1.0f / (1.0f + expf(-logit)); };
+  const float score = sigmoid(heatmap[class_offset + i]) * query_heatmap_score[class_offset + i];
 
   const float x = center[i] * bbox_voxel_x_size + min_x_range;
   const float y = center[num_proposals + i] * bbox_voxel_y_size + min_y_range;
