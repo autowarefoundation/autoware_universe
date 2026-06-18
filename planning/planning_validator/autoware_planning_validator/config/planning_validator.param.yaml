@@ -23,3 +23,6 @@
 
     # discard outdated traffic light information and do not use it in validation.
     th_traffic_light_timeout: 0.5 # [s]
+
+    # Must match mission_planner allow_area when using lanelet-area-lanelet routes
+    allow_area: true
