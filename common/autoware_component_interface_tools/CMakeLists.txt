@@ -13,6 +13,8 @@ target_link_libraries(${PROJECT_NAME} yaml-cpp)
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::component_interface_tools::ServiceLogChecker"
   EXECUTABLE service_log_checker_node
+  AGNOCAST_EXECUTOR AgnocastOnlySingleThreadedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
