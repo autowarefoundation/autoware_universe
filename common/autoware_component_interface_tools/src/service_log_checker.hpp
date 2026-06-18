@@ -16,6 +16,7 @@
 #define SERVICE_LOG_CHECKER_HPP_
 
 #include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_system_msgs/msg/service_log.hpp>
