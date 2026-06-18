@@ -14,6 +14,8 @@
 
 #include "autoware/ptv3/experimental/semantic_label.hpp"
 
+#include "autoware/ptv3/experimental/semantic_label_helper.hpp"
+
 #include <gtest/gtest.h>
 
 #include <cstdint>
