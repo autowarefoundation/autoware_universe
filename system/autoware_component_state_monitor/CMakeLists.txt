@@ -11,7 +11,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::component_state_monitor::StateMonitor"
   EXECUTABLE component_state_monitor_node
-  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlySingleThreadedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 

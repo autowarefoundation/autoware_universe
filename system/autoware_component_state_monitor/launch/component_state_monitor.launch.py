@@ -89,7 +89,7 @@ def launch_setup(context, *args, **kwargs):
                 ]
             )
         ),
-        launch_arguments={"use_multithread": "true"}.items(),
+        launch_arguments={"use_multithread": "false"}.items(),
     )
     container = ComposableNodeContainer(
         namespace="component_state_monitor",

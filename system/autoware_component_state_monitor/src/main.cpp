@@ -16,6 +16,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::component_state_monitor
@@ -93,10 +94,10 @@ StateMonitor::StateMonitor(const rclcpp::NodeOptions & options) : Node("state", 
 void StateMonitor::update_state(const StateType & type, const Module & module, bool state)
 {
   if (states_[type].count(module) == 0 || states_[type][module] != state) {
-    ModeChangeAvailable msg;
-    msg.stamp = now();
-    msg.available = state;
-    pubs_[type][module]->publish(msg);
+    auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pubs_[type][module]);
+    msg->stamp = now();
+    msg->available = state;
+    pubs_[type][module]->publish(std::move(msg));
   }
   states_[type][module] = state;
 }
