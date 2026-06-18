@@ -77,8 +77,6 @@ __global__ void decodeDetection3DToBoxesKernel(
 
   const float x = center[i] * bbox_voxel_x_size + min_x_range;
   const float y = center[num_proposals + i] * bbox_voxel_y_size + min_y_range;
-  const float length = expf(dim[i]);
-  const float width = expf(dim[num_proposals + i]);
   const float box_h = expf(dim[2 * num_proposals + i]);
   const float z = height[i] - box_h * 0.5f;
 
@@ -106,6 +104,9 @@ __global__ void decodeDetection3DToBoxesKernel(
   if (yaw_norm < yaw_norm_thresholds[label]) {
     return;
   }
+
+  const float length = expf(dim[i]);
+  const float width = expf(dim[num_proposals + i]);
 
   out_boxes[i].label = label;
   out_boxes[i].score = score;
