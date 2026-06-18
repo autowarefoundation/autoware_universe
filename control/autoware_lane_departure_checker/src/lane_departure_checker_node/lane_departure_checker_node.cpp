@@ -57,8 +57,7 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
   const lanelet::LaneletMapPtr & lanelet_map,
   const lanelet::routing::RoutingGraphPtr & routing_graph,
   const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr & route_ptr,
-  const double vehicle_length, 
-  const bool allow_area)
+  const double vehicle_length, const bool allow_area)
 {
   std::map<lanelet::Id, lanelet::ConstLanelet> route_lanelets;
 
