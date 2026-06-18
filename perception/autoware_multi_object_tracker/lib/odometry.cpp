@@ -187,7 +187,7 @@ void Odometry::updateOdometryBuffer(const nav_msgs::msg::Odometry & odometry)
   }
 }
 
-std::optional<rclcpp::Time> Odometry::getLatestOdometryTime() const
+std::optional<rclcpp::Time> Odometry::getLatestEgoPoseTime() const
 {
   // ODOMETRY backend: newest buffered odometry sample.
   if (ego_source_ == EgoSource::ODOMETRY) {

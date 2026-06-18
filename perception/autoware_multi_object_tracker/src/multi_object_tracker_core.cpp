@@ -304,7 +304,7 @@ PublishingData prepare_publishing_data(
       break;
     }
     case DelayReference::ODOMETRY:
-      result.object_time = state.odometry->getLatestOdometryTime().value_or(current_time);
+      result.object_time = state.odometry->getLatestEgoPoseTime().value_or(current_time);
       break;
     case DelayReference::FULL:
       result.object_time = current_time;
