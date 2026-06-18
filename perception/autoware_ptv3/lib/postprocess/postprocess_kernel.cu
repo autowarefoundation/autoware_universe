@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/experimental/semantic_label.hpp"
+#include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/utils.hpp"
 
@@ -112,7 +112,8 @@ std::uint8_t semanticLabelFromClassName(const std::string & class_name)
 /// @details
 /// The model output label index is determined by class_names order in parameters. This lookup
 /// keeps postprocess robust even when class_names order changes.
-std::vector<std::uint8_t> makeClassIdToSemanticLabelLut(const std::vector<std::string> & class_names)
+std::vector<std::uint8_t> makeClassIdToSemanticLabelLut(
+  const std::vector<std::string> & class_names)
 {
   std::vector<std::uint8_t> lut(class_names.size(), kInvalidSemanticLabel);
   for (std::size_t i = 0; i < class_names.size(); ++i) {
@@ -367,8 +368,7 @@ PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
   const auto class_id_to_semantic_label_lut = makeClassIdToSemanticLabelLut(config_.class_names_);
   cudaMemcpyAsync(
     class_id_to_semantic_label_d_.get(), class_id_to_semantic_label_lut.data(),
-    class_id_to_semantic_label_lut.size() * sizeof(std::uint8_t), cudaMemcpyHostToDevice,
-    stream_);
+    class_id_to_semantic_label_lut.size() * sizeof(std::uint8_t), cudaMemcpyHostToDevice, stream_);
 
   if (!config_.filter_class_indices_.empty()) {
     filter_class_indices_d_ =
