@@ -25,7 +25,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::ptv3
@@ -47,193 +49,240 @@ struct CudaDeleter
 template <typename T>
 using CudaPtr = std::unique_ptr<T, CudaDeleter<T>>;
 
-template <typename T>
-CudaPtr<T> make_device_buffer(const std::size_t count)
+class PreprocessKernelTest : public ::testing::Test
 {
-  T * ptr = nullptr;
-  EXPECT_EQ(cudaMalloc(reinterpret_cast<void **>(&ptr), count * sizeof(T)), cudaSuccess);
-  return CudaPtr<T>(ptr);
-}
-
-template <typename T>
-void copy_to_device(T * device, const std::vector<T> & host)
-{
-  ASSERT_EQ(
-    cudaMemcpy(device, host.data(), host.size() * sizeof(T), cudaMemcpyHostToDevice), cudaSuccess);
-}
-
-template <typename T>
-std::vector<T> copy_to_host(const T * device, const std::size_t count)
-{
-  std::vector<T> host(count);
-  EXPECT_EQ(
-    cudaMemcpy(host.data(), device, count * sizeof(T), cudaMemcpyDeviceToHost), cudaSuccess);
-  return host;
-}
-
-PTv3Config make_config(const std::string & source_reconstruction = "partial")
-{
-  return PTv3Config(
-    /* plugins_path */ "",
-    /* cloud_capacity */ 8,
-    /* voxel_size [min, opt, max]*/ {1, 4, 8},
-    /* point_cloud_range [x_min, y_min, z_min, x_max, y_max, z_max] */
-    {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F},
-    /*voxel_size [x, y, z]*/ {1.0F, 1.0F, 1.0F},
-    /* class_name */ {"background", "car"},
-    /* serialization_orders */ {"z", "z-trans"},
-    /* pooling_strides */ {2, 2},
-    /* palette  */ {0, 0, 0, 255, 0, 0},
-    /* filter_class_probability_threshold  */ 0.5F,
-    /* filter_classes  */ {},
-    /* filter_output_format */ "xyzi",
-    /* source_reconstruction */ source_reconstruction,
-    /* use_seg3d_head */ true);
-}
-
-TEST(PreprocessKernelTest, GenerateFeaturesCropsVoxelsAndBuildsInverseMap)
-{
-  SKIP_TEST_IF_CUDA_UNAVAILABLE();
-
-  cudaStream_t stream{};
-  ASSERT_EQ(cudaStreamCreate(&stream), cudaSuccess);
-
-  const auto config = make_config("partial");
-  PreprocessCuda preprocess(config, stream);
-
-  const std::vector<CloudPointTypeXYZI> host_points{
-    {0.10F, 0.20F, 0.30F, 1.5F},
-    {0.80F, 0.20F, 0.30F, 2.5F},  // Same voxel as the previous point.
-    {1.10F, 1.20F, 1.30F, 3.5F},
-    {4.00F, 0.00F, 0.00F, 4.5F},  // Out of range.
-    {-1.00F, -1.00F, -1.00F, 5.5F},
+protected:
+  struct GenerateFeaturesResult
+  {
+    CudaPtr<float> reconstruction_features_d;
+    CudaPtr<std::int32_t> voxel_coords_d;
+    CudaPtr<CloudPointTypeXYZI> cropped_source_points_d;
+    CudaPtr<std::int64_t> inverse_map_d;
+    std::size_t num_cropped_points{};
+    std::size_t num_voxels{};
   };
 
-  auto input_points_d = make_device_buffer<CloudPointTypeXYZI>(host_points.size());
-  copy_to_device(input_points_d.get(), host_points);
-
-  auto voxel_features_d =
-    make_device_buffer<float>(config.cloud_capacity_ * config.num_point_feature_size_);
-  auto reconstruction_features_d =
-    make_device_buffer<float>(config.cloud_capacity_ * config.num_point_feature_size_);
-  auto voxel_coords_d = make_device_buffer<std::int32_t>(config.cloud_capacity_ * 3);
-  auto voxel_hashes_d = make_device_buffer<std::int64_t>(config.cloud_capacity_ * 2);
-  auto compact_points_d = make_device_buffer<CloudPointTypeXYZI>(config.cloud_capacity_);
-  auto cropped_source_points_d = make_device_buffer<CloudPointTypeXYZI>(config.cloud_capacity_);
-  auto inverse_map_d = make_device_buffer<std::int64_t>(config.cloud_capacity_);
-
-  std::size_t num_cropped_points = 0;
-  const auto num_voxels = preprocess.generateFeatures(
-    input_points_d.get(), CloudFormat::XYZI, host_points.size(), voxel_features_d.get(),
-    voxel_coords_d.get(), voxel_hashes_d.get(), compact_points_d.get(),
-    reconstruction_features_d.get(), cropped_source_points_d.get(), inverse_map_d.get(),
-    &num_cropped_points);
-
-  ASSERT_EQ(cudaStreamSynchronize(stream), cudaSuccess);
-  EXPECT_EQ(num_cropped_points, 4U);
-  EXPECT_EQ(num_voxels, 3U);
-
-  const auto crop_mask = copy_to_host(preprocess.cropMask(), host_points.size());
-  const auto crop_indices = copy_to_host(preprocess.cropIndices(), host_points.size());
-  EXPECT_EQ(crop_mask, (std::vector<std::uint32_t>{1, 1, 1, 0, 1}));
-  EXPECT_EQ(crop_indices, (std::vector<std::uint32_t>{1, 2, 3, 3, 4}));
-
-  const auto reconstruction_features =
-    copy_to_host(reconstruction_features_d.get(), num_cropped_points * 4);
-  const std::vector<float> expected_reconstruction_features{
-    0.10F, 0.20F, 0.30F, 1.5F, 0.80F,  0.20F,  0.30F,  2.5F,
-    1.10F, 1.20F, 1.30F, 3.5F, -1.00F, -1.00F, -1.00F, 5.5F};
+  void SetUp() override
   {
-    // NOTE: EXPECT_FLOAT_EQ does not overload for std::vector<float>
-    EXPECT_EQ(reconstruction_features.size(), expected_reconstruction_features.size());
-    for (size_t i = 0; i < expected_reconstruction_features.size(); i++) {
-      EXPECT_FLOAT_EQ(reconstruction_features[i], expected_reconstruction_features[i]);
+    SKIP_TEST_IF_CUDA_UNAVAILABLE();
+    ASSERT_EQ(cudaStreamCreate(&stream_), cudaSuccess);
+  }
+
+  void TearDown() override
+  {
+    preprocess_.reset();
+    if (stream_ != nullptr) {
+      EXPECT_EQ(cudaStreamDestroy(stream_), cudaSuccess);
     }
   }
 
-  const auto cropped_source_points =
-    copy_to_host(cropped_source_points_d.get(), num_cropped_points);
-  auto is_xyzi_identical = [](auto & p1, auto & p2) {
-    EXPECT_FLOAT_EQ(p1.x, p2.x);
-    EXPECT_FLOAT_EQ(p1.y, p2.y);
-    EXPECT_FLOAT_EQ(p1.z, p2.z);
-    EXPECT_FLOAT_EQ(p1.intensity, p2.intensity);
-  };
-  is_xyzi_identical(cropped_source_points[0], host_points[0]);
-  is_xyzi_identical(cropped_source_points[1], host_points[1]);
-  is_xyzi_identical(cropped_source_points[2], host_points[2]);
-  is_xyzi_identical(cropped_source_points[3], host_points[4]);
+  PTv3Config makeConfig(const std::string & source_reconstruction = "partial") const
+  {
+    return PTv3Config(
+      /* plugins_path */ "",
+      /* cloud_capacity */ 8,
+      /* voxel_size [min, opt, max]*/ {1, 4, 8},
+      /* point_cloud_range [x_min, y_min, z_min, x_max, y_max, z_max] */
+      {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F},
+      /*voxel_size [x, y, z]*/ {1.0F, 1.0F, 1.0F},
+      /* class_name */ {"background", "car"},
+      /* serialization_orders */ {"z", "z-trans"},
+      /* pooling_strides */ {2, 2},
+      /* palette  */ {0, 0, 0, 255, 0, 0},
+      /* filter_class_probability_threshold  */ 0.5F,
+      /* filter_classes  */ {},
+      /* filter_output_format */ "xyzi",
+      /* source_reconstruction */ source_reconstruction,
+      /* use_seg3d_head */ true);
+  }
 
-  const auto inverse_map = copy_to_host(inverse_map_d.get(), num_cropped_points);
+  void initializePreprocess(const std::string & source_reconstruction)
+  {
+    config_.emplace(makeConfig(source_reconstruction));
+    preprocess_ = std::make_unique<PreprocessCuda>(*config_, stream_);
+  }
+
+  template <typename T>
+  CudaPtr<T> makeDeviceBuffer(const std::size_t count)
+  {
+    T * ptr = nullptr;
+    EXPECT_EQ(cudaMalloc(reinterpret_cast<void **>(&ptr), count * sizeof(T)), cudaSuccess);
+    return CudaPtr<T>(ptr);
+  }
+
+  template <typename T>
+  void copyToDevice(T * device, const std::vector<T> & host)
+  {
+    ASSERT_EQ(
+      cudaMemcpy(device, host.data(), host.size() * sizeof(T), cudaMemcpyHostToDevice),
+      cudaSuccess);
+  }
+
+  template <typename T>
+  std::vector<T> copyToHost(const T * device, const std::size_t count)
+  {
+    std::vector<T> host(count);
+    EXPECT_EQ(
+      cudaMemcpy(host.data(), device, count * sizeof(T), cudaMemcpyDeviceToHost), cudaSuccess);
+    return host;
+  }
+
+  void expectFloatVectorEq(
+    const std::vector<float> & actual, const std::vector<float> & expected) const
+  {
+    // NOTE: Since EXPECT_FLOAT_EQ does not have overload for std::vector<float>, this function
+    // checks the size and elements one-by-one
+    ASSERT_EQ(actual.size(), expected.size());
+    for (std::size_t i = 0; i < expected.size(); ++i) {
+      EXPECT_FLOAT_EQ(actual[i], expected[i]) << "at index " << i;
+    }
+  }
+
+  void expectPointEq(const CloudPointTypeXYZI & actual, const CloudPointTypeXYZI & expected) const
+  {
+    EXPECT_FLOAT_EQ(actual.x, expected.x);
+    EXPECT_FLOAT_EQ(actual.y, expected.y);
+    EXPECT_FLOAT_EQ(actual.z, expected.z);
+    EXPECT_FLOAT_EQ(actual.intensity, expected.intensity);
+  }
+
+  GenerateFeaturesResult runGenerateFeatures(
+    const std::string & source_reconstruction, const std::vector<CloudPointTypeXYZI> & host_points,
+    const bool with_source_outputs)
+  {
+    initializePreprocess(source_reconstruction);
+    const auto & config = *config_;
+
+    auto input_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(host_points.size());
+    copyToDevice(input_points_d.get(), host_points);
+
+    auto voxel_features_d =
+      makeDeviceBuffer<float>(config.cloud_capacity_ * config.num_point_feature_size_);
+    auto reconstruction_features_d =
+      makeDeviceBuffer<float>(config.cloud_capacity_ * config.num_point_feature_size_);
+    auto voxel_coords_d = makeDeviceBuffer<std::int32_t>(config.cloud_capacity_ * 3);
+    auto voxel_hashes_d = makeDeviceBuffer<std::int64_t>(config.cloud_capacity_ * 2);
+    auto compact_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(config.cloud_capacity_);
+    auto cropped_source_points_d = makeDeviceBuffer<CloudPointTypeXYZI>(config.cloud_capacity_);
+    auto inverse_map_d = makeDeviceBuffer<std::int64_t>(config.cloud_capacity_);
+
+    std::size_t num_cropped_points = 0;
+    const auto num_voxels = preprocess_->generateFeatures(
+      input_points_d.get(), CloudFormat::XYZI, host_points.size(), voxel_features_d.get(),
+      voxel_coords_d.get(), voxel_hashes_d.get(), compact_points_d.get(),
+      reconstruction_features_d.get(),
+      with_source_outputs ? cropped_source_points_d.get() : nullptr,
+      with_source_outputs ? inverse_map_d.get() : nullptr, &num_cropped_points);
+
+    EXPECT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
+
+    return GenerateFeaturesResult{
+      std::move(reconstruction_features_d),
+      std::move(voxel_coords_d),
+      std::move(cropped_source_points_d),
+      std::move(inverse_map_d),
+      num_cropped_points,
+      num_voxels};
+  }
+
+  cudaStream_t stream_{nullptr};
+  std::optional<PTv3Config> config_;
+  std::unique_ptr<PreprocessCuda> preprocess_;
+};
+
+const std::vector<CloudPointTypeXYZI> kPartialReconstructionPoints{
+  {0.10F, 0.20F, 0.30F, 1.5F},    {0.80F, 0.20F, 0.30F, 2.5F},  // Same voxel as the previous point.
+  {1.10F, 1.20F, 1.30F, 3.5F},    {4.00F, 0.00F, 0.00F, 4.5F},  // Out of range.
+  {-1.00F, -1.00F, -1.00F, 5.5F},
+};
+
+TEST_F(PreprocessKernelTest, PartialReconstructionBuildsCropMaskAndIndices)
+{
+  const auto result = runGenerateFeatures("partial", kPartialReconstructionPoints, true);
+  EXPECT_EQ(result.num_cropped_points, 4U);
+  EXPECT_EQ(result.num_voxels, 3U);
+
+  const auto crop_mask = copyToHost(preprocess_->cropMask(), kPartialReconstructionPoints.size());
+  const auto crop_indices =
+    copyToHost(preprocess_->cropIndices(), kPartialReconstructionPoints.size());
+  EXPECT_EQ(crop_mask, (std::vector<std::uint32_t>{1, 1, 1, 0, 1}));
+  EXPECT_EQ(crop_indices, (std::vector<std::uint32_t>{1, 2, 3, 3, 4}));
+}
+
+TEST_F(PreprocessKernelTest, PartialReconstructionKeepsCroppedFeatures)
+{
+  const auto result = runGenerateFeatures("partial", kPartialReconstructionPoints, true);
+  EXPECT_EQ(result.num_cropped_points, 4U);
+
+  const auto reconstruction_features =
+    copyToHost(result.reconstruction_features_d.get(), result.num_cropped_points * 4);
+  const std::vector<float> expected_reconstruction_features{
+    0.10F, 0.20F, 0.30F, 1.5F, 0.80F,  0.20F,  0.30F,  2.5F,
+    1.10F, 1.20F, 1.30F, 3.5F, -1.00F, -1.00F, -1.00F, 5.5F};
+  expectFloatVectorEq(reconstruction_features, expected_reconstruction_features);
+}
+
+TEST_F(PreprocessKernelTest, PartialReconstructionStoresCroppedSourcePoints)
+{
+  const auto result = runGenerateFeatures("partial", kPartialReconstructionPoints, true);
+  EXPECT_EQ(result.num_cropped_points, 4U);
+
+  const auto cropped_source_points =
+    copyToHost(result.cropped_source_points_d.get(), result.num_cropped_points);
+  expectPointEq(cropped_source_points[0], kPartialReconstructionPoints[0]);
+  expectPointEq(cropped_source_points[1], kPartialReconstructionPoints[1]);
+  expectPointEq(cropped_source_points[2], kPartialReconstructionPoints[2]);
+  expectPointEq(cropped_source_points[3], kPartialReconstructionPoints[4]);
+}
+
+TEST_F(PreprocessKernelTest, PartialReconstructionBuildsInverseMap)
+{
+  const auto result = runGenerateFeatures("partial", kPartialReconstructionPoints, true);
+  EXPECT_EQ(result.num_cropped_points, 4U);
+  EXPECT_EQ(result.num_voxels, 3U);
+
+  const auto inverse_map = copyToHost(result.inverse_map_d.get(), result.num_cropped_points);
   EXPECT_EQ(inverse_map[0], inverse_map[1]);
   EXPECT_NE(inverse_map[0], inverse_map[2]);
   EXPECT_NE(inverse_map[0], inverse_map[3]);
   EXPECT_NE(inverse_map[2], inverse_map[3]);
-  EXPECT_TRUE(std::all_of(inverse_map.begin(), inverse_map.end(), [num_voxels](const auto value) {
-    return value >= 0 && static_cast<std::size_t>(value) < num_voxels;
+  EXPECT_TRUE(std::all_of(inverse_map.begin(), inverse_map.end(), [&result](const auto value) {
+    return value >= 0 && static_cast<std::size_t>(value) < result.num_voxels;
   }));
+}
 
-  const auto voxel_coords = copy_to_host(voxel_coords_d.get(), num_voxels * 3);
-  for (std::size_t voxel_idx = 0; voxel_idx < num_voxels; ++voxel_idx) {
+TEST_F(PreprocessKernelTest, PartialReconstructionBuildsVoxelCoords)
+{
+  const auto result = runGenerateFeatures("partial", kPartialReconstructionPoints, true);
+  EXPECT_EQ(result.num_voxels, 3U);
+
+  const auto voxel_coords = copyToHost(result.voxel_coords_d.get(), result.num_voxels * 3);
+  for (std::size_t voxel_idx = 0; voxel_idx < result.num_voxels; ++voxel_idx) {
     const auto x = voxel_coords[voxel_idx * 3 + 0];
     const auto y = voxel_coords[voxel_idx * 3 + 1];
     const auto z = voxel_coords[voxel_idx * 3 + 2];
     EXPECT_TRUE(
       (x == 0 && y == 0 && z == 0) || (x == 1 && y == 1 && z == 1) || (x == 2 && y == 2 && z == 2));
   }
-
-  ASSERT_EQ(cudaStreamDestroy(stream), cudaSuccess);
 }
 
-TEST(PreprocessKernelTest, FullReconstructionKeepsAllInputFeaturesBeforeCrop)
+TEST_F(PreprocessKernelTest, FullReconstructionKeepsAllInputFeaturesBeforeCrop)
 {
-  SKIP_TEST_IF_CUDA_UNAVAILABLE();
-
-  cudaStream_t stream{};
-  ASSERT_EQ(cudaStreamCreate(&stream), cudaSuccess);
-
-  const auto config = make_config("full");
-  PreprocessCuda preprocess(config, stream);
-
   const std::vector<CloudPointTypeXYZI> host_points{
     {0.0F, 0.0F, 0.0F, 1.0F},
     {4.0F, 0.0F, 0.0F, 2.0F},  // Out of range
     {1.0F, 1.0F, 1.0F, 3.0F},
   };
 
-  auto input_points_d = make_device_buffer<CloudPointTypeXYZI>(host_points.size());
-  copy_to_device(input_points_d.get(), host_points);
-
-  auto voxel_features_d =
-    make_device_buffer<float>(config.cloud_capacity_ * config.num_point_feature_size_);
-  auto reconstruction_features_d =
-    make_device_buffer<float>(config.cloud_capacity_ * config.num_point_feature_size_);
-  auto voxel_coords_d = make_device_buffer<std::int32_t>(config.cloud_capacity_ * 3);
-  auto voxel_hashes_d = make_device_buffer<std::int64_t>(config.cloud_capacity_ * 2);
-  auto compact_points_d = make_device_buffer<CloudPointTypeXYZI>(config.cloud_capacity_);
-
-  std::size_t num_cropped_points = 0;
-  const auto num_voxels = preprocess.generateFeatures(
-    input_points_d.get(), CloudFormat::XYZI, host_points.size(), voxel_features_d.get(),
-    voxel_coords_d.get(), voxel_hashes_d.get(), compact_points_d.get(),
-    reconstruction_features_d.get(), nullptr, nullptr, &num_cropped_points);
-
-  ASSERT_EQ(cudaStreamSynchronize(stream), cudaSuccess);
-  EXPECT_EQ(num_cropped_points, 2U);
-  EXPECT_EQ(num_voxels, 2U);
+  const auto result = runGenerateFeatures("full", host_points, false);
+  EXPECT_EQ(result.num_cropped_points, 2U);
+  EXPECT_EQ(result.num_voxels, 2U);
 
   const auto reconstruction_features =
-    copy_to_host(reconstruction_features_d.get(), host_points.size() * 4);
+    copyToHost(result.reconstruction_features_d.get(), host_points.size() * 4);
   const std::vector<float> expected_reconstruction_features{0.0F, 0.0F, 0.0F, 1.0F, 4.0F, 0.0F,
                                                             0.0F, 2.0F, 1.0F, 1.0F, 1.0F, 3.0F};
-  {
-    EXPECT_EQ(reconstruction_features.size(), expected_reconstruction_features.size());
-    for (size_t i = 0; i < expected_reconstruction_features.size(); i++) {
-      EXPECT_FLOAT_EQ(reconstruction_features[i], expected_reconstruction_features[i]);
-    }
-  }
-
-  ASSERT_EQ(cudaStreamDestroy(stream), cudaSuccess);
+  expectFloatVectorEq(reconstruction_features, expected_reconstruction_features);
 }
 
 }  // namespace test
