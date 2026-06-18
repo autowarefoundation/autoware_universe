@@ -31,6 +31,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -42,6 +43,18 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 // internal functions
 namespace
 {
+float state_normalizer_value(
+  const std::vector<float> & values, const int64_t agent, const int64_t dim)
+{
+  if (values.size() == POSE_DIM) {
+    return values[dim];
+  }
+  if (values.size() >= static_cast<size_t>(MAX_NUM_AGENTS * POSE_DIM)) {
+    return values[agent * POSE_DIM + dim];
+  }
+  throw std::runtime_error("Unsupported state normalizer shape.");
+}
+
 /**
  * @brief Converts a vector of poses to a Trajectory message.
  *
@@ -60,6 +73,106 @@ Trajectory get_trajectory_from_poses(
   const double base_z, const rclcpp::Time & stamp, const int64_t velocity_smoothing_window,
   const bool enable_force_stop, const double stopping_threshold);
 };  // namespace
+
+std::vector<float> denormalize_prediction(
+  const std::vector<float> & prediction, const utils::StateNormalization & state_normalization,
+  const bool keep_current_state)
+{
+  const auto & [state_mean, state_std] = state_normalization;
+  if (state_mean.empty() || state_std.empty()) {
+    throw std::runtime_error("State normalizer is empty.");
+  }
+
+  const size_t output_trajectory_size = static_cast<size_t>(MAX_NUM_AGENTS) * OUTPUT_T * POSE_DIM;
+  const size_t solver_trajectory_size =
+    static_cast<size_t>(MAX_NUM_AGENTS) * (OUTPUT_T + 1) * POSE_DIM;
+
+  const bool has_current_state =
+    !prediction.empty() && prediction.size() % solver_trajectory_size == 0;
+  if (
+    prediction.empty() || (!has_current_state && prediction.size() % output_trajectory_size != 0)) {
+    throw std::runtime_error("Unsupported prediction shape for state denormalization.");
+  }
+
+  const int64_t batch_size = static_cast<int64_t>(
+    prediction.size() / (has_current_state ? solver_trajectory_size : output_trajectory_size));
+  const int64_t output_t = keep_current_state && has_current_state ? OUTPUT_T + 1 : OUTPUT_T;
+  std::vector<float> denormalized(batch_size * MAX_NUM_AGENTS * output_t * POSE_DIM);
+
+  for (int64_t b = 0; b < batch_size; ++b) {
+    for (int64_t agent = 0; agent < MAX_NUM_AGENTS; ++agent) {
+      for (int64_t t = 0; t < output_t; ++t) {
+        for (int64_t d = 0; d < POSE_DIM; ++d) {
+          const int64_t src_t = has_current_state && !keep_current_state ? t + 1 : t;
+          const size_t src_idx = ((static_cast<size_t>(b) * MAX_NUM_AGENTS + agent) *
+                                    (has_current_state ? OUTPUT_T + 1 : OUTPUT_T) +
+                                  src_t) *
+                                   POSE_DIM +
+                                 d;
+          const size_t dst_idx =
+            ((static_cast<size_t>(b) * MAX_NUM_AGENTS + agent) * output_t + t) * POSE_DIM + d;
+          denormalized[dst_idx] =
+            prediction[src_idx] * state_normalizer_value(state_std, agent, d) +
+            state_normalizer_value(state_mean, agent, d);
+        }
+      }
+    }
+  }
+
+  return denormalized;
+}
+
+Float32MultiArray create_denoising_steps_message(
+  const std::vector<float> & denoising_predictions, const std::vector<float> & denoising_timesteps)
+{
+  Float32MultiArray msg;
+
+  const auto num_steps = denoising_timesteps.size();
+  const auto trajectory_points = static_cast<size_t>(OUTPUT_T + 1);
+  const auto trajectory_size = static_cast<size_t>(MAX_NUM_AGENTS) * trajectory_points * POSE_DIM;
+  if (num_steps == 0 || trajectory_size == 0 || denoising_predictions.empty()) {
+    return msg;
+  }
+
+  const auto step_data_size = denoising_predictions.size() / num_steps;
+  if (
+    step_data_size == 0 || denoising_predictions.size() != step_data_size * num_steps ||
+    step_data_size % trajectory_size != 0) {
+    throw std::runtime_error("Unsupported denoising prediction shape for debug message.");
+  }
+
+  const auto batch_size = step_data_size / trajectory_size;
+  const auto ego_trajectory_size = trajectory_points * POSE_DIM;
+
+  msg.layout.dim.resize(4);
+  msg.layout.dim[0].label = "step";
+  msg.layout.dim[0].size = static_cast<uint32_t>(num_steps);
+  msg.layout.dim[0].stride = static_cast<uint32_t>(num_steps * batch_size * ego_trajectory_size);
+  msg.layout.dim[1].label = "batch";
+  msg.layout.dim[1].size = static_cast<uint32_t>(batch_size);
+  msg.layout.dim[1].stride = static_cast<uint32_t>(batch_size * ego_trajectory_size);
+  msg.layout.dim[2].label = "time";
+  msg.layout.dim[2].size = static_cast<uint32_t>(trajectory_points);
+  msg.layout.dim[2].stride = static_cast<uint32_t>(ego_trajectory_size);
+  msg.layout.dim[3].label = "dim";
+  msg.layout.dim[3].size = static_cast<uint32_t>(POSE_DIM);
+  msg.layout.dim[3].stride = static_cast<uint32_t>(POSE_DIM);
+  msg.layout.data_offset = 0;
+
+  msg.data.reserve(num_steps * batch_size * ego_trajectory_size);
+  for (size_t step = 0; step < num_steps; ++step) {
+    const auto step_offset = step * step_data_size;
+    for (size_t batch = 0; batch < batch_size; ++batch) {
+      const auto ego_offset = step_offset + batch * trajectory_size;
+      msg.data.insert(
+        msg.data.end(), denoising_predictions.begin() + static_cast<std::ptrdiff_t>(ego_offset),
+        denoising_predictions.begin() +
+          static_cast<std::ptrdiff_t>(ego_offset + ego_trajectory_size));
+    }
+  }
+
+  return msg;
+}
 
 std::vector<std::vector<std::vector<Eigen::Matrix4d>>> parse_predictions(
   const std::vector<float> & prediction, const Eigen::Matrix4d & transform_ego_to_map)
