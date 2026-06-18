@@ -70,7 +70,7 @@ protected:
   void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();
-  void allocateMessages();
+  void allocateSegOutputMessages();
   void allocateSerializedPoolingBuffers();
   void bindSerializedPoolingAddresses();
   void precomputeSerializedPoolingMetadata();

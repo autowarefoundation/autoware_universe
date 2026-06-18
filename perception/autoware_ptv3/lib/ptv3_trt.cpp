@@ -97,7 +97,7 @@ void PTv3TRT::setPublishFilteredPointcloud(
   publish_filtered_pointcloud_ = std::move(func);
 }
 
-void PTv3TRT::allocateMessages()
+void PTv3TRT::allocateSegOutputMessages()
 {
   if (!config_.use_seg3d_head_) {
     return;
@@ -215,7 +215,7 @@ void PTv3TRT::initPtr()
     post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
   }
 
-  allocateMessages();
+  allocateSegOutputMessages();
   allocateSerializedPoolingBuffers();
 }
 
@@ -741,7 +741,7 @@ bool PTv3TRT::preProcess(
       get_num_fields(input_format_), get_point_step(input_format_),
       to_string(filtered_output_format_));
   });
-  allocateMessages();
+  allocateSegOutputMessages();
 
   const auto num_points = msg_ptr->height * msg_ptr->width;
   if (should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::FULL) {
@@ -941,7 +941,7 @@ bool PTv3TRT::postProcess(
     filtered_points_msg_ptr_ = nullptr;
   }
 
-  allocateMessages();
+  allocateSegOutputMessages();
   return true;
 }
 
