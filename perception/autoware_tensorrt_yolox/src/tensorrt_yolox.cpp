@@ -406,8 +406,7 @@ void TrtYoloX::preprocessGpu(const std::vector<cv::Mat> & images)
 }
 
 bool TrtYoloX::doInference(
-  const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & masks,
-  [[maybe_unused]] std::vector<cv::Mat> & color_masks)
+  const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & masks)
 {
   if (!setCudaDeviceId(gpu_id_)) {
     return false;
@@ -416,7 +415,7 @@ bool TrtYoloX::doInference(
   preprocessGpu(images);
 
   if (needs_output_decode_) {
-    return feedforwardAndDecode(images, objects, masks, color_masks);
+    return feedforwardAndDecode(images, objects, masks);
   } else {
     return feedforward(images, objects);
   }
@@ -561,8 +560,7 @@ bool TrtYoloX::feedforward(const std::vector<cv::Mat> & images, ObjectArrays & o
 }
 
 bool TrtYoloX::feedforwardAndDecode(
-  const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & out_masks,
-  [[maybe_unused]] std::vector<cv::Mat> & color_masks)
+  const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & out_masks)
 {
   std::vector<void *> buffers = {input_d_.get(), out_prob_d_.get()};
   if (multitask_) {

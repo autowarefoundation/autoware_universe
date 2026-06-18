@@ -111,8 +111,7 @@ public:
    * @param[in] images batched images
    */
   bool doInference(
-    const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & masks,
-    std::vector<cv::Mat> & color_masks);
+    const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & masks);
 
   /**
    * @brief run multi-scale inference including pre-process and post-process
@@ -168,8 +167,7 @@ private:
 
   bool feedforward(const std::vector<cv::Mat> & images, ObjectArrays & objects);
   bool feedforwardAndDecode(
-    const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & masks,
-    std::vector<cv::Mat> & color_masks);
+    const std::vector<cv::Mat> & images, ObjectArrays & objects, std::vector<cv::Mat> & masks);
   void decodeOutputs(float * prob, ObjectArray & objects, float scale, cv::Size & img_size) const;
   void generateGridsAndStride(
     const int target_w, const int target_h, const std::vector<int> & strides,

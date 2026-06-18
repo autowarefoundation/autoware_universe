@@ -52,8 +52,7 @@ public:
     auto image = cv::imread(image_path);
     tensorrt_yolox::ObjectArrays objects;
     std::vector<cv::Mat> masks;
-    std::vector<cv::Mat> color_masks;
-    trt_yolox->doInference({image}, objects, masks, color_masks);
+    trt_yolox->doInference({image}, objects, masks);
     for (const auto & object : objects[0]) {
       const auto left = object.x_offset;
       const auto top = object.y_offset;
