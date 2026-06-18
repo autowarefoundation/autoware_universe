@@ -57,11 +57,12 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
   const lanelet::LaneletMapPtr & lanelet_map,
   const lanelet::routing::RoutingGraphPtr & routing_graph,
   const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr & route_ptr,
-  const double vehicle_length)
+  const double vehicle_length, 
+  const bool allow_area)
 {
   std::map<lanelet::Id, lanelet::ConstLanelet> route_lanelets;
 
-  bool is_route_valid = lanelet::utils::route::isRouteValid(*route_ptr, lanelet_map);
+  bool is_route_valid = lanelet::utils::route::isRouteValid(*route_ptr, lanelet_map, allow_area);
   if (!is_route_valid) {
     return route_lanelets;
   }
@@ -71,6 +72,9 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
     const auto extension_length = 2 * vehicle_length;
 
     for (const auto & primitive : route_ptr->segments.front().primitives) {
+      if (primitive.primitive_type == "area") {
+        continue;
+      }
       const auto lane_id = primitive.id;
       for (const auto & lanelet_sequence :
            autoware::experimental::lanelet2_utils::get_preceding_lanelet_sequences(
@@ -84,6 +88,9 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
 
   for (const auto & route_section : route_ptr->segments) {
     for (const auto & primitive : route_section.primitives) {
+      if (primitive.primitive_type == "area") {
+        continue;
+      }
       const auto lane_id = primitive.id;
       route_lanelets[lane_id] = lanelet_map->laneletLayer.get(lane_id);
     }
@@ -94,6 +101,9 @@ std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
     const auto extension_length = 2 * vehicle_length;
 
     for (const auto & primitive : route_ptr->segments.back().primitives) {
+      if (primitive.primitive_type == "area") {
+        continue;
+      }
       const auto lane_id = primitive.id;
       for (const auto & lanelet_sequence :
            autoware::experimental::lanelet2_utils::get_succeeding_lanelet_sequences(
@@ -279,8 +289,8 @@ void LaneDepartureCheckerNode::onTimer()
   if (last_route_ != route_ && !route_->segments.empty()) {
     std::map<lanelet::Id, lanelet::ConstLanelet>::iterator itr;
 
-    auto map_route_lanelets_ =
-      getRouteLanelets(lanelet_map_, routing_graph_, route_, vehicle_length_m_);
+    auto map_route_lanelets_ = getRouteLanelets(
+      lanelet_map_, routing_graph_, route_, vehicle_length_m_, node_param_.allow_area);
 
     lanelet::ConstLanelets shared_lanelets_tmp;
 

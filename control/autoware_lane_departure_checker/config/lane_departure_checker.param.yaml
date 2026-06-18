@@ -12,6 +12,8 @@
     include_left_lanes: false
     include_opposite_lanes: false
     include_conflicting_lanes: false
+    # Must match mission_planner allow_area when using lanelet-area-lanelet routes
+    allow_area: true
     boundary_types_to_detect: [curbstone]
 
 
