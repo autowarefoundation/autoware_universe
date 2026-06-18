@@ -37,3 +37,6 @@
     enable_cog_on_centerline: false
     input_path_interval: 2.0
     output_path_interval: 2.0
+
+    # Must match mission_planner allow_area when using lanelet-area-lanelet routes
+    allow_area: true
