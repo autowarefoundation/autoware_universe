@@ -23,6 +23,7 @@
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include "autoware_perception_msgs/msg/tracked_objects.hpp"
+#include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
 #include <vector>
@@ -39,6 +40,7 @@ private:
   // ROS interface
   std::vector<rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr>
     sub_objects_array_{};
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odometry_{};
 
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;

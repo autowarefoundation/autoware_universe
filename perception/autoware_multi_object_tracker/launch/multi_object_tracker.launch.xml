@@ -12,6 +12,7 @@
   <arg name="input/detection10/objects" default="input/objects10"/>
   <arg name="input/detection11/objects" default="input/objects11"/>
   <arg name="input/detection12/objects" default="input/objects12"/>
+  <arg name="input/odometry" default="/localization/kinematic_state"/>
   <arg name="output/objects" default="objects"/>
   <arg name="output/merged_objects" default="merged_objects"/>
 
@@ -31,6 +32,7 @@
   <arg name="data_association_matrix_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/data_association_matrix.param.yaml"/>
   <arg name="input_channels_path" default="$(find-pkg-share autoware_multi_object_tracker)/config/input_channels.param.yaml"/>
   <arg name="publish_merged_objects" default="false"/>
+  <arg name="ego_source" default="tf" description="ego pose source: tf (look up from TF tree) or odometry (interpolate from input/odometry)"/>
 
   <node pkg="autoware_multi_object_tracker" exec="multi_object_tracker_node" name="multi_object_tracker" output="both">
     <remap from="~/input/detection01/objects" to="$(var input/detection01/objects)"/>
@@ -45,6 +47,7 @@
     <remap from="~/input/detection10/objects" to="$(var input/detection10/objects)"/>
     <remap from="~/input/detection11/objects" to="$(var input/detection11/objects)"/>
     <remap from="~/input/detection12/objects" to="$(var input/detection12/objects)"/>
+    <remap from="~/input/odometry" to="$(var input/odometry)"/>
     <remap from="~/output/objects" to="$(var output/objects)"/>
     <remap from="~/output/merged_objects" to="$(var output/merged_objects)"/>
     <param name="input/detection01/channel" value="$(var input/detection01/channel)"/>
@@ -63,5 +66,6 @@
     <param from="$(var data_association_matrix_path)"/>
     <param from="$(var input_channels_path)"/>
     <param name="publish_merged_objects" value="$(var publish_merged_objects)"/>
+    <param name="ego_source" value="$(var ego_source)"/>
   </node>
 </launch>
