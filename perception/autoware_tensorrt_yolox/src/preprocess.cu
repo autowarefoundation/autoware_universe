@@ -14,9 +14,6 @@
 
 #include <autoware/tensorrt_yolox/preprocess.hpp>
 
-#include <stdio.h>
-#include <stdlib.h>
-
 #include <algorithm>
 
 #define MIN(x, y) x < y ? x : y
