@@ -12,7 +12,7 @@
     ego_source: tf
     # delay compensation, least -> most:
     # "none" | "publish_delay" (detection + update->publish delay) | "odometry" (up to latest odometry) | "full" (to now)
-    delay_compensation: publish_delay
+    delay_compensation: none
 
     consider_odometry_uncertainty: false
 
