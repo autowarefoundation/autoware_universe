@@ -551,8 +551,8 @@ void DirectionChangeModule::filterLaneletsAtCusp(BehaviorModuleOutput & output)
 
 void DirectionChangeModule::updateDrivableAreaInfo(BehaviorModuleOutput & output)
 {
-  // TODO: This check might not be necessary, but keep it for reference.
-  //    Clean once confirmation of results.
+  // TODO(emmeyteja): This check might not be necessary, but keep it for reference.
+  // Clean once confirmation of results.
   const bool is_active_segment = current_segment_state_ == PathSegmentState::FORWARD_FOLLOWING ||
                                  current_segment_state_ == PathSegmentState::AT_CUSP ||
                                  current_segment_state_ == PathSegmentState::REVERSE_FOLLOWING;
