@@ -153,11 +153,6 @@ TrtYoloX::TrtYoloX(
       nms_threshold_ = nms_threshold;
       // Todo : Support multiple segmentation heads
       multitask_++;
-      /*
-      std::stringstream s;
-      s << "\"" << model_path << "\" is unsupported format";
-      throw std::runtime_error{s.str()};
-      */
   }
   // GPU memory allocation
   const auto input_dims = trt_common_->getTensorShape(0);

@@ -47,10 +47,6 @@ struct Object
 using ObjectArray = std::vector<Object>;
 using ObjectArrays = std::vector<ObjectArray>;
 using autoware::tensorrt_common::CalibrationConfig;
-using autoware::tensorrt_common::NetworkIOPtr;
-using autoware::tensorrt_common::ProfileDimsPtr;
-using autoware::tensorrt_common::Profiler;
-using autoware::tensorrt_common::TrtCommon;
 using autoware::tensorrt_common::TrtCommonConfig;
 using autoware::tensorrt_common::TrtConvCalib;
 

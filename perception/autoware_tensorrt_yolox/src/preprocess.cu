@@ -159,33 +159,6 @@ void letterbox_gpu(
     N, dst, src, d_h, d_w, r_h, r_w, 1.0 / scale, r_h, r_w);
 }
 
-__global__ void nhwc_to_nchw_kernel(
-  int N, unsigned char * dst_img, unsigned char * src_img, int height, int width)
-{
-  // NHWC
-  int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
-
-  if (index >= N) return;
-  int chan = 3;
-  int c = 0;
-  int x = index % width;
-  int y = index / width;
-  int src_index = 0;
-  int dst_index = 0;
-  for (c = 0; c < chan; c++) {
-    src_index = c + (chan * x) + (chan * width * y);
-    dst_index = x + (width * y) + (width * height * c);
-    dst_img[dst_index] = src_img[src_index];
-  }
-}
-
-void nhwc_to_nchw_gpu(
-  unsigned char * dst, unsigned char * src, int d_w, int d_h, int d_c, cudaStream_t stream)
-{
-  int N = d_w * d_h;
-  nhwc_to_nchw_kernel<<<cuda_gridsize(N), block, 0, stream>>>(N, dst, src, d_h, d_w);
-}
-
 __global__ void nchw_to_nhwc_kernel(
   int N, unsigned char * dst, unsigned char * src, int height, int width)
 {
@@ -441,16 +414,6 @@ void resize_bilinear_letterbox_nhwc_to_nchw32_batch_gpu(
 
   resize_bilinear_letterbox_nhwc_to_nchw32_batch_kernel<<<cuda_gridsize(N), block, 0, stream>>>(
     N, dst, src, d_h, d_w, s_h, s_w, 1.0 / scale, r_h, r_w, norm, batch);
-  /*
-  int b
-  for (b = 0; b < batch; b++) {
-    int index_dst = b * d_w * d_h * d_c;
-    int index_src = b * s_w * s_h * s_c;
-    resize_bilinear_letterbox_nhwc_to_nchw32_kernel<<<cuda_gridsize(N), BLOCK, 0, stream>>>(N,
-  &dst[index_dst], &src[index_src], d_h, d_w, s_h, s_w, 1.0/scale, r_h, r_w, norm
-                                                                                       );
-  }
-  */
 }
 
 __global__ void multi_scale_resize_bilinear_letterbox_nhwc_to_nchw32_batch_kernel(
