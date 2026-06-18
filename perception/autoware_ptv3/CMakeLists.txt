@@ -158,6 +158,22 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       )
       ament_target_dependencies(semantic_label_test autoware_perception_msgs)
     endif()
+
+    if(CUDA_AVAIL)
+      ament_add_gtest(postprocess_kernel_test
+        test/postprocess_kernel_test.cpp
+      )
+      if(TARGET postprocess_kernel_test)
+        target_link_libraries(postprocess_kernel_test
+          CUDA::cudart
+          ${PROJECT_NAME}_cuda_lib
+        )
+        target_include_directories(postprocess_kernel_test PRIVATE
+          include
+          ${CUDA_INCLUDE_DIRS}
+        )
+      endif()
+    endif()
   endif()
 
   ament_auto_package(
