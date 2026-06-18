@@ -179,15 +179,14 @@ cudaError_t Detection3DPostprocess::process(
     thrust::raw_pointer_cast(raw_boxes_d_.data()), stream);
 
   const auto policy = thrust::cuda::par.on(stream);
+  const auto passing_end = thrust::copy_if(
+    policy, raw_boxes_d_.begin(), raw_boxes_d_.end(), passing_boxes_d_.begin(), IsScoreNonZero{});
+  const auto num_passing = static_cast<std::size_t>(passing_end - passing_boxes_d_.begin());
 
-  const auto num_passing =
-    thrust::count_if(policy, raw_boxes_d_.begin(), raw_boxes_d_.end(), IsScoreNonZero{});
   if (num_passing == 0) {
     return cudaGetLastError();
   }
 
-  const auto passing_end = thrust::copy_if(
-    policy, raw_boxes_d_.begin(), raw_boxes_d_.end(), passing_boxes_d_.begin(), IsScoreNonZero{});
   thrust::sort(policy, passing_boxes_d_.begin(), passing_end, IsScoreGreaterThan{});
 
   num_boxes_ = static_cast<std::size_t>(num_passing);
