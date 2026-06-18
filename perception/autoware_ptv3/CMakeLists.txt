@@ -163,6 +163,15 @@ if(TRT_AVAIL AND CUDA_AVAIL)
       ${PROJECT_NAME}_cuda_lib
     )
 
+    ament_add_gtest(semantic_label_test
+      test/semantic_label_test.cpp
+    )
+    if(TARGET semantic_label_test)
+      target_include_directories(semantic_label_test PRIVATE
+        include
+      )
+      ament_target_dependencies(semantic_label_test autoware_perception_msgs)
+    endif()
   endif()
 
   ament_auto_package(
