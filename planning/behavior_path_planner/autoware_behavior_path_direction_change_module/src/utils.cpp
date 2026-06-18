@@ -37,6 +37,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner
