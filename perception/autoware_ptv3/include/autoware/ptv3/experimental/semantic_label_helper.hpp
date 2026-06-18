@@ -19,7 +19,6 @@
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
-#include <cstdint>
 #include <optional>
 #include <string_view>
 
@@ -28,9 +27,11 @@ namespace autoware::ptv3::experimental
 using autoware_perception_msgs::msg::ObjectClassification;
 using ObjectLabel = ObjectClassification::_label_type;
 
-/// @brief Get the string representation of a semantic label.
-/// @param label The semantic label to convert.
-/// @return String view of the label name (e.g., "CAR", "HAZARD", "STRUCTURE").
+/**
+ * @brief Get the string representation of a semantic label.
+ * @param label The semantic label to convert.
+ * @return String view of the label name (e.g., "CAR", "HAZARD", "STRUCTURE").
+ */
 constexpr std::string_view to_string(SemanticLabel label) noexcept
 {
   switch (label) {
@@ -40,14 +41,18 @@ constexpr std::string_view to_string(SemanticLabel label) noexcept
       return "TRUCK";
     case SemanticLabel::BUS:
       return "BUS";
+    case SemanticLabel::MOTORCYCLE:
+      return "MOTORCYCLE";
     case SemanticLabel::BICYCLE:
       return "BICYCLE";
     case SemanticLabel::PEDESTRIAN:
       return "PEDESTRIAN";
+    case SemanticLabel::ANIMAL:
+      return "ANIMAL";
     case SemanticLabel::HAZARD:
       return "HAZARD";
-    case SemanticLabel::GROUND:
-      return "GROUND";
+    case SemanticLabel::FLAT_SURFACE:
+      return "FLAT_SURFACE";
     case SemanticLabel::STRUCTURE:
       return "STRUCTURE";
     case SemanticLabel::VEGETATION:
@@ -59,10 +64,12 @@ constexpr std::string_view to_string(SemanticLabel label) noexcept
   }
 }
 
-/// @brief Convert a semantic label to ObjectClassification label type where applicable.
-/// @param label The semantic label to convert.
-/// @return The ObjectClassification label value, or std::nullopt for non-object labels.
-constexpr std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexcept
+/**
+ * @brief Convert a semantic label to ObjectClassification label type where applicable.
+ * @param label The semantic label to convert.
+ * @return The ObjectClassification label value, or std::nullopt for non-object labels.
+ */
+inline std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexcept
 {
   switch (label) {
     case SemanticLabel::CAR:
@@ -71,13 +78,17 @@ constexpr std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexce
       return ObjectClassification::TRUCK;
     case SemanticLabel::BUS:
       return ObjectClassification::BUS;
+    case SemanticLabel::MOTORCYCLE:
+      return ObjectClassification::MOTORCYCLE;
     case SemanticLabel::BICYCLE:
       return ObjectClassification::BICYCLE;
     case SemanticLabel::PEDESTRIAN:
       return ObjectClassification::PEDESTRIAN;
+    case SemanticLabel::ANIMAL:
+      return ObjectClassification::ANIMAL;
     case SemanticLabel::HAZARD:
       return ObjectClassification::HAZARD;
-    case SemanticLabel::GROUND:
+    case SemanticLabel::FLAT_SURFACE:
     case SemanticLabel::STRUCTURE:
     case SemanticLabel::VEGETATION:
     case SemanticLabel::NOISE:
@@ -87,10 +98,12 @@ constexpr std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexce
   }
 }
 
-/// @brief Convert an ObjectClassification label to its semantic label.
-/// @param label The ObjectClassification label value.
-/// @return The corresponding SemanticLabel, or std::nullopt if not mapped.
-constexpr std::optional<SemanticLabel> try_into_semantic(std::uint8_t label) noexcept
+/**
+ * @brief Convert an ObjectClassification label to its semantic label.
+ * @param label The ObjectClassification label value.
+ * @return The corresponding SemanticLabel, or std::nullopt if not mapped.
+ */
+inline std::optional<SemanticLabel> try_into_semantic(ObjectLabel label) noexcept
 {
   switch (label) {
     case ObjectClassification::CAR:
@@ -99,10 +112,16 @@ constexpr std::optional<SemanticLabel> try_into_semantic(std::uint8_t label) noe
       return SemanticLabel::TRUCK;
     case ObjectClassification::BUS:
       return SemanticLabel::BUS;
+    case ObjectClassification::TRAILER:
+      return SemanticLabel::TRUCK;
+    case ObjectClassification::MOTORCYCLE:
+      return SemanticLabel::MOTORCYCLE;
     case ObjectClassification::BICYCLE:
       return SemanticLabel::BICYCLE;
     case ObjectClassification::PEDESTRIAN:
       return SemanticLabel::PEDESTRIAN;
+    case ObjectClassification::ANIMAL:
+      return SemanticLabel::ANIMAL;
     case ObjectClassification::HAZARD:
       return SemanticLabel::HAZARD;
     default:
@@ -110,11 +129,13 @@ constexpr std::optional<SemanticLabel> try_into_semantic(std::uint8_t label) noe
   }
 }
 
-/// @brief Check whether a semantic label is object-compatible.
-/// @param label The semantic label to check.
-/// @return true if the label is an object class, false for environment/non-object labels
-///         (GROUND, STRUCTURE, VEGETATION, NOISE).
-constexpr bool is_object_compatible(SemanticLabel label) noexcept
+/**
+ * @brief Check whether a semantic label is object-compatible.
+ * @param label The semantic label to check.
+ * @return true if the label is an object class, false for environment/non-object labels
+ *         (FLAT_SURFACE, STRUCTURE, VEGETATION, NOISE).
+ */
+inline bool is_object_compatible(SemanticLabel label) noexcept
 {
   return try_into_object(label).has_value();
 }
