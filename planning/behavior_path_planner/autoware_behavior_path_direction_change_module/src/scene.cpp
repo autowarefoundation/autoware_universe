@@ -335,10 +335,7 @@ void DirectionChangeModule::updateManeuverStateMachine(const PathWithLaneId & ma
       return;
     }
 
-    if (current_segment_state_ != PathSegmentState::FORWARD_FOLLOWING) {
-      is_ego_driving_forward_wrt_lane_ = true;
-      current_segment_state_ = PathSegmentState::FORWARD_FOLLOWING;
-    }
+    // Keep REVERSE_FOLLOWING / FORWARD_FOLLOWING set at the last cusp until maneuver exits.
     return;
   }
 
