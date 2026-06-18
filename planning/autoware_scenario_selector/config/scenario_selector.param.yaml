@@ -6,3 +6,5 @@
       th_stopped_time_sec: 1.0
       th_stopped_velocity_mps: 0.01
       enable_mode_switching: true
+      # Must match mission_planner allow_area when using lanelet-area-lanelet routes
+      allow_area: true
