@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__STATIC_TRACKER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__TRACKERS__STATIC_TRACKER_HPP_
 
+#include "autoware/multi_object_tracker/configurations.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
 #include "autoware/multi_object_tracker/tracker/shape_model/static_shape_model.hpp"
@@ -36,7 +37,9 @@ private:
   bool updateKinematics(const types::DynamicObject & object);
 
 public:
-  StaticTracker(const rclcpp::Time & time, const types::DynamicObject & object);
+  StaticTracker(
+    const rclcpp::Time & time, const types::DynamicObject & object,
+    const StaticTrackerConfig & config);
 
   // setEgoPose() is handled by the base via getShapeModel().setEgoPose().
 

@@ -16,9 +16,18 @@
 
 #include "autoware/diffusion_planner/conversion/agent.hpp"
 #include "autoware/diffusion_planner/dimensions.hpp"
+#include "autoware/diffusion_planner/inference/guidance/centerline_guidance.hpp"
+#include "autoware/diffusion_planner/inference/guidance/start_guidance.hpp"
+#include "autoware/diffusion_planner/inference/guidance/stop_guidance.hpp"
+#include "autoware/diffusion_planner/inference/multi_step_inference.hpp"
+#include "autoware/diffusion_planner/inference/single_step_inference.hpp"
 #include "autoware/diffusion_planner/postprocessing/postprocessing_utils.hpp"
 #include "autoware/diffusion_planner/preprocessing/preprocessing_utils.hpp"
 #include "autoware/diffusion_planner/utils/utils.hpp"
+
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
+#include "autoware/diffusion_planner/inference/onnxruntime_inference.hpp"
+#endif
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectory.hpp>
 #include <autoware_internal_planning_msgs/msg/generator_info.hpp>
@@ -30,11 +39,37 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace autoware::diffusion_planner
 {
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
+namespace
+{
+bool is_onnxruntime_backend(const std::string & backend)
+{
+  return backend == "ort_cpu" || backend == "ort_cuda" || backend == "ort_tensorrt";
+}
+
+std::string onnxruntime_execution_provider_from_backend(const std::string & backend)
+{
+  if (backend == "ort_cpu") {
+    return "cpu";
+  }
+  if (backend == "ort_cuda") {
+    return "cuda";
+  }
+  if (backend == "ort_tensorrt") {
+    return "tensorrt";
+  }
+  throw std::invalid_argument(
+    "Unsupported model.backend '" + backend +
+    "'. Expected 'tensorrt', 'ort_cpu', 'ort_cuda', or 'ort_tensorrt'.");
+}
+}  // namespace
+#endif
 
 DiffusionPlannerCore::DiffusionPlannerCore(
   const DiffusionPlannerParams & params, const VehicleInfo & vehicle_info)
@@ -48,12 +83,76 @@ DiffusionPlannerCore::DiffusionPlannerCore(
 
 void DiffusionPlannerCore::load_model()
 {
-  tensorrt_inference_.reset();
   last_agent_poses_map_.clear();
+  diffusion_planner_inference_.reset();
   utils::check_weight_version(params_.args_path);
-  normalization_map_ = utils::load_normalization_stats(params_.args_path);
-  tensorrt_inference_ = std::make_unique<TensorrtInference>(
-    params_.model_path, params_.plugins_path, params_.batch_size);
+  observation_normalization_ = utils::load_observation_normalization(params_.args_path);
+  state_normalization_ = utils::load_state_normalization(params_.args_path);
+
+  // Initialize guidance modules
+  StartGuidanceConfig start_guidance_config;
+  start_guidance_config.reference_distance_m =
+    static_cast<float>(params_.start_guidance_reference_distance_m);
+  start_guidance_config.max_scale = static_cast<float>(params_.start_guidance_max_scale);
+  start_guidance_config.x_mean = static_cast<float>(state_normalization_.first.at(0));
+  start_guidance_config.x_std = static_cast<float>(state_normalization_.second.at(0));
+  start_guidance_config.y_mean = static_cast<float>(state_normalization_.first.at(1));
+  start_guidance_config.y_std = static_cast<float>(state_normalization_.second.at(1));
+  start_guidance_ = std::make_shared<StartGuidance>(start_guidance_config);
+  start_guidance_->set_enabled(start_guidance_enabled_);
+
+  StopGuidanceConfig stop_guidance_config;
+  stop_guidance_config.stop_acceleration_mps2 =
+    static_cast<float>(params_.stop_guidance_stop_acceleration_mps2);
+  stop_guidance_config.x_mean = static_cast<float>(state_normalization_.first.at(0));
+  stop_guidance_config.x_std = static_cast<float>(state_normalization_.second.at(0));
+  stop_guidance_config.y_mean = static_cast<float>(state_normalization_.first.at(1));
+  stop_guidance_config.y_std = static_cast<float>(state_normalization_.second.at(1));
+  stop_guidance_ = std::make_shared<StopGuidance>(stop_guidance_config);
+  stop_guidance_->set_enabled(stop_guidance_enabled_);
+
+  CenterlineGuidanceConfig centerline_guidance_config;
+  centerline_guidance_config.start_time_s =
+    static_cast<float>(params_.centerline_guidance_start_time_s);
+  centerline_guidance_config.x_mean = static_cast<float>(state_normalization_.first.at(0));
+  centerline_guidance_config.x_std = static_cast<float>(state_normalization_.second.at(0));
+  centerline_guidance_config.y_mean = static_cast<float>(state_normalization_.first.at(1));
+  centerline_guidance_config.y_std = static_cast<float>(state_normalization_.second.at(1));
+  centerline_guidance_ = std::make_shared<CenterlineGuidance>(centerline_guidance_config);
+  centerline_guidance_->set_enabled(centerline_guidance_enabled_);
+
+  std::unordered_map<std::string, std::shared_ptr<Guidance>> guidances{
+    {"start", start_guidance_}, {"stop", stop_guidance_}, {"centerline", centerline_guidance_}};
+  if (params_.backend == "tensorrt" && params_.model_type == "single_step") {
+    diffusion_planner_inference_ = std::make_unique<SingleStepInference>(
+      params_.single_step_model_path, params_.plugins_path, params_.batch_size,
+      params_.trt_precision, params_.use_cuda_graph);
+  } else if (params_.backend == "tensorrt" && params_.model_type == "multi_step") {
+    diffusion_planner_inference_ = std::make_unique<MultiStepInference>(
+      params_.encoder_model_path, params_.decoder_model_path, params_.turn_indicator_model_path,
+      params_.plugins_path, params_.batch_size, params_.trt_precision, params_.use_cuda_graph,
+      params_.dpm_solver_steps, std::move(guidances));
+#ifdef AUTOWARE_DIFFUSION_PLANNER_USE_ONNXRUNTIME
+  } else if (is_onnxruntime_backend(params_.backend) && params_.model_type == "single_step") {
+    diffusion_planner_inference_ = std::make_unique<OnnxruntimeSingleStepInference>(
+      params_.single_step_model_path, onnxruntime_execution_provider_from_backend(params_.backend),
+      params_.plugins_path, params_.batch_size);
+  } else if (is_onnxruntime_backend(params_.backend) && params_.model_type == "multi_step") {
+    diffusion_planner_inference_ = std::make_unique<OnnxruntimeMultiStepInference>(
+      params_.encoder_model_path, params_.decoder_model_path, params_.turn_indicator_model_path,
+      onnxruntime_execution_provider_from_backend(params_.backend), params_.plugins_path,
+      params_.batch_size, params_.dpm_solver_steps, std::move(guidances));
+#endif
+  } else {
+    if (params_.backend != "tensorrt") {
+      throw std::invalid_argument(
+        "Unsupported model.backend '" + params_.backend +
+        "'. ONNX Runtime support is not available in this build.");
+    }
+    throw std::invalid_argument(
+      "Unsupported model.type '" + params_.model_type +
+      "'. Expected 'single_step' or 'multi_step'.");
+  }
 }
 
 void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
@@ -62,6 +161,64 @@ void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
   turn_indicator_manager_.set_hold_duration(
     rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
   turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
+  if (start_guidance_) {
+    StartGuidanceConfig start_guidance_config;
+    start_guidance_config.reference_distance_m =
+      static_cast<float>(params_.start_guidance_reference_distance_m);
+    start_guidance_config.max_scale = static_cast<float>(params_.start_guidance_max_scale);
+    start_guidance_config.x_mean = static_cast<float>(state_normalization_.first.at(0));
+    start_guidance_config.x_std = static_cast<float>(state_normalization_.second.at(0));
+    start_guidance_config.y_mean = static_cast<float>(state_normalization_.first.at(1));
+    start_guidance_config.y_std = static_cast<float>(state_normalization_.second.at(1));
+    start_guidance_->set_config(start_guidance_config);
+    start_guidance_->set_enabled(start_guidance_enabled_);
+  }
+  if (stop_guidance_) {
+    StopGuidanceConfig stop_guidance_config;
+    stop_guidance_config.stop_acceleration_mps2 =
+      static_cast<float>(params_.stop_guidance_stop_acceleration_mps2);
+    stop_guidance_config.x_mean = static_cast<float>(state_normalization_.first.at(0));
+    stop_guidance_config.x_std = static_cast<float>(state_normalization_.second.at(0));
+    stop_guidance_config.y_mean = static_cast<float>(state_normalization_.first.at(1));
+    stop_guidance_config.y_std = static_cast<float>(state_normalization_.second.at(1));
+    stop_guidance_->set_config(stop_guidance_config);
+    stop_guidance_->set_enabled(stop_guidance_enabled_);
+  }
+  if (centerline_guidance_) {
+    CenterlineGuidanceConfig centerline_guidance_config;
+    centerline_guidance_config.start_time_s =
+      static_cast<float>(params_.centerline_guidance_start_time_s);
+    centerline_guidance_config.x_mean = static_cast<float>(state_normalization_.first.at(0));
+    centerline_guidance_config.x_std = static_cast<float>(state_normalization_.second.at(0));
+    centerline_guidance_config.y_mean = static_cast<float>(state_normalization_.first.at(1));
+    centerline_guidance_config.y_std = static_cast<float>(state_normalization_.second.at(1));
+    centerline_guidance_->set_config(centerline_guidance_config);
+    centerline_guidance_->set_enabled(centerline_guidance_enabled_);
+  }
+}
+
+void DiffusionPlannerCore::set_start_guidance_enabled(const bool enabled)
+{
+  start_guidance_enabled_ = enabled;
+  if (start_guidance_) {
+    start_guidance_->set_enabled(enabled);
+  }
+}
+
+void DiffusionPlannerCore::set_stop_guidance_enabled(const bool enabled)
+{
+  stop_guidance_enabled_ = enabled;
+  if (stop_guidance_) {
+    stop_guidance_->set_enabled(enabled);
+  }
+}
+
+void DiffusionPlannerCore::set_centerline_guidance_enabled(const bool enabled)
+{
+  centerline_guidance_enabled_ = enabled;
+  if (centerline_guidance_) {
+    centerline_guidance_->set_enabled(enabled);
+  }
 }
 
 void DiffusionPlannerCore::set_map(
@@ -142,6 +299,11 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
 InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_context)
 {
   InputDataMap input_data_map;
+
+  if (stop_guidance_) {
+    const auto & linear = frame_context.ego_kinematic_state.twist.twist.linear;
+    stop_guidance_->set_current_speed_mps(static_cast<float>(std::hypot(linear.x, linear.y)));
+  }
 
   const geometry_msgs::msg::Pose & pose_center =
     params_.shift_x
@@ -243,6 +405,9 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
       lane_segment_context_->create_tensor_data_from_indices(
         map_to_ego_transform, traffic_light_id_map_, segment_indices, NUM_SEGMENTS_IN_ROUTE);
     input_data_map["route_lanes"] = utils::replicate_for_batch(route_lanes, params_.batch_size);
+    if (centerline_guidance_) {
+      centerline_guidance_->set_route_lanes(input_data_map["route_lanes"]);
+    }
     input_data_map["route_lanes_speed_limit"] =
       utils::replicate_for_batch(route_lanes_speed_limit, params_.batch_size);
   }
@@ -314,29 +479,42 @@ InputDataMap DiffusionPlannerCore::create_input_data(const FrameContext & frame_
   return input_data_map;
 }
 
-TensorrtInference::InferenceResult DiffusionPlannerCore::run_inference(
-  const InputDataMap & input_data_map)
+InferenceResult DiffusionPlannerCore::run_inference(const InputDataMap & input_data_map)
 {
-  if (!tensorrt_inference_) {
-    TensorrtInference::InferenceResult result;
-    result.error_msg = "Model not loaded";
-    return result;
+  if (!diffusion_planner_inference_) {
+    return tl::unexpected(std::string{"Model not loaded"});
   }
-  return tensorrt_inference_->infer(input_data_map);
+  return diffusion_planner_inference_->infer(input_data_map);
 }
 
 PlannerOutput DiffusionPlannerCore::create_planner_output(
-  const std::vector<float> & predictions, const std::vector<float> & turn_indicator_logit,
-  const FrameContext & frame_context, const rclcpp::Time & timestamp, const UUID & generator_uuid)
+  const InferenceOutput & inference_output, const FrameContext & frame_context,
+  const rclcpp::Time & timestamp, const UUID & generator_uuid)
 {
+  const auto & [raw_predictions, turn_indicator_logit] = inference_output.outputs;
+  const std::vector<float> denormalized_predictions =
+    inference_output.is_denormalized
+      ? raw_predictions
+      : postprocess::denormalize_prediction(raw_predictions, state_normalization_);
+  std::vector<float> denormalized_denoising_predictions;
+  if (!inference_output.denoising_predictions.empty()) {
+    denormalized_denoising_predictions =
+      inference_output.is_denormalized
+        ? inference_output.denoising_predictions
+        : postprocess::denormalize_prediction(
+            inference_output.denoising_predictions, state_normalization_, true);
+  }
+
   const auto agent_poses =
-    postprocess::parse_predictions(predictions, frame_context.ego_to_map_transform);
+    postprocess::parse_predictions(denormalized_predictions, frame_context.ego_to_map_transform);
   last_agent_poses_map_ = agent_poses;
 
   const bool enable_force_stop =
     frame_context.ego_kinematic_state.twist.twist.linear.x > std::numeric_limits<double>::epsilon();
 
   PlannerOutput output;
+  output.denoising_steps = postprocess::create_denoising_steps_message(
+    denormalized_denoising_predictions, inference_output.denoising_timesteps);
 
   // Trajectory and CandidateTrajectories
   for (int i = 0; i < params_.batch_size; i++) {
@@ -390,6 +568,8 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
                                 : turn_indicators_history_.back().report;
   output.turn_indicator_command =
     turn_indicator_manager_.evaluate(first_turn_indicator_logit, timestamp, prev_report);
+
+  output.guidance_triggered = inference_output.guidance_triggered;
 
   return output;
 }
