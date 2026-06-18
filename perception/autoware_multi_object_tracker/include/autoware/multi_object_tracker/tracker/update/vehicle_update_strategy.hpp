@@ -40,6 +40,33 @@ void createPseudoMeasurement(
   const autoware_perception_msgs::msg::Shape & tracker_shape,
   const bool enlarge_covariance = false);
 
+// Result of the wheel-anchor lateral correction.
+struct WheelAnchorLateral
+{
+  geometry_msgs::msg::Point anchor;  // laterally corrected anchor point
+  double var_lat;                    // extra variance to add along the body lateral axis [m^2]
+};
+
+// Corrects the wheel-anchor lateral position and reports extra lateral variance, accounting for the
+// mismatch between the observed polygon width and the tracked width. The wheel update measures the
+// observed front/rear edge CENTER, which is a biased lateral measurement when the widths differ:
+//   - polygon NARROWER (partial view): the center may sit anywhere within (w_t - w_p)/2 of the true
+//     center. The anchor is kept and the worst-case lateral offset is added as variance.
+//   - polygon WIDER (merged / over-segmented cluster): the edge center is pulled off the true body.
+//     A soft dead-zone ("back-lash") of half-width s = (w_p - w_t)/2 is applied to the lateral
+//     offset d between the observed edge center and the tracker center: the anchor is held near the
+//     tracker (slope `balance_alpha`) while the tracker stays contained (|d| <= s) and follows the
+//     exposed corner (unit slope) once |d| > s. The added lateral std scales continuously from s
+//     (centered, true position unknown across the slack) down to `corner_residual_beta` * s once
+//     the corner is matched.
+// `tracker_center` is the tracked body center (e.g. the prediction pose); `anchor` is the observed
+// edge center. The correction only moves the lateral component, leaving the longitudinal anchor
+// (and hence the length estimate) untouched.
+WheelAnchorLateral correctWheelAnchorLateral(
+  double yaw, double tracker_width, const geometry_msgs::msg::Point & tracker_center,
+  double polygon_width, const geometry_msgs::msg::Point & anchor, double balance_alpha,
+  double corner_residual_beta);
+
 }  // namespace autoware::multi_object_tracker
 
 #endif  // AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__UPDATE__VEHICLE_UPDATE_STRATEGY_HPP_

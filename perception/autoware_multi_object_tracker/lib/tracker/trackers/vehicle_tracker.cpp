@@ -204,45 +204,45 @@ bool VehicleTracker::updateKinematics(
 }
 
 bool VehicleTracker::updateWheelKinematics(
-  const UpdateStrategy & strategy, const types::DynamicObject & measurement)
+  const UpdateStrategy & strategy, const types::DynamicObject & measurement,
+  const types::DynamicObject & prediction)
 {
   std::array<double, 36> pose_cov = measurement.pose_covariance;
 
-  // Partial-edge lateral uncertainty.
-  // The wheel-anchor update measures the center of the observed front/rear edge. When the polygon
-  // is only partially visible, its width is narrower than the tracked object and the observed edge
-  // center is shifted laterally from the true center by an unknown amount of up to
-  // (object_width - polygon_width)/2. That lateral error is amplified into yaw through the
-  // wheel-base lever, so add the worst-case lateral offset as extra variance along the body lateral
-  // axis (perpendicular to heading) to the measurement covariance.
+  // Lateral correction for the observed edge center when the polygon width disagrees with the
+  // tracked width (partial view -> narrower, merged/over-segmented cluster -> wider). The wheel
+  // update measures the front/rear edge center; a biased lateral center is amplified into yaw
+  // through the wheel-base lever. correctWheelAnchorLateral() nudges the anchor (over-wide
+  // "back-lash" dead-zone) and reports the extra lateral variance to add. See its documentation.
+  geometry_msgs::msg::Point anchor_point = strategy.anchor_point;
   {
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    const double object_width = shape_model_.getWidth();
-    const double polygon_width = measurement.shape.dimensions.y;
-    const double width_gap = std::max(0.0, object_width - polygon_width);
-    if (width_gap > 0.0) {
-      const double half_gap = 0.5 * width_gap;
-      const double var_lat = half_gap * half_gap;  // conservative: std = worst-case lateral offset
-      const double yaw = motion_model_.getYawState();
-      const double s = std::sin(yaw);
-      const double c = std::cos(yaw);
-      // lateral unit vector n = (-sin(yaw), cos(yaw)); add var_lat * n * n^T to the x/y block
-      pose_cov[XYZRPY_COV_IDX::X_X] += var_lat * s * s;
-      pose_cov[XYZRPY_COV_IDX::X_Y] += -var_lat * s * c;
-      pose_cov[XYZRPY_COV_IDX::Y_X] += -var_lat * s * c;
-      pose_cov[XYZRPY_COV_IDX::Y_Y] += var_lat * c * c;
-    }
+    constexpr double balance_alpha = 0.2;  // hold-tracker slope inside the dead-zone
+    constexpr double corner_residual_beta =
+      0.3;  // residual std fraction once the corner is matched
+    const double yaw = motion_model_.getYawState();
+    const auto corr = correctWheelAnchorLateral(
+      yaw, shape_model_.getWidth(), prediction.pose.position, measurement.shape.dimensions.y,
+      strategy.anchor_point, balance_alpha, corner_residual_beta);
+    anchor_point = corr.anchor;
+
+    const double var_lat = corr.var_lat;
+    const double s = std::sin(yaw);
+    const double c = std::cos(yaw);
+    // lateral unit vector n = (-sin(yaw), cos(yaw)); add var_lat * n * n^T to the x/y block
+    pose_cov[XYZRPY_COV_IDX::X_X] += var_lat * s * s;
+    pose_cov[XYZRPY_COV_IDX::X_Y] += -var_lat * s * c;
+    pose_cov[XYZRPY_COV_IDX::Y_X] += -var_lat * s * c;
+    pose_cov[XYZRPY_COV_IDX::Y_Y] += var_lat * c * c;
   }
 
   bool is_updated = false;
   if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
     shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::FRONT;
-    is_updated = motion_model_.updateStatePoseFront(
-      strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
+    is_updated = motion_model_.updateStatePoseFront(anchor_point.x, anchor_point.y, pose_cov);
   } else {
     shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::REAR;
-    is_updated =
-      motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
+    is_updated = motion_model_.updateStatePoseRear(anchor_point.x, anchor_point.y, pose_cov);
   }
   // Wheel-anchor EKF only updates x/y; z position and height are applied here.
   constexpr double z_gain = 0.4;
@@ -359,7 +359,9 @@ bool VehicleTracker::conditionedUpdate(
     return true;
   }
 
-  const bool is_updated = updateWheelKinematics(strategy, measurement);
+  // Use the aligned measurement so the polygon width/anchor are expressed in the tracker frame
+  // (raw cluster dimensions.y is in the cluster's own local frame).
+  const bool is_updated = updateWheelKinematics(strategy, meas, prediction);
 
   geometry_msgs::msg::Pose tracker_pose;
   std::array<double, 36> dummy_cov{};

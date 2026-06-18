@@ -213,4 +213,45 @@ void createPseudoMeasurement(
   }
 }
 
+WheelAnchorLateral correctWheelAnchorLateral(
+  double yaw, double tracker_width, const geometry_msgs::msg::Point & tracker_center,
+  double polygon_width, const geometry_msgs::msg::Point & anchor, double balance_alpha,
+  double corner_residual_beta)
+{
+  WheelAnchorLateral result{anchor, 0.0};
+
+  const double slack = 0.5 * (polygon_width - tracker_width);
+  if (slack <= 0.0) {
+    // Polygon narrower than (or equal to) the tracker: partial view. Keep the anchor and add the
+    // worst-case lateral offset (half the missing width) as variance.
+    const double half_gap = -slack;  // = 0.5 * (tracker_width - polygon_width) >= 0
+    result.var_lat = half_gap * half_gap;
+    return result;
+  }
+
+  // Polygon wider than the tracker: soft dead-zone ("back-lash") lateral correction.
+  const double sin_yaw = std::sin(yaw);
+  const double cos_yaw = std::cos(yaw);
+  // Signed lateral offset of the observed edge center from the tracker center, along the body
+  // lateral axis n = (-sin yaw, cos yaw). The longitudinal component is orthogonal to n and drops.
+  const double d =
+    -(anchor.x - tracker_center.x) * sin_yaw + (anchor.y - tracker_center.y) * cos_yaw;
+  const double ad = std::abs(d);
+  const double sgn = (d >= 0.0) ? 1.0 : -1.0;
+
+  // Soft dead-zone: slope `balance_alpha` while contained (|d| <= slack), unit slope once the
+  // corner is exposed. Continuous at |d| = slack.
+  const double shift = (ad <= slack) ? balance_alpha * ad : (ad - slack) + balance_alpha * slack;
+  const double lateral_move = sgn * shift - d;  // (corrected - observed) lateral offset, along n
+  result.anchor.x = anchor.x - lateral_move * sin_yaw;
+  result.anchor.y = anchor.y + lateral_move * cos_yaw;
+
+  // Added lateral std: `slack` when centered (true position unknown across the slack), shrinking to
+  // `corner_residual_beta` * slack once the corner is matched. Continuous in |d|.
+  const double t = std::clamp(ad / slack, 0.0, 1.0);
+  const double std_lat = slack * (1.0 - (1.0 - corner_residual_beta) * t);
+  result.var_lat = std_lat * std_lat;
+  return result;
+}
+
 }  // namespace autoware::multi_object_tracker
