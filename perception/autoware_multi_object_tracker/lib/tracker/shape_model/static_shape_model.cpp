@@ -46,7 +46,9 @@ void StaticShapeModel::exportTo(types::DynamicObject & output, bool to_publish) 
   output.shape = assembleShapeMsg();
   output.area = area_;
 
-  if (to_publish && shape_type_ == autoware_perception_msgs::msg::Shape::POLYGON) {
+  if (
+    to_publish && convert_polygon_to_bbox_ &&
+    shape_type_ == autoware_perception_msgs::msg::Shape::POLYGON) {
     types::DynamicObject converted;
     if (shapes::convertConvexHullToBoundingBox(output, converted, ego_pos_)) {
       output.pose = converted.pose;

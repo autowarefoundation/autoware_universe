@@ -21,10 +21,13 @@
 namespace autoware::multi_object_tracker
 {
 
-StaticTracker::StaticTracker(const rclcpp::Time & time, const types::DynamicObject & object)
+StaticTracker::StaticTracker(
+  const rclcpp::Time & time, const types::DynamicObject & object,
+  const StaticTrackerConfig & config)
 : Tracker(time, object), logger_(rclcpp::get_logger("StaticTracker"))
 {
   tracker_type_ = TrackerType::STATIC;
+  shape_model_.setConvertPolygonToBbox(config.convert_polygon_to_bbox);
   shape_model_.init(object);
 
   // Set motion model parameters
