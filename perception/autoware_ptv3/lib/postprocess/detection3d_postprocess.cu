@@ -32,7 +32,7 @@ namespace
 {
 constexpr int k_block_size = 256;
 
-struct IsScoreKeep
+struct IsScoreNonZero
 {
   __device__ bool operator()(const Box3D & box) const { return box.score > 0.0f; }
 };
@@ -181,13 +181,13 @@ cudaError_t Detection3DPostprocess::process(
   const auto policy = thrust::cuda::par.on(stream);
 
   const auto num_passing =
-    thrust::count_if(policy, raw_boxes_d_.begin(), raw_boxes_d_.end(), IsScoreKeep{});
+    thrust::count_if(policy, raw_boxes_d_.begin(), raw_boxes_d_.end(), IsScoreNonZero{});
   if (num_passing == 0) {
     return cudaGetLastError();
   }
 
   const auto passing_end = thrust::copy_if(
-    policy, raw_boxes_d_.begin(), raw_boxes_d_.end(), passing_boxes_d_.begin(), IsScoreKeep{});
+    policy, raw_boxes_d_.begin(), raw_boxes_d_.end(), passing_boxes_d_.begin(), IsScoreNonZero{});
   thrust::sort(policy, passing_boxes_d_.begin(), passing_end, ScoreGreater{});
 
   num_boxes_ = static_cast<std::size_t>(num_passing);
