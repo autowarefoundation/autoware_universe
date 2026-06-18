@@ -723,13 +723,18 @@ void GyroBiasEstimator::timer_callback()
 
 void GyroBiasEstimator::validate_gyro_bias()
 {
+  if (!gyro_bias_) {
+    return;
+  }
+  const auto & gyro_bias = *gyro_bias_;
+
   // Calculate diagnostics key-values
-  diagnostics_info_.gyro_bias_x_for_imu_corrector = gyro_bias_.value().x;
-  diagnostics_info_.gyro_bias_y_for_imu_corrector = gyro_bias_.value().y;
-  diagnostics_info_.gyro_bias_z_for_imu_corrector = gyro_bias_.value().z;
-  diagnostics_info_.estimated_gyro_bias_x = gyro_bias_.value().x - angular_velocity_offset_x_;
-  diagnostics_info_.estimated_gyro_bias_y = gyro_bias_.value().y - angular_velocity_offset_y_;
-  diagnostics_info_.estimated_gyro_bias_z = gyro_bias_.value().z - angular_velocity_offset_z_;
+  diagnostics_info_.gyro_bias_x_for_imu_corrector = gyro_bias.x;
+  diagnostics_info_.gyro_bias_y_for_imu_corrector = gyro_bias.y;
+  diagnostics_info_.gyro_bias_z_for_imu_corrector = gyro_bias.z;
+  diagnostics_info_.estimated_gyro_bias_x = gyro_bias.x - angular_velocity_offset_x_;
+  diagnostics_info_.estimated_gyro_bias_y = gyro_bias.y - angular_velocity_offset_y_;
+  diagnostics_info_.estimated_gyro_bias_z = gyro_bias.z - angular_velocity_offset_z_;
 
   // Validation
   const bool is_bias_small_enough =
@@ -796,8 +801,8 @@ void GyroBiasEstimator::update_diagnostics(diagnostic_updater::DiagnosticStatusW
   stat.add("min_allowed_scale", (min_allowed_scale_));
   stat.add("max_allowed_scale", (max_allowed_scale_));
 
-  if (gyro_bias_.has_value()) {
-    stat.add("gyro_yaw_rate_", f(gyro_yaw_rate_ - gyro_bias_not_rotated_.value().z));
+  if (gyro_bias_ && gyro_bias_not_rotated_) {
+    stat.add("gyro_yaw_rate_", f(gyro_yaw_rate_ - gyro_bias_not_rotated_->z));
     stat.add("ndt_yaw_rate_", f(ndt_yaw_rate_));
   }
 

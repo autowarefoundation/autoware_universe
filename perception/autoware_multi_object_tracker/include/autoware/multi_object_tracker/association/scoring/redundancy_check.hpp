@@ -21,13 +21,6 @@
 namespace autoware::multi_object_tracker
 {
 
-/// Interpolates the GIoU removal threshold based on the known partner's speed.
-/// Between static_object_speed and moving_object_speed the threshold is linearly interpolated
-/// from static_iou_threshold down to generalized_iou_threshold.
-double calcAdaptiveGIoUThreshold(
-  double object_speed, double generalized_iou_threshold, double static_object_speed,
-  double moving_object_speed, double static_iou_threshold);
-
 /// Returns true when source and target trackers are spatially redundant and should be merged.
 /// Handles four cases: pedestrian/pedestrian, known/known, known/unknown, unknown/unknown.
 bool isRedundant(
