@@ -570,8 +570,10 @@ TEST(TestLongitudinalControllerUtils, estimateTrajectoryTimeFromPoseFallsBackToS
   pose.position.x = 0.2;
   pose.orientation.w = 1.0;
 
+  // Window must not overlap trajectory times; otherwise index t=2 remains a candidate and the
+  // bounded search (not spatial fallback) returns t=1 after segment interpolation.
   const auto estimated_time =
-    longitudinal_utils::estimateTrajectoryTimeFromPose(points, pose, 10.0, M_PI, 1.8, 2.2);
+    longitudinal_utils::estimateTrajectoryTimeFromPose(points, pose, 10.0, M_PI, 10.0, 11.0);
   ASSERT_TRUE(estimated_time.has_value());
   EXPECT_NEAR(*estimated_time, 0.2, 1e-6);
 }
