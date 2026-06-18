@@ -261,9 +261,8 @@ std::optional<double> estimateTrajectoryTimeFromPose(
 
   const double min_time_sec = std::min(min_time_window_sec, max_time_window_sec);
   const double max_time_sec = std::max(min_time_window_sec, max_time_window_sec);
-  const bool use_bounded_time_window =
-    min_time_sec > -std::numeric_limits<double>::infinity() ||
-    max_time_sec < std::numeric_limits<double>::infinity();
+  const bool use_bounded_time_window = min_time_sec > -std::numeric_limits<double>::infinity() ||
+                                       max_time_sec < std::numeric_limits<double>::infinity();
 
   size_t nearest_index = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     points, pose, max_dist, max_yaw);
@@ -293,8 +292,9 @@ std::optional<double> estimateTrajectoryTimeFromPose(
           best_relaxed_idx = idx;
         }
 
-        const double yaw_error = std::fabs(autoware_utils::normalize_radian(
-          self_yaw - tf2::getYaw(points.at(idx).pose.orientation)));
+        const double yaw_error = std::fabs(
+          autoware_utils::normalize_radian(
+            self_yaw - tf2::getYaw(points.at(idx).pose.orientation)));
         if (std::sqrt(dist2) <= max_dist && yaw_error <= max_yaw && dist2 < best_strict_dist2) {
           best_strict_dist2 = dist2;
           best_strict_idx = idx;
