@@ -53,6 +53,7 @@ public:
 
   // --- read accessors (base fields) ---
   bool isFootprintValid() const { return footprint_valid_; }
+  double getWidth() const { return width_; }
 
   // --- write interface (sensible defaults; each model overrides what it needs) ---
 

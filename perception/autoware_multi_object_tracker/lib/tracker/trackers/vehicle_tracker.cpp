@@ -207,6 +207,33 @@ bool VehicleTracker::updateWheelKinematics(
   const UpdateStrategy & strategy, const types::DynamicObject & measurement)
 {
   std::array<double, 36> pose_cov = measurement.pose_covariance;
+
+  // Partial-edge lateral uncertainty.
+  // The wheel-anchor update measures the center of the observed front/rear edge. When the polygon
+  // is only partially visible, its width is narrower than the tracked object and the observed edge
+  // center is shifted laterally from the true center by an unknown amount of up to
+  // (object_width - polygon_width)/2. That lateral error is amplified into yaw through the
+  // wheel-base lever, so add the worst-case lateral offset as extra variance along the body lateral
+  // axis (perpendicular to heading) to the measurement covariance.
+  {
+    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    const double object_width = shape_model_.getWidth();
+    const double polygon_width = measurement.shape.dimensions.y;
+    const double width_gap = std::max(0.0, object_width - polygon_width);
+    if (width_gap > 0.0) {
+      const double half_gap = 0.5 * width_gap;
+      const double var_lat = half_gap * half_gap;  // conservative: std = worst-case lateral offset
+      const double yaw = motion_model_.getYawState();
+      const double s = std::sin(yaw);
+      const double c = std::cos(yaw);
+      // lateral unit vector n = (-sin(yaw), cos(yaw)); add var_lat * n * n^T to the x/y block
+      pose_cov[XYZRPY_COV_IDX::X_X] += var_lat * s * s;
+      pose_cov[XYZRPY_COV_IDX::X_Y] += -var_lat * s * c;
+      pose_cov[XYZRPY_COV_IDX::Y_X] += -var_lat * s * c;
+      pose_cov[XYZRPY_COV_IDX::Y_Y] += var_lat * c * c;
+    }
+  }
+
   bool is_updated = false;
   if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
     shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::FRONT;
