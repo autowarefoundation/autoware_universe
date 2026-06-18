@@ -41,6 +41,7 @@ private:
 struct DrivingModeStatusData
 {
   TimeoutStatus available;
+  TimeoutStatus active;
   TimeoutStatus stable;
   TimeoutStatus continuable;
 };
@@ -54,6 +55,7 @@ public:
 
   bool is_ready() const;
   bool is_available(const AutowareMode & mode) const;
+  bool is_active(const AutowareMode & mode) const;
   bool is_stable(const AutowareMode & mode) const;
   bool is_continuable(const AutowareMode & mode) const;
 

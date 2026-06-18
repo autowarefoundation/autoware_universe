@@ -12,13 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TYPE__DATA_HPP_
-#define TYPE__DATA_HPP_
+#ifndef TYPE__TYPES_HPP_
+#define TYPE__TYPES_HPP_
 
 #include <autoware_driving_mode_manager/types.hpp>
 
+#include <string>
+#include <unordered_map>
+
 namespace autoware::driving_mode_manager
 {
+
+struct ServiceResponse
+{
+  bool success;
+  std::string message;
+};
+
+struct OperationModeState
+{
+  OperationMode mode;
+  bool is_autoware_control_enabled;
+  bool is_in_transition;
+  bool is_stop_mode_available;
+  bool is_autonomous_mode_available;
+  bool is_local_mode_available;
+  bool is_remote_mode_available;
+};
+
+struct MrmState
+{
+  enum class State {
+    kUnknown,
+    kNormal,
+    kOperating,
+    kSucceeded,
+    kFailed,
+  };
+  static constexpr MrmBehavior NoneBehavior{1};
+  State state;
+  MrmBehavior behavior;
+};
+
+struct MrmRequest
+{
+  MrmStrategy strategy;
+  MrmBehavior behavior;
+};
+
+struct ModeInfo
+{
+  std::unordered_map<AutowareMode, std::string> names;
+};
 
 struct GateStatusItem
 {
@@ -34,6 +79,18 @@ struct GateStatus
   GateStatusItem expect;
 };
 
+struct DebugStatus
+{
+  struct Flag
+  {
+    bool available;
+    bool active;
+    bool stable;
+    bool continuable;
+  };
+  std::unordered_map<AutowareMode, Flag> flags;
+};
+
 }  // namespace autoware::driving_mode_manager
 
-#endif  // TYPE__DATA_HPP_
+#endif  // TYPE__TYPES_HPP_

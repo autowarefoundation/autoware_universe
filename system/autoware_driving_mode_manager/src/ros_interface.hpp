@@ -38,6 +38,8 @@
 #include <tier4_system_msgs/srv/change_mrm_request.hpp>
 #include <tier4_system_msgs/srv/change_trajectory_source.hpp>
 
+#include <string>
+
 namespace autoware::driving_mode_manager
 {
 
@@ -59,6 +61,11 @@ public:
   void publish_debug(const DebugStatus & status) const override;
   void publish_debug(const RequestModes & request) const override;
 
+  void log_info(const std::string & message) const override;
+  void log_warn(const std::string & message) const override;
+  void log_error(const std::string & message) const override;
+  void log_debug(const std::string & message) const override;
+
 private:
   using TrajectorySourceSrv = tier4_system_msgs::srv::ChangeTrajectorySource;
   using ChangeCommandSourceSrv = tier4_system_msgs::srv::ChangeCommandSource;
@@ -67,20 +74,20 @@ private:
   using OperationModeStateMsg = autoware_adapi_v1_msgs::msg::OperationModeState;
   using MrmStateMsg = autoware_adapi_v1_msgs::msg::MrmState;
 
-  using DrivingModeRequest = tier4_system_msgs::msg::DrivingModeRequest;
-  using DrivingModeFlag = tier4_system_msgs::msg::DrivingModeFlag;
-  using DrivingModeInfo = tier4_system_msgs::msg::DrivingModeInfo;
-  using DrivingModeMrmState = tier4_system_msgs::msg::DrivingModeMrmState;
+  using DrivingModeRequestMsg = tier4_system_msgs::msg::DrivingModeRequest;
+  using DrivingModeFlagMsg = tier4_system_msgs::msg::DrivingModeFlag;
+  using DrivingModeInfoMsg = tier4_system_msgs::msg::DrivingModeInfo;
+  using DrivingModeMrmStateMsg = tier4_system_msgs::msg::DrivingModeMrmState;
   using TrajectorySourceMsg = tier4_system_msgs::msg::TrajectorySourceStatus;
   using CommandSourceMsg = tier4_system_msgs::msg::CommandSourceStatus;
   using CommandFilterMsg = tier4_system_msgs::msg::CommandFilterStatus;
-  using ControlModeReport = autoware_vehicle_msgs::msg::ControlModeReport;
-  using ChangeOperationMode = autoware_system_msgs::srv::ChangeOperationMode;
-  using ChangeAutowareControl = autoware_system_msgs::srv::ChangeAutowareControl;
-  using ChangeMrmRequest = tier4_system_msgs::srv::ChangeMrmRequest;
+  using ControlModeReportMsg = autoware_vehicle_msgs::msg::ControlModeReport;
+  using ChangeOperationModeSrv = autoware_system_msgs::srv::ChangeOperationMode;
+  using ChangeAutowareControlSrv = autoware_system_msgs::srv::ChangeAutowareControl;
+  using ChangeMrmRequestSrv = tier4_system_msgs::srv::ChangeMrmRequest;
 
-  using DebugModeFlag = autoware_driving_mode_manager::msg::DebugModeFlag;
-  using DebugModeRequest = autoware_driving_mode_manager::msg::DebugModeRequest;
+  using DebugModeFlagMsg = autoware_driving_mode_manager::msg::DebugModeFlag;
+  using DebugModeRequestMsg = autoware_driving_mode_manager::msg::DebugModeRequest;
 
   MainLogic * logic_;
 
@@ -92,36 +99,40 @@ private:
   rclcpp::Publisher<OperationModeStateMsg>::SharedPtr pub_operation_mode_;
   rclcpp::Publisher<MrmStateMsg>::SharedPtr pub_mrm_state_;
 
-  rclcpp::Subscription<DrivingModeFlag>::SharedPtr sub_driving_mode_available_;
-  rclcpp::Subscription<DrivingModeFlag>::SharedPtr sub_driving_mode_stable_;
-  rclcpp::Subscription<DrivingModeFlag>::SharedPtr sub_driving_mode_continuable_;
-  rclcpp::Subscription<DrivingModeMrmState>::SharedPtr sub_driving_mode_mrm_state_;
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_available_;
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_active_;
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_stable_;
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_continuable_;
+  rclcpp::Subscription<DrivingModeMrmStateMsg>::SharedPtr sub_driving_mode_mrm_state_;
   rclcpp::Subscription<TrajectorySourceMsg>::SharedPtr sub_trajectory_source_;
   rclcpp::Subscription<CommandSourceMsg>::SharedPtr sub_command_source_;
   rclcpp::Subscription<CommandFilterMsg>::SharedPtr sub_command_filter_;
-  rclcpp::Subscription<ControlModeReport>::SharedPtr sub_control_mode_report_;
-  rclcpp::Service<ChangeOperationMode>::SharedPtr srv_operation_mode_;
-  rclcpp::Service<ChangeAutowareControl>::SharedPtr srv_autoware_control_;
-  rclcpp::Service<ChangeMrmRequest>::SharedPtr srv_mrm_request_;
-  rclcpp::Publisher<DrivingModeRequest>::SharedPtr pub_driving_mode_request_;
-  rclcpp::Publisher<DrivingModeInfo>::SharedPtr pub_driving_mode_info_;
-  rclcpp::Publisher<DebugModeFlag>::SharedPtr pub_debug_status_;
-  rclcpp::Publisher<DebugModeRequest>::SharedPtr pub_debug_request_;
+  rclcpp::Subscription<ControlModeReportMsg>::SharedPtr sub_control_mode_report_;
+  rclcpp::Service<ChangeOperationModeSrv>::SharedPtr srv_operation_mode_;
+  rclcpp::Service<ChangeAutowareControlSrv>::SharedPtr srv_autoware_control_;
+  rclcpp::Service<ChangeMrmRequestSrv>::SharedPtr srv_mrm_request_;
+  rclcpp::Publisher<DrivingModeRequestMsg>::SharedPtr pub_driving_mode_request_;
+  rclcpp::Publisher<DrivingModeInfoMsg>::SharedPtr pub_driving_mode_info_;
+  rclcpp::Publisher<DebugModeFlagMsg>::SharedPtr pub_debug_status_;
+  rclcpp::Publisher<DebugModeRequestMsg>::SharedPtr pub_debug_request_;
 
-  void on_driving_mode_available(const DrivingModeFlag & msg);
-  void on_driving_mode_stable(const DrivingModeFlag & msg);
-  void on_driving_mode_continuable(const DrivingModeFlag & msg);
-  void on_driving_mode_mrm_state(const DrivingModeMrmState & msg);
+  void on_driving_mode_available(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_active(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_stable(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_continuable(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_mrm_state(const DrivingModeMrmStateMsg & msg);
   void on_trajectory_source(const TrajectorySourceMsg & msg);
   void on_command_source(const CommandSourceMsg & msg);
   void on_command_filter(const CommandFilterMsg & msg);
-  void on_control_mode_report(const ControlModeReport & msg);
+  void on_control_mode_report(const ControlModeReportMsg & msg);
   void on_change_operation_mode(
-    ChangeOperationMode::Request::SharedPtr req, ChangeOperationMode::Response::SharedPtr res);
+    ChangeOperationModeSrv::Request::SharedPtr req,
+    ChangeOperationModeSrv::Response::SharedPtr res);
   void on_change_autoware_control(
-    ChangeAutowareControl::Request::SharedPtr req, ChangeAutowareControl::Response::SharedPtr res);
+    ChangeAutowareControlSrv::Request::SharedPtr req,
+    ChangeAutowareControlSrv::Response::SharedPtr res);
   void on_change_mrm_request(
-    ChangeMrmRequest::Request::SharedPtr req, ChangeMrmRequest::Response::SharedPtr res);
+    ChangeMrmRequestSrv::Request::SharedPtr req, ChangeMrmRequestSrv::Response::SharedPtr res);
 };
 
 }  // namespace autoware::driving_mode_manager

@@ -10,6 +10,7 @@
     <remap from="~/system/driving_mode/request" to="/system/driving_mode/request"/>
     <remap from="~/system/driving_mode/info" to="/system/driving_mode/info"/>
     <remap from="~/system/driving_mode/available" to="/system/driving_mode/available"/>
+    <remap from="~/system/driving_mode/active" to="/system/driving_mode/active"/>
     <remap from="~/system/driving_mode/stable" to="/system/driving_mode/stable"/>
     <remap from="~/system/driving_mode/continuable" to="/system/driving_mode/continuable"/>
     <remap from="~/system/driving_mode/mrm_state" to="/system/driving_mode/mrm_state"/>
