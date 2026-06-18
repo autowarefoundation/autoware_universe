@@ -155,16 +155,11 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     ament_add_gtest(test_preprocess_kernel
       test/test_preprocess_kernel.cpp
     )
-    if(TARGET test_preprocess_kernel)
-      target_link_libraries(test_preprocess_kernel
-        CUDA::cudart
-        ${PROJECT_NAME}_cuda_lib
-      )
-      target_include_directories(test_preprocess_kernel PRIVATE
-        include
-        ${CUDA_INCLUDE_DIRS}
-      )
-    endif()
+
+    target_link_libraries(test_preprocess_kernel
+      CUDA::cudart
+      ${PROJECT_NAME}_cuda_lib
+    )
 
   endif()
 
