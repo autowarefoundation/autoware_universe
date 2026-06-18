@@ -143,15 +143,21 @@ TEST(PreprocessKernelTest, GenerateFeaturesCropsVoxelsAndBuildsInverseMap)
   const std::vector<float> expected_reconstruction_features{
     0.10F, 0.20F, 0.30F, 1.5F, 0.80F,  0.20F,  0.30F,  2.5F,
     1.10F, 1.20F, 1.30F, 3.5F, -1.00F, -1.00F, -1.00F, 5.5F};
-  EXPECT_EQ(reconstruction_features, expected_reconstruction_features);
+  {
+    // NOTE: EXPECT_FLOAT_EQ does not overload for std::vector<float>
+    EXPECT_EQ(reconstruction_features.size(), expected_reconstruction_features.size());
+    for (size_t i = 0; i < expected_reconstruction_features.size(); i++) {
+      EXPECT_FLOAT_EQ(reconstruction_features[i], expected_reconstruction_features[i]);
+    }
+  }
 
   const auto cropped_source_points =
     copy_to_host(cropped_source_points_d.get(), num_cropped_points);
   auto is_xyzi_identical = [](auto & p1, auto & p2) {
-    EXPECT_EQ(p1.x, p2.x);
-    EXPECT_EQ(p1.y, p2.y);
-    EXPECT_EQ(p1.z, p2.z);
-    EXPECT_EQ(p1.intensity, p2.intensity);
+    EXPECT_FLOAT_EQ(p1.x, p2.x);
+    EXPECT_FLOAT_EQ(p1.y, p2.y);
+    EXPECT_FLOAT_EQ(p1.z, p2.z);
+    EXPECT_FLOAT_EQ(p1.intensity, p2.intensity);
   };
   is_xyzi_identical(cropped_source_points[0], host_points[0]);
   is_xyzi_identical(cropped_source_points[1], host_points[1]);
@@ -220,7 +226,12 @@ TEST(PreprocessKernelTest, FullReconstructionKeepsAllInputFeaturesBeforeCrop)
     copy_to_host(reconstruction_features_d.get(), host_points.size() * 4);
   const std::vector<float> expected_reconstruction_features{0.0F, 0.0F, 0.0F, 1.0F, 4.0F, 0.0F,
                                                             0.0F, 2.0F, 1.0F, 1.0F, 1.0F, 3.0F};
-  EXPECT_EQ(reconstruction_features, expected_reconstruction_features);
+  {
+    EXPECT_EQ(reconstruction_features.size(), expected_reconstruction_features.size());
+    for (size_t i = 0; i < expected_reconstruction_features.size(); i++) {
+      EXPECT_FLOAT_EQ(reconstruction_features[i], expected_reconstruction_features[i]);
+    }
+  }
 
   ASSERT_EQ(cudaStreamDestroy(stream), cudaSuccess);
 }
