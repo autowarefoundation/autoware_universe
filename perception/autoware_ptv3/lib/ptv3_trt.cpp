@@ -750,7 +750,7 @@ bool PTv3TRT::preProcess(
   }
 
   if (num_points == 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping segmentation.");
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping inference.");
     return false;
   }
 
