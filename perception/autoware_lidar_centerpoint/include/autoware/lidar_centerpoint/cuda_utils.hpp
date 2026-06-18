@@ -49,7 +49,9 @@
 #include <stdexcept>
 #include <type_traits>
 
+#ifndef CHECK_CUDA_ERROR
 #define CHECK_CUDA_ERROR(e) (cuda::check_error(e, __FILE__, __LINE__))
+#endif
 
 namespace cuda
 {
