@@ -202,15 +202,15 @@ TEST_F(SemanticLabelTest, ConstexprEvaluation)
   constexpr auto str = to_string(SemanticLabel::CAR);
   EXPECT_EQ(str, "CAR");
 
-  constexpr auto obj = try_into_object(SemanticLabel::CAR);
+  auto obj = try_into_object(SemanticLabel::CAR);
   EXPECT_TRUE(obj.has_value());
   EXPECT_EQ(obj.value(), 1U);
 
-  constexpr auto sem = try_into_semantic(1U);
+  auto sem = try_into_semantic(1U);
   EXPECT_TRUE(sem.has_value());
   EXPECT_EQ(sem.value(), SemanticLabel::CAR);
 
-  constexpr auto compat = is_object_compatible(SemanticLabel::CAR);
+  const auto compat = is_object_compatible(SemanticLabel::CAR);
   EXPECT_TRUE(compat);
 }
 

@@ -62,7 +62,7 @@ constexpr std::string_view to_string(SemanticLabel label) noexcept
 /// @brief Convert a semantic label to ObjectClassification label type where applicable.
 /// @param label The semantic label to convert.
 /// @return The ObjectClassification label value, or std::nullopt for non-object labels.
-constexpr std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexcept
+inline std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexcept
 {
   switch (label) {
     case SemanticLabel::CAR:
@@ -90,7 +90,7 @@ constexpr std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexce
 /// @brief Convert an ObjectClassification label to its semantic label.
 /// @param label The ObjectClassification label value.
 /// @return The corresponding SemanticLabel, or std::nullopt if not mapped.
-constexpr std::optional<SemanticLabel> try_into_semantic(std::uint8_t label) noexcept
+inline std::optional<SemanticLabel> try_into_semantic(ObjectLabel label) noexcept
 {
   switch (label) {
     case ObjectClassification::CAR:
@@ -114,7 +114,7 @@ constexpr std::optional<SemanticLabel> try_into_semantic(std::uint8_t label) noe
 /// @param label The semantic label to check.
 /// @return true if the label is an object class, false for environment/non-object labels
 ///         (GROUND, STRUCTURE, VEGETATION, NOISE).
-constexpr bool is_object_compatible(SemanticLabel label) noexcept
+inline bool is_object_compatible(SemanticLabel label) noexcept
 {
   return try_into_object(label).has_value();
 }
