@@ -68,9 +68,24 @@
     <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_velodyne_top" args="0 0 1 -1.5386 -0.015 0.001 velodyne_top velodyne_top_changed"/> -->
     <!-- <node pkg="tf2_ros" exec="static_transform_publisher" name="carla_imu" args="0 0 1 -3.10519265 -0.015 -3.14059265359 tamagawa/imu_link tamagawa/imu_link_changed"/> -->
 
-    <!-- Relay CAM_FRONT to traffic_light namespace for traffic light recognition -->
-    <node pkg="topic_tools" exec="relay" name="traffic_light_image_relay" args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"/>
-    <node pkg="topic_tools" exec="relay" name="traffic_light_camera_info_relay" args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"/>
+    <!-- Relay CAM_FRONT to traffic_light namespace for traffic light recognition.
+         These relays subscribe the raw image, which forces the interface to
+         convert and publish every CAM_FRONT frame; skip them in light-weight
+         mode like the republish nodes below. -->
+    <node
+      pkg="topic_tools"
+      exec="relay"
+      name="traffic_light_image_relay"
+      args="/sensing/camera/CAM_FRONT/image_raw /sensing/camera/traffic_light/image_raw"
+      unless="$(var use_light_weight_sensor_mapping)"
+    />
+    <node
+      pkg="topic_tools"
+      exec="relay"
+      name="traffic_light_camera_info_relay"
+      args="/sensing/camera/CAM_FRONT/camera_info /sensing/camera/traffic_light/camera_info"
+      unless="$(var use_light_weight_sensor_mapping)"
+    />
 
     <!-- Image transport nodes to create compressed versions for all cameras -->
     <node
@@ -78,6 +93,7 @@
       exec="republish"
       name="cam_front_republish"
       args="raw compressed --ros-args -r in:=/sensing/camera/CAM_FRONT/image_raw -r out/compressed:=/sensing/camera/CAM_FRONT/image_raw/compressed"
+      unless="$(var use_light_weight_sensor_mapping)"
     />
 
     <node

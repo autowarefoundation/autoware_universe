@@ -221,7 +221,7 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
       .validator_category(category())
       .metric_name("check_crossing_red_light")
       .metric_value(0.0)
-      .level(is_crossing_red ? MetricReport::ERROR : MetricReport::OK));
+      .level(is_crossing_red ? MetricReport::DANGER : MetricReport::SAFE));
   is_feasible = is_feasible && !is_crossing_red;
 
   // Check for amber light crossings
@@ -267,7 +267,7 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
       .validator_category(category())
       .metric_name("check_crossing_amber_light")
       .metric_value(0.0)
-      .level(is_crossing_amber ? MetricReport::ERROR : MetricReport::OK));
+      .level(is_crossing_amber ? MetricReport::DANGER : MetricReport::SAFE));
   is_feasible = is_feasible && !is_crossing_amber;
 
   return ValidationResult{is_feasible, std::move(metrics)};

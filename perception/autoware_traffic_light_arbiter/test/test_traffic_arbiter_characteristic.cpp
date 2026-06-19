@@ -62,7 +62,7 @@ constexpr lanelet::Id vehicle_signal_b = 1002;
 constexpr lanelet::Id pedestrian_signal = 2001;
 
 // Intentionally not installed on the map; used by tests as the "off-map id"
-// probe to exercise the WARN+skip branch in arbitrateAndPublish.
+// probe to exercise the WARN+skip branch in arbitrate_and_publish.
 constexpr lanelet::Id off_map_probe = 9999;
 }  // namespace map_ids
 
@@ -134,7 +134,7 @@ LaneletMapBin build_minimal_map_bin()
 
 // Variant of build_minimal_map_bin with a single road lanelet but no Traffic
 // Light regulatory elements. Used to drive the
-// "map_regulatory_elements_set_->empty()" branch in arbitrateAndPublish.
+// "map_regulatory_elements_set_->empty()" branch in arbitrate_and_publish.
 LaneletMapBin build_empty_map_bin()
 {
   Lanelet road = make_lanelet(0.0, -3.0, AttributeValueString::Road);
@@ -782,7 +782,7 @@ TEST_F(ArbiterCharacteristic, priorityBasedOffMapIdDropped)
 //    input validation, priority overrides, predictions.
 // ---------------------------------------------------------------------------
 
-// Before the vector_map arrives, arbitrateAndPublish early-returns and no
+// Before the vector_map arrives, arbitrate_and_publish early-returns and no
 // TrafficLightGroupArray is emitted.
 TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
 {
@@ -794,7 +794,7 @@ TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
-  // Assert: arbitrateAndPublish should early-return when no map has been
+  // Assert: arbitrate_and_publish should early-return when no map has been
   // received. Content alone cannot prove this (a default-constructed
   // message looks identical to no publish at all), so we read the counter.
   EXPECT_EQ(arbiter_publish_count_, 0u);
@@ -802,7 +802,7 @@ TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
 
 // A non-null but signal-free map should yield an empty TrafficLightGroupArray
 // (stamp set, no groups). Exercises the
-// "map_regulatory_elements_set_->empty()" branch in arbitrateAndPublish.
+// "map_regulatory_elements_set_->empty()" branch in arbitrate_and_publish.
 TEST_F(ArbiterCharacteristic, emptyMapProducesEmptyOutput)
 {
   // Arrange: replace the default minimal map with a signal-free one.
@@ -845,7 +845,7 @@ TEST_F(ArbiterCharacteristic, unknownSourcePriorityFallsBackToConfidence)
 
 // With source_priority=perception, the perception value wins even when its
 // confidence is much lower than external's. Pins the PERCEPTION priority
-// branch in arbitrateAndPublish.
+// branch in arbitrate_and_publish.
 TEST_F(ArbiterCharacteristic, priorityFlagOverridesHigherConfidence)
 {
   // Arrange
@@ -911,7 +911,7 @@ TEST_F(ArbiterCharacteristic, multipleExternalSourcesAccumulate)
 }
 
 // An external message whose stamp is older than external_delay_tolerance
-// is dropped before reaching arbitrateAndPublish, so the last published
+// is dropped before reaching arbitrate_and_publish, so the last published
 // content stays as the earlier perception value.
 TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
 {
@@ -934,12 +934,12 @@ TEST_F(ArbiterCharacteristic, externalDelayToleranceDropsStaleMessage)
 }
 
 // When perception arrives past external_time_tolerance after a stored
-// external entry, cleanupExpiredExternalSignals purges that entry so the
+// external entry, cleanup_expired_external_signals purges that entry so the
 // upcoming publish reflects only perception.
 TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
 {
   // Arrange: seed an external entry that should be purged by the perception
-  // arrival's cleanupExpiredExternalSignals (perception is past
+  // arrival's cleanup_expired_external_signals (perception is past
   // external_time_tolerance newer than the stored external).
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
   publish_map();
@@ -956,7 +956,7 @@ TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
 }
 
-// onExternalMsg compares its own stamp to latest_perception_msg_.stamp; if
+// on_external_msg compares its own stamp to latest_perception_msg_.stamp; if
 // the gap exceeds perception_time_tolerance it clears the stored perception
 // groups so the upcoming publish reflects only external.
 TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)

@@ -27,58 +27,81 @@
       "required": ["class_probability_threshold", "classes", "output_format"],
       "additionalProperties": false
     },
-    "ptv3": {
+    "backbone": {
       "type": "object",
       "properties": {
-        "plugins_path": {
-          "type": "string",
-          "description": "A path to the TensorRT plugins.",
-          "default": "$(find-pkg-share autoware_ptv3)/plugins/libautoware_tensorrt_plugins.so",
-          "pattern": "\\.so$"
-        },
-        "trt_precision": {
-          "type": "string",
-          "description": "A precision of TensorRT engine.",
-          "default": "fp16",
-          "enum": ["fp16", "fp32"]
-        },
-        "cloud_capacity": {
-          "type": "integer",
-          "description": "Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).",
-          "default": 2000000,
-          "minimum": 1
-        },
-        "source_reconstruction": {
-          "type": "string",
-          "description": "Controls whether voxel predictions are mapped back to source points. 'none' publishes voxel representative points; 'partial' publishes cropped source points inside point_cloud_range; 'full' publishes the full input cloud, assigning unknown label 255 and zero class probabilities to points outside point_cloud_range.",
-          "default": "full",
-          "enum": ["none", "partial", "full"]
-        },
         "onnx_path": {
           "type": "string",
-          "description": "A path to ONNX model file.",
-          "default": "$(var model_path)/ptv3.onnx",
+          "description": "Path to the backbone ONNX file.",
           "pattern": "\\.onnx$"
         },
         "engine_path": {
           "type": "string",
-          "description": "A path to TensorRT engine file.",
-          "default": "$(var model_path)/ptv3.engine",
+          "description": "Path to the backbone TensorRT engine file.",
           "pattern": "\\.engine$"
+        }
+      },
+      "required": ["onnx_path", "engine_path"],
+      "additionalProperties": false
+    },
+    "segmentation3d": {
+      "type": "object",
+      "properties": {
+        "use_head": {
+          "description": "Enable the segmentation head."
+        },
+        "onnx_path": {
+          "type": "string",
+          "description": "Path to the segmentation head ONNX file.",
+          "pattern": "\\.onnx$"
+        },
+        "engine_path": {
+          "type": "string",
+          "description": "Path to the segmentation head TensorRT engine file.",
+          "pattern": "\\.engine$"
+        },
+        "source_reconstruction": {
+          "type": "string",
+          "description": "Controls mapping of voxel predictions back to source points. 'none': voxel representative points; 'partial': cropped source points inside point_cloud_range; 'full': full input cloud with unknown label 255 for out-of-range points.",
+          "enum": ["none", "partial", "full"]
         },
         "filter": {
           "$ref": "#/definitions/filter"
         }
       },
-      "required": [
-        "plugins_path",
-        "trt_precision",
-        "cloud_capacity",
-        "source_reconstruction",
-        "onnx_path",
-        "engine_path",
-        "filter"
+      "required": ["use_head"],
+      "allOf": [
+        {
+          "if": { "properties": { "use_head": { "const": true } }, "required": ["use_head"] },
+          "then": {
+            "required": ["onnx_path", "engine_path", "source_reconstruction", "filter"]
+          }
+        }
       ],
+      "additionalProperties": false
+    },
+    "ptv3": {
+      "type": "object",
+      "properties": {
+        "plugins_path": {
+          "type": "string",
+          "description": "Path to the TensorRT plugins shared library.",
+          "pattern": "\\.so$"
+        },
+        "trt_precision": {
+          "type": "string",
+          "description": "TensorRT inference precision.",
+          "enum": ["fp16", "fp32"]
+        },
+        "cloud_capacity": {
+          "type": "integer",
+          "description": "Point cloud buffer capacity. Must be at least the maximum expected number of points per frame.",
+          "minimum": 1
+        },
+        "backbone": { "$ref": "#/definitions/backbone" },
+        "segmentation3d": { "$ref": "#/definitions/segmentation3d" }
+      },
+      "required": ["plugins_path", "trt_precision", "cloud_capacity", "backbone", "segmentation3d"],
       "additionalProperties": false
     }
   },

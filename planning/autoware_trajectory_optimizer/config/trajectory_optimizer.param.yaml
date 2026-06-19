@@ -11,7 +11,6 @@
       - "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother"
       - "autoware::trajectory_optimizer::plugin::TrajectoryMPTOptimizer"
       - "autoware::trajectory_optimizer::plugin::TrajectoryExtender"
-
     # Plugin activation flags - control runtime enable/disable
     use_akima_spline_interpolation: true
     use_eb_smoother: false
@@ -21,3 +20,4 @@
     use_trajectory_extender: false
     use_kinematic_feasibility_enforcer: true
     use_mpt_optimizer: false
+    use_temporal_mpt_optimizer: false

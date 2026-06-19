@@ -27,6 +27,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -39,10 +40,11 @@ using autoware::cuda_utils::CudaUniquePtr;
 class PTV3_PUBLIC PTv3TRT
 {
 public:
-  explicit PTv3TRT(const tensorrt_common::TrtCommonConfig & trt_config, const PTv3Config & config);
+  explicit PTv3TRT(
+    const tensorrt_common::TrtCommonConfig & backbone_trt_config,
+    const std::optional<tensorrt_common::TrtCommonConfig> & seg3d_head_trt_config,
+    const PTv3Config & config);
   virtual ~PTv3TRT();
-
-  bool fake_segment(sensor_msgs::msg::PointCloud2 & out_msg);
 
   // cSpell:ignore probs
   bool segment(
@@ -59,9 +61,14 @@ public:
 
 protected:
   void initPtr();
-  void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  void initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
   void createPointFields();
   void allocateMessages();
+  void allocateSerializedPoolingBuffers();
+  void bindSerializedPoolingAddresses();
+  void precomputeSerializedPoolingMetadata();
+  bool setSerializedPoolingInputShapes();
   [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
 
   bool preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
@@ -72,7 +79,9 @@ protected:
     const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
     bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud);
 
-  std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
+  // The backbone is always present. The segmentation head is loaded only when enabled.
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> backbone_trt_ptr_{nullptr};
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> seg3d_head_trt_ptr_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
   std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
@@ -98,6 +107,23 @@ protected:
   CloudFormat input_format_{CloudFormat::UNKNOWN};
   CloudFormat filtered_output_format_{CloudFormat::UNKNOWN};
 
+  struct SerializedPoolingDeviceStage
+  {
+    CudaUniquePtr<std::int64_t[]> indices{nullptr};
+    CudaUniquePtr<std::int64_t[]> indptr{nullptr};
+    CudaUniquePtr<std::int64_t[]> head_indices{nullptr};
+    CudaUniquePtr<std::int64_t[]> cluster{nullptr};
+    CudaUniquePtr<std::int32_t[]> grid_coord{nullptr};
+    CudaUniquePtr<std::int64_t[]> serialized_code{nullptr};
+    CudaUniquePtr<std::int64_t[]> serialized_order{nullptr};
+    CudaUniquePtr<std::int64_t[]> serialized_inverse{nullptr};
+  };
+
+  std::vector<SerializedPoolingDeviceStage> serialized_pooling_stages_d_;
+  CudaUniquePtr<std::int64_t[]> serialized_pooling_num_voxels_d_{nullptr};
+  std::vector<std::int64_t> serialized_pooling_num_voxels_;
+  std::vector<std::int64_t> serialized_pooling_depths_;
+
   // Preprocess outputs
   std::int64_t num_voxels_{0};
   std::int64_t num_cropped_points_{0};        // only for partial
@@ -110,9 +136,14 @@ protected:
   CudaUniquePtr<std::int64_t[]> inverse_map_d_{nullptr};            // only for partial and full
   CudaUniquePtr<std::int64_t[]> reconstructed_labels_d_{nullptr};   // only for partial and full
   CudaUniquePtr<float[]> reconstructed_probs_d_{nullptr};           // only for partial and full
-  CudaUniquePtr<std::int64_t[]> grid_coord_d_{nullptr};
+  CudaUniquePtr<std::int32_t[]> grid_coord_d_{nullptr};
   CudaUniquePtr<float[]> feat_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
+
+  // Backbone outputs shared with the segmentation head.
+  CudaUniquePtr<float[]> bb_point_feat_d_{nullptr};
+  CudaUniquePtr<std::int32_t[]> bb_point_grid_coord_d_{nullptr};
+  CudaUniquePtr<std::int64_t[]> bb_point_offset_d_{nullptr};
 
   CudaUniquePtr<std::int64_t[]> pred_labels_d_{nullptr};
   CudaUniquePtr<float[]> pred_probs_d_{nullptr};

@@ -106,6 +106,7 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/outlier_filter/voxel_grid_outlier_filter_node.cpp
   src/outlier_filter/polar_voxel_outlier_filter_node.cpp
   src/outlier_filter/dual_return_outlier_filter_node.cpp
+  src/outlier_filter/polar_voxel_noise_filter_node.cpp
   src/passthrough_filter/passthrough_filter_node.cpp
   src/passthrough_filter/passthrough_filter_uint16_node.cpp
   src/passthrough_filter/passthrough_uint16.cpp
@@ -195,6 +196,11 @@ autoware_agnocast_wrapper_register_node(pointcloud_preprocessor_filter
   AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
+
+# -- Polar Voxel Noise Filter --
+rclcpp_components_register_node(pointcloud_preprocessor_filter
+  PLUGIN "autoware::pointcloud_preprocessor::PolarVoxelNoiseFilterComponent"
+  EXECUTABLE polar_voxel_noise_filter_node)
 
 # -- Radius Search 2D Outlier Filter --
 rclcpp_components_register_node(pointcloud_preprocessor_filter
@@ -334,6 +340,10 @@ if(BUILD_TESTING)
     test/test_polar_voxel_outlier_filter_node.cpp
   )
 
+  ament_add_gtest(test_polar_voxel_noise_filter_node
+    test/test_polar_voxel_noise_filter_node.cpp
+  )
+
   ament_add_gtest(test_blockage_diag
     test/blockage_diag/test_blockage_diag.cpp
   )
@@ -364,6 +374,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
   target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag_node pointcloud_preprocessor_filter)
   target_link_libraries(test_pointcloud2_to_depth_image pointcloud_preprocessor_filter)

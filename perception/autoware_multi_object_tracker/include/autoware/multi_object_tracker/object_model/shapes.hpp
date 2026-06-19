@@ -17,11 +17,9 @@
 
 #include "autoware/multi_object_tracker/types.hpp"
 
-#include <Eigen/Core>
+#include <geometry_msgs/msg/point.hpp>
 
-#include <tf2_ros/buffer.h>
-
-#include <string>
+#include <optional>
 #include <utility>
 
 namespace autoware::multi_object_tracker
@@ -44,12 +42,28 @@ bool get2dPrecisionRecallGIoU(
   double & precision, double & recall, double & generalized_iou);
 
 bool convertConvexHullToBoundingBox(
-  const types::DynamicObject & input_object, types::DynamicObject & output_object);
+  const types::DynamicObject & input_object, types::DynamicObject & output_object,
+  const std::optional<geometry_msgs::msg::Point> & ego_pos = std::nullopt);
+
+std::optional<types::DynamicObject> alignClusterToOrientation(
+  const types::DynamicObject & cluster, double target_yaw);
 
 std::pair<double, double> getObjectZRange(const types::DynamicObject & object);
 
 double get3dGeneralizedIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object);
+
+// Transform polygon footprint points from src_pose's local frame into dst_pose's local frame.
+// Equivalent to: p_dst = R_dst^T * (R_src * p_src + t_src - t_dst)
+geometry_msgs::msg::Polygon transformFootprint(
+  const geometry_msgs::msg::Polygon & footprint, const geometry_msgs::msg::Pose & src_pose,
+  const geometry_msgs::msg::Pose & dst_pose);
+
+// Compute the polygon union of two footprints already expressed in the same local frame.
+// Returns the exterior ring of the union polygon, or the convex hull of all vertices when
+// the inputs are disjoint.
+geometry_msgs::msg::Polygon unionFootprints(
+  const geometry_msgs::msg::Polygon & a, const geometry_msgs::msg::Polygon & b);
 
 }  // namespace shapes
 }  // namespace autoware::multi_object_tracker

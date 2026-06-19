@@ -100,7 +100,7 @@ perception/autoware_tensorrt_bevdet/** cynthia.liu@autocore.ai yliuhb@connect.us
 perception/autoware_tensorrt_bevformer/** dhinesh.panneerselvam@multicorewareinc.com kokseang.tan@tier4.jp naveen.sathiyaseelan@multicorewareinc.com rahul.sundar@multicorewareinc.com ramaseshan.subramanian@multicorewareinc.com selventhiran@multicorewareinc.com
 perception/autoware_tensorrt_classifier/** kotaro.uetake@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_tensorrt_common/** amadeusz.szymko.2@tier4.jp dan.umeda@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp masato.saeki@tier4.jp
-perception/autoware_tensorrt_plugins/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp kotaro.uetake@tier4.jp masato.saeki@tier4.jp
+perception/autoware_tensorrt_plugins/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp kotaro.uetake@tier4.jp manato.hirabayashi@tier4.jp masato.saeki@tier4.jp max.schmeller@tier4.jp
 perception/autoware_tensorrt_yolox/** dan.umeda@tier4.jp kotaro.uetake@tier4.jp manato.hirabayashi@tier4.jp masato.saeki@tier4.jp
 perception/autoware_tracking_object_merger/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_traffic_light_arbiter/** masaki.baba.2@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
@@ -132,6 +132,7 @@ planning/autoware_trajectory_concatenator/** daniel.sanchez@tier4.jp go.sakayori
 planning/autoware_trajectory_modifier/** alqudah.mohammad@tier4.jp daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp
 planning/autoware_trajectory_optimizer/** daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp
 planning/autoware_trajectory_ranker/** alqudah.mohammad@tier4.jp daniel.sanchez@tier4.jp go.sakayori@tier4.jp shintaro.sakoda@tier4.jp yukihiro.saito@tier4.jp zulfaqar.azmi@tier4.jp
+planning/autoware_trajectory_selector/** Kotakkucu@gmail.com alqudah.mohammad@tier4.jp daniel.sanchez@tier4.jp go.sakayori@tier4.jp maxime.clement@tier4.jp yukihiro.saito@tier4.jp zulfaqar.azmi@tier4.jp
 planning/autoware_trajectory_validator/** Kotakkucu@gmail.com alqudah.mohammad@tier4.jp daniel.sanchez@tier4.jp go.sakayori@tier4.jp maxime.clement@tier4.jp yukihiro.saito@tier4.jp zulfaqar.azmi@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_module/** alqudah.mohammad@tier4.jp fumiya.watanabe@tier4.jp maxime.clement@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp tomohito.ando@tier4.jp tomoya.kimura@tier4.jp zulfaqar.azmi@tier4.jp
 planning/behavior_path_planner/autoware_behavior_path_bidirectional_traffic_module/** mamoru.sobue@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
@@ -193,6 +194,7 @@ sensing/autoware_radar_tracks_noise_filter/** taekjin.lee@tier4.jp yoshi.ri@tier
 sensing/livox/autoware_livox_tag_filter/** kenzo.lobos@tier4.jp ryohsuke.mitsudome@tier4.jp
 simulator/autoware_carla_interface/** masaya.kataoka@tier4.jp maxime.clement@tier4.jp mradityagio@gmail.com
 simulator/autoware_dummy_perception_publisher/** junya.sasaki@tier4.jp yukihiro.saito@tier4.jp
+simulator/autoware_dummy_traffic_light_publisher/** junya.sasaki@tier4.jp takayuki.akamine@tier4.jp
 simulator/autoware_fault_injection/** junya.sasaki@tier4.jp keisuke.shima@tier4.jp
 simulator/autoware_learning_based_vehicle_model/** junya.sasaki@tier4.jp maxime.clement@tier4.jp nagy.tomas@tier4.jp
 simulator/autoware_simple_planning_simulator/** junya.sasaki@tier4.jp kotaro.yoshimoto@tier4.jp mamoru.sobue@tier4.jp maxime.clement@tier4.jp takamasa.horibe@tier4.jp temkei.kem@tier4.jp tomoya.kimura@tier4.jp zulfaqar.azmi@tier4.jp

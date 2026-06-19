@@ -21,6 +21,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::object_sorter
@@ -30,7 +31,7 @@ using autoware_perception_msgs::msg::DetectedObjects;
 template <typename ObjsMsgType>
 ObjectSorterBase<ObjsMsgType>::ObjectSorterBase(
   const std::string & node_name, const rclcpp::NodeOptions & node_options)
-: Node(node_name, node_options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
+: Node(node_name, node_options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_, *this)
 {
   // Node Parameter
   range_calc_frame_id_ = declare_parameter<std::string>("range_calc_frame_id");
@@ -107,15 +108,18 @@ void ObjectSorterBase<ObjsMsgType>::setupSortTarget(bool use_distance_thresholdi
 
 template <typename ObjsMsgType>
 void ObjectSorterBase<ObjsMsgType>::objectCallback(
-  const typename ObjsMsgType::ConstSharedPtr input_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ObjsMsgType) & input_msg)
 {
   // Guard
-  if (pub_output_objects_->get_subscription_count() < 1) {
+  if (
+    pub_output_objects_->get_subscription_count() +
+      pub_output_objects_->get_intra_process_subscription_count() <
+    1) {
     return;
   }
 
-  ObjsMsgType output_objects;
-  output_objects.header = input_msg->header;
+  auto output_objects = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_output_objects_);
+  output_objects->header = input_msg->header;
 
   geometry_msgs::msg::TransformStamped tf_input_frame_to_target_frame;
   // Even when it failed to get the transform, we still can do the velocity check
@@ -159,11 +163,11 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
       }
     }
 
-    output_objects.objects.push_back(object);
+    output_objects->objects.push_back(object);
   }
 
   // Publish
-  pub_output_objects_->publish(output_objects);
+  pub_output_objects_->publish(std::move(output_objects));
 }
 
 // Explicit instantiation

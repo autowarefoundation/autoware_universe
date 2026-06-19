@@ -91,9 +91,9 @@ std::map<int, double> convertListToClassMap(const std::vector<double> & distance
 namespace autoware::object_merger
 {
 ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptions & node_options)
-: rclcpp::Node("object_association_merger_node", node_options),
+: Node("object_association_merger_node", node_options),
   tf_buffer_(get_clock()),
-  tf_listener_(tf_buffer_),
+  tf_listener_(tf_buffer_, *this),
   object0_sub_(this, "input/object0", rclcpp::QoS{1}.get_rmw_qos_profile()),
   object1_sub_(this, "input/object1", rclcpp::QoS{1}.get_rmw_qos_profile())
 {
@@ -143,26 +143,31 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
 
   // Debug publisher
   processing_time_publisher_ =
-    std::make_unique<autoware_utils::DebugPublisher>(this, "object_association_merger");
+    std::make_unique<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      this, "object_association_merger");
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
-  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<
+    autoware_utils_debug::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>>(this);
   // Timeout process initialization
   message_timeout_sec_ = this->declare_parameter<double>("message_timeout_sec");
   initialization_timeout_sec_ = this->declare_parameter<double>("initialization_timeout_sec");
   last_sync_time_ = std::nullopt;
   message_interval_ = std::nullopt;
-  timeout_timer_ = rclcpp::create_timer(
-    this, get_clock(), std::chrono::duration<double>(message_timeout_sec_ / 2),
+  timeout_timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), rclcpp::Duration::from_seconds(message_timeout_sec_ / 2),
     std::bind(&ObjectAssociationMergerNode::diagCallback, this));
-  diagnostics_interface_ptr_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "object_association_merger");
+  diagnostics_interface_ptr_ = std::make_unique<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>(
+    this, "object_association_merger");
 }
 
 void ObjectAssociationMergerNode::objectsCallback(
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects0_msg,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects1_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) &
+    input_objects0_msg,
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) &
+    input_objects1_msg)
 {
   // Guard
   if (merged_object_pub_->get_subscription_count() < 1) {
@@ -181,7 +186,8 @@ void ObjectAssociationMergerNode::objectsCallback(
   }
 
   // build output msg
-  autoware_perception_msgs::msg::DetectedObjects output_msg;
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(merged_object_pub_);
+  auto & output_msg = *output;
   output_msg.header = input_objects0_msg->header;
   output_msg.header.frame_id = base_link_frame_id_;
 
@@ -292,8 +298,9 @@ void ObjectAssociationMergerNode::objectsCallback(
   last_sync_time_ = now;
 
   // publish output msg
-  merged_object_pub_->publish(output_msg);
-  published_time_publisher_->publish_if_subscribed(merged_object_pub_, output_msg.header.stamp);
+  const auto output_stamp = output_msg.header.stamp;
+  merged_object_pub_->publish(std::move(output));
+  published_time_publisher_->publish_if_subscribed(merged_object_pub_, output_stamp);
   // publish processing time
   processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/cyclic_time_ms", stop_watch_ptr_->toc("cyclic_time", true));

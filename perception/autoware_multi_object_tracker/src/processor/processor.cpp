@@ -17,6 +17,7 @@
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/static_tracker.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <tf2/transform_datatypes.hpp>
@@ -40,12 +41,18 @@ namespace autoware::multi_object_tracker
 using autoware_utils_debug::ScopedTimeTrack;
 
 TrackerProcessor::TrackerProcessor(
-  const TrackerCreationConfig & creation_config, const AssociatorConfig & associator_config,
+  const TrackerConfigs & tracker_configs, const TrackerCreationConfig & creation_config,
+  const TrackerAssociationConfig & association_config,
   const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
-  const std::vector<types::InputChannel> & channels_config)
-: creation_config_(creation_config), channels_config_(channels_config)
+  const std::vector<types::InputChannel> & channels_config, const rclcpp::Logger & logger,
+  rclcpp::Clock::SharedPtr clock)
+: tracker_configs_(tracker_configs),
+  creation_config_(creation_config),
+  channels_config_(channels_config),
+  logger_(logger),
+  clock_(std::move(clock))
 {
-  association_manager_ = std::make_unique<AssociationManager>(associator_config, channels_config);
+  association_manager_ = std::make_unique<AssociationManager>(association_config, channels_config);
   tracker_overlap_manager_ =
     std::make_unique<TrackerOverlapManager>(tracker_overlap_manager_config);
 }
@@ -110,6 +117,8 @@ void TrackerProcessor::update(const types::AssociatedObjects & associated_object
       const auto & associated_object = detected_objects.objects.at(measurement_idx);
       const types::InputChannel channel_info = channels_config_[associated_object.channel_index];
       const bool has_significant_shape_change = association_result.wasShapeChanged(tracker_uuid);
+      (*tracker_itr)
+        ->setEgoPose(ego_pose_ ? std::make_optional(ego_pose_->pose.position) : std::nullopt);
       (*(tracker_itr))
         ->updateWithMeasurement(
           associated_object, time, channel_info, has_significant_shape_change);
@@ -139,6 +148,7 @@ void TrackerProcessor::spawn(const types::AssociatedObjects & associated_objects
       continue;
     }
     std::shared_ptr<Tracker> tracker = createNewTracker(new_object, time);
+    if (!tracker) continue;  // null combo: (shape, label) not accepted
 
     if (channel_config.trust_existence_probability) {
       tracker->initializeExistenceProbabilities(
@@ -156,10 +166,12 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   const types::DynamicObject & object, const rclcpp::Time & time) const
 {
   const classes::Label label = classes::getHighestProbLabel(object.classification);
-  const auto tracker_type_opt = get_map_value_if_exists(creation_config_.tracker_map, label);
+  const ShapeLabelKey key{types::toShapeType(object.shape.type), label};
+
+  const auto tracker_type_opt = get_map_value_if_exists(creation_config_.shape_tracker_map, key);
+
   if (tracker_type_opt) {
-    const auto tracker_type = tracker_type_opt->get();
-    switch (tracker_type) {
+    switch (tracker_type_opt->get()) {
       case types::TrackerType::MULTIPLE_VEHICLE:
         return std::make_shared<MultipleVehicleTracker>(time, object);
       case types::TrackerType::GENERAL_VEHICLE:
@@ -174,21 +186,26 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
         return std::make_shared<VehicleTracker>(object_model::bicycle, time, object);
       case types::TrackerType::BIG_VEHICLE:
         return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
+      case types::TrackerType::STATIC:
+        return std::make_shared<StaticTracker>(time, object, tracker_configs_.static_tracker);
       case types::TrackerType::POLYGON:
-        return std::make_shared<PolygonTracker>(
-          time, object, creation_config_.enable_unknown_object_velocity_estimation,
-          creation_config_.enable_unknown_object_motion_output);
-      case types::TrackerType::PASS_THROUGH:
-        return std::make_shared<PassThroughTracker>(time, object);
+        return std::make_shared<PolygonTracker>(time, object, tracker_configs_.polygon_tracker);
       default:
-        return std::make_shared<PolygonTracker>(
-          time, object, creation_config_.enable_unknown_object_velocity_estimation,
-          creation_config_.enable_unknown_object_motion_output);
+        return std::make_shared<PolygonTracker>(time, object, tracker_configs_.polygon_tracker);
     }
   }
-  return std::make_shared<PolygonTracker>(
-    time, object, creation_config_.enable_unknown_object_velocity_estimation,
-    creation_config_.enable_unknown_object_motion_output);
+
+  if (creation_config_.explicit_null_combos.count(key)) {
+    return nullptr;  // create: "null" — explicitly not accepted, silently skip
+  }
+
+  // implicitly omitted — not listed in tracker_assignment; error periodically
+  RCLCPP_ERROR_THROTTLE(
+    logger_, *clock_, 1000,
+    "Received detection with unspecified tracker_assignment combination: shape=%s label=%s. "
+    "Add an explicit entry (or create: \"null\") to suppress this error.",
+    types::toString(key.first).c_str(), classes::toString(key.second).c_str());
+  return nullptr;
 }
 
 void TrackerProcessor::prune(const rclcpp::Time & time)

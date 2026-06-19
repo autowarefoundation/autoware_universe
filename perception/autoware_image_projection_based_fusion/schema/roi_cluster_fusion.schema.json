@@ -106,6 +106,20 @@
               "default": 0.65,
               "minimum": 0.0,
               "maximum": 1.0
+            },
+            "ANIMAL": {
+              "type": "number",
+              "description": "IoU threshold for ANIMAL objects.",
+              "default": 0.1,
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "HAZARD": {
+              "type": "number",
+              "description": "IoU threshold for HAZARD objects.",
+              "default": 0.1,
+              "minimum": 0.0,
+              "maximum": 1.0
             }
           },
           "required": [
@@ -116,7 +130,9 @@
             "TRAILER",
             "MOTORCYCLE",
             "BICYCLE",
-            "PEDESTRIAN"
+            "PEDESTRIAN",
+            "ANIMAL",
+            "HAZARD"
           ]
         },
         "remove_unknown": {

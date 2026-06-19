@@ -23,8 +23,12 @@
 #include <boost/geometry/index/rtree.hpp>
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <list>
 #include <memory>
+#include <optional>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -36,71 +40,61 @@ namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
 
 using OmPoint = bg::model::point<double, 2, bg::cs::cartesian>;
-using OmValue = std::pair<OmPoint, size_t>;  // (position, index into valid_trackers)
+using OmValue = std::pair<OmPoint, size_t>;  // (position, index into snapshots)
+
+namespace
+{
+
+constexpr float min_known_prob = 0.2f;
+
+// Per-tracker state captured once per merge cycle. All pair decisions read snapshots, never the
+// live tracker, so the outcome is a pure function of tracker states — independent of list order
+// and of merges applied later in the same cycle.
+struct TrackerSnapshot
+{
+  std::shared_ptr<Tracker> tracker;
+  geometry_msgs::msg::Point position;
+  classes::Label label{classes::Label::UNKNOWN};
+  bool is_unknown{true};
+  int priority{0};
+  float known_prob{0.0f};
+  double cov_det{0.0};
+  int measurement_count{0};
+  std::array<uint8_t, 16> uuid{};
+  std::vector<types::ExistenceProbability> existence_probs;
+  // Filled lazily, only for trackers that appear in a distance-gated pair
+  std::optional<bool> confident;
+  std::optional<bool> object_valid;
+  types::DynamicObject object;
+};
+
+// True when lhs significantly outperforms rhs on at least one input channel.
+// A channel missing from rhs counts as near-zero probability.
+bool dominatesOnAnyChannel(
+  const std::vector<types::ExistenceProbability> & lhs,
+  const std::vector<types::ExistenceProbability> & rhs)
+{
+  constexpr float prob_buffer = 0.4f;
+  for (const auto & lhs_prob : lhs) {
+    float rhs_prob_val = 0.001f;
+    for (const auto & rhs_prob : rhs) {
+      if (rhs_prob.channel_index == lhs_prob.channel_index) {
+        rhs_prob_val = rhs_prob.existence_probability;
+        break;
+      }
+    }
+    if (rhs_prob_val + prob_buffer < lhs_prob.existence_probability) {
+      return true;
+    }
+  }
+  return false;
+}
+
+}  // namespace
 
 TrackerOverlapManager::TrackerOverlapManager(const TrackerOverlapManagerConfig & config)
 : config_(config)
 {
-}
-
-bool TrackerOverlapManager::canMergeTarget(
-  const Tracker & target, const Tracker & other, const rclcpp::Time & time,
-  const AdaptiveThresholdCache & threshold_cache,
-  const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
-{
-  // 0. Compare tracker priority: higher priority (lower index) is never absorbed
-  if (target.getTrackerPriority() < other.getTrackerPriority()) {
-    return false;
-  }
-
-  // 1. If the other is not confident, do not remove the target
-  if (!other.isConfident(threshold_cache, ego_pose, time)) {
-    return false;
-  }
-
-  // 2. Compare known class probability
-  const float target_known_prob = target.getKnownObjectProbability();
-  const float other_known_prob = other.getKnownObjectProbability();
-  constexpr float min_known_prob = 0.2;
-
-  if (target_known_prob >= min_known_prob) {
-    // Target class is known
-    if (other_known_prob < min_known_prob) {
-      // Other is unknown -> keep target
-      return false;
-    }
-    // Both known: compare per-channel existence probabilities
-    const std::vector<types::ExistenceProbability> target_existence_prob =
-      target.getExistenceProbabilityVector();
-    const std::vector<types::ExistenceProbability> other_existence_prob =
-      other.getExistenceProbabilityVector();
-    constexpr float prob_buffer = 0.4;
-
-    for (const auto & other_prob : other_existence_prob) {
-      float target_prob_val = 0.001f;
-      for (const auto & target_prob : target_existence_prob) {
-        if (target_prob.channel_index == other_prob.channel_index) {
-          target_prob_val = target_prob.existence_probability;
-          break;
-        }
-      }
-      if (target_prob_val + prob_buffer < other_prob.existence_probability) {
-        // Other significantly outperforms target on this channel -> remove target
-        return true;
-      }
-    }
-
-    // No large per-channel difference: remove the one with larger position uncertainty
-    return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
-  }
-
-  // 3. Target class is unknown
-  if (other_known_prob < min_known_prob) {
-    // Both unknown: remove the one with larger position uncertainty
-    return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
-  }
-  // Other is known, target is unknown -> remove target
-  return true;
 }
 
 void TrackerOverlapManager::merge(
@@ -108,139 +102,225 @@ void TrackerOverlapManager::merge(
   const AdaptiveThresholdCache & threshold_cache,
   const std::optional<geometry_msgs::msg::Pose> & ego_pose)
 {
-  // Local cache of per-tracker data to avoid repeated virtual calls
-  struct TrackerData
-  {
-    std::shared_ptr<Tracker> tracker;
-    types::DynamicObject object;
-    classes::Label label;
-    bool is_unknown;
-    int tracker_priority;
-    int measurement_count;
-    double elapsed_time;
-    bool is_valid;
-
-    explicit TrackerData(const std::shared_ptr<Tracker> & t)
-    : tracker(t),
-      object(),
-      label(classes::Label::UNKNOWN),
-      is_unknown(false),
-      tracker_priority(0),
-      measurement_count(0),
-      elapsed_time(0.0),
-      is_valid(false)
-    {
-    }
-  };
-
-  std::vector<TrackerData> valid_trackers;
-  valid_trackers.reserve(tracker_list.size());
-
-  // First pass: collect valid trackers and their data
+  // ---- Snapshot pass: cheap scalars only ----
+  // Position comes from the motion model (no shape/classification assembly); the full object is
+  // fetched lazily per gated pair.
+  std::vector<TrackerSnapshot> snapshots;
+  snapshots.reserve(tracker_list.size());
   for (const auto & tracker : tracker_list) {
-    TrackerData data(tracker);
-    if (!tracker->getTrackedObject(time, data.object)) {
+    geometry_msgs::msg::Pose pose;
+    geometry_msgs::msg::Twist twist;
+    std::array<double, 36> pose_cov{};
+    std::array<double, 36> twist_cov{};
+    if (!tracker->getMotionState(time, pose, pose_cov, twist, twist_cov)) {
       continue;
     }
-    data.label = tracker->getHighestProbLabel();
-    data.is_unknown = (data.label == classes::Label::UNKNOWN);
-    data.tracker_priority = tracker->getTrackerPriority();
-    data.measurement_count = tracker->getTotalMeasurementCount();
-    data.elapsed_time = tracker->getElapsedTimeFromLastUpdate(time);
-    data.is_valid = true;
-    valid_trackers.push_back(std::move(data));
+    TrackerSnapshot snap;
+    snap.tracker = tracker;
+    snap.position = pose.position;
+    snap.label = tracker->getHighestProbLabel();
+    snap.is_unknown = (snap.label == classes::Label::UNKNOWN);
+    snap.priority = tracker->getTrackerPriority();
+    snap.known_prob = tracker->getKnownObjectProbability();
+    snap.cov_det = tracker->getPositionCovarianceDeterminant();
+    snap.measurement_count = tracker->getTotalMeasurementCount();
+    snap.uuid = tracker->getUUID().uuid;
+    snap.existence_probs = tracker->getExistenceProbabilityVector();
+    snapshots.push_back(std::move(snap));
+  }
+  if (snapshots.size() < 2) {
+    return;
   }
 
-  // Sort by priority: lower index -> higher priority, then non-unknown, then more measurements
-  std::sort(
-    valid_trackers.begin(), valid_trackers.end(), [](const TrackerData & a, const TrackerData & b) {
-      if (a.tracker_priority != b.tracker_priority) {
-        return a.tracker_priority < b.tracker_priority;
-      }
-      if (a.is_unknown != b.is_unknown) {
-        return b.is_unknown;  // Non-unknown first
-      }
-      if (a.measurement_count != b.measurement_count) {
-        return a.measurement_count > b.measurement_count;
-      }
-      return a.elapsed_time < b.elapsed_time;
-    });
+  const auto is_confident = [&](TrackerSnapshot & snap) {
+    if (!snap.confident) {
+      snap.confident = snap.tracker->isConfident(threshold_cache, ego_pose, time);
+    }
+    return *snap.confident;
+  };
+  const auto get_object = [&](TrackerSnapshot & snap) -> const types::DynamicObject * {
+    if (!snap.object_valid) {
+      snap.object_valid = snap.tracker->getTrackedObject(time, snap.object);
+    }
+    return *snap.object_valid ? &snap.object : nullptr;
+  };
 
-  // Build R-tree for spatial lookup
+  // ---- Candidate pair discovery ----
+  // Each tracker queries with its own label radius; pairs are deduplicated, so the effective
+  // gate is dist <= max(radius_a, radius_b) regardless of which side discovers the pair.
   bgi::rtree<OmValue, bgi::quadratic<16>> rtree;
-  std::vector<OmValue> rtree_points;
-  rtree_points.reserve(valid_trackers.size());
-  for (size_t i = 0; i < valid_trackers.size(); ++i) {
-    const auto & data = valid_trackers[i];
-    if (!data.is_valid) continue;
-    OmPoint p(data.object.pose.position.x, data.object.pose.position.y);
-    rtree_points.emplace_back(p, i);
+  {
+    std::vector<OmValue> rtree_points;
+    rtree_points.reserve(snapshots.size());
+    for (size_t i = 0; i < snapshots.size(); ++i) {
+      rtree_points.emplace_back(OmPoint(snapshots[i].position.x, snapshots[i].position.y), i);
+    }
+    rtree.insert(rtree_points.begin(), rtree_points.end());
   }
-  rtree.insert(rtree_points.begin(), rtree_points.end());
 
-  std::vector<size_t> to_remove;
-  to_remove.reserve(valid_trackers.size() / 4);
-
-  // Second pass: find and merge overlapping trackers
-  for (size_t i = 0; i < valid_trackers.size(); ++i) {
-    auto & data1 = valid_trackers[i];
-    if (!data1.is_valid || !data1.tracker->isConfident(threshold_cache, ego_pose, time)) continue;
-
+  std::vector<std::pair<size_t, size_t>> candidate_pairs;
+  std::vector<OmValue> nearby;
+  for (size_t i = 0; i < snapshots.size(); ++i) {
     const auto max_search_dist_sq_opt =
-      get_map_value_if_exists(config_.pruning_distance_thresholds_sq, data1.label);
-    if (!max_search_dist_sq_opt) continue;
+      get_map_value_if_exists(config_.pruning_distance_thresholds_sq, snapshots[i].label);
+    if (!max_search_dist_sq_opt) {
+      continue;
+    }
     const double max_search_dist_sq = max_search_dist_sq_opt->get();
+    const double max_search_dist = std::sqrt(max_search_dist_sq);
+    const double x = snapshots[i].position.x;
+    const double y = snapshots[i].position.y;
+    // The box predicate lets the R-tree prune subtrees; satisfies alone would scan linearly.
+    const bg::model::box<OmPoint> search_box(
+      OmPoint(x - max_search_dist, y - max_search_dist),
+      OmPoint(x + max_search_dist, y + max_search_dist));
 
-    std::vector<OmValue> nearby;
-    nearby.reserve(16);
+    nearby.clear();
     rtree.query(
-      bgi::satisfies([&](const OmValue & v) {
-        if (v.second <= i) return false;  // Skip already-processed and self
-        const double dx = bg::get<0>(v.first) - data1.object.pose.position.x;
-        const double dy = bg::get<1>(v.first) - data1.object.pose.position.y;
+      bgi::intersects(search_box) && bgi::satisfies([&](const OmValue & v) {
+        if (v.second == i) return false;
+        const double dx = bg::get<0>(v.first) - x;
+        const double dy = bg::get<1>(v.first) - y;
         return dx * dx + dy * dy <= max_search_dist_sq;
       }),
       std::back_inserter(nearby));
-
-    for (const auto & [p2, idx2] : nearby) {
-      auto & data2 = valid_trackers[idx2];
-      if (!data2.is_valid) continue;
-
-      if (
-        canMergeTarget(*data2.tracker, *data1.tracker, time, threshold_cache, ego_pose) &&
-        isRedundant(
-          data1.object, data2.object, data1.label, data2.label,
-          data1.tracker->getKnownObjectProbability(), data2.tracker->getKnownObjectProbability(),
-          config_)) {
-        // Merge data2 (lower priority) into data1 (higher priority)
-
-        // Existence probabilities
-        data1.tracker->updateTotalExistenceProbability(
-          data2.tracker->getTotalExistenceProbability());
-        data1.tracker->mergeExistenceProbabilities(data2.tracker->getExistenceProbabilityVector());
-
-        // Classification: only update if source is known
-        if (!data2.is_unknown) {
-          data1.tracker->updateClassification(data2.tracker->getClassification());
-        }
-
-        // Shape: prefer lower shape type (bounding box < cylinder < convex hull)
-        if (data1.object.shape.type > data2.object.shape.type) {
-          data1.tracker->setObjectShape(data2.object.shape);
-        }
-
-        data2.is_valid = false;
-        to_remove.push_back(idx2);
-      }
+    for (const auto & [point, j] : nearby) {
+      candidate_pairs.emplace_back(std::min(i, j), std::max(i, j));
     }
   }
+  std::sort(candidate_pairs.begin(), candidate_pairs.end());
+  candidate_pairs.erase(
+    std::unique(candidate_pairs.begin(), candidate_pairs.end()), candidate_pairs.end());
 
-  // Final pass: remove merged trackers
-  std::unordered_set<std::shared_ptr<Tracker>> trackers_to_remove;
-  trackers_to_remove.reserve(to_remove.size());
-  for (const auto idx : to_remove) {
-    trackers_to_remove.insert(valid_trackers[idx].tracker);
+  // ---- Pair decision ----
+  // Direction comes from a lexicographic comparison ending in the UUID, so every pair has a
+  // strict, list-order-independent winner. The per-channel existence tier is evaluated in both
+  // directions; mutual or no dominance falls through to the next tier.
+  const auto outranks = [&](TrackerSnapshot & a, TrackerSnapshot & b) {
+    if (a.priority != b.priority) {
+      return a.priority < b.priority;
+    }
+    const bool a_confident = is_confident(a);
+    const bool b_confident = is_confident(b);
+    if (a_confident != b_confident) {
+      return a_confident;
+    }
+    const bool a_known = a.known_prob >= min_known_prob;
+    const bool b_known = b.known_prob >= min_known_prob;
+    if (a_known != b_known) {
+      return a_known;
+    }
+    const bool a_dominates = dominatesOnAnyChannel(a.existence_probs, b.existence_probs);
+    const bool b_dominates = dominatesOnAnyChannel(b.existence_probs, a.existence_probs);
+    if (a_dominates != b_dominates) {
+      return a_dominates;
+    }
+    if (a.cov_det != b.cov_det) {
+      return a.cov_det < b.cov_det;
+    }
+    if (a.measurement_count != b.measurement_count) {
+      return a.measurement_count > b.measurement_count;
+    }
+    return a.uuid < b.uuid;
+  };
+
+  struct MergeCandidate
+  {
+    size_t winner_idx;
+    double dist_sq;
+  };
+  std::unordered_map<size_t, MergeCandidate> best_winner_of_loser;
+  for (const auto & [i, j] : candidate_pairs) {
+    const bool i_wins = outranks(snapshots[i], snapshots[j]);
+    const size_t winner_idx = i_wins ? i : j;
+    const size_t loser_idx = i_wins ? j : i;
+    auto & winner = snapshots[winner_idx];
+    auto & loser = snapshots[loser_idx];
+
+    // Winner eligibility: must be confident and carry a parametric shape. Polygon-only trackers
+    // may only be absorbed, never absorb — in particular two polygon-only trackers never merge.
+    // An ineligible winner vetoes the pair (no direction flip).
+    if (!is_confident(winner)) {
+      continue;
+    }
+    const auto * winner_object = get_object(winner);
+    const auto * loser_object = get_object(loser);
+    if (winner_object == nullptr || loser_object == nullptr) {
+      continue;
+    }
+    if (winner_object->shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
+      continue;
+    }
+    if (!isRedundant(
+          *winner_object, *loser_object, winner.label, loser.label, winner.known_prob,
+          loser.known_prob, config_)) {
+      continue;
+    }
+
+    const double dx = winner.position.x - loser.position.x;
+    const double dy = winner.position.y - loser.position.y;
+    const double dist_sq = dx * dx + dy * dy;
+    const auto it = best_winner_of_loser.find(loser_idx);
+    if (
+      it == best_winner_of_loser.end() || dist_sq < it->second.dist_sq ||
+      (dist_sq == it->second.dist_sq && winner.uuid < snapshots[it->second.winner_idx].uuid)) {
+      best_winner_of_loser[loser_idx] = MergeCandidate{winner_idx, dist_sq};
+    }
   }
+  if (best_winner_of_loser.empty()) {
+    return;
+  }
+
+  // ---- Apply phase ----
+  // Greedy in loser-UUID order, keeping the applied merges a star forest: a tracker may not both
+  // absorb and be absorbed within one cycle, so absorbed content never moves through a tracker
+  // whose overlap with the final destination was not geometry-checked. Deferred merges re-enter
+  // next cycle; the first edge in UUID order always applies, so chains make progress every cycle.
+  std::vector<size_t> loser_indices;
+  loser_indices.reserve(best_winner_of_loser.size());
+  for (const auto & [loser_idx, candidate] : best_winner_of_loser) {
+    loser_indices.push_back(loser_idx);
+  }
+  std::sort(loser_indices.begin(), loser_indices.end(), [&](const size_t a, const size_t b) {
+    return snapshots[a].uuid < snapshots[b].uuid;
+  });
+
+  std::vector<bool> was_absorbed(snapshots.size(), false);
+  std::vector<bool> has_absorbed(snapshots.size(), false);
+  std::unordered_set<std::shared_ptr<Tracker>> trackers_to_remove;
+  trackers_to_remove.reserve(loser_indices.size());
+  for (const size_t loser_idx : loser_indices) {
+    const size_t winner_idx = best_winner_of_loser.at(loser_idx).winner_idx;
+    if (was_absorbed[winner_idx] || has_absorbed[loser_idx]) {
+      continue;
+    }
+    auto & winner = snapshots[winner_idx];
+    auto & loser = snapshots[loser_idx];
+
+    // Existence probabilities
+    winner.tracker->updateTotalExistenceProbability(loser.tracker->getTotalExistenceProbability());
+    winner.tracker->mergeExistenceProbabilities(loser.existence_probs);
+
+    // Classification: only update if source is known
+    if (!loser.is_unknown) {
+      winner.tracker->updateClassification(loser.tracker->getClassification());
+    }
+
+    // Shape: prefer lower shape type (bounding box < cylinder < convex hull).
+    if (winner.object.shape.type > loser.object.shape.type) {
+      winner.tracker->setObjectShape(loser.object.shape);
+    }
+    // If the absorbed tracker carries footprint data (BBOX or POLYGON), union it into the winner.
+    if (!loser.object.shape.footprint.points.empty()) {
+      winner.tracker->mergeFootprintFrom(
+        loser.object.shape.footprint, loser.object.pose, winner.object.pose);
+    }
+
+    was_absorbed[loser_idx] = true;
+    has_absorbed[winner_idx] = true;
+    trackers_to_remove.insert(loser.tracker);
+  }
+
   tracker_list.remove_if([&trackers_to_remove](const std::shared_ptr<Tracker> & t) {
     return trackers_to_remove.count(t) > 0;
   });

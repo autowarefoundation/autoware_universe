@@ -15,3 +15,5 @@
       MOTORCYCLE: false
       BICYCLE: false
       PEDESTRIAN: false
+      ANIMAL: false
+      HAZARD: false
