@@ -14,6 +14,7 @@
 
 #include "autoware/camera_streampetr/node.hpp"
 
+#include "autoware/camera_streampetr/network/camera_ego_mask.hpp"
 #include "autoware/camera_streampetr/postprocess/non_maximum_suppression.hpp"
 
 #include <Eigen/Dense>
@@ -23,8 +24,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <utility>
@@ -32,6 +35,72 @@
 
 namespace autoware::camera_streampetr
 {
+
+namespace
+{
+
+constexpr std::size_t kMaxCameraMaskId = 10;
+
+std::vector<int64_t> makeDefaultCameraMaskIds(const std::size_t rois_number)
+{
+  std::vector<int64_t> camera_ids;
+  camera_ids.reserve(rois_number);
+  for (std::size_t i = 0; i < rois_number; ++i) {
+    camera_ids.push_back(static_cast<int64_t>(i));
+  }
+  return camera_ids;
+}
+
+void validateMaskPoints(const std::vector<double> & mask, const std::string & parameter_name)
+{
+  if (mask.empty()) {
+    return;
+  }
+  if (mask.size() < 6 || (mask.size() % 2) != 0) {
+    throw std::runtime_error(
+      parameter_name + " must contain at least 3 points to construct a mask.");
+  }
+}
+
+std::vector<std::optional<EgoMaskRoiConfig>> declareCameraMaskParams(
+  rclcpp::Node & node, const std::size_t rois_number, const std::array<std::uint8_t, 3> & fill_bgr,
+  const std::vector<int64_t> & camera_mask_ids)
+{
+  std::vector<std::optional<EgoMaskRoiConfig>> camera_mask_configs(kMaxCameraMaskId + 1);
+  for (std::size_t camera_id = 0; camera_id <= kMaxCameraMaskId; ++camera_id) {
+    const std::string parameter_prefix = "camera_" + std::to_string(camera_id) + "_mask";
+    const bool enabled = node.declare_parameter<bool>(parameter_prefix + ".enable", false);
+    const auto mask = node.declare_parameter<std::vector<double>>(
+      parameter_prefix + ".mask", std::vector<double>());
+    const bool normalized = node.declare_parameter<bool>(parameter_prefix + ".normalized", false);
+
+    if (!enabled || mask.empty()) {
+      continue;
+    }
+    validateMaskPoints(mask, parameter_prefix + ".mask");
+
+    EgoMaskRoiConfig config;
+    config.polygons.push_back(EgoMaskPolygon{mask, normalized});
+    config.fill_bgr = fill_bgr;
+    camera_mask_configs[camera_id] = std::move(config);
+  }
+
+  std::vector<std::optional<EgoMaskRoiConfig>> roi_mask_configs(rois_number, std::nullopt);
+  for (std::size_t roi_i = 0; roi_i < rois_number; ++roi_i) {
+    if (roi_i >= camera_mask_ids.size()) {
+      continue;
+    }
+    const int64_t camera_id = camera_mask_ids[roi_i];
+    if (camera_id < 0 || static_cast<std::size_t>(camera_id) >= camera_mask_configs.size()) {
+      throw std::runtime_error("camera_mask.camera_ids contains an unsupported camera id.");
+    }
+    roi_mask_configs[roi_i] = camera_mask_configs[static_cast<std::size_t>(camera_id)];
+  }
+
+  return roi_mask_configs;
+}
+
+}  // namespace
 
 std::vector<float> cast_to_float(const std::vector<double> & double_vector)
 {
@@ -165,10 +234,43 @@ StreamPetrNode::StreamPetrNode(const rclcpp::NodeOptions & node_options)
   // Publishers
   pub_objects_ = this->create_publisher<DetectedObjects>("~/output/objects", rclcpp::QoS{1});
 
+  EgoMaskParams ego_mask_params;
+  ego_mask_params.enabled = declare_parameter<bool>("ego_mask.enabled", false);
+  const auto fill_value_bgr =
+    declare_parameter<std::vector<double>>("ego_mask.fill_value_bgr", {0.0, 0.0, 0.0});
+  for (std::size_t i = 0; i < 3; ++i) {
+    const double v = i < fill_value_bgr.size() ? fill_value_bgr[i] : 0.0;
+    ego_mask_params.fill_bgr[i] = static_cast<std::uint8_t>(std::clamp(v, 0.0, 255.0));
+  }
+  const auto camera_mask_ids = declare_parameter<std::vector<int64_t>>(
+    "camera_mask.camera_ids", makeDefaultCameraMaskIds(rois_number_));
+  ego_mask_params.roi_mask_configs =
+    declareCameraMaskParams(*this, rois_number_, ego_mask_params.fill_bgr, camera_mask_ids);
+  ego_mask_params.roi_polygons_yaml = declare_parameter<std::vector<std::string>>(
+    "ego_mask.roi_polygons_yaml", std::vector<std::string>());
+
+  // log the id of the masked camera
+  std::string masked_camera_ids = "[";
+  for (std::size_t roi_i = 0; roi_i < ego_mask_params.roi_mask_configs.size(); ++roi_i) {
+    if (!ego_mask_params.roi_mask_configs[roi_i].has_value()) {
+      continue;
+    }
+    const int64_t camera_id =
+      roi_i < camera_mask_ids.size() ? camera_mask_ids[roi_i] : static_cast<int64_t>(roi_i);
+    masked_camera_ids += (masked_camera_ids.size() == 1 ? "" : ", ");
+    masked_camera_ids += std::to_string(camera_id);
+  }
+  masked_camera_ids += "]";
+  if (ego_mask_params.enabled || masked_camera_ids != "[]") {
+    RCLCPP_INFO(
+      rclcpp::get_logger(logger_name_.c_str()),
+      "mask enabled for StreamPETR preprocess (masked camera ids: %s)", masked_camera_ids.c_str());
+  }
+
   // Data store
   data_store_ = std::make_unique<CameraDataStore>(
     this, rois_number_, roi_height, roi_width, anchor_camera_id_,
-    declare_parameter<bool>("is_distorted_image"));
+    declare_parameter<bool>("is_distorted_image"), ego_mask_params);
 
   if (debug_mode_) {
     using autoware_utils::DebugPublisher;
