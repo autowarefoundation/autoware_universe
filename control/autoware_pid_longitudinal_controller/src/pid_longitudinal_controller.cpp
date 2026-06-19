@@ -992,7 +992,7 @@ PidLongitudinalController::Motion PidLongitudinalController::keepBrakeBeforeStop
   }
 
   const double brake_keeping_acc = std::max(m_brake_keeping_acc, min_acc_before_stop);
-  if (control_data.nearest_base >= bases.at(min_acc_idx) && target_motion.acc > brake_keeping_acc) {
+  if (control_data.target_base >= bases.at(min_acc_idx) && target_motion.acc > brake_keeping_acc) {
     output_motion.acc = brake_keeping_acc;
   }
 
