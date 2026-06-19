@@ -375,22 +375,43 @@ void DiffusionPlanner::on_timer()
 
   const rclcpp::Time frame_time(frame_context->frame_time);
 
+  // Dump the FrameContext for debugging. In addition to the ego payload, log the header stamp
+  // of every input message consumed to compose this frame. take_data() is a polling
+  // subscription that returns only the latest message at timer firing and discards
+  // intermediate ones, so the consumed stamps uniquely identify which messages in the rosbag
+  // were used, letting the core be replayed frame-by-frame to reconstruct the full state
+  // (e.g. neighbor histories).
+  std::stringstream traffic_signals_stamps_ns;
+  for (size_t i = 0; i < traffic_signals.size(); ++i) {
+    traffic_signals_stamps_ns << (i == 0 ? "" : ";")
+                              << rclcpp::Time(traffic_signals[i]->stamp).nanoseconds();
+  }
+  const LaneletRoute::ConstSharedPtr & route_ptr = core_->get_route();
   const auto & ego_position = frame_context->ego_kinematic_state.pose.pose.position;
   const auto & ego_orientation = frame_context->ego_kinematic_state.pose.pose.orientation;
   RCLCPP_DEBUG_STREAM(
     this->get_logger(),
-    "FrameContext: "                                                                //
-      << "frame_time_ns=" << frame_time.nanoseconds()                               //
-      << ", ego_pos_x=" << ego_position.x                                           //
-      << ", ego_pos_y=" << ego_position.y                                           //
-      << ", ego_pos_z=" << ego_position.z                                           //
-      << ", ego_quat_x=" << ego_orientation.x                                       //
-      << ", ego_quat_y=" << ego_orientation.y                                       //
-      << ", ego_quat_z=" << ego_orientation.z                                       //
-      << ", ego_quat_w=" << ego_orientation.w                                       //
-      << ", ego_vel_x=" << frame_context->ego_kinematic_state.twist.twist.linear.x  //
-      << ", ego_acc_x=" << frame_context->ego_acceleration.accel.accel.linear.x     //
-      << ", neighbors=" << frame_context->ego_centric_neighbor_histories.size());
+    "FrameContext: "                                                                              //
+      << "frame_time_ns=" << frame_time.nanoseconds()                                             //
+      << ", ego_pos_x=" << ego_position.x                                                         //
+      << ", ego_pos_y=" << ego_position.y                                                         //
+      << ", ego_pos_z=" << ego_position.z                                                         //
+      << ", ego_quat_x=" << ego_orientation.x                                                     //
+      << ", ego_quat_y=" << ego_orientation.y                                                     //
+      << ", ego_quat_z=" << ego_orientation.z                                                     //
+      << ", ego_quat_w=" << ego_orientation.w                                                     //
+      << ", ego_vel_x=" << frame_context->ego_kinematic_state.twist.twist.linear.x                //
+      << ", ego_acc_x=" << frame_context->ego_acceleration.accel.accel.linear.x                   //
+      << ", neighbors=" << frame_context->ego_centric_neighbor_histories.size()                   //
+      << ", odometry_stamp_ns=" << rclcpp::Time(ego_kinematic_state->header.stamp).nanoseconds()  //
+      << ", acceleration_stamp_ns="
+      << rclcpp::Time(ego_acceleration->header.stamp).nanoseconds()  //
+      << ", objects_stamp_ns="
+      << (objects ? rclcpp::Time(objects->header.stamp).nanoseconds() : -1)                       //
+      << ", turn_indicators_stamp_ns=" << rclcpp::Time(turn_indicators_ptr->stamp).nanoseconds()  //
+      << ", route_stamp_ns=" << rclcpp::Time(route_ptr->header.stamp).nanoseconds()               //
+      << ", traffic_signals_count=" << traffic_signals.size()                                     //
+      << ", traffic_signals_stamps_ns=[" << traffic_signals_stamps_ns.str() << "]");
 
   InputDataMap input_data_map = core_->create_input_data(*frame_context);
 
