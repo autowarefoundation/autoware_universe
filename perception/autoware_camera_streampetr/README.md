@@ -108,6 +108,18 @@ The `autoware_camera_streampetr` node has various parameters for configuration:
 - `post_process_params.confidence_threshold`: Confidence threshold for detections
 - `post_process_params.yaw_norm_thresholds`: Yaw normalization thresholds
 
+#### Ego vehicle mask
+
+Masking the area of the ego vehicle in order to reduce FP caused by reflection. Configure via **launch** or `camera_streampetr.param.yaml`, not `tensorrt_stream_petr.param.yaml` (model/post-process only).
+
+- `ego_mask.enabled`: Enable masking (default: `false`)
+- `ego_mask.fill_value_bgr`: BGR fill inside polygons, 0–255 (default: `[0, 0, 0]`)
+- `ego_mask.roi_polygons_yaml`: One YAML path per model ROI index; empty string disables that ROI.
+
+Example polygon files: `config/camera9_polygons.yaml`, `config/camera10_polygons.yaml`.
+
+**X2 five-camera layout** (`tensorrt_stream_petr.x2.launch.xml`): ROI 2 → camera10 (left strip), ROI 4 → camera9 (right strip). Ego mask params are set in that launch file.
+
 #### Node Parameters
 
 - `max_camera_time_diff`: Maximum allowed time difference between cameras (seconds)

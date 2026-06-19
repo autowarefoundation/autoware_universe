@@ -26,6 +26,7 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_msgs</depend>
   <depend>tf2_ros</depend>
+  <depend>yaml-cpp</depend>
 
   <test_depend>ament_clang_format</test_depend>
   <test_depend>ament_lint_auto</test_depend>
