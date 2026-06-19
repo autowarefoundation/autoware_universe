@@ -79,7 +79,13 @@
           preserved_distance: 2.0 # [m] when cutting a predicted path or ignoring an object, at least this much distance is preserved from the predicted paths
         BICYCLE:
           ignore_collisions:
+            polygon_types: ["NONE"]  # let the intersection module deal with collisions in the intersection
             lanelet_subtypes: ["crosswalk", "walkway"]
+          preserved_duration: 0.0  # [s] when cutting a predicted path or ignoring an object, at least this much duration is preserved from the predicted paths
+        MOTORCYCLE:
+          ignore_collisions:
+            polygon_types: ["NONE"] # let the intersection module deal with collisions in the intersection
+          preserved_duration: 0.0  # [s] when cutting a predicted path or ignoring an object, at least this much duration is preserved from the predicted paths
       debug:
         object_label: "PEDESTRIAN"  # debug markers specific to each object classification labels will only be published for this one
         enabled_markers:  # if true, the corresponding debug markers are published
