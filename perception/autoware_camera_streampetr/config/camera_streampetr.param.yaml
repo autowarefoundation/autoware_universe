@@ -6,4 +6,3 @@
     anchor_camera_id: 0 # Camera id of the anchor topic. The forward pass begins once every anchor camera topic reaches.
     is_compressed_image: false # Whether the input images are compressed
     is_distorted_image: false # Whether the input images are distorted
-
