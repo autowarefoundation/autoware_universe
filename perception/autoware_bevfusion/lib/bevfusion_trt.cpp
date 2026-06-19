@@ -23,7 +23,6 @@
 #include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware/point_types/memory.hpp>
 #include <autoware_utils_math/constants.hpp>
-
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -522,10 +521,12 @@ void BEVFusionTRT::addSparseRulebookNetworkIO(
   for (int i = 0; i < sparse_rulebook_ptr_->numStages(); ++i) {
     const auto & s = sparse_rulebook_ptr_->stage(i);
     const std::int64_t kv = s.kernel_volume;
-    network_io.emplace_back(s.onnx_base + "/out_indices", nvinfer1::Dims{2, {-1, 4}});   // out_indices
+    network_io.emplace_back(
+      s.onnx_base + "/out_indices", nvinfer1::Dims{2, {-1, 4}});                      // out_indices
     network_io.emplace_back(s.onnx_base + "/pair_fwd", nvinfer1::Dims{2, {kv, -1}});  // pair_fwd
-    network_io.emplace_back(s.onnx_base + "/pair_mask", nvinfer1::Dims{2, {-1, 1}});   // pair_mask
-    network_io.emplace_back(s.onnx_base + "/mask_argsort", nvinfer1::Dims{1, {-1}});  // mask_argsort
+    network_io.emplace_back(s.onnx_base + "/pair_mask", nvinfer1::Dims{2, {-1, 1}});  // pair_mask
+    network_io.emplace_back(
+      s.onnx_base + "/mask_argsort", nvinfer1::Dims{1, {-1}});  // mask_argsort
   }
 }
 
@@ -583,10 +584,14 @@ void BEVFusionTRT::setSparseRulebookInputShapes()
     const auto & s = sparse_rulebook_ptr_->stage(i);
     const std::int64_t n = sparse_rulebook_ptr_->stageCount(i);
     const std::int64_t kv = s.kernel_volume;
-    network_trt_ptr_->setInputShape((s.onnx_base + "/out_indices").c_str(), nvinfer1::Dims{2, {n, 4}});
-    network_trt_ptr_->setInputShape((s.onnx_base + "/pair_fwd").c_str(), nvinfer1::Dims{2, {kv, n}});
-    network_trt_ptr_->setInputShape((s.onnx_base + "/pair_mask").c_str(), nvinfer1::Dims{2, {n, 1}});
-    network_trt_ptr_->setInputShape((s.onnx_base + "/mask_argsort").c_str(), nvinfer1::Dims{1, {n}});
+    network_trt_ptr_->setInputShape(
+      (s.onnx_base + "/out_indices").c_str(), nvinfer1::Dims{2, {n, 4}});
+    network_trt_ptr_->setInputShape(
+      (s.onnx_base + "/pair_fwd").c_str(), nvinfer1::Dims{2, {kv, n}});
+    network_trt_ptr_->setInputShape(
+      (s.onnx_base + "/pair_mask").c_str(), nvinfer1::Dims{2, {n, 1}});
+    network_trt_ptr_->setInputShape(
+      (s.onnx_base + "/mask_argsort").c_str(), nvinfer1::Dims{1, {n}});
   }
 }
 

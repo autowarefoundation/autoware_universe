@@ -108,10 +108,10 @@ private:
   // spconv index-generation workspace + indices_kernel_num + thrust temp (per the plugin layout).
   CudaUniquePtr<std::uint8_t[]> spconv_workspace_d_{nullptr};
   std::size_t spconv_workspace_size_{0};
-  // Frame-invariant worst-case theoretical max active-output (max over stages at the N upper bound).
-  // computeStage() carves the workspace with this constant instead of a per-frame value, so the
-  // workspace layout / offsets do not vary frame to frame (num_in <= N => this always bounds the
-  // per-frame need). Avoids a per-frame get_handcrafted_max_act_out() call.
+  // Frame-invariant worst-case theoretical max active-output (max over stages at the N upper
+  // bound). computeStage() carves the workspace with this constant instead of a per-frame value, so
+  // the workspace layout / offsets do not vary frame to frame (num_in <= N => this always bounds
+  // the per-frame need). Avoids a per-frame get_handcrafted_max_act_out() call.
   int max_act_out_theory_worst_{0};
 };
 

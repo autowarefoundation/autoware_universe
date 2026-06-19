@@ -15,8 +15,6 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
-  <depend>nlohmann-json-dev</depend>
-
   <depend>autoware_cuda_dependency_meta</depend>
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_object_recognition_utils</depend>
@@ -31,12 +29,14 @@
   <depend>cuda_blackboard</depend>
   <depend>image_transport</depend>
   <depend>launch_ros</depend>
+  <depend>nlohmann-json-dev</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tf2_eigen</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_sensor_msgs</depend>
+
 
   <exec_depend>autoware_tensorrt_plugins</exec_depend>
 

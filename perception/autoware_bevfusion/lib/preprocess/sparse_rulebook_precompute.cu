@@ -115,9 +115,9 @@ void SparseRulebookPrecompute::allocateStageBuffers()
   max_act_out_theory_worst_ = 0;
   for (const auto & s : stages_) {
     max_act_out_theory_worst_ = std::max(
-      max_act_out_theory_worst_, SpconvOps::get_handcrafted_max_act_out(
-                                   static_cast<std::size_t>(N), s.ksize, s.stride, s.padding,
-                                   s.dilation));
+      max_act_out_theory_worst_,
+      SpconvOps::get_handcrafted_max_act_out(
+        static_cast<std::size_t>(N), s.ksize, s.stride, s.padding, s.dilation));
   }
   const int max_act_out_theory = max_act_out_theory_worst_;
   for (const auto & s : stages_) {
@@ -172,13 +172,14 @@ int SparseRulebookPrecompute::computeStage(int i, const std::int32_t * coords_in
   const bool use_direct_table = true;
   const bool use_int64_hash_k = useInt64HashK(s.spatial_shape, ksize, stride, padding, dilation);
 
-  // max_act_out_in_theory sizes the internal indice_pairs_uniq buffer (~max_act_out_in_theory * 1.1).
-  // Using N here (as the earliest code did) under-allocates for the large down-sample stages and trips
-  // the StaticAllocator "tensor size too small" assert. The plugin derives it from the per-call input
-  // count; we instead reuse the frame-invariant worst case (max over stages at the N upper bound,
-  // computed once in allocateStageBuffers). Since num_in <= N and get_handcrafted_max_act_out is
-  // non-decreasing in the input count, this always bounds the per-frame need, while keeping the
-  // workspace carving/offsets identical every frame (no per-frame get_handcrafted_max_act_out()).
+  // max_act_out_in_theory sizes the internal indice_pairs_uniq buffer (~max_act_out_in_theory
+  // * 1.1). Using N here (as the earliest code did) under-allocates for the large down-sample
+  // stages and trips the StaticAllocator "tensor size too small" assert. The plugin derives it from
+  // the per-call input count; we instead reuse the frame-invariant worst case (max over stages at
+  // the N upper bound, computed once in allocateStageBuffers). Since num_in <= N and
+  // get_handcrafted_max_act_out is non-decreasing in the input count, this always bounds the
+  // per-frame need, while keeping the workspace carving/offsets identical every frame (no per-frame
+  // get_handcrafted_max_act_out()).
   const int max_act_out_theory = max_act_out_theory_worst_;
 
   // Carve the workspace exactly like the plugin.
