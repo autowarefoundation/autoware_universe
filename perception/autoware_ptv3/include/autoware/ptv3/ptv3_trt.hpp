@@ -114,7 +114,7 @@ protected:
     CudaUniquePtr<std::uint32_t[]> head_indices{nullptr};
     CudaUniquePtr<std::uint32_t[]> cluster{nullptr};
     CudaUniquePtr<std::int32_t[]> grid_coord{nullptr};
-    CudaUniquePtr<std::uint32_t[]> serialized_code{nullptr};
+    CudaUniquePtr<std::int64_t[]> serialized_code{nullptr};
     CudaUniquePtr<std::uint32_t[]> serialized_order{nullptr};
     CudaUniquePtr<std::uint32_t[]> serialized_inverse{nullptr};
   };
@@ -138,7 +138,7 @@ protected:
   CudaUniquePtr<float[]> reconstructed_probs_d_{nullptr};           // only for partial and full
   CudaUniquePtr<std::int32_t[]> grid_coord_d_{nullptr};
   CudaUniquePtr<float[]> feat_d_{nullptr};
-  CudaUniquePtr<std::uint32_t[]> serialized_code_d_{nullptr};
+  CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
 
   // Backbone outputs shared with the segmentation head.
   CudaUniquePtr<float[]> bb_point_feat_d_{nullptr};

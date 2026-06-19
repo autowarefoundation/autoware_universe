@@ -90,9 +90,9 @@ public:
     auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
     serialization_depth_ =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
-    if (serialization_depth_ > 10) {
+    if (serialization_depth_ > 21) {
       throw std::runtime_error(
-        "The current PTv3 preprocessing path supports voxel grids up to 1024 per axis.");
+        "The current PTv3 preprocessing path supports serialized codes up to 63 bits.");
     }
 
     use_64bit_hash_ = false;

@@ -147,7 +147,7 @@ void PTv3TRT::initPtr()
   grid_coord_d_ = autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_ * 3);
   feat_d_ = autoware::cuda_utils::make_unique<float[]>(config_.max_num_voxels_ * 4);
   serialized_code_d_ =
-    autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.max_num_voxels_ * 2);
+    autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_ * 2);
 
   // Backbone outputs shared with the segmentation head.
   bb_point_feat_d_ = autoware::cuda_utils::make_unique<float[]>(
@@ -197,7 +197,7 @@ void PTv3TRT::allocateSerializedPoolingBuffers()
     stage.cluster = autoware::cuda_utils::make_unique<std::uint32_t[]>(max_num_voxels);
     stage.grid_coord = autoware::cuda_utils::make_unique<std::int32_t[]>(max_num_voxels * 3);
     stage.serialized_code =
-      autoware::cuda_utils::make_unique<std::uint32_t[]>(max_num_voxels * num_orders);
+      autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * num_orders);
     stage.serialized_order =
       autoware::cuda_utils::make_unique<std::uint32_t[]>(max_num_voxels * num_orders);
     stage.serialized_inverse =
@@ -256,7 +256,7 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
   network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
   network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
   network_io.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT32);
+    "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
 
   // Outputs: point_feat [N, backbone_feat_dim], point_grid_coord [N, 3], point_offset [1]
   network_io.emplace_back(
@@ -414,11 +414,10 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   stage_views.reserve(serialized_pooling_stages_d_.size());
   for (auto & stage : serialized_pooling_stages_d_) {
-    stage_views.push_back(
-      SerializedPoolingDeviceStageView{
-        stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
-        stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
-        stage.serialized_inverse.get()});
+    stage_views.push_back(SerializedPoolingDeviceStageView{
+      stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+      stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+      stage.serialized_inverse.get()});
   }
 
   pre_ptr_->generateSerializedPoolingMetadata(
