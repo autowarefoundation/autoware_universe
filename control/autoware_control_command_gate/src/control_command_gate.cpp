@@ -157,12 +157,12 @@ void ControlCmdGate::on_change_source(
 {
   const auto error = selector_->select(req->source);
   if (!error.empty()) {
-    res->success = false;
-    res->message = error;
+    res->status.success = false;
+    res->status.message = error;
     RCLCPP_ERROR_STREAM(get_logger(), error);
     return;
   }
-  res->success = true;
+  res->status.success = true;
   publish_source_status();
 }
 
@@ -171,7 +171,7 @@ void ControlCmdGate::on_change_filter(
   const ChangeCommandFilter::Response::SharedPtr res)
 {
   output_filter_->set_transition_flag(req->filter);
-  res->success = true;
+  res->status.success = true;
   publish_filter_status();
 }
 
