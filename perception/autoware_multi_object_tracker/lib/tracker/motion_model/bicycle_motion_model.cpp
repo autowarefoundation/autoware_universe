@@ -28,7 +28,7 @@
 namespace autoware::multi_object_tracker
 {
 
-// cspell: ignore CTRV
+// cspell: ignore CTRV nonholonomic
 // Bicycle CTRV motion model
 // CTRV : Constant Turn Rate and constant Velocity
 using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
@@ -559,19 +559,30 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   A(IDX::V, IDX::V) = decay_rate;
 
   // Process noise covariance Q
-  double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
-  if (vel_long > 0.01) {
-    /* uncertainty of the yaw rate is limited by the following:
-     *  - centripetal acceleration a_lat : d(yaw)/dt = w = a_lat/vel_long
-     *  - or maximum slip angle slip_max : w = vel_long*sin(slip_max)/wheel_base
-     */
-    q_stddev_yaw_rate = std::min(
-      motion_params_.q_stddev_acc_lat / vel_long,
-      vel_long * std::sin(motion_params_.q_max_slip_angle) / wheel_base);  // [rad/s]
-    q_stddev_yaw_rate = std::clamp(
-      q_stddev_yaw_rate, motion_params_.q_stddev_yaw_rate_min,
-      motion_params_.q_stddev_yaw_rate_max);
-  }
+  //
+  // Yaw-rate (heading) process noise obeys the nonholonomic constraint: a vehicle cannot change
+  // heading without translating (w = vel_long * tan(steer) / wheel_base), so the yaw-rate
+  // uncertainty must vanish as vel_long -> 0. A stationary vehicle is physically incapable of
+  // turning, hence NO heading noise may be injected at standstill. Injecting a constant floor there
+  // ratchets up the front-point lateral variance (the heading noise feeds q_cov_lat2 -> Q on
+  // X2/Y2 only), which a rear/front partial update cannot pull back -> standstill yaw jitter.
+  const double vel_long_abs = std::abs(vel_long);
+  constexpr double vel_long_eps = 1e-3;  // [m/s] guard against division by zero
+  /* physical yaw-rate bound, limited by the tighter of the two:
+   *  - centripetal acceleration a_lat : w = a_lat / vel_long
+   *  - or maximum slip angle slip_max : w = vel_long * sin(slip_max) / wheel_base  (-> 0 at v -> 0)
+   */
+  const double q_stddev_yaw_rate_phys = std::min(
+    motion_params_.q_stddev_acc_lat / std::max(vel_long_abs, vel_long_eps),
+    vel_long_abs * std::sin(motion_params_.q_max_slip_angle) / wheel_base);  // [rad/s]
+  // Ramp the configured floor in with speed instead of applying it unconditionally, so the floor
+  // -> 0 at standstill (no heading information exists to be tracked) and only reaches its full value
+  // once the vehicle is clearly moving. Above vel_ref this reproduces the original clamp behavior.
+  constexpr double vel_ref = 1.0;  // [m/s] speed at which the yaw-rate floor reaches full value
+  const double yaw_rate_floor =
+    motion_params_.q_stddev_yaw_rate_min * std::clamp(vel_long_abs / vel_ref, 0.0, 1.0);
+  const double q_stddev_yaw_rate = std::clamp(
+    q_stddev_yaw_rate_phys, yaw_rate_floor, motion_params_.q_stddev_yaw_rate_max);
   const double q_stddev_head = q_stddev_yaw_rate * wheel_base * dt;  // yaw uncertainty
 
   const double dt2 = dt * dt;
