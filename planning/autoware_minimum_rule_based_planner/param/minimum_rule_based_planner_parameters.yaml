@@ -110,6 +110,14 @@ minimum_rule_based_planner:
       type: bool
       default_value: true
       description: use pointcloud for obstacle stop
+    enable_stop_for_objects:
+      type: bool
+      default_value: true
+      description: enable stop for objects
+    enable_stop_for_pointcloud:
+      type: bool
+      default_value: false
+      description: enable stop for pointcloud
     stop_margin:
       type: double
       default_value: 6.0
@@ -136,24 +144,26 @@ minimum_rule_based_planner:
       description: time buffer after obstacle stop [s]
     lateral_margin:
       type: double
-      default_value: 0.5
+      default_value: 0.2
       description: lateral margin for obstacle stop [m]
-    longitudinal_margin:
+    arrived_distance_threshold:
       type: double
-      default_value: 10.0
-      description: longitudinal margin applied to each trajectory-point footprint; also acts as a floor on the detection corridor length to prevent chatter as ego decelerates [m]
+      default_value: 0.5
+      description: threshold to check if the ego vehicle has arrived at the stop point [m]
+      validation:
+        bounds<>: [0.0, 10.0]
     objects:
       object_types:
         type: string_array
-        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, unknown]
+        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
         description: object types to consider for obstacle stop
       max_velocity_th:
         type: double
-        default_value: 1.0
+        default_value: 3.0
         description: maximum velocity threshold for target object [m/s]
       stopped_velocity_th:
         type: double
-        default_value: 0.25
+        default_value: 0.3
         description: velocity threshold for target object to be considered as stopped [m/s]
       max_lateral_velocity_th:
         type: double
@@ -163,10 +173,73 @@ minimum_rule_based_planner:
           bounds<>: [0.0, 10.0]
       safety_buffer:
         type: double
-        default_value: 0.0
+        default_value: 0.1
         description: safety buffer to expand object shape [m]
         validation:
           bounds<>: [0.0, 10.0]
+    pointcloud:
+      height_buffer:
+        type: double
+        default_value: 0.5
+        description: height buffer to add above ego height [m]
+        validation:
+          bounds<>: [0.0, 10.0]
+      min_height:
+        type: double
+        default_value: 0.2
+        description: minimum height of pointcloud [m]
+        validation:
+          bounds<>: [0.0, 10.0]
+      voxel_grid_filter:
+        x:
+          type: double
+          default_value: 0.2
+          description: x size of voxel grid filter [m]
+          validation:
+            bounds<>: [0.0, 1.0]
+        y:
+          type: double
+          default_value: 0.2
+          description: y size of voxel grid filter [m]
+          validation:
+            bounds<>: [0.0, 1.0]
+        z:
+          type: double
+          default_value: 0.2
+          description: z size of voxel grid filter [m]
+          validation:
+            bounds<>: [0.0, 1.0]
+        min_size:
+          type: int
+          default_value: 3
+          description: minimum size of voxel grid filter
+          validation:
+            bounds<>: [1, 100]
+      clustering:
+        tolerance:
+          type: double
+          default_value: 0.5
+          description: tolerance for clustering [m]
+          validation:
+            bounds<>: [0.0, 1.0]
+        min_height:
+          type: double
+          default_value: 0.5
+          description: minimum height for clustering [m]
+          validation:
+            bounds<>: [0.0, 1.0]
+        min_size:
+          type: int
+          default_value: 10
+          description: minimum size for clustering
+          validation:
+            bounds<>: [1, 100]
+        max_size:
+          type: int
+          default_value: 10000
+          description: maximum size for clustering
+          validation:
+            bounds<>: [1, 10000]
     rss_params:
       enable:
         type: bool
@@ -177,93 +250,68 @@ minimum_rule_based_planner:
           type: double
           default_value: 1.5
           description: deceleration for car type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
         truck:
           type: double
           default_value: 1.5
           description: deceleration for truck type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
         bus:
           type: double
           default_value: 1.5
           description: deceleration for bus type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
         trailer:
           type: double
           default_value: 1.5
           description: deceleration for trailer type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
         motorcycle:
           type: double
-          default_value: 3.0
+          default_value: 2.0
           description: deceleration for motorcycle type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
         bicycle:
           type: double
-          default_value: 5.0
+          default_value: 3.0
           description: deceleration for bicycle type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
         pedestrian:
           type: double
           default_value: 5.0
           description: deceleration for pedestrian type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
       ego_decel:
         type: double
-        default_value: 4.0
+        default_value: 2.5
         description: deceleration for ego vehicle used in RSS calculation [m/s^2]
+        validation:
+          bounds<>: [0.0, 10.0]
       reaction_time:
         type: double
         default_value: 0.2
         description: reaction time used in RSS calculation [s]
+        validation:
+          bounds<>: [0.0, 10.0]
       safety_margin:
         type: double
         default_value: 2.0
         description: safety margin used in RSS calculation [m]
+        validation:
+          bounds<>: [0.0, 10.0]
       lookahead_horizon:
         type: double
         default_value: 1.5
         description: lookahead horizon used in RSS calculation [s]
-    pointcloud:
-      height_buffer:
-        type: double
-        default_value: 0.5
-        description: height buffer to add above ego height [m]
-      min_height:
-        type: double
-        default_value: 0.2
-        description: minimum height of pointcloud [m]
-      detection_range:
-        type: double
-        default_value: 100.0
-        description: detection range [m]
-      voxel_grid_filter:
-        x:
-          type: double
-          default_value: 0.2
-          description: x size of voxel grid filter [m]
-        y:
-          type: double
-          default_value: 0.2
-          description: y size of voxel grid filter [m]
-        z:
-          type: double
-          default_value: 0.2
-          description: z size of voxel grid filter [m]
-        min_size:
-          type: int
-          default_value: 3
-          description: minimum size of voxel grid filter
-      clustering:
-        tolerance:
-          type: double
-          default_value: 0.5
-          description: tolerance for clustering [m]
-        min_height:
-          type: double
-          default_value: 0.5
-          description: minimum height for clustering [m]
-        min_size:
-          type: int
-          default_value: 10
-          description: minimum size for clustering
-        max_size:
-          type: int
-          default_value: 10000
-          description: maximum size for clustering
+        validation:
+          bounds<>: [0.0, 10.0]
 
   debug:
     enable_path:

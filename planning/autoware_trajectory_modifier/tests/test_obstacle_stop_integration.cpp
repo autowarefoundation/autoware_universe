@@ -344,7 +344,7 @@ TEST_F(ObstacleStopIntegrationTest, TrajectoryModifiedWhenObjectBlocksPath)
 TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject)
 {
   // Arrange
-  constexpr double object_x = 20.0;
+  constexpr double object_x = 25.0;
   auto trajectory = create_straight_trajectory(30.0, 8.0);
   const auto car_blocking_path = make_blocking_car(object_x, 0.0);
   const auto input =
@@ -368,7 +368,68 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject)
   EXPECT_NEAR(object_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
 }
 
+TEST_F(ObstacleStopIntegrationTest, StopPointInsertedBeforeObject_ReachMaxDecel)
+{
+  // Arrange
+  constexpr double object_x = 20.0;
+  auto trajectory = create_straight_trajectory(30.0, 8.0);
+  const auto car_blocking_path = make_blocking_car(object_x, 0.0);
+  const auto input =
+    create_input_data(make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), car_blocking_path);
+
+  // Act: obstacle tracker requires `on_time_buffer` of continuous observation
+  //      before becoming active
+  plugin_->modify_trajectory(trajectory, input);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  const bool modified = plugin_->modify_trajectory(trajectory, input);
+
+  // Assert
+  ASSERT_TRUE(modified);
+  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
+  EXPECT_LT(trajectory.back().pose.position.x, object_x);
+
+  const auto expected_stop_margin = 6.96;  // Computed based on max_decel limit and jerk limit
+  EXPECT_NEAR(object_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
+}
+
 TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluster)
+{
+  // Arrange
+  constexpr double cluster_center_x = 25.0;
+  auto trajectory = create_straight_trajectory(30.0, 8.0);
+  const auto pointcloud_blocking_path =
+    make_blocking_pointcloud_cluster(cluster_center_x, 0.0, 0.7);
+  const auto input = create_input_data(
+    make_odometry(0.0, 0.0, 8.0), make_acceleration(0.0), nullptr, pointcloud_blocking_path);
+
+  // Act: obstacle tracker requires `on_time_buffer` of continuous observation
+  //      before becoming active
+  plugin_->modify_trajectory(trajectory, input);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  const bool modified = plugin_->modify_trajectory(trajectory, input);
+
+  // Assert
+  ASSERT_TRUE(modified);
+  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
+  EXPECT_LT(trajectory.back().pose.position.x, cluster_center_x);
+
+  const auto min_pcd_x = [&pointcloud_blocking_path]() {
+    sensor_msgs::PointCloud2ConstIterator<float> iter_x(*pointcloud_blocking_path, "x");
+    auto min_x = std::numeric_limits<float>::max();
+    for (; iter_x != iter_x.end(); ++iter_x) {
+      if (*iter_x < min_x) {
+        min_x = *iter_x;
+      }
+    }
+    return min_x;
+  }();
+
+  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
+  const auto expected_stop_margin = params_.obstacle_stop.stop_margin + ego_front_offset;
+  EXPECT_NEAR(min_pcd_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
+}
+
+TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluster_ReachMaxDecel)
 {
   // Arrange
   constexpr double cluster_center_x = 15.0;
@@ -400,7 +461,6 @@ TEST_F(ObstacleStopIntegrationTest, StopPointInsertedForBlockingPointcloudCluste
     return min_x;
   }();
 
-  const auto ego_front_offset = context_->vehicle_info.max_longitudinal_offset_m;
-  const auto expected_stop_margin = params_.obstacle_stop.stop_margin + ego_front_offset;
+  const auto expected_stop_margin = 2.01;  // Computed based on max_decel limit and jerk limit
   EXPECT_NEAR(min_pcd_x - trajectory.back().pose.position.x, expected_stop_margin, 0.1);
 }

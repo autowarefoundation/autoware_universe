@@ -1,0 +1,419 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Trajectory Validator",
+  "type": "object",
+  "definitions": {
+    "enable_assessment_per_class": {
+      "type": "object",
+      "properties": {
+        "unknown": { "type": "boolean", "default": true },
+        "car": { "type": "boolean", "default": true },
+        "truck": { "type": "boolean", "default": true },
+        "bus": { "type": "boolean", "default": true },
+        "trailer": { "type": "boolean", "default": true },
+        "motorcycle": { "type": "boolean", "default": true },
+        "bicycle": { "type": "boolean", "default": true },
+        "pedestrian": { "type": "boolean", "default": true },
+        "animal": { "type": "boolean", "default": true },
+        "hazard": { "type": "boolean", "default": true },
+        "over_drivable": { "type": "boolean", "default": true },
+        "under_drivable": { "type": "boolean", "default": true }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "assessment_trajectories": {
+      "type": "object",
+      "properties": {
+        "map_based": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use map-based predicted path trajectories."
+        },
+        "constant_curvature": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use constant-curvature predicted trajectories."
+        },
+        "diffusion_based": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use diffusion-model predicted trajectories."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ego_footprint_margin": {
+      "type": "object",
+      "properties": {
+        "lateral": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Lateral margin added to both sides of the ego footprint [m]."
+        },
+        "front": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Front margin added to the ego footprint [m]."
+        },
+        "rear": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Rear margin added to the ego footprint [m]."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "trajectory_validator": {
+      "type": "object",
+      "properties": {
+        "filter_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of validator plugin class names to enforce. Trajectories rejected by any plugin in this list are removed from the output.",
+          "default": [""]
+        },
+        "shadow_mode_filter_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of validator plugin class names that run in shadow mode: results are evaluated, logged, and reported via diagnostics but do not affect the output trajectory set.",
+          "default": [""]
+        },
+        "collision_check": {
+          "type": "object",
+          "properties": {
+            "global_setting": {
+              "type": "object",
+              "properties": {
+                "time_resolution": {
+                  "type": "number",
+                  "description": "Sampling interval used when generating collision-check trajectories [s].",
+                  "default": 0.1,
+                  "minimum": 0.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "drac": {
+              "type": "object",
+              "description": "Deceleration Rate to Avoid Collision (DRAC) assessment settings.",
+              "properties": {
+                "enable_assessment": { "$ref": "#/definitions/enable_assessment_per_class" },
+                "assessment_trajectories": { "$ref": "#/definitions/assessment_trajectories" },
+                "ego_total_braking_delay": {
+                  "type": "number",
+                  "description": "Total ego braking delay for DRAC assessment [s].",
+                  "default": 0.4,
+                  "minimum": 0.0
+                },
+                "ego_footprint_margin": { "$ref": "#/definitions/ego_footprint_margin" },
+                "warn_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "ego_acceleration": {
+                      "type": "number",
+                      "description": "Ego acceleration threshold for DRAC warning (negative, m/s²).",
+                      "default": -3.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "error_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "ego_acceleration": {
+                      "type": "number",
+                      "description": "Ego acceleration threshold for DRAC error (negative, m/s²).",
+                      "default": -5.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "pet_collision": {
+              "type": "object",
+              "description": "Post-Encroachment Time (PET) collision assessment settings.",
+              "properties": {
+                "enable_assessment": { "$ref": "#/definitions/enable_assessment_per_class" },
+                "assessment_trajectories": { "$ref": "#/definitions/assessment_trajectories" },
+                "ego_total_braking_delay": {
+                  "type": "number",
+                  "description": "Total ego braking delay for PET assessment [s].",
+                  "default": 0.4,
+                  "minimum": 0.0
+                },
+                "ego_footprint_margin": { "$ref": "#/definitions/ego_footprint_margin" },
+                "ego_assumed_acceleration": {
+                  "type": "number",
+                  "description": "Assumed ego acceleration for PET assessment (negative, m/s²).",
+                  "default": -5.0
+                },
+                "warn_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "ego_first_passing_time_gap": {
+                      "type": "number",
+                      "description": "Allowed time gap when ego passes the conflict point first [s].",
+                      "default": 1.0,
+                      "minimum": 0.0
+                    },
+                    "object_first_passing_time_gap": {
+                      "type": "number",
+                      "description": "Allowed time gap when the object passes the conflict point first [s].",
+                      "default": 1.0,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                },
+                "error_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "ego_first_passing_time_gap": {
+                      "type": "number",
+                      "description": "Minimum time gap for error when ego passes first [s].",
+                      "default": 0.3,
+                      "minimum": 0.0
+                    },
+                    "object_first_passing_time_gap": {
+                      "type": "number",
+                      "description": "Minimum time gap for error when object passes first [s].",
+                      "default": 0.6,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "rss": {
+              "type": "object",
+              "description": "Responsibility-Sensitive Safety (RSS) assessment settings.",
+              "properties": {
+                "enable_assessment": { "$ref": "#/definitions/enable_assessment_per_class" },
+                "stop_distance_margin": {
+                  "type": "number",
+                  "description": "Required remaining distance to the object when ego stops [m].",
+                  "default": 2.0,
+                  "minimum": 0.0
+                },
+                "ego_total_braking_delay": {
+                  "type": "number",
+                  "description": "Total ego braking delay for RSS calculation [s].",
+                  "default": 0.4,
+                  "minimum": 0.0
+                },
+                "ego_footprint_margin": { "$ref": "#/definitions/ego_footprint_margin" },
+                "object_assumed_acceleration": {
+                  "type": "number",
+                  "description": "Assumed object acceleration for RSS calculation (negative, m/s²).",
+                  "default": -1.0
+                },
+                "error_threshold": {
+                  "type": "object",
+                  "properties": {
+                    "ego_acceleration": {
+                      "type": "number",
+                      "description": "Ego acceleration threshold to determine RSS collision (negative, m/s²).",
+                      "default": -4.0
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "vehicle_constraint": {
+          "type": "object",
+          "properties": {
+            "max_speed": {
+              "type": "number",
+              "description": "Maximum allowed longitudinal speed [m/s].",
+              "default": 16.7,
+              "minimum": 0.0
+            },
+            "max_acceleration": {
+              "type": "number",
+              "description": "Maximum allowed longitudinal acceleration [m/s²].",
+              "default": 5.0,
+              "minimum": 0.0
+            },
+            "max_deceleration": {
+              "type": "number",
+              "description": "Maximum allowed deceleration magnitude [m/s²] (positive value representing deceleration).",
+              "default": 5.0,
+              "minimum": 0.0
+            },
+            "max_steering_angle": {
+              "type": "number",
+              "description": "Maximum allowed front-wheel steering angle [rad].",
+              "default": 0.8,
+              "minimum": 0.0
+            },
+            "max_steering_rate": {
+              "type": "number",
+              "description": "Maximum allowed steering rate [rad/s].",
+              "default": 0.3,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "traffic_light": {
+          "type": "object",
+          "properties": {
+            "deceleration_limit": {
+              "type": "number",
+              "description": "Deceleration limit used to decide whether ego can safely stop before an amber stop line [m/s²]. A trajectory crossing an amber light is rejected if ego could stop within this deceleration.",
+              "default": 2.8
+            },
+            "jerk_limit": {
+              "type": "number",
+              "description": "Jerk limit used together with `deceleration_limit` to compute the minimum stopping distance [m/s³].",
+              "default": 5.0
+            },
+            "delay_response_time": {
+              "type": "number",
+              "description": "Driver/system response delay used to estimate the earliest possible start of braking [s].",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "crossing_time_limit": {
+              "type": "number",
+              "description": "A trajectory crossing an amber light is rejected unless ego can fully clear the stop line within this time [s].",
+              "default": 2.75,
+              "minimum": 0.0
+            },
+            "treat_amber_light_as_red_light": {
+              "type": "boolean",
+              "description": "When true, amber lights are treated identically to red lights (no dilemma-zone logic is applied).",
+              "default": true
+            },
+            "stop_overshoot_margin": {
+              "type": "number",
+              "description": "Maximum allowed distance between the trajectory's stop point and the stop line for the trajectory to be considered as stopping correctly [m].",
+              "default": 0.5,
+              "minimum": 0.0
+            },
+            "checked_trajectory_length": {
+              "type": "object",
+              "properties": {
+                "deceleration_limit": {
+                  "type": "number",
+                  "description": "Deceleration limit used to compute the trajectory length scanned for traffic light stop lines [m/s²].",
+                  "default": 2.0
+                },
+                "jerk_limit": {
+                  "type": "number",
+                  "description": "Jerk limit used together with `deceleration_limit` to compute the trajectory scan length [m/s³].",
+                  "default": 2.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "boundary_departure": {
+          "type": "object",
+          "properties": {
+            "lateral_margin_m": {
+              "type": "number",
+              "description": "Lateral clearance margin from an uncrossable boundary [m]. Trajectories whose footprint comes within this margin are rejected.",
+              "default": 0.01
+            },
+            "longitudinal_margin_m": {
+              "type": "number",
+              "description": "Longitudinal look-ahead margin applied when projecting the vehicle footprint along the trajectory [m].",
+              "default": 1.0
+            },
+            "max_deceleration_mps2": {
+              "type": "number",
+              "description": "Maximum deceleration (negative value) used to compute whether ego can stop before the boundary [m/s²].",
+              "default": -4.0
+            },
+            "max_jerk_mps3": {
+              "type": "number",
+              "description": "Maximum jerk (negative value) used together with `max_deceleration_mps2` for the stopping distance estimate [m/s³].",
+              "default": -5.0
+            },
+            "brake_delay_s": {
+              "type": "number",
+              "description": "Braking response delay [s].",
+              "default": 1.0,
+              "minimum": 0.0
+            },
+            "time_to_departure_cutoff_s": {
+              "type": "number",
+              "description": "Time-to-boundary-crossing threshold below which a trajectory is flagged as departing [s].",
+              "default": 2.0,
+              "minimum": 0.0
+            },
+            "on_time_buffer_s": {
+              "type": "number",
+              "description": "Hysteresis buffer before activating boundary-departure detection [s].",
+              "default": 0.15,
+              "minimum": 0.0
+            },
+            "off_time_buffer_s": {
+              "type": "number",
+              "description": "Hysteresis buffer before deactivating boundary-departure detection [s].",
+              "default": 0.15,
+              "minimum": 0.0
+            },
+            "enable_developer_marker": {
+              "type": "boolean",
+              "description": "Publish diagnostic visualization markers intended for developer use.",
+              "default": true
+            },
+            "boundary_types": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of lanelet boundary type strings to treat as uncrossable (e.g., 'road_border').",
+              "default": ["road_border"]
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/trajectory_validator"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

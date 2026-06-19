@@ -11,6 +11,11 @@
           "type": "string",
           "default": "base_link"
         },
+        "initial_span_duration_s": {
+          "description": "default duration [s] on the first frame of a span accumulation (error_duration, keep_duration)",
+          "type": "number",
+          "default": 0.1
+        },
         "metrics_for_publish": {
           "description": "metrics to collect and publish",
           "type": "array",
