@@ -314,6 +314,8 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
   PreprocessCuda preprocess(config, stream.get());
   DeviceBuffer<std::int32_t> grid_coord_d(grid_coord.size());
   DeviceBuffer<std::int64_t> serialized_code_d(serialized_code.size());
+  DeviceBuffer<std::uint32_t> serialized_order_d(serialized_code.size());
+  DeviceBuffer<std::uint32_t> serialized_inverse_d(serialized_code.size());
   DeviceBuffer<std::uint32_t> stage_counts_d(config.pooling_strides_.size() + 1);
   std::vector<DeviceStage> device_stages;
   std::vector<SerializedPoolingDeviceStageView> stage_views;
@@ -331,8 +333,31 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
   copy_to_device(serialized_code_d.get(), serialized_code);
 
   preprocess.generateSerializedPoolingMetadata(
-    grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, stage_counts_d.get());
+    grid_coord_d.get(), serialized_code_d.get(), num_voxels, serialized_order_d.get(),
+    serialized_inverse_d.get(), stage_views, stage_counts_d.get());
   ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
+
+  std::vector<std::uint32_t> expected_serialized_order(serialized_code.size());
+  std::vector<std::uint32_t> expected_serialized_inverse(serialized_code.size());
+  for (std::size_t order = 0; order < kNumOrders; ++order) {
+    std::vector<std::int64_t> order_codes(num_voxels);
+    for (std::size_t index = 0; index < num_voxels; ++index) {
+      order_codes[index] = serialized_code[order * num_voxels + index];
+    }
+    const auto sorted_order = stable_argsort(order_codes);
+    for (std::size_t rank = 0; rank < sorted_order.size(); ++rank) {
+      const auto input_index = sorted_order[rank];
+      expected_serialized_order[order * num_voxels + rank] = input_index;
+      expected_serialized_inverse[order * num_voxels + input_index] =
+        static_cast<std::uint32_t>(rank);
+    }
+  }
+  expect_equal(
+    copy_to_host(serialized_order_d.get(), serialized_code.size()), expected_serialized_order,
+    "root serialized_order");
+  expect_equal(
+    copy_to_host(serialized_inverse_d.get(), serialized_code.size()), expected_serialized_inverse,
+    "root serialized_inverse");
 
   std::vector<CpuStage> references;
   references.push_back(

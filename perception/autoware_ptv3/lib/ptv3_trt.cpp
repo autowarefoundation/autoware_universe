@@ -148,6 +148,10 @@ void PTv3TRT::initPtr()
   feat_d_ = autoware::cuda_utils::make_unique<float[]>(config_.max_num_voxels_ * 4);
   serialized_code_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_ * 2);
+  serialized_order_d_ =
+    autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.max_num_voxels_ * 2);
+  serialized_inverse_d_ =
+    autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.max_num_voxels_ * 2);
 
   // Backbone outputs shared with the segmentation head.
   bb_point_feat_d_ = autoware::cuda_utils::make_unique<float[]>(
@@ -256,7 +260,9 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
   network_io.emplace_back("grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
   network_io.emplace_back("feat", nvinfer1::Dims{2, {-1, 4}}, nvinfer1::DataType::kFLOAT);
   network_io.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT64);
+    "serialized_order", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT32);
+  network_io.emplace_back(
+    "serialized_inverse", nvinfer1::Dims{2, {2, -1}}, nvinfer1::DataType::kINT32);
 
   // Outputs: point_feat [N, backbone_feat_dim], point_grid_coord [N, 3], point_offset [1]
   network_io.emplace_back(
@@ -276,7 +282,10 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
     nvinfer1::Dims{2, {config_.voxels_num_[1], 4}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 4}});
 
   profile_dims.emplace_back(
-    "serialized_code", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
+    "serialized_order", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
+    nvinfer1::Dims{2, {2, config_.voxels_num_[1]}}, nvinfer1::Dims{2, {2, config_.voxels_num_[2]}});
+  profile_dims.emplace_back(
+    "serialized_inverse", nvinfer1::Dims{2, {2, config_.voxels_num_[0]}},
     nvinfer1::Dims{2, {2, config_.voxels_num_[1]}}, nvinfer1::Dims{2, {2, config_.voxels_num_[2]}});
 
   // Serialized pooling metadata inputs are precomputed on device each frame and fed to the engine.
@@ -316,13 +325,6 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
       nvinfer1::Dims{1, {opt_voxels + 1}}, nvinfer1::Dims{1, {max_voxels + 1}},
       nvinfer1::DataType::kINT32);
     add_pooling_io(
-      prefix + "head_indices", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {1}},
-      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}}, nvinfer1::DataType::kINT32);
-    add_pooling_io(
-      prefix + "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::Dims{2, {1, 3}},
-      nvinfer1::Dims{2, {opt_voxels, 3}}, nvinfer1::Dims{2, {max_voxels, 3}},
-      nvinfer1::DataType::kINT32);
-    add_pooling_io(
       prefix + "serialized_order", nvinfer1::Dims{2, {num_orders, -1}},
       nvinfer1::Dims{2, {num_orders, 1}}, nvinfer1::Dims{2, {num_orders, opt_voxels}},
       nvinfer1::Dims{2, {num_orders, max_voxels}}, nvinfer1::DataType::kINT32);
@@ -344,7 +346,8 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
 
   backbone_trt_ptr_->setTensorAddress("grid_coord", grid_coord_d_.get());
   backbone_trt_ptr_->setTensorAddress("feat", feat_d_.get());
-  backbone_trt_ptr_->setTensorAddress("serialized_code", serialized_code_d_.get());
+  backbone_trt_ptr_->setTensorAddress("serialized_order", serialized_order_d_.get());
+  backbone_trt_ptr_->setTensorAddress("serialized_inverse", serialized_inverse_d_.get());
   backbone_trt_ptr_->setTensorAddress("point_feat", bb_point_feat_d_.get());
   backbone_trt_ptr_->setTensorAddress("point_grid_coord", bb_point_grid_coord_d_.get());
   backbone_trt_ptr_->setTensorAddress("point_offset", bb_point_offset_d_.get());
@@ -394,10 +397,7 @@ void PTv3TRT::bindSerializedPoolingAddresses()
     auto & buffers = serialized_pooling_stages_d_[stage];
     backbone_trt_ptr_->setTensorAddress((prefix + "indices").c_str(), buffers.indices.get());
     backbone_trt_ptr_->setTensorAddress((prefix + "indptr").c_str(), buffers.indptr.get());
-    backbone_trt_ptr_->setTensorAddress(
-      (prefix + "head_indices").c_str(), buffers.head_indices.get());
     backbone_trt_ptr_->setTensorAddress((prefix + "cluster").c_str(), buffers.cluster.get());
-    backbone_trt_ptr_->setTensorAddress((prefix + "grid_coord").c_str(), buffers.grid_coord.get());
     backbone_trt_ptr_->setTensorAddress(
       (prefix + "serialized_order").c_str(), buffers.serialized_order.get());
     backbone_trt_ptr_->setTensorAddress(
@@ -422,7 +422,8 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
 
   pre_ptr_->generateSerializedPoolingMetadata(
     grid_coord_d_.get(), serialized_code_d_.get(), static_cast<std::uint32_t>(num_voxels_),
-    stage_views, serialized_pooling_num_voxels_d_.get());
+    serialized_order_d_.get(), serialized_inverse_d_.get(), stage_views,
+    serialized_pooling_num_voxels_d_.get());
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     serialized_pooling_num_voxels_.data(), serialized_pooling_num_voxels_d_.get(),
     serialized_pooling_num_voxels_.size() * sizeof(std::uint32_t), cudaMemcpyDeviceToHost,
@@ -448,10 +449,6 @@ bool PTv3TRT::setSerializedPoolingInputShapes()
       backbone_trt_ptr_->setInputShape((prefix + "cluster").c_str(), nvinfer1::Dims{1, {in_count}});
     success &= backbone_trt_ptr_->setInputShape(
       (prefix + "indptr").c_str(), nvinfer1::Dims{1, {out_count + 1}});
-    success &= backbone_trt_ptr_->setInputShape(
-      (prefix + "head_indices").c_str(), nvinfer1::Dims{1, {out_count}});
-    success &= backbone_trt_ptr_->setInputShape(
-      (prefix + "grid_coord").c_str(), nvinfer1::Dims{2, {out_count, 3}});
     success &= backbone_trt_ptr_->setInputShape(
       (prefix + "serialized_order").c_str(), nvinfer1::Dims{2, {num_orders, out_count}});
     success &= backbone_trt_ptr_->setInputShape(
@@ -613,6 +610,10 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
   clear_async(grid_coord_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 3, stream_);
   clear_async(
     serialized_code_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 2, stream_);
+  clear_async(
+    serialized_order_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 2, stream_);
+  clear_async(
+    serialized_inverse_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 2, stream_);
   clear_async(pred_labels_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
   clear_async(
     pred_probs_d_.get(),
@@ -672,7 +673,8 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
 
   backbone_trt_ptr_->setInputShape("grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
   backbone_trt_ptr_->setInputShape("feat", nvinfer1::Dims{2, {num_voxels_, 4}});
-  backbone_trt_ptr_->setInputShape("serialized_code", nvinfer1::Dims{2, {2, num_voxels_}});
+  backbone_trt_ptr_->setInputShape("serialized_order", nvinfer1::Dims{2, {2, num_voxels_}});
+  backbone_trt_ptr_->setInputShape("serialized_inverse", nvinfer1::Dims{2, {2, num_voxels_}});
 
   if (!setSerializedPoolingInputShapes()) {
     RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Failed to set serialized pooling input shapes.");

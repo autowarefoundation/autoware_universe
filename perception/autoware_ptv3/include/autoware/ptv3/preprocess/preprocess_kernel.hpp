@@ -53,6 +53,7 @@ public:
 
   void generateSerializedPoolingMetadata(
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::uint32_t num_voxels,
+    std::uint32_t * serialized_order, std::uint32_t * serialized_inverse,
     const std::vector<SerializedPoolingDeviceStageView> & stages, std::uint32_t * stage_counts);
 
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
@@ -91,6 +92,8 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> pooling_sorted_indices_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> pooling_run_flags_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> pooling_run_ids_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> sorted_original_indices_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::uint32_t[]> original_to_current_indices_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
   std::size_t pooling_workspace_size_{0};
 };

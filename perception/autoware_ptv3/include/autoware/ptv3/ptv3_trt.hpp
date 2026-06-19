@@ -139,6 +139,8 @@ protected:
   CudaUniquePtr<std::int32_t[]> grid_coord_d_{nullptr};
   CudaUniquePtr<float[]> feat_d_{nullptr};
   CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
+  CudaUniquePtr<std::uint32_t[]> serialized_order_d_{nullptr};
+  CudaUniquePtr<std::uint32_t[]> serialized_inverse_d_{nullptr};
 
   // Backbone outputs shared with the segmentation head.
   CudaUniquePtr<float[]> bb_point_feat_d_{nullptr};
