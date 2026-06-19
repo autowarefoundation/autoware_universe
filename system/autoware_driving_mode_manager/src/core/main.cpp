@@ -256,6 +256,7 @@ ServiceResponse ManagerMain::change_autoware_control(const AutowareControl & aut
   // If disable, request the manual mode immediately.
   if (platform_mode == PlatformMode::kManual) {
     request_.platform_mode = platform_mode;
+    gates_.expect.platform_mode = platform_mode;
     interface_->change_platform_mode(platform_mode);
     return ServiceResponse{true, ""};
   }
