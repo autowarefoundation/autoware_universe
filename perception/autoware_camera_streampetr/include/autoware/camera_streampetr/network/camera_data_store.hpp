@@ -96,7 +96,7 @@ private:
   void build_ego_mask_gpu(const int camera_id);
   void build_ego_mask_gpu(const int camera_id, const int width, const int height);
   bool is_ego_mask_current(const int camera_id, const int width, const int height) const;
-  void upload_ego_mask_gpu(
+  void copy_ego_mask_gpu(
     const int camera_id, const std::vector<std::uint8_t> & raster, const int width,
     const int height);
 

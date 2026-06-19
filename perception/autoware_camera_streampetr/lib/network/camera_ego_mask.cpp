@@ -34,7 +34,7 @@ namespace autoware::camera_streampetr
 namespace
 {
 
-std::string loadTextFile(const std::string & path)
+std::string read_config(const std::string & path)
 {
   std::ifstream stream(path, std::ios::in | std::ios::binary);
   if (!stream) {
@@ -215,7 +215,7 @@ std::vector<EgoMaskPolygon> parsePolygonsYamlText(const std::string & yaml_text)
 
 std::vector<EgoMaskPolygon> parsePolygonsYamlFile(const std::string & path)
 {
-  return parsePolygonsYamlText(loadTextFile(path));
+  return parsePolygonsYamlText(read_config(path));
 }
 
 std::vector<std::optional<EgoMaskRoiConfig>> loadEgoMaskRoiConfigs(

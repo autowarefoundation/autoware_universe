@@ -398,29 +398,25 @@ void CameraDataStore::build_ego_mask_gpu(const int camera_id, const int width, c
   if (width <= 0 || height <= 0) {
     return;
   }
-  if (is_ego_mask_current(camera_id, width, height)) {
+
+  if (
+    ego_mask_built_[camera_id] && ego_mask_width_[camera_id] == width &&
+    ego_mask_height_[camera_id] == height) {
     return;
   }
 
   const auto raster = buildEgoMaskRaster(ego_mask_roi_configs_[camera_id]->polygons, width, height);
-  if (raster.empty()) {
+  if (raster.size() == 0) {
     RCLCPP_WARN(logger_, "Empty ego mask raster for camera %d", camera_id);
     return;
   }
 
-  upload_ego_mask_gpu(camera_id, raster, width, height);
+  copy_ego_mask_gpu(camera_id, raster, width, height);
 
   RCLCPP_INFO(logger_, "Ego mask GPU buffer built for camera %d (%dx%d)", camera_id, width, height);
 }
 
-bool CameraDataStore::is_ego_mask_current(
-  const int camera_id, const int width, const int height) const
-{
-  return ego_mask_built_[camera_id] && ego_mask_width_[camera_id] == width &&
-         ego_mask_height_[camera_id] == height;
-}
-
-void CameraDataStore::upload_ego_mask_gpu(
+void CameraDataStore::copy_ego_mask_gpu(
   const int camera_id, const std::vector<std::uint8_t> & raster, const int width, const int height)
 {
   ego_mask_gpu_[camera_id] = std::make_shared<Tensor>(
