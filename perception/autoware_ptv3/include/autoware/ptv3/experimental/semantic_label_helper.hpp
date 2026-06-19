@@ -19,7 +19,6 @@
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
-#include <cstdint>
 #include <optional>
 #include <string_view>
 
@@ -40,10 +39,14 @@ constexpr std::string_view to_string(SemanticLabel label) noexcept
       return "TRUCK";
     case SemanticLabel::BUS:
       return "BUS";
+    case SemanticLabel::MOTORCYCLE:
+      return "MOTORCYCLE";
     case SemanticLabel::BICYCLE:
       return "BICYCLE";
     case SemanticLabel::PEDESTRIAN:
       return "PEDESTRIAN";
+    case SemanticLabel::ANIMAL:
+      return "ANIMAL";
     case SemanticLabel::HAZARD:
       return "HAZARD";
     case SemanticLabel::GROUND:
@@ -71,10 +74,14 @@ inline std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexcept
       return ObjectClassification::TRUCK;
     case SemanticLabel::BUS:
       return ObjectClassification::BUS;
+    case SemanticLabel::MOTORCYCLE:
+      return ObjectClassification::MOTORCYCLE;
     case SemanticLabel::BICYCLE:
       return ObjectClassification::BICYCLE;
     case SemanticLabel::PEDESTRIAN:
       return ObjectClassification::PEDESTRIAN;
+    case SemanticLabel::ANIMAL:
+      return ObjectClassification::ANIMAL;
     case SemanticLabel::HAZARD:
       return ObjectClassification::HAZARD;
     case SemanticLabel::GROUND:
@@ -99,10 +106,16 @@ inline std::optional<SemanticLabel> try_into_semantic(ObjectLabel label) noexcep
       return SemanticLabel::TRUCK;
     case ObjectClassification::BUS:
       return SemanticLabel::BUS;
+    case ObjectClassification::TRAILER:
+      return SemanticLabel::TRUCK;
+    case ObjectClassification::MOTORCYCLE:
+      return SemanticLabel::MOTORCYCLE;
     case ObjectClassification::BICYCLE:
       return SemanticLabel::BICYCLE;
     case ObjectClassification::PEDESTRIAN:
       return SemanticLabel::PEDESTRIAN;
+    case ObjectClassification::ANIMAL:
+      return SemanticLabel::ANIMAL;
     case ObjectClassification::HAZARD:
       return SemanticLabel::HAZARD;
     default:
