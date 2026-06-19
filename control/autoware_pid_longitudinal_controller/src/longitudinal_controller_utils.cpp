@@ -54,8 +54,11 @@ double calcStopDistance(
 
   const double traj_length = traj.length();
   double ego_s = ego_s_raw;
+  constexpr double endpoint_overrun_tolerance = 0.01;
 
-  if (ego_s_raw >= traj_length - 0.01 && bases.size() >= 2) {
+  // Endpoint overrun fix: extend ego_s beyond the trajectory start/end instead of pinning it to
+  // the nearest endpoint, so stop_dist keeps the correct sign and magnitude outside the trajectory.
+  if (ego_s_raw >= traj_length - endpoint_overrun_tolerance && bases.size() >= 2) {
     const double last_base = bases.back();
     const double prev_base = bases[bases.size() - 2];
 
@@ -65,7 +68,7 @@ double calcStopDistance(
     const double dx = end_point.pose.position.x - prev_point.pose.position.x;
     const double dy = end_point.pose.position.y - prev_point.pose.position.y;
     const double dz = end_point.pose.position.z - prev_point.pose.position.z;
-    const double seg_len = std::sqrt(dx * dx + dy * dy + dz * dz);
+    const double seg_len = last_base - prev_base;
 
     if (seg_len > 1e-9) {
       const double tx = dx / seg_len;
@@ -81,7 +84,7 @@ double calcStopDistance(
         ego_s = traj_length + projection;
       }
     }
-  } else if (ego_s_raw <= 0.01 && bases.size() >= 2) {
+  } else if (ego_s_raw <= endpoint_overrun_tolerance && bases.size() >= 2) {
     const double first_base = bases[0];
     const double second_base = bases[1];
 
@@ -91,7 +94,7 @@ double calcStopDistance(
     const double dx = second_point.pose.position.x - first_point.pose.position.x;
     const double dy = second_point.pose.position.y - first_point.pose.position.y;
     const double dz = second_point.pose.position.z - first_point.pose.position.z;
-    const double seg_len = std::sqrt(dx * dx + dy * dy + dz * dz);
+    const double seg_len = second_base - first_base;
 
     if (seg_len > 1e-9) {
       const double tx = dx / seg_len;
@@ -133,7 +136,7 @@ double getPitchByTraj(
   const TrajectoryExperimental & trajectory, const double start_base, const double wheel_base)
 {
   const auto bases = trajectory.get_underlying_bases();
-  if (bases.size() <= 1) {
+  if (bases.size() <= 2) {
     return 0.0;
   }
 

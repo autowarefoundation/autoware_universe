@@ -214,6 +214,7 @@ TEST_F(PidLongitudinalControllerTest, goalOverrunKeepsContinuousControlData)
   const auto near_overrun_control_data = controller.getExperimentalControlData(odometry.pose.pose);
 
   ASSERT_TRUE(near_overrun_control_data);
+  EXPECT_LT(near_overrun_control_data->stop_dist, 0.0);
 
   odometry.pose.pose.position.x = 9.0;
   controller.setKinematicState(odometry);
@@ -221,6 +222,7 @@ TEST_F(PidLongitudinalControllerTest, goalOverrunKeepsContinuousControlData)
   const auto control_data = controller.getExperimentalControlData(odometry.pose.pose);
 
   ASSERT_TRUE(control_data);
+  EXPECT_LT(control_data->stop_dist, near_overrun_control_data->stop_dist);
 }
 
 TEST_F(PidLongitudinalControllerTest, goalOverrunKeepsContinuousControlDataEvenIfPoseIsImperfect)
