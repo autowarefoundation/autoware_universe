@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_dynamic_obstacle_avoidance_module/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_direction_change_module/">
       
       
-        <link rel="prev" href="../autoware_behavior_path_direction_change_module/">
+        <link rel="prev" href="../autoware_behavior_path_bidirectional_traffic_module/">
       
       
-        <link rel="next" href="../autoware_behavior_path_goal_planner_module/">
+        <link rel="next" href="../autoware_behavior_path_dynamic_obstacle_avoidance_module/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Avoidance module for dynamic objects - Autoware Universe Documentation</title>
+        <title>Direction Change Module - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#avoidance-module-for-dynamic-objects" class="md-skip">
+        <a href="#direction-change-module" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Avoidance module for dynamic objects
+              Direction Change Module
             
           </span>
         </div>
@@ -12466,7 +12466,7 @@
   
   
     <li class="md-nav__item">
-      <a href="." class="md-nav__link">
+      <a href="../autoware_behavior_path_dynamic_obstacle_avoidance_module" class="md-nav__link">
         
   
   
@@ -23094,10 +23094,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purpose-role" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Purpose / Role
+        Overview
       
     </span>
   </a>
@@ -23105,71 +23105,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#policy-of-algorithms" class="md-nav__link">
+  <a href="#features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Policy of algorithms
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Policy of algorithms">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#select-obstacles-to-avoid" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Select obstacles to avoid
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cuts-off-the-drivable-area-against-the-selected-vehicles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cuts off the drivable area against the selected vehicles
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cuts-off-the-drivable-area-against-the-selected-pedestrians" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cuts off the drivable area against the selected pedestrians
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#future-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Future works
+        Features
       
     </span>
   </a>
@@ -23181,6 +23120,39 @@
     <span class="md-ellipsis">
       
         Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#map-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Map Requirements
       
     </span>
   </a>
@@ -23207,217 +23179,28 @@
   
 
 
-<div><h1 id="avoidance-module-for-dynamic-objects">Avoidance module for dynamic objects<a class="headerlink" href="#avoidance-module-for-dynamic-objects" title="Permanent link">#</a></h1>
-<p>This module is under development.</p>
-<h2 id="purpose-role">Purpose / Role<a class="headerlink" href="#purpose-role" title="Permanent link">#</a></h2>
-<p>This module provides avoidance functions for vehicles, pedestrians, and obstacles in the vicinity of the ego's path in combination with the <a href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_path_optimizer/">autoware_path_optimizer</a>.
-Each module performs the following roles.
-Dynamic Avoidance module cuts off the drivable area according to the position and velocity of the target to be avoided.
-Obstacle Avoidance module modifies the path to be followed so that it fits within the received drivable area.</p>
-<p>Static obstacle's avoidance functions are also provided by the <a href="../autoware_behavior_path_static_obstacle_avoidance_module/">Static Avoidance module</a>, but these modules have different roles.
-The Static Obstacle Avoidance module performs avoidance through the outside of own lanes but cannot avoid the moving objects.
-On the other hand, this module can avoid moving objects.
-For this reason, the word "dynamic" is used in the module's name.
-The table below lists the avoidance modules that can handle each situation.</p>
-<table>
-<thead>
-<tr>
-<th align="left"></th>
-<th align="center">avoid within the own lane</th>
-<th align="center">avoid through the outside of own lanes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="left">avoid not-moving objects</td>
-<td align="center">Avoidance Module <br> Dynamic Avoidance Module + Obstacle Avoidance Module</td>
-<td align="center">Avoidance Module</td>
-</tr>
-<tr>
-<td align="left">avoid moving objects</td>
-<td align="center">Dynamic Avoidance Module + Obstacle Avoidance Module</td>
-<td align="center">No Module (Under Development)</td>
-</tr>
-</tbody>
-</table>
-<h2 id="policy-of-algorithms">Policy of algorithms<a class="headerlink" href="#policy-of-algorithms" title="Permanent link">#</a></h2>
-<p>Here, we describe the policy of inner algorithms.
-The inner algorithms can be separated into two parts: The first decides whether to avoid the obstacles and the second cuts off the drivable area against the corresponding obstacle.</p>
-<h3 id="select-obstacles-to-avoid">Select obstacles to avoid<a class="headerlink" href="#select-obstacles-to-avoid" title="Permanent link">#</a></h3>
-<p>To decide whether to avoid an object, both the predicted path and the state (pose and twist) of each object are used.
-The type of objects the user wants this module to avoid is also required.
-Using this information, the module decides to <em>avoid</em> objects that <em>obstruct the ego's passage</em> and <em>can be avoided</em>.</p>
-<p>The definition of <em>obstruct the ego's passage</em> is implemented as the object that collides within seconds.
-The other, <em>can be avoided</em> denotes whether it can be avoided without risk to the passengers or the other vehicles.
-For this purpose, the module judges whether the obstacle can be avoided with satisfying the constraints of lateral acceleration and lateral jerk.
-For example, the module decides not to avoid an object that is too close or fast in the lateral direction.</p>
-<h3 id="cuts-off-the-drivable-area-against-the-selected-vehicles">Cuts off the drivable area against the selected vehicles<a class="headerlink" href="#cuts-off-the-drivable-area-against-the-selected-vehicles" title="Permanent link">#</a></h3>
-<p>For the selected obstacles to be avoided, the module cuts off the drivable area.
-As inputs to decide the shapes of cut-off polygons, poses of the obstacles are mainly used, assuming they move in parallel to the ego's path, instead of its predicted path.
-This design arises from that the predicted path of objects is not accurate enough to use the path modifications (at least currently).
-Furthermore, the output drivable area shape is designed as a rectangular cutout along the ego's path to make the computation scalar rather than planar.</p>
-<h4 id="determination-of-lateral-dimension">Determination of lateral dimension<a class="headerlink" href="#determination-of-lateral-dimension" title="Permanent link">#</a></h4>
-<p>The lateral dimensions of the polygon are calculated as follows.
-The polygon's width to extract from the drivable area is the obstacle width and <code>drivable_area_generation.lat_offset_from_obstacle</code>.
-We can limit the lateral shift length by <code>drivable_area_generation.max_lat_offset_to_avoid</code>.</p>
-<p><img alt="drivable_area_extraction_width" src="image/drivable_area_extraction_width.drawio.svg"></p>
-<h4 id="determination-of-longitudinal-dimension">Determination of longitudinal dimension<a class="headerlink" href="#determination-of-longitudinal-dimension" title="Permanent link">#</a></h4>
-<p>Then, extracting the same directional and opposite directional obstacles from the drivable area will work as follows considering TTC (time to collision).</p>
-<p>Regarding the same directional obstacles, obstacles whose TTC is negative will be ignored (e.g., The obstacle is in front of the ego, and the obstacle's velocity is larger than the ego's velocity.).</p>
-<p>Same directional obstacles (Parameter names may differ from implementation)
-<img alt="same_directional_object" src="image/same_directional_object.svg"></p>
-<p>Opposite directional obstacles (Parameter names may differ from implementation)
-<img alt="opposite_directional_object" src="image/opposite_directional_object.svg"></p>
-<h3 id="cuts-off-the-drivable-area-against-the-selected-pedestrians">Cuts off the drivable area against the selected pedestrians<a class="headerlink" href="#cuts-off-the-drivable-area-against-the-selected-pedestrians" title="Permanent link">#</a></h3>
-<p>Then, we describe the logic to generate the drivable areas against pedestrians to be avoided.
-Objects of this type are considered to have priority right of way over the ego's vehicle while ensuring a minimum safety of the ego's vehicle.
-In other words, the module assigns a drivable area to an obstacle with a specific margin based on the predicted paths with specific confidences for a specific time interval, as shown in the following figure.</p>
-<figure>
-    <img src="./image/2024-04-18_15-13-01.png" width="600">
-    <figcaption> Restriction areas are generated from each pedestrian's predicted paths</figcaption>
-</figure>
-
-<p>Apart from polygons for objects, the module also generates another polygon to ensure the ego's safety, i.e., to avoid abrupt steering or significant changes from the path.
-This is similar to avoidance against the vehicles and takes precedence over keeping a safe distance from the object to be avoided.
-As a result, as shown in the figure below, the polygons around the objects reduced by the secured polygon of the ego are subtracted from the ego's drivable area.</p>
-<figure>
-    <img src="./image/2024-04-18_15-32-03.png" width="600">
-    <figcaption> Ego's minimum requirements are prioritized against object margin</figcaption>
-</figure>
-
-<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">#</a></h2>
-<figure>
-    <img src="./image/image-20230807-151945.png" width="800">
-    <figcaption>Avoidance for the bus departure</figcaption>
-</figure>
-
-<figure>  
-    <img src="./image/image-20230807-152835.png" width="800">
-    <figcaption>Avoidance on curve </figcaption>
-</figure>
-
-<figure>
-    <img src="./image/image-20230808-095936.png" width="800">
-    <figcaption>Avoidance against the opposite direction vehicle</figcaption>
-</figure>
-
-<figure>
-    <img src="./image/image-20230808-152853.png" width="800">
-    <figcaption>Avoidance for multiple vehicle</figcaption>
-</figure>
-
-<h2 id="future-works">Future works<a class="headerlink" href="#future-works" title="Permanent link">#</a></h2>
-<p>Currently, the path shifting length is limited to 0.5 meters or less by <code>drivable_area_generation.max_lat_offset_to_avoid</code>.
-This is caused by the lack of functionality to work with other modules and the structure of the planning component.
-Due to this issue, this module can only handle situations where a small avoidance width is sufficient.
-This issue is the most significant for this module.
-In addition, the ability of this module to extend the drivable area as needed is also required.</p>
+<div><h1 id="direction-change-module">Direction Change Module<a class="headerlink" href="#direction-change-module" title="Permanent link">#</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
+<p>This module enables the behavior path planner to handle paths with cusp points (direction changes) by detecting cusp points and reversing path point orientations (yaw angles) to indicate reverse direction segments. This enables bidirectional path following through orientation-based direction indication.</p>
+<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
+<ul>
+<li><strong>Cusp Detection</strong>: Automatically detects points in the path where direction changes occur (typically 180-degree turns) using configurable angle thresholds</li>
+<li><strong>Orientation Reversal</strong>: Reverses path point yaw angles at cusp points to indicate reverse direction segments</li>
+<li><strong>Direction Change Handling</strong>: Enables the vehicle to follow paths with direction changes (forward and reverse segments)</li>
+<li><strong>Map-Based Activation</strong>: Activates only when <code>direction_change</code> is set to <code>"yes"</code> in lanelet map and ego is away from the goal pose.</li>
+</ul>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<p>Under development</p>
-<table>
-<thead>
-<tr>
-<th align="left">Name</th>
-<th align="left">Unit</th>
-<th align="left">Type</th>
-<th align="left">Description</th>
-<th align="left">Default value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="left">target_object.car</td>
-<td align="left">[-]</td>
-<td align="left">bool</td>
-<td align="left">The flag whether to avoid cars or not</td>
-<td align="left">true</td>
-</tr>
-<tr>
-<td align="left">target_object.truck</td>
-<td align="left">[-]</td>
-<td align="left">bool</td>
-<td align="left">The flag whether to avoid trucks or not</td>
-<td align="left">true</td>
-</tr>
-<tr>
-<td align="left">...</td>
-<td align="left">[-]</td>
-<td align="left">bool</td>
-<td align="left">...</td>
-<td align="left">...</td>
-</tr>
-<tr>
-<td align="left">target_object.min_obstacle_vel</td>
-<td align="left">[m/s]</td>
-<td align="left">double</td>
-<td align="left">Minimum obstacle velocity to avoid</td>
-<td align="left">1.0</td>
-</tr>
-<tr>
-<td align="left">drivable_area_generation.lat_offset_from_obstacle</td>
-<td align="left">[m]</td>
-<td align="left">double</td>
-<td align="left">Lateral offset to avoid from obstacles</td>
-<td align="left">0.8</td>
-</tr>
-<tr>
-<td align="left">drivable_area_generation.max_lat_offset_to_avoid</td>
-<td align="left">[m]</td>
-<td align="left">double</td>
-<td align="left">Maximum lateral offset to avoid</td>
-<td align="left">0.5</td>
-</tr>
-<tr>
-<td align="left">drivable_area_generation.overtaking_object.max_time_to_collision</td>
-<td align="left">[s]</td>
-<td align="left">double</td>
-<td align="left">Maximum value when calculating time to collision</td>
-<td align="left">3.0</td>
-</tr>
-<tr>
-<td align="left">drivable_area_generation.overtaking_object.start_duration_to_avoid</td>
-<td align="left">[s]</td>
-<td align="left">double</td>
-<td align="left">Duration to consider avoidance before passing by obstacles</td>
-<td align="left">4.0</td>
-</tr>
-<tr>
-<td align="left">drivable_area_generation.overtaking_object.end_duration_to_avoid</td>
-<td align="left">[s]</td>
-<td align="left">double</td>
-<td align="left">Duration to consider avoidance after passing by obstacles</td>
-<td align="left">5.0</td>
-</tr>
-<tr>
-<td align="left">drivable_area_generation.overtaking_object.duration_to_hold_avoidance</td>
-<td align="left">[s]</td>
-<td align="left">double</td>
-<td align="left">Duration to hold avoidance after passing by obstacles</td>
-<td align="left">3.0</td>
-</tr>
-<tr>
-<td align="left">drivable_area_generation.oncoming_object.max_time_to_collision</td>
-<td align="left">[s]</td>
-<td align="left">double</td>
-<td align="left">Maximum value when calculating time to collision</td>
-<td align="left">3.0</td>
-</tr>
-<tr>
-<td align="left">drivable_area_generation.oncoming_object.start_duration_to_avoid</td>
-<td align="left">[s]</td>
-<td align="left">double</td>
-<td align="left">Duration to consider avoidance before passing by obstacles</td>
-<td align="left">9.0</td>
-</tr>
-<tr>
-<td align="left">drivable_area_generation.oncoming_object.end_duration_to_avoid</td>
-<td align="left">[s]</td>
-<td align="left">double</td>
-<td align="left">Duration to consider avoidance after passing by obstacles</td>
-<td align="left">0.0</td>
-</tr>
-</tbody>
-</table></div>
+<p>See <code>config/direction_change.param.yaml</code> for detailed parameter descriptions.</p>
+<h2 id="integration">Integration<a class="headerlink" href="#integration" title="Permanent link">#</a></h2>
+<p>This module is automatically registered as a plugin in the behavior path planner. To enable it, add it to the module list in the behavior path planner configuration.</p>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
+<p>The module activates automatically when:</p>
+<ul>
+<li><strong>A <code>direction_change</code> attribute is set to <code>"yes"</code> in the lanelet map</strong> (required)</li>
+<li>The path is within lanelets containing this tag</li>
+</ul>
+<h2 id="map-requirements">Map Requirements<a class="headerlink" href="#map-requirements" title="Permanent link">#</a></h2>
+<p>See the <a href="autoware_lanelet2_extension/autoware_lanelet2_extension/docs/lanelet2_format_extension.md">document</a></p></div>
 
 
 
@@ -23453,7 +23236,7 @@ In addition, the ability of this module to extend the drivable area as needed is
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_behavior_path_direction_change_module/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Direction Change Module">
+          <a href="../autoware_behavior_path_bidirectional_traffic_module/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Bidirectional Traffic">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23463,20 +23246,20 @@ In addition, the ability of this module to extend the drivable area as needed is
                 Previous
               </span>
               <div class="md-ellipsis">
-                Direction Change Module
+                Bidirectional Traffic
               </div>
             </div>
           </a>
         
         
           
-          <a href="../autoware_behavior_path_goal_planner_module/" class="md-footer__link md-footer__link--next" aria-label="Next: Goal Planner design">
+          <a href="../autoware_behavior_path_dynamic_obstacle_avoidance_module/" class="md-footer__link md-footer__link--next" aria-label="Next: Avoidance module for dynamic objects">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Goal Planner design
+                Avoidance module for dynamic objects
               </div>
             </div>
             <div class="md-footer__button md-icon">
