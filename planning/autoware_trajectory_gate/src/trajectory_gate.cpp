@@ -90,7 +90,7 @@ void TrajectoryGate::on_change_source(
 {
   const auto success = selector_.select(req->source);
   publish_source();
-  res->success = success;
+  res->status.success = success;
 
   if (!success) {
     const auto source = std::to_string(req->source);
