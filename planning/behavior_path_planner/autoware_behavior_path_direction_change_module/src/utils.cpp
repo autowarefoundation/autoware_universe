@@ -44,7 +44,6 @@ namespace autoware::behavior_path_planner
 {
 namespace
 {
-constexpr double kMinLateralShiftM = 0.05;
 constexpr double kMinManeuverLengthM = 0.0;
 constexpr double kShiftValidationSampleIntervalM = 1.0;
 
