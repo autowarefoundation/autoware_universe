@@ -23587,6 +23587,15 @@ No                  Yes                                                         
 <li><code>post_process_params.confidence_threshold</code>: Confidence threshold for detections</li>
 <li><code>post_process_params.yaw_norm_thresholds</code>: Yaw normalization thresholds</li>
 </ul>
+<h4 id="ego-vehicle-mask">Ego vehicle mask<a class="headerlink" href="#ego-vehicle-mask" title="Permanent link">#</a></h4>
+<p>Masking the area of the ego vehicle in order to reduce FP caused by reflection. Configure via <strong>launch</strong> or <code>camera_streampetr.param.yaml</code>, not <code>tensorrt_stream_petr.param.yaml</code> (model/post-process only).</p>
+<ul>
+<li><code>ego_mask.enabled</code>: Enable masking (default: <code>false</code>)</li>
+<li><code>ego_mask.fill_value_bgr</code>: BGR fill inside polygons, 0–255 (default: <code>[0, 0, 0]</code>)</li>
+<li><code>ego_mask.roi_polygons_yaml</code>: One YAML path per model ROI index; empty string disables that ROI.</li>
+</ul>
+<p>Example polygon files: <code>config/camera9_polygons.yaml</code>, <code>config/camera10_polygons.yaml</code>.</p>
+<p><strong>X2 five-camera layout</strong> (<code>tensorrt_stream_petr.x2.launch.xml</code>): ROI 2 → camera10 (left strip), ROI 4 → camera9 (right strip). Ego mask params are set in that launch file.</p>
 <h4 id="node-parameters">Node Parameters<a class="headerlink" href="#node-parameters" title="Permanent link">#</a></h4>
 <ul>
 <li><code>max_camera_time_diff</code>: Maximum allowed time difference between cameras (seconds)</li>
