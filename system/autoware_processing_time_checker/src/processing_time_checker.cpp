@@ -69,7 +69,7 @@ ProcessingTimeChecker::ProcessingTimeChecker(const rclcpp::NodeOptions & node_op
 
     // register module name
     if (module_name) {
-      const auto module_name_value = module_name.value_or("");
+      const auto & module_name_value = module_name.value();
       module_name_map_.insert_or_assign(processing_time_topic_name, module_name_value);
       processing_time_accumulator_map_.insert_or_assign(module_name_value, Accumulator<double>());
       processing_time_tdigest_map_.insert_or_assign(module_name_value, tdigest<double>(100));
