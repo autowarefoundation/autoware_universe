@@ -85,6 +85,12 @@ constexpr uint8_t pedestrian_type = TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT;
 constexpr double no_over_threshold = 2.0;
 constexpr double no_under_threshold = -2.0;
 
+// Named rgb8 fill colors (R, G, B) for synthesizing exposure / classification
+// inputs, so call sites read by intent rather than raw scalars.
+const cv::Scalar white(255, 255, 255);     // bright -> over-exposed
+const cv::Scalar black(0, 0, 0);           // dark -> under-exposed
+const cv::Scalar green_lamp(82, 200, 82);  // desaturated green -> classifies as GREEN once primed
+
 std_msgs::msg::Header make_header()
 {
   std_msgs::msg::Header header;
@@ -103,6 +109,16 @@ Image::SharedPtr make_dummy_image(int width = 16, int height = 16)
 {
   constexpr uint8_t neutral_gray = 100;
   cv::Mat mat(height, width, CV_8UC3, cv::Scalar(neutral_gray, neutral_gray, neutral_gray));
+  return cv_bridge::CvImage(make_header(), "rgb8", mat).toImageMsg();
+}
+
+// A 32x16 image split into two 16x16 halves: left half painted `left`, right
+// half painted `right`. Pairs with make_valid_roi(id) (left half) and
+// make_valid_roi(id, /*x=*/16) (right half) to give each ROI a distinct color.
+Image::SharedPtr make_left_right_image(const cv::Scalar & left, const cv::Scalar & right)
+{
+  cv::Mat mat(/*rows=*/16, /*cols=*/32, CV_8UC3, left);
+  mat(cv::Rect(/*x=*/16, /*y=*/0, /*width=*/16, /*height=*/16)).setTo(right);
   return cv_bridge::CvImage(make_header(), "rgb8", mat).toImageMsg();
 }
 
@@ -529,11 +545,8 @@ TEST_F(CharacterizationTest, OnlyExposedSlotIsOverwritten)
   // Arrange
   make_node_under_test(car_type, /*over=*/0.85, /*under=*/no_under_threshold);
   prime_color_thresholds();
-  // Left half: desaturated green (classifies as GREEN). Right half: white
-  // (over-exposed). rgb8 channel order is R, G, B.
-  cv::Mat mat(16, 32, CV_8UC3, cv::Scalar(82, 200, 82));
-  mat(cv::Rect(16, 0, 16, 16)).setTo(cv::Scalar(255, 255, 255));
-  auto image = cv_bridge::CvImage(make_header(), "rgb8", mat).toImageMsg();
+  // Left half green (normal, classifies as GREEN), right half white (over-exposed).
+  auto image = make_left_right_image(green_lamp, white);
   auto rois = std::make_shared<TrafficLightRoiArray>();
   rois->rois.push_back(make_valid_roi(/*id=*/1));             // normal (left half)
   rois->rois.push_back(make_valid_roi(/*id=*/2, /*x=*/16));   // over-exposed (right half)
@@ -567,9 +580,7 @@ TEST_F(CharacterizationTest, OverAndUnderExposureInSameCall)
   // Arrange
   make_node_under_test(car_type, /*over=*/0.85, /*under=*/-0.85);
   // Left half white (over-exposed), right half black (under-exposed).
-  cv::Mat mat(16, 32, CV_8UC3, cv::Scalar(255, 255, 255));
-  mat(cv::Rect(16, 0, 16, 16)).setTo(cv::Scalar(0, 0, 0));
-  auto image = cv_bridge::CvImage(make_header(), "rgb8", mat).toImageMsg();
+  auto image = make_left_right_image(white, black);
   auto rois = std::make_shared<TrafficLightRoiArray>();
   rois->rois.push_back(make_valid_roi(/*id=*/1));            // over-exposed (left half, white)
   rois->rois.push_back(make_valid_roi(/*id=*/2, /*x=*/16));  // under-exposed (right half, black)
