@@ -12,9 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/ptv3/experimental/semantic_label.hpp"
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/utils.hpp"
+
+#include <algorithm>
+#include <cctype>
+#include <stdexcept>
+#include <vector>
 
 namespace autoware::ptv3
 {
@@ -28,6 +34,93 @@ struct OutputSegmentationPointType
   float probability;
   float entropy;
 } __attribute__((packed));
+
+constexpr std::uint8_t kInvalidSemanticLabel = 255U;
+
+/// @brief Convert a PTv3 class name to the consolidated SemanticLabel value.
+/// @details
+/// The input class name is normalized to uppercase before comparison, so matching is
+/// case-insensitive for ASCII letters. Expected names are derived from
+/// segmentation3d.class_names (e.g., car, truck, traffic_cone, drivable_flat).
+///
+/// Mapping:
+/// - car -> CAR
+/// - truck -> TRUCK
+/// - bus -> BUS
+/// - bicycle -> BICYCLE
+/// - pedestrian -> PEDESTRIAN
+/// - traffic_cone -> HAZARD
+/// - barrier -> HAZARD
+/// - debris -> HAZARD
+/// - vertical_thin -> HAZARD
+/// - drivable_flat -> GROUND
+/// - non_drivable_flat -> STRUCTURE
+/// - building -> STRUCTURE
+/// - static_clutter -> STRUCTURE
+/// - vegetation -> VEGETATION
+/// - noise -> NOISE
+/// @param class_name PTv3 class name string from runtime configuration.
+/// @return SemanticLabel enum value encoded as std::uint8_t.
+/// @throws std::runtime_error if class_name is not supported.
+std::uint8_t semanticLabelFromClassName(const std::string & class_name)
+{
+  std::string normalized_class_name = class_name;
+  std::transform(
+    normalized_class_name.begin(), normalized_class_name.end(), normalized_class_name.begin(),
+    [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+
+  if (normalized_class_name == "CAR") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::CAR);
+  }
+  if (normalized_class_name == "TRUCK") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::TRUCK);
+  }
+  if (normalized_class_name == "BUS") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::BUS);
+  }
+  if (normalized_class_name == "BICYCLE") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::BICYCLE);
+  }
+  if (normalized_class_name == "PEDESTRIAN") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::PEDESTRIAN);
+  }
+  if (
+    normalized_class_name == "TRAFFIC_CONE" || normalized_class_name == "BARRIER" ||
+    normalized_class_name == "DEBRIS" || normalized_class_name == "VERTICAL_THIN") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::HAZARD);
+  }
+  if (normalized_class_name == "DRIVABLE_FLAT") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::GROUND);
+  }
+  if (
+    normalized_class_name == "NON_DRIVABLE_FLAT" || normalized_class_name == "BUILDING" ||
+    normalized_class_name == "STATIC_CLUTTER") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::STRUCTURE);
+  }
+  if (normalized_class_name == "VEGETATION") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::VEGETATION);
+  }
+  if (normalized_class_name == "NOISE") {
+    return static_cast<std::uint8_t>(experimental::SemanticLabel::NOISE);
+  }
+
+  throw std::runtime_error(
+    "Unexpected PTv3 class name in segmentation3d.class_names: '" + class_name + "'");
+}
+
+/// @brief Build lookup table from runtime class_names index to segmented class_id (SemanticLabel).
+/// @details
+/// The model output label index is determined by class_names order in parameters. This lookup
+/// keeps postprocess robust even when class_names order changes.
+std::vector<std::uint8_t> makeClassIdToSemanticLabelLut(
+  const std::vector<std::string> & class_names)
+{
+  std::vector<std::uint8_t> lut(class_names.size(), kInvalidSemanticLabel);
+  for (std::size_t i = 0; i < class_names.size(); ++i) {
+    lut[i] = semanticLabelFromClassName(class_names[i]);
+  }
+  return lut;
+}
 
 __global__ void createVisualizationPointcloudKernel(
   const float4 * input_features, const float * colors, const std::int64_t * labels,
@@ -48,6 +141,8 @@ __global__ void createVisualizationPointcloudKernel(
 
 __global__ void createSegmentationPointcloudKernel(
   const float4 * input_features, const std::int64_t * labels, const float * pred_probs,
+  const std::uint8_t * class_id_to_semantic_label, const std::uint32_t * filter_class_indices,
+  std::size_t num_filter_classes, std::uint32_t * output_num_points,
   OutputSegmentationPointType * output_points, std::size_t num_classes, std::size_t num_points)
 {
   const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
@@ -58,6 +153,14 @@ __global__ void createSegmentationPointcloudKernel(
   const auto input_point = input_features[idx];
   const auto label = labels[idx];
   const bool has_valid_label = label >= 0 && static_cast<std::size_t>(label) < num_classes;
+  if (has_valid_label) {
+    for (std::size_t i = 0; i < num_filter_classes; ++i) {
+      if (filter_class_indices[i] == static_cast<std::uint32_t>(label)) {
+        return;
+      }
+    }
+  }
+
   float entropy = 0.0f;
   for (std::size_t class_idx = 0; class_idx < num_classes; ++class_idx) {
     const auto probability = pred_probs[idx * num_classes + class_idx];
@@ -68,12 +171,16 @@ __global__ void createSegmentationPointcloudKernel(
   if (num_classes > 1) {
     entropy /= logf(static_cast<float>(num_classes));
   }
-  output_points[idx].x = input_point.x;
-  output_points[idx].y = input_point.y;
-  output_points[idx].z = input_point.z;
-  output_points[idx].class_id = has_valid_label ? static_cast<std::uint8_t>(label) : 255U;
-  output_points[idx].probability = has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
-  output_points[idx].entropy = entropy;
+
+  const auto output_idx = atomicAdd(output_num_points, 1U);
+  output_points[output_idx].x = input_point.x;
+  output_points[output_idx].y = input_point.y;
+  output_points[output_idx].z = input_point.z;
+  output_points[output_idx].class_id =
+    has_valid_label ? class_id_to_semantic_label[label] : kInvalidSemanticLabel;
+  output_points[output_idx].probability =
+    has_valid_label ? pred_probs[idx * num_classes + label] : 0.0f;
+  output_points[output_idx].entropy = entropy;
 }
 
 __global__ void reconstructPartialKernel(
@@ -268,6 +375,13 @@ PostprocessCuda::PostprocessCuda(const PTv3Config & config, cudaStream_t stream)
     color_map_d_.get(), config_.colors_rgb_.data(), config_.colors_rgb_.size() * sizeof(float),
     cudaMemcpyHostToDevice, stream_);
 
+  class_id_to_semantic_label_d_ =
+    autoware::cuda_utils::make_unique<std::uint8_t[]>(config_.class_names_.size());
+  const auto class_id_to_semantic_label_lut = makeClassIdToSemanticLabelLut(config_.class_names_);
+  cudaMemcpyAsync(
+    class_id_to_semantic_label_d_.get(), class_id_to_semantic_label_lut.data(),
+    class_id_to_semantic_label_lut.size() * sizeof(std::uint8_t), cudaMemcpyHostToDevice, stream_);
+
   if (!config_.filter_class_indices_.empty()) {
     filter_class_indices_d_ =
       autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.filter_class_indices_.size());
@@ -293,17 +407,27 @@ void PostprocessCuda::createVisualizationPointcloud(
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
-void PostprocessCuda::createSegmentationPointcloud(
+std::size_t PostprocessCuda::createSegmentationPointcloud(
   const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
   std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points)
 {
+  cudaMemsetAsync(filtered_mask_d_.get(), 0, sizeof(std::uint32_t), stream_);
+
   auto num_blocks = divup(num_points, config_.threads_per_block_);
 
   createSegmentationPointcloudKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<const float4 *>(input_features), pred_labels, pred_probs,
+    class_id_to_semantic_label_d_.get(), filter_class_indices_d_.get(),
+    config_.filter_class_indices_.size(), filtered_mask_d_.get(),
     reinterpret_cast<OutputSegmentationPointType *>(output_points), num_classes, num_points);
 
+  std::uint32_t num_segmented_points = 0;
+  cudaMemcpyAsync(
+    &num_segmented_points, filtered_mask_d_.get(), sizeof(std::uint32_t), cudaMemcpyDeviceToHost,
+    stream_);
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  return num_segmented_points;
 }
 
 void PostprocessCuda::reconstructPartial(

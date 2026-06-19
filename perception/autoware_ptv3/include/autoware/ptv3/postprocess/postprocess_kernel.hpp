@@ -37,7 +37,7 @@ public:
     const float * input_features, const std::int64_t * pred_labels, float * output_points,
     std::size_t num_classes, std::size_t num_points);
 
-  void createSegmentationPointcloud(
+  std::size_t createSegmentationPointcloud(
     const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
     std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points);
 
@@ -62,6 +62,7 @@ private:
 
   CudaUniquePtr<std::uint32_t[]> filtered_mask_d_{nullptr};
   CudaUniquePtr<float[]> color_map_d_{nullptr};
+  CudaUniquePtr<std::uint8_t[]> class_id_to_semantic_label_d_{nullptr};
   CudaUniquePtr<std::uint32_t[]> filter_class_indices_d_{nullptr};
   cudaStream_t stream_;
 };
