@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    # Default environment ID when the pose is not within any designated area polygon
+    default_environment_id: 0
+
+    # Default longitudinal scale factor when no environment match is found.
+    # Applied as: v_out = v_in * longitudinal_scale_factor
+    default_longitudinal_scale_factor: 1.0
+
+    # Area subtype to environment ID mapping
+    # The lanelet2 polygon type must be "feature_environment_specify"
+    area_subtype_uniform_road:
+      environment_id: 1
+    area_subtype_feature_poor_road:
+      environment_id: 2
+
+    # Longitudinal scale factor per environment_id
+    environment_1_longitudinal_scale_factor: 1.0075
+    environment_2_longitudinal_scale_factor: 1.0
