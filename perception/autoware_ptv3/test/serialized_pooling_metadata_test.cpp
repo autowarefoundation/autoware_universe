@@ -287,8 +287,8 @@ CpuStage make_stage_reference(
 PTv3Config make_test_config()
 {
   return PTv3Config(
-    "", 64, {1, 16, 32}, {0.0F, 0.0F, 0.0F, 64.0F, 64.0F, 64.0F}, {1.0F, 1.0F, 1.0F}, {"class"},
-    {"z", "z-trans"}, {2, 2}, {0, 0, 0}, 0.0F, {}, "XYZI", "none", true);
+    true, false, "", 64, {1, 16, 32}, {0.0F, 0.0F, 0.0F, 64.0F, 64.0F, 64.0F}, {1.0F, 1.0F, 1.0F},
+    {"class"}, {"z", "z-trans"}, {2, 2}, {0, 0, 0}, 0.0F, {}, "XYZI", "none");
 }
 
 template <typename T>
