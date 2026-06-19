@@ -5,6 +5,7 @@
     rate: 10.0
     input_qos_depth: 1000
     graph_qos_depth: 1
+    allow_override_for_debugging: false  # DO NOT set to true except for debugging.
 
     use_command_mode_mappings: true
     command_mode_mappings:
