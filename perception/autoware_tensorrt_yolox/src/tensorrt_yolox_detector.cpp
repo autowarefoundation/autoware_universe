@@ -96,10 +96,8 @@ tl::expected<TrtYoloXDetectorResult, std::string> TrtYoloXDetector::detect(
 
   tensorrt_yolox::ObjectArrays objects;
   std::vector<cv::Mat> masks = {cv::Mat(cv::Size(height, width), CV_8UC1, cv::Scalar(0))};
-  std::vector<cv::Mat> color_masks = {
-    cv::Mat(cv::Size(height, width), CV_8UC3, cv::Scalar(0, 0, 0))};
 
-  if (!trt_yolox_->doInference({in_image_ptr->image}, objects, masks, color_masks)) {
+  if (!trt_yolox_->doInference({in_image_ptr->image}, objects, masks)) {
     return tl::make_unexpected(std::string("failed to run inference"));
   }
   auto & mask = masks.at(0);
