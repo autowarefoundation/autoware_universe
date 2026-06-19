@@ -43,6 +43,7 @@ struct EgoMaskParams
   bool enabled{false};
   std::array<std::uint8_t, 3> fill_bgr{0, 0, 0};
   std::vector<std::string> roi_polygons_yaml;
+  std::vector<std::optional<EgoMaskRoiConfig>> roi_mask_configs;
 };
 
 std::vector<std::optional<EgoMaskRoiConfig>> loadEgoMaskRoiConfigs(

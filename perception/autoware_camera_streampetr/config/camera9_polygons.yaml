@@ -1,8 +1,0 @@
-# Each polygon is [x0, y0, x1, y1, ...] with at least 3 points (6 numbers).
-
-polygons:
-  - [0.8, 0.0, 1.0, 0.0, 1.0, 1.0, 0.8, 1.0]
-
-# Optional: same length as polygons; if omitted, points are in pixel coordinates.
-polygons_normalized:
-  - true

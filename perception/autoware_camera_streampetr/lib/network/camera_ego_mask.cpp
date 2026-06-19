@@ -223,6 +223,10 @@ std::vector<std::optional<EgoMaskRoiConfig>> loadEgoMaskRoiConfigs(
 {
   std::vector<std::optional<EgoMaskRoiConfig>> configs(rois_number, std::nullopt);
 
+  for (std::size_t i = 0; i < rois_number && i < params.roi_mask_configs.size(); ++i) {
+    configs[i] = params.roi_mask_configs[i];
+  }
+
   if (!params.enabled) {
     return configs;
   }
