@@ -321,10 +321,11 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
     device_stages.emplace_back(config.max_num_voxels_, kNumOrders);
   }
   for (auto & stage : device_stages) {
-    stage_views.push_back(SerializedPoolingDeviceStageView{
-      stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
-      stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
-      stage.serialized_inverse.get()});
+    stage_views.push_back(
+      SerializedPoolingDeviceStageView{
+        stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+        stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+        stage.serialized_inverse.get()});
   }
 
   copy_to_device(grid_coord_d.get(), grid_coord);
