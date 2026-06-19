@@ -576,13 +576,14 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
     motion_params_.q_stddev_acc_lat / std::max(vel_long_abs, vel_long_eps),
     vel_long_abs * std::sin(motion_params_.q_max_slip_angle) / wheel_base);  // [rad/s]
   // Ramp the configured floor in with speed instead of applying it unconditionally, so the floor
-  // -> 0 at standstill (no heading information exists to be tracked) and only reaches its full value
-  // once the vehicle is clearly moving. Above vel_ref this reproduces the original clamp behavior.
+  // -> 0 at standstill (no heading information exists to be tracked) and only reaches its full
+  // value once the vehicle is clearly moving. Above vel_ref this reproduces the original clamp
+  // behavior.
   constexpr double vel_ref = 1.0;  // [m/s] speed at which the yaw-rate floor reaches full value
   const double yaw_rate_floor =
     motion_params_.q_stddev_yaw_rate_min * std::clamp(vel_long_abs / vel_ref, 0.0, 1.0);
-  const double q_stddev_yaw_rate = std::clamp(
-    q_stddev_yaw_rate_phys, yaw_rate_floor, motion_params_.q_stddev_yaw_rate_max);
+  const double q_stddev_yaw_rate =
+    std::clamp(q_stddev_yaw_rate_phys, yaw_rate_floor, motion_params_.q_stddev_yaw_rate_max);
   const double q_stddev_head = q_stddev_yaw_rate * wheel_base * dt;  // yaw uncertainty
 
   const double dt2 = dt * dt;
