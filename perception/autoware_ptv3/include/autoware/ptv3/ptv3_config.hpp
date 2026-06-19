@@ -59,6 +59,12 @@ public:
     if (voxels_num.size() == 3) {
       min_num_voxels_ = voxels_num[0];
       max_num_voxels_ = voxels_num[2];
+      if (
+        cloud_capacity_ > std::numeric_limits<std::uint32_t>::max() ||
+        max_num_voxels_ > std::numeric_limits<std::uint32_t>::max()) {
+        throw std::runtime_error(
+          "The current PTv3 preprocessing path supports at most uint32 max points and voxels.");
+      }
 
       voxels_num_[0] = voxels_num[0];
       voxels_num_[1] = voxels_num[1];
@@ -84,14 +90,12 @@ public:
     auto max_grid_size = std::max({grid_x_size_, grid_y_size_, grid_z_size_});
     serialization_depth_ =
       static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_grid_size))));
-    auto max_voxels_depth =
-      static_cast<std::int32_t>(std::ceil(std::log2(static_cast<float>(max_num_voxels_))));
-    if (serialization_depth_ * 3 + max_voxels_depth >= 64) {
-      throw std::runtime_error("Serialization depth is too large");
+    if (serialization_depth_ > 10) {
+      throw std::runtime_error(
+        "The current PTv3 preprocessing path supports voxel grids up to 1024 per axis.");
     }
 
-    use_64bit_hash_ =
-      grid_x_size_ * grid_y_size_ * grid_z_size_ > std::numeric_limits<std::uint32_t>::max();
+    use_64bit_hash_ = false;
 
     class_names_ = class_names;
     serialization_orders_ = validate_serialization_orders(serialization_orders);

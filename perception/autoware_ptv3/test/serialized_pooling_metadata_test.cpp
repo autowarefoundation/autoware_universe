@@ -139,26 +139,26 @@ struct DeviceStage
   {
   }
 
-  DeviceBuffer<std::int64_t> indices;
-  DeviceBuffer<std::int64_t> indptr;
-  DeviceBuffer<std::int64_t> head_indices;
-  DeviceBuffer<std::int64_t> cluster;
+  DeviceBuffer<std::uint32_t> indices;
+  DeviceBuffer<std::uint32_t> indptr;
+  DeviceBuffer<std::uint32_t> head_indices;
+  DeviceBuffer<std::uint32_t> cluster;
   DeviceBuffer<std::int32_t> grid_coord;
-  DeviceBuffer<std::int64_t> serialized_code;
-  DeviceBuffer<std::int64_t> serialized_order;
-  DeviceBuffer<std::int64_t> serialized_inverse;
+  DeviceBuffer<std::uint32_t> serialized_code;
+  DeviceBuffer<std::uint32_t> serialized_order;
+  DeviceBuffer<std::uint32_t> serialized_inverse;
 };
 
 struct CpuStage
 {
-  std::vector<std::int64_t> indices;
-  std::vector<std::int64_t> indptr;
-  std::vector<std::int64_t> head_indices;
-  std::vector<std::int64_t> cluster;
+  std::vector<std::uint32_t> indices;
+  std::vector<std::uint32_t> indptr;
+  std::vector<std::uint32_t> head_indices;
+  std::vector<std::uint32_t> cluster;
   std::vector<std::int32_t> grid_coord;
-  std::vector<std::int64_t> serialized_code;
-  std::vector<std::int64_t> serialized_order;
-  std::vector<std::int64_t> serialized_inverse;
+  std::vector<std::uint32_t> serialized_code;
+  std::vector<std::uint32_t> serialized_order;
+  std::vector<std::uint32_t> serialized_inverse;
 };
 
 std::int32_t pooling_depth(const std::int64_t stride)
@@ -170,13 +170,13 @@ std::int32_t pooling_depth(const std::int64_t stride)
   return depth;
 }
 
-std::int64_t serialize_coord(
-  const std::int64_t x, const std::int64_t y, const std::int64_t z, const std::int32_t depth,
+std::uint32_t serialize_coord(
+  const std::int32_t x, const std::int32_t y, const std::int32_t z, const std::int32_t depth,
   const bool transposed)
 {
-  std::int64_t code = 0;
+  std::uint32_t code = 0;
   for (std::int32_t bit = 0; bit < depth; ++bit) {
-    const std::int64_t mask = 1LL << bit;
+    const auto mask = static_cast<std::uint32_t>(1U << bit);
     if (transposed) {
       code |= ((y & mask) << (2 * bit + 2));
       code |= ((x & mask) << (2 * bit + 1));
@@ -189,11 +189,11 @@ std::int64_t serialize_coord(
   return code;
 }
 
-std::vector<std::int64_t> make_serialized_code(
+std::vector<std::uint32_t> make_serialized_code(
   const std::vector<std::int32_t> & grid_coord, const std::int32_t depth)
 {
   const auto count = grid_coord.size() / 3;
-  std::vector<std::int64_t> code(2 * count);
+  std::vector<std::uint32_t> code(2 * count);
   for (std::size_t index = 0; index < count; ++index) {
     const auto x = grid_coord[index * 3 + 0];
     const auto y = grid_coord[index * 3 + 1];
@@ -204,9 +204,9 @@ std::vector<std::int64_t> make_serialized_code(
   return code;
 }
 
-std::vector<std::int64_t> stable_argsort(const std::vector<std::int64_t> & values)
+std::vector<std::uint32_t> stable_argsort(const std::vector<std::uint32_t> & values)
 {
-  std::vector<std::int64_t> order(values.size());
+  std::vector<std::uint32_t> order(values.size());
   std::iota(order.begin(), order.end(), 0);
   std::stable_sort(order.begin(), order.end(), [&values](const auto lhs, const auto rhs) {
     return values[static_cast<std::size_t>(lhs)] < values[static_cast<std::size_t>(rhs)];
@@ -216,23 +216,23 @@ std::vector<std::int64_t> stable_argsort(const std::vector<std::int64_t> & value
 
 CpuStage make_stage_reference(
   const std::vector<std::int32_t> & grid_coord_in,
-  const std::vector<std::int64_t> & serialized_code_in, const std::size_t num_orders,
+  const std::vector<std::uint32_t> & serialized_code_in, const std::size_t num_orders,
   const std::int64_t stride)
 {
   const auto input_count = grid_coord_in.size() / 3;
   const auto depth = pooling_depth(stride);
-  std::vector<std::int64_t> pooled_keys(input_count);
+  std::vector<std::uint32_t> pooled_keys(input_count);
   for (std::size_t index = 0; index < input_count; ++index) {
     pooled_keys[index] = serialized_code_in[index] >> (depth * 3);
   }
 
-  std::vector<std::int64_t> unique_keys = pooled_keys;
+  std::vector<std::uint32_t> unique_keys = pooled_keys;
   std::sort(unique_keys.begin(), unique_keys.end());
   unique_keys.erase(std::unique(unique_keys.begin(), unique_keys.end()), unique_keys.end());
 
-  std::map<std::int64_t, std::int64_t> key_to_cluster;
+  std::map<std::uint32_t, std::uint32_t> key_to_cluster;
   for (std::size_t index = 0; index < unique_keys.size(); ++index) {
-    key_to_cluster.emplace(unique_keys[index], static_cast<std::int64_t>(index));
+    key_to_cluster.emplace(unique_keys[index], static_cast<std::uint32_t>(index));
   }
 
   CpuStage stage;
@@ -241,7 +241,7 @@ CpuStage make_stage_reference(
   for (std::size_t index = 0; index < input_count; ++index) {
     const auto cluster = key_to_cluster.at(pooled_keys[index]);
     stage.cluster[index] = cluster;
-    ++stage.indptr[static_cast<std::size_t>(cluster + 1)];
+    ++stage.indptr[static_cast<std::size_t>(cluster + 1U)];
   }
   for (std::size_t index = 1; index < stage.indptr.size(); ++index) {
     stage.indptr[index] += stage.indptr[index - 1];
@@ -269,7 +269,7 @@ CpuStage make_stage_reference(
   stage.serialized_order.resize(num_orders * unique_keys.size());
   stage.serialized_inverse.resize(num_orders * unique_keys.size());
   for (std::size_t order = 0; order < num_orders; ++order) {
-    std::vector<std::int64_t> order_codes(unique_keys.size());
+    std::vector<std::uint32_t> order_codes(unique_keys.size());
     for (std::size_t index = 0; index < unique_keys.size(); ++index) {
       order_codes[index] = stage.serialized_code[order * unique_keys.size() + index];
     }
@@ -278,7 +278,7 @@ CpuStage make_stage_reference(
       const auto input_index = sorted_order[rank];
       stage.serialized_order[order * unique_keys.size() + rank] = input_index;
       stage.serialized_inverse[order * unique_keys.size() + static_cast<std::size_t>(input_index)] =
-        static_cast<std::int64_t>(rank);
+        static_cast<std::uint32_t>(rank);
     }
   }
   return stage;
@@ -307,24 +307,23 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
   const std::vector<std::int32_t> grid_coord{5, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 3,  0, 1,
                                              4, 4, 0, 5, 4, 1, 8, 0, 0, 9, 0, 0, 10, 2, 0};
   const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
-  const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
+  const auto num_voxels = static_cast<std::uint32_t>(grid_coord.size() / 3);
 
   CudaStreamGuard stream;
   PreprocessCuda preprocess(config, stream.get());
   DeviceBuffer<std::int32_t> grid_coord_d(grid_coord.size());
-  DeviceBuffer<std::int64_t> serialized_code_d(serialized_code.size());
-  DeviceBuffer<std::int64_t> stage_counts_d(config.pooling_strides_.size() + 1);
+  DeviceBuffer<std::uint32_t> serialized_code_d(serialized_code.size());
+  DeviceBuffer<std::uint32_t> stage_counts_d(config.pooling_strides_.size() + 1);
   std::vector<DeviceStage> device_stages;
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   for (std::size_t stage = 0; stage < config.pooling_strides_.size(); ++stage) {
     device_stages.emplace_back(config.max_num_voxels_, kNumOrders);
   }
   for (auto & stage : device_stages) {
-    stage_views.push_back(
-      SerializedPoolingDeviceStageView{
-        stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
-        stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
-        stage.serialized_inverse.get()});
+    stage_views.push_back(SerializedPoolingDeviceStageView{
+      stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+      stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+      stage.serialized_inverse.get()});
   }
 
   copy_to_device(grid_coord_d.get(), grid_coord);
@@ -343,8 +342,8 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
 
   const auto stage_counts = copy_to_host(stage_counts_d.get(), config.pooling_strides_.size() + 1);
   ASSERT_EQ(stage_counts[0], num_voxels);
-  ASSERT_EQ(stage_counts[1], static_cast<std::int64_t>(references[0].head_indices.size()));
-  ASSERT_EQ(stage_counts[2], static_cast<std::int64_t>(references[1].head_indices.size()));
+  ASSERT_EQ(stage_counts[1], static_cast<std::uint32_t>(references[0].head_indices.size()));
+  ASSERT_EQ(stage_counts[2], static_cast<std::uint32_t>(references[1].head_indices.size()));
 
   for (std::size_t stage_index = 0; stage_index < references.size(); ++stage_index) {
     const auto & expected = references[stage_index];
