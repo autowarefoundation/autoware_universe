@@ -28,6 +28,7 @@
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -122,6 +123,7 @@ rcl_interfaces::msg::SetParametersResult TrajectoryOptimizer::on_parameter(
   update_param<bool>(
     parameters, "use_kinematic_feasibility_enforcer", params.use_kinematic_feasibility_enforcer);
   update_param<bool>(parameters, "use_mpt_optimizer", params.use_mpt_optimizer);
+  update_param<bool>(parameters, "use_temporal_mpt_optimizer", params.use_temporal_mpt_optimizer);
 
   params_ = params;
 
@@ -165,6 +167,8 @@ void TrajectoryOptimizer::set_up_params()
   params_.use_kinematic_feasibility_enforcer =
     get_or_declare_parameter<bool>(*this, "use_kinematic_feasibility_enforcer");
   params_.use_mpt_optimizer = get_or_declare_parameter<bool>(*this, "use_mpt_optimizer");
+  params_.use_temporal_mpt_optimizer =
+    get_or_declare_parameter<bool>(*this, "use_temporal_mpt_optimizer");
 }
 
 void TrajectoryOptimizer::publish_processing_time_ms(const double processing_time_ms)

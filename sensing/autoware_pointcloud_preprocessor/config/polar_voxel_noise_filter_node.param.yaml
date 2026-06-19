@@ -1,0 +1,16 @@
+/**:
+  ros__parameters:
+    radial_resolution: 0.5
+    azimuth_resolution: 0.08
+    elevation_resolution: 0.05
+    voxel_points_threshold: 4
+    min_radius: 0.5
+    max_radius: 200.0
+    avg_intensity_threshold: 0.01
+
+    use_return_type_classification: true
+    filter_secondary_returns: true
+    secondary_noise_threshold: 4
+    primary_return_types: [1, 6, 8, 10]
+
+    publish_noise_cloud: false
