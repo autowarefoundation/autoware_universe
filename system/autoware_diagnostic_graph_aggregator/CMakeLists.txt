@@ -67,6 +67,7 @@ if(BUILD_TESTING)
     "test/src/test_logics.cpp"
     "test/src/test_levels.cpp"
     "test/src/test_remove.cpp"
+    "test/src/test_others.cpp"
     "test/src/tests/utils.cpp"
     "test/src/tests/timeline.cpp"
   )

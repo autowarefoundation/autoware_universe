@@ -19,6 +19,7 @@
 #include "autoware/map_based_prediction/map_based_prediction_node/callbacks.hpp"
 #include "autoware/map_based_prediction/map_based_prediction_node/diagnostics.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -34,8 +35,8 @@ public:
   explicit MapBasedPredictionNode(const rclcpp::NodeOptions & node_options);
 
 private:
-  rclcpp::Subscription<TrackedObjects>::SharedPtr sub_objects_;
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
+  AUTOWARE_SUBSCRIPTION_PTR(TrackedObjects) sub_objects_;
+  AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) sub_map_;
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;

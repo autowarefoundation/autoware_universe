@@ -127,7 +127,7 @@ VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(
   std::vector<MetricReport> metrics;
   for (const auto & checker : checkers_) {
     auto report = (this->*checker)(traj_points);
-    is_feasible &= report.level == MetricReport::OK;
+    is_feasible &= report.level == MetricReport::SAFE;
     metrics.push_back(report);
   }
 
@@ -143,7 +143,7 @@ MetricReport VehicleConstraintFilter::check_speed(const TrajectoryPoints & traj_
     .validator_category(category())
     .metric_name("check_speed")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
+    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
 }
 
 MetricReport VehicleConstraintFilter::check_acceleration(const TrajectoryPoints & traj_points) const
@@ -155,7 +155,7 @@ MetricReport VehicleConstraintFilter::check_acceleration(const TrajectoryPoints 
     .validator_category(category())
     .metric_name("check_acceleration")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
+    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
 }
 
 MetricReport VehicleConstraintFilter::check_deceleration(const TrajectoryPoints & traj_points) const
@@ -167,7 +167,7 @@ MetricReport VehicleConstraintFilter::check_deceleration(const TrajectoryPoints 
     .validator_category(category())
     .metric_name("check_deceleration")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
+    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
 }
 
 MetricReport VehicleConstraintFilter::check_steering_angle(
@@ -181,7 +181,7 @@ MetricReport VehicleConstraintFilter::check_steering_angle(
     .validator_category(category())
     .metric_name("check_steering_angle")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
+    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
 }
 
 MetricReport VehicleConstraintFilter::check_steering_rate(
@@ -195,7 +195,7 @@ MetricReport VehicleConstraintFilter::check_steering_rate(
     .validator_category(category())
     .metric_name("check_steering_rate")
     .metric_value(max_observed)
-    .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
+    .level(is_ok ? MetricReport::SAFE : MetricReport::DANGER);
 }
 
 // --- Helper functions for constraint checks ---
