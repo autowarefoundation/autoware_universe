@@ -414,10 +414,11 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   stage_views.reserve(serialized_pooling_stages_d_.size());
   for (auto & stage : serialized_pooling_stages_d_) {
-    stage_views.push_back(SerializedPoolingDeviceStageView{
-      stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
-      stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
-      stage.serialized_inverse.get()});
+    stage_views.push_back(
+      SerializedPoolingDeviceStageView{
+        stage.indices.get(), stage.indptr.get(), stage.head_indices.get(), stage.cluster.get(),
+        stage.grid_coord.get(), stage.serialized_code.get(), stage.serialized_order.get(),
+        stage.serialized_inverse.get()});
   }
 
   pre_ptr_->generateSerializedPoolingMetadata(
