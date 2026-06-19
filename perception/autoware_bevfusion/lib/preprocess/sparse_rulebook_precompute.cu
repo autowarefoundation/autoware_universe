@@ -204,7 +204,9 @@ int SparseRulebookPrecompute::computeStage(int i, const std::int32_t * coords_in
   tv::Tensor thrust_tmp =
     tv::from_blob(extra, {static_cast<std::int64_t>(kThrustTempBytes)}, tv::uint8, 0);
 
-  // Outputs go to our stable per-stage buffers (= the engine input tensors).
+  // Outputs go to our stable per-stage buffers (= the engine input tensors). spconv writes each
+  // forward tensor densely into the first num_act_out columns (stride num_act_out, not N), so the
+  // engine binds the matching dense [.., n] prefix directly — no repacking needed.
   tv::Tensor out_indices = tv::from_blob(out_indices_d_[i].get(), {N, 4}, tv::int32, 0);
   tv::Tensor pair_fwd = tv::from_blob(pair_fwd_d_[i].get(), {kv, N}, tv::int32, 0);
   tv::Tensor pair_mask_fwd = tv::from_blob(pair_mask_d_[i].get(), {kMaskCount, N}, tv::int32, 0);
@@ -233,14 +235,21 @@ int SparseRulebookPrecompute::computeStage(int i, const std::int32_t * coords_in
     reinterpret_cast<std::uintptr_t>(stream_), N, tv::CUDAKernelTimer(false), use_direct_table,
     kDoSort);
 
-  return std::get<1>(pair_res);  // num_act_out (host int; spconv performs the single D2H here)
+  // num_act_out (host int; spconv performs the single D2H here).
+  return std::get<1>(pair_res);
 }
 
 void SparseRulebookPrecompute::compute(
   const std::int32_t * coors_d, int num_in, int coors_cols, bool flip_zyx_to_xyz)
 {
-  if (num_in <= 0) {
-    throw std::runtime_error("SparseRulebookPrecompute: num_in must be > 0");
+  if (num_in <= 0 || num_in > out_indices_num_limit_) {
+    throw std::runtime_error(
+      "SparseRulebookPrecompute: num_in (" + std::to_string(num_in) + ") out of (0, " +
+      std::to_string(out_indices_num_limit_) + "]");
+  }
+  if (coors_cols != 3 && coors_cols != 4) {
+    throw std::runtime_error(
+      "SparseRulebookPrecompute: coors_cols must be 3 ([z,y,x]) or 4 ([b,x,y,z])");
   }
 
   // Build [batch, x, y, z] int32 coords for the first down-sample stage.
@@ -255,7 +264,15 @@ void SparseRulebookPrecompute::compute(
   const std::int32_t * cur_coords = coords_xyzb_d_.get();
   int cur_num = num_in;
   for (int i = 0; i < static_cast<int>(stages_.size()); ++i) {
-    int n_out = computeStage(i, cur_coords, cur_num);
+    const int n_out = computeStage(i, cur_coords, cur_num);
+    // n_out feeds the next stage and is bound as the engine input shape, so it must stay within
+    // the buffer / TRT-profile bound. spconv caps it at out_indices_num_limit_; guard anyway.
+    if (n_out <= 0 || n_out > out_indices_num_limit_) {
+      throw std::runtime_error(
+        "SparseRulebookPrecompute: stage " + std::to_string(i) + " produced " +
+        std::to_string(n_out) + " active voxels (expected within (0, " +
+        std::to_string(out_indices_num_limit_) + "])");
+    }
     stage_counts_[i] = n_out;
     cur_coords = out_indices_d_[i].get();  // [n_out, 4]
     cur_num = n_out;

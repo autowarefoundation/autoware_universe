@@ -33,8 +33,8 @@
 #include <ctime>
 #include <fstream>
 #include <memory>
-#include <string_view>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -52,6 +52,9 @@ bool read_varint(std::ifstream & f, std::uint64_t & out)
   int shift = 0;
   std::uint8_t b;
   do {
+    if (shift >= 64) {
+      return false;  // overlong varint (corrupt input) — avoid shift-overflow UB
+    }
     if (!f.read(reinterpret_cast<char *>(&b), 1)) {
       return false;
     }
@@ -159,8 +162,12 @@ std::vector<SparseDownsampleStage> load_stages_from_onnx(const std::string & onn
           stages.push_back(std::move(s));
         }
         return stages;
-      } catch (const std::exception &) {
-        return {};
+      } catch (const std::exception & e) {
+        // The key is present but the value is not the expected JSON — surface it rather than
+        // returning {} (which the caller reports as "metadata absent, re-export").
+        throw std::runtime_error(
+          std::string("ONNX 'rulebook_stages' metadata is present but could not be parsed: ") +
+          e.what());
       }
     } else {
       break;  // unexpected wire type — stop parsing
@@ -261,7 +268,6 @@ void BEVFusionTRT::initPtr()
 
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_, true);
   post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
-
 }
 
 void BEVFusionTRT::initTrt(const TrtBEVFusionConfig & trt_config)
@@ -907,7 +913,7 @@ bool BEVFusionTRT::preProcess(
   }
 
   // trainStation/DDS removal: precompute the 4 down-sample rulebooks from the voxel coords on the
-  // GPU (single host sync for the per-stage counts), so the engine has no in-graph DDS / sync.
+  // GPU (one host sync per stage for its active-voxel count), so the engine has no in-graph DDS.
   if (sparse_rulebook_ptr_) {
     sparse_rulebook_ptr_->compute(
       voxel_coords_d_.get(), static_cast<int>(num_voxels), BEVFusionConfig::kNum3DCoords,

@@ -95,11 +95,13 @@ private:
 
   std::vector<int> stage_counts_;
 
-  // Per-stage output (engine-input) buffers, sized to out_indices_num_limit_.
-  std::vector<CudaUniquePtr<std::int32_t[]>> out_indices_d_;   // [N,4]
-  std::vector<CudaUniquePtr<std::int32_t[]>> pair_fwd_d_;      // [KV,N]
-  std::vector<CudaUniquePtr<std::int32_t[]>> pair_mask_d_;     // [N,1] (mask_count==1)
-  std::vector<CudaUniquePtr<std::int32_t[]>> mask_argsort_d_;  // [N]
+  // Per-stage output (engine-input) buffers, capacity out_indices_num_limit_. spconv writes each
+  // tensor densely (stride = num_act_out, not N); only the first stageCount(i) entries along the
+  // dynamic dim are bound, which is exactly the dense prefix the engine reads.
+  std::vector<CudaUniquePtr<std::int32_t[]>> out_indices_d_;   // [n,4] in [N,4]
+  std::vector<CudaUniquePtr<std::int32_t[]>> pair_fwd_d_;      // [KV,n] in [KV,N]
+  std::vector<CudaUniquePtr<std::int32_t[]>> pair_mask_d_;     // [n,1] in [N] (mask_count==1)
+  std::vector<CudaUniquePtr<std::int32_t[]>> mask_argsort_d_;  // [n] in [N]
 
   // Scratch: [batch,x,y,z] int32 coords fed to spconv (max num voxels).
   CudaUniquePtr<std::int32_t[]> coords_xyzb_d_{nullptr};
