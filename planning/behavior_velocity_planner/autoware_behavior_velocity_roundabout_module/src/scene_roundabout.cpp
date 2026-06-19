@@ -97,7 +97,7 @@ DecisionResult RoundaboutModule::modifyPathVelocityDetail(PathWithLaneId * path)
   if (!prepare_data) {
     return prepare_data.err();
   }
-  const auto [interpolated_path_info, roundabout_stoplines, path_lanelets, roundabout_lanelets] =
+  const auto & [interpolated_path_info, roundabout_stoplines, path_lanelets, roundabout_lanelets] =
     prepare_data.ok();
 
   const auto closest_idx = roundabout_stoplines.closest_idx;
