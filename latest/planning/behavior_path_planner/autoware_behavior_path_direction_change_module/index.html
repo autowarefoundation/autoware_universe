@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/behavior_path_planner/autoware_behavior_path_bidirectional_traffic_module/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/planning/behavior_path_planner/autoware_behavior_path_direction_change_module/">
       
       
-        <link rel="prev" href="../autoware_behavior_path_avoidance_by_lane_change_module/">
+        <link rel="prev" href="../autoware_behavior_path_bidirectional_traffic_module/">
       
       
-        <link rel="next" href="../autoware_behavior_path_direction_change_module/">
+        <link rel="next" href="../autoware_behavior_path_dynamic_obstacle_avoidance_module/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Bidirectional Traffic - Autoware Universe Documentation</title>
+        <title>Direction Change Module - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#bidirectional-traffic" class="md-skip">
+        <a href="#direction-change-module" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Bidirectional Traffic
+              Direction Change Module
             
           </span>
         </div>
@@ -23094,10 +23094,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purposerole" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Purpose/Role
+        Overview
       
     </span>
   </a>
@@ -23105,63 +23105,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-representation-of-bidirectional-traffic-on-a-lanelet-map" class="md-nav__link">
+  <a href="#features" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The representation of bidirectional traffic on a Lanelet map
+        Features
       
     </span>
   </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inner-workingsalgorithms" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inner workings/Algorithms
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Inner workings/Algorithms">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#keep-left" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Keep Left
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#give-way" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Give Way
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -23170,6 +23120,39 @@
     <span class="md-ellipsis">
       
         Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#map-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Map Requirements
       
     </span>
   </a>
@@ -23196,182 +23179,28 @@
   
 
 
-<div><h1 id="bidirectional-traffic">Bidirectional Traffic<a class="headerlink" href="#bidirectional-traffic" title="Permanent link">#</a></h1>
-<p>This module enables trajectory planning for vehicles on "single-lane bidirectional traffic" roads in autonomous driving systems. Here, "single-lane bidirectional traffic" refers to roads without a centerline, such as those commonly found in residential areas, as shown in the image below．</p>
-<p><img alt="BidirectionalTrafficShiojiri" src="assets/BidirectionalTrafficShiojiri.png"></p>
-<p>In the following descriptions, the term bidirectional traffic refers specifically to such single-lane bidirectional roads as shown in the image above.</p>
-<h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
-<p>The main roles of this module are as follows:</p>
+<div><h1 id="direction-change-module">Direction Change Module<a class="headerlink" href="#direction-change-module" title="Permanent link">#</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
+<p>This module enables the behavior path planner to handle paths with cusp points (direction changes) by detecting cusp points and reversing path point orientations (yaw angles) to indicate reverse direction segments. This enables bidirectional path following through orientation-based direction indication.</p>
+<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
 <ul>
-<li>
-<p>Generating a driving trajectory along the left (or right) side of the road center</p>
-<p>This module provides a function to generate a trajectory along the left (or right) side of the road center on bidirectional traffic lanes. In some countries, traffic laws require vehicles to drive on the left or right side of the road center on bidirectional roads. For example, in Japan, <a href="https://laws.e-gov.go.jp/law/335AC0000000105#Mp-Ch_3-Se_1-At_18">Article 18, Paragraph 1 of the Road Traffic Act</a> requires that vehicles must keep to the left side of the road center. Because of these legal requirements, this module provides the function to generate a trajectory that follows the left (or right) side of the road center on bidirectional roads.</p>
-</li>
+<li><strong>Cusp Detection</strong>: Automatically detects points in the path where direction changes occur (typically 180-degree turns) using configurable angle thresholds</li>
+<li><strong>Orientation Reversal</strong>: Reverses path point yaw angles at cusp points to indicate reverse direction segments</li>
+<li><strong>Direction Change Handling</strong>: Enables the vehicle to follow paths with direction changes (forward and reverse segments)</li>
+<li><strong>Map-Based Activation</strong>: Activates only when <code>direction_change</code> is set to <code>"yes"</code> in lanelet map and ego is away from the goal pose.</li>
 </ul>
-<ul>
-<li>
-<p>Giving way to oncoming vehicles on bidirectional traffic roads</p>
-<p>This module provides the function for the ego vehicle to stop on the left side of the road and give way to oncoming vehicles in all situations where vehicles must pass each other on bidirectional roads. Bidirectional traffic roads are often narrow, and it is dangerous for both the ego vehicle and the oncoming vehicle to pass while moving simultaneously. To avoid such dangerous situations, this module enables the ego vehicle to stop on the left side of the road until the oncoming vehicle has completely passed.</p>
-</li>
-</ul>
-<h2 id="the-representation-of-bidirectional-traffic-on-a-lanelet-map">The representation of bidirectional traffic on a Lanelet map<a class="headerlink" href="#the-representation-of-bidirectional-traffic-on-a-lanelet-map" title="Permanent link">#</a></h2>
-<p>Bidirectional lanelets are represented on a Lanelet map as two lanes with opposite directions that share the same LineString as their boundary. There is no need to assign any special tags to the lanelets.</p>
-<p><img alt="BidirectionalTrafficMap" src="assets/BidirectionalTrafficMap.png"></p>
-<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">#</a></h2>
-<p>This module does not support the following situations or functionalities.</p>
-<ul>
-<li>
-<p>Handling situations where passing is not possible</p>
-<p>Depending on factors such as lane width, the size of the ego vehicle and the oncoming vehicle, and the surrounding environment, simple behaviors like those shown in the video above may not be sufficient for passing. In such cases, special behaviours such as reversing or clearing an intersection may be required. However, this module does not provide such functionality.</p>
-</li>
-</ul>
-<ul>
-<li>
-<p>When the oncoming vehicle is giving way or moving slowly</p>
-<p>In cases where the oncoming vehicle is trying to give way or is traveling at a low speed, it may be more appropriate for the ego vehicle to continue driving rather than stopping to give way. However, this module does not make any decision about whether to give way to the oncoming vehicle -- <strong>it always pulls over to the left and stops.</strong></p>
-</li>
-</ul>
-<ul>
-<li>
-<p>Does not support the functionality of pulling into the shoulder to stop and give way</p>
-<p>Depending on the road width, the ego vehicle may need to enter the shoulder in order to give way to an oncoming vehicle. However, this module does not support such functionality.</p>
-</li>
-</ul>
-<h2 id="inner-workingsalgorithms">Inner workings/Algorithms<a class="headerlink" href="#inner-workingsalgorithms" title="Permanent link">#</a></h2>
-<p>This module does not support the following situations or functionalities.</p>
-<h3 id="keep-left">Keep Left<a class="headerlink" href="#keep-left" title="Permanent link">#</a></h3>
-<p>This module detects bidirectional lanelets from the lanelet map and performs a keep left maneuver. When keeping left, the shift starts from the beginning of the lanelet immediately before the bidirectional lanelet, and ends at the end of the bidirectional lanelet.</p>
-<p><img alt="KeepLeft" src="assets/KeepLeft.drawio.svg"></p>
-<h3 id="give-way">Give Way<a class="headerlink" href="#give-way" title="Permanent link">#</a></h3>
-<h4 id="state-transition-of-giveway">State transition of GiveWay<a class="headerlink" href="#state-transition-of-giveway" title="Permanent link">#</a></h4>
-<p>To perform the give way maneuver, the GiveWay module has five internal states.</p>
-<ul>
-<li>
-<p><strong>NoNeedToGiveWay</strong></p>
-<p>No oncoming vehicles present and driving normally or oncoming vehicles are far away.</p>
-<p><img alt="NoNeedToGiveWay" src="assets/NoNeedToGiveWay.drawio.svg"></p>
-</li>
-</ul>
-<ul>
-<li>
-<p><strong>ApproachingToShift</strong></p>
-<p>If an oncoming vehicle is detected, it generates a path to shift left and pull over, approaching the shift start point.</p>
-<p><img alt="ApproachingToShift" src="assets/ApproachingToShift.drawio.svg"></p>
-</li>
-</ul>
-<ul>
-<li>
-<p><strong>ShiftingRoadside</strong></p>
-<p><img alt="ShiftingRoadside" src="assets/ShiftingRoadside.drawio.svg"></p>
-</li>
-</ul>
-<ul>
-<li>
-<p><strong>WaitingForOncomingCarsToPass</strong></p>
-<p>The ego vehicle stops and waits until all oncoming vehicles have passed.</p>
-<p><img alt="WaitingForOncomingCarsToPass" src="assets/WaitingForOncomingCarsToPass.drawio.svg"></p>
-</li>
-</ul>
-<ul>
-<li>
-<p><strong>BackToNormalLane</strong></p>
-<p>After the oncoming vehicle has passed, the ego vehicle performs a shift to return to its original driving lane.</p>
-<p><img alt="BackToNormalLane" src="assets/BackToNormalLane.drawio.svg"></p>
-</li>
-</ul>
-<p>The state transition diagram of the GiveWay module is shown below.</p>
-<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjEiIGRhdGEtZGlhZ3JhbS10eXBlPSJTVEFURSIgc3R5bGU9IndpZHRoOjc4NXB4O2hlaWdodDo3MzdweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB3aWR0aD0iNzg1cHgiIGhlaWdodD0iNzM3cHgiIHZpZXdCb3g9IjAgMCA3ODUgNzM3IiB6b29tQW5kUGFuPSJtYWduaWZ5IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyI+PD9wbGFudHVtbCAxLjIwMjYuN2JldGEzPz48ZGVmcy8+PGc+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iTm9OZWVkVG9HaXZlV2F5IiBpZD0iZW50MDAwMSIgZGF0YS1zb3VyY2UtbGluZT0iOSI+PHJlY3QgeD0iMzA5LjE0IiB5PSI4NyIgd2lkdGg9IjE3OC41MzIyIiBoZWlnaHQ9IjY4Ljg5MDYiIGZpbGw9IiNGRkZGRkYiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PGxpbmUgeDE9IjMwOS4xNCIgeTE9IjExMy4yOTY5IiB4Mj0iNDg3LjY3MjIiIHkyPSIxMTMuMjk2OSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDowLjU7Ii8+PHRleHQgeD0iMzMwLjg2MzYiIHk9IjEwNC45OTUxIiBmaWxsPSIjMDAwMDAwIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzNS4wODUiIGZvbnQtZmFtaWx5PSInQXJpYWwnIj5Ob05lZWRUb0dpdmVXYXk8L3RleHQ+PHRleHQgeD0iMzE0LjE0IiB5PSIxMzEuMjkyIiBmaWxsPSIjMDAwMDAwIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE1OC41MzIyIiBmb250LWZhbWlseT0iJ0FyaWFsJyI+Tm8gb25jb21pbmcgdmVoaWNsZXMsPC90ZXh0Pjx0ZXh0IHg9IjMxNC4xNCIgeT0iMTQ3LjU4ODkiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTE0LjM5MjYiIGZvbnQtZmFtaWx5PSInQXJpYWwnIj5kcml2aW5nIG5vcm1hbGx5PC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJBcHByb2FjaGluZ1RvU2hpZnQiIGlkPSJlbnQwMDAyIiBkYXRhLXNvdXJjZS1saW5lPSIxMCI+PHJlY3QgeD0iMTY0LjkzIiB5PSIyMzIuODkiIHdpZHRoPSIyMTYuOTQzNCIgaGVpZ2h0PSI2OC44OTA2IiBmaWxsPSIjRkZGRkZGIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjxsaW5lIHgxPSIxNjQuOTMiIHkxPSIyNTkuMTg2OSIgeDI9IjM4MS44NzM0IiB5Mj0iMjU5LjE4NjkiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IHg9IjIwNC41NzQiIHk9IjI1MC44ODUxIiBmaWxsPSIjMDAwMDAwIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzNy42NTUzIiBmb250LWZhbWlseT0iJ0FyaWFsJyI+QXBwcm9hY2hpbmdUb1NoaWZ0PC90ZXh0Pjx0ZXh0IHg9IjE2OS45MyIgeT0iMjc3LjE4MiIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxOTYuOTQzNCIgZm9udC1mYW1pbHk9IidBcmlhbCciPk9uY29taW5nIHZlaGljbGUgZGV0ZWN0ZWQsPC90ZXh0Pjx0ZXh0IHg9IjE2OS45MyIgeT0iMjkzLjQ3ODkiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTU5LjQ1NTEiIGZvbnQtZmFtaWx5PSInQXJpYWwnIj5hcHByb2FjaGluZyBzaGlmdCBzdGFydDwvdGV4dD48L2c+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iU2hpZnRpbmdSb2Fkc2lkZSIgaWQ9ImVudDAwMDMiIGRhdGEtc291cmNlLWxpbmU9IjExIj48cmVjdCB4PSIxODAuNzgiIHk9IjM3OC43OSIgd2lkdGg9IjE4NS4yNTIiIGhlaWdodD0iNTIuNTkzOCIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48bGluZSB4MT0iMTgwLjc4IiB5MT0iNDA1LjA4NjkiIHgyPSIzNjYuMDMyIiB5Mj0iNDA1LjA4NjkiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IHg9IjIxNC4zMjY0IiB5PSIzOTYuNzg1MSIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTguMTU5MiIgZm9udC1mYW1pbHk9IidBcmlhbCciPlNoaWZ0aW5nUm9hZHNpZGU8L3RleHQ+PHRleHQgeD0iMTg1Ljc4IiB5PSI0MjMuMDgyIiBmaWxsPSIjMDAwMDAwIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE2NS4yNTIiIGZvbnQtZmFtaWx5PSInQXJpYWwnIj5TaGlmdGluZyBsZWZ0IHRvIHB1bGwgb3ZlcjwvdGV4dD48L2c+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iV2FpdGluZ0Zvck9uY29taW5nQ2Fyc1RvUGFzcyIgaWQ9ImVudDAwMDQiIGRhdGEtc291cmNlLWxpbmU9IjEyIj48cmVjdCB4PSI3IiB5PSI1MDguMzgiIHdpZHRoPSIyODQuODEwNSIgaGVpZ2h0PSI2OC44OTA2IiBmaWxsPSIjRkZGRkZGIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjxsaW5lIHgxPSI3IiB5MT0iNTM0LjY3NjkiIHgyPSIyOTEuODEwNSIgeTI9IjUzNC42NzY5IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCB4PSIzNS43MDY1IiB5PSI1MjYuMzc1MSIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMjcuMzk3NSIgZm9udC1mYW1pbHk9IidBcmlhbCciPldhaXRpbmdGb3JPbmNvbWluZ0NhcnNUb1Bhc3M8L3RleHQ+PHRleHQgeD0iMTIiIHk9IjU1Mi42NzIiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTEuODIwMyIgZm9udC1mYW1pbHk9IidBcmlhbCciPkVnbyBzdG9wcGVkLDwvdGV4dD48dGV4dCB4PSIxMiIgeT0iNTY4Ljk2ODkiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjY0LjgxMDUiIGZvbnQtZmFtaWx5PSInQXJpYWwnIj53YWl0aW5nIGZvciBvbmNvbWluZyB2ZWhpY2xlcyB0byBwYXNzPC90ZXh0PjwvZz48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJCYWNrVG9Ob3JtYWxMYW5lIiBpZD0iZW50MDAwNSIgZGF0YS1zb3VyY2UtbGluZT0iMTMiPjxyZWN0IHg9IjI1MC44NSIgeT0iNjU0LjI3IiB3aWR0aD0iMjM1LjEyMDEiIGhlaWdodD0iNjguODkwNiIgZmlsbD0iI0ZGRkZGRiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48bGluZSB4MT0iMjUwLjg1IiB5MT0iNjgwLjU2NjkiIHgyPSI0ODUuOTcwMSIgeTI9IjY4MC41NjY5IiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCB4PSIzMDAuNDc0NSIgeT0iNjcyLjI2NTEiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTM1Ljg3MTEiIGZvbnQtZmFtaWx5PSInQXJpYWwnIj5CYWNrVG9Ob3JtYWxMYW5lPC90ZXh0Pjx0ZXh0IHg9IjI1NS44NSIgeT0iNjk4LjU2MiIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxODMuMTIxMSIgZm9udC1mYW1pbHk9IidBcmlhbCciPlJldHVybmluZyB0byBvcmlnaW5hbCBsYW5lLDwvdGV4dD48dGV4dCB4PSIyNTUuODUiIHk9IjcxNC44NTg5IiBmaWxsPSIjMDAwMDAwIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIxNS4xMjAxIiBmb250LWZhbWlseT0iJ0FyaWFsJyI+YWZ0ZXIgb25jb21pbmcgdmVoaWNsZSBwYXNzZWQ8L3RleHQ+PC9nPjxnIGNsYXNzPSJzdGFydF9lbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Ii5zdGFydC4iIGlkPSJlbnQwMDA2IiBkYXRhLXNvdXJjZS1saW5lPSI3Ij48ZWxsaXBzZSBjeD0iMzk4LjQxIiBjeT0iMTYiIHJ4PSIxMCIgcnk9IjEwIiBmaWxsPSIjMjIyMjIyIiBzdHlsZT0ic3Ryb2tlOiMyMjIyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PC9nPjwhLS1saW5rICpzdGFydCogdG8gTm9OZWVkVG9HaXZlV2F5LS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDYiIGRhdGEtZW50aXR5LTI9ImVudDAwMDEiIGlkPSJsbms3IiBkYXRhLXNvdXJjZS1saW5lPSI3IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSI+PHBhdGggZD0iTTM5OC40MSwyNi4xOCBDMzk4LjQxLDM5LjYzIDM5OC40MSw2MC40IDM5OC40MSw4MS42IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiBmaWxsPSJub25lIiBpZD0iKnN0YXJ0Ki10by1Ob05lZWRUb0dpdmVXYXkiLz48cG9seWdvbiBwb2ludHM9IjM5OC40MSw4Ni42LDQwMi40MSw3Ny42LDM5OC40MSw4MS42LDM5NC40MSw3Ny42LDM5OC40MSw4Ni42IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjwvZz48IS0tbGluayBOb05lZWRUb0dpdmVXYXkgdG8gQXBwcm9hY2hpbmdUb1NoaWZ0LS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDEiIGRhdGEtZW50aXR5LTI9ImVudDAwMDIiIGlkPSJsbms4IiBkYXRhLXNvdXJjZS1saW5lPSIxNiIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiPjxwYXRoIGQ9Ik0zMDguODIsMTM2LjY5IEMyNTQuMjYsMTQ3LjM5IDE5MS45NiwxNjMuOTcgMTc1LjQxLDE4NS44OSBDMTYyLjIxLDIwMy4zNyAxNjkuOTIxNiwyMTYuNjI4OCAxODkuMzYxNiwyMjkuNzA4OCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgZmlsbD0ibm9uZSIgaWQ9Ik5vTmVlZFRvR2l2ZVdheS10by1BcHByb2FjaGluZ1RvU2hpZnQiLz48cG9seWdvbiBwb2ludHM9IjE5My41MSwyMzIuNSwxODguMjc1OSwyMjQuMTU3MSwxODkuMzYxNiwyMjkuNzA4OCwxODMuODA5OSwyMzAuNzk0NSwxOTMuNTEsMjMyLjUiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMTc2LjQxIiB5PSIxOTguOTU2OSIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNzguNzQzNyIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPk9uY29taW5nIHZlaGljbGUgZGV0ZWN0ZWQ8L3RleHQ+PC9nPjwhLS1saW5rIEFwcHJvYWNoaW5nVG9TaGlmdCB0byBOb05lZWRUb0dpdmVXYXktLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMiIgZGF0YS1lbnRpdHktMj0iZW50MDAwMSIgaWQ9ImxuazkiIGRhdGEtc291cmNlLWxpbmU9IjE3IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSI+PHBhdGggZD0iTTMyNy44LDIzMi40NCBDMzM5LjE1LDIyMy43NCAzNTAuMzksMjEzLjc0IDM1OS40MSwyMDIuODkgQzM3MC44MSwxODkuMTcgMzc3Ljg4MzEsMTc2LjE0MTIgMzg0LjM3MzEsMTYwLjg4MTIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIGZpbGw9Im5vbmUiIGlkPSJBcHByb2FjaGluZ1RvU2hpZnQtdG8tTm9OZWVkVG9HaXZlV2F5Ii8+PHBvbHlnb24gcG9pbnRzPSIzODYuMzMsMTU2LjI4LDM3OS4xMjY3LDE2Mi45OTY2LDM4NC4zNzMxLDE2MC44ODEyLDM4Ni40ODg2LDE2Ni4xMjc2LDM4Ni4zMywxNTYuMjgiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMzcyLjQxIiB5PSIxOTguOTU2OSIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMDEuNTY5OCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPk9uY29taW5nIHZlaGljbGUgZGlzYXBwZWFyZWQ8L3RleHQ+PC9nPjwhLS1saW5rIEFwcHJvYWNoaW5nVG9TaGlmdCB0byBTaGlmdGluZ1JvYWRzaWRlLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDIiIGRhdGEtZW50aXR5LTI9ImVudDAwMDMiIGlkPSJsbmsxMCIgZGF0YS1zb3VyY2UtbGluZT0iMTgiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5Ij48cGF0aCBkPSJNMjczLjQxLDMwMi4yNCBDMjczLjQxLDMyNS45NiAyNzMuNDEsMzUyLjEzIDI3My40MSwzNzMuNzEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIGZpbGw9Im5vbmUiIGlkPSJBcHByb2FjaGluZ1RvU2hpZnQtdG8tU2hpZnRpbmdSb2Fkc2lkZSIvPjxwb2x5Z29uIHBvaW50cz0iMjczLjQxLDM3OC43MSwyNzcuNDEsMzY5LjcxLDI3My40MSwzNzMuNzEsMjY5LjQxLDM2OS43MSwyNzMuNDEsMzc4LjcxIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IHg9IjI3NC40MSIgeT0iMzQ0Ljg1NjkiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTQ5LjcyODUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5QYXNzZWQgc2hpZnQgc3RhcnQgcG9pbnQ8L3RleHQ+PC9nPjwhLS1saW5rIFNoaWZ0aW5nUm9hZHNpZGUgdG8gV2FpdGluZ0Zvck9uY29taW5nQ2Fyc1RvUGFzcy0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAzIiBkYXRhLWVudGl0eS0yPSJlbnQwMDA0IiBpZD0ibG5rMTEiIGRhdGEtc291cmNlLWxpbmU9IjE5IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSI+PHBhdGggZD0iTTI1MC4wOCw0MzEuNjEgQzIzMC4zNyw0NTMuMTkgMjA1LjM0MjgsNDgwLjU4ODkgMTgzLjcyMjgsNTA0LjI0ODkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiIGZpbGw9Im5vbmUiIGlkPSJTaGlmdGluZ1JvYWRzaWRlLXRvLVdhaXRpbmdGb3JPbmNvbWluZ0NhcnNUb1Bhc3MiLz48cG9seWdvbiBwb2ludHM9IjE4MC4zNSw1MDcuOTQsMTg5LjM3MzksNTAzLjk5NDMsMTgzLjcyMjgsNTA0LjI0ODksMTgzLjQ2ODIsNDk4LjU5NzgsMTgwLjM1LDUwNy45NCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCB4PSIyMjQuNDEiIHk9IjQ3NC40NDY5IiBmaWxsPSIjMDAwMDAwIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjgxLjEyOTQiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5FZ28gc3RvcHBlZDwvdGV4dD48L2c+PCEtLWxpbmsgU2hpZnRpbmdSb2Fkc2lkZSB0byBCYWNrVG9Ob3JtYWxMYW5lLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDMiIGRhdGEtZW50aXR5LTI9ImVudDAwMDUiIGlkPSJsbmsxMiIgZGF0YS1zb3VyY2UtbGluZT0iMjAiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5Ij48cGF0aCBkPSJNMjk1Ljc1LDQzMS43IEMzMDIuNTgsNDQwLjYgMzA5LjU2LDQ1MC45OCAzMTQuNDEsNDYxLjM4IEMzNDQuNDQsNTI1LjgyIDM1OC4wNDc5LDYwMy42ODI3IDM2NC4wMjc5LDY0OS4xNDI3IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiBmaWxsPSJub25lIiBpZD0iU2hpZnRpbmdSb2Fkc2lkZS10by1CYWNrVG9Ob3JtYWxMYW5lIi8+PHBvbHlnb24gcG9pbnRzPSIzNjQuNjgsNjU0LjEsMzY3LjQ3Miw2NDQuNjU1MiwzNjQuMDI3OSw2NDkuMTQyNywzNTkuNTQwNCw2NDUuNjk4NiwzNjQuNjgsNjU0LjEiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMzUyLjQxIiB5PSI1NDcuMzg2OSIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMDEuNTY5OCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPk9uY29taW5nIHZlaGljbGUgZGlzYXBwZWFyZWQ8L3RleHQ+PC9nPjwhLS1saW5rIFdhaXRpbmdGb3JPbmNvbWluZ0NhcnNUb1Bhc3MgdG8gQmFja1RvTm9ybWFsTGFuZS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA0IiBkYXRhLWVudGl0eS0yPSJlbnQwMDA1IiBpZD0ibG5rMTMiIGRhdGEtc291cmNlLWxpbmU9IjIxIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSI+PHBhdGggZD0iTTEzNC45NSw1NzcuNjMgQzEzMC42Nyw1OTMuMjMgMTI5LjQ0LDYxMS4xNiAxMzkuNDEsNjI0LjI3IEMxNTMuODYsNjQzLjI3IDE5Ny4xNzMzLDY1Ny4wMDE0IDI0NS42NDMzLDY2Ny41MDE0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7IiBmaWxsPSJub25lIiBpZD0iV2FpdGluZ0Zvck9uY29taW5nQ2Fyc1RvUGFzcy10by1CYWNrVG9Ob3JtYWxMYW5lIi8+PHBvbHlnb24gcG9pbnRzPSIyNTAuNTMsNjY4LjU2LDI0Mi41ODA5LDY2Mi43NDUyLDI0NS42NDMzLDY2Ny41MDE0LDI0MC44ODcyLDY3MC41NjM5LDI1MC41Myw2NjguNTYiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iMTQwLjQxIiB5PSI2MjAuMzM2OSIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMDEuNTY5OCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPk9uY29taW5nIHZlaGljbGUgZGlzYXBwZWFyZWQ8L3RleHQ+PC9nPjwhLS1saW5rIEJhY2tUb05vcm1hbExhbmUgdG8gTm9OZWVkVG9HaXZlV2F5LS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDUiIGRhdGEtZW50aXR5LTI9ImVudDAwMDEiIGlkPSJsbmsxNCIgZGF0YS1zb3VyY2UtbGluZT0iMjIiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5Ij48cGF0aCBkPSJNNDg2LjI5LDY2Ny42OSBDNTUzLjQ4LDY0OC43NyA2MjQuNDEsNjEyLjUyIDYyNC40MSw1NDMuODIgQzYyNC40MSwyNjYuMzQgNjI0LjQxLDI2Ni4zNCA2MjQuNDEsMjY2LjM0IEM2MjQuNDEsMjI2LjAxIDYxMi45NywyMTIuMjEgNTgyLjQxLDE4NS44OSBDNTU1Ljc3LDE2Mi45NyA1MjUuMjExOSwxNDkuNTkzNCA0OTIuNjExOSwxNDAuMTMzNCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIgZmlsbD0ibm9uZSIgaWQ9IkJhY2tUb05vcm1hbExhbmUtdG8tTm9OZWVkVG9HaXZlV2F5Ii8+PHBvbHlnb24gcG9pbnRzPSI0ODcuODEsMTM4Ljc0LDQ5NS4zMzg3LDE0NS4wODk3LDQ5Mi42MTE5LDE0MC4xMzM0LDQ5Ny41NjgyLDEzNy40MDY3LDQ4Ny44MSwxMzguNzQiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgeD0iNjI1LjQxIiB5PSI0MDkuNjQ2OSIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNDMuOTM5NSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPlBhc3NlZCBzaGlmdCBlbmQgcG9pbnQ8L3RleHQ+PC9nPjw/cGxhbnR1bWwtc3JjIGRQNzFKaUNtMzhSbFVHZ0I4czhsbTA1ZmNuV05MQVBIUUdWV08zTFU2b3NEZ29HaGNYM2xaakRrMGpPbzBMVnhfcF9SbHlGTWswT3pyWDBZSGU4dERTRFlNdGhVRUpyZG9ueE1iT2NhUGttci1SdW9pbzlIMnRPbm12aFdPa2VEc1dscmhqSkp2R2pDOVpVR1NLUWFTeHVwQlFybmhyR0ZGb2QzakxJME5TNnJTSU1xTDlkMktoWHdUamdSRGZLUy1uZ2p0SF95cXdSblo0S2JoUG1WQXhFOVdkV3V5T0VjSTRLYUJIcHlENDNlejBCb3lPM2gyRDlRQ1VmV0QwZGlNMDlCOGV1Q3BTdlF1OVJ5bVJENmFfZUJ6aVV2U19HWHZvTTY4RnhSYWNLNERxcXRfaEtObXFQMjZ2cFBxU0xyMEFWT1N5d3dXLV9IZk1MTTU3VlU5T3o4c1BsSUVCSFdmUGJFc3FHUUtaaVlRUU5LUVRSZkJOX0JKdXQ4SHZ1eFlaMTFlWVZxRnJENm1ienNrdHp6NTNIaU41RzNSR0J5X1hGWl9mNzBwenZuVGp2X1cwRnpVQlpWS1k2ZC1xbS0wMDAwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title=""></p>
-<h4 id="how-to-decide-shift-length-to-pull-over">How to decide shift length to pull over?<a class="headerlink" href="#how-to-decide-shift-length-to-pull-over" title="Permanent link">#</a></h4>
-<p>When an oncoming vehicle is detected, it is necessary to determine how much longitudinal distance to consume for the shift.</p>
-<p><img alt="ShiftDistance" src="assets/ShiftDistance.drawio.svg"></p>
-<p>The figure above illustrates the distances related to lane shifting. The shift prepare distance is the distance required to prepare for shifting before reaching the shift start point, and it is calculated by multiplying the parameter time_to_prepare_pull_over by the ego_velocity.</p>
-<p>These distances are calculated when the state is NoNeedToGiveWay. Once the ego vehicle enters the shift prepare distance, the state transitions to ApproachingToShift. When it enters the shift distance, the state transitions to ShiftingRoadside.</p>
-<p>While in the NoNeedToGiveWay state, the calculation of the shift_distance and the corresponding state transitions are handled as follows.</p>
-<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjEiIGRhdGEtZGlhZ3JhbS10eXBlPSJBQ1RJVklUWSIgc3R5bGU9IndpZHRoOjExMTFweDtoZWlnaHQ6NjAycHg7YmFja2dyb3VuZDojRkZGRkZGOyIgd2lkdGg9IjExMTFweCIgaGVpZ2h0PSI2MDJweCIgdmlld0JveD0iMCAwIDExMTEgNjAyIiB6b29tQW5kUGFuPSJtYWduaWZ5IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyI+PD9wbGFudHVtbCAxLjIwMjYuN2JldGEzPz48ZGVmcy8+PGc+PGVsbGlwc2UgY3g9IjQ1MC44ODU3IiBjeT0iMjUiIHJ4PSIxMCIgcnk9IjEwIiBmaWxsPSIjMjIyMjIyIiBzdHlsZT0ic3Ryb2tlOiMyMjIyMjI7c3Ryb2tlLXdpZHRoOjE7Ii8+PHJlY3QgeD0iMzM2Ljg2NzIiIHk9IjU1IiB3aWR0aD0iMjI4LjAzNzEiIGhlaWdodD0iMzMuOTY4OCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIzNDYuODY3MiIgeT0iNzYuMTM4NyIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMDguMDM3MSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPkNhbGN1bGF0ZSBsYXRlcmFsX3NoaWZ0X2Rpc3RhbmNlICgxKTwvdGV4dD48cmVjdCB4PSIzMTAuNjQzNiIgeT0iMTA4Ljk2ODgiIHdpZHRoPSIyODAuNDg0NCIgaGVpZ2h0PSIzMy45Njg4IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9IjMyMC42NDM2IiB5PSIxMzAuMTA3NCIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNjAuNDg0NCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPkNhbGN1bGF0ZSBhbGxvd2VkX2xvbmdpdHVkaW5hbF9kaXN0YW5jZSAoMik8L3RleHQ+PHJlY3QgeD0iMzI5LjY2MzEiIHk9IjE2Mi45Mzc1IiB3aWR0aD0iMjQyLjQ0NTMiIGhlaWdodD0iMzMuOTY4OCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIzMzkuNjYzMSIgeT0iMTg0LjA3NjIiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjIyLjQ0NTMiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5DYWxjdWxhdGUgZGVzaXJlZF9wdWxsX292ZXJfcG9pbnQgKDMpPC90ZXh0PjxyZWN0IHg9IjI0NS4zMjMyIiB5PSIyMTYuOTA2MyIgd2lkdGg9IjQxMS4xMjUiIGhlaWdodD0iMzMuOTY4OCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIyNTUuMzIzMiIgeT0iMjM4LjA0NDkiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzkxLjEyNSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPnNoaWZ0X3ByZXBhcmVfZGlzdGFuY2UgPSBlZ29fc3BlZWQgKiB0aW1lX3RvX3ByZXBhcmVfcHVsbF9vdmVyPC90ZXh0Pjxwb2x5Z29uIHBvaW50cz0iMjI0Ljg2MjEsMjcwLjg3NSw2NzYuOTA5NCwyNzAuODc1LDY4OC45MDk0LDI4Mi44NzUsNjc2LjkwOTQsMjk0Ljg3NSwyMjQuODYyMSwyOTQuODc1LDIxMi44NjIxLDI4Mi44NzUsMjI0Ljg2MjEsMjcwLjg3NSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IHg9IjIyNC44NjIxIiB5PSIyODYuNjgzMSIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMSIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI0NTIuMDQ3NCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPmRlc2lyZWRfcHVsbF9vdmVyX3BvaW50ICZsdDsgYWxsb3dlZF9sb25naXR1ZGluYWxfZGlzdGFuY2UgKyBzaGlmdF9wcmVwYXJlX2Rpc3RhbmNlPC90ZXh0Pjx0ZXh0IHg9IjE5My44NTM4IiB5PSIyODAuMjgwOCIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMSIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxOS4wMDgzIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+eWVzPC90ZXh0PjxyZWN0IHg9IjE2IiB5PSIzMDQuODc1IiB3aWR0aD0iMzAwLjQ2NDgiIGhlaWdodD0iMzMuOTY4OCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIyNiIgeT0iMzI2LjAxMzciIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjgwLjQ2NDgiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5zaGlmdF9kaXN0YW5jZSA9IGFsbG93ZWRfbG9uZ2l0dWRpbmFsX2Rpc3RhbmNlPC90ZXh0PjxyZWN0IHg9IjYyLjExOTEiIHk9IjM1OC44NDM4IiB3aWR0aD0iMjA4LjIyNjYiIGhlaWdodD0iMzMuOTY4OCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSI3Mi4xMTkxIiB5PSIzNzkuOTgyNCIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxODguMjI2NiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPkVudGVyIEFwcHJvYWNoaW5nVG9TaGlmdCBzdGF0ZTwvdGV4dD48cmVjdCB4PSI2MDUuMzEzNSIgeT0iMzA0Ljg3NSIgd2lkdGg9IjI2MC40NTEyIiBoZWlnaHQ9IjMzLjk2ODgiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iNjE1LjMxMzUiIHk9IjMyNi4wMTM3IiBmaWxsPSIjMDAwMDAwIiBmb250LXNpemU9IjEyIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI0MC40NTEyIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+Q2FsY3VsYXRlIG1heF9sb25naXR1ZGluYWxfZGlzdGFuY2UgKDQpPC90ZXh0Pjxwb2x5Z29uIHBvaW50cz0iNTE4LjY5NzMsMzU4Ljg0MzgsOTUyLjM4MDksMzU4Ljg0MzgsOTY0LjM4MDksMzcwLjg0MzgsOTUyLjM4MDksMzgyLjg0MzgsNTE4LjY5NzMsMzgyLjg0MzgsNTA2LjY5NzMsMzcwLjg0MzgsNTE4LjY5NzMsMzU4Ljg0MzgiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCB4PSI1MTguNjk3MyIgeT0iMzc0LjY1MTkiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTEiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDMzLjY4MzYiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5kZXNpcmVkX3B1bGxfb3Zlcl9wb2ludCAmbHQ7IG1heF9sb25naXR1ZGluYWxfZGlzdGFuY2UgKyBzaGlmdF9wcmVwYXJlX2Rpc3RhbmNlPC90ZXh0Pjx0ZXh0IHg9IjQ4Ny42ODkiIHk9IjM2OC4yNDk1IiBmaWxsPSIjMDAwMDAwIiBmb250LXNpemU9IjExIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE5LjAwODMiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj55ZXM8L3RleHQ+PHJlY3QgeD0iMzQ2LjQ2NDgiIHk9IjM5Mi44NDM4IiB3aWR0aD0iMzAwLjQ2NDgiIGhlaWdodD0iMzMuOTY4OCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSIzNTYuNDY0OCIgeT0iNDEzLjk4MjQiIGZpbGw9IiMwMDAwMDAiIGZvbnQtc2l6ZT0iMTIiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjgwLjQ2NDgiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIj5zaGlmdF9kaXN0YW5jZSA9IGFsbG93ZWRfbG9uZ2l0dWRpbmFsX2Rpc3RhbmNlPC90ZXh0PjxyZWN0IHg9IjM5Mi41ODQiIHk9IjQ0Ni44MTI1IiB3aWR0aD0iMjA4LjIyNjYiIGhlaWdodD0iMzMuOTY4OCIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiByeD0iMTIuNSIgcnk9IjEyLjUiLz48dGV4dCB4PSI0MDIuNTg0IiB5PSI0NjcuOTUxMiIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxODguMjI2NiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPkVudGVyIEFwcHJvYWNoaW5nVG9TaGlmdCBzdGF0ZTwvdGV4dD48cmVjdCB4PSI4ODguMTkxNCIgeT0iMzkyLjg0MzgiIHdpZHRoPSIxNzIuMzc4OSIgaGVpZ2h0PSIzMy45Njg4IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHJ4PSIxMi41IiByeT0iMTIuNSIvPjx0ZXh0IHg9Ijg5OC4xOTE0IiB5PSI0MTMuOTgyNCIgZmlsbD0iIzAwMDAwMCIgZm9udC1zaXplPSIxMiIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNTIuMzc4OSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiPk91dHB1dCBzaGlmdGluZyB0cmFqZWN0b3J5PC90ZXh0PjxyZWN0IHg9Ijg1Ny4yNDUxIiB5PSI0NDYuODEyNSIgd2lkdGg9IjIzNC4yNzE1IiBoZWlnaHQ9IjMzLjk2ODgiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgcng9IjEyLjUiIHJ5PSIxMi41Ii8+PHRleHQgeD0iODY3LjI0NTEiIHk9IjQ2Ny45NTEyIiBmaWxsPSIjMDAwMDAwIiBmb250LXNpemU9IjEyIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIxNC4yNzE1IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+UmVtYWluIGluIE5vTmVlZFRvR2l2ZVdheSBzdGF0ZTwvdGV4dD48cG9seWdvbiBwb2ludHM9IjczNS41MzkxLDQ4Ni43ODEzLDc0Ny41MzkxLDQ5OC43ODEzLDczNS41MzkxLDUxMC43ODEzLDcyMy41MzkxLDQ5OC43ODEzLDczNS41MzkxLDQ4Ni43ODEzIiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHBvbHlnb24gcG9pbnRzPSI0NTAuODg1Nyw1MTYuNzgxMyw0NjIuODg1Nyw1MjguNzgxMyw0NTAuODg1Nyw1NDAuNzgxMyw0MzguODg1Nyw1MjguNzgxMyw0NTAuODg1Nyw1MTYuNzgxMyIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxlbGxpcHNlIGN4PSI0NTAuODg1NyIgY3k9IjU3MS43ODEzIiByeD0iMTEiIHJ5PSIxMSIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMjIyMjIyO3N0cm9rZS13aWR0aDoxOyIvPjxlbGxpcHNlIGN4PSI0NTAuODg1NyIgY3k9IjU3MS43ODEzIiByeD0iNiIgcnk9IjYiIGZpbGw9IiMyMjIyMjIiIHN0eWxlPSJzdHJva2U6IzIyMjIyMjtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iNDUwLjg4NTciIHkxPSIzNSIgeDI9IjQ1MC44ODU3IiB5Mj0iNTUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjQ0Ni44ODU3LDQ1LDQ1MC44ODU3LDU1LDQ1NC44ODU3LDQ1LDQ1MC44ODU3LDQ5IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI0NTAuODg1NyIgeTE9Ijg4Ljk2ODgiIHgyPSI0NTAuODg1NyIgeTI9IjEwOC45Njg4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI0NDYuODg1Nyw5OC45Njg4LDQ1MC44ODU3LDEwOC45Njg4LDQ1NC44ODU3LDk4Ljk2ODgsNDUwLjg4NTcsMTAyLjk2ODgiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjQ1MC44ODU3IiB5MT0iMTQyLjkzNzUiIHgyPSI0NTAuODg1NyIgeTI9IjE2Mi45Mzc1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI0NDYuODg1NywxNTIuOTM3NSw0NTAuODg1NywxNjIuOTM3NSw0NTQuODg1NywxNTIuOTM3NSw0NTAuODg1NywxNTYuOTM3NSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iNDUwLjg4NTciIHkxPSIxOTYuOTA2MyIgeDI9IjQ1MC44ODU3IiB5Mj0iMjE2LjkwNjMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjQ0Ni44ODU3LDIwNi45MDYzLDQ1MC44ODU3LDIxNi45MDYzLDQ1NC44ODU3LDIwNi45MDYzLDQ1MC44ODU3LDIxMC45MDYzIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSIxNjYuMjMyNCIgeTE9IjMzOC44NDM4IiB4Mj0iMTY2LjIzMjQiIHkyPSIzNTguODQzOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTYyLjIzMjQsMzQ4Ljg0MzgsMTY2LjIzMjQsMzU4Ljg0MzgsMTcwLjIzMjQsMzQ4Ljg0MzgsMTY2LjIzMjQsMzUyLjg0MzgiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjQ5Ni42OTczIiB5MT0iNDI2LjgxMjUiIHgyPSI0OTYuNjk3MyIgeTI9IjQ0Ni44MTI1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI0OTIuNjk3Myw0MzYuODEyNSw0OTYuNjk3Myw0NDYuODEyNSw1MDAuNjk3Myw0MzYuODEyNSw0OTYuNjk3Myw0NDAuODEyNSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iOTc0LjM4MDkiIHkxPSI0MjYuODEyNSIgeDI9Ijk3NC4zODA5IiB5Mj0iNDQ2LjgxMjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9Ijk3MC4zODA5LDQzNi44MTI1LDk3NC4zODA5LDQ0Ni44MTI1LDk3OC4zODA5LDQzNi44MTI1LDk3NC4zODA5LDQ0MC44MTI1IiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI1MDYuNjk3MyIgeTE9IjM3MC44NDM4IiB4Mj0iNDk2LjY5NzMiIHkyPSIzNzAuODQzOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI0OTYuNjk3MyIgeTE9IjM3MC44NDM4IiB4Mj0iNDk2LjY5NzMiIHkyPSIzOTIuODQzOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iNDkyLjY5NzMsMzgyLjg0MzgsNDk2LjY5NzMsMzkyLjg0MzgsNTAwLjY5NzMsMzgyLjg0MzgsNDk2LjY5NzMsMzg2Ljg0MzgiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9Ijk2NC4zODA5IiB5MT0iMzcwLjg0MzgiIHgyPSI5NzQuMzgwOSIgeTI9IjM3MC44NDM4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9Ijk3NC4zODA5IiB5MT0iMzcwLjg0MzgiIHgyPSI5NzQuMzgwOSIgeTI9IjM5Mi44NDM4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI5NzAuMzgwOSwzODIuODQzOCw5NzQuMzgwOSwzOTIuODQzOCw5NzguMzgwOSwzODIuODQzOCw5NzQuMzgwOSwzODYuODQzOCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iNDk2LjY5NzMiIHkxPSI0ODAuNzgxMyIgeDI9IjQ5Ni42OTczIiB5Mj0iNDk4Ljc4MTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iNDk2LjY5NzMiIHkxPSI0OTguNzgxMyIgeDI9IjcyMy41MzkxIiB5Mj0iNDk4Ljc4MTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjcxMy41MzkxLDQ5NC43ODEzLDcyMy41MzkxLDQ5OC43ODEzLDcxMy41MzkxLDUwMi43ODEzLDcxNy41MzkxLDQ5OC43ODEzIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI5NzQuMzgwOSIgeTE9IjQ4MC43ODEzIiB4Mj0iOTc0LjM4MDkiIHkyPSI0OTguNzgxMyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI5NzQuMzgwOSIgeTE9IjQ5OC43ODEzIiB4Mj0iNzQ3LjUzOTEiIHkyPSI0OTguNzgxMyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iNzU3LjUzOTEsNDk0Ljc4MTMsNzQ3LjUzOTEsNDk4Ljc4MTMsNzU3LjUzOTEsNTAyLjc4MTMsNzUzLjUzOTEsNDk4Ljc4MTMiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjczNS41MzkxIiB5MT0iMzM4Ljg0MzgiIHgyPSI3MzUuNTM5MSIgeTI9IjM1OC44NDM4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gcG9pbnRzPSI3MzEuNTM5MSwzNDguODQzOCw3MzUuNTM5MSwzNTguODQzOCw3MzkuNTM5MSwzNDguODQzOCw3MzUuNTM5MSwzNTIuODQzOCIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMjEyLjg2MjEiIHkxPSIyODIuODc1IiB4Mj0iMTY2LjIzMjQiIHkyPSIyODIuODc1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjE2Ni4yMzI0IiB5MT0iMjgyLjg3NSIgeDI9IjE2Ni4yMzI0IiB5Mj0iMzA0Ljg3NSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iMTYyLjIzMjQsMjk0Ljg3NSwxNjYuMjMyNCwzMDQuODc1LDE3MC4yMzI0LDI5NC44NzUsMTY2LjIzMjQsMjk4Ljg3NSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iNjg4LjkwOTQiIHkxPSIyODIuODc1IiB4Mj0iNzM1LjUzOTEiIHkyPSIyODIuODc1IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PGxpbmUgeDE9IjczNS41MzkxIiB5MT0iMjgyLjg3NSIgeDI9IjczNS41MzkxIiB5Mj0iMzA0Ljg3NSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iNzMxLjUzOTEsMjk0Ljg3NSw3MzUuNTM5MSwzMDQuODc1LDczOS41MzkxLDI5NC44NzUsNzM1LjUzOTEsMjk4Ljg3NSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iMTY2LjIzMjQiIHkxPSIzOTIuODEyNSIgeDI9IjE2Ni4yMzI0IiB5Mj0iNTI4Ljc4MTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48bGluZSB4MT0iMTY2LjIzMjQiIHkxPSI1MjguNzgxMyIgeDI9IjQzOC44ODU3IiB5Mj0iNTI4Ljc4MTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjQyOC44ODU3LDUyNC43ODEzLDQzOC44ODU3LDUyOC43ODEzLDQyOC44ODU3LDUzMi43ODEzLDQzMi44ODU3LDUyOC43ODEzIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjxsaW5lIHgxPSI3MzUuNTM5MSIgeTE9IjUxMC43ODEzIiB4Mj0iNzM1LjUzOTEiIHkyPSI1MjguNzgxMyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxsaW5lIHgxPSI3MzUuNTM5MSIgeTE9IjUyOC43ODEzIiB4Mj0iNDYyLjg4NTciIHkyPSI1MjguNzgxMyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iNDcyLjg4NTcsNTI0Ljc4MTMsNDYyLjg4NTcsNTI4Ljc4MTMsNDcyLjg4NTcsNTMyLjc4MTMsNDY4Ljg4NTcsNTI4Ljc4MTMiIGZpbGw9IiMxODE4MTgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PGxpbmUgeDE9IjQ1MC44ODU3IiB5MT0iMjUwLjg3NSIgeDI9IjQ1MC44ODU3IiB5Mj0iMjcwLjg3NSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIHBvaW50cz0iNDQ2Ljg4NTcsMjYwLjg3NSw0NTAuODg1NywyNzAuODc1LDQ1NC44ODU3LDI2MC44NzUsNDUwLjg4NTcsMjY0Ljg3NSIgZmlsbD0iIzE4MTgxOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48bGluZSB4MT0iNDUwLjg4NTciIHkxPSI1NDAuNzgxMyIgeDI9IjQ1MC44ODU3IiB5Mj0iNTYwLjc4MTMiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBwb2ludHM9IjQ0Ni44ODU3LDU1MC43ODEzLDQ1MC44ODU3LDU2MC43ODEzLDQ1NC44ODU3LDU1MC43ODEzLDQ1MC44ODU3LDU1NC43ODEzIiBmaWxsPSIjMTgxODE4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjw/cGxhbnR1bWwtc3JjIG5QNF9KeUNtNENOdFY4ZVI0dlp1Q3I0T0s4Tk9ZV0lMNkFySlY2YUVFSnhCbFhKb3hONUtER3FJZUlFSVBJLV9VX1ZVU3JBQ01YSHRRdEhyeHIwOW5Za1lDd2RiSGV0YmZFWGhXbEFnTWlxblQ0dS1vSGVkVmlWUU1fUHZ2YUhWX3dHajlPd1AzaHJwSGxPS0pIM3Mya05EbzFyTVhLVzE4dnI0N2Uxc09iOFdpZDAxb1hxUGJHY1JmNVA1bUdzS0lvbGtwcll6WERfTkx3MGpVSVc3SWpOSHVpcFFkdzh2cXZGRkRTOVoyNTZtUmpkbGpsOHNRYTBjRDBGYTRpcVJ3bDFoZ1NsUndjcDR2VWJfWlZWSVEtWnJ1MjBwZTE0X2c1UTlHdlB1Zkd4UEdwdVJzVUdfdGllcHgtYVRYcWQzTXN3QXV2REttWlMwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title=""></p>
-<p>We now provide a detailed explanation of the following four calculations:</p>
-<h5 id="1-calculate-lateral_shift_distance">1. Calculate <code>lateral_shift_distance</code><a class="headerlink" href="#1-calculate-lateral_shift_distance" title="Permanent link">#</a></h5>
-<p><code>lateral_shift_distance</code> is the lateral distance that the ego vehicle needs to shift. This value is calculated from <code>min_distance_from_roadside</code> and <code>shift_distance_to_pull_over_from_center_line</code>, based on <code>road_width</code> and <code>vehicle_width</code>, as follows:</p>
-<div class="arithmatex">\[
-  \text{lateral_shift_distance} = \text{max}(\text{road_width} / 2 - \text{vehicle_width} / 2 - \text{min_distance_from_roadside}, \text{shift_distance_to_pull_over_from_center_line})
-\]</div>
-<h5 id="2-calculate-allowed_longitudinal_distance">2. Calculate <code>allowed_longitudinal_distance</code><a class="headerlink" href="#2-calculate-allowed_longitudinal_distance" title="Permanent link">#</a></h5>
-<p><code>allowed_longitudinal_distance</code> is the minimum longitudinal distance required for the ego vehicle to perform the shift. Shifting in a shorter distance would require a sharp steering maneuver, which is unsafe. This distance is calculated such that the lateral jerk derived from <code>lateral_shift_distance</code> and <code>ego_velocity</code> does not exceed <code>max_lateral_jerk</code>:</p>
-<div class="arithmatex">\[
-  \text{allowed_longitudinal_distance} = \text{calc_longitudinal_dist_from_jerk}(\text{lateral_shift_distance}, \text{max_lateral_jerk}, \text{ego_velocity})
-\]</div>
-<h5 id="3-calculate-desired_pull_over_point">3. Calculate <code>desired_pull_over_point</code><a class="headerlink" href="#3-calculate-desired_pull_over_point" title="Permanent link">#</a></h5>
-<p>If the shift starts too early, the ego vehicle may have to wait a long time for the oncoming vehicle to pass. If it starts too late, there is a risk of collision. To avoid both, the ideal point to begin the pull-over is calculated based on the ego speed and the oncoming vehicle's speed, assuming the ego vehicle will stop and wait for <code>wait_time_for_oncoming_car</code> seconds:</p>
-<div class="arithmatex">\[
-  \text{desired_pull_over_point} = \frac{(\text{distance_to_oncoming_car} - \text{oncoming_car_speed} \cdot \text{wait_time_for_oncoming_car}) \cdot \text{ego_speed}}{\text{ego_speed} + \text{oncoming_car_speed}}
-\]</div>
-<h5 id="4-calculate-max_longitudinal_distance">4. Calculate <code>max_longitudinal_distance</code><a class="headerlink" href="#4-calculate-max_longitudinal_distance" title="Permanent link">#</a></h5>
-<p>An overly long shift distance may appear unnatural. To prevent this, the maximum longitudinal distance is calculated based on the minimum lateral jerk:</p>
-<div class="arithmatex">\[
-  \text{max_longitudinal_distance} = \text{calc_longitudinal_dist_from_jerk}(\text{lateral_shift_distance}, \text{min_lateral_jerk}, \text{ego_velocity})
-\]</div>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-<th>Range</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>time_to_prepare_pull_over</td>
-<td>float</td>
-<td>Time to prepare for pull over. When an oncoming vehicle is detected, ego_speed x time_to_prepare_pull_over [m] starts shifting from ahead. Unit is <strong>[s]</strong>.</td>
-<td>1</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>min_distance_from_roadside</td>
-<td>float</td>
-<td>Minimum distance from left roadside to pull over. Unit is <strong>[m]</strong>.</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>keep_left_distance_from_center_line</td>
-<td>float</td>
-<td>Distance to keep left from center line. Unit is <strong>[m]</strong>.</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>shift_distance_to_pull_over_from_center_line</td>
-<td>float</td>
-<td>Distance to shift to the left from center line when pulling over. Unit is <strong>[m]</strong>.</td>
-<td>1.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>wait_time_for_oncoming_car</td>
-<td>float</td>
-<td>Wait time for oncoming car from ego vehicle stops to ego vehicle starts. Unit is <strong>[s]</strong>.</td>
-<td>15</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>max_lateral_jerk</td>
-<td>float</td>
-<td>Maximum lateral jerk when pulling over. Unit is <strong>[m/s^3]</strong>.</td>
-<td>3</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>min_lateral_jerk</td>
-<td>float</td>
-<td>Minimum lateral jerk when pulling over. Unit is <strong>[m/s^3]</strong>.</td>
-<td>2</td>
-<td>≥0.0</td>
-</tr>
-</tbody>
-</table></div>
+<p>See <code>config/direction_change.param.yaml</code> for detailed parameter descriptions.</p>
+<h2 id="integration">Integration<a class="headerlink" href="#integration" title="Permanent link">#</a></h2>
+<p>This module is automatically registered as a plugin in the behavior path planner. To enable it, add it to the module list in the behavior path planner configuration.</p>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">#</a></h2>
+<p>The module activates automatically when:</p>
+<ul>
+<li><strong>A <code>direction_change</code> attribute is set to <code>"yes"</code> in the lanelet map</strong> (required)</li>
+<li>The path is within lanelets containing this tag</li>
+</ul>
+<h2 id="map-requirements">Map Requirements<a class="headerlink" href="#map-requirements" title="Permanent link">#</a></h2>
+<p>See the <a href="autoware_lanelet2_extension/autoware_lanelet2_extension/docs/lanelet2_format_extension.md">document</a></p></div>
 
 
 
@@ -23407,7 +23236,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_behavior_path_avoidance_by_lane_change_module/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Avoidance by lane change design">
+          <a href="../autoware_behavior_path_bidirectional_traffic_module/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Bidirectional Traffic">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -23417,20 +23246,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Avoidance by lane change design
+                Bidirectional Traffic
               </div>
             </div>
           </a>
         
         
           
-          <a href="../autoware_behavior_path_direction_change_module/" class="md-footer__link md-footer__link--next" aria-label="Next: Direction Change Module">
+          <a href="../autoware_behavior_path_dynamic_obstacle_avoidance_module/" class="md-footer__link md-footer__link--next" aria-label="Next: Avoidance module for dynamic objects">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Direction Change Module
+                Avoidance module for dynamic objects
               </div>
             </div>
             <div class="md-footer__button md-icon">
