@@ -71,7 +71,6 @@ public:
   void objectsCallback(const TrackedObjects::ConstSharedPtr in_objects);
 
 private:
-  rclcpp::Node * node_;
   NodeState & state_;
 
   autoware_utils::InterProcessPollingSubscriber<TrafficLightGroupArray> sub_traffic_signals_;

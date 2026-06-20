@@ -69,8 +69,7 @@ void MapCallback::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
 // ---------------------------------------------------------------------------
 
 ObjectsCallback::ObjectsCallback(rclcpp::Node * node, NodeState & state)
-: node_(node),
-  state_(state),
+: state_(state),
   sub_traffic_signals_(node, "/traffic_signals"),
   transform_listener_(node)
 {
