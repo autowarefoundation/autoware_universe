@@ -186,10 +186,12 @@ public:
 
   void TearDown() override
   {
-    test_manager_ = nullptr;
-    test_target_node_ = nullptr;
-    sub_planning_factor_ = nullptr;
-    planning_factor_msg_ = nullptr;
+    sub_planning_factor_.reset();
+    planning_factor_msg_.reset();
+    test_manager_.reset();
+    test_node_.reset();
+    test_target_node_.reset();
+
     rclcpp::shutdown();
   }
 
