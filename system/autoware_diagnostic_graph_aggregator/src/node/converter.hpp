@@ -15,6 +15,7 @@
 #ifndef NODE__CONVERTER_HPP_
 #define NODE__CONVERTER_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_system_msgs/msg/command_mode_availability.hpp>
@@ -27,15 +28,15 @@ using tier4_system_msgs::msg::CommandModeAvailability;
 using tier4_system_msgs::msg::CommandModeAvailabilityItem;
 using tier4_system_msgs::msg::OperationModeAvailability;
 
-class ConverterNode : public rclcpp::Node
+class ConverterNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit ConverterNode(const rclcpp::NodeOptions & options);
 
 private:
-  rclcpp::Subscription<CommandModeAvailability>::SharedPtr sub_command_mode_;
-  rclcpp::Publisher<OperationModeAvailability>::SharedPtr pub_operation_mode_;
-  void on_availability(const CommandModeAvailability & in);
+  AUTOWARE_SUBSCRIPTION_PTR(CommandModeAvailability) sub_command_mode_;
+  AUTOWARE_PUBLISHER_PTR(OperationModeAvailability) pub_operation_mode_;
+  void on_availability(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CommandModeAvailability) & in);
 
   uint16_t stop_;
   uint16_t autonomous_;
