@@ -51,7 +51,21 @@ Additionally, source interface for switching trajectory and command, filter inte
 
 ![data-flow-external](./doc/data-flow-external.drawio.svg)
 
-## Drive Mode Flags
+## Request and Flags
+
+The driving mode manager sends driving mode request and receives driving mode flags to/from external modules.
+The request includes the currently selected driving mode ID, so use this if your module requires a trigger.
+The flags are as shown in the table below. If the available flag is false, the transition to that mode is rejected.
+
+The active and stable flags are used during the transition.
+The active flag is checked before changing the gate and waits until the output for that mode is ready.
+The stable flag is checked after the gate is changed to confirm that mode can be continued stably.
+If either the active or stable flag prevents a transition, the target mode is temporarily marked as unavailable, and a new target mode is determined.
+Modes marked as unavailable will be reset by a new mode change request.
+
+The continuation flag is used after the transition is complete.
+If the flag for the currently selected mode becomes false, a new target mode is determined.
+Note that the mode can continue even if the available flag is false.
 
 | Flags       | Description                                                                                             |
 | ----------- | ------------------------------------------------------------------------------------------------------- |
