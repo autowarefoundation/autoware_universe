@@ -228,22 +228,22 @@ void PTv3TRT::allocateSerializedPoolingBuffers()
 
   for (std::size_t stage_index = 0; stage_index < config_.pooling_strides_.size(); ++stage_index) {
     SerializedPoolingDeviceStage stage;
-    stage.indices = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
-    stage.indptr = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels + 1);
-    stage.head_indices = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
-    stage.cluster = autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels);
+    stage.indices = autoware::cuda_utils::make_unique<std::uint32_t[]>(max_num_voxels);
+    stage.indptr = autoware::cuda_utils::make_unique<std::uint32_t[]>(max_num_voxels + 1);
+    stage.head_indices = autoware::cuda_utils::make_unique<std::uint32_t[]>(max_num_voxels);
+    stage.cluster = autoware::cuda_utils::make_unique<std::uint32_t[]>(max_num_voxels);
     stage.grid_coord = autoware::cuda_utils::make_unique<std::int32_t[]>(max_num_voxels * 3);
     stage.serialized_code =
       autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * num_orders);
     stage.serialized_order =
-      autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * num_orders);
+      autoware::cuda_utils::make_unique<std::uint32_t[]>(max_num_voxels * num_orders);
     stage.serialized_inverse =
-      autoware::cuda_utils::make_unique<std::int64_t[]>(max_num_voxels * num_orders);
+      autoware::cuda_utils::make_unique<std::uint32_t[]>(max_num_voxels * num_orders);
     serialized_pooling_stages_d_.push_back(std::move(stage));
   }
 
   serialized_pooling_num_voxels_d_ =
-    autoware::cuda_utils::make_unique<std::int64_t[]>(config_.pooling_strides_.size() + 1);
+    autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.pooling_strides_.size() + 1);
   serialized_pooling_num_voxels_.assign(config_.pooling_strides_.size() + 1, 0);
   serialized_pooling_depths_.resize(config_.pooling_strides_.size());
   for (std::size_t stage_index = 0; stage_index < config_.pooling_strides_.size(); ++stage_index) {
@@ -343,17 +343,18 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
     const std::int64_t in_min = stage == 0 ? min_voxels : 1;
     add_pooling_io(
       prefix + "indices", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {in_min}},
-      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}});
+      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}}, nvinfer1::DataType::kINT32);
     add_pooling_io(
       prefix + "cluster", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {in_min}},
-      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}});
+      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}}, nvinfer1::DataType::kINT32);
     // Output-count-sized (pooled) tensors.
     add_pooling_io(
       prefix + "indptr", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {2}},
-      nvinfer1::Dims{1, {opt_voxels + 1}}, nvinfer1::Dims{1, {max_voxels + 1}});
+      nvinfer1::Dims{1, {opt_voxels + 1}}, nvinfer1::Dims{1, {max_voxels + 1}},
+      nvinfer1::DataType::kINT32);
     add_pooling_io(
       prefix + "head_indices", nvinfer1::Dims{1, {-1}}, nvinfer1::Dims{1, {1}},
-      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}});
+      nvinfer1::Dims{1, {opt_voxels}}, nvinfer1::Dims{1, {max_voxels}}, nvinfer1::DataType::kINT32);
     add_pooling_io(
       prefix + "grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::Dims{2, {1, 3}},
       nvinfer1::Dims{2, {opt_voxels, 3}}, nvinfer1::Dims{2, {max_voxels, 3}},
@@ -361,11 +362,11 @@ void PTv3TRT::initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_confi
     add_pooling_io(
       prefix + "serialized_order", nvinfer1::Dims{2, {num_orders, -1}},
       nvinfer1::Dims{2, {num_orders, 1}}, nvinfer1::Dims{2, {num_orders, opt_voxels}},
-      nvinfer1::Dims{2, {num_orders, max_voxels}});
+      nvinfer1::Dims{2, {num_orders, max_voxels}}, nvinfer1::DataType::kINT32);
     add_pooling_io(
       prefix + "serialized_inverse", nvinfer1::Dims{2, {num_orders, -1}},
       nvinfer1::Dims{2, {num_orders, 1}}, nvinfer1::Dims{2, {num_orders, opt_voxels}},
-      nvinfer1::Dims{2, {num_orders, max_voxels}});
+      nvinfer1::Dims{2, {num_orders, max_voxels}}, nvinfer1::DataType::kINT32);
   }
 
   backbone_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
@@ -459,11 +460,12 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
   }
 
   pre_ptr_->generateSerializedPoolingMetadata(
-    grid_coord_d_.get(), serialized_code_d_.get(), num_voxels_, stage_views,
-    serialized_pooling_num_voxels_d_.get());
+    grid_coord_d_.get(), serialized_code_d_.get(), static_cast<std::uint32_t>(num_voxels_),
+    stage_views, serialized_pooling_num_voxels_d_.get());
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     serialized_pooling_num_voxels_.data(), serialized_pooling_num_voxels_d_.get(),
-    serialized_pooling_num_voxels_.size() * sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_));
+    serialized_pooling_num_voxels_.size() * sizeof(std::uint32_t), cudaMemcpyDeviceToHost,
+    stream_));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 

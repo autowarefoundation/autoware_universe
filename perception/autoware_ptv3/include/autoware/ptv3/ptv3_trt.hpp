@@ -122,19 +122,19 @@ protected:
 
   struct SerializedPoolingDeviceStage
   {
-    CudaUniquePtr<std::int64_t[]> indices{nullptr};
-    CudaUniquePtr<std::int64_t[]> indptr{nullptr};
-    CudaUniquePtr<std::int64_t[]> head_indices{nullptr};
-    CudaUniquePtr<std::int64_t[]> cluster{nullptr};
+    CudaUniquePtr<std::uint32_t[]> indices{nullptr};
+    CudaUniquePtr<std::uint32_t[]> indptr{nullptr};
+    CudaUniquePtr<std::uint32_t[]> head_indices{nullptr};
+    CudaUniquePtr<std::uint32_t[]> cluster{nullptr};
     CudaUniquePtr<std::int32_t[]> grid_coord{nullptr};
     CudaUniquePtr<std::int64_t[]> serialized_code{nullptr};
-    CudaUniquePtr<std::int64_t[]> serialized_order{nullptr};
-    CudaUniquePtr<std::int64_t[]> serialized_inverse{nullptr};
+    CudaUniquePtr<std::uint32_t[]> serialized_order{nullptr};
+    CudaUniquePtr<std::uint32_t[]> serialized_inverse{nullptr};
   };
 
   std::vector<SerializedPoolingDeviceStage> serialized_pooling_stages_d_;
-  CudaUniquePtr<std::int64_t[]> serialized_pooling_num_voxels_d_{nullptr};
-  std::vector<std::int64_t> serialized_pooling_num_voxels_;
+  CudaUniquePtr<std::uint32_t[]> serialized_pooling_num_voxels_d_{nullptr};
+  std::vector<std::uint32_t> serialized_pooling_num_voxels_;
   std::vector<std::int64_t> serialized_pooling_depths_;
 
   // Preprocess outputs
