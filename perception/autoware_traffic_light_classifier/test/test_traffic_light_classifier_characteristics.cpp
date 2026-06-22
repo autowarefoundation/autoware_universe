@@ -37,8 +37,6 @@
 
 #include "../src/traffic_light_classifier_node.hpp"
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
-#include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -71,7 +69,8 @@ using tier4_perception_msgs::msg::TrafficLightElement;
 using tier4_perception_msgs::msg::TrafficLightRoi;
 using tier4_perception_msgs::msg::TrafficLightRoiArray;
 
-using namespace std::chrono_literals;
+using std::chrono_literals::operator""ms;
+using std::chrono_literals::operator""s;
 
 constexpr char node_name[] = "traffic_light_classifier_node";
 constexpr char output_topic[] = "/traffic_light_classifier_node/output/traffic_signals";
@@ -100,16 +99,23 @@ std_msgs::msg::Header make_header()
   return header;
 }
 
+// A uniformly painted image. The exposure tests use `white` (over-exposed) and
+// `black` (under-exposed); make_dummy_image builds on it for a neutral fill. The
+// default 16x16 hosts a single full-frame 16x16 ROI; pass larger explicit
+// dimensions when laying out multiple ROIs (the image must contain every ROI).
+Image::SharedPtr make_solid_image(const cv::Scalar & color, int width = 16, int height = 16)
+{
+  cv::Mat mat(height, width, CV_8UC3, color);
+  return cv_bridge::CvImage(make_header(), "rgb8", mat).toImageMsg();
+}
+
 // A placeholder image for tests that don't care about pixel content -- only the
 // dimensions matter (ROIs index into it). The fixed neutral gray is chosen so
 // it never trips the exposure thresholds; the color itself carries no meaning.
-// The default 16x16 hosts a single full-frame 16x16 ROI; pass larger explicit
-// dimensions when laying out multiple ROIs (the image must contain every ROI).
 Image::SharedPtr make_dummy_image(int width = 16, int height = 16)
 {
   constexpr uint8_t neutral_gray = 100;
-  cv::Mat mat(height, width, CV_8UC3, cv::Scalar(neutral_gray, neutral_gray, neutral_gray));
-  return cv_bridge::CvImage(make_header(), "rgb8", mat).toImageMsg();
+  return make_solid_image(cv::Scalar(neutral_gray, neutral_gray, neutral_gray), width, height);
 }
 
 // A 32x16 image split into two 16x16 halves: left half painted `left`, right
@@ -120,22 +126,6 @@ Image::SharedPtr make_left_right_image(const cv::Scalar & left, const cv::Scalar
   cv::Mat mat(/*rows=*/16, /*cols=*/32, CV_8UC3, left);
   mat(cv::Rect(/*x=*/16, /*y=*/0, /*width=*/16, /*height=*/16)).setTo(right);
   return cv_bridge::CvImage(make_header(), "rgb8", mat).toImageMsg();
-}
-
-Image::SharedPtr load_image(const std::string & filename)
-{
-  const auto package_dir =
-    ament_index_cpp::get_package_share_directory("autoware_traffic_light_classifier");
-  const auto path = package_dir + "/test_data/" + filename;
-  const cv::Mat bgr = cv::imread(path);
-  // Helpers stay free of gtest assertions; signal a setup failure by throwing
-  // (gtest reports the uncaught exception as a test failure).
-  if (bgr.empty()) {
-    throw std::runtime_error("failed to read test image: " + path);
-  }
-  cv::Mat rgb;
-  cv::cvtColor(bgr, rgb, cv::COLOR_BGR2RGB);
-  return cv_bridge::CvImage(make_header(), "rgb8", rgb).toImageMsg();
 }
 
 TrafficLightRoi make_roi(
@@ -198,9 +188,8 @@ const diagnostic_msgs::msg::KeyValue * find_key_value(
     return ::testing::AssertionFailure() << "no diagnostic was published by the node";
   }
   if (cap.diag.level != expected_level) {
-    return ::testing::AssertionFailure()
-           << "diag level = " << static_cast<int>(cap.diag.level) << ", expected "
-           << static_cast<int>(expected_level);
+    return ::testing::AssertionFailure() << "diag level = " << static_cast<int>(cap.diag.level)
+                                         << ", expected " << static_cast<int>(expected_level);
   }
   const std::pair<const char *, bool> flags[] = {
     {"detect_traffic_light_over_exposure", expect_over},
@@ -215,6 +204,31 @@ const diagnostic_msgs::msg::KeyValue * find_key_value(
       return ::testing::AssertionFailure()
              << key << " = \"" << kv->value << "\", expected \"" << want << "\"";
     }
+  }
+  return ::testing::AssertionSuccess();
+}
+
+// A signal whose single element was reset to UNKNOWN: color and shape UNKNOWN
+// with confidence 0 -- the canonical setSignalUnknown shape, produced both for
+// undetected (zero-sized) ROIs and for exposure-overwritten slots. Returns an
+// AssertionResult so the assertion stays in the test body.
+::testing::AssertionResult is_unknown_signal(const TrafficLight & signal)
+{
+  if (signal.elements.size() != 1u) {
+    return ::testing::AssertionFailure()
+           << "element count = " << signal.elements.size() << ", expected 1";
+  }
+  const auto & element = signal.elements[0];
+  if (element.color != TrafficLightElement::UNKNOWN) {
+    return ::testing::AssertionFailure()
+           << "color = " << static_cast<int>(element.color) << ", expected UNKNOWN";
+  }
+  if (element.shape != TrafficLightElement::UNKNOWN) {
+    return ::testing::AssertionFailure()
+           << "shape = " << static_cast<int>(element.shape) << ", expected UNKNOWN";
+  }
+  if (element.confidence != 0.0f) {
+    return ::testing::AssertionFailure() << "confidence = " << element.confidence << ", expected 0";
   }
   return ::testing::AssertionSuccess();
 }
@@ -245,9 +259,10 @@ protected:
   // callback is re-invoked in a wait loop so the test is robust against
   // pub/sub discovery latency (the callback is pure w.r.t. its inputs).
   // Every caller expects a publish, so a capture failure is treated as a setup
-  // failure and surfaced by throwing (kept free of gtest assertions, like
-  // load_image); callers therefore need not re-check cap.got_signals.
-  Captured process(const Image::ConstSharedPtr & image, const TrafficLightRoiArray::ConstSharedPtr & rois)
+  // failure and surfaced by throwing (helpers stay free of gtest assertions);
+  // callers therefore need not re-check cap.got_signals.
+  Captured process(
+    const Image::ConstSharedPtr & image, const TrafficLightRoiArray::ConstSharedPtr & rois)
   {
     Captured cap;
 
@@ -277,9 +292,7 @@ protected:
       std::this_thread::sleep_for(10ms);
     }
     // Drain a little more so diagnostics published in the same call are received.
-    for (int i = 0; i < 20 && !cap.got_diag &&
-                    std::chrono::steady_clock::now() < deadline;
-         ++i) {
+    for (int i = 0; i < 20 && !cap.got_diag && std::chrono::steady_clock::now() < deadline; ++i) {
       node_->imageRoiCallback(image, rois);
       exec.spin_some();
       std::this_thread::sleep_for(5ms);
@@ -308,8 +321,7 @@ protected:
     bool got = false;
     auto capture_node = std::make_shared<rclcpp::Node>("output_capture");
     auto sub = capture_node->create_subscription<TrafficLightArray>(
-      output_topic, rclcpp::QoS{1},
-      [&got](TrafficLightArray::ConstSharedPtr) { got = true; });
+      output_topic, rclcpp::QoS{1}, [&got](TrafficLightArray::ConstSharedPtr) { got = true; });
 
     rclcpp::executors::SingleThreadedExecutor exec;
     exec.add_node(capture_node);
@@ -344,7 +356,8 @@ TEST_F(CharacterizationTest, EmptyRoisPublishEmptySignalsWithHeader)
   EXPECT_EQ(cap.signals.signals.size(), 0u);
   // Output header is propagated from the input image (not the rois / not now()).
   EXPECT_EQ(cap.signals.header, image->header);
-  // Early return happens before diagnostics_interface_ptr_->publish().
+  // The exposure diagnostic reports per-ROI brightness; with no ROIs there is
+  // nothing to assess, so the node publishes no diagnostic at all (not even OK).
   EXPECT_FALSE(cap.got_diag);
 }
 
@@ -379,7 +392,7 @@ TEST_F(CharacterizationTest, ZeroSizedMatchingRoiAppendedAsUnknown)
   make_node_under_test(car_type, no_over_threshold, no_under_threshold);
   auto image = make_dummy_image();
   auto rois = std::make_shared<TrafficLightRoiArray>();
-  rois->rois.push_back(make_zero_sized_roi(/*id=*/42));
+  rois->rois.push_back(make_zero_sized_roi(/*id=*/1));
 
   // Act
   const auto cap = process(image, rois);
@@ -387,12 +400,9 @@ TEST_F(CharacterizationTest, ZeroSizedMatchingRoiAppendedAsUnknown)
   // Assert
   ASSERT_EQ(cap.signals.signals.size(), 1u);
   const auto & signal = cap.signals.signals[0];
-  EXPECT_EQ(signal.traffic_light_id, 42);
+  EXPECT_EQ(signal.traffic_light_id, 1);
   EXPECT_EQ(signal.traffic_light_type, car_type);
-  ASSERT_EQ(signal.elements.size(), 1u);
-  EXPECT_EQ(signal.elements[0].color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(signal.elements[0].shape, TrafficLightElement::UNKNOWN);
-  EXPECT_FLOAT_EQ(signal.elements[0].confidence, 0.0f);
+  EXPECT_TRUE(is_unknown_signal(signal));
 }
 
 // --------------------------------------------------------------------------
@@ -406,7 +416,7 @@ TEST_F(CharacterizationTest, ValidRoiProducesExactlyOneElement)
   make_node_under_test(car_type, no_over_threshold, no_under_threshold);
   auto image = make_dummy_image();
   auto rois = std::make_shared<TrafficLightRoiArray>();
-  rois->rois.push_back(make_valid_roi(/*id=*/7));
+  rois->rois.push_back(make_valid_roi(/*id=*/1));
 
   // Act
   const auto cap = process(image, rois);
@@ -414,7 +424,7 @@ TEST_F(CharacterizationTest, ValidRoiProducesExactlyOneElement)
   // Assert
   ASSERT_EQ(cap.signals.signals.size(), 1u);
   const auto & signal = cap.signals.signals[0];
-  EXPECT_EQ(signal.traffic_light_id, 7);  // input id propagated to the slot
+  EXPECT_EQ(signal.traffic_light_id, 1);  // input id propagated to the slot
   EXPECT_EQ(signal.elements.size(), 1u);  // classifier produced exactly one element
 
   // No exposure issues -> OK, both exposure flags false.
@@ -433,8 +443,8 @@ TEST_F(CharacterizationTest, MultipleValidRoisMapToOrderedSlots)
   make_node_under_test(car_type, no_over_threshold, no_under_threshold);
   auto image = make_dummy_image(32, 16);
   auto rois = std::make_shared<TrafficLightRoiArray>();
-  rois->rois.push_back(make_valid_roi(/*id=*/10));
-  rois->rois.push_back(make_valid_roi(/*id=*/20, /*x=*/16));
+  rois->rois.push_back(make_valid_roi(/*id=*/1));
+  rois->rois.push_back(make_valid_roi(/*id=*/2, /*x=*/16));
 
   // Act
   const auto cap = process(image, rois);
@@ -442,15 +452,18 @@ TEST_F(CharacterizationTest, MultipleValidRoisMapToOrderedSlots)
   // Assert
   ASSERT_EQ(cap.signals.signals.size(), 2u);
   // input ids map to slots in order, each with exactly one element
-  EXPECT_EQ(cap.signals.signals[0].traffic_light_id, 10);
+  EXPECT_EQ(cap.signals.signals[0].traffic_light_id, 1);
   EXPECT_EQ(cap.signals.signals[0].elements.size(), 1u);
-  EXPECT_EQ(cap.signals.signals[1].traffic_light_id, 20);
+  EXPECT_EQ(cap.signals.signals[1].traffic_light_id, 2);
   EXPECT_EQ(cap.signals.signals[1].elements.size(), 1u);
 }
 
 // --------------------------------------------------------------------------
-// Output ordering: classified (valid) signals come first, appended UNKNOWN
-// signals (from zero-sized ROIs) follow. ids are preserved per slot.
+// Output order is NOT input order: classified (valid) signals fill the leading
+// slots, then UNKNOWN signals from zero-sized ROIs are appended after them. The
+// input is deliberately [zero-sized, valid] so the two reorder -- a naive
+// input-order-preserving implementation would put the UNKNOWN first and fail.
+// ids are preserved per slot.
 // --------------------------------------------------------------------------
 TEST_F(CharacterizationTest, ValidThenZeroSizedRoiOrdering)
 {
@@ -458,8 +471,9 @@ TEST_F(CharacterizationTest, ValidThenZeroSizedRoiOrdering)
   make_node_under_test(car_type, no_over_threshold, no_under_threshold);
   auto image = make_dummy_image();
   auto rois = std::make_shared<TrafficLightRoiArray>();
-  rois->rois.push_back(make_valid_roi(/*id=*/1));
-  rois->rois.push_back(make_zero_sized_roi(/*id=*/2));
+  // Reversed relative to the expected output: zero-sized first, valid second.
+  rois->rois.push_back(make_zero_sized_roi(/*id=*/1));
+  rois->rois.push_back(make_valid_roi(/*id=*/2));
 
   // Act
   const auto cap = process(image, rois);
@@ -467,30 +481,28 @@ TEST_F(CharacterizationTest, ValidThenZeroSizedRoiOrdering)
   // Assert
   ASSERT_EQ(cap.signals.signals.size(), 2u);
 
-  // [0] classified valid ROI
-  EXPECT_EQ(cap.signals.signals[0].traffic_light_id, 1);
+  // [0] classified valid ROI -- input-second, but classified ROIs lead the output
+  EXPECT_EQ(cap.signals.signals[0].traffic_light_id, 2);
   EXPECT_EQ(cap.signals.signals[0].elements.size(), 1u);
 
-  // [1] appended UNKNOWN for the zero-sized ROI
-  EXPECT_EQ(cap.signals.signals[1].traffic_light_id, 2);
-  ASSERT_EQ(cap.signals.signals[1].elements.size(), 1u);
-  EXPECT_EQ(cap.signals.signals[1].elements[0].color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(cap.signals.signals[1].elements[0].shape, TrafficLightElement::UNKNOWN);
+  // [1] appended UNKNOWN for the zero-sized ROI -- input-first, but appended last
+  EXPECT_EQ(cap.signals.signals[1].traffic_light_id, 1);
+  EXPECT_TRUE(is_unknown_signal(cap.signals.signals[1]));
 }
 
 // --------------------------------------------------------------------------
 // Over-exposed ROI: result is overwritten with UNKNOWN and a WARN diagnostic
-// is published with detect_traffic_light_over_exposure == True.
-// backlight_strong.png crosses the 0.85 brightness threshold (see test_utils).
+// is published with detect_traffic_light_over_exposure == True. A solid `white`
+// fill (brightness ~1.27) clears the 0.85 threshold; compute_brightness on real
+// backlit images is covered separately in test_utils.
 // --------------------------------------------------------------------------
 TEST_F(CharacterizationTest, OverExposedRoiOverwrittenWithUnknownAndWarns)
 {
   // Arrange
   make_node_under_test(car_type, /*over=*/0.85, /*under=*/no_under_threshold);
-  auto image = load_image("backlight_strong.png");
+  auto image = make_solid_image(white);
   auto rois = std::make_shared<TrafficLightRoiArray>();
-  rois->rois.push_back(
-    make_valid_roi(/*id=*/5, /*x=*/0, /*y=*/0, image->width, image->height));  // full image
+  rois->rois.push_back(make_valid_roi(/*id=*/1));  // full-frame ROI
 
   // Act
   const auto cap = process(image, rois);
@@ -498,27 +510,25 @@ TEST_F(CharacterizationTest, OverExposedRoiOverwrittenWithUnknownAndWarns)
   // Assert
   ASSERT_EQ(cap.signals.signals.size(), 1u);
   const auto & signal = cap.signals.signals[0];
-  EXPECT_EQ(signal.traffic_light_id, 5);
-  ASSERT_EQ(signal.elements.size(), 1u);
-  EXPECT_EQ(signal.elements[0].color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(signal.elements[0].shape, TrafficLightElement::UNKNOWN);
-  EXPECT_FLOAT_EQ(signal.elements[0].confidence, 0.0f);
+  EXPECT_EQ(signal.traffic_light_id, 1);
+  EXPECT_TRUE(is_unknown_signal(signal));
 
   EXPECT_TRUE(has_exposure_diag(cap, DiagnosticStatus::WARN, /*over=*/true, /*under=*/false));
 }
 
 // --------------------------------------------------------------------------
 // Under-exposed ROI: same overwrite-to-UNKNOWN + WARN behavior, driven by
-// detect_traffic_light_under_exposure. traffic_light_dimmed_strong.png crosses
-// the -0.85 threshold (see test_utils).
+// detect_traffic_light_under_exposure. A solid `black` fill (brightness -1.0)
+// falls below the -0.85 threshold; compute_brightness on real dimmed images is
+// covered separately in test_utils.
 // --------------------------------------------------------------------------
 TEST_F(CharacterizationTest, UnderExposedRoiOverwrittenWithUnknownAndWarns)
 {
   // Arrange
   make_node_under_test(car_type, /*over=*/no_over_threshold, /*under=*/-0.85);
-  auto image = load_image("traffic_light_dimmed_strong.png");
+  auto image = make_solid_image(black);
   auto rois = std::make_shared<TrafficLightRoiArray>();
-  rois->rois.push_back(make_valid_roi(/*id=*/9, /*x=*/0, /*y=*/0, image->width, image->height));
+  rois->rois.push_back(make_valid_roi(/*id=*/1));  // full-frame ROI
 
   // Act
   const auto cap = process(image, rois);
@@ -526,9 +536,8 @@ TEST_F(CharacterizationTest, UnderExposedRoiOverwrittenWithUnknownAndWarns)
   // Assert
   ASSERT_EQ(cap.signals.signals.size(), 1u);
   const auto & signal = cap.signals.signals[0];
-  EXPECT_EQ(signal.traffic_light_id, 9);
-  ASSERT_EQ(signal.elements.size(), 1u);
-  EXPECT_EQ(signal.elements[0].color, TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(signal.traffic_light_id, 1);
+  EXPECT_TRUE(is_unknown_signal(signal));
 
   EXPECT_TRUE(has_exposure_diag(cap, DiagnosticStatus::WARN, /*over=*/false, /*under=*/true));
 }
@@ -548,8 +557,8 @@ TEST_F(CharacterizationTest, OnlyExposedSlotIsOverwritten)
   // Left half green (normal, classifies as GREEN), right half white (over-exposed).
   auto image = make_left_right_image(green_lamp, white);
   auto rois = std::make_shared<TrafficLightRoiArray>();
-  rois->rois.push_back(make_valid_roi(/*id=*/1));             // normal (left half)
-  rois->rois.push_back(make_valid_roi(/*id=*/2, /*x=*/16));   // over-exposed (right half)
+  rois->rois.push_back(make_valid_roi(/*id=*/1));            // normal (left half)
+  rois->rois.push_back(make_valid_roi(/*id=*/2, /*x=*/16));  // over-exposed (right half)
 
   // Act
   const auto cap = process(image, rois);
@@ -563,10 +572,7 @@ TEST_F(CharacterizationTest, OnlyExposedSlotIsOverwritten)
   EXPECT_GT(cap.signals.signals[0].elements[0].confidence, 0.0f);
   // slot 1: overwritten with UNKNOWN by the exposure handling
   EXPECT_EQ(cap.signals.signals[1].traffic_light_id, 2);
-  ASSERT_EQ(cap.signals.signals[1].elements.size(), 1u);
-  EXPECT_EQ(cap.signals.signals[1].elements[0].color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(cap.signals.signals[1].elements[0].shape, TrafficLightElement::UNKNOWN);
-  EXPECT_FLOAT_EQ(cap.signals.signals[1].elements[0].confidence, 0.0f);
+  EXPECT_TRUE(is_unknown_signal(cap.signals.signals[1]));
 
   EXPECT_TRUE(has_exposure_diag(cap, DiagnosticStatus::WARN, /*over=*/true, /*under=*/false));
 }
@@ -590,21 +596,17 @@ TEST_F(CharacterizationTest, OverAndUnderExposureInSameCall)
 
   // Assert
   ASSERT_EQ(cap.signals.signals.size(), 2u);
-  ASSERT_EQ(cap.signals.signals[0].elements.size(), 1u);
-  EXPECT_EQ(cap.signals.signals[0].elements[0].color, TrafficLightElement::UNKNOWN);
-  ASSERT_EQ(cap.signals.signals[1].elements.size(), 1u);
-  EXPECT_EQ(cap.signals.signals[1].elements[0].color, TrafficLightElement::UNKNOWN);
+  EXPECT_TRUE(is_unknown_signal(cap.signals.signals[0]));  // over-exposed (left half)
+  EXPECT_TRUE(is_unknown_signal(cap.signals.signals[1]));  // under-exposed (right half)
 
   EXPECT_TRUE(has_exposure_diag(cap, DiagnosticStatus::WARN, /*over=*/true, /*under=*/true));
 }
 
-// ==========================================================================
-// NOTE: the test below may be removed on request -- it pins a defensive
-// early-return guard rather than core behavior. Keep it self-contained so it
-// can be deleted as a single block.
 // --------------------------------------------------------------------------
 // An unknown classifier_type leaves classifier_ptr_ unset; the callback returns
-// early and publishes nothing at all (not even an empty message).
+// early and publishes nothing at all (not even an empty message). This pins a
+// defensive guard: a misconfigured classifier degrades to a silent no-op rather
+// than a crash or an empty publish.
 // --------------------------------------------------------------------------
 TEST_F(CharacterizationTest, UnknownClassifierTypePublishesNothing)
 {
@@ -620,7 +622,6 @@ TEST_F(CharacterizationTest, UnknownClassifierTypePublishesNothing)
   // Assert
   EXPECT_FALSE(published);
 }
-// ==========================================================================
 
 }  // namespace
 
