@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::vehicle_velocity_converter::VehicleVelocityConverter
+  plugin: autoware::vehicle_velocity_converter::VehicleVelocityConverterNode
   executable: autoware_vehicle_velocity_converter_node
   node_output: screen
 
