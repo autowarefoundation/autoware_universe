@@ -33,6 +33,17 @@
 
 namespace autoware::ptv3
 {
+namespace
+{
+struct NotEqual
+{
+  template <typename T>
+  __host__ __device__ bool operator()(const T & a, const T & b) const
+  {
+    return a != b;
+  }
+};
+}  // namespace
 
 PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
 : config_(config), stream_(stream)
@@ -80,11 +91,27 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
 
   std::uint64_t * uint64_nullptr = nullptr;
 
-  cub::DeviceRadixSort::SortPairs(
-    nullptr, sort_workspace_size_, uint64_nullptr, uint64_nullptr, uint64_nullptr, uint64_nullptr,
-    config_.cloud_capacity_, 0, 64, nullptr);
+  std::size_t sort_pair_workspace_size = 0;
+  std::size_t inclusive_sum_workspace_size = 0;
+  std::size_t adjacent_difference_workspace_size = 0;
 
-  sort_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(sort_workspace_size_);
+  CHECK_CUDA_ERROR(
+    cub::DeviceRadixSort::SortPairs(
+      nullptr, sort_pair_workspace_size, uint64_nullptr, uint64_nullptr, uint64_nullptr,
+      uint64_nullptr, config_.cloud_capacity_, 0, 64, nullptr));
+  CHECK_CUDA_ERROR(
+    cub::DeviceScan::InclusiveSum(
+      nullptr, inclusive_sum_workspace_size, uint64_nullptr, uint64_nullptr,
+      config_.cloud_capacity_));
+  CHECK_CUDA_ERROR(
+    cub::DeviceAdjacentDifference::SubtractLeftCopy(
+      nullptr, adjacent_difference_workspace_size, uint64_nullptr, uint64_nullptr,
+      config_.cloud_capacity_, NotEqual{}));
+
+  generate_feature_workspace_size_ = std::max(
+    {sort_pair_workspace_size, inclusive_sum_workspace_size, adjacent_difference_workspace_size});
+  generate_feature_workspace_d_ =
+    autoware::cuda_utils::make_unique<std::uint8_t[]>(generate_feature_workspace_size_);
 
   pooling_keys_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
   pooling_sorted_keys_d_ =
@@ -554,8 +581,10 @@ std::size_t PreprocessCuda::generateFeatures(
     config_.min_x_range_, config_.min_y_range_, config_.min_z_range_, config_.max_x_range_,
     config_.max_y_range_, config_.max_z_range_);
 
-  thrust::inclusive_scan(
-    policy, crop_mask_d_.get(), crop_mask_d_.get() + num_points, crop_indices_d_.get());
+  CHECK_CUDA_ERROR(
+    cub::DeviceScan::InclusiveSum(
+      generate_feature_workspace_d_.get(), generate_feature_workspace_size_, crop_mask_d_.get(),
+      crop_indices_d_.get(), num_points, stream_));
 
   std::uint32_t num_cropped_points;
 
@@ -654,23 +683,23 @@ std::size_t PreprocessCuda::generateFeatures(
       coord_min_z);
 
     cub::DeviceRadixSort::SortPairs(
-      reinterpret_cast<void *>(sort_workspace_d_.get()), sort_workspace_size_, hashes64_d_.get(),
-      sorted_hashes64_d_.get(), hash_indexes64_d_.get(), sorted_hash_indexes64_d_.get(),
-      num_cropped_points, 0, 64, stream_);
+      reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
+      generate_feature_workspace_size_, hashes64_d_.get(), sorted_hashes64_d_.get(),
+      hash_indexes64_d_.get(), sorted_hash_indexes64_d_.get(), num_cropped_points, 0, 64, stream_);
 
-    auto not_equal = [] __device__(const std::uint64_t a, const std::uint64_t b) { return a != b; };
-
-    thrust::adjacent_difference(
-      policy, sorted_hashes64_d_.get(), sorted_hashes64_d_.get() + num_cropped_points,
-      unique_mask64_d_.get(), not_equal);
+    CHECK_CUDA_ERROR(
+      cub::DeviceAdjacentDifference::SubtractLeftCopy(
+        generate_feature_workspace_d_.get(), generate_feature_workspace_size_,
+        sorted_hashes64_d_.get(), unique_mask64_d_.get(), num_cropped_points, NotEqual{}, stream_));
 
     std::uint64_t one = 1;
     cudaMemcpyAsync(
       unique_mask64_d_.get(), &one, sizeof(std::uint64_t), cudaMemcpyHostToDevice, stream_);
 
-    thrust::inclusive_scan(
-      policy, unique_mask64_d_.get(), unique_mask64_d_.get() + num_cropped_points,
-      unique_indices64_d_.get());
+    CHECK_CUDA_ERROR(
+      cub::DeviceScan::InclusiveSum(
+        generate_feature_workspace_d_.get(), generate_feature_workspace_size_,
+        unique_mask64_d_.get(), unique_indices64_d_.get(), num_cropped_points, stream_));
 
     cudaMemcpyAsync(
       &num_unique_points, unique_indices64_d_.get() + num_cropped_points - 1, sizeof(std::int64_t),
@@ -722,23 +751,23 @@ std::size_t PreprocessCuda::generateFeatures(
       static_cast<std::uint32_t>(config_.grid_x_size_ * config_.grid_y_size_));
 
     cub::DeviceRadixSort::SortPairs(
-      reinterpret_cast<void *>(sort_workspace_d_.get()), sort_workspace_size_, hashes32_d_.get(),
-      sorted_hashes32_d_.get(), hash_indexes32_d_.get(), sorted_hash_indexes32_d_.get(),
-      num_cropped_points, 0, 32, stream_);
+      reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
+      generate_feature_workspace_size_, hashes32_d_.get(), sorted_hashes32_d_.get(),
+      hash_indexes32_d_.get(), sorted_hash_indexes32_d_.get(), num_cropped_points, 0, 32, stream_);
 
-    auto not_equal = [] __device__(const std::uint32_t a, const std::uint32_t b) { return a != b; };
-
-    thrust::adjacent_difference(
-      policy, sorted_hashes32_d_.get(), sorted_hashes32_d_.get() + num_cropped_points,
-      unique_mask32_d_.get(), not_equal);
+    CHECK_CUDA_ERROR(
+      cub::DeviceAdjacentDifference::SubtractLeftCopy(
+        generate_feature_workspace_d_.get(), generate_feature_workspace_size_,
+        sorted_hashes32_d_.get(), unique_mask32_d_.get(), num_cropped_points, NotEqual{}, stream_));
 
     std::uint32_t one = 1;
     cudaMemcpyAsync(
       unique_mask32_d_.get(), &one, sizeof(std::uint32_t), cudaMemcpyHostToDevice, stream_);
 
-    thrust::inclusive_scan(
-      policy, unique_mask32_d_.get(), unique_mask32_d_.get() + num_cropped_points,
-      unique_indices32_d_.get());
+    CHECK_CUDA_ERROR(
+      cub::DeviceScan::InclusiveSum(
+        generate_feature_workspace_d_.get(), generate_feature_workspace_size_,
+        unique_mask32_d_.get(), unique_indices32_d_.get(), num_cropped_points, stream_));
 
     std::uint32_t num_unique_points32;
     cudaMemcpyAsync(
