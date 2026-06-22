@@ -217,38 +217,60 @@ types::DynamicObject createPseudoMeasurement(
 }
 
 double correctWheelAnchorLateral(
-  const double lateral_offset, const double tracker_width, const double polygon_width,
+  const double tracker_L, const double tracker_R, const double polygon_L, const double polygon_R,
   double & var_lat)
 {
-  constexpr double balance_alpha = 0.2;         // hold-tracker slope inside the dead-zone
-  constexpr double corner_residual_beta = 0.3;  // residual std fraction once the corner is matched
+  // Zone boundaries as fractions of tracker half-width H:
+  //   dead zone: half-width-miss or per-side excess ≤ 0.20·H → no correction
+  //   inner (zone 2): polygon_width < 0.80·tracker_width → weight based on half-width-miss only
+  //     full match at polygon_width = 0.50·tracker_width (half-width-miss = 0.50·H)
+  //   outer (zone 3): per-side excess > 0.20·H → full match at excess = 0.40·H (140% of H)
+  constexpr double DEAD_ZONE_FRAC  = 0.20;
+  constexpr double FULL_INNER_FRAC = 0.50;
+  constexpr double FULL_OUTER_FRAC = 0.40;
 
-  const double slack = 0.5 * (polygon_width - tracker_width);
-  if (slack <= 0.0) {
-    // Polygon narrower than (or equal to) the tracker: partial view. Keep the anchor (no move) and
-    // add the worst-case lateral offset (half the missing width) as variance.
-    const double half_gap = -slack;  // = 0.5 * (tracker_width - polygon_width) >= 0
-    var_lat = half_gap * half_gap;
-    return 0.0;
+  const double H         = (tracker_L - tracker_R) * 0.5;
+  const double dead_lat  = DEAD_ZONE_FRAC * H;
+  const double inner_lat = FULL_INNER_FRAC * H;
+  const double outer_lat = FULL_OUTER_FRAC * H;
+
+  const double polygon_width = polygon_L - polygon_R;
+  const double tracker_width = 2.0 * H;
+
+  if (polygon_width <= tracker_width) {
+    // Inner zone: polygon narrower than tracker.
+    // Weight is based on the symmetric half-width-miss so it does not depend on lateral_offset,
+    // avoiding the oscillation that per-side excess weights produce when a narrow polygon shifts.
+    const double half_width_miss = (tracker_width - polygon_width) * 0.5;
+    const double t_inner = (half_width_miss > dead_lat)
+                             ? std::clamp(
+                                 (half_width_miss - dead_lat) / (inner_lat - dead_lat), 0.0, 1.0)
+                             : 0.0;
+    // Correction: pull the anchor toward the tracker center proportional to its lateral offset.
+    // lateral_offset = (polygon_L + polygon_R) / 2; at t=1 the anchor snaps to center.
+    const double lateral_offset = (polygon_L + polygon_R) * 0.5;
+    // Uncorrected residual is also width-based to stay consistent.
+    const double resid = half_width_miss * (1.0 - t_inner);
+    var_lat = 2.0 * resid * resid;
+    return -lateral_offset * t_inner;
   }
 
-  // Polygon wider than the tracker: soft dead-zone ("back-lash") lateral correction.
-  const double abs_offset = std::abs(lateral_offset);
-  const double sgn = (lateral_offset >= 0.0) ? 1.0 : -1.0;
+  // Outer zone: polygon wider than tracker.
+  // Per-side excess weights give accurate boundary-level correction.
+  const double excess_L = polygon_L - tracker_L;
+  const double excess_R = tracker_R - polygon_R;
 
-  // Soft dead-zone: slope `balance_alpha` while contained (|offset| <= slack), unit slope once the
-  // corner is exposed. Continuous at |offset| = slack.
-  const double shift = (abs_offset <= slack) ? balance_alpha * abs_offset
-                                             : (abs_offset - slack) + balance_alpha * slack;
-  const double lateral_move =
-    sgn * shift - lateral_offset;  // (corrected - observed) lateral offset
-
-  // Added lateral std: `slack` when centered (true position unknown across the slack), shrinking to
-  // `corner_residual_beta` * slack once the corner is matched. Continuous in |offset|.
-  const double t = std::clamp(abs_offset / slack, 0.0, 1.0);
-  const double std_lat = slack * (1.0 - (1.0 - corner_residual_beta) * t);
-  var_lat = std_lat * std_lat;
-  return lateral_move;
+  const auto outer_weight = [&](const double excess) -> double {
+    return (excess > dead_lat)
+             ? std::clamp((excess - dead_lat) / (outer_lat - dead_lat), 0.0, 1.0)
+             : 0.0;
+  };
+  const double t_L = outer_weight(excess_L);
+  const double t_R = outer_weight(excess_R);
+  const double resid_L = excess_L * (1.0 - t_L);
+  const double resid_R = excess_R * (1.0 - t_R);
+  var_lat = resid_L * resid_L + resid_R * resid_R;
+  return -excess_L * t_L + excess_R * t_R;
 }
 
 geometry_msgs::msg::Point correctWheelAnchor(
@@ -268,9 +290,12 @@ geometry_msgs::msg::Point correctWheelAnchor(
   const double lateral_offset =
     -(anchor.x - tracker_center.x) * sin_yaw + (anchor.y - tracker_center.y) * cos_yaw;
 
+  const double tracker_half = tracker_width * 0.5;
+  const double polygon_half = polygon_width * 0.5;
   double var_lat = 0.0;
-  const double lateral_move =
-    correctWheelAnchorLateral(lateral_offset, tracker_width, polygon_width, var_lat);
+  const double lateral_move = correctWheelAnchorLateral(
+    +tracker_half, -tracker_half, lateral_offset + polygon_half, lateral_offset - polygon_half,
+    var_lat);
 
   // Apply the scalar lateral move back along n to get the corrected anchor point.
   geometry_msgs::msg::Point corrected = anchor;
