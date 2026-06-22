@@ -236,14 +236,11 @@ bool VehicleTracker::updateWheelKinematics(
     pose_cov[XYZRPY_COV_IDX::Y_Y] += var_lat * c * c;
   }
 
-  bool is_updated = false;
-  if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::FRONT;
-    is_updated = motion_model_.updateStatePoseFront(anchor_point.x, anchor_point.y, pose_cov);
-  } else {
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::REAR;
-    is_updated = motion_model_.updateStatePoseRear(anchor_point.x, anchor_point.y, pose_cov);
-  }
+  const bool measure_front = strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE;
+  shape_update_anchor_ = measure_front ? BicycleMotionModel::LengthUpdateAnchor::FRONT
+                                       : BicycleMotionModel::LengthUpdateAnchor::REAR;
+  const bool is_updated =
+    motion_model_.updateStatePoseWheel(anchor_point.x, anchor_point.y, pose_cov, measure_front);
   // Wheel-anchor EKF only updates x/y; z position and height are applied here.
   constexpr double z_gain = 0.4;
   motion_model_.updateZ(measurement.pose.position.z, z_gain);

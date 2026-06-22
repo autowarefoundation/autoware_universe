@@ -246,60 +246,35 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   return ekf_.update(Y, C, R);
 }
 
-bool BicycleMotionModel::updateStatePoseRear(
-  const double & xr, const double & yr, const std::array<double, 36> & pose_cov)
+bool BicycleMotionModel::updateStatePoseWheel(
+  const double & x, const double & y, const std::array<double, 36> & pose_cov,
+  const bool measure_front)
 {
   // check if the state is initialized
   if (!checkInitialized()) return false;
 
-  // Measure the observed rear FACE center directly. The face center lies on the body axis at a
-  // distance gamma_rear * wheel_base behind the rear axle. Because that offset is gamma_rear * L *
-  // u_hat and L * u_hat == (p2 - p1) by definition of the two-point state, the wheelbase and yaw
-  // cancel and the measurement is an EXACT linear function of the endpoints (true KF, no EKF
-  // approximation):
-  //   face_rear = p1 - gamma_rear * (p2 - p1) = (1 + gamma_rear) * p1 - gamma_rear * p2
-  // The innovation equals the old single-axle form, but C now constrains a linear blend of both
-  // endpoints, so the gain splits the correction between translation and rotation per the prior
-  // covariance instead of dumping it on the rear axle (which rotated the body as a side effect).
-  const double g = motion_params_.wheel_gamma_rear;
   constexpr int DIM_Y = 2;
   Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << xr, yr;
+  Y << x, y;
 
+  // Measure the edge FACE center as an exact linear blend of the two endpoints (true KF):
+  // face = (1 + gamma) * p_near - gamma * p_far
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
-  C(0, IDX::X1) = 1.0 + g;
-  C(0, IDX::X2) = -g;
-  C(1, IDX::Y1) = 1.0 + g;
-  C(1, IDX::Y2) = -g;
-
-  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
-  R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
-  R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
-  R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
-  R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
-
-  return ekf_.update(Y, C, R);
-}
-
-bool BicycleMotionModel::updateStatePoseFront(
-  const double & xf, const double & yf, const std::array<double, 36> & pose_cov)
-{
-  // check if the state is initialized
-  if (!checkInitialized()) return false;
-
-  // Measure the observed front FACE center directly. Same exact-linear reasoning as the rear case:
-  //   face_front = p2 + gamma_front * (p2 - p1) = (1 + gamma_front) * p2 - gamma_front * p1
-  // The wheelbase and yaw cancel because L * u_hat == (p2 - p1), so C is a constant linear map.
-  const double g = motion_params_.wheel_gamma_front;
-  constexpr int DIM_Y = 2;
-  Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << xf, yf;
-
-  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
-  C(0, IDX::X2) = 1.0 + g;
-  C(0, IDX::X1) = -g;
-  C(1, IDX::Y2) = 1.0 + g;
-  C(1, IDX::Y1) = -g;
+  if (measure_front) {
+    // The front face anchors on p2 = (X2, Y2) with gamma_front
+    const double gamma = motion_params_.wheel_gamma_front;
+    C(0, IDX::X1) = -gamma;
+    C(0, IDX::X2) = 1.0 + gamma;
+    C(1, IDX::Y1) = -gamma;
+    C(1, IDX::Y2) = 1.0 + gamma;
+  } else {
+    // The rear face anchors on p1 = (X1, Y1) with gamma_rear
+    const double gamma = motion_params_.wheel_gamma_rear;
+    C(0, IDX::X1) = 1.0 + gamma;
+    C(0, IDX::X2) = -gamma;
+    C(1, IDX::Y1) = 1.0 + gamma;
+    C(1, IDX::Y2) = -gamma;
+  }
 
   Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
