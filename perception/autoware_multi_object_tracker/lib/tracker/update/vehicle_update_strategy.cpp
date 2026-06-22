@@ -153,10 +153,12 @@ UpdateStrategy determineUpdateStrategy(
   return strategy;
 }
 
-void createPseudoMeasurement(
-  const types::DynamicObject & meas, types::DynamicObject & pred,
-  const autoware_perception_msgs::msg::Shape & tracker_shape, const bool enlarge_covariance)
+types::DynamicObject createPseudoMeasurement(
+  const types::DynamicObject & meas, const types::DynamicObject & prediction,
+  const bool enlarge_covariance)
 {
+  types::DynamicObject pred = prediction;
+
   // Apply linear fall‑off weight on dist square
   const double dx = meas.pose.position.x - pred.pose.position.x;
   const double dy = meas.pose.position.y - pred.pose.position.y;
@@ -170,9 +172,8 @@ void createPseudoMeasurement(
   pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
   pred.pose.position.z = pred.pose.position.z * (1 - w_pose) + meas.pose.position.z * w_pose;
 
-  // Use smoothed shape and its area
-  pred.shape = tracker_shape;
-  pred.area = types::getArea(tracker_shape);
+  // Refresh the area from pred's (tracker) shape
+  pred.area = types::getArea(pred.shape);
 
   // Blend orientation
   if (meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE) {
@@ -211,6 +212,8 @@ void createPseudoMeasurement(
       pred.twist_covariance[XYZRPY_COV_IDX::Y_Y] += additional_velocity_cov;
     }
   }
+
+  return pred;
 }
 
 WheelAnchorLateral correctWheelAnchorLateral(
@@ -252,6 +255,29 @@ WheelAnchorLateral correctWheelAnchorLateral(
   const double std_lat = slack * (1.0 - (1.0 - corner_residual_beta) * t);
   result.var_lat = std_lat * std_lat;
   return result;
+}
+
+geometry_msgs::msg::Point correctWheelAnchor(
+  double yaw, double tracker_width, const geometry_msgs::msg::Point & tracker_center,
+  double polygon_width, const geometry_msgs::msg::Point & anchor, std::array<double, 36> & pose_cov)
+{
+  using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  constexpr double balance_alpha = 0.2;         // hold-tracker slope inside the dead-zone
+  constexpr double corner_residual_beta = 0.3;  // residual std fraction once the corner is matched
+
+  const auto corr = correctWheelAnchorLateral(
+    yaw, tracker_width, tracker_center, polygon_width, anchor, balance_alpha, corner_residual_beta);
+
+  const double var_lat = corr.var_lat;
+  const double sin_yaw = std::sin(yaw);
+  const double cos_yaw = std::cos(yaw);
+  // lateral unit vector n = (-sin(yaw), cos(yaw)); add var_lat * n * n^T to the x/y block
+  pose_cov[XYZRPY_COV_IDX::X_X] += var_lat * sin_yaw * sin_yaw;
+  pose_cov[XYZRPY_COV_IDX::X_Y] += -var_lat * sin_yaw * cos_yaw;
+  pose_cov[XYZRPY_COV_IDX::Y_X] += -var_lat * sin_yaw * cos_yaw;
+  pose_cov[XYZRPY_COV_IDX::Y_Y] += var_lat * cos_yaw * cos_yaw;
+
+  return corr.anchor;
 }
 
 }  // namespace autoware::multi_object_tracker

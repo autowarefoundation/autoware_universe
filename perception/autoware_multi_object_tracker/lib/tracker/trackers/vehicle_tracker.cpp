@@ -209,32 +209,12 @@ bool VehicleTracker::updateWheelKinematics(
 {
   std::array<double, 36> pose_cov = measurement.pose_covariance;
 
-  // Lateral correction for the observed edge center when the polygon width disagrees with the
-  // tracked width (partial view -> narrower, merged/over-segmented cluster -> wider). The wheel
-  // update measures the front/rear edge center; a biased lateral center is amplified into yaw
-  // through the wheel-base lever. correctWheelAnchorLateral() nudges the anchor (over-wide
-  // "back-lash" dead-zone) and reports the extra lateral variance to add. See its documentation.
-  geometry_msgs::msg::Point anchor_point = strategy.anchor_point;
-  {
-    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    constexpr double balance_alpha = 0.2;  // hold-tracker slope inside the dead-zone
-    constexpr double corner_residual_beta =
-      0.3;  // residual std fraction once the corner is matched
-    const double yaw = motion_model_.getYawState();
-    const auto corr = correctWheelAnchorLateral(
-      yaw, shape_model_.getWidth(), prediction.pose.position, measurement.shape.dimensions.y,
-      strategy.anchor_point, balance_alpha, corner_residual_beta);
-    anchor_point = corr.anchor;
-
-    const double var_lat = corr.var_lat;
-    const double s = std::sin(yaw);
-    const double c = std::cos(yaw);
-    // lateral unit vector n = (-sin(yaw), cos(yaw)); add var_lat * n * n^T to the x/y block
-    pose_cov[XYZRPY_COV_IDX::X_X] += var_lat * s * s;
-    pose_cov[XYZRPY_COV_IDX::X_Y] += -var_lat * s * c;
-    pose_cov[XYZRPY_COV_IDX::Y_X] += -var_lat * s * c;
-    pose_cov[XYZRPY_COV_IDX::Y_Y] += var_lat * c * c;
-  }
+  // When polygon and tracked widths disagree, the observed edge center is a biased lateral
+  // measurement that the wheel-base lever amplifies into yaw. correctWheelAnchor() nudges the
+  // anchor and folds the extra lateral variance into pose_cov.
+  const geometry_msgs::msg::Point anchor_point = correctWheelAnchor(
+    motion_model_.getYawState(), prediction.shape.dimensions.y, prediction.pose.position,
+    measurement.shape.dimensions.y, strategy.anchor_point, pose_cov);
 
   const bool measure_front = strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE;
   shape_update_anchor_ = measure_front ? BicycleMotionModel::LengthUpdateAnchor::FRONT
@@ -323,8 +303,7 @@ bool VehicleTracker::getTrackedObject(
 
 bool VehicleTracker::conditionedUpdate(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-  const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const rclcpp::Time & measurement_time, const types::InputChannel & channel_info)
 {
   const auto aligned = shapes::alignClusterToOrientation(measurement, motion_model_.getYawState());
   const types::DynamicObject & meas = aligned ? *aligned : measurement;
@@ -332,8 +311,8 @@ bool VehicleTracker::conditionedUpdate(
   UpdateStrategy strategy = determineUpdateStrategy(meas, prediction);
 
   if (strategy.type == UpdateStrategyType::WEAK_UPDATE) {
-    types::DynamicObject pseudo_measurement = prediction;
-    createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape, true);
+    const types::DynamicObject pseudo_measurement =
+      createPseudoMeasurement(measurement, prediction, true);
 
     const types::DynamicObject pseudo_corrected =
       normalizeYaw(pseudo_measurement, motion_model_.getYawState());
