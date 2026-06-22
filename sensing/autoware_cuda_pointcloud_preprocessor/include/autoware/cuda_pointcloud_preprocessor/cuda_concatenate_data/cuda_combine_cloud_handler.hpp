@@ -57,7 +57,7 @@ public:
 
   /// Returns the per-topic CUDA stream used while consuming that topic's cloud.
   /// Enables stream-ordered producer/consumer lifetime handling.
-  cudaStream_t get_stream(const std::string & topic) const
+  cudaStream_t stream(const std::string & topic) const
   {
     return cuda_concat_struct_map_.at(topic).stream;
   }
