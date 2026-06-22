@@ -21,8 +21,6 @@
 //   * Drive the node by calling the public imageRoiCallback() directly,
 //     bypassing message_filters time-sync / the lazy-subscription timer so the
 //     tests are deterministic.
-//   * Use the CPU-only HSV backend (ColorClassifier) so no CUDA / TensorRT /
-//     model files are required and the test builds without a GPU.
 //   * The exact lamp *color* chosen by ColorClassifier is its own concern and
 //     is intentionally NOT pinned here; only the node-level orchestration
 //     (filtering, UNKNOWN handling, ordering, id/type propagation, exposure

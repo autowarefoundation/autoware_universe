@@ -130,9 +130,7 @@ if(BUILD_TESTING)
     test/test_utils.cpp
   )
 
-  # Characterization tests for the node orchestration logic (imageRoiCallback).
-  # Uses the CPU-only HSV backend, so it builds and runs without CUDA/TensorRT.
-  ament_auto_add_gtest(test_traffic_light_classifier_characteristics
+  ament_add_ros_isolated_gtest(test_traffic_light_classifier_characteristics
     test/test_traffic_light_classifier_characteristics.cpp
   )
   target_link_libraries(test_traffic_light_classifier_characteristics
