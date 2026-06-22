@@ -33,6 +33,81 @@ namespace autoware::traffic_light
 namespace
 {
 
+using autoware_perception_msgs::msg::PredictedTrafficLightState;
+using autoware_perception_msgs::msg::TrafficLightElement;
+using autoware_perception_msgs::msg::TrafficLightGroup;
+
+// One element paired with whether it came from the prioritized source.
+// Accumulated per regulatory-element id while routing signals, then reduced to
+// one element per shape by get_highest_confidence_elements().
+using ElementAndPriority = std::pair<TrafficLightElement, bool>;
+
+// Appends each group's predictions into predictions_map keyed by
+// regulatory-element id. Predictions accumulate across sources in call order.
+void append_predictions(
+  std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> & predictions_map,
+  const std::vector<TrafficLightGroup> & groups)
+{
+  for (const auto & group : groups) {
+    auto & predictions = predictions_map[group.traffic_light_group_id];
+    predictions.insert(predictions.end(), group.predictions.begin(), group.predictions.end());
+  }
+}
+
+// Routes one signal's elements into `signals_map` under its regulatory-element
+// id, tagging each with `priority`. Ids absent from `map_regulatory_elements`
+// are recorded in `off_map_signal_ids` and dropped.
+void route_signal(
+  const TrafficLightGroup & signal, bool priority,
+  const std::unordered_set<lanelet::Id> & map_regulatory_elements,
+  std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> & signals_map,
+  std::vector<lanelet::Id> & off_map_signal_ids)
+{
+  const auto id = signal.traffic_light_group_id;
+  if (!map_regulatory_elements.count(id)) {
+    off_map_signal_ids.push_back(id);
+    return;
+  }
+
+  auto & elements_and_priority = signals_map[id];
+  for (const auto & element : signal.elements) {
+    elements_and_priority.emplace_back(element, priority);
+  }
+}
+
+// Reduces the accumulated (element, priority) pairs for one regulatory element
+// to a single element per shape, keeping the highest (priority, confidence).
+std::vector<TrafficLightElement> get_highest_confidence_elements(
+  const std::vector<ElementAndPriority> & elements_and_priority_vector)
+{
+  using Key = TrafficLightElement::_shape_type;
+  std::map<Key, ElementAndPriority> highest_score_element_and_priority_map;
+  std::vector<TrafficLightElement> highest_score_elements_vector;
+
+  for (const auto & elements_and_priority : elements_and_priority_vector) {
+    const auto & element = elements_and_priority.first;
+    const auto & element_priority = elements_and_priority.second;
+    const auto key = element.shape;
+    auto [iter, success] =
+      highest_score_element_and_priority_map.try_emplace(key, elements_and_priority);
+    const auto & iter_element = iter->second.first;
+    const auto & iter_priority = iter->second.second;
+
+    if (
+      !success &&
+      (element_priority > iter_priority ||
+       (element_priority == iter_priority && element.confidence > iter_element.confidence))) {
+      iter->second = elements_and_priority;
+    }
+  }
+
+  for (const auto & [k, v] : highest_score_element_and_priority_map) {
+    highest_score_elements_vector.emplace_back(v.first);
+  }
+
+  return highest_score_elements_vector;
+}
+
 std::unordered_set<lanelet::Id> extract_traffic_light_ids(const lanelet::LaneletMapConstPtr & map)
 {
   std::unordered_set<lanelet::Id> traffic_light_ids;
@@ -121,6 +196,13 @@ TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
   return sweep_expired_external_signals(rclcpp::Time(msg.stamp), external_time_tolerance_);
 }
 
+// Admission control then cache maintenance:
+//   1. Reject (return {false, {}}) when |current_time - msg.stamp| exceeds
+//      external_delay_tolerance_ — the arrival is too far off to trust.
+//   2. Otherwise refresh each group's cache entry with msg.stamp, sweep the
+//      cache against current_time (external_delay_tolerance_), and return the
+//      evicted entries. Perception state is untouched here; its staleness is
+//      handled non-destructively inside arbitrate().
 TrafficLightArbiterCore::ExternalIngestResult TrafficLightArbiterCore::ingest_external(
   const TrafficSignalArray & msg, const rclcpp::Time & current_time)
 {
@@ -137,12 +219,10 @@ TrafficLightArbiterCore::ExternalIngestResult TrafficLightArbiterCore::ingest_ex
   return {true, sweep_expired_external_signals(current_time, external_delay_tolerance_)};
 }
 
-TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
-  TrafficSignalArray & output)
+TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() const
 {
   ArbitrationResult result;
 
-  using ElementAndPriority = std::pair<Element, bool>;
   std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> regulatory_element_signals_map;
 
   // Create external signals array from stored valid signals, tracking the
@@ -169,12 +249,6 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
   const auto & effective_perception =
     perception_is_stale ? empty_perception : latest_perception_msg_;
 
-  auto append_predictions = [](auto & map, const auto & groups) {
-    for (const auto & group : groups) {
-      auto & predictions = map[group.traffic_light_group_id];
-      predictions.insert(predictions.end(), group.predictions.begin(), group.predictions.end());
-    }
-  };
   std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predictions_map;
   // add in order from perception msg
   append_predictions(predictions_map, effective_perception.traffic_light_groups);
@@ -184,80 +258,45 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
     return result;
   }
 
+  TrafficSignalArray output_signals_msg;
   // stamp deliberately left default — the Node owns stamp inheritance.
-  result.has_output = true;
 
   if (map_regulatory_elements_set_->empty()) {
+    result.output = std::move(output_signals_msg);
     return result;
   }
 
-  auto add_signal_function = [&](const auto & signal, bool priority) {
-    const auto id = signal.traffic_light_group_id;
-    if (!map_regulatory_elements_set_->count(id)) {
-      result.off_map_signal_ids.push_back(id);
-      return;
-    }
-
-    auto & elements_and_priority = regulatory_element_signals_map[id];
-    for (const auto & element : signal.elements) {
-      elements_and_priority.emplace_back(element, priority);
-    }
-  };
-
+  const auto & map_regulatory_elements = *map_regulatory_elements_set_;
   if (enable_signal_matching_) {
     const auto validated_signals =
       signal_match_validator_->validate_signals(effective_perception, valid_external_signals);
     for (const auto & signal : validated_signals.traffic_light_groups) {
-      add_signal_function(signal, false);
+      route_signal(
+        signal, false, map_regulatory_elements, regulatory_element_signals_map,
+        result.off_map_signal_ids);
     }
   } else {
     for (const auto & signal : effective_perception.traffic_light_groups) {
-      add_signal_function(signal, source_priority_ == SourcePriority::PERCEPTION);
+      route_signal(
+        signal, source_priority_ == SourcePriority::PERCEPTION, map_regulatory_elements,
+        regulatory_element_signals_map, result.off_map_signal_ids);
     }
 
     for (const auto & signal : valid_external_signals.traffic_light_groups) {
-      add_signal_function(signal, source_priority_ == SourcePriority::EXTERNAL);
+      route_signal(
+        signal, source_priority_ == SourcePriority::EXTERNAL, map_regulatory_elements,
+        regulatory_element_signals_map, result.off_map_signal_ids);
     }
   }
 
-  const auto get_highest_confidence_elements =
-    [](const std::vector<ElementAndPriority> & elements_and_priority_vector) {
-      using Key = Element::_shape_type;
-      std::map<Key, ElementAndPriority> highest_score_element_and_priority_map;
-      std::vector<Element> highest_score_elements_vector;
-
-      for (const auto & elements_and_priority : elements_and_priority_vector) {
-        const auto & element = elements_and_priority.first;
-        const auto & element_priority = elements_and_priority.second;
-        const auto key = element.shape;
-        auto [iter, success] =
-          highest_score_element_and_priority_map.try_emplace(key, elements_and_priority);
-        const auto & iter_element = iter->second.first;
-        const auto & iter_priority = iter->second.second;
-
-        if (
-          !success &&
-          (element_priority > iter_priority ||
-           (element_priority == iter_priority && element.confidence > iter_element.confidence))) {
-          iter->second = elements_and_priority;
-        }
-      }
-
-      for (const auto & [k, v] : highest_score_element_and_priority_map) {
-        highest_score_elements_vector.emplace_back(v.first);
-      }
-
-      return highest_score_elements_vector;
-    };
-
-  output.traffic_light_groups.reserve(regulatory_element_signals_map.size());
+  output_signals_msg.traffic_light_groups.reserve(regulatory_element_signals_map.size());
 
   for (const auto & [regulatory_element_id, elements] : regulatory_element_signals_map) {
     TrafficSignal signal_msg;
     signal_msg.traffic_light_group_id = regulatory_element_id;
     signal_msg.elements = get_highest_confidence_elements(elements);
     signal_msg.predictions = predictions_map[regulatory_element_id];
-    output.traffic_light_groups.emplace_back(signal_msg);
+    output_signals_msg.traffic_light_groups.emplace_back(signal_msg);
   }
 
   // Latest input stamp across stored sources. The Node compares this against
@@ -267,6 +306,7 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate(
                                ? max_external_stamp
                                : perception_stamp;
 
+  result.output = std::move(output_signals_msg);
   return result;
 }
 
