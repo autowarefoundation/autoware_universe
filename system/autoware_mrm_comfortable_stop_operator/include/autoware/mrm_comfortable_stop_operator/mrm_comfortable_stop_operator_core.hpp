@@ -64,7 +64,7 @@ private:
   AUTOWARE_PUBLISHER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus) pub_status_;
   AUTOWARE_PUBLISHER_PTR(autoware_internal_planning_msgs::msg::VelocityLimit) pub_velocity_limit_;
   AUTOWARE_PUBLISHER_PTR(autoware_internal_planning_msgs::msg::VelocityLimitClearCommand)
-    pub_velocity_limit_clear_command_;
+  pub_velocity_limit_clear_command_;
 
   void publishStatus() const;
   void publishVelocityLimit() const;
