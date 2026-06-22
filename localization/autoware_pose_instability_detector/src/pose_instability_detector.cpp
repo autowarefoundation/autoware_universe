@@ -69,7 +69,7 @@ PoseInstabilityDetector::PoseInstabilityDetector(const rclcpp::NodeOptions & opt
     std::bind(&PoseInstabilityDetector::callback_twist, this, std::placeholders::_1));
 
   timer_ = autoware::agnocast_wrapper::create_timer(
-    this, this->get_clock(), rclcpp::Duration::from_seconds(timer_period_),
+    this, this->get_clock(), std::chrono::duration<double>(timer_period_),
     std::bind(&PoseInstabilityDetector::callback_timer, this));
 
   diff_pose_pub_ = this->create_publisher<PoseStamped>("~/debug/diff_pose", 10);
