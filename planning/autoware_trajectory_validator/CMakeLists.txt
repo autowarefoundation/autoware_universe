@@ -41,6 +41,7 @@ unset(PYTHON_EXECUTABLE)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MetricReport.msg"
+  "msg/RiskLevel.msg"
   "msg/ValidationReport.msg"
   "msg/ValidationReportArray.msg"
   DEPENDENCIES

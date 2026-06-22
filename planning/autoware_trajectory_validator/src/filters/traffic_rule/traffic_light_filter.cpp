@@ -164,13 +164,20 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
     context.odometry->pose.pose.position.z);
 
   std::vector<MetricReport> metrics;
+
+  auto get_risk_level = [](bool is_crossing) {
+    RiskLevel risk_level;
+    risk_level.level = is_crossing ? RiskLevel::DANGER : RiskLevel::SAFE;
+    return risk_level;
+  };
+
   metrics.push_back(
     autoware_trajectory_validator::build<MetricReport>()
       .validator_name(get_name())
       .validator_category(category())
       .metric_name("check_crossing_red_light")
       .metric_value(0.0)
-      .level(is_crossing_red ? MetricReport::DANGER : MetricReport::SAFE));
+      .risk(get_risk_level(is_crossing_red)));
 
   metrics.push_back(
     autoware_trajectory_validator::build<MetricReport>()
@@ -178,7 +185,7 @@ TrafficLightFilter::result_t TrafficLightFilter::is_feasible(
       .validator_category(category())
       .metric_name("check_crossing_amber_light")
       .metric_value(0.0)
-      .level(is_crossing_amber ? MetricReport::DANGER : MetricReport::SAFE));
+      .risk(get_risk_level(is_crossing_amber)));
 
   const bool is_feasible = !is_crossing_red && !is_crossing_amber;
 
