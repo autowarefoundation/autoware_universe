@@ -10,10 +10,6 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/pose_instability_detector.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} autoware_agnocast_wrapper)
-if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
-  find_package(agnocastlib REQUIRED)
-  ament_target_dependencies(${PROJECT_NAME} agnocastlib)
-endif()
 autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
@@ -23,16 +19,13 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND (NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
   find_package(ament_cmake_gtest REQUIRED)
   ament_auto_add_gtest(test_${PROJECT_NAME}
     test/test.cpp
     src/pose_instability_detector.cpp
   )
   ament_target_dependencies(test_${PROJECT_NAME} autoware_agnocast_wrapper)
-  if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
-    ament_target_dependencies(test_${PROJECT_NAME} agnocastlib)
-  endif()
   autoware_agnocast_wrapper_setup(test_${PROJECT_NAME})
 endif()
 

@@ -25,6 +25,7 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::pose_instability_detector

@@ -16,8 +16,8 @@
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
-#include "autoware/multi_object_tracker/tracker/model/static_tracker.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/static_tracker.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <tf2/transform_datatypes.hpp>
@@ -41,12 +41,13 @@ namespace autoware::multi_object_tracker
 using autoware_utils_debug::ScopedTimeTrack;
 
 TrackerProcessor::TrackerProcessor(
-  const TrackerCreationConfig & creation_config,
+  const TrackerConfigs & tracker_configs, const TrackerCreationConfig & creation_config,
   const TrackerAssociationConfig & association_config,
   const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
   const std::vector<types::InputChannel> & channels_config, const rclcpp::Logger & logger,
   rclcpp::Clock::SharedPtr clock)
-: creation_config_(creation_config),
+: tracker_configs_(tracker_configs),
+  creation_config_(creation_config),
   channels_config_(channels_config),
   logger_(logger),
   clock_(std::move(clock))
@@ -186,15 +187,11 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
       case types::TrackerType::BIG_VEHICLE:
         return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
       case types::TrackerType::STATIC:
-        return std::make_shared<StaticTracker>(time, object);
+        return std::make_shared<StaticTracker>(time, object, tracker_configs_.static_tracker);
       case types::TrackerType::POLYGON:
-        return std::make_shared<PolygonTracker>(
-          time, object, creation_config_.enable_unknown_object_velocity_estimation,
-          creation_config_.enable_unknown_object_motion_output);
+        return std::make_shared<PolygonTracker>(time, object, tracker_configs_.polygon_tracker);
       default:
-        return std::make_shared<PolygonTracker>(
-          time, object, creation_config_.enable_unknown_object_velocity_estimation,
-          creation_config_.enable_unknown_object_motion_output);
+        return std::make_shared<PolygonTracker>(time, object, tracker_configs_.polygon_tracker);
     }
   }
 

@@ -56,7 +56,7 @@ protected:
 
     subject_ =
       std::make_shared<autoware::pose_instability_detector::PoseInstabilityDetector>(node_options);
-    executor_.add_node(subject_->get_node_base_interface());
+    executor_.add_node(subject_);
 
     helper_ = std::make_shared<TestMessageHelperNode>();
     executor_.add_node(helper_);
@@ -66,7 +66,7 @@ protected:
 
   void TearDown() override
   {
-    executor_.remove_node(subject_->get_node_base_interface());
+    executor_.remove_node(subject_);
     executor_.remove_node(helper_);
   }
 

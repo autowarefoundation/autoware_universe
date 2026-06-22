@@ -3,29 +3,10 @@
   "title": "Parameters for ptv3",
   "type": "object",
   "definitions": {
-    "ptv3": {
+    "backbone": {
       "type": "object",
       "properties": {
-        "class_names": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Predicted classes' names.",
-          "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"],
-          "uniqueItems": true
-        },
-        "palette": {
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 255
-          },
-          "description": "Flat RGB palette for visualization output. Must contain 3 values per class in class_names."
-        },
         "voxels_num": {
-          "type": "array",
           "items": {
             "type": "integer"
           },
@@ -51,9 +32,96 @@
           "default": [0.3, 0.3, 8.0],
           "minItems": 3,
           "maxItems": 3
+        },
+        "serialization_orders": {
+          "type": "array",
+          "items": [{ "const": "z" }, { "const": "z-trans" }],
+          "additionalItems": false,
+          "description": "Space-filling curve serialization orders used by the exported model.",
+          "default": ["z", "z-trans"],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "pooling_strides": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "enum": [2]
+          },
+          "description": "Serialized pooling stride for each encoder downsampling stage.",
+          "default": [2, 2, 2, 2],
+          "minItems": 1
         }
       },
-      "required": ["class_names", "palette", "voxels_num", "point_cloud_range", "voxel_size"],
+      "required": [
+        "voxels_num",
+        "point_cloud_range",
+        "voxel_size",
+        "serialization_orders",
+        "pooling_strides"
+      ],
+      "additionalProperties": false
+    },
+    "segmentation3d": {
+      "type": "object",
+      "properties": {
+        "class_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Segmentation class names.",
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "palette": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 255 },
+          "description": "Flat RGB palette for visualization output. Must contain 3 values per class."
+        }
+      },
+      "required": ["class_names", "palette"],
+      "additionalProperties": false
+    },
+    "detection3d": {
+      "type": "object",
+      "properties": {
+        "bbox_voxel_size": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Voxel size [x, y, z] in meters of the BEV grid on which the detection head regresses box centers."
+        },
+        "has_twist": {
+          "type": "boolean",
+          "description": "Whether the model predicts per-object velocity (twist). When false, the velocity of each detection is set to zero."
+        },
+        "num_proposals": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of detection candidates the head outputs and that are evaluated during post-processing."
+        },
+        "post_center_range": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 6,
+          "maxItems": 6,
+          "description": "Bounds [x_min, y_min, z_min, x_max, y_max, z_max] in meters applied to decoded detection centers during post-processing. Any detection whose center lies outside is dropped."
+        },
+        "class_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Detection class names in the model's output label order."
+        }
+      },
+      "required": [
+        "bbox_voxel_size",
+        "has_twist",
+        "num_proposals",
+        "post_center_range",
+        "class_names"
+      ],
       "additionalProperties": false
     }
   },
@@ -62,7 +130,13 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/ptv3"
+          "type": "object",
+          "properties": {
+            "backbone": { "$ref": "#/definitions/backbone" },
+            "segmentation3d": { "$ref": "#/definitions/segmentation3d" },
+            "detection3d": { "$ref": "#/definitions/detection3d" }
+          },
+          "additionalProperties": false
         }
       },
       "required": ["ros__parameters"],

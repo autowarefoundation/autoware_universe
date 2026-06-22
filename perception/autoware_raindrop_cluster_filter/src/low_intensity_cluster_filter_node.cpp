@@ -105,7 +105,7 @@ void LowIntensityClusterFilter::objectCallback(AUTOWARE_MESSAGE_CONST_SHARED_PTR
     const auto & position = object.kinematics.pose_with_covariance.pose.position;
     bool is_inside_validation_range = min_ranged_transformed.position.x < position.x &&
                                       position.x < max_range_transformed.position.x &&
-                                      min_ranged_transformed.position.y < position.x &&
+                                      min_ranged_transformed.position.y < position.y &&
                                       position.y < max_range_transformed.position.y;
     int intensity_index = pcl::getFieldIndex(cluster, "intensity");
     if (

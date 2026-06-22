@@ -27,6 +27,14 @@
 #include <vector>
 
 // Configuration creation functions
+autoware::multi_object_tracker::TrackerConfigs createTrackerConfigs()
+{
+  autoware::multi_object_tracker::TrackerConfigs config;
+  config.polygon_tracker.enable_velocity_estimation = false;
+  // enable_motion_output left empty => motion output disabled for all labels
+  return config;
+}
+
 autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfig()
 {
   autoware::multi_object_tracker::TrackerCreationConfig config;
@@ -43,9 +51,6 @@ autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfi
     config.setCreation(shape_type, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
     config.setCreation(shape_type, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
   }
-
-  config.enable_unknown_object_velocity_estimation = false;
-  config.enable_unknown_object_motion_output = false;
 
   return config;
 }
@@ -168,14 +173,7 @@ autoware::multi_object_tracker::TrackerOverlapManagerConfig createTrackerOverlap
   config.min_known_object_removal_iou = 0.1;      // [ratio]
   config.min_unknown_object_removal_iou = 0.001;  // [ratio]
 
-  config.pruning_giou_thresholds = {{Label::UNKNOWN, -0.3}, {Label::CAR, -0.4},
-                                    {Label::TRUCK, -0.6},   {Label::BUS, -0.6},
-                                    {Label::TRAILER, -0.6}, {Label::MOTORCYCLE, -0.1},
-                                    {Label::BICYCLE, -0.1}, {Label::PEDESTRIAN, -0.1}};
-
-  config.pruning_moving_object_speed = 5.5;   // [m/s]
-  config.pruning_static_object_speed = 1.38;  // [m/s]
-  config.pruning_static_iou_threshold = 0.0;  // [ratio]
+  config.pruning_giou_threshold = -0.3;  // [ratio]
 
   config.pruning_distance_thresholds = {{Label::UNKNOWN, 9.0}, {Label::CAR, 5.0},
                                         {Label::TRUCK, 9.0},   {Label::BUS, 9.0},
