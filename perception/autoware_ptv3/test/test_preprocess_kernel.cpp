@@ -17,6 +17,7 @@
 #include "autoware/ptv3/ptv3_config.hpp"
 
 #include <autoware/cuda_utils/cuda_gtest_utils.hpp>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 
 #include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
@@ -34,30 +35,17 @@ namespace autoware::ptv3
 {
 namespace test
 {
-
-template <typename T>
-struct CudaDeleter
-{
-  void operator()(T * ptr) const
-  {
-    if (ptr != nullptr) {
-      cudaFree(ptr);
-    }
-  }
-};
-
-template <typename T>
-using CudaPtr = std::unique_ptr<T, CudaDeleter<T>>;
+using autoware::cuda_utils::CudaUniquePtr;
 
 class PreprocessKernelTest : public ::testing::Test
 {
 protected:
   struct GenerateFeaturesResult
   {
-    CudaPtr<float> reconstruction_features_d;
-    CudaPtr<std::int32_t> voxel_coords_d;
-    CudaPtr<CloudPointTypeXYZI> cropped_source_points_d;
-    CudaPtr<std::int64_t> inverse_map_d;
+    CudaUniquePtr<float> reconstruction_features_d;
+    CudaUniquePtr<std::int32_t> voxel_coords_d;
+    CudaUniquePtr<CloudPointTypeXYZI> cropped_source_points_d;
+    CudaUniquePtr<std::int64_t> inverse_map_d;
     std::size_t num_cropped_points{};
     std::size_t num_voxels{};
   };
@@ -103,11 +91,11 @@ protected:
   }
 
   template <typename T>
-  CudaPtr<T> makeDeviceBuffer(const std::size_t count)
+  CudaUniquePtr<T> makeDeviceBuffer(const std::size_t count)
   {
     T * ptr = nullptr;
     EXPECT_EQ(cudaMalloc(reinterpret_cast<void **>(&ptr), count * sizeof(T)), cudaSuccess);
-    return CudaPtr<T>(ptr);
+    return CudaUniquePtr<T>(ptr);
   }
 
   template <typename T>
