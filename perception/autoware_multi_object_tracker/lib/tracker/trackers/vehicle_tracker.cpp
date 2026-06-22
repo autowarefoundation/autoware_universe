@@ -17,7 +17,7 @@
 #include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_transform.hpp"
 
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
