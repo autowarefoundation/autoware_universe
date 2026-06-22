@@ -18,7 +18,7 @@
 #include "autoware/multi_object_tracker/association/adaptive_threshold_cache.hpp"
 #include "autoware/multi_object_tracker/association/association_manager.hpp"
 #include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
-#include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 
 #include <autoware_utils_debug/time_keeper.hpp>
@@ -40,7 +40,7 @@ class TrackerProcessor
 {
 public:
   TrackerProcessor(
-    const TrackerCreationConfig & creation_config,
+    const TrackerConfigs & tracker_configs, const TrackerCreationConfig & creation_config,
     const TrackerAssociationConfig & association_config,
     const TrackerOverlapManagerConfig & tracker_overlap_manager_config,
     const std::vector<types::InputChannel> & channels_config, const rclcpp::Logger & logger,
@@ -70,6 +70,7 @@ public:
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
 
 private:
+  const TrackerConfigs tracker_configs_;
   const TrackerCreationConfig creation_config_;
   const std::vector<types::InputChannel> & channels_config_;
 
