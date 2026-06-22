@@ -75,6 +75,8 @@ protected:
   PTv3Config makeConfig(const std::string & source_reconstruction = "partial") const
   {
     return PTv3Config(
+      /* use_seg3d_head*/ true,
+      /* use_det3d_head*/ false,
       /* plugins_path */ "",
       /* cloud_capacity */ 8,
       /* voxel_size [min, opt, max]*/ {1, 4, 8},
@@ -88,8 +90,7 @@ protected:
       /* filter_class_probability_threshold  */ 0.5F,
       /* filter_classes  */ {},
       /* filter_output_format */ "xyzi",
-      /* source_reconstruction */ source_reconstruction,
-      /* use_seg3d_head */ true);
+      /* source_reconstruction */ source_reconstruction);
   }
 
   void initializePreprocess(const std::string & source_reconstruction)
