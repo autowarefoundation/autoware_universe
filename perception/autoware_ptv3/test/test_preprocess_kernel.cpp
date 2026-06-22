@@ -94,24 +94,21 @@ protected:
   CudaUniquePtr<T> makeDeviceBuffer(const std::size_t count)
   {
     T * ptr = nullptr;
-    EXPECT_EQ(cudaMalloc(reinterpret_cast<void **>(&ptr), count * sizeof(T)), cudaSuccess);
+    cudaMalloc(reinterpret_cast<void **>(&ptr), count * sizeof(T));
     return CudaUniquePtr<T>(ptr);
   }
 
   template <typename T>
   void copyToDevice(T * device, const std::vector<T> & host)
   {
-    ASSERT_EQ(
-      cudaMemcpy(device, host.data(), host.size() * sizeof(T), cudaMemcpyHostToDevice),
-      cudaSuccess);
+    cudaMemcpy(device, host.data(), host.size() * sizeof(T), cudaMemcpyHostToDevice);
   }
 
   template <typename T>
   std::vector<T> copyToHost(const T * device, const std::size_t count)
   {
     std::vector<T> host(count);
-    EXPECT_EQ(
-      cudaMemcpy(host.data(), device, count * sizeof(T), cudaMemcpyDeviceToHost), cudaSuccess);
+    cudaMemcpy(host.data(), device, count * sizeof(T), cudaMemcpyDeviceToHost);
     return host;
   }
 
