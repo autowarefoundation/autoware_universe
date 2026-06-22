@@ -13,10 +13,11 @@
 // limitations under the License.
 #include "test_bench.hpp"
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <map>
 #include <random>
@@ -26,150 +27,162 @@
 #include <vector>
 
 // Configuration creation functions
-autoware::multi_object_tracker::TrackerProcessorConfig createProcessorConfig()
+autoware::multi_object_tracker::TrackerConfigs createTrackerConfigs()
 {
-  autoware::multi_object_tracker::TrackerProcessorConfig config;
+  autoware::multi_object_tracker::TrackerConfigs config;
+  config.polygon_tracker.enable_velocity_estimation = false;
+  // enable_motion_output left empty => motion output disabled for all labels
+  return config;
+}
+
+autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfig()
+{
+  autoware::multi_object_tracker::TrackerCreationConfig config;
   using autoware::multi_object_tracker::TrackerType;
-  using autoware_perception_msgs::msg::ObjectClassification;
+  using Label = autoware::multi_object_tracker::classes::Label;
 
-  // Set tracker types for different object classes
-  config.tracker_map = {
-    {ObjectClassification::UNKNOWN, TrackerType::UNKNOWN},
-    {ObjectClassification::CAR, TrackerType::MULTIPLE_VEHICLE},
-    {ObjectClassification::TRUCK, TrackerType::MULTIPLE_VEHICLE},
-    {ObjectClassification::BUS, TrackerType::MULTIPLE_VEHICLE},
-    {ObjectClassification::TRAILER, TrackerType::MULTIPLE_VEHICLE},
-    {ObjectClassification::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE},
-    {ObjectClassification::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE},
-    {ObjectClassification::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE}};
-
-  // Set tracker lifetime and removal thresholds (from multi_object_tracker_node.param.yaml)
-  config.tracker_lifetime = 1.0;                  // [s]
-  config.min_known_object_removal_iou = 0.1;      // [ratio]
-  config.min_unknown_object_removal_iou = 0.001;  // [ratio]
-
-  // Set confident count thresholds for different object classes (from
-  // multi_object_tracker_node.param.yaml)
-  std::map<std::string, ObjectClassification::_label_type> class_name_to_label = {
-    {"UNKNOWN", ObjectClassification::UNKNOWN}, {"CAR", ObjectClassification::CAR},
-    {"TRUCK", ObjectClassification::TRUCK},     {"BUS", ObjectClassification::BUS},
-    {"TRAILER", ObjectClassification::TRAILER}, {"MOTORBIKE", ObjectClassification::MOTORCYCLE},
-    {"BICYCLE", ObjectClassification::BICYCLE}, {"PEDESTRIAN", ObjectClassification::PEDESTRIAN}};
-
-  // Generalized IoU threshold for each class
-  config.pruning_giou_thresholds = {
-    {ObjectClassification::UNKNOWN, -0.3}, {ObjectClassification::CAR, -0.4},
-    {ObjectClassification::TRUCK, -0.6},   {ObjectClassification::BUS, -0.6},
-    {ObjectClassification::TRAILER, -0.6}, {ObjectClassification::MOTORCYCLE, -0.1},
-    {ObjectClassification::BICYCLE, -0.1}, {ObjectClassification::PEDESTRIAN, -0.1}};
-
-  config.pruning_moving_object_speed = 5.5;   // [m/s]
-  config.pruning_static_object_speed = 1.38;  // [m/s]
-  config.pruning_static_iou_threshold = 0.0;  // [ratio]
-  // overlap distance threshold for each class
-  config.pruning_distance_thresholds = {
-    {ObjectClassification::UNKNOWN, 9.0}, {ObjectClassification::CAR, 5.0},
-    {ObjectClassification::TRUCK, 9.0},   {ObjectClassification::BUS, 9.0},
-    {ObjectClassification::TRAILER, 9.0}, {ObjectClassification::MOTORCYCLE, 4.0},
-    {ObjectClassification::BICYCLE, 3.0}, {ObjectClassification::PEDESTRIAN, 2.0}};
+  for (const auto shape_type : autoware::multi_object_tracker::ALL_SHAPE_TYPES) {
+    config.setCreation(shape_type, Label::UNKNOWN, TrackerType::POLYGON);
+    config.setCreation(shape_type, Label::CAR, TrackerType::MULTIPLE_VEHICLE);
+    config.setCreation(shape_type, Label::TRUCK, TrackerType::MULTIPLE_VEHICLE);
+    config.setCreation(shape_type, Label::BUS, TrackerType::MULTIPLE_VEHICLE);
+    config.setCreation(shape_type, Label::TRAILER, TrackerType::MULTIPLE_VEHICLE);
+    config.setCreation(shape_type, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE);
+    config.setCreation(shape_type, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
+    config.setCreation(shape_type, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE);
+  }
 
   return config;
 }
 
-autoware::multi_object_tracker::AssociatorConfig createAssociatorConfig()
+autoware::multi_object_tracker::TrackerAssociationConfig createTrackerAssociationConfig()
 {
-  autoware::multi_object_tracker::AssociatorConfig config;
-  constexpr int label_num =
-    autoware::multi_object_tracker::types::NUM_LABELS;  // Number of object classes
+  autoware::multi_object_tracker::TrackerAssociationConfig config;
+  using autoware::multi_object_tracker::AssociationProfile;
   using autoware::multi_object_tracker::TrackerType;
-  using autoware_perception_msgs::msg::ObjectClassification;
+  using Label = autoware::multi_object_tracker::classes::Label;
+  using ShapeType = autoware::multi_object_tracker::types::ShapeType;
 
-  // Initialize matrices with values from data_association_matrix.param.yaml
-  // For a 8x8 matrix (8 object classes: UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORCYCLE, BICYCLE,
-  // PEDESTRIAN)
-  std::map<ObjectClassification::_label_type, TrackerType> tracker_map = {
-    {ObjectClassification::UNKNOWN, TrackerType::UNKNOWN},
-    {ObjectClassification::CAR, TrackerType::MULTIPLE_VEHICLE},
-    {ObjectClassification::TRUCK, TrackerType::MULTIPLE_VEHICLE},
-    {ObjectClassification::BUS, TrackerType::MULTIPLE_VEHICLE},
-    {ObjectClassification::TRAILER, TrackerType::MULTIPLE_VEHICLE},
-    {ObjectClassification::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE},
-    {ObjectClassification::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE},
-    {ObjectClassification::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE}};
+  // bounding_box
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::UNKNOWN, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{4.0 * 4.0, 60.0, 3.6, 0.0001});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.001, 0.0001});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::CAR, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 12.10, 3.6, 0.0001});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::TRUCK, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 36.0, 6.0, 0.10});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::BUS, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 60.0, 10.0, 0.10});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::TRAILER, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 60.0, 10.0, 0.10});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, -0.30});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, 0.0001});
+  config.setProfile(
+    ShapeType::BOUNDING_BOX, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{2.0 * 2.0, 2.0, 0.1, 0.0001});
 
-  // Initialize can_assign_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXi can_assign_matrix(label_num, label_num);
-  // 8x8 matrix for can_assign relationships
-  can_assign_matrix << 1, 0, 0, 0, 0, 0, 0, 0,  // UNKNOWN
-    0, 1, 1, 1, 1, 0, 0, 0,                     // CAR
-    0, 1, 1, 1, 1, 0, 0, 0,                     // TRUCK
-    0, 1, 1, 1, 1, 0, 0, 0,                     // BUS
-    0, 1, 1, 1, 1, 0, 0, 0,                     // TRAILER
-    0, 0, 0, 0, 0, 1, 1, 1,                     // MOTORBIKE
-    0, 0, 0, 0, 0, 1, 1, 1,                     // BICYCLE
-    0, 0, 0, 0, 0, 1, 1, 1;                     // PEDESTRIAN
+  // polygon
+  config.setProfile(
+    ShapeType::POLYGON, Label::UNKNOWN, TrackerType::POLYGON,
+    AssociationProfile{4.0 * 4.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::UNKNOWN, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{4.0 * 4.0, 60.0, 3.6, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.001, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::CAR, TrackerType::POLYGON,
+    AssociationProfile{5.0 * 5.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::CAR, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 12.10, 3.6, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::TRUCK, TrackerType::POLYGON,
+    AssociationProfile{5.0 * 5.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::TRUCK, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 36.0, 6.0, 0.10});
+  config.setProfile(
+    ShapeType::POLYGON, Label::BUS, TrackerType::POLYGON,
+    AssociationProfile{5.0 * 5.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::BUS, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 60.0, 10.0, 0.10});
+  config.setProfile(
+    ShapeType::POLYGON, Label::TRAILER, TrackerType::POLYGON,
+    AssociationProfile{5.0 * 5.0, 100.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::TRAILER, TrackerType::MULTIPLE_VEHICLE,
+    AssociationProfile{5.0 * 5.0, 60.0, 10.0, 0.10});
+  config.setProfile(
+    ShapeType::POLYGON, Label::MOTORCYCLE, TrackerType::POLYGON,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.0, -0.30});
+  config.setProfile(
+    ShapeType::POLYGON, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, -0.30});
+  config.setProfile(
+    ShapeType::POLYGON, Label::BICYCLE, TrackerType::POLYGON,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::PEDESTRIAN, TrackerType::POLYGON,
+    AssociationProfile{2.0 * 2.0, 2.0, 0.0, 0.0001});
+  config.setProfile(
+    ShapeType::POLYGON, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{2.0 * 2.0, 2.0, 0.1, 0.0001});
 
-  config.can_assign_map.clear();
-  for (const auto & [label, tracker_type] : tracker_map) {
-    config.can_assign_map[tracker_type].fill(false);
-  }
+  // cylinder
+  config.setProfile(
+    ShapeType::CYLINDER, Label::UNKNOWN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.001, 0.0001});
+  config.setProfile(
+    ShapeType::CYLINDER, Label::MOTORCYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, -0.30});
+  config.setProfile(
+    ShapeType::CYLINDER, Label::BICYCLE, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{3.0 * 3.0, 2.5, 0.1, 0.0001});
+  config.setProfile(
+    ShapeType::CYLINDER, Label::PEDESTRIAN, TrackerType::PEDESTRIAN_AND_BICYCLE,
+    AssociationProfile{2.0 * 2.0, 2.0, 0.1, 0.0001});
 
-  // can_assign_map : tracker_type that can be assigned to each measurement label
-  // relationship is given by tracker_map and can_assign_matrix
-  for (int i = 0; i < can_assign_matrix.rows(); ++i) {
-    for (int j = 0; j < can_assign_matrix.cols(); ++j) {
-      if (can_assign_matrix(i, j) == 1) {
-        const auto tracker_type = tracker_map.at(i);
-        config.can_assign_map[tracker_type][j] = true;
-      }
-    }
-  }
+  config.buildMaxDistances();
+  config.unknown_association_giou_threshold = -0.8;
 
-  // Initialize max_dist_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXd max_dist_matrix(label_num, label_num);
-  max_dist_matrix << 4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,  // UNKNOWN
-    4.0, 2.5, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0,                   // CAR
-    4.0, 2.5, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0,                   // TRUCK
-    4.0, 2.5, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0,                   // BUS
-    4.0, 2.5, 5.0, 5.0, 5.0, 1.0, 1.0, 1.0,                   // TRAILER
-    3.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 2.0,                   // MOTORCYCLE
-    3.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 2.0,                   // BICYCLE
-    2.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 2.0;                   // PEDESTRIAN
-  config.max_dist_matrix = max_dist_matrix;
+  return config;
+}
 
-  // Initialize max_area_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXd max_area_matrix(label_num, label_num);
-  max_area_matrix << 100.00, 100.00, 100.00, 100.00, 100.00, 100.00, 100.00, 100.00, 12.10, 12.10,
-    36.00, 60.00, 60.00, 10000.00, 10000.00, 10000.00, 36.00, 12.10, 36.00, 60.00, 60.00, 10000.00,
-    10000.00, 10000.00, 60.00, 12.10, 36.00, 60.00, 60.00, 10000.00, 10000.00, 10000.00, 60.00,
-    12.10, 36.00, 60.00, 60.00, 10000.00, 10000.00, 10000.00, 2.50, 10000.00, 10000.00, 10000.00,
-    10000.00, 2.50, 2.50, 2.50, 2.50, 10000.00, 10000.00, 10000.00, 10000.00, 2.50, 2.50, 2.50,
-    2.00, 10000.00, 10000.00, 10000.00, 10000.00, 2.00, 2.00, 2.00;
-  config.max_area_matrix = max_area_matrix;
+autoware::multi_object_tracker::TrackerOverlapManagerConfig createTrackerOverlapManagerConfig()
+{
+  autoware::multi_object_tracker::TrackerOverlapManagerConfig config;
+  using Label = autoware::multi_object_tracker::classes::Label;
 
-  // Initialize min_area_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXd min_area_matrix(label_num, label_num);
-  min_area_matrix << 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 3.600, 3.600, 4.200,
-    10.000, 10.000, 0.000, 0.000, 0.000, 4.200, 3.600, 4.200, 10.000, 10.000, 0.000, 0.000, 0.000,
-    10.000, 3.600, 4.200, 10.000, 10.000, 0.000, 0.000, 0.000, 10.000, 3.600, 4.200, 10.000, 10.000,
-    0.000, 0.000, 0.000, 0.001, 0.000, 0.000, 0.000, 0.000, 0.100, 0.100, 0.100, 0.001, 0.000,
-    0.000, 0.000, 0.000, 0.100, 0.100, 0.100, 0.001, 0.000, 0.000, 0.000, 0.000, 0.100, 0.100,
-    0.100;
-  config.min_area_matrix = min_area_matrix;
+  config.min_known_object_removal_iou = 0.1;      // [ratio]
+  config.min_unknown_object_removal_iou = 0.001;  // [ratio]
 
-  // Initialize min_iou_matrix (8x8) from data_association_matrix.param.yaml
-  Eigen::MatrixXd min_iou_matrix(label_num, label_num);
-  min_iou_matrix << 0.0001, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.1, 0.1,
-    0.1, 0.1, 0.2, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.2, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.2,
-    0.3, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, -1.0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1,
-    0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.0001;
-  config.min_iou_matrix = min_iou_matrix;
+  config.pruning_giou_threshold = -0.3;  // [ratio]
 
-  // Pre-process matrices
-  config.max_dist_matrix = config.max_dist_matrix.array().square();
-
-  config.unknown_association_giou_threshold =
-    -0.8;  // Default GIoU threshold for unknown-unknown association
+  config.pruning_distance_thresholds = {{Label::UNKNOWN, 9.0}, {Label::CAR, 5.0},
+                                        {Label::TRUCK, 9.0},   {Label::BUS, 9.0},
+                                        {Label::TRAILER, 9.0}, {Label::MOTORCYCLE, 4.0},
+                                        {Label::BICYCLE, 3.0}, {Label::PEDESTRIAN, 2.0}};
+  config.pruning_distance_thresholds_sq = {
+    {Label::UNKNOWN, 9.0 * 9.0}, {Label::CAR, 5.0 * 5.0},       {Label::TRUCK, 9.0 * 9.0},
+    {Label::BUS, 9.0 * 9.0},     {Label::TRAILER, 9.0 * 9.0},   {Label::MOTORCYCLE, 4.0 * 4.0},
+    {Label::BICYCLE, 3.0 * 3.0}, {Label::PEDESTRIAN, 2.0 * 2.0}};
 
   return config;
 }
@@ -180,7 +193,6 @@ std::vector<autoware::multi_object_tracker::types::InputChannel> createInputChan
   // Using lidar_centerpoint as the primary input channel
   autoware::multi_object_tracker::types::InputChannel input_channel_config;
   input_channel_config.index = 0;
-  input_channel_config.input_topic = "/perception/object_recognition/detection/centerpoint/objects";
   input_channel_config.long_name = "centerpoint";
   input_channel_config.short_name = "Lcp";
   input_channel_config.is_spawn_enabled = true;
@@ -300,8 +312,7 @@ void TestBench::initializeCarObject(
 {
   obj.uuid.uuid = stringToUUID(id);
   obj.time = stamp;
-  obj.classification.emplace_back();
-  obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::CAR;
+  obj.classification = {{autoware::multi_object_tracker::classes::Label::CAR, 1.0F}};
   obj.shape.dimensions.x = state.shape.x;
   obj.shape.dimensions.y = state.shape.y;
   obj.shape.dimensions.z = 1.5;
@@ -321,8 +332,7 @@ void TestBench::initializePedestrianObject(
 {
   obj.uuid.uuid = stringToUUID(id);
   obj.time = stamp;
-  obj.classification.emplace_back();
-  obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN;
+  obj.classification = {{autoware::multi_object_tracker::classes::Label::PEDESTRIAN, 1.0F}};
   obj.shape.type = autoware_perception_msgs::msg::Shape::CYLINDER;
   obj.shape.dimensions.x = 0.4;
   obj.shape.dimensions.y = 0.4;
@@ -342,9 +352,7 @@ void TestBench::initializeUnknownObject(
 {
   obj.uuid.uuid = stringToUUID(id);
   obj.time = stamp;
-  obj.classification.resize(1);
-  obj.classification[0].label = autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
-  obj.classification[0].probability = 1.0;
+  obj.classification = {{autoware::multi_object_tracker::classes::Label::UNKNOWN, 1.0F}};
 
   // Shape configuration
   obj.shape.type = state.shape_type;

@@ -91,6 +91,7 @@ private:
   std::shared_ptr<Sync> sync_ptr_;
 
   std::string base_link_frame_id_;
+  bool keep_input_dimensions_;
 
   std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
     processing_time_publisher_;

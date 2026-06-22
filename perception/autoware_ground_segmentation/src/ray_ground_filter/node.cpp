@@ -156,11 +156,11 @@ void RayGroundFilterComponent::setVehicleFootprint(
 {
   // create vehicle footprint polygon
   vehicle_footprint_.outer().clear();
-  vehicle_footprint_.outer().push_back(Point(min_x, min_y));  // left back
-  vehicle_footprint_.outer().push_back(Point(min_x, max_y));  // right back
-  vehicle_footprint_.outer().push_back(Point(max_x, max_y));  // right front
-  vehicle_footprint_.outer().push_back(Point(max_x, min_y));  // left front
-  vehicle_footprint_.outer().push_back(Point(min_x, min_y));  // left back
+  vehicle_footprint_.outer().emplace_back(min_x, min_y);  // left back
+  vehicle_footprint_.outer().emplace_back(min_x, max_y);  // right back
+  vehicle_footprint_.outer().emplace_back(max_x, max_y);  // right front
+  vehicle_footprint_.outer().emplace_back(max_x, min_y);  // left front
+  vehicle_footprint_.outer().emplace_back(min_x, min_y);  // left back
 }
 
 void RayGroundFilterComponent::ClassifyPointCloud(
