@@ -504,7 +504,8 @@ void ObjectFilter::filter_by_target_area(
       rclcpp::Duration(trajectory_points.at(nearest_seg_idx).time_from_start).seconds();
     const auto lon_offset_dist =
       motion_utils::calcSignedArcLength(trajectory_points, nearest_seg_idx, object_pose.position);
-    const auto nearest_seg_vel = trajectory_points.at(nearest_seg_idx).longitudinal_velocity_mps;
+    const auto nearest_seg_vel =
+      std::max<double>(trajectory_points.at(nearest_seg_idx).longitudinal_velocity_mps, 1e-3);
     const auto ego_front_time_offset = ego_front_offset / nearest_seg_vel;
     const auto t_to_obj =
       t_to_nearest_seg + (lon_offset_dist / nearest_seg_vel) - ego_front_time_offset - time_buffer;

@@ -129,7 +129,12 @@ bool VelocityModifier::modify_trajectory(TrajectoryPoints & traj_points, const I
     const auto s_clamped = std::min(s_curr, s_max);
 
     auto p = trajectory_interpolation_util->compute(s_clamped);
-    p.acceleration_mps2 = (p.longitudinal_velocity_mps - v_curr) / static_cast<float>(dt);
+    if (s_clamped >= s_max - 1e-6) {
+      p.longitudinal_velocity_mps = 0.0f;
+      p.acceleration_mps2 = 0.0f;
+    } else {
+      p.acceleration_mps2 = (p.longitudinal_velocity_mps - v_curr) / static_cast<float>(dt);
+    }
     p.time_from_start = t_curr + rclcpp::Duration::from_seconds(dt);
     traj_points.push_back(p);
   }
