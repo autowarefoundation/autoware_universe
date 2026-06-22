@@ -15,8 +15,8 @@
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
+#include "ptv3_test_fixture.hpp"
 
-#include <autoware/cuda_utils/cuda_gtest_utils.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 
 #include <cuda_runtime_api.h>
@@ -35,9 +35,8 @@ namespace autoware::ptv3
 {
 namespace test
 {
-using autoware::cuda_utils::CudaUniquePtr;
 
-class PreprocessKernelTest : public ::testing::Test
+class PreprocessKernelTest : public PTv3CudaTest
 {
 protected:
   static inline const std::vector<CloudPointTypeXYZI> kPartialReconstructionPoints{
@@ -50,75 +49,26 @@ protected:
 
   struct GenerateFeaturesResult
   {
-    CudaUniquePtr<float> reconstruction_features_d;
-    CudaUniquePtr<std::int32_t> voxel_coords_d;
-    CudaUniquePtr<CloudPointTypeXYZI> cropped_source_points_d;
-    CudaUniquePtr<std::int64_t> inverse_map_d;
+    CudaUniquePtr<float[]> reconstruction_features_d;
+    CudaUniquePtr<std::int32_t[]> voxel_coords_d;
+    CudaUniquePtr<CloudPointTypeXYZI[]> cropped_source_points_d;
+    CudaUniquePtr<std::int64_t[]> inverse_map_d;
     std::size_t num_cropped_points{};
     std::size_t num_voxels{};
   };
 
-  void SetUp() override
-  {
-    SKIP_TEST_IF_CUDA_UNAVAILABLE();
-    ASSERT_EQ(cudaStreamCreate(&stream_), cudaSuccess);
-  }
-
   void TearDown() override
   {
     preprocess_.reset();
-    if (stream_ != nullptr) {
-      EXPECT_EQ(cudaStreamDestroy(stream_), cudaSuccess);
-    }
-  }
-
-  PTv3Config makeConfig(const std::string & source_reconstruction = "partial") const
-  {
-    return PTv3Config(
-      /* use_seg3d_head*/ true,
-      /* use_det3d_head*/ false,
-      /* plugins_path */ "",
-      /* cloud_capacity */ 8,
-      /* voxel_size [min, opt, max]*/ {1, 4, 8},
-      /* point_cloud_range [x_min, y_min, z_min, x_max, y_max, z_max] */
-      {-1.0F, -1.0F, -1.0F, 3.0F, 3.0F, 3.0F},
-      /*voxel_size [x, y, z]*/ {1.0F, 1.0F, 1.0F},
-      /* class_name */ {"background", "car"},
-      /* serialization_orders */ {"z", "z-trans"},
-      /* pooling_strides */ {2, 2},
-      /* palette  */ {0, 0, 0, 255, 0, 0},
-      /* filter_class_probability_threshold  */ 0.5F,
-      /* filter_classes  */ {},
-      /* filter_output_format */ "xyzi",
-      /* source_reconstruction */ source_reconstruction);
+    PTv3CudaTest::TearDown();
   }
 
   void initializePreprocess(const std::string & source_reconstruction)
   {
-    config_.emplace(makeConfig(source_reconstruction));
+    PTv3ConfigParams params;
+    params.source_reconstruction = source_reconstruction;
+    config_.emplace(makeConfig(params));
     preprocess_ = std::make_unique<PreprocessCuda>(*config_, stream_);
-  }
-
-  template <typename T>
-  CudaUniquePtr<T> makeDeviceBuffer(const std::size_t count)
-  {
-    T * ptr = nullptr;
-    cudaMalloc(reinterpret_cast<void **>(&ptr), count * sizeof(T));
-    return CudaUniquePtr<T>(ptr);
-  }
-
-  template <typename T>
-  void copyToDevice(T * device, const std::vector<T> & host)
-  {
-    cudaMemcpy(device, host.data(), host.size() * sizeof(T), cudaMemcpyHostToDevice);
-  }
-
-  template <typename T>
-  std::vector<T> copyToHost(const T * device, const std::size_t count)
-  {
-    std::vector<T> host(count);
-    cudaMemcpy(host.data(), device, count * sizeof(T), cudaMemcpyDeviceToHost);
-    return host;
   }
 
   void expectFloatVectorEq(
