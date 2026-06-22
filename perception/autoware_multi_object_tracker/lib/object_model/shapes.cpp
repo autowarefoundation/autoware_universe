@@ -339,6 +339,12 @@ std::optional<types::DynamicObject> alignClusterToOrientation(
   const double cos_tr = std::cos(target_yaw), sin_tr = std::sin(target_yaw);
 
   types::DynamicObject aligned = cluster;
+
+  // Convert aligned object to bounding box
+  aligned.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  aligned.shape.footprint.points.clear();
+
+  // Update position, orientation, and dimensions
   aligned.pose.position.x = cluster.pose.position.x + long_center * cos_tr - lat_center * sin_tr;
   aligned.pose.position.y = cluster.pose.position.y + long_center * sin_tr + lat_center * cos_tr;
 
