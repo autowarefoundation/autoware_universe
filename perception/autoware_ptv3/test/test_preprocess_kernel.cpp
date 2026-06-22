@@ -40,6 +40,14 @@ using autoware::cuda_utils::CudaUniquePtr;
 class PreprocessKernelTest : public ::testing::Test
 {
 protected:
+  static inline const std::vector<CloudPointTypeXYZI> kPartialReconstructionPoints{
+    {0.10F, 0.20F, 0.30F, 1.5F},
+    {0.80F, 0.20F, 0.30F, 2.5F},  // Same voxel as the previous point.
+    {1.10F, 1.20F, 1.30F, 3.5F},
+    {4.00F, 0.00F, 0.00F, 4.5F},  // Out of range.
+    {-1.00F, -1.00F, -1.00F, 5.5F},
+  };
+
   struct GenerateFeaturesResult
   {
     CudaUniquePtr<float> reconstruction_features_d;
@@ -173,12 +181,6 @@ protected:
   cudaStream_t stream_{nullptr};
   std::optional<PTv3Config> config_;
   std::unique_ptr<PreprocessCuda> preprocess_;
-};
-
-const std::vector<CloudPointTypeXYZI> kPartialReconstructionPoints{
-  {0.10F, 0.20F, 0.30F, 1.5F},    {0.80F, 0.20F, 0.30F, 2.5F},  // Same voxel as the previous point.
-  {1.10F, 1.20F, 1.30F, 3.5F},    {4.00F, 0.00F, 0.00F, 4.5F},  // Out of range.
-  {-1.00F, -1.00F, -1.00F, 5.5F},
 };
 
 TEST_F(PreprocessKernelTest, PartialReconstructionBuildsCropMaskAndIndices)
