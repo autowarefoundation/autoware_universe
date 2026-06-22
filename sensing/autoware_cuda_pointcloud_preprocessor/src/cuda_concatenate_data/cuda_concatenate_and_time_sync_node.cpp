@@ -55,7 +55,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
 
     auto pointcloud_sub =
       std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
-        *this, topic, callback, combine_cloud_handler_->get_stream(topic));
+        *this, topic, callback, combine_cloud_handler_->stream(topic));
     pointcloud_subs_.push_back(pointcloud_sub);
   }
 
