@@ -129,6 +129,12 @@ PidLongitudinalController::PidLongitudinalController(
     m_ff_scale_min = node.declare_parameter<double>("ff_scale_min");
     m_ff_scale_max = node.declare_parameter<double>("ff_scale_max");
 
+    m_enable_velocity_lookahead_feedback =
+      node.declare_parameter<bool>("enable_velocity_lookahead_feedback");
+    m_velocity_lookahead_time = node.declare_parameter<double>("velocity_lookahead_time");  // [s]
+    m_velocity_lookahead_blend_weight =
+      node.declare_parameter<double>("velocity_lookahead_blend_weight");  // [-]
+
     m_enable_brake_keeping_before_stop =
       node.declare_parameter<bool>("enable_brake_keeping_before_stop");         // [-]
     m_brake_keeping_acc = node.declare_parameter<double>("brake_keeping_acc");  // [m/s^2]
@@ -364,6 +370,8 @@ rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallbac
     update_param("time_threshold_before_pid_integration", m_time_threshold_before_pid_integrate);
     update_param("ff_scale_min", m_ff_scale_min);
     update_param("ff_scale_max", m_ff_scale_max);
+    update_param("velocity_lookahead_time", m_velocity_lookahead_time);
+    update_param("velocity_lookahead_blend_weight", m_velocity_lookahead_blend_weight);
   }
 
   // stopping state
@@ -1248,7 +1256,60 @@ double PidLongitudinalController::applyVelocityFeedback(const ControlData & cont
   const double vel_sign = (control_data.shift == Shift::Forward)
                             ? 1.0
                             : (control_data.shift == Shift::Reverse ? -1.0 : 0.0);
+
   const double current_vel = control_data.current_motion.vel;
+
+  if (m_enable_velocity_lookahead_feedback) {
+    const double dt_target = m_velocity_lookahead_time;
+    const double w = m_velocity_lookahead_blend_weight;
+
+    const double current_vel_abs = std::max(std::abs(current_vel), 0.1);
+    const double lookahead_distance = current_vel_abs * dt_target;
+
+    size_t future_idx = control_data.target_idx;
+    double accumulated_dist = 0.0;
+
+    for (size_t i = control_data.target_idx; i + 1 < control_data.interpolated_traj.points.size();
+         ++i) {
+      const auto & p0 = control_data.interpolated_traj.points.at(i).pose.position;
+      const auto & p1 = control_data.interpolated_traj.points.at(i + 1).pose.position;
+
+      const double dx = p1.x - p0.x;
+      const double dy = p1.y - p0.y;
+      const double dz = p1.z - p0.z;
+      const double ds = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+      accumulated_dist += ds;
+      future_idx = i + 1;
+
+      if (accumulated_dist >= lookahead_distance) {
+        break;
+      }
+    }
+
+    const auto target_motion = Motion{
+      control_data.interpolated_traj.points.at(future_idx).longitudinal_velocity_mps,
+      control_data.interpolated_traj.points.at(future_idx).acceleration_mps2};
+
+    const double diff_vel = (target_motion.vel - current_vel) * vel_sign;
+    const double error_vel_filtered = m_lpf_vel_error->filter(diff_vel);
+
+    const double a_connect = error_vel_filtered / dt_target;
+
+    double target_acc = target_motion.acc;
+
+    // Detect stopped points, on the trajectory they have acceleration 0 based on the speed diff,
+    // but we still need deacceleration to enter stop.
+    if (
+      abs(target_motion.vel) < m_state_transition_params.stopped_state_entry_vel &&
+      target_motion.acc < m_state_transition_params.stopped_state_entry_acc) {
+      target_acc = m_stopped_state_params.acc;
+    }
+
+    const double feedback_acc = w * a_connect + (1.0 - w) * target_acc;
+    return feedback_acc;
+  }
+
   const auto target_motion = Motion{
     control_data.interpolated_traj.points.at(control_data.target_idx).longitudinal_velocity_mps,
     control_data.interpolated_traj.points.at(control_data.target_idx).acceleration_mps2};

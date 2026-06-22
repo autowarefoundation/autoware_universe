@@ -35,6 +35,9 @@
     time_threshold_before_pid_integration: 2.0
     ff_scale_min: 0.5
     ff_scale_max: 2.0
+    enable_velocity_lookahead_feedback: true
+    velocity_lookahead_time: 1.0
+    velocity_lookahead_blend_weight: 0.5
     enable_brake_keeping_before_stop: false
     brake_keeping_acc: -0.2
 

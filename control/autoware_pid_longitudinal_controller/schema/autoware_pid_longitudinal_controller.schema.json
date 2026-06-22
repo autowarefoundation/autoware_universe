@@ -156,6 +156,21 @@
           "description": "maximum clamp value for feedforward scaling",
           "default": "2.0"
         },
+        "enable_velocity_lookahead_feedback": {
+          "type": "boolean",
+          "description": "flag to use look-ahead velocity feedback blending instead of PID+feedforward",
+          "default": "true"
+        },
+        "velocity_lookahead_time": {
+          "type": "number",
+          "description": "look-ahead horizon for velocity feedback [s]",
+          "default": "1.0"
+        },
+        "velocity_lookahead_blend_weight": {
+          "type": "number",
+          "description": "blend weight for look-ahead velocity feedback (0.0-1.0, larger prioritizes velocity connection)",
+          "default": "0.5"
+        },
         "enable_brake_keeping_before_stop": {
           "type": "boolean",
           "description": "flag to keep a certain acceleration during DRIVE state before the ego stops. See [Brake keeping]",
@@ -341,6 +356,9 @@
         "enable_integration_at_low_speed",
         "current_vel_threshold_pid_integration",
         "time_threshold_before_pid_integration",
+        "enable_velocity_lookahead_feedback",
+        "velocity_lookahead_time",
+        "velocity_lookahead_blend_weight",
         "enable_brake_keeping_before_stop",
         "brake_keeping_acc",
         "smooth_stop_max_strong_acc",
