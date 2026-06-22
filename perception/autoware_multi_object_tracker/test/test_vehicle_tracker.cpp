@@ -23,7 +23,7 @@ namespace autoware::multi_object_tracker
 namespace
 {
 // Mirrors the zone constants defined inside correctWheelAnchorLateral.
-constexpr double kDeadFrac  = 0.20;
+constexpr double kDeadFrac = 0.20;
 constexpr double kInnerFrac = 0.50;
 constexpr double kOuterFrac = 0.40;
 
@@ -39,8 +39,7 @@ LateralResult run(double tracker_width, double polygon_width, double lateral_off
   const double polygon_half = polygon_width * 0.5;
   double var_lat = 0.0;
   const double lateral_move = correctWheelAnchorLateral(
-    +tracker_half, -tracker_half,
-    lateral_offset + polygon_half, lateral_offset - polygon_half,
+    +tracker_half, -tracker_half, lateral_offset + polygon_half, lateral_offset - polygon_half,
     var_lat);
   return {lateral_offset + lateral_move, var_lat};
 }
@@ -74,25 +73,69 @@ TEST(CorrectWheelAnchorLateral, Zone2SymmetricNoMove)
   EXPECT_DOUBLE_EQ(r.var_lat, 0.0);  // t=1 -> residual = 0
 }
 
-// Zone 2 asymmetric: narrow polygon offset left, width-based weight pulls anchor toward center.
-TEST(CorrectWheelAnchorLateral, Zone2WidthBasedPullsTowardCenter)
+// Zone 2 asymmetric with protrusion: polygon=1.4 offset=0.4 → left edge protrudes (gap_L=-0.1).
+// Close-side fully active (t_close_L=1): center-pull suppressed, close_correction = -0.1 (aligns
+// left edge to tracker boundary). Expected lateral = 0.4 - 0.1 = 0.3.
+TEST(CorrectWheelAnchorLateral, Zone2LeftProtrusionCloseSideDominates)
 {
-  // tracker=2 (H=1), polygon=1.4 (half=0.7), offset=0.4
-  // half_width_miss = (2-1.4)/2 = 0.3; dead=0.2, inner=0.5
-  // t_inner = clamp((0.3-0.2)/(0.5-0.2), 0,1) = 1/3
-  // lateral_move = -0.4 * (1/3) = -2/15
-  // resid = 0.3 * (2/3) = 0.2 -> var_lat = 2*0.04 = 0.08
-  const double dead         = kDeadFrac * 1.0;
-  const double inner        = kInnerFrac * 1.0;
-  const double half_wm      = 0.3;
-  const double lat_off      = 0.4;
-  const double t_inner      = std::clamp((half_wm - dead) / (inner - dead), 0.0, 1.0);
-  const double exp_move     = -lat_off * t_inner;
-  const double resid        = half_wm * (1.0 - t_inner);
-  const double exp_var      = 2.0 * resid * resid;
-  const auto r = run(2.0, 1.4, lat_off);
-  EXPECT_NEAR(r.lateral, lat_off + exp_move, 1e-9);
+  // gap_L = 1.0 - (0.4+0.7) = -0.1 → t_close_L=1, t_close_R=0 (gap_R=0.7), effective_t_inner=0
+  // close_correction = (-0.1)*1.0 - 0 = -0.1 ; resid = 0.3*1.0 → var_lat = 2*0.09 = 0.18
+  const auto r = run(2.0, 1.4, 0.4);
+  EXPECT_NEAR(r.lateral, 0.3, 1e-9);
+  EXPECT_NEAR(r.var_lat, 0.18, 1e-9);
+}
+
+// Zone 2 pure center-pull: polygon well inside tracker on both sides (gaps > dead_lat).
+// No close-side → effective_t_inner = t_inner; anchor pulled toward center.
+TEST(CorrectWheelAnchorLateral, Zone2PureCenterPull)
+{
+  // tracker=2 (H=1), polygon=1.0 (half=0.5), offset=0.1
+  // polygon_L=0.6, polygon_R=-0.4 → gap_L=0.4, gap_R=0.6; both > dead=0.2 → t_close=0
+  // half_wm=0.5, t_inner=clamp((0.5-0.2)/0.3,0,1)=1.0, effective_t_inner=1.0
+  // lateral_move = -0.1*1.0 = -0.1 ; corrected = 0.0 ; resid=0 → var_lat=0
+  const auto r = run(2.0, 1.0, 0.1);
+  EXPECT_NEAR(r.lateral, 0.0, 1e-9);
+  EXPECT_NEAR(r.var_lat, 0.0, 1e-9);
+}
+
+// Zone 2 close-side partial: polygon inside tracker, left edge near left boundary (gap_L<dead).
+// Close-side partially suppresses center-pull and adds leftward correction.
+TEST(CorrectWheelAnchorLateral, Zone2CloseSidePartialCorrection)
+{
+  // tracker=2 (H=1), polygon=1.0 (half=0.5), offset=0.4
+  // polygon_L=0.9, polygon_R=-0.1 → gap_L=0.1, gap_R=0.9
+  // t_close_L=(0.2-0.1)/0.2=0.5, t_close_R=0, t_close=0.5
+  // half_wm=0.5, t_inner=1.0, effective_t_inner=0.5
+  // close_correction = 0.1*0.5 - 0 = 0.05
+  // lateral_move = -0.4*0.5 + 0.05 = -0.15 ; corrected = 0.25
+  // resid = 0.5*(1-0.5)=0.25 → var_lat = 2*0.0625 = 0.125
+  const double H = 1.0;
+  const double dead = kDeadFrac * H;
+  const double lat_off = 0.4;
+  const double gap_L = 0.1;
+  const double t_cL = (dead - gap_L) / dead;
+  const double t_inner = 1.0;
+  const double eff_ti = t_inner * (1.0 - t_cL);
+  const double close_c = gap_L * t_cL;
+  const double exp_lat = lat_off + (-lat_off * eff_ti + close_c);
+  const double resid = 0.5 * (1.0 - eff_ti);
+  const double exp_var = 2.0 * resid * resid;
+  const auto r = run(2.0, 1.0, lat_off);
+  EXPECT_NEAR(r.lateral, exp_lat, 1e-9);
   EXPECT_NEAR(r.var_lat, exp_var, 1e-9);
+}
+
+// Zone 2 close-side full: left edge exactly at tracker boundary (gap_L=0) → no correction,
+// center-pull fully suppressed. Anchor stays at its observed position.
+TEST(CorrectWheelAnchorLateral, Zone2CloseSideFullSuppression)
+{
+  // tracker=2 (H=1), polygon=1.0 (half=0.5), offset=0.5
+  // polygon_L=1.0=tracker_L → gap_L=0 → t_close_L=1.0, t_close_R=0 (gap_R=1.0)
+  // effective_t_inner=0, close_correction=0 → lateral_move=0 ; corrected=0.5
+  // resid=0.5*1.0=0.5 → var_lat=0.5
+  const auto r = run(2.0, 1.0, 0.5);
+  EXPECT_NEAR(r.lateral, 0.5, 1e-9);
+  EXPECT_NEAR(r.var_lat, 0.5, 1e-9);
 }
 
 // Zone 3 symmetric: wide polygon centered -> both sides cancel, no net move, no residual.
@@ -120,13 +163,13 @@ TEST(CorrectWheelAnchorLateral, Zone3PartialOneSideCorrected)
   // tracker=2 H=1, polygon=2.6 (half=1.3), offset=0.3
   // excess_L = 0.3+1.3-1 = 0.6 -> zone 3, t_L = clamp((0.6-0.2)/0.2, 0,1) = 1.0
   // excess_R = -1-(0.3-1.3) = 0.0 -> zone 1, t_R = 0
-  const double H       = 1.0;
-  const double dead    = kDeadFrac * H;
-  const double outer   = kOuterFrac * H;
-  const double exc_L   = 0.6;
-  const double exc_R   = 0.0;
-  const double t_L     = std::clamp((exc_L - dead) / (outer - dead), 0.0, 1.0);
-  const double t_R     = 0.0;
+  const double H = 1.0;
+  const double dead = kDeadFrac * H;
+  const double outer = kOuterFrac * H;
+  const double exc_L = 0.6;
+  const double exc_R = 0.0;
+  const double t_L = std::clamp((exc_L - dead) / (outer - dead), 0.0, 1.0);
+  const double t_R = 0.0;
   const double exp_move = -exc_L * t_L + exc_R * t_R;
   const auto r = run(2.0, 2.6, 0.3);
   EXPECT_NEAR(r.lateral, 0.3 + exp_move, 1e-9);
@@ -137,28 +180,29 @@ TEST(CorrectWheelAnchorLateral, Zone3PartialOneSideCorrected)
 TEST(CorrectWheelAnchorLateral, ContinuousAtZone1Zone2Boundary)
 {
   constexpr double eps = 1e-6;
-  // tracker=2 H=1, polygon_width chosen so excess_L = -(dead ± eps), offset=0 keeps both sides equal
-  // dead = 0.2, excess = polygon_half - 1 => polygon_half = 1 + excess => polygon_width = 2*(1+excess)
+  // tracker=2 H=1, polygon_width chosen so excess_L = -(dead ± eps), offset=0 keeps both sides
+  // equal dead = 0.2, excess = polygon_half - 1 => polygon_half = 1 + excess => polygon_width =
+  // 2*(1+excess)
   const double dead = kDeadFrac * 1.0;
-  const double w_in  = 2.0 * (1.0 - dead + eps);  // excess just inside dead zone
+  const double w_in = 2.0 * (1.0 - dead + eps);   // excess just inside dead zone
   const double w_out = 2.0 * (1.0 - dead - eps);  // excess just below dead zone (zone 2)
-  const auto inside  = run(2.0, w_in,  0.0);
+  const auto inside = run(2.0, w_in, 0.0);
   const auto outside = run(2.0, w_out, 0.0);
-  EXPECT_NEAR(inside.lateral,  outside.lateral,  1e-4);
-  EXPECT_NEAR(inside.var_lat,  outside.var_lat,  1e-4);
+  EXPECT_NEAR(inside.lateral, outside.lateral, 1e-4);
+  EXPECT_NEAR(inside.var_lat, outside.var_lat, 1e-4);
 }
 
 // Continuity at zone 1/3 boundary: just inside vs just outside dead zone (wide side).
 TEST(CorrectWheelAnchorLateral, ContinuousAtZone1Zone3Boundary)
 {
   constexpr double eps = 1e-6;
-  const double dead  = kDeadFrac * 1.0;
-  const double w_in  = 2.0 * (1.0 + dead - eps);  // excess just below dead (zone 1)
+  const double dead = kDeadFrac * 1.0;
+  const double w_in = 2.0 * (1.0 + dead - eps);   // excess just below dead (zone 1)
   const double w_out = 2.0 * (1.0 + dead + eps);  // excess just above dead (zone 3)
-  const auto inside  = run(2.0, w_in,  0.0);
+  const auto inside = run(2.0, w_in, 0.0);
   const auto outside = run(2.0, w_out, 0.0);
-  EXPECT_NEAR(inside.lateral,  outside.lateral,  1e-4);
-  EXPECT_NEAR(inside.var_lat,  outside.var_lat,  1e-4);
+  EXPECT_NEAR(inside.lateral, outside.lateral, 1e-4);
+  EXPECT_NEAR(inside.var_lat, outside.var_lat, 1e-4);
 }
 
 // Sign symmetry: flipping lateral_offset mirrors corrected lateral and preserves variance.
@@ -168,7 +212,7 @@ TEST(CorrectWheelAnchorLateral, SignSymmetry)
   const auto pos = run(2.0, 3.6, +d);
   const auto neg = run(2.0, 3.6, -d);
   EXPECT_NEAR(pos.lateral, -neg.lateral, 1e-9);
-  EXPECT_NEAR(pos.var_lat,  neg.var_lat, 1e-9);
+  EXPECT_NEAR(pos.var_lat, neg.var_lat, 1e-9);
 }
 
 }  // namespace autoware::multi_object_tracker

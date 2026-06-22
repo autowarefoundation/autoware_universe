@@ -222,15 +222,16 @@ double correctWheelAnchorLateral(
 {
   // Zone boundaries as fractions of tracker half-width H:
   //   dead zone: half-width-miss or per-side excess ≤ 0.20·H → no correction
-  //   inner (zone 2): polygon_width < 0.80·tracker_width → weight based on half-width-miss only
-  //     full match at polygon_width = 0.50·tracker_width (half-width-miss = 0.50·H)
+  //   inner (zone 2): polygon_width ≤ tracker_width → center-pull by half-width-miss weight,
+  //     suppressed when a close side (gap < 0.20·H) is visible; close-side correction then
+  //     aligns that edge with the tracker boundary (full alignment at gap = 0)
   //   outer (zone 3): per-side excess > 0.20·H → full match at excess = 0.40·H (140% of H)
-  constexpr double DEAD_ZONE_FRAC  = 0.20;
+  constexpr double DEAD_ZONE_FRAC = 0.20;
   constexpr double FULL_INNER_FRAC = 0.50;
   constexpr double FULL_OUTER_FRAC = 0.40;
 
-  const double H         = (tracker_L - tracker_R) * 0.5;
-  const double dead_lat  = DEAD_ZONE_FRAC * H;
+  const double H = (tracker_L - tracker_R) * 0.5;
+  const double dead_lat = DEAD_ZONE_FRAC * H;
   const double inner_lat = FULL_INNER_FRAC * H;
   const double outer_lat = FULL_OUTER_FRAC * H;
 
@@ -239,20 +240,37 @@ double correctWheelAnchorLateral(
 
   if (polygon_width <= tracker_width) {
     // Inner zone: polygon narrower than tracker.
-    // Weight is based on the symmetric half-width-miss so it does not depend on lateral_offset,
-    // avoiding the oscillation that per-side excess weights produce when a narrow polygon shifts.
     const double half_width_miss = (tracker_width - polygon_width) * 0.5;
-    const double t_inner = (half_width_miss > dead_lat)
-                             ? std::clamp(
-                                 (half_width_miss - dead_lat) / (inner_lat - dead_lat), 0.0, 1.0)
-                             : 0.0;
-    // Correction: pull the anchor toward the tracker center proportional to its lateral offset.
-    // lateral_offset = (polygon_L + polygon_R) / 2; at t=1 the anchor snaps to center.
+    const double t_inner =
+      (half_width_miss > dead_lat)
+        ? std::clamp((half_width_miss - dead_lat) / (inner_lat - dead_lat), 0.0, 1.0)
+        : 0.0;
+
+    // Per-side gap: signed distance from each polygon edge to the corresponding tracker boundary.
+    // Positive = polygon edge is inside the tracker; negative = polygon edge protrudes beyond.
+    const double gap_L = tracker_L - polygon_L;
+    const double gap_R = polygon_R - tracker_R;
+
+    // Close-side weight: 1 when the polygon edge is AT the tracker boundary (gap = 0, or
+    // protrudes), decreasing to 0 as the gap grows to dead_lat (boundary no longer visible).
+    const double t_close_L =
+      (gap_L < dead_lat) ? std::clamp((dead_lat - gap_L) / dead_lat, 0.0, 1.0) : 0.0;
+    const double t_close_R =
+      (gap_R < dead_lat) ? std::clamp((dead_lat - gap_R) / dead_lat, 0.0, 1.0) : 0.0;
+    const double t_close = std::max(t_close_L, t_close_R);
+
+    // Center-pull suppressed proportionally to the close-side confidence: when one boundary
+    // is directly observable, pulling to center would introduce error.
+    const double effective_t_inner = t_inner * (1.0 - t_close);
     const double lateral_offset = (polygon_L + polygon_R) * 0.5;
-    // Uncorrected residual is also width-based to stay consistent.
-    const double resid = half_width_miss * (1.0 - t_inner);
+
+    // Close-side correction: pull the anchor to align each near edge with its tracker boundary.
+    // gap_L * t_close_L shifts left; gap_R * t_close_R shifts right (subtracted).
+    const double close_correction = gap_L * t_close_L - gap_R * t_close_R;
+
+    const double resid = half_width_miss * (1.0 - effective_t_inner);
     var_lat = 2.0 * resid * resid;
-    return -lateral_offset * t_inner;
+    return -lateral_offset * effective_t_inner + close_correction;
   }
 
   // Outer zone: polygon wider than tracker.
@@ -261,9 +279,8 @@ double correctWheelAnchorLateral(
   const double excess_R = tracker_R - polygon_R;
 
   const auto outer_weight = [&](const double excess) -> double {
-    return (excess > dead_lat)
-             ? std::clamp((excess - dead_lat) / (outer_lat - dead_lat), 0.0, 1.0)
-             : 0.0;
+    return (excess > dead_lat) ? std::clamp((excess - dead_lat) / (outer_lat - dead_lat), 0.0, 1.0)
+                               : 0.0;
   };
   const double t_L = outer_weight(excess_L);
   const double t_R = outer_weight(excess_R);
