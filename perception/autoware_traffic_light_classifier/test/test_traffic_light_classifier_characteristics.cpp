@@ -16,13 +16,7 @@
 // Characterization tests for TrafficLightClassifierNodelet.
 //
 // Purpose: pin the *current* observable behavior of the node's orchestration
-// logic (TrafficLightClassifierNodelet::imageRoiCallback) so that the planned
-// decoupling of "ROS 2 Node" from "logic" can be carried out under a safety
-// net. These tests are intentionally written against behavior, not intent: if
-// an assertion below looks "wrong", that is information about the legacy
-// behavior to be preserved (or deliberately changed) during refactoring -- do
-// NOT silently fix the production code to make a golden value prettier.
-//
+// logic (TrafficLightClassifierNodelet::imageRoiCallback).
 // Test strategy:
 //   * Drive the node by calling the public imageRoiCallback() directly,
 //     bypassing message_filters time-sync / the lazy-subscription timer so the
@@ -33,6 +27,15 @@
 //     is intentionally NOT pinned here; only the node-level orchestration
 //     (filtering, UNKNOWN handling, ordering, id/type propagation, exposure
 //     overwrite, diagnostics) is characterized.
+//
+// Not characterized (a refactor may change these without a failure here):
+//   * message_filters time-sync, the connectCb lazy subscription, and other
+//     construction-time concerns (build_only) -- bypassed by the direct call.
+//   * Error / degenerate paths impractical to drive via the HSV backend:
+//     classifier failure (early return), out-of-bounds ROI (OpenCV throws), and
+//     cv_bridge conversion failure -- the catch does NOT return, so a bad image
+//     hits a null cv_ptr deref (a latent bug; left unfixed, tracked separately).
+//   * Diagnostic timestamp and authoring hardware_id/name.
 //
 
 #include "../src/traffic_light_classifier_node.hpp"
@@ -423,6 +426,8 @@ TEST_F(CharacterizationTest, ValidRoiProducesExactlyOneElement)
 
   // Assert
   ASSERT_EQ(cap.signals.signals.size(), 1u);
+  // Output header is propagated from the input image
+  EXPECT_EQ(cap.signals.header, image->header);
   const auto & signal = cap.signals.signals[0];
   EXPECT_EQ(signal.traffic_light_id, 1);  // input id propagated to the slot
   EXPECT_EQ(signal.elements.size(), 1u);  // classifier produced exactly one element
