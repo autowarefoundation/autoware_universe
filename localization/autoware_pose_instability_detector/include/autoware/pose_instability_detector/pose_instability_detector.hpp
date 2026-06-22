@@ -24,6 +24,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <deque>
+#include <optional>
 #include <tuple>
 #include <vector>
 
