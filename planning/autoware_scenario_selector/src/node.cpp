@@ -446,7 +446,7 @@ ScenarioSelectorNode::ScenarioSelectorNode(const rclcpp::NodeOptions & node_opti
   th_stopped_time_sec_(this->declare_parameter<double>("th_stopped_time_sec")),
   th_stopped_velocity_mps_(this->declare_parameter<double>("th_stopped_velocity_mps")),
   enable_mode_switching_(this->declare_parameter<bool>("enable_mode_switching")),
-  allow_area_(this->declare_parameter<bool>("allow_area")),
+  allow_area_(this->declare_parameter<bool>("allow_area", false)),
   is_parking_completed_(false)
 {
   lane_driving_stop_time_ = {};
