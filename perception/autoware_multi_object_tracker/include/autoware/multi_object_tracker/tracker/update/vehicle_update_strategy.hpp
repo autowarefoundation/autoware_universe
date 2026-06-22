@@ -44,7 +44,8 @@ types::DynamicObject createPseudoMeasurement(
 
 // Scalar lateral correction of the wheel-anchor given explicit body-frame lateral edge positions.
 // tracker_L/R and polygon_L/R are signed lateral coordinates (positive = left).
-// Returns the lateral move and, via `var_lat`, the extra lateral variance from uncorrected residuals.
+// Returns the lateral move and, via `var_lat`, the extra lateral variance from uncorrected
+// residuals.
 double correctWheelAnchorLateral(
   const double tracker_L, const double tracker_R, const double polygon_L, const double polygon_R,
   double & var_lat);
