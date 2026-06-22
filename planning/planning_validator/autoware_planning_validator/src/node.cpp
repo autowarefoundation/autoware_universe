@@ -73,7 +73,7 @@ void PlanningValidatorNode::setupParameters()
   p.publish_diag = declare_parameter<bool>("publish_diag");
   p.diag_error_count_threshold = declare_parameter<int>("diag_error_count_threshold");
   p.display_on_terminal = declare_parameter<bool>("display_on_terminal");
-  p.allow_area = declare_parameter<bool>("allow_area");
+  p.allow_area = declare_parameter<bool>("allow_area", false);
   context_->data->route_handler->setAllowArea(p.allow_area);
 
   p.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
