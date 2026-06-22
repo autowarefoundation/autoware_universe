@@ -23238,9 +23238,10 @@
 <p>The Obstacle Stop plugin serves as a deterministic safety shield operating independently of the generative model to:</p>
 <ul>
 <li><strong>Enforce Longitudinal Safety</strong>: Monitors the gap to dynamic and static obstacles to ensure a safe distance is maintained under all kinematic conditions.</li>
-<li><strong>Ensure Definitive Stopping</strong>: Guarantees zero-velocity set-points for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.</li>
-<li><strong>Provide Predictable Deceleration</strong>: Standardizes the vehicle’s stopping profile to ensure consistent, comfortable, and physically guaranteed deceleration regardless of the AI's intended path.</li>
+<li><strong>Ensure Definitive Stopping For Obstacles</strong>: Guarantees zero-velocity set-points for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.</li>
 </ul>
+<h4 id="velocity-modifier">Velocity Modifier<a class="headerlink" href="#velocity-modifier" title="Permanent link">#</a></h4>
+<p>The Velocity Modifier plugins is responsible for ensuring the velocity profile is smooth and feasible, and adjusts the velocity profile if an anomaly is detected while respecting deceleration and jerk constraints.</p>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">#</a></h2>
 <p>This package depends on the following packages:</p>
 <ul>
@@ -23271,7 +23272,7 @@
 <td>plugin_names</td>
 <td>array</td>
 <td>List of trajectory modifier plugins to load</td>
-<td>['autoware::trajectory_modifier::plugin::ObstacleStop', 'autoware::trajectory_modifier::plugin::StopPointFixer']</td>
+<td>['autoware::trajectory_modifier::plugin::ObstacleStop', 'autoware::trajectory_modifier::plugin::StopPointFixer', 'autoware::trajectory_modifier::plugin::VelocityModifier']</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -23285,6 +23286,13 @@
 <td>use_obstacle_stop</td>
 <td>boolean</td>
 <td>Enable the obstacle stop modifier plugin</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_velocity_modifier</td>
+<td>boolean</td>
+<td>Enable the velocity modifier plugin</td>
 <td>True</td>
 <td>N/A</td>
 </tr>
@@ -23331,6 +23339,27 @@
 <td>≥0.0</td>
 </tr>
 <tr>
+<td>stopping_constraints.nominal_deceleration</td>
+<td>float</td>
+<td>Nominal deceleration during stopping [m/s^2]</td>
+<td>1.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>stopping_constraints.maximum_deceleration</td>
+<td>float</td>
+<td>Maximum deceleration during stopping [m/s^2]</td>
+<td>4.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>stopping_constraints.jerk_limit</td>
+<td>float</td>
+<td>Jerk limit during stopping [m/s^3]</td>
+<td>3.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
 <td>obstacle_stop.use_objects</td>
 <td>boolean</td>
 <td>Enable the use of objects for obstacle stop</td>
@@ -23366,30 +23395,16 @@
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>obstacle_stop.nominal_stopping_decel</td>
-<td>float</td>
-<td>Nominal deceleration during stopping [m/s^2]</td>
-<td>1.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>obstacle_stop.maximum_stopping_decel</td>
-<td>float</td>
-<td>Maximum deceleration during stopping [m/s^2]</td>
-<td>4.0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>obstacle_stop.stopping_jerk</td>
-<td>float</td>
-<td>Jerk during stopping [m/s^3]</td>
-<td>3.0</td>
-<td>N/A</td>
-</tr>
-<tr>
 <td>obstacle_stop.lateral_margin</td>
 <td>float</td>
 <td>Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]</td>
+<td>0.5</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>obstacle_stop.duplicate_check_threshold</td>
+<td>float</td>
+<td>Threshold to check if the stop point is already in the trajectory [m]</td>
 <td>0.5</td>
 <td>≥0.0</td>
 </tr>
@@ -23432,7 +23447,7 @@
 <td>obstacle_tracking.pcd_distance_th</td>
 <td>float</td>
 <td>Distance threshold for pointcloud tracking [m]</td>
-<td>0.5</td>
+<td>1.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
@@ -23453,7 +23468,28 @@
 <td>objects.max_velocity_th</td>
 <td>float</td>
 <td>Maximum velocity threshold for target object [m/s]</td>
+<td>5.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>objects.stopped_velocity_th</td>
+<td>float</td>
+<td>Velocity threshold for target object to be considered as stopped [m/s]</td>
+<td>0.25</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>objects.max_lateral_velocity_th</td>
+<td>float</td>
+<td>Maximum lateral velocity threshold for target object to be considered for obstacle stop [m/s]</td>
 <td>1.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
+<td>objects.safety_buffer</td>
+<td>float</td>
+<td>Safety buffer to expand object shape [m]</td>
+<td>0.0</td>
 <td>≥0.0</td>
 </tr>
 <tr>
@@ -23583,6 +23619,13 @@
 <td>≥0.0</td>
 </tr>
 <tr>
+<td>rss_params.ego_decel</td>
+<td>float</td>
+<td>Deceleration for ego vehicle [m/s^2]</td>
+<td>4.0</td>
+<td>≥0.0</td>
+</tr>
+<tr>
 <td>rss_params.reaction_time</td>
 <td>float</td>
 <td>Reaction time to consider for RSS calculation [s]</td>
@@ -23597,10 +23640,10 @@
 <td>≥0.0</td>
 </tr>
 <tr>
-<td>rss_params.min_vel_th</td>
+<td>rss_params.lookahead_horizon</td>
 <td>float</td>
-<td>Minimum velocity threshold for object to be considered for RSS safety check [m/s]</td>
-<td>0.5</td>
+<td>Lookahead horizon for RSS calculation [s]</td>
+<td>1.5</td>
 <td>≥0.0</td>
 </tr>
 </tbody>
