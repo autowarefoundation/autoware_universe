@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
 #include <vector>
 
 using autoware::trajectory_validator::FilterContext;
@@ -56,6 +57,11 @@ protected:
     node_->declare_parameter("traffic_light.delay_response_time", 0.5);
     node_->declare_parameter("traffic_light.crossing_time_limit", 2.75);
     node_->declare_parameter("traffic_light.treat_amber_light_as_red_light", false);
+    node_->declare_parameter("traffic_light.treat_unknown_light_as_red_light", false);
+    node_->declare_parameter("traffic_light.stable_duration_threshold_red", 0.0);
+    node_->declare_parameter("traffic_light.stable_duration_threshold_amber", 0.0);
+    node_->declare_parameter("traffic_light.amber_rejection_hysteresis_duration", 0.0);
+    node_->declare_parameter("traffic_light.ego_stopped_velocity_threshold", 0.01);
     node_->declare_parameter("traffic_light.checked_trajectory_length.deceleration_limit", 999.9);
     node_->declare_parameter("traffic_light.checked_trajectory_length.jerk_limit", 999.9);
 
@@ -65,19 +71,24 @@ protected:
     params.traffic_light.delay_response_time = 0.5;
     params.traffic_light.crossing_time_limit = 2.75;
     params.traffic_light.treat_amber_light_as_red_light = false;
+    params.traffic_light.treat_unknown_light_as_red_light = false;
+    params.traffic_light.stable_duration_threshold_red = 0.0;
+    params.traffic_light.stable_duration_threshold_amber = 0.0;
+    params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+    params.traffic_light.ego_stopped_velocity_threshold = 0.01;
     params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
     params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
     filter_->update_parameters(params);
 
     context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
-    // Set high velocity/acceleration to always check the whole trajectory
-    // (checked_trajectory_length feature)
-    nav_msgs::msg::Odometry odometry;
-    geometry_msgs::msg::AccelWithCovarianceStamped accel;
-    odometry.twist.twist.linear.x = 999.9f;
-    accel.accel.accel.linear.x = 999.9f;
-    context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
-    context_.acceleration = std::make_shared<geometry_msgs::msg::AccelWithCovarianceStamped>(accel);
+    context_.route = std::make_shared<autoware_planning_msgs::msg::LaneletRoute>();
+    auto acceleration = std::make_shared<geometry_msgs::msg::AccelWithCovarianceStamped>();
+    acceleration->accel.accel.linear.x = 0.0f;
+    context_.acceleration = acceleration;
+    auto odometry = std::make_shared<nav_msgs::msg::Odometry>();
+    odometry->header.stamp = node_->now();
+    odometry->twist.twist.linear.x = 5.0f;
+    context_.odometry = odometry;
   }
 
   // Helper to create a simple straight lanelet map with a traffic light
@@ -111,6 +122,13 @@ protected:
 
     // 6. Create and Set Map
     context_.lanelet_map = lanelet::utils::createMap({lanelet});
+
+    // 7. Create and Set Route
+    auto route = std::make_shared<autoware_planning_msgs::msg::LaneletRoute>();
+    autoware_planning_msgs::msg::LaneletSegment segment;
+    segment.preferred_primitive.id = lanelet.id();
+    route->segments.push_back(segment);
+    context_.route = route;
   }
 
   // Helper to set traffic light signal
@@ -155,6 +173,15 @@ protected:
     return points;
   }
 
+  void expect_feasibility(
+    const std::vector<TrajectoryPoint> & points, const bool expected_feasible,
+    const std::string & message = "")
+  {
+    const auto res = filter_->is_feasible(points, context_);
+    ASSERT_TRUE(res.has_value()) << "is_feasible should not return an error";
+    EXPECT_EQ(res->is_feasible, expected_feasible) << message;
+  }
+
   std::shared_ptr<TrafficLightFilter> filter_;
   std::shared_ptr<rclcpp::Node> node_;
   FilterContext context_;
@@ -165,8 +192,9 @@ TEST_F(TrafficLightFilterTest, IsFeasibleEmptyInput)
   std::vector<TrajectoryPoint> points;
   create_and_set_map(0, 0);
   set_traffic_light_signal(0, TrafficLightElement::RED);
-  EXPECT_TRUE(filter_->is_feasible(points, context_))
-    << "Empty trajectory should always be feasible (cannot cross a traffic light if empty)";
+  expect_feasibility(
+    points, true,
+    "Empty trajectory should always be feasible (cannot cross a traffic light if empty)");
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutMapAndSignals)
@@ -197,6 +225,14 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutSignals)
        "crosses a traffic "
        "light)";
 }
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithoutRoute)
+{
+  auto points = create_trajectory(0.0, 1.0);
+  create_and_set_map(0, 0);
+  context_.route = nullptr;
+  EXPECT_FALSE(filter_->is_feasible(points, context_).has_value())
+    << "Should not be feasible without a route";
+}
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedLightIntersection)
 {
@@ -209,9 +245,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithRedLightIntersection)
   // Trajectory crossing stop line (0 -> 10)
   auto points = create_trajectory(0.0, 10.0);
 
-  const auto res = filter_->is_feasible(points, context_);
-  ASSERT_TRUE(res.has_value());
-  EXPECT_FALSE(res->is_feasible) << "Should return false when crossing red light stop line";
+  expect_feasibility(points, false, "Should return false when crossing red light stop line");
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithGreenLight)
@@ -225,7 +259,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithGreenLight)
   // Trajectory crossing stop line (0 -> 10)
   auto points = create_trajectory(0.0, 10.0);
 
-  EXPECT_TRUE(filter_->is_feasible(points, context_)) << "Should return true for green light";
+  expect_feasibility(points, true, "Should return true for green light");
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithRedLightNoIntersection)
@@ -239,8 +273,7 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithRedLightNoIntersection)
   // Trajectory stops before stop line (0 -> 4)
   auto points = create_trajectory(0.0, 4.0);
 
-  EXPECT_TRUE(filter_->is_feasible(points, context_))
-    << "Should return true if red light is not crossed";
+  expect_feasibility(points, true, "Should return true if red light is not crossed");
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithFrontOverhang)
@@ -258,9 +291,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithFrontOverhang)
   vehicle_info.max_longitudinal_offset_m = 2.0;
   filter_->set_vehicle_info(vehicle_info);
 
-  const auto res = filter_->is_feasible(points, context_);
-  ASSERT_TRUE(res.has_value());
-  EXPECT_FALSE(res->is_feasible) << "Should return false when crossing red light stop line";
+  expect_feasibility(points, false, "Should return false when crossing red light stop line");
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
@@ -279,9 +310,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStop)
 
   auto points = create_trajectory(0.0, 30.0, 5.0);
 
-  const auto res = filter_->is_feasible(points, context_);
-  ASSERT_TRUE(res.has_value());
-  EXPECT_FALSE(res->is_feasible) << "Should return false if amber light can be stopped";
+  expect_feasibility(points, false, "Should return false if amber light can be stopped");
 }
 
 TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberLightCannotStop)
@@ -303,8 +332,8 @@ TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberLightCannotStop)
 
   auto points = create_trajectory(0.0, 10.0, 10.0);
 
-  EXPECT_TRUE(filter_->is_feasible(points, context_))
-    << "Should return true if amber light cannot be stopped but is reachable";
+  expect_feasibility(
+    points, true, "Should return true if amber light cannot be stopped but is reachable");
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStopAndCannotPass)
@@ -332,9 +361,7 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightCanStopAndCannotPass)
 
   auto points = create_trajectory(0.0, 200.0, 10.0);
 
-  const auto res = filter_->is_feasible(points, context_);
-  ASSERT_TRUE(res.has_value());
-  EXPECT_FALSE(res->is_feasible) << "Should return false if ego can stop but cannot pass";
+  expect_feasibility(points, false, "Should return false if ego can stop but cannot pass");
 }
 
 TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
@@ -350,20 +377,221 @@ TEST_F(TrafficLightFilterTest, IsInfeasibleWithAmberLightAsRedLight)
   params.traffic_light.delay_response_time = 0.5;
   params.traffic_light.crossing_time_limit = 2.75;
   params.traffic_light.treat_amber_light_as_red_light = true;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
   filter_->update_parameters(params);
 
   // Even if it's NOT stoppable (ego at 0m, velocity 10m/s, stop at 5m),
   // it should be rejected because it's treated as red.
   auto points = create_trajectory(0.0, 10.0, 10.0);
 
-  const auto res = filter_->is_feasible(points, context_);
-  ASSERT_TRUE(res.has_value());
-  EXPECT_FALSE(res->is_feasible)
-    << "Should return false for amber light when treat_amber_light_as_red_light is true";
+  expect_feasibility(
+    points, false,
+    "Should return false for amber light when treat_amber_light_as_red_light is true");
 }
 
-int main(int argc, char ** argv)
+TEST_F(TrafficLightFilterTest, IsInfeasibleWithUnknownLightAsRedLight)
 {
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  const lanelet::Id light_id = 301;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
+
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_unknown_light_as_red_light = true;
+  params.traffic_light.stable_duration_threshold_red = 0.0;
+  params.traffic_light.stable_duration_threshold_amber = 0.0;
+  params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  // Crossing unknown light when treat_unknown_light_as_red_light is true
+  auto points = create_trajectory(0.0, 10.0, 5.0);
+
+  expect_feasibility(
+    points, false,
+    "Should return false for unknown light when treat_unknown_light_as_red_light is true");
+
+  // Setting parameter to false
+  params.traffic_light.treat_unknown_light_as_red_light = false;
+  filter_->update_parameters(params);
+  expect_feasibility(
+    points, true,
+    "Should return true for unknown light when treat_unknown_light_as_red_light is false");
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithStabilityFiltering)
+{
+  const lanelet::Id light_id = 400;
+  const double stop_x = 5.0;
+
+  create_and_set_map(light_id, stop_x);
+
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_amber_light_as_red_light = false;
+  params.traffic_light.stable_duration_threshold_red = 1.0;  // 1 second stability
+  params.traffic_light.stable_duration_threshold_amber = 1.0;
+  params.traffic_light.amber_rejection_hysteresis_duration = 0.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  // Set initial state to GREEN
+  set_traffic_light_signal(light_id, TrafficLightElement::GREEN);
+  auto points = create_trajectory(0.0, 10.0);
+  expect_feasibility(points, true);
+
+  // Switch to RED at t=0
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  nav_msgs::msg::Odometry odometry = *context_.odometry;
+  odometry.header.stamp = node_->now();
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+
+  // Immediately check, should be feasible because of stability threshold
+  expect_feasibility(points, true, "Should be feasible because signal is not stable yet");
+
+  // Advance time by 0.5s (less than 1s threshold)
+  odometry.header.stamp =
+    rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.5);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  expect_feasibility(points, true, "Should still be feasible after 0.5s");
+
+  // Advance time by another 0.6s (total 1.1s > 1s threshold)
+  odometry.header.stamp =
+    rclcpp::Time(context_.odometry->header.stamp) + rclcpp::Duration::from_seconds(0.6);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  expect_feasibility(points, false, "Should be infeasible after stability threshold is exceeded");
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithAmberHysteresis)
+{
+  const lanelet::Id light_id = 500;
+  const double stop_x = 20.0;
+
+  create_and_set_map(light_id, stop_x);
+
+  validator::Params params;
+  params.traffic_light.deceleration_limit = 2.8;
+  params.traffic_light.delay_response_time = 0.5;
+  params.traffic_light.crossing_time_limit = 2.75;
+  params.traffic_light.treat_amber_light_as_red_light = false;
+  params.traffic_light.amber_rejection_hysteresis_duration = 2.0;  // 2 seconds hysteresis
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  // Ego at 0m, velocity 5m/s. Stoppable.
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+  auto points = create_trajectory(0.0, 30.0, 5.0);
+
+  // First check: should be infeasible (can stop for amber)
+  expect_feasibility(points, false);
+
+  // Advance time by 1s (less than 2s hysteresis)
+  nav_msgs::msg::Odometry odometry = *context_.odometry;
+  odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(1.0);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+
+  // Move ego closer to 5m from stop line. Now cannot stop (5m away at 10m/s)
+  auto points2 = create_trajectory(15.0, 30.0, 10.0);
+
+  expect_feasibility(points2, false, "Should be infeasible due to amber hysteresis");
+
+  // Advance time by another 1.1s (total 2.1s > 2s hysteresis)
+  odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(1.1);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+
+  // Now it should be feasible if it cannot stop
+  expect_feasibility(points2, true, "Should be feasible after hysteresis duration");
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithSignalHistoryCleanup)
+{
+  const lanelet::Id light_id = 600;
+  const double stop_x = 5.0;
+  create_and_set_map(light_id, stop_x);
+
+  validator::Params params;
+  params.traffic_light.stable_duration_threshold_red = 1.0;
+  params.traffic_light.stable_duration_threshold_amber = 1.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  auto points = create_trajectory(0.0, 10.0);
+
+  // 1. Send RED signal
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  expect_feasibility(points, true);
+
+  // 2. Stop sending signal for 2.0s
+  context_.traffic_light_signals = std::make_shared<TrafficLightGroupArray>();
+  nav_msgs::msg::Odometry odometry = *context_.odometry;
+  odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(2.0);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+
+  // Trigger cleanup
+  expect_feasibility(points, true);
+
+  // 3. Send RED signal again. It should be treated as new (not stable yet).
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  expect_feasibility(points, true, "Should be feasible because history was cleaned up");
+}
+
+TEST_F(TrafficLightFilterTest, IsFeasibleWithSignalStateChange)
+{
+  const lanelet::Id light_id = 700;
+  const double stop_x = 5.0;
+  create_and_set_map(light_id, stop_x);
+
+  validator::Params params;
+  params.traffic_light.stable_duration_threshold_red = 1.0;
+  params.traffic_light.stable_duration_threshold_amber = 1.0;
+  params.traffic_light.ego_stopped_velocity_threshold = 0.01;
+  params.traffic_light.checked_trajectory_length.deceleration_limit = 999.9;
+  params.traffic_light.checked_trajectory_length.jerk_limit = 999.9;
+  filter_->update_parameters(params);
+
+  auto points = create_trajectory(0.0, 10.0);
+
+  // 1. Send AMBER signal
+  set_traffic_light_signal(light_id, TrafficLightElement::AMBER);
+  expect_feasibility(points, true);
+
+  // 2. Advance 0.5s, still AMBER
+  nav_msgs::msg::Odometry odometry = *context_.odometry;
+  odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(0.5);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  expect_feasibility(points, true);
+
+  // 3. Switch to RED
+  set_traffic_light_signal(light_id, TrafficLightElement::RED);
+  // Stability timer should reset.
+  expect_feasibility(points, true, "Should be feasible after state change");
+
+  // 4. Advance another 0.6s (total from AMBER start is 1.1s, but from RED start is 0.6s)
+  odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(0.6);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  expect_feasibility(points, true, "Should still be feasible (0.6s < 1.0s)");
+
+  // 5. Advance another 0.5s (total from RED start is 1.1s > 1.0s duration threshold)
+  odometry.header.stamp = rclcpp::Time(odometry.header.stamp) + rclcpp::Duration::from_seconds(0.5);
+  context_.odometry = std::make_shared<nav_msgs::msg::Odometry>(odometry);
+  expect_feasibility(points, false, "Should be unfeasible (stable RED signal)");
 }

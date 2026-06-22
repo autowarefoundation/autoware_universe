@@ -17,10 +17,14 @@
 
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
-#include <lanelet2_core/Forward.h>
+#include <autoware/traffic_light_compliance_checker/traffic_light_compliance_checker.hpp>
 
+#include <geometry_msgs/msg/point.hpp>
+
+#include <memory>
+#include <optional>
 #include <string>
-#include <utility>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::trajectory_validator::plugin::traffic_rule
@@ -34,25 +38,26 @@ public:
 
   void update_parameters(const validator::Params & params) final;
 
-  /// @brief return true if ego can safely pass an amber traffic light
-  /// @note made public for testing purposes
-  [[nodiscard]] bool can_pass_amber_light(
-    const double distance_to_stop_line, const double current_velocity,
-    const double current_acceleration, const double time_to_cross_stop_line) const;
+  void set_vehicle_info(const VehicleInfo & vehicle_info) final;
 
 private:
-  /// @brief return the red and amber stop lines related to the given traffic light groups
-  [[nodiscard]] std::pair<
-    std::vector<lanelet::BasicLineString2d>, std::vector<lanelet::BasicLineString2d>>
-  get_stop_lines(
-    const lanelet::LaneletMap & lanelet_map,
-    const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_lights) const;
-  /// @brief return true if there is a stop point and it is within margin distance of the stop line
-  [[nodiscard]] bool is_stop_point_within_margin_from_stop_line(
-    const std::optional<TrajectoryPoint> & stop_point,
-    const lanelet::BasicLineString2d & stop_line) const;
+  struct RejectionInfo
+  {
+    geometry_msgs::msg::Point stop_line_pos;
+    std::string signal_label;
+    size_t rejection_count{0};
+  };
 
+  std::unique_ptr<traffic_light_compliance_checker::TrafficLightComplianceChecker> checker_;
   validator::Params::TrafficLight params_;
+
+  std::unordered_map<int64_t, RejectionInfo> aggregated_rejections_;
+  std::optional<rclcpp::Time> last_frame_time_;
+
+  void update_debug_data(
+    const std::vector<traffic_light_compliance_checker::Violation> & violations,
+    const autoware_perception_msgs::msg::TrafficLightGroupArray & traffic_light_signals,
+    const rclcpp::Time & current_time, const double z);
 };
 
 }  // namespace autoware::trajectory_validator::plugin::traffic_rule
