@@ -67,7 +67,7 @@
         0.1,     0.1,   0.1,   0.1,    0.1,      0.1,       0.1,      0.1,        0.1,     0.1]     #HAZARD
 
     lidar-radar:
-      can_assign_matrix: # {OVERRIDE}
+      can_assign_matrix:
         #UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORBIKE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD
         [1,       1,   1,     1,    1,       1,         1,       1,          1,      1,      #UNKNOWN
         1,       1,   1,     1,    1,       1,         1,       1,          1,      1,      #CAR
@@ -80,7 +80,7 @@
         1,       1,   1,     1,    1,       1,         1,       1,          1,      1,      #ANIMAL
         1,       1,   1,     1,    1,       1,         1,       1,          1,      1]      #HAZARD
 
-      max_dist_matrix: # {OVERRIDE}
+      max_dist_matrix:
         #UNKNOWN, CAR, TRUCK, BUS, TRAILER, MOTORBIKE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD
         [4.0,     4.0, 5.0,   5.0,  5.0,     3.5,       3.5,      3.5,        4.0,    4.0,    #UNKNOWN
         4.0,     5.5, 6.0,   6.0,  6.0,     3.0,       3.0,      3.0,        4.0,    4.0,    #CAR

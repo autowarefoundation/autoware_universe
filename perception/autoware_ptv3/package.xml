@@ -7,6 +7,7 @@
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
   <maintainer email="manato.hirabayashi@tier4.jp">Manato Hirabayashi</maintainer>
+  <maintainer email="max.schmeller@tier4.jp">Max Schmeller</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
@@ -21,6 +22,7 @@
   <depend>autoware_utils</depend>
   <depend>cuda_blackboard</depend>
   <depend>launch_ros</depend>
+  <depend>perception_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tf2_sensor_msgs</depend>
@@ -29,8 +31,6 @@
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_cmake_ros</test_depend>
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>autoware_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
