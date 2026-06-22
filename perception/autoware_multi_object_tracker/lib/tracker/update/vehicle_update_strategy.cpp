@@ -216,68 +216,74 @@ types::DynamicObject createPseudoMeasurement(
   return pred;
 }
 
-WheelAnchorLateral correctWheelAnchorLateral(
-  double yaw, double tracker_width, const geometry_msgs::msg::Point & tracker_center,
-  double polygon_width, const geometry_msgs::msg::Point & anchor, double balance_alpha,
-  double corner_residual_beta)
+double correctWheelAnchorLateral(
+  const double lateral_offset, const double tracker_width, const double polygon_width,
+  double & var_lat)
 {
-  WheelAnchorLateral result{anchor, 0.0};
-
-  const double slack = 0.5 * (polygon_width - tracker_width);
-  if (slack <= 0.0) {
-    // Polygon narrower than (or equal to) the tracker: partial view. Keep the anchor and add the
-    // worst-case lateral offset (half the missing width) as variance.
-    const double half_gap = -slack;  // = 0.5 * (tracker_width - polygon_width) >= 0
-    result.var_lat = half_gap * half_gap;
-    return result;
-  }
-
-  // Polygon wider than the tracker: soft dead-zone ("back-lash") lateral correction.
-  const double sin_yaw = std::sin(yaw);
-  const double cos_yaw = std::cos(yaw);
-  // Signed lateral offset of the observed edge center from the tracker center, along the body
-  // lateral axis n = (-sin yaw, cos yaw). The longitudinal component is orthogonal to n and drops.
-  const double d =
-    -(anchor.x - tracker_center.x) * sin_yaw + (anchor.y - tracker_center.y) * cos_yaw;
-  const double ad = std::abs(d);
-  const double sgn = (d >= 0.0) ? 1.0 : -1.0;
-
-  // Soft dead-zone: slope `balance_alpha` while contained (|d| <= slack), unit slope once the
-  // corner is exposed. Continuous at |d| = slack.
-  const double shift = (ad <= slack) ? balance_alpha * ad : (ad - slack) + balance_alpha * slack;
-  const double lateral_move = sgn * shift - d;  // (corrected - observed) lateral offset, along n
-  result.anchor.x = anchor.x - lateral_move * sin_yaw;
-  result.anchor.y = anchor.y + lateral_move * cos_yaw;
-
-  // Added lateral std: `slack` when centered (true position unknown across the slack), shrinking to
-  // `corner_residual_beta` * slack once the corner is matched. Continuous in |d|.
-  const double t = std::clamp(ad / slack, 0.0, 1.0);
-  const double std_lat = slack * (1.0 - (1.0 - corner_residual_beta) * t);
-  result.var_lat = std_lat * std_lat;
-  return result;
-}
-
-geometry_msgs::msg::Point correctWheelAnchor(
-  double yaw, double tracker_width, const geometry_msgs::msg::Point & tracker_center,
-  double polygon_width, const geometry_msgs::msg::Point & anchor, std::array<double, 36> & pose_cov)
-{
-  using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   constexpr double balance_alpha = 0.2;         // hold-tracker slope inside the dead-zone
   constexpr double corner_residual_beta = 0.3;  // residual std fraction once the corner is matched
 
-  const auto corr = correctWheelAnchorLateral(
-    yaw, tracker_width, tracker_center, polygon_width, anchor, balance_alpha, corner_residual_beta);
+  const double slack = 0.5 * (polygon_width - tracker_width);
+  if (slack <= 0.0) {
+    // Polygon narrower than (or equal to) the tracker: partial view. Keep the anchor (no move) and
+    // add the worst-case lateral offset (half the missing width) as variance.
+    const double half_gap = -slack;  // = 0.5 * (tracker_width - polygon_width) >= 0
+    var_lat = half_gap * half_gap;
+    return 0.0;
+  }
 
-  const double var_lat = corr.var_lat;
+  // Polygon wider than the tracker: soft dead-zone ("back-lash") lateral correction.
+  const double abs_offset = std::abs(lateral_offset);
+  const double sgn = (lateral_offset >= 0.0) ? 1.0 : -1.0;
+
+  // Soft dead-zone: slope `balance_alpha` while contained (|offset| <= slack), unit slope once the
+  // corner is exposed. Continuous at |offset| = slack.
+  const double shift = (abs_offset <= slack) ? balance_alpha * abs_offset
+                                             : (abs_offset - slack) + balance_alpha * slack;
+  const double lateral_move =
+    sgn * shift - lateral_offset;  // (corrected - observed) lateral offset
+
+  // Added lateral std: `slack` when centered (true position unknown across the slack), shrinking to
+  // `corner_residual_beta` * slack once the corner is matched. Continuous in |offset|.
+  const double t = std::clamp(abs_offset / slack, 0.0, 1.0);
+  const double std_lat = slack * (1.0 - (1.0 - corner_residual_beta) * t);
+  var_lat = std_lat * std_lat;
+  return lateral_move;
+}
+
+geometry_msgs::msg::Point correctWheelAnchor(
+  const types::DynamicObject & prediction, const double polygon_width,
+  const geometry_msgs::msg::Point & anchor, std::array<double, 36> & pose_cov)
+{
+  using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+
+  const double yaw = tf2::getYaw(prediction.pose.orientation);
+  const double tracker_width = prediction.shape.dimensions.y;
+  const geometry_msgs::msg::Point & tracker_center = prediction.pose.position;
+
   const double sin_yaw = std::sin(yaw);
   const double cos_yaw = std::cos(yaw);
-  // lateral unit vector n = (-sin(yaw), cos(yaw)); add var_lat * n * n^T to the x/y block
+  // Project the observed anchor offset from the tracker center onto the body lateral axis
+  // n = (-sin yaw, cos yaw). The longitudinal component is orthogonal to n and drops.
+  const double lateral_offset =
+    -(anchor.x - tracker_center.x) * sin_yaw + (anchor.y - tracker_center.y) * cos_yaw;
+
+  double var_lat = 0.0;
+  const double lateral_move =
+    correctWheelAnchorLateral(lateral_offset, tracker_width, polygon_width, var_lat);
+
+  // Apply the scalar lateral move back along n to get the corrected anchor point.
+  geometry_msgs::msg::Point corrected = anchor;
+  corrected.x = anchor.x - lateral_move * sin_yaw;
+  corrected.y = anchor.y + lateral_move * cos_yaw;
+
+  // add var_lat * n * n^T to the x/y block
   pose_cov[XYZRPY_COV_IDX::X_X] += var_lat * sin_yaw * sin_yaw;
   pose_cov[XYZRPY_COV_IDX::X_Y] += -var_lat * sin_yaw * cos_yaw;
   pose_cov[XYZRPY_COV_IDX::Y_X] += -var_lat * sin_yaw * cos_yaw;
   pose_cov[XYZRPY_COV_IDX::Y_Y] += var_lat * cos_yaw * cos_yaw;
 
-  return corr.anchor;
+  return corrected;
 }
 
 }  // namespace autoware::multi_object_tracker

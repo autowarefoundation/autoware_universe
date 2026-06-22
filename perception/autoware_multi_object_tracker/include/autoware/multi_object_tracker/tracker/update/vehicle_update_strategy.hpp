@@ -42,27 +42,16 @@ types::DynamicObject createPseudoMeasurement(
   const types::DynamicObject & meas, const types::DynamicObject & prediction,
   const bool enlarge_covariance = false);
 
-// Result of the wheel-anchor lateral correction.
-struct WheelAnchorLateral
-{
-  geometry_msgs::msg::Point anchor;  // laterally corrected anchor point
-  double var_lat;                    // extra variance to add along the body lateral axis [m^2]
-};
+// Scalar lateral correction of the wheel-anchor. Returns the lateral move and, via `var_lat`, the
+// extra lateral variance to add when the polygon and tracked widths disagree.
+double correctWheelAnchorLateral(
+  const double lateral_offset, const double tracker_width, const double polygon_width,
+  double & var_lat);
 
-// Laterally corrects the wheel-anchor and reports extra lateral variance to handle the bias that
-// arises when the observed front/rear edge center is used as a lateral measurement but the polygon
-// and tracked widths disagree. Only the lateral component is affected.
-WheelAnchorLateral correctWheelAnchorLateral(
-  double yaw, double tracker_width, const geometry_msgs::msg::Point & tracker_center,
-  double polygon_width, const geometry_msgs::msg::Point & anchor, double balance_alpha,
-  double corner_residual_beta);
-
-// Applies the wheel-anchor lateral correction (see correctWheelAnchorLateral) and folds the
-// resulting extra lateral variance into the x/y block of `pose_cov`. Returns the corrected anchor.
+// Laterally corrects the anchor against `prediction` and folds the extra variance into `pose_cov`.
 geometry_msgs::msg::Point correctWheelAnchor(
-  double yaw, double tracker_width, const geometry_msgs::msg::Point & tracker_center,
-  double polygon_width, const geometry_msgs::msg::Point & anchor,
-  std::array<double, 36> & pose_cov);
+  const types::DynamicObject & prediction, const double polygon_width,
+  const geometry_msgs::msg::Point & anchor, std::array<double, 36> & pose_cov);
 
 }  // namespace autoware::multi_object_tracker
 

@@ -207,14 +207,12 @@ bool VehicleTracker::updateWheelKinematics(
   const UpdateStrategy & strategy, const types::DynamicObject & measurement,
   const types::DynamicObject & prediction)
 {
-  std::array<double, 36> pose_cov = measurement.pose_covariance;
-
   // When polygon and tracked widths disagree, the observed edge center is a biased lateral
   // measurement that the wheel-base lever amplifies into yaw. correctWheelAnchor() nudges the
   // anchor and folds the extra lateral variance into pose_cov.
-  const geometry_msgs::msg::Point anchor_point = correctWheelAnchor(
-    motion_model_.getYawState(), prediction.shape.dimensions.y, prediction.pose.position,
-    measurement.shape.dimensions.y, strategy.anchor_point, pose_cov);
+  std::array<double, 36> pose_cov = measurement.pose_covariance;
+  const geometry_msgs::msg::Point anchor_point =
+    correctWheelAnchor(prediction, measurement.shape.dimensions.y, strategy.anchor_point, pose_cov);
 
   const bool measure_front = strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE;
   shape_update_anchor_ = measure_front ? BicycleMotionModel::LengthUpdateAnchor::FRONT

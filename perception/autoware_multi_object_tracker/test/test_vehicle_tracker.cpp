@@ -22,26 +22,25 @@ namespace autoware::multi_object_tracker
 {
 namespace
 {
-// Matches the values wired into VehicleTracker::updateWheelKinematics.
+// Matches the constants defined inside correctWheelAnchorLateral.
 constexpr double kAlpha = 0.2;  // balance_alpha
 constexpr double kBeta = 0.3;   // corner_residual_beta
 
-geometry_msgs::msg::Point makePoint(double x, double y)
+// correctWheelAnchorLateral is pure scalar math: given the signed lateral offset of the observed
+// edge center from the tracker center, it returns the lateral move and added variance. The
+// corrected lateral coordinate is `lateral_offset + lateral_move`.
+struct LateralResult
 {
-  geometry_msgs::msg::Point p;
-  p.x = x;
-  p.y = y;
-  p.z = 0.0;
-  return p;
-}
+  double lateral;  // corrected lateral coordinate (= lateral_offset + lateral_move)
+  double var_lat;
+};
 
-// With yaw = 0 the body lateral axis is +y, so the lateral offset d equals (anchor.y - center.y)
-// and the corrected anchor keeps x and moves only y. tracker_center is the origin throughout.
-WheelAnchorLateral run(double tracker_width, double polygon_width, double anchor_y)
+LateralResult run(double tracker_width, double polygon_width, double lateral_offset)
 {
-  return correctWheelAnchorLateral(
-    0.0, tracker_width, makePoint(0.0, 0.0), polygon_width, makePoint(5.0, anchor_y), kAlpha,
-    kBeta);
+  double var_lat = 0.0;
+  const double lateral_move =
+    correctWheelAnchorLateral(lateral_offset, tracker_width, polygon_width, var_lat);
+  return {lateral_offset + lateral_move, var_lat};
 }
 }  // namespace
 
@@ -49,8 +48,7 @@ WheelAnchorLateral run(double tracker_width, double polygon_width, double anchor
 TEST(CorrectWheelAnchorLateral, EqualWidthIsNoOp)
 {
   const auto r = run(2.0, 2.0, 0.5);
-  EXPECT_DOUBLE_EQ(r.anchor.x, 5.0);
-  EXPECT_DOUBLE_EQ(r.anchor.y, 0.5);
+  EXPECT_DOUBLE_EQ(r.lateral, 0.5);  // anchor unchanged
   EXPECT_DOUBLE_EQ(r.var_lat, 0.0);
 }
 
@@ -59,8 +57,7 @@ TEST(CorrectWheelAnchorLateral, EqualWidthIsNoOp)
 TEST(CorrectWheelAnchorLateral, NarrowPolygonAddsVarianceOnly)
 {
   const auto r = run(2.0, 1.0, 0.5);
-  EXPECT_DOUBLE_EQ(r.anchor.x, 5.0);
-  EXPECT_DOUBLE_EQ(r.anchor.y, 0.5);  // anchor unchanged
+  EXPECT_DOUBLE_EQ(r.lateral, 0.5);   // anchor unchanged
   EXPECT_DOUBLE_EQ(r.var_lat, 0.25);  // (0.5)^2
 }
 
@@ -69,7 +66,7 @@ TEST(CorrectWheelAnchorLateral, WideCenteredHoldsAnchorMaxVariance)
 {
   const double slack = 1.0;  // (4 - 2) / 2
   const auto r = run(2.0, 4.0, 0.0);
-  EXPECT_DOUBLE_EQ(r.anchor.y, 0.0);
+  EXPECT_DOUBLE_EQ(r.lateral, 0.0);
   EXPECT_DOUBLE_EQ(r.var_lat, slack * slack);  // std = slack
 }
 
@@ -80,7 +77,7 @@ TEST(CorrectWheelAnchorLateral, WideContainedPullsTowardTracker)
   const double slack = 1.0;
   const double d = 0.5;  // < slack -> contained
   const auto r = run(2.0, 4.0, d);
-  EXPECT_DOUBLE_EQ(r.anchor.y, kAlpha * d);  // 0.1, pulled in from 0.5
+  EXPECT_DOUBLE_EQ(r.lateral, kAlpha * d);  // 0.1, pulled in from 0.5
   const double t = d / slack;
   const double std_lat = slack * (1.0 - (1.0 - kBeta) * t);
   EXPECT_DOUBLE_EQ(r.var_lat, std_lat * std_lat);
@@ -93,7 +90,7 @@ TEST(CorrectWheelAnchorLateral, WideUncontainedFollowsCorner)
   const double slack = 1.0;
   const double d = 2.0;  // > slack -> corner exposed
   const auto r = run(2.0, 4.0, d);
-  EXPECT_DOUBLE_EQ(r.anchor.y, (d - slack) + kAlpha * slack);      // 1.2
+  EXPECT_DOUBLE_EQ(r.lateral, (d - slack) + kAlpha * slack);       // 1.2
   EXPECT_DOUBLE_EQ(r.var_lat, (kBeta * slack) * (kBeta * slack));  // std = beta * slack
 }
 
@@ -104,7 +101,7 @@ TEST(CorrectWheelAnchorLateral, ContinuousAtBoundary)
   const double eps = 1e-6;
   const auto inside = run(2.0, 4.0, slack - eps);
   const auto outside = run(2.0, 4.0, slack + eps);
-  EXPECT_NEAR(inside.anchor.y, outside.anchor.y, 1e-4);
+  EXPECT_NEAR(inside.lateral, outside.lateral, 1e-4);
   EXPECT_NEAR(inside.var_lat, outside.var_lat, 1e-4);
 }
 
@@ -113,7 +110,7 @@ TEST(CorrectWheelAnchorLateral, SignSymmetry)
 {
   const auto pos = run(2.0, 4.0, 1.5);
   const auto neg = run(2.0, 4.0, -1.5);
-  EXPECT_DOUBLE_EQ(pos.anchor.y, -neg.anchor.y);
+  EXPECT_DOUBLE_EQ(pos.lateral, -neg.lateral);
   EXPECT_DOUBLE_EQ(pos.var_lat, neg.var_lat);
 }
 
