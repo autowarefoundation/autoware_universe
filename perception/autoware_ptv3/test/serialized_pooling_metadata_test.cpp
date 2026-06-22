@@ -14,8 +14,9 @@
 
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
+#include "ptv3_test_fixture.hpp"
 
-#include <autoware/cuda_utils/cuda_gtest_utils.hpp>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 
 #include <cuda_runtime_api.h>
 #include <gtest/gtest.h>
@@ -25,128 +26,36 @@
 #include <cstdint>
 #include <map>
 #include <numeric>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
-namespace
+namespace autoware::ptv3
 {
-
-using autoware::ptv3::PreprocessCuda;
-using autoware::ptv3::PTv3Config;
-using autoware::ptv3::SerializedPoolingDeviceStageView;
-
-class CudaStreamGuard
+namespace test
 {
-public:
-  CudaStreamGuard()
-  {
-    const auto status = cudaStreamCreate(&stream_);
-    if (status != cudaSuccess) {
-      throw std::runtime_error(cudaGetErrorString(status));
-    }
-  }
-
-  ~CudaStreamGuard()
-  {
-    if (stream_ != nullptr) {
-      cudaStreamDestroy(stream_);
-    }
-  }
-
-  CudaStreamGuard(const CudaStreamGuard &) = delete;
-  CudaStreamGuard & operator=(const CudaStreamGuard &) = delete;
-
-  [[nodiscard]] cudaStream_t get() const { return stream_; }
-
-private:
-  cudaStream_t stream_{nullptr};
-};
-
-template <typename T>
-class DeviceBuffer
-{
-public:
-  explicit DeviceBuffer(const std::size_t element_count)
-  {
-    const auto status = cudaMalloc(&data_, sizeof(T) * element_count);
-    if (status != cudaSuccess) {
-      throw std::runtime_error(cudaGetErrorString(status));
-    }
-  }
-
-  ~DeviceBuffer()
-  {
-    if (data_ != nullptr) {
-      cudaFree(data_);
-    }
-  }
-
-  DeviceBuffer(const DeviceBuffer &) = delete;
-  DeviceBuffer & operator=(const DeviceBuffer &) = delete;
-  DeviceBuffer(DeviceBuffer && other) noexcept : data_(other.data_) { other.data_ = nullptr; }
-  DeviceBuffer & operator=(DeviceBuffer && other) noexcept
-  {
-    if (this != &other) {
-      if (data_ != nullptr) {
-        cudaFree(data_);
-      }
-      data_ = other.data_;
-      other.data_ = nullptr;
-    }
-    return *this;
-  }
-
-  [[nodiscard]] T * get() const { return static_cast<T *>(data_); }
-
-private:
-  void * data_{nullptr};
-};
-
-template <typename T>
-void copy_to_device(T * device_ptr, const std::vector<T> & values)
-{
-  const auto status =
-    cudaMemcpy(device_ptr, values.data(), sizeof(T) * values.size(), cudaMemcpyHostToDevice);
-  if (status != cudaSuccess) {
-    throw std::runtime_error(cudaGetErrorString(status));
-  }
-}
-
-template <typename T>
-std::vector<T> copy_to_host(const T * device_ptr, const std::size_t count)
-{
-  std::vector<T> values(count);
-  const auto status =
-    cudaMemcpy(values.data(), device_ptr, sizeof(T) * count, cudaMemcpyDeviceToHost);
-  if (status != cudaSuccess) {
-    throw std::runtime_error(cudaGetErrorString(status));
-  }
-  return values;
-}
 
 struct DeviceStage
 {
-  explicit DeviceStage(const std::size_t capacity, const std::size_t num_orders)
-  : indices(capacity),
-    indptr(capacity + 1),
-    head_indices(capacity),
-    cluster(capacity),
-    grid_coord(capacity * 3),
-    serialized_code(capacity * num_orders),
-    serialized_order(capacity * num_orders),
-    serialized_inverse(capacity * num_orders)
+  DeviceStage(const std::size_t capacity, const std::size_t num_orders)
+  : indices(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity)),
+    indptr(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity + 1)),
+    head_indices(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity)),
+    cluster(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity)),
+    grid_coord(autoware::cuda_utils::make_unique<std::int32_t[]>(capacity * 3)),
+    serialized_code(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity * num_orders)),
+    serialized_order(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity * num_orders)),
+    serialized_inverse(autoware::cuda_utils::make_unique<std::int64_t[]>(capacity * num_orders))
   {
   }
 
-  DeviceBuffer<std::int64_t> indices;
-  DeviceBuffer<std::int64_t> indptr;
-  DeviceBuffer<std::int64_t> head_indices;
-  DeviceBuffer<std::int64_t> cluster;
-  DeviceBuffer<std::int32_t> grid_coord;
-  DeviceBuffer<std::int64_t> serialized_code;
-  DeviceBuffer<std::int64_t> serialized_order;
-  DeviceBuffer<std::int64_t> serialized_inverse;
+  CudaUniquePtr<std::int64_t[]> indices;
+  CudaUniquePtr<std::int64_t[]> indptr;
+  CudaUniquePtr<std::int64_t[]> head_indices;
+  CudaUniquePtr<std::int64_t[]> cluster;
+  CudaUniquePtr<std::int32_t[]> grid_coord;
+  CudaUniquePtr<std::int64_t[]> serialized_code;
+  CudaUniquePtr<std::int64_t[]> serialized_order;
+  CudaUniquePtr<std::int64_t[]> serialized_inverse;
 };
 
 struct CpuStage
@@ -286,9 +195,16 @@ CpuStage make_stage_reference(
 
 PTv3Config make_test_config()
 {
-  return PTv3Config(
-    true, false, "", 64, {1, 16, 32}, {0.0F, 0.0F, 0.0F, 64.0F, 64.0F, 64.0F}, {1.0F, 1.0F, 1.0F},
-    {"class"}, {"z", "z-trans"}, {2, 2}, {0, 0, 0}, 0.0F, {}, "XYZI", "none");
+  PTv3ConfigParams params;
+  params.cloud_capacity = 64;
+  params.voxels_num = {1, 16, 32};
+  params.point_cloud_range = {0.0F, 0.0F, 0.0F, 64.0F, 64.0F, 64.0F};
+  params.segmentation_class_names = {"class"};
+  params.palette = {0, 0, 0};
+  params.filter_class_probability_threshold = 0.0F;
+  params.filter_output_format = "XYZI";
+  params.source_reconstruction = "none";
+  return makeConfig(params);
 }
 
 template <typename T>
@@ -298,10 +214,12 @@ void expect_equal(
   EXPECT_EQ(actual, expected) << name;
 }
 
-TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
+class SerializedPoolingMetadataTest : public PTv3CudaTest
 {
-  SKIP_TEST_IF_CUDA_UNAVAILABLE();
+};
 
+TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
+{
   const auto config = make_test_config();
   constexpr std::size_t kNumOrders = 2;
   const std::vector<std::int32_t> grid_coord{5, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 3,  0, 1,
@@ -309,11 +227,10 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
   const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
   const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
 
-  CudaStreamGuard stream;
-  PreprocessCuda preprocess(config, stream.get());
-  DeviceBuffer<std::int32_t> grid_coord_d(grid_coord.size());
-  DeviceBuffer<std::int64_t> serialized_code_d(serialized_code.size());
-  DeviceBuffer<std::int64_t> stage_counts_d(config.pooling_strides_.size() + 1);
+  PreprocessCuda preprocess(config, stream_);
+  auto grid_coord_d = makeDeviceBuffer<std::int32_t>(grid_coord.size());
+  auto serialized_code_d = makeDeviceBuffer<std::int64_t>(serialized_code.size());
+  auto stage_counts_d = makeDeviceBuffer<std::int64_t>(config.pooling_strides_.size() + 1);
   std::vector<DeviceStage> device_stages;
   std::vector<SerializedPoolingDeviceStageView> stage_views;
   for (std::size_t stage = 0; stage < config.pooling_strides_.size(); ++stage) {
@@ -327,12 +244,12 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
         stage.serialized_inverse.get()});
   }
 
-  copy_to_device(grid_coord_d.get(), grid_coord);
-  copy_to_device(serialized_code_d.get(), serialized_code);
+  copyToDevice(grid_coord_d.get(), grid_coord);
+  copyToDevice(serialized_code_d.get(), serialized_code);
 
   preprocess.generateSerializedPoolingMetadata(
     grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, stage_counts_d.get());
-  ASSERT_EQ(cudaStreamSynchronize(stream.get()), cudaSuccess);
+  ASSERT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
 
   std::vector<CpuStage> references;
   references.push_back(
@@ -341,7 +258,7 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
     references[0].grid_coord, references[0].serialized_code, kNumOrders,
     config.pooling_strides_[1]));
 
-  const auto stage_counts = copy_to_host(stage_counts_d.get(), config.pooling_strides_.size() + 1);
+  const auto stage_counts = copyToHost(stage_counts_d.get(), config.pooling_strides_.size() + 1);
   ASSERT_EQ(stage_counts[0], num_voxels);
   ASSERT_EQ(stage_counts[1], static_cast<std::int64_t>(references[0].head_indices.size()));
   ASSERT_EQ(stage_counts[2], static_cast<std::int64_t>(references[1].head_indices.size()));
@@ -353,28 +270,27 @@ TEST(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
     const auto out_count = static_cast<std::size_t>(stage_counts[stage_index + 1]);
     const auto prefix = "stage " + std::to_string(stage_index) + " ";
 
+    expect_equal(copyToHost(actual.indices.get(), in_count), expected.indices, prefix + "indices");
     expect_equal(
-      copy_to_host(actual.indices.get(), in_count), expected.indices, prefix + "indices");
+      copyToHost(actual.indptr.get(), out_count + 1), expected.indptr, prefix + "indptr");
     expect_equal(
-      copy_to_host(actual.indptr.get(), out_count + 1), expected.indptr, prefix + "indptr");
-    expect_equal(
-      copy_to_host(actual.head_indices.get(), out_count), expected.head_indices,
+      copyToHost(actual.head_indices.get(), out_count), expected.head_indices,
       prefix + "head_indices");
+    expect_equal(copyToHost(actual.cluster.get(), in_count), expected.cluster, prefix + "cluster");
     expect_equal(
-      copy_to_host(actual.cluster.get(), in_count), expected.cluster, prefix + "cluster");
-    expect_equal(
-      copy_to_host(actual.grid_coord.get(), out_count * 3), expected.grid_coord,
+      copyToHost(actual.grid_coord.get(), out_count * 3), expected.grid_coord,
       prefix + "grid_coord");
     expect_equal(
-      copy_to_host(actual.serialized_code.get(), out_count * kNumOrders), expected.serialized_code,
+      copyToHost(actual.serialized_code.get(), out_count * kNumOrders), expected.serialized_code,
       prefix + "serialized_code");
     expect_equal(
-      copy_to_host(actual.serialized_order.get(), out_count * kNumOrders),
-      expected.serialized_order, prefix + "serialized_order");
+      copyToHost(actual.serialized_order.get(), out_count * kNumOrders), expected.serialized_order,
+      prefix + "serialized_order");
     expect_equal(
-      copy_to_host(actual.serialized_inverse.get(), out_count * kNumOrders),
+      copyToHost(actual.serialized_inverse.get(), out_count * kNumOrders),
       expected.serialized_inverse, prefix + "serialized_inverse");
   }
 }
 
-}  // namespace
+}  // namespace test
+}  // namespace autoware::ptv3
