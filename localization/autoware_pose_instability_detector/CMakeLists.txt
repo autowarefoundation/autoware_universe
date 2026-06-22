@@ -10,10 +10,6 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/pose_instability_detector.cpp
 )
 ament_target_dependencies(${PROJECT_NAME} autoware_agnocast_wrapper)
-if(DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
-  find_package(agnocastlib REQUIRED)
-  ament_target_dependencies(${PROJECT_NAME} agnocastlib)
-endif()
 autoware_agnocast_wrapper_setup(${PROJECT_NAME})
 
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
