@@ -81,6 +81,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/postprocess/postprocess_kernel.cu
+    lib/postprocess/detection3d_postprocess.cu
     lib/preprocess/preprocess_kernel.cu
   )
 
@@ -91,6 +92,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     lib/ptv3_trt.cpp
+    lib/ros_utils.cpp
   )
 
   target_compile_definitions(${PROJECT_NAME}_lib PRIVATE

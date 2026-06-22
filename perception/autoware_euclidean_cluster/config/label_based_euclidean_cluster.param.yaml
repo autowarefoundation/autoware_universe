@@ -2,14 +2,46 @@
   ros__parameters:
     # Euclidean clustering
     use_height: false
-    tolerance: 0.7
-    min_cluster_size: 10
-    max_cluster_size: 3000
-    voxel_leaf_size: 0.2
-    min_points_number_per_voxel: 1
-    min_voxel_cluster_size_for_filtering: 10
-    max_points_per_voxel_in_large_cluster: 100
-    max_voxel_cluster_for_output: 1000
+    tolerance_m: 0.65
+    voxel_leaf_size_m: 0.2
+    min_points_per_voxel: 3
+    min_points_per_cluster: 10
+    large_cluster_voxel_count_threshold: 50
+    large_cluster_max_points_per_voxel: 100
+    max_voxels_per_cluster: 2000
+    # Per-label clustering parameter overrides.
+    label_cluster_params:
+      pedestrian:
+        tolerance_m: 0.3
+        voxel_leaf_size_m: 0.1
+        min_points_per_voxel: 1
+        min_points_per_cluster: 3
+        large_cluster_voxel_count_threshold: 5
+        large_cluster_max_points_per_voxel: 30
+        max_voxels_per_cluster: 200
+      bicycle:
+        tolerance_m: 0.4
+        voxel_leaf_size_m: 0.15
+        min_points_per_voxel: 1
+        min_points_per_cluster: 5
+        large_cluster_voxel_count_threshold: 5
+        large_cluster_max_points_per_voxel: 50
+        max_voxels_per_cluster: 300
+      hazard:
+        tolerance_m: 0.3
+        voxel_leaf_size_m: 0.1
+        min_points_per_voxel: 1
+        min_points_per_cluster: 3
+        large_cluster_voxel_count_threshold: 5
+        large_cluster_max_points_per_voxel: 30
+        max_voxels_per_cluster: 200
+
+    # Post-clustering merge for confusable label pairs (e.g. truck/trailer over-segmentation).
+    confusable_label_groups:
+      truck_trailer:
+        labels: ["truck", "trailer"]
+        cross_label_tolerance_m: 0.5
+        max_merged_size_m: 25.0
 
     # Point filtering by semantic confidence
     min_probability: 0.3
