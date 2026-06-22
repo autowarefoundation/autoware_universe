@@ -8,10 +8,11 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/mrm_handler/mrm_handler_core.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::mrm_handler::MrmHandler"
   EXECUTABLE ${PROJECT_NAME}_node
-  EXECUTOR MultiThreadedExecutor
+  ROS2_EXECUTOR MultiThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 ament_auto_package(INSTALL_TO_SHARE

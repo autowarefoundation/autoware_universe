@@ -22,7 +22,8 @@
 #include <variant>
 
 // Autoware
-#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
@@ -36,7 +37,6 @@
 #include <tier4_system_msgs/srv/operate_mrm.hpp>
 
 // ROS 2 core
-#include <rclcpp/create_timer.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
@@ -70,7 +70,7 @@ struct Param
   TurnIndicatorPolicy turning_indicator_on{};
 };
 
-class MrmHandler : public rclcpp::Node
+class MrmHandler : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MrmHandler(const rclcpp::NodeOptions & options);
@@ -79,59 +79,81 @@ private:
   // type
   enum RequestType { CALL, CANCEL };
 
+  // Cross-build helpers: the agnocast wrapper's polling-subscriber / client creation differs
+  // between ENABLE_AGNOCAST=1 (node member, takes rclcpp::QoS) and =0 (rclcpp::Node, which on
+  // Humble takes rmw_qos_profile_t and has no create_polling_subscriber member). Centralize the
+  // branch here so the constructor stays mode-agnostic.
+  template <typename MessageT>
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(MessageT) create_polling_sub(const std::string & topic_name)
+  {
+#ifdef USE_AGNOCAST_ENABLED
+    return this->create_polling_subscriber<MessageT>(topic_name, rclcpp::QoS{1});
+#else
+    return AUTOWARE_CREATE_POLLING_SUBSCRIBER(MessageT, topic_name, rclcpp::QoS{1});
+#endif
+  }
+
+  template <typename ServiceT>
+  AUTOWARE_CLIENT_PTR(ServiceT) create_mrm_client(
+    const std::string & service_name, rclcpp::CallbackGroup::SharedPtr group)
+  {
+#ifdef USE_AGNOCAST_ENABLED
+    return this->create_client<ServiceT>(service_name, rclcpp::ServicesQoS(), group);
+#else
+    return this->create_client<ServiceT>(
+      service_name, rclcpp::ServicesQoS().get_rmw_qos_profile(), group);
+#endif
+  }
+
   // Subscribers with callback
-  rclcpp::Subscription<tier4_system_msgs::msg::OperationModeAvailability>::SharedPtr
+  AUTOWARE_SUBSCRIPTION_PTR(tier4_system_msgs::msg::OperationModeAvailability)
     sub_operation_mode_availability_;
   // Subscribers without callback
-  autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry> sub_odom_{
-    this, "~/input/odometry"};
-  autoware_utils::InterProcessPollingSubscriber<autoware_vehicle_msgs::msg::ControlModeReport>
-    sub_control_mode_{this, "~/input/control_mode"};
-  autoware_utils::InterProcessPollingSubscriber<tier4_system_msgs::msg::MrmBehaviorStatus>
-    sub_mrm_pull_over_status_{this, "~/input/mrm/pull_over/status"};
-  autoware_utils::InterProcessPollingSubscriber<tier4_system_msgs::msg::MrmBehaviorStatus>
-    sub_mrm_comfortable_stop_status_{this, "~/input/mrm/comfortable_stop/status"};
-  autoware_utils::InterProcessPollingSubscriber<tier4_system_msgs::msg::MrmBehaviorStatus>
-    sub_mrm_emergency_stop_status_{this, "~/input/mrm/emergency_stop/status"};
-  autoware_utils::InterProcessPollingSubscriber<autoware_adapi_v1_msgs::msg::OperationModeState>
-    sub_operation_mode_state_{this, "~/input/api/operation_mode/state"};
-  autoware_utils::InterProcessPollingSubscriber<autoware_vehicle_msgs::msg::GearCommand>
-    sub_gear_cmd_{this, "~/input/gear"};
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(nav_msgs::msg::Odometry) sub_odom_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_vehicle_msgs::msg::ControlModeReport) sub_control_mode_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus)
+    sub_mrm_pull_over_status_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus)
+    sub_mrm_comfortable_stop_status_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus)
+    sub_mrm_emergency_stop_status_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_adapi_v1_msgs::msg::OperationModeState)
+    sub_operation_mode_state_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_vehicle_msgs::msg::GearCommand) sub_gear_cmd_;
 
-  tier4_system_msgs::msg::OperationModeAvailability::ConstSharedPtr operation_mode_availability_;
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_system_msgs::msg::OperationModeAvailability)
+    operation_mode_availability_;
 
   void onOperationModeAvailability(
-    const tier4_system_msgs::msg::OperationModeAvailability::ConstSharedPtr msg);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_system_msgs::msg::OperationModeAvailability) & msg);
 
   // Publisher
 
   // rclcpp::Publisher<tier4_vehicle_msgs::msg::ShiftStamped>::SharedPtr pub_shift_;
   // rclcpp::Publisher<tier4_vehicle_msgs::msg::TurnSignal>::SharedPtr pub_turn_signal_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>::SharedPtr
-    pub_turn_indicator_cmd_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>::SharedPtr pub_hazard_cmd_;
-  rclcpp::Publisher<autoware_vehicle_msgs::msg::GearCommand>::SharedPtr pub_gear_cmd_;
+  AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::TurnIndicatorsCommand) pub_turn_indicator_cmd_;
+  AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::HazardLightsCommand) pub_hazard_cmd_;
+  AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::GearCommand) pub_gear_cmd_;
 
   void publishTurnIndicatorCmd();
   void publishHazardCmd();
   void publishGearCmd();
 
-  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::MrmState>::SharedPtr pub_mrm_state_;
+  AUTOWARE_PUBLISHER_PTR(autoware_adapi_v1_msgs::msg::MrmState) pub_mrm_state_;
 
   autoware_adapi_v1_msgs::msg::MrmState mrm_state_;
   void publishMrmState();
 
-  rclcpp::Publisher<tier4_system_msgs::msg::EmergencyHoldingState>::SharedPtr
-    pub_emergency_holding_;
+  AUTOWARE_PUBLISHER_PTR(tier4_system_msgs::msg::EmergencyHoldingState) pub_emergency_holding_;
   void publishEmergencyHolding();
 
   // Clients
   rclcpp::CallbackGroup::SharedPtr client_mrm_pull_over_group_;
-  rclcpp::Client<tier4_system_msgs::srv::OperateMrm>::SharedPtr client_mrm_pull_over_;
+  AUTOWARE_CLIENT_PTR(tier4_system_msgs::srv::OperateMrm) client_mrm_pull_over_;
   rclcpp::CallbackGroup::SharedPtr client_mrm_comfortable_stop_group_;
-  rclcpp::Client<tier4_system_msgs::srv::OperateMrm>::SharedPtr client_mrm_comfortable_stop_;
+  AUTOWARE_CLIENT_PTR(tier4_system_msgs::srv::OperateMrm) client_mrm_comfortable_stop_;
   rclcpp::CallbackGroup::SharedPtr client_mrm_emergency_stop_group_;
-  rclcpp::Client<tier4_system_msgs::srv::OperateMrm>::SharedPtr client_mrm_emergency_stop_;
+  AUTOWARE_CLIENT_PTR(tier4_system_msgs::srv::OperateMrm) client_mrm_emergency_stop_;
 
   bool requestMrmBehavior(
     const autoware_adapi_v1_msgs::msg::MrmState::_behavior_type & mrm_behavior,
@@ -141,7 +163,7 @@ private:
     bool is_call) const;
 
   // Timer
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
   // Parameters
   Param param_;
