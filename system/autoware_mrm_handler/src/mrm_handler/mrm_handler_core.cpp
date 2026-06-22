@@ -54,15 +54,12 @@ MrmHandler::MrmHandler(const rclcpp::NodeOptions & options)
     create_polling_sub<autoware_vehicle_msgs::msg::ControlModeReport>("~/input/control_mode");
   sub_mrm_pull_over_status_ =
     create_polling_sub<tier4_system_msgs::msg::MrmBehaviorStatus>("~/input/mrm/pull_over/status");
-  sub_mrm_comfortable_stop_status_ =
-    create_polling_sub<tier4_system_msgs::msg::MrmBehaviorStatus>(
-      "~/input/mrm/comfortable_stop/status");
-  sub_mrm_emergency_stop_status_ =
-    create_polling_sub<tier4_system_msgs::msg::MrmBehaviorStatus>(
-      "~/input/mrm/emergency_stop/status");
-  sub_operation_mode_state_ =
-    create_polling_sub<autoware_adapi_v1_msgs::msg::OperationModeState>(
-      "~/input/api/operation_mode/state");
+  sub_mrm_comfortable_stop_status_ = create_polling_sub<tier4_system_msgs::msg::MrmBehaviorStatus>(
+    "~/input/mrm/comfortable_stop/status");
+  sub_mrm_emergency_stop_status_ = create_polling_sub<tier4_system_msgs::msg::MrmBehaviorStatus>(
+    "~/input/mrm/emergency_stop/status");
+  sub_operation_mode_state_ = create_polling_sub<autoware_adapi_v1_msgs::msg::OperationModeState>(
+    "~/input/api/operation_mode/state");
   sub_gear_cmd_ = create_polling_sub<autoware_vehicle_msgs::msg::GearCommand>("~/input/gear");
 
   // Publisher

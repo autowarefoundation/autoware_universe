@@ -84,7 +84,8 @@ private:
   // Humble takes rmw_qos_profile_t and has no create_polling_subscriber member). Centralize the
   // branch here so the constructor stays mode-agnostic.
   template <typename MessageT>
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(MessageT) create_polling_sub(const std::string & topic_name)
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(MessageT)
+  create_polling_sub(const std::string & topic_name)
   {
 #ifdef USE_AGNOCAST_ENABLED
     return this->create_polling_subscriber<MessageT>(topic_name, rclcpp::QoS{1});
@@ -94,8 +95,8 @@ private:
   }
 
   template <typename ServiceT>
-  AUTOWARE_CLIENT_PTR(ServiceT) create_mrm_client(
-    const std::string & service_name, rclcpp::CallbackGroup::SharedPtr group)
+  AUTOWARE_CLIENT_PTR(ServiceT)
+  create_mrm_client(const std::string & service_name, rclcpp::CallbackGroup::SharedPtr group)
   {
 #ifdef USE_AGNOCAST_ENABLED
     return this->create_client<ServiceT>(service_name, rclcpp::ServicesQoS(), group);
@@ -107,25 +108,26 @@ private:
 
   // Subscribers with callback
   AUTOWARE_SUBSCRIPTION_PTR(tier4_system_msgs::msg::OperationModeAvailability)
-    sub_operation_mode_availability_;
+  sub_operation_mode_availability_;
   // Subscribers without callback
   AUTOWARE_POLLING_SUBSCRIBER_PTR(nav_msgs::msg::Odometry) sub_odom_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_vehicle_msgs::msg::ControlModeReport) sub_control_mode_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus)
-    sub_mrm_pull_over_status_;
+  sub_mrm_pull_over_status_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus)
-    sub_mrm_comfortable_stop_status_;
+  sub_mrm_comfortable_stop_status_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus)
-    sub_mrm_emergency_stop_status_;
+  sub_mrm_emergency_stop_status_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_adapi_v1_msgs::msg::OperationModeState)
-    sub_operation_mode_state_;
+  sub_operation_mode_state_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_vehicle_msgs::msg::GearCommand) sub_gear_cmd_;
 
   AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_system_msgs::msg::OperationModeAvailability)
-    operation_mode_availability_;
+  operation_mode_availability_;
 
   void onOperationModeAvailability(
-    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_system_msgs::msg::OperationModeAvailability) & msg);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(tier4_system_msgs::msg::OperationModeAvailability) &
+    msg);
 
   // Publisher
 
