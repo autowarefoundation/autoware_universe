@@ -5,7 +5,15 @@
   "definitions": {
     "trajectory_selector": {
       "type": "object",
-      "properties": {},
+      "properties": {
+        "fallback_period_ms": {
+          "type": "integer",
+          "default": 150,
+          "minimum": 1,
+          "description": "fallback timer period in milliseconds"
+        }
+      },
+      "required": ["fallback_period_ms"],
       "additionalProperties": false
     }
   },

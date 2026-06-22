@@ -52,6 +52,8 @@ void TrajectoryConcatenator::add_candidate(const CandidateTrajectories & msg)
   }
 }
 
+#include <iostream>
+
 CandidateTrajectories TrajectoryConcatenator::get_concatenated(
   const builtin_interfaces::msg::Time & current_time)
 {
@@ -59,6 +61,8 @@ CandidateTrajectories TrajectoryConcatenator::get_concatenated(
   std::vector<autoware_internal_planning_msgs::msg::GeneratorInfo> generator_info;
 
   const double current_time_sec = to_seconds(current_time);
+  std::cout << "[DEBUG] get_concatenated current_time_sec: " << current_time_sec
+            << ", params_.duration_time: " << params_.duration_time << std::endl;
 
   // Prune expired entries individually
   for (auto it = buffer_.begin(); it != buffer_.end();) {

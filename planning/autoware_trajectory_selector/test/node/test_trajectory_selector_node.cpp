@@ -16,6 +16,7 @@
 
 #include <autoware_test_utils/autoware_test_utils.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
+#include <rclcpp/parameter_value.hpp>
 
 #include <gtest/gtest.h>
 
@@ -36,7 +37,8 @@ protected:
     node_options_.append_parameter_override(
       "filter_names",
       std::vector<std::string>{"autoware::trajectory_validator::plugin::DummyFilter"});
-    node_options_.append_parameter_override("dummy.dummy_param", 0.0);
+    node_options_.append_parameter_override("duration_time", 1.0);
+    node_options_.append_parameter_override("fallback_period_ms", 150);
 
     const auto vehicle_info_param_path = autoware::test_utils::get_absolute_path_to_config(
       "autoware_test_utils", "test_vehicle_info.param.yaml");
@@ -190,7 +192,7 @@ TEST_F(TrajectorySelectorNodeTest, ImmediateOutputOnGenerativeInput)
   last_output_ = nullptr;
   traj_pub_->publish(msg);
 
-  // Should publish immediately (timer is 100ms, so 50ms is "immediate" enough)
+  // Should publish immediately (timer is 150ms, so 50ms is "immediate" enough)
   const bool received =
     spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(50));
   EXPECT_TRUE(received) << "Node should publish immediately on generative input";
@@ -213,7 +215,7 @@ TEST_F(TrajectorySelectorNodeTest, NoImmediateOutputOnBackupInput)
     spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(50));
   EXPECT_FALSE(received) << "Node should NOT publish immediately on backup input";
 
-  // Should publish eventually via timer (timer is 100ms)
+  // Should publish eventually via timer (timer is 150ms)
   received = spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(200));
   EXPECT_TRUE(received) << "Node should eventually publish on backup input via timer";
 }
@@ -321,6 +323,67 @@ TEST_F(TrajectorySelectorNodeTest, NoPublishWhenObjectsMissing)
   const bool received =
     spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(500));
   EXPECT_FALSE(received) << "Node must not publish when predicted objects are unavailable";
+}
+
+TEST_F(TrajectorySelectorNodeTest, CustomFallbackPeriod)
+{
+  publish_context();
+  // node_under_test_->set_parameter(rclcpp::Parameter("duration_time", 1.0));
+  node_under_test_->get_node_parameters_interface()->set_parameters(
+    {rclcpp::Parameter("fallback_period_ms", 500), rclcpp::Parameter("duration_time", 1.0)});
+  spin_until([] { return false; }, std::chrono::milliseconds(100));
+
+  const auto now = node_under_test_->now();
+  autoware_internal_planning_msgs::msg::CandidateTrajectories msg;
+  add_trajectory(msg, "SomePlanner", 10.0, now);
+
+  // Publish only to backup, generative is never published
+  last_output_ = nullptr;
+  backup_traj_pub_->publish(msg);
+
+  // Should NOT publish within 400ms because fallback_period_ms is 500ms
+  bool received =
+    spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(400));
+  EXPECT_FALSE(received) << "Node should NOT publish within 200ms when fallback_period_ms is 500ms";
+
+  // Should publish eventually via timer (timer is 500ms, so 600ms total should be enough)
+  received = spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(200));
+  EXPECT_TRUE(received) << "Node should eventually publish on backup input via custom timer";
+}
+
+TEST_F(TrajectorySelectorNodeTest, ResetFallbackPeriod)
+{
+  publish_context();
+  node_under_test_->get_node_parameters_interface()->set_parameters(
+    {rclcpp::Parameter("fallback_period_ms", 500), rclcpp::Parameter("duration_time", 1.0)});
+  spin_until([] { return false; }, std::chrono::milliseconds(100));
+
+  const auto now = node_under_test_->now();
+  autoware_internal_planning_msgs::msg::CandidateTrajectories msg;
+  add_trajectory(msg, "SomePlanner", 10.0, now);
+
+  // Publish only to backup, generative is never published
+  last_output_ = nullptr;
+  backup_traj_pub_->publish(msg);
+
+  bool received =
+    spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(400));
+  EXPECT_FALSE(received) << "Node should NOT publish within 200ms when fallback_period_ms is 500ms";
+
+  // Set new fallback period which resets the fallback timer
+  node_under_test_->get_node_parameters_interface()->set_parameters(
+    {rclcpp::Parameter("fallback_period_ms", 400)});
+
+  received = spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(200));
+  EXPECT_FALSE(received) << "Node should NOT publish because timer was reset";
+
+  node_under_test_->get_node_parameters_interface()->set_parameters(
+    {rclcpp::Parameter("fallback_period_ms", 200)});
+
+  received = spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(100));
+  EXPECT_FALSE(received) << "Node should NOT publish because timer was reset";
+  received = spin_until([this] { return last_output_ != nullptr; }, std::chrono::milliseconds(200));
+  EXPECT_TRUE(received) << "Node should publish within 300ms when fallback_period_ms is 200ms";
 }
 
 }  // namespace autoware::trajectory_selector

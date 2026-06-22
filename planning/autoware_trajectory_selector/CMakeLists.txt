@@ -7,6 +7,9 @@ autoware_package()
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/trajectory_selector_node.cpp
 )
+generate_parameter_library(${PROJECT_NAME}_param
+  param/parameter_struct.yaml
+)
 
 # autoware_trajectory_validator defines rosidl messages, so ament_target_dependencies
 # enters "modern cmake" mode and silently ignores _INCLUDE_DIRS and _LIBRARIES for it.
@@ -16,6 +19,7 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
 )
 target_link_libraries(${PROJECT_NAME}
   ${autoware_trajectory_validator_LIBRARIES}
+  ${PROJECT_NAME}_param
 )
 
 target_compile_options(${PROJECT_NAME} PUBLIC

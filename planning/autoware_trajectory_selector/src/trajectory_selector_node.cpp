@@ -14,6 +14,8 @@
 
 #include "autoware/trajectory_selector/trajectory_selector_node.hpp"
 
+#include <rclcpp/node_interfaces/node_parameters_interface.hpp>
+
 #include <memory>
 #include <string>
 
@@ -32,10 +34,9 @@ TrajectorySelectorNode::TrajectorySelectorNode(const rclcpp::NodeOptions & node_
     *this, get_node_parameters_interface(),
     autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo(), time_keeper_);
 
-  constexpr int64_t timer_period_ms = 100;
-  timer_ = rclcpp::create_timer(
-    this, get_clock(), std::chrono::milliseconds(timer_period_ms),
-    std::bind(&TrajectorySelectorNode::on_timer, this));
+  selector_params_ = selector_params_listener_.get_params();
+  selector_params_listener_.setUserCallback([&](const auto &) { update_parameters(); });
+  update_fallback_timer();
 }
 
 void TrajectorySelectorNode::subscribers()
@@ -73,8 +74,7 @@ void TrajectorySelectorNode::map_callback(const LaneletMapBin::ConstSharedPtr ms
 void TrajectorySelectorNode::on_anchor_trajectories(const CandidateTrajectories::ConstSharedPtr msg)
 {
   concatenator_ptr_->add_candidate(*msg);
-  on_timer();  // WARN: on_timer() can also be executed by the timer callback so multithreaded
-               // executor must not be used
+  concatenate_and_validate();
   timer_->reset();
 }
 void TrajectorySelectorNode::on_trajectories(const CandidateTrajectories::ConstSharedPtr msg)
@@ -116,7 +116,7 @@ TrajectorySelectorNode::take_validator_data()
   return context;
 }
 
-void TrajectorySelectorNode::on_timer()
+void TrajectorySelectorNode::concatenate_and_validate()
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -140,6 +140,27 @@ void TrajectorySelectorNode::on_timer()
   pub_trajectories_->publish(validated_trajectories);
 }
 
+void TrajectorySelectorNode::update_parameters()
+{
+  if (selector_params_listener_.is_old(selector_params_)) {
+    selector_params_ = selector_params_listener_.get_params();
+    update_fallback_timer();
+
+    RCLCPP_INFO(get_logger(), "Trajectory Selector parameters are updated.");
+  }
+}
+void TrajectorySelectorNode::update_fallback_timer()
+{
+  if (timer_) {
+    timer_->cancel();
+  }
+  RCLCPP_INFO(
+    get_logger(), "New concatenate_and_validate timer callback created with period %ld.",
+    selector_params_.fallback_period_ms);
+  timer_ = rclcpp::create_timer(
+    this, get_clock(), std::chrono::milliseconds(selector_params_.fallback_period_ms),
+    std::bind(&TrajectorySelectorNode::concatenate_and_validate, this));
+}
 }  // namespace autoware::trajectory_selector
 
 #include <rclcpp_components/register_node_macro.hpp>

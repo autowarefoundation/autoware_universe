@@ -31,9 +31,9 @@
 
 ### Parameters
 
-This node does not declare parameters of its own. Configuration is provided through the sub-package parameter files loaded at launch:
+{{ json_to_markdown("planning/autoware_trajectory_selector/schema/trajectory_selector.schema.json") }}
+
+Other configuration is provided through the sub-package parameter files loaded at launch:
 
 - Concatenation parameters: see [`autoware_trajectory_concatenator`](../autoware_trajectory_concatenator/README.md#parameters)
 - Validation parameters: see [`autoware_trajectory_validator`](../autoware_trajectory_validator/README.md#parameters)
-
-{{ json_to_markdown("planning/autoware_trajectory_selector/schema/trajectory_selector.schema.json") }}
