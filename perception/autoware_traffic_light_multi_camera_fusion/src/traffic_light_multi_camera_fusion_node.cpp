@@ -19,7 +19,6 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
@@ -89,14 +88,12 @@ void MultiCameraFusionNode::traffic_signal_roi_callback(
 {
   rclcpp::Time stamp(roi_msg->header.stamp);
 
-  auto msg_out = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(signal_pub_);
-  const MultiCameraFusionResult result =
-    fusion_.fuse(*cam_info_msg, *roi_msg, *signal_msg, *msg_out);
+  const MultiCameraFusionResult result = fusion_.fuse(*cam_info_msg, *roi_msg, *signal_msg);
   for (const auto & unmapped_id : result.unmapped_traffic_light_ids) {
     RCLCPP_WARN_STREAM(
       get_logger(), "Found Traffic Light Id = " << unmapped_id << " which is not defined in Map");
   }
-  signal_pub_->publish(std::move(msg_out));
+  signal_pub_->publish(result.traffic_light_groups);
 
   if (result.conflicted_regulatory_element_status.size() > 0) {
     publish_diagnostics(result.conflicted_regulatory_element_status, stamp);

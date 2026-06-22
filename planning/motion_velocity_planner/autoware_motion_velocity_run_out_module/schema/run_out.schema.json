@@ -234,6 +234,9 @@
             },
             "BICYCLE": {
               "$ref": "#/definitions/object_parameters"
+            },
+            "MOTORCYCLE": {
+              "$ref": "#/definitions/object_parameters"
             }
           },
           "required": ["target_labels", "DEFAULT"]

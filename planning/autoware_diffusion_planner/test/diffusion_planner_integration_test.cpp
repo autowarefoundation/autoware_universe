@@ -46,7 +46,9 @@ protected:
     // Create node with test parameters
     rclcpp::NodeOptions options;
     options.parameter_overrides(
-      {{"model_path", "/tmp/test_model.onnx"},  // Non-existent model for testing
+      {{"encoder_onnx_model_path", "/tmp/test_encoder.onnx"},  // Non-existent model for testing
+       {"decoder_onnx_model_path", "/tmp/test_decoder.onnx"},
+       {"turn_indicator_onnx_model_path", "/tmp/test_turn_indicator.onnx"},
        {"args_path", "/tmp/test_args.json"},
        {"timer_period", 0.1},
        {"ignore_unknown_neighbors", true},
