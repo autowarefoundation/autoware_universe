@@ -12,7 +12,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::mrm_handler::MrmHandler"
   EXECUTABLE ${PROJECT_NAME}_node
   ROS2_EXECUTOR MultiThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ament_auto_package(INSTALL_TO_SHARE
