@@ -30,6 +30,8 @@
 
 namespace autoware::tensorrt_yolox
 {
+namespace
+{
 void trim_left(std::string & s)
 {
   s.erase(s.begin(), find_if(s.begin(), s.end(), [](int ch) { return !isspace(ch); }));
@@ -51,11 +53,11 @@ std::string trim(std::string & s)
  * @brief Reads a CSV file and returns a vector of rows, where each row is a vector of trimmed
  * strings.
  * @param filename Path to the file.
- * @param skip_header_lines Number of lines to skip at the top (default 0).
+ * @param skip_header_lines Number of lines to skip at the top.
  * @return Parsed data that contains parsed strings of each line.
  */
 std::optional<std::vector<std::vector<std::string>>> read_csv(
-  const std::string & filename, uint32_t skip_header_lines = 0)
+  const std::string & filename, uint32_t skip_header_lines)
 {
   std::ifstream file(filename);
   if (!file.is_open()) {
@@ -143,6 +145,106 @@ std::vector<std::string> load_list_from_text_file(const std::string & filename)
   return list;
 }
 
+// read label names of the model's outputs, indexed by the model's output class ID
+std::vector<std::string> read_label_file(const std::string & label_path)
+{
+  std::ifstream label_file(label_path);
+  if (!label_file.is_open()) {
+    std::stringstream error_msg;
+    error_msg << "Could not open label file: " << label_path;
+    throw std::runtime_error{error_msg.str()};
+  }
+
+  std::vector<std::string> roi_class_name_list;
+  std::string label_name;
+  while (getline(label_file, label_name)) {
+    trim(label_name);
+    roi_class_name_list.push_back(label_name);
+  }
+
+  return roi_class_name_list;
+}
+
+std::vector<Colormap> load_segmentation_colormap(
+  const std::string & file_name, uint32_t skip_header_lines)
+{
+  auto rows = read_csv(file_name, skip_header_lines);
+  // check loaded status
+  if (!rows) {
+    std::stringstream error_msg;
+    error_msg << "Could not open the segmentation color map file: " << file_name;
+    throw std::runtime_error{error_msg.str()};
+  }
+
+  std::vector<Colormap> semseg_color_map;
+  constexpr size_t expected_column_num = 5;
+  for (const auto & row : rows.value()) {
+    // ensure we have expected columns (id, name, r, g, b)
+    if (row.size() != expected_column_num) {
+      std::stringstream error_msg;
+      error_msg << "Invalid row: " << expected_column_num << " columns was expected.";
+      throw std::runtime_error{error_msg.str()};
+    }
+
+    Colormap cmap;
+
+    try {
+      // col 0: ID
+      cmap.id = std::stoi(row[0]);
+      // col 1: name
+      cmap.name = row[1];
+      // col 2~4: colors
+      for (size_t i = 2; i < expected_column_num; ++i) {
+        // assuming color is provided with 0~255 range in integer
+        cmap.color.push_back(static_cast<unsigned char>(std::stoi(row[i])));
+      }
+
+      semseg_color_map.push_back(cmap);
+    } catch (const std::exception & e) {
+      std::stringstream error_msg;
+      error_msg << "Invalid row: " << e.what();
+      throw std::runtime_error{error_msg.str()};
+    }
+  }
+
+  return semseg_color_map;
+}
+
+std::unordered_map<std::string, int> load_label_id_remap_file(
+  const std::string & file_name, uint32_t skip_header_lines)
+{
+  auto rows = read_csv(file_name, skip_header_lines);
+  if (!rows) {
+    std::stringstream error_msg;
+    error_msg << "Could not open the label map file: " << file_name;
+    throw std::runtime_error{error_msg.str()};
+  }
+
+  std::unordered_map<std::string, int> label_name_to_id_remap;
+  // expecting 2 columns (label_name, label_id)
+  constexpr size_t expected_column_num = 2;
+  for (const auto & row : rows.value()) {
+    if (row.size() != expected_column_num) {
+      std::stringstream error_msg;
+      error_msg << "Invalid row: " << expected_column_num << " columns were expected.";
+      throw std::runtime_error{error_msg.str()};
+    }
+
+    const std::string label_name = row[0];
+
+    try {
+      label_name_to_id_remap[label_name] = std::stoi(row[1]);
+    } catch (const std::exception & e) {
+      std::stringstream error_msg;
+      error_msg << "Failed to parse label ID as integer for " << label_name << ": " << e.what();
+      throw std::runtime_error{error_msg.str()};
+    }
+  }
+
+  return label_name_to_id_remap;
+}
+}  // namespace
+
 std::vector<std::string> load_image_list(const std::string & filename, const std::string & prefix)
 {
   std::vector<std::string> fileList = load_list_from_text_file(filename);
@@ -162,118 +264,12 @@ std::vector<std::string> load_image_list(const std::string & filename, const std
   return fileList;
 }
 
-// read label names of the model's outputs
-void read_label_file(
-  const std::string & label_path, std::vector<std::string> & roi_class_name_list,
-  std::unordered_map<std::string, int> & roi_name_to_id_map)
-{
-  std::ifstream label_file(label_path);
-  if (!label_file.is_open()) {
-    std::stringstream error_msg;
-    error_msg << "Could not open label file: " << label_path;
-    throw std::runtime_error{error_msg.str()};
-  }
-
-  int label_index = 0;
-  std::string label_name;
-  while (getline(label_file, label_name)) {
-    std::string trimmed_label_name = label_name;
-    trim(trimmed_label_name);
-    roi_class_name_list.push_back(trim(trimmed_label_name));
-    roi_name_to_id_map.insert({trimmed_label_name, label_index});
-
-    ++label_index;
-  }
-}
-
-void load_segmentation_colormap(
-  const std::string & file_name, std::vector<autoware::tensorrt_yolox::Colormap> & semseg_color_map,
-  std::unordered_map<std::string, int> & semseg_name_to_id_map, uint32_t skip_header_lines = 1)
-{
-  auto rows = read_csv(file_name, skip_header_lines);
-  // check loaded status
-  if (!rows) {
-    std::stringstream error_msg;
-    error_msg << "Could not open the segmentation color map file: " << file_name;
-    throw std::runtime_error{error_msg.str()};
-  }
-
-  constexpr size_t expected_column_num = 5;
-  for (const auto & row : rows.value()) {
-    // ensure we have expected columns (id, name, r, g, b)
-    if (row.size() != expected_column_num) {
-      std::stringstream error_msg;
-      error_msg << "Invalid row: " << expected_column_num << " columns was expected.";
-      throw std::runtime_error{error_msg.str()};
-    }
-
-    Colormap cmap;
-
-    try {
-      // col 0: ID
-      const int label = std::stoi(row[0]);
-      cmap.id = label;
-      // col 1: name
-      std::string label_name = row[1];
-      cmap.name = label_name;
-      // col 2~4: colors
-      for (size_t i = 2; i < expected_column_num; ++i) {
-        // assuming color is provided with 0~255 range in integer
-        cmap.color.push_back(static_cast<unsigned char>(std::stoi(row[i])));
-      }
-
-      semseg_color_map.push_back(cmap);
-      semseg_name_to_id_map.insert({label_name, label});
-    } catch (const std::exception & e) {
-      std::stringstream error_msg;
-      error_msg << "Invalid row: " << e.what();
-      throw std::runtime_error{error_msg.str()};
-    }
-  }
-}
-
-void load_label_id_remap_file(
-  const std::string & file_name, std::unordered_map<std::string, int> & label_name_to_id_remap,
-  uint32_t skip_header_lines = 1)
-{
-  auto rows = read_csv(file_name, skip_header_lines);
-  if (!rows) {
-    std::stringstream error_msg;
-    error_msg << "Could not open the label map file: " << file_name;
-    throw std::runtime_error{error_msg.str()};
-  }
-
-  // expecting 2 columns (label_name, label_id)
-  constexpr size_t expected_column_num = 2;
-  for (const auto & row : rows.value()) {
-    if (row.size() != expected_column_num) {
-      std::stringstream error_msg;
-      error_msg << "Invalid row: " << expected_column_num << " columns were expected.";
-      throw std::runtime_error{error_msg.str()};
-    }
-
-    const std::string label_name = row[0];
-
-    try {
-      const int label_id = std::stoi(row[1]);
-      label_name_to_id_remap[label_name] = label_id;
-    } catch (const std::exception & e) {
-      std::stringstream error_msg;
-      error_msg << "Failed to parse label ID as integer for " << label_name << ": " << e.what();
-      throw std::runtime_error{error_msg.str()};
-    }
-  }
-}
-
 LabelMaps load_label_maps(
   const std::string & label_path, const std::string & semseg_color_map_path,
   const std::string & roi_remap_path, const std::string & roi_to_semseg_remap_path)
 {
   LabelMaps label_maps;
-
-  // the label file is mandatory; the local name-to-id map is unused downstream
-  std::unordered_map<std::string, int> roi_name_to_id_map;
-  read_label_file(label_path, label_maps.roi_class_name_list, roi_name_to_id_map);
+  label_maps.roi_class_name_list = read_label_file(label_path);
 
   constexpr uint32_t skip_header_lines = 1;
 
@@ -281,24 +277,21 @@ LabelMaps load_label_maps(
   // entry unmapped, but the table is always sized so it can be indexed for every detection.
   std::unordered_map<std::string, int> roi_label_to_new_id_remap;
   if (!roi_remap_path.empty()) {
-    load_label_id_remap_file(roi_remap_path, roi_label_to_new_id_remap, skip_header_lines);
+    roi_label_to_new_id_remap = load_label_id_remap_file(roi_remap_path, skip_header_lines);
   }
   label_maps.roi_id_to_class_id_map = build_roi_id_to_target_id_map(
     label_maps.roi_class_name_list, roi_label_to_new_id_remap, unmapped_label_id);
 
   if (!semseg_color_map_path.empty()) {
-    // the local name-to-id map is unused downstream
-    std::unordered_map<std::string, int> semseg_name_to_id_map;
-    load_segmentation_colormap(
-      semseg_color_map_path, label_maps.semseg_color_map, semseg_name_to_id_map, skip_header_lines);
+    label_maps.semseg_color_map =
+      load_segmentation_colormap(semseg_color_map_path, skip_header_lines);
   }
 
   // resolve ROI -> semantic segmentation IDs (e.g. PEDESTRIAN -> 6). Left empty when no remap file
   // is given, since this table is only consumed when ROI-to-segmentation overlap is enabled.
   if (!roi_to_semseg_remap_path.empty()) {
-    std::unordered_map<std::string, int> roi_name_to_semseg_id_remap;
-    load_label_id_remap_file(
-      roi_to_semseg_remap_path, roi_name_to_semseg_id_remap, skip_header_lines);
+    const auto roi_name_to_semseg_id_remap =
+      load_label_id_remap_file(roi_to_semseg_remap_path, skip_header_lines);
     label_maps.roi_id_to_semseg_id_map = build_roi_id_to_target_id_map(
       label_maps.roi_class_name_list, roi_name_to_semseg_id_remap, unmapped_label_id);
   }

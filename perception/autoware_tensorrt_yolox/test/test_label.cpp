@@ -17,58 +17,107 @@
 
 #include <gtest/gtest.h>
 
-#include <fstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 // cspell: ignore semseg
 
+namespace
+{
 std::string get_file_path(const std::string & filename)
 {
   const auto package_dir = ament_index_cpp::get_package_share_directory("autoware_tensorrt_yolox");
-  std::string path = package_dir + "/test_label_data/" + filename;
+  return package_dir + "/test_label_data/" + filename;
+}
+}  // namespace
 
-  return path;
+// load_label_maps parses the label file into the ROI class name list
+TEST(LoadLabelMaps, ParsesRoiClassNameList)
+{
+  // Arrange
+  const std::string label_path = get_file_path("test_label_with_spaces.txt");
+
+  // Act
+  const auto label_maps = autoware::tensorrt_yolox::load_label_maps(label_path, "", "", "");
+
+  // Assert
+  ASSERT_EQ(label_maps.roi_class_name_list.size(), 3);
+  EXPECT_EQ(label_maps.roi_class_name_list[0], "CAR");
+  EXPECT_EQ(label_maps.roi_class_name_list[1], "PEDESTRIAN");
+  EXPECT_EQ(label_maps.roi_class_name_list[2], "UNKNOWN");
 }
 
-// test parsing a label file
-TEST(LabelProcessing, ReadLabelFile)
+// without optional files, the segmentation tables stay in their "not specified" form while the
+// class-id table is sized but fully unmapped
+TEST(LoadLabelMaps, LeavesOptionalTablesUnsetWhenPathsEmpty)
 {
-  const std::string input_file_name = get_file_path("test_label_with_spaces.txt");
+  // Arrange
+  const std::string label_path = get_file_path("test_label_with_spaces.txt");
 
-  std::vector<std::string> roi_id_to_name_map;
-  std::unordered_map<std::string, int> roi_name_to_id_map;
+  // Act
+  const auto label_maps = autoware::tensorrt_yolox::load_label_maps(label_path, "", "", "");
 
-  autoware::tensorrt_yolox::read_label_file(
-    input_file_name, roi_id_to_name_map, roi_name_to_id_map);
-
-  ASSERT_EQ(roi_id_to_name_map.size(), 3);
-  EXPECT_EQ(roi_id_to_name_map[0], "CAR");
-  EXPECT_EQ(roi_id_to_name_map[1], "PEDESTRIAN");
-  EXPECT_EQ(roi_id_to_name_map[2], "UNKNOWN");
-
-  ASSERT_EQ(roi_name_to_id_map.size(), 3);
-  EXPECT_EQ(roi_name_to_id_map["CAR"], 0);
-  EXPECT_EQ(roi_name_to_id_map["PEDESTRIAN"], 1);
-  EXPECT_EQ(roi_name_to_id_map["UNKNOWN"], 2);
+  // Assert
+  EXPECT_TRUE(label_maps.semseg_color_map.empty());
+  EXPECT_TRUE(label_maps.roi_id_to_semseg_id_map.empty());
+  ASSERT_EQ(label_maps.roi_id_to_class_id_map.size(), 3);
+  for (const int class_id : label_maps.roi_id_to_class_id_map) {
+    EXPECT_EQ(class_id, autoware::tensorrt_yolox::unmapped_label_id);
+  }
 }
 
-// test parsing a semantic segmentation color map file
-TEST(LabelProcessing, ReadSemsegColorMapFile)
+// load_label_maps applies the ROI remap file to resolve the class-id table
+TEST(LoadLabelMaps, ResolvesRoiRemap)
 {
-  const std::string input_file_name = get_file_path("test_semseg_col_map_with_spaces.csv");
+  // Arrange
+  const std::string label_path = get_file_path("test_label_with_spaces.txt");
+  const std::string roi_remap_path = get_file_path("test_label_remap.csv");
 
-  std::vector<autoware::tensorrt_yolox::Colormap> semseg_color_map;
-  std::unordered_map<std::string, int> semseg_name_to_id_map;
-  uint32_t skip_header_lines = 1;
+  // Act
+  const auto label_maps =
+    autoware::tensorrt_yolox::load_label_maps(label_path, "", roi_remap_path, "");
 
-  autoware::tensorrt_yolox::load_segmentation_colormap(
-    input_file_name, semseg_color_map, semseg_name_to_id_map, skip_header_lines);
+  // Assert
+  ASSERT_EQ(label_maps.roi_id_to_class_id_map.size(), 3);
+  EXPECT_EQ(label_maps.roi_id_to_class_id_map[0], 0);  // CAR
+  EXPECT_EQ(label_maps.roi_id_to_class_id_map[1], 1);  // PEDESTRIAN
+  EXPECT_EQ(label_maps.roi_id_to_class_id_map[2], 2);  // UNKNOWN
+}
 
+// comments and the header line in the remap file are ignored while resolving the class-id table
+TEST(LoadLabelMaps, ResolvesRoiRemapWithComments)
+{
+  // Arrange
+  const std::string label_path = get_file_path("test_label_with_spaces.txt");
+  const std::string roi_remap_path = get_file_path("test_label_file_with_comment.csv");
+
+  // Act
+  const auto label_maps =
+    autoware::tensorrt_yolox::load_label_maps(label_path, "", roi_remap_path, "");
+
+  // Assert
+  ASSERT_EQ(label_maps.roi_id_to_class_id_map.size(), 3);
+  EXPECT_EQ(label_maps.roi_id_to_class_id_map[0], 1);  // CAR
+  EXPECT_EQ(label_maps.roi_id_to_class_id_map[1], 3);  // PEDESTRIAN
+  EXPECT_EQ(label_maps.roi_id_to_class_id_map[2], 5);  // UNKNOWN
+}
+
+// load_label_maps parses the segmentation color map file
+TEST(LoadLabelMaps, ParsesSegmentationColorMap)
+{
+  // Arrange
+  const std::string label_path = get_file_path("test_label_with_spaces.txt");
+  const std::string color_map_path = get_file_path("test_semseg_col_map_with_spaces.csv");
+
+  // Act
+  const auto label_maps =
+    autoware::tensorrt_yolox::load_label_maps(label_path, color_map_path, "", "");
+
+  // Assert
+  const auto & semseg_color_map = label_maps.semseg_color_map;
   ASSERT_EQ(semseg_color_map.size(), 3);
 
-  // check parsed results
   EXPECT_EQ(semseg_color_map[0].id, 0);
   EXPECT_EQ(semseg_color_map[0].name, "others");
   EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[0]), 0);
@@ -86,64 +135,75 @@ TEST(LabelProcessing, ReadSemsegColorMapFile)
   EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[0]), 150);
   EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[1]), 160);
   EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[2]), 170);
-
-  // check name-to-id mapping is correct
-  ASSERT_EQ(semseg_name_to_id_map.size(), 3);
-  EXPECT_EQ(semseg_name_to_id_map["others"], 0);
-  EXPECT_EQ(semseg_name_to_id_map["building"], 1);
-  EXPECT_EQ(semseg_name_to_id_map["wall"], 2);
 }
 
-// test parsing a label remap file
-TEST(LabelProcessing, ReadLabelRemapFile)
+// load_label_maps applies the ROI-to-segmentation remap file to resolve the segmentation-id table
+TEST(LoadLabelMaps, ResolvesRoiToSemsegRemap)
 {
-  const std::string input_file_name = get_file_path("test_label_remap.csv");
+  // Arrange
+  const std::string label_path = get_file_path("test_label_with_spaces.txt");
+  const std::string roi_to_semseg_remap_path = get_file_path("test_label_remap.csv");
 
-  std::unordered_map<std::string, int> label_name_to_id_remap;
-  uint32_t skip_header_lines = 1;
+  // Act
+  const auto label_maps =
+    autoware::tensorrt_yolox::load_label_maps(label_path, "", "", roi_to_semseg_remap_path);
 
-  autoware::tensorrt_yolox::load_label_id_remap_file(
-    input_file_name, label_name_to_id_remap, skip_header_lines);
-
-  ASSERT_EQ(label_name_to_id_remap.size(), 3);
-  EXPECT_EQ(label_name_to_id_remap["CAR"], 0);
-  EXPECT_EQ(label_name_to_id_remap["PEDESTRIAN"], 1);
-  EXPECT_EQ(label_name_to_id_remap["UNKNOWN"], 2);
+  // Assert
+  ASSERT_EQ(label_maps.roi_id_to_semseg_id_map.size(), 3);
+  EXPECT_EQ(label_maps.roi_id_to_semseg_id_map[0], 0);  // CAR
+  EXPECT_EQ(label_maps.roi_id_to_semseg_id_map[1], 1);  // PEDESTRIAN
+  EXPECT_EQ(label_maps.roi_id_to_semseg_id_map[2], 2);  // UNKNOWN
 }
 
-// test parsing a label remap file without header
-// NOTE: the skip_header_lines is hard-coded in the source
-TEST(LabelProcessing, ReadLabelRemapFileWithoutHeader)
+// an empty remap disables remapping, leaving every entry unmapped
+TEST(BuildRoiIdToTargetIdMap, EmptyRemapLeavesEveryEntryUnmapped)
 {
-  const std::string input_file_name = get_file_path("test_label_remap_without_header.csv");
+  // Arrange
+  const std::vector<std::string> roi_class_name_list = {"CAR", "PEDESTRIAN", "UNKNOWN"};
+  const std::unordered_map<std::string, int> empty_remap;
 
-  std::unordered_map<std::string, int> label_name_to_id_remap;
-  uint32_t skip_header_lines = 0;
+  // Act
+  const auto roi_id_to_target_id_map = autoware::tensorrt_yolox::build_roi_id_to_target_id_map(
+    roi_class_name_list, empty_remap, autoware::tensorrt_yolox::unmapped_label_id);
 
-  autoware::tensorrt_yolox::load_label_id_remap_file(
-    input_file_name, label_name_to_id_remap, skip_header_lines);
-
-  ASSERT_EQ(label_name_to_id_remap.size(), 3);
-  EXPECT_EQ(label_name_to_id_remap["CAR"], 0);
-  EXPECT_EQ(label_name_to_id_remap["PEDESTRIAN"], 1);
-  EXPECT_EQ(label_name_to_id_remap["UNKNOWN"], 2);
+  // Assert
+  ASSERT_EQ(roi_id_to_target_id_map.size(), 3);
+  for (const int target_id : roi_id_to_target_id_map) {
+    EXPECT_EQ(target_id, autoware::tensorrt_yolox::unmapped_label_id);
+  }
 }
 
-// test parsing a label remap file with comment in the lines
-TEST(LabelProcessing, ReadLabelRemapFileWithComment)
+// a non-empty remap is applied by class name, indexed by the model's output class ID
+TEST(BuildRoiIdToTargetIdMap, AppliesRemapByClassName)
 {
-  const std::string input_file_name = get_file_path("test_label_file_with_comment.csv");
+  // Arrange
+  const std::vector<std::string> roi_class_name_list = {"CAR", "PEDESTRIAN", "UNKNOWN"};
+  const std::unordered_map<std::string, int> remap = {
+    {"CAR", 7}, {"PEDESTRIAN", 8}, {"UNKNOWN", 9}};
 
-  std::unordered_map<std::string, int> label_name_to_id_remap;
-  uint32_t skip_header_lines = 1;
+  // Act
+  const auto roi_id_to_target_id_map = autoware::tensorrt_yolox::build_roi_id_to_target_id_map(
+    roi_class_name_list, remap, autoware::tensorrt_yolox::unmapped_label_id);
 
-  autoware::tensorrt_yolox::load_label_id_remap_file(
-    input_file_name, label_name_to_id_remap, skip_header_lines);
+  // Assert
+  ASSERT_EQ(roi_id_to_target_id_map.size(), 3);
+  EXPECT_EQ(roi_id_to_target_id_map[0], 7);
+  EXPECT_EQ(roi_id_to_target_id_map[1], 8);
+  EXPECT_EQ(roi_id_to_target_id_map[2], 9);
+}
 
-  ASSERT_EQ(label_name_to_id_remap.size(), 3);
-  EXPECT_EQ(label_name_to_id_remap["CAR"], 1);
-  EXPECT_EQ(label_name_to_id_remap["PEDESTRIAN"], 3);
-  EXPECT_EQ(label_name_to_id_remap["UNKNOWN"], 5);
+// a class name missing from a non-empty remap is treated as an error (likely a wrong model)
+TEST(BuildRoiIdToTargetIdMap, ThrowsWhenClassNameMissingFromRemap)
+{
+  // Arrange
+  const std::vector<std::string> roi_class_name_list = {"CAR", "PEDESTRIAN", "UNKNOWN"};
+  const std::unordered_map<std::string, int> remap = {{"CAR", 0}, {"PEDESTRIAN", 1}};
+
+  // Act / Assert
+  EXPECT_THROW(
+    autoware::tensorrt_yolox::build_roi_id_to_target_id_map(
+      roi_class_name_list, remap, autoware::tensorrt_yolox::unmapped_label_id),
+    std::runtime_error);
 }
 
 int main(int argc, char ** argv)

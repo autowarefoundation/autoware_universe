@@ -15,8 +15,6 @@
 #ifndef AUTOWARE__TENSORRT_YOLOX__LABEL_HPP_
 #define AUTOWARE__TENSORRT_YOLOX__LABEL_HPP_
 
-#include <cstdint>
-#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -55,23 +53,8 @@ struct LabelMaps
   std::vector<int> roi_id_to_semseg_id_map;
 };
 
-void trim_left(std::string & s);
-void trim_right(std::string & s);
-std::string trim(std::string & s);
-std::optional<std::vector<std::vector<std::string>>> read_csv(
-  const std::string & filename, uint32_t skip_header_lines);
-bool file_exists(const std::string & file_name, bool verbose);
-std::vector<std::string> load_list_from_text_file(const std::string & filename);
+// Load a list of image file paths from a text file, prefixing entries that cannot be found as-is.
 std::vector<std::string> load_image_list(const std::string & filename, const std::string & prefix);
-void read_label_file(
-  const std::string & label_path, std::vector<std::string> & roi_class_id_to_class_name_map,
-  std::unordered_map<std::string, int> & roi_class_name_to_class_id_map);
-void load_segmentation_colormap(
-  const std::string & file_name, std::vector<autoware::tensorrt_yolox::Colormap> & semseg_color_map,
-  std::unordered_map<std::string, int> & semseg_name_to_semseg_id_map, uint32_t skip_header_lines);
-void load_label_id_remap_file(
-  const std::string & file_name, std::unordered_map<std::string, int> & label_name_to_id_remap,
-  uint32_t skip_header_lines);
 
 /**
  * @brief Load the label, remap and color-map files and resolve them into ready-to-use lookup
