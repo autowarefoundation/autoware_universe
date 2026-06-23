@@ -265,4 +265,70 @@ void load_label_id_remap_file(
   }
 }
 
+LabelMaps load_label_maps(
+  const std::string & label_path, const std::string & semseg_color_map_path,
+  const std::string & roi_remap_path, const std::string & roi_to_semseg_remap_path)
+{
+  LabelMaps label_maps;
+
+  // the label file is mandatory; the local name-to-id map is unused downstream
+  std::unordered_map<std::string, int> roi_name_to_id_map;
+  read_label_file(label_path, label_maps.roi_class_name_list, roi_name_to_id_map);
+
+  constexpr uint32_t skip_header_lines = 1;
+
+  // resolve ROI -> Autoware interface class IDs (e.g. MOTORBIKE -> 5). An empty remap leaves every
+  // entry unmapped, but the table is always sized so it can be indexed for every detection.
+  std::unordered_map<std::string, int> roi_label_to_new_id_remap;
+  if (!roi_remap_path.empty()) {
+    load_label_id_remap_file(roi_remap_path, roi_label_to_new_id_remap, skip_header_lines);
+  }
+  label_maps.roi_id_to_class_id_map = build_roi_id_to_target_id_map(
+    label_maps.roi_class_name_list, roi_label_to_new_id_remap, unmapped_label_id);
+
+  if (!semseg_color_map_path.empty()) {
+    // the local name-to-id map is unused downstream
+    std::unordered_map<std::string, int> semseg_name_to_id_map;
+    load_segmentation_colormap(
+      semseg_color_map_path, label_maps.semseg_color_map, semseg_name_to_id_map, skip_header_lines);
+  }
+
+  // resolve ROI -> semantic segmentation IDs (e.g. PEDESTRIAN -> 6). Left empty when no remap file
+  // is given, since this table is only consumed when ROI-to-segmentation overlap is enabled.
+  if (!roi_to_semseg_remap_path.empty()) {
+    std::unordered_map<std::string, int> roi_name_to_semseg_id_remap;
+    load_label_id_remap_file(
+      roi_to_semseg_remap_path, roi_name_to_semseg_id_remap, skip_header_lines);
+    label_maps.roi_id_to_semseg_id_map = build_roi_id_to_target_id_map(
+      label_maps.roi_class_name_list, roi_name_to_semseg_id_remap, unmapped_label_id);
+  }
+
+  return label_maps;
+}
+
+std::vector<int> build_roi_id_to_target_id_map(
+  const std::vector<std::string> & roi_class_name_list,
+  const std::unordered_map<std::string, int> & label_name_to_target_id, int unmapped_id)
+{
+  std::vector<int> roi_id_to_target_id_map(roi_class_name_list.size(), unmapped_id);
+
+  // an empty remap means remapping is disabled, so every entry stays unmapped
+  if (label_name_to_target_id.empty()) {
+    return roi_id_to_target_id_map;
+  }
+
+  for (size_t roi_class_id = 0; roi_class_id < roi_class_name_list.size(); ++roi_class_id) {
+    const std::string & class_name = roi_class_name_list[roi_class_id];
+    const auto remap_iter = label_name_to_target_id.find(class_name);
+    if (remap_iter == label_name_to_target_id.end()) {
+      std::stringstream error_msg;
+      error_msg << "ROI label " << class_name << " not found in remap file.";
+      throw std::runtime_error{error_msg.str()};
+    }
+    roi_id_to_target_id_map[roi_class_id] = remap_iter->second;
+  }
+
+  return roi_id_to_target_id_map;
+}
+
 }  // namespace autoware::tensorrt_yolox
