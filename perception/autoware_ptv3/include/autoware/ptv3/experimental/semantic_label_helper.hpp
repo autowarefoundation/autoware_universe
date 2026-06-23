@@ -27,9 +27,11 @@ namespace autoware::ptv3::experimental
 using autoware_perception_msgs::msg::ObjectClassification;
 using ObjectLabel = ObjectClassification::_label_type;
 
-/// @brief Get the string representation of a semantic label.
-/// @param label The semantic label to convert.
-/// @return String view of the label name (e.g., "CAR", "HAZARD", "STRUCTURE").
+/**
+ * @brief Get the string representation of a semantic label.
+ * @param label The semantic label to convert.
+ * @return String view of the label name (e.g., "CAR", "HAZARD", "STRUCTURE").
+ */
 constexpr std::string_view to_string(SemanticLabel label) noexcept
 {
   switch (label) {
@@ -62,9 +64,11 @@ constexpr std::string_view to_string(SemanticLabel label) noexcept
   }
 }
 
-/// @brief Convert a semantic label to ObjectClassification label type where applicable.
-/// @param label The semantic label to convert.
-/// @return The ObjectClassification label value, or std::nullopt for non-object labels.
+/**
+ * @brief Convert a semantic label to ObjectClassification label type where applicable.
+ * @param label The semantic label to convert.
+ * @return The ObjectClassification label value, or std::nullopt for non-object labels.
+ */
 inline std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexcept
 {
   switch (label) {
@@ -94,9 +98,11 @@ inline std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexcept
   }
 }
 
-/// @brief Convert an ObjectClassification label to its semantic label.
-/// @param label The ObjectClassification label value.
-/// @return The corresponding SemanticLabel, or std::nullopt if not mapped.
+/**
+ * @brief Convert an ObjectClassification label to its semantic label.
+ * @param label The ObjectClassification label value.
+ * @return The corresponding SemanticLabel, or std::nullopt if not mapped.
+ */
 inline std::optional<SemanticLabel> try_into_semantic(ObjectLabel label) noexcept
 {
   switch (label) {
@@ -123,10 +129,12 @@ inline std::optional<SemanticLabel> try_into_semantic(ObjectLabel label) noexcep
   }
 }
 
-/// @brief Check whether a semantic label is object-compatible.
-/// @param label The semantic label to check.
-/// @return true if the label is an object class, false for environment/non-object labels
-///         (GROUND, STRUCTURE, VEGETATION, NOISE).
+/**
+ * @brief Check whether a semantic label is object-compatible.
+ * @param label The semantic label to check.
+ * @return true if the label is an object class, false for environment/non-object labels
+ *         (GROUND, STRUCTURE, VEGETATION, NOISE).
+ */
 inline bool is_object_compatible(SemanticLabel label) noexcept
 {
   return try_into_object(label).has_value();
