@@ -15,7 +15,6 @@
 #include "processor.hpp"
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/static_tracker.hpp"
 #include "autoware/multi_object_tracker/types.hpp"

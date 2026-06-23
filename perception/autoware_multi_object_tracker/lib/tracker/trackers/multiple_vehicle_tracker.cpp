@@ -48,13 +48,11 @@ bool MultipleVehicleTracker::measure(
 
 bool MultipleVehicleTracker::conditionedUpdate(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-  const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const rclcpp::Time & measurement_time, const types::InputChannel & channel_info)
 {
-  big_vehicle_tracker_.conditionedUpdate(
-    measurement, prediction, tracker_shape, measurement_time, channel_info);
+  big_vehicle_tracker_.conditionedUpdate(measurement, prediction, measurement_time, channel_info);
   normal_vehicle_tracker_.conditionedUpdate(
-    measurement, prediction, tracker_shape, measurement_time, channel_info);
+    measurement, prediction, measurement_time, channel_info);
   big_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
   normal_vehicle_tracker_.setLatestMeasurementTime(measurement_time);
 

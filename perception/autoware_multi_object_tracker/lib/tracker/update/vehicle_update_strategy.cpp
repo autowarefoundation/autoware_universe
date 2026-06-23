@@ -153,10 +153,12 @@ UpdateStrategy determineUpdateStrategy(
   return strategy;
 }
 
-void createPseudoMeasurement(
-  const types::DynamicObject & meas, types::DynamicObject & pred,
-  const autoware_perception_msgs::msg::Shape & tracker_shape, const bool enlarge_covariance)
+types::DynamicObject createPseudoMeasurement(
+  const types::DynamicObject & meas, const types::DynamicObject & prediction,
+  const bool enlarge_covariance)
 {
+  types::DynamicObject pred = prediction;
+
   // Apply linear fall‑off weight on dist square
   const double dx = meas.pose.position.x - pred.pose.position.x;
   const double dy = meas.pose.position.y - pred.pose.position.y;
@@ -170,9 +172,8 @@ void createPseudoMeasurement(
   pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
   pred.pose.position.z = pred.pose.position.z * (1 - w_pose) + meas.pose.position.z * w_pose;
 
-  // Use smoothed shape and its area
-  pred.shape = tracker_shape;
-  pred.area = types::getArea(tracker_shape);
+  // Refresh the area from pred's (tracker) shape
+  pred.area = types::getArea(pred.shape);
 
   // Blend orientation
   if (meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE) {
@@ -211,6 +212,65 @@ void createPseudoMeasurement(
       pred.twist_covariance[XYZRPY_COV_IDX::Y_Y] += additional_velocity_cov;
     }
   }
+
+  return pred;
+}
+
+double correctWheelAnchorLateral(
+  const double anchor_lateral, const double tracker_half, const double polygon_half,
+  double & var_lat)
+{
+  // The true center lies within +/-half_dead_zone of the anchor; outside it, the closer polygon
+  // edge is taken as a real vehicle edge.
+  const double half_dead_zone = std::abs(polygon_half - tracker_half);
+  const double low = anchor_lateral - half_dead_zone;
+  const double high = anchor_lateral + half_dead_zone;
+
+  // Project the tracker center (0) into the dead-zone.
+  const double target = std::clamp(0.0, low, high);
+
+  // Variance = (dead-zone half-width)^2: the std equals the half-width by which the center may
+  // move.
+  var_lat = half_dead_zone * half_dead_zone;
+
+  return target - anchor_lateral;
+}
+
+geometry_msgs::msg::Point correctWheelAnchor(
+  const types::DynamicObject & prediction, const double polygon_width,
+  const geometry_msgs::msg::Point & anchor, std::array<double, 36> & pose_cov)
+{
+  using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+
+  const double yaw = tf2::getYaw(prediction.pose.orientation);
+  const double tracker_width = prediction.shape.dimensions.y;
+  const geometry_msgs::msg::Point & tracker_center = prediction.pose.position;
+
+  const double sin_yaw = std::sin(yaw);
+  const double cos_yaw = std::cos(yaw);
+  // Project the observed anchor offset from the tracker center onto the body lateral axis
+  // n = (-sin yaw, cos yaw). The longitudinal component is orthogonal to n and drops.
+  const double lateral_offset =
+    -(anchor.x - tracker_center.x) * sin_yaw + (anchor.y - tracker_center.y) * cos_yaw;
+
+  const double tracker_half = tracker_width * 0.5;
+  const double polygon_half = polygon_width * 0.5;
+  double var_lat = 0.0;
+  const double lateral_move =
+    correctWheelAnchorLateral(lateral_offset, tracker_half, polygon_half, var_lat);
+
+  // Apply the scalar lateral move back along n to get the corrected anchor point.
+  geometry_msgs::msg::Point corrected = anchor;
+  corrected.x = anchor.x - lateral_move * sin_yaw;
+  corrected.y = anchor.y + lateral_move * cos_yaw;
+
+  // add var_lat * n * n^T to the x/y block
+  pose_cov[XYZRPY_COV_IDX::X_X] += var_lat * sin_yaw * sin_yaw;
+  pose_cov[XYZRPY_COV_IDX::X_Y] += -var_lat * sin_yaw * cos_yaw;
+  pose_cov[XYZRPY_COV_IDX::Y_X] += -var_lat * sin_yaw * cos_yaw;
+  pose_cov[XYZRPY_COV_IDX::Y_Y] += var_lat * cos_yaw * cos_yaw;
+
+  return corrected;
 }
 
 }  // namespace autoware::multi_object_tracker

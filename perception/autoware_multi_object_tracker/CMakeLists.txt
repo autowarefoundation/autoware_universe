@@ -50,7 +50,8 @@ set(${PROJECT_NAME}_lib
   lib/association/mu_successive_shortest_path/mu_ssp.cpp
   lib/types.cpp
   lib/object_model/uuid.cpp
-  lib/object_model/shapes.cpp
+  lib/object_model/shapes_iou.cpp
+  lib/object_model/shapes_transform.cpp
   lib/tracker/motion_model/bicycle_motion_model.cpp
   # cspell: ignore ctrv
   lib/tracker/motion_model/ctrv_motion_model.cpp

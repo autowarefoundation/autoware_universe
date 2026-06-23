@@ -17,6 +17,8 @@
 
 #include "autoware/multi_object_tracker/types.hpp"
 
+#include <array>
+
 namespace autoware::multi_object_tracker
 {
 
@@ -33,12 +35,24 @@ struct UpdateStrategy
 UpdateStrategy determineUpdateStrategy(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction);
 
-// Blends measurement position/orientation into pred using a distance-weighted scheme.
-// When enlarge_covariance=true, inflates pose/velocity covariances for the weak-update path.
-void createPseudoMeasurement(
-  const types::DynamicObject & meas, types::DynamicObject & pred,
-  const autoware_perception_msgs::msg::Shape & tracker_shape,
+// Blends measurement position/orientation into a copy of prediction using a distance-weighted
+// scheme and returns it. When enlarge_covariance=true, inflates pose/velocity covariances for the
+// weak-update path.
+types::DynamicObject createPseudoMeasurement(
+  const types::DynamicObject & meas, const types::DynamicObject & prediction,
   const bool enlarge_covariance = false);
+
+// Computes the lateral correction of the wheel-anchor, accounting for the width mismatch between
+// the measurement polygon and the fixed-width tracker box. Returns the lateral move and, via
+// `var_lat`, the extra lateral variance.
+double correctWheelAnchorLateral(
+  const double anchor_lateral, const double tracker_half, const double polygon_half,
+  double & var_lat);
+
+// Laterally corrects the anchor against `prediction` and folds the extra variance into `pose_cov`.
+geometry_msgs::msg::Point correctWheelAnchor(
+  const types::DynamicObject & prediction, const double polygon_width,
+  const geometry_msgs::msg::Point & anchor, std::array<double, 36> & pose_cov);
 
 }  // namespace autoware::multi_object_tracker
 

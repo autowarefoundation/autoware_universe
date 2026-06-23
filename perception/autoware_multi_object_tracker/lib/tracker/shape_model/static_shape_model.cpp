@@ -14,7 +14,7 @@
 
 #include "autoware/multi_object_tracker/tracker/shape_model/static_shape_model.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_transform.hpp"
 
 namespace autoware::multi_object_tracker
 {

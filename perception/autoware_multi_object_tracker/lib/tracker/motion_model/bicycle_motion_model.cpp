@@ -28,7 +28,7 @@
 namespace autoware::multi_object_tracker
 {
 
-// cspell: ignore CTRV
+// cspell: ignore CTRV nonholonomic
 // Bicycle CTRV motion model
 // CTRV : Constant Turn Rate and constant Velocity
 using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
@@ -246,90 +246,41 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   return ekf_.update(Y, C, R);
 }
 
-bool BicycleMotionModel::updateStatePoseRear(
-  const double & xr, const double & yr, const std::array<double, 36> & pose_cov)
+bool BicycleMotionModel::updateStatePoseWheel(
+  const double & x, const double & y, const std::array<double, 36> & pose_cov,
+  const bool measure_front)
 {
   // check if the state is initialized
   if (!checkInitialized()) return false;
 
-  // get the current state to extract renovate deviation
-  StateVec X_t;
-  StateMat P_t;
-  ekf_.getX(X_t);
-  ekf_.getP(P_t);
-
-  const double yaw = getYawState();
-  const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
-  const double x1 = xr + wheel_base * motion_params_.wheel_gamma_rear * std::cos(yaw);
-  const double y1 = yr + wheel_base * motion_params_.wheel_gamma_rear * std::sin(yaw);
-  const double delta_x = x1 - X_t(IDX::X1);
-  const double delta_y = y1 - X_t(IDX::Y1);
-
-  // update state
-  constexpr int DIM_Y = 4;
+  constexpr int DIM_Y = 2;
   Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << x1, y1, X_t(IDX::X2) + delta_x, X_t(IDX::Y2) + delta_y;
+  Y << x, y;
 
+  // Measure the edge face center as an exact linear blend of the two endpoints:
+  // face = (1 + gamma) * p_near - gamma * p_far
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
-  C(0, IDX::X1) = 1.0;
-  C(1, IDX::Y1) = 1.0;
-  C(2, IDX::X2) = 1.0;
-  C(3, IDX::Y2) = 1.0;
+  if (measure_front) {
+    // The front face anchors on p2 = (X2, Y2) with gamma_front
+    const double gamma = motion_params_.wheel_gamma_front;
+    C(0, IDX::X1) = -gamma;
+    C(0, IDX::X2) = 1.0 + gamma;
+    C(1, IDX::Y1) = -gamma;
+    C(1, IDX::Y2) = 1.0 + gamma;
+  } else {
+    // The rear face anchors on p1 = (X1, Y1) with gamma_rear
+    const double gamma = motion_params_.wheel_gamma_rear;
+    C(0, IDX::X1) = 1.0 + gamma;
+    C(0, IDX::X2) = -gamma;
+    C(1, IDX::Y1) = 1.0 + gamma;
+    C(1, IDX::Y2) = -gamma;
+  }
 
-  constexpr double uncertainty_multiplier = 9.0;  // additional uncertainty for unmeasured position
   Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
   R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
-  R(2, 2) = pose_cov[XYZRPY_COV_IDX::X_X] * uncertainty_multiplier;
-  R(2, 3) = pose_cov[XYZRPY_COV_IDX::X_Y] * uncertainty_multiplier;
-  R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X] * uncertainty_multiplier;
-  R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y] * uncertainty_multiplier;
-
-  return ekf_.update(Y, C, R);
-}
-
-bool BicycleMotionModel::updateStatePoseFront(
-  const double & xf, const double & yf, const std::array<double, 36> & pose_cov)
-{
-  // check if the state is initialized
-  if (!checkInitialized()) return false;
-
-  // get the current state to extract renovate deviation
-  StateVec X_t;
-  StateMat P_t;
-  ekf_.getX(X_t);
-  ekf_.getP(P_t);
-
-  const double yaw = getYawState();
-  const double wheel_base = std::hypot(X_t(IDX::X2) - X_t(IDX::X1), X_t(IDX::Y2) - X_t(IDX::Y1));
-  const double x2 = xf - wheel_base * motion_params_.wheel_gamma_front * std::cos(yaw);
-  const double y2 = yf - wheel_base * motion_params_.wheel_gamma_front * std::sin(yaw);
-  const double delta_x = x2 - X_t(IDX::X2);
-  const double delta_y = y2 - X_t(IDX::Y2);
-
-  // update state
-  constexpr int DIM_Y = 4;
-  Eigen::Matrix<double, DIM_Y, 1> Y;
-  Y << X_t(IDX::X1) + delta_x, X_t(IDX::Y1) + delta_y, x2, y2;
-
-  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
-  C(0, IDX::X1) = 1.0;
-  C(1, IDX::Y1) = 1.0;
-  C(2, IDX::X2) = 1.0;
-  C(3, IDX::Y2) = 1.0;
-
-  constexpr double uncertainty_multiplier = 9.0;  // additional uncertainty for unmeasured position
-  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
-  R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X] * uncertainty_multiplier;
-  R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y] * uncertainty_multiplier;
-  R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X] * uncertainty_multiplier;
-  R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y] * uncertainty_multiplier;
-  R(2, 2) = pose_cov[XYZRPY_COV_IDX::X_X];
-  R(2, 3) = pose_cov[XYZRPY_COV_IDX::X_Y];
-  R(3, 2) = pose_cov[XYZRPY_COV_IDX::Y_X];
-  R(3, 3) = pose_cov[XYZRPY_COV_IDX::Y_Y];
 
   return ekf_.update(Y, C, R);
 }
@@ -583,19 +534,19 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   A(IDX::V, IDX::V) = decay_rate;
 
   // Process noise covariance Q
-  double q_stddev_yaw_rate = motion_params_.q_stddev_yaw_rate_min;
-  if (vel_long > 0.01) {
-    /* uncertainty of the yaw rate is limited by the following:
-     *  - centripetal acceleration a_lat : d(yaw)/dt = w = a_lat/vel_long
-     *  - or maximum slip angle slip_max : w = vel_long*sin(slip_max)/wheel_base
-     */
-    q_stddev_yaw_rate = std::min(
-      motion_params_.q_stddev_acc_lat / vel_long,
-      vel_long * std::sin(motion_params_.q_max_slip_angle) / wheel_base);  // [rad/s]
-    q_stddev_yaw_rate = std::clamp(
-      q_stddev_yaw_rate, motion_params_.q_stddev_yaw_rate_min,
-      motion_params_.q_stddev_yaw_rate_max);
-  }
+  const double vel_long_abs = std::abs(vel_long);
+  constexpr double vel_long_eps = 1e-3;  // [m/s] guard against division by zero
+  // physical yaw-rate bound, limited by the tighter of the two:
+  //  - Centripetal acceleration a_lat : w = a_lat / vel_long
+  //  - Nonholonomic constraint : w = vel_long * sin(slip_max) / wheel_base  (-> 0 at v -> 0)
+  const double q_stddev_centripetal =
+    motion_params_.q_stddev_acc_lat / std::max(vel_long_abs, vel_long_eps);
+  const double q_stddev_slip =
+    vel_long_abs * std::sin(motion_params_.q_max_slip_angle) / wheel_base;
+  const double q_stddev_yaw_rate_phys = std::min(q_stddev_centripetal, q_stddev_slip);  // [rad/s]
+  const double q_stddev_yaw_rate = std::clamp(
+    q_stddev_yaw_rate_phys, motion_params_.q_stddev_yaw_rate_min,
+    motion_params_.q_stddev_yaw_rate_max);
   const double q_stddev_head = q_stddev_yaw_rate * wheel_base * dt;  // yaw uncertainty
 
   const double dt2 = dt * dt;
