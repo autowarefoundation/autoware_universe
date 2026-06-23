@@ -534,27 +534,19 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   A(IDX::V, IDX::V) = decay_rate;
 
   // Process noise covariance Q
-  //
   // Nonholonomic constraint: heading cannot change without translating, so yaw-rate uncertainty
-  // must vanish at standstill. A constant floor there inflates the front-point lateral variance
-  // (heading noise feeds Q on X2/Y2 only), which a partial update cannot pull back -> yaw jitter.
+  // must vanish at standstill.
   const double vel_long_abs = std::abs(vel_long);
   constexpr double vel_long_eps = 1e-3;  // [m/s] guard against division by zero
-  /* physical yaw-rate bound, limited by the tighter of the two:
-   *  - centripetal acceleration a_lat : w = a_lat / vel_long
-   *  - or maximum slip angle slip_max : w = vel_long * sin(slip_max) / wheel_base  (-> 0 at v -> 0)
-   */
+  // physical yaw-rate bound, limited by the tighter of the two:
+  //  - centripetal acceleration a_lat : w = a_lat / vel_long
+  //  - or maximum slip angle slip_max : w = vel_long * sin(slip_max) / wheel_base  (-> 0 at v -> 0)
   const double q_stddev_yaw_rate_phys = std::min(
     motion_params_.q_stddev_acc_lat / std::max(vel_long_abs, vel_long_eps),
     vel_long_abs * std::sin(motion_params_.q_max_slip_angle) / wheel_base);  // [rad/s]
-  // Ramp the configured floor in linearly with speed (0 at standstill, full at vel_ref) instead of
-  // applying it unconditionally. NOTE: below vel_ref the floor is lower than the original code,
-  // which applied the full floor for any vel_long > 0.01.
-  constexpr double vel_ref = 1.0;  // [m/s] speed at which the yaw-rate floor reaches full value
-  const double yaw_rate_floor =
-    motion_params_.q_stddev_yaw_rate_min * std::clamp(vel_long_abs / vel_ref, 0.0, 1.0);
-  const double q_stddev_yaw_rate =
-    std::clamp(q_stddev_yaw_rate_phys, yaw_rate_floor, motion_params_.q_stddev_yaw_rate_max);
+  const double q_stddev_yaw_rate = std::clamp(
+    q_stddev_yaw_rate_phys, motion_params_.q_stddev_yaw_rate_min,
+    motion_params_.q_stddev_yaw_rate_max);
   const double q_stddev_head = q_stddev_yaw_rate * wheel_base * dt;  // yaw uncertainty
 
   const double dt2 = dt * dt;

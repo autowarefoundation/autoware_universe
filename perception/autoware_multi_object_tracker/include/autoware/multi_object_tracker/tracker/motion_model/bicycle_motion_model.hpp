@@ -40,7 +40,7 @@ private:
     double q_stddev_acc_lat = 1.47;          // [m/s^2] uncertain longitudinal acceleration, 0.15G
     double q_cov_acc_long = 11.8;            // [m/s^2] uncertain longitudinal acceleration, 0.35G
     double q_cov_acc_lat = 2.16;             // [m/s^2] uncertain lateral acceleration, 0.15G
-    double q_stddev_yaw_rate_min = 0.02618;  // [rad/s] uncertain yaw change rate, 1.5deg/s
+    double q_stddev_yaw_rate_min = 0.00873;  // [rad/s] uncertain yaw change rate, 0.5deg/s
     double q_stddev_yaw_rate_max = 0.2618;   // [rad/s] uncertain yaw change rate, 15deg/s
     double q_cov_slip_rate_min =
       2.7416e-5;  // [rad^2/s^2] uncertain slip angle change rate, 0.3 deg/s
