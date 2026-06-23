@@ -118,11 +118,6 @@ public:
   explicit TrtYoloXDetector(const TrtYoloXDetectorConfig & config);
 
   /**
-   * @brief whether the underlying GPU has been initialized successfully
-   */
-  bool isGPUInitialized() const;
-
-  /**
    * @brief run inference and post-process for a single image message
    * @param[in] image_msg input image message (BGR8 expected); its header is propagated to all
    * output messages

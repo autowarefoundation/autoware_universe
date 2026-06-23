@@ -79,10 +79,10 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   config.roi_overlay_semseg_labels.HAZARD =
     declare_parameter<bool>("roi_overlay_segmentation_label.HAZARD");
 
-  detector_ = std::make_unique<TrtYoloXDetector>(config);
-
-  if (!detector_->isGPUInitialized()) {
-    RCLCPP_ERROR(this->get_logger(), "GPU %d does not exist or is not suitable.", config.gpu_id);
+  try {
+    detector_ = std::make_unique<TrtYoloXDetector>(config);
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
     rclcpp::shutdown();
     return;
   }
