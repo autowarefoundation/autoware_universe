@@ -98,8 +98,16 @@ def format_json(json_data):
     if parameters is None:
         # Fallback for schemas that inline their parameters (e.g. component templates):
         # use the first definition that actually exposes parameters (skip enum-only ones).
-        definitions = list(json_data["definitions"].values())
-        parameters = next(d["properties"] for d in definitions if "properties" in d)
+        definitions = list(json_data.get("definitions", {}).values())
+        parameters = next((d["properties"] for d in definitions if "properties" in d), None)
+    if parameters is None:
+        # Last resort for flat schemas that declare parameters directly at the top
+        # level (no "/**"/"ros__parameters" wrapper, no "definitions").
+        top_properties = json_data.get("properties", {})
+        if "/**" not in top_properties:
+            parameters = top_properties
+    if parameters is None:
+        return ""
     # cspell: ignore tablefmt
     markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
     return markdown_table
