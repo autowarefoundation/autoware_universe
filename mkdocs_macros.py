@@ -61,10 +61,45 @@ def extract_parameter_info(parameters, namespace=""):
     return params
 
 
+def resolve_ref(root, node):
+    """Resolve a local "#/definitions/..." $ref against the schema root.
+
+    Sibling keys placed next to the $ref (e.g. a per-use "description" or "default")
+    take precedence over the referenced definition. The node is returned unchanged
+    when it carries no resolvable local $ref.
+    """
+    seen = set()
+    while isinstance(node, dict) and "$ref" in node:
+        ref = node["$ref"]
+        if not ref.startswith("#/") or ref in seen:
+            break
+        seen.add(ref)
+        target = root
+        for part in ref[len("#/") :].split("/"):
+            if not isinstance(target, dict) or part not in target:
+                return node
+            target = target[part]
+        node = {**target, **{k: v for k, v in node.items() if k != "$ref"}}
+    return node
+
+
 def format_json(json_data):
-    definitions = list(json_data["definitions"].values())
-    # use the first definition that actually exposes parameters (skip enum-only ones)
-    parameters = next(d["properties"] for d in definitions if "properties" in d)
+    # Prefer the definition referenced by ".../ros__parameters": a schema may declare
+    # helper sub-definitions ahead of the node definition, so picking the first
+    # definition with properties would document the wrong (helper) parameter set.
+    parameters = None
+    for top in json_data.get("properties", {}).values():
+        ros_params = resolve_ref(json_data, top).get("properties", {}).get("ros__parameters")
+        if isinstance(ros_params, dict) and "$ref" in ros_params:
+            resolved = resolve_ref(json_data, ros_params)
+            if "properties" in resolved:
+                parameters = resolved["properties"]
+                break
+    if parameters is None:
+        # Fallback for schemas that inline their parameters (e.g. component templates):
+        # use the first definition that actually exposes parameters (skip enum-only ones).
+        definitions = list(json_data["definitions"].values())
+        parameters = next(d["properties"] for d in definitions if "properties" in d)
     # cspell: ignore tablefmt
     markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
     return markdown_table
