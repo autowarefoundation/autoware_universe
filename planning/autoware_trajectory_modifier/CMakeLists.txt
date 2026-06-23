@@ -37,6 +37,7 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
 ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   src/trajectory_modifier_plugins/stop_point_fixer.cpp
   src/trajectory_modifier_plugins/obstacle_stop.cpp
+  src/trajectory_modifier_plugins/velocity_modifier.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_plugins
