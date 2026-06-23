@@ -14,6 +14,8 @@
 
 #include "node.hpp"
 
+#include <utility>
+
 namespace autoware::hazard_lights_selector
 {
 
