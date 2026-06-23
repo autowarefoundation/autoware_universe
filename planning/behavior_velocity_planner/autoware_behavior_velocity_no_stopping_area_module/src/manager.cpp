@@ -14,7 +14,6 @@
 
 #include "manager.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 
 #include <limits>
@@ -27,6 +26,7 @@ namespace autoware::behavior_velocity_planner
 {
 using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::NoStoppingArea;
+using tier4_rtc_msgs::msg::State;
 
 NoStoppingAreaModuleManager::NoStoppingAreaModuleManager(rclcpp::Node & node)
 : SceneModuleManagerInterfaceWithRTC(
@@ -47,11 +47,14 @@ NoStoppingAreaModuleManager::NoStoppingAreaModuleManager(rclcpp::Node & node)
 }
 
 void NoStoppingAreaModuleManager::launchNewModules(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const rclcpp::Time & stamp, const PlannerData & planner_data)
 {
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
+
   for (const auto & m : planning_utils::getRegElemMapOnPath<NoStoppingArea>(
-         path, planner_data_->route_handler_->getLaneletMapPtr(),
-         planner_data_->current_odometry->pose)) {
+         path_msg, planner_data.route_handler_->getLaneletMapPtr(),
+         planner_data.current_odometry->pose)) {
     // Use lanelet_id to unregister module when the route is changed
     const int64_t module_id = m.first->id();
     const int64_t lane_id = m.second.id();
@@ -62,26 +65,30 @@ void NoStoppingAreaModuleManager::launchNewModules(
         std::make_shared<NoStoppingAreaModule>(
           module_id, lane_id, *m.first, planner_param_,
           logger_.get_child("no_stopping_area_module"), clock_, time_keeper_,
-          planning_factor_interface_));
+          planning_factor_interface_),
+        planner_data);
       generate_uuid(module_id);
       updateRTCStatus(
         getUUID(module_id), true, State::WAITING_FOR_EXECUTION,
-        std::numeric_limits<double>::lowest(), path.header.stamp);
+        std::numeric_limits<double>::lowest(), stamp);
     }
   }
 }
 
-std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
+std::function<bool(const std::shared_ptr<experimental::SceneModuleInterfaceWithRTC> &)>
 NoStoppingAreaModuleManager::getModuleExpiredFunction(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  const Trajectory & path, const PlannerData & planner_data)
 {
-  const auto no_stopping_area_id_set = planning_utils::getRegElemIdSetOnPath<NoStoppingArea>(
-    path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
+  PathWithLaneId path_msg;
+  path_msg.points = path.restore();
 
-  return
-    [no_stopping_area_id_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
-      return no_stopping_area_id_set.count(scene_module->getModuleId()) == 0;
-    };
+  const auto no_stopping_area_id_set = planning_utils::getRegElemIdSetOnPath<NoStoppingArea>(
+    path_msg, planner_data.route_handler_->getLaneletMapPtr(), planner_data.current_odometry->pose);
+
+  return [no_stopping_area_id_set](
+           const std::shared_ptr<experimental::SceneModuleInterfaceWithRTC> & scene_module) {
+    return no_stopping_area_id_set.count(scene_module->getModuleId()) == 0;
+  };
 }
 
 }  // namespace autoware::behavior_velocity_planner
@@ -89,4 +96,4 @@ NoStoppingAreaModuleManager::getModuleExpiredFunction(
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::NoStoppingAreaModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)

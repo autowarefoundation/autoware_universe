@@ -16,8 +16,6 @@
 #define UTILS_HPP_
 
 #include <autoware/behavior_velocity_planner_common/planner_data.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
-#include <autoware/trajectory/path_point_with_lane_id.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/no_stopping_area.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
@@ -27,11 +25,8 @@
 
 namespace autoware::behavior_velocity_planner::no_stopping_area
 {
-using PathIndexWithPose = std::pair<size_t, geometry_msgs::msg::Pose>;    // front index, pose
-using PathIndexWithPoint2d = std::pair<size_t, autoware_utils::Point2d>;  // front index, point2d
-using PathIndexWithOffset = std::pair<size_t, double>;                    // front index, offset
-using Trajectory =
-  experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>;
+using Trajectory = autoware::experimental::trajectory::Trajectory<
+  autoware_internal_planning_msgs::msg::PathPointWithLaneId>;
 
 // intermediate data about the ego vehicle taken from the PlannerData
 struct EgoData
@@ -157,31 +152,6 @@ std::optional<double> get_stop_point(
   const double vehicle_offset, const lanelet::Ids & lane_ids = {});
 
 /**
- * @brief insert stop point on ego path
- * @param path          original path
- * @param stop_point    stop line point on the lane
- */
-void insert_stop_point(
-  autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const PathIndexWithPose & stop_point);
-
-/**
- * @brief generate stop line from no stopping area polygons
- *          ________________
- * ------|--|--------------|--> ego path
- *  stop |  |     Area     |
- *  line |  L______________/
- * @param path input path
- * @param no_stopping_areas no stopping area polygons
- * @param ego_width [m] width of ego
- * @param stop_line_margin [m] margin to keep between the stop line and the no stopping areas
- **/
-std::optional<autoware_utils::LineString2d> generate_stop_line(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const lanelet::ConstPolygons3d & no_stopping_areas, const double ego_width,
-  const double stop_line_margin);
-
-/**
  * @brief Calculate if it's possible for ego-vehicle to stop before area consider jerk limit
  * @param [inout] pass_judge the pass judge decision to update
  * @param self_pose       ego-car pose
@@ -195,47 +165,6 @@ bool is_stoppable(
   PassJudge & pass_judge, const geometry_msgs::msg::Pose & self_pose,
   const geometry_msgs::msg::Pose & line_pose, const EgoData & ego_data,
   const rclcpp::Logger & logger, rclcpp::Clock & clock);
-
-/**
- * @brief Calculate the polygon of the path from the ego-car position to the end of the
- * no stopping lanelet (+ extra distance).
- * @param path           ego-car lane
- * @param ego_pose       ego-car pose
- * @param margin         margin from the end point of the ego-no stopping area lane
- * @param max_polygon_length maximum length of the polygon
- * @return generated polygon
- */
-Polygon2d generate_ego_no_stopping_area_lane_polygon(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const geometry_msgs::msg::Pose & ego_pose,
-  const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem, const double margin,
-  const double max_polygon_length, const double path_expand_width, const rclcpp::Logger & logger,
-  rclcpp::Clock & clock);
-
-/**
- * @brief Check if there is a stop line in "stop line detect area".
- * @param path            ego-car lane
- * @param poly            ego focusing area polygon
- * @param [out] debug_data structure to store the stuck points for debugging
- * @return true if exists
- */
-bool check_stop_lines_in_no_stopping_area(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const Polygon2d & poly,
-  DebugData & debug_data);
-
-/**
- * @brief Calculate the stop line of a no stopping area
- * @details use the stop line of the regulatory element if it exists, otherwise generate it
- * @param path ego path
- * @param no_stopping_area_reg_elem no_stopping_area regulatory element
- * @param stop_line_margin [m] margin between the stop line and the start of the no stopping area
- * @param vehicle_width [m] width of the ego vehicle
- * @return generated stop line
- */
-std::optional<autoware_utils::LineString2d> get_stop_line_geometry2d(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
-  const double stop_line_margin, const double vehicle_width);
 
 }  // namespace autoware::behavior_velocity_planner::no_stopping_area
 
