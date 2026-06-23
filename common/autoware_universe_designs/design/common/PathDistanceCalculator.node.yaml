@@ -1,0 +1,40 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PathDistanceCalculator.node
+
+package:
+  name: autoware_path_distance_calculator
+  provider: autoware
+
+launch:
+  plugin: autoware::path_distance_calculator::PathDistanceCalculator
+  executable: autoware_path_distance_calculator_node
+
+# interfaces
+subscribers:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: ros_transform_static
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf_static
+  - name: path
+    message_type: autoware_planning_msgs/msg/Path
+
+publishers:
+  - name: distance
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+
+# parameters
+param_files: []
+
+param_values: []
+
+# processes
+processes:
+  - name: calculate_distance
+    trigger_conditions:
+      - periodic: 1.0
+    outcomes:
+      - to_output: distance

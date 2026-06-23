@@ -40,7 +40,7 @@ void MultiObjectTrackerInternalState::init(
   auto tf_buffer = std::make_shared<autoware::agnocast_wrapper::Buffer>(node.get_clock());
   odometry = std::make_shared<Odometry>(
     node.get_logger(), node.get_clock(), tf_buffer, params.world_frame_id, params.ego_frame_id,
-    params.enable_odometry_uncertainty);
+    params.enable_odometry_uncertainty, params.ego_source);
 
   // Initialize input manager
   input_manager = std::make_unique<InputManager>(odometry, node.get_logger(), node.get_clock());
@@ -49,8 +49,9 @@ void MultiObjectTrackerInternalState::init(
 
   // Initialize processor
   processor = std::make_unique<TrackerProcessor>(
-    params.creation_config, params.association_config, params.tracker_overlap_manager_config,
-    params.input_channels_config, node.get_logger(), node.get_clock());
+    params.tracker_configs, params.creation_config, params.association_config,
+    params.tracker_overlap_manager_config, params.input_channels_config, node.get_logger(),
+    node.get_clock());
 
   last_publish_time = node.now();
   last_updated_time = node.now();
@@ -273,8 +274,9 @@ ObjectProcessingResult process_objects_batch(
   // process end - end measurement time after processing
   debugger.endMeasurementTime(current_time);
 
-  // Publish immediately if delay compensation is disabled
-  result.should_publish = !params.enable_delay_compensation;
+  // Publish immediately when the timer is disabled; otherwise the periodic timer drives publishing.
+  // This is independent of delay_compensation, which only selects the export reference time.
+  result.should_publish = !params.publish_on_timer;
 
   return result;
 }
@@ -287,8 +289,28 @@ PublishingData prepare_publishing_data(
 
   const auto & last_tracker_time = state.last_tracker_time;
 
-  // Calculate object_time based on delay compensation setting
-  result.object_time = params.enable_delay_compensation ? current_time : last_tracker_time;
+  // Calculate object_time based on the export-time reference
+  switch (params.delay_compensation) {
+    case DelayReference::NONE:
+      result.object_time = last_tracker_time;
+      break;
+    case DelayReference::PUBLISH_DELAY: {
+      // Advance the detection stamp by the update->publish delay (wall-clock elapsed since the last
+      // tracker update). Compensates the publish-side latency without over-extrapolating by the
+      // sensor->tracker pipeline delay (as FULL would).
+      const auto elapsed = current_time - state.last_updated_time;
+      result.object_time =
+        last_tracker_time + (elapsed.seconds() > 0.0 ? elapsed : rclcpp::Duration(0, 0));
+      break;
+    }
+    case DelayReference::ODOMETRY:
+      result.object_time = state.odometry->getLatestEgoPoseTime().value_or(current_time);
+      // If no odometry is available, fall back to the current time.
+      break;
+    case DelayReference::FULL:
+      result.object_time = current_time;
+      break;
+  }
 
   /// Tracker pruning
   state.processor->prune(last_tracker_time);

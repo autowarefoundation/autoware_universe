@@ -7,6 +7,9 @@ autoware_package()
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/trajectory_selector_node.cpp
 )
+generate_parameter_library(${PROJECT_NAME}_param
+  param/parameter_struct.yaml
+)
 
 # autoware_trajectory_validator defines rosidl messages, so ament_target_dependencies
 # enters "modern cmake" mode and silently ignores _INCLUDE_DIRS and _LIBRARIES for it.
@@ -16,15 +19,18 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
 )
 target_link_libraries(${PROJECT_NAME}
   ${autoware_trajectory_validator_LIBRARIES}
+  ${PROJECT_NAME}_param
 )
 
 target_compile_options(${PROJECT_NAME} PUBLIC
   -Wno-error=deprecated-declarations
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::trajectory_selector::TrajectorySelectorNode"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 if(BUILD_TESTING)
@@ -57,6 +63,7 @@ if(BUILD_TESTING)
 
   ament_target_dependencies(test_trajectory_selector_node
     autoware_test_utils
+    rosgraph_msgs
   )
 endif()
 
