@@ -85,6 +85,7 @@
       stop_for_red_light: true
       stop_for_amber_light: false
       treat_amber_light_as_red: false
+      treat_unknown_light_as_red: false
       overshoot_tolerance: 0.0 # [m]
       th_stable_duration_red: 0.2 # [s]
       th_stable_duration_amber: 0.2 # [s]

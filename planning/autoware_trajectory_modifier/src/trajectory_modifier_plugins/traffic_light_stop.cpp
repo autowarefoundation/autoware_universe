@@ -33,6 +33,7 @@ autoware::traffic_light_compliance_checker::Parameters to_checker_params(
   p.jerk_limit = stopping_params.jerk_limit;
   p.crossing_time_limit = tl_stop_p.crossing_time_limit;
   p.treat_amber_light_as_red_light = tl_stop_p.treat_amber_light_as_red;
+  p.treat_unknown_light_as_red_light = tl_stop_p.treat_unknown_light_as_red;
   p.stop_overshoot_margin = tl_stop_p.overshoot_tolerance;
   p.stable_duration_threshold_red = tl_stop_p.th_stable_duration_red;
   p.stable_duration_threshold_amber = tl_stop_p.th_stable_duration_amber;

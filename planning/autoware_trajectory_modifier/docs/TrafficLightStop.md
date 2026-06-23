@@ -71,14 +71,15 @@ The module utilizes the following data from `TrajectoryModifierContext` & `Input
 
 The module parameters are grouped under `traffic_light_stop` section of `trajectory_modifier.param.yaml`
 
-| Parameter name                   | Type   | Default | Description                                                                                                       |
-| -------------------------------- | ------ | ------- | ----------------------------------------------------------------------------------------------------------------- |
-| `stop_margin`                    | double | 0.75    | [m] Distance to keep from stop line (measured from ego front)                                                     |
-| `stop_for_red_light`             | bool   | true    | Flag to enable/disable stopping for red light violation                                                           |
-| `stop_for_amber_light`           | bool   | false   | Flag to enable/disable stopping for amber light violation                                                         |
-| `treat_amber_light_as_red_light` | bool   | false   | When true, amber lights are treated identically to red lights (rejection on intersection regardless of distance). |
-| `overshoot_tolerance`            | double | 0.0     | [m] Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible.     |
-| `th_stable_duration_red`         | double | 0.2     | [s] Minimum duration a RED light must be seen before it is considered active (only when ego is moving).           |
-| `th_stable_duration_amber`       | double | 0.2     | [s] Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving).        |
-| `th_amber_rejection_hysteresis`  | double | 0.5     | [s] Duration to persist an amber rejection state to prevent "flipping" due to minor velocity/distance changes.    |
-| `crossing_time_limit`            | double | 2.75    | [s] Maximum time allowed for the ego vehicle to cross the stop line after an amber light appears.                 |
+| Parameter name                  | Type   | Default | Description                                                                                                       |
+| ------------------------------- | ------ | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| `stop_margin`                   | double | 0.75    | [m] Distance to keep from stop line (measured from ego front)                                                     |
+| `stop_for_red_light`            | bool   | true    | Flag to enable/disable stopping for red light violation                                                           |
+| `stop_for_amber_light`          | bool   | false   | Flag to enable/disable stopping for amber light violation                                                         |
+| `treat_amber_light_as_red`      | bool   | false   | When true, amber lights are treated identically to red lights (rejection on intersection regardless of distance). |
+| `treat_unknown_light_as_red`    | bool   | false   | When true, unknown lights are treated identically to red lights (rejection on intersection).                      |
+| `overshoot_tolerance`           | double | 0.0     | [m] Maximum distance between the stop line and the trajectory stop point to consider the trajectory feasible.     |
+| `th_stable_duration_red`        | double | 0.2     | [s] Minimum duration a RED light must be seen before it is considered active (only when ego is moving).           |
+| `th_stable_duration_amber`      | double | 0.2     | [s] Minimum duration an AMBER light must be seen before it is considered active (only when ego is moving).        |
+| `th_amber_rejection_hysteresis` | double | 0.5     | [s] Duration to persist an amber rejection state to prevent "flipping" due to minor velocity/distance changes.    |
+| `crossing_time_limit`           | double | 2.75    | [s] Maximum time allowed for the ego vehicle to cross the stop line after an amber light appears.                 |

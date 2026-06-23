@@ -226,6 +226,7 @@ protected:
     tl.stop_for_red_light = true;
     tl.stop_for_amber_light = true;
     tl.treat_amber_light_as_red = false;
+    tl.treat_unknown_light_as_red = false;
     tl.overshoot_tolerance = 0.0;
     tl.th_stable_duration_red = 0.0;
     tl.th_stable_duration_amber = 0.0;
@@ -454,4 +455,21 @@ TEST_F(TrafficLightStopIntegrationTest, TrajectoryNotModifiedWithUnknownLight)
   expect_not_modified(
     trajectory, make_default_input(),
     "Unknown light without treat-as-red parameter should not modify trajectory");
+}
+
+TEST_F(TrafficLightStopIntegrationTest, TrajectoryModifiedWithUnknownLightAsRedLight)
+{
+  const lanelet::Id light_id = 302;
+  const double stop_x = 10.0;
+
+  create_and_set_map(light_id, stop_x);
+  set_traffic_light_signal(light_id, TrafficLightElement::UNKNOWN);
+
+  params_.traffic_light_stop.treat_unknown_light_as_red = true;
+  plugin_->update_params(params_);
+
+  auto trajectory = create_straight_trajectory(0.0, 16.0, 10.0);
+  const bool modified = plugin_->modify_trajectory(trajectory, make_default_input(10.0));
+  EXPECT_TRUE(modified)
+    << "Unknown treated as red should insert stop point even when not stoppable";
 }
