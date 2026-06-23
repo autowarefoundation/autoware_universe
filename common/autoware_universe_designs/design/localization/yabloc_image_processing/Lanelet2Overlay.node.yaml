@@ -1,0 +1,43 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: Lanelet2Overlay.node
+package:
+  name: yabloc_image_processing
+  provider: autoware
+launch:
+  plugin: yabloc::lanelet2_overlay::Lanelet2Overlay
+  executable: yabloc_lanelet2_overlay_node
+# interfaces
+subscribers:
+  - name: ground
+    message_type: std_msgs/msg/Float32MultiArray
+  - name: image_raw
+    message_type: sensor_msgs/msg/Image
+  - name: pose
+    message_type: geometry_msgs/msg/PoseStamped
+  - name: projected_line_segments_cloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: camera_info
+    message_type: sensor_msgs/msg/CameraInfo
+  - name: ll2_sign_board
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: ll2_road_marking
+    message_type: sensor_msgs/msg/PointCloud2
+publishers:
+  - name: projected_marker
+    message_type: visualization_msgs/msg/Marker
+    remap_target: ~/debug/projected_marker
+  - name: lanelet2_overlay_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/debug/lanelet2_overlay_image
+# parameters
+param_files: []
+param_values: []
+# processes
+processes:
+  - name: overlay_lanelet2
+    trigger_conditions:
+      - on_input: image_raw
+    outcomes:
+      - to_output: projected_marker
+      - to_output: lanelet2_overlay_image

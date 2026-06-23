@@ -1,0 +1,32 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: GraphSegment.node
+package:
+  name: yabloc_image_processing
+  provider: autoware
+launch:
+  plugin: yabloc::graph_segment::GraphSegment
+  executable: yabloc_graph_segment_node
+# interfaces
+subscribers:
+  - name: image_raw
+    message_type: sensor_msgs/msg/Image
+publishers:
+  - name: mask_image
+    message_type: sensor_msgs/msg/Image
+  - name: segmented_image
+    message_type: sensor_msgs/msg/Image
+    remap_target: ~/debug/segmented_image
+# parameters
+param_files:
+  - name: graph_segment_param
+    default: config/graph_segment.param.yaml
+param_values: []
+# processes
+processes:
+  - name: segment_image
+    trigger_conditions:
+      - on_input: image_raw
+    outcomes:
+      - to_output: mask_image
+      - to_output: segmented_image
