@@ -21,14 +21,14 @@
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <tier4_control_msgs/msg/constant_jerk_deceleration_trigger.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_control_msgs/msg/jerk_constant_deceleration_trigger.hpp>
 #include <tier4_system_msgs/srv/change_topic_relay_control.hpp>
 
 namespace autoware::command_mode_switcher
 {
 
-using tier4_control_msgs::msg::JerkConstantDecelerationTrigger;
+using tier4_control_msgs::msg::ConstantJerkDecelerationTrigger;
 
 class MainEcuInLaneEmergencyStopSwitcher : public CommandPlugin
 {
@@ -45,9 +45,9 @@ public:
   MrmState update_mrm_state() override;
 
 private:
-  void publish_jerk_constant_deceleration_trigger(bool turn_on);
+  void publish_constant_jerk_deceleration_trigger(bool turn_on);
   void request_topic_relay_control(
-    bool turn_on, rclcpp::Client<tier4_system_msgs::srv::ChangeTopicRelayControl>::SharedPtr client,
+    bool relay_on, rclcpp::Client<tier4_system_msgs::srv::ChangeTopicRelayControl>::SharedPtr client,
     const std::string & srv_name);
   bool is_stopped();
 
@@ -60,7 +60,7 @@ private:
     int64_t service_timeout_ms;
   };
 
-  rclcpp::Publisher<JerkConstantDecelerationTrigger>::SharedPtr pub_trigger_;
+  rclcpp::Publisher<ConstantJerkDecelerationTrigger>::SharedPtr pub_trigger_;
   std::unique_ptr<autoware_utils_rclcpp::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>>
     sub_odom_;
   rclcpp::CallbackGroup::SharedPtr client_relay_trajectory_group_;

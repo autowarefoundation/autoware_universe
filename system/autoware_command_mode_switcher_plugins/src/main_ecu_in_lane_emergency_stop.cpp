@@ -19,8 +19,8 @@ namespace autoware::command_mode_switcher
 
 void MainEcuInLaneEmergencyStopSwitcher::initialize()
 {
-  pub_trigger_ = node_->create_publisher<JerkConstantDecelerationTrigger>(
-    "/control/jerk_constant_deceleration_trigger", rclcpp::QoS{1});
+  pub_trigger_ = node_->create_publisher<ConstantJerkDecelerationTrigger>(
+    "/control/constant_jerk_deceleration_trigger", rclcpp::QoS{1});
   sub_odom_ =
     std::make_unique<autoware_utils_rclcpp::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>>(
       node_, "/localization/kinematic_state");
@@ -55,7 +55,7 @@ SourceState MainEcuInLaneEmergencyStopSwitcher::update_source_state(bool request
   if (!request && mrm_state_ == MrmState::Normal) return SourceState{false, true};
 
   if (request) {
-    publish_jerk_constant_deceleration_trigger(request);
+    publish_constant_jerk_deceleration_trigger(request);
     // TODO(TetsuKawa): When request_topic_relay_control fails (timeout or service error), we
     // currently still return {true, false} and proceed with in_lane_stop. We need to decide
     // whether relay failure should block the state transition (i.e., return {false, false} or
@@ -69,7 +69,7 @@ SourceState MainEcuInLaneEmergencyStopSwitcher::update_source_state(bool request
     mrm_state_ = MrmState::Operating;
     return SourceState{true, false};
   } else {
-    publish_jerk_constant_deceleration_trigger(request);
+    publish_constant_jerk_deceleration_trigger(request);
     if (params_.enable_trajectory_relay)
       request_topic_relay_control(true, client_relay_trajectory_, "trajectory");
     if (params_.enable_pose_with_covariance_relay)
@@ -89,9 +89,9 @@ MrmState MainEcuInLaneEmergencyStopSwitcher::update_mrm_state()
   return mrm_state_;
 }
 
-void MainEcuInLaneEmergencyStopSwitcher::publish_jerk_constant_deceleration_trigger(bool turn_on)
+void MainEcuInLaneEmergencyStopSwitcher::publish_constant_jerk_deceleration_trigger(bool turn_on)
 {
-  auto trigger = JerkConstantDecelerationTrigger();
+  auto trigger = ConstantJerkDecelerationTrigger();
   trigger.stamp = node_->now();
   trigger.trigger = turn_on;
   trigger.target_acceleration = params_.target_acceleration;

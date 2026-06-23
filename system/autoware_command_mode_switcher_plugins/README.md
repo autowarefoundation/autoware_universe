@@ -92,11 +92,11 @@ The state transitions in `update_source_state(bool request)` are as follows:
 
 `update_mrm_state()` monitors the odometry from `/localization/kinematic_state` while in the `Operating` state, and transitions to `Succeeded` when the vehicle speed falls below 0.001 m/s.
 
-**2. Deceleration Command (`publish_jerk_constant_deceleration_trigger`)**
+**2. Deceleration Command (`publish_constant_jerk_deceleration_trigger`)**
 
-Publishes a trigger message to the `jerk_constant_deceleration_controller` node specifying the target deceleration and jerk values. An ON trigger is published when the switcher is selected, and an OFF trigger is published to cancel when the switcher is deselected.
+Publishes a trigger message to the `constant_jerk_deceleration_controller` node specifying the target deceleration and jerk values. An ON trigger is published when the switcher is selected, and an OFF trigger is published to cancel when the switcher is deselected.
 
-- Publisher: `/control/jerk_constant_deceleration_trigger`
+- Publisher: `/control/constant_jerk_deceleration_trigger`
 - The deceleration profile is specified via the `target_acceleration` and `target_jerk` parameters.
 - For emergency stop, values corresponding to hard braking are expected to be configured.
 
@@ -111,13 +111,13 @@ During normal autonomous driving, in_lane_stop continuously captures `pose_with_
 
 #### Parameters
 
-| Parameter                           | Type     | Description                                                                   |
-| ----------------------------------- | -------- | ----------------------------------------------------------------------------- |
-| `target_acceleration`               | `double` | Target deceleration commanded to jerk_constant_deceleration_controller [m/s²] |
-| `target_jerk`                       | `double` | Target jerk commanded to jerk_constant_deceleration_controller [m/s³]         |
-| `enable_trajectory_relay`           | `bool`   | Enable/disable trajectory relay control                                       |
-| `enable_pose_with_covariance_relay` | `bool`   | Enable/disable pose_with_covariance relay control                             |
-| `service_timeout_ms`                | `int64`  | Timeout for service calls [ms]                                                |
+| Parameter | Type | Description |
+|---|---|---|
+| `target_acceleration` | `double` | Target deceleration commanded to constant_jerk_deceleration_controller [m/s²] |
+| `target_jerk` | `double` | Target jerk commanded to constant_jerk_deceleration_controller [m/s³] |
+| `enable_trajectory_relay` | `bool` | Enable/disable trajectory relay control |
+| `enable_pose_with_covariance_relay` | `bool` | Enable/disable pose_with_covariance relay control |
+| `service_timeout_ms` | `int64` | Timeout for service calls [ms] |
 
 ---
 
