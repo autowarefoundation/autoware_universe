@@ -28,12 +28,14 @@
 #include <chrono>
 #include <memory>
 #include <optional>
+#include <string>
 #include <thread>
 #include <vector>
 
 using namespace std::chrono_literals;
 
-static autoware_map_msgs::msg::LaneletMapBin make_map_bin(const std::string & subtype)
+static autoware_map_msgs::msg::LaneletMapBin make_map_bin(
+  const std::string & subtype, const std::optional<double> map_longitudinal_scale_factor = std::nullopt)
 {
   auto map = std::make_shared<lanelet::LaneletMap>();
   lanelet::Polygon3d poly(
@@ -46,6 +48,10 @@ static autoware_map_msgs::msg::LaneletMapBin make_map_bin(const std::string & su
     });
   poly.setAttribute(lanelet::AttributeName::Type, "feature_environment_specify");
   poly.setAttribute(lanelet::AttributeName::Subtype, subtype);
+  if (map_longitudinal_scale_factor.has_value()) {
+    poly.setAttribute(
+      "longitudinal_scale_factor", std::to_string(map_longitudinal_scale_factor.value()));
+  }
   map->add(poly);
   return autoware::experimental::lanelet2_utils::to_autoware_map_msgs(map);
 }
@@ -178,7 +184,7 @@ TEST_F(VelocityScaleSelectorTest, test_point_outside_polygon)
   EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0);
 }
 
-TEST_F(VelocityScaleSelectorTest, test_point_inside_polygon_known_subtype)
+TEST_F(VelocityScaleSelectorTest, test_point_inside_polygon_param_fallback)
 {
   create_node(base_options());
 
@@ -190,6 +196,20 @@ TEST_F(VelocityScaleSelectorTest, test_point_inside_polygon_known_subtype)
 
   ASSERT_TRUE(spin_until_result());
   EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0 * 1.0075);
+}
+
+TEST_F(VelocityScaleSelectorTest, test_point_inside_polygon_map_attribute)
+{
+  create_node(base_options());
+
+  helper_->publish_map(make_map_bin("uniform_road", 1.02));
+  std::this_thread::sleep_for(100ms);
+
+  helper_->publish_pose(0.0, 0.0);
+  helper_->publish_twist(10.0);
+
+  ASSERT_TRUE(spin_until_result());
+  EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0 * 1.02);
 }
 
 TEST_F(VelocityScaleSelectorTest, test_point_inside_polygon_unknown_subtype)
@@ -204,6 +224,25 @@ TEST_F(VelocityScaleSelectorTest, test_point_inside_polygon_unknown_subtype)
 
   ASSERT_TRUE(spin_until_result());
   EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0);
+}
+
+TEST_F(VelocityScaleSelectorTest, test_map_attribute_without_param_fallback)
+{
+  auto opts = rclcpp::NodeOptions()
+    .automatically_declare_parameters_from_overrides(true)
+    .append_parameter_override("default_environment_id", 0)
+    .append_parameter_override("default_longitudinal_scale_factor", 1.0)
+    .append_parameter_override("area_subtype_uniform_road.environment_id", 1);
+  create_node(opts);
+
+  helper_->publish_map(make_map_bin("uniform_road", 1.05));
+  std::this_thread::sleep_for(100ms);
+
+  helper_->publish_pose(0.0, 0.0);
+  helper_->publish_twist(10.0);
+
+  ASSERT_TRUE(spin_until_result());
+  EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0 * 1.05);
 }
 
 int main(int argc, char ** argv)
