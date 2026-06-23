@@ -26,7 +26,7 @@
 
 // ROS-message conversion helpers that depend only on message types and header-only math (no rclcpp,
 // no tf2_ros). They let downstream code keep header stamps and transforms without pulling in the
-// ROS runtime, so the consuming logic can stay ROS-runtime-free and deterministic.
+// ROS runtime.
 namespace autoware::pointcloud_preprocessor::utils
 {
 
