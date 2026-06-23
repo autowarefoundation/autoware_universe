@@ -33,7 +33,8 @@ constexpr double INVALID_SCORE = -1.0;
 double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> & polygons)
 {
   return std::accumulate(
-    polygons.begin(), polygons.end(), 0.0, [](double acc, autoware_utils_geometry::Polygon2d p) {
+    polygons.begin(), polygons.end(), 0.0,
+    [](double acc, const autoware_utils_geometry::Polygon2d & p) {
       return acc + boost::geometry::area(p);
     });
 }
