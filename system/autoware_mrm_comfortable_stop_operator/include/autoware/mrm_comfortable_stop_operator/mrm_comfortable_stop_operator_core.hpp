@@ -54,8 +54,8 @@ private:
   AUTOWARE_SERVICE_PTR(tier4_system_msgs::srv::OperateMrm) service_operation_;
 
   void operateComfortableStop(
-    const tier4_system_msgs::srv::OperateMrm::Request::SharedPtr request,
-    const tier4_system_msgs::srv::OperateMrm::Response::SharedPtr response);
+    AUTOWARE_SERVICE_REQUEST_CONST_PTR(tier4_system_msgs::srv::OperateMrm) request,
+    AUTOWARE_SERVICE_RESPONSE_PTR(tier4_system_msgs::srv::OperateMrm) response);
 
   rcl_interfaces::msg::SetParametersResult onParameter(
     const std::vector<rclcpp::Parameter> & parameters);
