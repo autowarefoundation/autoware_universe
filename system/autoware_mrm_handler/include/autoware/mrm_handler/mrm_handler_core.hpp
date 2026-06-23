@@ -79,31 +79,18 @@ private:
   // type
   enum RequestType { CALL, CANCEL };
 
-  // Cross-build helpers: the agnocast wrapper's polling-subscriber / client creation differs
-  // between ENABLE_AGNOCAST=1 (node member, takes rclcpp::QoS) and =0 (rclcpp::Node, which on
-  // Humble takes rmw_qos_profile_t and has no create_polling_subscriber member). Centralize the
-  // branch here so the constructor stays mode-agnostic.
   template <typename MessageT>
   AUTOWARE_POLLING_SUBSCRIBER_PTR(MessageT)
   create_polling_sub(const std::string & topic_name)
   {
-#ifdef USE_AGNOCAST_ENABLED
     return this->create_polling_subscriber<MessageT>(topic_name, rclcpp::QoS{1});
-#else
-    return AUTOWARE_CREATE_POLLING_SUBSCRIBER(MessageT, topic_name, rclcpp::QoS{1});
-#endif
   }
 
   template <typename ServiceT>
   AUTOWARE_CLIENT_PTR(ServiceT)
   create_mrm_client(const std::string & service_name, rclcpp::CallbackGroup::SharedPtr group)
   {
-#ifdef USE_AGNOCAST_ENABLED
     return this->create_client<ServiceT>(service_name, rclcpp::ServicesQoS(), group);
-#else
-    return this->create_client<ServiceT>(
-      service_name, rclcpp::ServicesQoS().get_rmw_qos_profile(), group);
-#endif
   }
 
   // Subscribers with callback
