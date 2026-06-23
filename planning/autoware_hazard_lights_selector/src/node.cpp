@@ -41,19 +41,19 @@ HazardLightsSelector::HazardLightsSelector(const rclcpp::NodeOptions & node_opti
       "output/hazard_lights_command", 1);
 
   // Timer
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), std::chrono::milliseconds(1000 / params_.update_rate),
     std::bind(&HazardLightsSelector::on_timer, this));
 }
 
 void HazardLightsSelector::on_hazard_lights_command_from_planning(
-  const autoware_vehicle_msgs::msg::HazardLightsCommand::SharedPtr msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_vehicle_msgs::msg::HazardLightsCommand) & msg)
 {
   hazard_lights_command_from_planning_ = msg;
 }
 
 void HazardLightsSelector::on_hazard_lights_command_from_system(
-  const autoware_vehicle_msgs::msg::HazardLightsCommand::SharedPtr msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_vehicle_msgs::msg::HazardLightsCommand) & msg)
 {
   hazard_lights_command_from_system_ = msg;
 }
@@ -61,23 +61,23 @@ void HazardLightsSelector::on_hazard_lights_command_from_system(
 void HazardLightsSelector::on_timer()
 {
   using autoware_vehicle_msgs::msg::HazardLightsCommand;
-  auto hazard_lights_command = HazardLightsCommand();
-  hazard_lights_command.stamp = this->now();
-  hazard_lights_command.command = HazardLightsCommand::DISABLE;
+  auto hazard_lights_command = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_hazard_lights_command_);
+  hazard_lights_command->stamp = this->now();
+  hazard_lights_command->command = HazardLightsCommand::DISABLE;
 
   if (hazard_lights_command_from_planning_) {
     if (hazard_lights_command_from_planning_->command == HazardLightsCommand::ENABLE) {
-      hazard_lights_command.command = HazardLightsCommand::ENABLE;
+      hazard_lights_command->command = HazardLightsCommand::ENABLE;
     }
   }
 
   if (hazard_lights_command_from_system_) {
     if (hazard_lights_command_from_system_->command == HazardLightsCommand::ENABLE) {
-      hazard_lights_command.command = HazardLightsCommand::ENABLE;
+      hazard_lights_command->command = HazardLightsCommand::ENABLE;
     }
   }
 
-  pub_hazard_lights_command_->publish(hazard_lights_command);
+  pub_hazard_lights_command_->publish(std::move(hazard_lights_command));
 }
 
 }  // namespace autoware::hazard_lights_selector
