@@ -23,7 +23,7 @@ namespace autoware::driving_mode_manager
 class DefaultPlugin : public Plugin
 {
 public:
-  AutowareMode decide(const RequestModes & status, const AutowareModeSet & availables) override;
+  AutowareMode decide(const RequestModes & modes, const AutowareModeSet & availables) override;
   void setup(DrivingModeConfigInterface & config) const override;
 };
 
