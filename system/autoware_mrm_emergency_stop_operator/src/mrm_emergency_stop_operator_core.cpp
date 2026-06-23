@@ -126,6 +126,8 @@ void MrmEmergencyStopOperator::publishStatus() const
 
 void MrmEmergencyStopOperator::publishMrmState() const
 {
+  // See the following page for the definition of the MRM state.
+  // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture-v1/interfaces/ad-api/features/fail-safe/#mrm-state
   using tier4_system_msgs::msg::DrivingModeMrmStateItem;
   const auto convert_mrm_state = [](const uint8_t state) {
     // clang-format off
