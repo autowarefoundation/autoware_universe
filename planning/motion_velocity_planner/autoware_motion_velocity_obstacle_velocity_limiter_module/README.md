@@ -164,7 +164,7 @@ For example a value of `1` means all trajectory points will be evaluated while a
 | `obstacles.dynamic_obstacles_buffer`                | float       | buffer around dynamic obstacles used when masking an obstacle in order to prevent noise.                                                |
 | `obstacles.dynamic_obstacles_min_vel`               | float       | velocity above which to mask a dynamic obstacle.                                                                                        |
 | `obstacles.static_map_tags`                         | string list | linestring of the lanelet map with this tags are used as obstacles.                                                                     |
-| `obstacles.filter_envelope`                         | bool        | wether to use the safety envelope to filter the dynamic obstacles source.                                                               |
+| `obstacles.filter_envelope`                         | bool        | whether to use the safety envelope to filter the dynamic obstacles source.                                                               |
 
 ## Assumptions / Known limits
 
