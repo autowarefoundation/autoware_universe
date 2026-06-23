@@ -143,8 +143,11 @@ void TrajectorySelectorNode::concatenate_and_validate()
 void TrajectorySelectorNode::update_parameters()
 {
   if (selector_params_listener_.is_old(selector_params_)) {
-    selector_params_ = selector_params_listener_.get_params();
-    update_fallback_timer();
+    const auto new_params = selector_params_listener_.get_params();
+    const auto is_new_fallback_timer_period =
+      new_params.fallback_period_ms != selector_params_.fallback_period_ms;
+    selector_params_ = new_params;
+    if (is_new_fallback_timer_period) update_fallback_timer();
 
     RCLCPP_INFO(get_logger(), "Trajectory Selector parameters are updated.");
   }

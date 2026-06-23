@@ -10,7 +10,10 @@
           "type": "integer",
           "default": 150,
           "minimum": 1,
-          "description": "fallback timer period in milliseconds"
+          "description": "fallback timer period in milliseconds",
+          "validation": {
+            "gt_eq<>": 100
+          }
         }
       },
       "required": ["fallback_period_ms"],
