@@ -106,13 +106,10 @@ public:
     const double & vel_long, const double & vel_lat, const std::array<double, 36> & twist_cov,
     const double & length);
 
-  // Front/rear wheel-anchor update. The observed edge FACE center (x, y) is measured directly as an
-  // exact linear function of the two-point state (face = (1 + gamma) * p_near - gamma * p_far,
-  // since the body-axis offset gamma * L * u_hat equals gamma * (p2 - p1)). The measurement
-  // constrains a blend of both endpoints, so the gain splits the correction between translation and
-  // rotation via the prior covariance, letting the body rotate about the observed end instead of
-  // being rigidly translated (which froze yaw). measure_front == true anchors on the front endpoint
-  // p2 (gamma_front); false anchors on the rear endpoint p1 (gamma_rear).
+  // Front/rear wheel-anchor update from the observed edge face center (x, y). Because the
+  // measurement constrains a blend of both endpoints, the gain lets the body rotate about the
+  // observed end rather than translating rigidly (which froze yaw). measure_front selects the
+  // front endpoint p2 (gamma_front) vs the rear endpoint p1 (gamma_rear).
   bool updateStatePoseWheel(
     const double & x, const double & y, const std::array<double, 36> & pose_cov,
     const bool measure_front);

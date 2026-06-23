@@ -229,7 +229,7 @@ double correctWheelAnchorLateral(
   // Project the tracker center (0) into the dead-zone.
   const double target = std::clamp(0.0, low, high);
 
-  // std = half the dead-zone width.
+  // Variance = (dead-zone half-width)^2: the std equals the half-width by which the center may move.
   var_lat = half_dead_zone * half_dead_zone;
 
   return target - anchor_lateral;

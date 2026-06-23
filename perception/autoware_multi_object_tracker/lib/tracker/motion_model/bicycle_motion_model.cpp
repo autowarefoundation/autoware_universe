@@ -257,7 +257,7 @@ bool BicycleMotionModel::updateStatePoseWheel(
   Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y;
 
-  // Measure the edge FACE center as an exact linear blend of the two endpoints (true KF):
+  // Measure the edge face center as an exact linear blend of the two endpoints:
   // face = (1 + gamma) * p_near - gamma * p_far
   Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   if (measure_front) {
@@ -535,12 +535,9 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
 
   // Process noise covariance Q
   //
-  // Yaw-rate (heading) process noise obeys the nonholonomic constraint: a vehicle cannot change
-  // heading without translating (w = vel_long * tan(steer) / wheel_base), so the yaw-rate
-  // uncertainty must vanish as vel_long -> 0. A stationary vehicle is physically incapable of
-  // turning, hence NO heading noise may be injected at standstill. Injecting a constant floor there
-  // ratchets up the front-point lateral variance (the heading noise feeds q_cov_lat2 -> Q on
-  // X2/Y2 only), which a rear/front partial update cannot pull back -> standstill yaw jitter.
+  // Nonholonomic constraint: heading cannot change without translating, so yaw-rate uncertainty
+  // must vanish at standstill. A constant floor there inflates the front-point lateral variance
+  // (heading noise feeds Q on X2/Y2 only), which a partial update cannot pull back -> yaw jitter.
   const double vel_long_abs = std::abs(vel_long);
   constexpr double vel_long_eps = 1e-3;  // [m/s] guard against division by zero
   /* physical yaw-rate bound, limited by the tighter of the two:
@@ -550,10 +547,9 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   const double q_stddev_yaw_rate_phys = std::min(
     motion_params_.q_stddev_acc_lat / std::max(vel_long_abs, vel_long_eps),
     vel_long_abs * std::sin(motion_params_.q_max_slip_angle) / wheel_base);  // [rad/s]
-  // Ramp the configured floor in with speed instead of applying it unconditionally, so the floor
-  // -> 0 at standstill (no heading information exists to be tracked) and only reaches its full
-  // value once the vehicle is clearly moving. Above vel_ref this reproduces the original clamp
-  // behavior.
+  // Ramp the configured floor in linearly with speed (0 at standstill, full at vel_ref) instead of
+  // applying it unconditionally. NOTE: below vel_ref the floor is lower than the original code,
+  // which applied the full floor for any vel_long > 0.01.
   constexpr double vel_ref = 1.0;  // [m/s] speed at which the yaw-rate floor reaches full value
   const double yaw_rate_floor =
     motion_params_.q_stddev_yaw_rate_min * std::clamp(vel_long_abs / vel_ref, 0.0, 1.0);
