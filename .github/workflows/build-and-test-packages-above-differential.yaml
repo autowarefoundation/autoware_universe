@@ -109,6 +109,7 @@ jobs:
           packages-above-repos: packages_above.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}-above
           build-pre-command: ${{ inputs.build-pre-command }}
+          underlay-workspace: /opt/autoware
 
       - name: Show ccache stats after build
         run: du -sh ${CCACHE_DIR} && ccache -s
@@ -123,6 +124,7 @@ jobs:
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
           build-depends-repos: build_depends.repos
           packages-above-repos: packages_above.repos
+          underlay-workspace: /opt/autoware
 
       - name: Show disk space after the tasks
         run: df -h
