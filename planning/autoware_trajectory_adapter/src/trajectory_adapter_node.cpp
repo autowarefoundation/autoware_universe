@@ -15,6 +15,7 @@
 #include "trajectory_adapter_node.hpp"
 
 #include <memory>
+#include <utility>
 
 namespace autoware::trajectory_adapter
 {
