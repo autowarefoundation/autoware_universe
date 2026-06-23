@@ -44,6 +44,12 @@ VelocityScaleSelector::VelocityScaleSelector(const rclcpp::NodeOptions & options
   param_.default_longitudinal_scale_factor =
     this->get_parameter("default_longitudinal_scale_factor").as_double();
 
+  if (!this->has_parameter("map_longitudinal_scale_factor_attribute")) {
+    this->declare_parameter<std::string>("map_longitudinal_scale_factor_attribute", "longitudinal_scale_factor");
+  }
+  param_.map_longitudinal_scale_factor_attribute =
+    this->get_parameter("map_longitudinal_scale_factor_attribute").as_string();
+
   const auto param_names = this->list_parameters({}, 0);
   for (const auto & name : param_names.names) {
     if (name.find("area_subtype_") == 0) {
@@ -60,7 +66,7 @@ VelocityScaleSelector::VelocityScaleSelector(const rclcpp::NodeOptions & options
     }
   }
 
-  // --- per-environment longitudinal scale factor parameters ---
+  // --- per-environment longitudinal scale factor parameters (fallback when map attribute is absent) ---
   // Format: environment_<id>_longitudinal_scale_factor
   const std::string env_prefix = "environment_";
   const std::string env_suffix = "_longitudinal_scale_factor";
@@ -118,28 +124,51 @@ void VelocityScaleSelector::on_map(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
   is_map_ready_ = true;
 
-  area_polygons_.clear();
+  areas_.clear();
   constexpr auto kAreaType = "feature_environment_specify";
+  size_t areas_with_map_factor = 0;
   for (const auto & polygon : lanelet_map_ptr_->polygonLayer) {
     if (std::string{polygon.attributeOr(lanelet::AttributeName::Type, "none")} != kAreaType) {
       continue;
     }
-    const std::string subtype{polygon.attributeOr(lanelet::AttributeName::Subtype, "none")};
 
-    BoostPolygon boost_poly;
+    EnvironmentArea area;
+    area.subtype = polygon.attributeOr(lanelet::AttributeName::Subtype, "none");
+
     for (const lanelet::ConstPoint3d & p : polygon) {
-      boost_poly.outer().push_back(BoostPoint(p.x(), p.y()));
+      area.polygon.outer().push_back(BoostPoint(p.x(), p.y()));
     }
-    if (!boost_poly.outer().empty()) {
-      boost_poly.outer().push_back(boost_poly.outer().front());
+    if (!area.polygon.outer().empty()) {
+      area.polygon.outer().push_back(area.polygon.outer().front());
     }
-    boost::geometry::correct(boost_poly);
-    area_polygons_.emplace(subtype, boost_poly);
+    boost::geometry::correct(area.polygon);
+
+    const std::string factor_str =
+      polygon.attributeOr(param_.map_longitudinal_scale_factor_attribute, "");
+    if (!factor_str.empty()) {
+      try {
+        area.map_longitudinal_scale_factor = std::stod(factor_str);
+        ++areas_with_map_factor;
+        RCLCPP_INFO(
+          this->get_logger(),
+          "Area subtype '%s' has map %s = %f", area.subtype.c_str(),
+          param_.map_longitudinal_scale_factor_attribute.c_str(),
+          area.map_longitudinal_scale_factor.value());
+      } catch (const std::exception &) {
+        RCLCPP_WARN(
+          this->get_logger(), "Invalid %s '%s' on area subtype '%s'; using parameter fallback",
+          param_.map_longitudinal_scale_factor_attribute.c_str(), factor_str.c_str(),
+          area.subtype.c_str());
+      }
+    }
+
+    areas_.push_back(area);
   }
 
   RCLCPP_INFO(
-    this->get_logger(), "Map loaded: %zu lanelets, %zu velocity-scale-selector areas",
-    lanelet_map_ptr_->laneletLayer.size(), area_polygons_.size());
+    this->get_logger(),
+    "Map loaded: %zu lanelets, %zu velocity-scale-selector areas (%zu with map longitudinal_scale_factor)",
+    lanelet_map_ptr_->laneletLayer.size(), areas_.size(), areas_with_map_factor);
 }
 
 void VelocityScaleSelector::on_pose(
@@ -153,7 +182,9 @@ void VelocityScaleSelector::on_pose(
 void VelocityScaleSelector::on_twist(
   const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr msg)
 {
-  int32_t env_id = param_.default_environment_id;
+  AreaClassification classification;
+  classification.environment_id = param_.default_environment_id;
+  classification.longitudinal_scale_factor = param_.default_longitudinal_scale_factor;
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -165,43 +196,61 @@ void VelocityScaleSelector::on_twist(
       RCLCPP_WARN_THROTTLE(
         this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
     } else {
-      env_id = classify_environment(latest_pose_position_);
+      classification = classify_area(latest_pose_position_);
     }
   }
 
-  const double longitudinal_scale_factor = get_longitudinal_scale_factor(env_id);
-
   auto out = *msg;
-  out.twist.twist.linear.x *= longitudinal_scale_factor;
+  out.twist.twist.linear.x *= classification.longitudinal_scale_factor;
   pub_twist_->publish(out);
 
   autoware_internal_debug_msgs::msg::Int32Stamped env_msg;
   env_msg.stamp = msg->header.stamp;
-  env_msg.data = env_id;
+  env_msg.data = classification.environment_id;
   pub_env_id_->publish(env_msg);
 
   autoware_internal_debug_msgs::msg::Float64Stamped factor_msg;
   factor_msg.stamp = msg->header.stamp;
-  factor_msg.data = longitudinal_scale_factor;
+  factor_msg.data = classification.longitudinal_scale_factor;
   pub_longitudinal_scale_factor_->publish(factor_msg);
 }
 
-int32_t VelocityScaleSelector::classify_environment(
+VelocityScaleSelector::AreaClassification VelocityScaleSelector::classify_area(
   const geometry_msgs::msg::Point & point) const
 {
   const BoostPoint bp(point.x, point.y);
-  for (const auto & [subtype, polygon] : area_polygons_) {
-    if (boost::geometry::within(bp, polygon)) {
-      const auto it = param_.area_subtype_to_environment_id.find(subtype);
-      if (it != param_.area_subtype_to_environment_id.end()) {
-        return it->second;
-      }
+  for (const auto & area : areas_) {
+    if (!boost::geometry::within(bp, area.polygon)) {
+      continue;
     }
+
+    AreaClassification result;
+    result.environment_id = get_environment_id_for_subtype(area.subtype);
+    if (area.map_longitudinal_scale_factor.has_value()) {
+      result.longitudinal_scale_factor = area.map_longitudinal_scale_factor.value();
+    } else {
+      result.longitudinal_scale_factor =
+        get_longitudinal_scale_factor_for_env_id(result.environment_id);
+    }
+    return result;
+  }
+
+  AreaClassification result;
+  result.environment_id = param_.default_environment_id;
+  result.longitudinal_scale_factor = param_.default_longitudinal_scale_factor;
+  return result;
+}
+
+int32_t VelocityScaleSelector::get_environment_id_for_subtype(const std::string & subtype) const
+{
+  const auto it = param_.area_subtype_to_environment_id.find(subtype);
+  if (it != param_.area_subtype_to_environment_id.end()) {
+    return it->second;
   }
   return param_.default_environment_id;
 }
 
-double VelocityScaleSelector::get_longitudinal_scale_factor(int32_t env_id) const
+double VelocityScaleSelector::get_longitudinal_scale_factor_for_env_id(int32_t env_id) const
 {
   const auto it = param_.environment_longitudinal_scale_factor_map.find(env_id);
   if (it != param_.environment_longitudinal_scale_factor_map.end()) {

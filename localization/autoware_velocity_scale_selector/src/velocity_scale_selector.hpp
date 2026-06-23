@@ -27,11 +27,12 @@
 
 #include <lanelet2_core/LaneletMap.h>
 
-#include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace autoware::velocity_scale_selector
 {
@@ -42,18 +43,36 @@ public:
   explicit VelocityScaleSelector(const rclcpp::NodeOptions & options);
 
 private:
+  using BoostPoint = boost::geometry::model::d2::point_xy<double>;
+  using BoostPolygon = boost::geometry::model::polygon<BoostPoint>;
+
+  struct EnvironmentArea
+  {
+    BoostPolygon polygon;
+    std::string subtype;
+    std::optional<double> map_longitudinal_scale_factor;
+  };
+
+  struct AreaClassification
+  {
+    int32_t environment_id{0};
+    double longitudinal_scale_factor{1.0};
+  };
+
   void on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg);
   void on_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg);
   void on_twist(const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr msg);
 
-  int32_t classify_environment(const geometry_msgs::msg::Point & point) const;
-  double get_longitudinal_scale_factor(int32_t env_id) const;
+  AreaClassification classify_area(const geometry_msgs::msg::Point & point) const;
+  double get_longitudinal_scale_factor_for_env_id(int32_t env_id) const;
+  int32_t get_environment_id_for_subtype(const std::string & subtype) const;
 
   struct Param
   {
     std::unordered_map<std::string, int32_t> area_subtype_to_environment_id;
     int32_t default_environment_id{0};
     double default_longitudinal_scale_factor{1.0};
+    std::string map_longitudinal_scale_factor_attribute{"longitudinal_scale_factor"};
     std::unordered_map<int32_t, double> environment_longitudinal_scale_factor_map;
   } param_;
 
@@ -63,9 +82,7 @@ private:
   bool pose_received_{false};
   geometry_msgs::msg::Point latest_pose_position_;
 
-  using BoostPoint = boost::geometry::model::d2::point_xy<double>;
-  using BoostPolygon = boost::geometry::model::polygon<BoostPoint>;
-  std::multimap<std::string, BoostPolygon> area_polygons_;
+  std::vector<EnvironmentArea> areas_;
 
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_map_;
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr sub_pose_;

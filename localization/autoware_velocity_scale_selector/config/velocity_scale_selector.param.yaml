@@ -7,13 +7,19 @@
     # Applied as: v_out = v_in * longitudinal_scale_factor
     default_longitudinal_scale_factor: 1.0
 
-    # Area subtype to environment ID mapping
+    # Lanelet2 polygon attribute name for per-area longitudinal scale factor.
+    # Example OSM tag on feature_environment_specify polygon:
+    #   longitudinal_scale_factor: 1.0075
+    map_longitudinal_scale_factor_attribute: longitudinal_scale_factor
+
+    # Area subtype to environment ID mapping (used for debug and param fallback)
     # The lanelet2 polygon type must be "feature_environment_specify"
     area_subtype_uniform_road:
       environment_id: 1
     area_subtype_feature_poor_road:
       environment_id: 2
 
-    # Longitudinal scale factor per environment_id
-    environment_1_longitudinal_scale_factor: 1.0075
+    # Fallback longitudinal scale factor per environment_id when the map polygon
+    # does not define map_longitudinal_scale_factor_attribute.
+    environment_1_longitudinal_scale_factor: 1.0
     environment_2_longitudinal_scale_factor: 1.0
