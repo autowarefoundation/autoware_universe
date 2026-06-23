@@ -51,13 +51,11 @@ std::string trim(std::string & s)
 
 /**
  * @brief Reads a CSV file and returns a vector of rows, where each row is a vector of trimmed
- * strings.
+ * strings. The first line is always treated as a header and skipped.
  * @param filename Path to the file.
- * @param skip_header_lines Number of lines to skip at the top.
  * @return Parsed data that contains parsed strings of each line.
  */
-std::optional<std::vector<std::vector<std::string>>> read_csv(
-  const std::string & filename, uint32_t skip_header_lines)
+std::optional<std::vector<std::vector<std::string>>> read_csv(const std::string & filename)
 {
   std::ifstream file(filename);
   if (!file.is_open()) {
@@ -67,15 +65,11 @@ std::optional<std::vector<std::vector<std::string>>> read_csv(
 
   std::vector<std::vector<std::string>> parsed_strings;
   std::string line;
-  uint32_t current_line = 0;
+
+  // skip the header line
+  std::getline(file, line);
 
   while (std::getline(file, line)) {
-    // skip header lines
-    if (current_line < skip_header_lines) {
-      current_line++;
-      continue;
-    }
-
     // remove comments
     // '#' is widely used as starting symbol of comment in csv, but it is not an official rule
     // i.e. RFC 4180 does not mention this feature
@@ -104,8 +98,6 @@ std::optional<std::vector<std::vector<std::string>>> read_csv(
     if (!row.empty()) {
       parsed_strings.push_back(row);
     }
-
-    current_line++;
   }
 
   return parsed_strings;
@@ -165,10 +157,9 @@ std::vector<std::string> read_label_file(const std::string & label_path)
   return roi_class_name_list;
 }
 
-std::vector<Colormap> load_segmentation_colormap(
-  const std::string & file_name, uint32_t skip_header_lines)
+std::vector<Colormap> load_segmentation_colormap(const std::string & file_name)
 {
-  auto rows = read_csv(file_name, skip_header_lines);
+  auto rows = read_csv(file_name);
   // check loaded status
   if (!rows) {
     std::stringstream error_msg;
@@ -210,10 +201,9 @@ std::vector<Colormap> load_segmentation_colormap(
   return semseg_color_map;
 }
 
-std::unordered_map<std::string, int> load_label_id_remap_file(
-  const std::string & file_name, uint32_t skip_header_lines)
+std::unordered_map<std::string, int> load_label_id_remap_file(const std::string & file_name)
 {
-  auto rows = read_csv(file_name, skip_header_lines);
+  auto rows = read_csv(file_name);
   if (!rows) {
     std::stringstream error_msg;
     error_msg << "Could not open the label map file: " << file_name;
@@ -271,27 +261,23 @@ LabelMaps load_label_maps(
   LabelMaps label_maps;
   label_maps.roi_class_name_list = read_label_file(label_path);
 
-  constexpr uint32_t skip_header_lines = 1;
-
   // resolve ROI -> Autoware interface class IDs (e.g. MOTORBIKE -> 5). An empty remap leaves every
   // entry unmapped, but the table is always sized so it can be indexed for every detection.
   std::unordered_map<std::string, int> roi_label_to_new_id_remap;
   if (!roi_remap_path.empty()) {
-    roi_label_to_new_id_remap = load_label_id_remap_file(roi_remap_path, skip_header_lines);
+    roi_label_to_new_id_remap = load_label_id_remap_file(roi_remap_path);
   }
   label_maps.roi_id_to_class_id_map = build_roi_id_to_target_id_map(
     label_maps.roi_class_name_list, roi_label_to_new_id_remap, unmapped_label_id);
 
   if (!semseg_color_map_path.empty()) {
-    label_maps.semseg_color_map =
-      load_segmentation_colormap(semseg_color_map_path, skip_header_lines);
+    label_maps.semseg_color_map = load_segmentation_colormap(semseg_color_map_path);
   }
 
   // resolve ROI -> semantic segmentation IDs (e.g. PEDESTRIAN -> 6). Left empty when no remap file
   // is given, since this table is only consumed when ROI-to-segmentation overlap is enabled.
   if (!roi_to_semseg_remap_path.empty()) {
-    const auto roi_name_to_semseg_id_remap =
-      load_label_id_remap_file(roi_to_semseg_remap_path, skip_header_lines);
+    const auto roi_name_to_semseg_id_remap = load_label_id_remap_file(roi_to_semseg_remap_path);
     label_maps.roi_id_to_semseg_id_map = build_roi_id_to_target_id_map(
       label_maps.roi_class_name_list, roi_name_to_semseg_id_remap, unmapped_label_id);
   }
