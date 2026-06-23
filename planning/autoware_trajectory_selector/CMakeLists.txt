@@ -63,6 +63,7 @@ if(BUILD_TESTING)
 
   ament_target_dependencies(test_trajectory_selector_node
     autoware_test_utils
+    rosgraph_msgs
   )
 endif()
 
