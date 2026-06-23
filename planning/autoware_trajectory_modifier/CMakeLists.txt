@@ -27,14 +27,17 @@ target_compile_options(${PROJECT_NAME} PUBLIC
   -Wno-error=deprecated-declarations
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
   PLUGIN "autoware::trajectory_modifier::TrajectoryModifier"
   EXECUTABLE ${PROJECT_NAME}_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
 )
 
 ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   src/trajectory_modifier_plugins/stop_point_fixer.cpp
   src/trajectory_modifier_plugins/obstacle_stop.cpp
+  src/trajectory_modifier_plugins/velocity_modifier.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_plugins
