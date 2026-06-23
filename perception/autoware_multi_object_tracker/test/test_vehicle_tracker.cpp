@@ -22,11 +22,14 @@ namespace autoware::multi_object_tracker
 {
 namespace
 {
-// Mirrors the zone constants defined inside correctWheelAnchorLateral.
-constexpr double kDeadFrac = 0.20;
-constexpr double kInnerFrac = 0.50;
-constexpr double kOuterFrac = 0.40;
+// Matches the constants defined inside correctWheelAnchorLateral.
+constexpr double kAlpha = 0.2;  // balance_alpha
+constexpr double kBeta = 0.3;   // corner_residual_beta
 
+// correctWheelAnchorLateral is pure scalar math over the four lateral edge coordinates. The
+// measurement polygon is centered on the observed edge-center anchor (lateral_offset), so its edges
+// sit at lateral_offset +/- polygon_half; the tracker is centered, with edges at +/- tracker_half.
+// The corrected lateral coordinate is `lateral_offset + lateral_move`.
 struct LateralResult
 {
   double lateral;  // corrected lateral coordinate (= lateral_offset + lateral_move)
@@ -45,174 +48,74 @@ LateralResult run(double tracker_width, double polygon_width, double lateral_off
 }
 }  // namespace
 
-// Equal widths, centered: all excesses are zero -> zone 1, no correction, no variance.
-TEST(CorrectWheelAnchorLateral, EqualWidthCenteredIsNoOp)
+// Equal widths: no slack, no overhang -> anchor untouched, no added variance.
+TEST(CorrectWheelAnchorLateral, EqualWidthIsNoOp)
 {
-  const auto r = run(2.0, 2.0, 0.0);
-  EXPECT_DOUBLE_EQ(r.lateral, 0.0);
+  const auto r = run(2.0, 2.0, 0.5);
+  EXPECT_DOUBLE_EQ(r.lateral, 0.5);  // anchor unchanged
   EXPECT_DOUBLE_EQ(r.var_lat, 0.0);
 }
 
-// Zone 1: polygon slightly wider than tracker (excess < dead), centered.
-// No correction; uncorrected residuals (0.1 each side) contribute to var.
-TEST(CorrectWheelAnchorLateral, Zone1DeadZoneNoCorrection)
+// Polygon narrower than the tracker (partial view): anchor kept, worst-case lateral offset added
+// as variance, var = ((w_t - w_p) / 2)^2.
+TEST(CorrectWheelAnchorLateral, NarrowPolygonAddsVarianceOnly)
 {
-  // tracker_width=2 -> H=1, dead=0.2. polygon_width=2.2 -> excess=0.1 on both sides.
-  const double exc = 0.1;  // < dead (=0.2*H=0.2)
-  const auto r = run(2.0, 2.2, 0.0);
-  EXPECT_DOUBLE_EQ(r.lateral, 0.0);
-  EXPECT_NEAR(r.var_lat, exc * exc + exc * exc, 1e-9);
-}
-
-// Zone 2 symmetric: polygon much narrower, centered -> corrections cancel, no net move.
-TEST(CorrectWheelAnchorLateral, Zone2SymmetricNoMove)
-{
-  // excess_L = excess_R = 0.25 - 1.0 = -0.75 -> both fully matched (t=1)
-  const auto r = run(2.0, 0.5, 0.0);
-  EXPECT_DOUBLE_EQ(r.lateral, 0.0);
-  EXPECT_DOUBLE_EQ(r.var_lat, 0.0);  // t=1 -> residual = 0
-}
-
-// Zone 2 asymmetric with protrusion: polygon=1.4 offset=0.4 → left edge protrudes (gap_L=-0.1).
-// Close-side fully active (t_close_L=1): center-pull suppressed, close_correction = -0.1 (aligns
-// left edge to tracker boundary). Expected lateral = 0.4 - 0.1 = 0.3.
-TEST(CorrectWheelAnchorLateral, Zone2LeftProtrusionCloseSideDominates)
-{
-  // gap_L = 1.0 - (0.4+0.7) = -0.1 → t_close_L=1, t_close_R=0 (gap_R=0.7), effective_t_inner=0
-  // close_correction = (-0.1)*1.0 - 0 = -0.1 ; resid = 0.3*1.0 → var_lat = 2*0.09 = 0.18
-  const auto r = run(2.0, 1.4, 0.4);
-  EXPECT_NEAR(r.lateral, 0.3, 1e-9);
-  EXPECT_NEAR(r.var_lat, 0.18, 1e-9);
-}
-
-// Zone 2 pure center-pull: polygon well inside tracker on both sides (gaps > dead_lat).
-// No close-side → effective_t_inner = t_inner; anchor pulled toward center.
-TEST(CorrectWheelAnchorLateral, Zone2PureCenterPull)
-{
-  // tracker=2 (H=1), polygon=1.0 (half=0.5), offset=0.1
-  // polygon_L=0.6, polygon_R=-0.4 → gap_L=0.4, gap_R=0.6; both > dead=0.2 → t_close=0
-  // half_wm=0.5, t_inner=clamp((0.5-0.2)/0.3,0,1)=1.0, effective_t_inner=1.0
-  // lateral_move = -0.1*1.0 = -0.1 ; corrected = 0.0 ; resid=0 → var_lat=0
-  const auto r = run(2.0, 1.0, 0.1);
-  EXPECT_NEAR(r.lateral, 0.0, 1e-9);
-  EXPECT_NEAR(r.var_lat, 0.0, 1e-9);
-}
-
-// Zone 2 close-side partial: polygon inside tracker, left edge near left boundary (gap_L<dead).
-// Close-side partially suppresses center-pull and adds leftward correction.
-TEST(CorrectWheelAnchorLateral, Zone2CloseSidePartialCorrection)
-{
-  // tracker=2 (H=1), polygon=1.0 (half=0.5), offset=0.4
-  // polygon_L=0.9, polygon_R=-0.1 → gap_L=0.1, gap_R=0.9
-  // t_close_L=(0.2-0.1)/0.2=0.5, t_close_R=0, t_close=0.5
-  // half_wm=0.5, t_inner=1.0, effective_t_inner=0.5
-  // close_correction = 0.1*0.5 - 0 = 0.05
-  // lateral_move = -0.4*0.5 + 0.05 = -0.15 ; corrected = 0.25
-  // resid = 0.5*(1-0.5)=0.25 → var_lat = 2*0.0625 = 0.125
-  const double H = 1.0;
-  const double dead = kDeadFrac * H;
-  const double lat_off = 0.4;
-  const double gap_L = 0.1;
-  const double t_cL = (dead - gap_L) / dead;
-  const double t_inner = 1.0;
-  const double eff_ti = t_inner * (1.0 - t_cL);
-  const double close_c = gap_L * t_cL;
-  const double exp_lat = lat_off + (-lat_off * eff_ti + close_c);
-  const double resid = 0.5 * (1.0 - eff_ti);
-  const double exp_var = 2.0 * resid * resid;
-  const auto r = run(2.0, 1.0, lat_off);
-  EXPECT_NEAR(r.lateral, exp_lat, 1e-9);
-  EXPECT_NEAR(r.var_lat, exp_var, 1e-9);
-}
-
-// Zone 2 close-side full: left edge exactly at tracker boundary (gap_L=0) → no correction,
-// center-pull fully suppressed. Anchor stays at its observed position.
-TEST(CorrectWheelAnchorLateral, Zone2CloseSideFullSuppression)
-{
-  // tracker=2 (H=1), polygon=1.0 (half=0.5), offset=0.5
-  // polygon_L=1.0=tracker_L → gap_L=0 → t_close_L=1.0, t_close_R=0 (gap_R=1.0)
-  // effective_t_inner=0, close_correction=0 → lateral_move=0 ; corrected=0.5
-  // resid=0.5*1.0=0.5 → var_lat=0.5
   const auto r = run(2.0, 1.0, 0.5);
-  EXPECT_NEAR(r.lateral, 0.5, 1e-9);
-  EXPECT_NEAR(r.var_lat, 0.5, 1e-9);
+  EXPECT_DOUBLE_EQ(r.lateral, 0.5);   // anchor unchanged
+  EXPECT_DOUBLE_EQ(r.var_lat, 0.25);  // (0.5)^2
 }
 
-// Zone 3 symmetric: wide polygon centered -> both sides cancel, no net move, no residual.
-TEST(CorrectWheelAnchorLateral, Zone3SymmetricNoMove)
+// Wide polygon, observed center on the body axis: nothing to pull, full slack uncertainty.
+TEST(CorrectWheelAnchorLateral, WideCenteredHoldsAnchorMaxVariance)
 {
-  // tracker=2 H=1, polygon=3.6 -> excess = 0.8 on both sides (>> outer=0.4), t=1
-  const auto r = run(2.0, 3.6, 0.0);
+  const double slack = 1.0;  // (4 - 2) / 2
+  const auto r = run(2.0, 4.0, 0.0);
   EXPECT_DOUBLE_EQ(r.lateral, 0.0);
-  EXPECT_DOUBLE_EQ(r.var_lat, 0.0);
+  EXPECT_DOUBLE_EQ(r.var_lat, slack * slack);  // std = slack
 }
 
-// Zone 3 asymmetric: wide polygon, anchor offset left -> net move right (toward tracker center).
-TEST(CorrectWheelAnchorLateral, Zone3AsymmetricPullsTowardCenter)
+// Wide polygon, observed center inside the slack: anchor held near the tracker (slope alpha), so it
+// is pulled back toward the body axis rather than snapped to the observed center.
+TEST(CorrectWheelAnchorLateral, WideContainedPullsTowardTracker)
 {
-  // tracker=2 H=1, polygon=3.6, offset=0.3
-  // excess_L = 0.3+1.8-1 = 1.1 -> t_L=1.0, excess_R = -1-(0.3-1.8) = 0.5 -> t_R=1.0
-  const auto r = run(2.0, 3.6, 0.3);
-  EXPECT_NEAR(r.lateral, 0.3 + (-1.1 * 1.0 + 0.5 * 1.0), 1e-9);  // = -0.3
-  EXPECT_DOUBLE_EQ(r.var_lat, 0.0);
+  const double slack = 1.0;
+  const double d = 0.5;  // < slack -> contained
+  const auto r = run(2.0, 4.0, d);
+  EXPECT_DOUBLE_EQ(r.lateral, kAlpha * d);  // 0.1, pulled in from 0.5
+  const double t = d / slack;
+  const double std_lat = slack * (1.0 - (1.0 - kBeta) * t);
+  EXPECT_DOUBLE_EQ(r.var_lat, std_lat * std_lat);
 }
 
-// Zone 3 partial: one side in zone 3 (partially), other in zone 1.
-TEST(CorrectWheelAnchorLateral, Zone3PartialOneSideCorrected)
+// Wide polygon, observed center beyond the slack: a corner is exposed, anchor follows it (unit
+// slope) and the added variance shrinks toward beta * slack.
+TEST(CorrectWheelAnchorLateral, WideUncontainedFollowsCorner)
 {
-  // tracker=2 H=1, polygon=2.6 (half=1.3), offset=0.3
-  // excess_L = 0.3+1.3-1 = 0.6 -> zone 3, t_L = clamp((0.6-0.2)/0.2, 0,1) = 1.0
-  // excess_R = -1-(0.3-1.3) = 0.0 -> zone 1, t_R = 0
-  const double H = 1.0;
-  const double dead = kDeadFrac * H;
-  const double outer = kOuterFrac * H;
-  const double exc_L = 0.6;
-  const double exc_R = 0.0;
-  const double t_L = std::clamp((exc_L - dead) / (outer - dead), 0.0, 1.0);
-  const double t_R = 0.0;
-  const double exp_move = -exc_L * t_L + exc_R * t_R;
-  const auto r = run(2.0, 2.6, 0.3);
-  EXPECT_NEAR(r.lateral, 0.3 + exp_move, 1e-9);
-  EXPECT_NEAR(r.var_lat, 0.0, 1e-9);  // both residuals are 0
+  const double slack = 1.0;
+  const double d = 2.0;  // > slack -> corner exposed
+  const auto r = run(2.0, 4.0, d);
+  EXPECT_DOUBLE_EQ(r.lateral, (d - slack) + kAlpha * slack);       // 1.2
+  EXPECT_DOUBLE_EQ(r.var_lat, (kBeta * slack) * (kBeta * slack));  // std = beta * slack
 }
 
-// Continuity at zone 1/2 boundary: just inside vs just outside dead zone -> nearly identical.
-TEST(CorrectWheelAnchorLateral, ContinuousAtZone1Zone2Boundary)
+// The dead-zone is continuous at |d| = slack: both branches agree on anchor and variance.
+TEST(CorrectWheelAnchorLateral, ContinuousAtBoundary)
 {
-  constexpr double eps = 1e-6;
-  // tracker=2 H=1, polygon_width chosen so excess_L = -(dead ± eps), offset=0 keeps both sides
-  // equal dead = 0.2, excess = polygon_half - 1 => polygon_half = 1 + excess => polygon_width =
-  // 2*(1+excess)
-  const double dead = kDeadFrac * 1.0;
-  const double w_in = 2.0 * (1.0 - dead + eps);   // excess just inside dead zone
-  const double w_out = 2.0 * (1.0 - dead - eps);  // excess just below dead zone (zone 2)
-  const auto inside = run(2.0, w_in, 0.0);
-  const auto outside = run(2.0, w_out, 0.0);
+  const double slack = 1.0;
+  const double eps = 1e-6;
+  const auto inside = run(2.0, 4.0, slack - eps);
+  const auto outside = run(2.0, 4.0, slack + eps);
   EXPECT_NEAR(inside.lateral, outside.lateral, 1e-4);
   EXPECT_NEAR(inside.var_lat, outside.var_lat, 1e-4);
 }
 
-// Continuity at zone 1/3 boundary: just inside vs just outside dead zone (wide side).
-TEST(CorrectWheelAnchorLateral, ContinuousAtZone1Zone3Boundary)
-{
-  constexpr double eps = 1e-6;
-  const double dead = kDeadFrac * 1.0;
-  const double w_in = 2.0 * (1.0 + dead - eps);   // excess just below dead (zone 1)
-  const double w_out = 2.0 * (1.0 + dead + eps);  // excess just above dead (zone 3)
-  const auto inside = run(2.0, w_in, 0.0);
-  const auto outside = run(2.0, w_out, 0.0);
-  EXPECT_NEAR(inside.lateral, outside.lateral, 1e-4);
-  EXPECT_NEAR(inside.var_lat, outside.var_lat, 1e-4);
-}
-
-// Sign symmetry: flipping lateral_offset mirrors corrected lateral and preserves variance.
+// Sign symmetry: a negative lateral offset mirrors the positive case.
 TEST(CorrectWheelAnchorLateral, SignSymmetry)
 {
-  const double d = 0.3;
-  const auto pos = run(2.0, 3.6, +d);
-  const auto neg = run(2.0, 3.6, -d);
-  EXPECT_NEAR(pos.lateral, -neg.lateral, 1e-9);
-  EXPECT_NEAR(pos.var_lat, neg.var_lat, 1e-9);
+  const auto pos = run(2.0, 4.0, 1.5);
+  const auto neg = run(2.0, 4.0, -1.5);
+  EXPECT_DOUBLE_EQ(pos.lateral, -neg.lateral);
+  EXPECT_DOUBLE_EQ(pos.var_lat, neg.var_lat);
 }
 
 }  // namespace autoware::multi_object_tracker
