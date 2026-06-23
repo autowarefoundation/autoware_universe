@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2026 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,23 +45,25 @@ inline double to_seconds(const builtin_interfaces::msg::Time & stamp)
 /// Convert a transform message to a tf2 transform (equivalent to tf2::fromMsg).
 inline tf2::Transform to_tf2_transform(const geometry_msgs::msg::Transform & transform)
 {
+  const tf2::Vector3 origin(
+    transform.translation.x, transform.translation.y, transform.translation.z);
+  const tf2::Quaternion rotation(
+    transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w);
+
   tf2::Transform out;
-  out.setOrigin(
-    tf2::Vector3(transform.translation.x, transform.translation.y, transform.translation.z));
-  out.setRotation(
-    tf2::Quaternion(
-      transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w));
+  out.setOrigin(origin);
+  out.setRotation(rotation);
   return out;
 }
 
 /// Convert a transform message to a 4x4 homogeneous matrix (equivalent to tf2::transformToEigen).
 inline Eigen::Matrix4f to_eigen_matrix(const geometry_msgs::msg::Transform & transform)
 {
-  const Eigen::Isometry3d isometry =
-    Eigen::Translation3d(
-      transform.translation.x, transform.translation.y, transform.translation.z) *
-    Eigen::Quaterniond(
-      transform.rotation.w, transform.rotation.x, transform.rotation.y, transform.rotation.z);
+  const Eigen::Translation3d translation(
+    transform.translation.x, transform.translation.y, transform.translation.z);
+  const Eigen::Quaterniond rotation(
+    transform.rotation.w, transform.rotation.x, transform.rotation.y, transform.rotation.z);
+  const Eigen::Isometry3d isometry = translation * rotation;
   return isometry.matrix().cast<float>();
 }
 
