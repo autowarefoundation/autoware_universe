@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: ControlPerformanceAnalysis.node
+package:
+  name: autoware_control_performance_analysis
+  provider: autoware
+launch:
+  plugin: autoware::control_performance_analysis::ControlPerformanceAnalysisNode
+  executable: autoware_control_performance_analysis_node
+# interfaces
+subscribers:
+  - name: reference_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: control_raw
+    message_type: autoware_control_msgs/msg/Control
+  - name: measured_steering
+    message_type: autoware_vehicle_msgs/msg/SteeringReport
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+publishers:
+  - name: error_stamped
+    message_type: autoware_control_performance_analysis/msg/ErrorStamped
+  - name: driving_status_stamped
+    message_type: autoware_control_performance_analysis/msg/DrivingMonitorStamped
+# parameters
+param_files:
+  - name: control_performance_analysis_param
+    default: config/control_performance_analysis.param.yaml
+param_values: []
+# processes
+processes:
+  - name: analyze_control_performance
+    trigger_conditions:
+      - on_input: odometry
+    outcomes:
+      - to_output: error_stamped
+      - to_output: driving_status_stamped

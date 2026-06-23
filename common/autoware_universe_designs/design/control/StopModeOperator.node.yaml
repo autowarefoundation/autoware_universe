@@ -8,7 +8,7 @@ package:
   provider: autoware
 
 launch:
-  plugin: autoware::stop_mode_operator::StopModeOperatorNode
+  plugin: autoware::stop_mode_operator::StopModeOperator
   executable: stop_mode_operator_node
   node_output: screen
 
@@ -34,7 +34,7 @@ publishers:
 # parameters
 param_files:
   - name: config
-    default: $(find-pkg-share autoware_stop_mode_operator)/config/default.param.yaml
+    default: config/default.param.yaml
 
 param_values: []
 
