@@ -14,6 +14,8 @@
 
 #include "node.hpp"
 
+#include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace autoware::hazard_lights_selector
@@ -26,6 +28,11 @@ HazardLightsSelector::HazardLightsSelector(const rclcpp::NodeOptions & node_opti
 
   // Parameter
   params_.update_rate = static_cast<int>(declare_parameter("update_rate", 10));
+  if (params_.update_rate <= 0) {
+    throw std::invalid_argument(
+      "update_rate must be positive, but got " + std::to_string(params_.update_rate));
+  }
+  const auto period_ms = 1000 / params_.update_rate;
 
   // Subscriber
   sub_hazard_lights_command_from_planning_ =
@@ -44,7 +51,7 @@ HazardLightsSelector::HazardLightsSelector(const rclcpp::NodeOptions & node_opti
 
   // Timer
   timer_ = autoware::agnocast_wrapper::create_timer(
-    this, get_clock(), std::chrono::milliseconds(1000 / params_.update_rate),
+    this, get_clock(), std::chrono::milliseconds(period_ms),
     std::bind(&HazardLightsSelector::on_timer, this));
 }
 
