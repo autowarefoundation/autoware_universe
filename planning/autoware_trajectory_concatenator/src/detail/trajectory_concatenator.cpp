@@ -52,8 +52,6 @@ void TrajectoryConcatenator::add_candidate(const CandidateTrajectories & msg)
   }
 }
 
-#include <iostream>
-
 CandidateTrajectories TrajectoryConcatenator::get_concatenated(
   const builtin_interfaces::msg::Time & current_time)
 {

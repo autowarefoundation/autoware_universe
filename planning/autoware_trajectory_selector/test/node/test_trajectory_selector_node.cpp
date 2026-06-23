@@ -132,9 +132,9 @@ protected:
    * as ready), the second executes any newly-ready timer callback.
    */
   bool spin_until(
-    std::function<bool()> condition,
-    rclcpp::Duration timeout = rclcpp::Duration(std::chrono::seconds(1)),
-    rclcpp::Duration step = rclcpp::Duration(std::chrono::milliseconds(10)))
+    const std::function<bool()> & condition,
+    const rclcpp::Duration & timeout = rclcpp::Duration(std::chrono::seconds(1)),
+    const rclcpp::Duration & step = rclcpp::Duration(std::chrono::milliseconds(10)))
   {
     const rclcpp::Time deadline = sim_time_ + timeout;
     while (rclcpp::ok()) {
