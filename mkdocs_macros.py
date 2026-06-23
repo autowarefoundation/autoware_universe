@@ -41,38 +41,15 @@ def format_param_range(param):
         return range_in_text
 
 
-def resolve_ref(ref, root):
-    """Resolve a local JSON-schema reference like ``#/definitions/foo``."""
-    target = root
-    for part in ref.lstrip("#/").split("/"):
-        target = target[part]
-    return target
-
-
-def extract_parameter_info(parameters, namespace="", root=None, seen=None):
-    if seen is None:
-        seen = frozenset()
+def extract_parameter_info(parameters, namespace=""):
     params = []
     for k, v in parameters.items():
-        local_seen = seen
-        # Resolve a "$ref" so referenced definitions are documented rather than skipped.
         if "$ref" in v.keys():
-            ref = v["$ref"]
-            if root is None or ref in seen:  # guard against recursive schemas
-                continue
-            resolved = dict(resolve_ref(ref, root))
-            # keep a default/description supplied at the reference site
-            for key in ("default", "description"):
-                if key in v:
-                    resolved[key] = v[key]
-            v = resolved
-            local_seen = seen | {ref}
+            continue
         # Dive into a namespace only when it actually carries nested properties;
-        # an "object" without "properties" (e.g. a free-form map) is a leaf.
+        # tolerate entries without an explicit "type" / "description" / "default".
         if v.get("type") == "object" and "properties" in v:
-            params.extend(
-                extract_parameter_info(v["properties"], namespace + k + ".", root, local_seen)
-            )
+            params.extend(extract_parameter_info(v["properties"], k + "."))
         else:
             param = {}
             param["Name"] = namespace + k
@@ -84,31 +61,12 @@ def extract_parameter_info(parameters, namespace="", root=None, seen=None):
     return params
 
 
-def get_parameter_root(json_data):
-    """Locate the properties mapping that holds the documented parameters.
-
-    Preferred convention: ``properties -> "/**" -> properties -> ros__parameters``,
-    resolving a ``$ref`` to the main definition when present. Falls back to the
-    first definition that exposes ``properties`` for older single-definition schemas.
-    """
-    try:
-        ros_params = json_data["properties"]["/**"]["properties"]["ros__parameters"]
-        if "$ref" in ros_params:
-            return resolve_ref(ros_params["$ref"], json_data)["properties"]
-    except (KeyError, TypeError):
-        pass
-    for definition in json_data.get("definitions", {}).values():
-        if "properties" in definition:
-            return definition["properties"]
-    return {}
-
-
 def format_json(json_data):
-    parameters = get_parameter_root(json_data)
+    definitions = list(json_data["definitions"].values())
+    # use the first definition that actually exposes parameters (skip enum-only ones)
+    parameters = next(d["properties"] for d in definitions if "properties" in d)
     # cspell: ignore tablefmt
-    markdown_table = tabulate(
-        extract_parameter_info(parameters, root=json_data), headers="keys", tablefmt="github"
-    )
+    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
     return markdown_table
 
 
