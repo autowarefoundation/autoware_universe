@@ -240,20 +240,16 @@ double correctWheelAnchorLateral(
     return 0.0;
   }
 
-  // Polygon wider than the tracker: soft dead-zone ("back-lash") lateral correction.
-  const double abs_offset = std::abs(lateral_offset);
-  const double sgn = (lateral_offset >= 0.0) ? 1.0 : -1.0;
-
-  // Soft dead-zone: slope `balance_alpha` while the tracker is contained (|offset| <= slack), unit
-  // slope once a corner is exposed. Continuous at |offset| = slack.
-  const double shift = (abs_offset <= slack) ? balance_alpha * abs_offset
-                                             : (abs_offset - slack) + balance_alpha * slack;
-  const double lateral_move =
-    sgn * shift - lateral_offset;  // (corrected - observed) lateral offset
+  // Polygon wider than the tracker: soft dead-zone ("back-lash") lateral correction. The tracker box
+  // can slide within the polygon by up to `slack` on either side before a corner is exposed
+  // Clamping `lateral_offset` to [-slack, slack] expresses both regimes in one line.
+  const double clamped_offset = std::clamp(lateral_offset, -slack, slack);
+  const double lateral_move = -(1.0 - balance_alpha) * clamped_offset;
 
   // Added lateral std: `slack` when centered (true position unknown across the slack), shrinking to
-  // `corner_residual_beta` * slack once the corner is matched. Continuous in |offset|.
-  const double t = std::clamp(abs_offset / slack, 0.0, 1.0);
+  // `corner_residual_beta` * slack once the corner is matched. `|clamped_offset| / slack` runs 0 -> 1
+  // as the bias grows from centered to a fully exposed corner.
+  const double t = std::abs(clamped_offset) / slack;
   const double std_lat = slack * (1.0 - (1.0 - corner_residual_beta) * t);
   var_lat = std_lat * std_lat;
   return lateral_move;
