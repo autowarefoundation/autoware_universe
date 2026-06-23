@@ -58,7 +58,7 @@ bool isPointInsidePolygonByFootprint(
   const auto path_footprint =
     autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(point.point.pose));
   const auto basic_polygon = polygon.basicPolygon();
-  return bg::intersects(path_footprint, basic_polygon) || bg::within(path_footprint, basic_polygon);
+  return bg::intersects(path_footprint, basic_polygon);
 }
 
 void retrievePathsBackward(
