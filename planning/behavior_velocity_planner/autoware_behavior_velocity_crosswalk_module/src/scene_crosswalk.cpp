@@ -135,14 +135,17 @@ void sortCrosswalksByDistance(
   const PathWithLaneId & ego_path, const geometry_msgs::msg::Point & ego_pos,
   lanelet::ConstLanelets & crosswalks)
 {
-  const auto compare = [&](const lanelet::ConstLanelet & l1, const lanelet::ConstLanelet & l2) {
+const auto compare = [&](const lanelet::ConstLanelet & l1, const lanelet::ConstLanelet & l2) {
     const auto l1_end_points_on_crosswalk =
       getPathEndPointsOnCrosswalk(ego_path, l1.polygon2d().basicPolygon(), ego_pos);
     const auto l2_end_points_on_crosswalk =
       getPathEndPointsOnCrosswalk(ego_path, l2.polygon2d().basicPolygon(), ego_pos);
 
     if (!l1_end_points_on_crosswalk || !l2_end_points_on_crosswalk) {
-      return true;
+      if (!l1_end_points_on_crosswalk && !l2_end_points_on_crosswalk) {
+        return false;
+      }
+      return l1_end_points_on_crosswalk ? true : false;
     }
 
     const auto dist_l1 =
@@ -150,6 +153,10 @@ void sortCrosswalksByDistance(
 
     const auto dist_l2 =
       calcSignedArcLength(ego_path.points, size_t(0), l2_end_points_on_crosswalk->first);
+
+    if (std::abs(dist_l1 - dist_l2) < 1e-6) {
+      return l1.id() < l2.id();
+    }
 
     return dist_l1 < dist_l2;
   };
