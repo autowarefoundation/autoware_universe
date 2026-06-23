@@ -534,16 +534,16 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   A(IDX::V, IDX::V) = decay_rate;
 
   // Process noise covariance Q
-  // Nonholonomic constraint: heading cannot change without translating, so yaw-rate uncertainty
-  // must vanish at standstill.
   const double vel_long_abs = std::abs(vel_long);
   constexpr double vel_long_eps = 1e-3;  // [m/s] guard against division by zero
   // physical yaw-rate bound, limited by the tighter of the two:
-  //  - centripetal acceleration a_lat : w = a_lat / vel_long
-  //  - or maximum slip angle slip_max : w = vel_long * sin(slip_max) / wheel_base  (-> 0 at v -> 0)
-  const double q_stddev_yaw_rate_phys = std::min(
-    motion_params_.q_stddev_acc_lat / std::max(vel_long_abs, vel_long_eps),
-    vel_long_abs * std::sin(motion_params_.q_max_slip_angle) / wheel_base);  // [rad/s]
+  //  - Centripetal acceleration a_lat : w = a_lat / vel_long
+  //  - Nonholonomic constraint : w = vel_long * sin(slip_max) / wheel_base  (-> 0 at v -> 0)
+  const double q_stddev_centripetal =
+    motion_params_.q_stddev_acc_lat / std::max(vel_long_abs, vel_long_eps);
+  const double q_stddev_slip =
+    vel_long_abs * std::sin(motion_params_.q_max_slip_angle) / wheel_base;
+  const double q_stddev_yaw_rate_phys = std::min(q_stddev_centripetal, q_stddev_slip);  // [rad/s]
   const double q_stddev_yaw_rate = std::clamp(
     q_stddev_yaw_rate_phys, motion_params_.q_stddev_yaw_rate_min,
     motion_params_.q_stddev_yaw_rate_max);
