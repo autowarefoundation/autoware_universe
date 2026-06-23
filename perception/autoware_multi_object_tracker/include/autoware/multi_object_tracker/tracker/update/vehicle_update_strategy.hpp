@@ -42,17 +42,12 @@ types::DynamicObject createPseudoMeasurement(
   const types::DynamicObject & meas, const types::DynamicObject & prediction,
   const bool enlarge_covariance = false);
 
-// Scalar lateral correction of the wheel-anchor from the tracker and polygon left/right edges.
-// tracker_left/right and polygon_left/right are signed body-frame lateral coordinates (positive =
-// left). Aligning the fixed-width tracker box to each polygon edge yields two candidate vehicle
-// centers; their segment is the lateral "dead-zone" (width |polygon_width - tracker_width|). The
-// corrected anchor is the tracker center projected into that dead-zone: held when inside (polygon
-// straddles or is straddled by the tracker), or snapped to the nearest edge-aligned center when a
-// polygon edge protrudes/recedes. Returns the lateral move and, via `var_lat`, the extra lateral
-// variance, which grows with the dead-zone size (std = half the dead-zone width).
+// Computes the lateral correction of the wheel-anchor, accounting for the width mismatch between
+// the measurement polygon and the fixed-width tracker box. Returns the lateral move and, via
+// `var_lat`, the extra lateral variance.
 double correctWheelAnchorLateral(
-  const double tracker_left, const double tracker_right, const double polygon_left,
-  const double polygon_right, double & var_lat);
+  const double anchor_lateral, const double tracker_half, const double polygon_half,
+  double & var_lat);
 
 // Laterally corrects the anchor against `prediction` and folds the extra variance into `pose_cov`.
 geometry_msgs::msg::Point correctWheelAnchor(

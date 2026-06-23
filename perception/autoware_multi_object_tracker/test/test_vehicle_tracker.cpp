@@ -22,9 +22,9 @@ namespace autoware::multi_object_tracker
 {
 namespace
 {
-// correctWheelAnchorLateral is pure scalar math over the four lateral edge coordinates. The
-// measurement polygon is centered on the observed edge-center anchor (lateral_offset), so its edges
-// sit at lateral_offset +/- polygon_half; the tracker is centered, with edges at +/- tracker_half.
+// correctWheelAnchorLateral is pure scalar math. The measurement polygon is centered on the
+// observed edge-center anchor (lateral_offset) with half-width polygon_half; the tracker is
+// centered at 0 with half-width tracker_half.
 //
 // Aligning the fixed-width tracker box to each polygon edge gives two candidate vehicle centers;
 // their segment is the lateral "dead-zone" (width |polygon_width - tracker_width|). The corrected
@@ -41,9 +41,8 @@ LateralResult run(double tracker_width, double polygon_width, double lateral_off
   const double tracker_half = tracker_width * 0.5;
   const double polygon_half = polygon_width * 0.5;
   double var_lat = 0.0;
-  const double lateral_move = correctWheelAnchorLateral(
-    +tracker_half, -tracker_half, lateral_offset + polygon_half, lateral_offset - polygon_half,
-    var_lat);
+  const double lateral_move =
+    correctWheelAnchorLateral(lateral_offset, tracker_half, polygon_half, var_lat);
   return {lateral_offset + lateral_move, var_lat};
 }
 

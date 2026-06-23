@@ -217,33 +217,22 @@ types::DynamicObject createPseudoMeasurement(
 }
 
 double correctWheelAnchorLateral(
-  const double tracker_left, const double tracker_right, const double polygon_left,
-  const double polygon_right, double & var_lat)
+  const double anchor_lateral, const double tracker_half, const double polygon_half,
+  double & var_lat)
 {
-  const double tracker_center = 0.5 * (tracker_left + tracker_right);
-  const double polygon_center = 0.5 * (polygon_left + polygon_right);
+  // The true center lies within +/-half_dead_zone of the anchor; outside it, the closer polygon
+  // edge is taken as a real vehicle edge.
+  const double half_dead_zone = std::abs(polygon_half - tracker_half);
+  const double low = anchor_lateral - half_dead_zone;
+  const double high = anchor_lateral + half_dead_zone;
 
-  // Two candidate vehicle centers, one per side, obtained by aligning the tracker box (kept at its
-  // own width) to each polygon edge. The true center must lie on the segment between them; that
-  // segment is the lateral "dead-zone" whose width equals |polygon_width - tracker_width|.
-  const double center_from_left = polygon_left - tracker_left;
-  const double center_from_right = polygon_right - tracker_right;
-  const double low = std::min(center_from_left, center_from_right);
-  const double high = std::max(center_from_left, center_from_right);
+  // Project the tracker center (0) into the dead-zone.
+  const double target = std::clamp(0.0, low, high);
 
-  // Project the tracker center into the dead-zone:
-  //  - inside  -> hold it (polygon straddles, or is straddled by, the tracker on both sides)
-  //  - outside -> snap to the nearest edge-aligned center; the closer polygon edge is taken as a
-  //               real vehicle edge and the box slides by that overhang (tracker_center +
-  //               overhang).
-  const double target = std::clamp(tracker_center, low, high);
-
-  // Lateral position is unknown across the dead-zone, so its variance grows with the dead-zone
-  // size: std = half the dead-zone width = 0.5 * |polygon_width - tracker_width|.
-  const double half_dead_zone = 0.5 * (high - low);
+  // std = half the dead-zone width.
   var_lat = half_dead_zone * half_dead_zone;
 
-  return target - polygon_center;
+  return target - anchor_lateral;
 }
 
 geometry_msgs::msg::Point correctWheelAnchor(
@@ -266,9 +255,8 @@ geometry_msgs::msg::Point correctWheelAnchor(
   const double tracker_half = tracker_width * 0.5;
   const double polygon_half = polygon_width * 0.5;
   double var_lat = 0.0;
-  const double lateral_move = correctWheelAnchorLateral(
-    +tracker_half, -tracker_half, lateral_offset + polygon_half, lateral_offset - polygon_half,
-    var_lat);
+  const double lateral_move =
+    correctWheelAnchorLateral(lateral_offset, tracker_half, polygon_half, var_lat);
 
   // Apply the scalar lateral move back along n to get the corrected anchor point.
   geometry_msgs::msg::Point corrected = anchor;
