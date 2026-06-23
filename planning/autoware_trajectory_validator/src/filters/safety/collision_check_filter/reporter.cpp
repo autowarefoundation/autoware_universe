@@ -75,8 +75,9 @@ autoware_internal_planning_msgs::msg::SafetyFactorArray make_safety_factor_array
   SafetyFactor safety_factor;
   safety_factor.type = SafetyFactor::OBJECT;
   safety_factor.object_id = collision_detail.object_identification.uuid;
-  safety_factor.ttc_begin = static_cast<float>(collision_detail.ttc);
-  safety_factor.ttc_end = static_cast<float>(collision_detail.ttc + time_resolution);
+  safety_factor.ttc_begin = static_cast<float>(collision_detail.first_collision_timing.ttc);
+  safety_factor.ttc_end =
+    static_cast<float>(collision_detail.first_collision_timing.ttc + time_resolution);
   safety_factor.is_safe = false;
   if (!collision_detail.object_trajectory.empty()) {
     safety_factor.points.push_back(collision_detail.object_trajectory.front().position);
@@ -139,8 +140,8 @@ void process_pet_artifacts(
       continue;
     }
 
-    const auto & timing = evaluation.detail;
-    const auto & obj_id = timing.object_identification;
+    const auto & detail = evaluation.detail;
+    const auto & obj_id = detail.object_identification;
     const bool is_error = evaluation.risk == RiskLevel::ERROR;
     if (is_error) {
       log_level = MetricReport::ERROR;
@@ -148,17 +149,18 @@ void process_pet_artifacts(
 
     const auto finding_msg = fmt::format(
       "PET collision, classification: {}, ID: {}, PET: {}, TTC: {}, duration: {}, stamp: {}.{};",
-      obj_id.classification, obj_id.trajectory_id_string(), timing.pet, timing.ttc,
+      obj_id.classification, obj_id.trajectory_id_string(), detail.worst_pet_timing.pet,
+      detail.first_collision_timing.ttc,
       pet_continuous_times.get_time(obj_id.trajectory_id_string()), obj_id.stamp.sec,
       obj_id.stamp.nanosec);
     log_messages += finding_msg;
     reporter::append_text_marker_message(marker_messages, finding_msg);
     reporter::add_debug_markers(
       debug_markers, current_time, "planned_speed_collision", obj_id.trajectory_id_string(),
-      timing.ego_trajectory, timing.object_trajectory, timing.ego_hull, timing.object_hull);
+      detail.ego_trajectory, detail.object_trajectory, detail.ego_hull, detail.object_hull);
     if (is_error) {
       add_collision_planning_factor(
-        time_resolution, odometry.header.stamp, odometry.pose.pose, timing, "PET",
+        time_resolution, odometry.header.stamp, odometry.pose.pose, detail, "PET",
         artifacts.planning_factors);
     }
   }
@@ -193,7 +195,8 @@ void process_drac_artifacts(
     const auto finding_msg = fmt::format(
       "DRAC collision, classification: {}, ID: {}, PET: {}, TTC: {}, DRAC: {}, duration: {}, "
       "stamp: {}.{};",
-      obj_id.classification, obj_id.trajectory_id_string(), timing.pet, timing.ttc,
+      obj_id.classification, obj_id.trajectory_id_string(), timing.worst_pet_timing.pet,
+      timing.first_collision_timing.ttc,
       drac_artifact.required_acceleration.has_value()
         ? std::to_string(drac_artifact.required_acceleration.value())
         : "Cant be avoided",
