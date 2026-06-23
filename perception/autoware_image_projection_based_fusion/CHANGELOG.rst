@@ -2,6 +2,150 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: default artifact paths to ~/autoware_data/ml_models (`#12523 <https://github.com/mitsudome-r/autoware_universe/issues/12523>`_)
+  feat(launches,configs): default artifact paths to ~/autoware_data/ml_models
+  Roll every per-package `data_path` / `model_path` launch-arg default
+  from `$(env HOME)/autoware_data[/...]` to
+  `$(env HOME)/autoware_data/ml_models[/...]` so standalone universe
+  launches resolve artifacts under the new `~/autoware_data/ml_models/`
+  layout (`autowarefoundation/autoware#7068 <https://github.com/autowarefoundation/autoware/issues/7068>`_).
+  When invoked through autoware_launch the parent overrides cascade and
+  already pin the new root (`autowarefoundation/autoware_launch#1835 <https://github.com/autowarefoundation/autoware_launch/issues/1835>`_); this
+  commit closes the gap for users who launch a perception / localization /
+  sensing / planning component directly with `ros2 launch <pkg>`.
+  22 launch files updated (one-line default change each):
+  - e2e/autoware_tensorrt_vad/launch/vad_carla_tiny.launch.xml
+  - localization/yabloc/yabloc_pose_initializer/launch/yabloc_pose_initializer.launch.xml
+  - perception/autoware_bevfusion/launch/bevfusion.launch.xml
+  - perception/autoware_camera_streampetr/launch/streampetr.launch.xml
+  - perception/autoware_image_projection_based_fusion/launch/pointpainting_fusion.launch.xml
+  - perception/autoware_lidar_apollo_instance_segmentation/launch/lidar_apollo_instance_segmentation.launch.xml
+  - perception/autoware_lidar_centerpoint/launch/lidar_centerpoint.launch.xml
+  - perception/autoware_lidar_frnet/launch/lidar_frnet.launch.xml
+  - perception/autoware_lidar_transfusion/launch/lidar_transfusion.launch.xml
+  - perception/autoware_ptv3/launch/ptv3.launch.xml
+  - perception/autoware_shape_estimation/launch/shape_estimation.launch.xml
+  - perception/autoware_simpl_prediction/launch/simpl.launch.xml
+  - perception/autoware_tensorrt_bevdet/launch/tensorrt_bevdet.launch.xml
+  - perception/autoware_tensorrt_bevformer/launch/bevformer.launch.xml
+  - perception/autoware_tensorrt_yolox/launch/{yolox_traffic_light_detector,yolox_tiny,yolox_s_plus_opt}.launch.xml
+  - perception/autoware_traffic_light_classifier/launch/{car,pedestrian}_traffic_light_classifier.launch.xml
+  - perception/autoware_traffic_light_fine_detector/launch/traffic_light_fine_detector.launch.xml
+  - planning/autoware_diffusion_planner/launch/diffusion_planner.launch.xml
+  - sensing/autoware_calibration_status_classifier/launch/calibration_status_classifier.launch.xml
+  Drive-by README and test fixes:
+  - e2e/autoware_tensorrt_vad/{README.md,docs/design.md}: also migrate the
+  `$HOME/autoware_map/Town01` examples to `$HOME/autoware_data/maps/Town01`.
+  - localization/yabloc/{README.md,yabloc_pose_initializer/README.md}: also
+  migrate `$HOME/autoware_map/sample-map-rosbag` to
+  `$HOME/autoware_data/maps/demos/sample-map-rosbag`.
+  - control/autoware_smart_mpc_trajectory_follower/README.md: migrate the
+  `map_path:=$HOME/autoware_map/sample-map-planning` example to
+  `$HOME/autoware_data/maps/demos/sample-map-planning`.
+  - simulator/autoware_carla_interface/README.md: migrate every
+  `$HOME/autoware_map/Town01/...` reference to
+  `$HOME/autoware_data/maps/Town01/...`.
+  - perception/{autoware_bevfusion,autoware_image_projection_based_fusion,autoware_lidar_centerpoint,autoware_tensorrt_bevformer}/README.md: copy-paste examples updated to `~/autoware_data/ml_models/<pkg>`.
+  - perception/autoware_camera_streampetr/config/ml_package_camera_streampetr.param.yaml: header comment updated.
+  - planning/autoware_diffusion_planner/README.md: prerequisites snippet updated.
+  - sensing/autoware_calibration_status_classifier/test/{test_model_inference,test_calibration_status_classifier}.cpp: hardcoded fallback ONNX path updated.
+  Users on the legacy layout can pin the old root with
+  `data_path:=$HOME/autoware_data` (or the per-package equivalent) on the
+  command line.
+  Refs: https://github.com/autowarefoundation/autoware/issues/7068
+* fix(roi_cluster_fusion): separate agnocast subscription callback group (`#12439 <https://github.com/mitsudome-r/autoware_universe/issues/12439>`_)
+  * separate timer callback group from agnocast subscription
+  * style(pre-commit): autofix
+  * separate agnocast subscription from default callback group (revert timer separation)
+  * rename callback group
+  * add mutex
+  * fix error for compiler version
+  * fix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* feat(roi_pointcloud/cluster_fusion): use CallbackIsolatedAgnocastExecutor for roi_pointcloud/cluster_fusion (`#12359 <https://github.com/mitsudome-r/autoware_universe/issues/12359>`_)
+  apply cie to roi_pointcloud/cluster_fusion
+* feat(roi_detected_object_fusion): apply autoware_agnocast_wrapper for CIE (`#12336 <https://github.com/mitsudome-r/autoware_universe/issues/12336>`_)
+  * feat(autoware_image_projection_based_fusion): apply autoware_agnocast_wrapper for CIE
+  * fix(autoware_image_projection_based_fusion): fix alphabetical order in package.xml
+  ---------
+* feat(roi_pointcloud/cluster_fusion): apply agnocast by overriding publisher/subscription to ObjectWithFeature type communication (`#12350 <https://github.com/mitsudome-r/autoware_universe/issues/12350>`_)
+  * feat: replace executor
+  * feat: replace publisher
+  * style(pre-commit): autofix
+  * fix
+  * fix
+  * style(pre-commit): autofix
+  * fix: revert launch
+  * fix: use agnocast message macro and add comments
+  * fix: remove agnocast_env.launch.xml
+  * fix: typo
+  * fix: add include
+  * fix: name
+  * apply agnocast subscription to roi_cluster_fusion cluster sub
+  * apply agnocast publisher overriding the RoiFusion base class
+  * delete unnecessary
+  ---------
+  Co-authored-by: TetsuKawa <kawaguchitnon@icloud.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Tetsuhiro Kawaguchi <70682030+TetsuKawa@users.noreply.github.com>
+* refactor(autoware_universe): use autoware_ament_auto_package in perception packages (`#12275 <https://github.com/mitsudome-r/autoware_universe/issues/12275>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* fix(roi_pointcloud_fusion): add fusion option per class (`#12243 <https://github.com/mitsudome-r/autoware_universe/issues/12243>`_)
+  * fix(roi_pointcloud_fusion): add fusion option per class
+  * style(pre-commit): autofix
+  * refactor
+  * docs
+  * style(pre-commit): autofix
+  * pre-commit fix
+  * style(pre-commit): autofix
+  * Update perception/autoware_image_projection_based_fusion/src/roi_pointcloud_fusion/node.cpp
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+  * Update perception/autoware_image_projection_based_fusion/include/autoware/image_projection_based_fusion/roi_pointcloud_fusion/node.hpp
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+  * fix: bug
+  * change param name
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
+* fix(roi cluster fusion): add cluster size validation for pedestrian (`#12019 <https://github.com/mitsudome-r/autoware_universe/issues/12019>`_)
+  * add ped size validation
+  * fix: 3d size validation
+  * remove roi size validate
+  * remove max_footprint_area
+  * min_aspect_ratio and max_aspect_ratio
+  * refactor
+  * chore: refactor
+  * chore: refactor
+  * style(pre-commit): autofix
+  * remove unused size_score
+  * remove unused func and variables
+  * change to switch
+  * refactor
+  * remove duplicated sanitize
+  * change to std::optional
+  * update workflow
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* feat(autoware_image_projection_based_fusion): restore Turing arch compatibility (`#12208 <https://github.com/mitsudome-r/autoware_universe/issues/12208>`_)
+* feat(autoware_image_projection_based_fusion): cuda 12.0 build compatibility (`#12183 <https://github.com/mitsudome-r/autoware_universe/issues/12183>`_)
+  feat(autoware_image_projection_based_fusion): CUDA 12.0+ build compatibility
+* Contributors: Amadeusz Szymko, Koichi Imai, Mete Fatih Cırıt, Taekjin LEE, Vishal Chauhan, atsushi yano, badai nguyen, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

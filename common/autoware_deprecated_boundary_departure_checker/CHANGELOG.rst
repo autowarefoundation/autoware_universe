@@ -2,6 +2,16 @@
 Changelog for package autoware_boundary_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_deprecated_boundary_departure_checker): replace autoware_universe_utils with autoware_utils_geometry (`#12416 <https://github.com/mitsudome-r/autoware_universe/issues/12416>`_)
+* perf(common): use emplace/emplace_back to avoid temporary object creation (`#12238 <https://github.com/mitsudome-r/autoware_universe/issues/12238>`_)
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(boundary_departure_checker): deprecate legacy rule-based boundary departure checker (`#12420 <https://github.com/mitsudome-r/autoware_universe/issues/12420>`_)
+  refactor: separate bdp
+* Contributors: Vishal Chauhan, Zulfaqar Azmi, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

@@ -17,10 +17,6 @@
 
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 
-#include <memory>
-#include <string>
-#include <vector>
-
 namespace autoware::trajectory_modifier::plugin
 {
 
@@ -29,12 +25,13 @@ class StopPointFixer : public TrajectoryModifierPluginBase
 public:
   StopPointFixer() = default;
 
-  bool modify_trajectory(TrajectoryPoints & traj_points) override;
+  bool modify_trajectory(TrajectoryPoints & traj_points, const InputData & input) override;
 
   bool is_long_stop_trajectory(const TrajectoryPoints & traj_points) const;
-  bool is_stop_point_close_to_ego(const TrajectoryPoints & traj_points) const;
+  bool is_stop_point_close_to_ego(
+    const TrajectoryPoints & traj_points, const InputData & input) const;
   [[nodiscard]] bool is_trajectory_modification_required(
-    const TrajectoryPoints & traj_points) override;
+    const TrajectoryPoints & traj_points, const InputData & input) override;
 
   void update_params(const TrajectoryModifierParams & params) override
   {

@@ -2,6 +2,17 @@
 Changelog for package autoware_command_mode_switcher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_command_mode_switcher): adopt cie (`#12325 <https://github.com/mitsudome-r/autoware_universe/issues/12325>`_)
+  * feat: adopt cie
+  * fix
+  * fix: remove unnecessary lines
+  * fix: remove find_package
+  ---------
+* Contributors: Tetsuhiro Kawaguchi, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

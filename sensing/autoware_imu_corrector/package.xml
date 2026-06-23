@@ -2,10 +2,13 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_imu_corrector</name>
-  <version>0.50.0</version>
+  <version>0.51.0</version>
   <description>The ROS 2 autoware_imu_corrector package</description>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
   <maintainer email="taiki.yamada@tier4.jp">Taiki Yamada</maintainer>
+  <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
+  <maintainer email="sergioreyes.sanchez@tier4.jp">Sergio Reyes Sanchez</maintainer>
+  <maintainer email="manato.hirabayashi@tier4.jp">Manato Hirabayashi</maintainer>
   <license>Apache License 2.0</license>
   <author email="yamato.ando@tier4.jp">Yamato Ando</author>
 

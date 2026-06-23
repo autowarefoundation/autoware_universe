@@ -38,6 +38,8 @@ NodeUnit::NodeUnit(Parser & parser)
   struct_.path = parser.yaml().optional("path").text("");
   struct_.type = parser.type();
   status_.level = DiagnosticStatus::STALE;
+
+  allow_override_ = parser.yaml().optional("allow_override_for_debugging").flag(false);
 }
 
 NodeUnit::~NodeUnit()
@@ -52,9 +54,10 @@ DiagNodeStruct NodeUnit::create_struct()
 DiagNodeStatus NodeUnit::create_status()
 {
   status_.level = latch_->level();
-  status_.input_level = latch_->input_level();  // Note: Equals logic level.
+  status_.input_level = latch_->input_level();
   status_.latch_level = latch_->latch_level();
   status_.is_dependent = dependency();
+  status_.is_overridden = override_.has_value();
   return status_;
 }
 
@@ -66,6 +69,15 @@ bool NodeUnit::dependency() const
 void NodeUnit::set_initializing(bool initializing)
 {
   latch_->set_initializing(initializing);
+}
+
+bool NodeUnit::set_override(const std::optional<DiagnosticLevel> & level)
+{
+  if (!allow_override_) {
+    return false;
+  }
+  override_ = level;
+  return true;
 }
 
 void NodeUnit::reset()
@@ -95,7 +107,7 @@ std::string NodeUnit::type() const
 
 void NodeUnit::update(const rclcpp::Time & stamp)
 {
-  latch_->update(stamp, logic_->level());
+  latch_->update(stamp, override_ ? *override_ : logic_->level());
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator

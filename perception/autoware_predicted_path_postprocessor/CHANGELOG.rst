@@ -2,6 +2,23 @@
 Changelog for package autoware_predicted_path_postprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(predicted_path_postprocessor): add a processor to refine penetration by static objects (`#11672 <https://github.com/mitsudome-r/autoware_universe/issues/11672>`_)
+  * feat: add processor to refine penetration for static objects
+  * feat: add a utility function to build interpolation function
+  * feat: update builder logic, config and schema file
+  * fix: try-catch exception while converting obstacle to polygon
+  * test: add unit testings for RefinePenetrationByStaticObjects
+  * docs: update README
+  * feat: update find_collision() to consider OBB collision detection
+  * fix: resolve shadow variable
+  * chore: clean up includes
+  * chore: fix cpplint error
+  ---------
+* Contributors: Kotaro Uetake, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

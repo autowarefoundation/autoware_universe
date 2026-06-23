@@ -2,6 +2,119 @@
 Changelog for package autoware_trajectory_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(trajectory_optimizer): change order (`#12353 <https://github.com/mitsudome-r/autoware_universe/issues/12353>`_)
+* feat(autoware_trajectory_optimizer): optimizer semantic speed tracker (`#12289 <https://github.com/mitsudome-r/autoware_universe/issues/12289>`_)
+  * use a semantic speed tracker and update longitudinal weights fro better slow downs
+  * ● All changes are in. Here's what was implemented:
+  Fix 1 — Hard constraint on stop positions (prepare_osqp_matrices): Stop point indices from slow_down_ranges are collected, filtered to exclude any already covered by the existing start/end constraint
+  windows (no duplicate rows in A), and added as equality constraints. The stop position is now anchored regardless of weight ratios.
+  Fix 2 — Velocity restore at stop points (post_process_trajectory): After the moving average smoothing pass, the input velocity is restored at each stop point. Since the stop position is now
+  geometrically correct (fix 1), the geometric velocity is already near-zero — this step just trims the residual smoothing blur. The velocity at stop-1 is already small (arc length preservation + anchored
+  stop), so there's no jump.
+  * feat: add semantic stop detection and preserve deceleration profile through QP smoother
+  - Add SemanticSpeedTracker stop detection via velocity profile (build_stop_approach_ranges)
+  replaces the slow_speed_ranges cross-validation approach with a direct velocity-direction
+  check: stop points are detected first, then classified as stop approaches vs take-offs
+  - QP smoother preserves planner velocity profile in detected deceleration zones by overwriting
+  geometric recalculation with input velocities, forcing stop to zero; moving average handles
+  the transition boundary
+  - Velocity optimizer forces max_velocity=0 at detected stop points when jerk smoothing enabled
+  - Spline smoother remaps semantic tracker indices after resampling via arc length lookup
+  - Add stop_detection_velocity_threshold_mps param (default 0.3 m/s) to trajectory_point_fixer
+  - Remove slow_speed_ranges intermediate representation and its cross-validation machinery
+  * refactor: remove arc length preservation from QP smoother
+  The arc length preservation soft constraint in the QP is no longer
+  needed now that the velocity profile in deceleration zones is preserved
+  by overwriting geometric recalculation with input velocities. The stop
+  position is still pinned via hard constraints.
+  * refactor: remove use_semantic_stop_points from velocity optimizer
+  The stop velocity is now correctly set to zero by the QP smoother via
+  the deceleration zone velocity overwrite. The jerk smoother's
+  searchZeroVelocityIndex handles the stop naturally without needing
+  explicit max_velocity_per_point forcing from the semantic tracker.
+  * refactor: clean up SemanticSpeedTracker and SlowSpeedInfo
+  - Remove is_stop_point() method (no callers)
+  - Remove duration_s field from SlowSpeedInfo (write-only, never read)
+  - Remove is_stop_approach flag from SlowSpeedInfo (always true, never read)
+  - Rename stop_points to stop_point_candidates to clarify its staging role
+  before build_stop_approach_ranges() processes them into slow_down_ranges
+  * undo param change
+  * fix: address Copilot review feedback on PR 12289
+  - Reorder detection: build_stop_approach_ranges runs first; velocity-based
+  fallback only fires when the result is empty, preventing false-positive
+  candidates from silencing it
+  - Deduplicate stop_constraint_indices before adding OSQP equality constraints
+  - Use absolute speed comparison in detect_velocity_based_stop and
+  build_stop_approach_ranges (correct for signed velocity conventions)
+  - Fix stale Doxygen on prepare_osqp_matrices: describes actual use (hard stop
+  position constraints) not the old velocity-fidelity weighting
+  - Update schema description for stop_detection_velocity_threshold_mps
+  - Update qp_smoother.md and trajectory_optimizer_specification.md to document
+  stop handling, SemanticSpeedTracker, and revised Known Limitations
+  * fix: align qp_smoother.md markdown style with CI/CD prettier
+  Remove blank lines between list item headers and their descriptions
+  to match the prettier version used in GitHub Actions.
+  * refactor(trajectory_optimizer): move SemanticSpeedTracker into TrajectoryOptimizerData
+  - Add SemanticSpeedTracker as a member of TrajectoryOptimizerData, removing it
+  from the optimize_trajectory virtual interface. A fresh data instance is
+  created per trajectory in the optimizer loop, so the tracker resets
+  automatically between trajectories.
+  - Fix stale stop-point candidates bug: build_stop_approach_ranges now uses
+  take_stop_point_candidates() which atomically returns and clears the staging
+  area, preventing leftover candidates from the first call polluting the
+  velocity-based fallback second call.
+  - Encapsulate stop_point_candidates\_ and slow_down_ranges\_ as private members
+  with named accessors (add_stop_candidate, take_stop_point_candidates,
+  get_slow_down_ranges) to enforce the two-stage detection contract.
+  - Remove dead remap_to_trajectory call from TrajectorySplineSmoother: the QP
+  smoother already consumed slow_down_ranges before the spline smoother runs,
+  so the remap had no downstream effect.
+  * fix(trajectory_optimizer): address Copilot review comments
+  - Clarify remove_close_proximity_points docstring: close proximity implies
+  low speed at constant dt, so stop candidate registration is intentional.
+  - Remove misleading 'atomically' wording from take_stop_point_candidates
+  comment; the swap is O(1) but not thread-safe.
+  ---------
+* feat(autoware_trajectory_optimizer): force 3 point trajectory (`#12287 <https://github.com/mitsudome-r/autoware_universe/issues/12287>`_)
+  * force the optimizer to output a 3 point trajectory with 0 velocity if the output trajectory has less than 3 points
+  * review comments
+  * add debug logs
+  ---------
+* feat: improve parameters and the constraints (`#12271 <https://github.com/mitsudome-r/autoware_universe/issues/12271>`_)
+  * feat: improve parameters and the initial constraints
+  * feat: clean up constraints
+  * fix docs and test
+  * enforce end points and test
+  * feat: fix  docs and ci
+  * fix test
+  * fix builg
+  * fix spell ci
+  * fix cppcheck
+  * feat: fix cppcheck
+  * feat: fix cppcheck
+  ---------
+* fix(autoware_trajectory_optimizer): optimizer time recalculation (`#12258 <https://github.com/mitsudome-r/autoware_universe/issues/12258>`_)
+  * use constant dt for enforcer, remove faulty recalc time from start call
+  * add comment with TODO
+  * add time from start directly in the qp smoother
+  * add as param time_step_s
+  * update doc
+  ---------
+* docs(autoware_trajectory_optimizer): add optimizer spec file (`#12242 <https://github.com/mitsudome-r/autoware_universe/issues/12242>`_)
+  * add specs file
+  * fix qp smoother doc
+  * update readme
+  * copilot comments fix
+  * further comments
+  * further comments 2
+  * precommit fixes
+  * prettier
+  ---------
+* Contributors: Yuxuan Liu, danielsanchezaran, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
