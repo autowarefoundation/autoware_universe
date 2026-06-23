@@ -76,14 +76,12 @@ public:
    * @param[in] calibration_image_list_path path for calibration files (only require for
    * quantization)
    * @param[in] norm_factor scaling factor for preprocess
-   * @param[in] cache_dir unused variable
    * @param[in] calib_config calibration configuration
    */
   TrtYoloX(
     TrtCommonConfig & trt_config, const int num_class = 8, const float score_threshold = 0.3,
     const float nms_threshold = 0.7, const uint8_t gpu_id = 0,
     std::string calibration_image_list_path = std::string(), const double norm_factor = 1.0,
-    [[maybe_unused]] const std::string & cache_dir = "",
     const CalibrationConfig & calib_config = CalibrationConfig());
   /**
    * @brief Deconstruct TrtYoloX
@@ -117,20 +115,6 @@ public:
    */
   bool doMultiScaleInference(
     const cv::Mat & image, ObjectArrays & objects, const std::vector<cv::Rect> & roi);
-
-  /**
-   * @brief allocate buffer for preprocess on GPU
-   * @param[in] width original image width
-   * @param[in] height original image height
-   * @warning if we don't allocate buffers using it, "preprocessGpu" allocates buffers at the
-   * beginning
-   */
-  void initPreprocessBuffer(int width, int height);
-
-  /**
-   * @brief output TensorRT profiles for each layer
-   */
-  void printProfiling(void);
 
   /**
    * @brief get num for multitask heads
