@@ -533,6 +533,11 @@
               "description": "Treat amber light as red light",
               "default": false
             },
+            "treat_unknown_light_as_red": {
+              "type": "boolean",
+              "description": "Treat unknown light as red light",
+              "default": false
+            },
             "overshoot_tolerance": {
               "type": "number",
               "description": "Overshoot tolerance [m]",
