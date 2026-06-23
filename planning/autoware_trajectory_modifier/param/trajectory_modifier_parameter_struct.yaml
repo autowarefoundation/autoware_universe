@@ -394,6 +394,11 @@ trajectory_modifier_params:
       default_value: false
       description: Treat amber light as red light
       read_only: false
+    treat_unknown_light_as_red:
+      type: bool
+      default_value: false
+      description: Treat unknown light as red light
+      read_only: false
     overshoot_tolerance:
       type: double
       default_value: 0.5
