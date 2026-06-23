@@ -23179,9 +23179,10 @@
 <p><code>trajectory_selector_node</code> is the ROS 2 node that orchestrates the full candidate trajectory pipeline. It buffers trajectory candidates from multiple upstream planners via <code>autoware_trajectory_concatenator</code>, validates each candidate against the safety and traffic-rule plugins of <code>autoware_trajectory_validator</code>, and publishes the surviving trajectories for downstream processing.</p>
 <h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
 <ol>
-<li>Candidate trajectories arrive on two separate input topics — <code>~/input/trajectories_generative</code> for generative planners and <code>~/input/trajectories_backup</code> for backup planners. Each received message is forwarded to the internal concatenator buffer.</li>
-<li>A 100 ms timer fires: the concatenator prunes stale entries (older than <code>duration_time</code>) and returns the merged trajectory set from all registered generators.</li>
-<li>If any mandatory sensor input (odometry, predicted objects, acceleration, or HD map) is unavailable, the timer returns early without publishing.</li>
+<li>Candidate trajectories arrive on two separate input topics. <code>~/input/trajectories_generative</code> acts as an <strong>anchor</strong>: receiving a message on this topic triggers an immediate concatenation and validation cycle. <code>~/input/trajectories_backup</code> messages are buffered and processed in the next cycle.</li>
+<li>A 100 ms timer also fires periodically to ensure output is published even if the anchor input is delayed or missing. The timer is reset whenever an anchor message is received.</li>
+<li>During each cycle (triggered by the anchor or the timer), the concatenator prunes stale entries (older than <code>duration_time</code>) and returns the merged trajectory set from all registered generators.</li>
+<li>If any mandatory sensor input (odometry, predicted objects, acceleration, or HD map) is unavailable, the cycle returns early without publishing.</li>
 <li>The validator runs all loaded plugins against each trajectory. Trajectories rejected by any enforced plugin (listed in <code>filter_names</code>) are removed from the output set.</li>
 <li>The surviving trajectories are published to <code>~/output/trajectories</code>.</li>
 </ol>
@@ -23254,7 +23255,27 @@
 </tbody>
 </table>
 <h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
-<p>This node does not declare parameters of its own. Configuration is provided through the sub-package parameter files loaded at launch:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>fallback_period_ms</td>
+<td>integer</td>
+<td>fallback timer period in milliseconds</td>
+<td>150</td>
+<td>≥1</td>
+</tr>
+</tbody>
+</table>
+<p>Other configuration is provided through the sub-package parameter files loaded at launch:</p>
 <ul>
 <li>Concatenation parameters: see <a href="../autoware_trajectory_concatenator/#parameters"><code>autoware_trajectory_concatenator</code></a></li>
 <li>Validation parameters: see <a href="../autoware_trajectory_validator/#parameters"><code>autoware_trajectory_validator</code></a></li>
