@@ -37,11 +37,11 @@ ShiftDecider::ShiftDecider(const rclcpp::NodeOptions & node_options)
   pub_shift_cmd_ =
     create_publisher<autoware_vehicle_msgs::msg::GearCommand>("output/gear_cmd", durable_qos);
 
-  sub_control_cmd_ = create_polling_sub<autoware_control_msgs::msg::Control>(
+  sub_control_cmd_ = this->create_polling_subscriber<autoware_control_msgs::msg::Control>(
     "input/control_cmd", rclcpp::QoS{1});
-  sub_autoware_state_ = create_polling_sub<autoware_system_msgs::msg::AutowareState>(
+  sub_autoware_state_ = this->create_polling_subscriber<autoware_system_msgs::msg::AutowareState>(
     "input/state", rclcpp::QoS{1});
-  sub_current_gear_ = create_polling_sub<autoware_vehicle_msgs::msg::GearReport>(
+  sub_current_gear_ = this->create_polling_subscriber<autoware_vehicle_msgs::msg::GearReport>(
     "input/current_gear", rclcpp::QoS{1});
 
   initTimer(0.1);

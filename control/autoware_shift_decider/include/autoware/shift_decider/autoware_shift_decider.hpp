@@ -26,7 +26,6 @@
 #include <autoware_vehicle_msgs/msg/gear_report.hpp>
 
 #include <memory>
-#include <string>
 
 namespace autoware::shift_decider
 {
@@ -40,17 +39,6 @@ private:
   void onTimer();
   void updateCurrentShiftCmd();
   void initTimer(double period_s);
-
-  template <typename MessageT>
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(MessageT)
-    create_polling_sub(const std::string & topic, const rclcpp::QoS & qos)
-  {
-#ifdef USE_AGNOCAST_ENABLED
-    return this->create_polling_subscriber<MessageT>(topic, qos);
-#else
-    return AUTOWARE_CREATE_POLLING_SUBSCRIBER(MessageT, topic, qos);
-#endif
-  }
 
   AUTOWARE_PUBLISHER_PTR(autoware_vehicle_msgs::msg::GearCommand) pub_shift_cmd_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_control_msgs::msg::Control) sub_control_cmd_;
