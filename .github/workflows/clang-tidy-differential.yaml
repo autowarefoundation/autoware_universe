@@ -103,6 +103,8 @@ jobs:
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
           artifact-name: clang-tidy-result-${{ inputs.rosdistro }}${{ contains(inputs.container, '-cuda') && '-cuda' || '' }}
           use-clang-tidy-cache: true
+          # Core dependencies are provided pre-built by the Docker image under /opt/autoware.
+          underlay-workspace: /opt/autoware
 
       - name: Show disk space after the tasks
         run: df -h
