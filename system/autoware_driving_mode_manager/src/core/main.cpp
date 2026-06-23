@@ -289,18 +289,18 @@ ServiceResponse ManagerMain::change_autoware_control(const AutowareControl & aut
 
 void ManagerMain::update_autoware_mode()
 {
-  AutowareModeSet availables;
+  AutowareModeSet available;
   for (const auto & mode : config_->autoware_modes()) {
     if (temporary_unavailable_modes_.count(mode) == 0) {
       if (mode.id != request_.autoware_mode.id) {
-        if (status_->is_available(mode)) availables.insert(mode);
+        if (status_->is_available(mode)) available.insert(mode);
       } else {
-        if (status_->is_continuable(mode)) availables.insert(mode);
+        if (status_->is_continuable(mode)) available.insert(mode);
       }
     }
   }
 
-  const auto mode = plugin_->decide(request_, availables);
+  const auto mode = plugin_->decide(request_, available);
   const auto prev = request_.autoware_mode;
   if (prev.id == mode.id) {
     return;

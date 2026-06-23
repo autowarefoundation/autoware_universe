@@ -38,7 +38,7 @@ constexpr auto LocalCommand = CommandSource{13};
 constexpr auto RemoteCommand = CommandSource{14};
 constexpr auto EmergencyStopCommand = CommandSource{21};
 
-AutowareMode DefaultPlugin::decide(const RequestModes & modes, const AutowareModeSet & availables)
+AutowareMode DefaultPlugin::decide(const RequestModes & modes, const AutowareModeSet & available)
 {
   std::vector<AutowareMode> candidates;
 
@@ -51,7 +51,7 @@ AutowareMode DefaultPlugin::decide(const RequestModes & modes, const AutowareMod
 
   std::vector<AutowareMode> result;
   for (const auto & mode : candidates) {
-    if (availables.count(mode)) result.push_back(mode);
+    if (available.count(mode)) result.push_back(mode);
   }
 
   return result.empty() ? EmergencyStop : result.front();
