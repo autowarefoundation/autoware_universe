@@ -220,39 +220,30 @@ double correctWheelAnchorLateral(
   const double tracker_left, const double tracker_right, const double polygon_left,
   const double polygon_right, double & var_lat)
 {
-  constexpr double balance_alpha = 0.2;         // hold-tracker slope inside the dead-zone
-  constexpr double corner_residual_beta = 0.3;  // residual std fraction once the corner is matched
+  const double tracker_center = 0.5 * (tracker_left + tracker_right);
+  const double polygon_center = 0.5 * (polygon_left + polygon_right);
 
-  // Per-side overhang of the polygon beyond the tracker box (positive = the polygon edge sticks out
-  // past the tracker boundary on that side). The two overhangs fully describe the lateral geometry:
-  //   slack          = half the total overhang     = how far the tracker can slide inside the polygon
-  //   lateral_offset = half the overhang asymmetry  = edge-center bias from the tracker center
-  const double overhang_left = polygon_left - tracker_left;
-  const double overhang_right = tracker_right - polygon_right;
-  const double slack = 0.5 * (overhang_left + overhang_right);
-  const double lateral_offset = 0.5 * (overhang_left - overhang_right);
+  // Two candidate vehicle centers, one per side, obtained by aligning the tracker box (kept at its
+  // own width) to each polygon edge. The true center must lie on the segment between them; that
+  // segment is the lateral "dead-zone" whose width equals |polygon_width - tracker_width|.
+  const double center_from_left = polygon_left - tracker_left;
+  const double center_from_right = polygon_right - tracker_right;
+  const double low = std::min(center_from_left, center_from_right);
+  const double high = std::max(center_from_left, center_from_right);
 
-  if (slack <= 0.0) {
-    // Polygon narrower than (or equal to) the tracker: partial view. Keep the anchor (no move) and
-    // add the worst-case lateral offset (half the missing width) as variance.
-    const double half_gap = -slack;  // = 0.5 * (tracker_width - polygon_width) >= 0
-    var_lat = half_gap * half_gap;
-    return 0.0;
-  }
+  // Project the tracker center into the dead-zone:
+  //  - inside  -> hold it (polygon straddles, or is straddled by, the tracker on both sides)
+  //  - outside -> snap to the nearest edge-aligned center; the closer polygon edge is taken as a
+  //               real vehicle edge and the box slides by that overhang (tracker_center +
+  //               overhang).
+  const double target = std::clamp(tracker_center, low, high);
 
-  // Polygon wider than the tracker: soft dead-zone ("back-lash") lateral correction. The tracker box
-  // can slide within the polygon by up to `slack` on either side before a corner is exposed
-  // Clamping `lateral_offset` to [-slack, slack] expresses both regimes in one line.
-  const double clamped_offset = std::clamp(lateral_offset, -slack, slack);
-  const double lateral_move = -(1.0 - balance_alpha) * clamped_offset;
+  // Lateral position is unknown across the dead-zone, so its variance grows with the dead-zone
+  // size: std = half the dead-zone width = 0.5 * |polygon_width - tracker_width|.
+  const double half_dead_zone = 0.5 * (high - low);
+  var_lat = half_dead_zone * half_dead_zone;
 
-  // Added lateral std: `slack` when centered (true position unknown across the slack), shrinking to
-  // `corner_residual_beta` * slack once the corner is matched. `|clamped_offset| / slack` runs 0 -> 1
-  // as the bias grows from centered to a fully exposed corner.
-  const double t = std::abs(clamped_offset) / slack;
-  const double std_lat = slack * (1.0 - (1.0 - corner_residual_beta) * t);
-  var_lat = std_lat * std_lat;
-  return lateral_move;
+  return target - polygon_center;
 }
 
 geometry_msgs::msg::Point correctWheelAnchor(

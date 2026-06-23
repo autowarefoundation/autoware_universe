@@ -22,14 +22,14 @@ namespace autoware::multi_object_tracker
 {
 namespace
 {
-// Matches the constants defined inside correctWheelAnchorLateral.
-constexpr double kAlpha = 0.2;  // balance_alpha
-constexpr double kBeta = 0.3;   // corner_residual_beta
-
 // correctWheelAnchorLateral is pure scalar math over the four lateral edge coordinates. The
 // measurement polygon is centered on the observed edge-center anchor (lateral_offset), so its edges
 // sit at lateral_offset +/- polygon_half; the tracker is centered, with edges at +/- tracker_half.
-// The corrected lateral coordinate is `lateral_offset + lateral_move`.
+//
+// Aligning the fixed-width tracker box to each polygon edge gives two candidate vehicle centers;
+// their segment is the lateral "dead-zone" (width |polygon_width - tracker_width|). The corrected
+// lateral coordinate is the tracker center (0) projected into that dead-zone, and the added lateral
+// variance is the dead-zone half-width squared.
 struct LateralResult
 {
   double lateral;  // corrected lateral coordinate (= lateral_offset + lateral_move)
@@ -46,9 +46,17 @@ LateralResult run(double tracker_width, double polygon_width, double lateral_off
     var_lat);
   return {lateral_offset + lateral_move, var_lat};
 }
+
+// Variance is the dead-zone half-width squared, independent of the offset.
+double expectedVar(double tracker_width, double polygon_width)
+{
+  const double half_dead_zone = 0.5 * std::abs(polygon_width - tracker_width);
+  return half_dead_zone * half_dead_zone;
+}
 }  // namespace
 
-// Equal widths: no slack, no overhang -> anchor untouched, no added variance.
+// Equal widths: zero dead-zone, the two candidate centers coincide -> anchor untouched, no
+// variance.
 TEST(CorrectWheelAnchorLateral, EqualWidthIsNoOp)
 {
   const auto r = run(2.0, 2.0, 0.5);
@@ -56,55 +64,48 @@ TEST(CorrectWheelAnchorLateral, EqualWidthIsNoOp)
   EXPECT_DOUBLE_EQ(r.var_lat, 0.0);
 }
 
-// Polygon narrower than the tracker (partial view): anchor kept, worst-case lateral offset added
-// as variance, var = ((w_t - w_p) / 2)^2.
-TEST(CorrectWheelAnchorLateral, NarrowPolygonAddsVarianceOnly)
+// Row 1 - polygon smaller than the tracker and fully inside it (both overhangs negative): the
+// tracker center sits inside the dead-zone, so the anchor snaps to the tracker lateral center.
+TEST(CorrectWheelAnchorLateral, SmallPolygonWithinSnapsToCenter)
 {
-  const auto r = run(2.0, 1.0, 0.5);
-  EXPECT_DOUBLE_EQ(r.lateral, 0.5);   // anchor unchanged
-  EXPECT_DOUBLE_EQ(r.var_lat, 0.25);  // (0.5)^2
-}
-
-// Wide polygon, observed center on the body axis: nothing to pull, full slack uncertainty.
-TEST(CorrectWheelAnchorLateral, WideCenteredHoldsAnchorMaxVariance)
-{
-  const double slack = 1.0;  // (4 - 2) / 2
-  const auto r = run(2.0, 4.0, 0.0);
+  const auto r = run(2.0, 1.0, 0.3);  // polygon [-0.2, 0.8] inside tracker [-1, 1]
   EXPECT_DOUBLE_EQ(r.lateral, 0.0);
-  EXPECT_DOUBLE_EQ(r.var_lat, slack * slack);  // std = slack
+  EXPECT_DOUBLE_EQ(r.var_lat, expectedVar(2.0, 1.0));  // 0.25
 }
 
-// Wide polygon, observed center inside the slack: anchor held near the tracker (slope alpha), so it
-// is pulled back toward the body axis rather than snapped to the observed center.
-TEST(CorrectWheelAnchorLateral, WideContainedPullsTowardTracker)
+// Row 2 - polygon smaller than the tracker but one edge protrudes (one overhang positive): the
+// protruding polygon edge is taken as a real vehicle edge and the box slides by that overhang.
+TEST(CorrectWheelAnchorLateral, SmallPolygonProtrudingFollowsEdge)
 {
-  const double slack = 1.0;
-  const double d = 0.5;  // < slack -> contained
-  const auto r = run(2.0, 4.0, d);
-  EXPECT_DOUBLE_EQ(r.lateral, kAlpha * d);  // 0.1, pulled in from 0.5
-  const double t = d / slack;
-  const double std_lat = slack * (1.0 - (1.0 - kBeta) * t);
-  EXPECT_DOUBLE_EQ(r.var_lat, std_lat * std_lat);
+  const auto r = run(2.0, 1.0, 0.8);  // polygon [0.3, 1.3], left edge protrudes past tracker 1.0
+  EXPECT_DOUBLE_EQ(r.lateral, 0.3);   // tracker_center + overhang_left (1.3 - 1.0)
+  EXPECT_DOUBLE_EQ(r.var_lat, expectedVar(2.0, 1.0));  // 0.25
 }
 
-// Wide polygon, observed center beyond the slack: a corner is exposed, anchor follows it (unit
-// slope) and the added variance shrinks toward beta * slack.
-TEST(CorrectWheelAnchorLateral, WideUncontainedFollowsCorner)
+// Row 3 - polygon larger than the tracker, tracker fully inside it (both overhangs positive): the
+// tracker center is inside the dead-zone, so the anchor is held at the tracker center.
+TEST(CorrectWheelAnchorLateral, WidePolygonStraddlingHoldsCenter)
 {
-  const double slack = 1.0;
-  const double d = 2.0;  // > slack -> corner exposed
-  const auto r = run(2.0, 4.0, d);
-  EXPECT_DOUBLE_EQ(r.lateral, (d - slack) + kAlpha * slack);       // 1.2
-  EXPECT_DOUBLE_EQ(r.var_lat, (kBeta * slack) * (kBeta * slack));  // std = beta * slack
+  const auto r = run(2.0, 4.0, 0.5);  // polygon [-1.5, 2.5] straddles tracker [-1, 1]
+  EXPECT_DOUBLE_EQ(r.lateral, 0.0);
+  EXPECT_DOUBLE_EQ(r.var_lat, expectedVar(2.0, 4.0));  // 1.0
 }
 
-// The dead-zone is continuous at |d| = slack: both branches agree on anchor and variance.
+// Row 4 - polygon larger than the tracker but one edge recedes inside it (one overhang negative):
+// the recessed polygon edge is the real vehicle edge; the anchor snaps to that edge-aligned center.
+TEST(CorrectWheelAnchorLateral, WidePolygonRecedingFollowsEdge)
+{
+  const auto r = run(2.0, 4.0, 2.0);  // polygon [0, 4], right edge 0 recedes inside tracker
+  EXPECT_DOUBLE_EQ(r.lateral, 1.0);   // tracker right edge aligned to polygon_right (0 + 1)
+  EXPECT_DOUBLE_EQ(r.var_lat, expectedVar(2.0, 4.0));  // 1.0
+}
+
+// The projection is continuous as the tracker center crosses the dead-zone boundary.
 TEST(CorrectWheelAnchorLateral, ContinuousAtBoundary)
 {
-  const double slack = 1.0;
   const double eps = 1e-6;
-  const auto inside = run(2.0, 4.0, slack - eps);
-  const auto outside = run(2.0, 4.0, slack + eps);
+  const auto inside = run(2.0, 4.0, 1.0 - eps);
+  const auto outside = run(2.0, 4.0, 1.0 + eps);
   EXPECT_NEAR(inside.lateral, outside.lateral, 1e-4);
   EXPECT_NEAR(inside.var_lat, outside.var_lat, 1e-4);
 }
@@ -112,8 +113,8 @@ TEST(CorrectWheelAnchorLateral, ContinuousAtBoundary)
 // Sign symmetry: a negative lateral offset mirrors the positive case.
 TEST(CorrectWheelAnchorLateral, SignSymmetry)
 {
-  const auto pos = run(2.0, 4.0, 1.5);
-  const auto neg = run(2.0, 4.0, -1.5);
+  const auto pos = run(2.0, 4.0, 2.0);
+  const auto neg = run(2.0, 4.0, -2.0);
   EXPECT_DOUBLE_EQ(pos.lateral, -neg.lateral);
   EXPECT_DOUBLE_EQ(pos.var_lat, neg.var_lat);
 }
