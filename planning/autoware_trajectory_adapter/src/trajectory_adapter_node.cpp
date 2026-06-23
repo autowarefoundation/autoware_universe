@@ -14,6 +14,8 @@
 
 #include "trajectory_adapter_node.hpp"
 
+#include <algorithm>
+#include <functional>
 #include <memory>
 #include <utility>
 
