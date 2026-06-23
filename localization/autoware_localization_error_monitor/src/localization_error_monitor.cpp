@@ -53,7 +53,7 @@ LocalizationErrorMonitor::LocalizationErrorMonitor(const rclcpp::NodeOptions & o
     this->create_publisher<visualization_msgs::msg::Marker>("debug/ellipse_marker", durable_qos);
 
   logger_configure_ = std::make_unique<
-    autoware_utils_logging::LoggerLevelConfigureImpl<autoware::agnocast_wrapper::Node>>(this);
+    autoware_utils_logging::BasicLoggerLevelConfigure<autoware::agnocast_wrapper::Node>>(this);
 
   diagnostics_error_monitor_ = std::make_unique<
     autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>(

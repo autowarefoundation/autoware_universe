@@ -39,7 +39,7 @@ private:
   AUTOWARE_TIMER_PTR timer_;
 
   std::unique_ptr<
-    autoware_utils_logging::LoggerLevelConfigureImpl<autoware::agnocast_wrapper::Node>>
+    autoware_utils_logging::BasicLoggerLevelConfigure<autoware::agnocast_wrapper::Node>>
     logger_configure_;
 
   std::unique_ptr<
