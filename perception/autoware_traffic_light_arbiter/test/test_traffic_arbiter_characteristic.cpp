@@ -782,9 +782,10 @@ TEST_F(ArbiterCharacteristic, priorityBasedOffMapIdDropped)
 //    input validation, priority overrides, predictions.
 // ---------------------------------------------------------------------------
 
-// Before the vector_map arrives, arbitrate_and_publish early-returns and no
-// TrafficLightGroupArray is emitted.
-TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
+// Before the vector_map arrives, arbitrate_and_publish still publishes — an
+// empty (zero-group) TrafficLightGroupArray — rather than staying silent. The
+// throttled "before a map" warning is the Node's only no-map signal now.
+TEST_F(ArbiterCharacteristic, perceptionBeforeMapPublishesEmptyOutput)
 {
   // Arrange (intentionally no publish_map())
   start_arbiter(false, "confidence");  // priority-based mode, "confidence" priority
@@ -794,10 +795,11 @@ TEST_F(ArbiterCharacteristic, perceptionBeforeMapProducesNoOutput)
     t0_, map_ids::vehicle_signal_a,
     {make_traffic_light_element(TrafficLightElement::RED, TrafficLightElement::CIRCLE)}));
 
-  // Assert: arbitrate_and_publish should early-return when no map has been
-  // received. Content alone cannot prove this (a default-constructed
-  // message looks identical to no publish at all), so we read the counter.
-  EXPECT_EQ(arbiter_publish_count_, 0u);
+  // Assert: a publish happened, and it carried no groups. The counter read
+  // distinguishes "publish happened with zero groups" (the spec) from "no
+  // publish at all", which would also leave groups empty.
+  ASSERT_GE(arbiter_publish_count_, 1u);
+  EXPECT_EQ(observed_group_count(), 0u);
 }
 
 // A non-null but signal-free map should yield an empty TrafficLightGroupArray

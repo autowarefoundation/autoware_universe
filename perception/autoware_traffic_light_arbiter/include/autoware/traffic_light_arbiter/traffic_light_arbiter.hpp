@@ -53,6 +53,11 @@ private:
     const std::vector<TrafficLightArbiterCore::ExpiredExternalSignal> & expired);
 
   std::unique_ptr<TrafficLightArbiterCore> core_;
+
+  // True once on_map() has installed a map into the Core. Drives the
+  // "before a map" warning; the Core emits an empty output regardless, which
+  // the Node publishes either way.
+  bool map_received_{false};
 };
 }  // namespace autoware::traffic_light
 

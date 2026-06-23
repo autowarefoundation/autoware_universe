@@ -24,7 +24,6 @@
 #include <lanelet2_core/Forward.h>
 
 #include <memory>
-#include <optional>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -75,13 +74,12 @@ public:
   ExternalIngestResult ingest_external(
     const TrafficSignalArray & msg, const rclcpp::Time & current_time);
 
-  // Result of one arbitration cycle. `output` holds the arbitrated signals by
-  // value; std::nullopt means no map has arrived yet, so the Node skips the
-  // publish. The Core leaves output unstamped — the Node owns stamp inheritance
-  // and uses latest_input_time for staleness logging.
+  // Result of one arbitration cycle. `output` always holds the arbitrated signals
+  // by value, empty when no map or no traffic-light regulatory element exists. The
+  // Node always publishes it unstamped and uses latest_input_time for staleness logging.
   struct ArbitrationResult
   {
-    std::optional<TrafficSignalArray> output;  // stamp left default; Node fills it in.
+    TrafficSignalArray output;  // stamp left default; Node fills it in.
     std::vector<lanelet::Id> off_map_signal_ids;
     rclcpp::Time latest_input_time{0, 0, RCL_ROS_TIME};
   };

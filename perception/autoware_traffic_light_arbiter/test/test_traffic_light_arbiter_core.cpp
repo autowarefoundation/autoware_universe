@@ -195,18 +195,14 @@ TrafficLightGroupArray make_signal(
 
 // --- Assert helpers ----------------------------------------------------
 //
-// The Core's arbitrate() returns an ArbitrationResult whose `output` may be
-// std::nullopt (e.g. when no map was supplied). Helpers take that optional
-// directly so callers don't need a separate ASSERT_TRUE guard before each
-// observation — the helpers fold the nullopt case into their return.
+// The Core's arbitrate() returns an ArbitrationResult whose `output` is always
+// a TrafficLightGroupArray (empty when no map was supplied). Helpers take it by
+// const-ref and return std::nullopt only when the queried group or element is
+// absent, so callers can observe directly without a separate guard.
 
-const TrafficLightGroup * find_group(
-  const std::optional<TrafficLightGroupArray> & output, lanelet::Id id)
+const TrafficLightGroup * find_group(const TrafficLightGroupArray & output, lanelet::Id id)
 {
-  if (!output) {
-    return nullptr;
-  }
-  for (const auto & group : output->traffic_light_groups) {
+  for (const auto & group : output.traffic_light_groups) {
     if (group.traffic_light_group_id == id) {
       return &group;
     }
@@ -224,8 +220,7 @@ const TrafficLightElement * find_element(const TrafficLightGroup & group, uint8_
   return nullptr;
 }
 
-std::optional<uint8_t> observed_color(
-  const std::optional<TrafficLightGroupArray> & output, lanelet::Id id)
+std::optional<uint8_t> observed_color(const TrafficLightGroupArray & output, lanelet::Id id)
 {
   const auto * group = find_group(output, id);
   if (!group || group->elements.empty()) {
@@ -234,8 +229,7 @@ std::optional<uint8_t> observed_color(
   return group->elements[0].color;
 }
 
-std::optional<float> observed_confidence(
-  const std::optional<TrafficLightGroupArray> & output, lanelet::Id id)
+std::optional<float> observed_confidence(const TrafficLightGroupArray & output, lanelet::Id id)
 {
   const auto * group = find_group(output, id);
   if (!group || group->elements.empty()) {
@@ -244,17 +238,13 @@ std::optional<float> observed_confidence(
   return group->elements[0].confidence;
 }
 
-std::optional<std::size_t> observed_group_count(
-  const std::optional<TrafficLightGroupArray> & output)
+std::size_t observed_group_count(const TrafficLightGroupArray & output)
 {
-  if (!output) {
-    return std::nullopt;
-  }
-  return output->traffic_light_groups.size();
+  return output.traffic_light_groups.size();
 }
 
 std::optional<uint8_t> observed_color_of_shape(
-  const std::optional<TrafficLightGroupArray> & output, lanelet::Id id, uint8_t shape)
+  const TrafficLightGroupArray & output, lanelet::Id id, uint8_t shape)
 {
   const auto * group = find_group(output, id);
   if (!group) {
@@ -268,7 +258,7 @@ std::optional<uint8_t> observed_color_of_shape(
 }
 
 std::optional<std::string> observed_prediction_source(
-  const std::optional<TrafficLightGroupArray> & output, lanelet::Id id, std::size_t index)
+  const TrafficLightGroupArray & output, lanelet::Id id, std::size_t index)
 {
   const auto * group = find_group(output, id);
   if (!group || index >= group->predictions.size()) {
@@ -749,10 +739,10 @@ TEST(TrafficLightArbiterCorePerceptionPriority, externalOnlyPassesThrough)
 // each test needs a non-default map configuration (no map, or empty map).
 // ---------------------------------------------------------------------------
 
-// arbitrate() before set_map() yields output=std::nullopt. The Node
-// distinguishes "no output" (skip publish) from "empty output" (publish
-// with zero groups), so the optional must stay disengaged here.
-TEST(TrafficLightArbiterCoreBoundary, arbitrateWithoutMapProducesNoOutput)
+// arbitrate() before set_map() yields an engaged but empty output: the Core
+// emits zero groups rather than withholding a result, and the Node publishes it
+// regardless. The "before a map" diagnostic lives in the Node, not this return.
+TEST(TrafficLightArbiterCoreBoundary, arbitrateWithoutMapProducesEmptyOutput)
 {
   TrafficLightArbiterCore unconfigured(
     CONFIDENCE, /*enable_signal_matching=*/false, default_external_delay_tolerance,
@@ -763,12 +753,12 @@ TEST(TrafficLightArbiterCoreBoundary, arbitrateWithoutMapProducesNoOutput)
 
   const auto result = unconfigured.arbitrate();
 
-  EXPECT_FALSE(result.output.has_value());
+  EXPECT_EQ(observed_group_count(result.output), 0u);
 }
 
-// A map with no TrafficLight regulatory elements yields an output that is
-// engaged but empty — the counterpart to the no-map case above. The Node
-// publishes a zero-group message here instead of skipping the publish.
+// A map with no TrafficLight regulatory elements yields an empty output too:
+// both this path and the no-map case above converge on a zero-group result
+// that the Node publishes.
 TEST(TrafficLightArbiterCoreBoundary, emptyMapProducesEmptyOutput)
 {
   TrafficLightArbiterCore arbiter(

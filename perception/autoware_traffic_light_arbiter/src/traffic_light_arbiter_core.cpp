@@ -254,15 +254,10 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
   append_predictions(predictions_map, effective_perception.traffic_light_groups);
   append_predictions(predictions_map, valid_external_signals.traffic_light_groups);
 
-  if (map_regulatory_elements_set_ == nullptr) {
-    return result;
-  }
-
-  TrafficSignalArray output_signals_msg;
-  // stamp deliberately left default — the Node owns stamp inheritance.
-
-  if (map_regulatory_elements_set_->empty()) {
-    result.output = std::move(output_signals_msg);
+  // No map yet, or a map without traffic-light regulatory elements: leave the
+  // default-constructed empty output. The Node publishes it regardless and owns
+  // the "before a map" warning via its own map-subscription state.
+  if (map_regulatory_elements_set_ == nullptr || map_regulatory_elements_set_->empty()) {
     return result;
   }
 
@@ -289,6 +284,8 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
     }
   }
 
+  TrafficSignalArray output_signals_msg;
+  // stamp deliberately left default — the Node owns stamp inheritance.
   output_signals_msg.traffic_light_groups.reserve(regulatory_element_signals_map.size());
 
   for (const auto & [regulatory_element_id, elements] : regulatory_element_signals_map) {

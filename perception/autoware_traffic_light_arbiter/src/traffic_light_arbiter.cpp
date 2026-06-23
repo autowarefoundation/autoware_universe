@@ -70,6 +70,7 @@ TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
 void TrafficLightArbiter::on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg)
 {
   core_->set_map(autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
+  map_received_ = true;
 }
 
 void TrafficLightArbiter::on_perception_msg(
@@ -106,10 +107,12 @@ void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::T
 {
   auto result = core_->arbitrate();
 
-  if (!result.output) {
+  // Before a map arrives the Core hands back an empty output; we still publish
+  // it so downstream sees a live, zero-group stream instead of silence, and
+  // warn here because the empty-on-the-wire result alone cannot convey it.
+  if (!map_received_) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "Received traffic signal messages before a map");
-    return;
   }
 
   for (const auto & id : result.off_map_signal_ids) {
@@ -120,14 +123,14 @@ void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::T
 
   // Stamp inheritance is the Node's I/O contract with downstream consumers:
   // the published output carries the trigger msg's stamp for time alignment.
-  result.output->stamp = stamp;
+  result.output.stamp = stamp;
 
   // Publish by const-ref so the wrapper copies into a freshly borrowed message:
   // agnocast's heaphook only routes allocations into the shared-memory pool
   // while a publisher message is borrowed. The Core builds its output on the
   // regular heap, so moving that buffer into a loaned message would leave the
   // payload outside the segment subscribers map. The copy keeps it in shmem.
-  pub_->publish(*result.output);
+  pub_->publish(result.output);
 
   if (rclcpp::Time(stamp) < result.latest_input_time) {
     RCLCPP_WARN_THROTTLE(
