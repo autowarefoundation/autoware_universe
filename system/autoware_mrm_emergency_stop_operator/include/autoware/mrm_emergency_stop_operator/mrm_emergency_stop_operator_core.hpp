@@ -25,6 +25,7 @@
 #include <tier4_system_msgs/srv/operate_mrm.hpp>
 
 // ROS 2 core
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <vector>
@@ -41,7 +42,7 @@ struct Parameters
   double target_jerk;          // [m/s^3]
 };
 
-class MrmEmergencyStopOperator : public rclcpp::Node
+class MrmEmergencyStopOperator : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MrmEmergencyStopOperator(const rclcpp::NodeOptions & node_options);
@@ -49,31 +50,32 @@ public:
 private:
   // Parameters
   Parameters params_;
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   rcl_interfaces::msg::SetParametersResult onParameter(
     const std::vector<rclcpp::Parameter> & parameters);
 
   // Subscriber
-  rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
+  AUTOWARE_SUBSCRIPTION_PTR(Control) sub_control_cmd_;
 
-  void onControlCommand(Control::ConstSharedPtr msg);
+  void onControlCommand(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Control) & msg);
 
   // Server
-  rclcpp::Service<OperateMrm>::SharedPtr service_operation_;
+  AUTOWARE_SERVICE_PTR(OperateMrm) service_operation_;
 
   void operateEmergencyStop(
-    const OperateMrm::Request::SharedPtr request, const OperateMrm::Response::SharedPtr response);
+    const AUTOWARE_SERVICE_REQUEST_PTR(OperateMrm) request,
+    AUTOWARE_SERVICE_RESPONSE_PTR(OperateMrm) response);
 
   // Publisher
-  rclcpp::Publisher<MrmBehaviorStatus>::SharedPtr pub_status_;
-  rclcpp::Publisher<Control>::SharedPtr pub_control_cmd_;
+  AUTOWARE_PUBLISHER_PTR(MrmBehaviorStatus) pub_status_;
+  AUTOWARE_PUBLISHER_PTR(Control) pub_control_cmd_;
 
   void publishStatus() const;
   void publishControlCommand(const Control & command) const;
 
   // Timer
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
   void onTimer();
 

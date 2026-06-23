@@ -16,13 +16,14 @@
 
 #include <autoware_utils/ros/update_param.hpp>
 
+#include <utility>
 #include <vector>
 
 namespace autoware::mrm_emergency_stop_operator
 {
 
 MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & node_options)
-: Node("mrm_emergency_stop_operator", node_options)
+: autoware::agnocast_wrapper::Node("mrm_emergency_stop_operator", node_options)
 {
   // Parameter
   params_.update_rate = declare_parameter<int>("update_rate");
@@ -46,7 +47,7 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
 
   // Timer
   const auto update_period_ns = rclcpp::Rate(params_.update_rate).period();
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), update_period_ns, std::bind(&MrmEmergencyStopOperator::onTimer, this));
 
   // Initialize
@@ -71,7 +72,8 @@ rcl_interfaces::msg::SetParametersResult MrmEmergencyStopOperator::onParameter(
   return result;
 }
 
-void MrmEmergencyStopOperator::onControlCommand(Control::ConstSharedPtr msg)
+void MrmEmergencyStopOperator::onControlCommand(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Control) & msg)
 {
   if (status_.state != MrmBehaviorStatus::OPERATING) {
     prev_control_cmd_ = *msg;
@@ -80,7 +82,8 @@ void MrmEmergencyStopOperator::onControlCommand(Control::ConstSharedPtr msg)
 }
 
 void MrmEmergencyStopOperator::operateEmergencyStop(
-  const OperateMrm::Request::SharedPtr request, const OperateMrm::Response::SharedPtr response)
+  const AUTOWARE_SERVICE_REQUEST_PTR(OperateMrm) request,
+  AUTOWARE_SERVICE_RESPONSE_PTR(OperateMrm) response)
 {
   if (request->operate == true) {
     status_.state = MrmBehaviorStatus::OPERATING;
@@ -93,14 +96,17 @@ void MrmEmergencyStopOperator::operateEmergencyStop(
 
 void MrmEmergencyStopOperator::publishStatus() const
 {
-  auto status = status_;
-  status.stamp = this->now();
-  pub_status_->publish(status);
+  auto status = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_status_);
+  *status = status_;
+  status->stamp = this->now();
+  pub_status_->publish(std::move(status));
 }
 
 void MrmEmergencyStopOperator::publishControlCommand(const Control & command) const
 {
-  pub_control_cmd_->publish(command);
+  auto control_cmd = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_control_cmd_);
+  *control_cmd = command;
+  pub_control_cmd_->publish(std::move(control_cmd));
 }
 
 void MrmEmergencyStopOperator::onTimer()
