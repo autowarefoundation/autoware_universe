@@ -1,0 +1,55 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: YablocPredictor.node
+package:
+  name: yabloc_particle_filter
+  provider: autoware
+launch:
+  plugin: yabloc::modularized_particle_filter::Predictor
+  executable: yabloc_predictor_node
+# interfaces
+subscribers:
+  - name: initialpose
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+  - name: weighted_particles
+    message_type: yabloc_particle_filter/msg/ParticleArray
+  - name: height
+    message_type: std_msgs/msg/Float32
+  - name: twist_with_covariance
+    message_type: geometry_msgs/msg/TwistWithCovarianceStamped
+  - name: ekf_pose
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+publishers:
+  - name: predicted_particles
+    message_type: yabloc_particle_filter/msg/ParticleArray
+  - name: pose
+    message_type: geometry_msgs/msg/PoseStamped
+  - name: pose_with_covariance
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+  - name: init_marker
+    message_type: visualization_msgs/msg/Marker
+    remap_target: ~/debug/init_marker
+  - name: particles_marker_array
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/particles_marker_array
+  - name: tf
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+servers:
+  - name: yabloc_trigger_srv
+    message_type: std_srvs/srv/SetBool
+    remap_target: ~/service/yabloc_trigger_srv
+# parameters
+param_files:
+  - name: predictor_param
+    default: config/predictor.param.yaml
+param_values: []
+# processes
+processes:
+  - name: predict_particles
+    trigger_conditions:
+      - on_input: weighted_particles
+    outcomes:
+      - to_output: predicted_particles
+      - to_output: pose
+      - to_output: pose_with_covariance

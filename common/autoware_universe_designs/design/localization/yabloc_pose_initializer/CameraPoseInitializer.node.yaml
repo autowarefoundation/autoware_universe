@@ -1,0 +1,35 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: CameraPoseInitializer.node
+package:
+  name: yabloc_pose_initializer
+  provider: autoware
+launch:
+  plugin: yabloc::CameraPoseInitializer
+  executable: yabloc_pose_initializer_node
+# interfaces
+subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: image_raw
+    message_type: sensor_msgs/msg/Image
+publishers:
+  - name: init_candidates
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/init_candidates
+servers:
+  - name: yabloc_align_srv
+    message_type: autoware_internal_localization_msgs/srv/PoseWithCovarianceStamped
+    remap_target: ~/service/yabloc_align_srv
+# parameters
+param_files:
+  - name: camera_pose_initializer_param
+    default: config/camera_pose_initializer.param.yaml
+param_values: []
+# processes
+processes:
+  - name: initialize_pose_from_camera
+    trigger_conditions:
+      - on_input: image_raw
+    outcomes:
+      - to_output: init_candidates
