@@ -98,9 +98,9 @@ DrivingModeConfig::Gates DrivingModeConfig::gates(const AutowareMode & mode) con
   return gates_mapping_.at(mode);
 }
 
-AutowareMode DrivingModeConfig::to_autoware_mode(const OperationMode & operation_mode) const
+AutowareMode DrivingModeConfig::to_autoware_mode(const OperationMode & opmode) const
 {
-  return operation_to_autoware_.at(operation_mode);
+  return operation_to_autoware_.at(opmode);
 }
 
 std::optional<AutowareMode> DrivingModeConfig::to_autoware_mode(const MrmBehavior & behavior) const
@@ -109,9 +109,9 @@ std::optional<AutowareMode> DrivingModeConfig::to_autoware_mode(const MrmBehavio
   return iter == mrm_to_autoware_.end() ? std::nullopt : std::optional(iter->second);
 }
 
-OperationMode DrivingModeConfig::to_operation_mode(const AutowareMode & autoware_mode) const
+OperationMode DrivingModeConfig::to_operation_mode(const AutowareMode & mode) const
 {
-  return autoware_to_operation_.at(autoware_mode);
+  return autoware_to_operation_.at(mode);
 }
 
 std::optional<MrmBehavior> DrivingModeConfig::to_mrm_behavior(const AutowareMode & mode) const
