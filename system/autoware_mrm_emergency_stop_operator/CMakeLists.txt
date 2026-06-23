@@ -11,7 +11,7 @@ ament_auto_add_library(${PROJECT_NAME}_component SHARED
 autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::mrm_emergency_stop_operator::MrmEmergencyStopOperator"
   EXECUTABLE ${PROJECT_NAME}_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
