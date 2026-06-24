@@ -53,6 +53,11 @@
 
     reference_path_resolution: 0.5 #[m]
 
+    # parameters for traffic-signal-aware stop prediction
+    priority_prediction:
+      enable: false
+      signal_observation_timeout: 1.0
+
     # debug parameters
     publish_processing_time: false
     publish_processing_time_detail: false

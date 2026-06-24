@@ -30,6 +30,7 @@ struct NodeParams
   double object_buffer_time_length{2.0};
   bool remember_lost_crosswalk_users{false};
   double prediction_time_horizon_unknown{10.0};
+  bool use_priority_prediction{false};
 };
 
 }  // namespace autoware::map_based_prediction
