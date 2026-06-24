@@ -1,4 +1,11 @@
 <launch>
+  <arg name="container_type" default="component_container"/>
+  <let name="use_agnocast" value="$(env ENABLE_AGNOCAST 0)"/>
+  <let name="container_package" value="rclcpp_components" unless="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
+  <let name="container_package" value="agnocast_components" if="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
+  <let name="container_executable" value="$(var container_type)" unless="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
+  <let name="container_executable" value="agnocast_component_container_cie" if="$(eval &quot;'$(var use_agnocast)' == '1'&quot;)"/>
+
   <arg name="trajectory_modifier_param_path" default="$(find-pkg-share autoware_trajectory_modifier)/config/trajectory_modifier.param.yaml"/>
   <arg name="input_candidate_trajectories" default="/planning/diffusion_planner/candidate_trajectories"/>
   <arg name="input_odometry" default="/localization/kinematic_state"/>
@@ -10,7 +17,7 @@
   <arg name="input_vector_map" default="/map/vector_map"/>
   <arg name="output_candidate_trajectories" default="~/output/candidate_trajectories"/>
 
-  <node_container pkg="rclcpp_components" exec="component_container" name="trajectory_modifier_container" namespace="">
+  <node_container pkg="$(var container_package)" exec="$(var container_executable)" name="trajectory_modifier_container" namespace="">
     <composable_node pkg="autoware_glog_component" plugin="autoware::glog_component::GlogComponent" name="glog_component" namespace=""/>
     <composable_node pkg="autoware_trajectory_modifier" plugin="autoware::trajectory_modifier::TrajectoryModifier" name="trajectory_modifier" namespace="">
       <param from="$(var trajectory_modifier_param_path)"/>
