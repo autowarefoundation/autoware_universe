@@ -435,8 +435,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   const auto workspace_policy = thrust::cuda::par(thrust_workspace_.allocator()).on(stream_);
 
   thrust::inclusive_scan(
-    workspace_policy, device_ring_outlier_mask,
-    device_ring_outlier_mask + num_organized_points_, device_indices);
+    workspace_policy, device_ring_outlier_mask, device_ring_outlier_mask + num_organized_points_,
+    device_indices);
 
   int num_output_points{};
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
