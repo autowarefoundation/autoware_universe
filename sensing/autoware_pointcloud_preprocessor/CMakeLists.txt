@@ -365,6 +365,58 @@ ament_get_python_install_dir(python_install_dir)
 install(TARGETS _distortion_corrector_pybind
   DESTINATION "${python_install_dir}/${PROJECT_NAME}")
 
+# ---- Concatenation core (ROS-runtime-free) + Python bindings ----
+# Same approach as the distortion corrector core: the combine + matching logic is built as a
+# standalone shared library that links only ROS message types and header-only math (no rclcpp, no
+# tf, no pcl_ros). It is parameterized by the point cloud *message* type (not the node-level traits),
+# so its headers never pull in the trait's rclcpp publisher/subscriber types. It is built separately
+# from the full `concatenate_data` so the binding does not drag in the node / legacy-node sources
+# (and their utils::is_data_layout_* dependency). Only the pybind module links rclcpp, for message
+# (de)serialization. Dependencies are linked via target_link_libraries with the exported message
+# targets (not ament_target_dependencies, which would over-declare the package closure and re-pull
+# rclcpp).
+add_library(concatenate_core SHARED
+  src/concatenate_data/combine_cloud_handler.cpp
+  src/concatenate_data/combine_cloud_handler_base.cpp
+  src/concatenate_data/matching_policy.cpp
+)
+target_include_directories(concatenate_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+# Header-only includes (point_cloud_msg_wrapper / autoware_point_types provide the cloud helpers;
+# tf2 is used for its LinearMath types only). Message includes propagate via the linked targets.
+target_include_directories(concatenate_core SYSTEM PUBLIC
+  ${autoware_utils_INCLUDE_DIRS}
+  ${autoware_point_types_INCLUDE_DIRS}
+  ${point_cloud_msg_wrapper_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+)
+target_link_libraries(concatenate_core PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  ${autoware_sensing_msgs_TARGETS}
+  ${builtin_interfaces_TARGETS}
+)
+
+pybind11_add_module(_concatenate_pointclouds_pybind
+  src/concatenate_data/concatenate_pointclouds_pybind.cpp
+)
+target_include_directories(_concatenate_pointclouds_pybind PRIVATE ${rclcpp_INCLUDE_DIRS})
+target_link_libraries(_concatenate_pointclouds_pybind PRIVATE
+  concatenate_core
+  ${rclcpp_LIBRARIES}
+)
+
+install(TARGETS concatenate_core
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+install(TARGETS _concatenate_pointclouds_pybind
+  DESTINATION "${python_install_dir}/${PROJECT_NAME}")
+
 ament_python_install_package(${PROJECT_NAME}
   PACKAGE_DIR python/${PROJECT_NAME})
 
@@ -410,9 +462,7 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_matching_policy
     test/test_matching_policy.cpp
-    src/concatenate_data/matching_policy.cpp
   )
-  target_include_directories(test_matching_policy PRIVATE include)
 
   ament_add_gtest(test_polar_voxel_outlier_filter_node
     test/test_polar_voxel_outlier_filter_node.cpp
@@ -451,6 +501,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
+  target_link_libraries(test_matching_policy concatenate_core)
   target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
@@ -468,6 +519,9 @@ if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_distortion_corrector_py
     test/test_distortion_corrector_py.py
+  )
+  ament_add_pytest_test(test_concatenate_pointclouds_py
+    test/test_concatenate_pointclouds_py.py
   )
 
 endif()
