@@ -6,6 +6,20 @@ This package estimates the vehicle speed scale factor by comparing odometry velo
 
 The node runs periodically at `update_interval` and updates the estimate only when all operational constraints are satisfied.
 
+## Block Diagram
+
+### Node architecture
+
+ROS node interfaces and publish timing.
+
+![node architecture](docs/block_diagram_node.drawio.svg)
+
+### Estimation algorithm
+
+Internal processing flow inside `SpeedScaleEstimator`.
+
+![estimation algorithm](docs/block_diagram_algorithm.drawio.svg)
+
 ## Algorithm
 
 The speed scale estimation follows these steps:
