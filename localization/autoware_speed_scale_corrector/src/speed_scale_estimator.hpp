@@ -17,7 +17,9 @@
 
 #include "tl_expected/expected.hpp"
 
-#include <autoware/speed_scale_corrector/types.hpp>
+#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 
 #include <optional>
 #include <vector>
@@ -28,24 +30,22 @@
 namespace autoware::speed_scale_corrector
 {
 
-/**
- * @brief Parameters for speed scale estimator
- */
+using autoware_vehicle_msgs::msg::VelocityReport;
+using geometry_msgs::msg::PoseStamped;
+using sensor_msgs::msg::Imu;
+
 struct SpeedScaleEstimatorParameters
 {
-  double update_interval{};                        //!< Update interval [s]
-  double initial_speed_scale_factor{};             //!< Initial scale factor
-  double initial_speed_scale_factor_covariance{};  //!< Initial scale factor covariance (P)
-  double process_noise_covariance{};               //!< Process noise covariance (Q)
-  double measurement_noise_covariance{};           //!< Measurement noise covariance (R)
-  double max_angular_velocity{};                   //!< Maximum angular velocity constraint [rad/s]
-  double max_speed{};                              //!< Maximum speed constraint [m/s]
-  double min_speed{};                              //!< Minimum speed constraint [m/s]
+  double update_interval{};
+  double initial_speed_scale_factor{};
+  double initial_speed_scale_factor_covariance{};
+  double process_noise_covariance{};
+  double measurement_noise_covariance{};
+  double max_angular_velocity{};
+  double max_speed{};
+  double min_speed{};
 };
 
-/**
- * @brief Reason why estimation was not updated
- */
 enum class UpdateFailureReason
 {
   PoseEmpty,
@@ -61,9 +61,6 @@ enum class UpdateFailureReason
   VelocityReportTooSmall,
 };
 
-/**
- * @brief Context for update failure diagnostics
- */
 struct UpdateFailureContext
 {
   double time_diff = 0.0;
@@ -76,32 +73,23 @@ struct UpdateFailureContext
   double velocity_threshold = 0.0;
 };
 
-/**
- * @brief Result when estimation is successfully updated
- */
 struct SpeedScaleEstimatorUpdated
 {
-  double estimated_speed_scale_factor = 0.0;   //!< Estimated speed scale factor
-  double covariance = 0.0;                     //!< Covariance of the estimated speed scale factor
-  double velocity_from_odometry = 0.0;         //!< Velocity from odometry [m/s]
-  double velocity_from_velocity_report = 0.0;  //!< Velocity from velocity report [m/s]
-  double kalman_gain = 0.0;                    //!< Kalman gain
-  double time_diff = 0.0;                      //!< Time difference between the two updates [s]
+  double estimated_speed_scale_factor = 0.0;
+  double covariance = 0.0;
+  double velocity_from_odometry = 0.0;
+  double velocity_from_velocity_report = 0.0;
+  double kalman_gain = 0.0;
+  double time_diff = 0.0;
 };
 
-/**
- * @brief Result when estimation is not updated
- */
 struct SpeedScaleEstimatorNotUpdated
 {
-  UpdateFailureReason reason{};                //!< Reason for not updating
-  UpdateFailureContext context{};              //!< Diagnostic context
-  double last_estimated_speed_scale_factor{};  //!< Previous estimated speed scale factor
+  UpdateFailureReason reason{};
+  UpdateFailureContext context{};
+  double last_estimated_speed_scale_factor{};
 };
 
-/**
- * @brief Speed scale estimator class
- */
 class SpeedScaleEstimator
 {
 public:
@@ -110,12 +98,12 @@ public:
   [[nodiscard]] double get_update_interval_sec() const;
 
   tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> update(
-    const std::vector<TimestampedPose> & poses, const std::vector<TimestampedImu> & imus,
-    const std::vector<TimestampedVelocity> & velocity_reports);
+    const std::vector<PoseStamped> & poses, const std::vector<Imu> & imus,
+    const std::vector<VelocityReport> & velocity_reports);
 
 private:
   SpeedScaleEstimatorParameters parameters_;
-  std::optional<TimestampedPose> previous_pose_;
+  std::optional<PoseStamped> previous_pose_;
   double estimated_speed_scale_factor_ = 1.0;
   double covariance_ = 1.0;
 };
