@@ -70,7 +70,8 @@ add_library(concatenate_data SHARED
   src/concatenate_data/combine_cloud_handler_base.cpp
   src/concatenate_data/combine_cloud_handler.cpp
   src/concatenate_data/cloud_collector.cpp
-  src/concatenate_data/collector_matching_strategy.cpp
+  src/concatenate_data/collector_matcher.cpp
+  src/concatenate_data/matching_policy.cpp
   src/concatenate_data/concatenate_pointclouds.cpp
 )
 
@@ -406,6 +407,12 @@ if(BUILD_TESTING)
   ament_add_gtest(test_concatenation_info
     test/test_concatenation_info.cpp
   )
+
+  ament_add_gtest(test_matching_policy
+    test/test_matching_policy.cpp
+    src/concatenate_data/matching_policy.cpp
+  )
+  target_include_directories(test_matching_policy PRIVATE include)
 
   ament_add_gtest(test_polar_voxel_outlier_filter_node
     test/test_polar_voxel_outlier_filter_node.cpp
