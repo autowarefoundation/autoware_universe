@@ -14,12 +14,14 @@
 
 #include "autoware/pointcloud_preprocessor/distortion_corrector/distortion_corrector.hpp"
 
+#include "autoware/pointcloud_preprocessor/utility/conversion.hpp"
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 #include "autoware_utils/math/constants.hpp"
 
 #include <autoware_utils/math/trigonometry.hpp>
-#include <tf2_eigen/tf2_eigen.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
 
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <string>
@@ -56,16 +58,18 @@ void DistortionCorrectorBase::process_twist_message(
 
   // If time jumps backwards (e.g. when a rosbag restarts), clear buffer
   if (!twist_queue_.empty()) {
-    if (rclcpp::Time(twist_queue_.front().header.stamp) > rclcpp::Time(msg.header.stamp)) {
+    if (
+      utils::to_nanoseconds(twist_queue_.front().header.stamp) >
+      utils::to_nanoseconds(msg.header.stamp)) {
       twist_queue_.clear();
     }
   }
 
   // Twist data in the queue that is older than the current twist by 1 second will be cleared.
-  auto cutoff_time = rclcpp::Time(msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
+  const int64_t cutoff_nanoseconds = utils::to_nanoseconds(msg.header.stamp) - 1'000'000'000LL;
 
   while (!twist_queue_.empty()) {
-    if (rclcpp::Time(twist_queue_.front().header.stamp) > cutoff_time) {
+    if (utils::to_nanoseconds(twist_queue_.front().header.stamp) > cutoff_nanoseconds) {
       break;
     }
     twist_queue_.pop_front();
@@ -74,57 +78,54 @@ void DistortionCorrectorBase::process_twist_message(
   twist_queue_.push_back(msg);
 }
 
-void DistortionCorrectorBase::process_imu_message(
-  const std::string & base_frame, const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg)
+void DistortionCorrectorBase::set_imu_transform(
+  const geometry_msgs::msg::TransformStamped & imu_to_base_link)
 {
-  get_imu_transformation(base_frame, imu_msg->header.frame_id);
-  enqueue_imu(imu_msg);
+  // Only the rotation is needed to rotate angular velocities into the base frame.
+  geometry_imu_to_base_link_ptr_ = std::make_shared<geometry_msgs::msg::TransformStamped>();
+  geometry_imu_to_base_link_ptr_->transform.rotation = imu_to_base_link.transform.rotation;
 }
 
-void DistortionCorrectorBase::get_imu_transformation(
-  const std::string & base_frame, const std::string & imu_frame)
+void DistortionCorrectorBase::process_imu_message(
+  const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg)
 {
-  if (imu_transform_exists_) {
-    return;
+  if (!geometry_imu_to_base_link_ptr_) {
+    return;  // set_imu_transform() must be called before processing IMU messages.
   }
-
-  Eigen::Matrix4f eigen_imu_to_base_link;
-  auto eigen_transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
-    base_frame, imu_frame, node_.now(), rclcpp::Duration::from_seconds(1.0), node_.get_logger());
-  imu_transform_exists_ = eigen_transform_opt.has_value();
-  if (imu_transform_exists_) {
-    eigen_imu_to_base_link = *eigen_transform_opt;
-  }
-  tf2::Transform tf2_imu_to_base_link = convert_matrix_to_transform(eigen_imu_to_base_link);
-
-  geometry_imu_to_base_link_ptr_ = std::make_shared<geometry_msgs::msg::TransformStamped>();
-  geometry_imu_to_base_link_ptr_->transform.rotation =
-    tf2::toMsg(tf2_imu_to_base_link.getRotation());
+  enqueue_imu(imu_msg);
 }
 
 void DistortionCorrectorBase::enqueue_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg)
 {
-  geometry_msgs::msg::Vector3Stamped angular_velocity;
-  angular_velocity.vector = imu_msg->angular_velocity;
+  // Rotate the angular velocity into the base frame (rotation only; the stored transform carries no
+  // translation). Equivalent to tf2::doTransform on a Vector3, without depending on
+  // tf2_geometry_msgs.
+  const auto & rotation = geometry_imu_to_base_link_ptr_->transform.rotation;
+  const tf2::Vector3 rotated_angular_velocity = tf2::quatRotate(
+    tf2::Quaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+    tf2::Vector3(
+      imu_msg->angular_velocity.x, imu_msg->angular_velocity.y, imu_msg->angular_velocity.z));
 
   geometry_msgs::msg::Vector3Stamped transformed_angular_velocity;
-  tf2::doTransform(angular_velocity, transformed_angular_velocity, *geometry_imu_to_base_link_ptr_);
+  transformed_angular_velocity.vector.x = rotated_angular_velocity.x();
+  transformed_angular_velocity.vector.y = rotated_angular_velocity.y();
+  transformed_angular_velocity.vector.z = rotated_angular_velocity.z();
   transformed_angular_velocity.header = imu_msg->header;
 
   // If time jumps backwards (e.g. when a rosbag restarts), clear buffer
   if (!angular_velocity_queue_.empty()) {
     if (
-      rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
-      rclcpp::Time(imu_msg->header.stamp)) {
+      utils::to_nanoseconds(angular_velocity_queue_.front().header.stamp) >
+      utils::to_nanoseconds(imu_msg->header.stamp)) {
       angular_velocity_queue_.clear();
     }
   }
 
   // IMU data in the queue that is older than the current imu msg by 1 second will be cleared.
-  auto cutoff_time = rclcpp::Time(imu_msg->header.stamp) - rclcpp::Duration::from_seconds(1.0);
+  const int64_t cutoff_nanoseconds = utils::to_nanoseconds(imu_msg->header.stamp) - 1'000'000'000LL;
 
   while (!angular_velocity_queue_.empty()) {
-    if (rclcpp::Time(angular_velocity_queue_.front().header.stamp) > cutoff_time) {
+    if (utils::to_nanoseconds(angular_velocity_queue_.front().header.stamp) > cutoff_nanoseconds) {
       break;
     }
     angular_velocity_queue_.pop_front();
@@ -141,7 +142,7 @@ void DistortionCorrectorBase::get_twist_and_imu_iterator(
   it_twist = std::lower_bound(
     std::begin(twist_queue_), std::end(twist_queue_), first_point_time_stamp_sec,
     [](const geometry_msgs::msg::TwistStamped & x, const double t) {
-      return rclcpp::Time(x.header.stamp).seconds() < t;
+      return utils::to_seconds(x.header.stamp) < t;
     });
   it_twist = it_twist == std::end(twist_queue_) ? std::end(twist_queue_) - 1 : it_twist;
 
@@ -149,46 +150,32 @@ void DistortionCorrectorBase::get_twist_and_imu_iterator(
     it_imu = std::lower_bound(
       std::begin(angular_velocity_queue_), std::end(angular_velocity_queue_),
       first_point_time_stamp_sec, [](const geometry_msgs::msg::Vector3Stamped & x, const double t) {
-        return rclcpp::Time(x.header.stamp).seconds() < t;
+        return utils::to_seconds(x.header.stamp) < t;
       });
     it_imu =
       it_imu == std::end(angular_velocity_queue_) ? std::end(angular_velocity_queue_) - 1 : it_imu;
   }
 }
 
-bool DistortionCorrectorBase::is_pointcloud_valid(sensor_msgs::msg::PointCloud2 & pointcloud)
+PointcloudValidity DistortionCorrectorBase::check_pointcloud_validity(
+  sensor_msgs::msg::PointCloud2 & pointcloud)
 {
   if (pointcloud.data.empty()) {
-    RCLCPP_WARN_STREAM_THROTTLE(
-      node_.get_logger(), *node_.get_clock(), 10000 /* ms */, "Input pointcloud is empty.");
-    return false;
+    return PointcloudValidity::kEmpty;
   }
 
   auto time_stamp_field_it = std::find_if(
     std::cbegin(pointcloud.fields), std::cend(pointcloud.fields),
     [](const sensor_msgs::msg::PointField & field) { return field.name == "time_stamp"; });
   if (time_stamp_field_it == pointcloud.fields.cend()) {
-    RCLCPP_WARN_STREAM_THROTTLE(
-      node_.get_logger(), *node_.get_clock(), 10000 /* ms */,
-      "Required field time stamp doesn't exist in the point cloud.");
-    return false;
+    return PointcloudValidity::kMissingTimeStampField;
   }
 
   if (!utils::is_data_layout_compatible_with_point_xyzircaedt(pointcloud)) {
-    RCLCPP_ERROR(
-      node_.get_logger(), "The pointcloud layout is not compatible with PointXYZIRCAEDT. Aborting");
-
-    if (utils::is_data_layout_compatible_with_point_xyziradrt(pointcloud)) {
-      RCLCPP_ERROR(
-        node_.get_logger(),
-        "The pointcloud layout is compatible with PointXYZIRADRT. You may be using legacy "
-        "code/data");
-    }
-
-    return false;
+    return PointcloudValidity::kIncompatibleLayout;
   }
 
-  return true;
+  return PointcloudValidity::kValid;
 }
 
 std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conversion(
@@ -197,7 +184,7 @@ std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conver
   // This function tries to compute the angle conversion from Cartesian coordinates to LiDAR azimuth
   // coordinates system
 
-  if (!is_pointcloud_valid(pointcloud)) return std::nullopt;
+  if (check_pointcloud_validity(pointcloud) != PointcloudValidity::kValid) return std::nullopt;
 
   AngleConversion angle_conversion;
 
@@ -214,9 +201,7 @@ std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conver
     next_it_y = it_y + 1;
     next_it_azimuth = it_azimuth + 1;
   } else {
-    RCLCPP_WARN_STREAM_THROTTLE(
-      node_.get_logger(), *node_.get_clock(), 10000 /* ms */,
-      "Current point cloud only has a single point. Could not calculate the angle conversion.");
+    // Current point cloud only has a single point; cannot calculate the angle conversion.
     return std::nullopt;
   }
 
@@ -230,9 +215,7 @@ std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conver
     if (
       std::abs(*next_it_azimuth - *it_azimuth) == 0 ||
       std::abs(next_cartesian_rad - current_cartesian_rad) == 0) {
-      RCLCPP_DEBUG_STREAM_THROTTLE(
-        node_.get_logger(), *node_.get_clock(), 10000 /* ms */,
-        "Angle between two points is 0 degrees. Iterate to next point ...");
+      // Angle between two points is 0 degrees. Iterate to next point.
       continue;
     }
 
@@ -253,9 +236,7 @@ std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conver
     } else if (std::abs(sign + 1.0f) <= angle_conversion.sign_threshold) {
       angle_conversion.sign = -1.0f;
     } else {
-      RCLCPP_DEBUG_STREAM_THROTTLE(
-        node_.get_logger(), *node_.get_clock(), 10000 /* ms */,
-        "Value of sign is not close to 1 or -1. Iterate to next point ...");
+      // Value of sign is not close to 1 or -1. Iterate to next point.
       continue;
     }
 
@@ -265,10 +246,7 @@ std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conver
     if (
       std::abs(offset_rad - multiple_of_90_degrees * (autoware_utils::pi / 2)) >
       angle_conversion.offset_rad_threshold) {
-      RCLCPP_DEBUG_STREAM_THROTTLE(
-        node_.get_logger(), *node_.get_clock(), 10000 /* ms */,
-        "Value of offset_rad is not close to multiplication of 90 degrees. Iterate to next point "
-        "...");
+      // Value of offset_rad is not close to a multiple of 90 degrees. Iterate to next point.
       continue;
     }
 
@@ -282,46 +260,24 @@ std::optional<AngleConversion> DistortionCorrectorBase::try_compute_angle_conver
   return std::nullopt;
 }
 
-void DistortionCorrectorBase::warn_if_timestamp_is_too_late(
-  bool is_twist_time_stamp_too_late, bool is_imu_time_stamp_too_late)
-{
-  if (is_twist_time_stamp_too_late) {
-    RCLCPP_WARN_STREAM_THROTTLE(
-      node_.get_logger(), *node_.get_clock(), 10000 /* ms */,
-      "Twist time_stamp is too late. Could not interpolate.");
-  }
-
-  if (is_imu_time_stamp_too_late) {
-    RCLCPP_WARN_STREAM_THROTTLE(
-      node_.get_logger(), *node_.get_clock(), 10000 /* ms */,
-      "IMU time_stamp is too late. Could not interpolate.");
-  }
-}
-
-tf2::Transform DistortionCorrectorBase::convert_matrix_to_transform(const Eigen::Matrix4f & matrix)
-{
-  tf2::Transform transform;
-  transform.setOrigin(tf2::Vector3(matrix(0, 3), matrix(1, 3), matrix(2, 3)));
-  transform.setBasis(
-    tf2::Matrix3x3(
-      matrix(0, 0), matrix(0, 1), matrix(0, 2), matrix(1, 0), matrix(1, 1), matrix(1, 2),
-      matrix(2, 0), matrix(2, 1), matrix(2, 2)));
-  return transform;
-}
-
 template <class T>
-void DistortionCorrector<T>::undistort_pointcloud(
+UndistortionResult DistortionCorrector<T>::undistort_pointcloud(
   bool use_imu, std::optional<AngleConversion> angle_conversion_opt,
   sensor_msgs::msg::PointCloud2 & pointcloud)
 {
+  UndistortionResult result;
+
   timestamp_mismatch_count_ = 0;
   timestamp_mismatch_fraction_ = 0.0;
 
-  if (!is_pointcloud_valid(pointcloud)) return;
+  // Reset the per-cloud undistortion state so callers don't need to call initialize() themselves.
+  static_cast<T *>(this)->initialize();
+
+  result.validity = check_pointcloud_validity(pointcloud);
+  if (result.validity != PointcloudValidity::kValid) return result;
   if (twist_queue_.empty()) {
-    RCLCPP_WARN_STREAM_THROTTLE(
-      node_.get_logger(), *node_.get_clock(), 10000 /* ms */, "Twist queue is empty.");
-    return;
+    result.twist_queue_empty = true;
+    return result;
   }
 
   sensor_msgs::PointCloud2Iterator<float> it_x(pointcloud, "x");
@@ -340,11 +296,11 @@ void DistortionCorrector<T>::undistort_pointcloud(
   std::deque<geometry_msgs::msg::Vector3Stamped>::iterator it_imu;
   get_twist_and_imu_iterator(use_imu, first_point_time_stamp_sec, it_twist, it_imu);
 
-  // For performance, do not instantiate `rclcpp::Time` inside of the for-loop
-  double twist_stamp = rclcpp::Time(it_twist->header.stamp).seconds();
+  // For performance, do not recompute the stamp seconds inside of the for-loop
+  double twist_stamp = utils::to_seconds(it_twist->header.stamp);
   double imu_stamp{0.0};
   if (use_imu && !angular_velocity_queue_.empty()) {
-    imu_stamp = rclcpp::Time(it_imu->header.stamp).seconds();
+    imu_stamp = utils::to_seconds(it_imu->header.stamp);
   }
 
   // If there is a point in a pointcloud that cannot be associated, record it to issue a warning
@@ -362,7 +318,7 @@ void DistortionCorrector<T>::undistort_pointcloud(
     // Get closest twist information
     while (it_twist != std::end(twist_queue_) - 1 && current_point_stamp > twist_stamp) {
       ++it_twist;
-      twist_stamp = rclcpp::Time(it_twist->header.stamp).seconds();
+      twist_stamp = utils::to_seconds(it_twist->header.stamp);
     }
     if (std::abs(current_point_stamp - twist_stamp) > time_diff) {
       is_twist_time_stamp_too_late = true;
@@ -373,7 +329,7 @@ void DistortionCorrector<T>::undistort_pointcloud(
     if (use_imu && !angular_velocity_queue_.empty()) {
       while (it_imu != std::end(angular_velocity_queue_) - 1 && current_point_stamp > imu_stamp) {
         ++it_imu;
-        imu_stamp = rclcpp::Time(it_imu->header.stamp).seconds();
+        imu_stamp = utils::to_seconds(it_imu->header.stamp);
       }
 
       if (std::abs(current_point_stamp - imu_stamp) > time_diff) {
@@ -422,7 +378,9 @@ void DistortionCorrector<T>::undistort_pointcloud(
                                                       static_cast<float>(total_points)
                                                   : 0.0f;
 
-  warn_if_timestamp_is_too_late(is_twist_time_stamp_too_late, is_imu_time_stamp_too_late);
+  result.twist_timestamp_too_late = is_twist_time_stamp_too_late;
+  result.imu_timestamp_too_late = is_imu_time_stamp_too_late;
+  return result;
 }
 
 ///////////////////////// Functions for different undistortion strategies /////////////////////////
@@ -440,39 +398,23 @@ void DistortionCorrector3D::initialize()
 }
 
 void DistortionCorrector2D::set_pointcloud_transform(
-  const std::string & base_frame, const std::string & lidar_frame)
+  const geometry_msgs::msg::TransformStamped & lidar_to_base_link)
 {
-  if (pointcloud_transform_exists_) {
-    return;
-  }
-
-  Eigen::Matrix4f eigen_lidar_to_base_link;
-  auto eigen_transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
-    base_frame, lidar_frame, node_.now(), rclcpp::Duration::from_seconds(1.0), node_.get_logger());
-  pointcloud_transform_exists_ = eigen_transform_opt.has_value();
-  if (pointcloud_transform_exists_) {
-    eigen_lidar_to_base_link = *eigen_transform_opt;
-  }
-  tf2_lidar_to_base_link_ = convert_matrix_to_transform(eigen_lidar_to_base_link);
+  tf2_lidar_to_base_link_ = utils::to_tf2_transform(lidar_to_base_link.transform);
   tf2_base_link_to_lidar_ = tf2_lidar_to_base_link_.inverse();
-  pointcloud_transform_needed_ = base_frame != lidar_frame && pointcloud_transform_exists_;
+  pointcloud_transform_exists_ = true;
+  pointcloud_transform_needed_ =
+    lidar_to_base_link.header.frame_id != lidar_to_base_link.child_frame_id;
 }
 
 void DistortionCorrector3D::set_pointcloud_transform(
-  const std::string & base_frame, const std::string & lidar_frame)
+  const geometry_msgs::msg::TransformStamped & lidar_to_base_link)
 {
-  if (pointcloud_transform_exists_) {
-    return;
-  }
-
-  auto eigen_transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
-    base_frame, lidar_frame, node_.now(), rclcpp::Duration::from_seconds(1.0), node_.get_logger());
-  pointcloud_transform_exists_ = eigen_transform_opt.has_value();
-  if (pointcloud_transform_exists_) {
-    eigen_lidar_to_base_link_ = *eigen_transform_opt;
-  }
+  eigen_lidar_to_base_link_ = utils::to_eigen_matrix(lidar_to_base_link.transform);
   eigen_base_link_to_lidar_ = eigen_lidar_to_base_link_.inverse();
-  pointcloud_transform_needed_ = base_frame != lidar_frame && pointcloud_transform_exists_;
+  pointcloud_transform_exists_ = true;
+  pointcloud_transform_needed_ =
+    lidar_to_base_link.header.frame_id != lidar_to_base_link.child_frame_id;
 }
 
 inline void DistortionCorrector2D::undistort_point_implementation(
