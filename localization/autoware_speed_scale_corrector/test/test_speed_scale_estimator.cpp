@@ -18,7 +18,6 @@
 #include <gtest/gtest.h>
 
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace autoware::speed_scale_corrector
@@ -89,7 +88,7 @@ TEST_F(SpeedScaleEstimatorTest, InsufficientPoses)
 
   auto result = estimator_->update(poses, imus, velocity_reports);
   EXPECT_FALSE(result);
-  EXPECT_TRUE(result.error().reason.find("Waiting for next pose") != std::string::npos);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::WaitingForNextPose);
 }
 
 TEST_F(SpeedScaleEstimatorTest, AngularVelocityConstraintViolation)
@@ -106,8 +105,7 @@ TEST_F(SpeedScaleEstimatorTest, AngularVelocityConstraintViolation)
   const auto result = estimator_->update(poses, imus, velocity_reports);
 
   ASSERT_FALSE(result);
-  EXPECT_TRUE(
-    result.error().reason.find("Angular velocity is too high (IMU)") != std::string::npos);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::AngularVelocityTooHigh);
 }
 
 TEST_F(SpeedScaleEstimatorTest, SpeedConstraintViolation)
@@ -124,7 +122,7 @@ TEST_F(SpeedScaleEstimatorTest, SpeedConstraintViolation)
   const auto result = estimator_->update(poses, imus, velocity_reports);
 
   ASSERT_FALSE(result);
-  EXPECT_TRUE(result.error().reason.find("Velocity is too low") != std::string::npos);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::VelocityTooLow);
 }
 
 TEST_F(SpeedScaleEstimatorTest, VelocityReportTimestampMismatch)
@@ -141,8 +139,7 @@ TEST_F(SpeedScaleEstimatorTest, VelocityReportTimestampMismatch)
   const auto result = estimator_->update(poses, imus, velocity_reports);
 
   ASSERT_FALSE(result);
-  EXPECT_TRUE(
-    result.error().reason.find("Velocity report timestamp mismatch") != std::string::npos);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::VelocityReportTimestampMismatch);
 }
 
 TEST_F(SpeedScaleEstimatorTest, EmptyDataHandling)
@@ -153,7 +150,7 @@ TEST_F(SpeedScaleEstimatorTest, EmptyDataHandling)
 
   auto result = estimator_->update(poses, empty_imu, empty_velocity);
   EXPECT_FALSE(result);
-  EXPECT_TRUE(result.error().reason.find("IMU is empty") != std::string::npos);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::ImuEmpty);
 }
 
 }  // namespace autoware::speed_scale_corrector

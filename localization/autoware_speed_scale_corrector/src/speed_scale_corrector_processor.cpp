@@ -19,6 +19,7 @@
 #include <fmt/format.h>
 
 #include <cmath>
+#include <string>
 
 namespace autoware::speed_scale_corrector
 {
@@ -55,6 +56,49 @@ std::vector<TimestampedVelocity> to_domain_velocities(
        velocity_report_ptr->longitudinal_velocity});
   }
   return domain_velocities;
+}
+
+std::string failure_reason_to_string(
+  const UpdateFailureReason reason, const UpdateFailureContext & context)
+{
+  switch (reason) {
+    case UpdateFailureReason::PoseEmpty:
+      return "Pose is empty";
+    case UpdateFailureReason::ImuEmpty:
+      return "IMU is empty";
+    case UpdateFailureReason::VelocityReportEmpty:
+      return "Velocity report is empty";
+    case UpdateFailureReason::WaitingForNextPose:
+      return "Waiting for next pose";
+    case UpdateFailureReason::TimeDifferenceTooLarge:
+      return fmt::format(
+        "Time difference is too large, time_diff: {:.3f}, threshold: {:.3f}",
+        context.time_diff, context.time_diff_threshold);
+    case UpdateFailureReason::VelocityReportTimestampMismatch:
+      return fmt::format(
+        "Velocity report timestamp mismatch, stamp_diff: {:.3f}, threshold: {:.3f}",
+        context.stamp_diff, context.stamp_diff_threshold);
+    case UpdateFailureReason::ImuTimestampMismatch:
+      return fmt::format(
+        "IMU timestamp mismatch, stamp_diff: {:.3f}, threshold: {:.3f}", context.stamp_diff,
+        context.stamp_diff_threshold);
+    case UpdateFailureReason::AngularVelocityTooHigh:
+      return fmt::format(
+        "Angular velocity is too high (IMU), angular velocity: {:.3f}, max angular velocity: "
+        "{:.3f}",
+        context.angular_velocity, context.max_angular_velocity);
+    case UpdateFailureReason::VelocityTooHigh:
+      return fmt::format(
+        "Velocity is too high, velocity: {:.3f}, max velocity: {:.3f}", context.velocity,
+        context.velocity_threshold);
+    case UpdateFailureReason::VelocityTooLow:
+      return fmt::format(
+        "Velocity is too low, velocity: {:.3f}, min velocity: {:.3f}", context.velocity,
+        context.velocity_threshold);
+    case UpdateFailureReason::VelocityReportTooSmall:
+      return fmt::format("Velocity report is too small: {:.3f}", context.velocity);
+  }
+  return "Unknown failure reason";
 }
 
 }  // namespace
@@ -95,10 +139,11 @@ StringStamped SpeedScaleCorrectorProcessor::make_debug_info(
   debug_info.stamp = stamp;
 
   if (!result.estimation_result) {
+    const auto & error = result.estimation_result.error();
     debug_info.data = fmt::format(
       "Not updated: {}\nEstimated speed scale factor: {}",
-      result.estimation_result.error().reason,
-      result.estimation_result.error().last_estimated_speed_scale_factor);
+      failure_reason_to_string(error.reason, error.context),
+      error.last_estimated_speed_scale_factor);
   } else {
     const auto & updated = result.estimation_result.value();
     debug_info.data = fmt::format(
