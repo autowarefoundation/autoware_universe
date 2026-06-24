@@ -54,11 +54,11 @@ public:
     const std::vector<Imu::ConstSharedPtr> & imu_ptrs,
     const std::vector<VelocityReport::ConstSharedPtr> & velocity_report_ptrs);
 
-  [[nodiscard]] StringStamped make_debug_info(
-    const SpeedScaleCorrectorProcessResult & result, const rclcpp::Time & stamp) const;
+  [[nodiscard]] static StringStamped make_debug_info(
+    const SpeedScaleCorrectorProcessResult & result, const rclcpp::Time & stamp);
 
-  [[nodiscard]] Float32Stamped make_scale_factor_msg(
-    const SpeedScaleEstimatorUpdated & updated, const rclcpp::Time & stamp) const;
+  [[nodiscard]] static Float32Stamped make_scale_factor_msg(
+    const SpeedScaleEstimatorUpdated & updated, const rclcpp::Time & stamp);
 
 private:
   SpeedScaleEstimator speed_scale_estimator_;

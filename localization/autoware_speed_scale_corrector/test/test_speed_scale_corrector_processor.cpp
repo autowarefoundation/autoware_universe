@@ -100,7 +100,7 @@ TEST_F(SpeedScaleCorrectorProcessorTest, MakeDebugInfoContainsFailureReason)
   result.estimation_result =
     tl::make_unexpected(SpeedScaleEstimatorNotUpdated{UpdateFailureReason::PoseEmpty, {}, 1.0});
 
-  const auto debug_info = processor_->make_debug_info(result, rclcpp::Time(1, 0));
+  const auto debug_info = SpeedScaleCorrectorProcessor::make_debug_info(result, rclcpp::Time(1, 0));
 
   EXPECT_EQ(debug_info.stamp.sec, 1);
   EXPECT_NE(debug_info.data.find("Pose is empty"), std::string::npos);
@@ -112,7 +112,7 @@ TEST_F(SpeedScaleCorrectorProcessorTest, MakeScaleFactorMsgUsesUpdatedValue)
   SpeedScaleEstimatorUpdated updated;
   updated.estimated_speed_scale_factor = 1.25;
 
-  const auto msg = processor_->make_scale_factor_msg(updated, rclcpp::Time(2, 0));
+  const auto msg = SpeedScaleCorrectorProcessor::make_scale_factor_msg(updated, rclcpp::Time(2, 0));
 
   EXPECT_EQ(msg.stamp.sec, 2);
   EXPECT_FLOAT_EQ(msg.data, 1.25f);
