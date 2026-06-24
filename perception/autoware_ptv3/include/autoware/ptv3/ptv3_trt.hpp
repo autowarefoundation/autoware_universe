@@ -16,6 +16,7 @@
 #define AUTOWARE__PTV3__PTV3_TRT_HPP_
 
 #include "autoware/ptv3/backbone_preprocessor.hpp"
+#include "autoware/ptv3/backbone_engine.hpp"
 #include "autoware/ptv3/execution_context.hpp"
 #include "autoware/ptv3/postprocess/detection3d_postprocess.hpp"
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
@@ -44,35 +45,6 @@
 
 namespace autoware::ptv3
 {
-
-struct BackboneOutputView
-{
-  float * point_feat{};
-  std::int32_t * point_grid_coord{};
-  std::int64_t * point_offset{};
-};
-
-class PTV3_PUBLIC BackboneEngine
-{
-public:
-  BackboneEngine(
-    const tensorrt_common::TrtCommonConfig & trt_config, const PTv3BackboneConfig & config,
-    std::int32_t * grid_coord, float * feat, std::int64_t * serialized_code);
-
-  [[nodiscard]] BackboneOutputView output() const;
-  void bindSerializedPoolingAddresses(const std::vector<SerializedPoolingDeviceStageView> & stages);
-  bool setInputShapes(
-    std::int64_t num_voxels, const std::vector<std::int64_t> & serialized_pooling_num_voxels);
-  bool enqueue(const PTv3ExecutionContext & context);
-
-private:
-  PTv3BackboneConfig config_;
-
-  std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_ptr_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<float[]> point_feat_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::int32_t[]> point_grid_coord_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> point_offset_d_{nullptr};
-};
 
 class PTV3_PUBLIC SemsegModule
 {
