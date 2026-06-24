@@ -2,6 +2,110 @@
 Changelog for package autoware_crosswalk_traffic_light_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(traffic-light):  fix traffic light nodes message types for system design format files (`#12446 <https://github.com/mitsudome-r/autoware_universe/issues/12446>`_)
+  fix(perception): update message types for traffic light nodes to use autoware_perception_msgs
+* chore(perception): move perception node configuration file to each package (`#12440 <https://github.com/mitsudome-r/autoware_universe/issues/12440>`_)
+  move perception node configuration file to each package
+* refactor(autoware_crosswalk_traffic_light_estimator): improve readability of get_non_red_lanelets (`#12380 <https://github.com/mitsudome-r/autoware_universe/issues/12380>`_)
+  * refactor(autoware_crosswalk_traffic_light_estimator): extract is_lanelet_non_red free function
+  * refactor(autoware_crosswalk_traffic_light_estimator): replace boost::optional with std::optional
+  * refactor(autoware_crosswalk_traffic_light_estimator): extract is_green_or_amber and is_unknown_or_absent helpers
+  * refactor(autoware_crosswalk_traffic_light_estimator): improve readability of is_lanelet_non_red with named variables
+  * style(pre-commit): autofix
+  * refactor(autoware_crosswalk_traffic_light_estimator): add decision table comment to is_lanelet_non_red
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(autoware_universe): use autoware_ament_auto_package in perception utility packages (`#12281 <https://github.com/mitsudome-r/autoware_universe/issues/12281>`_)
+  Co-authored-by: github-actions <github-actions@github.com>
+* fix(crosswalk_traffic_light_estimator): skip lanelets with no signal info in get_non_red_lanelets (`#12370 <https://github.com/mitsudome-r/autoware_universe/issues/12370>`_)
+  * test(crosswalk_traffic_light_estimator): add test case for right turn arrow scenario
+  * test(crosswalk_traffic_light_estimator): unify test map
+  * fix(crosswalk_traffic_light_estimator): prevent unwatched traffic lights from being treated as non-red
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* feat(crosswalk_traffic_light_estimator): simplify CrosswalkTrafficLightEstimator behavior and add unit tests (`#12288 <https://github.com/mitsudome-r/autoware_universe/issues/12288>`_)
+  * refactor(crosswalk_traffic_light_estimator): simplify update_map method by removing routing graph parameter
+  * feat(crosswalk_traffic_light_estimator): simplify get_non_red_lanelets logic by removing unnecessary signal history check
+  * test(crosswalk_traffic_light_estimator): add unit tests for traffic light estimation logic
+  * test(crosswalk_traffic_light_estimator): add unit tests for signal estimation rules
+  * test(crosswalk_traffic_light_estimator): simplify integration test to single empty-input case
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(crosswalk_traffic_light_estimator): extract core estimation logic (`#12273 <https://github.com/mitsudome-r/autoware_universe/issues/12273>`_)
+  * refactor(autoware_crosswalk_traffic_light_estimator): rename node.cpp to crosswalk_traffic_light_estimator.cpp
+  * refactor(autoware_crosswalk_traffic_light_estimator): extract CrosswalkTrafficLightEstimator logic
+  * fix(autoware_crosswalk_traffic_light_estimator): value-initialize config\_ to fix cppcheck warning
+  * fix(autoware_crosswalk_traffic_light_estimator): move static member functions to anonymous namespace
+  * fix(autoware_crosswalk_traffic_light_estimator): add const qualifier to match declaration and definition
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(crosswalk_traffic_light_estimator): rename function names to snake case and move header file to src (`#12262 <https://github.com/mitsudome-r/autoware_universe/issues/12262>`_)
+  * refactor(autoware_crosswalk_traffic_light_estimator): rename functions and variables to snake_case
+  Rename camelCase function names and UPPER_CASE constexpr variables to
+  snake_case to comply with the Autoware coding conventions defined in
+  .clang-tidy (readability-identifier-naming).
+  * refactor(autoware_crosswalk_traffic_light_estimator): move headers from include/ to src/
+  Move node.hpp and flashing_detection.hpp to src/ since they are
+  internal headers not needed by external packages. Update all include
+  paths accordingly.
+  * refactor(autoware_crosswalk_traffic_light_estimator): restore const value name
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(crosswalk_traffic_light_estimator): extract flashing signal detector and unit tests (`#12252 <https://github.com/mitsudome-r/autoware_universe/issues/12252>`_)
+  * feat(crosswalk_traffic_light_estimator): extract flashing signal detection logic into separate class and add tests
+  * refactor(crosswalk_traffic_light_estimator): update estimate_stable_color to include current_time and remove update_signal_history
+  * refactor(crosswalk_traffic_light_estimator): replace direct detector usage with DetectorTimeline for improved test clarity
+  * refactor(flash_detection): extract signal history update logic into separate method for clarity
+  * refactor(crosswalk_traffic_light_estimator): rename DetectorTimeline to FlashingDetectorDriver for clarity and consistency
+  * refactor(flash_detection): remove redundant FlashingTransition_RedToGreen test and update assertions for clarity
+  * refactor(autoware_crosswalk_traffic_light_estimator): reduce cyclomatic complexity of update_signal_history
+  * refactor(autoware_crosswalk_traffic_light_estimator): reduce cyclomatic complexity of update_flashing_state
+  * refactor(autoware_crosswalk_traffic_light_estimator): reduce cyclomatic complexity of update_and_get_color_state
+  * refactor(autoware_crosswalk_traffic_light_estimator): extract remove_expired_entries and improve readability
+  * refactor(crosswalk_traffic_light_estimator): reorganize signal handling functions for improved clarity and maintainability
+  * refactor(crosswalk_traffic_light_estimator): use unordered_map for flashing state maps
+  Key ordering is not needed for is_flashing\_ and current_color_state\_,
+  so use unordered_map for consistency with other maps in the same file.
+  * fix(flashing_detection): correct confidence value for occluded signals in skippable signal check
+  * fix(crosswalk_traffic_light_estimator): reset flashing state when history contains only UNKNOWN entries
+  * test(crosswalk_traffic_light_estimator): update PrunesOldEntries test to verify UNKNOWN-only history reset
+  * test(crosswalk_traffic_light_estimator): use default confidence for UNKNOWN signals in flashing detection tests
+  * test(crosswalk_traffic_light_estimator): clarify test condition
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: Masaki Baba <masaki.baba.2@tier4.jp>
+* perf(perception): use emplace_back and emplace to avoid temporary object creation (`#12201 <https://github.com/mitsudome-r/autoware_universe/issues/12201>`_)
+  * perf(perception): use emplace_back to avoid temporary object creation
+  * style(pre-commit): autofix
+  * perf(perception): use emplace/emplace_back for most containers
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* chore(traffic_light_recognition): add maintainer (`#12221 <https://github.com/mitsudome-r/autoware_universe/issues/12221>`_)
+  add maintainer
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* feat(crosswalk_traffic_light_estimator): remove /route topic to simplify estimation logic (`#12116 <https://github.com/mitsudome-r/autoware_universe/issues/12116>`_)
+  * feat(autoware_crosswalk_traffic_light_estimator): remove route dependency and use signal-driven crosswalk estimation
+  Remove ~/input/route subscription and instead precompute traffic light to
+  crosswalk mappings at map load time. The estimation now processes only
+  crosswalks related to received traffic signals, eliminating per-callback
+  routing graph queries and improving performance.
+  * test(autoware_crosswalk_traffic_light_estimator): add integration tests for crosswalk signal estimation
+  * doc(autoware_crosswalk_traffic_light_estimator): remove route dependency from README and update related descriptions
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Masato Saeki <78376491+MasatoSaeki@users.noreply.github.com>
+* Contributors: Masaki Baba, Taekjin LEE, Takahisa Ishikawa, Vishal Chauhan, github-actions, nishikawa-masaki
+
 0.50.0 (2026-02-14)
 -------------------
 

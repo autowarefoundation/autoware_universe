@@ -10,7 +10,6 @@ jobs:
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
       rosdistro: jazzy
-      container: ghcr.io/autowarefoundation/autoware:universe-devel-jazzy
-      container-suffix: -cuda
+      container: ghcr.io/autowarefoundation/autoware:universe-dependencies-cuda-jazzy
       runner: "['self-hosted', 'Linux', 'X64']"
       pull-ccache: true

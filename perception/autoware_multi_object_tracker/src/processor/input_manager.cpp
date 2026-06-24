@@ -15,8 +15,7 @@
 #include "input_manager.hpp"
 
 #include "autoware/multi_object_tracker/object_model/classes.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
 #include <algorithm>
@@ -68,7 +67,7 @@ void InputStream::push(
 }
 
 std::optional<types::DynamicObjectList> InputStream::processMessage(
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg)
 {
   const autoware_perception_msgs::msg::DetectedObjects & objects = *msg;
   const rclcpp::Time timestamp = objects.header.stamp;
@@ -96,26 +95,12 @@ std::optional<types::DynamicObjectList> InputStream::processMessage(
 
   // object shape processing
   for (auto & object : dynamic_objects.objects) {
-    const auto label = classes::getHighestProbLabel(object.classification);
-    if (label == classes::Label::UNKNOWN) {
-      continue;
-    }
-
     // check object shape type, bounding box, cylinder, polygon
     const auto object_type = object.shape.type;
-    if (object_type == autoware_perception_msgs::msg::Shape::POLYGON) {
-      // convert convex hull to bounding box
-      if (!shapes::convertConvexHullToBoundingBox(object, object)) {
-        RCLCPP_WARN(
-          logger_, "InputManager::onMessage %s: Failed to convert convex hull to bounding box.",
-          channel_.long_name.c_str());
-        continue;
-      }
-    } else if (object_type == autoware_perception_msgs::msg::Shape::CYLINDER) {
+    if (object_type == autoware_perception_msgs::msg::Shape::CYLINDER) {
       // convert cylinder dimension to bounding box dimension
       object.shape.dimensions.y = object.shape.dimensions.x;
     }
-    // else, it is bounding box and nothing to do
   }
 
   // Normalize the object uncertainty
@@ -291,7 +276,7 @@ void InputManager::push(
 
 std::optional<types::DynamicObjectList> InputManager::processMessage(
   const size_t channel_index,
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg)
 {
   if (channel_index >= input_streams_.size()) {
     RCLCPP_WARN(

@@ -172,6 +172,7 @@ void BEVFusionNode::publishDebugInfo(
 
   const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic", true);
   const double processing_time_ms = stop_watch_ptr_->toc("processing/total", true);
+  last_processing_time_ms_ = processing_time_ms;
   const double pipeline_latency_ms =
     std::chrono::duration<double, std::milli>(
       std::chrono::nanoseconds((this->get_clock()->now() - header.stamp).nanoseconds()))

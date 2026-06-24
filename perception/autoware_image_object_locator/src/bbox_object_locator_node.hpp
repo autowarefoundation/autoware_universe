@@ -15,7 +15,7 @@
 #ifndef BBOX_OBJECT_LOCATOR_NODE_HPP_
 #define BBOX_OBJECT_LOCATOR_NODE_HPP_
 
-#include <autoware/universe_utils/ros/transform_listener.hpp>
+#include <autoware_utils_tf/transform_listener.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -41,9 +41,9 @@
 
 namespace autoware::image_object_locator
 {
-using autoware::universe_utils::TransformListener;
 using autoware_perception_msgs::msg::DetectedObject;
 using autoware_perception_msgs::msg::DetectedObjects;
+using autoware_utils_tf::TransformListener;
 using sensor_msgs::msg::CameraInfo;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
@@ -64,13 +64,16 @@ private:
     bool MOTORCYCLE;
     bool BICYCLE;
     bool PEDESTRIAN;
+    bool ANIMAL;
+    bool HAZARD;
 
     bool isDetectionTargetLabel(const uint8_t label) const
     {
       return (label == Label::UNKNOWN && UNKNOWN) || (label == Label::CAR && CAR) ||
              (label == Label::TRUCK && TRUCK) || (label == Label::BUS && BUS) ||
              (label == Label::TRAILER && TRAILER) || (label == Label::MOTORCYCLE && MOTORCYCLE) ||
-             (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN);
+             (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN) ||
+             (label == Label::ANIMAL && ANIMAL) || (label == Label::HAZARD && HAZARD);
     }
 
     static uint8_t getLabelShape(const uint8_t label)

@@ -23,11 +23,10 @@
 #include "autoware/bevfusion/visibility_control.hpp"
 
 #include <Eigen/Core>
-#include <autoware/universe_utils/system/stop_watch.hpp>
-#include <autoware_utils/ros/debug_publisher.hpp>
-#include <autoware_utils/ros/diagnostics_interface.hpp>
-#include <autoware_utils/ros/published_time_publisher.hpp>
-#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
+#include <autoware_utils_debug/published_time_publisher.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
+#include <autoware_utils_system/stop_watch.hpp>
 #include <cuda_blackboard/cuda_adaptation.hpp>
 #include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
@@ -137,12 +136,13 @@ private:
   NonMaximumSuppression iou_bev_nms_;
 
   std::unique_ptr<BEVFusionTRT> detector_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_detector_trt_;
+  std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_detector_trt_;
 
   // debugger
-  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_pub_{nullptr};
+  std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
+    nullptr};
+  std::unique_ptr<autoware_utils_debug::DebugPublisher> debug_publisher_ptr_{nullptr};
+  std::unique_ptr<autoware_utils_debug::PublishedTimePublisher> published_time_pub_{nullptr};
 };
 }  // namespace autoware::bevfusion
 

@@ -2,6 +2,12 @@
 Changelog for package autoware_component_state_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.51.0 (2026-05-01)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(component_state_monitor): remove /initialpose3d topic_state_monitor (`#12104 <https://github.com/mitsudome-r/autoware_universe/issues/12104>`_)
+* Contributors: Takayuki AKAMINE, github-actions
+
 0.50.0 (2026-02-14)
 -------------------
 

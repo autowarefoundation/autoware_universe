@@ -17,14 +17,15 @@
 
 #include "autoware/localization_util/smart_pose_buffer.hpp"
 #include "autoware/qos_utils/qos_compatibility.hpp"
-#include "autoware_utils_diagnostics/diagnostics_interface.hpp"
 
 #include <autoware/landmark_manager/landmark_manager.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
+#include <nav_msgs/msg/occupancy_grid.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -61,6 +62,10 @@ class LidarMarkerLocalizer : public rclcpp::Node
 
   struct Param
   {
+    bool enable_read_all_target_ids;
+    std::vector<std::string> target_ids;
+    int64_t queue_size_for_output_pose;
+
     std::string marker_name;
 
     double resolution;
@@ -69,21 +74,29 @@ class LidarMarkerLocalizer : public rclcpp::Node
     int64_t positive_match_num_threshold;
     int64_t negative_match_num_threshold;
     int64_t vote_threshold_for_detect_marker;
+    double marker_to_vehicle_offset_y;
     double marker_height_from_ground;
+    int64_t reference_ring_number;
 
     double self_pose_timeout_sec;
     double self_pose_distance_tolerance_m;
 
     double limit_distance_from_self_pose_to_nearest_marker;
+    double limit_distance_from_self_pose_to_nearest_marker_y;
     double limit_distance_from_self_pose_to_marker;
     std::array<double, 36> base_covariance;
 
     double marker_width;
+    // Parameters for initial lower/upper ring id
+    int64_t lower_ring_id_init;
+    int64_t upper_ring_id_init;
 
     bool enable_save_log;
     std::string save_file_directory_path;
     std::string save_file_name;
     std::string save_frame_id;
+    double radius_for_extracting_marker_pointcloud;
+    int64_t queue_size_for_debug_pub_msg;
   };
 
 public:
@@ -98,12 +111,20 @@ private:
 
   void initialize_diagnostics();
   void main_process(const PointCloud2::ConstSharedPtr & points_msg_ptr);
+  template <typename PointType>
   std::vector<landmark_manager::Landmark> detect_landmarks(
     const PointCloud2::ConstSharedPtr & points_msg_ptr);
   sensor_msgs::msg::PointCloud2::SharedPtr extract_marker_pointcloud(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & points_msg_ptr,
     const geometry_msgs::msg::Pose marker_pose) const;
   void save_detected_marker_log(const sensor_msgs::msg::PointCloud2::SharedPtr & points_msg_ptr);
+  landmark_manager::Landmark get_nearest_landmark(
+    const geometry_msgs::msg::Pose & self_pose,
+    const std::vector<landmark_manager::Landmark> & landmarks) const;
+  std::array<double, 36> rotate_covariance(
+    const std::array<double, 36> & src_covariance, const Eigen::Matrix3d & rotation) const;
+  template <typename PointT>
+  void save_intensity(const PointCloud2::ConstSharedPtr & points_msg_ptr, const Pose marker_pose);
 
   void transform_sensor_measurement(
     const std::string & source_frame, const std::string & target_frame,
@@ -125,7 +146,13 @@ private:
   rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pub_debug_pose_with_covariance_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_marker_pointcloud_;
 
-  std::shared_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_interface_;
+  std::shared_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
+
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_center_intensity_grid;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_positive_grid;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_negative_grid;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_matched_grid;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_vote_grid;
 
   Param param_;
   bool is_activated_;

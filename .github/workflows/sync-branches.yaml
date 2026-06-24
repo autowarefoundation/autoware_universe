@@ -1,0 +1,68 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
+# Opens a PR that merges one branch of this repo into another (e.g. main -> humble).
+#
+# Trigger: manual (workflow_dispatch).
+# Inputs:
+#   base-branch         The branch the PR targets — i.e. the branch that receives changes. Default: humble.
+#   sync-target-branch  The branch the PR's contents come from. Default: main.
+# The PR working branch is derived as: sync-<sync-target-branch>-to-<base-branch>.
+#
+# Auth: uses a GitHub App token (APP_ID / PRIVATE_KEY secrets) so the PR can be
+# created/updated and so workflow files under .github/workflows/ can be synced
+# (the default GITHUB_TOKEN lacks the `workflow` scope).
+name: sync-branches
+
+on:
+  workflow_dispatch:
+    inputs:
+      base-branch:
+        description: Base branch of the sync PR (the branch that receives changes).
+        required: false
+        default: humble
+        type: string
+      sync-target-branch:
+        description: Branch or commit SHA to sync from (the source of changes).
+        required: false
+        default: main
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ inputs.sync-target-branch }}-${{ inputs.base-branch }}
+  cancel-in-progress: true
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Validate inputs and compute PR branch name
+        id: prepare
+        run: |
+          if [ "${{ inputs.base-branch }}" = "${{ inputs.sync-target-branch }}" ]; then
+            echo "::error::base-branch and sync-target-branch must differ (got '${{ inputs.base-branch }}')."
+            exit 1
+          fi
+          echo "pr-branch=sync-${{ inputs.sync-target-branch }}-to-${{ inputs.base-branch }}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Run sync-branches
+        uses: autowarefoundation/autoware-github-actions/sync-branches@v1
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          base-branch: ${{ inputs.base-branch }}
+          sync-pr-branch: ${{ steps.prepare.outputs.pr-branch }}
+          sync-target-repository: https://github.com/${{ github.repository }}.git
+          sync-target-branch: ${{ inputs.sync-target-branch }}
+          pr-title: "chore: sync ${{ inputs.sync-target-branch }} into ${{ inputs.base-branch }}"
+          pr-labels: |
+            tag:bot
+            tag:sync-branches
