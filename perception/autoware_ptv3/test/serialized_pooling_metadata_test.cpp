@@ -227,7 +227,7 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
   const auto serialized_code = make_serialized_code(grid_coord, config.serialization_depth_);
   const auto num_voxels = static_cast<std::int64_t>(grid_coord.size() / 3);
 
-  PreprocessCuda preprocess(config, stream_);
+  PreprocessCuda preprocess(config.backbone_preprocess_config_);
   auto grid_coord_d = makeDeviceBuffer<std::int32_t>(grid_coord.size());
   auto serialized_code_d = makeDeviceBuffer<std::int64_t>(serialized_code.size());
   auto stage_counts_d = makeDeviceBuffer<std::int64_t>(config.pooling_strides_.size() + 1);
@@ -248,7 +248,8 @@ TEST_F(SerializedPoolingMetadataTest, MatchesCpuReferenceForOnnxFacingInputs)
   copyToDevice(serialized_code_d.get(), serialized_code);
 
   preprocess.generateSerializedPoolingMetadata(
-    grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, stage_counts_d.get());
+    grid_coord_d.get(), serialized_code_d.get(), num_voxels, stage_views, stage_counts_d.get(),
+    stream_);
   ASSERT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
 
   std::vector<CpuStage> references;

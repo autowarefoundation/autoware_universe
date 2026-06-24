@@ -40,9 +40,8 @@ public:
    * @brief Allocate decode buffers and copy threshold tables to the device.
    *
    * @param config Runtime configuration for detection thresholds and grid sizes.
-   * @param stream CUDA stream used for all kernel launches.
    */
-  Detection3DPostprocess(const PTv3Config & config, cudaStream_t stream);
+  explicit Detection3DPostprocess(const PTv3Detection3DConfig & config);
 
   /**
    * @brief Decode proposals, compact kept boxes, and sort by score.
@@ -83,7 +82,7 @@ public:
   [[nodiscard]] std::size_t numBoxes() const { return num_boxes_; }
 
 private:
-  PTv3Config config_;
+  PTv3Detection3DConfig config_;
 
   thrust::device_vector<Box3D> raw_boxes_d_;
   thrust::device_vector<Box3D> passing_boxes_d_;

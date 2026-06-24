@@ -15,9 +15,11 @@
 #ifndef AUTOWARE__PTV3__PTV3_TRT_HPP_
 #define AUTOWARE__PTV3__PTV3_TRT_HPP_
 
+#include "autoware/ptv3/execution_context.hpp"
 #include "autoware/ptv3/postprocess/detection3d_postprocess.hpp"
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
+#include "autoware/ptv3/ptv3_config.hpp"
 #include "autoware/ptv3/utils.hpp"
 #include "autoware/ptv3/visibility_control.hpp"
 
@@ -26,7 +28,12 @@
 #include <autoware_utils/system/stop_watch.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
+#include <sensor_msgs/msg/point_field.hpp>
+#include <std_msgs/msg/header.hpp>
+
+#include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -37,7 +44,205 @@
 namespace autoware::ptv3
 {
 
-using autoware::cuda_utils::CudaUniquePtr;
+class PTV3_PUBLIC BackbonePreprocessor
+{
+public:
+  explicit BackbonePreprocessor(const PTv3BackbonePreprocessConfig & config);
+
+  [[nodiscard]] std::int32_t * gridCoord() const { return grid_coord_d_.get(); }
+  [[nodiscard]] float * features() const { return feat_d_.get(); }
+  [[nodiscard]] std::int64_t * serializedCode() const { return serialized_code_d_.get(); }
+  [[nodiscard]] const void * compactPoints() const { return compact_points_d_.get(); }
+  [[nodiscard]] const PreprocessCuda & cudaPreprocessor() const { return *pre_ptr_; }
+  [[nodiscard]] CloudFormat inputFormat() const { return input_format_; }
+  [[nodiscard]] std::size_t numInputPoints() const { return num_input_points_; }
+  [[nodiscard]] std::size_t numCroppedPoints() const { return num_cropped_points_; }
+  [[nodiscard]] const std::vector<std::int64_t> & serializedPoolingNumVoxels() const
+  {
+    return serialized_pooling_num_voxels_;
+  }
+  [[nodiscard]] std::int64_t numVoxels() const { return num_voxels_; }
+
+  void prepareCloudFormat(const cuda_blackboard::CudaPointCloud2 & msg);
+  bool run(const cuda_blackboard::CudaPointCloud2 & msg, const PTv3ExecutionContext & context);
+  [[nodiscard]] std::vector<SerializedPoolingDeviceStageView> serializedPoolingStageViews();
+
+private:
+  struct SerializedPoolingDeviceStage
+  {
+    autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> indices{nullptr};
+    autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> indptr{nullptr};
+    autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> head_indices{nullptr};
+    autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> cluster{nullptr};
+    autoware::cuda_utils::CudaUniquePtr<std::int32_t[]> grid_coord{nullptr};
+    autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> serialized_code{nullptr};
+    autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> serialized_order{nullptr};
+    autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> serialized_inverse{nullptr};
+  };
+
+  void allocateSerializedPoolingBuffers();
+  void precomputeSerializedPoolingMetadata(const PTv3ExecutionContext & context);
+  [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
+
+  PTv3BackbonePreprocessConfig config_;
+  std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
+  std::once_flag init_cloud_;
+  CloudFormat input_format_{CloudFormat::UNKNOWN};
+  std::size_t num_input_points_{0};
+  std::size_t num_cropped_points_{0};
+  std::int64_t num_voxels_{0};
+
+  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> compact_points_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int32_t[]> grid_coord_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> feat_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
+
+  std::vector<SerializedPoolingDeviceStage> serialized_pooling_stages_d_;
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> serialized_pooling_num_voxels_d_{nullptr};
+  std::vector<std::int64_t> serialized_pooling_num_voxels_;
+};
+
+struct BackboneOutputView
+{
+  float * point_feat{};
+  std::int32_t * point_grid_coord{};
+  std::int64_t * point_offset{};
+};
+
+class PTV3_PUBLIC BackboneEngine
+{
+public:
+  BackboneEngine(
+    const tensorrt_common::TrtCommonConfig & trt_config, const PTv3BackboneConfig & config,
+    std::int32_t * grid_coord, float * feat, std::int64_t * serialized_code);
+
+  [[nodiscard]] BackboneOutputView output() const;
+  void bindSerializedPoolingAddresses(const std::vector<SerializedPoolingDeviceStageView> & stages);
+  bool setInputShapes(
+    std::int64_t num_voxels, const std::vector<std::int64_t> & serialized_pooling_num_voxels);
+  bool enqueue(const PTv3ExecutionContext & context);
+
+private:
+  PTv3BackboneConfig config_;
+
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_ptr_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> point_feat_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int32_t[]> point_grid_coord_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> point_offset_d_{nullptr};
+};
+
+class PTV3_PUBLIC SemsegModule
+{
+public:
+  SemsegModule(
+    const tensorrt_common::TrtCommonConfig & trt_config, const PTv3SemsegConfig & config,
+    const float * backbone_point_feat, const float * backbone_input_features,
+    const void * compact_points);
+
+  [[nodiscard]] bool shouldRun(
+    bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
+    bool should_publish_filtered_pointcloud) const;
+
+  void setPublishSegmentedPointcloud(
+    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+  void setPublishVisualizationPointcloud(
+    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+  void setPublishFilteredPointcloud(
+    std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+
+  void preparePreprocess(
+    const cuda_blackboard::CudaPointCloud2 & msg, const PTv3ExecutionContext & context,
+    CloudFormat input_format, bool should_run);
+  void preprocessSourceReconstruction(
+    const cuda_blackboard::CudaPointCloud2 & msg, const PTv3ExecutionContext & context,
+    const PreprocessCuda & backbone_preprocessor, std::size_t num_cropped_points, bool should_run);
+  void setInputShape(std::int64_t num_voxels);
+  bool enqueue(const PTv3ExecutionContext & context);
+  bool postProcess(
+    const std_msgs::msg::Header & header, const PTv3ExecutionContext & context,
+    const PreprocessCuda & preprocessor, CloudFormat input_format,
+    bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
+    bool should_publish_filtered_pointcloud, std::int64_t num_voxels);
+
+private:
+  void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+  void createPointFields();
+  void prepareFilteredPointcloudFormat(CloudFormat input_format);
+  void allocateOutputMessages();
+  [[nodiscard]] std::int64_t outputCapacity() const;
+
+  PTv3SemsegConfig config_;
+  const float * backbone_point_feat_;
+  const float * backbone_input_features_;
+  const void * compact_points_;
+
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_ptr_{nullptr};
+  std::unique_ptr<SemsegPreprocessCuda> preprocess_ptr_{nullptr};
+  std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
+
+  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
+    publish_segmented_pointcloud_{nullptr};
+  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
+    publish_visualization_pointcloud_{nullptr};
+  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
+    publish_filtered_pointcloud_{nullptr};
+
+  std::vector<sensor_msgs::msg::PointField> segmented_pointcloud_fields_;
+  std::vector<sensor_msgs::msg::PointField> visualization_pointcloud_fields_;
+  std::vector<sensor_msgs::msg::PointField> filtered_pointcloud_fields_;
+
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> segmented_points_msg_ptr_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> visualization_points_msg_ptr_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> filtered_points_msg_ptr_{nullptr};
+
+  std::size_t num_source_points_{0};
+  std::size_t num_cropped_points_{0};
+  const void * current_input_data_{nullptr};
+  std::once_flag init_filtered_cloud_;
+  CloudFormat input_format_{CloudFormat::UNKNOWN};
+  CloudFormat filtered_output_format_{CloudFormat::UNKNOWN};
+
+  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> cropped_source_points_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> reconstructed_features_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> inverse_map_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> reconstructed_labels_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> reconstructed_probs_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pred_labels_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> pred_probs_d_{nullptr};
+};
+
+class PTV3_PUBLIC Detection3DModule
+{
+public:
+  Detection3DModule(
+    const tensorrt_common::TrtCommonConfig & trt_config, const PTv3Detection3DConfig & config,
+    const float * backbone_point_feat, const std::int32_t * backbone_point_grid_coord);
+
+  void preparePreprocess();
+  void setInputShapes(std::int64_t num_voxels);
+  bool enqueue(const PTv3ExecutionContext & context);
+  bool postProcess(const PTv3ExecutionContext & context, std::vector<Box3D> & detection_boxes);
+
+private:
+  void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+
+  PTv3Detection3DConfig config_;
+  const float * backbone_point_feat_;
+  const std::int32_t * backbone_point_grid_coord_;
+
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_ptr_{nullptr};
+  std::unique_ptr<Detection3DPostprocess> post_ptr_{nullptr};
+
+  autoware::cuda_utils::CudaUniquePtr<float[]> dense_heatmap_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> query_heatmap_score_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> query_labels_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> heatmap_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> center_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> height_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> dim_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> rot_d_{nullptr};
+  autoware::cuda_utils::CudaUniquePtr<float[]> vel_d_{nullptr};
+};
 
 class PTV3_PUBLIC PTv3TRT
 {
@@ -65,113 +270,17 @@ public:
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
 
 protected:
-  void initPtr();
-  void initBackboneTrt(const tensorrt_common::TrtCommonConfig & trt_config);
-  void initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
-  void initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config);
-  void createPointFields();
-  void allocateSegOutputMessages();
-  void allocateSerializedPoolingBuffers();
-  void bindSerializedPoolingAddresses();
-  void precomputeSerializedPoolingMetadata();
-  bool setSerializedPoolingInputShapes();
-  [[nodiscard]] CloudFormat detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const;
-
-  bool preProcess(
-    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr, bool should_run_seg3d);
-
-  bool inferenceBackbone();
-  bool inferenceSeg3dHead();
-  bool inferenceDetection3DHead();
-
-  bool postProcess(
-    const std_msgs::msg::Header & header, bool should_publish_segmented_pointcloud,
-    bool should_publish_visualization_pointcloud, bool should_publish_filtered_pointcloud);
-
-  bool postProcessDetection3D(std::vector<Box3D> & detection_boxes);
+  bool prepareInferenceShapes(bool should_run_seg3d, bool should_run_det3d);
 
   // The backbone is always present. The heads are loaded only when enabled.
-  std::unique_ptr<autoware::tensorrt_common::TrtCommon> backbone_trt_ptr_{nullptr};
-  std::unique_ptr<autoware::tensorrt_common::TrtCommon> seg3d_head_trt_ptr_{nullptr};
-  std::unique_ptr<autoware::tensorrt_common::TrtCommon> detection3d_head_trt_ptr_{nullptr};
+  std::unique_ptr<BackboneEngine> backbone_engine_{nullptr};
+  std::unique_ptr<BackbonePreprocessor> backbone_preprocessor_{nullptr};
+  std::unique_ptr<SemsegModule> semseg_module_{nullptr};
+  std::unique_ptr<Detection3DModule> detection3d_module_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
-  std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
-  std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
-  std::unique_ptr<Detection3DPostprocess> detection3d_post_ptr_{nullptr};
   cudaStream_t stream_{nullptr};
 
-  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
-    publish_segmented_pointcloud_{nullptr};
-  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
-    publish_visualization_pointcloud_{nullptr};
-  std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)>
-    publish_filtered_pointcloud_{nullptr};
-
-  std::vector<sensor_msgs::msg::PointField> segmented_pointcloud_fields_;
-  std::vector<sensor_msgs::msg::PointField> visualization_pointcloud_fields_;
-  std::vector<sensor_msgs::msg::PointField> filtered_pointcloud_fields_;
-
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> segmented_points_msg_ptr_{nullptr};
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> visualization_points_msg_ptr_{nullptr};
-  std::unique_ptr<cuda_blackboard::CudaPointCloud2> filtered_points_msg_ptr_{nullptr};
-
   PTv3Config config_;
-  std::once_flag init_cloud_;
-  CloudFormat input_format_{CloudFormat::UNKNOWN};
-  CloudFormat filtered_output_format_{CloudFormat::UNKNOWN};
-
-  struct SerializedPoolingDeviceStage
-  {
-    CudaUniquePtr<std::int64_t[]> indices{nullptr};
-    CudaUniquePtr<std::int64_t[]> indptr{nullptr};
-    CudaUniquePtr<std::int64_t[]> head_indices{nullptr};
-    CudaUniquePtr<std::int64_t[]> cluster{nullptr};
-    CudaUniquePtr<std::int32_t[]> grid_coord{nullptr};
-    CudaUniquePtr<std::int64_t[]> serialized_code{nullptr};
-    CudaUniquePtr<std::int64_t[]> serialized_order{nullptr};
-    CudaUniquePtr<std::int64_t[]> serialized_inverse{nullptr};
-  };
-
-  std::vector<SerializedPoolingDeviceStage> serialized_pooling_stages_d_;
-  CudaUniquePtr<std::int64_t[]> serialized_pooling_num_voxels_d_{nullptr};
-  std::vector<std::int64_t> serialized_pooling_num_voxels_;
-  std::vector<std::int64_t> serialized_pooling_depths_;
-
-  // Preprocess outputs
-  std::int64_t num_voxels_{0};
-  std::int64_t num_cropped_points_{0};        // only for partial
-  std::int64_t num_source_points_{0};         // only for full
-  const void * current_input_data_{nullptr};  // only for full
-
-  CudaUniquePtr<std::uint8_t[]> compact_points_d_{nullptr};
-  CudaUniquePtr<std::uint8_t[]> cropped_source_points_d_{nullptr};  // only for partial
-  CudaUniquePtr<float[]> reconstructed_features_d_{nullptr};        // only for partial and full
-  CudaUniquePtr<std::int64_t[]> inverse_map_d_{nullptr};            // only for partial and full
-  CudaUniquePtr<std::int64_t[]> reconstructed_labels_d_{nullptr};   // only for partial and full
-  CudaUniquePtr<float[]> reconstructed_probs_d_{nullptr};           // only for partial and full
-  CudaUniquePtr<std::int32_t[]> grid_coord_d_{nullptr};
-  CudaUniquePtr<float[]> feat_d_{nullptr};
-  CudaUniquePtr<std::int64_t[]> serialized_code_d_{nullptr};
-
-  // Backbone outputs shared with all the heads
-  CudaUniquePtr<float[]> bb_point_feat_d_{nullptr};
-  CudaUniquePtr<std::int32_t[]> bb_point_grid_coord_d_{nullptr};
-  CudaUniquePtr<std::int64_t[]> bb_point_offset_d_{nullptr};
-
-  // Segmentation head outputs
-  CudaUniquePtr<std::int64_t[]> pred_labels_d_{nullptr};
-  CudaUniquePtr<float[]> pred_probs_d_{nullptr};
-
-  // Detection3D head outputs
-  CudaUniquePtr<float[]> dense_heatmap_d_{nullptr};
-  CudaUniquePtr<float[]> query_heatmap_score_d_{nullptr};
-  CudaUniquePtr<std::int64_t[]> query_labels_d_{nullptr};
-  CudaUniquePtr<float[]> heatmap_d_{nullptr};
-  CudaUniquePtr<float[]> center_d_{nullptr};
-  CudaUniquePtr<float[]> height_d_{nullptr};
-  CudaUniquePtr<float[]> dim_d_{nullptr};
-  CudaUniquePtr<float[]> rot_d_{nullptr};
-  CudaUniquePtr<float[]> vel_d_{nullptr};
 };
 
 }  // namespace autoware::ptv3

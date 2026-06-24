@@ -35,6 +35,79 @@ enum class SourceReconstruction {
   FULL,
 };
 
+struct PTv3BackbonePreprocessConfig
+{
+  std::uint32_t threads_per_block_{256};
+  bool use_64bit_hash_{};
+  std::int32_t serialization_depth_{};
+  std::int64_t cloud_capacity_{};
+  std::int64_t min_num_voxels_{};
+  std::int64_t max_num_voxels_{};
+  std::int64_t num_point_feature_size_{4};
+  float min_x_range_{};
+  float max_x_range_{};
+  float min_y_range_{};
+  float max_y_range_{};
+  float min_z_range_{};
+  float max_z_range_{};
+  float voxel_x_size_{};
+  float voxel_y_size_{};
+  float voxel_z_size_{};
+  std::int64_t grid_x_size_{};
+  std::int64_t grid_y_size_{};
+  std::int64_t grid_z_size_{};
+  std::vector<std::string> serialization_orders_;
+  std::vector<std::int64_t> pooling_strides_;
+};
+
+struct PTv3BackboneConfig
+{
+  std::string plugins_path_;
+  std::int64_t max_num_voxels_{};
+  std::int64_t backbone_feat_dim_{64};
+  std::array<std::int64_t, 3> voxels_num_{};
+  std::vector<std::string> serialization_orders_;
+  std::vector<std::int64_t> pooling_strides_;
+};
+
+struct PTv3SemsegConfig
+{
+  std::string plugins_path_;
+  std::uint32_t threads_per_block_{256};
+  bool use_64bit_hash_{};
+  std::int64_t cloud_capacity_{};
+  std::int64_t max_num_voxels_{};
+  std::int64_t num_point_feature_size_{4};
+  std::int64_t backbone_feat_dim_{64};
+  std::array<std::int64_t, 3> voxels_num_{};
+  std::vector<std::string> segmentation_class_names_;
+  std::vector<float> colors_rgb_;
+  std::string filter_output_format_;
+  float filter_class_probability_threshold_{};
+  std::vector<std::uint32_t> filter_class_indices_;
+  SourceReconstruction source_reconstruction_{SourceReconstruction::NONE};
+};
+
+struct PTv3Detection3DConfig
+{
+  std::string plugins_path_;
+  std::int64_t backbone_feat_dim_{64};
+  std::array<std::int64_t, 3> voxels_num_{};
+  std::vector<std::string> detection_class_names_;
+  float bbox_voxel_x_size_{};
+  float bbox_voxel_y_size_{};
+  bool has_twist_{};
+  std::size_t num_proposals_{};
+  std::vector<float> post_center_range_;
+  std::vector<float> distance_bin_upper_limits_;
+  std::vector<float> detection_score_thresholds_;
+  std::vector<float> yaw_norm_thresholds_;
+  std::size_t det_grid_x_size_{};
+  std::size_t det_grid_y_size_{};
+  float min_x_range_{};
+  float min_y_range_{};
+};
+
 class PTv3Config
 {
 public:
@@ -209,6 +282,54 @@ public:
       num_proposals_ = num_proposals;
       post_center_range_ = post_center_range;
     }
+
+    backbone_preprocess_config_ = PTv3BackbonePreprocessConfig{
+      threads_per_block_,
+      use_64bit_hash_,
+      serialization_depth_,
+      cloud_capacity_,
+      min_num_voxels_,
+      max_num_voxels_,
+      num_point_feature_size_,
+      min_x_range_,
+      max_x_range_,
+      min_y_range_,
+      max_y_range_,
+      min_z_range_,
+      max_z_range_,
+      voxel_x_size_,
+      voxel_y_size_,
+      voxel_z_size_,
+      grid_x_size_,
+      grid_y_size_,
+      grid_z_size_,
+      serialization_orders_,
+      pooling_strides_};
+    backbone_config_ = PTv3BackboneConfig{plugins_path_, max_num_voxels_,       backbone_feat_dim_,
+                                          voxels_num_,   serialization_orders_, pooling_strides_};
+    semseg_config_ = PTv3SemsegConfig{
+      plugins_path_,         threads_per_block_,    use_64bit_hash_,
+      cloud_capacity_,       max_num_voxels_,       num_point_feature_size_,
+      backbone_feat_dim_,    voxels_num_,           segmentation_class_names_,
+      colors_rgb_,           filter_output_format_, filter_class_probability_threshold_,
+      filter_class_indices_, source_reconstruction_};
+    detection3d_config_ = PTv3Detection3DConfig{
+      plugins_path_,
+      backbone_feat_dim_,
+      voxels_num_,
+      detection_class_names_,
+      bbox_voxel_x_size_,
+      bbox_voxel_y_size_,
+      has_twist_,
+      num_proposals_,
+      post_center_range_,
+      distance_bin_upper_limits_,
+      detection_score_thresholds_,
+      yaw_norm_thresholds_,
+      det_grid_x_size_,
+      det_grid_y_size_,
+      min_x_range_,
+      min_y_range_};
   }
 
   static SourceReconstruction parse_source_reconstruction(const std::string & value)
@@ -366,6 +487,11 @@ public:
 
   ///// RUNTIME DIMENSIONS /////
   std::array<std::int64_t, 3> voxels_num_{};
+
+  PTv3BackbonePreprocessConfig backbone_preprocess_config_;
+  PTv3BackboneConfig backbone_config_;
+  PTv3SemsegConfig semseg_config_;
+  PTv3Detection3DConfig detection3d_config_;
 };
 
 }  // namespace autoware::ptv3

@@ -22,6 +22,7 @@
 
 #include <cuda_runtime_api.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -43,24 +44,34 @@ struct SerializedPoolingDeviceStageView
 class PreprocessCuda
 {
 public:
-  PreprocessCuda(const PTv3Config & config, cudaStream_t stream);
+  explicit PreprocessCuda(const PTv3BackbonePreprocessConfig & config);
 
   std::size_t generateFeatures(
     const void * input_data, CloudFormat input_format, unsigned int num_points,
     float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
-    void * compact_points, float * reconstruction_features, void * cropped_source_points,
-    std::int64_t * inverse_map, std::size_t * num_cropped_points);
+    void * compact_points, std::size_t * num_cropped_points, cudaStream_t stream);
 
   void generateSerializedPoolingMetadata(
     const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
-    const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts);
+    const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts,
+    cudaStream_t stream);
 
+  [[nodiscard]] const float * pointFeatures() const { return points_d_.get(); }
   [[nodiscard]] const std::uint32_t * cropMask() const { return crop_mask_d_.get(); }
   [[nodiscard]] const std::uint32_t * cropIndices() const { return crop_indices_d_.get(); }
+  [[nodiscard]] const std::uint64_t * sortedHashIndexes64() const
+  {
+    return sorted_hash_indexes64_d_.get();
+  }
+  [[nodiscard]] const std::uint64_t * uniqueIndices64() const { return unique_indices64_d_.get(); }
+  [[nodiscard]] const std::uint32_t * sortedHashIndexes32() const
+  {
+    return sorted_hash_indexes32_d_.get();
+  }
+  [[nodiscard]] const std::uint32_t * uniqueIndices32() const { return unique_indices32_d_.get(); }
 
 private:
-  PTv3Config config_;
-  cudaStream_t stream_;
+  PTv3BackbonePreprocessConfig config_;
 
   autoware::cuda_utils::CudaUniquePtr<float[]> points_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<float[]> cropped_points_d_{nullptr};
@@ -93,6 +104,41 @@ private:
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_run_ids_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> pooling_workspace_d_{nullptr};
   std::size_t pooling_workspace_size_{0};
+};
+
+/**
+ * Device buffers requested by the semantic-segmentation module during preprocessing.
+ *
+ * The backbone preprocessor always produces voxelized backbone inputs. When semseg output is
+ * requested, this view points at semseg-owned buffers that preserve enough source-point information
+ * to reconstruct voxel predictions back into the selected source point domain.
+ */
+struct SemsegSourceReconstructionView
+{
+  float * reconstruction_features{};
+  void * cropped_source_points{};
+  std::int64_t * inverse_map{};
+  std::size_t * num_cropped_points{};
+};
+
+class SemsegPreprocessCuda
+{
+public:
+  explicit SemsegPreprocessCuda(const PTv3SemsegConfig & config);
+
+  /**
+   * Populate semseg-owned source reconstruction buffers from backbone preprocessing outputs.
+   *
+   * The caller passes the same execution stream used by the surrounding inference context. This
+   * helper does not store the stream because it is a leaf CUDA wrapper, not a pipeline phase owner.
+   */
+  void reconstructSource(
+    const PreprocessCuda & backbone_preprocessor, const void * input_data, CloudFormat input_format,
+    std::size_t num_points, std::size_t num_cropped_points, SemsegSourceReconstructionView view,
+    cudaStream_t stream) const;
+
+private:
+  PTv3SemsegConfig config_;
 };
 }  // namespace autoware::ptv3
 

@@ -34,8 +34,7 @@
 namespace autoware::ptv3
 {
 
-PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
-: config_(config), stream_(stream)
+PreprocessCuda::PreprocessCuda(const PTv3BackbonePreprocessConfig & config) : config_(config)
 {
   points_d_ = autoware::cuda_utils::make_unique<float[]>(
     config_.cloud_capacity_ * config_.num_point_feature_size_);
@@ -45,8 +44,6 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
     config_.cloud_capacity_ * sizeof(CloudPointTypeXYZIRCAEDT));
   crop_mask_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
   crop_indices_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
-
-  auto policy = thrust::cuda::par.on(stream_);
 
   if (config_.use_64bit_hash_) {
     hashes64_d_ = autoware::cuda_utils::make_unique<std::uint64_t[]>(config_.cloud_capacity_);
@@ -61,7 +58,7 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
 
     thrust::device_ptr<std::uint64_t> idx_ptr(hash_indexes64_d_.get());
 
-    thrust::sequence(policy, idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
+    thrust::sequence(idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
   } else {
     hashes32_d_ = autoware::cuda_utils::make_unique<std::uint32_t[]>(config_.cloud_capacity_);
     sorted_hashes32_d_ =
@@ -75,7 +72,7 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
 
     thrust::device_ptr<std::uint32_t> idx_ptr(hash_indexes32_d_.get());
 
-    thrust::sequence(policy, idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
+    thrust::sequence(idx_ptr, idx_ptr + config_.cloud_capacity_, 0);
   }
 
   std::uint64_t * uint64_nullptr = nullptr;
@@ -106,8 +103,6 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
     nullptr);
   pooling_workspace_size_ = std::max(pooling_sort_workspace_size, pooling_scan_workspace_size);
   pooling_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(pooling_workspace_size_);
-
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
 template <typename PointT>
@@ -200,19 +195,6 @@ __global__ void extractIndicesKernel(
   if (idx < num_points && masks[idx] == 1) {
     output_data[indices1[idx] - 1] = input_data[indices2[idx]];
   }
-}
-
-template <typename mask_t>
-__global__ void scatterInverseMapKernel(
-  const mask_t * __restrict__ unique_indices, const mask_t * __restrict__ sorted_hash_indexes,
-  std::int64_t * __restrict__ inverse_map, int num_points)
-{
-  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
-  if (idx >= num_points) {
-    return;
-  }
-
-  inverse_map[sorted_hash_indexes[idx]] = static_cast<std::int64_t>(unique_indices[idx] - 1);
 }
 
 __global__ void voxelizationHash64Kernel(
@@ -433,7 +415,8 @@ std::int32_t poolingDepth(const std::int64_t stride)
 
 void PreprocessCuda::generateSerializedPoolingMetadata(
   const std::int32_t * grid_coord, const std::int64_t * serialized_code, std::int64_t num_voxels,
-  const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts)
+  const std::vector<SerializedPoolingDeviceStageView> & stages, std::int64_t * stage_counts,
+  cudaStream_t stream)
 {
   if (stages.size() != config_.pooling_strides_.size()) {
     throw std::runtime_error("Serialized pooling stage buffer count does not match config.");
@@ -443,7 +426,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   const auto num_orders = static_cast<std::int32_t>(config_.serialization_orders_.size());
   const auto num_blocks = divup(static_cast<std::size_t>(capacity), config_.threads_per_block_);
 
-  setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, num_voxels);
+  setInitialStageCountKernel<<<1, 1, 0, stream>>>(stage_counts, num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
   const std::int32_t * current_grid_coord = grid_coord;
@@ -453,7 +436,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
     const auto & stage = stages[stage_index];
     const auto pooling_depth = poolingDepth(config_.pooling_strides_[stage_index]);
 
-    preparePoolingSortInputKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+    preparePoolingSortInputKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
       current_serialized_code, stage_counts, pooling_keys_d_.get(), pooling_indices_d_.get(),
       static_cast<std::int32_t>(stage_index), pooling_depth, capacity);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
@@ -462,18 +445,18 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
       cub::DeviceRadixSort::SortPairs(
         pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
         pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
-        capacity, 0, 63, stream_));
+        capacity, 0, 63, stream));
 
-    markPoolingRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+    markPoolingRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
       pooling_sorted_keys_d_.get(), pooling_run_flags_d_.get(), capacity);
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
     CHECK_CUDA_ERROR(
       cub::DeviceScan::InclusiveSum(
         pooling_workspace_d_.get(), pooling_workspace_size_, pooling_run_flags_d_.get(),
-        pooling_run_ids_d_.get(), capacity, stream_));
+        pooling_run_ids_d_.get(), capacity, stream));
 
-    fillPoolingStageKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+    fillPoolingStageKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
       current_grid_coord, current_serialized_code, pooling_sorted_keys_d_.get(),
       pooling_sorted_indices_d_.get(), pooling_run_flags_d_.get(), pooling_run_ids_d_.get(),
       stage.indices, stage.indptr, stage.head_indices, stage.cluster, stage.grid_coord,
@@ -482,7 +465,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
     CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
     for (std::int32_t order_index = 0; order_index < num_orders; ++order_index) {
-      prepareOrderSortInputKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      prepareOrderSortInputKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         stage.serialized_code, stage_counts, pooling_keys_d_.get(), pooling_indices_d_.get(),
         static_cast<std::int32_t>(stage_index + 1), order_index, capacity);
       CHECK_CUDA_ERROR(cudaPeekAtLastError());
@@ -491,9 +474,9 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
         cub::DeviceRadixSort::SortPairs(
           pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
           pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
-          capacity, 0, 63, stream_));
+          capacity, 0, 63, stream));
 
-      fillOrderAndInverseKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      fillOrderAndInverseKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         pooling_sorted_keys_d_.get(), pooling_sorted_indices_d_.get(), stage_counts,
         stage.serialized_order, stage.serialized_inverse,
         static_cast<std::int32_t>(stage_index + 1), order_index, capacity);
@@ -508,30 +491,29 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
 std::size_t PreprocessCuda::generateFeatures(
   const void * input_data, CloudFormat input_format, unsigned int num_points,
   float * voxel_features, std::int32_t * voxel_coords, std::int64_t * voxel_hashes,
-  void * compact_points, float * reconstruction_features, void * cropped_source_points,
-  std::int64_t * inverse_map, std::size_t * output_num_cropped_points)
+  void * compact_points, std::size_t * output_num_cropped_points, cudaStream_t stream)
 {
-  auto policy = thrust::cuda::par.on(stream_);
+  auto policy = thrust::cuda::par.on(stream);
 
   const auto num_blocks = divup(num_points, config_.threads_per_block_);
   switch (input_format) {
     case CloudFormat::XYZIRCAEDT:
-      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         static_cast<const CloudPointTypeXYZIRCAEDT *>(input_data), num_points,
         reinterpret_cast<float4 *>(points_d_.get()));
       break;
     case CloudFormat::XYZIRADRT:
-      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         static_cast<const CloudPointTypeXYZIRADRT *>(input_data), num_points,
         reinterpret_cast<float4 *>(points_d_.get()));
       break;
     case CloudFormat::XYZIRC:
-      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         static_cast<const CloudPointTypeXYZIRC *>(input_data), num_points,
         reinterpret_cast<float4 *>(points_d_.get()));
       break;
     case CloudFormat::XYZI:
-      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      points2FeaturesKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         static_cast<const CloudPointTypeXYZI *>(input_data), num_points,
         reinterpret_cast<float4 *>(points_d_.get()));
       break;
@@ -539,17 +521,7 @@ std::size_t PreprocessCuda::generateFeatures(
       throw std::runtime_error("Unsupported input point cloud format.");
   }
 
-  // FULL reconstruction preserves original input order, so copy features before range crop.
-  if (
-    config_.source_reconstruction_ == SourceReconstruction::FULL &&
-    reconstruction_features != nullptr) {
-    cudaMemcpyAsync(
-      reconstruction_features, points_d_.get(),
-      num_points * config_.num_point_feature_size_ * sizeof(float), cudaMemcpyDeviceToDevice,
-      stream_);
-  }
-
-  cropKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+  cropKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
     reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), num_points,
     config_.min_x_range_, config_.min_y_range_, config_.min_z_range_, config_.max_x_range_,
     config_.max_y_range_, config_.max_z_range_);
@@ -561,8 +533,8 @@ std::size_t PreprocessCuda::generateFeatures(
 
   cudaMemcpyAsync(
     &num_cropped_points, crop_indices_d_.get() + num_points - 1, sizeof(std::uint32_t),
-    cudaMemcpyDeviceToHost, stream_);
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    cudaMemcpyDeviceToHost, stream);
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
 
   if (num_cropped_points == 0) {
     *output_num_cropped_points = 0;
@@ -570,67 +542,34 @@ std::size_t PreprocessCuda::generateFeatures(
   }
   *output_num_cropped_points = num_cropped_points;
 
-  extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+  extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
     reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), crop_indices_d_.get(),
     reinterpret_cast<float4 *>(cropped_points_d_.get()), num_points);
 
-  // PARTIAL reconstruction publishes only in-range points, so compact features after range crop.
-  if (
-    config_.source_reconstruction_ == SourceReconstruction::PARTIAL &&
-    reconstruction_features != nullptr) {
-    extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-      reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), crop_indices_d_.get(),
-      reinterpret_cast<float4 *>(reconstruction_features), num_points);
-  }
-
   switch (input_format) {
     case CloudFormat::XYZIRCAEDT:
-      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         static_cast<const CloudPointTypeXYZIRCAEDT *>(input_data), crop_mask_d_.get(),
         crop_indices_d_.get(),
         reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()), num_points);
-      if (cropped_source_points != nullptr) {
-        extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-          static_cast<const CloudPointTypeXYZIRCAEDT *>(input_data), crop_mask_d_.get(),
-          crop_indices_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_source_points), num_points);
-      }
       break;
     case CloudFormat::XYZIRADRT:
-      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         static_cast<const CloudPointTypeXYZIRADRT *>(input_data), crop_mask_d_.get(),
         crop_indices_d_.get(),
         reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()), num_points);
-      if (cropped_source_points != nullptr) {
-        extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-          static_cast<const CloudPointTypeXYZIRADRT *>(input_data), crop_mask_d_.get(),
-          crop_indices_d_.get(), reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_source_points),
-          num_points);
-      }
       break;
     case CloudFormat::XYZIRC:
-      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         static_cast<const CloudPointTypeXYZIRC *>(input_data), crop_mask_d_.get(),
         crop_indices_d_.get(),
         reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()), num_points);
-      if (cropped_source_points != nullptr) {
-        extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-          static_cast<const CloudPointTypeXYZIRC *>(input_data), crop_mask_d_.get(),
-          crop_indices_d_.get(), reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_source_points),
-          num_points);
-      }
       break;
     case CloudFormat::XYZI:
-      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
+      extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
         static_cast<const CloudPointTypeXYZI *>(input_data), crop_mask_d_.get(),
         crop_indices_d_.get(),
         reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()), num_points);
-      if (cropped_source_points != nullptr) {
-        extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
-          static_cast<const CloudPointTypeXYZI *>(input_data), crop_mask_d_.get(),
-          crop_indices_d_.get(), reinterpret_cast<CloudPointTypeXYZI *>(cropped_source_points),
-          num_points);
-      }
       break;
     default:
       throw std::runtime_error("Unsupported input point cloud format.");
@@ -648,7 +587,7 @@ std::size_t PreprocessCuda::generateFeatures(
   std::uint64_t num_unique_points;
 
   if (config_.use_64bit_hash_) {
-    voxelizationHash64Kernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+    voxelizationHash64Kernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
       reinterpret_cast<float4 *>(cropped_points_d_.get()), hashes64_d_.get(), num_cropped_points,
       config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, coord_min_x, coord_min_y,
       coord_min_z);
@@ -656,7 +595,7 @@ std::size_t PreprocessCuda::generateFeatures(
     cub::DeviceRadixSort::SortPairs(
       reinterpret_cast<void *>(sort_workspace_d_.get()), sort_workspace_size_, hashes64_d_.get(),
       sorted_hashes64_d_.get(), hash_indexes64_d_.get(), sorted_hash_indexes64_d_.get(),
-      num_cropped_points, 0, 64, stream_);
+      num_cropped_points, 0, 64, stream);
 
     auto not_equal = [] __device__(const std::uint64_t a, const std::uint64_t b) { return a != b; };
 
@@ -666,7 +605,7 @@ std::size_t PreprocessCuda::generateFeatures(
 
     std::uint64_t one = 1;
     cudaMemcpyAsync(
-      unique_mask64_d_.get(), &one, sizeof(std::uint64_t), cudaMemcpyHostToDevice, stream_);
+      unique_mask64_d_.get(), &one, sizeof(std::uint64_t), cudaMemcpyHostToDevice, stream);
 
     thrust::inclusive_scan(
       policy, unique_mask64_d_.get(), unique_mask64_d_.get() + num_cropped_points,
@@ -674,38 +613,33 @@ std::size_t PreprocessCuda::generateFeatures(
 
     cudaMemcpyAsync(
       &num_unique_points, unique_indices64_d_.get() + num_cropped_points - 1, sizeof(std::int64_t),
-      cudaMemcpyDeviceToHost, stream_);
+      cudaMemcpyDeviceToHost, stream);
 
-    extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+    extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
       reinterpret_cast<float4 *>(cropped_points_d_.get()), unique_mask64_d_.get(),
       unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
       reinterpret_cast<float4 *>(voxel_features), num_cropped_points);
-    if (inverse_map != nullptr) {
-      scatterInverseMapKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-        unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(), inverse_map, num_cropped_points);
-    }
-
     switch (input_format) {
       case CloudFormat::XYZIRCAEDT:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
           reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()),
           unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
           reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), num_cropped_points);
         break;
       case CloudFormat::XYZIRADRT:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
           reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()),
           unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
           reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), num_cropped_points);
         break;
       case CloudFormat::XYZIRC:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
           reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()),
           unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
           reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), num_cropped_points);
         break;
       case CloudFormat::XYZI:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
           reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()),
           unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
           reinterpret_cast<CloudPointTypeXYZI *>(compact_points), num_cropped_points);
@@ -715,7 +649,7 @@ std::size_t PreprocessCuda::generateFeatures(
     }
 
   } else {
-    voxelizationHash32Kernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+    voxelizationHash32Kernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
       reinterpret_cast<float4 *>(cropped_points_d_.get()), hashes32_d_.get(), num_cropped_points,
       config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, config_.min_x_range_,
       config_.min_y_range_, config_.min_z_range_, static_cast<std::uint32_t>(config_.grid_x_size_),
@@ -724,7 +658,7 @@ std::size_t PreprocessCuda::generateFeatures(
     cub::DeviceRadixSort::SortPairs(
       reinterpret_cast<void *>(sort_workspace_d_.get()), sort_workspace_size_, hashes32_d_.get(),
       sorted_hashes32_d_.get(), hash_indexes32_d_.get(), sorted_hash_indexes32_d_.get(),
-      num_cropped_points, 0, 32, stream_);
+      num_cropped_points, 0, 32, stream);
 
     auto not_equal = [] __device__(const std::uint32_t a, const std::uint32_t b) { return a != b; };
 
@@ -734,7 +668,7 @@ std::size_t PreprocessCuda::generateFeatures(
 
     std::uint32_t one = 1;
     cudaMemcpyAsync(
-      unique_mask32_d_.get(), &one, sizeof(std::uint32_t), cudaMemcpyHostToDevice, stream_);
+      unique_mask32_d_.get(), &one, sizeof(std::uint32_t), cudaMemcpyHostToDevice, stream);
 
     thrust::inclusive_scan(
       policy, unique_mask32_d_.get(), unique_mask32_d_.get() + num_cropped_points,
@@ -743,41 +677,36 @@ std::size_t PreprocessCuda::generateFeatures(
     std::uint32_t num_unique_points32;
     cudaMemcpyAsync(
       &num_unique_points32, unique_indices32_d_.get() + num_cropped_points - 1,
-      sizeof(std::uint32_t), cudaMemcpyDeviceToHost, stream_);
-    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+      sizeof(std::uint32_t), cudaMemcpyDeviceToHost, stream);
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
 
     num_unique_points = static_cast<std::uint64_t>(num_unique_points32);
 
-    extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+    extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
       reinterpret_cast<float4 *>(cropped_points_d_.get()), unique_mask32_d_.get(),
       unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
       reinterpret_cast<float4 *>(voxel_features), num_cropped_points);
-    if (inverse_map != nullptr) {
-      scatterInverseMapKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
-        unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(), inverse_map, num_cropped_points);
-    }
-
     switch (input_format) {
       case CloudFormat::XYZIRCAEDT:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
           reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()),
           unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
           reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), num_cropped_points);
         break;
       case CloudFormat::XYZIRADRT:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
           reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()),
           unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
           reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), num_cropped_points);
         break;
       case CloudFormat::XYZIRC:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
           reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()),
           unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
           reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), num_cropped_points);
         break;
       case CloudFormat::XYZI:
-        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+        extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
           reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()),
           unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
           reinterpret_cast<CloudPointTypeXYZI *>(compact_points), num_cropped_points);
@@ -788,7 +717,7 @@ std::size_t PreprocessCuda::generateFeatures(
   }
 
   computeGridCoordsAndSerializationKernel<<<
-    num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
+    num_cropped_blocks, config_.threads_per_block_, 0, stream>>>(
     reinterpret_cast<float4 *>(voxel_features), reinterpret_cast<int3 *>(voxel_coords),
     voxel_hashes, num_unique_points, config_.voxel_x_size_, config_.voxel_y_size_,
     config_.voxel_z_size_, coord_min_x, coord_min_y, coord_min_z, config_.serialization_depth_);
@@ -796,4 +725,121 @@ std::size_t PreprocessCuda::generateFeatures(
   return num_unique_points;
 }
 
+template <typename scalar_t, typename mask_t>
+__global__ void extractSemsegPreprocessKernel(
+  const scalar_t * __restrict__ input_data, const mask_t * __restrict__ masks,
+  const mask_t * __restrict__ indices, scalar_t * __restrict__ output_data, int num_points)
+{
+  const auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < num_points && masks[idx] == 1) {
+    output_data[indices[idx] - 1] = input_data[idx];
+  }
+}
+
+template <typename mask_t>
+__global__ void scatterInverseMapKernel(
+  const mask_t * __restrict__ unique_indices, const mask_t * __restrict__ sorted_hash_indexes,
+  std::int64_t * __restrict__ inverse_map, int num_points)
+{
+  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
+  if (idx >= num_points) {
+    return;
+  }
+
+  inverse_map[sorted_hash_indexes[idx]] = static_cast<std::int64_t>(unique_indices[idx] - 1);
+}
+
+template <typename PointT>
+void extractCroppedSourcePoints(
+  const void * input_data, const std::uint32_t * crop_mask, const std::uint32_t * crop_indices,
+  void * cropped_source_points, std::size_t num_points, std::uint32_t threads_per_block,
+  cudaStream_t stream)
+{
+  const auto num_blocks = divup(num_points, threads_per_block);
+  extractSemsegPreprocessKernel<<<num_blocks, threads_per_block, 0, stream>>>(
+    static_cast<const PointT *>(input_data), crop_mask, crop_indices,
+    static_cast<PointT *>(cropped_source_points), num_points);
+}
+
+SemsegPreprocessCuda::SemsegPreprocessCuda(const PTv3SemsegConfig & config) : config_(config)
+{
+}
+
+void SemsegPreprocessCuda::reconstructSource(
+  const PreprocessCuda & backbone_preprocessor, const void * input_data,
+  const CloudFormat input_format, const std::size_t num_points,
+  const std::size_t num_cropped_points, const SemsegSourceReconstructionView view,
+  const cudaStream_t stream) const
+{
+  if (view.num_cropped_points != nullptr) {
+    *view.num_cropped_points = num_cropped_points;
+  }
+  if (config_.source_reconstruction_ == SourceReconstruction::NONE) {
+    return;
+  }
+
+  const auto num_blocks = divup(num_points, config_.threads_per_block_);
+  if (config_.source_reconstruction_ == SourceReconstruction::FULL) {
+    if (view.reconstruction_features == nullptr) {
+      throw std::runtime_error("FULL source reconstruction requires reconstruction features.");
+    }
+    cudaMemcpyAsync(
+      view.reconstruction_features, backbone_preprocessor.pointFeatures(),
+      num_points * config_.num_point_feature_size_ * sizeof(float), cudaMemcpyDeviceToDevice,
+      stream);
+  }
+
+  if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
+    if (view.reconstruction_features == nullptr || view.cropped_source_points == nullptr) {
+      throw std::runtime_error(
+        "PARTIAL source reconstruction requires features and cropped source points.");
+    }
+    extractSemsegPreprocessKernel<<<num_blocks, config_.threads_per_block_, 0, stream>>>(
+      reinterpret_cast<const float4 *>(backbone_preprocessor.pointFeatures()),
+      backbone_preprocessor.cropMask(), backbone_preprocessor.cropIndices(),
+      reinterpret_cast<float4 *>(view.reconstruction_features), num_points);
+
+    switch (input_format) {
+      case CloudFormat::XYZIRCAEDT:
+        extractCroppedSourcePoints<CloudPointTypeXYZIRCAEDT>(
+          input_data, backbone_preprocessor.cropMask(), backbone_preprocessor.cropIndices(),
+          view.cropped_source_points, num_points, config_.threads_per_block_, stream);
+        break;
+      case CloudFormat::XYZIRADRT:
+        extractCroppedSourcePoints<CloudPointTypeXYZIRADRT>(
+          input_data, backbone_preprocessor.cropMask(), backbone_preprocessor.cropIndices(),
+          view.cropped_source_points, num_points, config_.threads_per_block_, stream);
+        break;
+      case CloudFormat::XYZIRC:
+        extractCroppedSourcePoints<CloudPointTypeXYZIRC>(
+          input_data, backbone_preprocessor.cropMask(), backbone_preprocessor.cropIndices(),
+          view.cropped_source_points, num_points, config_.threads_per_block_, stream);
+        break;
+      case CloudFormat::XYZI:
+        extractCroppedSourcePoints<CloudPointTypeXYZI>(
+          input_data, backbone_preprocessor.cropMask(), backbone_preprocessor.cropIndices(),
+          view.cropped_source_points, num_points, config_.threads_per_block_, stream);
+        break;
+      default:
+        throw std::runtime_error("Unsupported input point cloud format.");
+    }
+  }
+
+  if (view.inverse_map == nullptr) {
+    throw std::runtime_error("Source reconstruction requires an inverse map.");
+  }
+
+  const auto cropped_blocks = divup(num_cropped_points, config_.threads_per_block_);
+  if (config_.use_64bit_hash_) {
+    scatterInverseMapKernel<<<cropped_blocks, config_.threads_per_block_, 0, stream>>>(
+      backbone_preprocessor.uniqueIndices64(), backbone_preprocessor.sortedHashIndexes64(),
+      view.inverse_map, num_cropped_points);
+  } else {
+    scatterInverseMapKernel<<<cropped_blocks, config_.threads_per_block_, 0, stream>>>(
+      backbone_preprocessor.uniqueIndices32(), backbone_preprocessor.sortedHashIndexes32(),
+      view.inverse_map, num_cropped_points);
+  }
+
+  CHECK_CUDA_ERROR(cudaPeekAtLastError());
+}
 }  // namespace autoware::ptv3
