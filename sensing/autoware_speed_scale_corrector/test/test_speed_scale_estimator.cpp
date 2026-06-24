@@ -38,9 +38,9 @@ protected:
     parameters_.initial_speed_scale_factor_covariance = 1000.0;
     parameters_.process_noise_covariance = 0.01;
     parameters_.measurement_noise_covariance = 0.01;
-    parameters_.max_angular_velocity = 1.0;
-    parameters_.max_speed = 15.0;
-    parameters_.min_speed = 2.0;
+    parameters_.max_angular_velocity = 0.0105;  // ~0.6 deg/s
+    parameters_.max_speed = 17.0;
+    parameters_.min_speed = 6.0;
 
     estimator_ = std::make_unique<SpeedScaleEstimator>(parameters_);
   }
@@ -89,7 +89,7 @@ TEST_F(SpeedScaleEstimatorTest, EstimationBehaviorTest)
   for (double t = 0.0; t <= 30.0; t += 0.1) {
     std::vector<PoseStamped> poses = {create_pose_msg(t, 10.0 * t, 0.0)};
     std::vector<VelocityReport> velocity_reports = {create_velocity_msg(t, 5.0)};
-    std::vector<Imu> imus = {create_imu_msg(t, 0.05)};
+    std::vector<Imu> imus = {create_imu_msg(t, 0.005)};
     auto result = estimator_->update(poses, imus, velocity_reports);
 
     if (result) {
@@ -125,7 +125,7 @@ TEST_F(SpeedScaleEstimatorTest, AngularVelocityConstraintViolation)
 
   std::vector<PoseStamped> poses = {create_pose_msg(0.1, 0.5, 0.0)};
   std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.1, 5.0f)};
-  std::vector<Imu> imus = {create_imu_msg(0.1, 2.0)};  // Exceeds max_angular_velocity = 1.0
+  std::vector<Imu> imus = {create_imu_msg(0.1, 0.05)};  // Exceeds max_angular_velocity (~0.6 deg/s)
 
   const auto result = estimator_->update(poses, imus, velocity_reports);
 
