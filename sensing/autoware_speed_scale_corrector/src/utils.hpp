@@ -18,16 +18,29 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <cmath>
+#include <optional>
+#include <vector>
 
 namespace autoware::speed_scale_corrector
 {
 using geometry_msgs::msg::PoseStamped;
 using geometry_msgs::msg::Twist;
 using geometry_msgs::msg::Vector3;
+using sensor_msgs::msg::Imu;
+
+/**
+ * @brief Nearest IMU sample to a target timestamp
+ */
+struct NearestImuSample
+{
+  double angular_velocity_z{};  //!< IMU z-axis angular velocity [rad/s]
+  double stamp_diff{};          //!< Absolute time difference from target [s]
+};
 
 /**
  * @brief Calculate time difference between two poses
@@ -53,6 +66,16 @@ using geometry_msgs::msg::Vector3;
  * @return Twist containing calculated linear and angular velocities
  */
 [[nodiscard]] Twist calc_twist_from_pose(const PoseStamped & pose_a, const PoseStamped & pose_b);
+
+/**
+ * @brief Find the IMU sample nearest to the target timestamp
+ *
+ * @param imus IMU messages (must not be empty)
+ * @param target_time Target timestamp
+ * @return Nearest IMU sample, or std::nullopt if imus is empty
+ */
+[[nodiscard]] std::optional<NearestImuSample> find_nearest_imu(
+  const std::vector<Imu> & imus, const rclcpp::Time & target_time);
 
 }  // namespace autoware::speed_scale_corrector
 
