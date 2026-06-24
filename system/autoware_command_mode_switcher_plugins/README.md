@@ -111,13 +111,13 @@ During normal autonomous driving, in_lane_stop continuously captures `pose_with_
 
 #### Parameters
 
-| Parameter | Type | Description |
-|---|---|---|
-| `target_acceleration` | `double` | Target deceleration commanded to constant_jerk_deceleration_controller [m/s²] |
-| `target_jerk` | `double` | Target jerk commanded to constant_jerk_deceleration_controller [m/s³] |
-| `enable_trajectory_relay` | `bool` | Enable/disable trajectory relay control |
-| `enable_pose_with_covariance_relay` | `bool` | Enable/disable pose_with_covariance relay control |
-| `service_timeout_ms` | `int64` | Timeout for service calls [ms] |
+| Parameter                           | Type     | Description                                                                   |
+| ----------------------------------- | -------- | ----------------------------------------------------------------------------- |
+| `target_acceleration`               | `double` | Target deceleration commanded to constant_jerk_deceleration_controller [m/s²] |
+| `target_jerk`                       | `double` | Target jerk commanded to constant_jerk_deceleration_controller [m/s³]         |
+| `enable_trajectory_relay`           | `bool`   | Enable/disable trajectory relay control                                       |
+| `enable_pose_with_covariance_relay` | `bool`   | Enable/disable pose_with_covariance relay control                             |
+| `service_timeout_ms`                | `int64`  | Timeout for service calls [ms]                                                |
 
 ---
 
