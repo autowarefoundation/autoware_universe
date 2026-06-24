@@ -109,8 +109,7 @@ std::shared_ptr<rclcpp::Node> createStaticTfBroadcasterNode(
 template <typename NodePtrT>
 void publishLaneletMapBin(
   const std::shared_ptr<autoware::test_utils::AutowareTestManager> & test_manager,
-  const NodePtrT & test_target_node,
-  const std::string & input_map_topic = "input/vector_map")
+  const NodePtrT & test_target_node, const std::string & input_map_topic = "input/vector_map")
 {
   auto qos = rclcpp::QoS(1).transient_local();
   LaneletMapBin map_msg = createSimpleLaneletMapMsg();
