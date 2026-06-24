@@ -22,18 +22,24 @@ namespace autoware::driving_mode_manager
 {
 
 void DrivingModeConfig::define_autoware_mode(
-  const AutowareMode & mode, const OperationMode & opmode)
+  const AutowareMode & mode, const OperationMode & opmode, uint16_t priority)
 {
-  autoware_modes_.insert(mode);
+  if (autoware_modes_.count(mode)) {
+    throw std::invalid_argument("this mode is already defined: " + std::to_string(mode.id));
+  }
+  autoware_modes_[mode].priority = priority;
+  autoware_modes_[mode].operation_mode = opmode;
   operation_to_autoware_[opmode] = mode;
-  autoware_to_operation_[mode] = opmode;
 }
 
 void DrivingModeConfig::define_autoware_mode(
-  const AutowareMode & mode, const MrmBehavior & behavior)
+  const AutowareMode & mode, const MrmBehavior & behavior, uint16_t priority)
 {
-  autoware_modes_.insert(mode);
-  autoware_to_mrm_[mode] = behavior;
+  if (autoware_modes_.count(mode)) {
+    throw std::invalid_argument("this mode is already defined: " + std::to_string(mode.id));
+  }
+  autoware_modes_[mode].priority = priority;
+  autoware_modes_[mode].mrm_behavior = behavior;
   mrm_to_autoware_[behavior] = mode;
 }
 
@@ -50,10 +56,9 @@ void DrivingModeConfig::define_command_source(const CommandSource & source)
 void DrivingModeConfig::bind_name(const AutowareMode & mode, const std::string & name)
 {
   if (autoware_modes_.count(mode) == 0) {
-    const auto id = std::to_string(mode.id);
-    throw std::invalid_argument("unknown autoware mode: " + id);
+    throw std::invalid_argument("unknown autoware mode: " + std::to_string(mode.id));
   }
-  autoware_mode_names_[mode] = name;
+  autoware_modes_.at(mode).name = name;
 }
 
 void DrivingModeConfig::bind_gates(const AutowareMode & mode, const Gates & gates)
@@ -70,16 +75,19 @@ void DrivingModeConfig::bind_gates(const AutowareMode & mode, const Gates & gate
     const auto id = std::to_string(gates.command->id);
     throw std::invalid_argument("unknown command source: " + id);
   }
-  gates_mapping_[mode] = gates;
+  autoware_modes_.at(mode).gates = gates;
 }
 
-void DrivingModeConfig::validate() const
+void DrivingModeConfig::finalize()
 {
+  for (const auto & [mode, config] : autoware_modes_) {
+    autoware_modes_list_.push_back(mode);
+  }
 }
 
 std::vector<AutowareMode> DrivingModeConfig::autoware_modes() const
 {
-  return {autoware_modes_.begin(), autoware_modes_.end()};
+  return autoware_modes_list_;
 }
 
 bool DrivingModeConfig::exists(const AutowareMode & mode) const
@@ -89,13 +97,13 @@ bool DrivingModeConfig::exists(const AutowareMode & mode) const
 
 std::string DrivingModeConfig::name(const AutowareMode & mode) const
 {
-  const auto iter = autoware_mode_names_.find(mode);
-  return iter == autoware_mode_names_.end() ? "" : iter->second;
+  const auto iter = autoware_modes_.find(mode);
+  return iter == autoware_modes_.end() ? "" : iter->second.name;
 }
 
 DrivingModeConfig::Gates DrivingModeConfig::gates(const AutowareMode & mode) const
 {
-  return gates_mapping_.at(mode);
+  return autoware_modes_.at(mode).gates;
 }
 
 AutowareMode DrivingModeConfig::to_autoware_mode(const OperationMode & opmode) const
@@ -111,13 +119,19 @@ std::optional<AutowareMode> DrivingModeConfig::to_autoware_mode(const MrmBehavio
 
 OperationMode DrivingModeConfig::to_operation_mode(const AutowareMode & mode) const
 {
-  return autoware_to_operation_.at(mode);
+  return autoware_modes_.at(mode).operation_mode.value();
 }
 
 std::optional<MrmBehavior> DrivingModeConfig::to_mrm_behavior(const AutowareMode & mode) const
 {
-  const auto iter = autoware_to_mrm_.find(mode);
-  return iter == autoware_to_mrm_.end() ? std::nullopt : std::optional(iter->second);
+  const auto iter = autoware_modes_.find(mode);
+  return iter == autoware_modes_.end() ? std::nullopt : iter->second.mrm_behavior;
+}
+
+uint16_t DrivingModeConfig::priority(const AutowareMode & mode) const
+{
+  const auto iter = autoware_modes_.find(mode);
+  return iter == autoware_modes_.end() ? 0 : iter->second.priority;
 }
 
 }  // namespace autoware::driving_mode_manager

@@ -56,7 +56,7 @@ public:
   void change_platform_mode(const PlatformMode & mode) override;
   void publish_operation_mode(const OperationModeState & state) const override;
   void publish_mrm_state(const MrmState & state) const override;
-  void publish_driving_mode_request(const AutowareMode & mode) const override;
+  void publish_driving_mode_request(const ModeRequest & request) const override;
   void publish_driving_mode_info(const ModeInfo & info) const override;
   void publish_debug(const DebugStatus & status) const override;
   void publish_debug(const RequestModes & request) const override;

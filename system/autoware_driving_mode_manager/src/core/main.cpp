@@ -100,7 +100,8 @@ void ManagerMain::publish_mrm_state() const
 
 void ManagerMain::publish_driving_mode_request() const
 {
-  interface_->publish_driving_mode_request(request_.autoware_mode);
+  const auto & mode = request_.autoware_mode;
+  interface_->publish_driving_mode_request({mode, config_->priority(mode)});
 }
 
 void ManagerMain::publish_debug() const

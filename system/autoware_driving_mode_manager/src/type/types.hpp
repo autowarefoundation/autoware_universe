@@ -60,6 +60,12 @@ struct MrmRequest
   MrmBehavior behavior;
 };
 
+struct ModeRequest
+{
+  AutowareMode mode;
+  uint16_t priority;
+};
+
 struct ModeInfo
 {
   std::unordered_map<AutowareMode, std::string> names;
