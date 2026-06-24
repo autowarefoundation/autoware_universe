@@ -22,13 +22,16 @@ All Rights Reserved 2019-2020.
 */
 
 #include "autoware/bevfusion/postprocess/circle_nms_kernel.hpp"
+#include "autoware/bevfusion/postprocess/postprocess_kernel.hpp"
 #include "autoware/bevfusion/utils.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 
+#include <thrust/copy.h>
 #include <thrust/host_vector.h>
 
 #include <cstddef>
+#include <vector>
 
 namespace
 {
@@ -102,44 +105,55 @@ cudaError_t circleNMS_launch(
   return cudaGetLastError();
 }
 
-std::size_t circleNMS(
-  thrust::device_vector<Box3D> & boxes3d, const float distance_threshold,
-  thrust::device_vector<bool> & keep_mask, cudaStream_t stream)
+std::size_t PostprocessCuda::circleNMS(
+  std::size_t num_boxes3d, const float distance_threshold, cudaStream_t stream)
 {
-  const auto num_boxes3d = boxes3d.size();
   const auto col_blocks = divup(num_boxes3d, THREADS_PER_BLOCK_NMS);
-  thrust::device_vector<std::uint64_t> mask_d(num_boxes3d * col_blocks);
 
-  CHECK_CUDA_ERROR(
-    circleNMS_launch(boxes3d, num_boxes3d, col_blocks, distance_threshold, mask_d, stream));
+  // Reserve scratch to the worst case once; per-call resizes never reallocate.
+  const std::size_t max_boxes = static_cast<std::size_t>(config_.num_proposals_);
+  const std::size_t max_col_blocks = divup(max_boxes, THREADS_PER_BLOCK_NMS);
+  nms_mask_d_.reserve(max_boxes * max_col_blocks);
+  nms_mask_h_.reserve(max_boxes * max_col_blocks);
+  keep_mask_h_.reserve(max_boxes);
+  nms_remv_h_.reserve(max_col_blocks);
 
-  // memcpy device to host
-  thrust::host_vector<std::uint64_t> mask_h(mask_d.size());
-  thrust::copy(mask_d.begin(), mask_d.end(), mask_h.begin());
+  nms_mask_d_.resize(num_boxes3d * col_blocks);
+  CHECK_CUDA_ERROR(circleNMS_launch(
+    det_boxes3d_d_, num_boxes3d, col_blocks, distance_threshold, nms_mask_d_, stream));
+
+  // copy the suppression mask to host on the node stream (stream-local sync)
+  nms_mask_h_.resize(nms_mask_d_.size());
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    thrust::raw_pointer_cast(nms_mask_h_.data()), thrust::raw_pointer_cast(nms_mask_d_.data()),
+    nms_mask_d_.size() * sizeof(std::uint64_t), cudaMemcpyDeviceToHost, stream));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream));
 
-  // generate keep_mask
-  std::vector<std::uint64_t> remv_h(col_blocks);
-  thrust::host_vector<bool> keep_mask_h(keep_mask.size());
+  // generate keep_mask on host
+  nms_remv_h_.assign(col_blocks, 0);
+  keep_mask_h_.resize(num_boxes3d);
   std::size_t num_to_keep = 0;
   for (std::size_t i = 0; i < num_boxes3d; i++) {
     auto nblock = i / THREADS_PER_BLOCK_NMS;
     auto inblock = i % THREADS_PER_BLOCK_NMS;
 
-    if (!(remv_h[nblock] & (1ULL << inblock))) {
-      keep_mask_h[i] = true;
+    if (!(nms_remv_h_[nblock] & (1ULL << inblock))) {
+      keep_mask_h_[i] = true;
       num_to_keep++;
-      std::uint64_t * p = &mask_h[0] + i * col_blocks;
+      std::uint64_t * p = &nms_mask_h_[0] + i * col_blocks;
       for (std::size_t j = nblock; j < col_blocks; j++) {
-        remv_h[j] |= p[j];
+        nms_remv_h_[j] |= p[j];
       }
     } else {
-      keep_mask_h[i] = false;
+      keep_mask_h_[i] = false;
     }
   }
 
-  // memcpy host to device
-  keep_mask = keep_mask_h;
+  // memcpy host to device on the node stream (ordered before the copy_if that reads it)
+  keep_mask_d_.resize(num_boxes3d);
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    thrust::raw_pointer_cast(keep_mask_d_.data()), thrust::raw_pointer_cast(keep_mask_h_.data()),
+    num_boxes3d * sizeof(bool), cudaMemcpyHostToDevice, stream));
 
   return num_to_keep;
 }
