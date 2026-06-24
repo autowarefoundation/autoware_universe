@@ -31,8 +31,8 @@
 
 #include <cuda_runtime.h>
 #include <tf2/utils.h>
-#include <thrust/count.h>
 #include <thrust/execution_policy.h>
+#include <thrust/iterator/transform_iterator.h>
 #include <thrust/reduce.h>
 #include <thrust/scan.h>
 
@@ -42,6 +42,48 @@ namespace autoware::cuda_pointcloud_preprocessor
 {
 
 namespace thrust_stream = cuda_utils::thrust_stream;
+
+namespace
+{
+template <typename T>
+struct EqualsTo
+{
+  using result_type = int;
+  T value;
+  __device__ int operator()(const T & x) const { return x == value ? 1 : 0; }
+};
+
+// Count, on `stream`, how many of the first `n` elements of `mask` equal `value`,
+// leaving the result in the device scalar `out_dev`. Using CUB DeviceReduce keeps
+// the result on the device: thrust::count would instead copy its return value to
+// the host and synchronize the *default* stream on every call (a process-wide
+// barrier). CUB scratch is carved from the pre-allocated thrust workspace, so no
+// per-call cudaMalloc/cudaFree is incurred either.
+template <typename T>
+void cubCountEqual(
+  const T * mask, std::size_t n, T value, int * out_dev,
+  autoware::cuda_utils::ThrustWorkspace::Allocator alloc, cudaStream_t stream)
+{
+  thrust::transform_iterator<EqualsTo<T>, const T *> it(mask, EqualsTo<T>{value});
+  std::size_t temp_bytes = 0;
+  CHECK_CUDA_ERROR(cub::DeviceReduce::Sum(nullptr, temp_bytes, it, out_dev, n, stream));
+  char * temp = alloc.allocate(static_cast<std::ptrdiff_t>(temp_bytes));
+  CHECK_CUDA_ERROR(cub::DeviceReduce::Sum(temp, temp_bytes, it, out_dev, n, stream));
+  alloc.deallocate(temp, temp_bytes);
+}
+
+// Ensure a device_vector can hold at least n elements, growing monotonically with
+// 2x headroom. An enlarging thrust::device_vector::resize() value-initializes the
+// new region on the *default* stream and synchronizes -- a process-wide barrier --
+// so never shrink and over-allocate, making regrowth geometrically rare. The
+// vector's size() therefore becomes a high-water mark: callers must drive kernels
+// with the logical element count, not size().
+template <typename Vec>
+void grow_to(Vec & vec, std::size_t n)
+{
+  if (vec.size() < n) vec.resize(n * 2);
+}
+}  // namespace
 
 CudaPointcloudPreprocessor::CudaPointcloudPreprocessor() : stream_(initialize_stream())
 {
@@ -105,6 +147,7 @@ CudaPointcloudPreprocessor::CudaPointcloudPreprocessor() : stream_(initialize_st
   device_mismatch_mask_.resize(num_organized_points_);
   device_ring_outlier_mask_.resize(num_organized_points_);
   device_indices_.resize(num_organized_points_);
+  device_diag_counts_.resize(3);
 
   preallocateOutput();
 }
@@ -188,28 +231,38 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     max_points_per_ring_ = std::max((max_points_per_ring + 511) / 512 * 512, 512);
     num_organized_points_ = num_rings_ * max_points_per_ring_;
 
-    device_ring_index_.resize(num_rings_);
-    thrust_stream::fill(device_ring_index_, 0, stream_);
-    device_indexes_tensor_.resize(num_organized_points_);
-    thrust_stream::fill<uint32_t>(device_indexes_tensor_, num_raw_points_, stream_);
-    device_sorted_indexes_tensor_.resize(num_organized_points_);
-    thrust_stream::fill<uint32_t>(device_sorted_indexes_tensor_, num_raw_points_, stream_);
-    device_segment_offsets_.resize(num_rings_ + 1);
-    device_organized_points_.resize(num_organized_points_);
-    thrust_stream::fill(device_organized_points_, InputPointType{}, stream_);
+    // Grow these buffers monotonically with headroom (grow_to) so the
+    // value-initializing resize -- which thrust runs on the default stream and
+    // synchronizes -- only fires while climbing to the high-water mark, not on
+    // every ring-geometry change. The fills below initialize the live region on
+    // the node stream; kernels are driven by num_organized_points_/num_rings_,
+    // never by size().
+    grow_to(device_ring_index_, num_rings_);
+    thrust_stream::fill_n(device_ring_index_, num_rings_, 0, stream_);
+    grow_to(device_indexes_tensor_, num_organized_points_);
+    thrust_stream::fill_n<uint32_t>(
+      device_indexes_tensor_, num_organized_points_, num_raw_points_, stream_);
+    grow_to(device_sorted_indexes_tensor_, num_organized_points_);
+    thrust_stream::fill_n<uint32_t>(
+      device_sorted_indexes_tensor_, num_organized_points_, num_raw_points_, stream_);
+    grow_to(device_segment_offsets_, num_rings_ + 1);
+    grow_to(device_organized_points_, num_organized_points_);
+    thrust_stream::fill_n(
+      device_organized_points_, num_organized_points_, InputPointType{}, stream_);
 
-    device_transformed_points_.resize(num_organized_points_);
-    thrust_stream::fill(device_transformed_points_, InputPointType{}, stream_);
-    device_crop_mask_.resize(num_organized_points_);
-    thrust_stream::fill(device_crop_mask_, 0U, stream_);
-    device_nan_mask_.resize(num_organized_points_);
-    thrust_stream::fill<uint8_t>(device_nan_mask_, 0, stream_);
-    device_mismatch_mask_.resize(num_organized_points_);
-    thrust_stream::fill<uint8_t>(device_mismatch_mask_, 0, stream_);
-    device_ring_outlier_mask_.resize(num_organized_points_);
-    thrust_stream::fill(device_ring_outlier_mask_, 0U, stream_);
-    device_indices_.resize(num_organized_points_);
-    thrust_stream::fill(device_indices_, 0U, stream_);
+    grow_to(device_transformed_points_, num_organized_points_);
+    thrust_stream::fill_n(
+      device_transformed_points_, num_organized_points_, InputPointType{}, stream_);
+    grow_to(device_crop_mask_, num_organized_points_);
+    thrust_stream::fill_n(device_crop_mask_, num_organized_points_, 0U, stream_);
+    grow_to(device_nan_mask_, num_organized_points_);
+    thrust_stream::fill_n<uint8_t>(device_nan_mask_, num_organized_points_, 0, stream_);
+    grow_to(device_mismatch_mask_, num_organized_points_);
+    thrust_stream::fill_n<uint8_t>(device_mismatch_mask_, num_organized_points_, 0, stream_);
+    grow_to(device_ring_outlier_mask_, num_organized_points_);
+    thrust_stream::fill_n(device_ring_outlier_mask_, num_organized_points_, 0U, stream_);
+    grow_to(device_indices_, num_organized_points_);
+    thrust_stream::fill_n(device_indices_, num_organized_points_, 0U, stream_);
 
     preallocateOutput();
 
@@ -233,7 +286,7 @@ void CudaPointcloudPreprocessor::organizePointcloud()
       num_organized_points_, num_rings_, thrust::raw_pointer_cast(device_segment_offsets_.data()),
       thrust::raw_pointer_cast(device_indexes_tensor_.data()),
       thrust::raw_pointer_cast(device_sorted_indexes_tensor_.data()), stream_);
-    device_sort_workspace_.resize(sort_workspace_bytes_);
+    grow_to(device_sort_workspace_, sort_workspace_bytes_);
 
     organizeLaunch(
       thrust::raw_pointer_cast(device_input_points_.data()),
@@ -303,9 +356,11 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     device_input_points_.resize(new_capacity);
   }
 
-  // Reset all contents in the device vector
+  // Reset contents in the device vectors. device_organized_points_ may be
+  // over-allocated (grow_to), so reset only its live [0, num_organized_points_)
+  // region on the node stream.
   thrust_stream::fill(device_input_points_, InputPointType{}, stream_);
-  thrust_stream::fill(device_organized_points_, InputPointType{}, stream_);
+  thrust_stream::fill_n(device_organized_points_, num_organized_points_, InputPointType{}, stream_);
 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     thrust::raw_pointer_cast(device_input_points_.data()), input_pointcloud_msg.data.data(),
@@ -347,12 +402,17 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     static_cast<std::uint64_t>(1'000'000'000) * input_pointcloud_msg.header.stamp.sec +
     input_pointcloud_msg.header.stamp.nanosec;
 
+  // Valid twist count for this callback. device_twist_*_structs_.size() is only a
+  // monotonic high-water mark (see setupTwist*Structs), so the kernels below must
+  // use these counts rather than .size().
+  std::size_t num_twist_2d_structs = 0;
+  std::size_t num_twist_3d_structs = 0;
   if (undistortion_type_ == UndistortionType::Undistortion3D) {
-    setupTwist3DStructs(
+    num_twist_3d_structs = setupTwist3DStructs(
       twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
       device_twist_3d_structs_, stream_);
   } else if (undistortion_type_ == UndistortionType::Undistortion2D) {
-    setupTwist2DStructs(
+    num_twist_2d_structs = setupTwist2DStructs(
       twist_queue, angular_velocity_queue, pointcloud_stamp_nsec, first_point_rel_stamp_nsec,
       device_twist_2d_structs_, stream_);
   } else {
@@ -393,17 +453,15 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   }
 
   // Undistortion
-  if (
-    undistortion_type_ == UndistortionType::Undistortion3D && device_twist_3d_structs_.size() > 0) {
+  if (undistortion_type_ == UndistortionType::Undistortion3D && num_twist_3d_structs > 0) {
     undistort3DLaunch(
       device_transformed_points, num_organized_points_, device_twist_3d_structs,
-      static_cast<int>(device_twist_3d_structs_.size()), device_mismatch_mask, threads_per_block_,
+      static_cast<int>(num_twist_3d_structs), device_mismatch_mask, threads_per_block_,
       blocks_per_grid, stream_);
-  } else if (
-    undistortion_type_ == UndistortionType::Undistortion2D && device_twist_2d_structs_.size() > 0) {
+  } else if (undistortion_type_ == UndistortionType::Undistortion2D && num_twist_2d_structs > 0) {
     undistort2DLaunch(
       device_transformed_points, num_organized_points_, device_twist_2d_structs,
-      static_cast<int>(device_twist_2d_structs_.size()), device_mismatch_mask, threads_per_block_,
+      static_cast<int>(num_twist_2d_structs), device_mismatch_mask, threads_per_block_,
       blocks_per_grid, stream_);
   }
 
@@ -417,8 +475,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
       threads_per_block_, blocks_per_grid, stream_);
   } else {
     thrust::fill(
-      thrust::device, device_ring_outlier_mask, device_ring_outlier_mask + num_organized_points_,
-      1);
+      cuda_utils::thrust_on_stream(stream_), device_ring_outlier_mask,
+      device_ring_outlier_mask + num_organized_points_, 1);
   }
 
   combineMasksLaunch(
@@ -438,34 +496,47 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     workspace_policy, device_ring_outlier_mask, device_ring_outlier_mask + num_organized_points_,
     device_indices);
 
+  // Diagnostic counts: reduce on the node stream with CUB into device scalars
+  // instead of thrust::count, whose host-value return synchronizes the default
+  // stream on every call. The results are read back at the single synchronize
+  // below, alongside num_output_points.
+  // num_organized_points_ is the logical element count; the mask buffers may be
+  // over-allocated (grow_to), so count over [0, num_organized_points_), not size().
+  int * device_diag_counts = thrust::raw_pointer_cast(device_diag_counts_.data());
+  cubCountEqual(
+    device_crop_mask, num_organized_points_, static_cast<std::uint32_t>(1), device_diag_counts + 0,
+    thrust_workspace_.allocator(), stream_);
+  cubCountEqual(
+    device_nan_mask, num_organized_points_, static_cast<std::uint8_t>(1), device_diag_counts + 1,
+    thrust_workspace_.allocator(), stream_);
+  cubCountEqual(
+    device_mismatch_mask, num_organized_points_, static_cast<std::uint8_t>(1),
+    device_diag_counts + 2, thrust_workspace_.allocator(), stream_);
+
+  // The extract kernel writes only the points the scan selected, so launching it
+  // unconditionally is a no-op when nothing passed. Doing so removes the host's
+  // dependency on num_output_points before the launch, letting every
+  // device->host result be gathered at one synchronize after all GPU work is
+  // queued (rather than syncing mid-pipeline to read the count back first).
+  extractPointsLaunch(
+    device_transformed_points, device_ring_outlier_mask, device_indices, num_organized_points_,
+    reinterpret_cast<OutputPointType *>(output_pointcloud_ptr_->data.get()), threads_per_block_,
+    blocks_per_grid, stream_);
+
   int num_output_points{};
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     &num_output_points, device_indices + num_organized_points_ - 1, sizeof(int),
     cudaMemcpyDeviceToHost, stream_));
+  int diag_counts_host[3] = {0, 0, 0};
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    diag_counts_host, device_diag_counts, sizeof(diag_counts_host), cudaMemcpyDeviceToHost,
+    stream_));
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
-  // Get information and extract points after filters
-  size_t num_crop_box_passed_points =
-    thrust::count(workspace_policy, device_crop_mask_.begin(), device_crop_mask_.end(), 1U);
-  size_t num_nan_points = thrust::count(
-    workspace_policy, device_nan_mask_.begin(), device_nan_mask_.end(), static_cast<uint8_t>(1));
-  size_t mismatch_count = thrust::count(
-    workspace_policy, device_mismatch_mask_.begin(), device_mismatch_mask_.end(),
-    static_cast<uint8_t>(1));
-
-  stats_.num_nan_points = static_cast<int>(num_nan_points);
-  stats_.num_crop_box_passed_points = static_cast<int>(num_crop_box_passed_points);
-  stats_.mismatch_count = static_cast<int>(mismatch_count);
-
-  if (num_output_points > 0) {
-    extractPointsLaunch(
-      device_transformed_points, device_ring_outlier_mask, device_indices, num_organized_points_,
-      reinterpret_cast<OutputPointType *>(output_pointcloud_ptr_->data.get()), threads_per_block_,
-      blocks_per_grid, stream_);
-  }
-
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+  stats_.num_crop_box_passed_points = diag_counts_host[0];
+  stats_.num_nan_points = diag_counts_host[1];
+  stats_.mismatch_count = diag_counts_host[2];
 
   // Copy the transformed points back
   output_pointcloud_ptr_->row_step = num_output_points * sizeof(OutputPointType);

@@ -119,6 +119,10 @@ private:
   thrust::device_vector<std::uint8_t> device_mismatch_mask_;
   thrust::device_vector<std::uint32_t> device_ring_outlier_mask_;
   thrust::device_vector<std::uint32_t> device_indices_;
+  // Diagnostic counters (crop-passed / NaN / mismatch). Written by CUB reductions
+  // on the node stream and read back together at a single synchronize, so the
+  // stats never trigger thrust::count's default-stream host-value sync.
+  thrust::device_vector<int> device_diag_counts_;
   thrust::device_vector<TwistStruct2D> device_twist_2d_structs_;
   thrust::device_vector<TwistStruct3D> device_twist_3d_structs_;
   thrust::device_vector<CropBoxParameters> device_crop_box_structs_;
