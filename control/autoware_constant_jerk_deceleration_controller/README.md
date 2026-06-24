@@ -39,9 +39,9 @@ jerk         = target_jerk  (0 once target_acceleration is reached)
 
 ### Subscriptions
 
-| Topic | Type | Description |
-|---|---|---|
-| `~/input/control` | `autoware_control_msgs/Control` | Upstream control command |
+| Topic                                        | Type                                                 | Description                         |
+| -------------------------------------------- | ---------------------------------------------------- | ----------------------------------- |
+| `~/input/control`                            | `autoware_control_msgs/Control`                      | Upstream control command            |
 | `~/input/constant_jerk_deceleration_trigger` | `tier4_control_msgs/ConstantJerkDecelerationTrigger` | Trigger and deceleration parameters |
 
 ### Publications
@@ -71,11 +71,11 @@ No parameters are currently defined.
 
 ### Launch Arguments
 
-| Argument | Default | Description |
-|---|---|---|
-| `input_control` | `/control/trajectory_follower/control_cmd` | Upstream control command topic |
-| `input_constant_jerk_deceleration_trigger` | `/control/constant_jerk_deceleration_trigger` | Trigger topic |
-| `output_control` | `/control/control_command_gate/inputs/in_lane_stop/control` | Output control command topic |
-| `output_gear_command` | `/control/control_command_gate/inputs/in_lane_stop/gear` | Output gear command topic |
-| `output_hazard_lights_command` | `/control/control_command_gate/inputs/in_lane_stop/hazard_lights` | Output hazard lights topic |
-| `output_turn_indicators_command` | `/control/control_command_gate/inputs/in_lane_stop/turn_indicators` | Output turn indicators topic |
+| Argument                                   | Default                                                             | Description                    |
+| ------------------------------------------ | ------------------------------------------------------------------- | ------------------------------ |
+| `input_control`                            | `/control/trajectory_follower/control_cmd`                          | Upstream control command topic |
+| `input_constant_jerk_deceleration_trigger` | `/control/constant_jerk_deceleration_trigger`                       | Trigger topic                  |
+| `output_control`                           | `/control/control_command_gate/inputs/in_lane_stop/control`         | Output control command topic   |
+| `output_gear_command`                      | `/control/control_command_gate/inputs/in_lane_stop/gear`            | Output gear command topic      |
+| `output_hazard_lights_command`             | `/control/control_command_gate/inputs/in_lane_stop/hazard_lights`   | Output hazard lights topic     |
+| `output_turn_indicators_command`           | `/control/control_command_gate/inputs/in_lane_stop/turn_indicators` | Output turn indicators topic   |
