@@ -1,0 +1,50 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: SphericCollisionDetector.node
+package:
+  name: autoware_spheric_collision_detector
+  provider: autoware
+launch:
+  plugin: spheric_collision_detector::SphericCollisionDetectorNode
+  executable: spheric_collision_detector_node
+# interfaces
+subscribers:
+  - name: ros_transform
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+  - name: ros_transform_static
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf_static
+  - name: object_recognition
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: input/object_recognition
+  - name: predicted_trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+    remap_target: input/predicted_trajectory
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+    remap_target: input/odometry
+publishers:
+  - name: diagnostics
+    message_type: diagnostic_msgs/msg/DiagnosticArray
+    global: /diagnostics
+  - name: marker_array
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: debug/marker/marker_array
+  - name: processing_time_ms
+    message_type: diagnostic_msgs/msg/DiagnosticStatus
+    remap_target: ~/debug/processing_time_ms
+# parameters
+param_files:
+  - name: spheric_collision_detector_param
+    default: config/spheric_collision_detector.param.yaml
+param_values: []
+# processes
+processes:
+  - name: detect_collision
+    trigger_conditions:
+      - periodic: 10.0 # Hz
+    outcomes:
+      - to_output: diagnostics
+      - to_output: marker_array
+      - to_output: processing_time_ms
