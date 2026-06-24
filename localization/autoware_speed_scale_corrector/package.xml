@@ -3,7 +3,7 @@
 <package format="3">
   <name>autoware_speed_scale_corrector</name>
   <version>0.3.0</version>
-  <description>The autoware_speed_scale_corrector package</description>
+  <description>Estimate speed scale factor from localization pose and vehicle velocity report</description>
   <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>
   <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
   <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
