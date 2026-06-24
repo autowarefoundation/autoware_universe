@@ -153,6 +153,25 @@ TEST_F(SpeedScaleEstimatorTest, SpeedConstraintViolation)
   EXPECT_TRUE(result.error().reason.find("Velocity is too low") != std::string::npos);
 }
 
+// Test error handling when velocity report timestamp is too far from pose
+TEST_F(SpeedScaleEstimatorTest, VelocityReportTimestampMismatch)
+{
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0f)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
+  (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
+
+  std::vector<PoseStamped> poses = {create_pose_msg(0.1, 1.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.5, 5.0f)};
+  std::vector<Imu> imus = {create_imu_msg(0.1, 0.0)};
+
+  const auto result = estimator_->update(poses, imus, velocity_reports);
+
+  ASSERT_FALSE(result);
+  EXPECT_TRUE(
+    result.error().reason.find("Velocity report timestamp mismatch") != std::string::npos);
+}
+
 // Test error handling with empty IMU and velocity data
 TEST_F(SpeedScaleEstimatorTest, EmptyDataHandling)
 {

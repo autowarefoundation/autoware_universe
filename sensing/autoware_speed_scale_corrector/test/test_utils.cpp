@@ -14,6 +14,7 @@
 
 #include "utils.hpp"
 
+#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <gtest/gtest.h>
 #include <rclcpp/rclcpp.hpp>
 
@@ -31,6 +32,15 @@ protected:
     msg.header.stamp.sec = static_cast<int32_t>(sec);
     msg.header.stamp.nanosec = static_cast<uint32_t>((sec - msg.header.stamp.sec) * 1e9);
     msg.angular_velocity.z = angular_velocity_z;
+    return msg;
+  }
+
+  static VelocityReport create_velocity_msg(double sec, double velocity)
+  {
+    VelocityReport msg;
+    msg.header.stamp.sec = static_cast<int32_t>(sec);
+    msg.header.stamp.nanosec = static_cast<uint32_t>((sec - msg.header.stamp.sec) * 1e9);
+    msg.longitudinal_velocity = static_cast<float>(velocity);
     return msg;
   }
 };
@@ -52,6 +62,27 @@ TEST_F(UtilsTest, FindNearestImuReturnsNulloptForEmptyInput)
 {
   const std::vector<Imu> imus;
   const auto result = find_nearest_imu(imus, rclcpp::Time(1, 0));
+
+  EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(UtilsTest, FindNearestVelocityReportReturnsClosestSample)
+{
+  const std::vector<VelocityReport> velocity_reports = {
+    create_velocity_msg(0.0, 1.0), create_velocity_msg(0.2, 3.0), create_velocity_msg(0.5, 7.0)};
+
+  const rclcpp::Time target_time(0, 210000000, RCL_ROS_TIME);
+  const auto result = find_nearest_velocity_report(velocity_reports, target_time);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_NEAR(result->longitudinal_velocity, 3.0, 1e-9);
+  EXPECT_NEAR(result->stamp_diff, 0.01, 1e-9);
+}
+
+TEST_F(UtilsTest, FindNearestVelocityReportReturnsNulloptForEmptyInput)
+{
+  const std::vector<VelocityReport> velocity_reports;
+  const auto result = find_nearest_velocity_report(velocity_reports, rclcpp::Time(1, 0));
 
   EXPECT_FALSE(result.has_value());
 }
