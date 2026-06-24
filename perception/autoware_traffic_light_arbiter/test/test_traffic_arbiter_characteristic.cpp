@@ -297,7 +297,7 @@ protected:
     });
     arbiter_ = std::make_shared<TrafficLightArbiter>(options);
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
-    executor_->add_node(arbiter_);
+    executor_->add_node(arbiter_->get_node_base_interface());
     executor_->add_node(test_node_);
     spin_for();
     t0_ = arbiter_->now();
