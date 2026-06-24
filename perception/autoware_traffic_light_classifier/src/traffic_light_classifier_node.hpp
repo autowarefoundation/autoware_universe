@@ -16,7 +16,7 @@
 #define TRAFFIC_LIGHT_CLASSIFIER_NODE_HPP_
 
 #include "classifier/classifier_interface.hpp"
-#include "traffic_light_classifier_process.hpp"
+#include "traffic_light_classifier.hpp"
 
 #include <image_transport/image_transport.hpp>
 #include <image_transport/subscriber_filter.hpp>
@@ -72,8 +72,6 @@ public:
     LampRecognizer = 2,  // Per-lamp recognizer based classifier: bbox + color + type + angle
   };
 
-  uint8_t classify_traffic_light_type_;
-
 private:
   void connectCb();
 
@@ -93,13 +91,10 @@ private:
   bool is_approximate_sync_;
   rclcpp::Publisher<tier4_perception_msgs::msg::TrafficLightArray>::SharedPtr
     traffic_signal_array_pub_;
-  std::shared_ptr<ClassifierInterface> classifier_ptr_;
+  std::unique_ptr<TrafficLightClassifier> classifier_;
 
   std::unique_ptr<autoware_utils::DiagnosticsInterface>
     diagnostics_interface_ptr_;  //!< Diagnostic handler.
-
-  double over_exposure_threshold_;
-  double under_exposure_threshold_;
 };
 
 }  // namespace autoware::traffic_light
