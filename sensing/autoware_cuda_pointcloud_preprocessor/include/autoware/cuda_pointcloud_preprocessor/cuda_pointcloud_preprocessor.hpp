@@ -21,6 +21,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/cuda_utils/thrust_utils.hpp>
+#include <autoware/cuda_utils/thrust_workspace_allocator.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -90,6 +91,10 @@ private:
   int max_blocks_per_grid_{};
   const int threads_per_block_{256};
   cudaMemPool_t device_memory_pool_{};
+
+  // Pre-allocated workspace backing thrust temporaries so the per-callback
+  // reductions/scans run without process-wide cudaMalloc/cudaFree barriers.
+  autoware::cuda_utils::ThrustWorkspace thrust_workspace_;
 
   ProcessingStats stats_;
 

@@ -430,8 +430,12 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     device_is_valid_point, device_ring_outlier_mask, num_organized_points_,
     device_ring_outlier_mask, threads_per_block_, blocks_per_grid, stream_);
 
+  // Back thrust temporaries with the pre-allocated workspace (no per-call
+  // cudaMalloc/cudaFree) while keeping execution on the node's own stream.
+  const auto workspace_policy = thrust::cuda::par(thrust_workspace_.allocator()).on(stream_);
+
   thrust::inclusive_scan(
-    cuda_utils::thrust_on_stream(stream_), device_ring_outlier_mask,
+    workspace_policy, device_ring_outlier_mask,
     device_ring_outlier_mask + num_organized_points_, device_indices);
 
   int num_output_points{};
@@ -442,9 +446,13 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   // Get information and extract points after filters
-  size_t num_crop_box_passed_points = thrust_stream::count(device_crop_mask_, 1U, stream_);
-  size_t num_nan_points = thrust_stream::count<uint8_t>(device_nan_mask_, 1, stream_);
-  size_t mismatch_count = thrust_stream::count<uint8_t>(device_mismatch_mask_, 1, stream_);
+  size_t num_crop_box_passed_points =
+    thrust::count(workspace_policy, device_crop_mask_.begin(), device_crop_mask_.end(), 1U);
+  size_t num_nan_points = thrust::count(
+    workspace_policy, device_nan_mask_.begin(), device_nan_mask_.end(), static_cast<uint8_t>(1));
+  size_t mismatch_count = thrust::count(
+    workspace_policy, device_mismatch_mask_.begin(), device_mismatch_mask_.end(),
+    static_cast<uint8_t>(1));
 
   stats_.num_nan_points = static_cast<int>(num_nan_points);
   stats_.num_crop_box_passed_points = static_cast<int>(num_crop_box_passed_points);
