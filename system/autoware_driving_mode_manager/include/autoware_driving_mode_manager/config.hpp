@@ -32,8 +32,10 @@ struct DrivingModeConfigInterface
   };
 
   virtual ~DrivingModeConfigInterface() = default;
-  virtual void define_autoware_mode(const AutowareMode & mode, const OperationMode & opmode) = 0;
-  virtual void define_autoware_mode(const AutowareMode & mode, const MrmBehavior & behavior) = 0;
+  virtual void define_autoware_mode(
+    const AutowareMode & mode, const OperationMode & opmode, uint16_t priority = 0) = 0;
+  virtual void define_autoware_mode(
+    const AutowareMode & mode, const MrmBehavior & behavior, uint16_t priority = 0) = 0;
   virtual void define_trajectory_source(const TrajectorySource & source) = 0;
   virtual void define_command_source(const CommandSource & source) = 0;
   virtual void bind_name(const AutowareMode & mode, const std::string & name) = 0;

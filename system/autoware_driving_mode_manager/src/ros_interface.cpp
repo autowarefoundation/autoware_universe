@@ -271,11 +271,12 @@ void RosInterface::on_driving_mode_mrm_state(const DrivingModeMrmStateMsg & msg)
   }
 }
 
-void RosInterface::publish_driving_mode_request(const AutowareMode & mode) const
+void RosInterface::publish_driving_mode_request(const ModeRequest & request) const
 {
   DrivingModeRequestMsg msg;
   msg.stamp = now();
-  msg.mode = mode.id;
+  msg.mode = request.mode.id;
+  msg.priority = request.priority;
   pub_driving_mode_request_->publish(msg);
 }
 

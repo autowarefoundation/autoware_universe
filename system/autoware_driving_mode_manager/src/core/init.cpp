@@ -28,7 +28,7 @@ ManagerInit::ManagerInit(std::unique_ptr<Interface> && interface, std::shared_pt
   config_ = std::make_unique<DrivingModeConfig>();
   plugin_ = plugin;
   plugin_->setup(*config_);
-  config_->validate();
+  config_->finalize();
   status_ = std::make_unique<DrivingModeStatus>(config_->autoware_modes());
 
   publish_driving_mode_info();

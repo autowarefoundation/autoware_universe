@@ -28,14 +28,16 @@ namespace autoware::driving_mode_manager
 class DrivingModeConfig : public DrivingModeConfigInterface
 {
 public:
-  void define_autoware_mode(const AutowareMode & mode, const OperationMode & opmode) override;
-  void define_autoware_mode(const AutowareMode & mode, const MrmBehavior & behavior) override;
+  void define_autoware_mode(
+    const AutowareMode & mode, const OperationMode & opmode, uint16_t priority) override;
+  void define_autoware_mode(
+    const AutowareMode & mode, const MrmBehavior & behavior, uint16_t priority) override;
   void define_trajectory_source(const TrajectorySource & source) override;
   void define_command_source(const CommandSource & source) override;
   void bind_name(const AutowareMode & mode, const std::string & name) override;
   void bind_gates(const AutowareMode & mode, const Gates & gates) override;
 
-  void validate() const;
+  void finalize();
 
   std::vector<AutowareMode> autoware_modes() const;
   std::string name(const AutowareMode & mode) const;
@@ -45,17 +47,23 @@ public:
   std::optional<AutowareMode> to_autoware_mode(const MrmBehavior & behavior) const;
   OperationMode to_operation_mode(const AutowareMode & mode) const;
   std::optional<MrmBehavior> to_mrm_behavior(const AutowareMode & mode) const;
+  uint16_t priority(const AutowareMode & mode) const;
 
 private:
-  std::unordered_set<AutowareMode> autoware_modes_;
+  struct AutowareModeConfig
+  {
+    uint16_t priority;
+    std::string name;
+    std::optional<OperationMode> operation_mode;
+    std::optional<MrmBehavior> mrm_behavior;
+    Gates gates;
+  };
+  std::unordered_map<AutowareMode, AutowareModeConfig> autoware_modes_;
   std::unordered_set<TrajectorySource> trajectory_sources_;
   std::unordered_set<CommandSource> command_sources_;
-  std::unordered_map<AutowareMode, std::string> autoware_mode_names_;
-  std::unordered_map<AutowareMode, Gates> gates_mapping_;
   std::unordered_map<OperationMode, AutowareMode> operation_to_autoware_;
-  std::unordered_map<AutowareMode, OperationMode> autoware_to_operation_;
   std::unordered_map<MrmBehavior, AutowareMode> mrm_to_autoware_;
-  std::unordered_map<AutowareMode, MrmBehavior> autoware_to_mrm_;
+  std::vector<AutowareMode> autoware_modes_list_;
 };
 
 }  // namespace autoware::driving_mode_manager
