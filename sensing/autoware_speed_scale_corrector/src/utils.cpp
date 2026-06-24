@@ -103,4 +103,30 @@ std::optional<NearestImuSample> find_nearest_imu(
   return sample;
 }
 
+std::optional<NearestVelocityReportSample> find_nearest_velocity_report(
+  const std::vector<VelocityReport> & velocity_reports, const rclcpp::Time & target_time)
+{
+  if (velocity_reports.empty()) {
+    return std::nullopt;
+  }
+
+  const VelocityReport * nearest_velocity_report = &velocity_reports.front();
+  double min_stamp_diff = std::abs(
+    (rclcpp::Time(nearest_velocity_report->header.stamp) - target_time).seconds());
+
+  for (const auto & velocity_report : velocity_reports) {
+    const double stamp_diff =
+      std::abs((rclcpp::Time(velocity_report.header.stamp) - target_time).seconds());
+    if (stamp_diff < min_stamp_diff) {
+      min_stamp_diff = stamp_diff;
+      nearest_velocity_report = &velocity_report;
+    }
+  }
+
+  NearestVelocityReportSample sample;
+  sample.longitudinal_velocity = nearest_velocity_report->longitudinal_velocity;
+  sample.stamp_diff = min_stamp_diff;
+  return sample;
+}
+
 }  // namespace autoware::speed_scale_corrector

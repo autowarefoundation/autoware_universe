@@ -162,11 +162,27 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   const auto twist = calc_twist_from_pose(pose_prev, pose_curr);
   const double v_odometry = twist.linear.x;
 
-  // Get velocity from velocity report (use latest value)
-  const double v_report = velocity_reports.back().longitudinal_velocity;
+  const rclcpp::Time pose_time(pose_curr.header.stamp);
+
+  // Get velocity from the nearest velocity report to the current pose timestamp
+  const auto nearest_velocity_report = find_nearest_velocity_report(velocity_reports, pose_time);
+  if (!nearest_velocity_report) {
+    return tl::make_unexpected(
+      SpeedScaleEstimatorNotUpdated{"Velocity report is empty", estimated_speed_scale_factor_});
+  }
+
+  if (nearest_velocity_report->stamp_diff > parameters_.update_interval) {
+    return tl::make_unexpected(
+      SpeedScaleEstimatorNotUpdated{
+        fmt::format(
+          "Velocity report timestamp mismatch, stamp_diff: {:.3f}, threshold: {:.3f}",
+          nearest_velocity_report->stamp_diff, parameters_.update_interval),
+        estimated_speed_scale_factor_});
+  }
+
+  const double v_report = nearest_velocity_report->longitudinal_velocity;
 
   // Check angular velocity constraint using IMU
-  const rclcpp::Time pose_time(pose_curr.header.stamp);
   const auto nearest_imu = find_nearest_imu(imus, pose_time);
   if (!nearest_imu) {
     return tl::make_unexpected(
