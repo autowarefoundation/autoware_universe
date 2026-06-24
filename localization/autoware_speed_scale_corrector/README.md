@@ -2,9 +2,20 @@
 
 ## Overview
 
-This package estimates the vehicle speed scale factor by comparing map-matched pose velocity with the longitudinal velocity reported by the vehicle. The reference velocity is computed from localization pose (e.g. NDT scan matcher), so the estimate reflects consistency between localization motion and wheel speed.
+This package estimates the vehicle speed scale factor by comparing odometry velocity derived from consecutive localization poses with the longitudinal velocity reported by the vehicle. The reference velocity is computed from pose position differences (e.g. NDT scan matcher output), so the estimate reflects consistency between localization motion and wheel speed.
 
 The estimated scale factor can be used to monitor and tune the speed scale in `autoware_vehicle_velocity_converter`. The node runs periodically at `update_interval` and updates the estimate only when all operational constraints are satisfied.
+
+## Package Architecture
+
+The package is split into a core library (separated from ROS node I/O) and a ROS adapter layer:
+
+| Layer | Library | Responsibility |
+| ----- | ------- | -------------- |
+| Core | `autoware_speed_scale_corrector` | Utils, Kalman filter estimation (`SpeedScaleEstimator`) |
+| ROS | `autoware_speed_scale_corrector_ros` | Message handling, debug formatting, node I/O (`SpeedScaleCorrectorProcessor`, `SpeedScaleCorrectorNode`) |
+
+Core algorithms can be unit-tested without spinning up a ROS graph.
 
 ## Block Diagram
 
@@ -37,7 +48,7 @@ $$
 v_{odom} = \frac{\| \Delta \mathbf{p} \|}{\Delta t}
 $$
 
-If the time difference between the two poses is too large, the previous pose is reset and estimation is skipped.
+If the time difference between the two poses is greater than or equal to `2 × update_interval`, the previous pose is reset and estimation is skipped.
 
 ### 3. Timestamp Synchronization
 
@@ -46,7 +57,7 @@ For the current pose timestamp, the node selects:
 - the nearest IMU sample for angular velocity constraint checking
 - the nearest velocity report for Kalman filter observation
 
-Estimation is skipped when either timestamp difference exceeds `update_interval`.
+Estimation is skipped when either timestamp difference is greater than `update_interval`.
 
 ### 4. Constraint Validation
 
@@ -66,12 +77,12 @@ Estimation is performed only when all of the following constraints are satisfied
   v_{min} \leq v_{odom} \leq v_{max}
   $$
 
-  Default $v_{min} = 6.0\ \mathrm{m/s}$ improves pose-differentiation SNR. Together with $\omega_{max}$, estimation runs mainly on moderate-speed, near-straight segments.
+  Default $v_{min} = 6.0\ \mathrm{m/s}$ improves pose-differentiation SNR. Default $v_{max} = 17.0\ \mathrm{m/s}$ filters out extreme speeds. Together with $\omega_{max}$, estimation runs mainly on moderate-speed, near-straight segments.
 
 - **Velocity report validity**:
 
   $$
-  |v_{report}| > 0
+  |v_{report}| > 10^{-6}
   $$
 
 ### 5. Scale Factor Estimation (Kalman Filter)
@@ -118,8 +129,8 @@ Kalman filter update:
 
 | Name                    | Type                                                | Description                                     |
 | ----------------------- | --------------------------------------------------- | ----------------------------------------------- |
-| `~/output/scale_factor` | `autoware_internal_debug_msgs::msg::Float32Stamped` | Estimated speed scale factor (updated on success) |
-| `~/output/debug_info`   | `autoware_internal_debug_msgs::msg::StringStamped`  | Debug information                               |
+| `~/output/scale_factor` | `autoware_internal_debug_msgs::msg::Float32Stamped` | Estimated speed scale factor (published on successful update only) |
+| `~/output/debug_info`   | `autoware_internal_debug_msgs::msg::StringStamped`  | Debug information (published every timer callback)                 |
 
 ## Parameters
 
@@ -127,4 +138,4 @@ Kalman filter update:
 
 ### Tuning
 
-Default constraint values are a practical starting point, not vehicle-specific optima. If estimation accuracy is insufficient, tune `max_angular_velocity`, `min_speed`, and Kalman noise parameters per vehicle and operation. IMU bias cancellation or other preprocessing may allow a stricter angular velocity threshold; without it, thresholds near the IMU noise floor are expected.
+Default constraint values are a practical starting point, not vehicle-specific optima. If estimation accuracy is insufficient, tune `max_angular_velocity`, `min_speed`, `max_speed`, and Kalman noise parameters per vehicle and operation. IMU bias cancellation or other preprocessing may allow a stricter angular velocity threshold; without it, thresholds near the IMU noise floor are expected.
