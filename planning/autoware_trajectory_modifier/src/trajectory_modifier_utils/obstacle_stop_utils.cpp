@@ -565,12 +565,11 @@ void ObstacleTracker::update_objects(
       it++;
   }
 
-  auto closest_object_uuid =
+  auto get_closest_object_uuid =
     [&](const PredictedObject & object) -> std::optional<boost::uuids::uuid> {
     std::optional<boost::uuids::uuid> closest_uuid = std::nullopt;
     if (persistent_objects_map_.empty()) return std::nullopt;
-    double min_distance = std::numeric_limits<double>::max();
-    double yaw_diff = std::numeric_limits<double>::max();
+    double min_distance = object_distance_th_ + std::numeric_limits<double>::epsilon();
     for (const auto & [uuid, existing_object] : persistent_objects_map_) {
       const auto existing_obj_label = existing_object.object.classification.empty()
                                         ? ObjectClassification::UNKNOWN
@@ -581,23 +580,24 @@ void ObstacleTracker::update_objects(
       const auto distance = autoware_utils::calc_distance2d(
         object.kinematics.initial_pose_with_covariance.pose.position,
         existing_object.object.kinematics.initial_pose_with_covariance.pose.position);
-      if (distance < min_distance) {
-        min_distance = distance;
-        closest_uuid = uuid;
-        yaw_diff = std::abs(
-          autoware_utils_geometry::calc_yaw_deviation(
-            object.kinematics.initial_pose_with_covariance.pose,
-            existing_object.object.kinematics.initial_pose_with_covariance.pose));
-      }
-    }
-    if (closest_uuid && (min_distance > object_distance_th_ || yaw_diff > object_yaw_th_)) {
-      closest_uuid = std::nullopt;
+      if (distance > min_distance) continue;
+      // ignore orientation difference for cylinder objects
+      const auto yaw_diff =
+        object.shape.type == autoware_perception_msgs::msg::Shape::CYLINDER
+          ? 0.0
+          : std::abs(
+              autoware_utils_geometry::calc_yaw_deviation(
+                object.kinematics.initial_pose_with_covariance.pose,
+                existing_object.object.kinematics.initial_pose_with_covariance.pose));
+      if (yaw_diff > object_yaw_th_) continue;
+      min_distance = distance;
+      closest_uuid = uuid;
     }
     return closest_uuid;
   };
 
   for (const auto & object : objects.objects) {
-    const auto closest_uuid = closest_object_uuid(object);
+    const auto closest_uuid = get_closest_object_uuid(object);
     if (!closest_uuid) {
       persistent_objects_map_.emplace(id_generator_(), PersistentObject(object, now));
       continue;
@@ -629,27 +629,23 @@ void ObstacleTracker::update_points(
       it++;
   }
 
-  auto closest_point_uuid =
+  auto get_closest_point_uuid =
     [&](const geometry_msgs::msg::Point & point) -> std::optional<boost::uuids::uuid> {
     std::optional<boost::uuids::uuid> closest_uuid = std::nullopt;
     if (persistent_point_map_.empty()) return std::nullopt;
-    double min_distance = std::numeric_limits<double>::max();
+    double min_distance = pcd_distance_th_ + std::numeric_limits<double>::epsilon();
     for (const auto & [uuid, existing_point] : persistent_point_map_) {
       const auto distance = autoware_utils::calc_distance2d(point, existing_point.position);
-      if (distance < min_distance) {
-        min_distance = distance;
-        closest_uuid = uuid;
-      }
-    }
-    if (closest_uuid && min_distance > pcd_distance_th_) {
-      closest_uuid = std::nullopt;
+      if (distance > min_distance) continue;
+      min_distance = distance;
+      closest_uuid = uuid;
     }
     return closest_uuid;
   };
 
   for (const auto & point : points->points) {
     auto point_msg = autoware_utils::create_point(point.x, point.y, point.z);
-    const auto closest_uuid = closest_point_uuid(point_msg);
+    const auto closest_uuid = get_closest_point_uuid(point_msg);
     if (!closest_uuid) {
       persistent_point_map_.emplace(id_generator_(), PersistentPoint(point_msg, now));
       continue;
