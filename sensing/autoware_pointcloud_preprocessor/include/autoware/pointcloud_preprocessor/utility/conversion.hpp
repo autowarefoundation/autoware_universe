@@ -42,6 +42,16 @@ inline double to_seconds(const builtin_interfaces::msg::Time & stamp)
   return static_cast<double>(to_nanoseconds(stamp)) * 1e-9;
 }
 
+/// Convert an absolute time in integer nanoseconds back to a header stamp (inverse of
+/// to_nanoseconds, for non-negative times).
+inline builtin_interfaces::msg::Time to_ros_time(int64_t nanoseconds)
+{
+  builtin_interfaces::msg::Time stamp;
+  stamp.sec = static_cast<int32_t>(nanoseconds / 1'000'000'000LL);
+  stamp.nanosec = static_cast<uint32_t>(nanoseconds % 1'000'000'000LL);
+  return stamp;
+}
+
 /// Convert a transform message to a tf2 transform (equivalent to tf2::fromMsg).
 inline tf2::Transform to_tf2_transform(const geometry_msgs::msg::Transform & transform)
 {
