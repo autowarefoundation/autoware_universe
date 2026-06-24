@@ -2,112 +2,110 @@
 
 ## Overview
 
-This package performs vehicle speed scale correction by estimating and correcting speed scale factors. It compares velocities calculated from odometry with velocities reported by the vehicle's velocity sensors to correct discrepancies caused by sensor individual differences and calibration errors.
+This package estimates the vehicle speed scale factor by comparing odometry velocity with the longitudinal velocity reported by the vehicle. The estimated scale factor can be used to monitor and tune the speed scale in `autoware_vehicle_velocity_converter`.
+
+The node runs periodically at `update_interval` and updates the estimate only when all operational constraints are satisfied.
 
 ## Algorithm
 
-The speed scale estimation follows these detailed steps:
+The speed scale estimation follows these steps:
 
-### 1. Data Collection and Buffering
+### 1. Data Collection
 
-- Collects pose information (PoseWithCovarianceStamped), IMU data, and vehicle velocity reports (VelocityReport)
-- Maintains internal buffers for each data stream with timestamps
-- Extracts time series data: position (x, y) from poses, angular velocity (z) from IMU, and longitudinal velocity from velocity reports
+- Collects pose (`PoseStamped`), IMU, and vehicle velocity reports (`VelocityReport`) received since the previous timer callback
+- Keeps the previous pose internally to compute odometry velocity between consecutive updates
 
-### 2. Time Synchronization
+### 2. Odometry Velocity Calculation
 
-- Finds the common time interval across all sensor data streams using interval intersection
-- Ensures sufficient time window (≥ `time_window` parameter) is available for reliable estimation
-- Early returns with previous scale factor if data is insufficient or time windows don't overlap
+Computes odometry velocity from the previous and current poses:
 
-### 3. Data Preprocessing
+$$
+v_{odom} = \frac{\| \Delta \mathbf{p} \|}{\Delta t}
+$$
 
-- Applies Gaussian smoothing (σ=0.7) to all sensor data to reduce noise:
-  - Position data (x, y coordinates)
-  - IMU angular velocity
-  - Vehicle velocity reports
-- Uses a sliding window Gaussian kernel with 3σ cutoff for efficient computation
+If the time difference between the two poses is too large, the previous pose is reset and estimation is skipped.
 
-### 4. Trajectory Interpolation
+### 3. Timestamp Synchronization
 
-- Creates cubic spline interpolators for smoothed position data (x, y)
-- Creates linear interpolators for angular velocity and velocity data
-- Generates uniform time samples within the valid time window at specified intervals
+For the current pose timestamp, the node selects:
 
-### 5. State Vector Creation
+- the nearest IMU sample for angular velocity constraint checking
+- the nearest velocity report for Kalman filter observation
 
-For each time sample, computes:
+Estimation is skipped when either timestamp difference exceeds `update_interval`.
 
-- **Odometry velocity**: Magnitude of position derivatives
+### 4. Constraint Validation
+
+Estimation is performed only when all of the following constraints are satisfied:
+
+- **Angular velocity constraint (IMU)**:
 
   $$
-  v_{odom} = \sqrt{\left(\frac{dx}{dt}\right)^2 + \left(\frac{dy}{dt}\right)^2}
-  $$
-
-- **Distance between points**: Euclidean distance from previous position
-- **Integrated distance from velocity**: Trapezoidal integration of velocity reports
-- **Angular velocity**: Interpolated IMU z-axis rotation
-
-### 6. Constraint Validation
-
-Validates that all states satisfy operational constraints to ensure reliable estimation:
-
-- **Angular velocity constraint**:
-
-  $$
-  |\omega| \leq \omega_{max}
+  |\omega_{imu}| \leq \omega_{max}
   $$
 
   (avoids estimation during sharp turns)
 
-- **Speed constraints**:
+- **Speed constraints (odometry)**:
 
   $$
-  v_{min} \leq v \leq v_{max}
+  v_{min} \leq v_{odom} \leq v_{max}
   $$
 
-  (ensures sufficient motion for accurate differentiation and avoids extreme speeds)
+  (ensures sufficient motion and avoids extreme speeds)
 
-- **Speed change constraint**:
-
-  $$
-  |\Delta v| \leq \Delta v_{max}
-  $$
-
-  (filters out periods of rapid acceleration/deceleration where tire slip may occur)
-
-### 7. Scale Factor Estimation
-
-- Computes instantaneous scale factor:
+- **Velocity report validity**:
 
   $$
-  s = \frac{d_{odom}}{d_{velocity}}
+  |v_{report}| > 0
   $$
 
-- Updates running average:
+### 5. Scale Factor Estimation (Kalman Filter)
+
+The scale factor is modeled as a scalar state $x$ with the observation:
+
+$$
+z = v_{odom} = x \cdot v_{report}
+$$
+
+Kalman filter update:
+
+- Prediction:
 
   $$
-  \bar{s}_{new} = \frac{\bar{s}_{old} \times n + s_{current}}{n + 1}
+  x_{pred} = x,\quad P_{pred} = P + Q
   $$
 
-- Clears sensor buffers after successful estimation
+- Update:
+
+  $$
+  H = v_{report},\quad y = z - H x_{pred}
+  $$
+
+  $$
+  S = H^2 P_{pred} + R,\quad K = \frac{P_{pred} H}{S}
+  $$
+
+  $$
+  x = x_{pred} + K y,\quad P = (1 - K H) P_{pred}
+  $$
 
 ## Inputs / Outputs
 
 ### Input Topics
 
-| Name                           | Type                                            | Description                 |
-| ------------------------------ | ----------------------------------------------- | --------------------------- |
-| `~/input/pose_with_covariance` | `geometry_msgs::msg::PoseWithCovarianceStamped` | Pose information (odometry) |
-| `~/input/velocity_report`      | `autoware_vehicle_msgs::msg::VelocityReport`    | Vehicle velocity report     |
-| `~/input/imu`                  | `sensor_msgs::msg::Imu`                         | IMU sensor data             |
+| Name                      | Type                                         | Description                 |
+| ------------------------- | -------------------------------------------- | --------------------------- |
+| `~/input/pose`            | `geometry_msgs::msg::PoseStamped`            | Pose information (odometry) |
+| `~/input/velocity_report` | `autoware_vehicle_msgs::msg::VelocityReport` | Vehicle velocity report     |
+| `~/input/imu`             | `sensor_msgs::msg::Imu`                      | IMU sensor data             |
 
 ### Output Topics
 
-| Name                    | Type                                                | Description                  |
-| ----------------------- | --------------------------------------------------- | ---------------------------- |
-| `~/output/scale_factor` | `autoware_internal_debug_msgs::msg::Float32Stamped` | Estimated speed scale factor |
-| `~/output/debug_info`   | `autoware_internal_debug_msgs::msg::StringStamped`  | Debug information            |
+| Name                    | Type                                                | Description                                     |
+| ----------------------- | --------------------------------------------------- | ----------------------------------------------- |
+| `~/output/scale_factor` | `autoware_internal_debug_msgs::msg::Float32Stamped` | Estimated speed scale factor (updated on success) |
+| `~/output/debug_info`   | `autoware_internal_debug_msgs::msg::StringStamped`  | Debug information                               |
 
 ## Parameters
 

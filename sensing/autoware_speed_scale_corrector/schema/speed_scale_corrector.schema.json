@@ -6,15 +6,9 @@
     "speed_scale_corrector": {
       "type": "object",
       "properties": {
-        "time_window": {
+        "update_interval": {
           "type": "number",
-          "description": "Time window for data collection and analysis in seconds. Must be sufficient for reliable estimation. Unit is **[s]**.",
-          "minimum": 0.0,
-          "default": 4.0
-        },
-        "time_interval": {
-          "type": "number",
-          "description": "Time interval for uniform sampling within the time window in seconds. Unit is **[s]**.",
+          "description": "Timer interval for estimation updates and maximum allowed timestamp difference between pose, IMU, and velocity report in seconds. Unit is **[s]**.",
           "minimum": 0.0,
           "default": 0.1
         },
@@ -24,39 +18,52 @@
           "minimum": 0.0,
           "default": 1.0
         },
+        "initial_speed_scale_factor_covariance": {
+          "type": "number",
+          "description": "Initial covariance of the speed scale factor state (P).",
+          "minimum": 0.0,
+          "default": 1000.0
+        },
+        "process_noise_covariance": {
+          "type": "number",
+          "description": "Process noise covariance of the speed scale factor state (Q).",
+          "minimum": 0.0,
+          "default": 0.01
+        },
+        "measurement_noise_covariance": {
+          "type": "number",
+          "description": "Measurement noise covariance used in the Kalman filter update (R).",
+          "minimum": 0.0,
+          "default": 0.01
+        },
         "max_angular_velocity": {
           "type": "number",
-          "description": "Maximum allowed angular velocity in rad/s. States exceeding this value are filtered out to avoid estimation during sharp turns. Unit is **[rad/s]**.",
+          "description": "Maximum allowed IMU angular velocity in rad/s. Samples exceeding this value are filtered out to avoid estimation during sharp turns. Unit is **[rad/s]**.",
           "minimum": 0.0,
           "default": 1.0
         },
         "max_speed": {
           "type": "number",
-          "description": "Maximum allowed vehicle speed in m/s. States exceeding this value are filtered out to avoid extreme speeds that may cause inaccurate estimation. Unit is **[m/s]**.",
+          "description": "Maximum allowed odometry velocity in m/s. Samples exceeding this value are filtered out to avoid extreme speeds that may cause inaccurate estimation. Unit is **[m/s]**.",
           "minimum": 0.0,
           "default": 15.0
         },
         "min_speed": {
           "type": "number",
-          "description": "Minimum required vehicle speed in m/s. States below this value are filtered out to ensure sufficient motion for accurate differentiation. Unit is **[m/s]**.",
+          "description": "Minimum required odometry velocity in m/s. Samples below this value are filtered out to ensure sufficient motion for reliable estimation. Unit is **[m/s]**.",
           "minimum": 0.0,
           "default": 2.0
-        },
-        "max_speed_change": {
-          "type": "number",
-          "description": "Maximum allowed speed change in m/s^2. States exceeding this value are filtered out to avoid periods of rapid acceleration/deceleration where tire slip may occur. Unit is **[m/s^2]**.",
-          "minimum": 0.0,
-          "default": 1.0
         }
       },
       "required": [
-        "time_window",
-        "time_interval",
+        "update_interval",
         "initial_speed_scale_factor",
+        "initial_speed_scale_factor_covariance",
+        "process_noise_covariance",
+        "measurement_noise_covariance",
         "max_angular_velocity",
         "max_speed",
-        "min_speed",
-        "max_speed_change"
+        "min_speed"
       ],
       "additionalProperties": false
     }
@@ -66,21 +73,11 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "type": "object",
-          "properties": {
-            "speed_scale_corrector": {
-              "type": "object",
-              "$ref": "#/definitions/speed_scale_corrector"
-            }
-          },
-          "required": ["speed_scale_corrector"],
-          "additionalProperties": false
+          "$ref": "#/definitions/speed_scale_corrector"
         }
       },
-      "required": ["ros__parameters"],
-      "additionalProperties": false
+      "required": ["ros__parameters"]
     }
   },
-  "required": ["/**"],
-  "additionalProperties": false
+  "required": ["/**"]
 }
