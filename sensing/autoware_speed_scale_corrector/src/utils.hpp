@@ -18,6 +18,7 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
+#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -31,6 +32,7 @@ namespace autoware::speed_scale_corrector
 using geometry_msgs::msg::PoseStamped;
 using geometry_msgs::msg::Twist;
 using geometry_msgs::msg::Vector3;
+using autoware_vehicle_msgs::msg::VelocityReport;
 using sensor_msgs::msg::Imu;
 
 /**
@@ -40,6 +42,15 @@ struct NearestImuSample
 {
   double angular_velocity_z{};  //!< IMU z-axis angular velocity [rad/s]
   double stamp_diff{};          //!< Absolute time difference from target [s]
+};
+
+/**
+ * @brief Nearest velocity report to a target timestamp
+ */
+struct NearestVelocityReportSample
+{
+  double longitudinal_velocity{};  //!< Longitudinal velocity [m/s]
+  double stamp_diff{};             //!< Absolute time difference from target [s]
 };
 
 /**
@@ -76,6 +87,16 @@ struct NearestImuSample
  */
 [[nodiscard]] std::optional<NearestImuSample> find_nearest_imu(
   const std::vector<Imu> & imus, const rclcpp::Time & target_time);
+
+/**
+ * @brief Find the velocity report nearest to the target timestamp
+ *
+ * @param velocity_reports Velocity report messages (must not be empty)
+ * @param target_time Target timestamp
+ * @return Nearest velocity report sample, or std::nullopt if velocity_reports is empty
+ */
+[[nodiscard]] std::optional<NearestVelocityReportSample> find_nearest_velocity_report(
+  const std::vector<VelocityReport> & velocity_reports, const rclcpp::Time & target_time);
 
 }  // namespace autoware::speed_scale_corrector
 
