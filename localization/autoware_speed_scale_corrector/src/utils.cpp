@@ -16,6 +16,7 @@
 
 #include <cmath>
 #include <limits>
+#include <vector>
 
 namespace autoware::speed_scale_corrector
 {
