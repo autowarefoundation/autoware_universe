@@ -158,20 +158,37 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
         estimated_speed_scale_factor_});
   }
 
-  // Calculate twist (velocity and angular velocity) from pose difference
+  // Calculate odometry velocity from pose difference
   const auto twist = calc_twist_from_pose(pose_prev, pose_curr);
   const double v_odometry = twist.linear.x;
-  const double angular_velocity = twist.angular.z;
 
   // Get velocity from velocity report (use latest value)
   const double v_report = velocity_reports.back().longitudinal_velocity;
 
-  // Check constraints
+  // Check angular velocity constraint using IMU
+  const rclcpp::Time pose_time(pose_curr.header.stamp);
+  const auto nearest_imu = find_nearest_imu(imus, pose_time);
+  if (!nearest_imu) {
+    return tl::make_unexpected(
+      SpeedScaleEstimatorNotUpdated{"IMU is empty", estimated_speed_scale_factor_});
+  }
+
+  if (nearest_imu->stamp_diff > parameters_.update_interval) {
+    return tl::make_unexpected(
+      SpeedScaleEstimatorNotUpdated{
+        fmt::format(
+          "IMU timestamp mismatch, stamp_diff: {:.3f}, threshold: {:.3f}",
+          nearest_imu->stamp_diff, parameters_.update_interval),
+        estimated_speed_scale_factor_});
+  }
+
+  const double angular_velocity = nearest_imu->angular_velocity_z;
   if (std::abs(angular_velocity) > parameters_.max_angular_velocity) {
     return tl::make_unexpected(
       SpeedScaleEstimatorNotUpdated{
         fmt::format(
-          "Angular velocity is too high, angular velocity: {:.3f}, max angular velocity: {:.3f}",
+          "Angular velocity is too high (IMU), angular velocity: {:.3f}, max angular velocity: "
+          "{:.3f}",
           angular_velocity, parameters_.max_angular_velocity),
         estimated_speed_scale_factor_});
   }
