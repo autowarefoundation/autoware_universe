@@ -177,8 +177,8 @@ TEST(LoadLabelMaps, ThrowsWhenRoiRemapIsMissingLabel)
     autoware::tensorrt_yolox::load_label_maps(label_path, roi_remap_path, ""), std::runtime_error);
 }
 
-// load_semseg_colormap parses the segmentation color map file
-TEST(LoadSemsegColormap, ParsesColorMap)
+// load_segmentation_colormap parses the segmentation color map file
+TEST(LoadSegmentationColormap, ParsesColorMap)
 {
   // Arrange
   const std::string color_map_path = write_temp_file(
@@ -189,7 +189,8 @@ TEST(LoadSemsegColormap, ParsesColorMap)
     " 2, wall, 150, 160, 170\n");
 
   // Act
-  const auto semseg_color_map = autoware::tensorrt_yolox::load_semseg_colormap(color_map_path);
+  const auto semseg_color_map =
+    autoware::tensorrt_yolox::load_segmentation_colormap(color_map_path);
 
   // Assert
   ASSERT_EQ(semseg_color_map.size(), 3);

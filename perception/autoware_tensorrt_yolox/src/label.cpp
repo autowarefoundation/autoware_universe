@@ -170,6 +170,10 @@ std::vector<std::string> read_label_file(const std::string & label_path)
 
 std::vector<Colormap> load_segmentation_colormap(const std::string & file_name)
 {
+  if (file_name.empty()) {
+    return {};
+  }
+
   auto rows = read_csv(file_name);
   // check loaded status
   if (!rows) {
@@ -300,11 +304,6 @@ std::vector<RoiLabel> load_label_maps(
     roi_labels.push_back({roi_class_name_list[i], class_id_map[i], semseg_id_map[i]});
   }
   return roi_labels;
-}
-
-std::vector<Colormap> load_semseg_colormap(const std::string & semseg_color_map_path)
-{
-  return load_segmentation_colormap(semseg_color_map_path);
 }
 
 }  // namespace autoware::tensorrt_yolox

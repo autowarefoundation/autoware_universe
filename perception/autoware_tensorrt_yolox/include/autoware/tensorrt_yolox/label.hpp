@@ -72,10 +72,11 @@ std::vector<RoiLabel> load_label_maps(
 /**
  * @brief Load the segmentation color map file.
  *
- * @param[in] semseg_color_map_path file path of the color map file for segmentation (mandatory)
- * @return color map entries indexed by segmentation label ID
+ * @param[in] file_name file path of the color map file for segmentation (optional;
+ * returns an empty vector when the path is an empty string)
+ * @return color map entries indexed by segmentation label ID, or empty when path is empty
  */
-std::vector<Colormap> load_semseg_colormap(const std::string & semseg_color_map_path);
+std::vector<Colormap> load_segmentation_colormap(const std::string & file_name);
 
 }  // namespace autoware::tensorrt_yolox
 
