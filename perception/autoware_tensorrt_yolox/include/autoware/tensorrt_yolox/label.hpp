@@ -16,7 +16,6 @@
 #define AUTOWARE__TENSORRT_YOLOX__LABEL_HPP_
 
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 // cspell: ignore semseg
@@ -74,24 +73,6 @@ std::vector<std::string> load_image_list(const std::string & filename, const std
 LabelMaps load_label_maps(
   const std::string & label_path, const std::string & semseg_color_map_path,
   const std::string & roi_remap_path, const std::string & roi_to_semseg_remap_path);
-
-/**
- * @brief Build a mapping from the model's ROI class ID to a target label ID using a name-based
- * remap.
- *
- * When the remap is empty, every entry is set to @p unmapped_id (i.e. remapping is disabled). When
- * the remap is non-empty, every ROI class name must be present in it; otherwise a
- * std::runtime_error is thrown, since a missing entry usually indicates that a wrong model is being
- * used.
- *
- * @param[in] roi_class_name_list ROI class names indexed by the model's output class ID
- * @param[in] label_name_to_target_id remap from label name to target ID (empty disables remapping)
- * @param[in] unmapped_id value used for unmapped entries
- * @return target label ID indexed by the model's output class ID
- */
-std::vector<int> build_roi_id_to_target_id_map(
-  const std::vector<std::string> & roi_class_name_list,
-  const std::unordered_map<std::string, int> & label_name_to_target_id, int unmapped_id);
 
 }  // namespace autoware::tensorrt_yolox
 

@@ -19,7 +19,6 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 // cspell: ignore semseg
@@ -204,54 +203,25 @@ TEST(LoadLabelMaps, ResolvesRoiToSemsegRemap)
   EXPECT_EQ(label_maps.roi_id_to_semseg_id_map[2], 2);  // UNKNOWN
 }
 
-// an empty remap disables remapping, leaving every entry unmapped
-TEST(BuildRoiIdToTargetIdMap, EmptyRemapLeavesEveryEntryUnmapped)
+// a class name present in the label file but absent from a non-empty remap throws (likely wrong
+// model)
+TEST(LoadLabelMaps, ThrowsWhenRoiRemapIsMissingLabel)
 {
   // Arrange
-  const std::vector<std::string> roi_class_name_list = {"CAR", "PEDESTRIAN", "UNKNOWN"};
-  const std::unordered_map<std::string, int> empty_remap;
-
-  // Act
-  const auto roi_id_to_target_id_map = autoware::tensorrt_yolox::build_roi_id_to_target_id_map(
-    roi_class_name_list, empty_remap, autoware::tensorrt_yolox::unmapped_label_id);
-
-  // Assert
-  ASSERT_EQ(roi_id_to_target_id_map.size(), 3);
-  for (const int target_id : roi_id_to_target_id_map) {
-    EXPECT_EQ(target_id, autoware::tensorrt_yolox::unmapped_label_id);
-  }
-}
-
-// a non-empty remap is applied by class name, indexed by the model's output class ID
-TEST(BuildRoiIdToTargetIdMap, AppliesRemapByClassName)
-{
-  // Arrange
-  const std::vector<std::string> roi_class_name_list = {"CAR", "PEDESTRIAN", "UNKNOWN"};
-  const std::unordered_map<std::string, int> remap = {
-    {"CAR", 7}, {"PEDESTRIAN", 8}, {"UNKNOWN", 9}};
-
-  // Act
-  const auto roi_id_to_target_id_map = autoware::tensorrt_yolox::build_roi_id_to_target_id_map(
-    roi_class_name_list, remap, autoware::tensorrt_yolox::unmapped_label_id);
-
-  // Assert
-  ASSERT_EQ(roi_id_to_target_id_map.size(), 3);
-  EXPECT_EQ(roi_id_to_target_id_map[0], 7);
-  EXPECT_EQ(roi_id_to_target_id_map[1], 8);
-  EXPECT_EQ(roi_id_to_target_id_map[2], 9);
-}
-
-// a class name missing from a non-empty remap is treated as an error (likely a wrong model)
-TEST(BuildRoiIdToTargetIdMap, ThrowsWhenClassNameMissingFromRemap)
-{
-  // Arrange
-  const std::vector<std::string> roi_class_name_list = {"CAR", "PEDESTRIAN", "UNKNOWN"};
-  const std::unordered_map<std::string, int> remap = {{"CAR", 0}, {"PEDESTRIAN", 1}};
+  const std::string label_path = write_temp_file(
+    "label_missing_remap.txt",
+    "CAR\n"
+    "PEDESTRIAN\n"
+    "UNKNOWN\n");
+  const std::string roi_remap_path = write_temp_file(
+    "label_remap_missing_entry.csv",
+    "from, to\n"
+    "CAR, 0\n"
+    "PEDESTRIAN, 1\n");  // UNKNOWN is intentionally absent
 
   // Act / Assert
   EXPECT_THROW(
-    autoware::tensorrt_yolox::build_roi_id_to_target_id_map(
-      roi_class_name_list, remap, autoware::tensorrt_yolox::unmapped_label_id),
+    autoware::tensorrt_yolox::load_label_maps(label_path, "", roi_remap_path, ""),
     std::runtime_error);
 }
 

@@ -233,6 +233,31 @@ std::unordered_map<std::string, int> load_label_id_remap_file(const std::string 
 
   return label_name_to_id_remap;
 }
+
+std::vector<int> build_roi_id_to_target_id_map(
+  const std::vector<std::string> & roi_class_name_list,
+  const std::unordered_map<std::string, int> & label_name_to_target_id, int unmapped_id)
+{
+  std::vector<int> roi_id_to_target_id_map(roi_class_name_list.size(), unmapped_id);
+
+  // an empty remap means remapping is disabled, so every entry stays unmapped
+  if (label_name_to_target_id.empty()) {
+    return roi_id_to_target_id_map;
+  }
+
+  for (size_t roi_class_id = 0; roi_class_id < roi_class_name_list.size(); ++roi_class_id) {
+    const std::string & class_name = roi_class_name_list[roi_class_id];
+    const auto remap_iter = label_name_to_target_id.find(class_name);
+    if (remap_iter == label_name_to_target_id.end()) {
+      std::stringstream error_msg;
+      error_msg << "ROI label " << class_name << " not found in remap file.";
+      throw std::runtime_error{error_msg.str()};
+    }
+    roi_id_to_target_id_map[roi_class_id] = remap_iter->second;
+  }
+
+  return roi_id_to_target_id_map;
+}
 }  // namespace
 
 std::vector<std::string> load_image_list(const std::string & filename, const std::string & prefix)
@@ -283,31 +308,6 @@ LabelMaps load_label_maps(
   }
 
   return label_maps;
-}
-
-std::vector<int> build_roi_id_to_target_id_map(
-  const std::vector<std::string> & roi_class_name_list,
-  const std::unordered_map<std::string, int> & label_name_to_target_id, int unmapped_id)
-{
-  std::vector<int> roi_id_to_target_id_map(roi_class_name_list.size(), unmapped_id);
-
-  // an empty remap means remapping is disabled, so every entry stays unmapped
-  if (label_name_to_target_id.empty()) {
-    return roi_id_to_target_id_map;
-  }
-
-  for (size_t roi_class_id = 0; roi_class_id < roi_class_name_list.size(); ++roi_class_id) {
-    const std::string & class_name = roi_class_name_list[roi_class_id];
-    const auto remap_iter = label_name_to_target_id.find(class_name);
-    if (remap_iter == label_name_to_target_id.end()) {
-      std::stringstream error_msg;
-      error_msg << "ROI label " << class_name << " not found in remap file.";
-      throw std::runtime_error{error_msg.str()};
-    }
-    roi_id_to_target_id_map[roi_class_id] = remap_iter->second;
-  }
-
-  return roi_id_to_target_id_map;
 }
 
 }  // namespace autoware::tensorrt_yolox
