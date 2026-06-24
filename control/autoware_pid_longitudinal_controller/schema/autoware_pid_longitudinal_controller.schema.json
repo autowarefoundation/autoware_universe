@@ -31,6 +31,11 @@
           "description": "flag to modify output acceleration for slope compensation. The source of the slope angle can be selected from ego-pose or trajectory angle",
           "default": "true"
         },
+        "enable_emergency_exit_without_stop": {
+          "type": "boolean",
+          "description": "flag to allow transition from EMERGENCY to DRIVE while still moving when the stop distance exceeds `emergency_state_overshoot_stop_dist`. Intended for the MRM in-lane-stop controller.",
+          "default": "false"
+        },
         "enable_keep_stopped_until_steer_convergence": {
           "type": "boolean",
           "description": "flag to keep stopped condition until until the steer converges",

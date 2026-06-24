@@ -155,6 +155,7 @@ private:
   bool m_enable_overshoot_emergency;
   bool m_enable_slope_compensation;
   bool m_enable_large_tracking_error_emergency;
+  bool m_enable_emergency_exit_without_stop;
   bool m_enable_keep_stopped_until_steer_convergence;
 
   // smooth stop transition

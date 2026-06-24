@@ -71,6 +71,8 @@ PidLongitudinalController::PidLongitudinalController(
   m_enable_overshoot_emergency = node.declare_parameter<bool>("enable_overshoot_emergency");
   m_enable_large_tracking_error_emergency =
     node.declare_parameter<bool>("enable_large_tracking_error_emergency");
+  m_enable_emergency_exit_without_stop =
+    node.declare_parameter<bool>("enable_emergency_exit_without_stop", false);
   m_enable_slope_compensation = node.declare_parameter<bool>("enable_slope_compensation");
   m_enable_keep_stopped_until_steer_convergence =
     node.declare_parameter<bool>("enable_keep_stopped_until_steer_convergence");
@@ -904,6 +906,12 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
     if (!emergency_condition.result) {
       if (!is_under_control) {
         // NOTE: On manual driving, no need stopping to exit the emergency.
+        return changeControlState(ControlState::DRIVE);
+      }
+      if (
+        m_enable_emergency_exit_without_stop && stop_dist > p.emergency_state_overshoot_stop_dist) {
+        m_pid_vel.reset();
+        m_lpf_vel_error->reset(0.0);
         return changeControlState(ControlState::DRIVE);
       }
     }
