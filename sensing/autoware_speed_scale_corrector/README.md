@@ -58,7 +58,7 @@ Estimation is performed only when all of the following constraints are satisfied
   |\omega_{imu}| \leq \omega_{max}
   $$
 
-  (avoids estimation during sharp turns)
+  Default $\omega_{max} \approx 0.6\ \mathrm{deg/s}$ ($0.0105\ \mathrm{rad/s}$) rejects obvious curves and turns. This threshold is set near the practical IMU bias/noise floor rather than fine straight-line discrimination.
 
 - **Speed constraints (odometry)**:
 
@@ -66,7 +66,7 @@ Estimation is performed only when all of the following constraints are satisfied
   v_{min} \leq v_{odom} \leq v_{max}
   $$
 
-  (ensures sufficient motion and avoids extreme speeds)
+  Default $v_{min} = 6.0\ \mathrm{m/s}$ improves pose-differentiation SNR. Together with $\omega_{max}$, estimation runs mainly on moderate-speed, near-straight segments.
 
 - **Velocity report validity**:
 
@@ -124,3 +124,7 @@ Kalman filter update:
 ## Parameters
 
 {{ json_to_markdown("sensing/autoware_speed_scale_corrector/schema/speed_scale_corrector.schema.json") }}
+
+### Tuning
+
+Default constraint values are a practical starting point, not vehicle-specific optima. If estimation accuracy is insufficient, tune `max_angular_velocity`, `min_speed`, and Kalman noise parameters per vehicle and operation. IMU bias cancellation or other preprocessing may allow a stricter angular velocity threshold; without it, thresholds near the IMU noise floor are expected.
