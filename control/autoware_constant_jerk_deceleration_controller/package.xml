@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>autoware_jerk_constant_deceleration_controller</name>
+  <name>autoware_constant_jerk_deceleration_controller</name>
   <version>0.1.0</version>
   <description>Constant-jerk deceleration controller for Autoware MRM</description>
   <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>

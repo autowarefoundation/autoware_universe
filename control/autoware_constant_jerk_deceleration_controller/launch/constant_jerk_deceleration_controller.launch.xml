@@ -1,15 +1,15 @@
 <launch>
-  <arg name="jerk_constant_deceleration_controller_param_path" default="$(find-pkg-share autoware_jerk_constant_deceleration_controller)/config/jerk_constant_deceleration_controller.param.yaml"/>
+  <arg name="constant_jerk_deceleration_controller_param_path" default="$(find-pkg-share autoware_constant_jerk_deceleration_controller)/config/constant_jerk_deceleration_controller.param.yaml"/>
   <arg name="input_control" default="/control/trajectory_follower/control_cmd"/>
-  <arg name="input_jerk_constant_deceleration_trigger" default="/control/jerk_constant_deceleration_trigger"/>
+  <arg name="input_constant_jerk_deceleration_trigger" default="/control/constant_jerk_deceleration_trigger"/>
   <arg name="output_control" default="/control/control_command_gate/inputs/in_lane_stop/control"/>
   <arg name="output_gear_command" default="/control/control_command_gate/inputs/in_lane_stop/gear"/>
   <arg name="output_hazard_lights_command" default="/control/control_command_gate/inputs/in_lane_stop/hazard_lights"/>
   <arg name="output_turn_indicators_command" default="/control/control_command_gate/inputs/in_lane_stop/turn_indicators"/>
 
-  <node pkg="autoware_jerk_constant_deceleration_controller" exec="autoware_jerk_constant_deceleration_controller_node" name="jerk_constant_deceleration_controller" output="screen">
+  <node pkg="autoware_constant_jerk_deceleration_controller" exec="autoware_constant_jerk_deceleration_controller_node" name="constant_jerk_deceleration_controller" output="screen">
     <remap from="~/input/control" to="$(var input_control)"/>
-    <remap from="~/input/jerk_constant_deceleration_trigger" to="$(var input_jerk_constant_deceleration_trigger)"/>
+    <remap from="~/input/constant_jerk_deceleration_trigger" to="$(var input_constant_jerk_deceleration_trigger)"/>
     <remap from="~/output/control" to="$(var output_control)"/>
     <remap from="~/output/gear_command" to="$(var output_gear_command)"/>
     <remap from="~/output/hazard_lights_command" to="$(var output_hazard_lights_command)"/>

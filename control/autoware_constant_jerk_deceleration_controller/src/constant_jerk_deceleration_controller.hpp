@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef JERK_CONSTANT_DECELERATION_CONTROLLER_HPP_
-#define JERK_CONSTANT_DECELERATION_CONTROLLER_HPP_
+#ifndef AUTOWARE_CONSTANT_JERK_DECELERATION_CONTROLLER_HPP_
+#define AUTOWARE_CONSTANT_JERK_DECELERATION_CONTROLLER_HPP_
 
 // include
 #include <rclcpp/rclcpp.hpp>
@@ -23,26 +23,28 @@
 #include <autoware_vehicle_msgs/msg/gear_command.hpp>
 #include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
-#include <tier4_control_msgs/msg/jerk_constant_deceleration_trigger.hpp>
+#include <tier4_control_msgs/msg/constant_jerk_deceleration_trigger.hpp>
 
-namespace autoware::jerk_constant_deceleration_controller
+namespace autoware::constant_jerk_deceleration_controller
 {
 
-class JerkConstantDecelerationController : public rclcpp::Node
+class ConstantJerkDecelerationController : public rclcpp::Node
 {
 public:
-  explicit JerkConstantDecelerationController(const rclcpp::NodeOptions & node_options);
+  explicit ConstantJerkDecelerationController(const rclcpp::NodeOptions & node_options);
 
 private:
   // Parameter
 
   // Subscriber
   rclcpp::Subscription<autoware_control_msgs::msg::Control>::SharedPtr sub_control_;
-  rclcpp::Subscription<tier4_control_msgs::msg::JerkConstantDecelerationTrigger>::SharedPtr
+  rclcpp::Subscription<
+    tier4_control_msgs::msg::ConstantJerkDecelerationTrigger>::SharedPtr
     sub_trigger_;
 
   void onControl(const autoware_control_msgs::msg::Control::SharedPtr msg);
-  void onTrigger(const tier4_control_msgs::msg::JerkConstantDecelerationTrigger::SharedPtr msg);
+  void onTrigger(const tier4_control_msgs::msg::
+                   ConstantJerkDecelerationTrigger::SharedPtr msg);
 
   // Publisher
   rclcpp::Publisher<autoware_control_msgs::msg::Control>::SharedPtr pub_control_;
@@ -63,11 +65,11 @@ private:
   // Timer
 
   // State
-  tier4_control_msgs::msg::JerkConstantDecelerationTrigger trigger_;
+  tier4_control_msgs::msg::ConstantJerkDecelerationTrigger trigger_;
   autoware_control_msgs::msg::Control prev_control_;
 
   // Diagnostics
 };
-}  // namespace autoware::jerk_constant_deceleration_controller
+}  // namespace autoware::constant_jerk_deceleration_controller
 
-#endif  // JERK_CONSTANT_DECELERATION_CONTROLLER_HPP_
+#endif  // AUTOWARE_CONSTANT_JERK_DECELERATION_CONTROLLER_HPP_
