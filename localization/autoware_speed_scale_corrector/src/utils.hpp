@@ -17,7 +17,7 @@
 
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 
 #include <optional>
@@ -25,22 +25,17 @@
 
 namespace autoware::speed_scale_corrector
 {
+
 using autoware_vehicle_msgs::msg::VelocityReport;
 using geometry_msgs::msg::PoseStamped;
 using sensor_msgs::msg::Imu;
 
-/**
- * @brief Nearest IMU sample to a target timestamp
- */
 struct NearestImuSample
 {
   double angular_velocity_z{};  //!< IMU z-axis angular velocity [rad/s]
   double stamp_diff{};          //!< Absolute time difference from target [s]
 };
 
-/**
- * @brief Nearest velocity report to a target timestamp
- */
 struct NearestVelocityReportSample
 {
   double longitudinal_velocity{};  //!< Longitudinal velocity [m/s]

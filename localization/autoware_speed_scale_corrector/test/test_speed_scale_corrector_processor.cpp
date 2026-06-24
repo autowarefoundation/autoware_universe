@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/speed_scale_corrector_processor.hpp"
+#include "speed_scale_corrector_processor.hpp"
 
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
