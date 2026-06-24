@@ -51,29 +51,13 @@ public:
   // (vehicle traffic lights, plus pedestrian ones when signal matching is on).
   void set_map(const lanelet::LaneletMapConstPtr & map);
 
-  struct ExpiredExternalSignal
-  {
-    lanelet::Id id;
-    double age;
-  };
-
   // Stores the latest perception msg, then evicts external cache entries that
-  // are stale relative to its stamp; returns the evicted entries for logging.
-  std::vector<ExpiredExternalSignal> ingest_perception(const TrafficSignalArray & msg);
+  // are stale relative to its stamp.
+  void ingest_perception(const TrafficSignalArray & msg);
 
-  // Outcome of ingest_external: `accepted` is false when the msg's stamp was
-  // too far from current_time to use; `expired` lists cache entries the
-  // accepted ingest evicted, for caller logging.
-  struct ExternalIngestResult
-  {
-    bool accepted;
-    std::vector<ExpiredExternalSignal> expired;
-  };
-
-  // Rejects the msg when its stamp is too far from current_time; otherwise
-  // refreshes the external cache and returns any entries the sweep evicted.
-  ExternalIngestResult ingest_external(
-    const TrafficSignalArray & msg, const rclcpp::Time & current_time);
+  // Rejects the msg (returns false) when its stamp is too far from current_time;
+  // otherwise refreshes the external cache, sweeps stale entries, returns true.
+  bool ingest_external(const TrafficSignalArray & msg, const rclcpp::Time & current_time);
 
   // Result of one arbitration cycle. `output` holds the arbitrated signals by
   // value; std::nullopt means no map has arrived yet, so the Node skips the
@@ -94,9 +78,8 @@ private:
     const rclcpp::Time & current_time, const rclcpp::Time & msg_stamp) const;
 
   // Sweeps external cache: removes every stored entry whose stamp deviates
-  // from `reference_time` beyond `tolerance`, returning the removed entries.
-  std::vector<ExpiredExternalSignal> sweep_expired_external_signals(
-    const rclcpp::Time & reference_time, double tolerance);
+  // from `reference_time` beyond `tolerance`.
+  void sweep_expired_external_signals(const rclcpp::Time & reference_time, double tolerance);
 
   SourcePriority source_priority_;
   bool enable_signal_matching_;
