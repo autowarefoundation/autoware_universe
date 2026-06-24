@@ -20,6 +20,7 @@ if(BUILD_TESTING)
     test/test_speed_scale_estimator.cpp
     test/test_utils.cpp
   )
+  target_include_directories(test_autoware_speed_scale_corrector PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
   target_link_libraries(test_autoware_speed_scale_corrector ${PROJECT_NAME})
   ament_target_dependencies(test_autoware_speed_scale_corrector ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS})
 endif()

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/speed_scale_corrector/speed_scale_estimator.hpp"
+#include "speed_scale_estimator.hpp"
 
 #include <gtest/gtest.h>
 
@@ -34,6 +34,7 @@ class SpeedScaleEstimatorTest : public ::testing::Test
 protected:
   void SetUp() override
   {
+    parameters_.update_interval = 0.1;
     parameters_.initial_speed_scale_factor = 1.0;
     parameters_.initial_speed_scale_factor_covariance = 1000.0;
     parameters_.process_noise_covariance = 0.01;
@@ -112,49 +113,44 @@ TEST_F(SpeedScaleEstimatorTest, InsufficientPoses)
 
   auto result = estimator_->update(poses, imus, velocity_reports);
   EXPECT_FALSE(result);
-  EXPECT_TRUE(result.error().reason.find("Need at least 2 poses") != std::string::npos);
+  EXPECT_TRUE(result.error().reason.find("Waiting for next pose") != std::string::npos);
 }
 
 // Test constraint validation when angular velocity exceeds maximum limit
 TEST_F(SpeedScaleEstimatorTest, AngularVelocityConstraintViolation)
 {
-  for (double t = 0.0; t <= 3.0; t += 0.1) {
-    std::vector<PoseStamped> poses = {create_pose_msg(t, 5.0 * t, 0.0)};
-    std::vector<VelocityReport> velocity_reports = {create_velocity_msg(t, 5.0f)};
-    std::vector<Imu> imus = {create_imu_msg(t, 2.0)};  // Exceeds max_angular_velocity = 1.0
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0f)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
+  (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
 
-    auto result = estimator_->update(poses, imus, velocity_reports);
+  std::vector<PoseStamped> poses = {create_pose_msg(0.1, 0.5, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.1, 5.0f)};
+  std::vector<Imu> imus = {create_imu_msg(0.1, 2.0)};  // Exceeds max_angular_velocity = 1.0
 
-    if (t >= 0.2) {  // After we have at least 2 poses
-      if (!result) {
-        std::cout << "Error reason at t=" << t << ": " << result.error().reason << std::endl;
-        // Should get angular velocity constraint error
-        EXPECT_TRUE(
-          result.error().reason.find("Angular velocity is too high") != std::string::npos);
-      }
-    }
-  }
+  const auto result = estimator_->update(poses, imus, velocity_reports);
+
+  ASSERT_FALSE(result);
+  EXPECT_TRUE(
+    result.error().reason.find("Angular velocity is too high (IMU)") != std::string::npos);
 }
 
 // Test constraint validation when speed is below minimum threshold
 TEST_F(SpeedScaleEstimatorTest, SpeedConstraintViolation)
 {
-  for (double t = 0.0; t <= 3.0; t += 0.1) {
-    std::vector<PoseStamped> poses = {create_pose_msg(t, 1.0 * t, 0.0)};
-    std::vector<VelocityReport> velocity_reports = {
-      create_velocity_msg(t, 1.0f)};  // Below min_speed = 2.0
-    std::vector<Imu> imus = {create_imu_msg(t, 0.1)};
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0f)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
+  (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
 
-    auto result = estimator_->update(poses, imus, velocity_reports);
+  std::vector<PoseStamped> poses = {create_pose_msg(0.1, 0.1, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.1, 1.0f)};
+  std::vector<Imu> imus = {create_imu_msg(0.1, 0.1)};
 
-    if (t >= 0.2) {  // After we have at least 2 poses
-      if (!result) {
-        std::cout << "Error reason at t=" << t << ": " << result.error().reason << std::endl;
-        // Should get speed constraint error
-        EXPECT_TRUE(result.error().reason.find("Velocity is too low") != std::string::npos);
-      }
-    }
-  }
+  const auto result = estimator_->update(poses, imus, velocity_reports);
+
+  ASSERT_FALSE(result);
+  EXPECT_TRUE(result.error().reason.find("Velocity is too low") != std::string::npos);
 }
 
 // Test error handling with empty IMU and velocity data
