@@ -125,7 +125,7 @@ SpeedScaleCorrectorProcessResult SpeedScaleCorrectorProcessor::process(
 }
 
 StringStamped SpeedScaleCorrectorProcessor::make_debug_info(
-  const SpeedScaleCorrectorProcessResult & result, const rclcpp::Time & stamp) const
+  const SpeedScaleCorrectorProcessResult & result, const rclcpp::Time & stamp)
 {
   StringStamped debug_info;
   debug_info.stamp = stamp;
@@ -149,7 +149,7 @@ StringStamped SpeedScaleCorrectorProcessor::make_debug_info(
 }
 
 Float32Stamped SpeedScaleCorrectorProcessor::make_scale_factor_msg(
-  const SpeedScaleEstimatorUpdated & updated, const rclcpp::Time & stamp) const
+  const SpeedScaleEstimatorUpdated & updated, const rclcpp::Time & stamp)
 {
   Float32Stamped msg;
   msg.stamp = stamp;
