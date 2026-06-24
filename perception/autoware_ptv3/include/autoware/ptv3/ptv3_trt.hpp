@@ -15,30 +15,19 @@
 #ifndef AUTOWARE__PTV3__PTV3_TRT_HPP_
 #define AUTOWARE__PTV3__PTV3_TRT_HPP_
 
-#include "autoware/ptv3/backbone_preprocessor.hpp"
 #include "autoware/ptv3/backbone_engine.hpp"
+#include "autoware/ptv3/backbone_preprocessor.hpp"
+#include "autoware/ptv3/detection3d_module.hpp"
 #include "autoware/ptv3/semseg_module.hpp"
-#include "autoware/ptv3/execution_context.hpp"
-#include "autoware/ptv3/postprocess/detection3d_postprocess.hpp"
-#include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
-#include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
-#include "autoware/ptv3/ptv3_config.hpp"
 #include "autoware/ptv3/utils.hpp"
 #include "autoware/ptv3/visibility_control.hpp"
 
-#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
-#include <sensor_msgs/msg/point_field.hpp>
-#include <std_msgs/msg/header.hpp>
-
-#include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -46,39 +35,6 @@
 
 namespace autoware::ptv3
 {
-
-class PTV3_PUBLIC Detection3DModule
-{
-public:
-  Detection3DModule(
-    const tensorrt_common::TrtCommonConfig & trt_config, const PTv3Detection3DConfig & config,
-    const float * backbone_point_feat, const std::int32_t * backbone_point_grid_coord);
-
-  void preparePreprocess();
-  void setInputShapes(std::int64_t num_voxels);
-  bool enqueue(const PTv3ExecutionContext & context);
-  bool postProcess(const PTv3ExecutionContext & context, std::vector<Box3D> & detection_boxes);
-
-private:
-  void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
-
-  PTv3Detection3DConfig config_;
-  const float * backbone_point_feat_;
-  const std::int32_t * backbone_point_grid_coord_;
-
-  std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_ptr_{nullptr};
-  std::unique_ptr<Detection3DPostprocess> post_ptr_{nullptr};
-
-  autoware::cuda_utils::CudaUniquePtr<float[]> dense_heatmap_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<float[]> query_heatmap_score_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> query_labels_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<float[]> heatmap_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<float[]> center_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<float[]> height_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<float[]> dim_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<float[]> rot_d_{nullptr};
-  autoware::cuda_utils::CudaUniquePtr<float[]> vel_d_{nullptr};
-};
 
 class PTV3_PUBLIC PTv3TRT
 {

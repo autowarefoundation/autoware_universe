@@ -94,6 +94,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     lib/backbone_engine.cpp
     lib/backbone_preprocessor.cpp
+    lib/detection3d_module.cpp
     lib/ptv3_trt.cpp
     lib/ros_utils.cpp
     lib/semseg_module.cpp
