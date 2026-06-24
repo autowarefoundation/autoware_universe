@@ -52,8 +52,13 @@ struct LabelMaps
   std::vector<int> roi_id_to_semseg_id_map;
 };
 
-// Load a list of image file paths from a text file, prefixing entries that cannot be found as-is.
-std::vector<std::string> load_image_list(const std::string & filename, const std::string & prefix);
+/**
+ * @brief Load a list of image file paths from a text file, skipping blank lines.
+ *
+ * @param[in] filepath path to the text file containing one image path per line
+ * @return list of image file paths read from the file
+ */
+std::vector<std::string> load_image_list(const std::string & filepath);
 
 /**
  * @brief Load the label, remap and color-map files and resolve them into ready-to-use lookup

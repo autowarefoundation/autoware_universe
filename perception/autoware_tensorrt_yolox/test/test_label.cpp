@@ -225,6 +225,24 @@ TEST(LoadLabelMaps, ThrowsWhenRoiRemapIsMissingLabel)
     std::runtime_error);
 }
 
+// load_image_list returns the paths listed in the file
+TEST(LoadImageList, ReturnsListedPaths)
+{
+  // Arrange
+  const std::filesystem::path image_path =
+    std::filesystem::temp_directory_path() / "load_image_list_existing.png";
+  std::ofstream(image_path).close();
+  const std::string list_path =
+    write_temp_file("image_list_existing.txt", image_path.string() + "\n");
+
+  // Act
+  const auto image_list = autoware::tensorrt_yolox::load_image_list(list_path);
+
+  // Assert
+  ASSERT_EQ(image_list.size(), 1u);
+  EXPECT_EQ(image_list[0], image_path.string());
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);

@@ -135,23 +135,17 @@ std::vector<std::string> load_list_from_text_file(const std::string & filename)
   return list;
 }
 
-std::vector<std::string> load_image_list(const std::string & filename, const std::string & prefix)
+std::vector<std::string> load_image_list(const std::string & filepath)
 {
-  std::vector<std::string> fileList = load_list_from_text_file(filename);
-  for (auto & file : fileList) {
-    if (file_exists(file, false)) {
-      continue;
-    } else {
-      std::string prefixed = prefix + file;
-      if (file_exists(prefixed, false))
-        file = prefixed;
-      else
-        std::cerr << "WARNING: couldn't find: " << prefixed << " while loading: " << filename
-                  << std::endl;
+  std::vector<std::string> file_list = load_list_from_text_file(filepath);
+  for (const auto & file : file_list) {
+    if (!file_exists(file, false)) {
+      std::cerr << "WARNING: couldn't find: " << file << " while loading: " << filepath
+                << std::endl;
     }
   }
 
-  return fileList;
+  return file_list;
 }
 
 // read label names of the model's outputs, indexed by the model's output class ID
