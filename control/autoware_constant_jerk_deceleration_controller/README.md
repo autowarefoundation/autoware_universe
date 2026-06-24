@@ -1,4 +1,4 @@
-# autoware_jerk_constant_deceleration_controller
+# autoware_constant_jerk_deceleration_controller
 
 ## Overview
 
@@ -35,14 +35,14 @@ jerk         = target_jerk  (0 once target_acceleration is reached)
 
 ---
 
-## Node: `jerk_constant_deceleration_controller`
+## Node: `constant_jerk_deceleration_controller`
 
 ### Subscriptions
 
-| Topic                                        | Type                                                 | Description                         |
-| -------------------------------------------- | ---------------------------------------------------- | ----------------------------------- |
-| `~/input/control`                            | `autoware_control_msgs/Control`                      | Upstream control command            |
-| `~/input/jerk_constant_deceleration_trigger` | `tier4_control_msgs/JerkConstantDecelerationTrigger` | Trigger and deceleration parameters |
+| Topic | Type | Description |
+|---|---|---|
+| `~/input/control` | `autoware_control_msgs/Control` | Upstream control command |
+| `~/input/constant_jerk_deceleration_trigger` | `tier4_control_msgs/ConstantJerkDecelerationTrigger` | Trigger and deceleration parameters |
 
 ### Publications
 
@@ -62,20 +62,20 @@ No parameters are currently defined.
 ## Launch
 
 ```xml
-<include file="$(find-pkg-share autoware_jerk_constant_deceleration_controller)/launch/jerk_constant_deceleration_controller.launch.xml">
+<include file="$(find-pkg-share autoware_constant_jerk_deceleration_controller)/launch/constant_jerk_deceleration_controller.launch.xml">
   <arg name="input_control" value="/control/trajectory_follower/control_cmd"/>
-  <arg name="input_jerk_constant_deceleration_trigger" value="/control/jerk_constant_deceleration_trigger"/>
+  <arg name="input_constant_jerk_deceleration_trigger" value="/control/constant_jerk_deceleration_trigger"/>
   <arg name="output_control" value="/control/control_command_gate/inputs/in_lane_stop/control"/>
 </include>
 ```
 
 ### Launch Arguments
 
-| Argument                                   | Default                                                             | Description                    |
-| ------------------------------------------ | ------------------------------------------------------------------- | ------------------------------ |
-| `input_control`                            | `/control/trajectory_follower/control_cmd`                          | Upstream control command topic |
-| `input_jerk_constant_deceleration_trigger` | `/control/jerk_constant_deceleration_trigger`                       | Trigger topic                  |
-| `output_control`                           | `/control/control_command_gate/inputs/in_lane_stop/control`         | Output control command topic   |
-| `output_gear_command`                      | `/control/control_command_gate/inputs/in_lane_stop/gear`            | Output gear command topic      |
-| `output_hazard_lights_command`             | `/control/control_command_gate/inputs/in_lane_stop/hazard_lights`   | Output hazard lights topic     |
-| `output_turn_indicators_command`           | `/control/control_command_gate/inputs/in_lane_stop/turn_indicators` | Output turn indicators topic   |
+| Argument | Default | Description |
+|---|---|---|
+| `input_control` | `/control/trajectory_follower/control_cmd` | Upstream control command topic |
+| `input_constant_jerk_deceleration_trigger` | `/control/constant_jerk_deceleration_trigger` | Trigger topic |
+| `output_control` | `/control/control_command_gate/inputs/in_lane_stop/control` | Output control command topic |
+| `output_gear_command` | `/control/control_command_gate/inputs/in_lane_stop/gear` | Output gear command topic |
+| `output_hazard_lights_command` | `/control/control_command_gate/inputs/in_lane_stop/hazard_lights` | Output hazard lights topic |
+| `output_turn_indicators_command` | `/control/control_command_gate/inputs/in_lane_stop/turn_indicators` | Output turn indicators topic |

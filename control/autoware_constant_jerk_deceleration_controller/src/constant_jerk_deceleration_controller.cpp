@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "jerk_constant_deceleration_controller.hpp"
+#include "constant_jerk_deceleration_controller.hpp"
 
 #include <rclcpp/qos.hpp>
 
-namespace autoware::jerk_constant_deceleration_controller
+namespace autoware::constant_jerk_deceleration_controller
 {
 
-JerkConstantDecelerationController::JerkConstantDecelerationController(
+ConstantJerkDecelerationController::ConstantJerkDecelerationController(
   const rclcpp::NodeOptions & node_options)
-: Node("jerk_constant_deceleration_controller", node_options)
+: Node("constant_jerk_deceleration_controller", node_options)
 {
   using std::placeholders::_1;
   // Parameter
@@ -29,11 +29,11 @@ JerkConstantDecelerationController::JerkConstantDecelerationController(
   // Subscriber
   sub_control_ = this->create_subscription<autoware_control_msgs::msg::Control>(
     "~/input/control", rclcpp::QoS{1},
-    std::bind(&JerkConstantDecelerationController::onControl, this, _1));
-  sub_trigger_ =
-    this->create_subscription<tier4_control_msgs::msg::JerkConstantDecelerationTrigger>(
-      "~/input/jerk_constant_deceleration_trigger", rclcpp::QoS{1},
-      std::bind(&JerkConstantDecelerationController::onTrigger, this, _1));
+    std::bind(&ConstantJerkDecelerationController::onControl, this, _1));
+  sub_trigger_ = this->create_subscription<
+    tier4_control_msgs::msg::ConstantJerkDecelerationTrigger>(
+    "~/input/constant_jerk_deceleration_trigger", rclcpp::QoS{1},
+    std::bind(&ConstantJerkDecelerationController::onTrigger, this, _1));
 
   // Publisher
   pub_control_ =
@@ -64,7 +64,7 @@ JerkConstantDecelerationController::JerkConstantDecelerationController(
   // Diagnostics
 }
 
-void JerkConstantDecelerationController::onControl(
+void ConstantJerkDecelerationController::onControl(
   const autoware_control_msgs::msg::Control::SharedPtr msg)
 {
   if (!trigger_.trigger) {
@@ -99,13 +99,13 @@ void JerkConstantDecelerationController::onControl(
   publishTurnIndicatorsCommand();
 }
 
-void JerkConstantDecelerationController::onTrigger(
-  const tier4_control_msgs::msg::JerkConstantDecelerationTrigger::SharedPtr msg)
+void ConstantJerkDecelerationController::onTrigger(
+  const tier4_control_msgs::msg::ConstantJerkDecelerationTrigger::SharedPtr msg)
 {
   trigger_ = *msg;
 }
 
-void JerkConstantDecelerationController::publishGearCommand()
+void ConstantJerkDecelerationController::publishGearCommand()
 {
   auto gear_cmd_msg = autoware_vehicle_msgs::msg::GearCommand();
   gear_cmd_msg.stamp = this->now();
@@ -113,7 +113,7 @@ void JerkConstantDecelerationController::publishGearCommand()
   pub_gear_command_->publish(gear_cmd_msg);
 }
 
-void JerkConstantDecelerationController::publishHazardLightsCommand()
+void ConstantJerkDecelerationController::publishHazardLightsCommand()
 {
   auto hazard_lights_cmd_msg = autoware_vehicle_msgs::msg::HazardLightsCommand();
   hazard_lights_cmd_msg.stamp = this->now();
@@ -121,7 +121,7 @@ void JerkConstantDecelerationController::publishHazardLightsCommand()
   pub_hazard_lights_command_->publish(hazard_lights_cmd_msg);
 }
 
-void JerkConstantDecelerationController::publishTurnIndicatorsCommand()
+void ConstantJerkDecelerationController::publishTurnIndicatorsCommand()
 {
   auto turn_indicators_cmd_msg = autoware_vehicle_msgs::msg::TurnIndicatorsCommand();
   turn_indicators_cmd_msg.stamp = this->now();
@@ -129,8 +129,8 @@ void JerkConstantDecelerationController::publishTurnIndicatorsCommand()
   pub_turn_indicators_command_->publish(turn_indicators_cmd_msg);
 }
 
-}  // namespace autoware::jerk_constant_deceleration_controller
+}  // namespace autoware::constant_jerk_deceleration_controller
 
 #include <rclcpp_components/register_node_macro.hpp>
 RCLCPP_COMPONENTS_REGISTER_NODE(
-  autoware::jerk_constant_deceleration_controller::JerkConstantDecelerationController)
+  autoware::constant_jerk_deceleration_controller::ConstantJerkDecelerationController)
