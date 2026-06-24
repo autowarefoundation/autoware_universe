@@ -14,8 +14,6 @@
 
 #include "node.hpp"
 
-#include "speed_scale_estimator.hpp"
-
 #include <functional>
 
 namespace autoware::speed_scale_corrector

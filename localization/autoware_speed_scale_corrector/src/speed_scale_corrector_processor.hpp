@@ -21,7 +21,7 @@
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 
 #include <vector>
@@ -35,47 +35,28 @@ using autoware_vehicle_msgs::msg::VelocityReport;
 using geometry_msgs::msg::PoseStamped;
 using sensor_msgs::msg::Imu;
 
-/**
- * @brief Result of a single processor update cycle
- */
 struct SpeedScaleCorrectorProcessResult
 {
   bool updated = false;
   tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> estimation_result;
 };
 
-/**
- * @brief Converts ROS messages and runs speed scale estimation
- */
 class SpeedScaleCorrectorProcessor
 {
 public:
   explicit SpeedScaleCorrectorProcessor(const SpeedScaleEstimatorParameters & parameters);
 
-  /**
-   * @brief Get update interval
-   * @return Update interval [s]
-   */
   [[nodiscard]] double get_update_interval_sec() const;
 
-  /**
-   * @brief Process input messages and update estimation
-   */
-  SpeedScaleCorrectorProcessResult process(
+  [[nodiscard]] SpeedScaleCorrectorProcessResult process(
     const std::vector<PoseStamped::ConstSharedPtr> & pose_ptrs,
     const std::vector<Imu::ConstSharedPtr> & imu_ptrs,
     const std::vector<VelocityReport::ConstSharedPtr> & velocity_report_ptrs);
 
-  /**
-   * @brief Create debug info message from process result
-   */
-  StringStamped make_debug_info(
+  [[nodiscard]] StringStamped make_debug_info(
     const SpeedScaleCorrectorProcessResult & result, const rclcpp::Time & stamp) const;
 
-  /**
-   * @brief Create scale factor message from successful update
-   */
-  Float32Stamped make_scale_factor_msg(
+  [[nodiscard]] Float32Stamped make_scale_factor_msg(
     const SpeedScaleEstimatorUpdated & updated, const rclcpp::Time & stamp) const;
 
 private:

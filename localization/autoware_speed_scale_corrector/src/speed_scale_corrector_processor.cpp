@@ -94,8 +94,9 @@ std::string failure_reason_to_string(
         context.velocity_threshold);
     case UpdateFailureReason::VelocityReportTooSmall:
       return fmt::format("Velocity report is too small: {:.3f}", context.velocity);
+    default:
+      return "Unknown failure reason";
   }
-  return "Unknown failure reason";
 }
 
 }  // namespace

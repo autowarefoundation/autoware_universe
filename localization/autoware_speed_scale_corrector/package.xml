@@ -20,9 +20,9 @@
   <depend>fmt</depend>
   <depend>geometry_msgs</depend>
   <depend>rclcpp</depend>
+  <depend>rcpputils</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
-  <depend>tl_expected</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_lint_auto</test_depend>
