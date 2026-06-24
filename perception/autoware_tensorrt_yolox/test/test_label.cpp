@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware/tensorrt_yolox/label.hpp>
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -25,10 +26,12 @@
 
 namespace
 {
-std::string get_file_path(const std::string & filename)
+std::string write_temp_file(const std::string & filename, const std::string & content)
 {
-  const auto package_dir = ament_index_cpp::get_package_share_directory("autoware_tensorrt_yolox");
-  return package_dir + "/test_label_data/" + filename;
+  const std::filesystem::path path = std::filesystem::temp_directory_path() / filename;
+  std::ofstream file(path);
+  file << content;
+  return path.string();
 }
 }  // namespace
 
@@ -36,7 +39,11 @@ std::string get_file_path(const std::string & filename)
 TEST(LoadLabelMaps, ParsesRoiClassNameList)
 {
   // Arrange
-  const std::string label_path = get_file_path("test_label_with_spaces.txt");
+  const std::string label_path = write_temp_file(
+    "label_with_spaces.txt",
+    " CAR\n"
+    " PEDESTRIAN\n"
+    "UNKNOWN\n");
 
   // Act
   const auto label_maps = autoware::tensorrt_yolox::load_label_maps(label_path, "", "", "");
@@ -53,7 +60,11 @@ TEST(LoadLabelMaps, ParsesRoiClassNameList)
 TEST(LoadLabelMaps, LeavesOptionalTablesUnsetWhenPathsEmpty)
 {
   // Arrange
-  const std::string label_path = get_file_path("test_label_with_spaces.txt");
+  const std::string label_path = write_temp_file(
+    "label_with_spaces.txt",
+    " CAR\n"
+    " PEDESTRIAN\n"
+    "UNKNOWN\n");
 
   // Act
   const auto label_maps = autoware::tensorrt_yolox::load_label_maps(label_path, "", "", "");
@@ -71,8 +82,17 @@ TEST(LoadLabelMaps, LeavesOptionalTablesUnsetWhenPathsEmpty)
 TEST(LoadLabelMaps, ResolvesRoiRemap)
 {
   // Arrange
-  const std::string label_path = get_file_path("test_label_with_spaces.txt");
-  const std::string roi_remap_path = get_file_path("test_label_remap.csv");
+  const std::string label_path = write_temp_file(
+    "label_with_spaces.txt",
+    " CAR\n"
+    " PEDESTRIAN\n"
+    "UNKNOWN\n");
+  const std::string roi_remap_path = write_temp_file(
+    "label_remap.csv",
+    "from, to\n"
+    "CAR, 0\n"
+    "PEDESTRIAN, 1\n"
+    "UNKNOWN, 2\n");
 
   // Act
   const auto label_maps =
@@ -89,8 +109,19 @@ TEST(LoadLabelMaps, ResolvesRoiRemap)
 TEST(LoadLabelMaps, ResolvesRoiRemapWithComments)
 {
   // Arrange
-  const std::string label_path = get_file_path("test_label_with_spaces.txt");
-  const std::string roi_remap_path = get_file_path("test_label_file_with_comment.csv");
+  const std::string label_path = write_temp_file(
+    "label_with_spaces.txt",
+    " CAR\n"
+    " PEDESTRIAN\n"
+    "UNKNOWN\n");
+  const std::string roi_remap_path = write_temp_file(
+    "label_remap_with_comment.csv",
+    "from, to\n"
+    "# this line is comment\n"
+    "CAR, 1\n"
+    "PEDESTRIAN, 3 # after hash, it will be comment\n"
+    "# this line is also comment\n"
+    "UNKNOWN, 5\n");
 
   // Act
   const auto label_maps =
@@ -107,8 +138,17 @@ TEST(LoadLabelMaps, ResolvesRoiRemapWithComments)
 TEST(LoadLabelMaps, ParsesSegmentationColorMap)
 {
   // Arrange
-  const std::string label_path = get_file_path("test_label_with_spaces.txt");
-  const std::string color_map_path = get_file_path("test_semseg_col_map_with_spaces.csv");
+  const std::string label_path = write_temp_file(
+    "label_with_spaces.txt",
+    " CAR\n"
+    " PEDESTRIAN\n"
+    "UNKNOWN\n");
+  const std::string color_map_path = write_temp_file(
+    "semseg_col_map_with_spaces.csv",
+    "id,name,r,g,b\n"
+    "0,others,0,1,2\n"
+    "1, building ,70,75,80\n"
+    " 2, wall, 150, 160, 170\n");
 
   // Act
   const auto label_maps =
@@ -141,8 +181,17 @@ TEST(LoadLabelMaps, ParsesSegmentationColorMap)
 TEST(LoadLabelMaps, ResolvesRoiToSemsegRemap)
 {
   // Arrange
-  const std::string label_path = get_file_path("test_label_with_spaces.txt");
-  const std::string roi_to_semseg_remap_path = get_file_path("test_label_remap.csv");
+  const std::string label_path = write_temp_file(
+    "label_with_spaces.txt",
+    " CAR\n"
+    " PEDESTRIAN\n"
+    "UNKNOWN\n");
+  const std::string roi_to_semseg_remap_path = write_temp_file(
+    "label_remap.csv",
+    "from, to\n"
+    "CAR, 0\n"
+    "PEDESTRIAN, 1\n"
+    "UNKNOWN, 2\n");
 
   // Act
   const auto label_maps =
