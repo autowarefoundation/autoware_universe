@@ -170,45 +170,39 @@ bool TrafficLightArbiterCore::is_external_outdated(
   return std::abs((current_time - msg_stamp).seconds()) > external_delay_tolerance_;
 }
 
-std::vector<TrafficLightArbiterCore::ExpiredExternalSignal>
-TrafficLightArbiterCore::sweep_expired_external_signals(
+void TrafficLightArbiterCore::sweep_expired_external_signals(
   const rclcpp::Time & reference_time, double tolerance)
 {
-  std::vector<ExpiredExternalSignal> expired;
   auto it = external_traffic_lights_.begin();
   while (it != external_traffic_lights_.end()) {
     const auto & msg_stamp = it->second.first;
-    const auto age = (reference_time - msg_stamp).seconds();
-    if (std::abs(age) > tolerance) {
-      expired.push_back({it->first, age});
+    if (std::abs((reference_time - msg_stamp).seconds()) > tolerance) {
       it = external_traffic_lights_.erase(it);
     } else {
       ++it;
     }
   }
-  return expired;
 }
 
-std::vector<TrafficLightArbiterCore::ExpiredExternalSignal>
-TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
+void TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
 {
   latest_perception_msg_ = msg;
-  return sweep_expired_external_signals(rclcpp::Time(msg.stamp), external_time_tolerance_);
+  sweep_expired_external_signals(rclcpp::Time(msg.stamp), external_time_tolerance_);
 }
 
 // Admission control then cache maintenance:
-//   1. Reject (return {false, {}}) when |current_time - msg.stamp| exceeds
+//   1. Reject (return false) when |current_time - msg.stamp| exceeds
 //      external_delay_tolerance_ — the arrival is too far off to trust.
-//   2. Otherwise refresh each group's cache entry with msg.stamp, sweep the
-//      cache against current_time (external_delay_tolerance_), and return the
-//      evicted entries. Perception state is untouched here; its staleness is
-//      handled non-destructively inside arbitrate().
-TrafficLightArbiterCore::ExternalIngestResult TrafficLightArbiterCore::ingest_external(
+//   2. Otherwise refresh each group's cache entry with msg.stamp and sweep the
+//      cache against current_time (external_delay_tolerance_). Perception state
+//      is untouched here; its staleness is handled non-destructively inside
+//      arbitrate().
+bool TrafficLightArbiterCore::ingest_external(
   const TrafficSignalArray & msg, const rclcpp::Time & current_time)
 {
   const auto msg_time = rclcpp::Time(msg.stamp);
   if (is_external_outdated(current_time, msg_time)) {
-    return {false, {}};
+    return false;
   }
 
   // Update external traffic lights map with new information
@@ -216,7 +210,8 @@ TrafficLightArbiterCore::ExternalIngestResult TrafficLightArbiterCore::ingest_ex
     external_traffic_lights_[signal.traffic_light_group_id] = std::make_pair(msg_time, signal);
   }
 
-  return {true, sweep_expired_external_signals(current_time, external_delay_tolerance_)};
+  sweep_expired_external_signals(current_time, external_delay_tolerance_);
+  return true;
 }
 
 TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() const

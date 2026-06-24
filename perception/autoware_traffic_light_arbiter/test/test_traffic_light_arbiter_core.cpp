@@ -967,8 +967,8 @@ TEST(TrafficLightArbiterCoreLatestInputTime, perceptionStampWhenExternalIsSilent
 
 // ---------------------------------------------------------------------------
 // Timing utilities: mode-agnostic. Behaviour is observed through
-// ingest_external's admission-control return (accepted/rejected) and
-// ingest_perception's expired-entries return.
+// ingest_external's admission-control return (accepted/rejected) and the
+// downstream effect of external-cache eviction on arbitrate() output.
 // ---------------------------------------------------------------------------
 
 // A stamp close enough to current_time (within external_delay_tolerance)
@@ -980,10 +980,10 @@ TEST(TrafficLightArbiterCoreTiming, ingestExternalAcceptsStampsWithinTolerance)
   const auto t_past_within =
     base_time - rclcpp::Duration::from_seconds(default_external_delay_tolerance - 1.0);
 
-  const auto result = arbiter.ingest_external(
+  const bool accepted = arbiter.ingest_external(
     make_signal(t_past_within, map_ids::vehicle_a, {make_element(RED, CIRCLE)}), base_time);
 
-  EXPECT_TRUE(result.accepted);
+  EXPECT_TRUE(accepted);
 }
 
 // A stamp older than current_time by more than external_delay_tolerance
@@ -995,10 +995,10 @@ TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooOldStamps)
   const auto t_past_beyond =
     base_time - rclcpp::Duration::from_seconds(default_external_delay_tolerance + 1.0);
 
-  const auto result = arbiter.ingest_external(
+  const bool accepted = arbiter.ingest_external(
     make_signal(t_past_beyond, map_ids::vehicle_a, {make_element(RED, CIRCLE)}), base_time);
 
-  EXPECT_FALSE(result.accepted);
+  EXPECT_FALSE(accepted);
 }
 
 // A stamp ahead of current_time by more than external_delay_tolerance is
@@ -1011,31 +1011,10 @@ TEST(TrafficLightArbiterCoreTiming, ingestExternalRejectsTooFutureStamps)
   const auto t_future_beyond =
     base_time + rclcpp::Duration::from_seconds(default_external_delay_tolerance + 1.0);
 
-  const auto result = arbiter.ingest_external(
+  const bool accepted = arbiter.ingest_external(
     make_signal(t_future_beyond, map_ids::vehicle_a, {make_element(RED, CIRCLE)}), base_time);
 
-  EXPECT_FALSE(result.accepted);
-}
-
-// Sweep-on-ingest report: a perception arrival far past
-// external_time_tolerance after a stored external evicts that entry,
-// and ingest_perception's return value carries the eviction details
-// (used by the Node for DEBUG logging).
-TEST(TrafficLightArbiterCoreTiming, ingestPerceptionReportsExpiredExternalEntry)
-{
-  auto arbiter = make_arbiter(CONFIDENCE, /*enable_signal_matching=*/false);
-
-  arbiter.ingest_external(
-    make_signal(base_time, map_ids::vehicle_a, {make_element(RED, CIRCLE)}), base_time);
-  const auto t_perception =
-    base_time + rclcpp::Duration::from_seconds(default_external_time_tolerance + 1.0);
-
-  const auto expired = arbiter.ingest_perception(
-    make_signal(t_perception, map_ids::vehicle_b, {make_element(GREEN, CIRCLE)}));
-
-  ASSERT_EQ(expired.size(), 1u);
-  EXPECT_EQ(expired.front().id, map_ids::vehicle_a);
-  EXPECT_GT(expired.front().age, default_external_time_tolerance);
+  EXPECT_FALSE(accepted);
 }
 
 // Sweep-on-ingest downstream effect: an external entry evicted by the
