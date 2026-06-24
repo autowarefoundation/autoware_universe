@@ -1,1 +1,281 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="1441px" height="341px" viewBox="-0.5 -0.5 1441 341" content="&lt;mxfile&gt;&lt;diagram name=&quot;estimation_algorithm&quot; id=&quot;estimation-algorithm&quot;&gt;7Vltb9s2EP41BtIBHfRiy/LHxEnaochWzGi3fTJo8SQRpkSBohy7v34kRb0riYEJdrfuSyIe707k89wdefLMXSfHDxxl8RPDQGeOhY8z937mOAvLln+V4FQKfN8pBREnuBTZjWBDvoERWkZaEAx5R1EwRgXJusKApSkEoiNDnLPnrlrIaPetGYpgINgEiA6lfxAsYiOdW1Yz8RFIFJtXr6qJBFXKRpDHCLPnlsh9mLlrzpgon5LjGqjCrsKltHt8YbZeGIdUnGMgiJCb0kYHRAuzv4dcELlUwlIpv6UR40TEycy9lcNNBoA1FkaLcbMVcarwEXCUb7+LRUKlwJaPiJIolc+BXBdwKTgAF0R6uTUTCcFYmd+FLBWGcduvxsa18jTcodm08gjHlsjs+AOwBAQ/SRUzO6/QP3XD6rnhslaJWzS6RoZM+ES15wZh+WBAHgecpNuM5UPIP2uhdRMUXO9Mvf9RbZTDgbAifzdzvJnjyqVKSDhL1BSjlKSRfNoVYQhDGjgrUgzYAPccEwGbDAVq9lnmZZehkFC6ZlSyqWxdjMAPAynPBWd7aM14gQ+7cCImukQsh0Q41ggR3jREHFRV6vHwFSgLiDj9DhnjioYdEkH8I4BvXxh9khQD9H95+vIjQV5DeQnID1uGFY49yGUNDvSM8qdSQof/TbveKD0Lk1ygNIC6MmExQpGpVmqpKVYncF3Omqo3FWML8PF8jDHf2bmeNw1jbu+sGGPMHWHMn4Cx/JQGo0UqJCnepiD3lYuasi3XJavDnDygpQpKMgW79NaautHyLSZhqCn1qDqytX+ryDASsCXqrJavffcf4M2+OHFj9a1DnFT4n6xRsmSHcDmyZJMgN4eIqlI9utatKSuIIdi3OHmvmFiuZ+vHmb/SbMtBn5wEHbcojQqKeJ2oPR+JPAtzdakeGFcVe8SnMegv5mCKQL2USJvVZ8pEURH6AQSjh+XOX8wX1jRR4fVTeCwqvJGosK0JwmIfDsJBdT1IXjusT4gmSPVGj4Sqdqbh4bddrrLQtE6Jbnx12/RN8aHpU4fjT5pdw1Vj/QQoLzgkGrOuVRULL70JCU6OpdHHltHgFRshi0WppxZyU0Verrtb2QujQHZ00xYRsGUZWY6Fy8pbumiiIrJa9MJlvjgzXOwJwoUVYsv2g5D5oouzAliW/IK2mYCyfQZcJvNWM7At8W+pBeyAOClvXiqpP5X/qnhYd2ieMsfD0BnPceztvMVEpNk1I6+d02PN+BSlX5GW70k2oO1XJuqTtV1m9wBZ95rbzZuWKgdR8FQTj3KdoxJI3b78+0mqwX+LpOUEJIE9gAxwBNU3IRn3MYtYiuhDI71rQLW6AL4IR84KHhj/nY80AvEIxLCHUot4FT0OVJbnQ/eb4T9CwrkGEnUD0gai25pcAQr3GlDUV/oBFPXMFaCYTwmFRICf/jRyPfhLDX52FtX4/tievT+Z0VkYtvOnjWH/Dn4FFBcXD6huDn1ncHiXCKrlJEHVTcDvDMflxcOqv+k2IFVTcwUg/Fn/kpWhPL84OhUCbVTad/c3kTF3ovfGd30jMuOzgTOeP7Py60Lltr5a1Z+Iez5YGOYgBtDXKzyPjdWAjRAROiUbGOVxfat9qQBMkv+vBXz3hj9d2GvTW87RqaWQKS7zl8ld2T1urd6Ps2/ou/aix3u5gjOjQA6bH5ZL9ebXeffhbw==&lt;/diagram&gt;&lt;/mxfile&gt;"><defs/><g><rect x="380" y="0" width="420" height="30" fill="none" stroke="none" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 15px; margin-left: 590px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 18px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; font-weight: bold; white-space: nowrap;">Estimation Algorithm: SpeedScaleEstimator</div></div></div></foreignObject><text x="590" y="20" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="18px" text-anchor="middle" font-weight="bold">Estimation Algorithm: SpeedScaleEstimator</text></switch></g><rect x="0" y="60" width="200" height="60" rx="9" ry="9" fill="#dae8fc" stroke="#6c8ebf" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 198px; height: 1px; padding-top: 90px; margin-left: 1px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">Pose (current / previous)<br />from polling buffer</div></div></div></foreignObject><text x="100" y="94" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Pose (current / previous)...</text></switch></g><rect x="0" y="160" width="200" height="60" rx="9" ry="9" fill="#dae8fc" stroke="#6c8ebf" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 198px; height: 1px; padding-top: 190px; margin-left: 1px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">VelocityReport batch<br />from polling buffer</div></div></div></foreignObject><text x="100" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">VelocityReport batch...</text></switch></g><rect x="0" y="250" width="200" height="60" rx="9" ry="9" fill="#dae8fc" stroke="#6c8ebf" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 198px; height: 1px; padding-top: 280px; margin-left: 1px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">IMU batch<br />from polling buffer</div></div></div></foreignObject><text x="100" y="284" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">IMU batch...</text></switch></g><rect x="280" y="50" width="230" height="80" rx="12" ry="12" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 228px; height: 1px; padding-top: 90px; margin-left: 281px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">calc_odometry_velocity()<br />3D distance / dt<br />from previous and current pose</div></div></div></foreignObject><text x="395" y="94" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">calc_odometry_velocity()...</text></switch></g><rect x="280" y="150" width="230" height="80" rx="12" ry="12" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 228px; height: 1px; padding-top: 190px; margin-left: 281px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">find_nearest_velocity_report()<br />timestamp sync<br />(stamp_diff &lt;= update_interval)</div></div></div></foreignObject><text x="395" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">find_nearest_velocity_report()...</text></switch></g><rect x="280" y="240" width="230" height="80" rx="12" ry="12" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 228px; height: 1px; padding-top: 280px; margin-left: 281px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">find_nearest_imu()<br />timestamp sync<br />(stamp_diff &lt;= update_interval)</div></div></div></foreignObject><text x="395" y="284" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">find_nearest_imu()...</text></switch></g><rect x="580" y="140" width="260" height="100" rx="15" ry="15" fill="#f8cecc" stroke="#b85450" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 258px; height: 1px; padding-top: 190px; margin-left: 581px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">Constraint check<br />- |ω_imu| &lt;= max_angular_velocity<br />- min_speed &lt;= v_odom &lt;= max_speed<br />- |v_report| &gt; 0</div></div></div></foreignObject><text x="710" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Constraint check...</text></switch></g><rect x="910" y="135" width="260" height="110" rx="16.5" ry="16.5" fill="#e1d5e7" stroke="#9673a6" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 258px; height: 1px; padding-top: 190px; margin-left: 911px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">Scalar Kalman Filter<br />Observation model: z = s * v_report<br />Measurement: z = v_odom<br />Observation matrix: H = v_report<br />State: s (speed scale factor)</div></div></div></foreignObject><text x="1040" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Scalar Kalman Filter...</text></switch></g><rect x="1220" y="150" width="220" height="80" rx="12" ry="12" fill="#fff2cc" stroke="#d6b656" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 218px; height: 1px; padding-top: 190px; margin-left: 1221px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">Updated result<br />estimated_speed_scale_factor<br />covariance, K, v_odom, v_report</div></div></div></foreignObject><text x="1330" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Updated result...</text></switch></g><rect x="1220" y="270" width="220" height="70" rx="10.5" ry="10.5" fill="#fff2cc" stroke="#d6b656" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 218px; height: 1px; padding-top: 305px; margin-left: 1221px;"><div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">Not updated<br />keep previous scale factor<br />return reason string</div></div></div></foreignObject><text x="1330" y="309" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Not updated...</text></switch></g><path d="M 200 90 L 273.63 90" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 278.88 90 L 271.88 93.5 L 273.63 90 L 271.88 86.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/><path d="M 200 190 L 273.63 190" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 278.88 190 L 271.88 193.5 L 273.63 190 L 271.88 186.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/><path d="M 200 280 L 273.63 280" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 278.88 280 L 271.88 283.5 L 273.63 280 L 271.88 276.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/><path d="M 510 90 L 545 90 L 545 165 L 573.63 165" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 578.88 165 L 571.88 168.5 L 573.63 165 L 571.88 161.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/><path d="M 510 190 L 573.63 190" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 578.88 190 L 571.88 193.5 L 573.63 190 L 571.88 186.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/><path d="M 510 280 L 545 280 L 545 215 L 573.63 215" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 578.88 215 L 571.88 218.5 L 573.63 215 L 571.88 211.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/><path d="M 840 190 L 903.63 190" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 908.88 190 L 901.88 193.5 L 903.63 190 L 901.88 186.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/><path d="M 1170 190 L 1213.63 190" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 1218.88 190 L 1211.88 193.5 L 1213.63 190 L 1211.88 186.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 170px; margin-left: 890px;"><div data-drawio-colors="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 11px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; background-color: rgb(255, 255, 255); white-space: nowrap;">pass</div></div></div></foreignObject><text x="890" y="173" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="11px" text-anchor="middle">pass</text></switch></g><path d="M 840 190 L 870 190 L 870 305 L 1213.63 305" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" stroke-dasharray="3 3" pointer-events="stroke"/><path d="M 1218.88 305 L 1211.88 308.5 L 1213.63 305 L 1211.88 301.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 305px; margin-left: 973px;"><div data-drawio-colors="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 11px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; background-color: rgb(255, 255, 255); white-space: nowrap;">fail</div></div></div></foreignObject><text x="973" y="308" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="11px" text-anchor="middle">fail</text></switch></g></g><switch><g requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"/><a transform="translate(0,-5)" xlink:href="https://www.diagrams.net/doc/faq/svg-export-text-problems" target="_blank"><text text-anchor="middle" font-size="10px" x="50%" y="100%">Text is not SVG - cannot display</text></a></switch></svg>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  version="1.1"
+  width="1441px"
+  height="341px"
+  viewBox="-0.5 -0.5 1441 341"
+  content="&lt;mxfile&gt;&lt;diagram name=&quot;estimation_algorithm&quot; id=&quot;estimation-algorithm&quot;&gt;7Vltb9s2EP41BtIBHfRiy/LHxEnaochWzGi3fTJo8SQRpkSBohy7v34kRb0riYEJdrfuSyIe707k89wdefLMXSfHDxxl8RPDQGeOhY8z937mOAvLln+V4FQKfN8pBREnuBTZjWBDvoERWkZaEAx5R1EwRgXJusKApSkEoiNDnLPnrlrIaPetGYpgINgEiA6lfxAsYiOdW1Yz8RFIFJtXr6qJBFXKRpDHCLPnlsh9mLlrzpgon5LjGqjCrsKltHt8YbZeGIdUnGMgiJCb0kYHRAuzv4dcELlUwlIpv6UR40TEycy9lcNNBoA1FkaLcbMVcarwEXCUb7+LRUKlwJaPiJIolc+BXBdwKTgAF0R6uTUTCcFYmd+FLBWGcduvxsa18jTcodm08gjHlsjs+AOwBAQ/SRUzO6/QP3XD6rnhslaJWzS6RoZM+ES15wZh+WBAHgecpNuM5UPIP2uhdRMUXO9Mvf9RbZTDgbAifzdzvJnjyqVKSDhL1BSjlKSRfNoVYQhDGjgrUgzYAPccEwGbDAVq9lnmZZehkFC6ZlSyqWxdjMAPAynPBWd7aM14gQ+7cCImukQsh0Q41ggR3jREHFRV6vHwFSgLiDj9DhnjioYdEkH8I4BvXxh9khQD9H95+vIjQV5DeQnID1uGFY49yGUNDvSM8qdSQof/TbveKD0Lk1ygNIC6MmExQpGpVmqpKVYncF3Omqo3FWML8PF8jDHf2bmeNw1jbu+sGGPMHWHMn4Cx/JQGo0UqJCnepiD3lYuasi3XJavDnDygpQpKMgW79NaautHyLSZhqCn1qDqytX+ryDASsCXqrJavffcf4M2+OHFj9a1DnFT4n6xRsmSHcDmyZJMgN4eIqlI9utatKSuIIdi3OHmvmFiuZ+vHmb/SbMtBn5wEHbcojQqKeJ2oPR+JPAtzdakeGFcVe8SnMegv5mCKQL2USJvVZ8pEURH6AQSjh+XOX8wX1jRR4fVTeCwqvJGosK0JwmIfDsJBdT1IXjusT4gmSPVGj4Sqdqbh4bddrrLQtE6Jbnx12/RN8aHpU4fjT5pdw1Vj/QQoLzgkGrOuVRULL70JCU6OpdHHltHgFRshi0WppxZyU0Verrtb2QujQHZ00xYRsGUZWY6Fy8pbumiiIrJa9MJlvjgzXOwJwoUVYsv2g5D5oouzAliW/IK2mYCyfQZcJvNWM7At8W+pBeyAOClvXiqpP5X/qnhYd2ieMsfD0BnPceztvMVEpNk1I6+d02PN+BSlX5GW70k2oO1XJuqTtV1m9wBZ95rbzZuWKgdR8FQTj3KdoxJI3b78+0mqwX+LpOUEJIE9gAxwBNU3IRn3MYtYiuhDI71rQLW6AL4IR84KHhj/nY80AvEIxLCHUot4FT0OVJbnQ/eb4T9CwrkGEnUD0gai25pcAQr3GlDUV/oBFPXMFaCYTwmFRICf/jRyPfhLDX52FtX4/tievT+Z0VkYtvOnjWH/Dn4FFBcXD6huDn1ncHiXCKrlJEHVTcDvDMflxcOqv+k2IFVTcwUg/Fn/kpWhPL84OhUCbVTad/c3kTF3ovfGd30jMuOzgTOeP7Py60Lltr5a1Z+Iez5YGOYgBtDXKzyPjdWAjRAROiUbGOVxfat9qQBMkv+vBXz3hj9d2GvTW87RqaWQKS7zl8ld2T1urd6Ps2/ou/aix3u5gjOjQA6bH5ZL9ebXeffhbw==&lt;/diagram&gt;&lt;/mxfile&gt;"
+>
+  <defs/>
+  <g>
+    <rect x="380" y="0" width="420" height="30" fill="none" stroke="none" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 15px; margin-left: 590px;">
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div style="display: inline-block; font-size: 18px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; font-weight: bold; white-space: nowrap;">
+                Estimation Algorithm: SpeedScaleEstimator
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="590" y="20" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="18px" text-anchor="middle" font-weight="bold">Estimation Algorithm: SpeedScaleEstimator</text>
+      </switch>
+    </g>
+    <rect x="0" y="60" width="200" height="60" rx="9" ry="9" fill="#dae8fc" stroke="#6c8ebf" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 198px; height: 1px; padding-top: 90px; margin-left: 1px;">
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                Pose (current / previous)
+                <br/>
+                from polling buffer
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="100" y="94" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Pose (current / previous)...</text>
+      </switch>
+    </g>
+    <rect x="0" y="160" width="200" height="60" rx="9" ry="9" fill="#dae8fc" stroke="#6c8ebf" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 198px; height: 1px; padding-top: 190px; margin-left: 1px;">
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                VelocityReport batch
+                <br/>
+                from polling buffer
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="100" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">VelocityReport batch...</text>
+      </switch>
+    </g>
+    <rect x="0" y="250" width="200" height="60" rx="9" ry="9" fill="#dae8fc" stroke="#6c8ebf" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 198px; height: 1px; padding-top: 280px; margin-left: 1px;">
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                IMU batch
+                <br/>
+                from polling buffer
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="100" y="284" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">IMU batch...</text>
+      </switch>
+    </g>
+    <rect x="280" y="50" width="230" height="80" rx="12" ry="12" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div
+            xmlns="http://www.w3.org/1999/xhtml"
+            style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 228px; height: 1px; padding-top: 90px; margin-left: 281px;"
+          >
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                calc_odometry_velocity()
+                <br/>
+                3D distance / dt
+                <br/>
+                from previous and current pose
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="395" y="94" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">calc_odometry_velocity()...</text>
+      </switch>
+    </g>
+    <rect x="280" y="150" width="230" height="80" rx="12" ry="12" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div
+            xmlns="http://www.w3.org/1999/xhtml"
+            style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 228px; height: 1px; padding-top: 190px; margin-left: 281px;"
+          >
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div
+                style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"
+              >find_nearest_velocity_report()<br/>timestamp sync<br/>(stamp_diff &lt;= update_interval)</div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="395" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">find_nearest_velocity_report()...</text>
+      </switch>
+    </g>
+    <rect x="280" y="240" width="230" height="80" rx="12" ry="12" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div
+            xmlns="http://www.w3.org/1999/xhtml"
+            style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 228px; height: 1px; padding-top: 280px; margin-left: 281px;"
+          >
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div
+                style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"
+              >find_nearest_imu()<br/>timestamp sync<br/>(stamp_diff &lt;= update_interval)</div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="395" y="284" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">find_nearest_imu()...</text>
+      </switch>
+    </g>
+    <rect x="580" y="140" width="260" height="100" rx="15" ry="15" fill="#f8cecc" stroke="#b85450" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div
+            xmlns="http://www.w3.org/1999/xhtml"
+            style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 258px; height: 1px; padding-top: 190px; margin-left: 581px;"
+          >
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div
+                style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"
+              >Constraint check<br/>- |ω_imu| &lt;= max_angular_velocity<br/>- min_speed &lt;= v_odom &lt;= max_speed<br/>- |v_report| &gt; 0</div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="710" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Constraint check...</text>
+      </switch>
+    </g>
+    <rect x="910" y="135" width="260" height="110" rx="16.5" ry="16.5" fill="#e1d5e7" stroke="#9673a6" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div
+            xmlns="http://www.w3.org/1999/xhtml"
+            style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 258px; height: 1px; padding-top: 190px; margin-left: 911px;"
+          >
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                Scalar Kalman Filter
+                <br/>
+                Observation model: z = s * v_report
+                <br/>
+                Measurement: z = v_odom
+                <br/>
+                Observation matrix: H = v_report
+                <br/>
+                State: s (speed scale factor)
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="1040" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Scalar Kalman Filter...</text>
+      </switch>
+    </g>
+    <rect x="1220" y="150" width="220" height="80" rx="12" ry="12" fill="#fff2cc" stroke="#d6b656" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div
+            xmlns="http://www.w3.org/1999/xhtml"
+            style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 218px; height: 1px; padding-top: 190px; margin-left: 1221px;"
+          >
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                Updated result
+                <br/>
+                estimated_speed_scale_factor
+                <br/>
+                covariance, K, v_odom, v_report
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="1330" y="194" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Updated result...</text>
+      </switch>
+    </g>
+    <rect x="1220" y="270" width="220" height="70" rx="10.5" ry="10.5" fill="#fff2cc" stroke="#d6b656" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div
+            xmlns="http://www.w3.org/1999/xhtml"
+            style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 218px; height: 1px; padding-top: 305px; margin-left: 1221px;"
+          >
+            <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
+                Not updated
+                <br/>
+                keep previous scale factor
+                <br/>
+                return reason string
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="1330" y="309" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">Not updated...</text>
+      </switch>
+    </g>
+    <path d="M 200 90 L 273.63 90" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+    <path d="M 278.88 90 L 271.88 93.5 L 273.63 90 L 271.88 86.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    <path d="M 200 190 L 273.63 190" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+    <path d="M 278.88 190 L 271.88 193.5 L 273.63 190 L 271.88 186.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    <path d="M 200 280 L 273.63 280" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+    <path d="M 278.88 280 L 271.88 283.5 L 273.63 280 L 271.88 276.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    <path d="M 510 90 L 545 90 L 545 165 L 573.63 165" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+    <path d="M 578.88 165 L 571.88 168.5 L 573.63 165 L 571.88 161.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    <path d="M 510 190 L 573.63 190" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+    <path d="M 578.88 190 L 571.88 193.5 L 573.63 190 L 571.88 186.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    <path d="M 510 280 L 545 280 L 545 215 L 573.63 215" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+    <path d="M 578.88 215 L 571.88 218.5 L 573.63 215 L 571.88 211.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    <path d="M 840 190 L 903.63 190" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+    <path d="M 908.88 190 L 901.88 193.5 L 903.63 190 L 901.88 186.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    <path d="M 1170 190 L 1213.63 190" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="stroke"/>
+    <path d="M 1218.88 190 L 1211.88 193.5 L 1213.63 190 L 1211.88 186.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 170px; margin-left: 890px;">
+            <div data-drawio-colors="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div
+                style="display: inline-block; font-size: 11px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; background-color: rgb(255, 255, 255); white-space: nowrap;"
+              >
+                pass
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="890" y="173" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="11px" text-anchor="middle">pass</text>
+      </switch>
+    </g>
+    <path d="M 840 190 L 870 190 L 870 305 L 1213.63 305" fill="none" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" stroke-dasharray="3 3" pointer-events="stroke"/>
+    <path d="M 1218.88 305 L 1211.88 308.5 L 1213.63 305 L 1211.88 301.5 Z" fill="rgb(0, 0, 0)" stroke="rgb(0, 0, 0)" stroke-miterlimit="10" pointer-events="all"/>
+    <g transform="translate(-0.5 -0.5)">
+      <switch>
+        <foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 1px; height: 1px; padding-top: 305px; margin-left: 973px;">
+            <div data-drawio-colors="color: rgb(0, 0, 0); background-color: rgb(255, 255, 255); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
+              <div
+                style="display: inline-block; font-size: 11px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; background-color: rgb(255, 255, 255); white-space: nowrap;"
+              >
+                fail
+              </div>
+            </div>
+          </div>
+        </foreignObject>
+        <text x="973" y="308" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="11px" text-anchor="middle">fail</text>
+      </switch>
+    </g>
+  </g>
+  <switch>
+    <g requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"/>
+    <a transform="translate(0,-5)" xlink:href="https://www.diagrams.net/doc/faq/svg-export-text-problems" target="_blank">
+      <text text-anchor="middle" font-size="10px" x="50%" y="100%">Text is not SVG - cannot display</text>
+    </a>
+  </switch>
+</svg>

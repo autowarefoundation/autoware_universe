@@ -14,10 +14,12 @@
 
 #include "utils.hpp"
 
-#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
-#include <gtest/gtest.h>
 #include <rclcpp/rclcpp.hpp>
+
+#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <sensor_msgs/msg/imu.hpp>
+
+#include <gtest/gtest.h>
 
 #include <vector>
 

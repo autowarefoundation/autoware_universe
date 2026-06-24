@@ -15,9 +15,10 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
+#include <rclcpp/time.hpp>
+
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <rclcpp/time.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 
 #include <optional>

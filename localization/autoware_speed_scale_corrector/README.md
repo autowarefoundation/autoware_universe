@@ -10,10 +10,10 @@ The estimated scale factor can be used to monitor and tune the speed scale in `a
 
 The package is split into a core library (separated from ROS node I/O) and a ROS adapter layer:
 
-| Layer | Library | Responsibility |
-| ----- | ------- | -------------- |
-| Core | `autoware_speed_scale_corrector` | Utils, Kalman filter estimation (`SpeedScaleEstimator`) |
-| ROS | `autoware_speed_scale_corrector_ros` | Message handling, debug formatting, node I/O (`SpeedScaleCorrectorProcessor`, `SpeedScaleCorrectorNode`) |
+| Layer | Library                              | Responsibility                                                                                           |
+| ----- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Core  | `autoware_speed_scale_corrector`     | Utils, Kalman filter estimation (`SpeedScaleEstimator`)                                                  |
+| ROS   | `autoware_speed_scale_corrector_ros` | Message handling, debug formatting, node I/O (`SpeedScaleCorrectorProcessor`, `SpeedScaleCorrectorNode`) |
 
 Core algorithms can be unit-tested without spinning up a ROS graph.
 
@@ -119,16 +119,16 @@ Kalman filter update:
 
 ### Input Topics
 
-| Name                      | Type                                         | Description                 |
-| ------------------------- | -------------------------------------------- | --------------------------- |
+| Name                      | Type                                         | Description                               |
+| ------------------------- | -------------------------------------------- | ----------------------------------------- |
 | `~/input/pose`            | `geometry_msgs::msg::PoseStamped`            | Localization pose (e.g. NDT scan matcher) |
-| `~/input/velocity_report` | `autoware_vehicle_msgs::msg::VelocityReport` | Vehicle velocity report     |
-| `~/input/imu`             | `sensor_msgs::msg::Imu`                      | IMU sensor data             |
+| `~/input/velocity_report` | `autoware_vehicle_msgs::msg::VelocityReport` | Vehicle velocity report                   |
+| `~/input/imu`             | `sensor_msgs::msg::Imu`                      | IMU sensor data                           |
 
 ### Output Topics
 
-| Name                    | Type                                                | Description                                     |
-| ----------------------- | --------------------------------------------------- | ----------------------------------------------- |
+| Name                    | Type                                                | Description                                                        |
+| ----------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
 | `~/output/scale_factor` | `autoware_internal_debug_msgs::msg::Float32Stamped` | Estimated speed scale factor (published on successful update only) |
 | `~/output/debug_info`   | `autoware_internal_debug_msgs::msg::StringStamped`  | Debug information (published every timer callback)                 |
 

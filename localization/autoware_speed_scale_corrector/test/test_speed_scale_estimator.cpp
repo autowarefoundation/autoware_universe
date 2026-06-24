@@ -16,8 +16,9 @@
 
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <gtest/gtest.h>
 #include <sensor_msgs/msg/imu.hpp>
+
+#include <gtest/gtest.h>
 
 #include <memory>
 #include <vector>
