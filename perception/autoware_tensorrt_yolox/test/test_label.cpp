@@ -45,18 +45,17 @@ TEST(LoadLabelMaps, ParsesRoiClassNameList)
     "UNKNOWN\n");
 
   // Act
-  const auto label_maps = autoware::tensorrt_yolox::load_label_maps(label_path, "", "", "");
+  const auto roi_labels = autoware::tensorrt_yolox::load_label_maps(label_path, "", "");
 
   // Assert
-  ASSERT_EQ(label_maps.roi_class_name_list.size(), 3);
-  EXPECT_EQ(label_maps.roi_class_name_list[0], "CAR");
-  EXPECT_EQ(label_maps.roi_class_name_list[1], "PEDESTRIAN");
-  EXPECT_EQ(label_maps.roi_class_name_list[2], "UNKNOWN");
+  ASSERT_EQ(roi_labels.size(), 3);
+  EXPECT_EQ(roi_labels[0].name, "CAR");
+  EXPECT_EQ(roi_labels[1].name, "PEDESTRIAN");
+  EXPECT_EQ(roi_labels[2].name, "UNKNOWN");
 }
 
-// without optional files, the segmentation tables stay in their "not specified" form while the
-// class-id table is sized but fully unmapped
-TEST(LoadLabelMaps, LeavesOptionalTablesUnsetWhenPathsEmpty)
+// without optional remap files, all class_id and semseg_id fields are unmapped_label_id
+TEST(LoadLabelMaps, LeavesOptionalFieldsUnmappedWhenPathsEmpty)
 {
   // Arrange
   const std::string label_path = write_temp_file(
@@ -66,14 +65,13 @@ TEST(LoadLabelMaps, LeavesOptionalTablesUnsetWhenPathsEmpty)
     "UNKNOWN\n");
 
   // Act
-  const auto label_maps = autoware::tensorrt_yolox::load_label_maps(label_path, "", "", "");
+  const auto roi_labels = autoware::tensorrt_yolox::load_label_maps(label_path, "", "");
 
   // Assert
-  EXPECT_TRUE(label_maps.semseg_color_map.empty());
-  EXPECT_TRUE(label_maps.roi_id_to_semseg_id_map.empty());
-  ASSERT_EQ(label_maps.roi_id_to_class_id_map.size(), 3);
-  for (const int class_id : label_maps.roi_id_to_class_id_map) {
-    EXPECT_EQ(class_id, autoware::tensorrt_yolox::unmapped_label_id);
+  ASSERT_EQ(roi_labels.size(), 3);
+  for (const auto & roi_label : roi_labels) {
+    EXPECT_EQ(roi_label.class_id, autoware::tensorrt_yolox::unmapped_label_id);
+    EXPECT_EQ(roi_label.semseg_id, autoware::tensorrt_yolox::unmapped_label_id);
   }
 }
 
@@ -94,14 +92,13 @@ TEST(LoadLabelMaps, ResolvesRoiRemap)
     "UNKNOWN, 2\n");
 
   // Act
-  const auto label_maps =
-    autoware::tensorrt_yolox::load_label_maps(label_path, "", roi_remap_path, "");
+  const auto roi_labels = autoware::tensorrt_yolox::load_label_maps(label_path, roi_remap_path, "");
 
   // Assert
-  ASSERT_EQ(label_maps.roi_id_to_class_id_map.size(), 3);
-  EXPECT_EQ(label_maps.roi_id_to_class_id_map[0], 0);  // CAR
-  EXPECT_EQ(label_maps.roi_id_to_class_id_map[1], 1);  // PEDESTRIAN
-  EXPECT_EQ(label_maps.roi_id_to_class_id_map[2], 2);  // UNKNOWN
+  ASSERT_EQ(roi_labels.size(), 3);
+  EXPECT_EQ(roi_labels[0].class_id, 0);  // CAR
+  EXPECT_EQ(roi_labels[1].class_id, 1);  // PEDESTRIAN
+  EXPECT_EQ(roi_labels[2].class_id, 2);  // UNKNOWN
 }
 
 // comments and the header line in the remap file are ignored while resolving the class-id table
@@ -123,57 +120,13 @@ TEST(LoadLabelMaps, ResolvesRoiRemapWithComments)
     "UNKNOWN, 5\n");
 
   // Act
-  const auto label_maps =
-    autoware::tensorrt_yolox::load_label_maps(label_path, "", roi_remap_path, "");
+  const auto roi_labels = autoware::tensorrt_yolox::load_label_maps(label_path, roi_remap_path, "");
 
   // Assert
-  ASSERT_EQ(label_maps.roi_id_to_class_id_map.size(), 3);
-  EXPECT_EQ(label_maps.roi_id_to_class_id_map[0], 1);  // CAR
-  EXPECT_EQ(label_maps.roi_id_to_class_id_map[1], 3);  // PEDESTRIAN
-  EXPECT_EQ(label_maps.roi_id_to_class_id_map[2], 5);  // UNKNOWN
-}
-
-// load_label_maps parses the segmentation color map file
-TEST(LoadLabelMaps, ParsesSegmentationColorMap)
-{
-  // Arrange
-  const std::string label_path = write_temp_file(
-    "label_with_spaces.txt",
-    " CAR\n"
-    " PEDESTRIAN\n"
-    "UNKNOWN\n");
-  const std::string color_map_path = write_temp_file(
-    "semseg_col_map_with_spaces.csv",
-    "id,name,r,g,b\n"
-    "0,others,0,1,2\n"
-    "1, building ,70,75,80\n"
-    " 2, wall, 150, 160, 170\n");
-
-  // Act
-  const auto label_maps =
-    autoware::tensorrt_yolox::load_label_maps(label_path, color_map_path, "", "");
-
-  // Assert
-  const auto & semseg_color_map = label_maps.semseg_color_map;
-  ASSERT_EQ(semseg_color_map.size(), 3);
-
-  EXPECT_EQ(semseg_color_map[0].id, 0);
-  EXPECT_EQ(semseg_color_map[0].name, "others");
-  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[0]), 0);
-  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[1]), 1);
-  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[2]), 2);
-
-  EXPECT_EQ(semseg_color_map[1].id, 1);
-  EXPECT_EQ(semseg_color_map[1].name, "building");
-  EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[0]), 70);
-  EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[1]), 75);
-  EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[2]), 80);
-
-  EXPECT_EQ(semseg_color_map[2].id, 2);
-  EXPECT_EQ(semseg_color_map[2].name, "wall");
-  EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[0]), 150);
-  EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[1]), 160);
-  EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[2]), 170);
+  ASSERT_EQ(roi_labels.size(), 3);
+  EXPECT_EQ(roi_labels[0].class_id, 1);  // CAR
+  EXPECT_EQ(roi_labels[1].class_id, 3);  // PEDESTRIAN
+  EXPECT_EQ(roi_labels[2].class_id, 5);  // UNKNOWN
 }
 
 // load_label_maps applies the ROI-to-segmentation remap file to resolve the segmentation-id table
@@ -193,14 +146,14 @@ TEST(LoadLabelMaps, ResolvesRoiToSemsegRemap)
     "UNKNOWN, 2\n");
 
   // Act
-  const auto label_maps =
-    autoware::tensorrt_yolox::load_label_maps(label_path, "", "", roi_to_semseg_remap_path);
+  const auto roi_labels =
+    autoware::tensorrt_yolox::load_label_maps(label_path, "", roi_to_semseg_remap_path);
 
   // Assert
-  ASSERT_EQ(label_maps.roi_id_to_semseg_id_map.size(), 3);
-  EXPECT_EQ(label_maps.roi_id_to_semseg_id_map[0], 0);  // CAR
-  EXPECT_EQ(label_maps.roi_id_to_semseg_id_map[1], 1);  // PEDESTRIAN
-  EXPECT_EQ(label_maps.roi_id_to_semseg_id_map[2], 2);  // UNKNOWN
+  ASSERT_EQ(roi_labels.size(), 3);
+  EXPECT_EQ(roi_labels[0].semseg_id, 0);  // CAR
+  EXPECT_EQ(roi_labels[1].semseg_id, 1);  // PEDESTRIAN
+  EXPECT_EQ(roi_labels[2].semseg_id, 2);  // UNKNOWN
 }
 
 // a class name present in the label file but absent from a non-empty remap throws (likely wrong
@@ -221,8 +174,43 @@ TEST(LoadLabelMaps, ThrowsWhenRoiRemapIsMissingLabel)
 
   // Act / Assert
   EXPECT_THROW(
-    autoware::tensorrt_yolox::load_label_maps(label_path, "", roi_remap_path, ""),
-    std::runtime_error);
+    autoware::tensorrt_yolox::load_label_maps(label_path, roi_remap_path, ""), std::runtime_error);
+}
+
+// load_semseg_colormap parses the segmentation color map file
+TEST(LoadSemsegColormap, ParsesColorMap)
+{
+  // Arrange
+  const std::string color_map_path = write_temp_file(
+    "semseg_col_map_with_spaces.csv",
+    "id,name,r,g,b\n"
+    "0,others,0,1,2\n"
+    "1, building ,70,75,80\n"
+    " 2, wall, 150, 160, 170\n");
+
+  // Act
+  const auto semseg_color_map = autoware::tensorrt_yolox::load_semseg_colormap(color_map_path);
+
+  // Assert
+  ASSERT_EQ(semseg_color_map.size(), 3);
+
+  EXPECT_EQ(semseg_color_map[0].id, 0);
+  EXPECT_EQ(semseg_color_map[0].name, "others");
+  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[0]), 0);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[1]), 1);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[2]), 2);
+
+  EXPECT_EQ(semseg_color_map[1].id, 1);
+  EXPECT_EQ(semseg_color_map[1].name, "building");
+  EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[0]), 70);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[1]), 75);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[2]), 80);
+
+  EXPECT_EQ(semseg_color_map[2].id, 2);
+  EXPECT_EQ(semseg_color_map[2].name, "wall");
+  EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[0]), 150);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[1]), 160);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[2]), 170);
 }
 
 // load_image_list returns the paths listed in the file

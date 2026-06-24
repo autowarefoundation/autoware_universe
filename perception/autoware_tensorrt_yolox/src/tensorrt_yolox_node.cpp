@@ -58,8 +58,10 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
 
   // read the label / remap / color-map files into structured data outside the detector
   try {
-    config.label_maps =
-      load_label_maps(label_path, semseg_color_map_path, roi_remap_path, roi_to_semseg_remap_path);
+    config.roi_labels = load_label_maps(label_path, roi_remap_path, roi_to_semseg_remap_path);
+    if (!semseg_color_map_path.empty()) {
+      config.semseg_color_map = load_semseg_colormap(semseg_color_map_path);
+    }
   } catch (const std::exception & e) {
     RCLCPP_ERROR(this->get_logger(), "Failed to load label files: %s", e.what());
     rclcpp::shutdown();

@@ -41,14 +41,17 @@ namespace autoware::tensorrt_yolox
 {
 TrtYoloXDetector::TrtYoloXDetector(const TrtYoloXDetectorConfig & config) : config_(config)
 {
-  if (config_.is_publish_color_mask && config_.label_maps.semseg_color_map.empty()) {
+  if (config_.is_publish_color_mask && config_.semseg_color_map.empty()) {
     std::stringstream error_msg;
     error_msg << "semantic_segmentation_color_map_path must be specified "
               << "when `is_publish_color_mask` is true.";
     throw std::runtime_error{error_msg.str()};
   }
 
-  if (config_.is_roi_overlap_semseg && config_.label_maps.roi_id_to_semseg_id_map.empty()) {
+  const bool semseg_remap_configured = std::any_of(
+    config_.roi_labels.begin(), config_.roi_labels.end(),
+    [](const RoiLabel & roi_label) { return roi_label.semseg_id != unmapped_label_id; });
+  if (config_.is_roi_overlap_semseg && !semseg_remap_configured) {
     std::stringstream error_msg;
     error_msg << "roi_to_semantic_segmentation_remap_path must be specified "
               << "when `is_roi_overlap_segmentation` is true.";
@@ -66,9 +69,8 @@ TrtYoloXDetector::TrtYoloXDetector(const TrtYoloXDetectorConfig & config) : conf
   const double norm_factor = 1.0;
 
   trt_yolox_ = std::make_unique<tensorrt_yolox::TrtYoloX>(
-    trt_config, config_.label_maps.roi_class_name_list.size(), config_.score_threshold,
-    config_.nms_threshold, config_.gpu_id, config_.calibration_image_list_path, norm_factor,
-    calib_config);
+    trt_config, config_.roi_labels.size(), config_.score_threshold, config_.nms_threshold,
+    config_.gpu_id, config_.calibration_image_list_path, norm_factor, calib_config);
 
   if (!trt_yolox_->isGPUInitialized()) {
     std::stringstream error_msg;
@@ -108,7 +110,7 @@ tl::expected<TrtYoloXDetectorResult, std::string> TrtYoloXDetector::detect(
     object.object.existence_probability = yolox_object.score;
 
     // direct mapping from YOLOX ID to class ID
-    const int target_class_id = config_.label_maps.roi_id_to_class_id_map[yolox_object.type];
+    const int target_class_id = config_.roi_labels[yolox_object.type].class_id;
 
     // drop the object if it is marked as ignore
     if (target_class_id == unmapped_label_id) continue;
@@ -178,7 +180,7 @@ tl::expected<TrtYoloXDetectorResult, std::string> TrtYoloXDetector::detect(
 int TrtYoloXDetector::mapRoiLabel2SegLabel(const int32_t roi_label_index)
 {
   if (config_.roi_overlay_semseg_labels.isOverlay(static_cast<uint8_t>(roi_label_index))) {
-    return config_.label_maps.roi_id_to_semseg_id_map[roi_label_index];
+    return config_.roi_labels[roi_label_index].semseg_id;
   }
   return unmapped_label_id;
 }
@@ -218,7 +220,7 @@ void TrtYoloXDetector::getColorizedMask(const cv::Mat & mask, cv::Mat & cmask)
     throw std::runtime_error("input and output image have difference size.");
   }
 
-  const auto & semseg_color_map = config_.label_maps.semseg_color_map;
+  const auto & semseg_color_map = config_.semseg_color_map;
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       unsigned char id = mask.at<unsigned char>(y, x);

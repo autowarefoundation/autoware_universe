@@ -80,8 +80,10 @@ struct TrtYoloXDetectorConfig
   std::string calibration_image_list_path;
   uint8_t gpu_id;
 
-  // parsed label / remap / color-map data (loaded from files outside this class)
-  LabelMaps label_maps;
+  // ROI label entries indexed by model output class ID (loaded from files outside this class)
+  std::vector<RoiLabel> roi_labels;
+  // semantic segmentation color map indexed by semseg label ID; empty when not specified
+  std::vector<Colormap> semseg_color_map;
 
   // behavior
   bool is_roi_overlap_semseg;
