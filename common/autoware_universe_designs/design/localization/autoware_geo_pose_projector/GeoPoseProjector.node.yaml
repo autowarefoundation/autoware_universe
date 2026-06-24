@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: GeoPoseProjector.node
+package:
+  name: autoware_geo_pose_projector
+  provider: autoware
+launch:
+  plugin: autoware::geo_pose_projector::GeoPoseProjector
+  executable: autoware_geo_pose_projector_node
+# interfaces
+subscribers:
+  - name: map_projector_info
+    message_type: autoware_map_msgs/msg/MapProjectorInfo
+    global: /map/map_projector_info
+  - name: geo_pose
+    message_type: geographic_msgs/msg/GeoPoseWithCovarianceStamped
+    remap_target: input_geo_pose
+publishers:
+  - name: pose
+    message_type: geometry_msgs/msg/PoseWithCovarianceStamped
+    remap_target: output_pose
+  - name: tf
+    message_type: tf2_msgs/msg/TFMessage
+    global: /tf
+# parameters
+param_files:
+  - name: geo_pose_projector_param
+    default: config/geo_pose_projector.param.yaml
+param_values: []
+# processes
+processes:
+  - name: project_geo_pose
+    trigger_conditions:
+      - on_input: geo_pose
+    outcomes:
+      - to_output: pose
+      - to_output: tf
