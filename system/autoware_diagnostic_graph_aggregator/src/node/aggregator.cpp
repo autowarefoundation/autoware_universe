@@ -124,24 +124,24 @@ void AggregatorNode::on_diag(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DiagnosticA
 }
 
 void AggregatorNode::on_reset(
-  AUTOWARE_SERVICE_REQUEST_CONST_PTR(ResetDiagGraph),
-  AUTOWARE_SERVICE_RESPONSE_PTR(ResetDiagGraph) response)
+  AUTOWARE_SERVER_REQUEST_PTR(ResetDiagGraph),
+  AUTOWARE_SERVER_RESPONSE_PTR(ResetDiagGraph) response)
 {
   graph_->reset();
   response->status.success = true;
 }
 
 void AggregatorNode::on_set_initializing(
-  AUTOWARE_SERVICE_REQUEST_CONST_PTR(SetInitializing) request,
-  AUTOWARE_SERVICE_RESPONSE_PTR(SetInitializing) response)
+  AUTOWARE_SERVER_REQUEST_PTR(SetInitializing) request,
+  AUTOWARE_SERVER_RESPONSE_PTR(SetInitializing) response)
 {
   graph_->set_initializing(request->data);
   response->success = true;
 }
 
 void AggregatorNode::on_set_override(
-  AUTOWARE_SERVICE_REQUEST_CONST_PTR(SetOverride) request,
-  AUTOWARE_SERVICE_RESPONSE_PTR(SetOverride) response)
+  AUTOWARE_SERVER_REQUEST_PTR(SetOverride) request,
+  AUTOWARE_SERVER_RESPONSE_PTR(SetOverride) response)
 {
   if (!allow_override_) {
     response->status.success = false;

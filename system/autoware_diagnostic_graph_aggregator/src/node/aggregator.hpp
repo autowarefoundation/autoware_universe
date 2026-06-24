@@ -58,14 +58,14 @@ private:
   void on_timer();
   void on_diag(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DiagnosticArray) & msg);
   void on_reset(
-    AUTOWARE_SERVICE_REQUEST_CONST_PTR(ResetDiagGraph) request,
-    AUTOWARE_SERVICE_RESPONSE_PTR(ResetDiagGraph) response);
+    AUTOWARE_SERVER_REQUEST_PTR(ResetDiagGraph) request,
+    AUTOWARE_SERVER_RESPONSE_PTR(ResetDiagGraph) response);
   void on_set_initializing(
-    AUTOWARE_SERVICE_REQUEST_CONST_PTR(SetInitializing) request,
-    AUTOWARE_SERVICE_RESPONSE_PTR(SetInitializing) response);
+    AUTOWARE_SERVER_REQUEST_PTR(SetInitializing) request,
+    AUTOWARE_SERVER_RESPONSE_PTR(SetInitializing) response);
   void on_set_override(
-    AUTOWARE_SERVICE_REQUEST_CONST_PTR(SetOverride) request,
-    AUTOWARE_SERVICE_RESPONSE_PTR(SetOverride) response);
+    AUTOWARE_SERVER_REQUEST_PTR(SetOverride) request,
+    AUTOWARE_SERVER_RESPONSE_PTR(SetOverride) response);
 };
 
 }  // namespace autoware::diagnostic_graph_aggregator
