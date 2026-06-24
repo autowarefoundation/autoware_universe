@@ -96,6 +96,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     lib/backbone_preprocessor.cpp
     lib/ptv3_trt.cpp
     lib/ros_utils.cpp
+    lib/semseg_module.cpp
   )
 
   target_compile_definitions(${PROJECT_NAME}_lib PRIVATE
