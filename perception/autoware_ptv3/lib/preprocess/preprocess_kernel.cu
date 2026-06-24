@@ -116,6 +116,11 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
 
   num_cropped_points_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
   num_unique_points32_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
+  CHECK_CUDA_ERROR(
+    cudaEventCreateWithFlags(&num_cropped_points_copy_event_, cudaEventDisableTiming));
+
+  CHECK_CUDA_ERROR(
+    cudaEventCreateWithFlags(&num_unique_points32_copy_event_, cudaEventDisableTiming));
 
   pooling_keys_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
   pooling_sorted_keys_d_ =
@@ -139,6 +144,16 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   pooling_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(pooling_workspace_size_);
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+}
+
+PreprocessCuda::~PreprocessCuda()
+{
+  if (num_cropped_points_copy_event_) {
+    cudaEventDestroy(num_cropped_points_copy_event_);
+  }
+  if (num_unique_points32_copy_event_) {
+    cudaEventDestroy(num_unique_points32_copy_event_);
+  }
 }
 
 template <typename PointT>
@@ -595,13 +610,8 @@ std::size_t PreprocessCuda::generateFeatures(
   cudaMemcpyAsync(
     num_cropped_points_.get(), crop_indices_d_.get() + num_points - 1, sizeof(std::uint32_t),
     cudaMemcpyDeviceToHost, stream_);
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-
-  if (*num_cropped_points_ == 0) {
-    *output_num_cropped_points = 0;
-    return 0;
-  }
-  *output_num_cropped_points = *num_cropped_points_;
+  CHECK_CUDA_ERROR(
+    cudaEventRecord(num_cropped_points_copy_event_, stream_));  // Lazy sync. use later
 
   extractIndicesKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<float4 *>(points_d_.get()), crop_mask_d_.get(), crop_indices_d_.get(),
@@ -668,6 +678,14 @@ std::size_t PreprocessCuda::generateFeatures(
     default:
       throw std::runtime_error("Unsupported input point cloud format.");
   }
+
+  CHECK_CUDA_ERROR(cudaEventSynchronize(num_cropped_points_copy_event_));
+
+  if (*num_cropped_points_ == 0) {
+    *output_num_cropped_points = 0;
+    return 0;
+  }
+  *output_num_cropped_points = *num_cropped_points_;
 
   const auto coord_min_x =
     static_cast<std::int32_t>(std::floor(config_.min_x_range_ / config_.voxel_x_size_));
@@ -782,9 +800,8 @@ std::size_t PreprocessCuda::generateFeatures(
     cudaMemcpyAsync(
       num_unique_points32_.get(), unique_indices32_d_.get() + *num_cropped_points_ - 1,
       sizeof(std::uint32_t), cudaMemcpyDeviceToHost, stream_);
-    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-
-    num_unique_points = static_cast<std::uint64_t>(*num_unique_points32_);
+    CHECK_CUDA_ERROR(
+      cudaEventRecord(num_unique_points32_copy_event_, stream_));  // Lazy sync. use later
 
     extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
       reinterpret_cast<float4 *>(cropped_points_d_.get()), unique_mask32_d_.get(),
@@ -824,6 +841,9 @@ std::size_t PreprocessCuda::generateFeatures(
       default:
         throw std::runtime_error("Unsupported input point cloud format.");
     }
+
+    CHECK_CUDA_ERROR(cudaEventSynchronize(num_unique_points32_copy_event_));
+    num_unique_points = static_cast<std::uint64_t>(*num_unique_points32_);
   }
 
   computeGridCoordsAndSerializationKernel<<<

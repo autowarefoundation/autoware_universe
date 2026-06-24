@@ -44,6 +44,7 @@ class PreprocessCuda
 {
 public:
   PreprocessCuda(const PTv3Config & config, cudaStream_t stream);
+  ~PreprocessCuda();
 
   std::size_t generateFeatures(
     const void * input_data, CloudFormat input_format, unsigned int num_points,
@@ -86,6 +87,8 @@ private:
   std::size_t generate_feature_workspace_size_{0};
   autoware::cuda_utils::CudaUniquePtrHost<std::uint32_t> num_cropped_points_;
   autoware::cuda_utils::CudaUniquePtrHost<std::uint32_t> num_unique_points32_;
+  cudaEvent_t num_cropped_points_copy_event_;
+  cudaEvent_t num_unique_points32_copy_event_;
 
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_keys_d_{nullptr};
   autoware::cuda_utils::CudaUniquePtr<std::int64_t[]> pooling_sorted_keys_d_{nullptr};
