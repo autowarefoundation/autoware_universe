@@ -40,69 +40,6 @@ SpeedScaleEstimatorParameters SpeedScaleEstimatorParameters::load_parameters(rcl
   return parameters;
 }
 
-/**
- * @brief Result type for successful constraint check
- */
-struct CheckConstraintSuccess
-{
-};
-
-/**
- * @brief Result type for failed constraint check
- */
-struct CheckConstraintFailure
-{
-  std::string reason;  //!< Reason for constraint failure
-};
-
-/**
- * @brief Check angular velocity constraint
- * @param states Vector of estimator states to check
- * @param parameters Estimation parameters containing constraints
- * @return Expected result indicating success or failure with reason
- */
-tl::expected<CheckConstraintSuccess, CheckConstraintFailure> check_angular_velocity_constraint(
-  const std::vector<SpeedScaleEstimatorState> & states,
-  const SpeedScaleEstimatorParameters & parameters)
-{
-  for (const auto & state : states) {
-    if (std::abs(state.angular_velocity) > parameters.max_angular_velocity) {
-      return tl::make_unexpected(
-        CheckConstraintFailure{fmt::format(
-          "Angular velocity is too high, angular velocity: {:.3f}, max angular velocity: {:.3f}",
-          state.angular_velocity, parameters.max_angular_velocity)});
-    }
-  }
-  return CheckConstraintSuccess{};
-}
-
-/**
- * @brief Check velocity constraints (minimum and maximum)
- * @param states Vector of estimator states to check
- * @param parameters Estimation parameters containing constraints
- * @return Expected result indicating success or failure with reason
- */
-tl::expected<CheckConstraintSuccess, CheckConstraintFailure> check_velocity_constraint(
-  const std::vector<SpeedScaleEstimatorState> & states,
-  const SpeedScaleEstimatorParameters & parameters)
-{
-  for (const auto & state : states) {
-    if (state.velocity_from_odometry > parameters.max_speed) {
-      return tl::make_unexpected(
-        CheckConstraintFailure{fmt::format(
-          "Velocity is too high, velocity: {:.3f}, max velocity: {:.3f}",
-          state.velocity_from_odometry, parameters.max_speed)});
-    }
-    if (state.velocity_from_odometry < parameters.min_speed) {
-      return tl::make_unexpected(
-        CheckConstraintFailure{fmt::format(
-          "Velocity is too low, velocity: {:.3f}, min velocity: {:.3f}",
-          state.velocity_from_odometry, parameters.min_speed)});
-    }
-  }
-  return CheckConstraintSuccess{};
-}
-
 SpeedScaleEstimator::SpeedScaleEstimator(const SpeedScaleEstimatorParameters & parameters)
 : parameters_(parameters),
   estimated_speed_scale_factor_(parameters.initial_speed_scale_factor),
@@ -159,8 +96,7 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   }
 
   // Calculate odometry velocity from pose difference
-  const auto twist = calc_twist_from_pose(pose_prev, pose_curr);
-  const double v_odometry = twist.linear.x;
+  const double v_odometry = calc_odometry_velocity(pose_prev, pose_curr);
 
   const rclcpp::Time pose_time(pose_curr.header.stamp);
 

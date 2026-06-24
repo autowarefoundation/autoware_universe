@@ -15,7 +15,6 @@
 #ifndef SPEED_SCALE_ESTIMATOR_HPP_
 #define SPEED_SCALE_ESTIMATOR_HPP_
 
-#include "autoware/trajectory/interpolator/interpolator.hpp"
 #include "tl_expected/expected.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -33,7 +32,6 @@
 namespace autoware::speed_scale_corrector
 {
 
-using autoware::experimental::trajectory::interpolator::InterpolatorInterface;
 using autoware_vehicle_msgs::msg::VelocityReport;
 using geometry_msgs::msg::PoseStamped;
 using sensor_msgs::msg::Imu;
@@ -53,18 +51,6 @@ struct SpeedScaleEstimatorParameters
   double min_speed{};                              //!< Minimum speed constraint [m/s]
 
   static SpeedScaleEstimatorParameters load_parameters(rclcpp::Node * node);
-};
-
-/**
- * @brief State vector for speed scale estimation
- */
-struct SpeedScaleEstimatorState
-{
-  double distance = 0.0;                       //!< Distance between consecutive points [m]
-  double distance_from_velocity_report = 0.0;  //!< Integrated distance from velocity reports [m]
-  double angular_velocity = 0.0;               //!< Angular velocity from IMU [rad/s]
-  double velocity_from_odometry = 0.0;         //!< Velocity calculated from odometry [m/s]
-  double velocity_from_velocity_report = 0.0;  //!< Velocity from vehicle reports [m/s]
 };
 
 /**
@@ -92,9 +78,9 @@ struct SpeedScaleEstimatorNotUpdated
 /**
  * @brief Speed scale estimator class
  *
- * Estimates speed scale factors by comparing odometry-based travel distance
- * with velocity report-based travel distance. The estimation is performed
- * only when all operational constraints are satisfied.
+ * Estimates speed scale factors by comparing odometry velocity with velocity
+ * report measurements using a Kalman filter. The estimation is performed only
+ * when all operational constraints are satisfied.
  */
 class SpeedScaleEstimator
 {
@@ -107,7 +93,7 @@ public:
 
   /**
    * @brief Get update interval
-   * @return Speed scale estimator parameters
+   * @return Update interval duration
    */
   [[nodiscard]] rclcpp::Duration get_update_interval() const;
 

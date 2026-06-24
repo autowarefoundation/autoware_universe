@@ -20,61 +20,23 @@
 namespace autoware::speed_scale_corrector
 {
 
-geometry_msgs::msg::Vector3 compute_relative_rotation_vector(
-  const tf2::Quaternion & q1, const tf2::Quaternion & q2)
-{
-  const tf2::Quaternion diff_quaternion = q1.inverse() * q2;
-  const tf2::Vector3 axis = diff_quaternion.getAxis() * diff_quaternion.getAngle();
-  return geometry_msgs::msg::Vector3{}.set__x(axis.x()).set__y(axis.y()).set__z(axis.z());
-}
-
-tf2::Quaternion to_quaternion(const geometry_msgs::msg::Quaternion & quaternion)
-{
-  return {quaternion.x, quaternion.y, quaternion.z, quaternion.w};
-}
-
 double calc_time_diff(const PoseStamped & pose_a, const PoseStamped & pose_b)
 {
   return (rclcpp::Time(pose_b.header.stamp) - rclcpp::Time(pose_a.header.stamp)).seconds();
 }
 
-Twist calc_twist_from_pose(const PoseStamped & pose_a, const PoseStamped & pose_b)
+double calc_odometry_velocity(const PoseStamped & pose_a, const PoseStamped & pose_b)
 {
   const double dt = calc_time_diff(pose_a, pose_b);
-
-  Twist twist;
-
-  // Return zero twist if time difference is too small
   if (std::abs(dt) < std::numeric_limits<double>::epsilon()) {
-    return twist;
+    return 0.0;
   }
 
-  const auto pose_a_quaternion = to_quaternion(pose_a.pose.orientation);
-  const auto pose_b_quaternion = to_quaternion(pose_b.pose.orientation);
+  const double dx = pose_b.pose.position.x - pose_a.pose.position.x;
+  const double dy = pose_b.pose.position.y - pose_a.pose.position.y;
+  const double dz = pose_b.pose.position.z - pose_a.pose.position.z;
 
-  // Calculate position difference
-  Vector3 diff_xyz;
-  diff_xyz.x = pose_b.pose.position.x - pose_a.pose.position.x;
-  diff_xyz.y = pose_b.pose.position.y - pose_a.pose.position.y;
-  diff_xyz.z = pose_b.pose.position.z - pose_a.pose.position.z;
-
-  // Calculate orientation difference
-  const Vector3 relative_rotation_vector =
-    compute_relative_rotation_vector(pose_a_quaternion, pose_b_quaternion);
-
-  // Calculate linear velocity (magnitude of position change)
-  twist.linear.x =
-    std::sqrt(std::pow(diff_xyz.x, 2.0) + std::pow(diff_xyz.y, 2.0) + std::pow(diff_xyz.z, 2.0)) /
-    dt;
-  twist.linear.y = 0.0;
-  twist.linear.z = 0.0;
-
-  // Calculate angular velocity
-  twist.angular.x = relative_rotation_vector.x / dt;
-  twist.angular.y = relative_rotation_vector.y / dt;
-  twist.angular.z = relative_rotation_vector.z / dt;
-
-  return twist;
+  return std::sqrt(dx * dx + dy * dy + dz * dz) / dt;
 }
 
 std::optional<NearestImuSample> find_nearest_imu(
