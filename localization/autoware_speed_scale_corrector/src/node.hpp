@@ -16,7 +16,7 @@
 #define NODE_HPP_
 
 #include "autoware_utils_rclcpp/polling_subscriber.hpp"
-#include "speed_scale_estimator.hpp"
+#include "speed_scale_corrector_processor.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
@@ -45,65 +45,24 @@ using PollingSubscriber = InterProcessPollingSubscriber<T, PollingPolicy>;
 
 /**
  * @brief ROS 2 node for speed scale correction
- *
- * This node estimates and corrects speed scale factors by comparing velocities
- * calculated from odometry with velocities reported by the vehicle's velocity sensors.
- * The estimation is performed only when operational constraints are satisfied to
- * ensure reliable results.
  */
 class SpeedScaleCorrectorNode : public rclcpp::Node
 {
 public:
-  /**
-   * @brief Constructor
-   * @param node_options ROS 2 node options
-   */
   explicit SpeedScaleCorrectorNode(const rclcpp::NodeOptions & node_options);
 
 private:
-  /**
-   * @brief Speed scale estimator instance
-   */
-  SpeedScaleEstimator speed_scale_estimator_;
+  SpeedScaleCorrectorProcessor processor_;
 
-  // Publishers
-  /**
-   * @brief Publisher for estimated speed scale factor
-   */
   rclcpp::Publisher<Float32Stamped>::SharedPtr pub_estimated_speed_scale_factor_;
-
-  /**
-   * @brief Publisher for debug information
-   */
   rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_info_;
 
-  // Subscribers
-
-  /**
-   * @brief Polling subscriber for pose data
-   */
   PollingSubscriber<PoseStamped, All>::SharedPtr sub_pose_;
-
-  /**
-   * @brief Polling subscriber for velocity reports
-   */
   PollingSubscriber<VelocityReport, All>::SharedPtr sub_velocity_report_;
-
-  /**
-   * @brief Polling subscriber for IMU data
-   */
   PollingSubscriber<Imu, All>::SharedPtr sub_imu_;
 
-  // Timer
-  /**
-   * @brief Timer for periodic updates
-   */
   rclcpp::TimerBase::SharedPtr timer_;
 
-  // Callbacks
-  /**
-   * @brief Timer callback
-   */
   void on_timer();
 };
 
