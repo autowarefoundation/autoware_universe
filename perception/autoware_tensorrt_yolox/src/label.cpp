@@ -30,8 +30,6 @@
 
 namespace autoware::tensorrt_yolox
 {
-namespace
-{
 void trim_left(std::string & s)
 {
   s.erase(s.begin(), find_if(s.begin(), s.end(), [](int ch) { return !isspace(ch); }));
@@ -135,6 +133,25 @@ std::vector<std::string> load_list_from_text_file(const std::string & filename)
   }
 
   return list;
+}
+
+std::vector<std::string> load_image_list(const std::string & filename, const std::string & prefix)
+{
+  std::vector<std::string> fileList = load_list_from_text_file(filename);
+  for (auto & file : fileList) {
+    if (file_exists(file, false)) {
+      continue;
+    } else {
+      std::string prefixed = prefix + file;
+      if (file_exists(prefixed, false))
+        file = prefixed;
+      else
+        std::cerr << "WARNING: couldn't find: " << prefixed << " while loading: " << filename
+                  << std::endl;
+    }
+  }
+
+  return fileList;
 }
 
 // read label names of the model's outputs, indexed by the model's output class ID
@@ -257,26 +274,6 @@ std::vector<int> build_roi_id_to_target_id_map(
   }
 
   return roi_id_to_target_id_map;
-}
-}  // namespace
-
-std::vector<std::string> load_image_list(const std::string & filename, const std::string & prefix)
-{
-  std::vector<std::string> fileList = load_list_from_text_file(filename);
-  for (auto & file : fileList) {
-    if (file_exists(file, false)) {
-      continue;
-    } else {
-      std::string prefixed = prefix + file;
-      if (file_exists(prefixed, false))
-        file = prefixed;
-      else
-        std::cerr << "WARNING: couldn't find: " << prefixed << " while loading: " << filename
-                  << std::endl;
-    }
-  }
-
-  return fileList;
 }
 
 LabelMaps load_label_maps(
