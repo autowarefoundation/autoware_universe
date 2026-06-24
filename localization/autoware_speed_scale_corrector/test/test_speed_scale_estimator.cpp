@@ -144,7 +144,7 @@ TEST_F(SpeedScaleEstimatorTest, SpeedConstraintViolation)
 
   std::vector<PoseStamped> poses = {create_pose_msg(0.1, 0.1, 0.0)};
   std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.1, 1.0f)};
-  std::vector<Imu> imus = {create_imu_msg(0.1, 0.1)};
+  std::vector<Imu> imus = {create_imu_msg(0.1, 0.005)};
 
   const auto result = estimator_->update(poses, imus, velocity_reports);
 
