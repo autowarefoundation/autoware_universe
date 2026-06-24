@@ -14,6 +14,7 @@
 
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
+#include "autoware/ptv3/preprocess/semseg_preprocess_kernel.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
 #include "ptv3_test_fixture.hpp"
 
