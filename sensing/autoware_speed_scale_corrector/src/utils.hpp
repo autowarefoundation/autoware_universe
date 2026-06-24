@@ -15,24 +15,18 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
-#include <geometry_msgs/msg/pose_stamped.hpp>
-#include <geometry_msgs/msg/twist.hpp>
-#include <geometry_msgs/msg/vector3.hpp>
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include <cmath>
 #include <optional>
 #include <vector>
 
 namespace autoware::speed_scale_corrector
 {
-using geometry_msgs::msg::PoseStamped;
-using geometry_msgs::msg::Twist;
-using geometry_msgs::msg::Vector3;
 using autoware_vehicle_msgs::msg::VelocityReport;
+using geometry_msgs::msg::PoseStamped;
 using sensor_msgs::msg::Imu;
 
 /**
@@ -56,9 +50,6 @@ struct NearestVelocityReportSample
 /**
  * @brief Calculate time difference between two poses
  *
- * This function computes the time difference in seconds between two pose
- * measurements based on their timestamps.
- *
  * @param pose_a First pose (earlier timestamp)
  * @param pose_b Second pose (later timestamp)
  * @return Time difference in seconds
@@ -66,17 +57,13 @@ struct NearestVelocityReportSample
 [[nodiscard]] double calc_time_diff(const PoseStamped & pose_a, const PoseStamped & pose_b);
 
 /**
- * @brief Calculate twist from pose difference
- *
- * This function computes the twist (linear and angular velocities) between
- * two pose measurements. The velocities are calculated by taking the difference
- * between the poses and dividing by the time difference.
+ * @brief Calculate odometry velocity from pose difference
  *
  * @param pose_a First pose (earlier timestamp)
  * @param pose_b Second pose (later timestamp)
- * @return Twist containing calculated linear and angular velocities
+ * @return Magnitude of linear velocity [m/s]
  */
-[[nodiscard]] Twist calc_twist_from_pose(const PoseStamped & pose_a, const PoseStamped & pose_b);
+[[nodiscard]] double calc_odometry_velocity(const PoseStamped & pose_a, const PoseStamped & pose_b);
 
 /**
  * @brief Find the IMU sample nearest to the target timestamp
