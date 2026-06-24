@@ -4,8 +4,8 @@
   <arg name="input_pose_name" default="/localization/pose_estimator/pose"/>
   <arg name="input_velocity_report" default="/vehicle/status/velocity_status"/>
   <arg name="input_imu" default="/sensing/imu/imu_data"/>
-  <arg name="output_scale_factor" default="speed_scale_corrector/estimated_speed_scale_factor"/>
-  <arg name="output_debug_info" default="speed_scale_corrector/debug_info"/>
+  <arg name="output_scale_factor" default="/localization/speed_scale_corrector/scale_factor"/>
+  <arg name="output_debug_info" default="/localization/speed_scale_corrector/debug_info"/>
 
   <node pkg="autoware_speed_scale_corrector" exec="speed_scale_corrector_node" name="speed_scale_corrector" output="screen">
     <param name="use_sim_time" value="$(var use_sim_time)"/>

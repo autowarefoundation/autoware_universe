@@ -2,9 +2,9 @@
 
 ## Overview
 
-This package estimates the vehicle speed scale factor by comparing odometry velocity with the longitudinal velocity reported by the vehicle. The estimated scale factor can be used to monitor and tune the speed scale in `autoware_vehicle_velocity_converter`.
+This package estimates the vehicle speed scale factor by comparing map-matched pose velocity with the longitudinal velocity reported by the vehicle. The reference velocity is computed from localization pose (e.g. NDT scan matcher), so the estimate reflects consistency between localization motion and wheel speed.
 
-The node runs periodically at `update_interval` and updates the estimate only when all operational constraints are satisfied.
+The estimated scale factor can be used to monitor and tune the speed scale in `autoware_vehicle_velocity_converter`. The node runs periodically at `update_interval` and updates the estimate only when all operational constraints are satisfied.
 
 ## Block Diagram
 
@@ -110,7 +110,7 @@ Kalman filter update:
 
 | Name                      | Type                                         | Description                 |
 | ------------------------- | -------------------------------------------- | --------------------------- |
-| `~/input/pose`            | `geometry_msgs::msg::PoseStamped`            | Pose information (odometry) |
+| `~/input/pose`            | `geometry_msgs::msg::PoseStamped`            | Localization pose (e.g. NDT scan matcher) |
 | `~/input/velocity_report` | `autoware_vehicle_msgs::msg::VelocityReport` | Vehicle velocity report     |
 | `~/input/imu`             | `sensor_msgs::msg::Imu`                      | IMU sensor data             |
 
@@ -123,7 +123,7 @@ Kalman filter update:
 
 ## Parameters
 
-{{ json_to_markdown("sensing/autoware_speed_scale_corrector/schema/speed_scale_corrector.schema.json") }}
+{{ json_to_markdown("localization/autoware_speed_scale_corrector/schema/speed_scale_corrector.schema.json") }}
 
 ### Tuning
 
