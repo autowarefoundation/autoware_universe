@@ -47,12 +47,11 @@ std::optional<NearestImuSample> find_nearest_imu(
   }
 
   const Imu * nearest_imu = &imus.front();
-  double min_stamp_diff = std::abs(
-    (rclcpp::Time(nearest_imu->header.stamp) - target_time).seconds());
+  double min_stamp_diff =
+    std::abs((rclcpp::Time(nearest_imu->header.stamp) - target_time).seconds());
 
   for (const auto & imu : imus) {
-    const double stamp_diff =
-      std::abs((rclcpp::Time(imu.header.stamp) - target_time).seconds());
+    const double stamp_diff = std::abs((rclcpp::Time(imu.header.stamp) - target_time).seconds());
     if (stamp_diff < min_stamp_diff) {
       min_stamp_diff = stamp_diff;
       nearest_imu = &imu;
@@ -73,8 +72,8 @@ std::optional<NearestVelocityReportSample> find_nearest_velocity_report(
   }
 
   const VelocityReport * nearest_velocity_report = &velocity_reports.front();
-  double min_stamp_diff = std::abs(
-    (rclcpp::Time(nearest_velocity_report->header.stamp) - target_time).seconds());
+  double min_stamp_diff =
+    std::abs((rclcpp::Time(nearest_velocity_report->header.stamp) - target_time).seconds());
 
   for (const auto & velocity_report : velocity_reports) {
     const double stamp_diff =

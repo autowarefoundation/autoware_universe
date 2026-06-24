@@ -17,11 +17,12 @@
 
 #include "speed_scale_estimator.hpp"
 
+#include <rclcpp/time.hpp>
+
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <rclcpp/time.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 
 #include <vector>

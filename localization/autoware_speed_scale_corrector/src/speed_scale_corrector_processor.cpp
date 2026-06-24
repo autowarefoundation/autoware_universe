@@ -69,8 +69,8 @@ std::string failure_reason_to_string(
       return "Waiting for next pose";
     case UpdateFailureReason::TimeDifferenceTooLarge:
       return fmt::format(
-        "Time difference is too large, time_diff: {:.3f}, threshold: {:.3f}",
-        context.time_diff, context.time_diff_threshold);
+        "Time difference is too large, time_diff: {:.3f}, threshold: {:.3f}", context.time_diff,
+        context.time_diff_threshold);
     case UpdateFailureReason::VelocityReportTimestampMismatch:
       return fmt::format(
         "Velocity report timestamp mismatch, stamp_diff: {:.3f}, threshold: {:.3f}",

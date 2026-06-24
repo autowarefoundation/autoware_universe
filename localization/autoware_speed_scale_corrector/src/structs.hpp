@@ -30,8 +30,7 @@ struct SpeedScaleEstimatorParameters
   double min_speed{};
 };
 
-enum class UpdateFailureReason
-{
+enum class UpdateFailureReason {
   PoseEmpty,
   ImuEmpty,
   VelocityReportEmpty,

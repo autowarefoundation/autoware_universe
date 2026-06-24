@@ -14,11 +14,13 @@
 
 #include "speed_scale_corrector_processor.hpp"
 
+#include <rclcpp/rclcpp.hpp>
+
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <gtest/gtest.h>
-#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
+
+#include <gtest/gtest.h>
 
 #include <memory>
 #include <string>
@@ -48,8 +50,7 @@ protected:
   {
     auto msg = std::make_shared<PoseStamped>();
     msg->header.stamp.sec = static_cast<int32_t>(sec);
-    msg->header.stamp.nanosec =
-      static_cast<uint32_t>((sec - msg->header.stamp.sec) * 1e9);
+    msg->header.stamp.nanosec = static_cast<uint32_t>((sec - msg->header.stamp.sec) * 1e9);
     msg->pose.position.x = x;
     msg->pose.position.y = y;
     msg->pose.position.z = 0.0;
@@ -60,8 +61,7 @@ protected:
   {
     auto msg = std::make_shared<VelocityReport>();
     msg->header.stamp.sec = static_cast<int32_t>(sec);
-    msg->header.stamp.nanosec =
-      static_cast<uint32_t>((sec - msg->header.stamp.sec) * 1e9);
+    msg->header.stamp.nanosec = static_cast<uint32_t>((sec - msg->header.stamp.sec) * 1e9);
     msg->longitudinal_velocity = static_cast<float>(velocity);
     return msg;
   }
@@ -70,8 +70,7 @@ protected:
   {
     auto msg = std::make_shared<Imu>();
     msg->header.stamp.sec = static_cast<int32_t>(sec);
-    msg->header.stamp.nanosec =
-      static_cast<uint32_t>((sec - msg->header.stamp.sec) * 1e9);
+    msg->header.stamp.nanosec = static_cast<uint32_t>((sec - msg->header.stamp.sec) * 1e9);
     msg->angular_velocity.z = angular_velocity_z;
     return msg;
   }
@@ -98,8 +97,8 @@ TEST_F(SpeedScaleCorrectorProcessorTest, MakeDebugInfoContainsFailureReason)
 {
   SpeedScaleCorrectorProcessResult result;
   result.updated = false;
-  result.estimation_result = tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
-    UpdateFailureReason::PoseEmpty, {}, 1.0});
+  result.estimation_result =
+    tl::make_unexpected(SpeedScaleEstimatorNotUpdated{UpdateFailureReason::PoseEmpty, {}, 1.0});
 
   const auto debug_info = processor_->make_debug_info(result, rclcpp::Time(1, 0));
 
