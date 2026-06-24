@@ -64,6 +64,9 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
   if (path->points.size() <= 2) {
     return true;
   }
+  if (!predicted_obj_arr_ptr) {
+    return true;
+  }
   // Reset data
   debug_data_ = no_stopping_area::DebugData();
   debug_data_.base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
