@@ -17,12 +17,9 @@
 
 #include "tl_expected/expected.hpp"
 
-#include <rclcpp/rclcpp.hpp>
+#include <autoware/speed_scale_corrector/types.hpp>
 
-#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
-#include <sensor_msgs/msg/imu.hpp>
-
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -31,10 +28,6 @@
  */
 namespace autoware::speed_scale_corrector
 {
-
-using autoware_vehicle_msgs::msg::VelocityReport;
-using geometry_msgs::msg::PoseStamped;
-using sensor_msgs::msg::Imu;
 
 /**
  * @brief Parameters for speed scale estimator
@@ -49,8 +42,6 @@ struct SpeedScaleEstimatorParameters
   double max_angular_velocity{};                   //!< Maximum angular velocity constraint [rad/s]
   double max_speed{};                              //!< Maximum speed constraint [m/s]
   double min_speed{};                              //!< Minimum speed constraint [m/s]
-
-  static SpeedScaleEstimatorParameters load_parameters(rclcpp::Node * node);
 };
 
 /**
@@ -85,36 +76,19 @@ struct SpeedScaleEstimatorNotUpdated
 class SpeedScaleEstimator
 {
 public:
-  /**
-   * @brief Constructor
-   * @param parameters Estimation parameters
-   */
   explicit SpeedScaleEstimator(const SpeedScaleEstimatorParameters & parameters);
 
-  /**
-   * @brief Get update interval
-   * @return Update interval duration
-   */
-  [[nodiscard]] rclcpp::Duration get_update_interval() const;
+  [[nodiscard]] double get_update_interval_sec() const;
 
-  /**
-   * @brief Update speed scale estimation
-   * @param poses Pose information from odometry
-   * @param imus IMU sensor data
-   * @param velocity_reports Vehicle velocity reports
-   * @return Expected result containing either updated estimation or error information
-   */
   tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> update(
-    const std::vector<PoseStamped> & poses, const std::vector<Imu> & imus,
-    const std::vector<VelocityReport> & velocity_reports);
+    const std::vector<TimestampedPose> & poses, const std::vector<TimestampedImu> & imus,
+    const std::vector<TimestampedVelocity> & velocity_reports);
 
 private:
-  SpeedScaleEstimatorParameters parameters_;  //!< Estimation parameters
-
-  std::optional<PoseStamped> previous_pose_;  //!< Previous pose for velocity calculation
-
-  double estimated_speed_scale_factor_ = 1.0;  //!< Current estimated scale factor (state x)
-  double covariance_ = 1.0;                    //!< State covariance (P)
+  SpeedScaleEstimatorParameters parameters_;
+  std::optional<TimestampedPose> previous_pose_;
+  double estimated_speed_scale_factor_ = 1.0;
+  double covariance_ = 1.0;
 };
 
 }  // namespace autoware::speed_scale_corrector

@@ -18,27 +18,12 @@
 
 #include <fmt/format.h>
 
+#include <cmath>
 #include <string>
 #include <vector>
 
 namespace autoware::speed_scale_corrector
 {
-SpeedScaleEstimatorParameters SpeedScaleEstimatorParameters::load_parameters(rclcpp::Node * node)
-{
-  SpeedScaleEstimatorParameters parameters;
-  parameters.update_interval = node->declare_parameter<double>("update_interval");
-  parameters.initial_speed_scale_factor =
-    node->declare_parameter<double>("initial_speed_scale_factor");
-  parameters.initial_speed_scale_factor_covariance =
-    node->declare_parameter<double>("initial_speed_scale_factor_covariance");
-  parameters.process_noise_covariance = node->declare_parameter<double>("process_noise_covariance");
-  parameters.measurement_noise_covariance =
-    node->declare_parameter<double>("measurement_noise_covariance");
-  parameters.max_angular_velocity = node->declare_parameter<double>("max_angular_velocity");
-  parameters.max_speed = node->declare_parameter<double>("max_speed");
-  parameters.min_speed = node->declare_parameter<double>("min_speed");
-  return parameters;
-}
 
 SpeedScaleEstimator::SpeedScaleEstimator(const SpeedScaleEstimatorParameters & parameters)
 : parameters_(parameters),
@@ -47,16 +32,15 @@ SpeedScaleEstimator::SpeedScaleEstimator(const SpeedScaleEstimatorParameters & p
 {
 }
 
-rclcpp::Duration SpeedScaleEstimator::get_update_interval() const
+double SpeedScaleEstimator::get_update_interval_sec() const
 {
-  return std::chrono::duration<double>(parameters_.update_interval);
+  return parameters_.update_interval;
 }
 
 tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedScaleEstimator::update(
-  const std::vector<PoseStamped> & poses, const std::vector<Imu> & imus,
-  const std::vector<VelocityReport> & velocity_reports)
+  const std::vector<TimestampedPose> & poses, const std::vector<TimestampedImu> & imus,
+  const std::vector<TimestampedVelocity> & velocity_reports)
 {
-  // Check if input data is available
   if (poses.empty()) {
     return tl::make_unexpected(
       SpeedScaleEstimatorNotUpdated{"Pose is empty", estimated_speed_scale_factor_});
@@ -72,18 +56,16 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
       SpeedScaleEstimatorNotUpdated{"Velocity report is empty", estimated_speed_scale_factor_});
   }
 
-  // Need previous pose to calculate velocity
+  const auto & pose_curr = poses.back();
+
   if (!previous_pose_) {
-    previous_pose_ = poses.back();
+    previous_pose_ = pose_curr;
     return tl::make_unexpected(
       SpeedScaleEstimatorNotUpdated{"Waiting for next pose", estimated_speed_scale_factor_});
   }
 
-  // Get the current and previous poses
-  const auto & pose_curr = poses.back();
   const auto & pose_prev = previous_pose_.value();
 
-  // Check time difference
   const double time_diff = calc_time_diff(pose_prev, pose_curr);
   if (time_diff >= parameters_.update_interval * 2.0) {
     previous_pose_ = pose_curr;
@@ -95,13 +77,10 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
         estimated_speed_scale_factor_});
   }
 
-  // Calculate odometry velocity from pose difference
   const double v_odometry = calc_odometry_velocity(pose_prev, pose_curr);
 
-  const rclcpp::Time pose_time(pose_curr.header.stamp);
-
-  // Get velocity from the nearest velocity report to the current pose timestamp
-  const auto nearest_velocity_report = find_nearest_velocity_report(velocity_reports, pose_time);
+  const auto nearest_velocity_report =
+    find_nearest_velocity_report(velocity_reports, pose_curr.time_sec);
   if (!nearest_velocity_report) {
     return tl::make_unexpected(
       SpeedScaleEstimatorNotUpdated{"Velocity report is empty", estimated_speed_scale_factor_});
@@ -118,8 +97,7 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
 
   const double v_report = nearest_velocity_report->longitudinal_velocity;
 
-  // Check angular velocity constraint using IMU
-  const auto nearest_imu = find_nearest_imu(imus, pose_time);
+  const auto nearest_imu = find_nearest_imu(imus, pose_curr.time_sec);
   if (!nearest_imu) {
     return tl::make_unexpected(
       SpeedScaleEstimatorNotUpdated{"IMU is empty", estimated_speed_scale_factor_});
@@ -170,23 +148,11 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
         estimated_speed_scale_factor_});
   }
 
-  // Observation model: z = estimated_speed_scale_factor * v_report
-  // Observation: z = v_odometry
   const double z = v_odometry;
 
-  // Kalman Filter: Prediction Step
-  // x_pred(k) = x(k-1)
-  // P_pred(k) = P(k-1) + Q
   const double x_pred = estimated_speed_scale_factor_;
   const double P_pred = covariance_ + parameters_.process_noise_covariance;  // NOLINT
 
-  // Kalman Filter: Update Step
-  // Observation matrix: H = v_report
-  // Innovation: y = z - H * x_pred = v_odometry - v_report * x_pred
-  // Innovation covariance: S = H * P_pred * H + R = v_report^2 * P_pred + R
-  // Kalman gain: K = P_pred * H / S = (P_pred * v_report) / (v_report^2 * P_pred + R)
-  // State update: x(k) = x_pred + K * y
-  // Covariance update: P(k) = (1 - K * H) * P_pred = (1 - K * v_report) * P_pred
   const double H = v_report;  // NOLINT
   const double innovation = z - H * x_pred;
   const double S = H * H * P_pred + parameters_.measurement_noise_covariance;  // NOLINT
@@ -195,7 +161,6 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   estimated_speed_scale_factor_ = x_pred + K * innovation;
   covariance_ = (1.0 - K * H) * P_pred;
 
-  // Update previous pose for next iteration
   previous_pose_ = pose_curr;
 
   SpeedScaleEstimatorUpdated result;

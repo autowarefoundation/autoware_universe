@@ -16,6 +16,8 @@
 
 #include "speed_scale_estimator.hpp"
 
+#include <autoware/speed_scale_corrector/types.hpp>
+
 #include <fmt/format.h>
 
 #include <cmath>
@@ -24,28 +26,76 @@
 
 namespace autoware::speed_scale_corrector
 {
+namespace
+{
+
+SpeedScaleEstimatorParameters load_parameters(rclcpp::Node * node)
+{
+  SpeedScaleEstimatorParameters parameters;
+  parameters.update_interval = node->declare_parameter<double>("update_interval");
+  parameters.initial_speed_scale_factor =
+    node->declare_parameter<double>("initial_speed_scale_factor");
+  parameters.initial_speed_scale_factor_covariance =
+    node->declare_parameter<double>("initial_speed_scale_factor_covariance");
+  parameters.process_noise_covariance = node->declare_parameter<double>("process_noise_covariance");
+  parameters.measurement_noise_covariance =
+    node->declare_parameter<double>("measurement_noise_covariance");
+  parameters.max_angular_velocity = node->declare_parameter<double>("max_angular_velocity");
+  parameters.max_speed = node->declare_parameter<double>("max_speed");
+  parameters.min_speed = node->declare_parameter<double>("min_speed");
+  return parameters;
+}
+
+TimestampedPose to_domain(const PoseStamped & pose)
+{
+  return {
+    rclcpp::Time(pose.header.stamp).seconds(), pose.pose.position.x, pose.pose.position.y,
+    pose.pose.position.z};
+}
+
+std::vector<TimestampedImu> to_domain_imus(const std::vector<Imu> & imus)
+{
+  std::vector<TimestampedImu> domain_imus;
+  domain_imus.reserve(imus.size());
+  for (const auto & imu : imus) {
+    domain_imus.push_back(
+      {rclcpp::Time(imu.header.stamp).seconds(), imu.angular_velocity.z});
+  }
+  return domain_imus;
+}
+
+std::vector<TimestampedVelocity> to_domain_velocities(
+  const std::vector<VelocityReport> & velocity_reports)
+{
+  std::vector<TimestampedVelocity> domain_velocities;
+  domain_velocities.reserve(velocity_reports.size());
+  for (const auto & velocity_report : velocity_reports) {
+    domain_velocities.push_back(
+      {rclcpp::Time(velocity_report.header.stamp).seconds(),
+       velocity_report.longitudinal_velocity});
+  }
+  return domain_velocities;
+}
+
+}  // namespace
 
 SpeedScaleCorrectorNode::SpeedScaleCorrectorNode(const rclcpp::NodeOptions & node_options)
-: Node("speed_scale_corrector", node_options),
-  speed_scale_estimator_(SpeedScaleEstimatorParameters::load_parameters(this))
+: Node("speed_scale_corrector", node_options), speed_scale_estimator_(load_parameters(this))
 {
   using std::placeholders::_1;
 
-  // Publishers
   pub_estimated_speed_scale_factor_ = create_publisher<Float32Stamped>("~/output/scale_factor", 1);
 
-  // Subscriber
   sub_pose_ = PollingSubscriber<PoseStamped, All>::create_subscription(this, "~/input/pose", 1);
   sub_velocity_report_ =
     PollingSubscriber<VelocityReport, All>::create_subscription(this, "~/input/velocity_report", 1);
   sub_imu_ = PollingSubscriber<Imu, All>::create_subscription(this, "~/input/imu", 1);
 
-  // Debug Publishers
   pub_debug_info_ = create_publisher<StringStamped>("~/output/debug_info", 1);
 
-  // Timer
   timer_ = rclcpp::create_timer(
-    this, get_clock(), speed_scale_estimator_.get_update_interval(),
+    this, get_clock(),
+    std::chrono::duration<double>(speed_scale_estimator_.get_update_interval_sec()),
     std::bind(&SpeedScaleCorrectorNode::on_timer, this));
 }
 
@@ -68,7 +118,14 @@ void SpeedScaleCorrectorNode::on_timer()
     imu_ptrs.begin(), imu_ptrs.end(), imus.begin(),
     [](const Imu::ConstSharedPtr & ptr) { return *ptr; });
 
-  auto result = speed_scale_estimator_.update(poses, imus, velocity_reports);
+  std::vector<TimestampedPose> domain_poses;
+  domain_poses.reserve(poses.size());
+  for (const auto & pose : poses) {
+    domain_poses.push_back(to_domain(pose));
+  }
+
+  auto result = speed_scale_estimator_.update(
+    domain_poses, to_domain_imus(imus), to_domain_velocities(velocity_reports));
   StringStamped debug_info;
   debug_info.stamp = get_clock()->now();
   if (!result) {
