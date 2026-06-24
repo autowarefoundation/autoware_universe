@@ -16,6 +16,8 @@
 
 #include "utils.hpp"
 
+#include <rclcpp/rclcpp.hpp>
+
 #include <cmath>
 #include <vector>
 
@@ -35,8 +37,8 @@ double SpeedScaleEstimator::get_update_interval_sec() const
 }
 
 tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedScaleEstimator::update(
-  const std::vector<TimestampedPose> & poses, const std::vector<TimestampedImu> & imus,
-  const std::vector<TimestampedVelocity> & velocity_reports)
+  const std::vector<PoseStamped> & poses, const std::vector<Imu> & imus,
+  const std::vector<VelocityReport> & velocity_reports)
 {
   if (poses.empty()) {
     return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
@@ -75,8 +77,9 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
 
   const double v_odometry = calc_odometry_velocity(pose_prev, pose_curr);
 
-  const auto nearest_velocity_report =
-    find_nearest_velocity_report(velocity_reports, pose_curr.time_sec);
+  const rclcpp::Time pose_time(pose_curr.header.stamp);
+
+  const auto nearest_velocity_report = find_nearest_velocity_report(velocity_reports, pose_time);
   if (!nearest_velocity_report) {
     return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
       UpdateFailureReason::VelocityReportEmpty, {}, estimated_speed_scale_factor_});
@@ -93,7 +96,7 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
 
   const double v_report = nearest_velocity_report->longitudinal_velocity;
 
-  const auto nearest_imu = find_nearest_imu(imus, pose_curr.time_sec);
+  const auto nearest_imu = find_nearest_imu(imus, pose_time);
   if (!nearest_imu) {
     return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
       UpdateFailureReason::ImuEmpty, {}, estimated_speed_scale_factor_});

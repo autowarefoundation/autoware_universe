@@ -14,8 +14,6 @@
 
 #include "speed_scale_corrector_processor.hpp"
 
-#include <autoware/speed_scale_corrector/types.hpp>
-
 #include <fmt/format.h>
 
 #include <cmath>
@@ -26,36 +24,35 @@ namespace autoware::speed_scale_corrector
 namespace
 {
 
-TimestampedPose to_domain(const PoseStamped & pose)
+std::vector<PoseStamped> to_messages(const std::vector<PoseStamped::ConstSharedPtr> & pose_ptrs)
 {
-  return {
-    rclcpp::Time(pose.header.stamp).seconds(), pose.pose.position.x, pose.pose.position.y,
-    pose.pose.position.z};
-}
-
-std::vector<TimestampedImu> to_domain_imus(
-  const std::vector<Imu::ConstSharedPtr> & imu_ptrs)
-{
-  std::vector<TimestampedImu> domain_imus;
-  domain_imus.reserve(imu_ptrs.size());
-  for (const auto & imu_ptr : imu_ptrs) {
-    domain_imus.push_back(
-      {rclcpp::Time(imu_ptr->header.stamp).seconds(), imu_ptr->angular_velocity.z});
+  std::vector<PoseStamped> poses;
+  poses.reserve(pose_ptrs.size());
+  for (const auto & pose_ptr : pose_ptrs) {
+    poses.push_back(*pose_ptr);
   }
-  return domain_imus;
+  return poses;
 }
 
-std::vector<TimestampedVelocity> to_domain_velocities(
+std::vector<Imu> to_messages(const std::vector<Imu::ConstSharedPtr> & imu_ptrs)
+{
+  std::vector<Imu> imus;
+  imus.reserve(imu_ptrs.size());
+  for (const auto & imu_ptr : imu_ptrs) {
+    imus.push_back(*imu_ptr);
+  }
+  return imus;
+}
+
+std::vector<VelocityReport> to_messages(
   const std::vector<VelocityReport::ConstSharedPtr> & velocity_report_ptrs)
 {
-  std::vector<TimestampedVelocity> domain_velocities;
-  domain_velocities.reserve(velocity_report_ptrs.size());
+  std::vector<VelocityReport> velocity_reports;
+  velocity_reports.reserve(velocity_report_ptrs.size());
   for (const auto & velocity_report_ptr : velocity_report_ptrs) {
-    domain_velocities.push_back(
-      {rclcpp::Time(velocity_report_ptr->header.stamp).seconds(),
-       velocity_report_ptr->longitudinal_velocity});
+    velocity_reports.push_back(*velocity_report_ptr);
   }
-  return domain_velocities;
+  return velocity_reports;
 }
 
 std::string failure_reason_to_string(
@@ -119,15 +116,9 @@ SpeedScaleCorrectorProcessResult SpeedScaleCorrectorProcessor::process(
   const std::vector<Imu::ConstSharedPtr> & imu_ptrs,
   const std::vector<VelocityReport::ConstSharedPtr> & velocity_report_ptrs)
 {
-  std::vector<TimestampedPose> domain_poses;
-  domain_poses.reserve(pose_ptrs.size());
-  for (const auto & pose_ptr : pose_ptrs) {
-    domain_poses.push_back(to_domain(*pose_ptr));
-  }
-
   SpeedScaleCorrectorProcessResult result;
   result.estimation_result = speed_scale_estimator_.update(
-    domain_poses, to_domain_imus(imu_ptrs), to_domain_velocities(velocity_report_ptrs));
+    to_messages(pose_ptrs), to_messages(imu_ptrs), to_messages(velocity_report_ptrs));
   result.updated = result.estimation_result.has_value();
   return result;
 }

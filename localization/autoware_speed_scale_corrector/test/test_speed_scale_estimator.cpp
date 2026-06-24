@@ -14,8 +14,10 @@
 
 #include "speed_scale_estimator.hpp"
 
-#include <autoware/speed_scale_corrector/types.hpp>
+#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <gtest/gtest.h>
+#include <sensor_msgs/msg/imu.hpp>
 
 #include <memory>
 #include <vector>
@@ -40,19 +42,35 @@ protected:
     estimator_ = std::make_unique<SpeedScaleEstimator>(parameters_);
   }
 
-  static TimestampedPose create_pose(double sec, double x, double y)
+  static PoseStamped create_pose_msg(double sec, double x, double y)
   {
-    return {sec, x, y, 0.0};
+    PoseStamped pose;
+    pose.header.stamp.sec = static_cast<int32_t>(sec);
+    pose.header.stamp.nanosec = static_cast<uint32_t>((sec - pose.header.stamp.sec) * 1e9);
+    pose.pose.position.x = x;
+    pose.pose.position.y = y;
+    pose.pose.position.z = 0.0;
+    return pose;
   }
 
-  static TimestampedVelocity create_velocity(double sec, double velocity)
+  static VelocityReport create_velocity_msg(double sec, double velocity)
   {
-    return {sec, velocity};
+    VelocityReport msg;
+    msg.header.stamp.sec = static_cast<int32_t>(sec);
+    msg.header.stamp.nanosec = static_cast<uint32_t>((sec - msg.header.stamp.sec) * 1e9);
+    msg.longitudinal_velocity = static_cast<float>(velocity);
+    return msg;
   }
 
-  static TimestampedImu create_imu(double sec, double angular_velocity_z)
+  static Imu create_imu_msg(double sec, double angular_velocity_z)
   {
-    return {sec, angular_velocity_z};
+    Imu msg;
+    msg.header.stamp.sec = static_cast<int32_t>(sec);
+    msg.header.stamp.nanosec = static_cast<uint32_t>((sec - msg.header.stamp.sec) * 1e9);
+    msg.angular_velocity.x = 0.0;
+    msg.angular_velocity.y = 0.0;
+    msg.angular_velocity.z = angular_velocity_z;
+    return msg;
   }
 
   SpeedScaleEstimatorParameters parameters_;
@@ -65,9 +83,9 @@ TEST_F(SpeedScaleEstimatorTest, EstimationBehaviorTest)
   double estimated_speed_scale_factor = 0.0;
 
   for (double t = 0.0; t <= 30.0; t += 0.1) {
-    std::vector<TimestampedPose> poses = {create_pose(t, 10.0 * t, 0.0)};
-    std::vector<TimestampedVelocity> velocity_reports = {create_velocity(t, 5.0)};
-    std::vector<TimestampedImu> imus = {create_imu(t, 0.005)};
+    std::vector<PoseStamped> poses = {create_pose_msg(t, 10.0 * t, 0.0)};
+    std::vector<VelocityReport> velocity_reports = {create_velocity_msg(t, 5.0)};
+    std::vector<Imu> imus = {create_imu_msg(t, 0.005)};
     auto result = estimator_->update(poses, imus, velocity_reports);
 
     if (result) {
@@ -82,9 +100,9 @@ TEST_F(SpeedScaleEstimatorTest, EstimationBehaviorTest)
 
 TEST_F(SpeedScaleEstimatorTest, InsufficientPoses)
 {
-  std::vector<TimestampedPose> poses = {create_pose(1.0, 0.0, 0.0)};
-  std::vector<TimestampedVelocity> velocity_reports = {create_velocity(1.0, 5.0)};
-  std::vector<TimestampedImu> imus = {create_imu(1.0, 0.1)};
+  std::vector<PoseStamped> poses = {create_pose_msg(1.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(1.0, 5.0)};
+  std::vector<Imu> imus = {create_imu_msg(1.0, 0.1)};
 
   auto result = estimator_->update(poses, imus, velocity_reports);
   EXPECT_FALSE(result);
@@ -93,14 +111,14 @@ TEST_F(SpeedScaleEstimatorTest, InsufficientPoses)
 
 TEST_F(SpeedScaleEstimatorTest, AngularVelocityConstraintViolation)
 {
-  std::vector<TimestampedPose> poses_t0 = {create_pose(0.0, 0.0, 0.0)};
-  std::vector<TimestampedVelocity> velocity_reports_t0 = {create_velocity(0.0, 5.0)};
-  std::vector<TimestampedImu> imus_t0 = {create_imu(0.0, 0.0)};
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
   (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
 
-  std::vector<TimestampedPose> poses = {create_pose(0.1, 0.5, 0.0)};
-  std::vector<TimestampedVelocity> velocity_reports = {create_velocity(0.1, 5.0)};
-  std::vector<TimestampedImu> imus = {create_imu(0.1, 0.05)};
+  std::vector<PoseStamped> poses = {create_pose_msg(0.1, 0.5, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.1, 5.0)};
+  std::vector<Imu> imus = {create_imu_msg(0.1, 0.05)};
 
   const auto result = estimator_->update(poses, imus, velocity_reports);
 
@@ -110,14 +128,14 @@ TEST_F(SpeedScaleEstimatorTest, AngularVelocityConstraintViolation)
 
 TEST_F(SpeedScaleEstimatorTest, SpeedConstraintViolation)
 {
-  std::vector<TimestampedPose> poses_t0 = {create_pose(0.0, 0.0, 0.0)};
-  std::vector<TimestampedVelocity> velocity_reports_t0 = {create_velocity(0.0, 5.0)};
-  std::vector<TimestampedImu> imus_t0 = {create_imu(0.0, 0.0)};
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
   (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
 
-  std::vector<TimestampedPose> poses = {create_pose(0.1, 0.1, 0.0)};
-  std::vector<TimestampedVelocity> velocity_reports = {create_velocity(0.1, 1.0)};
-  std::vector<TimestampedImu> imus = {create_imu(0.1, 0.005)};
+  std::vector<PoseStamped> poses = {create_pose_msg(0.1, 0.1, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.1, 1.0)};
+  std::vector<Imu> imus = {create_imu_msg(0.1, 0.005)};
 
   const auto result = estimator_->update(poses, imus, velocity_reports);
 
@@ -127,14 +145,14 @@ TEST_F(SpeedScaleEstimatorTest, SpeedConstraintViolation)
 
 TEST_F(SpeedScaleEstimatorTest, VelocityReportTimestampMismatch)
 {
-  std::vector<TimestampedPose> poses_t0 = {create_pose(0.0, 0.0, 0.0)};
-  std::vector<TimestampedVelocity> velocity_reports_t0 = {create_velocity(0.0, 5.0)};
-  std::vector<TimestampedImu> imus_t0 = {create_imu(0.0, 0.0)};
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
   (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
 
-  std::vector<TimestampedPose> poses = {create_pose(0.1, 1.0, 0.0)};
-  std::vector<TimestampedVelocity> velocity_reports = {create_velocity(0.5, 5.0)};
-  std::vector<TimestampedImu> imus = {create_imu(0.1, 0.0)};
+  std::vector<PoseStamped> poses = {create_pose_msg(0.1, 1.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.5, 5.0)};
+  std::vector<Imu> imus = {create_imu_msg(0.1, 0.0)};
 
   const auto result = estimator_->update(poses, imus, velocity_reports);
 
@@ -144,9 +162,9 @@ TEST_F(SpeedScaleEstimatorTest, VelocityReportTimestampMismatch)
 
 TEST_F(SpeedScaleEstimatorTest, EmptyDataHandling)
 {
-  std::vector<TimestampedPose> poses = {create_pose(1.0, 0.0, 0.0)};
-  std::vector<TimestampedVelocity> empty_velocity;
-  std::vector<TimestampedImu> empty_imu;
+  std::vector<PoseStamped> poses = {create_pose_msg(1.0, 0.0, 0.0)};
+  std::vector<VelocityReport> empty_velocity;
+  std::vector<Imu> empty_imu;
 
   auto result = estimator_->update(poses, empty_imu, empty_velocity);
   EXPECT_FALSE(result);

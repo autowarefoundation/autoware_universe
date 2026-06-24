@@ -15,13 +15,19 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
-#include <autoware/speed_scale_corrector/types.hpp>
+#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 
 #include <optional>
 #include <vector>
 
 namespace autoware::speed_scale_corrector
 {
+using autoware_vehicle_msgs::msg::VelocityReport;
+using geometry_msgs::msg::PoseStamped;
+using sensor_msgs::msg::Imu;
 
 /**
  * @brief Nearest IMU sample to a target timestamp
@@ -41,44 +47,15 @@ struct NearestVelocityReportSample
   double stamp_diff{};             //!< Absolute time difference from target [s]
 };
 
-/**
- * @brief Calculate time difference between two poses
- *
- * @param pose_a First pose (earlier timestamp)
- * @param pose_b Second pose (later timestamp)
- * @return Time difference in seconds
- */
-[[nodiscard]] double calc_time_diff(const TimestampedPose & pose_a, const TimestampedPose & pose_b);
+[[nodiscard]] double calc_time_diff(const PoseStamped & pose_a, const PoseStamped & pose_b);
 
-/**
- * @brief Calculate odometry velocity from pose difference
- *
- * @param pose_a First pose (earlier timestamp)
- * @param pose_b Second pose (later timestamp)
- * @return Magnitude of linear velocity [m/s]
- */
-[[nodiscard]] double calc_odometry_velocity(
-  const TimestampedPose & pose_a, const TimestampedPose & pose_b);
+[[nodiscard]] double calc_odometry_velocity(const PoseStamped & pose_a, const PoseStamped & pose_b);
 
-/**
- * @brief Find the IMU sample nearest to the target timestamp
- *
- * @param imus IMU samples (must not be empty)
- * @param target_time_sec Target timestamp [s]
- * @return Nearest IMU sample, or std::nullopt if imus is empty
- */
 [[nodiscard]] std::optional<NearestImuSample> find_nearest_imu(
-  const std::vector<TimestampedImu> & imus, double target_time_sec);
+  const std::vector<Imu> & imus, const rclcpp::Time & target_time);
 
-/**
- * @brief Find the velocity report nearest to the target timestamp
- *
- * @param velocity_reports Velocity samples (must not be empty)
- * @param target_time_sec Target timestamp [s]
- * @return Nearest velocity report sample, or std::nullopt if velocity_reports is empty
- */
 [[nodiscard]] std::optional<NearestVelocityReportSample> find_nearest_velocity_report(
-  const std::vector<TimestampedVelocity> & velocity_reports, double target_time_sec);
+  const std::vector<VelocityReport> & velocity_reports, const rclcpp::Time & target_time);
 
 }  // namespace autoware::speed_scale_corrector
 
