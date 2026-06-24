@@ -21,8 +21,8 @@
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_control_msgs/msg/constant_jerk_deceleration_trigger.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <tier4_control_msgs/msg/constant_jerk_deceleration_trigger.hpp>
 #include <tier4_system_msgs/srv/change_topic_relay_control.hpp>
 
 namespace autoware::command_mode_switcher
@@ -47,7 +47,8 @@ public:
 private:
   void publish_constant_jerk_deceleration_trigger(bool turn_on);
   void request_topic_relay_control(
-    bool relay_on, rclcpp::Client<tier4_system_msgs::srv::ChangeTopicRelayControl>::SharedPtr client,
+    bool relay_on,
+    rclcpp::Client<tier4_system_msgs::srv::ChangeTopicRelayControl>::SharedPtr client,
     const std::string & srv_name);
   bool is_stopped();
 
