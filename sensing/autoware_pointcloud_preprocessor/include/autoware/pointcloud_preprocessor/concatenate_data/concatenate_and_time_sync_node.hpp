@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 // ROS includes
@@ -29,7 +30,9 @@
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <managed_transform_buffer/managed_transform_buffer.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
@@ -63,7 +66,7 @@ public:
   ~PointCloudConcatenateDataSynchronizerComponentTemplated() override = default;
 
   void publish_clouds(
-    ConcatenatedCloudResult<MsgTraits> && concatenated_cloud_result,
+    ConcatenatedCloudResult<typename MsgTraits::PointCloudMessage> && concatenated_cloud_result,
     std::shared_ptr<CollectorInfoBase> collector_info);
 
   void manage_collector_list();
@@ -107,9 +110,11 @@ private:
     double pipeline_latency{0.0};
   };
 
-  std::shared_ptr<CombineCloudHandler<MsgTraits>> combine_cloud_handler_;
+  std::shared_ptr<CombineCloudHandler<typename MsgTraits::PointCloudMessage>> combine_cloud_handler_;
   std::list<std::shared_ptr<CloudCollector<MsgTraits>>> cloud_collectors_;
   std::unique_ptr<CollectorMatcher<MsgTraits>> collector_matcher_;
+  std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_;
+  std::unordered_set<std::string> frames_with_loaded_transform_;
 
   bool init_collector_list_{false};
   static constexpr const int num_of_collectors{3};
