@@ -5,10 +5,20 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
-  DIRECTORY src
+  src/speed_scale_estimator.cpp
+  src/utils.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
+ament_auto_add_library(${PROJECT_NAME}_ros SHARED
+  src/speed_scale_corrector_processor.cpp
+  src/node.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}_ros
+  ${PROJECT_NAME}
+)
+
+rclcpp_components_register_node(${PROJECT_NAME}_ros
   PLUGIN "autoware::speed_scale_corrector::SpeedScaleCorrectorNode"
   EXECUTABLE speed_scale_corrector_node
 )
@@ -23,9 +33,18 @@ if(BUILD_TESTING)
   target_include_directories(test_autoware_speed_scale_corrector PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
   target_link_libraries(test_autoware_speed_scale_corrector ${PROJECT_NAME})
   ament_target_dependencies(test_autoware_speed_scale_corrector ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS})
+
+  ament_add_gtest(test_autoware_speed_scale_corrector_processor
+    test/test_speed_scale_corrector_processor.cpp
+  )
+  target_include_directories(
+    test_autoware_speed_scale_corrector_processor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_link_libraries(
+    test_autoware_speed_scale_corrector_processor ${PROJECT_NAME} ${PROJECT_NAME}_ros)
+  ament_target_dependencies(
+    test_autoware_speed_scale_corrector_processor ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS})
 endif()
 
-# Install launch files
 ament_auto_package(
   INSTALL_TO_SHARE
   launch
