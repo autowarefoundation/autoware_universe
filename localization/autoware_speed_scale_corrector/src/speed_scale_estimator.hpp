@@ -20,7 +20,6 @@
 #include <autoware/speed_scale_corrector/types.hpp>
 
 #include <optional>
-#include <string>
 #include <vector>
 
 /**
@@ -45,6 +44,39 @@ struct SpeedScaleEstimatorParameters
 };
 
 /**
+ * @brief Reason why estimation was not updated
+ */
+enum class UpdateFailureReason
+{
+  PoseEmpty,
+  ImuEmpty,
+  VelocityReportEmpty,
+  WaitingForNextPose,
+  TimeDifferenceTooLarge,
+  VelocityReportTimestampMismatch,
+  ImuTimestampMismatch,
+  AngularVelocityTooHigh,
+  VelocityTooHigh,
+  VelocityTooLow,
+  VelocityReportTooSmall,
+};
+
+/**
+ * @brief Context for update failure diagnostics
+ */
+struct UpdateFailureContext
+{
+  double time_diff = 0.0;
+  double time_diff_threshold = 0.0;
+  double stamp_diff = 0.0;
+  double stamp_diff_threshold = 0.0;
+  double angular_velocity = 0.0;
+  double max_angular_velocity = 0.0;
+  double velocity = 0.0;
+  double velocity_threshold = 0.0;
+};
+
+/**
  * @brief Result when estimation is successfully updated
  */
 struct SpeedScaleEstimatorUpdated
@@ -62,16 +94,13 @@ struct SpeedScaleEstimatorUpdated
  */
 struct SpeedScaleEstimatorNotUpdated
 {
-  std::string reason;                        //!< Reason for not updating
-  double last_estimated_speed_scale_factor;  //!< Previous estimated speed scale factor
+  UpdateFailureReason reason{};                //!< Reason for not updating
+  UpdateFailureContext context{};              //!< Diagnostic context
+  double last_estimated_speed_scale_factor{};  //!< Previous estimated speed scale factor
 };
 
 /**
  * @brief Speed scale estimator class
- *
- * Estimates speed scale factors by comparing odometry velocity with velocity
- * report measurements using a Kalman filter. The estimation is performed only
- * when all operational constraints are satisfied.
  */
 class SpeedScaleEstimator
 {

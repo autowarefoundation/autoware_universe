@@ -16,10 +16,7 @@
 
 #include "utils.hpp"
 
-#include <fmt/format.h>
-
 #include <cmath>
-#include <string>
 #include <vector>
 
 namespace autoware::speed_scale_corrector
@@ -42,26 +39,26 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   const std::vector<TimestampedVelocity> & velocity_reports)
 {
   if (poses.empty()) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{"Pose is empty", estimated_speed_scale_factor_});
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::PoseEmpty, {}, estimated_speed_scale_factor_});
   }
 
   if (imus.empty()) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{"IMU is empty", estimated_speed_scale_factor_});
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::ImuEmpty, {}, estimated_speed_scale_factor_});
   }
 
   if (velocity_reports.empty()) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{"Velocity report is empty", estimated_speed_scale_factor_});
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::VelocityReportEmpty, {}, estimated_speed_scale_factor_});
   }
 
   const auto & pose_curr = poses.back();
 
   if (!previous_pose_) {
     previous_pose_ = pose_curr;
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{"Waiting for next pose", estimated_speed_scale_factor_});
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::WaitingForNextPose, {}, estimated_speed_scale_factor_});
   }
 
   const auto & pose_prev = previous_pose_.value();
@@ -69,12 +66,11 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   const double time_diff = calc_time_diff(pose_prev, pose_curr);
   if (time_diff >= parameters_.update_interval * 2.0) {
     previous_pose_ = pose_curr;
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{
-        fmt::format(
-          "Time difference is too large, time_diff: {:.3f}, threshold: {:.3f}", time_diff,
-          parameters_.update_interval * 2.0),
-        estimated_speed_scale_factor_});
+    UpdateFailureContext context;
+    context.time_diff = time_diff;
+    context.time_diff_threshold = parameters_.update_interval * 2.0;
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::TimeDifferenceTooLarge, context, estimated_speed_scale_factor_});
   }
 
   const double v_odometry = calc_odometry_velocity(pose_prev, pose_curr);
@@ -82,70 +78,65 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   const auto nearest_velocity_report =
     find_nearest_velocity_report(velocity_reports, pose_curr.time_sec);
   if (!nearest_velocity_report) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{"Velocity report is empty", estimated_speed_scale_factor_});
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::VelocityReportEmpty, {}, estimated_speed_scale_factor_});
   }
 
   if (nearest_velocity_report->stamp_diff > parameters_.update_interval) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{
-        fmt::format(
-          "Velocity report timestamp mismatch, stamp_diff: {:.3f}, threshold: {:.3f}",
-          nearest_velocity_report->stamp_diff, parameters_.update_interval),
-        estimated_speed_scale_factor_});
+    UpdateFailureContext context;
+    context.stamp_diff = nearest_velocity_report->stamp_diff;
+    context.stamp_diff_threshold = parameters_.update_interval;
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::VelocityReportTimestampMismatch, context,
+      estimated_speed_scale_factor_});
   }
 
   const double v_report = nearest_velocity_report->longitudinal_velocity;
 
   const auto nearest_imu = find_nearest_imu(imus, pose_curr.time_sec);
   if (!nearest_imu) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{"IMU is empty", estimated_speed_scale_factor_});
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::ImuEmpty, {}, estimated_speed_scale_factor_});
   }
 
   if (nearest_imu->stamp_diff > parameters_.update_interval) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{
-        fmt::format(
-          "IMU timestamp mismatch, stamp_diff: {:.3f}, threshold: {:.3f}",
-          nearest_imu->stamp_diff, parameters_.update_interval),
-        estimated_speed_scale_factor_});
+    UpdateFailureContext context;
+    context.stamp_diff = nearest_imu->stamp_diff;
+    context.stamp_diff_threshold = parameters_.update_interval;
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::ImuTimestampMismatch, context, estimated_speed_scale_factor_});
   }
 
   const double angular_velocity = nearest_imu->angular_velocity_z;
   if (std::abs(angular_velocity) > parameters_.max_angular_velocity) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{
-        fmt::format(
-          "Angular velocity is too high (IMU), angular velocity: {:.3f}, max angular velocity: "
-          "{:.3f}",
-          angular_velocity, parameters_.max_angular_velocity),
-        estimated_speed_scale_factor_});
+    UpdateFailureContext context;
+    context.angular_velocity = angular_velocity;
+    context.max_angular_velocity = parameters_.max_angular_velocity;
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::AngularVelocityTooHigh, context, estimated_speed_scale_factor_});
   }
 
   if (v_odometry > parameters_.max_speed) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{
-        fmt::format(
-          "Velocity is too high, velocity: {:.3f}, max velocity: {:.3f}", v_odometry,
-          parameters_.max_speed),
-        estimated_speed_scale_factor_});
+    UpdateFailureContext context;
+    context.velocity = v_odometry;
+    context.velocity_threshold = parameters_.max_speed;
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::VelocityTooHigh, context, estimated_speed_scale_factor_});
   }
 
   if (v_odometry < parameters_.min_speed) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{
-        fmt::format(
-          "Velocity is too low, velocity: {:.3f}, min velocity: {:.3f}", v_odometry,
-          parameters_.min_speed),
-        estimated_speed_scale_factor_});
+    UpdateFailureContext context;
+    context.velocity = v_odometry;
+    context.velocity_threshold = parameters_.min_speed;
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::VelocityTooLow, context, estimated_speed_scale_factor_});
   }
 
   if (std::abs(v_report) < 1e-6) {
-    return tl::make_unexpected(
-      SpeedScaleEstimatorNotUpdated{
-        fmt::format("Velocity report is too small: {:.3f}", v_report),
-        estimated_speed_scale_factor_});
+    UpdateFailureContext context;
+    context.velocity = v_report;
+    return tl::make_unexpected(SpeedScaleEstimatorNotUpdated{
+      UpdateFailureReason::VelocityReportTooSmall, context, estimated_speed_scale_factor_});
   }
 
   const double z = v_odometry;
