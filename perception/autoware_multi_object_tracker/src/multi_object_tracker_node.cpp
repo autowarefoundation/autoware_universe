@@ -283,18 +283,16 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       sub_tracked_objects_array_.at(index) =
         create_subscription<autoware_perception_msgs::msg::TrackedObjects>(
           input_channel_topic, rclcpp::QoS{1},
-          [this, index](
-            AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) msg) {
-            this->onTrackedMeasurement(index, std::move(msg));
-          });
+          [this,
+           index](AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects)
+                    msg) { this->onTrackedMeasurement(index, std::move(msg)); });
     } else {
       sub_objects_array_.at(index) =
         create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
           input_channel_topic, rclcpp::QoS{1},
-          [this, index](
-            AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg) {
-            this->onMeasurement(index, std::move(msg));
-          });
+          [this,
+           index](AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects)
+                    msg) { this->onMeasurement(index, std::move(msg)); });
     }
   }
 
