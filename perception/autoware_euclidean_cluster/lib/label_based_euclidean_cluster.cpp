@@ -130,17 +130,25 @@ std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> split_pointcloud(
   return buckets;
 }
 
-/// @brief Compute the average semantic probability for a set of points.
-float average_probability(const std::vector<SemanticPoint> & points)
+/// @brief Compute the average semantic probability for one clustered object instance.
+float cluster_probability_from_indices(
+  const std::vector<SemanticPoint> & points, const pcl::Indices & indices)
 {
-  if (points.empty()) {
+  if (indices.empty()) {
     return 0.0F;
   }
 
-  const float sum = std::accumulate(
-    points.begin(), points.end(), 0.0F,
-    [](const float acc, const auto & point) { return acc + point.probability; });
-  return sum / static_cast<float>(points.size());
+  float sum = 0.0F;
+  for (const auto point_index : indices) {
+    if (point_index < 0 || static_cast<std::size_t>(point_index) >= points.size()) {
+      throw std::out_of_range(
+        "LabelBasedEuclideanCluster: cluster returned a point index outside the source cloud");
+    }
+
+    sum += points[static_cast<std::size_t>(point_index)].probability;
+  }
+
+  return sum / static_cast<float>(indices.size());
 }
 
 /// @brief Return true when the estimator populated a usable shape output.
@@ -262,13 +270,14 @@ LabelBasedEuclideanCluster::result_t LabelBasedEuclideanCluster::process(
       label_cloud->push_back(sp.point);
     }
 
-    std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters;
+    std::vector<IndexedCluster> clusters;
     get_cluster_executer(label).cluster(label_cloud, clusters);
 
-    const float prob = average_probability(semantic_points);
     for (auto & cluster : clusters) {
-      if (!cluster.empty()) {
-        all_entries.push_back({std::move(cluster), label, prob});
+      if (!cluster.cloud.empty()) {
+        const float cluster_probability =
+          cluster_probability_from_indices(semantic_points, cluster.indices);
+        all_entries.push_back({std::move(cluster.cloud), label, cluster_probability});
       }
     }
   }
