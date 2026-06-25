@@ -23,6 +23,7 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 
+#include <deque>
 #include <optional>
 #include <vector>
 
@@ -48,8 +49,13 @@ private:
   [[nodiscard]] SpeedScaleEstimatorNotUpdated make_not_updated(
     UpdateFailureReason reason, const UpdateFailureContext & context = {}) const;
 
+  void update_imu_buffer(const std::vector<Imu> & imus);
+  void update_velocity_report_buffer(const std::vector<VelocityReport> & velocity_reports);
+
   SpeedScaleEstimatorParameters parameters_;
   std::optional<PoseStamped> previous_pose_;
+  std::deque<Imu> imu_buffer_;
+  std::deque<VelocityReport> velocity_report_buffer_;
   double estimated_speed_scale_factor_ = 1.0;
   double covariance_ = 1.0;
 };
