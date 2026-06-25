@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
     update_interval: 0.3
-    max_pose_lag: 0.5 # [s] max interval between consecutive poses for odometry velocity
+    max_pose_lag: 0.5 # [s] max interval between consecutive poses for pose velocity
     max_stamp_lag: 0.2 # [s] max timestamp difference between pose and IMU/velocity report
     sensor_buffer_duration: 1.0 # [s] rolling buffer length for IMU and velocity report
     initial_speed_scale_factor: 1.0

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This package estimates the vehicle speed scale factor by comparing odometry velocity derived from consecutive localization poses with the longitudinal velocity reported by the vehicle. The reference velocity is computed from pose position differences (e.g. NDT scan matcher output), so the estimate reflects consistency between localization motion and wheel speed.
+This package estimates the vehicle speed scale factor by comparing pose-derived velocity from consecutive localization poses with wheel velocity reported by the vehicle. The reference velocity is computed from pose position differences (e.g. NDT scan matcher output), so the estimate reflects consistency between localization motion and wheel speed.
 
 The estimated scale factor can be used to monitor and tune the speed scale in `autoware_vehicle_velocity_converter`. The node runs periodically at `update_interval` and updates the estimate only when all operational constraints are satisfied.
 
@@ -38,14 +38,14 @@ The speed scale estimation follows these steps:
 ### 1. Data Collection
 
 - Collects pose (`PoseStamped`), IMU, and vehicle velocity reports (`VelocityReport`) received since the previous timer callback
-- Keeps the previous pose internally to compute odometry velocity between consecutive updates
+- Keeps the previous pose internally to compute pose velocity between consecutive updates
 
-### 2. Odometry Velocity Calculation
+### 2. Pose Velocity Calculation
 
-Computes odometry velocity from the previous and current poses:
+Computes pose velocity from the previous and current poses:
 
 $$
-v_{odom} = \frac{\| \Delta \mathbf{p} \|}{\Delta t}
+v_{pose} = \frac{\| \Delta \mathbf{p} \|}{\Delta t}
 $$
 
 If the time difference between the two poses is greater than or equal to `2 × update_interval`, the previous pose is reset and estimation is skipped.
@@ -67,18 +67,18 @@ Estimation is performed only when all of the following constraints are satisfied
 
   Default $\omega_{max} \approx 0.6\ \mathrm{deg/s}$ ($0.0105\ \mathrm{rad/s}$) rejects obvious curves and turns. This threshold is set near the practical IMU bias/noise floor rather than fine straight-line discrimination.
 
-- **Speed constraints (odometry)** — $v_{min} \leq v_{odom} \leq v_{max}$
+- **Speed constraints (pose velocity)** — $v_{min} \leq v_{pose} \leq v_{max}$
 
   Default $v_{min} = 6.0\ \mathrm{m/s}$ improves pose-differentiation SNR. Default $v_{max} = 17.0\ \mathrm{m/s}$ filters out extreme speeds. Together with $\omega_{max}$, estimation runs mainly on moderate-speed, near-straight segments.
 
-- **Velocity report validity** — $|v_{report}| > 10^{-6}$
+- **Wheel velocity validity** — $|v_{wheel}| > 10^{-6}$
 
 ### 5. Scale Factor Estimation (Kalman Filter)
 
 The scale factor is modeled as a scalar state $x$ with the observation:
 
 $$
-z = v_{odom} = x \cdot v_{report}
+z = v_{pose} = x \cdot v_{wheel}
 $$
 
 Kalman filter update:
@@ -92,7 +92,7 @@ $$
 **Update:**
 
 $$
-H = v_{report},\quad y = z - H x_{pred}
+H = v_{wheel},\quad y = z - H x_{pred}
 $$
 
 $$

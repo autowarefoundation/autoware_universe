@@ -63,8 +63,8 @@ struct SpeedScaleEstimatorUpdated
 {
   double estimated_speed_scale_factor = 0.0;
   double covariance = 0.0;
-  double velocity_from_odometry = 0.0;
-  double velocity_from_velocity_report = 0.0;
+  double velocity_from_pose = 0.0;
+  double velocity_from_wheel = 0.0;
   double kalman_gain = 0.0;
   double time_diff = 0.0;
 };

@@ -14,7 +14,7 @@
         },
         "max_pose_lag": {
           "type": "number",
-          "description": "Maximum allowed time difference between consecutive poses used for odometry velocity. Samples exceeding this value reset the previous pose. Unit is **[s]**.",
+          "description": "Maximum allowed time difference between consecutive poses used for pose velocity. Samples exceeding this value reset the previous pose. Unit is **[s]**.",
           "minimum": 0.0,
           "default": 0.5
         },
@@ -62,13 +62,13 @@
         },
         "max_speed": {
           "type": "number",
-          "description": "Maximum allowed odometry velocity in m/s. Samples exceeding this value are filtered out to avoid extreme speeds that may cause inaccurate estimation. Unit is **[m/s]**.",
+          "description": "Maximum allowed pose velocity in m/s. Samples exceeding this value are filtered out to avoid extreme speeds that may cause inaccurate estimation. Unit is **[m/s]**.",
           "minimum": 0.0,
           "default": 17.0
         },
         "min_speed": {
           "type": "number",
-          "description": "Minimum required odometry velocity in m/s. Samples below this value are filtered out to ensure sufficient motion for reliable pose-differentiation-based estimation. Unit is **[m/s]**.",
+          "description": "Minimum required pose velocity in m/s. Samples below this value are filtered out to ensure sufficient motion for reliable pose-differentiation-based estimation. Unit is **[m/s]**.",
           "minimum": 0.0,
           "default": 6.0
         }

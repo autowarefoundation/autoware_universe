@@ -45,7 +45,7 @@ struct NearestVelocityReportSample
 
 [[nodiscard]] double calc_time_diff(const PoseStamped & pose_a, const PoseStamped & pose_b);
 
-[[nodiscard]] double calc_odometry_velocity(const PoseStamped & pose_a, const PoseStamped & pose_b);
+[[nodiscard]] double calc_pose_velocity(const PoseStamped & pose_a, const PoseStamped & pose_b);
 
 [[nodiscard]] std::optional<NearestImuSample> find_nearest_imu(
   const std::vector<Imu> & imus, const rclcpp::Time & target_time);
