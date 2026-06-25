@@ -59,8 +59,8 @@ MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions
 }
 
 void MrmComfortableStopOperator::operateComfortableStop(
-  AUTOWARE_SERVICE_REQUEST_CONST_PTR(tier4_system_msgs::srv::OperateMrm) request,
-  AUTOWARE_SERVICE_RESPONSE_PTR(tier4_system_msgs::srv::OperateMrm) response)
+  AUTOWARE_SERVER_REQUEST_PTR(tier4_system_msgs::srv::OperateMrm) request,
+  AUTOWARE_SERVER_RESPONSE_PTR(tier4_system_msgs::srv::OperateMrm) response)
 {
   if (request->operate == true) {
     publishVelocityLimit();
