@@ -33,12 +33,6 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
   sub_control_cmd_ = create_subscription<Control>(
     "~/input/control/control_cmd", 1,
     std::bind(&MrmEmergencyStopOperator::onControlCommand, this, std::placeholders::_1));
-  sub_driving_mode_request_ = create_subscription<DrivingModeRequest>(
-    "~/input/driving_mode_request", 1,
-    std::bind(&MrmEmergencyStopOperator::onDrivingModeRequest, this, std::placeholders::_1));
-  sub_driving_mode_info_ = create_subscription<DrivingModeInfo>(
-    "~/input/driving_mode_info", rclcpp::QoS(1).transient_local(),
-    std::bind(&MrmEmergencyStopOperator::onDrivingModeInfo, this, std::placeholders::_1));
 
   // Server
   service_operation_ = create_service<OperateMrm>(
@@ -49,7 +43,6 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
   // Publisher
   pub_status_ = create_publisher<MrmBehaviorStatus>("~/output/mrm/emergency_stop/status", 1);
   pub_control_cmd_ = create_publisher<Control>("~/output/mrm/emergency_stop/control_cmd", 1);
-  pub_mrm_state_ = create_publisher<DrivingModeMrmState>("~/output/mrm_state", 1);
 
   // Timer
   const auto update_period_ns = rclcpp::Rate(params_.update_rate).period();
@@ -63,6 +56,15 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
   // Parameter Callback
   set_param_res_ = add_on_set_parameters_callback(
     std::bind(&MrmEmergencyStopOperator::onParameter, this, std::placeholders::_1));
+
+  // Driving mode interface
+  pub_mrm_state_ = create_publisher<DrivingModeMrmState>("~/output/mrm_state", 1);
+  sub_driving_mode_request_ = create_subscription<DrivingModeRequest>(
+    "~/input/driving_mode_request", 1,
+    std::bind(&MrmEmergencyStopOperator::onDrivingModeRequest, this, std::placeholders::_1));
+  sub_driving_mode_info_ = create_subscription<DrivingModeInfo>(
+    "~/input/driving_mode_info", rclcpp::QoS(1).transient_local(),
+    std::bind(&MrmEmergencyStopOperator::onDrivingModeInfo, this, std::placeholders::_1));
 }
 
 rcl_interfaces::msg::SetParametersResult MrmEmergencyStopOperator::onParameter(
@@ -86,6 +88,18 @@ void MrmEmergencyStopOperator::onControlCommand(Control::ConstSharedPtr msg)
   }
 }
 
+void MrmEmergencyStopOperator::operateEmergencyStop(
+  const OperateMrm::Request::SharedPtr request, const OperateMrm::Response::SharedPtr response)
+{
+  if (request->operate == true) {
+    status_.state = MrmBehaviorStatus::OPERATING;
+    response->response.success = true;
+  } else {
+    status_.state = MrmBehaviorStatus::AVAILABLE;
+    response->response.success = true;
+  }
+}
+
 void MrmEmergencyStopOperator::onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg)
 {
   if (msg->mode == driving_mode_id_) {
@@ -103,25 +117,6 @@ void MrmEmergencyStopOperator::onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr
       break;
     }
   }
-}
-
-void MrmEmergencyStopOperator::operateEmergencyStop(
-  const OperateMrm::Request::SharedPtr request, const OperateMrm::Response::SharedPtr response)
-{
-  if (request->operate == true) {
-    status_.state = MrmBehaviorStatus::OPERATING;
-    response->response.success = true;
-  } else {
-    status_.state = MrmBehaviorStatus::AVAILABLE;
-    response->response.success = true;
-  }
-}
-
-void MrmEmergencyStopOperator::publishStatus() const
-{
-  auto status = status_;
-  status.stamp = this->now();
-  pub_status_->publish(status);
 }
 
 void MrmEmergencyStopOperator::publishMrmState() const
@@ -151,6 +146,13 @@ void MrmEmergencyStopOperator::publishMrmState() const
   msg.stamp = this->now();
   msg.items = {item};
   pub_mrm_state_->publish(msg);
+}
+
+void MrmEmergencyStopOperator::publishStatus() const
+{
+  auto status = status_;
+  status.stamp = this->now();
+  pub_status_->publish(status);
 }
 
 void MrmEmergencyStopOperator::publishControlCommand(const Control & command) const

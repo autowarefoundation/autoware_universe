@@ -62,12 +62,8 @@ private:
 
   // Subscriber
   rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
-  rclcpp::Subscription<DrivingModeRequest>::SharedPtr sub_driving_mode_request_;
-  rclcpp::Subscription<DrivingModeInfo>::SharedPtr sub_driving_mode_info_;
 
   void onControlCommand(Control::ConstSharedPtr msg);
-  void onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg);
-  void onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg);
 
   // Server
   rclcpp::Service<OperateMrm>::SharedPtr service_operation_;
@@ -78,10 +74,8 @@ private:
   // Publisher
   rclcpp::Publisher<MrmBehaviorStatus>::SharedPtr pub_status_;
   rclcpp::Publisher<Control>::SharedPtr pub_control_cmd_;
-  rclcpp::Publisher<DrivingModeMrmState>::SharedPtr pub_mrm_state_;
 
   void publishStatus() const;
-  void publishMrmState() const;
   void publishControlCommand(const Control & command) const;
 
   // Timer
@@ -94,7 +88,13 @@ private:
   Control prev_control_cmd_;
   bool is_prev_control_cmd_subscribed_;
 
-  // Driving mode
+  // Driving mode interface
+  rclcpp::Subscription<DrivingModeRequest>::SharedPtr sub_driving_mode_request_;
+  rclcpp::Subscription<DrivingModeInfo>::SharedPtr sub_driving_mode_info_;
+  rclcpp::Publisher<DrivingModeMrmState>::SharedPtr pub_mrm_state_;
+  void onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg);
+  void onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg);
+  void publishMrmState() const;
   std::optional<uint32_t> driving_mode_id_;  // Refer to the driving_mode_manager for this ID.
 
   // Algorithm
