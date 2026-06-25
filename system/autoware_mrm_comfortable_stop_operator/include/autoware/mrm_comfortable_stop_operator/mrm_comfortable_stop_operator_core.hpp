@@ -27,6 +27,7 @@
 #include <tier4_system_msgs/srv/operate_mrm.hpp>
 
 // ROS 2 core
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 namespace autoware::mrm_comfortable_stop_operator
@@ -40,7 +41,7 @@ struct Parameters
   double min_jerk;          // [m/s^3]
 };
 
-class MrmComfortableStopOperator : public rclcpp::Node
+class MrmComfortableStopOperator : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit MrmComfortableStopOperator(const rclcpp::NodeOptions & node_options);
@@ -50,7 +51,7 @@ private:
   Parameters params_;
 
   // Server
-  rclcpp::Service<tier4_system_msgs::srv::OperateMrm>::SharedPtr service_operation_;
+  AUTOWARE_SERVICE_PTR(tier4_system_msgs::srv::OperateMrm) service_operation_;
 
   void operateComfortableStop(
     const tier4_system_msgs::srv::OperateMrm::Request::SharedPtr request,
@@ -60,18 +61,17 @@ private:
     const std::vector<rclcpp::Parameter> & parameters);
 
   // Publisher
-  rclcpp::Publisher<tier4_system_msgs::msg::MrmBehaviorStatus>::SharedPtr pub_status_;
-  rclcpp::Publisher<autoware_internal_planning_msgs::msg::VelocityLimit>::SharedPtr
-    pub_velocity_limit_;
-  rclcpp::Publisher<autoware_internal_planning_msgs::msg::VelocityLimitClearCommand>::SharedPtr
-    pub_velocity_limit_clear_command_;
+  AUTOWARE_PUBLISHER_PTR(tier4_system_msgs::msg::MrmBehaviorStatus) pub_status_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_planning_msgs::msg::VelocityLimit) pub_velocity_limit_;
+  AUTOWARE_PUBLISHER_PTR(autoware_internal_planning_msgs::msg::VelocityLimitClearCommand)
+  pub_velocity_limit_clear_command_;
 
   void publishStatus() const;
   void publishVelocityLimit() const;
   void publishVelocityLimitClearCommand() const;
 
   // Timer
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
 
   void onTimer() const;
 
@@ -79,7 +79,7 @@ private:
   tier4_system_msgs::msg::MrmBehaviorStatus status_;
 
   // Parameter callback
-  OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 };
 
 }  // namespace autoware::mrm_comfortable_stop_operator
