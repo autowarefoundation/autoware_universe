@@ -21,11 +21,21 @@
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/types.h>
 
 #include <vector>
 
 namespace autoware::euclidean_cluster
 {
+/// @brief One clustered object together with the indices of its source points.
+struct IndexedCluster
+{
+  /// @brief Clustered points copied from the source cloud.
+  pcl::PointCloud<pcl::PointXYZ> cloud;
+  /// @brief Indices of the source points that contributed to this cluster.
+  pcl::Indices indices;
+};
+
 class EuclideanClusterInterface
 {
 public:
@@ -43,6 +53,10 @@ public:
   virtual bool cluster(
     const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
     std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters) = 0;
+
+  virtual bool cluster(
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
+    std::vector<IndexedCluster> & clusters) = 0;
 
   virtual bool cluster(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_msg,
