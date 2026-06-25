@@ -16,7 +16,6 @@
 #define AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_CORE_HPP_
 
 #include <autoware/traffic_light_arbiter/signal_match_validator.hpp>
-#include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
@@ -25,7 +24,6 @@
 
 #include <memory>
 #include <optional>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -41,7 +39,6 @@ public:
   using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
   using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
   using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
-  using TrafficLightConstPtr = lanelet::TrafficLightConstPtr;
 
   TrafficLightArbiterCore(
     SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
