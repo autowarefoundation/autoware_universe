@@ -75,7 +75,7 @@ def _make_transform(child_frame, translation, quaternion, parent_frame=_OUTPUT_F
     t = TransformStamped()
     t.header.frame_id = parent_frame
     t.child_frame_id = child_frame
-    (t.transform.translation.x, t.transform.translation.y, t.transform.translation.z) = translation
+    t.transform.translation.x, t.transform.translation.y, t.transform.translation.z = translation
     (
         t.transform.rotation.x,
         t.transform.rotation.y,
@@ -179,11 +179,17 @@ def test_motion_compensation_shifts_newer_cloud():
     # stays put; the newer cloud is shifted by 0.1 s * 1.0 m/s = 0.1 m. Exercises
     # correct_pointcloud_motion + compute_transform_to_adjust_for_old_timestamp with real twist.
     handler = CombineCloudHandler(["lidar_a", "lidar_b"], _OUTPUT_FRAME, is_motion_compensated=True)
-    for ms in range(9900, 10250, 50):  # twists at 9.90 .. 10.20 s, 50 ms apart, bracketing the clouds
+    for ms in range(
+        9900, 10250, 50
+    ):  # twists at 9.90 .. 10.20 s, 50 ms apart, bracketing the clouds
         handler.process_twist(_make_twist(ms // 1000, (ms % 1000) * 1_000_000, vx=1.0))
 
-    cloud_a = _make_cloud(10, 0, points=[(1.0, 0.0, 0.0)], frame_id=_OUTPUT_FRAME)  # oldest (10.0 s)
-    cloud_b = _make_cloud(10, 100_000_000, points=[(2.0, 0.0, 0.0)], frame_id=_OUTPUT_FRAME)  # 10.1 s
+    cloud_a = _make_cloud(
+        10, 0, points=[(1.0, 0.0, 0.0)], frame_id=_OUTPUT_FRAME
+    )  # oldest (10.0 s)
+    cloud_b = _make_cloud(
+        10, 100_000_000, points=[(2.0, 0.0, 0.0)], frame_id=_OUTPUT_FRAME
+    )  # 10.1 s
 
     result = handler.combine_pointclouds({"lidar_a": cloud_a, "lidar_b": cloud_b})
 
@@ -197,7 +203,9 @@ def test_motion_compensation_shifts_newer_cloud():
 def test_missing_transform_drops_frame_and_reports_it():
     # An extrinsic is provided for lidar_x only; lidar_y must be dropped (not silently mis-placed),
     # and the dropped frame must be reported in the result (the node turns this into a warning).
-    handler = CombineCloudHandler(["lidar_x", "lidar_y"], _OUTPUT_FRAME, is_motion_compensated=False)
+    handler = CombineCloudHandler(
+        ["lidar_x", "lidar_y"], _OUTPUT_FRAME, is_motion_compensated=False
+    )
     handler.set_transform(_make_transform("lidar_x", (0.0, 0.0, 0.0), _quat_z(0.0)))
     cloud_x = _make_cloud(10, 0, frame_id="lidar_x")
     cloud_y = _make_cloud(10, 0, frame_id="lidar_y")
@@ -218,8 +226,13 @@ def test_naive_completes_when_all_topics_arrive():
 
     # All three arrive within 20 ms (< 0.2 s timeout) -> one complete group.
     assert concatenator.process_cloud("lidar_top", _make_cloud(10, 0), arrival_time=100.00) == []
-    assert concatenator.process_cloud("lidar_left", _make_cloud(10, 1_000_000), arrival_time=100.01) == []
-    frames = concatenator.process_cloud("lidar_right", _make_cloud(10, 2_000_000), arrival_time=100.02)
+    assert (
+        concatenator.process_cloud("lidar_left", _make_cloud(10, 1_000_000), arrival_time=100.01)
+        == []
+    )
+    frames = concatenator.process_cloud(
+        "lidar_right", _make_cloud(10, 2_000_000), arrival_time=100.02
+    )
 
     assert len(frames) == 1
     assert frames[0].status == CollectorStatus.COMPLETE
@@ -250,9 +263,7 @@ def test_arrival_time_drives_timeout_independent_of_stamp():
     # clouds *arrive* 0.5 s apart, so the arrival-driven timer closes the first group before the
     # second cloud is grouped.
     assert concatenator.process_cloud("lidar_top", _make_cloud(10, 0), arrival_time=100.0) == []
-    frames = concatenator.process_cloud(
-        "lidar_left", _make_cloud(10, 0), arrival_time=100.5
-    )
+    frames = concatenator.process_cloud("lidar_left", _make_cloud(10, 0), arrival_time=100.5)
 
     assert len(frames) == 1
     assert frames[0].status == CollectorStatus.TIMEOUT
@@ -268,7 +279,10 @@ def test_arrival_time_groups_clouds_with_far_apart_stamps():
     # Stamps span 1.0 s, but all three arrive within 20 ms, so the arrival-driven path groups them
     # as COMPLETE.
     assert concatenator.process_cloud("lidar_top", _make_cloud(10, 0), arrival_time=100.00) == []
-    assert concatenator.process_cloud("lidar_left", _make_cloud(10, 500_000_000), arrival_time=100.01) == []
+    assert (
+        concatenator.process_cloud("lidar_left", _make_cloud(10, 500_000_000), arrival_time=100.01)
+        == []
+    )
     frames = concatenator.process_cloud("lidar_right", _make_cloud(11, 0), arrival_time=100.02)
 
     assert len(frames) == 1
@@ -295,7 +309,11 @@ def _advanced_concatenator(timeout_sec=0.2):
 def test_advanced_requires_offsets():
     try:
         Concatenator(
-            _INPUT_TOPICS, _OUTPUT_FRAME, tf_static={}, timeout_sec=0.2, matching_strategy="advanced"
+            _INPUT_TOPICS,
+            _OUTPUT_FRAME,
+            tf_static={},
+            timeout_sec=0.2,
+            matching_strategy="advanced",
         )
     except ValueError:
         pass
@@ -309,8 +327,13 @@ def test_advanced_groups_offset_corrected_timestamps():
     # One scan: per-topic stamps are staggered by exactly the offsets, so the offset-corrected
     # timestamps all map to 10.00 s; arriving within 20 ms they form a single complete group.
     assert concatenator.process_cloud("lidar_top", _make_cloud(10, 0), arrival_time=100.00) == []
-    assert concatenator.process_cloud("lidar_left", _make_cloud(10, 40_000_000), arrival_time=100.01) == []
-    frames = concatenator.process_cloud("lidar_right", _make_cloud(10, 80_000_000), arrival_time=100.02)
+    assert (
+        concatenator.process_cloud("lidar_left", _make_cloud(10, 40_000_000), arrival_time=100.01)
+        == []
+    )
+    frames = concatenator.process_cloud(
+        "lidar_right", _make_cloud(10, 80_000_000), arrival_time=100.02
+    )
 
     assert len(frames) == 1
     assert frames[0].status == CollectorStatus.COMPLETE
@@ -325,7 +348,9 @@ def test_advanced_times_out_when_clock_advances():
     # lidar_top for one scan, then lidar_top arriving 0.5 s later: the first group can no longer be
     # completed, so the advancing arrival clock closes it as a timeout.
     assert concatenator.process_cloud("lidar_top", _make_cloud(10, 0), arrival_time=100.0) == []
-    frames = concatenator.process_cloud("lidar_top", _make_cloud(10, 500_000_000), arrival_time=100.5)
+    frames = concatenator.process_cloud(
+        "lidar_top", _make_cloud(10, 500_000_000), arrival_time=100.5
+    )
 
     assert len(frames) == 1
     assert frames[0].status == CollectorStatus.TIMEOUT
@@ -339,7 +364,10 @@ def test_advanced_does_not_merge_out_of_window_cloud():
     # it must start its own group, not join. Both arrive close together (within the timeout), so
     # neither is closed during processing and both remain open.
     assert concatenator.process_cloud("lidar_top", _make_cloud(10, 0), arrival_time=100.00) == []
-    assert concatenator.process_cloud("lidar_left", _make_cloud(10, 200_000_000), arrival_time=100.05) == []
+    assert (
+        concatenator.process_cloud("lidar_left", _make_cloud(10, 200_000_000), arrival_time=100.05)
+        == []
+    )
 
     # Flushing the stream emits both still-open (incomplete) groups as timeouts.
     frames = concatenator.flush()

@@ -145,9 +145,7 @@ class CombineCloudHandler:
             status,
             topic_to_original_stamp,
             dropped_frames_missing_transform,
-        ) = self._impl.combine_pointclouds(
-            topic_to_cloud_bytes, reference_timestamp, noise_window
-        )
+        ) = self._impl.combine_pointclouds(topic_to_cloud_bytes, reference_timestamp, noise_window)
 
         concatenated_cloud = (
             deserialize_message(concatenated_bytes, PointCloud2)
@@ -244,7 +242,9 @@ class Concatenator:
                 )
             # The C++ core validates the sizes against the topics.
             self._strategy = _ext.MatchingPolicy.make_advanced(
-                self._input_topics, list(lidar_timestamp_offsets), list(lidar_timestamp_noise_window)
+                self._input_topics,
+                list(lidar_timestamp_offsets),
+                list(lidar_timestamp_noise_window),
             )
         elif matching_strategy == "naive":
             self._strategy = _ext.MatchingPolicy.make_naive()
@@ -282,9 +282,7 @@ class Concatenator:
         order.**
         """
         if topic not in self._input_topics:
-            raise ValueError(
-                f"unknown topic {topic!r}; expected one of {self._input_topics}"
-            )
+            raise ValueError(f"unknown topic {topic!r}; expected one of {self._input_topics}")
         stamp = _stamp_to_seconds(cloud.header.stamp)
         arrival = float(arrival_time)
         params = _ext.IncomingCloudInfo(topic, stamp, arrival)
@@ -296,16 +294,16 @@ class Concatenator:
 
         # (1) Timeout: close any group whose timer has expired in arrival time (it can no longer
         # receive more clouds). This replaces the node's per-collector wall-clock timer.
-        stale = [
-            c for c in self._collectors if c.creation_arrival < arrival - self._timeout_sec
-        ]
+        stale = [c for c in self._collectors if c.creation_arrival < arrival - self._timeout_sec]
         self._collectors = [c for c in self._collectors if c not in stale]
         for collector in sorted(stale, key=lambda c: c.creation_arrival):
             outputs.append(self._emit(collector, CollectorStatus.TIMEOUT))
 
         # (2) Match against the open collectors (delegated to the shared C++ matching core).
         states = [
-            _ext.CandidateCollectorState(c.reference_time, c.noise_window, topic in c.topic_to_cloud)
+            _ext.CandidateCollectorState(
+                c.reference_time, c.noise_window, topic in c.topic_to_cloud
+            )
             for c in self._collectors
         ]
         matched_index = self._strategy.match(states, params)

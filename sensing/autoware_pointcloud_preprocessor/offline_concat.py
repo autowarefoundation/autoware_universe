@@ -58,8 +58,8 @@ def _err(msg: str) -> None:
 
 def _check_env() -> None:
     try:
-        import rclpy.serialization  # noqa: F401
         from autoware_pointcloud_preprocessor import concatenate_pointclouds  # noqa: F401
+        import rclpy.serialization  # noqa: F401
     except Exception as exc:  # pragma: no cover - environment guard
         _err(
             "cannot import the bindings: "
@@ -286,10 +286,10 @@ def main() -> None:
     args = parser.parse_args()
 
     _check_env()
-    from rosidl_runtime_py.utilities import get_message
-    from rclpy.serialization import deserialize_message
     from autoware_pointcloud_preprocessor.concatenate_pointclouds import CollectorStatus
     from autoware_pointcloud_preprocessor.concatenate_pointclouds import Concatenator
+    from rclpy.serialization import deserialize_message
+    from rosidl_runtime_py.utilities import get_message
 
     db3 = _find_db3(args.bag)
     con, cur, topics = _open_bag(db3)

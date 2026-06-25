@@ -45,11 +45,11 @@ namespace
 {
 using autoware::pointcloud_preprocessor::AdvancedCollectorInfo;
 using autoware::pointcloud_preprocessor::AdvancedMatchingPolicy;
+using autoware::pointcloud_preprocessor::CandidateCollectorState;
 using autoware::pointcloud_preprocessor::CollectorInfoBase;
 using autoware::pointcloud_preprocessor::CollectorReference;
 using autoware::pointcloud_preprocessor::CombineCloudHandler;
 using autoware::pointcloud_preprocessor::ConcatenatedCloudResult;
-using autoware::pointcloud_preprocessor::CandidateCollectorState;
 using autoware::pointcloud_preprocessor::IncomingCloudInfo;
 using autoware::pointcloud_preprocessor::MatchingPolicy;
 using autoware::pointcloud_preprocessor::MotionCompensationStatus;
@@ -140,8 +140,9 @@ public:
 
   void process_twist(const py::bytes & twist)
   {
-    handler_.process_twist(std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>(
-      deserialize<geometry_msgs::msg::TwistWithCovarianceStamped>(twist)));
+    handler_.process_twist(
+      std::make_shared<geometry_msgs::msg::TwistWithCovarianceStamped>(
+        deserialize<geometry_msgs::msg::TwistWithCovarianceStamped>(twist)));
   }
 
   void process_odometry(const py::bytes & odometry)

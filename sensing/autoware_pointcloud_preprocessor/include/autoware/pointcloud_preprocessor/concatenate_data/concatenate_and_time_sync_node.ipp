@@ -159,11 +159,12 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::initial
 {
   // Initialize collector list
   for (size_t i = 0; i < num_of_collectors; ++i) {
-    cloud_collectors_.emplace_back(std::make_shared<CloudCollector<MsgTraits>>(
-      std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponentTemplated>(
-        shared_from_this()),
-      combine_cloud_handler_, params_.input_topics.size(), params_.timeout_sec,
-      params_.debug_mode));
+    cloud_collectors_.emplace_back(
+      std::make_shared<CloudCollector<MsgTraits>>(
+        std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponentTemplated>(
+          shared_from_this()),
+        combine_cloud_handler_, params_.input_topics.size(), params_.timeout_sec,
+        params_.debug_mode));
   }
   init_collector_list_ = true;
 }
@@ -364,8 +365,9 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
         if (
           (*concatenated_cloud_result.topic_to_transformed_cloud_map).find(topic) !=
           (*concatenated_cloud_result.topic_to_transformed_cloud_map).end()) {
-          topic_to_transformed_cloud_publisher_map_[topic]->publish(std::move(
-            (*concatenated_cloud_result.topic_to_transformed_cloud_map).extract(topic).mapped()));
+          topic_to_transformed_cloud_publisher_map_[topic]->publish(
+            std::move(
+              (*concatenated_cloud_result.topic_to_transformed_cloud_map).extract(topic).mapped()));
         } else {
           RCLCPP_WARN(
             this->get_logger(),

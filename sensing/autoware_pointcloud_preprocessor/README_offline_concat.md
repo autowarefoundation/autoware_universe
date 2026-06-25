@@ -7,7 +7,6 @@ a rosbag2 SQLite store and feeds them to the pybind `Concatenator`
 makes the offline run reproduce the online node's grouping and concatenation, frame for frame, so you
 can debug / regression-test the concat behavior from a recorded bag.
 
-
 ## What it does, step by step
 
 1. **Reads the bag directly via SQLite** (`_open_bag` / `_iter_messages`) — no `rosbag2_py` or storage
@@ -59,18 +58,18 @@ order and the offsets/noise from the **same file** the node uses, so they cannot
 
 ### Key flags
 
-| Flag | Meaning |
-|---|---|
-| `bag` | rosbag2 directory or a `.db3` file (positional) |
-| `--param-file` | `concatenate_and_time_sync_node.param.yaml`; mirrors the node (topic order + strategy + offsets/noise + timeout) |
-| `--strategy {naive,advanced}` | override matching strategy (default: from param file, else `naive`) |
-| `--timeout SEC` | per-group timeout (default: from param file, else `0.1`) |
-| `--output-frame` | target frame for the concatenated cloud (default `base_link`) |
-| `--lidar-prefix` | topics under this prefix are treated as concat inputs (default `/sensing/lidar/`) |
-| `--twist-topic` | twist topic for motion compensation |
-| `--no-motion-compensation` | disable twist motion compensation |
-| `--offsets` / `--noise` | advanced offsets/noise on the CLI (use `--param-file` instead to avoid mis-ordering) |
-| `--limit N` | stop after N complete groups (0 = all) |
+| Flag                          | Meaning                                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `bag`                         | rosbag2 directory or a `.db3` file (positional)                                                                  |
+| `--param-file`                | `concatenate_and_time_sync_node.param.yaml`; mirrors the node (topic order + strategy + offsets/noise + timeout) |
+| `--strategy {naive,advanced}` | override matching strategy (default: from param file, else `naive`)                                              |
+| `--timeout SEC`               | per-group timeout (default: from param file, else `0.1`)                                                         |
+| `--output-frame`              | target frame for the concatenated cloud (default `base_link`)                                                    |
+| `--lidar-prefix`              | topics under this prefix are treated as concat inputs (default `/sensing/lidar/`)                                |
+| `--twist-topic`               | twist topic for motion compensation                                                                              |
+| `--no-motion-compensation`    | disable twist motion compensation                                                                                |
+| `--offsets` / `--noise`       | advanced offsets/noise on the CLI (use `--param-file` instead to avoid mis-ordering)                             |
+| `--limit N`                   | stop after N complete groups (0 = all)                                                                           |
 
 ### A note on the bag
 

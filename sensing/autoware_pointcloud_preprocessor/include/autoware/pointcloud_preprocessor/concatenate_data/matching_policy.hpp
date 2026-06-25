@@ -58,7 +58,8 @@ public:
     const IncomingCloudInfo & incoming_cloud_info) const = 0;
 
   // Reference (timestamp + noise window) for a new collector created for this cloud.
-  [[nodiscard]] virtual CollectorReference reference_for(const IncomingCloudInfo & incoming_cloud_info) const = 0;
+  [[nodiscard]] virtual CollectorReference reference_for(
+    const IncomingCloudInfo & incoming_cloud_info) const = 0;
 };
 
 // Match the closest collector (by arrival time) that does not yet hold the topic.
@@ -68,7 +69,8 @@ public:
   [[nodiscard]] std::optional<std::size_t> match(
     const std::vector<CandidateCollectorState> & collectors,
     const IncomingCloudInfo & incoming_cloud_info) const override;
-  [[nodiscard]] CollectorReference reference_for(const IncomingCloudInfo & incoming_cloud_info) const override;
+  [[nodiscard]] CollectorReference reference_for(
+    const IncomingCloudInfo & incoming_cloud_info) const override;
 };
 
 // Match by an offset-corrected timestamp falling inside a collector's noise window.
@@ -83,7 +85,8 @@ public:
   [[nodiscard]] std::optional<std::size_t> match(
     const std::vector<CandidateCollectorState> & collectors,
     const IncomingCloudInfo & incoming_cloud_info) const override;
-  [[nodiscard]] CollectorReference reference_for(const IncomingCloudInfo & incoming_cloud_info) const override;
+  [[nodiscard]] CollectorReference reference_for(
+    const IncomingCloudInfo & incoming_cloud_info) const override;
 
 private:
   std::unordered_map<std::string, double> topic_to_offset_map_;

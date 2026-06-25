@@ -110,7 +110,8 @@ private:
     double pipeline_latency{0.0};
   };
 
-  std::shared_ptr<CombineCloudHandler<typename MsgTraits::PointCloudMessage>> combine_cloud_handler_;
+  std::shared_ptr<CombineCloudHandler<typename MsgTraits::PointCloudMessage>>
+    combine_cloud_handler_;
   std::list<std::shared_ptr<CloudCollector<MsgTraits>>> cloud_collectors_;
   std::unique_ptr<CollectorMatcher<MsgTraits>> collector_matcher_;
   std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_;
