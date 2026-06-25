@@ -29,7 +29,7 @@ TrajectorySelector::TrajectorySelector()
 void TrajectorySelector::add_input(TrajectorySender * input, uint32_t source_id)
 {
   if (source_id == invalid_source_id) {
-    throw std::runtime_error("trajectory input has an invalid source id");
+    throw std::runtime_error("trajectory input is invalid source id: " + std::to_string(source_id));
   }
 
   const auto [iter, success] = inputs_.insert({source_id, input});
