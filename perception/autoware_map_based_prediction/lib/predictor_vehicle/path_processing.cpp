@@ -18,6 +18,7 @@
 #include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
@@ -139,6 +140,37 @@ void replaceObjectYawWithLaneletsYaw(
   tf2::Quaternion filtered_quaternion;
   filtered_quaternion.setRPY(roll, pitch, mean_yaw_angle);
   pose_with_cov.pose.orientation = tf2::toMsg(filtered_quaternion);
+}
+
+// Ratio of the body length (dimensions.x) between the rear axle and the body-box center.
+// Mirrored from autoware_multi_object_tracker object_model.hpp (BicycleModelState
+// wheel_pos_ratio_rear). Kept in sync manually so this package does not depend on the tracker:
+//   CAR / BUS / TRUCK / TRAILER (normal_vehicle, big_vehicle): 0.25
+//   MOTORCYCLE / BICYCLE        (bicycle):                      0.30
+double rearAxleRatioForLabel(const uint8_t label)
+{
+  switch (label) {
+    case ObjectClassification::MOTORCYCLE:
+    case ObjectClassification::BICYCLE:
+      return 0.30;
+    case ObjectClassification::CAR:
+    case ObjectClassification::BUS:
+    case ObjectClassification::TRUCK:
+    case ObjectClassification::TRAILER:
+    default:
+      return 0.25;
+  }
+}
+
+// Longitudinal distance from the body-box center back to the rear axle [m]. The vehicle tracker
+// exports its pose at this body-box center while the bicycle motion model pivots about the rear
+// axle, so path integration must start from the rear axle to curve correctly.
+double rearAxleOffset(const TrackedObject & object)
+{
+  if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) return 0.0;
+  const uint8_t label =
+    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+  return object.shape.dimensions.x * rearAxleRatioForLabel(label);
 }
 }  // namespace
 
@@ -265,15 +297,26 @@ std::optional<PredictedObject> PathProcessor::predict(
     replaceObjectYawWithLaneletsYaw(current_lanelets, yaw_fixed_object);
   }
 
+  // Integrate the path about the rear axle (the bicycle motion model's pivot) instead of the
+  // body-box center the tracker exports, then shift the resulting path forward by the same
+  // offset to re-express it about the body-box center. On straight/constant-yaw paths the two
+  // shifts cancel exactly; only turns and lane changes are affected.
+  const double rear_axle_offset = rearAxleOffset(yaw_fixed_object);
+  TrackedObject rear_axle_object = yaw_fixed_object;
+  rear_axle_object.kinematics.pose_with_covariance.pose = autoware_utils::calc_offset_pose(
+    yaw_fixed_object.kinematics.pose_with_covariance.pose, -rear_axle_offset, 0.0, 0.0);
+
   std::vector<PredictedPath> predicted_paths;
   double min_avg_curvature = std::numeric_limits<double>::max();
   std::optional<PredictedPath> path_with_smallest_avg_curvature;
 
   for (const auto & ref_path : ref_paths) {
     PredictedPath predicted_path = path_generator_->generatePathForOnLaneVehicle(
-      yaw_fixed_object, ref_path.path, params_.prediction_time_horizon,
+      rear_axle_object, ref_path.path, params_.prediction_time_horizon,
       params_.lateral_control_time_horizon, ref_path.width, ref_path.speed_limit);
     if (predicted_path.path.empty()) continue;
+
+    shiftPathReference(predicted_path, Eigen::Vector2d(rear_axle_offset, 0.0));
 
     if (!params_.check_lateral_acceleration_constraints) {
       predicted_path.confidence = ref_path.probability;

@@ -142,6 +142,34 @@ You can change these parameters in rosparam in the table below.
 | `max_lateral_accel`                      | `2.0` [m/s^2]  |
 | `min_acceleration_before_curve`          | `-2.0` [m/s^2] |
 
+#### Rear-axle reference point for path integration (for vehicle obstacles)
+
+A vehicle pivots about its **rear axle**, not its body-box center, so integrating the path from the
+center produces an over-cut corner on turns and lane changes. The `multi_object_tracker` bicycle
+motion model already estimates the rear-axle state internally but exports the object pose at the
+body-box center.
+
+To reproduce the correct curvature, on-lane vehicle path generation:
+
+1. shifts the object reference back to the rear axle by `lr = dimensions.x * wheel_pos_ratio_rear`,
+2. integrates the predicted path about the rear axle, and
+3. shifts the resulting path forward by the same `lr` to re-express it about the body-box center
+   (the reference point that downstream consumers expect).
+
+On straight/constant-heading paths the two shifts cancel exactly, so only turning motion is
+affected. The per-class `wheel_pos_ratio_rear` values mirror
+`autoware_multi_object_tracker`'s `object_model.hpp` (`0.25` for car/bus/truck/trailer, `0.30` for
+motorcycle) and are kept in sync manually so this package keeps no build dependency on the tracker.
+
+#### Footprint-aware box expansion (for all objects)
+
+A tracked object carries a body bounding box (`shape.dimensions`) plus an object-local footprint
+polygon (`shape.footprint`) that can protrude beyond the box (e.g. open doors, overhanging cargo).
+As a shared final pass over every predicted object, bounding-box shapes whose footprint protrudes
+are expanded to the axis-aligned union of the body box and footprint, and their predicted paths are
+re-centered on the expanded box so the path keeps tracing the box center. Objects without a
+protruding footprint are unaffected.
+
 ## Using Vehicle Acceleration for Path Prediction (for Vehicle Obstacles)
 
 By default, the `map_based_prediction` module uses the current obstacle's velocity to compute its predicted path length. However, it is possible to use the obstacle's current acceleration to calculate its predicted path's length.

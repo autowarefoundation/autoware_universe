@@ -14,6 +14,8 @@
 
 #include "autoware/map_based_prediction/utils.hpp"
 
+#include "autoware/map_based_prediction/path_generator/path_generator.hpp"
+
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
@@ -29,6 +31,7 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
+#include <cmath>
 #include <deque>
 #include <limits>
 #include <memory>
@@ -242,6 +245,53 @@ PredictedObject convertToPredictedObject(const TrackedObject & tracked_object)
   predicted_object.existence_probability = tracked_object.existence_probability;
 
   return predicted_object;
+}
+
+void expandShapeToFootprintAndRecenter(PredictedObject & object)
+{
+  // grow a bounding-box shape to cover its footprint and recenter the predicted paths
+  if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) return;
+  const auto & footprint = object.shape.footprint.points;
+  if (footprint.empty()) return;
+
+  // Axis-aligned bounds of the footprint in the object-local frame.
+  double min_x = std::numeric_limits<double>::max();
+  double max_x = std::numeric_limits<double>::lowest();
+  double min_y = std::numeric_limits<double>::max();
+  double max_y = std::numeric_limits<double>::lowest();
+  for (const auto & point : footprint) {
+    min_x = std::min(min_x, static_cast<double>(point.x));
+    max_x = std::max(max_x, static_cast<double>(point.x));
+    min_y = std::min(min_y, static_cast<double>(point.y));
+    max_y = std::max(max_y, static_cast<double>(point.y));
+  }
+
+  // Union of the body box (centered at the local origin) and the footprint bounds.
+  const double half_length = object.shape.dimensions.x / 2.0;
+  const double half_width = object.shape.dimensions.y / 2.0;
+  const double lo_x = std::min(-half_length, min_x);
+  const double hi_x = std::max(half_length, max_x);
+  const double lo_y = std::min(-half_width, min_y);
+  const double hi_y = std::max(half_width, max_y);
+
+  const Eigen::Vector2d center_offset((lo_x + hi_x) / 2.0, (lo_y + hi_y) / 2.0);
+  constexpr double eps = 1e-3;
+  if (std::abs(center_offset.x()) < eps && std::abs(center_offset.y()) < eps) return;
+
+  object.shape.dimensions.x = hi_x - lo_x;
+  object.shape.dimensions.y = hi_y - lo_y;
+
+  // Re-express the footprint about the new box center so it stays geometrically consistent.
+  for (auto & point : object.shape.footprint.points) {
+    point.x -= static_cast<float>(center_offset.x());
+    point.y -= static_cast<float>(center_offset.y());
+  }
+
+  // Move the t=0 box center and every predicted-path point onto the expanded box center.
+  shiftPoseReference(object.kinematics.initial_pose_with_covariance.pose, center_offset);
+  for (auto & predicted_path : object.kinematics.predicted_paths) {
+    shiftPathReference(predicted_path, center_offset);
+  }
 }
 
 double calculateLocalLikelihood(

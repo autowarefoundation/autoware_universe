@@ -14,8 +14,14 @@
 
 #include "autoware/map_based_prediction/data_structure.hpp"
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
+#include "autoware/map_based_prediction/utils.hpp"
+
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
 
 #include <gtest/gtest.h>
+
+#include <cmath>
 
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
@@ -183,6 +189,174 @@ TEST(PathGenerator, test_generatePathForCrosswalkUser)
   EXPECT_EQ(predicted_path.path[0].position.x, 0.0);
   EXPECT_EQ(predicted_path.path[0].position.y, 0.0);
   EXPECT_EQ(predicted_path.path[0].position.z, 0.0);
+}
+
+namespace
+{
+geometry_msgs::msg::Pose make_pose(const double x, const double y, const double yaw)
+{
+  geometry_msgs::msg::Pose pose;
+  pose.position.x = x;
+  pose.position.y = y;
+  pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
+  return pose;
+}
+}  // namespace
+
+TEST(ShiftPathReference, zero_offset_is_noop)
+{
+  PredictedPath path;
+  path.path.push_back(make_pose(1.0, 2.0, 0.3));
+  path.path.push_back(make_pose(3.0, 4.0, 0.6));
+
+  const PredictedPath original = path;
+  autoware::map_based_prediction::shiftPathReference(path, Eigen::Vector2d(0.0, 0.0));
+
+  ASSERT_EQ(path.path.size(), original.path.size());
+  for (size_t i = 0; i < path.path.size(); ++i) {
+    EXPECT_DOUBLE_EQ(path.path[i].position.x, original.path[i].position.x);
+    EXPECT_DOUBLE_EQ(path.path[i].position.y, original.path[i].position.y);
+  }
+}
+
+TEST(ShiftPathReference, straight_path_translates_by_offset)
+{
+  // yaw == 0: object-local axes align with world axes, so the offset adds directly.
+  PredictedPath path;
+  path.path.push_back(make_pose(1.0, 1.0, 0.0));
+  path.path.push_back(make_pose(2.0, 1.0, 0.0));
+
+  autoware::map_based_prediction::shiftPathReference(path, Eigen::Vector2d(0.5, 0.3));
+
+  EXPECT_DOUBLE_EQ(path.path[0].position.x, 1.5);
+  EXPECT_DOUBLE_EQ(path.path[0].position.y, 1.3);
+  EXPECT_DOUBLE_EQ(path.path[1].position.x, 2.5);
+  EXPECT_DOUBLE_EQ(path.path[1].position.y, 1.3);
+}
+
+TEST(ShiftPathReference, offset_rotates_with_pose_yaw)
+{
+  // yaw == +90 deg: a longitudinal (+x local) offset points along +y in the world frame.
+  PredictedPath path;
+  path.path.push_back(make_pose(5.0, 5.0, M_PI / 2.0));
+
+  autoware::map_based_prediction::shiftPathReference(path, Eigen::Vector2d(1.0, 0.0));
+
+  EXPECT_NEAR(path.path[0].position.x, 5.0, 1e-9);
+  EXPECT_NEAR(path.path[0].position.y, 6.0, 1e-9);
+}
+
+TEST(ShiftPathReference, turning_path_is_displaced_and_reversible)
+{
+  // A curving path (varying yaw) gets each point displaced along its own heading, and the
+  // inverse offset restores the original geometry exactly.
+  PredictedPath path;
+  path.path.push_back(make_pose(0.0, 0.0, 0.0));
+  path.path.push_back(make_pose(1.0, 0.2, 0.5));
+  path.path.push_back(make_pose(1.8, 0.8, 1.0));
+  const PredictedPath original = path;
+
+  constexpr double lr = 1.25;
+  autoware::map_based_prediction::shiftPathReference(path, Eigen::Vector2d(lr, 0.0));
+
+  // Every point moves by exactly lr (the displacement magnitude is offset-norm-preserving).
+  for (size_t i = 0; i < path.path.size(); ++i) {
+    const double dx = path.path[i].position.x - original.path[i].position.x;
+    const double dy = path.path[i].position.y - original.path[i].position.y;
+    EXPECT_NEAR(std::hypot(dx, dy), lr, 1e-9);
+  }
+  // The middle/last points point in different directions, so the displacement vectors differ.
+  EXPECT_GT(
+    std::abs(
+      (path.path[2].position.y - original.path[2].position.y) -
+      (path.path[0].position.y - original.path[0].position.y)),
+    1e-3);
+
+  // Reversible: shifting back by -lr restores the original points.
+  autoware::map_based_prediction::shiftPathReference(path, Eigen::Vector2d(-lr, 0.0));
+  for (size_t i = 0; i < path.path.size(); ++i) {
+    EXPECT_NEAR(path.path[i].position.x, original.path[i].position.x, 1e-9);
+    EXPECT_NEAR(path.path[i].position.y, original.path[i].position.y, 1e-9);
+  }
+}
+
+namespace
+{
+PredictedObject make_box_object_with_path()
+{
+  PredictedObject object;
+  object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  object.shape.dimensions.x = 4.0;
+  object.shape.dimensions.y = 2.0;
+  object.shape.dimensions.z = 1.5;
+
+  object.kinematics.initial_pose_with_covariance.pose = make_pose(10.0, 20.0, 0.0);
+
+  PredictedPath path;
+  path.path.push_back(make_pose(10.0, 20.0, 0.0));
+  object.kinematics.predicted_paths.push_back(path);
+  return object;
+}
+
+geometry_msgs::msg::Point32 make_point32(const float x, const float y)
+{
+  geometry_msgs::msg::Point32 point;
+  point.x = x;
+  point.y = y;
+  return point;
+}
+}  // namespace
+
+TEST(ExpandShapeToFootprintAndRecenter, noop_without_footprint)
+{
+  PredictedObject object = make_box_object_with_path();
+  autoware::map_based_prediction::utils::expandShapeToFootprintAndRecenter(object);
+
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.x, 4.0);
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.y, 2.0);
+  EXPECT_DOUBLE_EQ(object.kinematics.predicted_paths[0].path[0].position.x, 10.0);
+}
+
+TEST(ExpandShapeToFootprintAndRecenter, noop_when_footprint_within_box)
+{
+  PredictedObject object = make_box_object_with_path();
+  // Footprint fully inside the 4x2 box.
+  object.shape.footprint.points.push_back(make_point32(-1.0, -0.5));
+  object.shape.footprint.points.push_back(make_point32(1.0, -0.5));
+  object.shape.footprint.points.push_back(make_point32(1.0, 0.5));
+  object.shape.footprint.points.push_back(make_point32(-1.0, 0.5));
+
+  autoware::map_based_prediction::utils::expandShapeToFootprintAndRecenter(object);
+
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.x, 4.0);
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.y, 2.0);
+  EXPECT_DOUBLE_EQ(object.kinematics.predicted_paths[0].path[0].position.x, 10.0);
+  EXPECT_DOUBLE_EQ(object.kinematics.predicted_paths[0].path[0].position.y, 20.0);
+}
+
+TEST(ExpandShapeToFootprintAndRecenter, grows_box_and_recenters_on_protrusion)
+{
+  PredictedObject object = make_box_object_with_path();
+  // Footprint protrudes forward to x = 3 (box half-length is 2).
+  object.shape.footprint.points.push_back(make_point32(-2.0, -1.0));
+  object.shape.footprint.points.push_back(make_point32(3.0, -1.0));
+  object.shape.footprint.points.push_back(make_point32(3.0, 1.0));
+  object.shape.footprint.points.push_back(make_point32(-2.0, 1.0));
+
+  autoware::map_based_prediction::utils::expandShapeToFootprintAndRecenter(object);
+
+  // Union bounds: x in [-2, 3] -> length 5, center offset +0.5; y unchanged.
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.x, 5.0);
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.y, 2.0);
+  // Path (yaw 0) recenters by +0.5 in x.
+  EXPECT_DOUBLE_EQ(object.kinematics.predicted_paths[0].path[0].position.x, 10.5);
+  EXPECT_DOUBLE_EQ(object.kinematics.predicted_paths[0].path[0].position.y, 20.0);
+  // The t=0 box center (initial pose) recenters by the same +0.5 in x.
+  EXPECT_DOUBLE_EQ(object.kinematics.initial_pose_with_covariance.pose.position.x, 10.5);
+  EXPECT_DOUBLE_EQ(object.kinematics.initial_pose_with_covariance.pose.position.y, 20.0);
+  // Footprint re-expressed about the new center (shifted by -0.5 in x).
+  EXPECT_FLOAT_EQ(object.shape.footprint.points[1].x, 2.5f);
+  EXPECT_FLOAT_EQ(object.shape.footprint.points[0].x, -2.5f);
 }
 
 TEST(PathGenerator, test_generatePathToTargetPoint)
