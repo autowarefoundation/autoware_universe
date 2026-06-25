@@ -27,7 +27,7 @@ autoware_agnocast_wrapper_register_node(imu_corrector
 autoware_agnocast_wrapper_register_node(gyro_bias_estimator
   PLUGIN "autoware::imu_corrector::GyroBiasEstimator"
   EXECUTABLE gyro_bias_estimator_node
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
   ROS2_EXECUTOR SingleThreadedExecutor
 )
 
