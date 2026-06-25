@@ -494,6 +494,15 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
   const auto num_orders = static_cast<std::int32_t>(config_.serialization_orders_.size());
   const auto num_blocks = divup(static_cast<std::size_t>(capacity), config_.threads_per_block_);
 
+  // The sort keys are serialized (Morton/Z-order) codes interleaving 3 grid coordinates of
+  // serialization_depth_ bits each, so they occupy at most 3 * serialization_depth_ bits (the MSB
+  // sits at 3 * serialization_depth_ - 1). Pooling stages only right-shift the codes, which can
+  // never raise the MSB, so this is a valid upper bound for every stage. The INT64_MAX padding
+  // sentinel still sorts last because its low bits are all set, and the full key value is preserved
+  // by the radix sort, so exact-equality sentinel checks remain valid. std::max guards a degenerate
+  // single-voxel grid (serialization_depth_ == 0), since CUB requires end_bit > begin_bit.
+  const int pooling_end_bit = std::max(1, 3 * config_.serialization_depth_);
+
   setInitialStageCountKernel<<<1, 1, 0, stream_>>>(stage_counts, num_voxels);
   CHECK_CUDA_ERROR(cudaPeekAtLastError());
 
@@ -513,7 +522,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
       cub::DeviceRadixSort::SortPairs(
         pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
         pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
-        capacity, 0, 63, stream_));
+        capacity, 0, pooling_end_bit, stream_));
 
     markPoolingRunsKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
       pooling_sorted_keys_d_.get(), pooling_run_flags_d_.get(), capacity);
@@ -542,7 +551,7 @@ void PreprocessCuda::generateSerializedPoolingMetadata(
         cub::DeviceRadixSort::SortPairs(
           pooling_workspace_d_.get(), pooling_workspace_size_, pooling_keys_d_.get(),
           pooling_sorted_keys_d_.get(), pooling_indices_d_.get(), pooling_sorted_indices_d_.get(),
-          capacity, 0, 63, stream_));
+          capacity, 0, pooling_end_bit, stream_));
 
       fillOrderAndInverseKernel<<<num_blocks, config_.threads_per_block_, 0, stream_>>>(
         pooling_sorted_keys_d_.get(), pooling_sorted_indices_d_.get(), stage_counts,
@@ -709,6 +718,8 @@ std::size_t PreprocessCuda::generateFeatures(
       config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, coord_min_x, coord_min_y,
       coord_min_z);
 
+    // Keys are FNV-1a hashes spread pseudo-randomly across the full 64-bit range, so there is no
+    // usable upper bound below 2^64; sort all 64 bits.
     cub::DeviceRadixSort::SortPairs(
       reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
       generate_feature_workspace_size_, hashes64_d_.get(), sorted_hashes64_d_.get(),
