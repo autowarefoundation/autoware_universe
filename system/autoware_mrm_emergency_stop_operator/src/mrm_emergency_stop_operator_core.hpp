@@ -95,7 +95,7 @@ private:
   bool is_prev_control_cmd_subscribed_;
 
   // Driving mode
-  std::optional<uint32_t> driving_mode_id;
+  std::optional<uint32_t> driving_mode_id_;  // Refer to the driving_mode_manager for this ID.
 
   // Algorithm
   Control calcTargetAcceleration(const Control & prev_control_cmd) const;
