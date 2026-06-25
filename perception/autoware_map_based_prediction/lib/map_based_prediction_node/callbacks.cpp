@@ -72,8 +72,6 @@ void MapCallback::mapCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMap
 ObjectsCallback::ObjectsCallback(autoware::agnocast_wrapper::Node * node, NodeState & state)
 : node_(node), state_(state), transform_listener_(node)
 {
-  // Use the wrapper Node's member (works in both =0 and =1); the AUTOWARE_CREATE_*_ON_NODE macro
-  // expands to a free function taking rclcpp::Node*, which a wrapper Node* does not convert to.
   sub_traffic_signals_ =
     node->create_polling_subscriber<TrafficLightGroupArray>("/traffic_signals", rclcpp::QoS{1});
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();

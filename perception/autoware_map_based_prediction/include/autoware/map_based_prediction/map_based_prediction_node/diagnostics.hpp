@@ -27,7 +27,6 @@
 namespace autoware::map_based_prediction
 {
 
-// Wrapper-Node specializations of the autoware_utils helpers (the bare aliases bind rclcpp::Node).
 using PublishedTimePublisher =
   autoware_utils::BasicPublishedTimePublisher<autoware::agnocast_wrapper::Node>;
 using DebugPublisher = autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>;
