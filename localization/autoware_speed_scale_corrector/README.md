@@ -63,27 +63,15 @@ Estimation is skipped when either timestamp difference is greater than `update_i
 
 Estimation is performed only when all of the following constraints are satisfied:
 
-- **Angular velocity constraint (IMU)**:
-
-  $$
-  |\omega_{imu}| \leq \omega_{max}
-  $$
+- **Angular velocity constraint (IMU)** — $|\omega_{imu}| \leq \omega_{max}$
 
   Default $\omega_{max} \approx 0.6\ \mathrm{deg/s}$ ($0.0105\ \mathrm{rad/s}$) rejects obvious curves and turns. This threshold is set near the practical IMU bias/noise floor rather than fine straight-line discrimination.
 
-- **Speed constraints (odometry)**:
-
-  $$
-  v_{min} \leq v_{odom} \leq v_{max}
-  $$
+- **Speed constraints (odometry)** — $v_{min} \leq v_{odom} \leq v_{max}$
 
   Default $v_{min} = 6.0\ \mathrm{m/s}$ improves pose-differentiation SNR. Default $v_{max} = 17.0\ \mathrm{m/s}$ filters out extreme speeds. Together with $\omega_{max}$, estimation runs mainly on moderate-speed, near-straight segments.
 
-- **Velocity report validity**:
-
-  $$
-  |v_{report}| > 10^{-6}
-  $$
+- **Velocity report validity** — $|v_{report}| > 10^{-6}$
 
 ### 5. Scale Factor Estimation (Kalman Filter)
 
@@ -95,25 +83,25 @@ $$
 
 Kalman filter update:
 
-- Prediction:
+**Prediction:**
 
-  $$
-  x_{pred} = x,\quad P_{pred} = P + Q
-  $$
+$$
+x_{pred} = x,\quad P_{pred} = P + Q
+$$
 
-- Update:
+**Update:**
 
-  $$
-  H = v_{report},\quad y = z - H x_{pred}
-  $$
+$$
+H = v_{report},\quad y = z - H x_{pred}
+$$
 
-  $$
-  S = H^2 P_{pred} + R,\quad K = \frac{P_{pred} H}{S}
-  $$
+$$
+S = H^2 P_{pred} + R,\quad K = \frac{P_{pred} H}{S}
+$$
 
-  $$
-  x = x_{pred} + K y,\quad P = (1 - K H) P_{pred}
-  $$
+$$
+x = x_{pred} + K y,\quad P = (1 - K H) P_{pred}
+$$
 
 ## Inputs / Outputs
 
