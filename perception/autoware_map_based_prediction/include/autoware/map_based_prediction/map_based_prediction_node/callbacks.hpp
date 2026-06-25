@@ -22,6 +22,8 @@
 #include "autoware/map_based_prediction/predictor_vru/predictor_vru.hpp"
 
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/transform_listener.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -50,44 +52,48 @@ struct NodeState
 class MapCallback
 {
 public:
-  explicit MapCallback(rclcpp::Node * node, NodeState & state);
+  explicit MapCallback(autoware::agnocast_wrapper::Node * node, NodeState & state);
 
   void mapCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg);
 
 private:
-  rclcpp::Node * node_;
+  autoware::agnocast_wrapper::Node * node_;
   NodeState & state_;
 };
 
 class ObjectsCallback
 {
 public:
-  explicit ObjectsCallback(rclcpp::Node * node, NodeState & state);
+  explicit ObjectsCallback(autoware::agnocast_wrapper::Node * node, NodeState & state);
 
-  void setObjectsPublisher(rclcpp::Publisher<PredictedObjects>::SharedPtr pub_objects);
-  void setDebugMarkersPublisher(
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_debug_markers);
+  void setObjectsPublisher(AUTOWARE_PUBLISHER_PTR(PredictedObjects) pub_objects);
+  void setDebugMarkersPublisher(AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray)
+                                  pub_debug_markers);
   void setDiagnostics(Diagnostics * diagnostics);
 
   void objectsCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & in_objects);
 
 private:
-  rclcpp::Node * node_;
+  using TfListener = autoware_utils::TransformListenerT<
+    autoware::agnocast_wrapper::Node, autoware::agnocast_wrapper::Buffer,
+    autoware::agnocast_wrapper::TransformListener>;
+
+  autoware::agnocast_wrapper::Node * node_;
   NodeState & state_;
 
   AUTOWARE_POLLING_SUBSCRIBER_PTR(TrafficLightGroupArray) sub_traffic_signals_;
-  autoware_utils::TransformListener transform_listener_;
+  TfListener transform_listener_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
 
-  rclcpp::Publisher<PredictedObjects>::SharedPtr pub_objects_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_debug_markers_;
+  AUTOWARE_PUBLISHER_PTR(PredictedObjects) pub_objects_;
+  AUTOWARE_PUBLISHER_PTR(visualization_msgs::msg::MarkerArray) pub_debug_markers_;
 
   Diagnostics * diagnostics_{};
 
   void trafficSignalsCallback(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & msg);
   void publish(
-    const PredictedObjects & output,
+    AUTOWARE_MESSAGE_UNIQUE_PTR(PredictedObjects) output,
     const visualization_msgs::msg::MarkerArray & debug_markers) const;
 };
 

@@ -18,6 +18,7 @@
 #include "autoware/map_based_prediction/data_structure.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
@@ -48,7 +49,7 @@ public:
     double history_time_length{1.0};
   };
 
-  explicit ManeuverPredictor(rclcpp::Node & node);
+  explicit ManeuverPredictor(autoware::agnocast_wrapper::Node & node);
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
   void setRoutingGraph(std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr);
@@ -77,7 +78,7 @@ private:
   double calcLeftLateralOffset(
     const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose);
 
-  rclcpp::Node & node_;
+  autoware::agnocast_wrapper::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;
   Params params_;

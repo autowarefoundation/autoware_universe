@@ -18,6 +18,7 @@
 #include "autoware/map_based_prediction/data_structure.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <std_msgs/msg/header.hpp>
@@ -44,7 +45,7 @@ public:
     double cutoff_freq_of_velocity_lpf{0.1};
   };
 
-  explicit ObjectTracker(rclcpp::Node & node);
+  explicit ObjectTracker(autoware::agnocast_wrapper::Node & node);
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
   void setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr);
@@ -69,7 +70,7 @@ public:
   }
 
 private:
-  rclcpp::Node & node_;
+  autoware::agnocast_wrapper::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;

@@ -18,6 +18,7 @@
 #include "autoware/map_based_prediction/data_structure.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
@@ -46,7 +47,7 @@ public:
     std::vector<double> timeout_set_for_no_intention_to_walk;
   };
 
-  explicit TrafficSignalModule(rclcpp::Node & node) : node_(node) {}
+  explicit TrafficSignalModule(autoware::agnocast_wrapper::Node & node) : node_(node) {}
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
   {
@@ -71,7 +72,7 @@ public:
     const lanelet::Id & signal_id);
 
 private:
-  rclcpp::Node & node_;
+  autoware::agnocast_wrapper::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   std::unordered_map<lanelet::Id, TrafficLightGroup> signal_id_map_;
