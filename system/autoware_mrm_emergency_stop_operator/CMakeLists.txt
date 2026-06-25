@@ -8,9 +8,11 @@ ament_auto_add_library(${PROJECT_NAME}_component SHARED
   src/mrm_emergency_stop_operator/mrm_emergency_stop_operator_core.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_component
+autoware_agnocast_wrapper_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::mrm_emergency_stop_operator::MrmEmergencyStopOperator"
   EXECUTABLE ${PROJECT_NAME}_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 ament_auto_package(INSTALL_TO_SHARE
