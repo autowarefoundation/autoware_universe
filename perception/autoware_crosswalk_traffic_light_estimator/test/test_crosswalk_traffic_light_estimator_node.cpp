@@ -48,7 +48,7 @@ protected:
     test_node_ = std::make_shared<rclcpp::Node>("test_node");
 
     executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
-    executor_->add_node(node_);
+    executor_->add_node(node_->get_node_base_interface());
     executor_->add_node(test_node_);
 
     map_pub_ = test_node_->create_publisher<LaneletMapBin>(
