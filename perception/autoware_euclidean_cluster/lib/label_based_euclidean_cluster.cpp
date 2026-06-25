@@ -131,6 +131,7 @@ std::unordered_map<std::uint8_t, std::vector<SemanticPoint>> split_pointcloud(
 }
 
 /// @brief Compute the average semantic probability for one clustered object instance.
+/// @details `indices` are relative to the per-label filtered cloud built from `points`.
 float cluster_probability_from_indices(
   const std::vector<SemanticPoint> & points, const pcl::Indices & indices)
 {

@@ -50,10 +50,16 @@ public:
   void setUseHeight(bool use_height) { use_height_ = use_height; }
   void setMinClusterSize(int size) { min_points_per_cluster_ = size; }
   void setMaxClusterSize(int size) { max_cluster_size_ = size; }
+
+  /// @brief Cluster a point cloud and return only point copies for each cluster.
+  /// @details This legacy overload preserves the existing interface for callers that do not need
+  ///          source-point bookkeeping.
   virtual bool cluster(
     const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
     std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters) = 0;
 
+  /// @brief Cluster a point cloud and preserve which source points contributed to each cluster.
+  /// @details Returned indices are relative to the input `pointcloud` passed to this overload.
   virtual bool cluster(
     const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
     std::vector<IndexedCluster> & clusters) = 0;
