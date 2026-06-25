@@ -53,8 +53,7 @@ SpeedScaleCorrectorNode::SpeedScaleCorrectorNode(const rclcpp::NodeOptions & nod
     PollingSubscriber<PoseStamped, All>::create_subscription(this, "~/input/pose", rclcpp::QoS{10});
   sub_velocity_report_ = PollingSubscriber<VelocityReport, All>::create_subscription(
     this, "~/input/velocity_report", rclcpp::QoS{10});
-  sub_imu_ =
-    PollingSubscriber<Imu, All>::create_subscription(this, "~/input/imu", rclcpp::QoS{10});
+  sub_imu_ = PollingSubscriber<Imu, All>::create_subscription(this, "~/input/imu", rclcpp::QoS{10});
 
   timer_ = rclcpp::create_timer(
     this, get_clock(), std::chrono::duration<double>(processor_.get_update_interval_sec()),

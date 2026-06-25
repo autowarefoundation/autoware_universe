@@ -53,10 +53,9 @@ void SpeedScaleEstimator::update_imu_buffer(const std::vector<Imu> & imus)
     imu_buffer_.emplace_back(imu);
   }
 
-  while (
-    !imu_buffer_.empty() &&
-    (rclcpp::Time(imu_buffer_.back().header.stamp) - rclcpp::Time(imu_buffer_.front().header.stamp))
-        .seconds() > parameters_.sensor_buffer_duration) {
+  while (!imu_buffer_.empty() && (rclcpp::Time(imu_buffer_.back().header.stamp) -
+                                  rclcpp::Time(imu_buffer_.front().header.stamp))
+                                     .seconds() > parameters_.sensor_buffer_duration) {
     imu_buffer_.pop_front();
   }
 }
@@ -74,11 +73,10 @@ void SpeedScaleEstimator::update_velocity_report_buffer(
     velocity_report_buffer_.emplace_back(velocity_report);
   }
 
-  while (
-    !velocity_report_buffer_.empty() &&
-    (rclcpp::Time(velocity_report_buffer_.back().header.stamp) -
-     rclcpp::Time(velocity_report_buffer_.front().header.stamp))
-        .seconds() > parameters_.sensor_buffer_duration) {
+  while (!velocity_report_buffer_.empty() &&
+         (rclcpp::Time(velocity_report_buffer_.back().header.stamp) -
+          rclcpp::Time(velocity_report_buffer_.front().header.stamp))
+             .seconds() > parameters_.sensor_buffer_duration) {
     velocity_report_buffer_.pop_front();
   }
 }
