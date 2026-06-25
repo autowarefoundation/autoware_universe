@@ -60,7 +60,8 @@ NaiveCollectorMatcher<MsgTraits>::match_cloud_to_collector(
 
 template <typename MsgTraits>
 void NaiveCollectorMatcher<MsgTraits>::set_collector_info(
-  std::shared_ptr<CloudCollector<MsgTraits>> & collector, const IncomingCloudInfo & incoming_cloud_info)
+  std::shared_ptr<CloudCollector<MsgTraits>> & collector,
+  const IncomingCloudInfo & incoming_cloud_info)
 {
   const auto reference = core_.reference_for(incoming_cloud_info);
   collector->set_info(std::make_shared<NaiveCollectorInfo>(reference.reference_time));
@@ -106,7 +107,8 @@ AdvancedCollectorMatcher<MsgTraits>::match_cloud_to_collector(
 
 template <typename MsgTraits>
 void AdvancedCollectorMatcher<MsgTraits>::set_collector_info(
-  std::shared_ptr<CloudCollector<MsgTraits>> & collector, const IncomingCloudInfo & incoming_cloud_info)
+  std::shared_ptr<CloudCollector<MsgTraits>> & collector,
+  const IncomingCloudInfo & incoming_cloud_info)
 {
   const auto reference = core_.reference_for(incoming_cloud_info);
   collector->set_info(

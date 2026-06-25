@@ -111,8 +111,7 @@ private:
   // available transform are dropped and recorded.
   void process_input_cloud(
     const std::string & topic, const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud,
-    const std::vector<int64_t> & pc_nanoseconds,
-    const builtin_interfaces::msg::Time & oldest_stamp,
+    const std::vector<int64_t> & pc_nanoseconds, const builtin_interfaces::msg::Time & oldest_stamp,
     std::unordered_map<int64_t, Eigen::Matrix4f> & transform_memo,
     ConcatenatedCloudResult<sensor_msgs::msg::PointCloud2> & result);
 

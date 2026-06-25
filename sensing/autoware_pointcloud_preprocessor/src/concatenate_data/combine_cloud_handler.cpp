@@ -188,7 +188,8 @@ void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::initialize_concatenated
       concatenate_cloud_modifier{*result.concatenate_cloud_ptr, output_frame_};
   }
 
-  // An empty cloud is trivially dense; process_input_cloud() folds in each appended cloud's density.
+  // An empty cloud is trivially dense; process_input_cloud() folds in each appended cloud's
+  // density.
   result.concatenate_cloud_ptr->is_dense = true;
 
   // Reserve space based on the total size of the pointcloud data to speed up the concatenation
@@ -229,8 +230,7 @@ void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::store_synchronized_clou
 
 void CombineCloudHandler<sensor_msgs::msg::PointCloud2>::process_input_cloud(
   const std::string & topic, const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud,
-  const std::vector<int64_t> & pc_nanoseconds,
-  const builtin_interfaces::msg::Time & oldest_stamp,
+  const std::vector<int64_t> & pc_nanoseconds, const builtin_interfaces::msg::Time & oldest_stamp,
   std::unordered_map<int64_t, Eigen::Matrix4f> & transform_memo,
   ConcatenatedCloudResult<sensor_msgs::msg::PointCloud2> & result)
 {
