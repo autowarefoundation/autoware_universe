@@ -25,6 +25,9 @@ SpeedScaleEstimatorParameters load_parameters(rclcpp::Node * node)
 {
   SpeedScaleEstimatorParameters parameters;
   parameters.update_interval = node->declare_parameter<double>("update_interval");
+  parameters.max_pose_lag = node->declare_parameter<double>("max_pose_lag");
+  parameters.max_stamp_lag = node->declare_parameter<double>("max_stamp_lag");
+  parameters.sensor_buffer_duration = node->declare_parameter<double>("sensor_buffer_duration");
   parameters.initial_speed_scale_factor =
     node->declare_parameter<double>("initial_speed_scale_factor");
   parameters.initial_speed_scale_factor_covariance =
@@ -46,10 +49,12 @@ SpeedScaleCorrectorNode::SpeedScaleCorrectorNode(const rclcpp::NodeOptions & nod
   pub_estimated_speed_scale_factor_ = create_publisher<Float32Stamped>("~/output/scale_factor", 1);
   pub_debug_info_ = create_publisher<StringStamped>("~/output/debug_info", 1);
 
-  sub_pose_ = PollingSubscriber<PoseStamped, All>::create_subscription(this, "~/input/pose", 1);
-  sub_velocity_report_ =
-    PollingSubscriber<VelocityReport, All>::create_subscription(this, "~/input/velocity_report", 1);
-  sub_imu_ = PollingSubscriber<Imu, All>::create_subscription(this, "~/input/imu", 1);
+  sub_pose_ =
+    PollingSubscriber<PoseStamped, All>::create_subscription(this, "~/input/pose", rclcpp::QoS{10});
+  sub_velocity_report_ = PollingSubscriber<VelocityReport, All>::create_subscription(
+    this, "~/input/velocity_report", rclcpp::QoS{10});
+  sub_imu_ =
+    PollingSubscriber<Imu, All>::create_subscription(this, "~/input/imu", rclcpp::QoS{10});
 
   timer_ = rclcpp::create_timer(
     this, get_clock(), std::chrono::duration<double>(processor_.get_update_interval_sec()),

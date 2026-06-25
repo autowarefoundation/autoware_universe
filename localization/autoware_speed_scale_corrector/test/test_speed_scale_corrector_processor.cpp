@@ -35,6 +35,9 @@ protected:
   void SetUp() override
   {
     parameters_.update_interval = 0.1;
+    parameters_.max_pose_lag = 0.5;
+    parameters_.max_stamp_lag = 0.2;
+    parameters_.sensor_buffer_duration = 1.0;
     parameters_.initial_speed_scale_factor = 1.0;
     parameters_.initial_speed_scale_factor_covariance = 1000.0;
     parameters_.process_noise_covariance = 0.01;

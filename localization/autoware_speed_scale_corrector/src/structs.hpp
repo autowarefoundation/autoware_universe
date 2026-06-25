@@ -21,6 +21,9 @@ namespace autoware::speed_scale_corrector
 struct SpeedScaleEstimatorParameters
 {
   double update_interval{};
+  double max_pose_lag{};
+  double max_stamp_lag{};
+  double sensor_buffer_duration{};
   double initial_speed_scale_factor{};
   double initial_speed_scale_factor_covariance{};
   double process_noise_covariance{};

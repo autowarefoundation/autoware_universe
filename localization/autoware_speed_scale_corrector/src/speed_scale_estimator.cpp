@@ -42,19 +42,63 @@ SpeedScaleEstimatorNotUpdated SpeedScaleEstimator::make_not_updated(
   return {reason, context, estimated_speed_scale_factor_};
 }
 
+void SpeedScaleEstimator::update_imu_buffer(const std::vector<Imu> & imus)
+{
+  for (const auto & imu : imus) {
+    if (
+      !imu_buffer_.empty() &&
+      rclcpp::Time(imu.header.stamp) < rclcpp::Time(imu_buffer_.back().header.stamp)) {
+      continue;
+    }
+    imu_buffer_.emplace_back(imu);
+  }
+
+  while (
+    !imu_buffer_.empty() &&
+    (rclcpp::Time(imu_buffer_.back().header.stamp) - rclcpp::Time(imu_buffer_.front().header.stamp))
+        .seconds() > parameters_.sensor_buffer_duration) {
+    imu_buffer_.pop_front();
+  }
+}
+
+void SpeedScaleEstimator::update_velocity_report_buffer(
+  const std::vector<VelocityReport> & velocity_reports)
+{
+  for (const auto & velocity_report : velocity_reports) {
+    if (
+      !velocity_report_buffer_.empty() &&
+      rclcpp::Time(velocity_report.header.stamp) <
+        rclcpp::Time(velocity_report_buffer_.back().header.stamp)) {
+      continue;
+    }
+    velocity_report_buffer_.emplace_back(velocity_report);
+  }
+
+  while (
+    !velocity_report_buffer_.empty() &&
+    (rclcpp::Time(velocity_report_buffer_.back().header.stamp) -
+     rclcpp::Time(velocity_report_buffer_.front().header.stamp))
+        .seconds() > parameters_.sensor_buffer_duration) {
+    velocity_report_buffer_.pop_front();
+  }
+}
+
 tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedScaleEstimator::update(
   const std::vector<PoseStamped> & poses, const std::vector<Imu> & imus,
   const std::vector<VelocityReport> & velocity_reports)
 {
+  update_imu_buffer(imus);
+  update_velocity_report_buffer(velocity_reports);
+
   if (poses.empty()) {
     return tl::make_unexpected(make_not_updated(UpdateFailureReason::PoseEmpty));
   }
 
-  if (imus.empty()) {
+  if (imu_buffer_.empty()) {
     return tl::make_unexpected(make_not_updated(UpdateFailureReason::ImuEmpty));
   }
 
-  if (velocity_reports.empty()) {
+  if (velocity_report_buffer_.empty()) {
     return tl::make_unexpected(make_not_updated(UpdateFailureReason::VelocityReportEmpty));
   }
 
@@ -68,11 +112,11 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   const auto & pose_prev = previous_pose_.value();
 
   const double time_diff = calc_time_diff(pose_prev, pose_curr);
-  if (time_diff >= parameters_.update_interval * 2.0) {
+  if (time_diff > parameters_.max_pose_lag) {
     previous_pose_ = pose_curr;
     UpdateFailureContext context;
     context.time_diff = time_diff;
-    context.time_diff_threshold = parameters_.update_interval * 2.0;
+    context.time_diff_threshold = parameters_.max_pose_lag;
     return tl::make_unexpected(
       make_not_updated(UpdateFailureReason::TimeDifferenceTooLarge, context));
   }
@@ -81,30 +125,34 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
 
   const rclcpp::Time pose_time(pose_curr.header.stamp);
 
-  const auto nearest_velocity_report = find_nearest_velocity_report(velocity_reports, pose_time);
+  const std::vector<VelocityReport> buffered_velocity_reports(
+    velocity_report_buffer_.begin(), velocity_report_buffer_.end());
+  const auto nearest_velocity_report =
+    find_nearest_velocity_report(buffered_velocity_reports, pose_time);
   if (!nearest_velocity_report) {
     return tl::make_unexpected(make_not_updated(UpdateFailureReason::VelocityReportEmpty));
   }
 
-  if (nearest_velocity_report->stamp_diff > parameters_.update_interval) {
+  if (nearest_velocity_report->stamp_diff > parameters_.max_stamp_lag) {
     UpdateFailureContext context;
     context.stamp_diff = nearest_velocity_report->stamp_diff;
-    context.stamp_diff_threshold = parameters_.update_interval;
+    context.stamp_diff_threshold = parameters_.max_stamp_lag;
     return tl::make_unexpected(
       make_not_updated(UpdateFailureReason::VelocityReportTimestampMismatch, context));
   }
 
   const double v_report = nearest_velocity_report->longitudinal_velocity;
 
-  const auto nearest_imu = find_nearest_imu(imus, pose_time);
+  const std::vector<Imu> buffered_imus(imu_buffer_.begin(), imu_buffer_.end());
+  const auto nearest_imu = find_nearest_imu(buffered_imus, pose_time);
   if (!nearest_imu) {
     return tl::make_unexpected(make_not_updated(UpdateFailureReason::ImuEmpty));
   }
 
-  if (nearest_imu->stamp_diff > parameters_.update_interval) {
+  if (nearest_imu->stamp_diff > parameters_.max_stamp_lag) {
     UpdateFailureContext context;
     context.stamp_diff = nearest_imu->stamp_diff;
-    context.stamp_diff_threshold = parameters_.update_interval;
+    context.stamp_diff_threshold = parameters_.max_stamp_lag;
     return tl::make_unexpected(
       make_not_updated(UpdateFailureReason::ImuTimestampMismatch, context));
   }
