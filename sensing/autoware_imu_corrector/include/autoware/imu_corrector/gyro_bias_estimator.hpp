@@ -108,10 +108,10 @@ private:
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry) & odom_msg_ptr);
   void callback_pose_msg(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
-      pose_msg_ptr);
+    pose_msg_ptr);
   void estimate_scale_gyro(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::PoseWithCovarianceStamped) &
-      pose_msg_ptr);
+    pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
   double compute_yaw_rate_from_quat(
