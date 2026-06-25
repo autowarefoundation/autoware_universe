@@ -332,8 +332,8 @@ LabelBasedEuclideanClusterNode::LabelBasedEuclideanClusterNode(const rclcpp::Nod
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "input", rclcpp::SensorDataQoS().keep_last(1),
     std::bind(&LabelBasedEuclideanClusterNode::on_pointcloud, this, _1));
-  objects_pub_ =
-    this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>("output", rclcpp::QoS{1});
+  objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
+    "output", rclcpp::QoS{1});
 
   // Initialize timing and debug
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
