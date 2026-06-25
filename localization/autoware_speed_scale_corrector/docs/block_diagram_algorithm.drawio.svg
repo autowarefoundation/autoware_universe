@@ -85,7 +85,7 @@
           >
             <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
               <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
-                calc_odometry_velocity()
+                calc_pose_velocity()
                 <br/>
                 3D distance / dt
                 <br/>
@@ -94,7 +94,7 @@
             </div>
           </div>
         </foreignObject>
-        <text x="395" y="94" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">calc_odometry_velocity()...</text>
+        <text x="395" y="94" fill="rgb(0, 0, 0)" font-family="Helvetica" font-size="12px" text-anchor="middle">calc_pose_velocity()...</text>
       </switch>
     </g>
     <rect x="280" y="150" width="230" height="80" rx="12" ry="12" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/>
@@ -144,7 +144,7 @@
             <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
               <div
                 style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"
-              >Constraint check<br/>- |ω_imu| &lt;= max_angular_velocity<br/>- min_speed &lt;= v_odom &lt;= max_speed<br/>- |v_report| &gt; 0</div>
+              >Constraint check<br/>- |ω_imu| &lt;= max_angular_velocity<br/>- min_speed &lt;= v_pose &lt;= max_speed<br/>- |v_wheel| &gt; 0</div>
             </div>
           </div>
         </foreignObject>
@@ -163,11 +163,11 @@
               <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
                 Scalar Kalman Filter
                 <br/>
-                Observation model: z = s * v_report
+                Observation model: z = s * v_wheel
                 <br/>
-                Measurement: z = v_odom
+                Measurement: z = v_pose
                 <br/>
-                Observation matrix: H = v_report
+                Observation matrix: H = v_wheel
                 <br/>
                 State: s (speed scale factor)
               </div>
@@ -191,7 +191,7 @@
                 <br/>
                 estimated_speed_scale_factor
                 <br/>
-                covariance, K, v_odom, v_report
+                covariance, K, v_pose, v_wheel
               </div>
             </div>
           </div>

@@ -119,7 +119,7 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
       make_not_updated(UpdateFailureReason::TimeDifferenceTooLarge, context));
   }
 
-  const double v_odometry = calc_odometry_velocity(pose_prev, pose_curr);
+  const double v_pose = calc_pose_velocity(pose_prev, pose_curr);
 
   const rclcpp::Time pose_time(pose_curr.header.stamp);
 
@@ -139,7 +139,7 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
       make_not_updated(UpdateFailureReason::VelocityReportTimestampMismatch, context));
   }
 
-  const double v_report = nearest_velocity_report->longitudinal_velocity;
+  const double v_wheel = nearest_velocity_report->longitudinal_velocity;
 
   const std::vector<Imu> buffered_imus(imu_buffer_.begin(), imu_buffer_.end());
   const auto nearest_imu = find_nearest_imu(buffered_imus, pose_time);
@@ -164,33 +164,33 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
       make_not_updated(UpdateFailureReason::AngularVelocityTooHigh, context));
   }
 
-  if (v_odometry > parameters_.max_speed) {
+  if (v_pose > parameters_.max_speed) {
     UpdateFailureContext context;
-    context.velocity = v_odometry;
+    context.velocity = v_pose;
     context.velocity_threshold = parameters_.max_speed;
     return tl::make_unexpected(make_not_updated(UpdateFailureReason::VelocityTooHigh, context));
   }
 
-  if (v_odometry < parameters_.min_speed) {
+  if (v_pose < parameters_.min_speed) {
     UpdateFailureContext context;
-    context.velocity = v_odometry;
+    context.velocity = v_pose;
     context.velocity_threshold = parameters_.min_speed;
     return tl::make_unexpected(make_not_updated(UpdateFailureReason::VelocityTooLow, context));
   }
 
-  if (std::abs(v_report) < 1e-6) {
+  if (std::abs(v_wheel) < 1e-6) {
     UpdateFailureContext context;
-    context.velocity = v_report;
+    context.velocity = v_wheel;
     return tl::make_unexpected(
       make_not_updated(UpdateFailureReason::VelocityReportTooSmall, context));
   }
 
-  const double z = v_odometry;
+  const double z = v_pose;
 
   const double x_pred = estimated_speed_scale_factor_;
   const double P_pred = covariance_ + parameters_.process_noise_covariance;  // NOLINT
 
-  const double H = v_report;  // NOLINT
+  const double H = v_wheel;  // NOLINT
   const double innovation = z - H * x_pred;
   const double S = H * H * P_pred + parameters_.measurement_noise_covariance;  // NOLINT
   const double K = (P_pred * H) / S;                                           // NOLINT
@@ -203,8 +203,8 @@ tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> SpeedSca
   SpeedScaleEstimatorUpdated result;
   result.estimated_speed_scale_factor = estimated_speed_scale_factor_;
   result.covariance = covariance_;
-  result.velocity_from_odometry = v_odometry;
-  result.velocity_from_velocity_report = v_report;
+  result.velocity_from_pose = v_pose;
+  result.velocity_from_wheel = v_wheel;
   result.kalman_gain = K;
   result.time_diff = time_diff;
 

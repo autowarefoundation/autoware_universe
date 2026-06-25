@@ -16,7 +16,7 @@
                 <mxCell id="in_imu" value="IMU batch&#10;from polling buffer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
                     <mxGeometry x="40" y="260" width="200" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="v_odom" value="calc_odometry_velocity()&#10;3D distance / dt&#10;from previous and current pose" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                <mxCell id="v_pose" value="calc_pose_velocity()&#10;3D distance / dt&#10;from previous and current pose" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
                     <mxGeometry x="320" y="60" width="230" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="sync_vel" value="find_nearest_velocity_report()&#10;timestamp sync&#10;(stamp_diff &lt;= update_interval)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
@@ -25,19 +25,19 @@
                 <mxCell id="sync_imu" value="find_nearest_imu()&#10;timestamp sync&#10;(stamp_diff &lt;= update_interval)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
                     <mxGeometry x="320" y="250" width="230" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="constraint" value="Constraint check&#10;- |ω_imu| &lt;= max_angular_velocity&#10;- min_speed &lt;= v_odom &lt;= max_speed&#10;- |v_report| &gt; 0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
+                <mxCell id="constraint" value="Constraint check&#10;- |ω_imu| &lt;= max_angular_velocity&#10;- min_speed &lt;= v_pose &lt;= max_speed&#10;- |v_wheel| &gt; 0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
                     <mxGeometry x="620" y="150" width="260" height="100" as="geometry"/>
                 </mxCell>
-                <mxCell id="kf" value="Scalar Kalman Filter&#10;Observation model: z = s * v_report&#10;Measurement: z = v_odom&#10;Observation matrix: H = v_report&#10;State: s (speed scale factor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
+                <mxCell id="kf" value="Scalar Kalman Filter&#10;Observation model: z = s * v_wheel&#10;Measurement: z = v_pose&#10;Observation matrix: H = v_wheel&#10;State: s (speed scale factor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
                     <mxGeometry x="950" y="145" width="260" height="110" as="geometry"/>
                 </mxCell>
-                <mxCell id="out_ok" value="Updated result&#10;estimated_speed_scale_factor&#10;covariance, K, v_odom, v_report" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                <mxCell id="out_ok" value="Updated result&#10;estimated_speed_scale_factor&#10;covariance, K, v_pose, v_wheel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
                     <mxGeometry x="1260" y="160" width="220" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="out_skip" value="Not updated&#10;keep previous scale factor&#10;return reason string" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
                     <mxGeometry x="1260" y="280" width="220" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="in_pose" target="v_odom" edge="1">
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="in_pose" target="v_pose" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="in_vel" target="sync_vel" edge="1">
@@ -46,7 +46,7 @@
                 <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="in_imu" target="sync_imu" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="v_odom" target="constraint" edge="1">
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="v_pose" target="constraint" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="sync_vel" target="constraint" edge="1">

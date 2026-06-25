@@ -87,14 +87,14 @@ std::string failure_reason_to_string(
         context.angular_velocity, context.max_angular_velocity);
     case UpdateFailureReason::VelocityTooHigh:
       return fmt::format(
-        "Velocity is too high, velocity: {:.3f}, max velocity: {:.3f}", context.velocity,
+        "Pose velocity is too high, velocity: {:.3f}, max velocity: {:.3f}", context.velocity,
         context.velocity_threshold);
     case UpdateFailureReason::VelocityTooLow:
       return fmt::format(
-        "Velocity is too low, velocity: {:.3f}, min velocity: {:.3f}", context.velocity,
+        "Pose velocity is too low, velocity: {:.3f}, min velocity: {:.3f}", context.velocity,
         context.velocity_threshold);
     case UpdateFailureReason::VelocityReportTooSmall:
-      return fmt::format("Velocity report is too small: {:.3f}", context.velocity);
+      return fmt::format("Wheel velocity is too small: {:.3f}", context.velocity);
     default:
       return "Unknown failure reason";
   }
@@ -140,10 +140,10 @@ StringStamped SpeedScaleCorrectorProcessor::make_debug_info(
   } else {
     const auto & updated = result.estimation_result.value();
     debug_info.data = fmt::format(
-      "Updated:\nEstimated speed scale factor: {}\nStd. dev.: {}\nVelocity from odometry: "
-      "{}\nVelocity from velocity report: {}\nKalman gain: {}",
+      "Updated:\nEstimated speed scale factor: {}\nStd. dev.: {}\nVelocity from pose: "
+      "{}\nVelocity from wheel: {}\nKalman gain: {}",
       updated.estimated_speed_scale_factor, std::sqrt(updated.covariance),
-      updated.velocity_from_odometry, updated.velocity_from_velocity_report, updated.kalman_gain);
+      updated.velocity_from_pose, updated.velocity_from_wheel, updated.kalman_gain);
   }
 
   return debug_info;

@@ -26,7 +26,7 @@ double calc_time_diff(const PoseStamped & pose_a, const PoseStamped & pose_b)
   return (rclcpp::Time(pose_b.header.stamp) - rclcpp::Time(pose_a.header.stamp)).seconds();
 }
 
-double calc_odometry_velocity(const PoseStamped & pose_a, const PoseStamped & pose_b)
+double calc_pose_velocity(const PoseStamped & pose_a, const PoseStamped & pose_b)
 {
   const double dt = calc_time_diff(pose_a, pose_b);
   if (std::abs(dt) < std::numeric_limits<double>::epsilon()) {

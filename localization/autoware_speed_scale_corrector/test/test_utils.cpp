@@ -101,12 +101,12 @@ TEST_F(UtilsTest, FindNearestVelocityReportReturnsNulloptForEmptyInput)
   EXPECT_FALSE(result.has_value());
 }
 
-TEST_F(UtilsTest, CalcOdometryVelocityFromPoseDifference)
+TEST_F(UtilsTest, CalcPoseVelocityFromPoseDifference)
 {
   const PoseStamped pose_a = create_pose_msg(0.0, 0.0, 0.0);
   const PoseStamped pose_b = create_pose_msg(0.1, 1.0, 0.0);
 
-  EXPECT_NEAR(calc_odometry_velocity(pose_a, pose_b), 10.0, 1e-9);
+  EXPECT_NEAR(calc_pose_velocity(pose_a, pose_b), 10.0, 1e-9);
 }
 
 }  // namespace autoware::speed_scale_corrector
