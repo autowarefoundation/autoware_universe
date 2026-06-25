@@ -57,7 +57,8 @@ TEST(NaiveMatchingPolicy, SkipsCollectorsThatAlreadyHaveTheTopic)
 {
   NaiveMatchingPolicy strategy;
   std::vector<CandidateCollectorState> collectors = {
-    {10.0, 0.0, false}, {10.5, 0.0, true},  // closest by time, but already holds the topic
+    {10.0, 0.0, false},
+    {10.5, 0.0, true},  // closest by time, but already holds the topic
   };
   const auto matched = strategy.match(collectors, incoming_cloud_info("lidar_left", 0.0, 10.45));
   ASSERT_TRUE(matched.has_value());
@@ -96,7 +97,8 @@ TEST(AdvancedMatchingPolicy, MatchesInsideWindowAndRejectsOutside)
   // lidar_left @ 10.04 -> corrected 10.00, inside [9.99, 10.01] (+- topic noise).
   EXPECT_EQ(strategy.match(collectors, incoming_cloud_info("lidar_left", 10.04, 0.0)).value(), 0u);
   // lidar_left @ 10.20 -> corrected 10.16, far outside the window.
-  EXPECT_FALSE(strategy.match(collectors, incoming_cloud_info("lidar_left", 10.20, 0.0)).has_value());
+  EXPECT_FALSE(
+    strategy.match(collectors, incoming_cloud_info("lidar_left", 10.20, 0.0)).has_value());
 }
 
 TEST(AdvancedMatchingPolicy, DoesNotSkipCollectorsThatHaveTheTopic)
