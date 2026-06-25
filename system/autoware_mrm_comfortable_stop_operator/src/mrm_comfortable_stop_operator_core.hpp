@@ -96,7 +96,7 @@ private:
   void onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg);
   void onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg);
   void publishMrmState() const;
-  std::optional<uint32_t> driving_mode_id;
+  std::optional<uint32_t> driving_mode_id_;  // Refer to the driving_mode_manager for this ID.
 };
 
 }  // namespace autoware::mrm_comfortable_stop_operator

@@ -83,7 +83,7 @@ void MrmComfortableStopOperator::operateComfortableStop(
 
 void MrmComfortableStopOperator::onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg)
 {
-  if (msg->mode == driving_mode_id) {
+  if (msg->mode == driving_mode_id_) {
     publishVelocityLimit();
     status_.state = MrmBehaviorStatus::OPERATING;
   } else {
@@ -96,7 +96,7 @@ void MrmComfortableStopOperator::onDrivingModeInfo(DrivingModeInfo::ConstSharedP
 {
   for (const auto & item : msg->items) {
     if (item.name == "comfortable_stop") {
-      driving_mode_id = item.mode;
+      driving_mode_id_ = item.mode;
       break;
     }
   }
@@ -115,12 +115,12 @@ void MrmComfortableStopOperator::publishMrmState() const
     // clang-format on
   };
 
-  if (!driving_mode_id) {
+  if (!driving_mode_id_) {
     return;
   }
 
   DrivingModeMrmStateItem item;
-  item.mode = driving_mode_id.value();
+  item.mode = driving_mode_id_.value();
   item.state = convert_mrm_state(status_.state);
 
   DrivingModeMrmState msg;
