@@ -9,6 +9,7 @@
   <maintainer email="kotaro.uetake@tier4.jp">Kotaro Uetake</maintainer>
   <maintainer email="masato.saeki@tier4.jp">Masato Saeki</maintainer>
   <maintainer email="kokseang.tan@tier4.jp">Kok Seang Tan</maintainer>
+  <maintainer email="yihsiang.fang@tier4.jp">Yi-Hsiang Fang</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
@@ -28,12 +29,14 @@
   <depend>cuda_blackboard</depend>
   <depend>image_transport</depend>
   <depend>launch_ros</depend>
+  <depend>nlohmann-json-dev</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>tf2_eigen</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_sensor_msgs</depend>
+
 
   <exec_depend>autoware_tensorrt_plugins</exec_depend>
 
