@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/mrm_emergency_stop_operator/mrm_emergency_stop_operator_core.hpp"
+#include "mrm_emergency_stop_operator_core.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
 
@@ -56,6 +56,15 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
   // Parameter Callback
   set_param_res_ = add_on_set_parameters_callback(
     std::bind(&MrmEmergencyStopOperator::onParameter, this, std::placeholders::_1));
+
+  // Driving mode interface
+  pub_mrm_state_ = create_publisher<DrivingModeMrmState>("~/output/mrm_state", 1);
+  sub_driving_mode_request_ = create_subscription<DrivingModeRequest>(
+    "~/input/driving_mode_request", 1,
+    std::bind(&MrmEmergencyStopOperator::onDrivingModeRequest, this, std::placeholders::_1));
+  sub_driving_mode_info_ = create_subscription<DrivingModeInfo>(
+    "~/input/driving_mode_info", rclcpp::QoS(1).transient_local(),
+    std::bind(&MrmEmergencyStopOperator::onDrivingModeInfo, this, std::placeholders::_1));
 }
 
 rcl_interfaces::msg::SetParametersResult MrmEmergencyStopOperator::onParameter(
@@ -91,6 +100,54 @@ void MrmEmergencyStopOperator::operateEmergencyStop(
   }
 }
 
+void MrmEmergencyStopOperator::onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg)
+{
+  if (msg->mode == driving_mode_id_) {
+    status_.state = MrmBehaviorStatus::OPERATING;
+  } else {
+    status_.state = MrmBehaviorStatus::AVAILABLE;
+  }
+}
+
+void MrmEmergencyStopOperator::onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg)
+{
+  for (const auto & item : msg->items) {
+    if (item.name == "emergency_stop") {
+      driving_mode_id_ = item.mode;
+      break;
+    }
+  }
+}
+
+void MrmEmergencyStopOperator::publishMrmState() const
+{
+  // See the following page for the definition of the MRM state.
+  // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture-v1/interfaces/ad-api/features/fail-safe/#mrm-state
+  using tier4_system_msgs::msg::DrivingModeMrmStateItem;
+  const auto convert_mrm_state = [](const uint8_t state) {
+    // clang-format off
+    switch (state) {
+      case MrmBehaviorStatus::AVAILABLE: return DrivingModeMrmStateItem::NORMAL;
+      case MrmBehaviorStatus::OPERATING: return DrivingModeMrmStateItem::OPERATING;
+      default:                           return DrivingModeMrmStateItem::UNKNOWN;
+    }
+    // clang-format on
+  };
+
+  if (!driving_mode_id_) {
+    return;
+  }
+
+  DrivingModeMrmStateItem item;
+  item.mode = driving_mode_id_.value();
+  item.state = convert_mrm_state(status_.state);
+
+  DrivingModeMrmState msg;
+  msg.stamp = this->now();
+  msg.items = {item};
+  pub_mrm_state_->publish(msg);
+}
+
 void MrmEmergencyStopOperator::publishStatus() const
 {
   auto status = status_;
@@ -113,6 +170,7 @@ void MrmEmergencyStopOperator::onTimer()
     publishControlCommand(prev_control_cmd_);
   }
   publishStatus();
+  publishMrmState();
 }
 
 Control MrmEmergencyStopOperator::calcTargetAcceleration(const Control & prev_control_cmd) const

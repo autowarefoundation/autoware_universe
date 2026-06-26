@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MRM_EMERGENCY_STOP_OPERATOR__MRM_EMERGENCY_STOP_OPERATOR_CORE_HPP_
-#define AUTOWARE__MRM_EMERGENCY_STOP_OPERATOR__MRM_EMERGENCY_STOP_OPERATOR_CORE_HPP_
+#ifndef MRM_EMERGENCY_STOP_OPERATOR_CORE_HPP_
+#define MRM_EMERGENCY_STOP_OPERATOR_CORE_HPP_
 
 // Core
 #include <functional>
@@ -21,6 +21,9 @@
 
 // Autoware
 #include <autoware_control_msgs/msg/control.hpp>
+#include <tier4_system_msgs/msg/driving_mode_info.hpp>
+#include <tier4_system_msgs/msg/driving_mode_mrm_state.hpp>
+#include <tier4_system_msgs/msg/driving_mode_request.hpp>
 #include <tier4_system_msgs/msg/mrm_behavior_status.hpp>
 #include <tier4_system_msgs/srv/operate_mrm.hpp>
 
@@ -31,6 +34,9 @@
 namespace autoware::mrm_emergency_stop_operator
 {
 using autoware_control_msgs::msg::Control;
+using tier4_system_msgs::msg::DrivingModeInfo;
+using tier4_system_msgs::msg::DrivingModeMrmState;
+using tier4_system_msgs::msg::DrivingModeRequest;
 using tier4_system_msgs::msg::MrmBehaviorStatus;
 using tier4_system_msgs::srv::OperateMrm;
 
@@ -82,10 +88,19 @@ private:
   Control prev_control_cmd_;
   bool is_prev_control_cmd_subscribed_;
 
+  // Driving mode interface
+  rclcpp::Subscription<DrivingModeRequest>::SharedPtr sub_driving_mode_request_;
+  rclcpp::Subscription<DrivingModeInfo>::SharedPtr sub_driving_mode_info_;
+  rclcpp::Publisher<DrivingModeMrmState>::SharedPtr pub_mrm_state_;
+  void onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg);
+  void onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg);
+  void publishMrmState() const;
+  std::optional<uint32_t> driving_mode_id_;  // Refer to the driving_mode_manager for this ID.
+
   // Algorithm
   Control calcTargetAcceleration(const Control & prev_control_cmd) const;
 };
 
 }  // namespace autoware::mrm_emergency_stop_operator
 
-#endif  // AUTOWARE__MRM_EMERGENCY_STOP_OPERATOR__MRM_EMERGENCY_STOP_OPERATOR_CORE_HPP_
+#endif  // MRM_EMERGENCY_STOP_OPERATOR_CORE_HPP_
