@@ -48,7 +48,7 @@ PosePath interpolateReferencePath(
 
 PredictedPath convertToPredictedPath(
   const TrackedObject & object, const FrenetPath & frenet_predicted_path, const PosePath & ref_path,
-  const double sampling_time_interval);
+  const double sampling_time_interval, const double rear_lever_arm = 0.0);
 
 }  // namespace autoware::map_based_prediction
 

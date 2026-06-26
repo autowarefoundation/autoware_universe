@@ -169,26 +169,6 @@ double rearAxleOffset(const TrackedObject & object)
     autoware::object_recognition_utils::getHighestProbLabel(object.classification);
   return object.shape.dimensions.x * rearAxleRatioForLabel(label);
 }
-
-// Overwrite the heading of a center-anchored predicted path with the rear-axle bicycle model.
-void applyBicycleYawToCenterPath(PredictedPath & predicted_path, const double rear_lever_arm)
-{
-  constexpr double min_rear_lever_arm = 1e-3;  // non-bounding-box shapes keep the azimuth heading
-  if (rear_lever_arm < min_rear_lever_arm) return;
-  if (predicted_path.path.size() < 2) return;
-
-  double yaw = tf2::getYaw(predicted_path.path.front().orientation);
-  for (size_t i = 1; i < predicted_path.path.size(); ++i) {
-    const double dx =
-      predicted_path.path.at(i).position.x - predicted_path.path.at(i - 1).position.x;
-    const double dy =
-      predicted_path.path.at(i).position.y - predicted_path.path.at(i - 1).position.y;
-    // Component of the center displacement along the body-left axis (-sin(yaw), cos(yaw)).
-    const double lateral_step = -dx * std::sin(yaw) + dy * std::cos(yaw);
-    yaw = autoware_utils::normalize_radian(yaw + lateral_step / rear_lever_arm);
-    predicted_path.path.at(i).orientation = autoware_utils::create_quaternion_from_yaw(yaw);
-  }
-}
 }  // namespace
 
 PathProcessor::PathProcessor(rclcpp::Node & node) : node_(node)
@@ -326,8 +306,6 @@ std::optional<PredictedObject> PathProcessor::predict(
       yaw_fixed_object, ref_path.path, params_.prediction_time_horizon,
       params_.lateral_control_time_horizon, ref_path.width, ref_path.speed_limit, rear_lever_arm);
     if (predicted_path.path.empty()) continue;
-
-    applyBicycleYawToCenterPath(predicted_path, rear_lever_arm);
 
     if (!params_.check_lateral_acceleration_constraints) {
       predicted_path.confidence = ref_path.probability;

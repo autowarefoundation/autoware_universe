@@ -339,7 +339,7 @@ PredictedPath PathGenerator::generatePolynomialPath(
 
   // Step 4. Convert predicted trajectory from Frenet to Cartesian coordinate
   return convertToPredictedPath(
-    object, frenet_predicted_path, interpolated_ref_path, sampling_time_interval_);
+    object, frenet_predicted_path, interpolated_ref_path, sampling_time_interval_, rear_lever_arm);
 }
 
 }  // namespace autoware::map_based_prediction

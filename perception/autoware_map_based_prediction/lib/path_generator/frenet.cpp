@@ -15,9 +15,11 @@
 #include "autoware/map_based_prediction/path_generator/frenet.hpp"
 
 #include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/utils.hpp>
 
+#include <cmath>
 #include <vector>
 
 namespace autoware::map_based_prediction
@@ -377,7 +379,7 @@ PosePath interpolateReferencePath(
 
 PredictedPath convertToPredictedPath(
   const TrackedObject & object, const FrenetPath & frenet_predicted_path, const PosePath & ref_path,
-  const double sampling_time_interval)
+  const double sampling_time_interval, const double rear_lever_arm)
 {
   // Object position
   const auto & object_pose = object.kinematics.pose_with_covariance.pose;
@@ -391,6 +393,15 @@ PredictedPath convertToPredictedPath(
   // Set the first point as the object's current position
   predicted_path.path.at(0) = object_pose;
 
+  // Center-anchored bicycle heading: the box center rides the Frenet path while the heading psi is
+  // integrated forward toward the center velocity direction theta_c, lagging by the rear-axle slip.
+  //   gain = 1 - exp(-chord / L)   // in (0, 1) -> stable
+  //   psi += gain * normalize_radian(theta_c - psi)
+  // L -> 0: gain -> 1 -> psi = theta_c (plain azimuth heading). chord -> 0: heading frozen (idle).
+  constexpr double min_chord = 1e-3;           // [m] below this the object is treated as idle
+  constexpr double min_rear_lever_arm = 1e-3;  // [m] below this fall back to azimuth heading
+  double psi = tf2::getYaw(object_pose.orientation);
+
   // Convert the rest of the points
   for (size_t i = 1; i < predicted_path.path.size(); ++i) {
     // Reference Point from interpolated reference path
@@ -400,12 +411,21 @@ PredictedPath convertToPredictedPath(
     const auto & frenet_point = frenet_predicted_path.at(i);
     double d_offset = frenet_point.d;
 
-    // Converted Pose
+    // Converted Pose: the center position rides the Frenet path
     auto predicted_pose = autoware_utils::calc_offset_pose(ref_pose, 0.0, d_offset, 0.0);
     predicted_pose.position.z += object_height;
-    const double yaw = autoware_utils::calc_azimuth_angle(
-      predicted_path.path.at(i - 1).position, predicted_pose.position);
-    predicted_pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
+
+    const auto & prev_position = predicted_path.path.at(i - 1).position;
+    const double chord = autoware_utils::calc_distance2d(prev_position, predicted_pose.position);
+    if (chord > min_chord) {
+      const double theta_c =
+        autoware_utils::calc_azimuth_angle(prev_position, predicted_pose.position);
+      const double heading_error = autoware_utils::normalize_radian(theta_c - psi);
+      const double relaxation_gain =
+        rear_lever_arm > min_rear_lever_arm ? 1.0 - std::exp(-chord / rear_lever_arm) : 1.0;
+      psi = autoware_utils::normalize_radian(psi + relaxation_gain * heading_error);
+    }
+    predicted_pose.orientation = autoware_utils::create_quaternion_from_yaw(psi);
 
     predicted_path.path.at(i) = predicted_pose;
   }
