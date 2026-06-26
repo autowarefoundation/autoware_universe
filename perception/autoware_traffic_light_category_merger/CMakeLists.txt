@@ -18,6 +18,14 @@ rclcpp_components_register_node(${PROJECT_NAME}
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
 
+  # ROS-free unit tests for the merge core.
+  ament_auto_add_gtest(test_traffic_light_category_merger
+    test/test_traffic_light_category_merger.cpp
+  )
+  target_link_libraries(test_traffic_light_category_merger
+    ${PROJECT_NAME}
+  )
+
   # Node-level integration tests (topic-driven pub/sub + sync).
   ament_add_ros_isolated_gtest(test_traffic_light_category_merger_integration
     test/test_traffic_light_category_merger_integration.cpp
