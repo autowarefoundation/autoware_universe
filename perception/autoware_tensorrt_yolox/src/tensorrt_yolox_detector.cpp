@@ -224,6 +224,12 @@ void TrtYoloXDetector::getColorizedMask(const cv::Mat & mask, cv::Mat & cmask)
   for (int y = 0; y < height; y++) {
     for (int x = 0; x < width; x++) {
       unsigned char id = mask.at<unsigned char>(y, x);
+      const bool unregistered = id >= semseg_color_map.size();
+      if (unregistered) {
+        const auto black = cv::Vec3b(0, 0, 0);
+        cmask.at<cv::Vec3b>(y, x) = black;
+        continue;
+      }
       cmask.at<cv::Vec3b>(y, x)[0] = semseg_color_map[id].color[2];
       cmask.at<cv::Vec3b>(y, x)[1] = semseg_color_map[id].color[1];
       cmask.at<cv::Vec3b>(y, x)[2] = semseg_color_map[id].color[0];
