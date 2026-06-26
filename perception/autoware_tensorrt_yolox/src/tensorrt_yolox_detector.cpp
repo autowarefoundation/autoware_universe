@@ -70,11 +70,10 @@ TrtYoloXDetector::TrtYoloXDetector(const TrtYoloXDetectorConfig & config) : conf
     config_.clip_value);
 
   const double norm_factor = 1.0;
-  const std::string cache_dir = "";
 
   trt_yolox_ = std::make_unique<tensorrt_yolox::TrtYoloX>(
     trt_config, roi_class_name_list_.size(), config_.score_threshold, config_.nms_threshold,
-    config_.gpu_id, config_.calibration_image_list_path, norm_factor, cache_dir, calib_config);
+    config_.gpu_id, config_.calibration_image_list_path, norm_factor, calib_config);
 }
 
 bool TrtYoloXDetector::isGPUInitialized() const
@@ -96,10 +95,8 @@ tl::expected<TrtYoloXDetectorResult, std::string> TrtYoloXDetector::detect(
 
   tensorrt_yolox::ObjectArrays objects;
   std::vector<cv::Mat> masks = {cv::Mat(cv::Size(height, width), CV_8UC1, cv::Scalar(0))};
-  std::vector<cv::Mat> color_masks = {
-    cv::Mat(cv::Size(height, width), CV_8UC3, cv::Scalar(0, 0, 0))};
 
-  if (!trt_yolox_->doInference({in_image_ptr->image}, objects, masks, color_masks)) {
+  if (!trt_yolox_->doInference({in_image_ptr->image}, objects, masks)) {
     return tl::make_unexpected(std::string("failed to run inference"));
   }
   auto & mask = masks.at(0);
