@@ -37,7 +37,7 @@ using FrenetPath = std::vector<FrenetPoint>;
 FrenetPoint getFrenetPoint(
   const TrackedObject & object, const geometry_msgs::msg::Pose & ref_pose, const double duration,
   const double speed_limit, bool use_vehicle_acceleration,
-  double acceleration_exponential_half_life);
+  double acceleration_exponential_half_life, double rear_lever_arm = 0.0);
 
 FrenetPath generateFrenetPath(
   const FrenetPoint & current_point, const FrenetPoint & target_point, const double max_length,

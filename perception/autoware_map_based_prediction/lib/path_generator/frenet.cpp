@@ -174,7 +174,7 @@ std::vector<tf2::Quaternion> interpolationLerp(
 FrenetPoint getFrenetPoint(
   const TrackedObject & object, const geometry_msgs::msg::Pose & ref_pose, const double duration,
   const double speed_limit, const bool use_vehicle_acceleration,
-  const double acceleration_exponential_half_life)
+  const double acceleration_exponential_half_life, const double rear_lever_arm)
 {
   FrenetPoint frenet_point;
 
@@ -190,7 +190,11 @@ FrenetPoint getFrenetPoint(
 
   // 2. Velocity (adjusted by acceleration)
   const float vx = static_cast<float>(object.kinematics.twist_with_covariance.twist.linear.x);
-  const float vy = static_cast<float>(object.kinematics.twist_with_covariance.twist.linear.y);
+  // set initial slip by yaw rate and rear lever arm
+  const float vy =
+    rear_lever_arm != 0.0
+      ? static_cast<float>(rear_lever_arm * object.kinematics.twist_with_covariance.twist.angular.z)
+      : static_cast<float>(object.kinematics.twist_with_covariance.twist.linear.y);
   const float ax =
     use_vehicle_acceleration
       ? static_cast<float>(object.kinematics.acceleration_with_covariance.accel.linear.x)
