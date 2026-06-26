@@ -18,11 +18,15 @@
 #include "autoware/image_projection_based_fusion/fusion_matching_strategy.hpp"
 #include "autoware/image_projection_based_fusion/fusion_types.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/diagnostic_updater.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 #include <autoware/image_projection_based_fusion/camera_projection.hpp>
 #include <autoware/image_projection_based_fusion/debugger.hpp>
-#include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
+#include <autoware_utils_debug/debug_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -55,7 +59,7 @@ namespace autoware::image_projection_based_fusion
 {
 
 template <class Msg3D, class Msg2D, class ExportObj>
-class FusionNode : public rclcpp::Node
+class FusionNode : public autoware::agnocast_wrapper::Node
 {
 public:
   /** \brief constructor. */
@@ -74,7 +78,8 @@ public:
     typename Msg3D::SharedPtr & output_det3d_msg,
     std::unordered_map<std::size_t, double> id_to_stamp_map,
     std::shared_ptr<FusionCollectorInfoBase> collector_info);
-  std::optional<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr>
+  std::optional<
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)>
   find_concatenation_info(double timestamp);
   void show_diagnostic_message(
     std::unordered_map<std::size_t, double> id_to_stamp_map,
@@ -83,7 +88,7 @@ public:
 private:
   // Common process methods
   void camera_info_callback(
-    const sensor_msgs::msg::CameraInfo::ConstSharedPtr input_camera_info_msg,
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::CameraInfo) input_camera_info_msg,
     const std::size_t rois_id);
 
   void initialize_strategy();
@@ -106,8 +111,8 @@ private:
   double msg3d_timeout_sec_{};
   double rois_timeout_sec_{};
 
-  std::vector<typename rclcpp::Subscription<Msg2D>::SharedPtr> rois_subs_;
-  std::vector<rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr> camera_info_subs_;
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(Msg2D)> rois_subs_;
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::CameraInfo)> camera_info_subs_;
 
   std::unique_ptr<FusionMatchingStrategy<Msg3D, Msg2D, ExportObj>> fusion_matching_strategy_;
   std::mutex fusion_collectors_mutex_;
@@ -116,10 +121,12 @@ private:
   std::unordered_map<std::size_t, double> id_to_offset_map_;
 
   // timestamp: (key, value)
-  std::unordered_map<double, autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr>
+  std::unordered_map<
+    double,
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)>
     concatenated_info_map_;
 
-  diagnostic_updater::Updater diagnostic_updater_{this};
+  autoware::agnocast_wrapper::diagnostic_updater::Updater diagnostic_updater_{this};
   std::shared_ptr<FusionCollectorInfoBase> diagnostic_collector_info_;
   std::unordered_map<std::size_t, double> diagnostic_id_to_stamp_map_;
 
@@ -137,28 +144,30 @@ protected:
   void initialize_det2d_status(std::size_t rois_number);
 
   // callback for main subscription
-  void sub_callback(const typename Msg3D::ConstSharedPtr msg3d);
+  void sub_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg3D) msg3d);
   // callback for rois subscription
-  void rois_callback(const typename Msg2D::ConstSharedPtr rois_msg, const std::size_t rois_id);
+  void rois_callback(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Msg2D) rois_msg, const std::size_t rois_id);
 
   void concatenation_info_callback(
-    const autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concatenation_info_msg);
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)
+      concatenation_info_msg);
 
   // Custom process methods
   virtual void postprocess(const Msg3D & processing_msg, ExportObj & output_msg);
   virtual void publish(const ExportObj & output_msg);
 
   // Members
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
+  autoware::agnocast_wrapper::Buffer tf_buffer_;
+  autoware::agnocast_wrapper::TransformListener tf_listener_;
 
   // 2d detection management
   std::vector<Det2dStatus<Msg2D>> det2d_status_list_;
 
   // 3d detection subscription
-  typename rclcpp::Subscription<Msg3D>::SharedPtr msg3d_sub_;
-  rclcpp::Subscription<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>::SharedPtr
-    sub_concatenation_info_;
+  AUTOWARE_SUBSCRIPTION_PTR(Msg3D) msg3d_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo)
+  sub_concatenation_info_;
 
   // parameters for out_of_scope filter
   float filter_scope_min_x_;
@@ -171,19 +180,23 @@ protected:
   std::string matching_strategy_;
 
   // output publisher
-  typename rclcpp::Publisher<ExportObj>::SharedPtr pub_ptr_;
+  AUTOWARE_PUBLISHER_PTR(ExportObj) pub_ptr_;
+
+  // cached node name (stable storage for debug publishers that keep a const char*)
+  std::string self_node_name_;
 
   // debugger
   std::shared_ptr<Debugger> debugger_;
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_internal_pub_;
+  std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    debug_internal_pub_;
 
   /** \brief processing time publisher. **/
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    debug_publisher_;
 
   // timekeeper
-  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
-    detailed_processing_time_publisher_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils::ProcessingTimeDetail) detailed_processing_time_publisher_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
 
