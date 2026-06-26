@@ -3,7 +3,7 @@
 <package format="3">
   <name>autoware_driving_mode_manager</name>
   <version>0.50.0</version>
-  <description>The trajectory_gate package</description>
+  <description>The autoware_driving_mode_manager package</description>
   <maintainer email="isamu.takagi@tier4.jp">Takagi, Isamu</maintainer>
   <license>Apache License 2.0</license>
 
