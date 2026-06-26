@@ -16,7 +16,7 @@
 
 #include "autoware/euclidean_cluster/label_based_euclidean_cluster.hpp"
 
-#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -37,7 +37,7 @@ namespace autoware::euclidean_cluster
 ///
 /// This node wraps the core LabelBasedEuclideanCluster class, handling ROS-specific concerns
 /// like parameter loading, pub/sub lifecycle, and timing instrumentation.
-class LabelBasedEuclideanClusterNode : public rclcpp::Node
+class LabelBasedEuclideanClusterNode : public autoware::agnocast_wrapper::Node
 {
 public:
   /// @brief Construct the node and initialize parameters, publishers, subscribers, and core
@@ -48,10 +48,11 @@ public:
 private:
   /// @brief Process an input semantic point cloud and publish detected objects.
   /// @param input_msg Input point cloud containing xyz and optionally class_id / probability.
-  void on_pointcloud(sensor_msgs::msg::PointCloud2::ConstSharedPtr input_msg);
+  void on_pointcloud(
+    const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::PointCloud2) & input_msg);
 
   // Publishers and subscribers
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
+  AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::PointCloud2) pointcloud_sub_;
   AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::DetectedObjects) objects_pub_;
 
   // Core clustering processor
@@ -59,6 +60,7 @@ private:
 
   // Timing and debug instrumentation
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>
+    debug_publisher_;
 };
 }  // namespace autoware::euclidean_cluster
