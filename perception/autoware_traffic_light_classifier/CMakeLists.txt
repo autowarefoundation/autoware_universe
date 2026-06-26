@@ -142,6 +142,15 @@ if(BUILD_TESTING)
     ${OpenCV_LIBRARIES}
   )
 
+  # ColorClassifier unit tests (ROS-isolated: the classifier currently needs a node).
+  ament_add_ros_isolated_gtest(test_color_classifier
+    test/test_color_classifier.cpp
+  )
+  target_link_libraries(test_color_classifier
+    ${PROJECT_NAME}
+    ${OpenCV_LIBRARIES}
+  )
+
   # Node-level integration tests (topic-driven pub/sub + diagnostics).
   ament_add_ros_isolated_gtest(test_traffic_light_classifier_integration
     test/test_traffic_light_classifier_integration.cpp
