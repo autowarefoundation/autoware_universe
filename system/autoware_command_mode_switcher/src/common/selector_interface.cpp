@@ -25,12 +25,16 @@ namespace autoware::command_mode_switcher
 ControlGateInterface::ControlGateInterface(rclcpp::Node & node, Callback callback) : node_(node)
 {
   notification_callback_ = callback;
-  status_.source = autoware::command_mode_types::sources::unknown;
+  source_status_.source = autoware::command_mode_types::sources::unknown;
+  filter_status_.filter = false;
 
   cli_source_select_ = node.create_client<SelectCommandSource>("~/source/select");
   sub_source_status_ = node.create_subscription<CommandSourceStatus>(
     "~/source/status", rclcpp::QoS(1).transient_local(),
     std::bind(&ControlGateInterface::on_source_status, this, std::placeholders::_1));
+  sub_filter_status_ = node.create_subscription<CommandFilterStatus>(
+    "~/filter/status", rclcpp::QoS(1).transient_local(),
+    std::bind(&ControlGateInterface::on_filter_status, this, std::placeholders::_1));
 }
 
 VehicleGateInterface::VehicleGateInterface(rclcpp::Node & node, Callback callback) : node_(node)
@@ -65,8 +69,15 @@ bool equals_except_stamp(const T & msg1, const T & msg2)
 
 void ControlGateInterface::on_source_status(const CommandSourceStatus & msg)
 {
-  const auto equals = equals_except_stamp(status_, msg);
-  status_ = msg;
+  const auto equals = equals_except_stamp(source_status_, msg);
+  source_status_ = msg;
+  if (!equals) notification_callback_();
+}
+
+void ControlGateInterface::on_filter_status(const CommandFilterStatus & msg)
+{
+  const auto equals = equals_except_stamp(filter_status_, msg);
+  filter_status_ = msg;
   if (!equals) notification_callback_();
 }
 
@@ -87,7 +98,7 @@ void NetworkGateInterface::on_active_control_unit(const ActiveControlUnit & msg)
 
 bool ControlGateInterface::is_in_transition() const
 {
-  return status_.transition;
+  return filter_status_.filter;
 }
 
 bool VehicleGateInterface::is_autoware_control() const
@@ -105,7 +116,7 @@ bool VehicleGateInterface::is_manual_control() const
 
 bool ControlGateInterface::is_selected(const CommandPlugin & plugin) const
 {
-  return plugin.source() == status_.source;
+  return plugin.source() == source_status_.source;
 }
 
 bool VehicleGateInterface::is_selected(const CommandPlugin & plugin) const
