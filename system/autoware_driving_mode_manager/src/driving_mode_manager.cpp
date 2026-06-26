@@ -28,9 +28,6 @@ DrivingModeManager::DrivingModeManager(const rclcpp::NodeOptions & options)
   diag_(this, 0.1),
   loader_("autoware_driving_mode_manager", "autoware::driving_mode_manager::Plugin")
 {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-
   rate_ = declare_parameter<double>("rate");
   diag_.setHardwareID("none");
 
