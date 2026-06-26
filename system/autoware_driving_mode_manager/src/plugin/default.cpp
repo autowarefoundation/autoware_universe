@@ -20,7 +20,6 @@
 namespace autoware::driving_mode_manager
 {
 
-const auto logger = rclcpp::get_logger("DefaultPlugin");
 constexpr auto StopMode = AutowareMode{1001};
 constexpr auto AutonomousMode = AutowareMode{1002};
 constexpr auto LocalMode = AutowareMode{1003};
