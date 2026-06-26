@@ -29,25 +29,27 @@ class DrivingModeConfig : public DrivingModeConfigInterface
 {
 public:
   void define_autoware_mode(
-    const AutowareMode & mode, const OperationMode & opmode, uint16_t priority) override;
+    const AutowareMode & autoware_mode, const OperationMode & operation_mode,
+    uint16_t priority) override;
   void define_autoware_mode(
-    const AutowareMode & mode, const MrmBehavior & behavior, uint16_t priority) override;
+    const AutowareMode & autoware_mode, const MrmBehavior & mrm_behavior,
+    uint16_t priority) override;
   void define_trajectory_source(const TrajectorySource & source) override;
   void define_command_source(const CommandSource & source) override;
-  void bind_name(const AutowareMode & mode, const std::string & name) override;
-  void bind_gates(const AutowareMode & mode, const Gates & gates) override;
+  void bind_name(const AutowareMode & autoware_mode, const std::string & name) override;
+  void bind_gates(const AutowareMode & autoware_mode, const Gates & gates) override;
 
   void finalize();
 
   std::vector<AutowareMode> autoware_modes() const;
-  std::string name(const AutowareMode & mode) const;
-  bool exists(const AutowareMode & mode) const;
-  Gates gates(const AutowareMode & mode) const;
-  AutowareMode to_autoware_mode(const OperationMode & opmode) const;
-  std::optional<AutowareMode> to_autoware_mode(const MrmBehavior & behavior) const;
-  OperationMode to_operation_mode(const AutowareMode & mode) const;
-  std::optional<MrmBehavior> to_mrm_behavior(const AutowareMode & mode) const;
-  uint16_t priority(const AutowareMode & mode) const;
+  std::string name(const AutowareMode & autoware_mode) const;
+  bool exists(const AutowareMode & autoware_mode) const;
+  Gates gates(const AutowareMode & autoware_mode) const;
+  AutowareMode to_autoware_mode(const OperationMode & operation_mode) const;
+  std::optional<AutowareMode> to_autoware_mode(const MrmBehavior & mrm_behavior) const;
+  OperationMode to_operation_mode(const AutowareMode & autoware_mode) const;
+  std::optional<MrmBehavior> to_mrm_behavior(const AutowareMode & autoware_mode) const;
+  uint16_t priority(const AutowareMode & autoware_mode) const;
 
 private:
   struct AutowareModeConfig
