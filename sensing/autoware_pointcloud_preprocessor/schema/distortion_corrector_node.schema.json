@@ -14,17 +14,17 @@
         "use_imu": {
           "type": "boolean",
           "description": "Use IMU angular velocity, otherwise, use twist angular velocity.",
-          "default": "true"
+          "default": true
         },
         "use_3d_distortion_correction": {
           "type": "boolean",
           "description": "Use 3d distortion correction algorithm, otherwise, use 2d distortion correction algorithm.",
-          "default": "false"
+          "default": false
         },
         "update_azimuth_and_distance": {
           "type": "boolean",
           "description": "Flag to update the azimuth and distance values of each point after undistortion. If set to false, the azimuth and distance values will remain unchanged after undistortion, resulting in a mismatch with the updated x, y, z coordinates.",
-          "default": "false"
+          "default": false
         },
         "processing_time_threshold_sec": {
           "type": "number",
