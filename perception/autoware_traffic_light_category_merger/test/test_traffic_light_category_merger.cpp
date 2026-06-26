@@ -41,11 +41,16 @@ using tier4_perception_msgs::msg::TrafficLight;
 using tier4_perception_msgs::msg::TrafficLightArray;
 using tier4_perception_msgs::msg::TrafficLightElement;
 
-std_msgs::msg::Header make_header(const char * frame_id, int32_t sec)
+// merge() only ever copies a header wholesale, so the stamp value is irrelevant
+// to these tests; every header shares this one. The car/pedestrian arrays are
+// told apart by frame_id, which is what the header-source assertions key on.
+constexpr int32_t common_stamp_sec = 100;
+
+std_msgs::msg::Header make_header(const char * frame_id)
 {
   std_msgs::msg::Header header;
   header.frame_id = frame_id;
-  header.stamp.sec = sec;
+  header.stamp.sec = common_stamp_sec;
   header.stamp.nanosec = 0;
   return header;
 }
@@ -73,12 +78,12 @@ TEST(TrafficLightCategoryMerger, ConcatenatesCarThenPedestrian)
 {
   // Arrange
   TrafficLightArray car;
-  car.header = make_header("car_frame", 10);
+  car.header = make_header("car_frame");
   car.signals.push_back(make_signal(1, TrafficLight::CAR_TRAFFIC_LIGHT, TrafficLightElement::RED));
   car.signals.push_back(
     make_signal(2, TrafficLight::CAR_TRAFFIC_LIGHT, TrafficLightElement::GREEN));
   TrafficLightArray pedestrian;
-  pedestrian.header = make_header("pedestrian_frame", 20);
+  pedestrian.header = make_header("pedestrian_frame");
   pedestrian.signals.push_back(
     make_signal(3, TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT, TrafficLightElement::AMBER));
 
@@ -105,14 +110,15 @@ TEST(TrafficLightCategoryMerger, ConcatenatesCarThenPedestrian)
 TEST(TrafficLightCategoryMerger, OutputHeaderComesFromCarArray)
 {
   TrafficLightArray car;
-  car.header = make_header("car_frame", 10);
+  car.header = make_header("car_frame");
   TrafficLightArray pedestrian;
-  pedestrian.header = make_header("pedestrian_frame", 20);
+  pedestrian.header = make_header("pedestrian_frame");
 
   const auto out = tl::TrafficLightCategoryMerger().merge(car, pedestrian);
 
-  EXPECT_EQ(out.header.frame_id, "car_frame");
-  EXPECT_EQ(out.header.stamp.sec, 10);
+  // The whole header is copied from the car array (frame_id tells it apart from
+  // the pedestrian one, which shares the same stamp).
+  EXPECT_EQ(out.header, car.header);
 }
 
 // --------------------------------------------------------------------------
@@ -121,10 +127,10 @@ TEST(TrafficLightCategoryMerger, OutputHeaderComesFromCarArray)
 TEST(TrafficLightCategoryMerger, EmptyPedestrianKeepsCarSignals)
 {
   TrafficLightArray car;
-  car.header = make_header("car_frame", 10);
+  car.header = make_header("car_frame");
   car.signals.push_back(make_signal(1, TrafficLight::CAR_TRAFFIC_LIGHT, TrafficLightElement::RED));
   TrafficLightArray pedestrian;
-  pedestrian.header = make_header("pedestrian_frame", 20);
+  pedestrian.header = make_header("pedestrian_frame");
 
   const auto out = tl::TrafficLightCategoryMerger().merge(car, pedestrian);
 
@@ -139,9 +145,9 @@ TEST(TrafficLightCategoryMerger, EmptyPedestrianKeepsCarSignals)
 TEST(TrafficLightCategoryMerger, EmptyCarKeepsPedestrianSignalsAndCarHeader)
 {
   TrafficLightArray car;
-  car.header = make_header("car_frame", 10);
+  car.header = make_header("car_frame");
   TrafficLightArray pedestrian;
-  pedestrian.header = make_header("pedestrian_frame", 20);
+  pedestrian.header = make_header("pedestrian_frame");
   pedestrian.signals.push_back(
     make_signal(3, TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT, TrafficLightElement::GREEN));
 
@@ -149,7 +155,7 @@ TEST(TrafficLightCategoryMerger, EmptyCarKeepsPedestrianSignalsAndCarHeader)
 
   ASSERT_EQ(out.signals.size(), 1u);
   EXPECT_EQ(out.signals[0].traffic_light_id, 3);
-  EXPECT_EQ(out.header.frame_id, "car_frame");
+  EXPECT_EQ(out.header, car.header);
 }
 
 // --------------------------------------------------------------------------
@@ -158,14 +164,14 @@ TEST(TrafficLightCategoryMerger, EmptyCarKeepsPedestrianSignalsAndCarHeader)
 TEST(TrafficLightCategoryMerger, BothEmptyYieldsEmptyWithCarHeader)
 {
   TrafficLightArray car;
-  car.header = make_header("car_frame", 10);
+  car.header = make_header("car_frame");
   TrafficLightArray pedestrian;
-  pedestrian.header = make_header("pedestrian_frame", 20);
+  pedestrian.header = make_header("pedestrian_frame");
 
   const auto out = tl::TrafficLightCategoryMerger().merge(car, pedestrian);
 
   EXPECT_EQ(out.signals.size(), 0u);
-  EXPECT_EQ(out.header.frame_id, "car_frame");
+  EXPECT_EQ(out.header, car.header);
 }
 
 }  // namespace
