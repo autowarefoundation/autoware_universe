@@ -165,6 +165,26 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
     DESTINATION lib
   )
 
+  if(BUILD_TESTING)
+    find_package(ament_lint_auto REQUIRED)
+    ament_lint_auto_find_test_dependencies()
+
+    find_package(ament_cmake_gtest REQUIRED)
+    ament_add_gtest(test_detection_class_remapper
+      test/test_detection_class_remapper.cpp
+      lib/detection_class_remapper.cpp
+    )
+    target_include_directories(test_detection_class_remapper PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_detection_class_remapper
+      Eigen3::Eigen
+    )
+    ament_target_dependencies(test_detection_class_remapper
+      autoware_perception_msgs
+    )
+  endif()
+
   ament_auto_package(
     INSTALL_TO_SHARE
       launch
@@ -174,6 +194,27 @@ if(TRT_AVAIL AND CUDA_AVAIL AND SPCONV_AVAIL)
 else()
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
+
+  if(BUILD_TESTING)
+    find_package(ament_lint_auto REQUIRED)
+    ament_lint_auto_find_test_dependencies()
+
+    find_package(ament_cmake_gtest REQUIRED)
+    find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+    ament_add_gtest(test_detection_class_remapper
+      test/test_detection_class_remapper.cpp
+      lib/detection_class_remapper.cpp
+    )
+    target_include_directories(test_detection_class_remapper PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_detection_class_remapper
+      Eigen3::Eigen
+    )
+    ament_target_dependencies(test_detection_class_remapper
+      autoware_perception_msgs
+    )
+  endif()
 
   ament_auto_package(
     INSTALL_TO_SHARE
