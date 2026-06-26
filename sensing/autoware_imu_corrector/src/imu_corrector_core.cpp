@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <utility>
 
 std::array<double, 9> transform_covariance(const std::array<double, 9> & cov)
 {
@@ -52,10 +53,10 @@ geometry_msgs::msg::Vector3 transform_vector3(
 namespace autoware::imu_corrector
 {
 ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
-: rclcpp::Node("imu_corrector", options),
+: autoware::agnocast_wrapper::Node("imu_corrector", options),
   output_frame_(declare_parameter<std::string>("base_link", "base_link"))
 {
-  transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
+  transform_listener_ = std::make_shared<TfListener>(this);
 
   angular_velocity_offset_x_imu_link_ = declare_parameter<double>("angular_velocity_offset_x", 0.0);
   angular_velocity_offset_y_imu_link_ = declare_parameter<double>("angular_velocity_offset_y", 0.0);
@@ -105,7 +106,8 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
   }
 }
 
-void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg_ptr)
+void ImuCorrector::callback_imu(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(sensor_msgs::msg::Imu) & imu_msg_ptr)
 {
   sensor_msgs::msg::Imu imu_msg;
   imu_msg = *imu_msg_ptr;
@@ -161,28 +163,30 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
     return;
   }
 
-  sensor_msgs::msg::Imu imu_msg_base_link;
-  imu_msg_base_link.header.stamp = imu_msg_ptr->header.stamp;
-  imu_msg_base_link.header.frame_id = output_frame_;
-  imu_msg_base_link.linear_acceleration =
+  auto imu_msg_base_link = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(imu_pub_);
+  imu_msg_base_link->header.stamp = imu_msg_ptr->header.stamp;
+  imu_msg_base_link->header.frame_id = output_frame_;
+  imu_msg_base_link->linear_acceleration =
     transform_vector3(imu_msg.linear_acceleration, *tf_imu2base_ptr);
-  imu_msg_base_link.linear_acceleration_covariance =
+  imu_msg_base_link->linear_acceleration_covariance =
     transform_covariance(imu_msg.linear_acceleration_covariance);
-  imu_msg_base_link.angular_velocity =
+  imu_msg_base_link->angular_velocity =
     transform_vector3(imu_msg.angular_velocity, *tf_imu2base_ptr);
-  imu_msg_base_link.angular_velocity_covariance =
+  imu_msg_base_link->angular_velocity_covariance =
     transform_covariance(imu_msg.angular_velocity_covariance);
 
-  imu_pub_->publish(imu_msg_base_link);
+  imu_pub_->publish(std::move(imu_msg_base_link));
 }
 
-void ImuCorrector::callback_bias(const Vector3Stamped::ConstSharedPtr bias_msg_ptr)
+void ImuCorrector::callback_bias(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Vector3Stamped) & bias_msg_ptr)
 {
   // update gyro bias
   gyro_bias_ = *bias_msg_ptr;
 }
 
-void ImuCorrector::callback_scale(const Vector3Stamped::ConstSharedPtr scale_msg_ptr)
+void ImuCorrector::callback_scale(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Vector3Stamped) & scale_msg_ptr)
 {
   // update gyro scale
   gyro_scale_ = *scale_msg_ptr;
