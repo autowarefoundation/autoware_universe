@@ -42,7 +42,7 @@ ManagerMain::ManagerMain(ManagerInit & init)
   gates_.expect = init.gates();
 
   request_.operation_mode = config_->to_autoware_mode(OperationMode::kStop);
-  request_.platform_mode = init.platform_mode.value();
+  request_.platform_mode = init.platform_mode_.value();
   request_.mrm_strategy = MrmStrategy::kNone;
   request_.mrm_behavior = unknown_mode;
   request_.autoware_mode = unknown_mode;
