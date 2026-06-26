@@ -18,4 +18,10 @@
       Modifies the velocity of a trajectory to smooth the motion
     </description>
   </class>
+  <class type="autoware::trajectory_modifier::plugin::TrafficLightStop"
+         base_class_type="autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase">
+    <description>
+      Modifies the trajectory to stop at traffic lights
+    </description>
+  </class>
 </library>
