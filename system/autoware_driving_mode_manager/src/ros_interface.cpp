@@ -33,7 +33,7 @@ RosInterface::RosInterface(rclcpp::Node * node) : node_(node)
   cli_command_filter_ = node->create_client<ChangeCommandFilterSrv>("~/command/filter/change");
   cli_control_mode_command_ =
     node->create_client<ControlModeCommandSrv>("~/vehicle/control_mode/command");
-  pub_operation_mode_ = node->create_publisher<OperationModeStateMsg>(
+  pub_operation_mode_state_ = node->create_publisher<OperationModeStateMsg>(
     "~/system/operation_mode_state", rclcpp::QoS(1).transient_local());
   pub_mrm_state_ =
     node->create_publisher<MrmStateMsg>("~/system/mrm_state", rclcpp::QoS(1).transient_local());
@@ -80,8 +80,8 @@ RosInterface::RosInterface(rclcpp::Node * node) : node_(node)
   pub_driving_mode_info_ = node->create_publisher<DrivingModeInfoMsg>(
     "~/system/driving_mode/info", rclcpp::QoS(1).transient_local());
 
-  pub_debug_status_ = node->create_publisher<DebugModeFlagMsg>("~/debug/status", rclcpp::QoS(1));
-  pub_debug_request_ =
+  pub_debug_mode_flag_ = node->create_publisher<DebugModeFlagsMsg>("~/debug/flags", rclcpp::QoS(1));
+  pub_debug_mode_request_ =
     node->create_publisher<DebugModeRequestMsg>("~/debug/request", rclcpp::QoS(1));
 }
 
@@ -159,7 +159,7 @@ void RosInterface::publish_operation_mode(const OperationModeState & state) cons
   msg.is_autonomous_mode_available = state.is_autonomous_mode_available;
   msg.is_local_mode_available = state.is_local_mode_available;
   msg.is_remote_mode_available = state.is_remote_mode_available;
-  pub_operation_mode_->publish(msg);
+  pub_operation_mode_state_->publish(msg);
 }
 
 void RosInterface::publish_mrm_state(const MrmState & state) const
@@ -186,10 +186,10 @@ void RosInterface::publish_mrm_state(const MrmState & state) const
 
 void RosInterface::publish_debug(const DebugStatus & status) const
 {
-  DebugModeFlagMsg msg;
+  DebugModeFlagsMsg msg;
   msg.stamp = now();
   for (const auto & [mode, flag] : status.flags) {
-    autoware_driving_mode_manager::msg::DebugModeFlagItem item;
+    autoware_driving_mode_manager::msg::DebugModeFlagsItem item;
     item.mode = mode.id;
     item.available = flag.available;
     item.active = flag.active;
@@ -197,7 +197,7 @@ void RosInterface::publish_debug(const DebugStatus & status) const
     item.continuable = flag.continuable;
     msg.items.push_back(item);
   }
-  pub_debug_status_->publish(msg);
+  pub_debug_mode_flag_->publish(msg);
 }
 
 void RosInterface::publish_driving_mode_info(const ModeInfo & info) const
@@ -222,7 +222,7 @@ void RosInterface::publish_debug(const RequestModes & request) const
   msg.mrm_strategy = static_cast<std::underlying_type_t<MrmStrategy>>(request.mrm_strategy);
   msg.mrm_behavior = request.mrm_behavior.id;
   msg.autoware_mode = request.autoware_mode.id;
-  pub_debug_request_->publish(msg);
+  pub_debug_mode_request_->publish(msg);
 }
 
 void RosInterface::on_driving_mode_available(const DrivingModeFlagMsg & msg)
