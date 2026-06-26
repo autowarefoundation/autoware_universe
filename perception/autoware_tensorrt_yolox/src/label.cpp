@@ -285,6 +285,9 @@ std::vector<RoiLabel> load_label_maps(
   std::unordered_map<std::string, int> roi_label_to_new_id_remap;
   if (!roi_remap_path.empty()) {
     roi_label_to_new_id_remap = load_label_id_remap_file(roi_remap_path);
+    if (roi_label_to_new_id_remap.empty()) {
+      throw std::runtime_error{"ROI remap file is empty: " + roi_remap_path};
+    }
   }
   const auto class_id_map = build_roi_id_to_target_id_map(
     roi_class_name_list, roi_label_to_new_id_remap, unmapped_label_id);
@@ -294,6 +297,9 @@ std::vector<RoiLabel> load_label_maps(
   std::vector<int> semseg_id_map(roi_class_name_list.size(), unmapped_label_id);
   if (!roi_to_semseg_remap_path.empty()) {
     const auto roi_name_to_semseg_id_remap = load_label_id_remap_file(roi_to_semseg_remap_path);
+    if (roi_name_to_semseg_id_remap.empty()) {
+      throw std::runtime_error{"ROI-to-semseg remap file is empty: " + roi_to_semseg_remap_path};
+    }
     semseg_id_map = build_roi_id_to_target_id_map(
       roi_class_name_list, roi_name_to_semseg_id_remap, unmapped_label_id);
   }
