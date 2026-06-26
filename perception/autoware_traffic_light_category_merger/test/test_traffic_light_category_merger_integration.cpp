@@ -18,7 +18,7 @@
 // These stand up the real node and drive it over its ROS interface: a car
 // TrafficLightArray and a pedestrian TrafficLightArray are published on the two
 // input topics, the node's message_filters ApproximateTime sync wires them
-// through signalsCallback, and the test observes the merged array published on
+// through signals_callback, and the test observes the merged array published on
 // the output topic. This exercises the full pub/sub + sync path that a unit-level
 // callback invocation would bypass.
 //

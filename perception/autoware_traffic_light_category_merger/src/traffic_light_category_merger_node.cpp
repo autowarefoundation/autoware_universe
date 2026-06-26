@@ -30,12 +30,13 @@ TrafficLightCategoryMergerNode::TrafficLightCategoryMergerNode(
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
-  sync_.registerCallback(std::bind(&TrafficLightCategoryMergerNode::signalsCallback, this, _1, _2));
+  sync_.registerCallback(
+    std::bind(&TrafficLightCategoryMergerNode::signals_callback, this, _1, _2));
   pub_traffic_light_signals_ =
     create_publisher<TrafficLightArray>("output/traffic_signals", rclcpp::QoS{1});
 }
 
-void TrafficLightCategoryMergerNode::signalsCallback(
+void TrafficLightCategoryMergerNode::signals_callback(
   const TrafficLightArray::ConstSharedPtr & car_signals_msg,
   const TrafficLightArray::ConstSharedPtr & pedestrian_signals_msg)
 {

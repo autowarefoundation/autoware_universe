@@ -48,7 +48,7 @@ private:
     SyncPolicy;
   message_filters::Synchronizer<SyncPolicy> sync_;
 
-  void signalsCallback(
+  void signals_callback(
     const TrafficLightArray::ConstSharedPtr & car_signals_msg,
     const TrafficLightArray::ConstSharedPtr & pedestrian_signals_msg);
 
