@@ -21,6 +21,7 @@
 #include "autoware/map_based_prediction/predictor_vru/history.hpp"
 #include "autoware/map_based_prediction/predictor_vru/traffic_signal.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -54,7 +55,7 @@ public:
     CrosswalkUserHistoryManager::Params history;
   };
 
-  explicit PredictorVru(rclcpp::Node & node)
+  explicit PredictorVru(autoware::agnocast_wrapper::Node & node)
   : node_(node), traffic_signal_module_(node), history_manager_(node)
   {
   }
@@ -94,7 +95,7 @@ public:
   PredictedObjects retrieveUndetectedObjects();
 
 private:
-  rclcpp::Node & node_;
+  autoware::agnocast_wrapper::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   // Map data
