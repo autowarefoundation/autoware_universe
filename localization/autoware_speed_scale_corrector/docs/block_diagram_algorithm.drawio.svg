@@ -50,7 +50,7 @@
               <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
                 VelocityReport batch
                 <br/>
-                from polling buffer
+                rolling buffer (sensor_buffer_duration)
               </div>
             </div>
           </div>
@@ -67,7 +67,7 @@
               <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
                 IMU batch
                 <br/>
-                from polling buffer
+                rolling buffer (sensor_buffer_duration)
               </div>
             </div>
           </div>
@@ -89,7 +89,7 @@
                 <br/>
                 3D distance / dt
                 <br/>
-                from previous and current pose
+                skip if dt &gt; max_pose_lag
               </div>
             </div>
           </div>
@@ -108,7 +108,7 @@
             <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
               <div
                 style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"
-              >find_nearest_velocity_report()<br/>timestamp sync<br/>(stamp_diff &lt;= update_interval)</div>
+              >find_nearest_velocity_report()<br/>timestamp sync<br/>(stamp_diff &lt;= max_stamp_lag)</div>
             </div>
           </div>
         </foreignObject>
@@ -126,7 +126,7 @@
             <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
               <div
                 style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"
-              >find_nearest_imu()<br/>timestamp sync<br/>(stamp_diff &lt;= update_interval)</div>
+              >find_nearest_imu()<br/>timestamp sync<br/>(stamp_diff &lt;= max_stamp_lag)</div>
             </div>
           </div>
         </foreignObject>
@@ -213,7 +213,7 @@
                 <br/>
                 keep previous scale factor
                 <br/>
-                return reason string
+                UpdateFailureReason
               </div>
             </div>
           </div>

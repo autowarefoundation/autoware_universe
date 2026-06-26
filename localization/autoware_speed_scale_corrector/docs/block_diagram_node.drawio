@@ -22,7 +22,7 @@
                 <mxCell id="subs" value="Polling subscribers&#10;pose / velocity_report / imu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="node_box" vertex="1">
                     <mxGeometry x="30" y="50" width="160" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="estimator_ref" value="SpeedScaleEstimator&#10;(see algorithm diagram)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="node_box" vertex="1">
+                <mxCell id="estimator_ref" value="SpeedScaleCorrectorProcessor&#10;+ SpeedScaleEstimator&#10;(see algorithm diagram)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="node_box" vertex="1">
                     <mxGeometry x="240" y="45" width="280" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="publish" value="Publishers&#10;scale_factor: on successful update&#10;debug_info: always" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="node_box" vertex="1">
