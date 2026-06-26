@@ -30,6 +30,10 @@ struct NodeParams
   double object_buffer_time_length{2.0};
   bool remember_lost_crosswalk_users{false};
   double prediction_time_horizon_unknown{10.0};
+  // TODO(badai-nguyen): Remove this flag once planning supports ANIMAL and HAZARD classes.
+  // When true, ANIMAL and HAZARD classifications are remapped to UNKNOWN before prediction
+  // so that downstream planning (which only understands the legacy label set) keeps working.
+  bool remap_unsupported_labels_to_unknown{true};
   bool use_priority_prediction{false};
 };
 

@@ -148,6 +148,8 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   state_.params.remember_lost_crosswalk_users =
     declare_parameter<bool>("use_crosswalk_user_history.remember_lost_users");
   state_.params.prediction_time_horizon_unknown = time_horizon.unknown;
+  state_.params.remap_unsupported_labels_to_unknown =
+    declare_parameter<bool>("remap_unsupported_labels_to_unknown");
 
   // --- Callbacks ---
   map_callback_ = std::make_unique<MapCallback>(this, state_);
