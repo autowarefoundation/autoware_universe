@@ -17,6 +17,10 @@
         enable_assessment:
           # default value is true.
           unknown: false
+          animal: false
+          hazard: false
+          over_drivable: false
+          under_drivable: false
         assessment_trajectories:
           map_based: true
           constant_curvature: true
@@ -34,6 +38,10 @@
         enable_assessment:
           # default value is true.
           unknown: false
+          animal: false
+          hazard: false
+          over_drivable: false
+          under_drivable: false
         assessment_trajectories:
           map_based: true
           constant_curvature: true
@@ -54,6 +62,10 @@
         enable_assessment:
           # default value is true.
           unknown: false
+          animal: false
+          hazard: false
+          over_drivable: false
+          under_drivable: false
         stop_distance_margin: 2.0
         ego_total_braking_delay: 0.4
         ego_footprint_margin:
