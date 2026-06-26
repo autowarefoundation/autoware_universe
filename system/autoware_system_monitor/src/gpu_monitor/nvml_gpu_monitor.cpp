@@ -158,13 +158,8 @@ void GPUMonitor::checkUsage(diagnostic_updater::DiagnosticStatusWrapper & stat)
       return;
     }
 
-    int level = DiagStatus::OK;
-    float usage = static_cast<float>(itr->utilization.gpu) / 100.0;
-    if (usage >= gpu_usage_error_) {
-      level = std::max(level, static_cast<int>(DiagStatus::ERROR));
-    } else if (usage >= gpu_usage_warn_) {
-      level = std::max(level, static_cast<int>(DiagStatus::WARN));
-    }
+    const float usage = static_cast<float>(itr->utilization.gpu) / 100.0;
+    const int level = gpuUsageToLevel(static_cast<size_t>(index), usage);
 
     stat.add(fmt::format("GPU {}: status", index), load_dict_.at(level));
     stat.add(fmt::format("GPU {}: name", index), itr->name);
