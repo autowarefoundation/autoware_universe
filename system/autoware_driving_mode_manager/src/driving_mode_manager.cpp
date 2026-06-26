@@ -17,6 +17,7 @@
 #include "ros_interface.hpp"
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 namespace autoware::driving_mode_manager

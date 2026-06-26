@@ -20,6 +20,7 @@
 
 #include <rclcpp/time.hpp>
 
+#include <memory>
 #include <optional>
 #include <queue>
 #include <string>

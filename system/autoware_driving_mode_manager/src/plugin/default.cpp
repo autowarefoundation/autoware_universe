@@ -17,9 +17,6 @@
 #include <string>
 #include <vector>
 
-// DEBUG
-#include <rclcpp/logging.hpp>
-
 namespace autoware::driving_mode_manager
 {
 
