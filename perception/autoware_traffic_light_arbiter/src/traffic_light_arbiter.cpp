@@ -18,7 +18,6 @@
 
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::traffic_light
@@ -76,39 +75,26 @@ void TrafficLightArbiter::on_map(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Lanelet
 void TrafficLightArbiter::on_perception_msg(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg)
 {
-  log_expired_external_signals(core_->ingest_perception(*msg));
+  core_->ingest_perception(*msg);
   arbitrate_and_publish(msg->stamp);
 }
 
 void TrafficLightArbiter::on_external_msg(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficSignalArray) & msg)
 {
-  const auto result = core_->ingest_external(*msg, this->now());
-  if (!result.accepted) {
+  if (!core_->ingest_external(*msg, this->now())) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "Received outdated external traffic signal messages");
     return;
   }
-  log_expired_external_signals(result.expired);
   arbitrate_and_publish(msg->stamp);
-}
-
-void TrafficLightArbiter::log_expired_external_signals(
-  const std::vector<TrafficLightArbiterCore::ExpiredExternalSignal> & expired)
-{
-  for (const auto & entry : expired) {
-    RCLCPP_DEBUG(
-      get_logger(), "Removing expired external traffic light signal (ID: %lu, age: %.2f s)",
-      entry.id, entry.age);
-  }
 }
 
 void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::Time & stamp)
 {
-  auto output_signals_msg_ptr = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_);
-  auto result = core_->arbitrate(*output_signals_msg_ptr);
+  auto result = core_->arbitrate();
 
-  if (!result.has_output) {
+  if (!result.output) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), 5000, "Received traffic signal messages before a map");
     return;
@@ -122,8 +108,14 @@ void TrafficLightArbiter::arbitrate_and_publish(const builtin_interfaces::msg::T
 
   // Stamp inheritance is the Node's I/O contract with downstream consumers:
   // the published output carries the trigger msg's stamp for time alignment.
-  output_signals_msg_ptr->stamp = stamp;
-  pub_->publish(std::move(output_signals_msg_ptr));
+  result.output->stamp = stamp;
+
+  // Publish by const-ref so the wrapper copies into a freshly borrowed message:
+  // agnocast's heaphook only routes allocations into the shared-memory pool
+  // while a publisher message is borrowed. The Core builds its output on the
+  // regular heap, so moving that buffer into a loaned message would leave the
+  // payload outside the segment subscribers map. The copy keeps it in shmem.
+  pub_->publish(*result.output);
 
   if (rclcpp::Time(stamp) < result.latest_input_time) {
     RCLCPP_WARN_THROTTLE(

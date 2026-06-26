@@ -26,19 +26,20 @@ This package is a C++ library. The topics below are subscribed to by the hosting
 
 ### Topics
 
-| Direction  | Topic name                                 | Message Type                                              | Description                                                            |
-| ---------- | ------------------------------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Subscriber | `~/input/odometry`                         | `nav_msgs/msg/Odometry`                                   | Current ego pose and velocity (mandatory)                              |
-| Subscriber | `~/input/acceleration`                     | `geometry_msgs/msg/AccelWithCovarianceStamped`            | Current ego acceleration (mandatory)                                   |
-| Subscriber | `~/input/objects`                          | `autoware_perception_msgs/msg/PredictedObjects`           | Surrounding dynamic obstacles (mandatory)                              |
-| Subscriber | `~/input/traffic_signals`                  | `autoware_perception_msgs/msg/TrafficLightGroupArray`     | Traffic light states (optional; absent data does not block validation) |
-| Subscriber | `~/input/lanelet2_map`                     | `autoware_map_msgs/msg/LaneletMapBin`                     | HD map loaded once at startup (transient local QoS; mandatory)         |
-| Publisher  | `~/debug/validation_reports`               | `autoware_trajectory_validator/msg/ValidationReportArray` | Per-trajectory validation verdict and per-metric values                |
-| Publisher  | `~/debug/markers/<plugin_name>`            | `visualization_msgs/msg/MarkerArray`                      | Per-plugin debug visualization markers                                 |
-| Publisher  | `~/debug/plugin_report_text`               | `visualization_msgs/msg/MarkerArray`                      | Text overlay summarizing how many paths each plugin filtered           |
-| Publisher  | `~/debug/processing_time_ms`               | `autoware_internal_debug_msgs/msg/Float64Stamped`         | Total validator processing time [ms]                                   |
-| Publisher  | `~/debug/<plugin_name>/processing_time_ms` | `autoware_internal_debug_msgs/msg/Float64Stamped`         | Per-plugin processing time [ms]                                        |
-| Publisher  | `~/debug/processing_time_text`             | `autoware_internal_debug_msgs/msg/StringStamped`          | Human-readable processing time breakdown                               |
+| Direction  | Topic name                                 | Message Type                                              | Description                                                                         |
+| ---------- | ------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Subscriber | `~/input/odometry`                         | `nav_msgs/msg/Odometry`                                   | Current ego pose and velocity (mandatory)                                           |
+| Subscriber | `~/input/acceleration`                     | `geometry_msgs/msg/AccelWithCovarianceStamped`            | Current ego acceleration (mandatory)                                                |
+| Subscriber | `~/input/objects`                          | `autoware_perception_msgs/msg/PredictedObjects`           | Surrounding dynamic obstacles (mandatory)                                           |
+| Subscriber | `~/input/traffic_signals`                  | `autoware_perception_msgs/msg/TrafficLightGroupArray`     | Traffic light states (optional; absent data does not block validation)              |
+| Subscriber | `~/input/route`                            | `autoware_planning_msgs/msg/LaneletRoute`                 | Route with the lanelets followed by ego (only required by the `TrafficLightFilter`) |
+| Subscriber | `~/input/lanelet2_map`                     | `autoware_map_msgs/msg/LaneletMapBin`                     | HD map loaded once at startup (transient local QoS; mandatory)                      |
+| Publisher  | `~/debug/validation_reports`               | `autoware_trajectory_validator/msg/ValidationReportArray` | Per-trajectory validation verdict and per-metric values                             |
+| Publisher  | `~/debug/markers/<plugin_name>`            | `visualization_msgs/msg/MarkerArray`                      | Per-plugin debug visualization markers                                              |
+| Publisher  | `~/debug/plugin_report_text`               | `visualization_msgs/msg/MarkerArray`                      | Text overlay summarizing how many paths each plugin filtered                        |
+| Publisher  | `~/debug/processing_time_ms`               | `autoware_internal_debug_msgs/msg/Float64Stamped`         | Total validator processing time [ms]                                                |
+| Publisher  | `~/debug/<plugin_name>/processing_time_ms` | `autoware_internal_debug_msgs/msg/Float64Stamped`         | Per-plugin processing time [ms]                                                     |
+| Publisher  | `~/debug/processing_time_text`             | `autoware_internal_debug_msgs/msg/StringStamped`          | Human-readable processing time breakdown                                            |
 
 ### Parameters
 

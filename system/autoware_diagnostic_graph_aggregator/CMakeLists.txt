@@ -28,6 +28,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 ament_auto_add_library(aggregator SHARED
   "src/node/aggregator.cpp"
   "src/node/command_mode_mapping.cpp"
+  "src/node/driving_mode_mapping.cpp"
 )
 ament_auto_add_library(converter SHARED
   "src/node/converter.cpp"

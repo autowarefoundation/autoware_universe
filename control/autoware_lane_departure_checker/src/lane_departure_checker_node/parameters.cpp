@@ -50,6 +50,7 @@ NodeParam NodeParam::init(rclcpp::Node & node)
   p.include_left_lanes = get_or_declare_parameter<bool>(node, "include_left_lanes");
   p.include_opposite_lanes = get_or_declare_parameter<bool>(node, "include_opposite_lanes");
   p.include_conflicting_lanes = get_or_declare_parameter<bool>(node, "include_conflicting_lanes");
+  p.allow_area = get_or_declare_parameter<bool>(node, "allow_area");
   p.boundary_types_to_detect =
     get_or_declare_parameter<std::vector<std::string>>(node, "boundary_types_to_detect");
   return p;

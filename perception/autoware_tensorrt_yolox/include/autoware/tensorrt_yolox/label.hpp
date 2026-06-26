@@ -46,9 +46,6 @@ void read_label_file(
 void load_segmentation_colormap(
   const std::string & file_name, std::vector<autoware::tensorrt_yolox::Colormap> & semseg_color_map,
   std::unordered_map<std::string, int> & semseg_name_to_semseg_id_map, uint32_t skip_header_lines);
-void load_label_remap_file(
-  const std::string & file_name, std::unordered_map<std::string, std::string> & label_name_remap,
-  uint32_t skip_header_lines);
 void load_label_id_remap_file(
   const std::string & file_name, std::unordered_map<std::string, int> & label_name_to_id_remap,
   uint32_t skip_header_lines);

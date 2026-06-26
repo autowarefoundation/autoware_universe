@@ -60,6 +60,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/classifier/color_classifier.cpp
     src/classifier/cnn_classifier.cpp
     src/classifier/cnn_lamp_recognizer.cpp
+    src/traffic_light_classifier.cpp
     src/traffic_light_classifier_node.cpp
     src/traffic_light_classifier_process.cpp
   )
@@ -81,6 +82,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     src/classifier/cnn_classifier.cpp
     src/classifier/color_classifier.cpp
     src/classifier/cnn_lamp_recognizer.cpp
+    src/traffic_light_classifier.cpp
     src/traffic_light_classifier_node.cpp
     src/traffic_light_classifier_process.cpp
     src/single_image_debug_inference_node.cpp
@@ -110,6 +112,7 @@ else()
 
   ament_auto_add_library(${PROJECT_NAME} SHARED
     src/classifier/color_classifier.cpp
+    src/traffic_light_classifier.cpp
     src/traffic_light_classifier_node.cpp
     src/traffic_light_classifier_process.cpp
   )
@@ -128,6 +131,14 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_auto_add_gtest(test_utils
     test/test_utils.cpp
+  )
+
+  ament_add_ros_isolated_gtest(test_traffic_light_classifier_characteristics
+    test/test_traffic_light_classifier_characteristics.cpp
+  )
+  target_link_libraries(test_traffic_light_classifier_characteristics
+    ${PROJECT_NAME}
+    ${OpenCV_LIBRARIES}
   )
 endif()
 

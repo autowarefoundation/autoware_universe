@@ -1,0 +1,64 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: AutowareJoyController.node
+package:
+  name: autoware_joy_controller
+  provider: autoware
+launch:
+  plugin: autoware::joy_controller::AutowareJoyControllerNode
+  executable: autoware_joy_controller
+# interfaces
+subscribers:
+  - name: joy
+    message_type: sensor_msgs/msg/Joy
+    remap_target: input/joy
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+    remap_target: input/odometry
+publishers:
+  - name: control_command
+    message_type: autoware_control_msgs/msg/Control
+    remap_target: output/control_command
+  - name: external_control_command
+    message_type: tier4_external_api_msgs/msg/ControlCommandStamped
+    remap_target: output/external_control_command
+  - name: shift
+    message_type: tier4_external_api_msgs/msg/GearShiftStamped
+    remap_target: output/shift
+  - name: turn_signal
+    message_type: tier4_external_api_msgs/msg/TurnSignalStamped
+    remap_target: output/turn_signal
+  - name: gate_mode
+    message_type: tier4_control_msgs/msg/GateMode
+    remap_target: output/gate_mode
+  - name: heartbeat
+    message_type: tier4_external_api_msgs/msg/Heartbeat
+    remap_target: output/heartbeat
+  - name: vehicle_engage
+    message_type: autoware_vehicle_msgs/msg/Engage
+    remap_target: output/vehicle_engage
+clients:
+  - name: emergency_stop
+    message_type: tier4_external_api_msgs/srv/SetEmergency
+    remap_target: service/emergency_stop
+  - name: autoware_engage
+    message_type: tier4_external_api_msgs/srv/Engage
+    remap_target: service/autoware_engage
+# parameters
+param_files:
+  - name: joy_controller_param
+    default: config/joy_controller_ds4.param.yaml
+param_values: []
+# processes
+processes:
+  - name: publish_joy_commands
+    trigger_conditions:
+      - periodic: 10.0 # Hz
+    outcomes:
+      - to_output: control_command
+      - to_output: external_control_command
+      - to_output: shift
+      - to_output: turn_signal
+      - to_output: gate_mode
+      - to_output: heartbeat
+      - to_output: vehicle_engage

@@ -226,15 +226,13 @@ bool Tracker::updateWithMeasurement(
       // The current (assembled) shape serves as the conditioned-update reference shape.
       types::DynamicObject predicted_object;
       getTrackedObject(measurement_time, predicted_object);
-      conditionedUpdate(
-        object, predicted_object, predicted_object.shape, measurement_time, channel_info);
+      conditionedUpdate(object, predicted_object, measurement_time, channel_info);
     }
 
   } else {  // UpdatePath::CONDITIONED
     types::DynamicObject predicted_object;
     getTrackedObject(measurement_time, predicted_object);
-    conditionedUpdate(
-      object, predicted_object, predicted_object.shape, measurement_time, channel_info);
+    conditionedUpdate(object, predicted_object, measurement_time, channel_info);
   }
 
   return true;
@@ -599,12 +597,10 @@ double Tracker::getPositionCovarianceDeterminant() const
 
 bool Tracker::conditionedUpdate(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-  const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const rclcpp::Time & measurement_time, const types::InputChannel & channel_info)
 {
   (void)measurement;
   (void)prediction;
-  (void)tracker_shape;
   (void)measurement_time;
   (void)channel_info;
   RCLCPP_ERROR(

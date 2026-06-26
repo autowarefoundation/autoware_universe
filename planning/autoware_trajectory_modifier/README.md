@@ -38,8 +38,11 @@ Both conditions are individually enabled or disabled via parameters, allowing fi
 The Obstacle Stop plugin serves as a deterministic safety shield operating independently of the generative model to:
 
 - **Enforce Longitudinal Safety**: Monitors the gap to dynamic and static obstacles to ensure a safe distance is maintained under all kinematic conditions.
-- **Ensure Definitive Stopping**: Guarantees zero-velocity set-points for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.
-- **Provide Predictable Deceleration**: Standardizes the vehicle’s stopping profile to ensure consistent, comfortable, and physically guaranteed deceleration regardless of the AI's intended path.
+- **Ensure Definitive Stopping For Obstacles**: Guarantees zero-velocity set-points for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.
+
+#### Velocity Modifier
+
+The Velocity Modifier plugins is responsible for ensuring the velocity profile is smooth and feasible, and adjusts the velocity profile if an anomaly is detected while respecting deceleration and jerk constraints.
 
 ## Dependencies
 

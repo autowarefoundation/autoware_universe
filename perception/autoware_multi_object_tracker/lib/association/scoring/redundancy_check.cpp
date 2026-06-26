@@ -14,7 +14,7 @@
 
 #include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_iou.hpp"
 
 namespace autoware::multi_object_tracker
 {

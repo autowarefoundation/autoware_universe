@@ -636,31 +636,12 @@ std::size_t PreprocessCuda::generateFeatures(
       throw std::runtime_error("Unsupported input point cloud format.");
   }
 
-  auto min_op = [] __host__ __device__(const float4 & a, const float4 & b) {
-    return make_float4(fminf(a.x, b.x), fminf(a.y, b.y), fminf(a.z, b.z), fminf(a.w, b.w));
-  };
-
-  auto max_op = [] __host__ __device__(const float4 & a, const float4 & b) {
-    return make_float4(fmaxf(a.x, b.x), fmaxf(a.y, b.y), fmaxf(a.z, b.z), fmaxf(a.w, b.w));
-  };
-
-  float4 min_value = make_float4(
-    std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
-    std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-  min_value = thrust::reduce(
-    policy, reinterpret_cast<float4 *>(cropped_points_d_.get()),
-    reinterpret_cast<float4 *>(cropped_points_d_.get()) + num_cropped_points, min_value, min_op);
-
-  float4 max_value = make_float4(
-    -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(),
-    -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
-  max_value = thrust::reduce(
-    policy, reinterpret_cast<float4 *>(cropped_points_d_.get()),
-    reinterpret_cast<float4 *>(cropped_points_d_.get()) + num_cropped_points, max_value, max_op);
-
-  std::int32_t min_x = static_cast<std::int32_t>(std::floor(min_value.x / config_.voxel_x_size_));
-  std::int32_t min_y = static_cast<std::int32_t>(std::floor(min_value.y / config_.voxel_y_size_));
-  std::int32_t min_z = static_cast<std::int32_t>(std::floor(min_value.z / config_.voxel_z_size_));
+  const auto coord_min_x =
+    static_cast<std::int32_t>(std::floor(config_.min_x_range_ / config_.voxel_x_size_));
+  const auto coord_min_y =
+    static_cast<std::int32_t>(std::floor(config_.min_y_range_ / config_.voxel_y_size_));
+  const auto coord_min_z =
+    static_cast<std::int32_t>(std::floor(config_.min_z_range_ / config_.voxel_z_size_));
 
   const auto num_cropped_blocks = divup(num_cropped_points, config_.threads_per_block_);
 
@@ -669,7 +650,8 @@ std::size_t PreprocessCuda::generateFeatures(
   if (config_.use_64bit_hash_) {
     voxelizationHash64Kernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
       reinterpret_cast<float4 *>(cropped_points_d_.get()), hashes64_d_.get(), num_cropped_points,
-      config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, min_x, min_y, min_z);
+      config_.voxel_x_size_, config_.voxel_y_size_, config_.voxel_z_size_, coord_min_x, coord_min_y,
+      coord_min_z);
 
     cub::DeviceRadixSort::SortPairs(
       reinterpret_cast<void *>(sort_workspace_d_.get()), sort_workspace_size_, hashes64_d_.get(),
@@ -809,7 +791,7 @@ std::size_t PreprocessCuda::generateFeatures(
     num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<float4 *>(voxel_features), reinterpret_cast<int3 *>(voxel_coords),
     voxel_hashes, num_unique_points, config_.voxel_x_size_, config_.voxel_y_size_,
-    config_.voxel_z_size_, min_x, min_y, min_z, config_.serialization_depth_);
+    config_.voxel_z_size_, coord_min_x, coord_min_y, coord_min_z, config_.serialization_depth_);
 
   return num_unique_points;
 }

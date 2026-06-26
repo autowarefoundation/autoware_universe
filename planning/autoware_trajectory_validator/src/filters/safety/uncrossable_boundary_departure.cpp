@@ -49,13 +49,14 @@ UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter:
       std::back_inserter(debug_markers_.markers));
   }
 
-  std::vector<MetricReport> metrics{
-    autoware_trajectory_validator::build<MetricReport>()
-      .validator_name(get_name())
-      .validator_category(category())
-      .metric_name("check_critical_departure")
-      .metric_value(is_feasible ? 1.0 : 0.0)
-      .level(!is_feasible ? MetricReport::DANGER : MetricReport::SAFE)};
+  RiskLevel risk_level;
+  risk_level.level = is_feasible ? RiskLevel::SAFE : RiskLevel::DANGER;
+  std::vector<MetricReport> metrics{autoware_trajectory_validator::build<MetricReport>()
+                                      .validator_name(get_name())
+                                      .validator_category(category())
+                                      .metric_name("check_critical_departure")
+                                      .metric_value(is_feasible ? 1.0 : 0.0)
+                                      .risk(risk_level)};
 
   return ValidationResult{is_feasible, std::move(metrics)};
 }
