@@ -54,14 +54,14 @@ public:
   std::unique_ptr<DrivingModeConfig> config_;
   std::unique_ptr<DrivingModeStatus> status_;
   std::unordered_map<AutowareMode, MrmState::State> mrm_states_;
-  std::optional<PlatformMode> platform_mode;
+  std::optional<PlatformMode> platform_mode_;
 
 private:
   void publish_driving_mode_info() const;
   void publish_debug() const;
-  std::optional<TrajectorySource> trajectory_source;
-  std::optional<CommandSource> command_source;
-  std::optional<CommandFilter> command_filter;
+  std::optional<TrajectorySource> trajectory_source_;
+  std::optional<CommandSource> command_source_;
+  std::optional<CommandFilter> command_filter_;
 };
 
 }  // namespace autoware::driving_mode_manager
