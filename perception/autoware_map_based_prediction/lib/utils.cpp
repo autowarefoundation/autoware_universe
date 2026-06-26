@@ -20,11 +20,14 @@
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 #include <tf2/utils.hpp>
+
+#include <boost/geometry/geometry.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -247,6 +250,85 @@ PredictedObject convertToPredictedObject(const TrackedObject & tracked_object)
   return predicted_object;
 }
 
+namespace
+{
+// Signed area of a footprint ring; positive for counter-clockwise winding (see the convention note
+// in autoware_utils boost_polygon_utils). Used only to preserve the input winding on output.
+double footprintSignedArea(const std::vector<geometry_msgs::msg::Point32> & points)
+{
+  double area = 0.0;
+  for (size_t i = 0; i < points.size(); ++i) {
+    const auto & a = points[i];
+    const auto & b = points[(i + 1) % points.size()];
+    area += static_cast<double>(a.x) * b.y - static_cast<double>(b.x) * a.y;
+  }
+  return 0.5 * area;
+}
+
+// Polygon union of the original body box and the footprint, both in the object-local frame, then
+// re-expressed about the recentered box origin. The body box and the footprint share the object
+// body, so the union is a single connected polygon; the largest piece is taken defensively.
+geometry_msgs::msg::Polygon mergeFootprintWithBox(
+  const geometry_msgs::msg::Polygon & footprint, const double half_length, const double half_width,
+  const Eigen::Vector2d & center_offset)
+{
+  namespace bg = boost::geometry;
+  using autoware_utils::Point2d;
+  using autoware_utils::Polygon2d;
+
+  Polygon2d box;
+  bg::append(box.outer(), Point2d(half_length, half_width));
+  bg::append(box.outer(), Point2d(-half_length, half_width));
+  bg::append(box.outer(), Point2d(-half_length, -half_width));
+  bg::append(box.outer(), Point2d(half_length, -half_width));
+  bg::correct(box);
+
+  Polygon2d foot;
+  for (const auto & point : footprint.points) {
+    bg::append(foot.outer(), Point2d(point.x, point.y));
+  }
+  bg::correct(foot);
+
+  bg::model::multi_polygon<Polygon2d> merged;
+  bg::union_(box, foot, merged);
+
+  Polygon2d single;
+  if (merged.size() == 1) {
+    // Box and footprint overlap (the normal case): the union is one connected polygon.
+    single = merged.front();
+  } else {
+    // Disjoint or degenerate input: the union has multiple rings, but geometry_msgs::Polygon can
+    // hold only one. Fall back to the convex hull covering all pieces so neither shape is dropped.
+    bg::convex_hull(merged, single);
+  }
+
+  geometry_msgs::msg::Polygon output;
+  if (single.outer().empty()) return output;
+
+  // Drop the duplicated closing vertex that boost keeps on the ring.
+  const auto & ring = single.outer();
+  size_t count = ring.size();
+  if (count > 1 && bg::equals(ring.front(), ring.back())) --count;
+
+  output.points.reserve(count);
+  for (size_t i = 0; i < count; ++i) {
+    geometry_msgs::msg::Point32 point;
+    point.x = static_cast<float>(ring[i].x() - center_offset.x());
+    point.y = static_cast<float>(ring[i].y() - center_offset.y());
+    point.z = 0.0F;
+    output.points.push_back(point);
+  }
+
+  // Keep the input winding so downstream consumers see a consistent footprint orientation.
+  const double input_area = footprintSignedArea(footprint.points);
+  if (input_area != 0.0 && (footprintSignedArea(output.points) > 0.0) != (input_area > 0.0)) {
+    std::reverse(output.points.begin(), output.points.end());
+  }
+
+  return output;
+}
+}  // namespace
+
 void expandShapeToFootprintAndRecenter(PredictedObject & object)
 {
   // grow a bounding-box shape to cover its footprint and recenter the predicted paths
@@ -281,11 +363,9 @@ void expandShapeToFootprintAndRecenter(PredictedObject & object)
   object.shape.dimensions.x = hi_x - lo_x;
   object.shape.dimensions.y = hi_y - lo_y;
 
-  // Re-express the footprint about the new box center so it stays geometrically consistent.
-  for (auto & point : object.shape.footprint.points) {
-    point.x -= static_cast<float>(center_offset.x());
-    point.y -= static_cast<float>(center_offset.y());
-  }
+  // Merge the footprint with the original bounding box and re-express it about the new box center.
+  object.shape.footprint =
+    mergeFootprintWithBox(object.shape.footprint, half_length, half_width, center_offset);
 
   // Move the t=0 box center and every predicted-path point onto the expanded box center.
   shiftPoseReference(object.kinematics.initial_pose_with_covariance.pose, center_offset);

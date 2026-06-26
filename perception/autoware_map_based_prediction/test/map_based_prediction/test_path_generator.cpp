@@ -21,7 +21,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
@@ -354,9 +356,86 @@ TEST(ExpandShapeToFootprintAndRecenter, grows_box_and_recenters_on_protrusion)
   // The t=0 box center (initial pose) recenters by the same +0.5 in x.
   EXPECT_DOUBLE_EQ(object.kinematics.initial_pose_with_covariance.pose.position.x, 10.5);
   EXPECT_DOUBLE_EQ(object.kinematics.initial_pose_with_covariance.pose.position.y, 20.0);
-  // Footprint re-expressed about the new center (shifted by -0.5 in x).
-  EXPECT_FLOAT_EQ(object.shape.footprint.points[1].x, 2.5f);
-  EXPECT_FLOAT_EQ(object.shape.footprint.points[0].x, -2.5f);
+  // Footprint is the union of the original box and the footprint, re-expressed about the new
+  // center. Here the footprint encloses the box, so the union is the footprint rectangle shifted
+  // by -0.5 in x: x in [-2.5, 2.5], y in [-1, 1]. Check bounds order-independently since the
+  // boost union may reorder the ring.
+  ASSERT_FALSE(object.shape.footprint.points.empty());
+  float min_x = std::numeric_limits<float>::max();
+  float max_x = std::numeric_limits<float>::lowest();
+  float min_y = std::numeric_limits<float>::max();
+  float max_y = std::numeric_limits<float>::lowest();
+  for (const auto & point : object.shape.footprint.points) {
+    min_x = std::min(min_x, point.x);
+    max_x = std::max(max_x, point.x);
+    min_y = std::min(min_y, point.y);
+    max_y = std::max(max_y, point.y);
+  }
+  EXPECT_FLOAT_EQ(min_x, -2.5f);
+  EXPECT_FLOAT_EQ(max_x, 2.5f);
+  EXPECT_FLOAT_EQ(min_y, -1.0f);
+  EXPECT_FLOAT_EQ(max_y, 1.0f);
+}
+
+TEST(ExpandShapeToFootprintAndRecenter, footprint_box_union_keeps_concavity)
+{
+  PredictedObject object = make_box_object_with_path();
+  // A narrow bump on the front face: footprint covers x in [2, 3], y in [-0.5, 0.5], while the body
+  // box is x in [-2, 2], y in [-1, 1]. Neither shape contains the other, so the union is a true
+  // T-shape that no axis-aligned rectangle can represent.
+  object.shape.footprint.points.push_back(make_point32(2.0, -0.5));
+  object.shape.footprint.points.push_back(make_point32(3.0, -0.5));
+  object.shape.footprint.points.push_back(make_point32(3.0, 0.5));
+  object.shape.footprint.points.push_back(make_point32(2.0, 0.5));
+
+  autoware::map_based_prediction::utils::expandShapeToFootprintAndRecenter(object);
+
+  // AABB union: x in [-2, 3] -> length 5, center offset +0.5; y unchanged.
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.x, 5.0);
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.y, 2.0);
+
+  // The merged footprint must keep the bump's concavity, so it has more than the 4 corners a plain
+  // rectangle would. Re-expressed about the new center (shifted by -0.5 in x).
+  const auto & points = object.shape.footprint.points;
+  EXPECT_GT(points.size(), 4u);
+  bool has_notch = false;
+  for (const auto & point : points) {
+    // The re-entrant corners sit at x = 1.5 (old x = 2.0), y = +/-0.5.
+    if (std::abs(point.x - 1.5f) < 1e-3f && std::abs(std::abs(point.y) - 0.5f) < 1e-3f) {
+      has_notch = true;
+    }
+  }
+  EXPECT_TRUE(has_notch);
+}
+
+TEST(ExpandShapeToFootprintAndRecenter, disjoint_footprint_covers_both_shapes)
+{
+  PredictedObject object = make_box_object_with_path();
+  // Pathological input: the footprint (x in [5, 6]) does not touch the body box (x in [-2, 2]).
+  // The union has two disjoint rings, which a single-ring polygon cannot hold, so the result must
+  // fall back to a convex hull that still covers both shapes rather than dropping either one.
+  object.shape.footprint.points.push_back(make_point32(5.0, -0.5));
+  object.shape.footprint.points.push_back(make_point32(6.0, -0.5));
+  object.shape.footprint.points.push_back(make_point32(6.0, 0.5));
+  object.shape.footprint.points.push_back(make_point32(5.0, 0.5));
+
+  autoware::map_based_prediction::utils::expandShapeToFootprintAndRecenter(object);
+
+  // AABB union: x in [-2, 6] -> length 8, center offset +2; y unchanged.
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.x, 8.0);
+  EXPECT_DOUBLE_EQ(object.shape.dimensions.y, 2.0);
+
+  // Re-expressed about the new center (shifted by -2 in x): the footprint must still span both the
+  // box (down to x = -4) and the far footprint (up to x = 4) - nothing dropped.
+  ASSERT_FALSE(object.shape.footprint.points.empty());
+  float min_x = std::numeric_limits<float>::max();
+  float max_x = std::numeric_limits<float>::lowest();
+  for (const auto & point : object.shape.footprint.points) {
+    min_x = std::min(min_x, point.x);
+    max_x = std::max(max_x, point.x);
+  }
+  EXPECT_FLOAT_EQ(min_x, -4.0f);
+  EXPECT_FLOAT_EQ(max_x, 4.0f);
 }
 
 TEST(PathGenerator, test_generatePathToTargetPoint)
