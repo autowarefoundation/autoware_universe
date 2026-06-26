@@ -2,6 +2,13 @@
 Changelog for package autoware_dummy_infrastructure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_dummy_infrastructure): rename virtual traffic light state (`#12505 <https://github.com/autowarefoundation/autoware_universe/issues/12505>`_)
+  fix(autoware_dummy_infrastructure): fix virtual traffic light topic name
+* Contributors: Takagi, Isamu, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 

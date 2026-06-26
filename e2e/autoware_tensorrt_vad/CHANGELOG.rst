@@ -2,6 +2,20 @@
 Changelog for package autoware_tensorrt_vad
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): re-enable bugprone-multi-level-implicit-pointer-conversion (`#12578 <https://github.com/autowarefoundation/autoware_universe/issues/12578>`_)
+  fix(clang-tidy): re-enable multi-level pointer conversion check
+* fix(autoware_tensorrt_vad): bind prev_bev via setTensorAddress (`#12608 <https://github.com/autowarefoundation/autoware_universe/issues/12608>`_)
+  * fix(autoware_tensorrt_vad): bind prev_bev via setTensorAddress
+  * fix(autoware_tensorrt_vad): abort frame on load_inputs failure to keep ping-pong in sync
+  ---------
+* feat: remove deprecated planning interface (`#12636 <https://github.com/autowarefoundation/autoware_universe/issues/12636>`_)
+  remove deprecated planning interface
+* docs(autoware_tensorrt_vad): fix link in docs (`#12624 <https://github.com/autowarefoundation/autoware_universe/issues/12624>`_)
+* Contributors: Max-Bin, Shin, Vishal Chauhan, Yukihiro Saito, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

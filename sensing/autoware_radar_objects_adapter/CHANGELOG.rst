@@ -2,6 +2,13 @@
 Changelog for package autoware_radar_objects_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(radar_objects_adapter): apply agnocast for publisher of `radar_objects_adapter` (`#12756 <https://github.com/autowarefoundation/autoware_universe/issues/12756>`_)
+  apply agnocast for publisher
+* Contributors: Koichi Imai, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

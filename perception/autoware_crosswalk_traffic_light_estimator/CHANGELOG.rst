@@ -2,6 +2,25 @@
 Changelog for package autoware_crosswalk_traffic_light_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(perception): fix test for `agnocast_wrapper::Node` (`#12861 <https://github.com/autowarefoundation/autoware_universe/issues/12861>`_)
+  * fix test for agnocast_wrapper::Node
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(crosswalk_traffic_light_estimator): apply `agnocast_wrapper::Node` to crosswalk_traffic_light_estimator (`#12703 <https://github.com/autowarefoundation/autoware_universe/issues/12703>`_)
+  * apply agnocast_wrapper
+  * no test when ENABLE_AGNOCAST=1
+  * style(pre-commit): autofix
+  * reuse stop_watch\_ (copilot review)
+  * fix to use SingleThreadedExecuto
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(crosswalk_traffic_light_estimator): apply autoware_agnocast_wrapper for CIE (`#12714 <https://github.com/autowarefoundation/autoware_universe/issues/12714>`_)
+* Contributors: Koichi Imai, atsushi yano, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

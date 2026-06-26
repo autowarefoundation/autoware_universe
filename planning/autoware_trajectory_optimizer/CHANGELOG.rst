@@ -2,6 +2,52 @@
 Changelog for package autoware_trajectory_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(planning): apply autoware_agnocast_wrapper to diffussion planner trajectory pipeline nodes for CIE (`#12779 <https://github.com/autowarefoundation/autoware_universe/issues/12779>`_)
+  * feat(autoware_diffusion_planner): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_optimizer): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_adapter): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_ranker): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_selector): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_modifier): apply autoware_agnocast_wrapper for CIE
+  ---------
+* feat(autoware_trajectory_optimiser): add temporal MPT tracking (`#12394 <https://github.com/autowarefoundation/autoware_universe/issues/12394>`_)
+  * autowar_trajectory_optimizer
+  * Apply suggestion from @go-sakayori
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  * Apply suggestion from @danielsanchezaran
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+  * fixes
+  * fixes
+  * fixes
+  * style(pre-commit): autofix
+  * fixes
+  * fixes
+  * fixes
+  * fixes
+  * fixes
+  * fixes
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  ---------
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(processing_time_cheker): add neural_network_based_planner node `processing_time_ms` (`#12529 <https://github.com/autowarefoundation/autoware_universe/issues/12529>`_)
+  * feat(diffusion_planner, trajectory_optimizer): add processing_time_ms topic
+  * feat: processing_time_checker
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* Contributors: Arjun Jagdish Ram, Kazunori-Nakajima, atsushi yano, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

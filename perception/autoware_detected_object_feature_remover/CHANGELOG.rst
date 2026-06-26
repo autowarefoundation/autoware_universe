@@ -2,6 +2,19 @@
 Changelog for package autoware_detected_object_feature_remover
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(detected_object_feature_remover): update autoware system design format to add parameter for convex hull conversion (`#12590 <https://github.com/autowarefoundation/autoware_universe/issues/12590>`_)
+  * feat(detected_object_feature_remover): add parameter for convex hull conversion
+  - Introduced a new parameter `run_convex_hull_conversion` with a default value of `false` in the DetectedObjectFeatureRemover configuration.
+  - This addition allows for optional convex hull conversion during object feature processing, enhancing flexibility in feature management.
+  These changes aim to improve the configurability of the detected object feature removal process.
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Taekjin LEE, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

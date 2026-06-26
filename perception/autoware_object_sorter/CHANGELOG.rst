@@ -2,6 +2,28 @@
 Changelog for package autoware_object_sorter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_object_sorter): remove hard coded label configuration (`#12828 <https://github.com/autowarefoundation/autoware_universe/issues/12828>`_)
+  * fix label handling
+  * add test
+  ---------
+* fix(object_sorter): update params for new ANIMAL and HAZARD classes (`#12744 <https://github.com/autowarefoundation/autoware_universe/issues/12744>`_)
+  * fix(object_sorter): update params for new ANIMAL and HAZARD classes
+  * fix: update tracked_objects config
+  ---------
+* feat(object_sorter): apply `agnocast_wrapper::Node` to object_sorter (`#12705 <https://github.com/autowarefoundation/autoware_universe/issues/12705>`_)
+  * apply agnocast
+  * style(pre-commit): autofix
+  * delete unnecessary comments
+  * delete suppress comments
+  * add intra_subscription_count: copilot review
+  * make Cmakelists.txt simple
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Koichi Imai, Masaki Baba, badai nguyen, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

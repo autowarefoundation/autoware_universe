@@ -2,6 +2,27 @@
 Changelog for package autoware_bytetrack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(clang-tidy): re-enable bugprone-assignment-in-if-condition (`#12552 <https://github.com/autowarefoundation/autoware_universe/issues/12552>`_)
+  Add NOLINTNEXTLINE markers to the 45 sites flagged by
+  bugprone-assignment-in-if-condition and re-enable the check in
+  .clang-tidy-ci.
+  Both files are derived from upstream third-party code where the
+  assignment-in-if pattern is intentional:
+  - planning/autoware_freespace_planning_algorithms/src/reeds_shepp.cpp
+  is derived from OMPL's ReedsSheppStateSpace.cpp (BSD). Each path
+  family computes a candidate length L and compares it against L_min
+  in the same expression; rewriting all 39 sites would diverge from
+  the OMPL upstream and make future cross-checking harder.
+  - perception/autoware_bytetrack/lib/src/lapjv.cpp is the upstream
+  LAPJV port (MIT, Yifu Zhang). The 6 sites are all expansions of
+  the NEW(x, t, n) macro from lapjv.h, which uses the canonical
+  malloc-or-bail idiom 'if ((x = malloc(...)) == 0) return -1;'.
+  Refs: `#12450 <https://github.com/autowarefoundation/autoware_universe/issues/12450>`_
+* Contributors: Vishal Chauhan, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 

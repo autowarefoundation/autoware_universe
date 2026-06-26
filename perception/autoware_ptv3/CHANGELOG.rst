@@ -2,6 +2,81 @@
 Changelog for package autoware_ptv3
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* test(autoware_ptv3): add pre-process tests (`#12702 <https://github.com/autowarefoundation/autoware_universe/issues/12702>`_)
+  * test(ptv3): add unit tests for pre-process
+  * refactor(ptv3): use `ament_add_gtest` for the unit test generation of preprocess_kernel
+  * refactor(ptv3): simplify redundant CMake condition
+  `target_include_directories` can be omitted since global `include_directories`
+  does exactly the same
+  * test(ptv3): ommit linter tests
+  * test(ptv3): handle float equality explicitly
+  * test(ptv3): refactor preprocess kernel tests with fixture
+  * refactor(ptv3): use cuda_util::CudaUniquePtr instead of local defined one
+  * test(ptv3): omit redundant test assertions
+  * refactor(ptv3): move common input into the test fixture
+  * fix(ptv3): update `PTv3Config` to align the latest definition
+  * refactor(ptv3): introduce base test fixture class for reusability
+  and apply the base class to `serialized_pooling_metadata_test.cpp` and `test_preprocess_kernel.cpp`
+  ---------
+* feat(autoware_ptv3): add detection3d head (`#12758 <https://github.com/autowarefoundation/autoware_universe/issues/12758>`_)
+  * feat(autoware_ptv3): add detection3d head
+  * refactor(autoware_ptv3): use shared utils
+  * docs(autoware_ptv3): params description
+  * style(autoware_ptv3): naming convention
+  * fix(autoware_ptv3): remove redundant param
+  * fix(autoware_ptv3): voxel size safe guard
+  * fix(autoware_ptv3): log
+  * fix(autoware_ptv3): func rename
+  * fix(autoware_ptv3): func rename
+  * fix(autoware_ptv3): remove redundant call
+  * fix(autoware_ptv3): add sigmoid lambda
+  * fix(autoware_ptv3): later definition
+  * refactor(autoware_ptv3): func name
+  ---------
+* chore: add myself as PTv3 maintainer (`#12823 <https://github.com/autowarefoundation/autoware_universe/issues/12823>`_)
+* feat(ptv3)!: precompute serialized pooling metadata (`#12727 <https://github.com/autowarefoundation/autoware_universe/issues/12727>`_)
+  * perf: serialized pooling optimization
+  * chore: fix rebase
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_ptv3): split the backbone and head (`#12655 <https://github.com/autowarefoundation/autoware_universe/issues/12655>`_)
+  * feat(autoware_ptv3): add multi-head support (segmentation3d and detection3d)
+  * fix(autoware_ptv3): cspell
+  * fix(autoware_ptv3): typo
+  * fix(autoware_ptv3): centerhead dims order
+  * feat(autoware_ptv3): remove center_head support for now
+  * refactor(autoware_ptv3): PR split - drop det3d head
+  * feat(autoware_ptv3): cleanup
+  * feat(autoware_ptv3): explicit types for all tensors
+  * feat(autoware_ptv3): pre-commit
+  * feat(autoware_ptv3): restore old sources
+  * fix(autoware_ptv3): use of member initializer lists
+  * fix(autoware_ptv3): remove redundant initialization
+  * fix(autoware_ptv3): wrong type
+  * fix(autoware_ptv3): redundant sync
+  * fix(autoware_ptv3): guard pointer
+  * feat(autoware_ptv3): update model params
+  ---------
+* feat(autoware_ptv3): source cloud reconstruction & entropy (`#12547 <https://github.com/autowarefoundation/autoware_universe/issues/12547>`_)
+  * feat(autoware_ptv3): source cloud reconstruction & entropy
+  * refactor(ptv3): clarify reconstruction feature handling
+  * refactor(autoware_ptv3): remove unnecessary buffers clear
+  * refactor(ptv3): simplify source reconstruction buffers
+  * fix(autoware_ptv3): remove redundant memory clear
+  * feat(autoware_ptv3): add __restrict\_\_
+  Co-authored-by: Manato Hirabayashi <3022416+manato@users.noreply.github.com>
+  * style(pre-commit): autofix
+  * feat(autoware_ptv3): add restrict
+  * feat(autoware_ptv3): parallelizaiton
+  ---------
+  Co-authored-by: Manato Hirabayashi <3022416+manato@users.noreply.github.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Amadeusz Szymko, Manato Hirabayashi, Max Schmeller, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

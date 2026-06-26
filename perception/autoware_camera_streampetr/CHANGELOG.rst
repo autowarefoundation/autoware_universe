@@ -2,6 +2,45 @@
 Changelog for package autoware_camera_streampetr
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(streampetr): apply mask to input image (`#12656 <https://github.com/autowarefoundation/autoware_universe/issues/12656>`_)
+  * feat(autoware_vehicle_cmd_gate): apply to CIE (`#12654 <https://github.com/autowarefoundation/autoware_universe/issues/12654>`_)
+  * feat: apply to CIE
+  * chore: re-trigger CI
+  * chore: re-trigger CI
+  ---------
+  * feat(camera_streampetr): add CUDA ego mask in GPU preprocess
+  Apply polygon ego masking on distorted BGR in GPU before undistortion,
+  replacing separate ego_mask image topics. Includes per-ROI YAML configs
+  for X2 camera9/camera10 and ego_mask node parameters.
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  * fix: move masking after undistortion
+  * fix: polygon conig
+  * fix: documents
+  * fix: precommit
+  * style(pre-commit): autofix
+  * fix: refactor
+  * fix: structure
+  * fix: move polygon config to camera_streampetr.para.yaml
+  ---------
+  Co-authored-by: Yutaro Kobayashi <129580202+kobayu858@users.noreply.github.com>
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_camera_streampetr): refine config to separate ros2 node param and ml param (`#12826 <https://github.com/autowarefoundation/autoware_universe/issues/12826>`_)
+  * feat: separate parameter from node and ml models
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_camera_streampetr): add TRAFFIC_CONE and BARRIER classes (`#12784 <https://github.com/autowarefoundation/autoware_universe/issues/12784>`_)
+  * add animal and hazard classes
+  * fix parameter names to TRAFFIC_CONE and BARRIER
+  * relax parameter validation to allow threshold arrays longer than num_classes
+  * update initialization value
+  ---------
+* Contributors: Masaki Baba, Tao Zhong, Yoshi Ri, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

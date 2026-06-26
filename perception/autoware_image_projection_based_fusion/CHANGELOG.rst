@@ -2,6 +2,18 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(image_projection_based_fusion): update roi_detection_object config file for new ANIMAL and HAZARD classes (`#12743 <https://github.com/autowarefoundation/autoware_universe/issues/12743>`_)
+* fix(autoware_image_projection_based_fusion): adding 2 new classes for perception (`#12671 <https://github.com/autowarefoundation/autoware_universe/issues/12671>`_)
+  * fix roi pointcloud_fusion
+  * fix: roi_cluster_fusion
+  ---------
+* feat(image_projection_based_fusion): apply to CIE (`#12639 <https://github.com/autowarefoundation/autoware_universe/issues/12639>`_)
+  feat: apply to CIE
+* Contributors: Yutaro Kobayashi, badai nguyen, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

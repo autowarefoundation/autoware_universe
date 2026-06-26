@@ -2,6 +2,47 @@
 Changelog for package autoware_path_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_trajectory_optimiser): add temporal MPT tracking (`#12394 <https://github.com/autowarefoundation/autoware_universe/issues/12394>`_)
+  * autowar_trajectory_optimizer
+  * Apply suggestion from @go-sakayori
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  * Apply suggestion from @danielsanchezaran
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+  * fixes
+  * fixes
+  * fixes
+  * style(pre-commit): autofix
+  * fixes
+  * fixes
+  * fixes
+  * fixes
+  * fixes
+  * fixes
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  * fix
+  ---------
+  Co-authored-by: Go Sakayori <go-sakayori@users.noreply.github.com>
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* Contributors: Arjun Jagdish Ram, Sarun MUKDAPITAK, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

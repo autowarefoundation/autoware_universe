@@ -2,6 +2,36 @@
 Changelog for package autoware_behavior_path_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(direction_change_module): propagate `allow_area` to downstream modules for area-primitive route support (`#12815 <https://github.com/autowarefoundation/autoware_universe/issues/12815>`_)
+  * feat: ignore lane_departure in area primitive
+  * feat: add area primitive for isRouteValid() in mission_planner_universe
+  * feat: add allow_area for scenario_selector
+  * feat: add allow_area to planning_validator
+  * feat: add missing params in scenario module manager
+  * fix: set allow_area to false by default
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* fix(behavior_path_planner): recover route lanelet after manual override  (`#12576 <https://github.com/autowarefoundation/autoware_universe/issues/12576>`_)
+  * feat(behavior_path_planner): refine current route lanelet updates
+  - Reconcile graph-based lane choice with isEgoOutOfRoute via snap_to_global_route_if_ego_out
+  - Skip harsh global route snaps in AUTONOMOUS when Autoware control is enabled
+  - Use if / else if chain for lanelet_sequence fallbacks; keep !is_any_approved_module_running reset
+  - Fix missing braces around resetCurrentRouteLanelet in runApprovedModules
+  - Document legacy trade-off when approved modules hold current_route_lanelet\_; IWYU note for print()
+  Review: verify autonomous lateral error, manual route recovery, and lane-change wait/execute paths.
+  remove comments
+  * fix(behavior_path_planner): gate reset in snap_to_global_route_if_ego_out
+  Only call resetCurrentRouteLanelet when no approved module is running or
+  waiting approval, matching the lanelet_sequence fallback policy.
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+  ---------
+  Co-authored-by: Cursor <cursoragent@cursor.com>
+* Contributors: Shumpei Wakabayashi, emmeyteja, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

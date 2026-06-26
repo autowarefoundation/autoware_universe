@@ -2,6 +2,26 @@
 Changelog for package tier4_planning_factor_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: support VTL for reverse maneuvers (`#12609 <https://github.com/autowarefoundation/autoware_universe/issues/12609>`_)
+  * feat: support VTL for reverse maneuvers
+  * style(pre-commit): autofix
+  * feat: support rear bumper based VTL wall position for reverse maneuvers
+  * fix: build errors
+  * refactor: remove redundant code and refactor
+  * style(pre-commit): autofix
+  * refactor: remove redundant code in scene.cpp
+  * style(pre-commit): autofix
+  * fix: build errors
+  * style(pre-commit): autofix
+  * fix: cpplint errors
+  * feat: add reverse maneuver support for SLOWDOWN walls for rvizplugins
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: emmeyteja, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 

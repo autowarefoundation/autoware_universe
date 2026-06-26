@@ -2,6 +2,18 @@
 Changelog for package autoware_command_mode_switcher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: split control command source and filter service (`#12650 <https://github.com/autowarefoundation/autoware_universe/issues/12650>`_)
+  * feat: split control command source and filter service
+  * fix switcher remap
+  * fix emergency stop remap
+  * fix response status
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* Contributors: Takagi, Isamu, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

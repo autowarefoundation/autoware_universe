@@ -2,6 +2,26 @@
 Changelog for package autoware_remaining_distance_time_calculator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat: add area support for route planning and fix DCO signoff (`#12572 <https://github.com/autowarefoundation/autoware_universe/issues/12572>`_)
+  * feat: add support for area for route planning
+  * feat(mission_planner): publish lane+area route segments and goal height
+  * fix(manual_lane_change_handler): guard lane-only APIs when route has areas
+  * feat(mission_planner): visualize route area segments as LINE_STRIP in RViz
+  * fix (remaining_distance_calculator): derive lane list from route msg when areas present in the route
+  * fix(mission_planner): drop redundant goal_height init in refine_goal_height
+  Removes cppcheck redundantInitialization warning; goal_height is always
+  set in the area vs lane branches before use.
+  * style(pre-commit): autofix
+  * fix: resolve merge conflicts
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Ryohsuke Mitsudome <ryohsuke.mitsudome@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: emmeyteja, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

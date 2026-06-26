@@ -2,6 +2,13 @@
 Changelog for package autoware_motion_velocity_run_out_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* chore(run-out): add master config fields used in autoware_launch (`#12816 <https://github.com/autowarefoundation/autoware_universe/issues/12816>`_)
+  chore: add master config fields used in autoware_launch
+* Contributors: Taeseung Sohn, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 
