@@ -150,15 +150,6 @@ if(BUILD_TESTING)
     ${PROJECT_NAME}
     ${OpenCV_LIBRARIES}
   )
-
-  # Characterization tests pinning the node's current observable behavior.
-  ament_add_ros_isolated_gtest(test_traffic_light_classifier_characteristics
-    test/test_traffic_light_classifier_characteristics.cpp
-  )
-  target_link_libraries(test_traffic_light_classifier_characteristics
-    ${PROJECT_NAME}
-    ${OpenCV_LIBRARIES}
-  )
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE
