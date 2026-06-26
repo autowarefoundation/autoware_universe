@@ -25,7 +25,7 @@ namespace autoware::traffic_light
 {
 TrafficLightMapVisualizerNode::TrafficLightMapVisualizerNode(
   const rclcpp::NodeOptions & node_options)
-: rclcpp::Node("traffic_light_map_visualizer_node", node_options)
+: autoware::agnocast_wrapper::Node("traffic_light_map_visualizer_node", node_options)
 {
   using std::placeholders::_1;
 
@@ -40,19 +40,19 @@ TrafficLightMapVisualizerNode::TrafficLightMapVisualizerNode(
 }
 
 void TrafficLightMapVisualizerNode::detected_traffic_lights_callback(
-  const TrafficLightGroupArray::ConstSharedPtr detected_traffic_lights)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & detected_traffic_lights)
 {
   if (!visualizer_) {
     return;
   }
-  visualization_msgs::msg::MarkerArray output_msg;
+  auto output_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(traffic_light_marker_pub_);
   const builtin_interfaces::msg::Time stamp = now();
-  output_msg.markers = visualizer_->generate_markers(*detected_traffic_lights, stamp);
-  traffic_light_marker_pub_->publish(output_msg);
+  output_msg->markers = visualizer_->generate_markers(*detected_traffic_lights, stamp);
+  traffic_light_marker_pub_->publish(std::move(output_msg));
 }
 
 void TrafficLightMapVisualizerNode::lanelet_map_callback(
-  const LaneletMapBin::ConstSharedPtr lanelet_map_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & lanelet_map_msg)
 {
   lanelet::LaneletMapPtr lanelet_map = autoware::experimental::lanelet2_utils::remove_const(
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*lanelet_map_msg));

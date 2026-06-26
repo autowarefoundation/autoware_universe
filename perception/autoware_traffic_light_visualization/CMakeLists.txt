@@ -29,9 +29,11 @@ ament_auto_add_library(traffic_light_map_visualizer SHARED
   src/traffic_light_map_visualizer/traffic_light_visualizer.cpp
 )
 
-rclcpp_components_register_node(traffic_light_map_visualizer
+autoware_agnocast_wrapper_register_node(traffic_light_map_visualizer
   PLUGIN "autoware::traffic_light::TrafficLightMapVisualizerNode"
   EXECUTABLE traffic_light_map_visualizer_node
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 if(BUILD_TESTING)
@@ -77,6 +79,7 @@ if(BUILD_TESTING)
     traffic_light_map_visualizer
   )
   ament_target_dependencies(test_traffic_light_map_visualizer_node
+    autoware_agnocast_wrapper
     autoware_lanelet2_extension
     autoware_lanelet2_utils
     autoware_map_msgs
