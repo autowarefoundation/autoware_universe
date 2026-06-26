@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/mrm_comfortable_stop_operator/mrm_comfortable_stop_operator_core.hpp"
+#include "mrm_comfortable_stop_operator_core.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
 
@@ -37,8 +37,7 @@ MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions
                                               this, std::placeholders::_1, std::placeholders::_2));
 
   // Publisher
-  pub_status_ = create_publisher<tier4_system_msgs::msg::MrmBehaviorStatus>(
-    "~/output/mrm/comfortable_stop/status", 1);
+  pub_status_ = create_publisher<MrmBehaviorStatus>("~/output/mrm/comfortable_stop/status", 1);
   pub_velocity_limit_ = create_publisher<autoware_internal_planning_msgs::msg::VelocityLimit>(
     "~/output/velocity_limit", rclcpp::QoS{1}.transient_local());
   pub_velocity_limit_clear_command_ =
@@ -51,11 +50,20 @@ MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions
     this, get_clock(), update_period_ns, std::bind(&MrmComfortableStopOperator::onTimer, this));
 
   // Initialize
-  status_.state = tier4_system_msgs::msg::MrmBehaviorStatus::AVAILABLE;
+  status_.state = MrmBehaviorStatus::AVAILABLE;
 
   // Parameter Callback
   set_param_res_ = add_on_set_parameters_callback(
     std::bind(&MrmComfortableStopOperator::onParameter, this, std::placeholders::_1));
+
+  // Driving mode interface
+  pub_mrm_state_ = create_publisher<DrivingModeMrmState>("~/output/mrm_state", 1);
+  sub_driving_mode_request_ = create_subscription<DrivingModeRequest>(
+    "~/input/driving_mode_request", 1,
+    std::bind(&MrmComfortableStopOperator::onDrivingModeRequest, this, std::placeholders::_1));
+  sub_driving_mode_info_ = create_subscription<DrivingModeInfo>(
+    "~/input/driving_mode_info", rclcpp::QoS(1).transient_local(),
+    std::bind(&MrmComfortableStopOperator::onDrivingModeInfo, this, std::placeholders::_1));
 }
 
 void MrmComfortableStopOperator::operateComfortableStop(
@@ -64,13 +72,61 @@ void MrmComfortableStopOperator::operateComfortableStop(
 {
   if (request->operate == true) {
     publishVelocityLimit();
-    status_.state = tier4_system_msgs::msg::MrmBehaviorStatus::OPERATING;
+    status_.state = MrmBehaviorStatus::OPERATING;
     response->response.success = true;
   } else {
     publishVelocityLimitClearCommand();
-    status_.state = tier4_system_msgs::msg::MrmBehaviorStatus::AVAILABLE;
+    status_.state = MrmBehaviorStatus::AVAILABLE;
     response->response.success = true;
   }
+}
+
+void MrmComfortableStopOperator::onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg)
+{
+  if (msg->mode == driving_mode_id_) {
+    publishVelocityLimit();
+    status_.state = MrmBehaviorStatus::OPERATING;
+  } else {
+    publishVelocityLimitClearCommand();
+    status_.state = MrmBehaviorStatus::AVAILABLE;
+  }
+}
+
+void MrmComfortableStopOperator::onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg)
+{
+  for (const auto & item : msg->items) {
+    if (item.name == "comfortable_stop") {
+      driving_mode_id_ = item.mode;
+      break;
+    }
+  }
+}
+
+void MrmComfortableStopOperator::publishMrmState() const
+{
+  using tier4_system_msgs::msg::DrivingModeMrmStateItem;
+  const auto convert_mrm_state = [](const uint8_t state) {
+    // clang-format off
+    switch (state) {
+      case MrmBehaviorStatus::AVAILABLE: return DrivingModeMrmStateItem::NORMAL;
+      case MrmBehaviorStatus::OPERATING: return DrivingModeMrmStateItem::OPERATING;
+      default:                           return DrivingModeMrmStateItem::UNKNOWN;
+    }
+    // clang-format on
+  };
+
+  if (!driving_mode_id_) {
+    return;
+  }
+
+  DrivingModeMrmStateItem item;
+  item.mode = driving_mode_id_.value();
+  item.state = convert_mrm_state(status_.state);
+
+  DrivingModeMrmState msg;
+  msg.stamp = this->now();
+  msg.items = {item};
+  pub_mrm_state_->publish(msg);
 }
 
 rcl_interfaces::msg::SetParametersResult MrmComfortableStopOperator::onParameter(
@@ -122,6 +178,7 @@ void MrmComfortableStopOperator::publishVelocityLimitClearCommand() const
 void MrmComfortableStopOperator::onTimer() const
 {
   publishStatus();
+  publishMrmState();
 }
 
 }  // namespace autoware::mrm_comfortable_stop_operator

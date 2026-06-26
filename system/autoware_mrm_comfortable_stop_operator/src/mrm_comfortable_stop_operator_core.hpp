@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MRM_COMFORTABLE_STOP_OPERATOR__MRM_COMFORTABLE_STOP_OPERATOR_CORE_HPP_
-#define AUTOWARE__MRM_COMFORTABLE_STOP_OPERATOR__MRM_COMFORTABLE_STOP_OPERATOR_CORE_HPP_
+#ifndef MRM_COMFORTABLE_STOP_OPERATOR_CORE_HPP_
+#define MRM_COMFORTABLE_STOP_OPERATOR_CORE_HPP_
 
 // Core
 #include <memory>
@@ -23,6 +23,9 @@
 #include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 #include <autoware_internal_planning_msgs/msg/velocity_limit_clear_command.hpp>
 #include <autoware_internal_planning_msgs/msg/velocity_limit_constraints.hpp>
+#include <tier4_system_msgs/msg/driving_mode_info.hpp>
+#include <tier4_system_msgs/msg/driving_mode_mrm_state.hpp>
+#include <tier4_system_msgs/msg/driving_mode_request.hpp>
 #include <tier4_system_msgs/msg/mrm_behavior_status.hpp>
 #include <tier4_system_msgs/srv/operate_mrm.hpp>
 
@@ -31,6 +34,11 @@
 
 namespace autoware::mrm_comfortable_stop_operator
 {
+
+using tier4_system_msgs::msg::DrivingModeInfo;
+using tier4_system_msgs::msg::DrivingModeMrmState;
+using tier4_system_msgs::msg::DrivingModeRequest;
+using tier4_system_msgs::msg::MrmBehaviorStatus;
 
 struct Parameters
 {
@@ -80,8 +88,17 @@ private:
 
   // Parameter callback
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
+
+  // Driving mode interface
+  rclcpp::Subscription<DrivingModeRequest>::SharedPtr sub_driving_mode_request_;
+  rclcpp::Subscription<DrivingModeInfo>::SharedPtr sub_driving_mode_info_;
+  rclcpp::Publisher<DrivingModeMrmState>::SharedPtr pub_mrm_state_;
+  void onDrivingModeRequest(DrivingModeRequest::ConstSharedPtr msg);
+  void onDrivingModeInfo(DrivingModeInfo::ConstSharedPtr msg);
+  void publishMrmState() const;
+  std::optional<uint32_t> driving_mode_id_;  // Refer to the driving_mode_manager for this ID.
 };
 
 }  // namespace autoware::mrm_comfortable_stop_operator
 
-#endif  // AUTOWARE__MRM_COMFORTABLE_STOP_OPERATOR__MRM_COMFORTABLE_STOP_OPERATOR_CORE_HPP_
+#endif  // MRM_COMFORTABLE_STOP_OPERATOR_CORE_HPP_
