@@ -92,9 +92,6 @@ private:
 
   // Service
   rclcpp::Service<CommandSourceSelect>::SharedPtr srv_select_external_command_;
-  // Guards current_selector_mode_: the service callback writes it while the command relays and the
-  // timer read it, and those run in separate callback groups (concurrent under a multi-threaded
-  // container executor).
   CommandSourceMode current_selector_mode_;
   std::mutex current_selector_mode_mutex_;
   bool on_select_external_command(
