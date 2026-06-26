@@ -70,7 +70,8 @@ add_library(concatenate_data SHARED
   src/concatenate_data/combine_cloud_handler_base.cpp
   src/concatenate_data/combine_cloud_handler.cpp
   src/concatenate_data/cloud_collector.cpp
-  src/concatenate_data/collector_matching_strategy.cpp
+  src/concatenate_data/collector_matcher.cpp
+  src/concatenate_data/matching_policy.cpp
   src/concatenate_data/concatenate_pointclouds.cpp
 )
 
@@ -305,6 +306,68 @@ install(
 
 ament_export_targets(export_${PROJECT_NAME})
 
+# ========== Python bindings (distortion corrector) ==========
+# The distortion corrector core is built as a standalone shared library that the pybind module
+# links. It is ROS-runtime-free: it links only ROS message types and math libraries (no rclcpp, no
+# tf). It uses tf2's header-only LinearMath types, which are included but never linked. Dependencies
+# are linked via target_link_libraries with the dependencies' exported CMake targets (modern targets
+# propagate their transitive include dirs) instead of ament_target_dependencies, which would
+# over-declare the full package closure and clashes with pybind11's keyword target_link_libraries
+# usage. Only the pybind module (the binding layer, not the core) links rclcpp, for message
+# (de)serialization.
+find_package(ament_cmake_python REQUIRED)
+find_package(python_cmake_module REQUIRED)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11_vendor REQUIRED)
+find_package(pybind11 REQUIRED)
+find_package(autoware_utils_math REQUIRED)
+
+add_library(distortion_corrector_core SHARED
+  src/distortion_corrector/distortion_corrector.cpp
+  src/utility/memory.cpp
+)
+target_include_directories(distortion_corrector_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+# Header-only includes (tf2 is used for its LinearMath types only; the autoware_utils meta include
+# provides the autoware_utils/math/* headers). Message includes propagate via the linked targets.
+target_include_directories(distortion_corrector_core SYSTEM PUBLIC
+  ${autoware_utils_INCLUDE_DIRS}
+  ${autoware_point_types_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+)
+target_link_libraries(distortion_corrector_core PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${autoware_utils_math_LIBRARIES}
+)
+
+pybind11_add_module(_distortion_corrector_pybind
+  src/distortion_corrector/distortion_corrector_pybind.cpp
+)
+target_include_directories(_distortion_corrector_pybind PRIVATE ${rclcpp_INCLUDE_DIRS})
+target_link_libraries(_distortion_corrector_pybind PRIVATE
+  distortion_corrector_core
+  ${rclcpp_LIBRARIES}
+)
+
+install(TARGETS distortion_corrector_core
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+# Install the extension next to the Python package. Use ament_get_python_install_dir() rather than
+# the raw PYTHON_INSTALL_DIR variable: the latter is only populated later (by
+# ament_python_install_package / ament_package), so on a clean configure it is empty and the
+# DESTINATION would resolve to an absolute "/<project>" path.
+ament_get_python_install_dir(python_install_dir)
+install(TARGETS _distortion_corrector_pybind
+  DESTINATION "${python_install_dir}/${PROJECT_NAME}")
+
+ament_python_install_package(${PROJECT_NAME}
+  PACKAGE_DIR python/${PROJECT_NAME})
+
 ament_auto_package(INSTALL_TO_SHARE
   launch
   config
@@ -318,6 +381,15 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_utilities
     test/test_utilities.cpp
+  )
+
+  ament_add_gtest(test_conversion
+    test/test_conversion.cpp
+  )
+  ament_target_dependencies(test_conversion
+    builtin_interfaces
+    geometry_msgs
+    tf2
   )
 
   ament_add_gtest(test_distortion_corrector_node
@@ -335,6 +407,12 @@ if(BUILD_TESTING)
   ament_add_gtest(test_concatenation_info
     test/test_concatenation_info.cpp
   )
+
+  ament_add_gtest(test_matching_policy
+    test/test_matching_policy.cpp
+    src/concatenate_data/matching_policy.cpp
+  )
+  target_include_directories(test_matching_policy PRIVATE include)
 
   ament_add_gtest(test_polar_voxel_outlier_filter_node
     test/test_polar_voxel_outlier_filter_node.cpp
@@ -385,6 +463,11 @@ if(BUILD_TESTING)
   add_ros_test(
     test/test_concatenate_node_component.py
     TIMEOUT "50"
+  )
+
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_distortion_corrector_py
+    test/test_distortion_corrector_py.py
   )
 
 endif()
