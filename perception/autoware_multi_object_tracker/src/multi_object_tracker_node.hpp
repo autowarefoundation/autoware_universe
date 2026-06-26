@@ -43,6 +43,8 @@ private:
   // ROS interface
   std::vector<AUTOWARE_SUBSCRIPTION_PTR(autoware_perception_msgs::msg::DetectedObjects)>
     sub_objects_array_{};
+  std::vector<AUTOWARE_SUBSCRIPTION_PTR(autoware_perception_msgs::msg::TrackedObjects)>
+    sub_tracked_objects_array_{};
   AUTOWARE_SUBSCRIPTION_PTR(nav_msgs::msg::Odometry) sub_odometry_ {};
 
   AUTOWARE_PUBLISHER_PTR(autoware_perception_msgs::msg::TrackedObjects) tracked_objects_pub_;
@@ -71,6 +73,9 @@ private:
   void onMeasurement(
     const size_t channel_index,
     AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
+  void onTrackedMeasurement(
+    const size_t channel_index,
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrackedObjects) msg);
 
   // publish processes
   void publish();
