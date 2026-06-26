@@ -2,6 +2,32 @@
 Changelog for package autoware_diagnostic_graph_aggregator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(diagnostic_graph_aggregator): add driving mode interface (`#12760 <https://github.com/autowarefoundation/autoware_universe/issues/12760>`_)
+  * add driving mode interface
+  * remove unused variable
+  ---------
+  Co-authored-by: Junya Sasaki <junya.sasaki@tier4.jp>
+* feat(diagnostic_graph_aggregator): add override feature (`#12621 <https://github.com/autowarefoundation/autoware_universe/issues/12621>`_)
+  * add override level
+  * fix override logic
+  * add override service
+  * add override flag
+  * use constant
+  * remove outdated comment
+  * add whitelist
+  * modify param name
+  * add test
+  * Update system/autoware_diagnostic_graph_aggregator/src/node/aggregator.cpp
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+  * fix type
+  * update config field
+  ---------
+  Co-authored-by: Junya Sasaki <j2sasaki1990@gmail.com>
+* Contributors: Takagi, Isamu, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

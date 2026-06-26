@@ -2,6 +2,46 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(direction_change_module): propagate `allow_area` to downstream modules for area-primitive route support (`#12815 <https://github.com/autowarefoundation/autoware_universe/issues/12815>`_)
+  * feat: ignore lane_departure in area primitive
+  * feat: add area primitive for isRouteValid() in mission_planner_universe
+  * feat: add allow_area for scenario_selector
+  * feat: add allow_area to planning_validator
+  * feat: add missing params in scenario module manager
+  * fix: set allow_area to false by default
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(behavior_path_planner): add direction change module. Initial Commit (`#12638 <https://github.com/autowarefoundation/autoware_universe/issues/12638>`_)
+  * feat: add direction change module. Initial Commit
+  * style(pre-commit): autofix
+  * refactor: direction_change module
+  * style(pre-commit): autofix
+  * feat: dont flip bounds for reverse manuever for direction_change tagged lanelets
+  the reason is, the nature of reversing in direction_change module and start_planner is different in terms of ego orientation, lane direction, direction of ego motion.
+  direction_change lanelet bounds doesn't need reversing
+  * style(pre-commit): autofix
+  * fix: address issues of path snapping with multiple cusps; build path from dc tagged lanelets
+  * style(pre-commit): autofix
+  * refactor: remove unused methods and helpers
+  * style(pre-commit): autofix
+  * fix: pre-commit cpp lint errors
+  * fix: lint errors
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* Contributors: Sarun MUKDAPITAK, emmeyteja, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

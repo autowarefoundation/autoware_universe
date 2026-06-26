@@ -2,6 +2,17 @@
 Changelog for package autoware_tensorrt_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_tensorrt_common): enable tensor io type setting (`#12716 <https://github.com/autowarefoundation/autoware_universe/issues/12716>`_)
+  * feat(autoware_tensorrt_common): enable tensort io type setting
+  * fix(autoware_tensorrt_common): replace logic
+  * fix(autoware_tensorrt_common): remove wrong docstring
+  ---------
+* fix(autoware_tensorrt_common): fix typo & adjust macro offset (`#12567 <https://github.com/autowarefoundation/autoware_universe/issues/12567>`_)
+* Contributors: Amadeusz Szymko, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 

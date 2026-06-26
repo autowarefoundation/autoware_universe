@@ -2,6 +2,19 @@
 Changelog for package perception_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(perception_utils): add detection class remapper and BEV NMS (`#12786 <https://github.com/autowarefoundation/autoware_universe/issues/12786>`_)
+  * feat(perception_utils): add detection class remapper and BEV NMS
+  * fix(perception_utils): keep NMS source objects intact and reject non-finite params
+  * style(pre-commit): autofix
+  * refactor(preception_utils): split tests
+  * refactor(perception_utils): test utils
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Amadeusz Szymko, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

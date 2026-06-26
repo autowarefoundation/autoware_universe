@@ -2,6 +2,36 @@
 Changelog for package tier4_dummy_object_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(`dummy_perception_publisher`): replace `tier4_simulation_msgs` by `autoware_simulation_msgs` (`#12499 <https://github.com/autowarefoundation/autoware_universe/issues/12499>`_)
+  * chore: replace `tier4_simulation_msgs` by `autoware_simulation_msgs`
+  * missing fix: to the previous commit (see below)
+  * This commit applies the missing fix for the following commit
+  - https://github.com/autowarefoundation/autoware_universe/pull/12499/changes/f0efc76abc007ab79bbff8e6a40ac2d12f8bc943
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * bug: use "simulated" for consistency, except its package name
+  * Apply the following review comment
+  - https://github.com/autowarefoundation/autoware_universe/pull/12499#discussion_r3161153194
+  * fix: code formatting by `pre-commit`
+  * bug: fix documentation bugs
+  * style(pre-commit): autofix
+  * Update simulator/autoware_dummy_perception_publisher/README.md
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * Update simulator/autoware_dummy_perception_publisher/README.md
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * Update simulator/autoware_dummy_perception_publisher/README.md
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * bug: fix to handle missing `default:` case
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+* Contributors: Junya Sasaki, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 

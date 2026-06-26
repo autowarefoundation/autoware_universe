@@ -2,6 +2,13 @@
 Changelog for package autoware_autonomous_emergency_braking
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(aeb, collision_detector): skip empty point clouds to silence PCL warning spam (`#12670 <https://github.com/autowarefoundation/autoware_universe/issues/12670>`_)
+* fix(aeb, shape_estimation): guard pcl::fromROSMsg against empty point clouds (`#12569 <https://github.com/autowarefoundation/autoware_universe/issues/12569>`_)
+* Contributors: Mert Yavuz, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 

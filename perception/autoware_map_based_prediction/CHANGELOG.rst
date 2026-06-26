@@ -2,6 +2,53 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_map_based_prediction): flip footprint points when object direction is flipped (`#12751 <https://github.com/autowarefoundation/autoware_universe/issues/12751>`_)
+  fix(object_tracker): flip footprint points in updateObjectData method
+* feat(map_based_prediction): apply agnocast subscription to `map_based_prediction` (`#12676 <https://github.com/autowarefoundation/autoware_universe/issues/12676>`_)
+  * apply agnocast sub
+  * style(pre-commit): autofix
+  * delete suppress comments for cppcheck
+  * add
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* chore(autoware_map_based_prediction): total refactoring - split monolitic node.cpp (`#12687 <https://github.com/autowarefoundation/autoware_universe/issues/12687>`_)
+  * decompose files. build failed
+  * split node class. build failed
+  * fix build
+  * refactor(map_based_prediction): reorganize code structure and enhance callbacks functionality
+  * refactor vru predictor
+  * refactor(path_generator): reorganize FrenetPoint structure and enhance path generation functions
+  * refactor(map_based_prediction): restructure callbacks and diagnostics integration for improved state management
+  * Refactor predictor vehicle module into sub-modules
+  - Introduced DebugModule for visualization marker generation.
+  - Created ManeuverPredictor for handling maneuver predictions.
+  - Added ObjectTracker for managing object data and history.
+  - Implemented PathProcessor for path prediction and processing.
+  - Updated PredictorVehicle to utilize the new sub-modules, improving code organization and maintainability.
+  - Adjusted method signatures to pass object history and parameters appropriately.
+  - Ensured all new classes are integrated with existing functionality while maintaining the original behavior.
+  * refactor: streamline code formatting and improve readability across multiple files
+  * refactor(map_based_prediction): introduce NodeParams struct and streamline parameter handling for predictors
+  * fix: correct copyright formatting across multiple files
+  * refactor: update include directives for improved dependency management and code clarity
+  * refactor: reorganize include directives for improved clarity and dependency management
+  * Potential fix for pull request finding
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+  * refactor: improve parameter handling and readability in FenceModule and TrafficSignalModule
+  * refactor: add missing include for algorithm in fence.cpp
+  * refactor: change debug_markers parameter from reference to pointer in prediction methods
+  * refactor: remove empty predicted reference paths from conversion results
+  * refactor: change path_with_smallest_avg_curvature to optional for better handling of empty states
+  refactor: enhance path prediction logic to handle off-lane vehicles when no optimal path is found
+  refactor: remove early exit for empty straight path in prediction logic
+  ---------
+  Co-authored-by: Copilot Autofix powered by AI <175728472+Copilot@users.noreply.github.com>
+* Contributors: Koichi Imai, Taekjin LEE, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

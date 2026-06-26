@@ -2,6 +2,35 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_control_evaluator): add object_metrics.excluded_labels fpr ignoring unknown objects (`#12659 <https://github.com/autowarefoundation/autoware_universe/issues/12659>`_)
+  * add object_metrics.excluded_labels, ignoring unknown objects by default
+  * remove unused update
+  * Update evaluator/autoware_control_evaluator/src/control_evaluator_node.cpp
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+  ---------
+  Co-authored-by: danielsanchezaran <daniel.sanchez@tier4.jp>
+* fix(control_evaluator): boundary_distance was 0 on both the left and right sides (`#12634 <https://github.com/autowarefoundation/autoware_universe/issues/12634>`_)
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* feat(autoware_vehicle_info_utils): refactor to use createFootprint with base_pose (`#12586 <https://github.com/autowarefoundation/autoware_universe/issues/12586>`_)
+  * refactor universe_utils to transform in createFootprint
+  * refactor mission_universe_planner to transform in createFootprint
+  * refactor path_optimizer to transform in createFootprint
+  * common-evaluator refactor createFootprint to apply base_link internally
+  * bpp refactor createFootprint to apply base_link internally
+  * bvp refactor createFootprint to apply base_link internally
+  ---------
+* feat(control_evaluator): add lateral deviation between ego and centerline (`#12598 <https://github.com/autowarefoundation/autoware_universe/issues/12598>`_)
+  * feat(evaluator): lateral_deviation_centerline
+  * add lateral_deviation_centerline_abs
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* Contributors: Kazunori-Nakajima, Kem (TiankuiXian), Sarun MUKDAPITAK, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

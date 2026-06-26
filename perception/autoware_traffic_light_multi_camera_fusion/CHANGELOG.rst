@@ -2,6 +2,212 @@
 Changelog for package autoware_traffic_light_multi_camera_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(traffic_light_multi_camera_fusion): restore fuse() return-based output (`#12777 <https://github.com/autowarefoundation/autoware_universe/issues/12777>`_)
+  Revert the fuse() input/output change introduced in `#12710 <https://github.com/autowarefoundation/autoware_universe/issues/12710>`_ so that
+  MultiCameraFusion::fuse() returns the fused TrafficLightGroupArray via
+  MultiCameraFusionResult again, instead of writing into an output
+  reference parameter. The agnocast publisher adoption in the node is
+  kept; the node now publishes through the agnocast publisher's
+  publish(const &) overload.
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* fix(traffic_light_multi_camera_fusion): use `CallbackIsolatedAgnocastExecutor` (`#12776 <https://github.com/autowarefoundation/autoware_universe/issues/12776>`_)
+  * fix to use CallbackIsolatedAgnocastExecutor
+  * add launch for agnocast
+  ---------
+* test(traffic_light_multi_camera_fusion): shrink node integration test (`#12752 <https://github.com/autowarefoundation/autoware_universe/issues/12752>`_)
+  * test(autoware_traffic_light_multi_camera_fusion): shrink node integration test to single case
+  * test(autoware_traffic_light_multi_camera_fusion): rename test constants to snake_case
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(autoware_traffic_light_multi_camera_fusion): simplify determine_best_group_state (`#12737 <https://github.com/autowarefoundation/autoware_universe/issues/12737>`_)
+  Extract helper functions to improve readability of determine_best_group_state:
+  - get_best_record: consolidate the repeated highest-log-odds record lookup
+  - detect_group_conflict: isolate pairwise conflict detection (detection only)
+  - build_partial_matched_record: rebuild a record from matched signals
+  The publish policy branching now lives entirely in the caller, and the
+  single-use get_best_state_key helper is inlined into get_best_record.
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* feat(traffic_light_multi_camera_fusion): apply agnocast to publisher in `traffic_light_multi_camera_fusion` (`#12710 <https://github.com/autowarefoundation/autoware_universe/issues/12710>`_)
+  * apply agnocast to publisher
+  * fix cpplint
+  * fix to use SingleThreadedExecutor
+  ---------
+* feat(traffic_light_multi_camera_fusion): apply autoware_agnocast_wrapper for CIE (`#12712 <https://github.com/autowarefoundation/autoware_universe/issues/12712>`_)
+* refactor(traffic_light_multi_camera_fusion): improve readability (`#12686 <https://github.com/autowarefoundation/autoware_universe/issues/12686>`_)
+  * refactor(traffic_light_multi_camera_fusion): return conflict status by value instead of member
+  Replace the MultiCameraFusion::conflicted_regulatory_element_status\_ member,
+  which acted as a hidden output channel written by determine_best_group_state
+  and read back in fuse, with an explicit return value. determine_best_group_state
+  now builds and returns a local std::vector<ConflictInfo> and is const;
+  group_fusion forwards it through an output argument like unmapped_traffic_light_ids,
+  and fuse writes it straight into the result. This removes the implicit
+  call-ordering dependency on member state and keeps the fusion logic pure.
+  * refactor(traffic_light_multi_camera_fusion): detect unmapped ids in a dedicated pass
+  Stop threading the unmapped_traffic_light_ids output argument through
+  group_fusion -> accumulate_group_evidence -> process_fused_record. Detecting
+  unmapped ids only needs the fused_record_map and the id-to-regulatory-element
+  mapping, which is independent from the log-odds evidence accumulation. Extract
+  it into a free function find_unmapped_traffic_light_ids and call it once in
+  fuse(), so the group-fusion call chain no longer carries an unrelated output
+  argument. process_fused_record now just skips unregistered ids.
+  * refactor(traffic_light_multi_camera_fusion): make multi_camera_fusion to free function
+  * refactor(traffic_light_multi_camera_fusion): make log-odds update helpers free functions
+  * refactor(traffic_light_multi_camera_fusion): return group fusion result by value
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(traffic_light_multi_camera_fusion): improve readability and maintainability (`#12657 <https://github.com/autowarefoundation/autoware_universe/issues/12657>`_)
+  * refactor(autoware_traffic_light_multi_camera_fusion): replace SignalValidator class with free function
+  SignalValidator held only a static check_conflict and an unimplemented
+  merge_partial_match (dead code). Demote check_conflict to a free function
+  in namespace signal_validator, drop the merge_partial_match declaration,
+  and remove the conditionally-created signal_validator\_ unique_ptr member
+  (which left a hidden segfault precondition when the consistency check was
+  disabled). Update the unit test to call the free function and drop the now
+  empty test fixture.
+  * refactor(autoware_traffic_light_multi_camera_fusion): move file-local helpers out of the header
+  is_unknown(StateKey) and compare_state_key_log_odds were inline functions
+  in the header but are only used inside the .cpp. convert_output_msg and
+  update_best_record were static member functions that touch no member state.
+  Demote all four into the existing anonymous namespace in the .cpp so the
+  public header only exposes the types and the class API.
+  * refactor(autoware_traffic_light_multi_camera_fusion): rename ambiguous is_unknown overloads
+  Two same-named is_unknown functions checked different things: one a StateKey,
+  the other a TrafficLight signal. Rename them to is_state_key_unknown and
+  is_signal_unknown so the check target is clear from the name alone.
+  * test(traffic_light_multi_camra_fusion): refactor test for util
+  * refactor(autoware_traffic_light_multi_camera_fusion): replace compare_record with has_higher_or_equal_priority
+  Redesign the three-valued compare_record (-1/0/1), whose only caller used
+  just its sign via '>= 0', into a boolean predicate
+  has_higher_or_equal_priority(candidate, incumbent) that directly answers
+  whether a candidate record should replace the current best one. The fixed
+  priority order (timestamp, recognized-over-unknown, visibility, confidence)
+  and tie handling are preserved.
+  Also refactor test_utils.cpp for readability: extract make_signal/make_record
+  helpers, split multi-assertion tests into single-scenario cases, and replace
+  magic numbers with named constants.
+  * refactor(autoware_traffic_light_multi_camera_fusion): replace cal_visible_score with is_fully_visible
+  cal_visible_score returned int 0/1, which is effectively a boolean. Its only
+  caller compared two scores to decide which record is less truncated. Replace it
+  with a boolean predicate is_fully_visible(record) (true = not truncated by the
+  image boundary) and simplify the visibility check in has_higher_or_equal_priority.
+  The unit tests become EXPECT_TRUE/EXPECT_FALSE and the now-unused VisibleScore
+  enum is removed; stale references in the integration test comments are updated.
+  * refactor(autoware_traffic_light_multi_camera_fusion): clean up unnecessary includes
+  - traffic_light_multi_camera_fusion_process.cpp / test_utils.cpp: include
+  <rclcpp/time.hpp> instead of <rclcpp/rclcpp.hpp> (only rclcpp::Time is used)
+  - signal_validator.hpp: drop <tier4_perception_msgs/msg/traffic_light.hpp>
+  (no longer references TrafficLight; StateKey comes from types.hpp) and include
+  the precise <traffic_light_element.hpp> in signal_validator.cpp where used
+  - multi_camera_fusion.hpp: drop unused <utility>
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* test(autoware_traffic_light_multi_camera_fusion): add unit tests for core logic (`#12630 <https://github.com/autowarefoundation/autoware_universe/issues/12630>`_)
+  * test(autoware_traffic_light_multi_camera_fusion): add unit tests for MultiCameraFusion
+  Add unit tests covering construction, single/multi camera fusion, unmapped
+  traffic light handling, message lifespan filtering, and signal consistency
+  check behavior with conflict diagnostics.
+  * test(autoware_traffic_light_multi_camera_fusion): remove redundant constructor tests
+  MultiCameraFusionConstruction's three EXPECT_NO_THROW tests are
+  implicitly covered by every MultiCameraFusionFuse test which constructs
+  the same object in their Arrange step.
+  * test(autoware_traffic_light_multi_camera_fusion): bundle fuse inputs via make_fusion_input
+  Introduce a `FusionInput` struct and `make_fusion_input(stamp, frame_id, signal)`
+  helper to remove the stamp/frame_id/traffic_light_id triple-repetition that
+  appeared in every happy-path fuse call. The two edge-case tests (empty arrays
+  and mismatched ROI/signal IDs) keep using the lower-level helpers directly
+  since they intentionally build inputs that diverge from the bundled shape.
+  * test(autoware_traffic_light_multi_camera_fusion): cover compare_record and partial-conflict paths
+  Add six MultiCameraFusionFuse tests that route two observations through
+  the same traffic_light_id so Stage 1 compare_record is actually invoked
+  (existing tests used distinct ids and only exercised Stage 2 log-odds):
+  visibility-score tiebreaker, unknown vs valid signal, same-frame_id
+  timestamp tiebreaker, and confidence tiebreaker. Also cover Stage 2
+  PARTIAL_CONFLICT with publish_partial_matched_signal both enabled
+  (common state published) and disabled (fail-safe UNKNOWN).
+  * test(autoware_traffic_light_multi_camera_fusion): drop null lanelet map case and shorten input names
+  Remove the NullLaneletMap unit test (covered by node-level checks) and rename
+  input_cameraN to inputN to reduce noise in multi-camera fuse tests.
+  * test(autoware_traffic_light_multi_camera_fusion): extract helpers for single fused color assertions
+  Add expect_single_fused_color and expect_single_fused_color_and_shape helpers
+  to consolidate the repeated "size=1, elements.size=1, color (and shape)"
+  assertions in the fuse tests.
+  * test(autoware_traffic_light_multi_camera_fusion): extract helper for single conflict status assertion
+  Add expect_single_conflict_status to consolidate the repeated
+  "conflicted_regulatory_element_status size=1 + conflict_type" checks across
+  the consistency/partial-conflict tests.
+  * test(autoware_traffic_light_multi_camera_fusion): default stamp in make_fusion_input
+  Reorder make_fusion_input so that frame_id and signal come first and stamp
+  takes a default rclcpp::Time(0, 0). Tests that do not depend on timestamp
+  no longer need to construct or pass a stamp; the three tests where timing
+  is significant (message lifespan, newer-timestamp wins) pass stamp explicitly
+  as the last argument.
+  * test(autoware_traffic_light_multi_camera_fusion): extract compound signal helper
+  Add make_signal_with_left_arrow to build a CIRCLE+LEFT_ARROW two-element
+  signal and replace the duplicated compound signal construction in the
+  partial-conflict tests.
+  * test(autoware_traffic_light_multi_camera_fusion): remove comment
+  * test(autoware_traffic_light_multi_camera_fusion): cover min confidence aggregation across elements
+  Add a test that two cameras observe the same traffic_light_id with
+  CIRCLE + LEFT_ARROW elements whose per-element confidences differ.
+  The winner is decided by utils::get_min_confidence, so min-aggregation
+  picks the camera whose weakest element confidence is higher; a
+  max-aggregation implementation would pick the other camera and the
+  output element confidences would differ.
+  Extend make_signal_with_left_arrow to accept a separate confidence per
+  element so the test can construct uneven signals, and introduce an
+  expect_element_confidence helper to keep the assertion concise.
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(traffic_light_multi_camera_fusion): extract core logic from node (`#12610 <https://github.com/autowarefoundation/autoware_universe/issues/12610>`_)
+  * test(autoware_traffic_light_multi_camera_fusion): use PascalCase for test names
+  Rename gtest TestSuite and TestName arguments in test_utils.cpp to
+  PascalCase as required by Google Test naming conventions.
+  * refactor(autoware_traffic_light_multi_camera_fusion): rename node files to multi_camera_fusion
+  Pure rename in preparation for extracting the core fusion logic into a
+  separate class. The Node class still lives in the renamed files; only
+  include paths, include guards, and CMakeLists/test references are
+  updated to keep the build green. The logical separation between Node
+  and core class happens in the follow-up commit.
+  * refactor(autoware_traffic_light_multi_camera_fusion): extract MultiCameraFusion logic
+  Move the Node-specific code (rclcpp subscribers/publisher, diagnostics,
+  parameter declarations) out of multi_camera_fusion.{cpp,hpp} into a new
+  MultiCameraFusionNode in traffic_light_multi_camera_fusion_node.{cpp,hpp}.
+  What remains in multi_camera_fusion.{cpp,hpp} is a pure-logic class with
+  a fuse() entry point that takes ROS2 messages and returns a Result,
+  without depending on rclcpp::Node or rclcpp::Logger. Warnings are
+  returned via Result fields so the Node logs them (Error-as-Value).
+  * fix(autoware_traffic_light_multi_camera_fusion): satisfy cppcheck functionStatic/functionConst
+  Mark MultiCameraFusion::convert_output_msg and update_best_record as
+  static, and update_log_odds / update_group_info_for_element as const,
+  so that cppcheck --enable=all --inconclusive passes. These functions
+  do not modify the object state; the qualifiers reflect existing
+  behavior.
+  * refactor(autoware_traffic_light_multi_camera_fusion): return unmapped traffic light IDs as data
+  Previously the core MultiCameraFusion class built warning log strings
+  ("Found Traffic Light Id = X which is not defined in Map") and returned
+  them via MultiCameraFusionResult::warnings. Replace this with a raw
+  vector of traffic light IDs (unmapped_traffic_light_ids) and move the
+  string formatting to MultiCameraFusionNode, so that the core class only
+  deals with data and presentation concerns stay in the Node.
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(autoware_traffic_light_multi_camera_fusion): rename functions to snake_case (`#12603 <https://github.com/autowarefoundation/autoware_universe/issues/12603>`_)
+  Rename camelCase function names (member, free, and anonymous-namespace
+  functions) to snake_case to follow the project naming convention.
+  No behavior change.
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* test(autoware_traffic_light_multi_camera_fusion): add integration test for node (`#12581 <https://github.com/autowarefoundation/autoware_universe/issues/12581>`_)
+  * test(autoware_traffic_light_multi_camera_fusion): add integration test for node
+  * test(autoware_traffic_light_multi_camera_fusion): add test for confidence-based color selection
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* fix(traffic_light_multi_camera_fusion): use minimum confidence across signal elements (`#12566 <https://github.com/autowarefoundation/autoware_universe/issues/12566>`_)
+  use minimum confidence across signal elements
+* Contributors: Koichi Imai, Masaki Baba, Takahisa Ishikawa, atsushi yano, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -2,6 +2,34 @@
 Changelog for package autoware_traffic_light_fine_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-26)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* refactor(autoware_tensorrt_yolox): remove unused public API (`#12835 <https://github.com/autowarefoundation/autoware_universe/issues/12835>`_)
+  Remove public API symbols that have no caller in the autowarefoundation
+  and tier4 organizations (verified via GitHub code search):
+  - preprocess.{hpp,cu}: 6 unused exported GPU functions and their kernels
+  (resize_bilinear_gpu, letterbox_gpu, nchw_to_nhwc_gpu, to_float_gpu,
+  resize_bilinear_letterbox_gpu, resize_bilinear_letterbox_nhwc_to_nchw32_gpu);
+  the batch/multi-scale/argmax variants that are actually used are kept
+  - TrtYoloX::printProfiling and TrtYoloX::initPreprocessBuffer
+  - the unused cache_dir constructor parameter (documented as "unused
+  variable"); update the call sites in tensorrt_yolox_detector and
+  autoware_traffic_light_fine_detector accordingly
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(tensorrt_yolox): unify preprocessing on GPU and remove CPU path (`#12803 <https://github.com/autowarefoundation/autoware_universe/issues/12803>`_)
+  Remove the use_gpu_preprocess option and the CPU preprocessing code path so
+  that preprocessing is always performed on the GPU.
+  - Drop the use_gpu_preprocess constructor argument and use_gpu_preprocess\_ flag
+  - Delete the CPU-only preprocess(), multiScalePreprocess() and getMaskImage()
+  - Remove now-dead members input_h\_ and segmentation_out_prob_h\_
+  - Drop the preprocess_on_gpu ROS parameter, config struct member, param files,
+  JSON schema entries and the test override
+  - Remove unused includes (<fstream>, <optional>) from the touched files
+  - Update autoware_traffic_light_fine_detector for the new constructor signature
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* Contributors: Takahisa Ishikawa, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
