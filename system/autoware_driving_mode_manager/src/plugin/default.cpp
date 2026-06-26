@@ -38,18 +38,35 @@ AutowareMode DefaultPlugin::decide(const RequestModes & modes, const AutowareMod
 {
   std::vector<AutowareMode> candidates;
 
-  if (modes.mrm_strategy == MrmStrategy::kNone) {
-    candidates.push_back(modes.operation_mode);
+  // Select the highest priority mode based on the MRM strategy.
+  switch (modes.mrm_strategy) {
+    case MrmStrategy::kNone:
+      // If there is no MRM request, set the operation mode to the highest priority.
+      candidates.push_back(modes.operation_mode);
+      break;
+    case MrmStrategy::kBehavior:
+      // If specific MRM behavior is requested, set it as the highest priority.
+      candidates.push_back(modes.mrm_behavior);
+      break;
+    case MrmStrategy::kDelegate:
+      // If the selection of MRM behavior is delegated, follow the default MRM priority.
+      break;
+    case MrmStrategy::kUnknown:
+      // If the MRM strategy is unknown, follow the default MRM priority.
+      break;
   }
 
+  // Set the MRM behaviors in order of priority.
   candidates.push_back(ComfortableStop);
   candidates.push_back(EmergencyStop);
 
+  // Remove unavailable modes from candidates.
   std::vector<AutowareMode> result;
   for (const auto & mode : candidates) {
     if (available.count(mode)) result.push_back(mode);
   }
 
+  // If no available mode is found, return EmergencyStop as a fallback.
   return result.empty() ? EmergencyStop : result.front();
 };
 
