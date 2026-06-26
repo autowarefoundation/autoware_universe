@@ -252,22 +252,9 @@ PredictedObject convertToPredictedObject(const TrackedObject & tracked_object)
 
 namespace
 {
-// Signed area of a footprint ring; positive for counter-clockwise winding (see the convention note
-// in autoware_utils boost_polygon_utils). Used only to preserve the input winding on output.
-double footprintSignedArea(const std::vector<geometry_msgs::msg::Point32> & points)
-{
-  double area = 0.0;
-  for (size_t i = 0; i < points.size(); ++i) {
-    const auto & a = points[i];
-    const auto & b = points[(i + 1) % points.size()];
-    area += static_cast<double>(a.x) * b.y - static_cast<double>(b.x) * a.y;
-  }
-  return 0.5 * area;
-}
-
-// Polygon union of the original body box and the footprint, both in the object-local frame, then
-// re-expressed about the recentered box origin. The body box and the footprint share the object
-// body, so the union is a single connected polygon; the largest piece is taken defensively.
+// Convex hull of the original body box and the footprint, both in the object-local frame, then
+// re-expressed about the recentered box origin. The hull always yields a single convex ring, so it
+// fits geometry_msgs::Polygon and covers both shapes regardless of whether they overlap.
 geometry_msgs::msg::Polygon mergeFootprintWithBox(
   const geometry_msgs::msg::Polygon & footprint, const double half_length, const double half_width,
   const Eigen::Vector2d & center_offset)
@@ -276,31 +263,18 @@ geometry_msgs::msg::Polygon mergeFootprintWithBox(
   using autoware_utils::Point2d;
   using autoware_utils::Polygon2d;
 
-  Polygon2d box;
-  bg::append(box.outer(), Point2d(half_length, half_width));
-  bg::append(box.outer(), Point2d(-half_length, half_width));
-  bg::append(box.outer(), Point2d(-half_length, -half_width));
-  bg::append(box.outer(), Point2d(half_length, -half_width));
-  bg::correct(box);
-
-  Polygon2d foot;
+  // Collect the body-box corners and the footprint vertices, then take their convex hull.
+  Polygon2d points;
+  bg::append(points.outer(), Point2d(half_length, half_width));
+  bg::append(points.outer(), Point2d(-half_length, half_width));
+  bg::append(points.outer(), Point2d(-half_length, -half_width));
+  bg::append(points.outer(), Point2d(half_length, -half_width));
   for (const auto & point : footprint.points) {
-    bg::append(foot.outer(), Point2d(point.x, point.y));
+    bg::append(points.outer(), Point2d(point.x, point.y));
   }
-  bg::correct(foot);
-
-  bg::model::multi_polygon<Polygon2d> merged;
-  bg::union_(box, foot, merged);
 
   Polygon2d single;
-  if (merged.size() == 1) {
-    // Box and footprint overlap (the normal case): the union is one connected polygon.
-    single = merged.front();
-  } else {
-    // Disjoint or degenerate input: the union has multiple rings, but geometry_msgs::Polygon can
-    // hold only one. Fall back to the convex hull covering all pieces so neither shape is dropped.
-    bg::convex_hull(merged, single);
-  }
+  bg::convex_hull(points, single);
 
   geometry_msgs::msg::Polygon output;
   if (single.outer().empty()) return output;
@@ -317,12 +291,6 @@ geometry_msgs::msg::Polygon mergeFootprintWithBox(
     point.y = static_cast<float>(ring[i].y() - center_offset.y());
     point.z = 0.0F;
     output.points.push_back(point);
-  }
-
-  // Keep the input winding so downstream consumers see a consistent footprint orientation.
-  const double input_area = footprintSignedArea(footprint.points);
-  if (input_area != 0.0 && (footprintSignedArea(output.points) > 0.0) != (input_area > 0.0)) {
-    std::reverse(output.points.begin(), output.points.end());
   }
 
   return output;

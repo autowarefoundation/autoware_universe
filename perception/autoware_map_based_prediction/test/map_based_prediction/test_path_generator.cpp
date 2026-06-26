@@ -356,10 +356,10 @@ TEST(ExpandShapeToFootprintAndRecenter, grows_box_and_recenters_on_protrusion)
   // The t=0 box center (initial pose) recenters by the same +0.5 in x.
   EXPECT_DOUBLE_EQ(object.kinematics.initial_pose_with_covariance.pose.position.x, 10.5);
   EXPECT_DOUBLE_EQ(object.kinematics.initial_pose_with_covariance.pose.position.y, 20.0);
-  // Footprint is the union of the original box and the footprint, re-expressed about the new
-  // center. Here the footprint encloses the box, so the union is the footprint rectangle shifted
+  // Footprint is the convex hull of the original box and the footprint, re-expressed about the new
+  // center. Here the footprint encloses the box, so the hull is the footprint rectangle shifted
   // by -0.5 in x: x in [-2.5, 2.5], y in [-1, 1]. Check bounds order-independently since the
-  // boost union may reorder the ring.
+  // boost hull may reorder the ring.
   ASSERT_FALSE(object.shape.footprint.points.empty());
   float min_x = std::numeric_limits<float>::max();
   float max_x = std::numeric_limits<float>::lowest();
@@ -377,12 +377,12 @@ TEST(ExpandShapeToFootprintAndRecenter, grows_box_and_recenters_on_protrusion)
   EXPECT_FLOAT_EQ(max_y, 1.0f);
 }
 
-TEST(ExpandShapeToFootprintAndRecenter, footprint_box_union_keeps_concavity)
+TEST(ExpandShapeToFootprintAndRecenter, footprint_box_merge_is_convex)
 {
   PredictedObject object = make_box_object_with_path();
   // A narrow bump on the front face: footprint covers x in [2, 3], y in [-0.5, 0.5], while the body
-  // box is x in [-2, 2], y in [-1, 1]. Neither shape contains the other, so the union is a true
-  // T-shape that no axis-aligned rectangle can represent.
+  // box is x in [-2, 2], y in [-1, 1]. Neither shape contains the other, so their merge is a true
+  // T-shape; the convex hull fills the re-entrant notches at the bump's base.
   object.shape.footprint.points.push_back(make_point32(2.0, -0.5));
   object.shape.footprint.points.push_back(make_point32(3.0, -0.5));
   object.shape.footprint.points.push_back(make_point32(3.0, 0.5));
@@ -394,26 +394,50 @@ TEST(ExpandShapeToFootprintAndRecenter, footprint_box_union_keeps_concavity)
   EXPECT_DOUBLE_EQ(object.shape.dimensions.x, 5.0);
   EXPECT_DOUBLE_EQ(object.shape.dimensions.y, 2.0);
 
-  // The merged footprint must keep the bump's concavity, so it has more than the 4 corners a plain
-  // rectangle would. Re-expressed about the new center (shifted by -0.5 in x).
+  // The merged footprint is the convex hull of the box and the bump, re-expressed about the new
+  // center (shifted by -0.5 in x). It must be convex and must NOT contain the re-entrant notch at
+  // x = 1.5 (old x = 2.0), y = +/-0.5 that the raw T-shape would have.
   const auto & points = object.shape.footprint.points;
-  EXPECT_GT(points.size(), 4u);
-  bool has_notch = false;
+  ASSERT_GE(points.size(), 3u);
   for (const auto & point : points) {
-    // The re-entrant corners sit at x = 1.5 (old x = 2.0), y = +/-0.5.
-    if (std::abs(point.x - 1.5f) < 1e-3f && std::abs(std::abs(point.y) - 0.5f) < 1e-3f) {
-      has_notch = true;
+    const bool is_notch =
+      std::abs(point.x - 1.5f) < 1e-3f && std::abs(std::abs(point.y) - 0.5f) < 1e-3f;
+    EXPECT_FALSE(is_notch);
+  }
+  // The bump's outer corners survive on the hull at x = 2.5 (old x = 3.0), y = +/-0.5.
+  bool has_bump_corner = false;
+  for (const auto & point : points) {
+    if (std::abs(point.x - 2.5f) < 1e-3f && std::abs(std::abs(point.y) - 0.5f) < 1e-3f) {
+      has_bump_corner = true;
     }
   }
-  EXPECT_TRUE(has_notch);
+  EXPECT_TRUE(has_bump_corner);
+
+  // Every turn around the ring has the same sign: a strict definition of convexity.
+  const size_t n = points.size();
+  int sign = 0;
+  for (size_t i = 0; i < n; ++i) {
+    const auto & a = points[i];
+    const auto & b = points[(i + 1) % n];
+    const auto & c = points[(i + 2) % n];
+    const double cross =
+      static_cast<double>(b.x - a.x) * (c.y - b.y) - static_cast<double>(b.y - a.y) * (c.x - b.x);
+    if (std::abs(cross) < 1e-6) continue;  // collinear vertices do not break convexity
+    const int current = cross > 0.0 ? 1 : -1;
+    if (sign == 0) {
+      sign = current;
+    } else {
+      EXPECT_EQ(sign, current);
+    }
+  }
 }
 
 TEST(ExpandShapeToFootprintAndRecenter, disjoint_footprint_covers_both_shapes)
 {
   PredictedObject object = make_box_object_with_path();
   // Pathological input: the footprint (x in [5, 6]) does not touch the body box (x in [-2, 2]).
-  // The union has two disjoint rings, which a single-ring polygon cannot hold, so the result must
-  // fall back to a convex hull that still covers both shapes rather than dropping either one.
+  // The convex hull of the two disjoint shapes still covers both with a single ring, so neither is
+  // dropped.
   object.shape.footprint.points.push_back(make_point32(5.0, -0.5));
   object.shape.footprint.points.push_back(make_point32(6.0, -0.5));
   object.shape.footprint.points.push_back(make_point32(6.0, 0.5));
