@@ -19,6 +19,7 @@
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/trajectory/utils/crossed.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -36,17 +37,6 @@
 namespace autoware::motion_velocity_planner::out_of_lane
 {
 
-lanelet::BasicPolygon2d project_to_pose(
-  const autoware_utils::Polygon2d & base_footprint, const geometry_msgs::msg::Pose & pose)
-{
-  const auto angle = tf2::getYaw(pose.orientation);
-  const auto rotated_footprint = autoware_utils::rotate_polygon(base_footprint, angle);
-  lanelet::BasicPolygon2d footprint;
-  for (const auto & p : rotated_footprint.outer())
-    footprint.emplace_back(p.x() + pose.position.x, p.y() + pose.position.y);
-  return footprint;
-}
-
 std::optional<geometry_msgs::msg::Pose> calculate_last_avoiding_pose(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
   const autoware_utils::Polygon2d & footprint, const lanelet::BasicPolygons2d & polygons_to_avoid,
@@ -60,10 +50,11 @@ std::optional<geometry_msgs::msg::Pose> calculate_last_avoiding_pose(
   while (to - from > precision) {
     auto l = from + 0.5 * (to - from);
     interpolated_pose = motion_utils::calcInterpolatedPose(trajectory, l);
-    const auto interpolated_footprint = project_to_pose(footprint, interpolated_pose);
     is_avoiding_pose =
       std::all_of(polygons_to_avoid.begin(), polygons_to_avoid.end(), [&](const auto & polygon) {
-        return boost::geometry::disjoint(interpolated_footprint, polygon);
+        // find avoid instead of crossed (intersection)
+        return !autoware::experimental::trajectory::crossed_with_footprint(
+          interpolated_pose, polygon, footprint);
       });
     if (is_avoiding_pose) {
       from = l;
@@ -87,10 +78,9 @@ std::optional<geometry_msgs::msg::Pose> calculate_pose_ahead_of_collision(
        l -= precision) {
     const auto interpolated_pose =
       motion_utils::calcInterpolatedPose(ego_data.trajectory_points, l);
-    const auto interpolated_footprint = project_to_pose(footprint, interpolated_pose);
-    if (!boost::geometry::disjoint(interpolated_footprint, point_to_avoid.out_overlaps)) {
+    if (autoware::experimental::trajectory::crossed_with_footprint(
+          interpolated_pose, point_to_avoid.out_overlaps, footprint))
       return interpolated_pose;
-    }
   }
   return std::nullopt;
 }
