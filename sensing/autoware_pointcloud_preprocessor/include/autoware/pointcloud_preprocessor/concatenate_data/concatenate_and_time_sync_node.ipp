@@ -77,10 +77,10 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
   params_.matching_strategy = declare_parameter<std::string>("matching_strategy.type");
 
   if (params_.matching_strategy == "naive") {
-    collector_matching_strategy_ = std::make_unique<NaiveMatchingStrategy<MsgTraits>>(*this);
+    collector_matcher_ = std::make_unique<NaiveCollectorMatcher<MsgTraits>>(*this);
   } else if (params_.matching_strategy == "advanced") {
-    collector_matching_strategy_ =
-      std::make_unique<AdvancedMatchingStrategy<MsgTraits>>(*this, params_.input_topics);
+    collector_matcher_ =
+      std::make_unique<AdvancedCollectorMatcher<MsgTraits>>(*this, params_.input_topics);
   } else {
     throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");
   }
@@ -106,13 +106,18 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
   }
 
   // Combine cloud handler
-  combine_cloud_handler_ = std::make_shared<CombineCloudHandler<MsgTraits>>(
-    *this, params_.input_topics, params_.output_frame, params_.is_motion_compensated,
-    params_.publish_synchronized_pointcloud, params_.keep_input_frame_in_synchronized_pointcloud);
+  combine_cloud_handler_ =
+    std::make_shared<CombineCloudHandler<typename MsgTraits::PointCloudMessage>>(
+      params_.input_topics, params_.output_frame, params_.is_motion_compensated,
+      params_.publish_synchronized_pointcloud, params_.keep_input_frame_in_synchronized_pointcloud,
+      params_.matching_strategy);
 
   // Diagnostic Updater
   diagnostics_interface_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, this->get_fully_qualified_name());
+
+  // TF Buffer
+  managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
 
   initialize_pub_sub();
 }
@@ -203,19 +208,32 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
       this->get_logger(), *this->get_clock(), 1000, "Empty sensor points!");
   }
 
+  if (
+    input_ptr->header.frame_id != params_.output_frame &&
+    frames_with_loaded_transform_.count(input_ptr->header.frame_id) == 0) {
+    const auto sensor_to_output =
+      managed_tf_buffer_->getTransform<geometry_msgs::msg::TransformStamped>(
+        params_.output_frame, input_ptr->header.frame_id, this->now(),
+        rclcpp::Duration::from_seconds(1.0), this->get_logger());
+    if (sensor_to_output.has_value()) {
+      combine_cloud_handler_->set_transform(*sensor_to_output);
+      frames_with_loaded_transform_.insert(input_ptr->header.frame_id);
+    }
+  }
+
   // protect cloud collectors list
   std::shared_ptr<CloudCollector<MsgTraits>> selected_collector = nullptr;
 
   // For each callback, check whether there is an existing collector that matches this cloud
   std::optional<std::shared_ptr<CloudCollector<MsgTraits>>> cloud_collector{};
-  MatchingParams matching_params;
-  matching_params.topic_name = topic_name;
-  matching_params.cloud_arrival_time = cloud_arrival_time;
-  matching_params.cloud_timestamp = rclcpp::Time(input_ptr->header.stamp).seconds();
+  IncomingCloudInfo incoming_cloud_info;
+  incoming_cloud_info.topic_name = topic_name;
+  incoming_cloud_info.cloud_arrival_time = cloud_arrival_time;
+  incoming_cloud_info.cloud_timestamp = rclcpp::Time(input_ptr->header.stamp).seconds();
 
   if (!cloud_collectors_.empty()) {
     cloud_collector =
-      collector_matching_strategy_->match_cloud_to_collector(cloud_collectors_, matching_params);
+      collector_matcher_->match_cloud_to_collector(cloud_collectors_, incoming_cloud_info);
   }
 
   if (cloud_collector.has_value() && cloud_collector.value()) {
@@ -243,7 +261,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
     }
 
     if (selected_collector) {
-      collector_matching_strategy_->set_collector_info(selected_collector, matching_params);
+      collector_matcher_->set_collector_info(selected_collector, incoming_cloud_info);
     }
   }
 
@@ -266,7 +284,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::odom_ca
 
 template <typename MsgTraits>
 void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish_clouds(
-  ConcatenatedCloudResult<MsgTraits> && concatenated_cloud_result,
+  ConcatenatedCloudResult<typename MsgTraits::PointCloudMessage> && concatenated_cloud_result,
   std::shared_ptr<CollectorInfoBase> collector_info)
 {
   DiagnosticInfo diagnostic_info;
@@ -278,6 +296,33 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
   if (concatenated_cloud_result.concatenate_cloud_ptr == nullptr) {
     RCLCPP_ERROR(this->get_logger(), "Concatenated cloud is a nullptr.");
     return;
+  }
+
+  if (concatenated_cloud_result.motion_compensation_status.no_twist_available) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), std::chrono::milliseconds(10000).count(),
+      "No twist is available. Please confirm twist topic and timestamp. Leaving point cloud "
+      "untransformed.");
+  }
+  if (concatenated_cloud_result.motion_compensation_status.twist_time_gap_too_large) {
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), std::chrono::milliseconds(10000).count(),
+      "Time difference is too large. Cloud not interpolate. Please confirm twist topic and "
+      "timestamp");
+  }
+
+  if (!concatenated_cloud_result.dropped_frames_missing_transform.empty()) {
+    std::string dropped_frames;
+    for (const auto & frame : concatenated_cloud_result.dropped_frames_missing_transform) {
+      if (!dropped_frames.empty()) dropped_frames += ", ";
+      dropped_frames += frame;
+    }
+    RCLCPP_ERROR_STREAM_THROTTLE(
+      this->get_logger(), *this->get_clock(), std::chrono::milliseconds(10000).count(),
+      "No transform to output frame '"
+        << params_.output_frame << "' was available for frame(s) [" << dropped_frames
+        << "]; their point clouds were dropped from the concatenation. Please confirm the TF tree "
+           "and sensor extrinsics.");
   }
 
   if (
