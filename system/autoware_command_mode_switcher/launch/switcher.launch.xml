@@ -4,6 +4,7 @@
   <arg name="~/command_mode/status" default="/system/command_mode/status"/>
   <arg name="~/command_mode/request" default="/system/command_mode/request"/>
   <arg name="~/command_mode/transition/completed" default="/system/command_mode/transition/completed"/>
+  <arg name="~/filter/status" default="/control/control_command_gate/filter/status"/>
   <arg name="~/source/status" default="/control/control_command_gate/source/status"/>
   <arg name="~/source/select" default="/control/control_command_gate/source/select"/>
   <arg name="~/election/status" default="/system/election/status"/>
@@ -15,6 +16,7 @@
     <remap from="~/command_mode/status" to="$(var ~/command_mode/status)"/>
     <remap from="~/command_mode/request" to="$(var ~/command_mode/request)"/>
     <remap from="~/command_mode/transition/completed" to="$(var ~/command_mode/transition/completed)"/>
+    <remap from="~/filter/status" to="$(var ~/filter/status)"/>
     <remap from="~/source/status" to="$(var ~/source/status)"/>
     <remap from="~/source/select" to="$(var ~/source/select)"/>
     <remap from="~/election/status" to="$(var ~/election/status)"/>
