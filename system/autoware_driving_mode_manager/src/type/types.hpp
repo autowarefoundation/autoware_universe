@@ -85,16 +85,16 @@ struct GateStatus
   GateStatusItem expect;
 };
 
-struct DebugStatus
+struct DebugFlags
 {
-  struct Flag
+  struct Item
   {
     bool available;
     bool active;
     bool stable;
     bool continuable;
   };
-  std::unordered_map<AutowareMode, Flag> flags;
+  std::unordered_map<AutowareMode, Item> items;
 };
 
 }  // namespace autoware::driving_mode_manager

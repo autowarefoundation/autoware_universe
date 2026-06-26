@@ -49,6 +49,8 @@ public:
   explicit RosInterface(rclcpp::Node * node);
   void init(MainLogic * logic) override { logic_ = logic; }
 
+  bool get_enable_debug_topics() const override { return enable_debug_topics_; }
+
   rclcpp::Time now() const override;
   void change_trajectory_source(const TrajectorySource & source) override;
   void change_command_source(const CommandSource & source) override;
@@ -58,8 +60,8 @@ public:
   void publish_mrm_state(const MrmState & state) const override;
   void publish_driving_mode_request(const ModeRequest & request) const override;
   void publish_driving_mode_info(const ModeInfo & info) const override;
-  void publish_debug(const DebugStatus & status) const override;
-  void publish_debug(const RequestModes & request) const override;
+  void publish_debug_flags(const DebugFlags & flags) const override;
+  void publish_debug_request(const RequestModes & request) const override;
 
   void log_info(const std::string & message) const override;
   void log_warn(const std::string & message) const override;
@@ -90,6 +92,7 @@ private:
   using DebugModeRequestMsg = autoware_driving_mode_manager::msg::DebugModeRequest;
 
   MainLogic * logic_;
+  bool enable_debug_topics_;
 
   rclcpp::Node * node_;
   rclcpp::Client<TrajectorySourceSrv>::SharedPtr cli_trajectory_source_;
