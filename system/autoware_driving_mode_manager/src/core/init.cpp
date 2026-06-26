@@ -56,8 +56,13 @@ GateStatusItem ManagerInit::gates() const
 
 void ManagerInit::update()
 {
+  // Detect status timeout.
   status_->update(interface_->now(), 1.0);
-  publish_debug();
+
+  // Publish debug topics.
+  if (interface_->get_enable_debug_topics()) {
+    publish_debug_flags();
+  }
 }
 
 void ManagerInit::on_trajectory_source(const TrajectorySource & source)
@@ -140,18 +145,18 @@ void ManagerInit::publish_driving_mode_info() const
   interface_->publish_driving_mode_info(info);
 }
 
-void ManagerInit::publish_debug() const
+void ManagerInit::publish_debug_flags() const
 {
-  DebugStatus debug;
+  DebugFlags flags;
   for (const auto & mode : config_->autoware_modes()) {
-    DebugStatus::Flag flag;
-    flag.available = status_->is_available(mode);
-    flag.active = status_->is_active(mode);
-    flag.stable = status_->is_stable(mode);
-    flag.continuable = status_->is_continuable(mode);
-    debug.flags[mode] = flag;
+    DebugFlags::Item item;
+    item.available = status_->is_available(mode);
+    item.active = status_->is_active(mode);
+    item.stable = status_->is_stable(mode);
+    item.continuable = status_->is_continuable(mode);
+    flags.items[mode] = item;
   }
-  interface_->publish_debug(debug);
+  interface_->publish_debug_flags(flags);
 }
 
 }  // namespace autoware::driving_mode_manager

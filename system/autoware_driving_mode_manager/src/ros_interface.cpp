@@ -28,6 +28,8 @@ RosInterface::RosInterface(rclcpp::Node * node) : node_(node)
   using std::placeholders::_1;
   using std::placeholders::_2;
 
+  enable_debug_topics_ = node->declare_parameter<bool>("enable_debug_topics");
+
   cli_trajectory_source_ = node->create_client<TrajectorySourceSrv>("~/trajectory/source/change");
   cli_command_source_ = node->create_client<ChangeCommandSourceSrv>("~/command/source/change");
   cli_command_filter_ = node->create_client<ChangeCommandFilterSrv>("~/command/filter/change");
@@ -184,22 +186,6 @@ void RosInterface::publish_mrm_state(const MrmState & state) const
   pub_mrm_state_->publish(msg);
 }
 
-void RosInterface::publish_debug(const DebugStatus & status) const
-{
-  DebugModeFlagsMsg msg;
-  msg.stamp = now();
-  for (const auto & [mode, flag] : status.flags) {
-    autoware_driving_mode_manager::msg::DebugModeFlagsItem item;
-    item.mode = mode.id;
-    item.available = flag.available;
-    item.active = flag.active;
-    item.stable = flag.stable;
-    item.continuable = flag.continuable;
-    msg.items.push_back(item);
-  }
-  pub_debug_mode_flag_->publish(msg);
-}
-
 void RosInterface::publish_driving_mode_info(const ModeInfo & info) const
 {
   DrivingModeInfoMsg msg;
@@ -213,7 +199,23 @@ void RosInterface::publish_driving_mode_info(const ModeInfo & info) const
   pub_driving_mode_info_->publish(msg);
 }
 
-void RosInterface::publish_debug(const RequestModes & request) const
+void RosInterface::publish_debug_flags(const DebugFlags & flags) const
+{
+  DebugModeFlagsMsg msg;
+  msg.stamp = now();
+  for (const auto & [mode, flag] : flags.items) {
+    autoware_driving_mode_manager::msg::DebugModeFlagsItem item;
+    item.mode = mode.id;
+    item.available = flag.available;
+    item.active = flag.active;
+    item.stable = flag.stable;
+    item.continuable = flag.continuable;
+    msg.items.push_back(item);
+  }
+  pub_debug_mode_flag_->publish(msg);
+}
+
+void RosInterface::publish_debug_request(const RequestModes & request) const
 {
   DebugModeRequestMsg msg;
   msg.stamp = now();

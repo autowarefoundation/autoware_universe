@@ -58,7 +58,7 @@ public:
 
 private:
   void publish_driving_mode_info() const;
-  void publish_debug() const;
+  void publish_debug_flags() const;
   std::optional<TrajectorySource> trajectory_source_;
   std::optional<CommandSource> command_source_;
   std::optional<CommandFilter> command_filter_;

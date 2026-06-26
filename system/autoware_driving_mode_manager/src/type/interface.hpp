@@ -32,6 +32,8 @@ public:
   virtual ~Interface() = default;
   virtual void init(MainLogic * logic) = 0;
 
+  virtual bool get_enable_debug_topics() const = 0;
+
   virtual rclcpp::Time now() const = 0;
   virtual void change_trajectory_source(const TrajectorySource & source) = 0;
   virtual void change_command_source(const CommandSource & source) = 0;
@@ -41,8 +43,8 @@ public:
   virtual void publish_mrm_state(const MrmState & state) const = 0;
   virtual void publish_driving_mode_request(const ModeRequest & request) const = 0;
   virtual void publish_driving_mode_info(const ModeInfo & info) const = 0;
-  virtual void publish_debug(const DebugStatus & status) const = 0;
-  virtual void publish_debug(const RequestModes & request) const = 0;
+  virtual void publish_debug_flags(const DebugFlags & flags) const = 0;
+  virtual void publish_debug_request(const RequestModes & request) const = 0;
 
   virtual void log_info(const std::string & message) const = 0;
   virtual void log_warn(const std::string & message) const = 0;
