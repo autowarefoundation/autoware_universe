@@ -63,17 +63,17 @@ Kalman filter settings can be controlled by the parameters in `config/bytetrack_
 
 ## Parameters
 
-### bytetrack_node
+- bytetrack
 
-| Name                  | Type | Default Value | Description                                              |
-| --------------------- | ---- | ------------- | -------------------------------------------------------- |
-| `track_buffer_length` | int  | 30            | The frame count that a tracklet is considered to be lost |
+{{ json_to_markdown("perception/autoware_bytetrack/schema/bytetrack_node.schema.json") }}
 
-### bytetrack_visualizer
+- kalman filter
 
-| Name      | Type | Default Value | Description                                                                                   |
-| --------- | ---- | ------------- | --------------------------------------------------------------------------------------------- |
-| `use_raw` | bool | false         | The flag for the node to switch `sensor_msgs/Image` or `sensor_msgs/CompressedImage` as input |
+{{ json_to_markdown("perception/autoware_bytetrack/schema/kalman_filter.schema.json") }}
+
+- bytetrack visualizer
+
+{{ json_to_markdown("perception/autoware_bytetrack/schema/bytetrack_visualizer.schema.json") }}
 
 ## Assumptions/Known limits
 
