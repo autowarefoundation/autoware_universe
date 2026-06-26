@@ -42,8 +42,10 @@
 #include "visualization_msgs/msg/marker.hpp"
 
 #include <deque>
+#include <limits>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -93,6 +95,12 @@ private:
     double stop_dist{0.0};  // signed distance that is positive when car is before the stopline
     double slope_angle{0.0};
     double dt{0.0};
+    double temporal_predicted_time{std::numeric_limits<double>::quiet_NaN()};
+    double temporal_observed_time{std::numeric_limits<double>::quiet_NaN()};
+    double temporal_fused_time{std::numeric_limits<double>::quiet_NaN()};
+    double temporal_window_min{std::numeric_limits<double>::quiet_NaN()};
+    double temporal_window_max{std::numeric_limits<double>::quiet_NaN()};
+    bool temporal_observation_used{false};
   };
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_;
   rclcpp::Clock::SharedPtr clock_;
@@ -138,6 +146,9 @@ private:
 
   // delay compensation
   double m_delay_compensation_time;
+  bool m_use_temporal_trajectory{false};
+  std::optional<double> m_prev_nearest_time{std::nullopt};
+  std::optional<rclcpp::Time> m_prev_trajectory_stamp{std::nullopt};
 
   // enable flags
   bool m_enable_smooth_stop;
@@ -279,8 +290,11 @@ private:
   /**
    * @brief set reference trajectory with received message
    * @param [in] msg trajectory message
+   * @param [in] current_kinematics current ego odometry used to reset temporal phase on replan
    */
-  void setTrajectory(const autoware_planning_msgs::msg::Trajectory & msg);
+  void setTrajectory(
+    const autoware_planning_msgs::msg::Trajectory & msg,
+    const nav_msgs::msg::Odometry & current_kinematics);
 
   bool isReady(const trajectory_follower::InputData & input_data) override;
 
