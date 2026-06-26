@@ -1,0 +1,22 @@
+# Default configuration for autoware_redundancy_switcher_interface.
+# Switcher-plugin-specific parameters (UDS paths, etc.) must be
+# provided by the plugin package (e.g., autoware_redundancy_switcher_interface_plugins).
+/**:
+  ros__parameters:
+    # Set false for a non-redundant (single-ECU) system.
+    # When false, switcher_plugin is NOT loaded and the system is treated as permanently stable.
+    is_redundant: true
+
+    # pluginlib class name for the switcher-side adapter.
+    # Must be set when is_redundant=true. Leave unset to require explicit configuration.
+    # Example: "autoware::redundancy_switcher::SwitcherAdapter"
+    switcher_plugin: ""
+
+    # Elapsed time [ms] without CommandModeAvailability from the peer ECU before the peer
+    # is considered unavailable. Only meaningful when is_redundant=true.
+    availability_timeout_milli: 500.0
+
+    diag:
+      # DiagAdapter: a transitional switcher state (startup or state change in progress) that
+      # lasts longer than this threshold is reported as DiagStatus::ERROR. (unit: ms)
+      transitional_timeout_milli: 2000.0

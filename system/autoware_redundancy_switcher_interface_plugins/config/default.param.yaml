@@ -1,0 +1,4 @@
+# Default config for topic-based switcher adapter plugin.
+/**:
+  ros__parameters:
+    switcher_plugin: "autoware::redundancy_switcher::SimpleSwitcherAdapter"
