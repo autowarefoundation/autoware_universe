@@ -60,14 +60,15 @@ AutowareMode DefaultPlugin::decide(const RequestModes & modes, const AutowareMod
   candidates.push_back(ComfortableStop);
   candidates.push_back(EmergencyStop);
 
-  // Remove unavailable modes from candidates.
-  std::vector<AutowareMode> result;
+  // Return the first available mode from the candidates list.
   for (const auto & mode : candidates) {
-    if (available.count(mode)) result.push_back(mode);
+    if (available.count(mode)) {
+      return mode;
+    }
   }
 
-  // If no available mode is found, return EmergencyStop as a fallback.
-  return result.empty() ? EmergencyStop : result.front();
+  // Return EmergencyStop as a fallback if no available mode is found,
+  return EmergencyStop;
 };
 
 void DefaultPlugin::setup(DrivingModeConfigInterface & config) const
