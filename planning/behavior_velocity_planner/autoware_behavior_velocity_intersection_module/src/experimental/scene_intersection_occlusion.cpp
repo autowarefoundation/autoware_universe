@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/behavior_velocity_intersection_module/util.hpp"
+#include "autoware/behavior_velocity_intersection_module/experimental/util.hpp"
 #include "scene_intersection.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
-#include <autoware_utils/geometry/geometry.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
-
-#include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
 #include <limits>
@@ -34,12 +32,9 @@ namespace autoware::behavior_velocity_planner::experimental
 {
 namespace bg = boost::geometry;
 
-std::tuple<
-  IntersectionModule::OcclusionType, bool /* module detection with margin */,
-  bool /* reconciled occlusion disapproval */>
-IntersectionModule::getOcclusionStatus(
-  const TrafficPrioritizedLevel & traffic_prioritized_level,
-  const InterpolatedPathInfo & interpolated_path_info, const PlannerData & planner_data)
+IntersectionModule::OcclusionStatus IntersectionModule::getOcclusionStatus(
+  const TrafficPrioritizedLevel & traffic_prioritized_level, const Trajectory & path,
+  const Interval & lane_id_interval, const PlannerData & planner_data)
 {
   const auto & intersection_lanelets = intersection_lanelets_.value();
   const auto & occlusion_attention_lanelets = intersection_lanelets.occlusion_attention();
@@ -66,7 +61,7 @@ IntersectionModule::getOcclusionStatus(
   auto occlusion_status =
     (planner_param_.occlusion.enable && !occlusion_attention_lanelets.empty() &&
      !is_amber_or_red_or_no_tl_info_ever)
-      ? detectOcclusion(interpolated_path_info, planner_data)
+      ? detectOcclusion(path, lane_id_interval, planner_data)
       : NotOccluded{};
 
   // ==========================================================================================
@@ -104,30 +99,27 @@ IntersectionModule::getOcclusionStatus(
 }
 
 IntersectionModule::OcclusionType IntersectionModule::detectOcclusion(
-  const InterpolatedPathInfo & interpolated_path_info, const PlannerData & planner_data) const
+  const Trajectory & path, const Interval & lane_id_interval,
+  const PlannerData & planner_data) const
 {
   const auto & intersection_lanelets = intersection_lanelets_.value();
   const auto & adjacent_lanelets = intersection_lanelets.adjacent();
   const auto & attention_areas = intersection_lanelets.occlusion_attention_area();
-  const auto first_attention_area = intersection_lanelets.first_attention_area().value();
+  const auto & first_attention_area = intersection_lanelets.first_attention_area().value();
   const auto & lane_divisions = occlusion_attention_divisions_.value();
 
   const auto & occ_grid = *planner_data.occupancy_grid;
   const auto & current_pose = planner_data.current_odometry->pose;
-  const double occlusion_dist_thr = planner_param_.occlusion.occlusion_required_clearance_distance;
+  const auto & occlusion_dist_thr = planner_param_.occlusion.occlusion_required_clearance_distance;
 
-  const auto & path_ip = interpolated_path_info.path;
-  const auto & lane_interval_ip = interpolated_path_info.lane_id_interval.value();
-
-  const auto first_inside_attention_idx =
-    util::getFirstPointInsidePolygon(path_ip, lane_interval_ip, first_attention_area);
-  if (!first_inside_attention_idx) {
+  const auto first_inside_attention_s =
+    util::getFirstIndexInsidePolygon(path, lane_id_interval, first_attention_area);
+  if (!first_inside_attention_s) {
     return NotOccluded{};
   }
 
-  const std::pair<size_t, size_t> lane_attention_interval_ip =
-    std::make_pair(first_inside_attention_idx.value(), std::get<1>(lane_interval_ip));
-  const auto [lane_start_idx, lane_end_idx] = lane_attention_interval_ip;
+  const auto & lane_start_s = first_inside_attention_s.value();
+  const auto & lane_end_s = lane_id_interval.end;
 
   const int width = occ_grid.info.width;
   const int height = occ_grid.info.height;
@@ -313,22 +305,10 @@ IntersectionModule::OcclusionType IntersectionModule::detectOcclusion(
 
   // (5) find distance
   // (5.1) discretize path_ip with resolution for computational cost
-  LineString2d path_linestring;
-  path_linestring.emplace_back(
-    path_ip.points.at(lane_start_idx).point.pose.position.x,
-    path_ip.points.at(lane_start_idx).point.pose.position.y);
-  {
-    auto prev_path_linestring_point = path_ip.points.at(lane_start_idx).point.pose.position;
-    for (auto i = lane_start_idx + 1; i <= lane_end_idx; i++) {
-      const auto path_linestring_point = path_ip.points.at(i).point.pose.position;
-      if (
-        autoware_utils::calc_distance2d(prev_path_linestring_point, path_linestring_point) <
-        1.0 /* rough tick for computational cost */) {
-        continue;
-      }
-      path_linestring.emplace_back(path_linestring_point.x, path_linestring_point.y);
-      prev_path_linestring_point = path_linestring_point;
-    }
+  LineString2d path_linestring{};
+  for (const auto & s : path.base_arange({lane_start_s, lane_end_s}, 1.0, false)) {
+    path_linestring.emplace_back(
+      autoware_utils_geometry::from_msg(path.compute(s).point.pose.position).to_2d());
   }
 
   auto findNearestPointToProjection = [](
@@ -374,7 +354,7 @@ IntersectionModule::OcclusionType IntersectionModule::detectOcclusion(
 
     // find the intersection point of lane_line and path
     std::vector<Point2d> intersection_points;
-    boost::geometry::intersection(division_linestring, path_linestring, intersection_points);
+    bg::intersection(division_linestring, path_linestring, intersection_points);
     if (intersection_points.empty()) {
       continue;
     }

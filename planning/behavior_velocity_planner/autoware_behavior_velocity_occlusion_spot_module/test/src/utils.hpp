@@ -15,36 +15,39 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
-#include "occlusion_spot_utils.hpp"
+#include "../../src/utils.hpp"
 
+#include <autoware/trajectory/utils/pretty_build.hpp>
 #include <grid_map_core/GridMap.hpp>
-
-#include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <vector>
 
 namespace test
 {
 
-inline autoware_internal_planning_msgs::msg::PathWithLaneId generatePath(
-  double x0, double y0, double x, double y, int nb_points)
+using autoware::behavior_velocity_planner::Trajectory;
+inline Trajectory generatePath(
+  const double x0, const double y0, const double x, const double y, const size_t nb_points)
 {
-  autoware_internal_planning_msgs::msg::PathWithLaneId path{};
-  double x_step = (x - x0) / (nb_points - 1);
-  double y_step = (y - y0) / (nb_points - 1);
-  for (int i = 0; i < nb_points; ++i) {
-    autoware_internal_planning_msgs::msg::PathPointWithLaneId point{};
+  using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+
+  std::vector<PathPointWithLaneId> path_points{};
+  const auto x_step = (x - x0) / (nb_points - 1);
+  const auto y_step = (y - y0) / (nb_points - 1);
+
+  for (size_t i = 0; i < nb_points; ++i) {
+    PathPointWithLaneId point{};
     point.point.pose.position.x = x0 + x_step * i;
     point.point.pose.position.y = y0 + y_step * i;
     point.point.pose.position.z = 0.0;
-    path.points.push_back(point);
+    path_points.push_back(point);
   }
-  return path;
+
+  return autoware::experimental::trajectory::pretty_build(path_points).value();
 }
 
 // /!\ columns and rows in the GridMap are "inverted" (x -> rows, y -> columns)
-inline grid_map::GridMap generateGrid(int w, int h, double res)
+inline grid_map::GridMap generateGrid(const size_t w, const size_t h, const double res)
 {
   grid_map::GridMap grid{};
   grid_map::Length length(w * res, h * res);
@@ -54,13 +57,12 @@ inline grid_map::GridMap generateGrid(int w, int h, double res)
   return grid;
 }
 
-using autoware::behavior_velocity_planner::occlusion_spot_utils::PossibleCollisionInfo;
+using autoware::behavior_velocity_planner::utils::PossibleCollisionInfo;
 inline void generatePossibleCollisions(
-  std::vector<PossibleCollisionInfo> & possible_collisions, double x0, double y0, double x,
-  double y, int nb_cols)
+  std::vector<PossibleCollisionInfo> & possible_collisions, const double x0, const double y0,
+  const double x, const double y, const size_t nb_cols)
 {
-  using autoware::behavior_velocity_planner::occlusion_spot_utils::ObstacleInfo;
-  using autoware::behavior_velocity_planner::occlusion_spot_utils::PossibleCollisionInfo;
+  using autoware::behavior_velocity_planner::utils::ObstacleInfo;
   const double lon = 0.0;  // assume col_x = intersection_x
   const double lat = -1.0;
   const double velocity = 1.0;
@@ -76,7 +78,7 @@ inline void generatePossibleCollisions(
    */
   double x_step = (x - x0) / (nb_cols - 1);
   double y_step = (y - y0) / (nb_cols - 1);
-  for (int i = 0; i < nb_cols; ++i) {
+  for (size_t i = 0; i < nb_cols; ++i) {
     // collision
     ObstacleInfo obstacle_info;
     obstacle_info.position.x = x0 + x_step * i;

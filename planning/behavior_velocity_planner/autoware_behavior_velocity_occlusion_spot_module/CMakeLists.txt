@@ -9,12 +9,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/debug.cpp
   src/grid_utils.cpp
   src/manager.cpp
-  src/occlusion_spot_utils.cpp
-  src/risk_predictive_braking.cpp
+  src/utils.cpp
   src/scene_occlusion_spot.cpp
-  src/experimental/manager.cpp
-  src/experimental/scene_occlusion_spot.cpp
-  src/experimental/utils.cpp
 )
 
 if(BUILD_TESTING)

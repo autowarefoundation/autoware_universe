@@ -14,25 +14,19 @@
 
 #include "manager.hpp"
 
-#include "scene_occlusion_spot.hpp"
-
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware_utils/ros/parameter.hpp>
-
-#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
 using autoware_utils::get_or_declare_parameter;
-using occlusion_spot_utils::DETECTION_METHOD;
-using occlusion_spot_utils::PASS_JUDGE;
+using utils::DETECTION_METHOD;
+using utils::PASS_JUDGE;
 
 OcclusionSpotModuleManager::OcclusionSpotModuleManager(rclcpp::Node & node)
-: SceneModuleManagerInterface(node, getModuleName())
+: experimental::SceneModuleManagerInterface<>(node, getModuleName())
 {
   const std::string ns(OcclusionSpotModuleManager::getModuleName());
   auto & pp = planner_param_;
@@ -122,29 +116,31 @@ OcclusionSpotModuleManager::OcclusionSpotModuleManager(rclcpp::Node & node)
 }
 
 void OcclusionSpotModuleManager::launchNewModules(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const rclcpp::Time & stamp,
+  const PlannerData & planner_data)
 {
-  if (path.points.empty()) return;
   // general
   if (!isModuleRegistered(module_id_)) {
     registerModule(
       std::make_shared<OcclusionSpotModule>(
-        module_id_, planner_data_, planner_param_, logger_.get_child("occlusion_spot_module"),
-        clock_, time_keeper_, planning_factor_interface_));
+        module_id_, planner_data, planner_param_, logger_.get_child("occlusion_spot_module"),
+        clock_, time_keeper_, planning_factor_interface_),
+      planner_data);
   }
 }
 
-std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<experimental::SceneModuleInterface> &)>
 OcclusionSpotModuleManager::getModuleExpiredFunction(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
+  [[maybe_unused]] const Trajectory & path, [[maybe_unused]] const PlannerData & planner_data)
 {
-  return [path]([[maybe_unused]] const std::shared_ptr<SceneModuleInterface> & scene_module) {
-    return false;
-  };
+  return
+    []([[maybe_unused]] const std::shared_ptr<experimental::SceneModuleInterface> & scene_module) {
+      return false;
+    };
 }
 }  // namespace autoware::behavior_velocity_planner
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::behavior_velocity_planner::OcclusionSpotModulePlugin,
-  autoware::behavior_velocity_planner::PluginInterface)
+  autoware::behavior_velocity_planner::experimental::PluginInterface)
