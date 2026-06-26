@@ -12,25 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/behavior_velocity_intersection_module/util.hpp"
+#include "autoware/behavior_velocity_intersection_module/experimental/util.hpp"
 #include "scene_intersection.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/lanelet2_utils/geometry.hpp>
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
-#include <boost/geometry/algorithms/intersection.hpp>
 #include <boost/geometry/algorithms/length.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
-#include <lanelet2_core/geometry/LineString.h>
-#include <lanelet2_core/geometry/Point.h>
-#include <lanelet2_core/primitives/LaneletSequence.h>
 
 #include <algorithm>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -118,7 +114,6 @@ lanelet::ConstLanelet createLaneletFromArcLength(
 
   return lanelet::Lanelet(lanelet::InvalId, left_bound, right_bound);
 }
-
 }  // namespace
 
 namespace autoware::behavior_velocity_planner::experimental
@@ -126,47 +121,50 @@ namespace autoware::behavior_velocity_planner::experimental
 namespace bg = boost::geometry;
 
 std::optional<StuckStop> IntersectionModule::isStuckStatus(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const IntersectionStopLines & intersection_stoplines, const PathLanelets & path_lanelets,
   const PlannerData & planner_data) const
 {
-  const auto closest_idx = intersection_stoplines.closest_idx;
+  const auto & closest_s = intersection_stoplines.closest_s;
+  const auto & stuck_stopline_s_opt = intersection_stoplines.stuck_stopline;
+  const auto & default_stopline_s_opt = intersection_stoplines.default_stopline;
+  const auto & first_attention_stopline_s = intersection_stoplines.first_attention_stopline;
 
   const auto & intersection_lanelets = intersection_lanelets_.value();  // this is OK
-  const bool stuck_detected = checkStuckVehicleInIntersection(path_lanelets, planner_data);
-  const auto first_conflicting_lane =
+  const auto stuck_detected = checkStuckVehicleInIntersection(path_lanelets, planner_data);
+  const auto & first_conflicting_lane =
     intersection_lanelets.first_conflicting_lane().value();  // this is OK
-  const bool is_first_conflicting_lane_private =
-    (std::string(first_conflicting_lane.attributeOr("location", "else")) == "private");
-  const auto stuck_stopline_idx_opt = intersection_stoplines.stuck_stopline;
-  const auto default_stopline_idx_opt = intersection_stoplines.default_stopline;
-  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
+  const auto is_first_conflicting_lane_private =
+    first_conflicting_lane.attributeOr<std::string>("location", "else") == "private";
+
   if (stuck_detected) {
     if (
       is_first_conflicting_lane_private &&
       planner_param_.stuck_vehicle.disable_against_private_lane) {
       // do nothing
     } else {
-      std::optional<size_t> stopline_idx = std::nullopt;
-      if (stuck_stopline_idx_opt) {
+      std::optional<double> stopline_s = std::nullopt;
+      if (stuck_stopline_s_opt) {
+        const auto & stuck_stopline_s = stuck_stopline_s_opt.value();
         const bool is_stuck_stopline_feasible =
-          can_smoothly_stop_at(path, closest_idx, stuck_stopline_idx_opt.value(), planner_data);
+          can_smoothly_stop_at(closest_s, stuck_stopline_s, planner_data);
         if (is_stuck_stopline_feasible) {
-          stopline_idx = stuck_stopline_idx_opt.value();
+          stopline_s = stuck_stopline_s;
         }
       }
-      if (!stopline_idx) {
-        if (
-          default_stopline_idx_opt &&
-          can_smoothly_stop_at(path, closest_idx, default_stopline_idx_opt.value(), planner_data)) {
-          stopline_idx = default_stopline_idx_opt.value();
-        } else if (can_smoothly_stop_at(
-                     path, closest_idx, first_attention_stopline_idx, planner_data)) {
-          stopline_idx = first_attention_stopline_idx;
+      if (!stopline_s) {
+        if (default_stopline_s_opt) {
+          const auto & default_stopline_s = default_stopline_s_opt.value();
+          if (can_smoothly_stop_at(closest_s, default_stopline_s, planner_data)) {
+            stopline_s = default_stopline_s;
+          }
+        } else {
+          if (can_smoothly_stop_at(closest_s, first_attention_stopline_s, planner_data)) {
+            stopline_s = first_attention_stopline_s;
+          }
         }
       }
-      if (stopline_idx) {
-        return StuckStop{closest_idx, stopline_idx.value()};
+      if (stopline_s) {
+        return StuckStop{closest_s, stopline_s.value()};
       }
     }
   }
@@ -309,47 +307,47 @@ bool IntersectionModule::checkStuckVehicleInIntersection(
 }
 
 std::optional<YieldStuckStop> IntersectionModule::isYieldStuckStatus(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
-  const InterpolatedPathInfo & interpolated_path_info,
+  const Trajectory & path, const Interval & lane_id_interval,
   const IntersectionStopLines & intersection_stoplines, const PlannerData & planner_data) const
 {
-  const auto closest_idx = intersection_stoplines.closest_idx;
+  const auto & closest_s = intersection_stoplines.closest_s;
   const auto & intersection_lanelets = intersection_lanelets_.value();
-  const auto default_stopline_idx = intersection_stoplines.default_stopline.value();
-  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
-  const auto stuck_stopline_idx_opt = intersection_stoplines.stuck_stopline;
+  const auto & default_stopline_s = intersection_stoplines.default_stopline.value();
+  const auto & first_attention_stopline_s = intersection_stoplines.first_attention_stopline;
+  const auto & stuck_stopline_s_opt = intersection_stoplines.stuck_stopline;
 
-  const bool yield_stuck_detected = checkYieldStuckVehicleInIntersection(
-    interpolated_path_info, intersection_lanelets.attention_non_preceding(), planner_data);
+  const auto yield_stuck_detected = checkYieldStuckVehicleInIntersection(
+    path, lane_id_interval, intersection_lanelets.attention_non_preceding(), planner_data);
   if (yield_stuck_detected) {
-    std::optional<size_t> stopline_idx = std::nullopt;
-    const bool is_default_stopline_feasible =
-      can_smoothly_stop_at(path, closest_idx, default_stopline_idx, planner_data);
-    const bool is_first_attention_stopline_feasible =
-      can_smoothly_stop_at(path, closest_idx, first_attention_stopline_idx, planner_data);
-    if (stuck_stopline_idx_opt) {
-      const bool is_stuck_stopline_feasible =
-        can_smoothly_stop_at(path, closest_idx, stuck_stopline_idx_opt.value(), planner_data);
+    std::optional<double> stopline_s = std::nullopt;
+    const auto is_default_stopline_feasible =
+      can_smoothly_stop_at(closest_s, default_stopline_s, planner_data);
+    const auto is_first_attention_stopline_feasible =
+      can_smoothly_stop_at(closest_s, first_attention_stopline_s, planner_data);
+    if (stuck_stopline_s_opt) {
+      const auto & stuck_stopline_s = stuck_stopline_s_opt.value();
+      const auto is_stuck_stopline_feasible =
+        can_smoothly_stop_at(closest_s, stuck_stopline_s, planner_data);
       if (is_stuck_stopline_feasible) {
-        stopline_idx = stuck_stopline_idx_opt.value();
+        stopline_s = stuck_stopline_s;
       }
     }
-    if (!stopline_idx) {
+    if (!stopline_s) {
       if (is_default_stopline_feasible) {
-        stopline_idx = default_stopline_idx;
+        stopline_s = default_stopline_s;
       } else if (is_first_attention_stopline_feasible) {
-        stopline_idx = first_attention_stopline_idx;
+        stopline_s = first_attention_stopline_s;
       }
     }
-    if (stopline_idx) {
-      return YieldStuckStop{closest_idx, stopline_idx.value()};
+    if (stopline_s) {
+      return YieldStuckStop{closest_s, stopline_s.value()};
     }
   }
   return std::nullopt;
 }
 
 bool IntersectionModule::checkYieldStuckVehicleInIntersection(
-  const InterpolatedPathInfo & interpolated_path_info,
+  const Trajectory & path, const Interval & lane_id_interval,
   const lanelet::ConstLanelets & attention_lanelets, const PlannerData & planner_data) const
 {
   const bool yield_stuck_detection_direction = [&]() {
@@ -367,10 +365,12 @@ bool IntersectionModule::checkYieldStuckVehicleInIntersection(
   const double yield_stuck_distance_thr = planner_param_.yield_stuck.distance_threshold;
 
   LineString2d sparse_intersection_path;
-  const auto [start, end] = interpolated_path_info.lane_id_interval.value();
-  for (unsigned i = start; i < end; ++i) {
-    const auto & point = interpolated_path_info.path.points.at(i).point.pose.position;
-    const auto yaw = tf2::getYaw(interpolated_path_info.path.points.at(i).point.pose.orientation);
+  for (const auto s : path.base_arange(
+         {lane_id_interval.start, lane_id_interval.end},
+         planner_param_.common.path_interpolation_ds)) {
+    const auto pose = path.compute(s).point.pose;
+    const auto & point = pose.position;
+    const auto yaw = tf2::getYaw(pose.orientation);
     if (turn_direction_ == "right") {
       const double right_x = point.x - width / 2 * std::sin(yaw);
       const double right_y = point.y + width / 2 * std::cos(yaw);
