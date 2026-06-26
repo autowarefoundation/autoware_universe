@@ -6,6 +6,16 @@
     "crop_box_filter": {
       "type": "object",
       "properties": {
+        "input_frame": {
+          "type": "string",
+          "description": "input frame id for point cloud data",
+          "default": "base_link"
+        },
+        "output_frame": {
+          "type": "string",
+          "description": "output frame id for point cloud data",
+          "default": "base_link"
+        },
         "min_x": {
           "type": "number",
           "description": "minimum x-coordinate value for crop range in meters",

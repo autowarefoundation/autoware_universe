@@ -1,5 +1,8 @@
 /**:
   ros__parameters:
+    input_frame: ""
+    output_frame: ""
+
     radial_resolution: 0.5
     azimuth_resolution: 0.08
     elevation_resolution: 0.05

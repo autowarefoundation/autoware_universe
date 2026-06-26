@@ -1,4 +1,6 @@
 /**:
   ros__parameters:
+    input_frame: base_link
+    output_frame: base_link
     accumulation_time_sec: 2.0
     pointcloud_buffer_size: 50

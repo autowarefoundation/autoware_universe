@@ -1,4 +1,7 @@
 /**:
   ros__parameters:
+    input_frame: base_link
+    output_frame: base_link
+
     min_neighbors: 5
     search_radius: 0.2
