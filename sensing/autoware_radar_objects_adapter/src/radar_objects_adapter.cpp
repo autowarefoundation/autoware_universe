@@ -56,13 +56,11 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     "~/input/radar_info", rclcpp::SensorDataQoS(),
     std::bind(&RadarObjectsAdapter::radar_info_callback, this, std::placeholders::_1));
 
-  detections_pub_ = AUTOWARE_CREATE_PUBLISHER2(
-    autoware_perception_msgs::msg::DetectedObjects, "~/output/detections",
-    rclcpp::QoS(10).reliable().transient_local());
+  detections_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
+    "~/output/detections", rclcpp::QoS(10).reliable().transient_local());
 
-  tracks_pub_ = AUTOWARE_CREATE_PUBLISHER2(
-    autoware_perception_msgs::msg::TrackedObjects, "~/output/tracks",
-    rclcpp::QoS(10).reliable().transient_local());
+  tracks_pub_ = this->create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
+    "~/output/tracks", rclcpp::QoS(10).reliable().transient_local());
 
   default_position_z_ = this->declare_parameter<float>("default_position_z");
   default_velocity_z_ = this->declare_parameter<float>("default_velocity_z");
@@ -76,7 +74,10 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
     "acceleration_x",        "acceleration_y", "orientation"};
 
-  std::size_t hash_code = std::hash<std::string>{}(radar_objects_sub_->get_topic_name());
+  // agnocast_wrapper::Subscription does not expose get_topic_name(); resolve the input topic
+  // name via the node's topics interface (works in both =0 and =1 builds).
+  std::size_t hash_code = std::hash<std::string>{}(
+    this->get_node_topics_interface()->resolve_topic_name("~/input/objects"));
 
   for (std::size_t i = 0; i < sizeof(std::size_t); ++i) {
     topic_hash_code_[i] = static_cast<std::uint8_t>((hash_code >> (i * 8)) & 0xFF);
@@ -201,7 +202,7 @@ void RadarObjectsAdapter::radar_cov_to_detection_acceleration_cov(
 }
 
 void RadarObjectsAdapter::objects_callback(
-  const autoware_sensing_msgs::msg::RadarObjects & objects_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::RadarObjects) & objects_msg)
 {
   if (!valid_radar_info_) {
     RCLCPP_WARN_THROTTLE(
@@ -211,8 +212,8 @@ void RadarObjectsAdapter::objects_callback(
   }
 
   // publish both detections and tracks
-  this->parse_as_detections(objects_msg);
-  this->parse_as_tracks(objects_msg);
+  this->parse_as_detections(*objects_msg);
+  this->parse_as_tracks(*objects_msg);
 }
 
 template <typename ObjectType>
@@ -367,9 +368,9 @@ void RadarObjectsAdapter::parse_as_tracks(
 }
 
 void RadarObjectsAdapter::radar_info_callback(
-  const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg)
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::RadarInfo) & radar_info_msg)
 {
-  for (const auto & field_info : radar_info_msg.object_fields_info) {
+  for (const auto & field_info : radar_info_msg->object_fields_info) {
     field_info_map_[field_info.field_name.data] = field_info;
   }
 
