@@ -10,19 +10,19 @@
                 <mxCell id="in_pose" value="Pose (current / previous)&#10;from polling buffer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
                     <mxGeometry x="40" y="70" width="200" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="in_vel" value="VelocityReport batch&#10;from polling buffer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                <mxCell id="in_vel" value="VelocityReport batch&#10;rolling buffer (sensor_buffer_duration)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
                     <mxGeometry x="40" y="170" width="200" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="in_imu" value="IMU batch&#10;from polling buffer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                <mxCell id="in_imu" value="IMU batch&#10;rolling buffer (sensor_buffer_duration)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
                     <mxGeometry x="40" y="260" width="200" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="v_pose" value="calc_pose_velocity()&#10;3D distance / dt&#10;from previous and current pose" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                <mxCell id="v_pose" value="calc_pose_velocity()&#10;3D distance / dt&#10;skip if dt &gt; max_pose_lag" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
                     <mxGeometry x="320" y="60" width="230" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="sync_vel" value="find_nearest_velocity_report()&#10;timestamp sync&#10;(stamp_diff &lt;= update_interval)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                <mxCell id="sync_vel" value="find_nearest_velocity_report()&#10;timestamp sync&#10;(stamp_diff &lt;= max_stamp_lag)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
                     <mxGeometry x="320" y="160" width="230" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="sync_imu" value="find_nearest_imu()&#10;timestamp sync&#10;(stamp_diff &lt;= update_interval)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                <mxCell id="sync_imu" value="find_nearest_imu()&#10;timestamp sync&#10;(stamp_diff &lt;= max_stamp_lag)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
                     <mxGeometry x="320" y="250" width="230" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="constraint" value="Constraint check&#10;- |ω_imu| &lt;= max_angular_velocity&#10;- min_speed &lt;= v_pose &lt;= max_speed&#10;- |v_wheel| &gt; 0" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" parent="1" vertex="1">
@@ -34,7 +34,7 @@
                 <mxCell id="out_ok" value="Updated result&#10;estimated_speed_scale_factor&#10;covariance, K, v_pose, v_wheel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
                     <mxGeometry x="1260" y="160" width="220" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="out_skip" value="Not updated&#10;keep previous scale factor&#10;return reason string" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                <mxCell id="out_skip" value="Not updated&#10;keep previous scale factor&#10;UpdateFailureReason" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
                     <mxGeometry x="1260" y="280" width="220" height="70" as="geometry"/>
                 </mxCell>
                 <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" parent="1" source="in_pose" target="v_pose" edge="1">

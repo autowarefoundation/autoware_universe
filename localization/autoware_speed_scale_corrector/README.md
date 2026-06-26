@@ -38,6 +38,7 @@ The speed scale estimation follows these steps:
 ### 1. Data Collection
 
 - Collects pose (`PoseStamped`), IMU, and vehicle velocity reports (`VelocityReport`) received since the previous timer callback
+- Keeps IMU and velocity report messages in rolling buffers of length `sensor_buffer_duration` for timestamp synchronization
 - Keeps the previous pose internally to compute pose velocity between consecutive updates
 
 ### 2. Pose Velocity Calculation
@@ -48,16 +49,16 @@ $$
 v_{pose} = \frac{\| \Delta \mathbf{p} \|}{\Delta t}
 $$
 
-If the time difference between the two poses is greater than or equal to `2 × update_interval`, the previous pose is reset and estimation is skipped.
+If the time difference between the two poses exceeds `max_pose_lag`, the previous pose is reset and estimation is skipped.
 
 ### 3. Timestamp Synchronization
 
-For the current pose timestamp, the node selects:
+For the current pose timestamp, the estimator selects from the rolling buffers:
 
 - the nearest IMU sample for angular velocity constraint checking
 - the nearest velocity report for Kalman filter observation
 
-Estimation is skipped when either timestamp difference is greater than `update_interval`.
+Estimation is skipped when either timestamp difference exceeds `max_stamp_lag`.
 
 ### 4. Constraint Validation
 
@@ -126,4 +127,4 @@ $$
 
 ### Tuning
 
-Default constraint values are a practical starting point, not vehicle-specific optima. If estimation accuracy is insufficient, tune `max_angular_velocity`, `min_speed`, `max_speed`, and Kalman noise parameters per vehicle and operation. IMU bias cancellation or other preprocessing may allow a stricter angular velocity threshold; without it, thresholds near the IMU noise floor are expected.
+Default constraint values are a practical starting point, not vehicle-specific optima. If estimation accuracy is insufficient, tune `max_pose_lag`, `max_stamp_lag`, `sensor_buffer_duration`, `max_angular_velocity`, `min_speed`, `max_speed`, and Kalman noise parameters per vehicle and operation. IMU bias cancellation or other preprocessing may allow a stricter angular velocity threshold; without it, thresholds near the IMU noise floor are expected.
