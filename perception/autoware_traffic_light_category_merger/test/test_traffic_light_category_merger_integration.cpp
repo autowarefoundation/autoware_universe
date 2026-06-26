@@ -91,7 +91,7 @@ TrafficLight make_signal(int64_t id, uint8_t type)
 class OutputCapture
 {
 public:
-  void onSignals(TrafficLightArray::ConstSharedPtr msg)
+  void on_signals(TrafficLightArray::ConstSharedPtr msg)
   {
     signals = *msg;
     got_signals = true;
@@ -121,7 +121,7 @@ protected:
     OutputCapture capture;
     auto tester = std::make_shared<rclcpp::Node>("integration_tester");
     auto signal_sub = tester->create_subscription<TrafficLightArray>(
-      output_topic, rclcpp::QoS{1}, std::bind(&OutputCapture::onSignals, &capture, _1));
+      output_topic, rclcpp::QoS{1}, std::bind(&OutputCapture::on_signals, &capture, _1));
     auto car_pub = tester->create_publisher<TrafficLightArray>(car_topic, rclcpp::QoS{1});
     auto pedestrian_pub =
       tester->create_publisher<TrafficLightArray>(pedestrian_topic, rclcpp::QoS{1});
