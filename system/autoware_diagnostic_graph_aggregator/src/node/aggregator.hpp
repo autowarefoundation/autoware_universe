@@ -19,6 +19,7 @@
 #include "driving_mode_mapping.hpp"
 #include "graph/graph.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <std_srvs/srv/set_bool.hpp>
@@ -32,7 +33,7 @@
 namespace autoware::diagnostic_graph_aggregator
 {
 
-class AggregatorNode : public rclcpp::Node
+class AggregatorNode : public autoware::agnocast_wrapper::Node
 {
 public:
   explicit AggregatorNode(const rclcpp::NodeOptions & options);
@@ -47,25 +48,26 @@ private:
   using ResetDiagGraph = tier4_system_msgs::srv::ResetDiagGraph;
   using SetInitializing = std_srvs::srv::SetBool;
   using SetOverride = tier4_system_msgs::srv::SetDiagGraphOverride;
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Subscription<DiagnosticArray>::SharedPtr sub_input_;
-  rclcpp::Publisher<DiagGraphStruct>::SharedPtr pub_struct_;
-  rclcpp::Publisher<DiagGraphStatus>::SharedPtr pub_status_;
-  rclcpp::Publisher<DiagnosticArray>::SharedPtr pub_unknown_;
-  rclcpp::Service<ResetDiagGraph>::SharedPtr srv_reset_;
-  rclcpp::Service<SetInitializing>::SharedPtr srv_set_initializing_;
-  rclcpp::Service<SetOverride>::SharedPtr srv_set_override_;
+  AUTOWARE_TIMER_PTR timer_;
+  AUTOWARE_SUBSCRIPTION_PTR(DiagnosticArray) sub_input_;
+  AUTOWARE_PUBLISHER_PTR(DiagGraphStruct) pub_struct_;
+  AUTOWARE_PUBLISHER_PTR(DiagGraphStatus) pub_status_;
+  AUTOWARE_PUBLISHER_PTR(DiagnosticArray) pub_unknown_;
+  AUTOWARE_SERVICE_PTR(ResetDiagGraph) srv_reset_;
+  AUTOWARE_SERVICE_PTR(SetInitializing) srv_set_initializing_;
+  AUTOWARE_SERVICE_PTR(SetOverride) srv_set_override_;
 
   void on_timer();
-  void on_diag(const DiagnosticArray & msg);
+  void on_diag(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DiagnosticArray) & msg);
   void on_reset(
-    const ResetDiagGraph::Request::SharedPtr request,
-    const ResetDiagGraph::Response::SharedPtr response);
+    AUTOWARE_SERVER_REQUEST_PTR(ResetDiagGraph) request,
+    AUTOWARE_SERVER_RESPONSE_PTR(ResetDiagGraph) response);
   void on_set_initializing(
-    const SetInitializing::Request::SharedPtr request,
-    const SetInitializing::Response::SharedPtr response);
+    AUTOWARE_SERVER_REQUEST_PTR(SetInitializing) request,
+    AUTOWARE_SERVER_RESPONSE_PTR(SetInitializing) response);
   void on_set_override(
-    const SetOverride::Request::SharedPtr request, const SetOverride::Response::SharedPtr response);
+    AUTOWARE_SERVER_REQUEST_PTR(SetOverride) request,
+    AUTOWARE_SERVER_RESPONSE_PTR(SetOverride) response);
 };
 
 }  // namespace autoware::diagnostic_graph_aggregator
