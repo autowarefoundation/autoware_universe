@@ -31,6 +31,7 @@ DrivingModeManager::DrivingModeManager(const rclcpp::NodeOptions & options)
   using std::placeholders::_1;
   using std::placeholders::_2;
 
+  rate_ = declare_parameter<double>("rate");
   diag_.setHardwareID("none");
 
   const auto plugin_name = declare_parameter<std::string>("plugin");
@@ -40,7 +41,7 @@ DrivingModeManager::DrivingModeManager(const rclcpp::NodeOptions & options)
   const auto plugin = loader_.createSharedInstance(plugin_name);
   init_ = std::make_unique<ManagerInit>(std::make_unique<RosInterface>(this), plugin);
 
-  const auto period = rclcpp::Rate(1.0).period();
+  const auto period = rclcpp::Rate(rate_).period();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer_init(); });
 }
 
@@ -52,7 +53,7 @@ void DrivingModeManager::on_timer_init()
   main_ = std::make_unique<ManagerMain>(*init_);
   init_.reset();
 
-  const auto period = rclcpp::Rate(10.0).period();
+  const auto period = rclcpp::Rate(rate_).period();
   timer_->cancel();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer_main(); });
 }
