@@ -88,7 +88,7 @@ TEST(TrafficLightCategoryMerger, ConcatenatesCarThenPedestrian)
     make_signal(3, TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT, TrafficLightElement::AMBER));
 
   // Act
-  const auto out = tl::TrafficLightCategoryMerger().merge(car, pedestrian);
+  const auto out = tl::TrafficLightCategoryMerger::merge(car, pedestrian);
 
   // Assert: car signals precede pedestrian signals, in input order.
   ASSERT_EQ(out.signals.size(), 3u);
@@ -114,7 +114,7 @@ TEST(TrafficLightCategoryMerger, OutputHeaderComesFromCarArray)
   TrafficLightArray pedestrian;
   pedestrian.header = make_header("pedestrian_frame");
 
-  const auto out = tl::TrafficLightCategoryMerger().merge(car, pedestrian);
+  const auto out = tl::TrafficLightCategoryMerger::merge(car, pedestrian);
 
   // The whole header is copied from the car array (frame_id tells it apart from
   // the pedestrian one, which shares the same stamp).
@@ -132,7 +132,7 @@ TEST(TrafficLightCategoryMerger, EmptyPedestrianKeepsCarSignals)
   TrafficLightArray pedestrian;
   pedestrian.header = make_header("pedestrian_frame");
 
-  const auto out = tl::TrafficLightCategoryMerger().merge(car, pedestrian);
+  const auto out = tl::TrafficLightCategoryMerger::merge(car, pedestrian);
 
   ASSERT_EQ(out.signals.size(), 1u);
   EXPECT_EQ(out.signals[0].traffic_light_id, 1);
@@ -151,7 +151,7 @@ TEST(TrafficLightCategoryMerger, EmptyCarKeepsPedestrianSignalsAndCarHeader)
   pedestrian.signals.push_back(
     make_signal(3, TrafficLight::PEDESTRIAN_TRAFFIC_LIGHT, TrafficLightElement::GREEN));
 
-  const auto out = tl::TrafficLightCategoryMerger().merge(car, pedestrian);
+  const auto out = tl::TrafficLightCategoryMerger::merge(car, pedestrian);
 
   ASSERT_EQ(out.signals.size(), 1u);
   EXPECT_EQ(out.signals[0].traffic_light_id, 3);
@@ -168,7 +168,7 @@ TEST(TrafficLightCategoryMerger, BothEmptyYieldsEmptyWithCarHeader)
   TrafficLightArray pedestrian;
   pedestrian.header = make_header("pedestrian_frame");
 
-  const auto out = tl::TrafficLightCategoryMerger().merge(car, pedestrian);
+  const auto out = tl::TrafficLightCategoryMerger::merge(car, pedestrian);
 
   EXPECT_EQ(out.signals.size(), 0u);
   EXPECT_EQ(out.header, car.header);

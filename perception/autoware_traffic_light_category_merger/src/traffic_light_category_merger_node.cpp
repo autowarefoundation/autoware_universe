@@ -38,7 +38,8 @@ void TrafficLightCategoryMergerNode::signals_callback(
   const TrafficLightArray::ConstSharedPtr & car_signals_msg,
   const TrafficLightArray::ConstSharedPtr & pedestrian_signals_msg)
 {
-  const TrafficLightArray output = merger_.merge(*car_signals_msg, *pedestrian_signals_msg);
+  const TrafficLightArray output =
+    TrafficLightCategoryMerger::merge(*car_signals_msg, *pedestrian_signals_msg);
   pub_traffic_light_signals_->publish(output);
 }
 

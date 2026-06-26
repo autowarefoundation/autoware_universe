@@ -25,13 +25,13 @@ using tier4_perception_msgs::msg::TrafficLightArray;
 ///
 /// Concatenates the car and pedestrian traffic-light arrays into a single array.
 /// The result carries the car array's header, followed by the car signals and
-/// then the pedestrian signals. This holds no state, so a single instance can be
-/// shared across callbacks.
+/// then the pedestrian signals. The merge holds no state, so it is exposed as a
+/// static function.
 class TrafficLightCategoryMerger
 {
 public:
-  TrafficLightArray merge(
-    const TrafficLightArray & car_signals, const TrafficLightArray & pedestrian_signals) const;
+  static TrafficLightArray merge(
+    const TrafficLightArray & car_signals, const TrafficLightArray & pedestrian_signals);
 };
 
 }  // namespace autoware::traffic_light

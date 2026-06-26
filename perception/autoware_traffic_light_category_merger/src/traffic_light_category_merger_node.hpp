@@ -49,9 +49,6 @@ private:
     const TrafficLightArray::ConstSharedPtr & car_signals_msg,
     const TrafficLightArray::ConstSharedPtr & pedestrian_signals_msg);
 
-  // Core merge logic, decoupled from the ROS interface.
-  TrafficLightCategoryMerger merger_;
-
   rclcpp::Publisher<TrafficLightArray>::SharedPtr pub_traffic_light_signals_;
 };
 

@@ -18,7 +18,7 @@ namespace autoware::traffic_light
 {
 
 TrafficLightArray TrafficLightCategoryMerger::merge(
-  const TrafficLightArray & car_signals, const TrafficLightArray & pedestrian_signals) const
+  const TrafficLightArray & car_signals, const TrafficLightArray & pedestrian_signals)
 {
   TrafficLightArray output;
   output.header = car_signals.header;
