@@ -24,6 +24,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // cspell: ignore semseg
@@ -182,7 +183,7 @@ std::vector<Colormap> load_segmentation_colormap(const std::string & file_name)
     throw std::runtime_error{error_msg.str()};
   }
 
-  std::vector<Colormap> semseg_color_map;
+  std::vector<Colormap> parsed;
   constexpr size_t expected_column_num = 5;
   for (const auto & row : rows.value()) {
     // ensure we have expected columns (id, name, r, g, b)
@@ -205,12 +206,21 @@ std::vector<Colormap> load_segmentation_colormap(const std::string & file_name)
         cmap.color.push_back(static_cast<unsigned char>(std::stoi(row[i])));
       }
 
-      semseg_color_map.push_back(cmap);
+      parsed.push_back(cmap);
     } catch (const std::exception & e) {
       std::stringstream error_msg;
       error_msg << "Invalid row: " << e.what();
       throw std::runtime_error{error_msg.str()};
     }
+  }
+
+  const int max_id =
+    std::max_element(parsed.begin(), parsed.end(), [](const Colormap & a, const Colormap & b) {
+      return a.id < b.id;
+    })->id;
+  std::vector<Colormap> semseg_color_map(max_id + 1);
+  for (auto & cmap : parsed) {
+    semseg_color_map[cmap.id] = std::move(cmap);
   }
 
   return semseg_color_map;

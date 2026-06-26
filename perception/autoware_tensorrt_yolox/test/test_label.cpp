@@ -214,6 +214,56 @@ TEST(LoadSegmentationColormap, ParsesColorMap)
   EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[2]), 170);
 }
 
+// load_segmentation_colormap with out-of-order IDs: vector position must match ID for safe indexing
+TEST(LoadSegmentationColormap, ReturnsEntriesIndexableByIdWhenOutOfOrder)
+{
+  // Arrange: id=1 appears before id=0 in the file
+  const std::string color_map_path = write_temp_file(
+    "semseg_col_map_out_of_order.csv",
+    "id,name,r,g,b\n"
+    "1, red, 255, 0, 0\n"
+    "0, blue, 0, 0, 255\n");
+
+  // Act
+  const auto semseg_color_map =
+    autoware::tensorrt_yolox::load_segmentation_colormap(color_map_path);
+
+  // Assert: semseg_color_map[0] must be blue (id=0), semseg_color_map[1] must be red (id=1)
+  // because getColorizedMask() indexes directly by pixel value (id)
+  ASSERT_EQ(semseg_color_map.size(), 2u);
+  EXPECT_EQ(semseg_color_map[0].id, 0);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[0]), 0);    // r
+  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[1]), 0);    // g
+  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[2]), 255);  // b
+  EXPECT_EQ(semseg_color_map[1].id, 1);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[0]), 255);  // r
+  EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[1]), 0);    // g
+  EXPECT_EQ(static_cast<int>(semseg_color_map[1].color[2]), 0);    // b
+}
+
+// load_segmentation_colormap with non-contiguous IDs: vector must be resized to be safely
+// indexable by the largest ID so that getColorizedMask() does not read a wrong entry
+TEST(LoadSegmentationColormap, ReturnsVectorSizedByMaxIdWhenNonContiguous)
+{
+  // Arrange: IDs 0 and 2 are present, ID 1 is absent
+  const std::string color_map_path = write_temp_file(
+    "semseg_col_map_non_contiguous.csv",
+    "id,name,r,g,b\n"
+    "0, blue, 0, 0, 255\n"
+    "2, green, 0, 255, 0\n");
+
+  // Act
+  const auto semseg_color_map =
+    autoware::tensorrt_yolox::load_segmentation_colormap(color_map_path);
+
+  // Assert: vector must be size 3 (max id + 1) so that semseg_color_map[2] is green
+  ASSERT_EQ(semseg_color_map.size(), 3u);
+  EXPECT_EQ(semseg_color_map[0].id, 0);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[0].color[2]), 255);  // blue
+  EXPECT_EQ(semseg_color_map[2].id, 2);
+  EXPECT_EQ(static_cast<int>(semseg_color_map[2].color[1]), 255);  // green
+}
+
 // load_image_list returns the paths listed in the file
 TEST(LoadImageList, ReturnsListedPaths)
 {
