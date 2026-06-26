@@ -15,6 +15,8 @@
 #ifndef TRAFFIC_LIGHT_CATEGORY_MERGER_NODE_HPP_
 #define TRAFFIC_LIGHT_CATEGORY_MERGER_NODE_HPP_
 
+#include "traffic_light_category_merger.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
@@ -49,6 +51,9 @@ private:
   void signalsCallback(
     const TrafficLightArray::ConstSharedPtr & car_signals_msg,
     const TrafficLightArray::ConstSharedPtr & pedestrian_signals_msg);
+
+  // Core merge logic, decoupled from the ROS interface.
+  TrafficLightCategoryMerger merger_;
 
   rclcpp::Publisher<TrafficLightArray>::SharedPtr pub_traffic_light_signals_;
 };
