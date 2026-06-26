@@ -103,6 +103,8 @@ using AutowareModeSet = std::unordered_set<AutowareMode>;
 namespace std
 {
 
+// NOTE: The std::hash function is required for the unordered_map and unordered_set.
+
 template <>
 struct hash<autoware::driving_mode_manager::AutowareMode>
 {
