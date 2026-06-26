@@ -14,3 +14,13 @@
       - "{mode: 2001, path: /autoware/modes/emergency_stop}"
       - "{mode: 2002, path: /autoware/modes/comfortable_stop}"
       - "{mode: 2003, path: /autoware/modes/pull_over}"
+
+    use_driving_mode_mappings: true
+    driving_mode_mappings:
+      - "{mode: 1001, path: /autoware/modes/stop}"
+      - "{mode: 1002, path: /autoware/modes/autonomous}"
+      - "{mode: 1003, path: /autoware/modes/local}"
+      - "{mode: 1004, path: /autoware/modes/remote}"
+      - "{mode: 2001, path: /autoware/modes/emergency_stop}"
+      - "{mode: 2002, path: /autoware/modes/comfortable_stop}"
+      - "{mode: 2003, path: /autoware/modes/pull_over}"
