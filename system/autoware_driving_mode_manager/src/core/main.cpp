@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <queue>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
