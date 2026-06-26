@@ -142,6 +142,41 @@ You can change these parameters in rosparam in the table below.
 | `max_lateral_accel`                      | `2.0` [m/s^2]  |
 | `min_acceleration_before_curve`          | `-2.0` [m/s^2] |
 
+#### Center-anchored bicycle heading for path integration (for vehicle obstacles)
+
+A vehicle pivots about its **rear axle**, not its body-box center, so its heading lags the path
+tangent on turns and lane changes (the body-box center traces the lane while the heading carries a
+slip angle). The body-box center is kept on the Frenet reference path — preserving lane-centering —
+while the **heading is integrated forward as a state** rather than read off the segment azimuth.
+
+For on-lane vehicles, `convertToPredictedPath` integrates the body heading `psi` along the predicted
+center path with a rear-axle relaxation law:
+
+```text
+gain = 1 - exp(-chord / lr)
+psi += gain * normalize_radian(theta_c - psi)
+```
+
+where `chord` is the inter-point center displacement, `theta_c` is the center velocity direction, and
+`lr = dimensions.x * wheel_pos_ratio_rear` is the rear lever arm. The heading relaxes toward the
+center velocity direction with a lag that is exactly the bicycle slip angle, so cornering produces the
+correct rear-tucking geometry. The formulation is unconditionally stable (`gain` in `(0, 1)` for all
+inputs), which replaces an earlier post-pass that recovered heading by finite-differencing positions
+and dividing by `lr` — a feedback loop that diverged at high speed / fine sampling.
+
+The per-class `wheel_pos_ratio_rear` values mirror `autoware_multi_object_tracker`'s
+`object_model.hpp` (`0.25` for car/bus/truck/trailer, `0.30` for motorcycle) and are kept in sync
+manually so this package keeps no build dependency on the tracker.
+
+#### Footprint-aware box expansion (for all objects)
+
+A tracked object carries a body bounding box (`shape.dimensions`) plus an object-local footprint
+polygon (`shape.footprint`) that can protrude beyond the box (e.g. open doors, overhanging cargo).
+As a shared final pass over every predicted object, bounding-box shapes whose footprint protrudes
+are expanded to the axis-aligned union of the body box and footprint, and their predicted paths are
+re-centered on the expanded box so the path keeps tracing the box center. Objects without a
+protruding footprint are unaffected.
+
 ## Using Vehicle Acceleration for Path Prediction (for Vehicle Obstacles)
 
 By default, the `map_based_prediction` module uses the current obstacle's velocity to compute its predicted path length. However, it is possible to use the obstacle's current acceleration to calculate its predicted path's length.
