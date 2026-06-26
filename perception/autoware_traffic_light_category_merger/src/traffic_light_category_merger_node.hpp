@@ -25,10 +25,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
 
-#include <chrono>
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace autoware::traffic_light
 {

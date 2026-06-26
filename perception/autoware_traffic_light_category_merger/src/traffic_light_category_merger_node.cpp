@@ -15,8 +15,6 @@
 #include "traffic_light_category_merger_node.hpp"
 
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace autoware::traffic_light
 {
