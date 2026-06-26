@@ -305,7 +305,7 @@ void calcTrajectoryCurvatureBySpatialResample(
 
   // 2. Remove spatially duplicate points (stopped vehicle).
   //    Spline requires strictly increasing arc length.
-  constexpr double dedup_eps = 1e-3;
+  constexpr double deduplicate_eps = 1e-3;
   std::vector<double> unique_arclength;
   std::vector<double> unique_x;
   std::vector<double> unique_y;
@@ -313,7 +313,7 @@ void calcTrajectoryCurvatureBySpatialResample(
   unique_x.push_back(traj.x.front());
   unique_y.push_back(traj.y.front());
   for (size_t i = 1; i < orig_arclength.size(); ++i) {
-    if (orig_arclength[i] - unique_arclength.back() > dedup_eps) {
+    if (orig_arclength[i] - unique_arclength.back() > deduplicate_eps) {
       unique_arclength.push_back(orig_arclength[i]);
       unique_x.push_back(traj.x[i]);
       unique_y.push_back(traj.y[i]);
@@ -366,11 +366,11 @@ void calcTrajectoryCurvatureBySpatialResample(
   for (size_t i = 0; i < traj.size(); ++i) {
     // Find matching unique point
     while (unique_idx + 1 < unique_arclength.size() &&
-           unique_arclength[unique_idx + 1] <= orig_arclength[i] + dedup_eps) {
+           unique_arclength[unique_idx + 1] <= orig_arclength[i] + deduplicate_eps) {
       ++unique_idx;
     }
     // Only assign curvature if this point has a unique spatial position
-    if (i == 0 || orig_arclength[i] - orig_arclength[i - 1] > dedup_eps) {
+    if (i == 0 || orig_arclength[i] - orig_arclength[i - 1] > deduplicate_eps) {
       traj.k[i] = k_at_unique[unique_idx];
       traj.smooth_k[i] = smooth_k_at_unique[unique_idx];
     }
