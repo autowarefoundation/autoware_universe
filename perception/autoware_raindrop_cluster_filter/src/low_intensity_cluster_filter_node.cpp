@@ -52,7 +52,6 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
 
   using std::placeholders::_1;
   // Set publisher/subscriber
-  // cppcheck-suppress unknownMacro
   object_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
     tier4_perception_msgs::msg::DetectedObjectsWithFeature, "input/objects", rclcpp::QoS{1},
     std::bind(&LowIntensityClusterFilter::objectCallback, this, _1),

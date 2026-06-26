@@ -40,7 +40,6 @@ public:
   explicit LowIntensityClusterFilter(const rclcpp::NodeOptions & node_options);
 
 private:
-  // cppcheck-suppress unknownMacro
   void objectCallback(AUTOWARE_MESSAGE_CONST_SHARED_PTR(
     tier4_perception_msgs::msg::DetectedObjectsWithFeature) input_msg);
   bool isValidatedCluster(const sensor_msgs::msg::PointCloud2 & cluster);
