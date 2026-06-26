@@ -17,6 +17,7 @@
 
 #include "autoware/map_based_prediction/data_structure.hpp"
 #include "autoware/map_based_prediction/priority_predictor/debug_priority_pred.hpp"
+#include "autoware/map_based_prediction/priority_predictor/signal_stop_hysteresis.hpp"
 
 #include <autoware/lanelet2_utils/nn_search.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -86,11 +87,20 @@ struct ObjectPrediction
   std::vector<PredictedPath> predicted_paths;
 };
 
+struct PriorityPredictionParams
+{
+  double stop_time_hysteresis{0.2};
+  double go_time_hysteresis{0.1};
+  double signal_retention_timeout{15.0};
+};
+
 class TrafficSignalStopPredictor
 {
 public:
-  void setParameters(double signal_observation_timeout)
+  void setParameters(
+    const PriorityPredictionParams & params, const double signal_observation_timeout)
   {
+    params_ = params;
     signal_observation_timeout_ = signal_observation_timeout;
   }
 
@@ -109,7 +119,10 @@ private:
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   std::optional<autoware::experimental::lanelet2_utils::LaneletRTree> road_lanelet_rtree_;
   std::unordered_map<lanelet::Id, TrafficLightGroup> traffic_signal_id_map_;
+  std::unordered_map<lanelet::Id, TrafficLightGroup> stabilized_traffic_signal_id_map_;
+  std::unordered_map<lanelet::Id, SignalStabilizeState> signal_stabilize_state_;
   std::optional<rclcpp::Time> latest_traffic_signal_time_;
+  PriorityPredictionParams params_;
   double signal_observation_timeout_{0.0};
   StopHypothesisDebug debug_;
 };

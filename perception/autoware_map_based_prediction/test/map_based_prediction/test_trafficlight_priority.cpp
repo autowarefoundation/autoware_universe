@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/map_based_prediction/priority_predictor/signal_stop_hysteresis.hpp"
 #include "autoware/map_based_prediction/priority_predictor/traffic_signal_stop_predictor.hpp"
 
 #include <autoware/lanelet2_utils/nn_search.hpp>
+#include <rclcpp/time.hpp>
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
@@ -318,6 +320,106 @@ TEST(PriorityUtils, StopHypothesisConfidenceCenterIsStrongest)
   EXPECT_DOUBLE_EQ(center, weight);
   EXPECT_LT(weakenConfidenceInLaneChange(Maneuver::LEFT_LANE_CHANGE, weight), center);
   EXPECT_LT(weakenConfidenceInLaneChange(Maneuver::RIGHT_LANE_CHANGE, weight), center);
+}
+
+// ---- signal stop hysteresis -------------------------------------------------------
+
+rclcpp::Time t(const double seconds)
+{
+  return rclcpp::Time(static_cast<int64_t>(seconds * 1e9));
+}
+
+TrafficLightGroup makeGroup(const uint8_t color, const uint8_t shape = TrafficLightElement::CIRCLE)
+{
+  TrafficLightGroup group;
+  group.elements.push_back(makeElement(color, shape));
+  return group;
+}
+
+uint8_t firstColor(const TrafficLightGroup & group)
+{
+  return group.elements.empty() ? TrafficLightElement::UNKNOWN : group.elements.front().color;
+}
+
+TEST(PriorityUtils, StopHysteresisDelaysEnteringStop)
+{
+  SignalStabilizeState state;
+  EXPECT_FALSE(debounceStopDecision(state, true, t(0.0), 0.2, 0.1));
+  EXPECT_FALSE(debounceStopDecision(state, true, t(0.15), 0.2, 0.1));
+  EXPECT_TRUE(debounceStopDecision(state, true, t(0.2), 0.2, 0.1));
+}
+
+TEST(PriorityUtils, StopHysteresisRevertsToGoSoonerThanStop)
+{
+  SignalStabilizeState state;
+  ASSERT_FALSE(debounceStopDecision(state, true, t(0.0), 0.2, 0.1));
+  ASSERT_TRUE(debounceStopDecision(state, true, t(0.2), 0.2, 0.1));
+  EXPECT_TRUE(debounceStopDecision(state, false, t(0.25), 0.2, 0.1));
+  EXPECT_TRUE(debounceStopDecision(state, false, t(0.3), 0.2, 0.1));
+  EXPECT_FALSE(debounceStopDecision(state, false, t(0.35), 0.2, 0.1));
+}
+
+TEST(PriorityUtils, StopHysteresisAbsorbsSingleFrameFlicker)
+{
+  SignalStabilizeState state;
+  EXPECT_FALSE(debounceStopDecision(state, true, t(0.0), 0.2, 0.1));
+  EXPECT_FALSE(debounceStopDecision(state, true, t(0.1), 0.2, 0.1));
+  EXPECT_FALSE(debounceStopDecision(state, false, t(0.12), 0.2, 0.1));
+  EXPECT_FALSE(debounceStopDecision(state, true, t(0.2), 0.2, 0.1));
+}
+
+TEST(PriorityUtils, StopHysteresisIsIdempotentWithinAFrame)
+{
+  SignalStabilizeState state;
+  EXPECT_FALSE(debounceStopDecision(state, true, t(0.0), 0.2, 0.1));
+  EXPECT_FALSE(debounceStopDecision(state, true, t(0.0), 0.2, 0.1));
+  EXPECT_FALSE(debounceStopDecision(state, true, t(0.0), 0.2, 0.1));
+  EXPECT_TRUE(debounceStopDecision(state, true, t(0.2), 0.2, 0.1));
+}
+
+TEST(PriorityUtils, ShowsRedOrAmberCircleClassifiesCircleColors)
+{
+  EXPECT_TRUE(showsRedOrAmberCircle(makeGroup(TrafficLightElement::RED)));
+  EXPECT_TRUE(showsRedOrAmberCircle(makeGroup(TrafficLightElement::AMBER)));
+  EXPECT_FALSE(showsRedOrAmberCircle(makeGroup(TrafficLightElement::GREEN)));
+  EXPECT_FALSE(showsRedOrAmberCircle(makeGroup(TrafficLightElement::UNKNOWN)));
+  TrafficLightGroup mixed = makeGroup(TrafficLightElement::RED);
+  mixed.elements.push_back(
+    makeElement(TrafficLightElement::GREEN, TrafficLightElement::LEFT_ARROW));
+  EXPECT_TRUE(showsRedOrAmberCircle(mixed));
+}
+
+TEST(PriorityUtils, StabilizeHoldsLastStableUntilStopCommits)
+{
+  SignalStabilizeState state;
+  EXPECT_EQ(
+    firstColor(debounceSignalGroup(state, makeGroup(TrafficLightElement::GREEN), t(0.0), 0.2, 0.1)),
+    TrafficLightElement::GREEN);
+  EXPECT_EQ(
+    firstColor(debounceSignalGroup(state, makeGroup(TrafficLightElement::RED), t(0.1), 0.2, 0.1)),
+    TrafficLightElement::GREEN);
+  EXPECT_EQ(
+    firstColor(debounceSignalGroup(state, makeGroup(TrafficLightElement::RED), t(0.2), 0.2, 0.1)),
+    TrafficLightElement::GREEN);
+  EXPECT_EQ(
+    firstColor(debounceSignalGroup(state, makeGroup(TrafficLightElement::RED), t(0.3), 0.2, 0.1)),
+    TrafficLightElement::RED);
+}
+
+TEST(PriorityUtils, StabilizeRestoresGoQuickerThanStop)
+{
+  SignalStabilizeState state;
+  ASSERT_EQ(
+    firstColor(debounceSignalGroup(state, makeGroup(TrafficLightElement::RED), t(0.0), 0.2, 0.1)),
+    TrafficLightElement::RED);
+  EXPECT_EQ(
+    firstColor(
+      debounceSignalGroup(state, makeGroup(TrafficLightElement::GREEN), t(0.05), 0.2, 0.1)),
+    TrafficLightElement::RED);
+  EXPECT_EQ(
+    firstColor(
+      debounceSignalGroup(state, makeGroup(TrafficLightElement::GREEN), t(0.15), 0.2, 0.1)),
+    TrafficLightElement::GREEN);
 }
 
 }  // namespace

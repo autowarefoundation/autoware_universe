@@ -393,6 +393,10 @@ void TrafficSignalStopPredictor::setTrafficSignal(
   for (const auto & group : traffic_signals.traffic_light_groups) {
     traffic_signal_id_map_[group.traffic_light_group_id] = group;
   }
+
+  stabilized_traffic_signal_id_map_ = stabilizeTrafficSignalMap(
+    traffic_signal_id_map_, signal_stabilize_state_, now, params_.stop_time_hysteresis,
+    params_.go_time_hysteresis, params_.signal_retention_timeout);
   latest_traffic_signal_time_ = now;
 }
 
@@ -411,17 +415,20 @@ std::vector<PredictedPath> TrafficSignalStopPredictor::addStopHypotheses(
   }
 
   const bool signal_observation_stale =
-    !latest_traffic_signal_time_ ||
-    (now - *latest_traffic_signal_time_).seconds() > signal_observation_timeout_;
+    signal_observation_timeout_ > 0.0 &&
+    (!latest_traffic_signal_time_ ||
+     (now - *latest_traffic_signal_time_).seconds() > signal_observation_timeout_);
   if (signal_observation_stale) {
+    signal_stabilize_state_.clear();
+    stabilized_traffic_signal_id_map_.clear();
     debug_.used_signal_colors.clear();
     return prediction.predicted_paths;
   }
 
-  debug::populateUsedSignalColors(traffic_signal_id_map_, debug_.used_signal_colors);
+  debug::populateUsedSignalColors(stabilized_traffic_signal_id_map_, debug_.used_signal_colors);
 
   return addTrafficSignalStopHypotheses(
-    prediction, traffic_signal_id_map_, *road_lanelet_rtree_, debug_);
+    prediction, stabilized_traffic_signal_id_map_, *road_lanelet_rtree_, debug_);
 }
 
 }  // namespace autoware::map_based_prediction::priority_predictor

@@ -29,6 +29,7 @@ ament_auto_add_library(map_based_prediction_node SHARED
   lib/predictor_vehicle/path_processing.cpp
   lib/predictor_vehicle/debug.cpp
   lib/priority_predictor/traffic_signal_stop_predictor.cpp
+  lib/priority_predictor/signal_stop_hysteresis.cpp
   lib/priority_predictor/debug_priority_pred.cpp
   lib/predictor_vru/predictor_vru.cpp
   lib/predictor_vru/history.cpp
