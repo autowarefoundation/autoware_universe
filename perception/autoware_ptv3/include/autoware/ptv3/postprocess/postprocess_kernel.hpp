@@ -31,39 +31,39 @@ using autoware::cuda_utils::CudaUniquePtr;
 class PostprocessCuda
 {
 public:
-  explicit PostprocessCuda(const PTv3Config & config, cudaStream_t stream);
+  explicit PostprocessCuda(const PTv3SemsegConfig & config);
 
   void createVisualizationPointcloud(
     const float * input_features, const std::int64_t * pred_labels, float * output_points,
-    std::size_t num_classes, std::size_t num_points);
+    std::size_t num_classes, std::size_t num_points, cudaStream_t stream);
 
   void createSegmentationPointcloud(
     const float * input_features, const std::int64_t * pred_labels, const float * pred_probs,
-    std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points);
+    std::uint8_t * output_points, std::size_t num_classes, std::size_t num_points,
+    cudaStream_t stream);
 
   void reconstructPartial(
     const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
     std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
-    std::size_t num_cropped_points, std::size_t num_voxels);
+    std::size_t num_cropped_points, std::size_t num_voxels, cudaStream_t stream);
 
   void reconstructFull(
     const std::uint32_t * crop_mask, const std::uint32_t * crop_indices,
     const std::int64_t * inverse_map, const std::int64_t * voxel_labels, const float * voxel_probs,
     std::int64_t * output_labels, float * output_probs, std::size_t num_classes,
-    std::size_t num_points, std::size_t num_voxels);
+    std::size_t num_points, std::size_t num_voxels, cudaStream_t stream);
 
   std::size_t createFilteredPointcloud(
     const void * compact_input_points, CloudFormat input_format, CloudFormat output_format,
-    const float * pred_probs, void * output_points, std::size_t num_classes,
-    std::size_t num_points);
+    const float * pred_probs, void * output_points, std::size_t num_classes, std::size_t num_points,
+    cudaStream_t stream);
 
 private:
-  PTv3Config config_;
+  PTv3SemsegConfig config_;
 
   CudaUniquePtr<std::uint32_t[]> filtered_mask_d_{nullptr};
   CudaUniquePtr<float[]> color_map_d_{nullptr};
   CudaUniquePtr<std::uint32_t[]> filter_class_indices_d_{nullptr};
-  cudaStream_t stream_;
 };
 
 }  // namespace autoware::ptv3

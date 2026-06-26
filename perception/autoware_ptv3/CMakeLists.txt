@@ -83,6 +83,7 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     lib/postprocess/postprocess_kernel.cu
     lib/postprocess/detection3d_postprocess.cu
     lib/preprocess/preprocess_kernel.cu
+    lib/preprocess/semseg_preprocess_kernel.cu
   )
 
   target_include_directories(${PROJECT_NAME}_cuda_lib
@@ -91,8 +92,12 @@ if(TRT_AVAIL AND CUDA_AVAIL)
   )
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
+    lib/backbone_engine.cpp
+    lib/backbone_preprocessor.cpp
+    lib/detection3d_module.cpp
     lib/ptv3_trt.cpp
     lib/ros_utils.cpp
+    lib/semseg_module.cpp
   )
 
   target_compile_definitions(${PROJECT_NAME}_lib PRIVATE

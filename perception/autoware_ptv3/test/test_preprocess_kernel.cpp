@@ -14,6 +14,7 @@
 
 #include "autoware/ptv3/preprocess/point_type.hpp"
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
+#include "autoware/ptv3/preprocess/semseg_preprocess_kernel.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
 #include "ptv3_test_fixture.hpp"
 
@@ -68,7 +69,8 @@ protected:
     PTv3ConfigParams params;
     params.source_reconstruction = source_reconstruction;
     config_.emplace(makeConfig(params));
-    preprocess_ = std::make_unique<PreprocessCuda>(*config_, stream_);
+    preprocess_ = std::make_unique<PreprocessCuda>(config_->backbone_preprocess_config_);
+    semseg_preprocess_ = std::make_unique<SemsegPreprocessCuda>(config_->semseg_config_);
   }
 
   void expectFloatVectorEq(
@@ -113,10 +115,17 @@ protected:
     std::size_t num_cropped_points = 0;
     const auto num_voxels = preprocess_->generateFeatures(
       input_points_d.get(), CloudFormat::XYZI, host_points.size(), voxel_features_d.get(),
-      voxel_coords_d.get(), voxel_hashes_d.get(), compact_points_d.get(),
-      reconstruction_features_d.get(),
-      with_source_outputs ? cropped_source_points_d.get() : nullptr,
-      with_source_outputs ? inverse_map_d.get() : nullptr, &num_cropped_points);
+      voxel_coords_d.get(), voxel_hashes_d.get(), compact_points_d.get(), &num_cropped_points,
+      stream_);
+    if (with_source_outputs || source_reconstruction == "full") {
+      const SemsegSourceReconstructionView view{
+        reconstruction_features_d.get(),
+        with_source_outputs ? cropped_source_points_d.get() : nullptr,
+        with_source_outputs ? inverse_map_d.get() : inverse_map_d.get(), &num_cropped_points};
+      semseg_preprocess_->reconstructSource(
+        *preprocess_, input_points_d.get(), CloudFormat::XYZI, host_points.size(),
+        num_cropped_points, view, stream_);
+    }
 
     EXPECT_EQ(cudaStreamSynchronize(stream_), cudaSuccess);
 
@@ -132,6 +141,7 @@ protected:
   cudaStream_t stream_{nullptr};
   std::optional<PTv3Config> config_;
   std::unique_ptr<PreprocessCuda> preprocess_;
+  std::unique_ptr<SemsegPreprocessCuda> semseg_preprocess_;
 };
 
 TEST_F(PreprocessKernelTest, PartialReconstructionBuildsCropMaskAndIndices)
