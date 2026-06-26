@@ -1,0 +1,465 @@
+// Copyright 2026 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware/trajectory_modifier/trajectory_modifier.hpp"
+#include "autoware/trajectory_optimizer/trajectory_optimizer.hpp"
+
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <autoware_test_utils/autoware_test_utils.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+#include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include <gtest/gtest.h>
+
+#include <chrono>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
+
+using autoware_internal_planning_msgs::msg::CandidateTrajectories;
+using autoware_internal_planning_msgs::msg::CandidateTrajectory;
+using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_planning_msgs::msg::Trajectory;
+using autoware_planning_msgs::msg::TrajectoryPoint;
+using geometry_msgs::msg::AccelWithCovarianceStamped;
+using nav_msgs::msg::Odometry;
+using sensor_msgs::msg::PointCloud2;
+
+namespace
+{
+TrajectoryPoint create_trajectory_point(double x, double y, double velocity)
+{
+  TrajectoryPoint point;
+  point.pose.position.x = x;
+  point.pose.position.y = y;
+  point.pose.position.z = 0.0;
+  point.pose.orientation.w = 1.0;
+  point.longitudinal_velocity_mps = static_cast<float>(velocity);
+  return point;
+}
+
+CandidateTrajectories create_straight_trajectories(
+  double length, double velocity, rclcpp::Time stamp)
+{
+  CandidateTrajectories msg;
+  CandidateTrajectory candidate;
+  candidate.header.frame_id = "map";
+  candidate.header.stamp = stamp;
+  for (double x = 0.0; x <= length; x += 1.0) {
+    candidate.points.push_back(create_trajectory_point(x, 0.0, velocity));
+  }
+  msg.candidate_trajectories.push_back(candidate);
+  return msg;
+}
+}  // namespace
+
+class TrajectoryProcessorIntegrationTest : public ::testing::Test
+{
+protected:
+  static void SetUpTestSuite()
+  {
+    if (!rclcpp::ok()) {
+      rclcpp::init(0, nullptr);
+    }
+  }
+
+  static void TearDownTestSuite() { rclcpp::shutdown(); }
+
+  void SetUp() override
+  {
+    // Setup node options with parameters
+    auto modifier_options = rclcpp::NodeOptions{};
+    auto optimizer_options = rclcpp::NodeOptions{};
+
+    const auto modifier_dir =
+      ament_index_cpp::get_package_share_directory("autoware_trajectory_modifier");
+    const auto optimizer_dir =
+      ament_index_cpp::get_package_share_directory("autoware_trajectory_optimizer");
+    const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
+
+    modifier_options.append_parameter_override("use_stop_point_fixer", true);
+    modifier_options.append_parameter_override("use_obstacle_stop", true);
+
+    optimizer_options.append_parameter_override("use_akima_spline_interpolation", true);
+    optimizer_options.append_parameter_override("use_eb_smoother", false);
+    optimizer_options.append_parameter_override("use_qp_smoother", true);
+    optimizer_options.append_parameter_override("use_trajectory_point_fixer", true);
+    optimizer_options.append_parameter_override("use_velocity_optimizer", true);
+    optimizer_options.append_parameter_override("use_trajectory_extender", false);
+    optimizer_options.append_parameter_override("use_kinematic_feasibility_enforcer", true);
+    optimizer_options.append_parameter_override("use_mpt_optimizer", false);
+    optimizer_options.append_parameter_override("use_temporal_mpt_optimizer", false);
+
+    const std::vector<std::string> modifier_plugins = {
+      "autoware::trajectory_modifier::plugin::ObstacleStop",
+      "autoware::trajectory_modifier::plugin::StopPointFixer"};
+    modifier_options.append_parameter_override("plugin_names", modifier_plugins);
+
+    const std::vector<std::string> optimizer_plugins = {
+      "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
+      "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
+      "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
+      "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
+      "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"};
+    optimizer_options.append_parameter_override("plugin_names", optimizer_plugins);
+
+    // Set mandatory vehicle info parameters that VehicleInfoUtils expects at the root
+    for (auto & opt : {&modifier_options, &optimizer_options}) {
+      opt->append_parameter_override("wheel_radius", 0.383);
+      opt->append_parameter_override("wheel_width", 0.235);
+      opt->append_parameter_override("wheel_base", 2.79);
+      opt->append_parameter_override("wheel_tread", 1.64);
+      opt->append_parameter_override("front_overhang", 1.0);
+      opt->append_parameter_override("rear_overhang", 1.1);
+      opt->append_parameter_override("left_overhang", 0.128);
+      opt->append_parameter_override("right_overhang", 0.128);
+      opt->append_parameter_override("vehicle_height", 2.5);
+      opt->append_parameter_override("max_steer_angle", 0.70);
+    }
+    optimizer_options.append_parameter_override("max_vel", 20.0);
+    optimizer_options.append_parameter_override("limit.max_acc", 2.0);
+    optimizer_options.append_parameter_override("limit.min_acc", -3.0);
+    optimizer_options.append_parameter_override("limit.max_jerk", 1.5);
+    optimizer_options.append_parameter_override("limit.min_jerk", -1.5);
+
+    // Optimizer plugin parameters
+    optimizer_options.append_parameter_override("trajectory_point_fixer.remove_close_points", true);
+    optimizer_options.append_parameter_override(
+      "trajectory_point_fixer.resample_close_points", true);
+    optimizer_options.append_parameter_override(
+      "trajectory_point_fixer.min_dist_to_remove_m", 0.01);
+    optimizer_options.append_parameter_override(
+      "trajectory_point_fixer.min_dist_to_resample_m", 0.05);
+    optimizer_options.append_parameter_override(
+      "trajectory_point_fixer.stop_detection_velocity_threshold_mps", 0.3);
+
+    optimizer_options.append_parameter_override(
+      "trajectory_kinematic_feasibility.max_yaw_rate_rad_s", 0.7);
+    optimizer_options.append_parameter_override(
+      "trajectory_kinematic_feasibility.time_step_s", 0.1);
+
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.weight_smoothness", 10.0);
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.weight_fidelity", 1.0);
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.time_step_s", 0.1);
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.osqp_eps_abs", 1e-4);
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.osqp_eps_rel", 1e-4);
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.osqp_max_iter", 4000);
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.osqp_verbose", false);
+    optimizer_options.append_parameter_override(
+      "trajectory_qp_smoother.preserve_input_trajectory_orientation", true);
+    optimizer_options.append_parameter_override(
+      "trajectory_qp_smoother.max_distance_for_orientation_m", 5.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_qp_smoother.use_velocity_based_fidelity", false);
+    optimizer_options.append_parameter_override(
+      "trajectory_qp_smoother.velocity_threshold_mps", 0.2);
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.sigmoid_sharpness", 40.0);
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.min_fidelity_weight", 0.1);
+    optimizer_options.append_parameter_override("trajectory_qp_smoother.max_fidelity_weight", 1.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_qp_smoother.num_constrained_points_start", 3);
+    optimizer_options.append_parameter_override(
+      "trajectory_qp_smoother.num_constrained_points_end", 3);
+
+    optimizer_options.append_parameter_override(
+      "trajectory_spline_smoother.interpolation_resolution_m", 0.5);
+    optimizer_options.append_parameter_override(
+      "trajectory_spline_smoother.max_distance_discrepancy_m", 5.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_spline_smoother.preserve_input_trajectory_orientation", true);
+
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.nearest_dist_threshold_m", 1.5);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.nearest_yaw_threshold_deg", 60.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.target_pull_out_speed_mps", 1.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.target_pull_out_acc_mps2", 1.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.max_lateral_accel_mps2", 1.5);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.min_limited_speed_mps", 3.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.set_engage_speed", false);
+    optimizer_options.append_parameter_override("trajectory_velocity_optimizer.limit_speed", true);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.limit_lateral_acceleration", false);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.smooth_velocities", false);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight", 30.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.continuous_jerk_smoother.over_v_weight", 3000.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.continuous_jerk_smoother.over_a_weight", 30.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.continuous_jerk_smoother.over_j_weight", 10.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.continuous_jerk_smoother.velocity_tracking_weight", 1.0);
+    optimizer_options.append_parameter_override(
+      "trajectory_velocity_optimizer.continuous_jerk_smoother.accel_tracking_weight", 300.0);
+
+    // Load default parameters from yaml files
+    autoware::test_utils::updateNodeOptions(
+      modifier_options, {modifier_dir + "/config/trajectory_modifier.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options, {optimizer_dir + "/config/trajectory_optimizer.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_qp_smoother.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_point_fixer.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options,
+      {optimizer_dir + "/config/plugins/trajectory_velocity_optimizer.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_extender.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_spline_smoother.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options,
+      {optimizer_dir + "/config/plugins/trajectory_kinematic_feasibility_enforcer.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_mpt_optimizer.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options,
+      {optimizer_dir + "/config/plugins/trajectory_temporal_mpt_optimizer.param.yaml"});
+
+    // Add vehicle info
+    autoware::test_utils::updateNodeOptions(
+      modifier_options, {test_utils_dir + "/config/test_vehicle_info.param.yaml"});
+    autoware::test_utils::updateNodeOptions(
+      optimizer_options, {test_utils_dir + "/config/test_vehicle_info.param.yaml"});
+
+    // Remap modifier output to optimizer input
+    modifier_options.arguments(
+      {"--ros-args", "-r", "~/output/candidate_trajectories:=/combined/trajectories", "-r",
+       "~/input/odometry:=/localization/kinematic_state", "-r",
+       "~/input/acceleration:=/localization/acceleration", "-r",
+       "~/input/objects:=/perception/object_recognition/objects", "-r",
+       "~/input/pointcloud:=/perception/obstacle_segmentation/pointcloud"});
+    optimizer_options.arguments(
+      {"--ros-args", "-r", "~/input/trajectories:=/combined/trajectories", "-r",
+       "~/input/odometry:=/localization/kinematic_state", "-r",
+       "~/input/acceleration:=/localization/acceleration"});
+
+    modifier_node_ =
+      std::make_shared<autoware::trajectory_modifier::TrajectoryModifier>(modifier_options);
+    optimizer_node_ =
+      std::make_shared<autoware::trajectory_optimizer::TrajectoryOptimizer>(optimizer_options);
+
+    test_node_ = std::make_shared<rclcpp::Node>("test_node");
+
+    // Publishers for inputs
+    pub_tra_ = test_node_->create_publisher<CandidateTrajectories>(
+      "/trajectory_modifier/input/candidate_trajectories", 1);
+    pub_odo_ = test_node_->create_publisher<Odometry>("/localization/kinematic_state", 1);
+    pub_acc_ =
+      test_node_->create_publisher<AccelWithCovarianceStamped>("/localization/acceleration", 1);
+    pub_obj_ =
+      test_node_->create_publisher<PredictedObjects>("/perception/object_recognition/objects", 1);
+
+    // Subscriber for final output
+    sub_output_ = test_node_->create_subscription<Trajectory>(
+      "/trajectory_optimizer/output/trajectory", 1, [this](const Trajectory::ConstSharedPtr msg) {
+        output_received_ = true;
+        latest_output_ = *msg;
+      });
+
+    executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+    executor_->add_node(modifier_node_);
+    executor_->add_node(optimizer_node_);
+    executor_->add_node(test_node_);
+
+    spin_thread_ = std::thread([this]() { executor_->spin(); });
+  }
+
+  void TearDown() override
+  {
+    executor_->cancel();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
+  }
+
+  void publish_mandatory_inputs(
+    const CandidateTrajectories & traj, const Odometry & odom,
+    const AccelWithCovarianceStamped & acc)
+  {
+    pub_tra_->publish(traj);
+    pub_odo_->publish(odom);
+    pub_acc_->publish(acc);
+  }
+
+  void wait_for_output(int timeout_s = 5)
+  {
+    auto start_time = std::chrono::steady_clock::now();
+    while (!output_received_ &&
+           (std::chrono::steady_clock::now() - start_time < std::chrono::seconds(timeout_s))) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  }
+
+  std::shared_ptr<autoware::trajectory_modifier::TrajectoryModifier> modifier_node_;
+  std::shared_ptr<autoware::trajectory_optimizer::TrajectoryOptimizer> optimizer_node_;
+  std::shared_ptr<rclcpp::Node> test_node_;
+  std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
+  std::thread spin_thread_;
+
+  rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_tra_;
+  rclcpp::Publisher<Odometry>::SharedPtr pub_odo_;
+  rclcpp::Publisher<AccelWithCovarianceStamped>::SharedPtr pub_acc_;
+  rclcpp::Publisher<PredictedObjects>::SharedPtr pub_obj_;
+  rclcpp::Subscription<Trajectory>::SharedPtr sub_output_;
+
+  bool output_received_{false};
+  Trajectory latest_output_;
+};
+
+TEST_F(TrajectoryProcessorIntegrationTest, BasicPipelineTest)
+{
+  // Arrange
+  auto traj = create_straight_trajectories(30.0, 5.0, test_node_->now());
+
+  Odometry odom;
+  odom.header.frame_id = "map";
+  odom.pose.pose.position.x = 0.0;
+  odom.pose.pose.orientation.w = 1.0;
+  odom.twist.twist.linear.x = 5.0;
+
+  AccelWithCovarianceStamped acc;
+  acc.header.frame_id = "map";
+
+  // Act
+  // Publish in a loop to ensure the nodes receive it after discovery
+  for (int i = 0; i < 20 && !output_received_; ++i) {
+    odom.header.stamp = test_node_->now();
+    acc.header.stamp = test_node_->now();
+    publish_mandatory_inputs(traj, odom, acc);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  wait_for_output();
+
+  // Assert
+  EXPECT_TRUE(output_received_);
+  EXPECT_GT(latest_output_.points.size(), 0U);
+}
+
+TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopIntegrationTest)
+{
+  // Arrange
+  auto traj = create_straight_trajectories(30.0, 8.0, test_node_->now());
+
+  Odometry odom;
+  odom.header.frame_id = "map";
+  odom.pose.pose.position.x = 0.0;
+  odom.pose.pose.orientation.w = 1.0;
+  odom.twist.twist.linear.x = 8.0;
+
+  AccelWithCovarianceStamped acc;
+  acc.header.frame_id = "map";
+
+  // Create a blocking car at x=20.0
+  PredictedObjects objects;
+  objects.header.frame_id = "map";
+  objects.header.stamp = test_node_->now();
+  autoware_perception_msgs::msg::PredictedObject object;
+  object.kinematics.initial_pose_with_covariance.pose.position.x = 20.0;
+  object.kinematics.initial_pose_with_covariance.pose.orientation.w = 1.0;
+  object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  object.shape.dimensions.x = 4.0;
+  object.shape.dimensions.y = 2.0;
+  object.shape.dimensions.z = 1.5;
+  autoware_perception_msgs::msg::ObjectClassification classification;
+  classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
+  classification.probability = 1.0;
+  object.classification.push_back(classification);
+  objects.objects.push_back(object);
+
+  // Act
+  // Obstacle stop needs continuous detection (on_time_buffer=0.5s).
+  // Publish for 2 seconds to be safe.
+  for (int i = 0; i < 20; ++i) {
+    objects.header.stamp = test_node_->now();
+    odom.header.stamp = test_node_->now();
+    acc.header.stamp = test_node_->now();
+    pub_obj_->publish(objects);
+    publish_mandatory_inputs(traj, odom, acc);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  wait_for_output();
+
+  // Assert
+  ASSERT_TRUE(output_received_);
+  // The trajectory should have a stop point (velocity close to 0) before the object at x=20.0
+  bool found_stop = false;
+  for (const auto & p : latest_output_.points) {
+    if (p.longitudinal_velocity_mps < 0.1) {
+      EXPECT_LT(p.pose.position.x, 20.0);
+      found_stop = true;
+      break;
+    }
+  }
+  EXPECT_TRUE(found_stop);
+}
+
+TEST_F(TrajectoryProcessorIntegrationTest, StopPointFixerIntegrationTest)
+{
+  // Arrange
+  // Short trajectory with a stop point at 0.5m
+  CandidateTrajectories msg;
+  CandidateTrajectory candidate;
+  candidate.header.frame_id = "map";
+  candidate.header.stamp = test_node_->now();
+  candidate.points.push_back(create_trajectory_point(0.0, 0.0, 0.1));
+  candidate.points.push_back(create_trajectory_point(0.5, 0.0, 0.0));
+  msg.candidate_trajectories.push_back(candidate);
+
+  Odometry odom;
+  odom.header.frame_id = "map";
+  odom.pose.pose.position.x = 0.0;
+  odom.pose.pose.orientation.w = 1.0;
+  odom.twist.twist.linear.x = 0.05;  // Stationary
+
+  AccelWithCovarianceStamped acc;
+  acc.header.frame_id = "map";
+
+  // Act
+  for (int i = 0; i < 20 && !output_received_; ++i) {
+    odom.header.stamp = test_node_->now();
+    acc.header.stamp = test_node_->now();
+    publish_mandatory_inputs(msg, odom, acc);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  wait_for_output();
+
+  // Assert
+  ASSERT_TRUE(output_received_);
+  // Stop point fixer should have replaced the trajectory with stop points at ego
+  EXPECT_NEAR(latest_output_.points.front().pose.position.x, 0.0, 0.1);
+  EXPECT_NEAR(latest_output_.points.front().longitudinal_velocity_mps, 0.0, 0.01);
+}
+
+int main(int argc, char ** argv)
+{
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
