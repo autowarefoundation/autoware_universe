@@ -198,6 +198,10 @@ When enabled, for each voxel both criteria must be satisfied:
 - **Comprehensive Diagnostics**: Mode-specific filter ratio and visibility metrics
 - **Debug Support**: Optional noise cloud publishing for analysis and tuning
 
+### Geometric Entropy-Based Visibility Estimation (Advanced Mode Only)
+
+The filter uses geometric entropy and anisotropy analysis to detect low-visibility conditions caused by adverse weather. Entropy and anisotropy are calculated from the spatial distribution of points within voxels to identify irregular point clusters (rain, fog, smoke) while avoiding false positives on planar surfaces like windows. High entropy value combined with anisotropy value under certain threshold, indicates weather-induced noise, whereas planar surfaces exhibit different entropy and anisotropy values, avoiding that structural surfaces could be misclassified as noise when using secondary return type.
+
 ### Return Type Management (Advanced Mode Only)
 
 - **Primary Returns**: Configurable list of return types (default: [1,6,8,10])
@@ -217,11 +221,12 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Additional Debug Topics
 
-| Name                                                  | Type                                                | Description                                                                                 |
-| ----------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `~/polar_voxel_outlier_filter/debug/filter_ratio`     | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of output to input points (always published)                                          |
-| `~/polar_voxel_outlier_filter/debug/visibility`       | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of voxels passing secondary return threshold test (advanced mode only, range-limited) |
-| `~/polar_voxel_outlier_filter/debug/pointcloud_noise` | `sensor_msgs::msg::PointCloud2`                     | Filtered-out points for debugging (when enabled and not in visibility-only mode)            |
+| Name                                                       | Type                                                | Description                                                                                                                  |
+| ---------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `~/polar_voxel_outlier_filter/debug/filter_ratio`          | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of output to input points (always published)                                                                           |
+| `~/polar_voxel_outlier_filter/debug/visibility`            | `autoware_internal_debug_msgs::msg::Float32Stamped` | Ratio of voxels passing secondary return threshold test (advanced mode only, range-limited)                                  |
+| `~/polar_voxel_outlier_filter/debug/pointcloud_noise`      | `sensor_msgs::msg::PointCloud2`                     | Filtered-out points for debugging (when enabled and not in visibility-only mode)                                             |
+| `~/polar_voxel_outlier_filter/debug/low_visibility_voxels` | `sensor_msgs::msg::PointCloud2`                     | Points in low-visibility candidate voxels for monitoring entropy-based detection (when `publish_low_visibility_voxels=true`) |
 
 ## Parameters
 
@@ -239,6 +244,9 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 - **visibility_estimation_max_secondary_voxel_count**: Only used when `use_return_type_classification=true`, limits secondary voxel counting in visibility calculations
 - **primary_return_types**: Only used when `use_return_type_classification=true`
 - **visibility_estimation_max_range_m**: Limits visibility calculation to reliable sensor range (advanced mode only)
+- **low_visibility_entropy_threshold**: Normalized geometric entropy threshold for detecting low-visibility voxels (advanced mode only, default: 0.3)
+- **low_visibility_anisotropy_threshold**: Geometric anisotropy threshold for detecting low-visibility voxels (advanced mode only, default: 0.95)
+- **publish_low_visibility_voxels**: When `true`, publishes points in low-visibility voxels for monitoring entropy-based detection (advanced mode only)
 - **visibility_estimation_only**: When `true`, skips point cloud output generation but still calculates and publishes diagnostics
 - **publish_noise_cloud**: When `false`, improves performance by skipping noise cloud generation (ignored when `visibility_estimation_only=true`)
 - **Diagnostics**: Visibility is only published when return type classification is enabled
@@ -308,6 +316,9 @@ visibility_estimation_max_azimuth_rad: 2.35
 visibility_estimation_min_elevation_rad: -0.26
 visibility_estimation_max_elevation_rad: 1.04
 visibility_estimation_max_secondary_voxel_count: 500 # Allow secondary voxels in visibility calculation
+low_visibility_entropy_threshold: 0.3 # Entropy threshold for low-visibility detection
+low_visibility_anisotropy_threshold: 0.95 # Anisotropy threshold for low-visibility detection
+publish_low_visibility_voxels: true # Monitor voxels used for visibility estimation
 visibility_estimation_only: false # Normal filtering with debug output
 publish_noise_cloud: true # Enable noise cloud for analysis
 filter_ratio_error_threshold: 0.5
@@ -582,6 +593,7 @@ auto node = std::make_shared<autoware::pointcloud_preprocessor::PolarVoxelOutlie
 #### Mode Selection Guidelines
 
 - **Choose visibility-only mode when**:
+
   - Only diagnostic information is needed
   - Computational resources are limited
   - Running parallel monitoring alongside main processing
