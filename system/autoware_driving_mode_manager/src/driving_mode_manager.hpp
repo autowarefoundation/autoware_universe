@@ -35,6 +35,7 @@ public:
 private:
   diagnostic_updater::Updater diag_;
   rclcpp::TimerBase::SharedPtr timer_;
+  double rate_;
 
   void on_timer_init();
   void on_timer_main();
