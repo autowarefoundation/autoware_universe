@@ -171,13 +171,9 @@ jobs:
             echo "Bump version from \`${BASE_VERSION}\` to \`${NEW_VERSION}\`."
             echo
             if [ -s "${DELETED_CHANGELOG_PACKAGES_FILE}" ]; then
-              echo "## Packages whose \`CHANGELOG.rst\` was reset"
-              echo
-              echo "The following packages had their \`CHANGELOG.rst\` deleted before"
-              echo "regenerating changelogs (e.g. their version had diverged from"
-              echo "\`${BASE_VERSION}\`). Please double-check the regenerated changelog"
-              echo "entries for these packages:"
-              echo
+              printf "%s\n\n%s\n" \
+                     "## Packages whose \`CHANGELOG.rst\` was reset" \
+                     "The following packages had their \`CHANGELOG.rst\` deleted before regenerating changelogs (e.g. their version had diverged from \`${BASE_VERSION}\`). Please double-check the regenerated changelog entries for these packages:"
               while IFS= read -r pkg; do
                 [ -z "${pkg}" ] && continue
                 echo "- \`${pkg}\`"
