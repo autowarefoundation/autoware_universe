@@ -20,6 +20,7 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <iomanip>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <unordered_set>
@@ -42,7 +43,8 @@ ObstacleTypeParameters to_obstacle_type_parameters(
 }
 
 Parameters to_proximity_checker_parameters(
-  const autoware::trajectory_modifier::plugin::TrajectoryModifierParams::SurroundObstacleStop & params)
+  const autoware::trajectory_modifier::plugin::TrajectoryModifierParams::SurroundObstacleStop &
+    params)
 {
   Parameters parameters;
   parameters.pointcloud_enable_check = params.use_pointcloud;
@@ -70,12 +72,10 @@ Parameters to_proximity_checker_parameters(
     to_obstacle_type_parameters(front.pointcloud, side.pointcloud, back.pointcloud);
   parameters.obstacle_types_map["unknown"] =
     to_obstacle_type_parameters(front.unknown, side.unknown, back.unknown);
-  parameters.obstacle_types_map["car"] =
-    to_obstacle_type_parameters(front.car, side.car, back.car);
+  parameters.obstacle_types_map["car"] = to_obstacle_type_parameters(front.car, side.car, back.car);
   parameters.obstacle_types_map["truck"] =
     to_obstacle_type_parameters(front.truck, side.truck, back.truck);
-  parameters.obstacle_types_map["bus"] =
-    to_obstacle_type_parameters(front.bus, side.bus, back.bus);
+  parameters.obstacle_types_map["bus"] = to_obstacle_type_parameters(front.bus, side.bus, back.bus);
   parameters.obstacle_types_map["trailer"] =
     to_obstacle_type_parameters(front.trailer, side.trailer, back.trailer);
   parameters.obstacle_types_map["motorcycle"] =

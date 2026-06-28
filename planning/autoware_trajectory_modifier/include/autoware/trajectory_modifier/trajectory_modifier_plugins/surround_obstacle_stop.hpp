@@ -56,7 +56,8 @@ private:
 
   [[nodiscard]] bool check_inputs(const InputData & input) const;
 
-  [[nodiscard]] obstacle_proximity_checker::Inputs to_proximity_checker_inputs(const InputData & input) const;
+  [[nodiscard]] obstacle_proximity_checker::Inputs to_proximity_checker_inputs(
+    const InputData & input) const;
 
   [[nodiscard]] bool is_obstacle_nearby(const InputData & input);
 

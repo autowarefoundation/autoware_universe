@@ -43,8 +43,7 @@ public:
    * nearby [m]
    * @return result specifying if a nearby obstacle is found and the nearest obstacle
    */
-  [[nodiscard]] CheckResult check(
-    const Inputs & input, double contact_distance_threshold) const;
+  [[nodiscard]] CheckResult check(const Inputs & input, double contact_distance_threshold) const;
 
   /**
    * @brief update parameters

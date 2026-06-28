@@ -14,6 +14,7 @@
 
 #include "autoware/obstacle_proximity_checker/obstacle_proximity_checker.hpp"
 
+#include <Eigen/Geometry>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
@@ -22,7 +23,6 @@
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
-#include <Eigen/Geometry>
 #include <gtest/gtest.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -45,8 +45,7 @@ constexpr double kContactDistanceThreshold = 1e-3;
 
 vehicle_info_utils::VehicleInfo make_vehicle_info()
 {
-  return vehicle_info_utils::createVehicleInfo(
-    0.3, 0.2, 2.5, 1.6, 1.0, 1.0, 0.5, 0.5, 1.8, 0.7);
+  return vehicle_info_utils::createVehicleInfo(0.3, 0.2, 2.5, 1.6, 1.0, 1.0, 0.5, 0.5, 1.8, 0.7);
 }
 
 ObstacleTypeParameters make_obstacle_type_parameters(
@@ -98,8 +97,7 @@ sensor_msgs::msg::PointCloud2::SharedPtr make_pointcloud(
   return cloud_msg;
 }
 
-PredictedObjects::SharedPtr make_predicted_objects(
-  const std::vector<PredictedObject> & objects)
+PredictedObjects::SharedPtr make_predicted_objects(const std::vector<PredictedObject> & objects)
 {
   auto objects_msg = std::make_shared<PredictedObjects>();
   objects_msg->objects = objects;
@@ -179,8 +177,7 @@ TEST_F(ProximityCheckerTest, NoObstacleWhenPointcloudCheckDisabled)
 TEST_F(ProximityCheckerTest, DetectsNearbyPointInPointcloud)
 {
   const auto pointcloud = make_pointcloud({{4.2F, 0.0F, 0.0F}});
-  const auto result =
-    checker_->check(make_inputs(ego_pose_, pointcloud), 0.5);
+  const auto result = checker_->check(make_inputs(ego_pose_, pointcloud), 0.5);
 
   ASSERT_TRUE(result.nearest_obstacle.has_value());
   EXPECT_TRUE(result.nearest_obstacle->is_point_cloud);
@@ -223,8 +220,7 @@ TEST_F(ProximityCheckerTest, NoObstacleWhenPointcloudTransformMissing)
 TEST_F(ProximityCheckerTest, DetectsNearbyDynamicObject)
 {
   const auto objects = make_predicted_objects({make_car_object(5.2, 0.0)});
-  const auto result =
-    checker_->check(make_inputs(ego_pose_, nullptr, objects), 0.5);
+  const auto result = checker_->check(make_inputs(ego_pose_, nullptr, objects), 0.5);
 
   ASSERT_TRUE(result.nearest_obstacle.has_value());
   EXPECT_FALSE(result.nearest_obstacle->is_point_cloud);
@@ -238,8 +234,7 @@ TEST_F(ProximityCheckerTest, IgnoresDisabledObjectTypes)
   checker_->update_parameters(parameters_);
 
   const auto objects = make_predicted_objects({make_car_object(5.2, 0.0)});
-  const auto result =
-    checker_->check(make_inputs(ego_pose_, nullptr, objects), 0.5);
+  const auto result = checker_->check(make_inputs(ego_pose_, nullptr, objects), 0.5);
 
   EXPECT_FALSE(result.is_obstacle_found);
   EXPECT_FALSE(result.nearest_obstacle.has_value());
@@ -250,8 +245,7 @@ TEST_F(ProximityCheckerTest, SelectsNearestBetweenPointcloudAndObject)
   const auto pointcloud = make_pointcloud({{4.5F, 0.0F, 0.0F}});
   const auto objects = make_predicted_objects({make_car_object(5.2, 0.0)});
 
-  const auto result = checker_->check(
-    make_inputs(ego_pose_, pointcloud, objects), 0.5);
+  const auto result = checker_->check(make_inputs(ego_pose_, pointcloud, objects), 0.5);
 
   ASSERT_TRUE(result.nearest_obstacle.has_value());
   EXPECT_FALSE(result.nearest_obstacle->is_point_cloud);

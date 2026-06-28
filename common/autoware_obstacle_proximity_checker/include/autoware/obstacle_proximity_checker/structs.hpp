@@ -15,13 +15,13 @@
 #ifndef AUTOWARE__OBSTACLE_PROXIMITY_CHECKER__STRUCTS_HPP_
 #define AUTOWARE__OBSTACLE_PROXIMITY_CHECKER__STRUCTS_HPP_
 
+#include <Eigen/Geometry>
+
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
-
-#include <Eigen/Geometry>
 
 #include <memory>
 #include <optional>

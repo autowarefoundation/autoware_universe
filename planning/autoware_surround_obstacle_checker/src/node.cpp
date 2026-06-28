@@ -101,7 +101,8 @@ bool SurroundObstacleCheckerNode::getUseDynamicObject() const
   return use_dynamic_object;
 }
 
-obstacle_proximity_checker::Parameters SurroundObstacleCheckerNode::toProximityCheckerParameters() const
+obstacle_proximity_checker::Parameters SurroundObstacleCheckerNode::toProximityCheckerParameters()
+  const
 {
   const auto param = param_listener_->get_params();
 
@@ -184,9 +185,8 @@ void SurroundObstacleCheckerNode::onTimer()
       "Surround obstacle check is disabled for all dynamic object types and for pointcloud check.");
   }
 
-  const double contact_distance_threshold = state_ == State::STOP
-                                              ? param.surround_check_hysteresis_distance
-                                              : kContactDistanceThreshold;
+  const double contact_distance_threshold =
+    state_ == State::STOP ? param.surround_check_hysteresis_distance : kContactDistanceThreshold;
   const auto proximity_result =
     proximity_checker_->check(toProximityCheckerInputs(), contact_distance_threshold);
   const auto is_vehicle_stopped = vehicle_stop_checker_->isVehicleStopped();

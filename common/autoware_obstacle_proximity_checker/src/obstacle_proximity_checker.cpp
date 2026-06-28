@@ -29,6 +29,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <limits>
+#include <string>
 #include <unordered_map>
 
 namespace autoware::obstacle_proximity_checker
@@ -197,7 +198,9 @@ std::optional<ProximityObstacle> ProximityChecker::getNearestObstacleByDynamicOb
 
     const auto & str_label = label_iter->second;
     const auto enable_check_iter = parameters_.object_type_enable_check.find(str_label);
-    if (enable_check_iter == parameters_.object_type_enable_check.end() || !enable_check_iter->second) {
+    if (
+      enable_check_iter == parameters_.object_type_enable_check.end() ||
+      !enable_check_iter->second) {
       continue;
     }
 
@@ -227,8 +230,7 @@ std::optional<ProximityObstacle> ProximityChecker::getNearestObstacleByDynamicOb
   ProximityObstacle obstacle;
   obstacle.is_point_cloud = false;
   obstacle.nearest_distance = minimum_distance;
-  obstacle.nearest_point =
-    nearest_object.kinematics.initial_pose_with_covariance.pose.position;
+  obstacle.nearest_point = nearest_object.kinematics.initial_pose_with_covariance.pose.position;
   obstacle.uuid = nearest_object.object_id;
   return obstacle;
 }
