@@ -2,11 +2,13 @@
   ros__parameters:
     plugin_names:
       - "autoware::trajectory_modifier::plugin::StopPointFixer"
+      - "autoware::trajectory_modifier::plugin::SurroundObstacleStop"
       - "autoware::trajectory_modifier::plugin::ObstacleStop"
       - "autoware::trajectory_modifier::plugin::VelocityModifier"
     use_stop_point_fixer: true
     use_obstacle_stop: true
     use_velocity_modifier: true
+    use_surround_obstacle_stop: false
     trajectory_time_step: 0.1 # [s]
 
     # Stop Point Fixer Plugin Parameters
@@ -76,3 +78,42 @@
         reaction_time: 0.2 # [s]
         safety_margin: 2.0 # [m]
         lookahead_horizon: 1.5 # [s]
+
+    # Surround Obstacle Stop Plugin Parameters
+    surround_obstacle_stop:
+      use_objects: true
+      use_pointcloud: true
+      object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"]
+      front_distance_th:
+        car: 0.5
+        truck: 0.5
+        bus: 0.5
+        trailer: 0.5
+        motorcycle: 0.5
+        bicycle: 0.5
+        pedestrian: 0.5
+        unknown: 0.5
+        pointcloud: 0.5
+      side_distance_th:
+        car: 0.0
+        truck: 0.0
+        bus: 0.0
+        trailer: 0.0
+        motorcycle: 1.0
+        bicycle: 1.0
+        pedestrian: 1.0
+        unknown: 0.5
+        pointcloud: 0.5
+      back_distance_th:
+        car: 0.0
+        truck: 0.0
+        bus: 0.0
+        trailer: 0.0
+        motorcycle: 0.5
+        bicycle: 0.5
+        pedestrian: 0.5
+        unknown: 0.5
+        pointcloud: 0.5
+      hysteresis_distance: 0.1
+      hysteresis_time: 0.2
+      ego_stopped_vel_th: 0.1 # [m/s]
