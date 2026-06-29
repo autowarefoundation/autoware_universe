@@ -20,13 +20,9 @@
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <cub/cub.cuh>
 
-#include <thrust/adjacent_difference.h>
 #include <thrust/device_ptr.h>
 #include <thrust/execution_policy.h>
-#include <thrust/scan.h>
-#include <thrust/scatter.h>
 #include <thrust/sequence.h>
-#include <thrust/unique.h>
 
 #include <algorithm>
 #include <limits>
@@ -571,8 +567,6 @@ std::size_t PreprocessCuda::generateFeatures(
   void * compact_points, float * reconstruction_features, void * cropped_source_points,
   std::int64_t * inverse_map, std::size_t * output_num_cropped_points)
 {
-  auto policy = thrust::cuda::par.on(stream_);
-
   const auto num_blocks = divup(num_points, config_.threads_per_block_);
   switch (input_format) {
     case CloudFormat::XYZIRCAEDT:
