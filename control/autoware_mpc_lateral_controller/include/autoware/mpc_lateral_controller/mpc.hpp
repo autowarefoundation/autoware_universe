@@ -464,7 +464,7 @@ public:
     true;  // Flag to use x0_delayed as initial state for predicted trajectory
 
   bool m_use_temporal_trajectory =
-    true;  // Flag to use temporal trajectory mode (true: use timestamps, false: spatial)
+    false;  // Flag to use temporal trajectory mode (true: use timestamps, false: spatial)
 
   bool m_publish_debug_trajectories = false;  // Flag to publish predicted trajectory and
                                               // resampled reference trajectory for debug purpose
