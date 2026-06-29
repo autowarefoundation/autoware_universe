@@ -41,7 +41,7 @@ TEST_F(SemanticLabelTest, EnumValuesCorrect)
   EXPECT_EQ(static_cast<std::uint8_t>(SemanticLabel::PEDESTRIAN), 5U);
   EXPECT_EQ(static_cast<std::uint8_t>(SemanticLabel::ANIMAL), 6U);
   EXPECT_EQ(static_cast<std::uint8_t>(SemanticLabel::HAZARD), 7U);
-  EXPECT_EQ(static_cast<std::uint8_t>(SemanticLabel::GROUND), 8U);
+  EXPECT_EQ(static_cast<std::uint8_t>(SemanticLabel::FLAT_SURFACE), 8U);
   EXPECT_EQ(static_cast<std::uint8_t>(SemanticLabel::STRUCTURE), 9U);
   EXPECT_EQ(static_cast<std::uint8_t>(SemanticLabel::VEGETATION), 10U);
   EXPECT_EQ(static_cast<std::uint8_t>(SemanticLabel::NOISE), 11U);
@@ -61,7 +61,7 @@ TEST_F(SemanticLabelTest, ToStringConversion)
   EXPECT_EQ(to_string(SemanticLabel::PEDESTRIAN), "PEDESTRIAN");
   EXPECT_EQ(to_string(SemanticLabel::ANIMAL), "ANIMAL");
   EXPECT_EQ(to_string(SemanticLabel::HAZARD), "HAZARD");
-  EXPECT_EQ(to_string(SemanticLabel::GROUND), "GROUND");
+  EXPECT_EQ(to_string(SemanticLabel::FLAT_SURFACE), "FLAT_SURFACE");
   EXPECT_EQ(to_string(SemanticLabel::STRUCTURE), "STRUCTURE");
   EXPECT_EQ(to_string(SemanticLabel::VEGETATION), "VEGETATION");
   EXPECT_EQ(to_string(SemanticLabel::NOISE), "NOISE");
@@ -110,7 +110,7 @@ TEST_F(SemanticLabelTest, TryIntoObjectValidObjectLabels)
 TEST_F(SemanticLabelTest, TryIntoObjectNonObjectLabels)
 {
   // Non-object labels should return nullopt
-  EXPECT_FALSE(try_into_object(SemanticLabel::GROUND).has_value());
+  EXPECT_FALSE(try_into_object(SemanticLabel::FLAT_SURFACE).has_value());
   EXPECT_FALSE(try_into_object(SemanticLabel::STRUCTURE).has_value());
   EXPECT_FALSE(try_into_object(SemanticLabel::VEGETATION).has_value());
   EXPECT_FALSE(try_into_object(SemanticLabel::NOISE).has_value());
@@ -190,7 +190,7 @@ TEST_F(SemanticLabelTest, IsObjectCompatibleObjectLabels)
 TEST_F(SemanticLabelTest, IsObjectCompatibleNonObjectLabels)
 {
   // Non-object labels
-  EXPECT_FALSE(is_object_compatible(SemanticLabel::GROUND));
+  EXPECT_FALSE(is_object_compatible(SemanticLabel::FLAT_SURFACE));
   EXPECT_FALSE(is_object_compatible(SemanticLabel::STRUCTURE));
   EXPECT_FALSE(is_object_compatible(SemanticLabel::VEGETATION));
   EXPECT_FALSE(is_object_compatible(SemanticLabel::NOISE));

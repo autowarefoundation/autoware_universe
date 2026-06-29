@@ -31,10 +31,10 @@ enum class SemanticLabel : std::uint8_t {
   PEDESTRIAN = 5,
   ANIMAL = 6,
   HAZARD = 7,
-  GROUND = 8,       ///< Drivable ground surface.
-  STRUCTURE = 9,    ///< Non-drivable structures, such as buildings and walls.
-  VEGETATION = 10,  ///< Vegetation, such as trees and bushes.
-  NOISE = 11,       ///< Noise points and outliers.
+  FLAT_SURFACE = 8,  ///< Flat surfaces that can be filtered out.
+  STRUCTURE = 9,     ///< Non-drivable structures, such as buildings and walls.
+  VEGETATION = 10,   ///< Vegetation, such as trees and bushes.
+  NOISE = 11,        ///< Noise points and outliers.
 };
 
 }  // namespace autoware::ptv3::experimental

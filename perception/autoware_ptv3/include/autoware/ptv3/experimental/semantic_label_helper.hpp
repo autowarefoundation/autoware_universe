@@ -51,8 +51,8 @@ constexpr std::string_view to_string(SemanticLabel label) noexcept
       return "ANIMAL";
     case SemanticLabel::HAZARD:
       return "HAZARD";
-    case SemanticLabel::GROUND:
-      return "GROUND";
+    case SemanticLabel::FLAT_SURFACE:
+      return "FLAT_SURFACE";
     case SemanticLabel::STRUCTURE:
       return "STRUCTURE";
     case SemanticLabel::VEGETATION:
@@ -88,7 +88,7 @@ inline std::optional<ObjectLabel> try_into_object(SemanticLabel label) noexcept
       return ObjectClassification::ANIMAL;
     case SemanticLabel::HAZARD:
       return ObjectClassification::HAZARD;
-    case SemanticLabel::GROUND:
+    case SemanticLabel::FLAT_SURFACE:
     case SemanticLabel::STRUCTURE:
     case SemanticLabel::VEGETATION:
     case SemanticLabel::NOISE:
@@ -133,7 +133,7 @@ inline std::optional<SemanticLabel> try_into_semantic(ObjectLabel label) noexcep
  * @brief Check whether a semantic label is object-compatible.
  * @param label The semantic label to check.
  * @return true if the label is an object class, false for environment/non-object labels
- *         (GROUND, STRUCTURE, VEGETATION, NOISE).
+ *         (FLAT_SURFACE, STRUCTURE, VEGETATION, NOISE).
  */
 inline bool is_object_compatible(SemanticLabel label) noexcept
 {
