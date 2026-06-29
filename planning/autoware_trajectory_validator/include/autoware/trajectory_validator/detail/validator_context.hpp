@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__VALIDATOR_CONTEXT_HPP_
 #define AUTOWARE__TRAJECTORY_VALIDATOR__DETAIL__VALIDATOR_CONTEXT_HPP_
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
+
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
@@ -31,12 +33,14 @@ namespace autoware::trajectory_validator
 /** @brief World state snapshot passed to each validator plugin. */
 struct ValidatorContext
 {
-  nav_msgs::msg::Odometry::ConstSharedPtr odometry;
-  geometry_msgs::msg::AccelWithCovarianceStamped::ConstSharedPtr acceleration;
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry) odometry;
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::AccelWithCovarianceStamped) acceleration;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map;
-  autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr predicted_objects;
-  autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr route;
-  autoware_perception_msgs::msg::TrafficLightGroupArray::ConstSharedPtr traffic_light_signals;
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::PredictedObjects)
+    predicted_objects;
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_planning_msgs::msg::LaneletRoute) route;
+  AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrafficLightGroupArray)
+    traffic_light_signals;
 };
 
 using FilterContext = ValidatorContext;

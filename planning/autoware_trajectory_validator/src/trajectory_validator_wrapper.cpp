@@ -38,7 +38,7 @@ namespace autoware::trajectory_validator
 {
 
 TrajectoryValidatorWrapper::TrajectoryValidatorWrapper(
-  rclcpp::Node & node,
+  autoware::agnocast_wrapper::Node & node,
   rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface,
   vehicle_info_utils::VehicleInfo vehicle_info,
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper)
@@ -71,7 +71,9 @@ TrajectoryValidatorWrapper::TrajectoryValidatorWrapper(
   publishers();
 
   validator_ptr_ = std::make_unique<TrajectoryValidator>(plugins_);
-  diagnostics_interface_ptr_ = std::make_unique<DiagnosticsInterface>(node_ptr_, interface_name_);
+  diagnostics_interface_ptr_ = std::make_unique<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>(
+    node_ptr_, interface_name_);
 }
 
 void TrajectoryValidatorWrapper::load_metric(const std::string & name, const bool is_shadow_mode)
@@ -126,7 +128,9 @@ void TrajectoryValidatorWrapper::update_parameters()
 
 void TrajectoryValidatorWrapper::publishers()
 {
-  pub_debug_ = std::make_shared<autoware_utils_debug::DebugPublisher>(node_ptr_, "~/debug");
+  pub_debug_ = std::make_shared<
+    autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+    node_ptr_, "~/debug");
 }
 
 CandidateTrajectories TrajectoryValidatorWrapper::validate_trajectories(
