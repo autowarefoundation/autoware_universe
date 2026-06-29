@@ -21,13 +21,6 @@ namespace autoware::ptv3::experimental
 {
 /**
  * @brief Semantic labels for point cloud segmentation.
- * @details
- * Consolidated labels representing different point cloud categories:
- * - CAR, TRUCK, BUS, MOTORCYCLE, BICYCLE, PEDESTRIAN, ANIMAL, HAZARD: Object classes
- * - GROUND: Drivable ground surface
- * - STRUCTURE: Non-drivable structures (e.g., buildings, walls)
- * - VEGETATION: Vegetation (trees, bushes)
- * - NOISE: Noise points and outliers
  */
 enum class SemanticLabel : std::uint8_t {
   CAR = 0,
@@ -38,10 +31,10 @@ enum class SemanticLabel : std::uint8_t {
   PEDESTRIAN = 5,
   ANIMAL = 6,
   HAZARD = 7,
-  GROUND = 8,
-  STRUCTURE = 9,
-  VEGETATION = 10,
-  NOISE = 11,
+  GROUND = 8,       ///< Drivable ground surface.
+  STRUCTURE = 9,    ///< Non-drivable structures, such as buildings and walls.
+  VEGETATION = 10,  ///< Vegetation, such as trees and bushes.
+  NOISE = 11,       ///< Noise points and outliers.
 };
 
 }  // namespace autoware::ptv3::experimental
