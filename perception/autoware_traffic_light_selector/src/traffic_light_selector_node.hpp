@@ -15,6 +15,7 @@
 #ifndef TRAFFIC_LIGHT_SELECTOR_NODE_HPP_
 #define TRAFFIC_LIGHT_SELECTOR_NODE_HPP_
 
+#include "traffic_light_selector.hpp"
 #include "traffic_light_selector_utils.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
@@ -66,16 +67,13 @@ private:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 
+  TrafficLightSelector selector_;
+
   void objectsCallback(
     const DetectedObjectsWithFeature::ConstSharedPtr & detected_rois_msg,
     const TrafficLightRoiArray::ConstSharedPtr & rough_rois_msg,
     const TrafficLightRoiArray::ConstSharedPtr & expect_rois_msg,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg);
-
-  void evaluateWholeRois(
-    const std::vector<RegionOfInterest> & detected_rois,
-    const std::map<int64_t, RegionOfInterest> & expect_rois_shifted_map, double & total_max_iou,
-    std::map<int64_t, RegionOfInterest> & total_max_iou_rois_map);
 };
 
 }  // namespace autoware::traffic_light
