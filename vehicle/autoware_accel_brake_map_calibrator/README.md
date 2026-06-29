@@ -21,7 +21,7 @@ ros2 launch autoware_accel_brake_map_calibrator accel_brake_map_calibrator.launc
 ros2 bag play <rosbag_file> --clock
 ```
 
-During the calibration with setting the parameter `progress_file_output` to true, the log file is output in [directory of *autoware_accel_brake_map_calibrator*]/config/ . You can also see accel and brake maps in [directory of *autoware_accel_brake_map_calibrator*]/config/accel_map.csv and [directory of *autoware_accel_brake_map_calibrator*]/config/brake_map.csv after calibration.
+During the calibration with setting the parameter `progress_file_output` to true, the log file is output in [directory of _autoware_accel_brake_map_calibrator_]/config/ . You can also see accel and brake maps in [directory of _autoware_accel_brake_map_calibrator_]/config/accel_map.csv and [directory of _autoware_accel_brake_map_calibrator_]/config/brake_map.csv after calibration.
 
 ### Calibration plugin
 
