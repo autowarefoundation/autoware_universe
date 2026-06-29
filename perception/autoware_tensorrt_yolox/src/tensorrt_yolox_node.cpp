@@ -69,24 +69,6 @@ TrtYoloXNode::TrtYoloXNode(const rclcpp::NodeOptions & node_options)
   config.is_roi_overlap_semseg = declare_parameter<bool>("is_roi_overlap_segmentation");
   config.is_publish_color_mask = declare_parameter<bool>("is_publish_color_mask");
   config.overlap_roi_score_threshold = declare_parameter<float>("overlap_roi_score_threshold");
-  config.roi_overlay_semseg_labels.UNKNOWN =
-    declare_parameter<bool>("roi_overlay_segmentation_label.UNKNOWN");
-  config.roi_overlay_semseg_labels.CAR =
-    declare_parameter<bool>("roi_overlay_segmentation_label.CAR");
-  config.roi_overlay_semseg_labels.TRUCK =
-    declare_parameter<bool>("roi_overlay_segmentation_label.TRUCK");
-  config.roi_overlay_semseg_labels.BUS =
-    declare_parameter<bool>("roi_overlay_segmentation_label.BUS");
-  config.roi_overlay_semseg_labels.MOTORCYCLE =
-    declare_parameter<bool>("roi_overlay_segmentation_label.MOTORCYCLE");
-  config.roi_overlay_semseg_labels.BICYCLE =
-    declare_parameter<bool>("roi_overlay_segmentation_label.BICYCLE");
-  config.roi_overlay_semseg_labels.PEDESTRIAN =
-    declare_parameter<bool>("roi_overlay_segmentation_label.PEDESTRIAN");
-  config.roi_overlay_semseg_labels.ANIMAL =
-    declare_parameter<bool>("roi_overlay_segmentation_label.ANIMAL");
-  config.roi_overlay_semseg_labels.HAZARD =
-    declare_parameter<bool>("roi_overlay_segmentation_label.HAZARD");
 
   try {
     detector_ = std::make_unique<TrtYoloXDetector>(config);
