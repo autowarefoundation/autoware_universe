@@ -132,11 +132,12 @@ protected:
     // Wait for connections to be established
     auto start = std::chrono::steady_clock::now();
     while (std::chrono::steady_clock::now() - start < std::chrono::seconds(5)) {
-      if (detected_rois_publisher_->get_subscription_count() > 0 &&
-          rough_rois_publisher_->get_subscription_count() > 0 &&
-          expected_rois_publisher_->get_subscription_count() > 0 &&
-          camera_info_publisher_->get_subscription_count() > 0 &&
-          output_subscription_->get_publisher_count() > 0) {
+      if (
+        detected_rois_publisher_->get_subscription_count() > 0 &&
+        rough_rois_publisher_->get_subscription_count() > 0 &&
+        expected_rois_publisher_->get_subscription_count() > 0 &&
+        camera_info_publisher_->get_subscription_count() > 0 &&
+        output_subscription_->get_publisher_count() > 0) {
         break;
       }
       executor_->spin_some();
