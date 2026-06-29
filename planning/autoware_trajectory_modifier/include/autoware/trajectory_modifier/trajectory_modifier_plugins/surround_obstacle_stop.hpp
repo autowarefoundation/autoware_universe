@@ -50,6 +50,10 @@ private:
 
   std::unique_ptr<obstacle_proximity_checker::ProximityChecker> proximity_checker_;
 
+  std::optional<obstacle_proximity_checker::CheckResult> proximity_check_result_;
+
+  std::optional<rclcpp::Time> last_frame_time_;
+
   bool is_stop_active_{false};
   std::optional<rclcpp::Time> last_obstacle_found_time_;
 

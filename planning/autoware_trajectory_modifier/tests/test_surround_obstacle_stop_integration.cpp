@@ -79,10 +79,12 @@ TrajectoryPoints create_straight_trajectory(
   return trajectory;
 }
 
-Odometry::ConstSharedPtr make_odometry(double x, double y, double velocity)
+Odometry::ConstSharedPtr make_odometry(
+  double x, double y, double velocity, const rclcpp::Time & stamp)
 {
   Odometry odometry;
   odometry.header.frame_id = "map";
+  odometry.header.stamp = stamp;
   odometry.pose.pose.position.x = x;
   odometry.pose.pose.position.y = y;
   odometry.pose.pose.position.z = 0.0;
@@ -169,15 +171,6 @@ InputData create_input_data(
   return input;
 }
 
-InputData make_stopped_input(
-  PredictedObjects::ConstSharedPtr predicted_objects = nullptr,
-  sensor_msgs::msg::PointCloud2::ConstSharedPtr obstacle_pointcloud = nullptr)
-{
-  return create_input_data(
-    make_odometry(0.0, 0.0, 0.0), make_acceleration(0.0), std::move(predicted_objects),
-    std::move(obstacle_pointcloud));
-}
-
 void expect_stop_trajectory_at_ego(const TrajectoryPoints & trajectory)
 {
   ASSERT_EQ(trajectory.size(), 2U);
@@ -244,6 +237,16 @@ protected:
     p.side_distance_th.pointcloud = 1.0;
   }
 
+  InputData make_stopped_input(
+    PredictedObjects::ConstSharedPtr predicted_objects = nullptr,
+    sensor_msgs::msg::PointCloud2::ConstSharedPtr obstacle_pointcloud = nullptr)
+  {
+    const auto current_time = node_->now();
+    return create_input_data(
+      make_odometry(0.0, 0.0, 0.0, current_time), make_acceleration(0.0),
+      std::move(predicted_objects), std::move(obstacle_pointcloud));
+  }
+
   std::shared_ptr<rclcpp::Node> node_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_;
   std::unique_ptr<SurroundObstacleStop> plugin_;
@@ -267,8 +270,9 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryNotModifiedWhenEgoMoving)
 {
   auto trajectory = create_straight_trajectory(10.0, 5.0);
   const auto objects = make_predicted_objects(0.0, 2.5);
+  const auto current_time = node_->now();
   const auto input =
-    create_input_data(make_odometry(0.0, 0.0, 5.0), make_acceleration(0.0), objects);
+    create_input_data(make_odometry(0.0, 0.0, 5.0, current_time), make_acceleration(0.0), objects);
 
   const bool modified = plugin_->modify_trajectory(trajectory, input);
 
@@ -317,6 +321,7 @@ TEST_F(SurroundObstacleStopIntegrationTest, TrajectoryModifiedWhenNearObjectDete
   ASSERT_TRUE(modified);
   expect_stop_trajectory_at_ego(trajectory);
 
+  trajectory = create_straight_trajectory(10.0, 0.0);
   objects = make_predicted_objects(0.0, 3.0);
   input = make_stopped_input(objects);
   const bool modified_with_hysteresis = plugin_->modify_trajectory(trajectory, input);

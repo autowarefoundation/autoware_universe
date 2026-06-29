@@ -183,9 +183,12 @@ bool SurroundObstacleStop::is_obstacle_nearby(const InputData & input)
 {
   const double contact_distance_threshold = is_stop_active_ ? params_.hysteresis_distance : 1e-3;
 
-  const auto result =
-    proximity_checker_->check(to_proximity_checker_inputs(input), contact_distance_threshold);
+  if (!proximity_check_result_.has_value()) {
+    proximity_check_result_ =
+      proximity_checker_->check(to_proximity_checker_inputs(input), contact_distance_threshold);
+  }
 
+  const auto & result = proximity_check_result_.value();
   if (result.is_obstacle_found) {
     last_obstacle_found_time_ = get_clock()->now();
     is_stop_active_ = true;
@@ -211,13 +214,16 @@ bool SurroundObstacleStop::is_trajectory_modification_required(
     "SurroundObstacleStop::is_trajectory_modification_required", *get_time_keeper());
 
   if (!enabled_ || !check_inputs(input)) {
+    proximity_check_result_ = std::nullopt;
     return false;
   }
 
-  if (utils::is_ego_vehicle_moving(
-        input.current_odometry->twist.twist, params_.ego_stopped_vel_th)) {
+  if (
+    utils::is_stop_trajectory(traj_points, params_.ego_stopped_vel_th) ||
+    utils::is_ego_vehicle_moving(input.current_odometry->twist.twist, params_.ego_stopped_vel_th)) {
     is_stop_active_ = false;
     last_obstacle_found_time_ = std::nullopt;
+    proximity_check_result_ = std::nullopt;
     return false;
   }
 
@@ -229,6 +235,13 @@ bool SurroundObstacleStop::modify_trajectory(
 {
   autoware_utils_debug::ScopedTimeTrack st(
     "SurroundObstacleStop::modify_trajectory", *get_time_keeper());
+
+  const auto current_time = rclcpp::Time(input.current_odometry->header.stamp);
+
+  if (!last_frame_time_ || *last_frame_time_ != current_time) {
+    proximity_check_result_ = std::nullopt;
+    last_frame_time_ = current_time;
+  }
 
   if (!is_trajectory_modification_required(traj_points, input)) {
     publish_debug_string(false);

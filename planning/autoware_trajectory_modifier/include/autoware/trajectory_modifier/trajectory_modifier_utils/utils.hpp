@@ -37,6 +37,8 @@ void replace_trajectory_with_stop_point(
 bool is_ego_vehicle_moving(
   const geometry_msgs::msg::Twist & twist, const double velocity_threshold);
 
+bool is_stop_trajectory(const TrajectoryPoints & trajectory, const double stopped_vel_th = 1e-3);
+
 }  // namespace autoware::trajectory_modifier::utils
 
 #endif  // AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_UTILS__UTILS_HPP_

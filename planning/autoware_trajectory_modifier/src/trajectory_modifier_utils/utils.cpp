@@ -27,14 +27,14 @@ bool validate_trajectory(const TrajectoryPoints & trajectory)
 }
 
 double calculate_distance_to_last_point(
-  const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose)
+  const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & src_pose)
 {
   if (traj_points.empty()) {
     return 0.0;
   }
 
   return autoware::motion_utils::calcSignedArcLength(
-    traj_points, ego_pose.position, traj_points.back().pose.position);
+    traj_points, src_pose.position, traj_points.size() - 1);
 }
 
 void replace_trajectory_with_stop_point(
@@ -64,6 +64,19 @@ bool is_ego_vehicle_moving(const geometry_msgs::msg::Twist & twist, const double
     twist.linear.z * twist.linear.z);
 
   return current_velocity > velocity_threshold;
+}
+
+bool is_stop_trajectory(const TrajectoryPoints & traj_points, const double stopped_vel_th)
+{
+  if (traj_points.empty()) return false;
+
+  if (calculate_distance_to_last_point(traj_points, traj_points.front().pose) > 1.0) {
+    return false;
+  }
+
+  return std::find_if(traj_points.begin(), traj_points.end(), [&](const TrajectoryPoint & point) {
+           return point.longitudinal_velocity_mps > stopped_vel_th;
+         }) == traj_points.end();
 }
 
 }  // namespace autoware::trajectory_modifier::utils
