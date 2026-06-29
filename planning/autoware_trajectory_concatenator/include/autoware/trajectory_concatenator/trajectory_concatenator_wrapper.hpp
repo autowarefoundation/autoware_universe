@@ -38,10 +38,13 @@ public:
    * @param node Node used for parameter declaration and logging.
    * @param node_parameters_interface Parameter interface for declaring and reading parameters.
    */
+  // Templated on the node type so that it accepts both rclcpp::Node and
+  // autoware::agnocast_wrapper::Node (only get_clock()/get_logger() are used from the node).
+  template <typename NodeT>
   TrajectoryConcatenatorWrapper(
-    rclcpp::Node & node,
+    NodeT & node,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface)
-  : node_ptr_(&node),
+  : clock_(node.get_clock()),
     logger_(node.get_logger().get_child(interface_name_)),
     concatenator_params_listener_(node_parameters_interface),
     concatenator_params_(concatenator_params_listener_.get_params()),
@@ -75,7 +78,7 @@ public:
   [[nodiscard]] autoware_internal_planning_msgs::msg::CandidateTrajectories get_concatenated()
   {
     update_parameters();
-    const auto time_now = node_ptr_->get_clock()->now();
+    const auto time_now = clock_->now();
 
     std::lock_guard<std::mutex> lock(concatenator_mutex_);
     RCLCPP_DEBUG(logger_, "get_concatenated()");
@@ -84,7 +87,7 @@ public:
 
 private:
   std::string interface_name_{"trajectory_concatenator"};
-  rclcpp::Node * node_ptr_{nullptr};
+  rclcpp::Clock::SharedPtr clock_;
   rclcpp::Logger logger_;
   concatenator::ParamListener concatenator_params_listener_;
   concatenator::Params concatenator_params_;
