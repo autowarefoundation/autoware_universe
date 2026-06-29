@@ -133,8 +133,9 @@ std::vector<MetricReport> CollisionCheckFilter::generate_metric_reports(
 }
 
 CollisionCheckFilter::result_t CollisionCheckFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext & context)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext & context)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (
     (!context.predicted_objects || context.predicted_objects->objects.empty()) &&
     (!context.neural_network_predicted_objects ||

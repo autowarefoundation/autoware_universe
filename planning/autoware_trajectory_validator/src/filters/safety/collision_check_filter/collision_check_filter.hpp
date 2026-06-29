@@ -30,7 +30,7 @@ public:
   CollisionCheckFilter() : ValidatorInterface("collision_check_filter") {}
 
   result_t is_feasible(
-    const TrajectoryPoints & traj_points, const FilterContext & context) override;
+    const CandidateTrajectory & candidate_trajectory, const FilterContext & context) override;
 
   void update_parameters(const validator::Params & node_params) final;
 
