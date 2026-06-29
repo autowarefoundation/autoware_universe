@@ -30,7 +30,7 @@ typedef struct Colormap_
 } Colormap;
 
 // label ID used for ROI classes that are not mapped to any output class
-inline constexpr int unmapped_label_id = -1;
+inline constexpr int g_unmapped_label_id = -1;
 
 /**
  * @struct RoiLabel
@@ -39,11 +39,11 @@ inline constexpr int unmapped_label_id = -1;
 struct RoiLabel
 {
   std::string name;
-  // Autoware interface class ID; unmapped_label_id when no ROI remap file was specified
-  int class_id = unmapped_label_id;
-  // semantic segmentation label ID; unmapped_label_id when no ROI-to-segmentation remap was
+  // Autoware interface class ID; g_unmapped_label_id when no ROI remap file was specified
+  int class_id = g_unmapped_label_id;
+  // semantic segmentation label ID; g_unmapped_label_id when no ROI-to-segmentation remap was
   // specified
-  int semseg_id = unmapped_label_id;
+  int semseg_id = g_unmapped_label_id;
 };
 
 /**
@@ -58,7 +58,7 @@ std::vector<std::string> load_image_list(const std::string & filepath);
  * @brief Load the label and remap files and resolve them into per-class RoiLabel entries.
  *
  * The label file is mandatory. The remap files are optional: when a path is an empty string the
- * corresponding ID field in each entry is left as unmapped_label_id.
+ * corresponding ID field in each entry is left as g_unmapped_label_id.
  *
  * @param[in] label_path file path of the label file for ROI (mandatory)
  * @param[in] roi_remap_path file path of the remap file for ROI (optional)

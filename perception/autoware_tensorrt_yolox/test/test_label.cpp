@@ -54,7 +54,7 @@ TEST(LoadLabelMaps, ParsesRoiClassNameList)
   EXPECT_EQ(roi_labels[2].name, "UNKNOWN");
 }
 
-// without optional remap files, all class_id and semseg_id fields are unmapped_label_id
+// without optional remap files, all class_id and semseg_id fields are g_unmapped_label_id
 TEST(LoadLabelMaps, LeavesOptionalFieldsUnmappedWhenPathsEmpty)
 {
   // Arrange
@@ -70,8 +70,8 @@ TEST(LoadLabelMaps, LeavesOptionalFieldsUnmappedWhenPathsEmpty)
   // Assert
   ASSERT_EQ(roi_labels.size(), 3);
   for (const auto & roi_label : roi_labels) {
-    EXPECT_EQ(roi_label.class_id, autoware::tensorrt_yolox::unmapped_label_id);
-    EXPECT_EQ(roi_label.semseg_id, autoware::tensorrt_yolox::unmapped_label_id);
+    EXPECT_EQ(roi_label.class_id, autoware::tensorrt_yolox::g_unmapped_label_id);
+    EXPECT_EQ(roi_label.semseg_id, autoware::tensorrt_yolox::g_unmapped_label_id);
   }
 }
 

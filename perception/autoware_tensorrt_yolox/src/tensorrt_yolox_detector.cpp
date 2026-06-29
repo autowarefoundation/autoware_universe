@@ -50,7 +50,7 @@ TrtYoloXDetector::TrtYoloXDetector(const TrtYoloXDetectorConfig & config) : conf
 
   const bool semseg_remap_configured = std::any_of(
     config_.roi_labels.begin(), config_.roi_labels.end(),
-    [](const RoiLabel & roi_label) { return roi_label.semseg_id != unmapped_label_id; });
+    [](const RoiLabel & roi_label) { return roi_label.semseg_id != g_unmapped_label_id; });
   if (config_.is_roi_overlap_semseg && !semseg_remap_configured) {
     std::stringstream error_msg;
     error_msg << "roi_to_semantic_segmentation_remap_path must be specified "
@@ -113,7 +113,7 @@ tl::expected<TrtYoloXDetectorResult, std::string> TrtYoloXDetector::detect(
     const int target_class_id = config_.roi_labels[yolox_object.type].class_id;
 
     // drop the object if it is marked as ignore
-    if (target_class_id == unmapped_label_id) continue;
+    if (target_class_id == g_unmapped_label_id) continue;
 
     const auto classification =
       autoware_perception_msgs::build<autoware_perception_msgs::msg::ObjectClassification>()
@@ -182,7 +182,7 @@ int TrtYoloXDetector::mapRoiLabel2SegLabel(const int32_t roi_label_index)
   if (config_.roi_overlay_semseg_labels.isOverlay(static_cast<uint8_t>(roi_label_index))) {
     return config_.roi_labels[roi_label_index].semseg_id;
   }
-  return unmapped_label_id;
+  return g_unmapped_label_id;
 }
 
 void TrtYoloXDetector::overlapSegmentByRoi(
