@@ -17,6 +17,7 @@
 
 #include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/traffic_light_arbiter/traffic_light_arbiter_core.hpp>
+#include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
