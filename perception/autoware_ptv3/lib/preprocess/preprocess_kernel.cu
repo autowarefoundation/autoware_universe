@@ -720,11 +720,12 @@ std::size_t PreprocessCuda::generateFeatures(
 
     // Keys are FNV-1a hashes spread pseudo-randomly across the full 64-bit range, so there is no
     // usable upper bound below 2^64; sort all 64 bits.
-    cub::DeviceRadixSort::SortPairs(
-      reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
-      generate_feature_workspace_size_, hashes64_d_.get(), sorted_hashes64_d_.get(),
-      hash_indexes64_d_.get(), sorted_hash_indexes64_d_.get(), *num_cropped_points_, 0, 64,
-      stream_);
+    CHECK_CUDA_ERROR(
+      cub::DeviceRadixSort::SortPairs(
+        reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
+        generate_feature_workspace_size_, hashes64_d_.get(), sorted_hashes64_d_.get(),
+        hash_indexes64_d_.get(), sorted_hash_indexes64_d_.get(), *num_cropped_points_, 0, 64,
+        stream_));
 
     CHECK_CUDA_ERROR(
       cub::DeviceAdjacentDifference::SubtractLeftCopy(
@@ -796,11 +797,12 @@ std::size_t PreprocessCuda::generateFeatures(
       config_.min_y_range_, config_.min_z_range_, static_cast<std::uint32_t>(config_.grid_x_size_),
       static_cast<std::uint32_t>(config_.grid_x_size_ * config_.grid_y_size_));
 
-    cub::DeviceRadixSort::SortPairs(
-      reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
-      generate_feature_workspace_size_, hashes32_d_.get(), sorted_hashes32_d_.get(),
-      hash_indexes32_d_.get(), sorted_hash_indexes32_d_.get(), *num_cropped_points_, 0, 32,
-      stream_);
+    CHECK_CUDA_ERROR(
+      cub::DeviceRadixSort::SortPairs(
+        reinterpret_cast<void *>(generate_feature_workspace_d_.get()),
+        generate_feature_workspace_size_, hashes32_d_.get(), sorted_hashes32_d_.get(),
+        hash_indexes32_d_.get(), sorted_hash_indexes32_d_.get(), *num_cropped_points_, 0, 32,
+        stream_));
 
     CHECK_CUDA_ERROR(
       cub::DeviceAdjacentDifference::SubtractLeftCopy(
