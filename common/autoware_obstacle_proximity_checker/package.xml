@@ -5,6 +5,8 @@
   <version>0.50.0</version>
   <description>Library for checking nearby obstacles around the ego vehicle</description>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
+  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
+  <maintainer email="takumi.odashima@tier4.jp">Takumi Odashima</maintainer>
 
   <license>Apache License 2.0</license>
 
