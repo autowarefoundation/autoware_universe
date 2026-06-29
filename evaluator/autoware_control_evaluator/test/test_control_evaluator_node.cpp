@@ -236,7 +236,7 @@ protected:
 
   void spin_some()
   {
-    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(eval_node->get_node_base_interface());
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
   }

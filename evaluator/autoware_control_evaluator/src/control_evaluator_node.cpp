@@ -82,6 +82,21 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
 {
   using std::placeholders::_1;
 
+  // Polling subscribers
+  odometry_sub_ = this->create_polling_subscriber<Odometry>("~/input/odometry", rclcpp::QoS{1});
+  accel_sub_ = this->create_polling_subscriber<AccelWithCovarianceStamped>(
+    "~/input/acceleration", rclcpp::QoS{1});
+  traj_sub_ = this->create_polling_subscriber<Trajectory>("~/input/trajectory", rclcpp::QoS{1});
+  route_subscriber_ = this->create_polling_subscriber<LaneletRoute>(
+    "~/input/route", rclcpp::QoS{1}.transient_local());
+  vector_map_subscriber_ = this->create_polling_subscriber<LaneletMapBin>(
+    "~/input/vector_map", rclcpp::QoS{1}.transient_local());
+  behavior_path_subscriber_ =
+    this->create_polling_subscriber<PathWithLaneId>("~/input/behavior_path", rclcpp::QoS{1});
+  steering_sub_ =
+    this->create_polling_subscriber<SteeringReport>("~/input/steering_status", rclcpp::QoS{1});
+  objects_sub_ = this->create_polling_subscriber<PredictedObjects>("~/input/objects", rclcpp::QoS{1});
+
   // planning_factor subscribers
   std::vector<std::string> stop_deviation_modules_list =
     declare_parameter<std::vector<std::string>>(
@@ -93,8 +108,8 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
     declare_parameter<std::string>("planning_factor_metrics.topic_prefix");
   for (const auto & module_name : stop_deviation_modules_) {
     planning_factors_sub_.emplace(
-      module_name, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>(
-                     this, topic_prefix + module_name));
+      module_name, this->create_polling_subscriber<PlanningFactorArray>(
+                     topic_prefix + module_name, rclcpp::QoS{1}));
     stop_deviation_accumulators_.emplace(module_name, Accumulator<double>());
     stop_deviation_abs_accumulators_.emplace(module_name, Accumulator<double>());
   }
@@ -142,8 +157,8 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
 
   // Timer callback to publish evaluator diagnostics
   using namespace std::literals::chrono_literals;
-  timer_ =
-    rclcpp::create_timer(this, get_clock(), 100ms, std::bind(&ControlEvaluatorNode::onTimer, this));
+  timer_ = autoware::agnocast_wrapper::create_timer(
+    this, get_clock(), 100ms, std::bind(&ControlEvaluatorNode::onTimer, this));
 }
 
 ControlEvaluatorNode::~ControlEvaluatorNode()
@@ -231,21 +246,25 @@ void ControlEvaluatorNode::getRouteData()
 {
   // route
   {
-    const auto msg = route_subscriber_.take_data();
-    if (msg) {
+    const auto msg = route_subscriber_->take_data();
+    // Apply only when a newer message arrives (the wrapper's polling subscriber re-returns the
+    // cached latched message every call; guard on the stamp to preserve apply-once semantics).
+    if (msg && last_applied_route_stamp_ != rclcpp::Time(msg->header.stamp)) {
       if (msg->segments.empty()) {
         RCLCPP_ERROR(get_logger(), "input route is empty. ignored");
       } else {
         route_handler_.setRoute(*msg);
+        last_applied_route_stamp_ = rclcpp::Time(msg->header.stamp);
       }
     }
   }
 
   // map
   {
-    const auto msg = vector_map_subscriber_.take_data();
-    if (msg) {
+    const auto msg = vector_map_subscriber_->take_data();
+    if (msg && last_applied_map_stamp_ != rclcpp::Time(msg->header.stamp)) {
       route_handler_.setMap(*msg);
+      last_applied_map_stamp_ = rclcpp::Time(msg->header.stamp);
     }
   }
 }
@@ -545,7 +564,7 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 void ControlEvaluatorNode::AddStopDeviationMetricMsg()
 {
   const auto get_min_distance_signed =
-    [](const PlanningFactorArray::ConstSharedPtr & planning_factors) -> std::optional<double> {
+    [](const auto & planning_factors) -> std::optional<double> {
     std::optional<double> min_distance = std::nullopt;
     for (const auto & factor : planning_factors->factors) {
       if (factor.behavior == PlanningFactor::STOP) {
@@ -563,7 +582,7 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg()
   // get min_distance from each module
   std::vector<std::pair<std::string, double>> min_distances;
   for (auto & [module_name, planning_factor_sub_] : planning_factors_sub_) {
-    const auto planning_factors = planning_factor_sub_.take_data();
+    const auto planning_factors = planning_factor_sub_->take_data();
     if (
       !planning_factors || planning_factors->factors.empty() ||
       stop_deviation_modules_.count(module_name) == 0) {
@@ -663,7 +682,7 @@ void ControlEvaluatorNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 
-  const auto odom = odometry_sub_.take_data();
+  const auto odom = odometry_sub_->take_data();
   if (odom) {
     const Pose ego_pose = odom->pose.pose;
     ego_speed_ = std::abs(odom->twist.twist.linear.x);
@@ -672,19 +691,19 @@ void ControlEvaluatorNode::onTimer()
     AddStopDeviationMetricMsg();
 
     // add object related metrics
-    const auto objects = objects_sub_.take_data();
+    const auto objects = objects_sub_->take_data();
     if (objects) {
       AddObjectMetricMsg(*odom, *objects);
     }
 
     // add kinematic info
-    const auto acc = accel_sub_.take_data();
+    const auto acc = accel_sub_->take_data();
     if (acc) {
       AddKinematicStateMetricMsg(*odom, *acc);
     }
 
     // add deviation metrics
-    const auto traj = traj_sub_.take_data();
+    const auto traj = traj_sub_->take_data();
     if (traj && !traj->points.empty()) {
       AddLateralDeviationMetricMsg(*traj, ego_pose.position);
       AddYawDeviationMetricMsg(*traj, ego_pose);
@@ -699,7 +718,7 @@ void ControlEvaluatorNode::onTimer()
       AddGoalDeviationMetricMsg(*odom);
 
       // add boundary distance metrics
-      const auto behavior_path = behavior_path_subscriber_.take_data();
+      const auto behavior_path = behavior_path_subscriber_->take_data();
       if (behavior_path) {
         AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
       }
@@ -708,21 +727,23 @@ void ControlEvaluatorNode::onTimer()
   }
 
   // add steering metrics
-  const auto steering_status = steering_sub_.take_data();
+  const auto steering_status = steering_sub_->take_data();
   if (steering_status) {
     AddSteeringMetricMsg(*steering_status);
   }
 
-  // Publish metrics
-  metrics_msg_.stamp = now();
-  metrics_pub_->publish(metrics_msg_);
+  // Publish metrics (zero-copy: borrow the output buffer, move the accumulated array into it)
+  auto metrics_out = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(metrics_pub_);
+  *metrics_out = std::move(metrics_msg_);
+  metrics_out->stamp = now();
+  metrics_pub_->publish(std::move(metrics_out));
   metrics_msg_ = MetricArrayMsg{};
 
   // Publish processing time
-  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
-  processing_time_msg.stamp = get_clock()->now();
-  processing_time_msg.data = stop_watch.toc();
-  processing_time_pub_->publish(processing_time_msg);
+  auto processing_time_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(processing_time_pub_);
+  processing_time_msg->stamp = get_clock()->now();
+  processing_time_msg->data = stop_watch.toc();
+  processing_time_pub_->publish(std::move(processing_time_msg));
 }
 }  // namespace control_diagnostics
 
