@@ -10,9 +10,11 @@ ament_auto_add_library(planning_evaluator_node SHARED
   DIRECTORY src
 )
 
-rclcpp_components_register_node(planning_evaluator_node
+autoware_agnocast_wrapper_register_node(planning_evaluator_node
   PLUGIN "planning_diagnostics::PlanningEvaluatorNode"
   EXECUTABLE planning_evaluator
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
+  ROS2_EXECUTOR SingleThreadedExecutor
 )
 
 rclcpp_components_register_node(planning_evaluator_node
