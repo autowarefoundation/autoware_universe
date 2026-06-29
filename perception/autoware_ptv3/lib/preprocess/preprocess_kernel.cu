@@ -113,12 +113,6 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
   num_cropped_points_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
   num_unique_points32_ = autoware::cuda_utils::make_unique_host<std::uint32_t>();
   num_unique_points64_ = autoware::cuda_utils::make_unique_host<std::uint64_t>();
-  CHECK_CUDA_ERROR(
-    cudaEventCreateWithFlags(&num_cropped_points_copy_event_, cudaEventDisableTiming));
-  CHECK_CUDA_ERROR(
-    cudaEventCreateWithFlags(&num_unique_points32_copy_event_, cudaEventDisableTiming));
-  CHECK_CUDA_ERROR(
-    cudaEventCreateWithFlags(&num_unique_points64_copy_event_, cudaEventDisableTiming));
 
   pooling_keys_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
   pooling_sorted_keys_d_ =
@@ -140,6 +134,13 @@ PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
     nullptr);
   pooling_workspace_size_ = std::max(pooling_sort_workspace_size, pooling_scan_workspace_size);
   pooling_workspace_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(pooling_workspace_size_);
+
+  CHECK_CUDA_ERROR(
+    cudaEventCreateWithFlags(&num_cropped_points_copy_event_, cudaEventDisableTiming));
+  CHECK_CUDA_ERROR(
+    cudaEventCreateWithFlags(&num_unique_points32_copy_event_, cudaEventDisableTiming));
+  CHECK_CUDA_ERROR(
+    cudaEventCreateWithFlags(&num_unique_points64_copy_event_, cudaEventDisableTiming));
 
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
