@@ -153,7 +153,7 @@ PlannerPlugin::MarkerArray DefaultPlanner::visualize(
     autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.999);
   const std_msgs::msg::ColorRGBA cl_end = autoware_utils::create_marker_color(0.2, 0.2, 0.4, 0.05);
   const std_msgs::msg::ColorRGBA cl_goal =
-    autoware_utils::create_marker_color(1.0, 0.5, 0.0, goal_lanelet_transparency);
+    autoware_utils::create_marker_color(0.2, 0.4, 0.4, goal_lanelet_transparency);
 
   visualization_msgs::msg::MarkerArray route_marker_array;
   insert_marker_array(
