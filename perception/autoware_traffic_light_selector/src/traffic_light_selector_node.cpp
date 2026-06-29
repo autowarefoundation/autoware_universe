@@ -55,8 +55,7 @@ void TrafficLightSelectorNode::objectsCallback(
   stop_watch_ptr_->toc("processing_time", true);
 
   const auto output = selector_.select(
-    *detected_traffic_light_msg, *rough_rois_msg, *expected_rois_msg, camera_info_msg->width,
-    camera_info_msg->height);
+    *detected_traffic_light_msg, *rough_rois_msg, *expected_rois_msg, *camera_info_msg);
 
   pub_traffic_light_rois_->publish(output);
 

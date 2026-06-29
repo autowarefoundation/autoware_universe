@@ -51,8 +51,10 @@ void evaluateWholeRois(
 TrafficLightRoiArray TrafficLightSelector::select(
   const DetectedObjectsWithFeature & detected_traffic_light_msg,
   const TrafficLightRoiArray & rough_rois_msg, const TrafficLightRoiArray & expected_rois_msg,
-  uint32_t image_width, uint32_t image_height) const
+  const sensor_msgs::msg::CameraInfo & camera_info_msg) const
 {
+  const auto image_width = camera_info_msg.width;
+  const auto image_height = camera_info_msg.height;
   std::map<int64_t, RegionOfInterest> rough_rois_map;
   for (const auto & roi : rough_rois_msg.rois) {
     rough_rois_map[roi.traffic_light_id] = roi.roi;

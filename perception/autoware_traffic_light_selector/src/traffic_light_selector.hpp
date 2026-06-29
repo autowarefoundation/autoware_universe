@@ -17,6 +17,7 @@
 
 #include "traffic_light_selector_utils.hpp"
 
+#include <sensor_msgs/msg/camera_info.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
@@ -37,7 +38,7 @@ public:
   TrafficLightRoiArray select(
     const DetectedObjectsWithFeature & detected_traffic_light_msg,
     const TrafficLightRoiArray & rough_rois_msg, const TrafficLightRoiArray & expected_rois_msg,
-    uint32_t image_width, uint32_t image_height) const;
+    const sensor_msgs::msg::CameraInfo & camera_info_msg) const;
 };
 
 }  // namespace autoware::traffic_light
