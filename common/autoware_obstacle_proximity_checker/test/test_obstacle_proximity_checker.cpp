@@ -41,8 +41,6 @@ using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::Shape;
 
-constexpr double kContactDistanceThreshold = 1e-3;
-
 vehicle_info_utils::VehicleInfo make_vehicle_info()
 {
   return vehicle_info_utils::createVehicleInfo(0.3, 0.2, 2.5, 1.6, 1.0, 1.0, 0.5, 0.5, 1.8, 0.7);
@@ -83,18 +81,15 @@ geometry_msgs::msg::Pose make_pose(const double x, const double y)
   return pose;
 }
 
-sensor_msgs::msg::PointCloud2::SharedPtr make_pointcloud(
-  const std::vector<std::array<float, 3>> & points, const std::string & frame_id = "base_link")
+pcl::PointCloud<pcl::PointXYZ>::Ptr make_pointcloud(
+  const std::vector<std::array<float, 3>> & points)
 {
   pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
   for (const auto & point : points) {
     pcl_cloud.push_back(pcl::PointXYZ(point[0], point[1], point[2]));
   }
 
-  auto cloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
-  pcl::toROSMsg(pcl_cloud, *cloud_msg);
-  cloud_msg->header.frame_id = frame_id;
-  return cloud_msg;
+  return pcl_cloud.makeShared();
 }
 
 PredictedObjects::SharedPtr make_predicted_objects(const std::vector<PredictedObject> & objects)
@@ -121,17 +116,13 @@ PredictedObject make_car_object(const double x, const double y, const uint8_t id
 
 Inputs make_inputs(
   const geometry_msgs::msg::Pose & ego_pose,
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud = nullptr,
-  const PredictedObjects::ConstSharedPtr & objects = nullptr,
-  const bool use_identity_transform = true)
+  const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud = nullptr,
+  const PredictedObjects::ConstSharedPtr & objects = nullptr)
 {
   Inputs inputs;
   inputs.ego_pose = ego_pose;
-  inputs.pointcloud = pointcloud;
+  inputs.pointcloud_in_base_link = pointcloud;
   inputs.objects = objects;
-  if (use_identity_transform) {
-    inputs.pointcloud_to_base_link_transform = Eigen::Affine3f::Identity();
-  }
   return inputs;
 }
 
@@ -156,7 +147,7 @@ protected:
 
 TEST_F(ProximityCheckerTest, NoObstacleWhenInputsAreEmpty)
 {
-  const auto result = checker_->check(make_inputs(ego_pose_), kContactDistanceThreshold);
+  const auto result = checker_->check(make_inputs(ego_pose_), 1e-3);
   EXPECT_FALSE(result.is_obstacle_found);
   EXPECT_FALSE(result.nearest_obstacle.has_value());
 }
@@ -167,8 +158,7 @@ TEST_F(ProximityCheckerTest, NoObstacleWhenPointcloudCheckDisabled)
   checker_->update_parameters(parameters_);
 
   const auto pointcloud = make_pointcloud({{0.0F, 0.0F, 0.0F}});
-  const auto result =
-    checker_->check(make_inputs(ego_pose_, pointcloud), kContactDistanceThreshold);
+  const auto result = checker_->check(make_inputs(ego_pose_, pointcloud), 1e-3);
 
   EXPECT_FALSE(result.is_obstacle_found);
   EXPECT_FALSE(result.nearest_obstacle.has_value());
@@ -188,8 +178,7 @@ TEST_F(ProximityCheckerTest, DetectsNearbyPointInPointcloud)
 TEST_F(ProximityCheckerTest, NoObstacleForFarPointInPointcloud)
 {
   const auto pointcloud = make_pointcloud({{20.0F, 0.0F, 0.0F}});
-  const auto result =
-    checker_->check(make_inputs(ego_pose_, pointcloud), kContactDistanceThreshold);
+  const auto result = checker_->check(make_inputs(ego_pose_, pointcloud), 1e-3);
 
   EXPECT_FALSE(result.is_obstacle_found);
 }
@@ -205,16 +194,6 @@ TEST_F(ProximityCheckerTest, RespectsContactDistanceThreshold)
 
   const auto result_above_threshold = checker_->check(inputs, 0.5);
   EXPECT_TRUE(result_above_threshold.is_obstacle_found);
-}
-
-TEST_F(ProximityCheckerTest, NoObstacleWhenPointcloudTransformMissing)
-{
-  auto inputs = make_inputs(ego_pose_, make_pointcloud({{4.2F, 0.0F, 0.0F}}), nullptr, false);
-  inputs.pointcloud_to_base_link_transform = std::nullopt;
-
-  const auto result = checker_->check(inputs, 0.5);
-  EXPECT_FALSE(result.is_obstacle_found);
-  EXPECT_FALSE(result.nearest_obstacle.has_value());
 }
 
 TEST_F(ProximityCheckerTest, DetectsNearbyDynamicObject)
@@ -258,7 +237,7 @@ TEST_F(ProximityCheckerTest, UpdateParametersDisablesPointcloudCheck)
   const auto inputs = make_inputs(ego_pose_, pointcloud);
 
   {
-    const auto result = checker_->check(inputs, kContactDistanceThreshold);
+    const auto result = checker_->check(inputs, 1e-3);
     EXPECT_TRUE(result.is_obstacle_found);
   }
 
@@ -266,7 +245,7 @@ TEST_F(ProximityCheckerTest, UpdateParametersDisablesPointcloudCheck)
   checker_->update_parameters(parameters_);
 
   {
-    const auto result = checker_->check(inputs, kContactDistanceThreshold);
+    const auto result = checker_->check(inputs, 1e-3);
     EXPECT_FALSE(result.is_obstacle_found);
   }
 }

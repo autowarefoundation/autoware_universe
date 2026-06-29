@@ -16,7 +16,12 @@
 
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils/transform/transforms.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
+
+#include <pcl/common/transforms.h>
+#include <pcl/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <functional>
 #include <memory>
@@ -26,10 +31,6 @@
 
 namespace autoware::surround_obstacle_checker
 {
-namespace
-{
-constexpr double kContactDistanceThreshold = 1e-3;
-}  // namespace
 
 using autoware_perception_msgs::msg::ObjectClassification;
 
@@ -131,17 +132,22 @@ obstacle_proximity_checker::Inputs SurroundObstacleCheckerNode::toProximityCheck
 {
   obstacle_proximity_checker::Inputs inputs;
   inputs.ego_pose = odometry_ptr_->pose.pose;
-  inputs.pointcloud = pointcloud_ptr_;
   inputs.objects = object_ptr_;
 
-  if (pointcloud_ptr_) {
-    const auto transform_stamped = getTransform(
-      "base_link", pointcloud_ptr_->header.frame_id, pointcloud_ptr_->header.stamp, 0.5);
-    if (transform_stamped.has_value()) {
-      inputs.pointcloud_to_base_link_transform =
-        tf2::transformToEigen(transform_stamped.value().transform).cast<float>();
-    }
-  }
+  if (!pointcloud_ptr_) return inputs;
+
+  const auto transform_stamped =
+    getTransform("base_link", pointcloud_ptr_->header.frame_id, pointcloud_ptr_->header.stamp, 0.5);
+
+  if (!transform_stamped.has_value()) return inputs;
+
+  Eigen::Affine3f isometry =
+    tf2::transformToEigen(transform_stamped.value().transform).cast<float>();
+  pcl::PointCloud<pcl::PointXYZ> transformed_pointcloud;
+  pcl::fromROSMsg(*pointcloud_ptr_, transformed_pointcloud);
+  autoware_utils::transform_pointcloud(transformed_pointcloud, transformed_pointcloud, isometry);
+
+  inputs.pointcloud_in_base_link = transformed_pointcloud.makeShared();
 
   return inputs;
 }
@@ -186,7 +192,7 @@ void SurroundObstacleCheckerNode::onTimer()
   }
 
   const double contact_distance_threshold =
-    state_ == State::STOP ? param.surround_check_hysteresis_distance : kContactDistanceThreshold;
+    state_ == State::STOP ? param.surround_check_hysteresis_distance : 1e-3;
   const auto proximity_result =
     proximity_checker_->check(toProximityCheckerInputs(), contact_distance_threshold);
   const auto is_vehicle_stopped = vehicle_stop_checker_->isVehicleStopped();

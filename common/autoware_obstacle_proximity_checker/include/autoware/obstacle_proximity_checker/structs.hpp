@@ -15,13 +15,14 @@
 #ifndef AUTOWARE__OBSTACLE_PROXIMITY_CHECKER__STRUCTS_HPP_
 #define AUTOWARE__OBSTACLE_PROXIMITY_CHECKER__STRUCTS_HPP_
 
-#include <Eigen/Geometry>
-
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
+
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
 #include <memory>
 #include <optional>
@@ -56,9 +57,8 @@ struct ProximityObstacle
 struct Inputs
 {
   geometry_msgs::msg::Pose ego_pose;
-  sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud;
-  autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr objects;
-  std::optional<Eigen::Affine3f> pointcloud_to_base_link_transform;
+  pcl::PointCloud<pcl::PointXYZ>::ConstPtr pointcloud_in_base_link{nullptr};
+  autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr objects{nullptr};
 };
 
 struct CheckResult

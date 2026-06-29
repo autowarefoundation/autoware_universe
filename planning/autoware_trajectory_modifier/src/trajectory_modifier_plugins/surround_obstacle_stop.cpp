@@ -16,8 +16,13 @@
 
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
 
+#include <autoware_utils/transform/transforms.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
+
+#include <pcl/common/transforms.h>
+#include <pcl/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <iomanip>
 #include <memory>
@@ -27,8 +32,6 @@
 
 namespace
 {
-constexpr double kContactDistanceThreshold = 1e-3;
-
 using autoware::obstacle_proximity_checker::ObstacleTypeParameters;
 using autoware::obstacle_proximity_checker::Parameters;
 
@@ -139,28 +142,46 @@ obstacle_proximity_checker::Inputs SurroundObstacleStop::to_proximity_checker_in
 {
   obstacle_proximity_checker::Inputs checker_inputs;
   checker_inputs.ego_pose = input.current_odometry->pose.pose;
-  checker_inputs.pointcloud = params_.use_pointcloud ? input.obstacle_pointcloud : nullptr;
-  checker_inputs.objects = params_.use_objects ? input.predicted_objects : nullptr;
+  checker_inputs.objects = input.predicted_objects;
 
-  if (checker_inputs.pointcloud) {
-    try {
-      const auto transform_stamped = context_->tf_buffer.lookupTransform(
-        "base_link", checker_inputs.pointcloud->header.frame_id,
-        checker_inputs.pointcloud->header.stamp, tf2::durationFromSec(0.5));
-      checker_inputs.pointcloud_to_base_link_transform =
-        tf2::transformToEigen(transform_stamped.transform).cast<float>();
-    } catch (const tf2::TransformException &) {
-      checker_inputs.pointcloud_to_base_link_transform = std::nullopt;
-    }
-  }
+  if (!input.obstacle_pointcloud) return checker_inputs;
+
+  const auto transform_stamped = get_transform(
+    "base_link", input.obstacle_pointcloud->header.frame_id,
+    input.obstacle_pointcloud->header.stamp, 0.5);
+
+  if (!transform_stamped.has_value()) return checker_inputs;
+
+  Eigen::Affine3f isometry =
+    tf2::transformToEigen(transform_stamped.value().transform).cast<float>();
+  pcl::PointCloud<pcl::PointXYZ> transformed_pointcloud;
+  pcl::fromROSMsg(*input.obstacle_pointcloud, transformed_pointcloud);
+  autoware_utils::transform_pointcloud(transformed_pointcloud, transformed_pointcloud, isometry);
+
+  checker_inputs.pointcloud_in_base_link = transformed_pointcloud.makeShared();
 
   return checker_inputs;
 }
 
+std::optional<geometry_msgs::msg::TransformStamped> SurroundObstacleStop::get_transform(
+  const std::string & source, const std::string & target, const rclcpp::Time & stamp,
+  double duration_sec) const
+{
+  geometry_msgs::msg::TransformStamped transform_stamped;
+
+  try {
+    transform_stamped = context_->tf_buffer.lookupTransform(
+      source, target, stamp, tf2::durationFromSec(duration_sec));
+  } catch (const tf2::TransformException & ex) {
+    return {};
+  }
+
+  return transform_stamped;
+}
+
 bool SurroundObstacleStop::is_obstacle_nearby(const InputData & input)
 {
-  const double contact_distance_threshold =
-    is_stop_active_ ? params_.hysteresis_distance : kContactDistanceThreshold;
+  const double contact_distance_threshold = is_stop_active_ ? params_.hysteresis_distance : 1e-3;
 
   const auto result =
     proximity_checker_->check(to_proximity_checker_inputs(input), contact_distance_threshold);

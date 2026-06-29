@@ -22,6 +22,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 
 namespace autoware::trajectory_modifier::plugin
 {
@@ -60,6 +61,10 @@ private:
     const InputData & input) const;
 
   [[nodiscard]] bool is_obstacle_nearby(const InputData & input);
+
+  std::optional<geometry_msgs::msg::TransformStamped> get_transform(
+    const std::string & source, const std::string & target, const rclcpp::Time & stamp,
+    double duration_sec) const;
 
   void publish_debug_string(bool is_active) const;
 };

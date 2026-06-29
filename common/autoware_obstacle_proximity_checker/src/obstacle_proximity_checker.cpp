@@ -17,7 +17,6 @@
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/transform/transforms.hpp>
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
@@ -128,19 +127,13 @@ std::optional<ProximityObstacle> ProximityChecker::getNearestObstacle(const Inpu
 std::optional<ProximityObstacle> ProximityChecker::getNearestObstacleByPointCloud(
   const Inputs & input) const
 {
-  if (!parameters_.pointcloud_enable_check || !input.pointcloud) {
+  if (!parameters_.pointcloud_enable_check || !input.pointcloud_in_base_link) {
     return std::nullopt;
   }
 
-  if (input.pointcloud->data.empty() || !input.pointcloud_to_base_link_transform.has_value()) {
+  if (input.pointcloud_in_base_link->empty()) {
     return std::nullopt;
   }
-
-  pcl::PointCloud<pcl::PointXYZ> transformed_pointcloud;
-  pcl::fromROSMsg(*input.pointcloud, transformed_pointcloud);
-  autoware_utils::transform_pointcloud(
-    transformed_pointcloud, transformed_pointcloud,
-    input.pointcloud_to_base_link_transform.value());
 
   const auto & pointcloud_param = parameters_.obstacle_types_map.at("pointcloud");
   const double front_margin = pointcloud_param.surround_check_front_distance;
@@ -155,7 +148,7 @@ std::optional<ProximityObstacle> ProximityChecker::getNearestObstacleByPointClou
   geometry_msgs::msg::Point nearest_point_base_link;
   double minimum_distance = std::numeric_limits<double>::max();
   bool was_minimum_distance_updated = false;
-  for (const auto & point : transformed_pointcloud) {
+  for (const auto & point : *input.pointcloud_in_base_link) {
     const Point2d boost_point(point.x, point.y);
     const auto distance_to_object = bg::distance(ego_polygon, boost_point);
 
