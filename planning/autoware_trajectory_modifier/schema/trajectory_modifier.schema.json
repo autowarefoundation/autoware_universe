@@ -208,7 +208,7 @@
                     "motorcycle",
                     "bicycle",
                     "pedestrian",
-                    "unknown"
+                    "hazard"
                   ],
                   "items": {
                     "type": "string"
@@ -373,6 +373,12 @@
                     "pedestrian": {
                       "type": "number",
                       "description": "Deceleration for pedestrian type objects [m/s^2]",
+                      "default": 5.0,
+                      "minimum": 0.0
+                    },
+                    "animal": {
+                      "type": "number",
+                      "description": "Deceleration for animal type objects [m/s^2]",
                       "default": 5.0,
                       "minimum": 0.0
                     }

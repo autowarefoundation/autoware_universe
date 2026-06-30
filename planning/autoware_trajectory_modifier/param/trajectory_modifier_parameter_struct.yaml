@@ -188,7 +188,7 @@ trajectory_modifier_params:
     objects:
       object_types:
         type: string_array
-        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
+        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard]
         description: Types of objects to consider for obstacle stop
         read_only: false
       max_velocity_th:
@@ -339,6 +339,13 @@ trajectory_modifier_params:
           type: double
           default_value: 5.0
           description: Deceleration for pedestrian type objects [m/s^2]
+          validation:
+            bounds<>: [0.0, 10.0]
+          read_only: false
+        animal:
+          type: double
+          default_value: 5.0
+          description: Deceleration for animal type objects [m/s^2]
           validation:
             bounds<>: [0.0, 10.0]
           read_only: false
