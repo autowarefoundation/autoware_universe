@@ -40,7 +40,11 @@ UncrossableBoundaryDepartureFilter::result_t UncrossableBoundaryDepartureFilter:
   ego_state.acceleration = context.acceleration->accel.accel.linear.x;
   ego_state.current_time_s = rclcpp::Time(context.odometry->header.stamp).seconds();
 
-  auto status = checker_->update_departure_status(traj_points, ego_state);
+  // Evaluate each generator's trajectory against its own hysteresis state so that a critical
+  // verdict for one trajectory does not bleed into another through the shared ON/OFF buffers.
+  auto & hysteresis_state = hysteresis_states_[candidate_trajectory.generator_id.uuid];
+
+  auto status = checker_->update_departure_status(traj_points, ego_state, hysteresis_state);
 
   const bool is_feasible = status.status != boundary_departure_checker::DepartureType::CRITICAL;
 
