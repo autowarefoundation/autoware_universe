@@ -45,7 +45,7 @@ AgentLabel get_model_label(const TrackedObject & object)
       return AgentLabel::PEDESTRIAN;
     case autoware_perception_msgs::msg::ObjectClassification::HAZARD:
       return AgentLabel::UNKNOWN;
-      // TODO: replace to STATIC_OBJECT
+      // TODO(yukkysaito): replace to STATIC_OBJECT
     default:
       return AgentLabel::UNKNOWN;
   }
