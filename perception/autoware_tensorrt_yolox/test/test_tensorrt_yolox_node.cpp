@@ -43,19 +43,11 @@
 
 // Integration smoke test for TrtYoloXNode driven end-to-end through ROS topics: an image is
 // published on ~/in/image and the resulting messages are verified on ~/out/objects, ~/out/mask and
-// ~/out/color_mask. Its purpose is to exercise the node's ROS plumbing (parameter loading -> lazy
-// subscription via onConnect -> onImage -> detect -> publish on every output topic); the detection
-// / segmentation logic itself is covered directly by test_tensorrt_yolox_detector.cpp, so it is not
-// re-tested here.
-//
-// The multitask model (general detection + semantic segmentation) is used so that the segmentation
-// mask and colorized mask publishers are exercised as well as the objects publisher. A blank image
-// keeps the test deterministic: it yields no detections above the threshold (empty object list)
-// while the multitask head still produces a segmentation / color mask on every inference.
+// ~/out/color_mask.
 //
 // The node requires an NVIDIA GPU, TensorRT and the ONNX models (downloaded under autoware_data).
 // When any of these are missing the test self-skips (GTEST_SKIP), so it is a no-op on CI machines
-// without a GPU. In CMake it is additionally gated behind `TRT_AVAIL AND CUDA_AVAIL`.
+// without a GPU.
 
 namespace
 {

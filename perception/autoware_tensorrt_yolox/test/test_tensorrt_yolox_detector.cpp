@@ -39,16 +39,7 @@
 
 // cspell: ignore semseg
 
-// Unit test for TrtYoloXDetector::detect(). Unlike test_tensorrt_yolox_node.cpp (which drives the
-// node end-to-end over ROS topics), this exercises the detector class directly: the config is
-// assembled in-process and detect() is called with an image message, so no executor / topic
-// plumbing is involved.
-//
-// The same two model configurations as the node test are used:
-//   * traffic-light detector (yolox_s_car_ped_tl_detector): detection only, no segmentation head.
-//   * general detector + segmentation (yolox-sPlus-opt ... seg16cls): a "multitask" model, so
-//   detect()
-//     additionally fills in the segmentation mask and (optionally) a colorized mask.
+// Unit test for TrtYoloXDetector::detect().
 //
 // detect() owns the TensorRT engine, so the test requires an NVIDIA GPU, TensorRT and the ONNX
 // models (downloaded under autoware_data). When any of these are missing the test self-skips
@@ -239,9 +230,8 @@ TEST(TrtYoloXDetectorTest, DetectReturnsEmptyObjectsForBlankImage)
   EXPECT_FALSE(result->color_mask.has_value());
 }
 
-// Longest detection path: a real camera image containing traffic lights drives the full detect()
-// loop (inference -> per-object classification remap -> non-empty object list). The output header
-// is propagated from the input message.
+// A real camera image containing traffic lights drives the full detect()
+// loop (inference -> per-object classification remap -> non-empty object list).
 TEST(TrtYoloXDetectorTest, DetectFindsTrafficLightInRealImage)
 {
   // Arrange
@@ -271,8 +261,8 @@ TEST(TrtYoloXDetectorTest, DetectFindsTrafficLightInRealImage)
   EXPECT_FALSE(result->mask.has_value());
 }
 
-// Longest segmentation path: the multitask model additionally fills in a segmentation mask and a
-// colorized mask, exercising the segmentation branches of detect() (mask encode, ROI overlay and
+// The multitask model additionally fills in a segmentation mask and a colorized mask,
+// exercising the segmentation branches of detect() (mask encode, ROI overlay and
 // getColorizedMask) that the detection-only model never reaches.
 TEST(TrtYoloXDetectorTest, DetectProducesSegmentationMaskForMultitaskModel)
 {
