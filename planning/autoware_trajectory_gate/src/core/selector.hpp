@@ -34,6 +34,9 @@ public:
   uint32_t source() const;
 
 private:
+  void select_invalid_source();
+  bool select_source(uint32_t target_id);
+
   static constexpr uint32_t invalid_source_id = 0;
   uint32_t current_source_id_;
   std::unordered_map<uint32_t, TrajectorySender *> inputs_;

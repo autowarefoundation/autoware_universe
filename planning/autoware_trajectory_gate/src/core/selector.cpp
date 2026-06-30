@@ -46,28 +46,37 @@ void TrajectorySelector::set_output(TrajectoryReceiver * output)
   output_ = output;
 }
 
+uint32_t TrajectorySelector::source() const
+{
+  return current_source_id_;
+}
+
 bool TrajectorySelector::select(uint32_t target_id)
 {
-  // NOTE: Switch to the invalid source if an unknown source is requested.
+  // Reset the source first, regardless of whether the target source exists.
+  // Therefore, if an unknown source is specified, invalid source is selected.
+  select_invalid_source();
+  return select_source(target_id);
+}
 
-  if (current_source_id_ != invalid_source_id) {
-    inputs_.at(current_source_id_)->set_output(nullptr);
-    current_source_id_ = invalid_source_id;
+void TrajectorySelector::select_invalid_source()
+{
+  if (current_source_id_ == invalid_source_id) {
+    return;
   }
+  inputs_.at(current_source_id_)->set_output(nullptr);
+  current_source_id_ = invalid_source_id;
+}
 
+bool TrajectorySelector::select_source(uint32_t target_id)
+{
   const auto iter = inputs_.find(target_id);
   if (iter == inputs_.end()) {
     return false;
   }
-
   iter->second->set_output(output_);
   current_source_id_ = target_id;
   return true;
-}
-
-uint32_t TrajectorySelector::source() const
-{
-  return current_source_id_;
 }
 
 }  // namespace autoware::trajectory_gate
