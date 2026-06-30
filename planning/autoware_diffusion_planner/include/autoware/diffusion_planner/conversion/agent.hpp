@@ -49,7 +49,7 @@ using autoware_perception_msgs::msg::TrackedObject;
 using autoware_perception_msgs::msg::TrackedObjects;
 constexpr size_t AGENT_STATE_DIM = 11;
 
-enum AgentLabel { VEHICLE = 0, PEDESTRIAN = 1, BICYCLE = 2 };
+enum AgentLabel { VEHICLE = 0, PEDESTRIAN = 1, BICYCLE = 2, IGNORE = 3 };
 
 /**
  * @brief A class to represent a single state of an agent.

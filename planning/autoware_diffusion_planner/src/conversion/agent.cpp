@@ -44,7 +44,7 @@ AgentLabel get_model_label(const TrackedObject & object)
     case autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN:
       return AgentLabel::PEDESTRIAN;
     default:
-      return AgentLabel::VEHICLE;
+      return AgentLabel::IGNORE;
   }
 }
 
@@ -88,6 +88,9 @@ void AgentData::update_histories(const TrackedObjects & objects)
   const rclcpp::Time objects_timestamp(objects.header.stamp);
   std::vector<std::string> found_ids;
   for (const TrackedObject & object : objects.objects) {
+    if (get_model_label(object) == AgentLabel::IGNORE) {
+      continue;
+    }
     const std::string object_id = autoware_utils_uuid::to_hex_string(object.object_id);
     auto it = histories_map_.find(object_id);
     if (it != histories_map_.end()) {
