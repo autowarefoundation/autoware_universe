@@ -69,6 +69,28 @@ ExternalSnapshot collect_external_snapshot(
   return snapshot;
 }
 
+// Applies the perception staleness gate. Returns the stored perception snapshot
+// to use this cycle, or an empty stand-in carrying the same stamp when
+// perception lags the freshest external by more than perception_time_tolerance.
+// Non-destructive: the stored perception is never modified, so
+// ingest_perception() stays its sole writer.
+TrafficLightGroupArray select_effective_perception(
+  const TrafficLightGroupArray & perception, const ExternalSnapshot & external,
+  double perception_time_tolerance)
+{
+  const auto perception_stamp = rclcpp::Time(perception.stamp);
+  const bool perception_is_stale =
+    external.has_any &&
+    (external.max_stamp - perception_stamp).seconds() > perception_time_tolerance;
+  if (!perception_is_stale) {
+    return perception;
+  }
+
+  TrafficLightGroupArray empty_perception;
+  empty_perception.stamp = perception.stamp;
+  return empty_perception;
+}
+
 // Appends each group's predictions into predictions_map keyed by
 // regulatory-element id. Predictions accumulate across sources in call order.
 void append_predictions(
@@ -260,17 +282,12 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
 
   const auto external = collect_external_snapshot(external_traffic_lights_);
 
-  // Ignore perception for this cycle when it lags the freshest external by
-  // more than perception_time_tolerance_. Done as a non-destructive view so
-  // ingest_perception() remains the sole writer of perception_traffic_light_.
+  // perception_stamp is also the effective stamp: select_effective_perception()
+  // carries it onto the empty stand-in, so it is valid for latest_input_time
+  // below regardless of whether perception was gated out this cycle.
   const auto perception_stamp = rclcpp::Time(perception_traffic_light_.stamp);
-  const bool perception_is_stale =
-    external.has_any &&
-    (external.max_stamp - perception_stamp).seconds() > perception_time_tolerance_;
-  TrafficSignalArray empty_perception;
-  empty_perception.stamp = perception_traffic_light_.stamp;
-  const auto & effective_perception =
-    perception_is_stale ? empty_perception : perception_traffic_light_;
+  const auto effective_perception =
+    select_effective_perception(perception_traffic_light_, external, perception_time_tolerance_);
 
   std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predictions_map;
   // add in order from perception msg
