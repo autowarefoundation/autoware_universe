@@ -173,12 +173,13 @@ protected:
 
   // Publishes all four synchronized inputs and waits for the node to emit the output.
   void publish_inputs(
-    const DetectedObjectsWithFeature & detected_rois, const TrafficLightRoiArray & rough_rois,
-    const TrafficLightRoiArray & expected_rois, const CameraInfo & camera_info)
+    const std::vector<RegionOfInterest> & detected_rois,
+    const std::vector<TrafficLightRoi> & rough_rois,
+    const std::vector<TrafficLightRoi> & expected_rois, const CameraInfo & camera_info)
   {
-    detected_rois_publisher_->publish(detected_rois);
-    rough_rois_publisher_->publish(rough_rois);
-    expected_rois_publisher_->publish(expected_rois);
+    detected_rois_publisher_->publish(make_detected_rois(detected_rois));
+    rough_rois_publisher_->publish(make_traffic_light_roi_array(rough_rois));
+    expected_rois_publisher_->publish(make_traffic_light_roi_array(expected_rois));
     camera_info_publisher_->publish(camera_info);
   }
 
@@ -213,14 +214,8 @@ protected:
 // With no expected ROIs the output loop produces nothing, so the node emits an empty array.
 TEST_F(TrafficLightSelectorIntegrationTest, EmptyExpectedRoisOutputsEmptyArray)
 {
-  // Arrange
-  const auto detected_rois = make_detected_rois({});
-  const auto rough_rois = make_traffic_light_roi_array({});
-  const auto expected_rois = make_traffic_light_roi_array({});
-  const auto camera_info = make_camera_info(1280, 720);
-
   // Act
-  publish_inputs(detected_rois, rough_rois, expected_rois, camera_info);
+  publish_inputs({}, {}, {}, make_camera_info(1280, 720));
   const auto result = receive_published_message();
 
   // Assert
@@ -240,13 +235,8 @@ TEST_F(TrafficLightSelectorIntegrationTest, DetectionOutsideRoughRoiOutputsDefau
   const auto detected_roi = make_roi(800, 600, 40, 40);
   const auto expected_output_roi = make_traffic_light_roi(traffic_light_id, RegionOfInterest{});
 
-  const auto detected_rois = make_detected_rois({detected_roi});
-  const auto rough_rois = make_traffic_light_roi_array({rough_roi});
-  const auto expected_rois = make_traffic_light_roi_array({expected_roi});
-  const auto camera_info = make_camera_info(1280, 720);
-
   // Act
-  publish_inputs(detected_rois, rough_rois, expected_rois, camera_info);
+  publish_inputs({detected_roi}, {rough_roi}, {expected_roi}, make_camera_info(1280, 720));
   const auto result = receive_published_message();
 
   // Assert
@@ -265,13 +255,8 @@ TEST_F(TrafficLightSelectorIntegrationTest, DetectionInsideRoughRoiIsAssignedToO
   const auto detected_roi = make_roi(100, 100, 40, 40);
   const auto expected_output_roi = make_traffic_light_roi(traffic_light_id, detected_roi);
 
-  const auto detected_rois = make_detected_rois({detected_roi});
-  const auto rough_rois = make_traffic_light_roi_array({rough_roi});
-  const auto expected_rois = make_traffic_light_roi_array({expected_roi});
-  const auto camera_info = make_camera_info(1280, 720);
-
   // Act
-  publish_inputs(detected_rois, rough_rois, expected_rois, camera_info);
+  publish_inputs({detected_roi}, {rough_roi}, {expected_roi}, make_camera_info(1280, 720));
   const auto result = receive_published_message();
 
   // Assert
@@ -293,13 +278,10 @@ TEST_F(TrafficLightSelectorIntegrationTest, HighestIouCandidateIsSelectedAmongMu
   const auto high_iou_detected_roi = make_roi(100, 100, 40, 40);  // coincides with the expected ROI
   const auto expected_output_roi = make_traffic_light_roi(traffic_light_id, high_iou_detected_roi);
 
-  const auto detected_rois = make_detected_rois({low_iou_detected_roi, high_iou_detected_roi});
-  const auto rough_rois = make_traffic_light_roi_array({rough_roi});
-  const auto expected_rois = make_traffic_light_roi_array({expected_roi});
-  const auto camera_info = make_camera_info(1280, 720);
-
   // Act
-  publish_inputs(detected_rois, rough_rois, expected_rois, camera_info);
+  publish_inputs(
+    {low_iou_detected_roi, high_iou_detected_roi}, {rough_roi}, {expected_roi},
+    make_camera_info(1280, 720));
   const auto result = receive_published_message();
 
   // Assert
