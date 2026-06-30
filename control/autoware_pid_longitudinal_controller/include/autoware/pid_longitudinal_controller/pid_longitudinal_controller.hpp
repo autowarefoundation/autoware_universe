@@ -155,6 +155,7 @@ private:
   bool m_enable_overshoot_emergency;
   bool m_enable_slope_compensation;
   bool m_enable_large_tracking_error_emergency;
+  bool m_enable_emergency_exit_without_stop;
   bool m_enable_keep_stopped_until_steer_convergence;
 
   // smooth stop transition
@@ -182,6 +183,9 @@ private:
   double m_time_threshold_before_pid_integrate;
   double m_ff_scale_min{0.5};
   double m_ff_scale_max{2.0};
+  bool m_enable_velocity_lookahead_feedback{true};
+  double m_velocity_lookahead_time{1.0};
+  double m_velocity_lookahead_blend_weight{0.5};
   bool m_enable_brake_keeping_before_stop;
   double m_brake_keeping_acc;
 

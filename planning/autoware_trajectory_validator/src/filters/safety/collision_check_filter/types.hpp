@@ -75,11 +75,18 @@ struct TrajectoryIdentification
 };
 
 enum class RiskLevel { SAFE, WARN, ERROR };
+
+struct CollisionTiming
+{
+  double ttc;
+  double pet;
+};
+
 struct CollisionDetail
 {
   TrajectoryIdentification object_identification;
-  double pet;
-  double ttc;
+  CollisionTiming first_collision_timing;
+  CollisionTiming worst_pet_timing;
   std::vector<geometry_msgs::msg::Pose> ego_trajectory;
   std::vector<geometry_msgs::msg::Pose> object_trajectory;
   Polygon2d ego_hull;

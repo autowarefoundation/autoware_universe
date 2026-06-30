@@ -81,7 +81,7 @@ std::map<int, double> convertListToClassMap(const std::vector<double> & distance
   std::map<int /*class label*/, double /*distance_threshold*/> distance_threshold_map;
   int class_label = 0;
   for (const auto & distance_threshold : distance_threshold_list) {
-    distance_threshold_map.insert(std::make_pair(class_label, distance_threshold));
+    distance_threshold_map.emplace(class_label, distance_threshold);
     class_label++;
   }
   return distance_threshold_map;

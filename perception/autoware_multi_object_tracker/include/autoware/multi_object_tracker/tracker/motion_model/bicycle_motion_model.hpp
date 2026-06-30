@@ -1,4 +1,4 @@
-// Copyright 2024 Tier IV, Inc.
+// Copyright 2024 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,12 +53,12 @@ private:
     double wheel_base_ratio_inv =
       1 / (lf_ratio + lr_ratio);  // [-] inverse of the sum of lf_ratio and lr_ratio
     double max_vel = 27.8;        // [m/s] maximum velocity, 100km/h
-    double max_slip = 0.5236;     // [rad] maximum slip angle, 30deg
     double max_reverse_vel =
       -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
     double wheel_pos_ratio =
       (lf_ratio + lr_ratio) /
       lr_ratio;  // [-] distance ratio of the wheel base over center-to-rear-wheel
+    double wheel_pos_ratio_sq = wheel_pos_ratio * wheel_pos_ratio;  // [-] square of wheel_pos_ratio
     double wheel_gamma_front =
       (0.5 - lf_ratio) / (lf_ratio + lr_ratio);  // [-] protrusion from front wheel position ratio
     double wheel_gamma_rear =

@@ -42,8 +42,11 @@ inline constexpr std::pair<uint8_t, std::string_view> kObjectClassifications[] =
   {ObjectClassification::MOTORCYCLE, "motorcycle"},
   {ObjectClassification::BICYCLE, "bicycle"},
   {ObjectClassification::PEDESTRIAN, "pedestrian"},
-  {ObjectClassification::UNKNOWN, "unknown"}};
-// DO NOT accept "animal", "hazard", "over_drivable", "under_drivable" class
+  {ObjectClassification::UNKNOWN, "unknown"},
+  {ObjectClassification::ANIMAL, "animal"},
+  {ObjectClassification::HAZARD, "hazard"},
+  {ObjectClassification::OVER_DRIVABLE, "over_drivable"},
+  {ObjectClassification::UNDER_DRIVABLE, "under_drivable"}};
 
 constexpr std::string_view to_type_string(const uint8_t label)
 {

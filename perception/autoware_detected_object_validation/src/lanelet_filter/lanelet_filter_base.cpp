@@ -15,7 +15,6 @@
 #include "lanelet_filter_base.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
-#include "autoware_lanelet2_extension/utility/query.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <Eigen/Core>
@@ -67,6 +66,8 @@ ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::ObjectLaneletFilterBase(
   filter_target_.MOTORCYCLE = declare_parameter<bool>("filter_target_label.MOTORCYCLE");
   filter_target_.BICYCLE = declare_parameter<bool>("filter_target_label.BICYCLE");
   filter_target_.PEDESTRIAN = declare_parameter<bool>("filter_target_label.PEDESTRIAN");
+  filter_target_.ANIMAL = declare_parameter<bool>("filter_target_label.ANIMAL");
+  filter_target_.HAZARD = declare_parameter<bool>("filter_target_label.HAZARD");
 
   // Set filter settings
   filter_settings_.lanelet_xy_overlap_filter =

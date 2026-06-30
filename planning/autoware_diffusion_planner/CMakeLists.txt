@@ -144,9 +144,11 @@ if(TRT_AVAIL AND CUDA_AVAIL)
     endif()
   endif()
 
-  rclcpp_components_register_node(autoware_diffusion_planner_component
+  autoware_agnocast_wrapper_register_node(autoware_diffusion_planner_component
     PLUGIN "autoware::diffusion_planner::DiffusionPlanner"
     EXECUTABLE autoware_diffusion_planner_node
+    ROS2_EXECUTOR SingleThreadedExecutor
+    AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
   )
 
   if(BUILD_TESTING)

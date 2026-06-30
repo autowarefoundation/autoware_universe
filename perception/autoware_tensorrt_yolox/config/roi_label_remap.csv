@@ -1,0 +1,11 @@
+from, to # The label remapped to -1 will not be published.
+UNKNOWN, 9
+CAR, 1
+TRUCK, 2
+BUS, 3
+BICYCLE, 6
+MOTORBIKE, 5
+PEDESTRIAN, 7
+ANIMAL, 8
+HAZARD, 9
+DEBRIS, 9

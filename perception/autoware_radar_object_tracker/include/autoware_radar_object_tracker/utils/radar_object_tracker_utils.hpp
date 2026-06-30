@@ -18,8 +18,6 @@
 #include "autoware_utils_geometry/geometry.hpp"
 #include "autoware_utils_math/unit_conversion.hpp"
 
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2/convert.hpp>

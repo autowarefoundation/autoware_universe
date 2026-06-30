@@ -4,6 +4,7 @@
   <version>0.50.0</version>
   <description>autoware_camera_streampetr</description>
   <maintainer email="samratthapa120@gmail.com">samrat</maintainer>
+  <maintainer email="kokseang.tan@tier4.jp">Kok Seang Tan</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
@@ -25,6 +26,7 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_msgs</depend>
   <depend>tf2_ros</depend>
+  <depend>yaml-cpp</depend>
 
   <test_depend>ament_clang_format</test_depend>
   <test_depend>ament_lint_auto</test_depend>

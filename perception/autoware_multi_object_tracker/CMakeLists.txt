@@ -32,6 +32,7 @@ include_directories(
 # Generate exe file
 set(${PROJECT_NAME}_src
   src/multi_object_tracker_node.cpp
+  src/multi_object_tracker_core.cpp
   src/debugger/debugger.cpp
   src/debugger/debug_object.cpp
   src/processor/processor.cpp
@@ -39,25 +40,38 @@ set(${PROJECT_NAME}_src
 )
 set(${PROJECT_NAME}_lib
   lib/odometry.cpp
-  lib/association/association.cpp
+  lib/association/bev_association.cpp
+  lib/association/association_manager.cpp
+  lib/association/tracker_overlap_manager.cpp
+  lib/association/polar_association.cpp
+  lib/association/scoring/bev_assignment_scoring.cpp
+  lib/association/scoring/polar_assignment_scoring.cpp
+  lib/association/scoring/redundancy_check.cpp
   lib/association/mu_successive_shortest_path/mu_ssp.cpp
-  lib/object_model/types.cpp
+  lib/types.cpp
+  lib/object_model/uuid.cpp
   lib/object_model/shapes.cpp
   lib/tracker/motion_model/bicycle_motion_model.cpp
   # cspell: ignore ctrv
   lib/tracker/motion_model/ctrv_motion_model.cpp
   lib/tracker/motion_model/cv_motion_model.cpp
   lib/tracker/motion_model/static_motion_model.cpp
-  lib/tracker/model/tracker_base.cpp
-  lib/tracker/model/vehicle_tracker.cpp
-  lib/tracker/model/multiple_vehicle_tracker.cpp
-  lib/tracker/model/pedestrian_tracker.cpp
-  lib/tracker/model/pedestrian_and_bicycle_tracker.cpp
-  lib/tracker/model/unknown_tracker.cpp
-  lib/tracker/model/pass_through_tracker.cpp
+  lib/tracker/trackers/tracker_base.cpp
+  lib/tracker/trackers/vehicle_tracker.cpp
+  lib/tracker/update/vehicle_update_strategy.cpp
+  lib/tracker/trackers/multiple_vehicle_tracker.cpp
+  lib/tracker/trackers/pedestrian_tracker.cpp
+  lib/tracker/trackers/pedestrian_and_bicycle_tracker.cpp
+  lib/tracker/trackers/polygon_tracker.cpp
+  lib/tracker/trackers/static_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
   lib/association/adaptive_threshold_cache.cpp
   lib/tracker/shape_model/unstable_shape_filter.cpp
+  lib/tracker/shape_model/shape_model_base.cpp
+  lib/tracker/shape_model/vehicle_shape_model.cpp
+  lib/tracker/shape_model/pedestrian_shape_model.cpp
+  lib/tracker/shape_model/polygon_shape_model.cpp
+  lib/tracker/shape_model/static_shape_model.cpp
 )
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${${PROJECT_NAME}_src}
@@ -91,6 +105,8 @@ if(BUILD_TESTING)
     test/test_utils.cpp
     test/test_bench_association.cpp
     test/test_vehicle_tracker.cpp
+    test/test_uuid_generator.cpp
+    test/test_tracker_overlap_manager.cpp
   )
   add_definitions(-D_SRC_RESOURCES_DIR_PATH="${PROJECT_SOURCE_DIR}/test/data/")
   ament_add_ros_isolated_gtest(test_multi_object_tracker ${test_files})

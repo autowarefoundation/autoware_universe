@@ -115,8 +115,9 @@ void VehicleConstraintFilter::update_parameters(const validator::Params & params
 }
 
 VehicleConstraintFilter::result_t VehicleConstraintFilter::is_feasible(
-  const TrajectoryPoints & traj_points, const FilterContext &)
+  const CandidateTrajectory & candidate_trajectory, const FilterContext &)
 {
+  const auto & traj_points = candidate_trajectory.points;
   if (!vehicle_info_ptr_) {
     return tl::make_unexpected("Vehicle info not set");
   }
@@ -141,7 +142,7 @@ MetricReport VehicleConstraintFilter::check_speed(const TrajectoryPoints & traj_
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
-    .metric_name("check_speed")
+    .metric_name("speed")
     .metric_value(max_observed)
     .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
 }
@@ -153,7 +154,7 @@ MetricReport VehicleConstraintFilter::check_acceleration(const TrajectoryPoints 
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
-    .metric_name("check_acceleration")
+    .metric_name("acceleration")
     .metric_value(max_observed)
     .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
 }
@@ -165,7 +166,7 @@ MetricReport VehicleConstraintFilter::check_deceleration(const TrajectoryPoints 
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
-    .metric_name("check_deceleration")
+    .metric_name("deceleration")
     .metric_value(max_observed)
     .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
 }
@@ -179,7 +180,7 @@ MetricReport VehicleConstraintFilter::check_steering_angle(
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
-    .metric_name("check_steering_angle")
+    .metric_name("steering_angle")
     .metric_value(max_observed)
     .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
 }
@@ -193,7 +194,7 @@ MetricReport VehicleConstraintFilter::check_steering_rate(
   return autoware_trajectory_validator::build<MetricReport>()
     .validator_name(get_name())
     .validator_category(category())
-    .metric_name("check_steering_rate")
+    .metric_name("steering_rate")
     .metric_value(max_observed)
     .level(is_ok ? MetricReport::OK : MetricReport::ERROR);
 }

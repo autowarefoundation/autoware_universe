@@ -16,6 +16,10 @@
     sigma_yaw_angle_deg: 5.0 #[angle degree]
     object_buffer_time_length: 2.0 #[s]
     history_time_length: 1.0 #[s]
+    # When true, ANIMAL and HAZARD classifications are remapped to UNKNOWN before prediction
+    # to keep compatibility with downstream planning that only supports the legacy label set.
+    # Set to false once planning natively handles ANIMAL and HAZARD classes.
+    remap_unsupported_labels_to_unknown: true
     check_lateral_acceleration_constraints: false # whether to check if the predicted path complies with lateral acceleration constraints
     max_lateral_accel: 2.0 # [m/ss] max acceptable lateral acceleration for predicted vehicle paths
     min_acceleration_before_curve: -2.0 # [m/ss] min acceleration a vehicle might take to decelerate before a curve
@@ -52,6 +56,14 @@
       consider_only_routable_neighbours: false
 
     reference_path_resolution: 0.5 #[m]
+
+    # parameters for traffic-signal-aware stop prediction
+    priority_prediction:
+      enable: false
+      stop_time_hysteresis: 0.2
+      go_time_hysteresis: 0.1
+      signal_retention_timeout: 15.0
+      signal_observation_timeout: 20.0
 
     # debug parameters
     publish_processing_time: false

@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__UNSTABLE_SHAPE_FILTER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__SHAPE_MODEL__UNSTABLE_SHAPE_FILTER_HPP_
 
-#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/types.hpp"
 
 #include <Eigen/Core>
 
