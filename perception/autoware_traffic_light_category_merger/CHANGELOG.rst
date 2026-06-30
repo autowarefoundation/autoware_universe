@@ -2,6 +2,15 @@
 Changelog for package autoware_traffic_light_category_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* test(autoware_traffic_light_category_merger): decouple merge core from node and add tests (`#12885 <https://github.com/autowarefoundation/autoware_universe/issues/12885>`_)
+  * Extract the merge logic from TrafficLightCategoryMergerNode into a ROS-free TrafficLightCategoryMerger core (now a static function); the node only handles the ROS interface (sync, publish), with behavior unchanged.
+  * Add node-level integration tests driving the real node over its ROS topics to pin the observable behavior before the extraction.
+  * Add ROS-free unit tests for the merge core, covering ordering, header source, and the empty-car / empty-pedestrian / both-empty edge cases.
+* Contributors: Takayuki AKAMINE, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

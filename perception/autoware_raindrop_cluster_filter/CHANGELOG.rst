@@ -2,6 +2,20 @@
 Changelog for package autoware_raindrop_cluster_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(low_intensity_filter): bug fixing (`#12809 <https://github.com/autowarefoundation/autoware_universe/issues/12809>`_)
+  fix(low_intensity_filter): typo bug fixing
+* fix(detected_object_validation, raindrop_cluster_filter): adding 2 new object classes (`#12673 <https://github.com/autowarefoundation/autoware_universe/issues/12673>`_)
+  * fix(autoware_detected_object_validation): adding 2 new object classes
+  * fix other validation nodes
+  * fix(autoware_raindrop_cluster_filter): adapt to 2 new classes
+  * docs
+  * docs: raindrop filter
+  ---------
+* Contributors: badai nguyen, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

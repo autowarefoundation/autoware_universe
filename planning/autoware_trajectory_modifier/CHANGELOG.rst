@@ -2,6 +2,131 @@
 Changelog for package autoware_trajectory_modifier
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(obstacle_stop): ignore orientation difference for cylinder objects in obstacle tracker (`#12862 <https://github.com/autowarefoundation/autoware_universe/issues/12862>`_)
+  * ignore orientation difference for cylinder objects in obstacle tracker
+  * add maintainer
+  * refactor lambda function get_closest_object_uuid
+  ---------
+* feat(trajectory_modifier): improve trajectory modifier obstacle stop (`#12651 <https://github.com/autowarefoundation/autoware_universe/issues/12651>`_)
+  * feat(trajectory_modifier): improve obstacle stop rss collision check (`#2880 <https://github.com/autowarefoundation/autoware_universe/issues/2880>`_)
+  * Improve logic at multiple places
+  - fix extend_trajectory() function to account for turning at end
+  - fix update_velocities() function to ensure ego can stop at target
+  - fix pcd filter bounds calculation
+  * apply rss check at multiple trajectory points within time horizon
+  - modify rss check to check future states within specified time horizon instead of checking only current state
+  - publish debug string
+  - specify plugin names in parameter yaml instead of launch file
+  - update schema
+  * fix get_nearest_object_collision() function
+  * fix format with pre-commit
+  * update param values
+  * use target trajectory velocity for rss check instead of fixed ego velocity
+  ---------
+  * fix(trajectory_modifier): fix node crash (`#2886 <https://github.com/autowarefoundation/autoware_universe/issues/2886>`_)
+  prevent accessing out of range index
+  - ensure trajectory has at least 2 points wherever necessary
+  - use glog in trajectory modifer launch file
+  * feat(trajectory_modifier): improve obstacle stop to better handle crossing objects (`#2931 <https://github.com/autowarefoundation/autoware_universe/issues/2931>`_)
+  * filter out temporary crossing objects
+  - add function filter_by_target_area() to ObjectFilter struct
+  - filter out objects not overlaping with target area
+  - for remaining moving objects, check if objects are moving along trajectory direction or not
+  - filter out objects that are leaving target area before ego reaches relevant region
+  * check for nearby existing stop point before inserting stop point
+  * use object lateral velocity componenet instead of direction vector to determine crossing objects
+  * parameterize lateral velocity threshold
+  * add docstrings to obstacle_stop_utils.hpp
+  * improve function filter_by_target_area()
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  * feat(trajectory_modifier): add parameterized safety buffer around obstacle footprint (`#2953 <https://github.com/autowarefoundation/autoware_universe/issues/2953>`_)
+  add parameterized safety buffer around obstacle footprint
+  * refactor(trajectory_modifier): remove unused parameter (`#2965 <https://github.com/autowarefoundation/autoware_universe/issues/2965>`_)
+  remove unused parameter from trajectory_modifier parameter struct yaml
+  * fix(trajecotry_modifier): make sure planning_factor distance value is not NaN (`#2973 <https://github.com/autowarefoundation/autoware_universe/issues/2973>`_)
+  * make sure planning_factor distance value is not NaN
+  * remove duplicate function definition
+  ---------
+  Co-authored-by: Yuxuan Liu <619684051@qq.com>
+  * feat(trajectory_modifier): move velocity modification logic to a separate plugin (`#2974 <https://github.com/autowarefoundation/autoware_universe/issues/2974>`_)
+  * move velocity modification logic to a separate plugin
+  - add new plugin velocity_modifier
+  - move velocity update logic from obstacle_stop to velocity_modifier
+  - update trajectory_modifier parameters struct
+  - update trajectory_modifier param yaml and schema
+  - update trajectory_modifier CMakeLists and plugins.xml
+  * remove unnecessary comments and includes
+  * fix log statements, remove unnecessary member variable
+  * add integration test for velocity_modifier plugin
+  * update obstacle_stop integration test
+  * fix spelling and format
+  * remove unused parameter
+  * add missing include
+  * minor refactor
+  ---------
+  * fix(obstacle_stop): always process objects/pointcloud (`#2997 <https://github.com/autowarefoundation/autoware_universe/issues/2997>`_)
+  * process objects/pointcloud even if input data is empty
+  * change arg names in trajectory_modifier launch file
+  ---------
+  * fix obstacle_stop integration tests
+  * fix format, add missing includes
+  * feat(trajectory_modifier): improve obstacle stop crossing object assessment (`#3068 <https://github.com/autowarefoundation/autoware_universe/issues/3068>`_)
+  * improve time to object calculation to take into account ego front offset, update trajectory modifier readme
+  * add obstacle type (dynamic or static) to debug string
+  * improve get_predicted_obj_pose_at_time() to extrapolate obj pose from kinematics if there is no predicted path
+  * reduce time buffer for crossing object time overlap check
+  * update default param values
+  * fix obstacle stop integration tests
+  ---------
+  * guard against division by zero, force last interpolated velocity sample to zero when clamped to s_max
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Yuxuan Liu <619684051@qq.com>
+* feat(planning): apply autoware_agnocast_wrapper to diffussion planner trajectory pipeline nodes for CIE (`#12779 <https://github.com/autowarefoundation/autoware_universe/issues/12779>`_)
+  * feat(autoware_diffusion_planner): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_optimizer): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_adapter): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_ranker): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_selector): apply autoware_agnocast_wrapper for CIE
+  * feat(autoware_trajectory_modifier): apply autoware_agnocast_wrapper for CIE
+  ---------
+* test(autoware_trajectory_modifier): add integration test for obstacle_stop plugin (`#12568 <https://github.com/autowarefoundation/autoware_universe/issues/12568>`_)
+  * test(autoware_trajectory_modifier): add integration test for obstacle_stop plugin
+  Add a node-level integration test that exercises the obstacle_stop plugin
+  through the trajectory_modifier node interface. The test serves as a
+  characterization test capturing the current behavior prior to refactoring.
+  * test(autoware_trajectory_modifier): specify expectation
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* refactor(autoware_trajectory_modifier): split per-frame inputs from long-lived context (`#12550 <https://github.com/autowarefoundation/autoware_universe/issues/12550>`_)
+  * refactor(autoware_trajectory_modifier): pass per-frame inputs as method arguments
+  * refactor(autoware_trajectory_modifier): rename FrameInputs to InputData
+  Rename the per-frame plugin-input struct and its header file from
+  FrameInputs/frame_inputs.hpp to InputData/input_data.hpp, plus the
+  associated factory method make_frame_inputs() to make_input_data().
+  * refactor(autoware_trajectory_modifier): rename TrajectoryModifierData to TrajectoryModifierContext
+  Rename the long-lived plugin-shared struct and its header file from
+  TrajectoryModifierData/trajectory_modifier_structs.hpp to
+  TrajectoryModifierContext/trajectory_modifier_context.hpp, and rename
+  the corresponding member/parameter (data\_/data) to context\_/context.
+  * chore(autoware_trajectory_modifier): remove redundant comments
+  * test(autoware_trajectory_modifier): declare input variables using helper functions
+  * refactor(autoware_trajectory_modifier): rename `inputs` parameter to `input`
+  The parameter name `inputs` (plural) was misleading because the type is a
+  singular `InputData` struct, not a collection. The `s` suffix conventionally
+  suggests a vector/container, so rename to `input` to match the type.
+  Test helper struct `DataInputs` and the `apply_inputs` function keep their
+  plural form since they intentionally aggregate multiple data streams.
+  * chore(autoware_trajectory_modifier): remove unused includes
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* Contributors: Takahisa Ishikawa, atsushi yano, github-actions, mkquda
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
