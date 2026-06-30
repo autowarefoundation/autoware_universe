@@ -82,8 +82,8 @@
     # Surround Obstacle Stop Plugin Parameters
     surround_obstacle_stop:
       use_objects: true
-      use_pointcloud: true
-      object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"]
+      use_pointcloud: false
+      object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "unknown"]
       front_distance_th:
         car: 0.5
         truck: 0.5
@@ -99,9 +99,9 @@
         truck: 0.0
         bus: 0.0
         trailer: 0.0
-        motorcycle: 1.0
-        bicycle: 1.0
-        pedestrian: 1.0
+        motorcycle: 0.0
+        bicycle: 0.5
+        pedestrian: 0.5
         unknown: 0.5
         pointcloud: 0.5
       back_distance_th:
