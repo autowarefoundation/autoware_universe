@@ -34,7 +34,7 @@ ServiceLogChecker::ServiceLogChecker(const rclcpp::NodeOptions & options)
   diagnostics_.add("response_status", this, &ServiceLogChecker::update_diagnostics);
 }
 
-void ServiceLogChecker::on_service_log(const ServiceLog::ConstSharedPtr msg)
+void ServiceLogChecker::on_service_log(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(ServiceLog) & msg)
 {
   try {
     // Ignore service request.
