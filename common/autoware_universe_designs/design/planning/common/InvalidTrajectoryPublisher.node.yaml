@@ -1,0 +1,26 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: InvalidTrajectoryPublisher.node
+package:
+  name: autoware_planning_validator
+  provider: autoware
+launch:
+  plugin: autoware::planning_validator::InvalidTrajectoryPublisherNode
+  executable: invalid_trajectory_publisher
+# interfaces
+subscribers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+publishers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+# parameters
+param_files: []
+param_values: []
+# processes
+processes:
+  - name: publish_invalid_trajectory
+    trigger_conditions:
+      - on_input: trajectory
+    outcomes:
+      - to_output: trajectory

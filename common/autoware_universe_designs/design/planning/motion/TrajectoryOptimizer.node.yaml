@@ -1,0 +1,37 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: TrajectoryOptimizer.node
+package:
+  name: autoware_trajectory_optimizer
+  provider: autoware
+launch:
+  plugin: autoware::trajectory_optimizer::TrajectoryOptimizer
+  executable: autoware_trajectory_optimizer_node
+# interfaces
+subscribers:
+  - name: trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+publishers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: processing_time_detail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeTree
+    remap_target: ~/debug/processing_time_detail_ms
+  - name: processing_time
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: ~/debug/processing_time_ms
+# parameters
+param_files:
+  - name: trajectory_optimizer_param
+    default: config/trajectory_optimizer.param.yaml
+param_values: []
+# processes
+processes:
+  - name: optimize_trajectory
+    trigger_conditions:
+      - on_input: trajectories
+    outcomes:
+      - to_output: trajectory
+      - to_output: trajectories

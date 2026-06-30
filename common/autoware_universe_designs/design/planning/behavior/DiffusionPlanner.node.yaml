@@ -1,0 +1,83 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: DiffusionPlanner.node
+package:
+  name: autoware_diffusion_planner
+  provider: autoware
+launch:
+  plugin: autoware::diffusion_planner::DiffusionPlanner
+  executable: autoware_diffusion_planner_node
+# interfaces
+subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: tracked_objects
+    message_type: autoware_perception_msgs/msg/TrackedObjects
+  - name: traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+  - name: turn_indicators
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsReport
+publishers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+  - name: predicted_objects
+    message_type: autoware_perception_msgs/msg/PredictedObjects
+  - name: turn_indicators
+    message_type: autoware_vehicle_msgs/msg/TurnIndicatorsCommand
+  - name: traffic_signal
+    message_type: autoware_perception_msgs/msg/TrafficLightGroup
+    remap_target: ~/output/debug/traffic_signal
+  - name: route_marker
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/route_marker
+  - name: lane_marker
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/lane_marker
+  - name: linestring_marker
+    message_type: visualization_msgs/msg/MarkerArray
+    remap_target: ~/debug/linestring_marker
+  - name: processing_time_detail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeTree
+    remap_target: ~/debug/processing_time_detail_ms
+  - name: processing_time
+    message_type: autoware_internal_debug_msgs/msg/Float64Stamped
+    remap_target: ~/debug/processing_time_ms
+  - name: inference_time
+    message_type: std_msgs/msg/Float64
+    remap_target: ~/debug/inference_time_ms
+  - name: denoising_steps
+    message_type: std_msgs/msg/Float32MultiArray
+    remap_target: ~/debug/denoising_steps
+  - name: guidance_status
+    message_type: autoware_internal_debug_msgs/msg/StringStamped
+    remap_target: ~/debug/guidance_status
+# parameters
+param_files:
+  - name: diffusion_planner_param
+    default: config/diffusion_planner.param.yaml
+param_values: []
+# processes
+processes:
+  - name: plan_trajectory
+    trigger_conditions:
+      - on_input: route
+    outcomes:
+      - to_output: trajectory
+servers:
+  - name: set_start_guidance_enabled
+    message_type: std_srvs/srv/SetBool
+    remap_target: ~/service/set_start_guidance_enabled
+  - name: set_stop_guidance_enabled
+    message_type: std_srvs/srv/SetBool
+    remap_target: ~/service/set_stop_guidance_enabled
+  - name: set_centerline_guidance_enabled
+    message_type: std_srvs/srv/SetBool
+    remap_target: ~/service/set_centerline_guidance_enabled
