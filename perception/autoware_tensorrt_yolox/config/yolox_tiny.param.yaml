@@ -11,17 +11,6 @@
     # publish color mask for result visualization
     is_publish_color_mask: false
 
-    roi_overlay_segmentation_label:
-      UNKNOWN : true
-      CAR : false
-      TRUCK : false
-      BUS : false
-      MOTORCYCLE : true
-      BICYCLE : true
-      PEDESTRIAN : true
-      ANIMAL: true
-      HAZARD: true
-
     score_threshold: 0.35 # Objects with a score lower than this value will be ignored. This threshold will be ignored if specified model contains EfficientNMS_TRT module in it.
     nms_threshold: 0.7 # Detection results will be ignored if IoU over this value. This threshold will be ignored if specified model contains EfficientNMS_TRT module in it.
 

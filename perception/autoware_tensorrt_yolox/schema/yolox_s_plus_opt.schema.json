@@ -18,13 +18,6 @@
           "type": "boolean",
           "description": "Publish color mask for result visualization."
         },
-        "roi_overlay_segmentation_label": {
-          "type": "object",
-          "description": "Enable/disable ROI overlay for specific labels.",
-          "additionalProperties": {
-            "type": "boolean"
-          }
-        },
         "score_threshold": {
           "type": "number",
           "minimum": 0.0,
@@ -89,7 +82,6 @@
         "is_roi_overlap_segmentation",
         "overlap_roi_score_threshold",
         "is_publish_color_mask",
-        "roi_overlay_segmentation_label",
         "score_threshold",
         "nms_threshold",
         "precision",

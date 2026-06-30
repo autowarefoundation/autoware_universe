@@ -177,20 +177,13 @@ tl::expected<TrtYoloXDetectorResult, std::string> TrtYoloXDetector::detect(
   return result;
 }
 
-int TrtYoloXDetector::mapRoiLabel2SegLabel(const int32_t roi_label_index)
-{
-  if (config_.roi_overlay_semseg_labels.isOverlay(static_cast<uint8_t>(roi_label_index))) {
-    return config_.roi_labels[roi_label_index].semseg_id;
-  }
-  return g_unmapped_label_id;
-}
-
 void TrtYoloXDetector::overlapSegmentByRoi(
   const tensorrt_yolox::Object & roi_object, cv::Mat & mask, const int orig_width,
   const int orig_height)
 {
   if (roi_object.score < config_.overlap_roi_score_threshold) return;
-  int seg_class_index = mapRoiLabel2SegLabel(roi_object.type);
+  // A negative semseg ID marks a ROI class that should not overlay the segmentation mask.
+  const int seg_class_index = config_.roi_labels[roi_object.type].semseg_id;
   if (seg_class_index < 0) return;
 
   const float scale_x = static_cast<float>(mask.cols) / static_cast<float>(orig_width);

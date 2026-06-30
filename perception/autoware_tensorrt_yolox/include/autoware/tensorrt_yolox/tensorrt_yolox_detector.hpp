@@ -23,7 +23,6 @@
 
 #include <sensor_msgs/msg/image.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
-#include <tier4_perception_msgs/msg/semantic.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -31,34 +30,10 @@
 #include <string>
 #include <vector>
 
-// cspell: ignore Semseg semseg
+// cspell: ignore semseg
 
 namespace autoware::tensorrt_yolox
 {
-using Label = tier4_perception_msgs::msg::Semantic;
-
-struct RoiOverlaySemsegLabel
-{
-  bool UNKNOWN;
-  bool CAR;
-  bool TRUCK;
-  bool BUS;
-  bool MOTORCYCLE;
-  bool BICYCLE;
-  bool PEDESTRIAN;
-  bool ANIMAL;
-  bool HAZARD;
-
-  bool isOverlay(const uint8_t label) const
-  {
-    return (label == Label::UNKNOWN && UNKNOWN) || (label == Label::CAR && CAR) ||
-           (label == Label::TRUCK && TRUCK) || (label == Label::BUS && BUS) ||
-           (label == Label::ANIMAL && ANIMAL) || (label == Label::MOTORBIKE && MOTORCYCLE) ||
-           (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN) ||
-           (label == Label::HAZARD && HAZARD);
-  };
-};  // struct RoiOverlaySemsegLabel
-
 /**
  * @struct TrtYoloXDetectorConfig
  * @brief Configuration that does not change frame-by-frame. The detector is reconstructed when any
@@ -89,7 +64,6 @@ struct TrtYoloXDetectorConfig
   bool is_roi_overlap_semseg;
   bool is_publish_color_mask;
   float overlap_roi_score_threshold;
-  RoiOverlaySemsegLabel roi_overlay_semseg_labels;
 };
 
 /**
@@ -127,7 +101,6 @@ public:
     const sensor_msgs::msg::Image & image_msg);
 
 private:
-  int mapRoiLabel2SegLabel(const int32_t roi_label_index);
   void overlapSegmentByRoi(
     const tensorrt_yolox::Object & object, cv::Mat & mask, const int width, const int height);
   void getColorizedMask(const cv::Mat & mask, cv::Mat & cmask);

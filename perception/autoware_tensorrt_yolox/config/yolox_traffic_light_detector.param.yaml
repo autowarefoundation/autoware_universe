@@ -18,13 +18,3 @@
     is_roi_overlap_segmentation: false
     overlap_roi_score_threshold: 0.3
     is_publish_color_mask: false
-    roi_overlay_segmentation_label:
-      UNKNOWN : false
-      CAR : false
-      TRUCK : false
-      BUS : false
-      MOTORCYCLE : false
-      BICYCLE : false
-      PEDESTRIAN : false
-      ANIMAL: false
-      HAZARD: false

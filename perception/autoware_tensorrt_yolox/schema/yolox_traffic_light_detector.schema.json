@@ -76,13 +76,6 @@
         "is_publish_color_mask": {
           "type": "boolean",
           "description": "Publish color mask for result visualization."
-        },
-        "roi_overlay_segmentation_label": {
-          "type": "object",
-          "description": "Enable/disable ROI overlay for specific labels.",
-          "additionalProperties": {
-            "type": "boolean"
-          }
         }
       },
       "required": [
@@ -99,8 +92,7 @@
         "calibration_image_list_path",
         "is_roi_overlap_segmentation",
         "overlap_roi_score_threshold",
-        "is_publish_color_mask",
-        "roi_overlay_segmentation_label"
+        "is_publish_color_mask"
       ],
       "additionalProperties": false
     }
