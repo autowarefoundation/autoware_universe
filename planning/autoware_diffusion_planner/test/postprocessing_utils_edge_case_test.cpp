@@ -53,6 +53,10 @@ protected:
     tracked_object_.kinematics.pose_with_covariance.pose.orientation =
       autoware_utils::create_quaternion_from_yaw(0.0);
     tracked_object_.existence_probability = 0.9;
+    autoware_perception_msgs::msg::ObjectClassification classification;
+    classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
+    classification.probability = 1.0;
+    tracked_object_.classification.push_back(classification);
   }
 
   TrackedObject tracked_object_;
