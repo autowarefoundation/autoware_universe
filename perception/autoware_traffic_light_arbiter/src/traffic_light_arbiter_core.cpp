@@ -282,10 +282,6 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
 
   const auto external = collect_external_snapshot(external_traffic_lights_);
 
-  // perception_stamp is also the effective stamp: select_effective_perception()
-  // carries it onto the empty stand-in, so it is valid for latest_input_time
-  // below regardless of whether perception was gated out this cycle.
-  const auto perception_stamp = rclcpp::Time(perception_traffic_light_.stamp);
   const auto effective_perception =
     select_effective_perception(perception_traffic_light_, external, perception_time_tolerance_);
 
@@ -332,9 +328,9 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
     output_signals_msg.traffic_light_groups.emplace_back(signal_msg);
   }
 
-  // Latest input stamp across stored sources. The Node compares this against
-  // its trigger stamp to decide whether the published output is behind some
-  // input that has arrived but hasn't yet driven a publish cycle.
+  // Latest input stamp across stored sources, for the Node's behind-input check.
+  // perception_stamp stays valid even when perception was gated out (stand-in keeps it).
+  const auto perception_stamp = rclcpp::Time(effective_perception.stamp);
   result.latest_input_time = (external.has_any && external.max_stamp > perception_stamp)
                                ? external.max_stamp
                                : perception_stamp;
