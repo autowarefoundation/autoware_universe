@@ -1,0 +1,39 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: RadarThresholdFilter.node
+
+package:
+  name: autoware_radar_threshold_filter
+  provider: autoware
+
+launch:
+  plugin: autoware::radar_threshold_filter::RadarThresholdFilterNode
+  executable: radar_threshold_filter_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: radar
+    message_type: radar_msgs/msg/RadarScan
+    remap_target: ~/input/radar
+
+publishers:
+  - name: radar
+    message_type: radar_msgs/msg/RadarScan
+    remap_target: ~/output/radar
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/radar_threshold_filter.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - on_input: radar
+    outcomes:
+      - to_output: radar
