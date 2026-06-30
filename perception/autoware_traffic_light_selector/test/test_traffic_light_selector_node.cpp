@@ -229,6 +229,7 @@ TEST_F(TrafficLightSelectorIntegrationTest, DetectionOutsideRoughRoiOutputsDefau
 {
   // Arrange
   const auto traffic_light_id = 123;
+  const auto camera_info = make_camera_info(1280, 720);
   const auto expected_roi = make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40));
   const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
   // Detected ROI center (820, 620) is far outside the rough ROI span (50..250).
@@ -236,7 +237,7 @@ TEST_F(TrafficLightSelectorIntegrationTest, DetectionOutsideRoughRoiOutputsDefau
   const auto expected_output_roi = make_traffic_light_roi(traffic_light_id, RegionOfInterest{});
 
   // Act
-  publish_inputs({detected_roi}, {rough_roi}, {expected_roi}, make_camera_info(1280, 720));
+  publish_inputs({detected_roi}, {rough_roi}, {expected_roi}, camera_info);
   const auto result = receive_published_message();
 
   // Assert
@@ -249,6 +250,7 @@ TEST_F(TrafficLightSelectorIntegrationTest, DetectionInsideRoughRoiIsAssignedToO
 {
   // Arrange
   const auto traffic_light_id = 123;
+  const auto camera_info = make_camera_info(1280, 720);
   const auto expected_roi = make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40));
   const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
   // Detected ROI center (120, 120) is inside the rough ROI and coincides with the expected ROI.
@@ -256,7 +258,7 @@ TEST_F(TrafficLightSelectorIntegrationTest, DetectionInsideRoughRoiIsAssignedToO
   const auto expected_output_roi = make_traffic_light_roi(traffic_light_id, detected_roi);
 
   // Act
-  publish_inputs({detected_roi}, {rough_roi}, {expected_roi}, make_camera_info(1280, 720));
+  publish_inputs({detected_roi}, {rough_roi}, {expected_roi}, camera_info);
   const auto result = receive_published_message();
 
   // Assert
@@ -271,6 +273,7 @@ TEST_F(TrafficLightSelectorIntegrationTest, HighestIouCandidateIsSelectedAmongMu
 {
   // Arrange
   const auto traffic_light_id = 123;
+  const auto camera_info = make_camera_info(1280, 720);
   const auto expected_roi = make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40));
   const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
   // Both detected ROI centers (180, 180) and (120, 120) lie inside the rough ROI span (50..250).
@@ -280,8 +283,7 @@ TEST_F(TrafficLightSelectorIntegrationTest, HighestIouCandidateIsSelectedAmongMu
 
   // Act
   publish_inputs(
-    {low_iou_detected_roi, high_iou_detected_roi}, {rough_roi}, {expected_roi},
-    make_camera_info(1280, 720));
+    {low_iou_detected_roi, high_iou_detected_roi}, {rough_roi}, {expected_roi}, camera_info);
   const auto result = receive_published_message();
 
   // Assert
