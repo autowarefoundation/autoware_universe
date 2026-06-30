@@ -91,7 +91,7 @@ private:
   std::unique_ptr<std::unordered_set<lanelet::Id>> map_regulatory_elements_set_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 
-  TrafficSignalArray latest_perception_msg_;
+  TrafficSignalArray perception_traffic_light_;
   std::unordered_map<lanelet::Id, std::pair<rclcpp::Time, TrafficSignal>> external_traffic_lights_;
 };
 

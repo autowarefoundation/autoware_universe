@@ -224,7 +224,7 @@ void TrafficLightArbiterCore::sweep_expired_external_signals(
 
 void TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
 {
-  latest_perception_msg_ = msg;
+  perception_traffic_light_ = msg;
   sweep_expired_external_signals(rclcpp::Time(msg.stamp), external_time_tolerance_);
 }
 
@@ -262,15 +262,15 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
 
   // Ignore perception for this cycle when it lags the freshest external by
   // more than perception_time_tolerance_. Done as a non-destructive view so
-  // ingest_perception() remains the sole writer of latest_perception_msg_.
-  const auto perception_stamp = rclcpp::Time(latest_perception_msg_.stamp);
+  // ingest_perception() remains the sole writer of perception_traffic_light_.
+  const auto perception_stamp = rclcpp::Time(perception_traffic_light_.stamp);
   const bool perception_is_stale =
     external.has_any &&
     (external.max_stamp - perception_stamp).seconds() > perception_time_tolerance_;
   TrafficSignalArray empty_perception;
-  empty_perception.stamp = latest_perception_msg_.stamp;
+  empty_perception.stamp = perception_traffic_light_.stamp;
   const auto & effective_perception =
-    perception_is_stale ? empty_perception : latest_perception_msg_;
+    perception_is_stale ? empty_perception : perception_traffic_light_;
 
   std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predictions_map;
   // add in order from perception msg
