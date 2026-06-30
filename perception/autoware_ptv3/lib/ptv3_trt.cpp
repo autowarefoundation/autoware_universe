@@ -18,6 +18,7 @@
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
 
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware/point_types/memory.hpp>
 #include <autoware/point_types/types.hpp>
@@ -244,7 +245,9 @@ void PTv3TRT::allocateSerializedPoolingBuffers()
 
   serialized_pooling_num_voxels_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.pooling_strides_.size() + 1);
-  serialized_pooling_num_voxels_.assign(config_.pooling_strides_.size() + 1, 0);
+  serialized_pooling_num_voxels_ = autoware::cuda_utils::make_unique_host<std::int64_t[]>(
+    config_.pooling_strides_.size() + 1, cudaHostAllocDefault);
+  std::fill_n(serialized_pooling_num_voxels_.get(), config_.pooling_strides_.size() + 1, 0);
   serialized_pooling_depths_.resize(config_.pooling_strides_.size());
   for (std::size_t stage_index = 0; stage_index < config_.pooling_strides_.size(); ++stage_index) {
     serialized_pooling_depths_[stage_index] = poolingDepth(config_.pooling_strides_[stage_index]);
@@ -462,8 +465,8 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
     grid_coord_d_.get(), serialized_code_d_.get(), num_voxels_, stage_views,
     serialized_pooling_num_voxels_d_.get());
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    serialized_pooling_num_voxels_.data(), serialized_pooling_num_voxels_d_.get(),
-    serialized_pooling_num_voxels_.size() * sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_));
+    serialized_pooling_num_voxels_.get(), serialized_pooling_num_voxels_d_.get(),
+    (config_.pooling_strides_.size() + 1) * sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
