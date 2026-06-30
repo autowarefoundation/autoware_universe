@@ -26,7 +26,6 @@ constexpr auto LocalMode = AutowareMode{1003};
 constexpr auto RemoteMode = AutowareMode{1004};
 constexpr auto EmergencyStop = AutowareMode{2001};
 constexpr auto ComfortableStop = AutowareMode{2002};
-constexpr auto UnknownMode = AutowareMode{0};
 constexpr auto MainTrajectory = TrajectorySource{100};
 constexpr auto StopCommand = CommandSource{11};
 constexpr auto MainCommand = CommandSource{12};
