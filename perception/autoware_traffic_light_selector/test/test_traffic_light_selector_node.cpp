@@ -275,6 +275,39 @@ TEST_F(TrafficLightSelectorIntegrationTest, DetectionInsideRoughRoiIsAssignedToO
   EXPECT_TRUE(is_same(result->rois.front().roi, expected_assigned_roi));
 }
 
+// Multiple detected ROIs have their center inside the rough ROI, so they all become selection
+// candidates. The selector must pick the one with the highest IoU against the expected ROI. The
+// poorly-overlapping candidate is published first to prove the choice is IoU-driven, not
+// order-driven.
+TEST_F(TrafficLightSelectorIntegrationTest, HighestIouCandidateIsSelectedAmongMultipleRois)
+{
+  // Arrange
+  const auto traffic_light_id = 123;
+  const auto expected_roi = make_roi(100, 100, 40, 40);
+  const auto rough_roi = make_roi(50, 50, 200, 200);
+  // Both detected ROI centers (180, 180) and (120, 120) lie inside the rough ROI span (50..250).
+  const auto low_iou_detected_roi = make_roi(140, 140, 80, 80);
+  const auto high_iou_detected_roi = make_roi(100, 100, 40, 40);  // coincides with the expected ROI
+  const auto expected_assigned_roi = high_iou_detected_roi;
+
+  const auto detected_rois = make_detected_rois({low_iou_detected_roi, high_iou_detected_roi});
+  const auto rough_rois =
+    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, rough_roi)});
+  const auto expected_rois =
+    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, expected_roi)});
+  const auto camera_info = make_camera_info(1280, 720);
+
+  // Act
+  publish_inputs(detected_rois, rough_rois, expected_rois, camera_info);
+  const auto result = receive_published_message();
+
+  // Assert
+  ASSERT_NE(result, nullptr);
+  ASSERT_EQ(result->rois.size(), 1u);
+  EXPECT_EQ(result->rois.front().traffic_light_id, traffic_light_id);
+  EXPECT_TRUE(is_same(result->rois.front().roi, expected_assigned_roi));
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);
