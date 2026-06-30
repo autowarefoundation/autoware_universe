@@ -97,6 +97,10 @@ public:
     std::vector<sensor_msgs::msg::CameraInfo> & camera_info_vector,
     std::vector<Matrix4fRowM> & lidar2camera_vector);
 
+  /// CUDA stream used for pointcloud processing and inference.
+  /// Enables stream-ordered producer/consumer lifetime handling.
+  cudaStream_t stream() const { return stream_; }
+
 protected:
   void initPtr();
   void initTrt(const TrtBEVFusionConfig & trt_config);
