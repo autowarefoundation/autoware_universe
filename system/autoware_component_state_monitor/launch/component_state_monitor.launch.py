@@ -71,10 +71,6 @@ def launch_setup(context, *args, **kwargs):
         topic_monitor_param[row["type"]][row["module"]].append(create_topic_monitor_name(row))
     topic_monitor_param = {name: dict(module) for name, module in topic_monitor_param.items()}
 
-    # agnocast_wrapper::Node runs as a standalone executable: its agnocast runtime (signal handler /
-    # shutdown eventfd) is set up by the generated standalone main, not by a component container, so
-    # the AgnocastOnly executor would SIGSEGV if loaded as a composable node. agnocast_env provides
-    # the LD_PRELOAD heaphook the AgnocastOnly executor requires.
     agnocast_env = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
