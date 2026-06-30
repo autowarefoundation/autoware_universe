@@ -35,29 +35,27 @@
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
 
 // cspell: ignore semseg
 
-// Characterization test for TrtYoloXNode driven end-to-end through ROS topics: an image is
-// published on ~/in/image and the resulting detections / segmentation masks are verified on
-// ~/out/objects, ~/out/mask and ~/out/color_mask.
+// Integration smoke test for TrtYoloXNode driven end-to-end through ROS topics: an image is
+// published on ~/in/image and the resulting messages are verified on ~/out/objects, ~/out/mask and
+// ~/out/color_mask. Its purpose is to exercise the node's ROS plumbing (parameter loading -> lazy
+// subscription via onConnect -> onImage -> detect -> publish on every output topic); the detection
+// / segmentation logic itself is covered directly by test_tensorrt_yolox_detector.cpp, so it is not
+// re-tested here.
 //
-// Two model configurations are exercised:
-//   * traffic-light detector (yolox_s_car_ped_tl_detector): detection only, no segmentation head.
-//   * general detector + segmentation (yolox-sPlus-opt ... seg16cls): a "multitask" model, so the
-//     node additionally publishes the segmentation mask and (optionally) a colorized mask.
+// The multitask model (general detection + semantic segmentation) is used so that the segmentation
+// mask and colorized mask publishers are exercised as well as the objects publisher. A blank image
+// keeps the test deterministic: it yields no detections above the threshold (empty object list)
+// while the multitask head still produces a segmentation / color mask on every inference.
 //
 // The node requires an NVIDIA GPU, TensorRT and the ONNX models (downloaded under autoware_data).
 // When any of these are missing the test self-skips (GTEST_SKIP), so it is a no-op on CI machines
 // without a GPU. In CMake it is additionally gated behind `TRT_AVAIL AND CUDA_AVAIL`.
-//
-// Detection outputs (box coordinates / scores) are not bit-reproducible across GPU / TensorRT
-// versions, so the assertions are intentionally coarse: presence, class, ROI within bounds and
-// score above threshold. Exact pixel coordinates are deliberately not asserted.
 
 namespace
 {
@@ -69,9 +67,6 @@ constexpr char input_image_topic[] = "/tensorrt_yolox/in/image";
 constexpr char output_objects_topic[] = "/tensorrt_yolox/out/objects";
 constexpr char output_mask_topic[] = "/tensorrt_yolox/out/mask";
 constexpr char output_color_mask_topic[] = "/tensorrt_yolox/out/color_mask";
-
-// Class ID after remapping by traffic_light_roi_label_remap.csv.
-constexpr uint8_t vehicle_traffic_light_label = 1;
 
 // Detection score threshold configured for the node (see the *.param.yaml files).
 constexpr float score_threshold = 0.35f;
@@ -104,41 +99,6 @@ std::string config_file(const std::string & filename)
          filename;
 }
 
-// Parameters shared by every configuration (TensorRT builder settings and disabled features).
-void append_common_overrides(rclcpp::NodeOptions & options)
-{
-  options.append_parameter_override("score_threshold", static_cast<double>(score_threshold));
-  options.append_parameter_override("nms_threshold", 0.7);
-  options.append_parameter_override("calibration_algorithm", std::string("Entropy"));
-  options.append_parameter_override("dla_core_id", -1);
-  options.append_parameter_override("quantize_first_layer", false);
-  options.append_parameter_override("quantize_last_layer", false);
-  options.append_parameter_override("profile_per_layer", false);
-  options.append_parameter_override("clip_value", 6.0);
-  options.append_parameter_override("calibration_image_list_path", std::string(""));
-  options.append_parameter_override("gpu_id", 0);
-}
-
-// Build the parameters for the traffic-light detector model (detection only, no segmentation).
-rclcpp::NodeOptions make_traffic_light_detector_options(
-  const std::string & model_path, const std::string & label_path)
-{
-  rclcpp::NodeOptions options;
-  options.append_parameter_override("model_path", model_path);
-  options.append_parameter_override("label_path", label_path);
-  // Without a remap file every class maps to "unmapped" and all detections are dropped, so this
-  // path is mandatory to exercise the detection output.
-  options.append_parameter_override(
-    "roi_remap_path", config_file("traffic_light_roi_label_remap.csv"));
-  options.append_parameter_override("precision", std::string("fp16"));
-
-  options.append_parameter_override("is_roi_overlap_segmentation", false);
-  options.append_parameter_override("is_publish_color_mask", false);
-  options.append_parameter_override("overlap_roi_score_threshold", 0.3);
-  append_common_overrides(options);
-  return options;
-}
-
 // Build the parameters for the multitask model (general detection + semantic segmentation), with
 // both the segmentation mask and the colorized mask enabled. fp16 is used instead of the launch's
 // int8 to avoid the int8 calibration-cache dependency; the exercised node code is precision
@@ -160,7 +120,17 @@ rclcpp::NodeOptions make_segmentation_options(
   options.append_parameter_override("is_roi_overlap_segmentation", true);
   options.append_parameter_override("is_publish_color_mask", true);
   options.append_parameter_override("overlap_roi_score_threshold", 0.3);
-  append_common_overrides(options);
+
+  options.append_parameter_override("score_threshold", static_cast<double>(score_threshold));
+  options.append_parameter_override("nms_threshold", 0.7);
+  options.append_parameter_override("calibration_algorithm", std::string("Entropy"));
+  options.append_parameter_override("dla_core_id", -1);
+  options.append_parameter_override("quantize_first_layer", false);
+  options.append_parameter_override("quantize_last_layer", false);
+  options.append_parameter_override("profile_per_layer", false);
+  options.append_parameter_override("clip_value", 6.0);
+  options.append_parameter_override("calibration_image_list_path", std::string(""));
+  options.append_parameter_override("gpu_id", 0);
   return options;
 }
 
@@ -175,71 +145,6 @@ sensor_msgs::msg::Image to_image_msg(const cv::Mat & bgr_image, const rclcpp::Ti
 cv::Mat make_black_image(int width, int height)
 {
   return cv::Mat::zeros(height, width, CV_8UC3);
-}
-
-cv::Mat load_test_image()
-{
-  const std::string path = ament_index_cpp::get_package_share_directory("autoware_tensorrt_yolox") +
-                           "/test/test_image.jpg";
-  const cv::Mat image = cv::imread(path, cv::IMREAD_COLOR);
-  if (image.empty()) {
-    throw std::runtime_error("failed to load test image: " + path);
-  }
-  return image;
-}
-
-size_t count_objects_with_label(const DetectedObjectsWithFeature & objects, uint8_t label)
-{
-  size_t count = 0;
-  for (const auto & feature_object : objects.feature_objects) {
-    if (
-      !feature_object.object.classification.empty() &&
-      feature_object.object.classification.front().label == label) {
-      ++count;
-    }
-  }
-  return count;
-}
-
-bool all_rois_within_image(
-  const DetectedObjectsWithFeature & objects, uint32_t width, uint32_t height)
-{
-  for (const auto & feature_object : objects.feature_objects) {
-    const auto & roi = feature_object.feature.roi;
-    if (roi.x_offset + roi.width > width || roi.y_offset + roi.height > height) {
-      return false;
-    }
-  }
-  return true;
-}
-
-// Asserts a non-empty set of detections was published with every ROI inside the image bounds.
-// This is the common, lenient validation shared by the real-image tests; per-test specifics
-// (e.g. an expected class) are asserted separately by the caller.
-void expect_objects_detected(
-  const DetectedObjectsWithFeature::ConstSharedPtr & objects, const cv::Mat & image)
-{
-  ASSERT_NE(objects, nullptr) << "node did not publish any objects message";
-  EXPECT_FALSE(objects->feature_objects.empty());
-  EXPECT_TRUE(all_rois_within_image(
-    *objects, static_cast<uint32_t>(image.cols), static_cast<uint32_t>(image.rows)));
-}
-
-// Asserts the multitask model published a non-empty segmentation mask (class-id map).
-void expect_segmentation_mask_published(const sensor_msgs::msg::Image::ConstSharedPtr & mask)
-{
-  ASSERT_NE(mask, nullptr) << "multitask model did not publish a segmentation mask";
-  EXPECT_GT(mask->width, 0u);
-  EXPECT_GT(mask->height, 0u);
-}
-
-// Asserts a non-empty colorized mask was published as a BGR8 image.
-void expect_color_mask_published(const sensor_msgs::msg::Image::ConstSharedPtr & color_mask)
-{
-  ASSERT_NE(color_mask, nullptr) << "color mask was not published";
-  EXPECT_EQ(color_mask->encoding, sensor_msgs::image_encodings::BGR8);
-  EXPECT_GT(color_mask->width, 0u);
-  EXPECT_GT(color_mask->height, 0u);
 }
 }  // namespace
 
@@ -346,59 +251,11 @@ protected:
   sensor_msgs::msg::Image::ConstSharedPtr received_color_mask_;
 };
 
-// A blank (all-black) image yields an inference pass with no detections above the threshold,
-// so the node still publishes a DetectedObjectsWithFeature message with an empty object list.
-TEST_F(TrtYoloXNodeIntegrationTest, PublishesEmptyObjectsForBlankImage)
-{
-  // Arrange
-  const std::string model_path =
-    resolve_autoware_data_file("yolox_s_car_ped_tl_detector_960_960_batch_1.onnx");
-  const std::string label_path = resolve_autoware_data_file("car_ped_tl_detector_labels.txt");
-  if (model_path.empty() || label_path.empty()) {
-    GTEST_SKIP() << "traffic-light detector model/label not found under autoware_data.";
-  }
-  if (!initialize_yolox_node(make_traffic_light_detector_options(model_path, label_path))) {
-    GTEST_SKIP() << "GPU is not available for inference.";
-  }
-  const auto blank_image = to_image_msg(make_black_image(1280, 827), test_node_->now());
-
-  // Act
-  publish_until_detected_objects_received(blank_image);
-
-  // Assert
-  ASSERT_NE(received_objects_, nullptr) << "node did not publish any objects message";
-  EXPECT_TRUE(received_objects_->feature_objects.empty());
-}
-
-// Longest detection path: a real camera image containing traffic lights drives the full onImage
-// loop (inference -> per-object classification remap -> publish a non-empty object list).
-TEST_F(TrtYoloXNodeIntegrationTest, DetectsTrafficLightInRealImage)
-{
-  // Arrange
-  const std::string model_path =
-    resolve_autoware_data_file("yolox_s_car_ped_tl_detector_960_960_batch_1.onnx");
-  const std::string label_path = resolve_autoware_data_file("car_ped_tl_detector_labels.txt");
-  if (model_path.empty() || label_path.empty()) {
-    GTEST_SKIP() << "traffic-light detector model/label not found under autoware_data.";
-  }
-  if (!initialize_yolox_node(make_traffic_light_detector_options(model_path, label_path))) {
-    GTEST_SKIP() << "GPU is not available for inference.";
-  }
-  const cv::Mat image = load_test_image();
-  const auto image_msg = to_image_msg(image, test_node_->now());
-
-  // Act
-  publish_until_detected_objects_received(image_msg);
-
-  // Assert
-  expect_objects_detected(received_objects_, image);
-  EXPECT_GE(count_objects_with_label(*received_objects_, vehicle_traffic_light_label), 1u);
-}
-
-// Longest segmentation path: the multitask model additionally publishes a segmentation mask and a
-// colorized mask, exercising the segmentation branches of onImage (mask publish, ROI overlay and
-// getColorizedMask) that the detection-only model never reaches.
-TEST_F(TrtYoloXNodeIntegrationTest, PublishesSegmentationMaskForMultitaskModel)
+// Smoke test for the node's ROS plumbing with the multitask model: publishing a (blank) image
+// drives the full onConnect -> onImage -> detect -> publish path. The node publishes an
+// (empty, since a black image yields no detections) DetectedObjectsWithFeature on ~/out/objects,
+// and the multitask head additionally publishes a segmentation mask and a colorized mask.
+TEST_F(TrtYoloXNodeIntegrationTest, PublishesObjectsAndMasksForBlankImage)
 {
   // Arrange
   const std::string model_path =
@@ -411,17 +268,24 @@ TEST_F(TrtYoloXNodeIntegrationTest, PublishesSegmentationMaskForMultitaskModel)
   if (!initialize_yolox_node(make_segmentation_options(model_path, label_path, color_map_path))) {
     GTEST_SKIP() << "GPU is not available for inference.";
   }
-  const cv::Mat image = load_test_image();
-  const auto image_msg = to_image_msg(image, test_node_->now());
+  const auto blank_image = to_image_msg(make_black_image(1280, 827), test_node_->now());
 
   // Act
-  publish_until_detected_objects_received(image_msg);
+  publish_until_detected_objects_received(blank_image);
   wait_for_mask_messages();
 
   // Assert
-  expect_objects_detected(received_objects_, image);
-  expect_segmentation_mask_published(received_mask_);
-  expect_color_mask_published(received_color_mask_);
+  ASSERT_NE(received_objects_, nullptr) << "node did not publish any objects message";
+  EXPECT_TRUE(received_objects_->feature_objects.empty());
+
+  ASSERT_NE(received_mask_, nullptr) << "multitask model did not publish a segmentation mask";
+  EXPECT_GT(received_mask_->width, 0u);
+  EXPECT_GT(received_mask_->height, 0u);
+
+  ASSERT_NE(received_color_mask_, nullptr) << "color mask was not published";
+  EXPECT_EQ(received_color_mask_->encoding, sensor_msgs::image_encodings::BGR8);
+  EXPECT_GT(received_color_mask_->width, 0u);
+  EXPECT_GT(received_color_mask_->height, 0u);
 }
 
 int main(int argc, char ** argv)
