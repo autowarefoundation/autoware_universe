@@ -91,6 +91,9 @@ void AgentData::update_histories(const TrackedObjects & objects)
     if (get_model_label(object) == AgentLabel::IGNORE) {
       continue;
     }
+    if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
+      continue;
+    }
     const std::string object_id = autoware_utils_uuid::to_hex_string(object.object_id);
     auto it = histories_map_.find(object_id);
     if (it != histories_map_.end()) {
