@@ -21,7 +21,7 @@ ros2 launch autoware_accel_brake_map_calibrator accel_brake_map_calibrator.launc
 ros2 bag play <rosbag_file> --clock
 ```
 
-During the calibration with setting the parameter `progress_file_output` to true, the log file is output in [directory of *autoware_accel_brake_map_calibrator*]/config/ . You can also see accel and brake maps in [directory of *autoware_accel_brake_map_calibrator*]/config/accel_map.csv and [directory of *autoware_accel_brake_map_calibrator*]/config/brake_map.csv after calibration.
+During the calibration with setting the parameter `progress_file_output` to true, the log file is output in [directory of _autoware_accel_brake_map_calibrator_]/config/ . You can also see accel and brake maps in [directory of _autoware_accel_brake_map_calibrator_]/config/accel*map.csv and [directory of \_autoware_accel_brake_map_calibrator*]/config/brake_map.csv after calibration.
 
 ### Calibration plugin
 
@@ -140,8 +140,8 @@ You can also save accel and brake map in the default directory where Autoware re
 | get_pitch_method         | string | "tf": get pitch from tf, "none": unable to perform pitch validation and pitch compensation                                                                                        | "tf"                                                              |
 | pedal_accel_graph_output | bool   | if true, it will output a log of the pedal accel graph.                                                                                                                           | true                                                              |
 | progress_file_output     | bool   | if true, it will output a log and csv file of the update process.                                                                                                                 | false                                                             |
-| default_map_dir          | str    | directory of default map                                                                                                                                                          | [directory of *autoware_raw_vehicle_cmd_converter*]/data/default/ |
-| calibrated_map_dir       | str    | directory of calibrated map                                                                                                                                                       | [directory of *autoware_accel_brake_map_calibrator*]/config/      |
+| default_map_dir          | str    | directory of default map                                                                                                                                                          | [directory of _autoware_raw_vehicle_cmd_converter_]/data/default/ |
+| calibrated_map_dir       | str    | directory of calibrated map                                                                                                                                                       | [directory of _autoware_accel_brake_map_calibrator_]/config/      |
 | update_hz                | double | hz for update                                                                                                                                                                     | 10.0                                                              |
 
 ## Algorithm Parameters
