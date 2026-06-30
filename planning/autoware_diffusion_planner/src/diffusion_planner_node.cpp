@@ -99,6 +99,14 @@ DiffusionPlanner::DiffusionPlanner(const rclcpp::NodeOptions & options)
 
   set_up_params();
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
+  RCLCPP_INFO_STREAM(
+    get_logger(),
+    "vehicle_info: wheel_base_m=" << vehicle_info_.wheel_base_m
+                                  << ", front_overhang_m=" << vehicle_info_.front_overhang_m
+                                  << ", rear_overhang_m=" << vehicle_info_.rear_overhang_m
+                                  << ", left_overhang_m=" << vehicle_info_.left_overhang_m
+                                  << ", right_overhang_m=" << vehicle_info_.right_overhang_m
+                                  << ", wheel_tread_m=" << vehicle_info_.wheel_tread_m);
 
   // Create core instance
   core_ = std::make_unique<DiffusionPlannerCore>(params_, vehicle_info_);
