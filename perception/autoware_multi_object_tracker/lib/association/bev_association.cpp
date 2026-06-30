@@ -46,36 +46,16 @@ struct MeasurementWithIndex
   MeasurementWithIndex(const types::DynamicObject & obj, size_t idx) : object(obj), index(idx) {}
 };
 
-BevAssociation::BevAssociation(const AssociatorConfig & config)
-: config_(config), score_threshold_(0.01)
+BevAssociation::BevAssociation(const TrackerAssociationConfig & config)
+: config_(config), score_threshold_(config.score_threshold)
 {
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
-  updateMaxSearchDistances();
 }
 
 void BevAssociation::setTimeKeeper(
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
-}
-
-void BevAssociation::updateMaxSearchDistances()
-{
-  max_squared_dist_per_class_.clear();
-  for (const auto measurement_label : classes::trackedLabels()) {
-    double max_squared_dist = 0.0;
-    const auto tracker_params_map_opt =
-      get_map_value_if_exists(config_.association_params_map, measurement_label);
-    if (!tracker_params_map_opt) {
-      continue;
-    }
-    const auto & tracker_params_map = tracker_params_map_opt->get();
-    for (const auto & [tracker_type, association_params] : tracker_params_map) {
-      static_cast<void>(tracker_type);
-      max_squared_dist = std::max(max_squared_dist, association_params.max_dist_sq);
-    }
-    max_squared_dist_per_class_.insert_or_assign(measurement_label, max_squared_dist);
-  }
 }
 
 types::AssociationResult BevAssociation::associate(
@@ -178,36 +158,27 @@ PreparationData BevAssociation::prepareAssociationData(
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
   PreparationData prep_data;
+  prep_data.trackers.reserve(trackers.size());
 
-  prep_data.tracked_objects.reserve(trackers.size());
-  prep_data.tracker_labels.reserve(trackers.size());
-  prep_data.tracker_types.reserve(trackers.size());
+  std::vector<ValueType> rtree_points;
+  rtree_.clear();
+  rtree_points.reserve(trackers.size());
 
-  {
-    size_t tracker_idx = 0;
-    std::vector<ValueType> rtree_points;
-    rtree_.clear();
-    rtree_points.reserve(trackers.size());
-    for (const auto & tracker : trackers) {
-      types::DynamicObject tracked_object;
-      tracker->getTrackedObject(measurements.header.stamp, tracked_object);
+  size_t tracker_idx = 0;
+  for (const auto & tracker : trackers) {
+    TrackerBevEntry entry;
+    tracker->getTrackedObject(measurements.header.stamp, entry.object);
+    entry.label = tracker->getHighestProbLabel();
+    entry.type = tracker->getTrackerType();
+    entry.inv_cov = precomputeInverseCovarianceFromPose(entry.object.pose_covariance);
 
-      Point p(tracked_object.pose.position.x, tracked_object.pose.position.y);
-      rtree_points.emplace_back(p, tracker_idx);
+    Point p(entry.object.pose.position.x, entry.object.pose.position.y);
+    rtree_points.emplace_back(p, tracker_idx);
 
-      prep_data.tracked_objects.emplace_back(std::move(tracked_object));
-      prep_data.tracker_labels.emplace_back(tracker->getHighestProbLabel());
-      prep_data.tracker_types.emplace_back(tracker->getTrackerType());
-      ++tracker_idx;
-    }
-    rtree_.insert(rtree_points.begin(), rtree_points.end());
+    prep_data.trackers.emplace_back(std::move(entry));
+    ++tracker_idx;
   }
-
-  prep_data.tracker_inverse_covariances.reserve(prep_data.tracked_objects.size());
-  for (const auto & tracked_object : prep_data.tracked_objects) {
-    prep_data.tracker_inverse_covariances.emplace_back(
-      precomputeInverseCovarianceFromPose(tracked_object.pose_covariance));
-  }
+  rtree_.insert(rtree_points.begin(), rtree_points.end());
 
   return prep_data;
 }
@@ -217,21 +188,23 @@ void BevAssociation::processMeasurement(
   const classes::Label measurement_label, const PreparationData & prep_data,
   types::AssociationData & association_data)
 {
+  const ShapeLabelKey shape_label_key{
+    types::toShapeType(measurement_object.shape.type), measurement_label};
   const auto tracker_params_map_opt =
-    get_map_value_if_exists(config_.association_params_map, measurement_label);
+    get_map_value_if_exists(config_.association_params_map, shape_label_key);
   if (!tracker_params_map_opt) {
     return;
   }
   const auto & tracker_params_map = tracker_params_map_opt->get();
 
   const auto max_squared_dist_opt =
-    get_map_value_if_exists(max_squared_dist_per_class_, measurement_label);
+    get_map_value_if_exists(config_.max_dist_sq_per_label, measurement_label);
   const double max_squared_dist = max_squared_dist_opt ? max_squared_dist_opt->get() : 0.0;
 
   Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);
 
   std::vector<ValueType> nearby_trackers;
-  nearby_trackers.reserve(std::min(size_t{100}, prep_data.tracked_objects.size()));
+  nearby_trackers.reserve(std::min(size_t{100}, prep_data.trackers.size()));
 
   const double max_dist = std::sqrt(max_squared_dist);
   const Box query_box(
@@ -241,23 +214,21 @@ void BevAssociation::processMeasurement(
 
   for (const auto & tracker_value : nearby_trackers) {
     const size_t tracker_idx = tracker_value.second;
-    const auto tracker_type = prep_data.tracker_types[tracker_idx];
+    const auto & tracker_entry = prep_data.trackers[tracker_idx];
 
-    const auto association_params_opt = get_map_value_if_exists(tracker_params_map, tracker_type);
+    const auto association_params_opt =
+      get_map_value_if_exists(tracker_params_map, tracker_entry.type);
     if (!association_params_opt) continue;
 
-    const auto & tracked_object = prep_data.tracked_objects[tracker_idx];
-    const auto tracker_label = prep_data.tracker_labels[tracker_idx];
+    const auto result = calculateBevAssignmentScore(
+      tracker_entry.object, tracker_entry.label, tracker_entry.type, association_params_opt->get(),
+      measurement_object, measurement_label, tracker_entry.inv_cov,
+      config_.unknown_association_giou_threshold);
 
-    bool has_significant_shape_change = false;
-    const double score = calculateBevAssignmentScore(
-      tracked_object, tracker_label, tracker_type, association_params_opt->get(),
-      measurement_object, measurement_label, prep_data.tracker_inverse_covariances[tracker_idx],
-      config_.unknown_association_giou_threshold, has_significant_shape_change);
-
-    if (score > INVALID_SCORE) {
+    if (result.score > INVALID_SCORE) {
       association_data.entries.emplace_back(
-        types::AssociationEntry{tracker_idx, measurement_idx, score, has_significant_shape_change});
+        types::AssociationEntry{
+          tracker_idx, measurement_idx, result.score, result.has_significant_shape_change});
     }
   }
 }

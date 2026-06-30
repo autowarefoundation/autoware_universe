@@ -4,18 +4,25 @@
   <arg name="output/pointcloud/segmentation" default="~/segmentation"/>
   <arg name="output/pointcloud/visualization" default="~/visualization"/>
   <arg name="output/pointcloud/filtered" default="~/filtered"/>
+  <arg name="output/objects" default="~/objects"/>
 
   <arg name="data_path" default="$(env HOME)/autoware_data/ml_models" description="packages data and artifacts directory path"/>
-  <arg name="model_name" default="ptv3"/>
   <arg name="model_path" default="$(var data_path)/ptv3"/>
-  <arg name="model_param_path" default="$(find-pkg-share autoware_ptv3)/config/$(var model_name).param.yaml"/>
-  <arg name="ml_package_param_path" default="$(var model_path)/ml_package_$(var model_name).param.yaml"/>
-  <arg name="class_remapper_param_path" default="$(var model_path)/detection_class_remapper.param.yaml"/>
-  <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
+  <arg name="model_variant" default="ptv3" description="Model variant: ptv3"/>
+  <arg name="use_seg3d_head" default="true" description="Enable segmentation 3D head"/>
+  <arg name="use_det3d_head" default="true" description="Enable detection 3D head"/>
+  <arg name="model_param_path" default="$(find-pkg-share autoware_ptv3)/config/ptv3.param.yaml" description="Path to the model parameter file"/>
+  <arg name="backbone_ml_package_param_path" default="$(var model_path)/ml_package_$(var model_variant)_backbone.param.yaml" description="Path to the backbone ML package parameter file"/>
+  <arg
+    name="seg3d_head_ml_package_param_path"
+    default="$(var model_path)/ml_package_$(var model_variant)_seg3d_head.param.yaml"
+    description="Path to the segmentation 3D head ML package parameter file"
+  />
+  <arg name="det3d_head_ml_package_param_path" default="$(var model_path)/ml_package_$(var model_variant)_det3d_head.param.yaml" description="Path to the detection 3D head ML package parameter file"/>
+  <arg name="build_only" default="false" description="Shutdown node after TensorRT engine file is built"/>
   <arg name="log_level" default="info"/>
-
-  <arg name="use_pointcloud_container" default="false" description="use pointcloud_container"/>
-  <arg name="pointcloud_container_name" default="pointcloud_container" description="pointcloud_container name"/>
+  <arg name="use_pointcloud_container" default="false" description="Use pointcloud_container"/>
+  <arg name="pointcloud_container_name" default="pointcloud_container" description="Point cloud container name"/>
 
   <!-- cSpell:ignore probs -->
   <group if="$(var use_pointcloud_container)">
@@ -29,8 +36,11 @@
         <remap from="~/output/pointcloud/visualization/cuda" to="$(var output/pointcloud/visualization)/cuda"/>
         <remap from="~/output/pointcloud/filtered" to="$(var output/pointcloud/filtered)"/>
         <remap from="~/output/pointcloud/filtered/cuda" to="$(var output/pointcloud/filtered)/cuda"/>
+        <remap from="~/output/objects" to="$(var output/objects)"/>
         <param from="$(var model_param_path)" allow_substs="true"/>
-        <param from="$(var ml_package_param_path)" allow_substs="true"/>
+        <param from="$(var backbone_ml_package_param_path)"/>
+        <param from="$(var seg3d_head_ml_package_param_path)"/>
+        <param from="$(var det3d_head_ml_package_param_path)"/>
 
         <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6167 -->
         <param name="build_only" value="$(var build_only)"/>
@@ -40,16 +50,18 @@
   <group unless="$(var use_pointcloud_container)">
     <node pkg="autoware_ptv3" exec="autoware_ptv3_node" name="ptv3" output="screen" args="--ros-args --log-level $(var log_level)">
       <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
-      <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
+      <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda/dummy"/>
       <remap from="~/output/pointcloud/segmentation" to="$(var output/pointcloud/segmentation)"/>
-      <remap from="~/output/pointcloud/segmentation/cuda" to="$(var output/pointcloud/segmentation)/cuda"/>
+      <remap from="~/output/pointcloud/segmentation/cuda" to="$(var output/pointcloud/segmentation)/cuda/dummy"/>
       <remap from="~/output/pointcloud/visualization" to="$(var output/pointcloud/visualization)"/>
-      <remap from="~/output/pointcloud/visualization/cuda" to="$(var output/pointcloud/visualization)/cuda"/>
+      <remap from="~/output/pointcloud/visualization/cuda" to="$(var output/pointcloud/visualization)/cuda/dummy"/>
       <remap from="~/output/pointcloud/filtered" to="$(var output/pointcloud/filtered)"/>
-      <remap from="~/output/pointcloud/filtered/cuda" to="$(var output/pointcloud/filtered)/cuda"/>
-
+      <remap from="~/output/pointcloud/filtered/cuda" to="$(var output/pointcloud/filtered)/cuda/dummy"/>
+      <remap from="~/output/objects" to="$(var output/objects)"/>
       <param from="$(var model_param_path)" allow_substs="true"/>
-      <param from="$(var ml_package_param_path)" allow_substs="true"/>
+      <param from="$(var backbone_ml_package_param_path)"/>
+      <param from="$(var seg3d_head_ml_package_param_path)"/>
+      <param from="$(var det3d_head_ml_package_param_path)"/>
 
       <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6167 -->
       <param name="build_only" value="$(var build_only)"/>

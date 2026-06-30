@@ -28,6 +28,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 ament_auto_add_library(aggregator SHARED
   "src/node/aggregator.cpp"
   "src/node/command_mode_mapping.cpp"
+  "src/node/driving_mode_mapping.cpp"
 )
 ament_auto_add_library(converter SHARED
   "src/node/converter.cpp"
@@ -67,6 +68,7 @@ if(BUILD_TESTING)
     "test/src/test_logics.cpp"
     "test/src/test_levels.cpp"
     "test/src/test_remove.cpp"
+    "test/src/test_others.cpp"
     "test/src/tests/utils.cpp"
     "test/src/tests/timeline.cpp"
   )
