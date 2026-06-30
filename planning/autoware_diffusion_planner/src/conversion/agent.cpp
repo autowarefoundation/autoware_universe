@@ -48,13 +48,6 @@ AgentLabel get_model_label(const TrackedObject & object)
   }
 }
 
-bool is_unknown_object(const TrackedObject & object)
-{
-  const auto autoware_label =
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
-  return autoware_label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
-}
-
 }  // namespace
 
 AgentState::AgentState(const TrackedObject & object, const rclcpp::Time & timestamp)
@@ -90,14 +83,11 @@ AgentState::AgentState(const TrackedObject & object, const rclcpp::Time & timest
   };
 }
 
-void AgentData::update_histories(const TrackedObjects & objects, const bool ignore_unknown_agents)
+void AgentData::update_histories(const TrackedObjects & objects)
 {
   const rclcpp::Time objects_timestamp(objects.header.stamp);
   std::vector<std::string> found_ids;
   for (const TrackedObject & object : objects.objects) {
-    if (ignore_unknown_agents && is_unknown_object(object)) {
-      continue;
-    }
     const std::string object_id = autoware_utils_uuid::to_hex_string(object.object_id);
     auto it = histories_map_.find(object_id);
     if (it != histories_map_.end()) {

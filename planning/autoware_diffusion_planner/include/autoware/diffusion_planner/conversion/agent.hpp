@@ -136,7 +136,7 @@ private:
  */
 struct AgentData
 {
-  void update_histories(const TrackedObjects & objects, const bool ignore_unknown_agents);
+  void update_histories(const TrackedObjects & objects);
 
   // Transform histories, trim to max_num_agent, and return the processed vector.
   std::vector<AgentHistory> transformed_and_trimmed_histories(

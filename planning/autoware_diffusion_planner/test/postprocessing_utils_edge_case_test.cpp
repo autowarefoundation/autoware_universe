@@ -68,7 +68,7 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreatePredictedObjects_EmptyAgentData)
   empty_objects.header.stamp = rclcpp::Time(0);
 
   AgentData agent_data;
-  agent_data.update_histories(empty_objects, false);
+  agent_data.update_histories(empty_objects);
   rclcpp::Time stamp(123, 0);
   Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
@@ -98,7 +98,7 @@ TEST_F(PostprocessingUtilsEdgeCaseTest, CreatePredictedObjects_MorePredictionsTh
   objects.objects.push_back(tracked_object_);
 
   AgentData agent_data;
-  agent_data.update_histories(objects, false);
+  agent_data.update_histories(objects);
   rclcpp::Time stamp(123, 0);
   Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
