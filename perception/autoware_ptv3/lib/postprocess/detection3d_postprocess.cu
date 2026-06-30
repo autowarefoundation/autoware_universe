@@ -138,28 +138,28 @@ void launchDecodeDetection3DToBoxes(
 }
 }  // namespace
 
-Detection3DPostprocess::Detection3DPostprocess(const PTv3Config & config, cudaStream_t stream)
+Detection3DPostprocess::Detection3DPostprocess(const PTv3Detection3DConfig & config)
 : config_(config),
   raw_boxes_d_(config.num_proposals_),
   passing_boxes_d_(config.num_proposals_),
   yaw_norm_thresholds_d_(config.yaw_norm_thresholds_.begin(), config.yaw_norm_thresholds_.end())
 {
   post_center_range_d_ = autoware::cuda_utils::make_unique<float[]>(6);
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpy(
     post_center_range_d_.get(), config_.post_center_range_.data(), 6 * sizeof(float),
-    cudaMemcpyHostToDevice, stream));
+    cudaMemcpyHostToDevice));
 
   score_thresholds_d_ =
     autoware::cuda_utils::make_unique<float[]>(config_.detection_score_thresholds_.size());
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpy(
     score_thresholds_d_.get(), config_.detection_score_thresholds_.data(),
-    config_.detection_score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream));
+    config_.detection_score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice));
 
   dist_bin_limits_d_ =
     autoware::cuda_utils::make_unique<float[]>(config_.distance_bin_upper_limits_.size());
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+  CHECK_CUDA_ERROR(cudaMemcpy(
     dist_bin_limits_d_.get(), config_.distance_bin_upper_limits_.data(),
-    config_.distance_bin_upper_limits_.size() * sizeof(float), cudaMemcpyHostToDevice, stream));
+    config_.distance_bin_upper_limits_.size() * sizeof(float), cudaMemcpyHostToDevice));
 }
 
 cudaError_t Detection3DPostprocess::process(
