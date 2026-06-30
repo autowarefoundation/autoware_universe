@@ -183,12 +183,11 @@ TrafficLightArbiterCore::TrafficLightArbiterCore(
   SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
   double external_time_tolerance, double perception_time_tolerance)
 : source_priority_(source_priority),
-  enable_signal_matching_(enable_signal_matching),
   external_delay_tolerance_(external_delay_tolerance),
   external_time_tolerance_(external_time_tolerance),
   perception_time_tolerance_(perception_time_tolerance)
 {
-  if (enable_signal_matching_) {
+  if (enable_signal_matching) {
     signal_match_validator_ = std::make_unique<SignalMatchValidator>(source_priority_);
   }
 }
@@ -197,7 +196,7 @@ void TrafficLightArbiterCore::set_map(const lanelet::LaneletMapConstPtr & map)
 {
   map_regulatory_elements_set_ =
     std::make_unique<std::unordered_set<lanelet::Id>>(extract_traffic_light_ids(map));
-  if (enable_signal_matching_) {
+  if (is_signal_matching_enabled()) {
     signal_match_validator_->set_pedestrian_traffic_light_ids(
       extract_pedestrian_traffic_light_ids(map));
   }
@@ -291,7 +290,7 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
   }
 
   const auto & map_regulatory_elements = *map_regulatory_elements_set_;
-  if (enable_signal_matching_) {
+  if (is_signal_matching_enabled()) {
     const auto validated_signals =
       signal_match_validator_->validate_signals(effective_perception, external.signals);
     route_signals(

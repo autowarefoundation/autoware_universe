@@ -78,8 +78,12 @@ private:
   // from `reference_time` beyond `tolerance`.
   void sweep_expired_external_signals(const rclcpp::Time & reference_time, double tolerance);
 
+  // Signal matching is on iff the validator exists: it is created in the
+  // constructor exactly when matching is enabled and never replaced afterward,
+  // so the pointer is the single source of truth for the mode.
+  bool is_signal_matching_enabled() const { return signal_match_validator_ != nullptr; }
+
   SourcePriority source_priority_;
-  bool enable_signal_matching_;
   double external_delay_tolerance_;
   double external_time_tolerance_;
   double perception_time_tolerance_;
