@@ -15,7 +15,6 @@
 #include "input_manager.hpp"
 
 #include "autoware/multi_object_tracker/object_model/classes.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 

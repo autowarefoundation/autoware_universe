@@ -1,0 +1,6 @@
+selector:
+  fallback_period_ms:
+    type: int
+    default_value: 150
+    description: fallback timer period in milliseconds.
+    read_only: false

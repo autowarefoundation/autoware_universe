@@ -2,6 +2,144 @@
 Changelog for package autoware_universe_designs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(autoware_universe_designs): add node designs for localization nodes (`#12801 <https://github.com/autowarefoundation/autoware_universe/issues/12801>`_)
+  * feat(autoware_universe_designs): add node design for localization error monitor
+  * feat(autoware_universe_designs): add node design for geo pose projector
+  * feat(autoware_universe_designs): add node design for pose instability detector
+  * feat(autoware_universe_designs): add node design for pose covariance modifier
+  * feat(autoware_universe_designs): add node design for pose estimator arbiter
+  * feat(autoware_universe_designs): add node design for ar tag based localizer
+  * feat(autoware_universe_designs): add node design for lidar marker localizer
+  * fix(autoware_universe_designs): add remap_target for debug and nested output topics in localization nodes
+  ---------
+* feat(autoware_universe_designs): add node designs for yabloc common, particle filter, pose initializer, and monitor nodes (`#12829 <https://github.com/autowarefoundation/autoware_universe/issues/12829>`_)
+  * feat(autoware_universe_designs): add node design for yabloc ground server
+  * feat(autoware_universe_designs): add node design for yabloc ll2 decomposer
+  * feat(autoware_universe_designs): add node design for yabloc camera particle corrector
+  * feat(autoware_universe_designs): add node design for yabloc gnss particle corrector
+  * feat(autoware_universe_designs): add node design for yabloc predictor
+  * feat(autoware_universe_designs): add node design for yabloc camera pose initializer
+  * feat(autoware_universe_designs): add node design for yabloc monitor
+  ---------
+* feat(autoware_universe_designs): add node designs for yabloc image processing nodes (`#12824 <https://github.com/autowarefoundation/autoware_universe/issues/12824>`_)
+  * feat(autoware_universe_designs): add node design for yabloc graph segment
+  * feat(autoware_universe_designs): add node design for yabloc lanelet2 overlay
+  * feat(autoware_universe_designs): add node design for yabloc line segment detector
+  * feat(autoware_universe_designs): add node design for yabloc line segments overlay
+  * feat(autoware_universe_designs): add node design for yabloc segment filter
+  * feat(autoware_universe_designs): add node design for yabloc undistort
+  ---------
+* feat(autoware_universe_designs): add node designs for control nodes (`#12783 <https://github.com/autowarefoundation/autoware_universe/issues/12783>`_)
+  * fix(autoware_universe_designs): correct StopModeOperator plugin name and use relative param path
+  * feat(autoware_universe_designs): add node design for autonomous mode transition flag
+  * feat(autoware_universe_designs): add node design for spheric collision detector
+  * feat(autoware_universe_designs): add node design for control performance analysis
+  * feat(autoware_universe_designs): add node design for joy controller
+  * fix(autoware_universe_designs): correct socket names and remap targets in control node designs
+  Launch-test verification (ros2 node info vs generated remaps) revealed
+  socket names containing input/output prefixes generate doubled remap
+  sources (~/input/input/...) that match no code topic. Corrected per
+  each node's actual topic declarations:
+  - ControlPerformanceAnalysis: bare socket names (code uses ~/input/<name>,
+  ~/output/<name>); process trigger/outcome references updated to match
+  - SphericCollisionDetector: bare names + relative remap_target (code
+  subscribes to relative input/<name>); processing_time_ms publisher
+  corrected to ~/debug/processing_time_ms (autoware_utils
+  ProcessingTimePublisher default)
+  - AutowareJoyController: bare names + relative remap_target for all
+  topics and the emergency_stop service client (code uses relative names)
+  - AutonomousModeTransitionFlag: relative remap_target for polling
+  subscribers (code uses bare relative names); debug_info corrected
+  to ~/debug_info
+  All remaps verified at runtime against /localization/kinematic_state,
+  /planning/trajectory, /control/command/control_cmd,
+  /control/predicted_trajectory, /vehicle/status/steering_status.
+  ---------
+* refactor(vehicle_velocity_converter): update plugin name to VehicleVelocityConverterNode (`#12830 <https://github.com/autowarefoundation/autoware_universe/issues/12830>`_)
+  Follow the node class rename from extracting VehicleVelocityConverterNode into a separate translation unit in autoware_core.
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+* feat(autoware_universe_designs): add node designs for common packages (`#12749 <https://github.com/autowarefoundation/autoware_universe/issues/12749>`_)
+  * feat(autoware_universe_designs): add path distance calculator node
+  * feat(autoware_universe_designs): add node design for autoware_goal_distance_calculator
+  * feat(autoware_universe_designs): add node designs for remaining common packages
+  * fix(autoware_universe_designs): use relative param file path per review
+  * fix(autoware_universe_designs): remove GlogComponent design (already in autoware_sample_designs)
+  ---------
+* feat(autoware_universe_designs): autware system designer planning and control nodes (`#12408 <https://github.com/autowarefoundation/autoware_universe/issues/12408>`_)
+  * add planning/control and fix traffic light msg type
+  * add rviz config
+  * fixing planning nodes/modules
+  * move to common/autoware_universe_designs
+  * add missing params
+  * improve control/planning
+  * Update Autoware system design format to 0.3.0 and restructure node configurations across control and planning modules. Added package information, updated parameters, and refined interfaces for various nodes including AutonomousEmergencyBraking, CollisionDetector, and others. Removed deprecated ControlContainer node. Enhanced connections and subscriber/publisher definitions for improved modularity and clarity.
+  * Refactor node configurations to standardize param_values across various modules in the Autoware universe design. This update ensures consistency by initializing param_values as empty lists in multiple node YAML files, enhancing clarity and maintainability.
+  * Remove deprecated planning and control module configurations, including Control.module.yaml, LaneDriving.module.yaml, Planning.module.yaml, ScenarioPlanning.module.yaml, BehaviorPlanning.module.yaml, MissionPlanning.module.yaml, MotionPlanning.module.yaml, and Rviz.node.yaml. This cleanup enhances modularity and prepares for future updates.
+  * Standardize boolean parameter values in ControlEvaluator and BehaviorVelocityPlanner node configurations from 'False' to 'false' for consistency across YAML files.
+  * Update parameter file paths in planning node configurations to reference autoware_core_planning instead of autoware_planning_common. This change ensures consistency across multiple nodes, including BehaviorVelocityPlanner, ExternalVelocityLimitSelector, VelocitySmoother, and ElasticBandSmoother.
+  * update planning control node execution info
+  * Enhance node configurations across control and planning modules by updating message types, adding remap targets, and refining subscriber/publisher definitions. Key changes include the introduction of new message types in AutonomousEmergencyBraking, CollisionDetector, and other nodes, as well as the standardization of parameters for improved clarity and maintainability.
+  * style(pre-commit): autofix
+  * Update parameter file paths in planning node configurations to use relative paths instead of package share references. This change applies to multiple nodes including BehaviorPathPlanner, BehaviorVelocityPlanner, PathGenerator, CostmapGenerator, PlanningEvaluator, PlanningValidator, RemainingDistanceTimeCalculator, and VelocitySmoother, enhancing consistency and maintainability across the configuration files.
+  * Enhance planning node configurations by adding new subscribers and publishers, updating message types, and refining parameter definitions. Key updates include the introduction of remap targets in ManualLaneChangeHandler and GoalPoseVisualizer, as well as the addition of new parameters in PlanningEvaluator, PlanningValidator, and VelocitySmoother for improved functionality and clarity.
+  * Add new boolean parameters to PlanningEvaluator and PlanningValidator configurations for enhanced functionality. The parameters include 'output_metrics' in PlanningEvaluator and 'use_intra_process_comms' in PlanningValidator, improving clarity and control over node behavior.
+  * style(pre-commit): autofix
+  * Refactor PlanningValidator configuration by renaming 'planning_validator_launch_modules' to 'launch_modules' for improved clarity and consistency in parameter definitions.
+  * Enhance MissionPlanner and RouteSelector configurations by adding remap targets for subscribers, publishers, and service servers/clients. This update improves clarity in message routing and aligns with the overall design structure for better integration with upstream and downstream components.
+  * Add subscribers to StopModeOperator configuration for improved message handling. New subscribers include RouteState, SteeringReport, and VelocityReport, enhancing the node's integration with planning and vehicle control systems.
+  * Add new subscribers and servers to ManualLaneChangeHandler configuration for enhanced functionality. The updates include a new reroute availability subscriber and a set preferred lane service server, improving the node's integration with planning and rerouting processes.
+  * Enhance ManualLaneChangeHandler configuration by adding a new subscriber for LaneletMapBin and a client for SetPreferredPrimitive service. Additionally, implement a warning in the route callback to handle cases where the lanelet map is not yet loaded, improving robustness and integration with planning processes.
+  * Update message types in BehaviorPathPlanner and MissionPlanner configurations to use autoware_planning_msgs for modified_goal. This change enhances consistency in message handling across planning nodes.
+  * Add new publisher for traffic light recognition in SimplePlanningSimulator configuration. This update enhances the simulator's ability to process traffic signal data, improving overall functionality and integration with perception components.
+  * style(pre-commit): autofix
+  * fix path optimizer, /planning/trajectory published
+  * Refactor node configurations: update message types and add new parameters for improved functionality
+  * Enhance BehaviorPathPlanner and BehaviorVelocityPlanner configurations: add new parameter files and update existing parameters for improved module management and functionality.
+  * style(pre-commit): autofix
+  * Refactor node configurations: update message types and add new subscribers for improved functionality in various control and planning nodes.
+  * Refactor node configurations: update subscriber and publisher names for consistency and clarity in BehaviorPathPlanner, BehaviorVelocityPlanner, and MotionVelocityPlanner nodes.
+  * Refactor ControlValidator node: add remap targets for trajectory and predicted_trajectory subscribers for improved message routing
+  * Refactor VehicleCmdGate node: update message types, add new subscribers and publishers, and enhance service configurations for improved functionality and clarity.
+  * Refactor node configurations: update subscriber names for consistency and clarity in ExternalCmdSelector, add new publishers in OperationModeTransitionManager, and rename emergency command publisher in VehicleCmdGate.
+  * Refactor ExternalCmdConverter node: add remap targets for subscribers and publisher for improved message routing
+  * remap some engage and route topics
+  * Refactor OperationModeTransitionManager and VehicleCmdGate nodes: update message types and remove global remap targets for improved clarity and consistency
+  * Add steering_offset_update subscriber to TrajectoryFollower node for enhanced debugging
+  * Update autoware_system_designer to version 0.4.0 in workflow and pre-commit configuration
+  * Update autoware_system_designer to version 0.4.1 in workflow and pre-commit configuration
+  ---------
+  Co-authored-by: Maxime CLEMENT <maxime.clement@tier4.jp>
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* refactor(`dummy_perception_publisher`): replace `tier4_simulation_msgs` by `autoware_simulation_msgs` (`#12499 <https://github.com/autowarefoundation/autoware_universe/issues/12499>`_)
+  * chore: replace `tier4_simulation_msgs` by `autoware_simulation_msgs`
+  * missing fix: to the previous commit (see below)
+  * This commit applies the missing fix for the following commit
+  - https://github.com/autowarefoundation/autoware_universe/pull/12499/changes/f0efc76abc007ab79bbff8e6a40ac2d12f8bc943
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * bug: use "simulated" for consistency, except its package name
+  * Apply the following review comment
+  - https://github.com/autowarefoundation/autoware_universe/pull/12499#discussion_r3161153194
+  * fix: code formatting by `pre-commit`
+  * bug: fix documentation bugs
+  * style(pre-commit): autofix
+  * Update simulator/autoware_dummy_perception_publisher/README.md
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * Update simulator/autoware_dummy_perception_publisher/README.md
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * Update simulator/autoware_dummy_perception_publisher/README.md
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * bug: fix to handle missing `default:` case
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+  Co-authored-by: Mete Fatih Cırıt <mfc@autoware.org>
+* Contributors: Junya Sasaki, Taekjin LEE, Takahisa Ishikawa, Vishal Chauhan, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 * chore: align package versions to 0.50.0 and reset changelogs

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_trajectory_modifier</name>
-  <version>0.51.0</version>
+  <version>0.52.0</version>
   <description>The autoware_trajectory_modifier package</description>
 
   <maintainer email="daniel.sanchez@tier4.jp">Daniel Sanchez</maintainer>
@@ -9,6 +9,7 @@
   <maintainer email="go.sakayori@tier4.jp">Go Sakayori</maintainer>
   <maintainer email="shintaro.sakoda@tier4.jp">Shintaro Sakoda</maintainer>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
+  <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
 
   <license>Apache License 2.0</license>
 
