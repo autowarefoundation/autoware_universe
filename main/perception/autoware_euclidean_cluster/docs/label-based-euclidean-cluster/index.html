@@ -23249,6 +23249,7 @@ It groups points by semantic class, clusters each label bucket independently, an
 <li>Split the remaining points into buckets keyed by the mapped Autoware object label.</li>
 <li>Run <code>VoxelGridBasedEuclideanCluster</code> independently for each label bucket, using the per-label parameter overrides from <code>label_cluster_params.*</code> where configured and the global defaults otherwise.</li>
 <li>Merge over-segmented clusters across labels that belong to the same confusable label group (<code>confusable_label_groups.*</code>).</li>
+<li>Compute the average semantic probability for each output cluster from the points that ended up in that cluster. This uses the source-point indices returned by the clustering backend for the per-label filtered cloud, rather than rematching points by coordinate.</li>
 <li>Estimate a shape and pose for each cluster with <code>ShapeEstimator</code>.</li>
 <li>If shape estimation does not produce a usable shape, fall back to an axis-aligned bounding shape computed from the clustered points.</li>
 <li>Publish one <code>DetectedObject</code> per cluster.</li>
@@ -23279,7 +23280,7 @@ It groups points by semantic class, clusters each label bucket independently, an
 <p>After clustering, the node converts each cluster into a <code>DetectedObject</code>.</p>
 <ul>
 <li>The output classification label is the mapped object label for that bucket.</li>
-<li>The output existence probability is the average of the bucket point probabilities.</li>
+<li>The output existence probability is the average of the clustered point probabilities for that object instance.</li>
 <li>Shape estimation is delegated to <code>autoware::shape_estimation::ShapeEstimator</code>.</li>
 <li><code>shape_policy=0</code> (<code>ALL_POLYGON</code>) estimates whole shapes as polygon.</li>
 <li><code>shape_policy=1</code> (<code>LABEL_DEPEND</code>) estimates shapes with the mapped object label.</li>
@@ -23475,7 +23476,6 @@ confusable_label_groups:
 <li><code>class_id</code> is interpreted only by order in <code>class_names.*</code>; changing YAML order changes the expected semantic index mapping.</li>
 <li>When the input has no <code>class_id</code> field, all points are clustered together as <code>UNKNOWN</code>.</li>
 <li>When the input has no <code>probability</code> field, every point is treated as confidence <code>1.0</code>.</li>
-<li>The current existence probability is averaged per label bucket before clustering, not per individual cluster.</li>
 <li>Clustering is spatial only; there is no temporal association or tracking.</li>
 </ul>
 <h2 id="intended-usage">Intended Usage<a class="headerlink" href="#intended-usage" title="Permanent link">#</a></h2>
@@ -23484,10 +23484,7 @@ confusable_label_groups:
 <p>The following items came up during PR review as acceptable short-term trade-offs, but they remain good candidates for follow-up work.</p>
 <ul>
 <li>Load semantic label order from the segmentation model artifact, such as <code>label.txt</code>, and keep the ROS parameter file focused on label selection and Autoware label remapping instead of treating YAML declaration order as the source of truth.</li>
-<li>Preserve source point indices through clustering so <code>existence_probability</code> can be computed per output cluster rather than once per semantic bucket.<ul>
-<li>Or uncertainty aware clustering can be applied to propagate point-level probabilities into clusters using entropy field values.</li>
-</ul>
-</li>
+<li>Improve uncertainty-aware clustering so point-level probabilities can be propagated with richer statistics than a simple per-cluster average, such as entropy-aware aggregation or quantile-based gating.</li>
 <li>Improve large-cluster downsampling in the internal voxel-grid-based cluster with deterministic voxel-wise, spatially uniform, or edge-preserving sampling so shape estimation keeps outline points more reliably.</li>
 </ul></div>
 
