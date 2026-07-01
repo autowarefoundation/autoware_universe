@@ -24,6 +24,7 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <rosgraph_msgs/msg/clock.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <gtest/gtest.h>
@@ -31,7 +32,6 @@
 #include <chrono>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 using autoware_internal_planning_msgs::msg::CandidateTrajectories;
@@ -88,6 +88,12 @@ protected:
     // Setup node options with parameters
     auto modifier_options = rclcpp::NodeOptions{};
     auto optimizer_options = rclcpp::NodeOptions{};
+    auto test_options = rclcpp::NodeOptions{};
+
+    // Force all nodes to use simulated time
+    modifier_options.append_parameter_override("use_sim_time", true);
+    optimizer_options.append_parameter_override("use_sim_time", true);
+    test_options.append_parameter_override("use_sim_time", true);
 
     const auto modifier_dir =
       ament_index_cpp::get_package_share_directory("autoware_trajectory_modifier");
@@ -266,7 +272,11 @@ protected:
     optimizer_node_ =
       std::make_shared<autoware::trajectory_optimizer::TrajectoryOptimizer>(optimizer_options);
 
-    test_node_ = std::make_shared<rclcpp::Node>("test_node");
+    test_node_ = std::make_shared<rclcpp::Node>("test_node", test_options);
+
+    // Simulated Clock Setup
+    clock_pub_ = test_node_->create_publisher<rosgraph_msgs::msg::Clock>("/clock", 10);
+    sim_time_ = rclcpp::Time(1, 0, RCL_ROS_TIME);
 
     // Publishers for inputs
     pub_tra_ = test_node_->create_publisher<CandidateTrajectories>(
@@ -288,16 +298,21 @@ protected:
     executor_->add_node(modifier_node_);
     executor_->add_node(optimizer_node_);
     executor_->add_node(test_node_);
-
-    spin_thread_ = std::thread([this]() { executor_->spin(); });
   }
 
-  void TearDown() override
+  /**
+   * Advances the simulated clock and spins the executor to process callbacks deterministically.
+   */
+  void advance_sim_time_and_spin(std::chrono::milliseconds step)
   {
-    executor_->cancel();
-    if (spin_thread_.joinable()) {
-      spin_thread_.join();
-    }
+    sim_time_ = sim_time_ + rclcpp::Duration(step);
+    rosgraph_msgs::msg::Clock clock_msg;
+    clock_msg.clock = sim_time_;
+    clock_pub_->publish(clock_msg);
+
+    // Spin twice: once to deliver the clock msg, once to execute timers triggered by the clock
+    executor_->spin_some();
+    executor_->spin_some();
   }
 
   void publish_mandatory_inputs(
@@ -309,12 +324,14 @@ protected:
     pub_acc_->publish(acc);
   }
 
-  void wait_for_output(int timeout_s = 5)
+  /**
+   * Spins the executor deterministically in simulated time until an output is received.
+   */
+  void wait_for_output_sim(int timeout_s = 5)
   {
-    auto start_time = std::chrono::steady_clock::now();
-    while (!output_received_ &&
-           (std::chrono::steady_clock::now() - start_time < std::chrono::seconds(timeout_s))) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    const rclcpp::Time deadline = sim_time_ + rclcpp::Duration(std::chrono::seconds(timeout_s));
+    while (!output_received_ && sim_time_ < deadline && rclcpp::ok()) {
+      advance_sim_time_and_spin(std::chrono::milliseconds(100));
     }
   }
 
@@ -322,7 +339,9 @@ protected:
   std::shared_ptr<autoware::trajectory_optimizer::TrajectoryOptimizer> optimizer_node_;
   std::shared_ptr<rclcpp::Node> test_node_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
-  std::thread spin_thread_;
+
+  rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
+  rclcpp::Time sim_time_;
 
   rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_tra_;
   rclcpp::Publisher<Odometry>::SharedPtr pub_odo_;
@@ -336,8 +355,7 @@ protected:
 
 TEST_F(TrajectoryProcessorIntegrationTest, BasicPipelineTest)
 {
-  // Arrange
-  auto traj = create_straight_trajectories(30.0, 5.0, test_node_->now());
+  auto traj = create_straight_trajectories(30.0, 5.0, sim_time_);
 
   Odometry odom;
   odom.header.frame_id = "map";
@@ -348,25 +366,22 @@ TEST_F(TrajectoryProcessorIntegrationTest, BasicPipelineTest)
   AccelWithCovarianceStamped acc;
   acc.header.frame_id = "map";
 
-  // Act
   // Publish in a loop to ensure the nodes receive it after discovery
   for (int i = 0; i < 20 && !output_received_; ++i) {
-    odom.header.stamp = test_node_->now();
-    acc.header.stamp = test_node_->now();
+    odom.header.stamp = sim_time_;
+    acc.header.stamp = sim_time_;
     publish_mandatory_inputs(traj, odom, acc);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
-  wait_for_output();
+  wait_for_output_sim();
 
-  // Assert
-  EXPECT_TRUE(output_received_);
+  ASSERT_TRUE(output_received_);
   EXPECT_GT(latest_output_.points.size(), 0U);
 }
 
 TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopIntegrationTest)
 {
-  // Arrange
-  auto traj = create_straight_trajectories(30.0, 8.0, test_node_->now());
+  auto traj = create_straight_trajectories(30.0, 8.0, sim_time_);
 
   Odometry odom;
   odom.header.frame_id = "map";
@@ -380,7 +395,6 @@ TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopIntegrationTest)
   // Create a blocking car at x=20.0
   PredictedObjects objects;
   objects.header.frame_id = "map";
-  objects.header.stamp = test_node_->now();
   autoware_perception_msgs::msg::PredictedObject object;
   object.kinematics.initial_pose_with_covariance.pose.position.x = 20.0;
   object.kinematics.initial_pose_with_covariance.pose.orientation.w = 1.0;
@@ -394,20 +408,17 @@ TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopIntegrationTest)
   object.classification.push_back(classification);
   objects.objects.push_back(object);
 
-  // Act
   // Obstacle stop needs continuous detection (on_time_buffer=0.5s).
-  // Publish for 2 seconds to be safe.
   for (int i = 0; i < 20; ++i) {
-    objects.header.stamp = test_node_->now();
-    odom.header.stamp = test_node_->now();
-    acc.header.stamp = test_node_->now();
+    objects.header.stamp = sim_time_;
+    odom.header.stamp = sim_time_;
+    acc.header.stamp = sim_time_;
     pub_obj_->publish(objects);
     publish_mandatory_inputs(traj, odom, acc);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
-  wait_for_output();
+  wait_for_output_sim();
 
-  // Assert
   ASSERT_TRUE(output_received_);
   // The trajectory should have a stop point (velocity close to 0) before the object at x=20.0
   bool found_stop = false;
@@ -423,12 +434,11 @@ TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopIntegrationTest)
 
 TEST_F(TrajectoryProcessorIntegrationTest, StopPointFixerIntegrationTest)
 {
-  // Arrange
   // Short trajectory with a stop point at 0.5m
   CandidateTrajectories msg;
   CandidateTrajectory candidate;
   candidate.header.frame_id = "map";
-  candidate.header.stamp = test_node_->now();
+  candidate.header.stamp = sim_time_;
   candidate.points.push_back(create_trajectory_point(0.0, 0.0, 0.1));
   candidate.points.push_back(create_trajectory_point(0.5, 0.0, 0.0));
   msg.candidate_trajectories.push_back(candidate);
@@ -442,16 +452,14 @@ TEST_F(TrajectoryProcessorIntegrationTest, StopPointFixerIntegrationTest)
   AccelWithCovarianceStamped acc;
   acc.header.frame_id = "map";
 
-  // Act
   for (int i = 0; i < 20 && !output_received_; ++i) {
-    odom.header.stamp = test_node_->now();
-    acc.header.stamp = test_node_->now();
+    odom.header.stamp = sim_time_;
+    acc.header.stamp = sim_time_;
     publish_mandatory_inputs(msg, odom, acc);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
-  wait_for_output();
+  wait_for_output_sim();
 
-  // Assert
   ASSERT_TRUE(output_received_);
   // Stop point fixer should have replaced the trajectory with stop points at ego
   EXPECT_NEAR(latest_output_.points.front().pose.position.x, 0.0, 0.1);
