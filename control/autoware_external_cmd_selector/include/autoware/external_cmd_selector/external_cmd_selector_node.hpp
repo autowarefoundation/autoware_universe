@@ -28,6 +28,7 @@
 #include <tier4_control_msgs/msg/external_command_selector_mode.hpp>
 #include <tier4_control_msgs/srv/external_command_select.hpp>
 
+#include <atomic>
 #include <memory>
 
 namespace autoware::external_cmd_selector
@@ -91,7 +92,7 @@ private:
 
   // Service
   rclcpp::Service<CommandSourceSelect>::SharedPtr srv_select_external_command_;
-  CommandSourceMode current_selector_mode_;
+  std::atomic<uint8_t> current_selector_mode_;
   bool on_select_external_command(
     const CommandSourceSelect::Request::SharedPtr req,
     const CommandSourceSelect::Response::SharedPtr res);
