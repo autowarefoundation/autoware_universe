@@ -25,7 +25,7 @@
     
     
       
-        <title>Autoware Trajectory Modifier - Autoware Universe Documentation</title>
+        <title>Macro Rendering Error - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#autoware-trajectory-modifier" class="md-skip">
+        <a href="#macro-rendering-error" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Autoware Trajectory Modifier
+              Macro Rendering Error
             
           </span>
         </div>
@@ -22764,108 +22764,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Architecture">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#plugin-interface" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Plugin Interface
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#current-plugins" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Current Plugins
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#dependencies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Dependencies
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inputoutput" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Input/Output
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-new-modifier-plugins" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding New Modifier Plugins
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -22884,457 +22782,30 @@
   
 
 
-<div><h1 id="autoware-trajectory-modifier">Autoware Trajectory Modifier<a class="headerlink" href="#autoware-trajectory-modifier" title="Permanent link">#</a></h1>
-<p>The <code>autoware_trajectory_modifier</code> package provides a plugin-based architecture for post-processing trajectory points to improve trajectory quality and ensure vehicle safety. It takes candidate trajectories and applies various modification algorithms to enhance their feasibility and safety characteristics.</p>
-<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">#</a></h2>
-<ul>
-<li>Plugin-based architecture for extensible trajectory modifications</li>
-<li>Stop point fixing to prevent trajectory issues near stationary conditions</li>
-<li>Obstacle detection and stopping to prevent collision</li>
-<li>Configurable parameters to adjust modification behavior</li>
-</ul>
-<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">#</a></h2>
-<p>The trajectory modifier uses a plugin-based system where different modification algorithms can be implemented as plugins. Each plugin inherits from the <code>TrajectoryModifierPluginBase</code> class and implements the required interface.</p>
-<h3 id="plugin-interface">Plugin Interface<a class="headerlink" href="#plugin-interface" title="Permanent link">#</a></h3>
-<p>All modifier plugins must inherit from <code>TrajectoryModifierPluginBase</code> and implement:</p>
-<ul>
-<li><code>modify_trajectory()</code> - Main method to modify trajectory points</li>
-<li><code>on_initialize()</code> - Initialize plugin members and parameters</li>
-<li><code>update_params()</code> - Handle parameter updates</li>
-<li><code>is_trajectory_modification_required()</code> - Determine if modification is needed</li>
-</ul>
-<h3 id="current-plugins">Current Plugins<a class="headerlink" href="#current-plugins" title="Permanent link">#</a></h3>
-<h4 id="stop-point-fixer">Stop Point Fixer<a class="headerlink" href="#stop-point-fixer" title="Permanent link">#</a></h4>
-<p>The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is stationary or moving at very low speeds. It prevents problematic trajectory points that could cause planning issues by replacing the trajectory with a single stop point when either of two independently configurable conditions is met:</p>
-<ul>
-<li><strong>Close stop</strong>: the trajectory's last point (stop point) is within a minimum distance threshold from ego</li>
-<li><strong>Long stop</strong>: the trajectory commands ego to remain stopped for longer than a minimum duration threshold</li>
-</ul>
-<p>Both conditions are individually enabled or disabled via parameters, allowing fine-grained control over when the override is applied.</p>
-<h4 id="obstacle-stop">Obstacle Stop<a class="headerlink" href="#obstacle-stop" title="Permanent link">#</a></h4>
-<p>The Obstacle Stop plugin serves as a deterministic safety shield operating independently of the generative model to:</p>
-<ul>
-<li><strong>Enforce Longitudinal Safety</strong>: Monitors the gap to dynamic and static obstacles to ensure a safe distance is maintained under all kinematic conditions.</li>
-<li><strong>Ensure Definitive Stopping For Obstacles</strong>: Guarantees zero-velocity set-points for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.</li>
-</ul>
-<h4 id="velocity-modifier">Velocity Modifier<a class="headerlink" href="#velocity-modifier" title="Permanent link">#</a></h4>
-<p>The Velocity Modifier plugins is responsible for ensuring the velocity profile is smooth and feasible, and adjusts the velocity profile if an anomaly is detected while respecting deceleration and jerk constraints.</p>
-<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">#</a></h2>
-<p>This package depends on the following packages:</p>
-<ul>
-<li><code>autoware_internal_planning_msgs</code>: For candidate trajectory message types</li>
-<li><code>autoware_planning_msgs</code>: For output trajectory message types</li>
-<li><code>autoware_motion_utils</code>: Motion-related utility functions</li>
-<li><code>autoware_trajectory</code>: Trajectory data structures and utilities</li>
-<li><code>autoware_utils</code>: Common utility functions</li>
-</ul>
-<h2 id="inputoutput">Input/Output<a class="headerlink" href="#inputoutput" title="Permanent link">#</a></h2>
-<ul>
-<li><strong>Input</strong>: <code>autoware_internal_planning_msgs::msg::CandidateTrajectories</code></li>
-<li><strong>Output</strong>: Modified <code>autoware_internal_planning_msgs::msg::CandidateTrajectories</code> and selected <code>autoware_planning_msgs::msg::Trajectory</code></li>
-</ul>
-<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-<th>Range</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>plugin_names</td>
-<td>array</td>
-<td>List of trajectory modifier plugins to load</td>
-<td>['autoware::trajectory_modifier::plugin::ObstacleStop', 'autoware::trajectory_modifier::plugin::StopPointFixer', 'autoware::trajectory_modifier::plugin::VelocityModifier']</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>use_stop_point_fixer</td>
-<td>boolean</td>
-<td>Enable the stop point fixer modifier plugin</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>use_obstacle_stop</td>
-<td>boolean</td>
-<td>Enable the obstacle stop modifier plugin</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>use_velocity_modifier</td>
-<td>boolean</td>
-<td>Enable the velocity modifier plugin</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>trajectory_time_step</td>
-<td>float</td>
-<td>Time step for trajectory modification [s]</td>
-<td>0.1</td>
-<td>&gt;0.0</td>
-</tr>
-<tr>
-<td>stop_point_fixer.force_stop_long_stopped_trajectories</td>
-<td>boolean</td>
-<td>Force zero velocity trajectory for trajectories with long stops</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>stop_point_fixer.force_stop_close_stopped_trajectories</td>
-<td>boolean</td>
-<td>Force zero velocity trajectory for trajectories with stops close to ego</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>stop_point_fixer.velocity_threshold</td>
-<td>float</td>
-<td>Velocity threshold below which ego vehicle is considered stationary</td>
-<td>0.25</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>stop_point_fixer.min_distance_threshold</td>
-<td>float</td>
-<td>Minimum distance threshold to trigger trajectory replacement</td>
-<td>1.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>stop_point_fixer.min_stop_duration</td>
-<td>float</td>
-<td>Minimum duration of stop to consider for trajectory replacement</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>stopping_constraints.nominal_deceleration</td>
-<td>float</td>
-<td>Nominal deceleration during stopping [m/s^2]</td>
-<td>1.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>stopping_constraints.maximum_deceleration</td>
-<td>float</td>
-<td>Maximum deceleration during stopping [m/s^2]</td>
-<td>4.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>stopping_constraints.jerk_limit</td>
-<td>float</td>
-<td>Jerk limit during stopping [m/s^3]</td>
-<td>3.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_stop.use_objects</td>
-<td>boolean</td>
-<td>Enable the use of objects for obstacle stop</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>obstacle_stop.use_pointcloud</td>
-<td>boolean</td>
-<td>Enable the use of pointcloud for obstacle stop</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>obstacle_stop.enable_stop_for_objects</td>
-<td>boolean</td>
-<td>Enable stopping behavior when object is detected as obstacle</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>obstacle_stop.enable_stop_for_pointcloud</td>
-<td>boolean</td>
-<td>Enable stopping behavior when pointcloud is detected as obstacle</td>
-<td>False</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>obstacle_stop.stop_margin</td>
-<td>float</td>
-<td>Distance to maintain from an obstacle when stopped [m]</td>
-<td>6.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_stop.lateral_margin</td>
-<td>float</td>
-<td>Lateral margin on top of ego width from trajectory to consider for obstacle stop [m]</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_stop.duplicate_check_threshold</td>
-<td>float</td>
-<td>Threshold to check if the stop point is already in the trajectory [m]</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_stop.arrived_distance_threshold</td>
-<td>float</td>
-<td>Threshold to check if the ego vehicle has arrived at the stop point [m]</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_tracking.on_time_buffer</td>
-<td>float</td>
-<td>Continuous detection duration to consider object/pointcloud to be persistent [s]</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_tracking.off_time_buffer</td>
-<td>float</td>
-<td>Continuous non-detection duration to consider object/pointcloud as not persistent [s]</td>
-<td>1.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_tracking.object_distance_th</td>
-<td>float</td>
-<td>Distance threshold for object tracking [m]</td>
-<td>1.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_tracking.object_yaw_th</td>
-<td>float</td>
-<td>Yaw threshold for object tracking [rad]</td>
-<td>0.1745</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_tracking.pcd_distance_th</td>
-<td>float</td>
-<td>Distance threshold for pointcloud tracking [m]</td>
-<td>1.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>obstacle_tracking.grace_period</td>
-<td>float</td>
-<td>Grace period for object tracking [s]</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>objects.object_types</td>
-<td>array</td>
-<td>Object types to consider for obstacle stop</td>
-<td>['car', 'truck', 'bus', 'trailer', 'motorcycle', 'bicycle', 'pedestrian', 'unknown']</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>objects.max_velocity_th</td>
-<td>float</td>
-<td>Maximum velocity threshold for target object [m/s]</td>
-<td>5.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>objects.stopped_velocity_th</td>
-<td>float</td>
-<td>Velocity threshold for target object to be considered as stopped [m/s]</td>
-<td>0.25</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>objects.max_lateral_velocity_th</td>
-<td>float</td>
-<td>Maximum lateral velocity threshold for target object to be considered for obstacle stop [m/s]</td>
-<td>1.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>objects.safety_buffer</td>
-<td>float</td>
-<td>Safety buffer to expand object shape [m]</td>
-<td>0.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>pointcloud.height_buffer</td>
-<td>float</td>
-<td>Height buffer to add above ego height [m]</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>pointcloud.min_height</td>
-<td>float</td>
-<td>Minimum height of pointcloud [m]</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>voxel_grid_filter.x</td>
-<td>float</td>
-<td>X dimension of voxel grid filter [m]</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>voxel_grid_filter.y</td>
-<td>float</td>
-<td>Y dimension of voxel grid filter [m]</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>voxel_grid_filter.z</td>
-<td>float</td>
-<td>Z dimension of voxel grid filter [m]</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>voxel_grid_filter.min_size</td>
-<td>float</td>
-<td>Minimum size of voxel grid filter [m]</td>
-<td>3</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>clustering.tolerance</td>
-<td>float</td>
-<td>Tolerance for clustering [m]</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>clustering.min_height</td>
-<td>float</td>
-<td>Minimum height for clustering [m]</td>
-<td>0.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>clustering.min_size</td>
-<td>float</td>
-<td>Minimum size for clustering [m]</td>
-<td>10</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>clustering.max_size</td>
-<td>float</td>
-<td>Maximum size for clustering [m]</td>
-<td>10000</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>rss_params.enable</td>
-<td>boolean</td>
-<td>Enable RSS safety check</td>
-<td>True</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>object_decel.car</td>
-<td>float</td>
-<td>Deceleration for car type objects [m/s^2]</td>
-<td>1.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>object_decel.truck</td>
-<td>float</td>
-<td>Deceleration for truck type objects [m/s^2]</td>
-<td>1.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>object_decel.bus</td>
-<td>float</td>
-<td>Deceleration for bus type objects [m/s^2]</td>
-<td>1.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>object_decel.trailer</td>
-<td>float</td>
-<td>Deceleration for trailer type objects [m/s^2]</td>
-<td>1.5</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>object_decel.motorcycle</td>
-<td>float</td>
-<td>Deceleration for motorcycle type objects [m/s^2]</td>
-<td>3.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>object_decel.bicycle</td>
-<td>float</td>
-<td>Deceleration for bicycle type objects [m/s^2]</td>
-<td>5.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>object_decel.pedestrian</td>
-<td>float</td>
-<td>Deceleration for pedestrian type objects [m/s^2]</td>
-<td>5.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>rss_params.ego_decel</td>
-<td>float</td>
-<td>Deceleration for ego vehicle [m/s^2]</td>
-<td>4.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>rss_params.reaction_time</td>
-<td>float</td>
-<td>Reaction time to consider for RSS calculation [s]</td>
-<td>0.2</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>rss_params.safety_margin</td>
-<td>float</td>
-<td>Safety margin to consider for RSS calculation [m]</td>
-<td>2.0</td>
-<td>≥0.0</td>
-</tr>
-<tr>
-<td>rss_params.lookahead_horizon</td>
-<td>float</td>
-<td>Lookahead horizon for RSS calculation [s]</td>
-<td>1.5</td>
-<td>≥0.0</td>
-</tr>
-</tbody>
-</table>
-<p>Parameters can be set via YAML configuration files in the <code>config/</code> directory.</p>
-<h2 id="adding-new-modifier-plugins">Adding New Modifier Plugins<a class="headerlink" href="#adding-new-modifier-plugins" title="Permanent link">#</a></h2>
-<p>To add a new modifier plugin:</p>
-<ol>
-<li>Create header and source files in <code>trajectory_modifier_plugins/</code></li>
-<li>Inherit from <code>TrajectoryModifierPluginBase</code></li>
-<li>Implement the required virtual methods</li>
-<li>Register the plugin in the main node's <code>initialize_modifiers()</code> method</li>
-<li>Add plugin-specific parameters to the schema and config files</li>
-</ol></div>
+<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
+<p><em>File</em>: <code>planning/autoware_trajectory_modifier/README.md</code></p>
+<p><em>KeyError</em>: 'description'</p>
+<p>```
+Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/mkdocs_macros/plugin.py", line 703, in render
+    return md_template.render(**page_variables)
+  File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "<template>", line 64, in top-level template code
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
+    return format_json(data)
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
+    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 57, in extract_parameter_info
+    params.extend(extract_parameter_info(v["properties"], k + "."))
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 57, in extract_parameter_info
+    params.extend(extract_parameter_info(v["properties"], k + "."))
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 52, in extract_parameter_info
+    param["Description"] = v["description"]
+KeyError: 'description'</template></p>
+<p>```</p></div>
 
 
 
