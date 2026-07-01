@@ -14,6 +14,7 @@
 
 #include "autoware/mpc_lateral_controller/mpc_utils.hpp"
 
+#include "autoware/interpolation/interpolation_utils.hpp"
 #include "autoware/interpolation/linear_interpolation.hpp"
 #include "autoware/interpolation/spline_interpolation.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
@@ -23,6 +24,7 @@
 #include <algorithm>
 #include <iostream>
 #include <limits>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -112,7 +114,11 @@ std::pair<bool, MPCTrajectory> resampleMPCTrajectoryByDistance(
   std::vector<double> input_arclength;
   calcMPCTrajectoryArcLength(input, input_arclength);
 
-  if (input_arclength.empty()) {
+  if (input_arclength.size() < 2) {
+    return {false, output};
+  }
+
+  if (!autoware::interpolation::isIncreasing(input_arclength)) {
     return {false, output};
   }
 
@@ -142,14 +148,30 @@ std::pair<bool, MPCTrajectory> resampleMPCTrajectoryByDistance(
     return autoware::interpolation::spline(input_arclength, input_value, output_arclength);
   };
 
-  output.x = spline_arc_length(input.x);
-  output.y = spline_arc_length(input.y);
-  output.z = spline_arc_length(input.z);
-  output.yaw = spline_arc_length(input_yaw);
-  output.vx = lerp_arc_length(input.vx);  // must be linear
-  output.k = spline_arc_length(input.k);
-  output.smooth_k = spline_arc_length(input.smooth_k);
-  output.relative_time = lerp_arc_length(input.relative_time);  // must be linear
+  if (output_arclength.empty()) {
+    return {false, output};
+  }
+
+  try {
+    output.x = spline_arc_length(input.x);
+    output.y = spline_arc_length(input.y);
+    output.z = spline_arc_length(input.z);
+    output.yaw = spline_arc_length(input_yaw);
+    output.vx = lerp_arc_length(input.vx);  // must be linear
+    output.k = spline_arc_length(input.k);
+    output.smooth_k = spline_arc_length(input.smooth_k);
+    output.relative_time = lerp_arc_length(input.relative_time);  // must be linear
+  } catch (const std::exception & e) {
+    const auto logger = rclcpp::get_logger("mpc_util");
+    const rclcpp::Clock clock{RCL_ROS_TIME};
+    RCLCPP_ERROR_THROTTLE(
+      logger, clock, 5000,
+      "[resampleMPCTrajectoryByDistance] interpolation failed: %s (input_points=%zu, "
+      "path_length=%.3f m, output_samples=%zu, nearest_seg_idx=%zu, resample_interval=%.3f m)",
+      e.what(), input.size(), input_arclength.back(), output_arclength.size(), nearest_seg_idx,
+      resample_interval_dist);
+    return {false, output};
+  }
 
   return {true, output};
 }
