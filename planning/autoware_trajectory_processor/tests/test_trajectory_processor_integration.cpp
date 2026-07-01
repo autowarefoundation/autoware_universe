@@ -16,7 +16,6 @@
 #include "autoware/trajectory_optimizer/trajectory_optimizer.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_test_utils/autoware_test_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
@@ -131,171 +130,45 @@ protected:
     const auto optimizer_dir =
       ament_index_cpp::get_package_share_directory("autoware_trajectory_optimizer");
     const auto test_utils_dir = ament_index_cpp::get_package_share_directory("autoware_test_utils");
-
-    modifier_options.append_parameter_override("use_stop_point_fixer", true);
-    modifier_options.append_parameter_override("use_obstacle_stop", true);
-
-    optimizer_options.append_parameter_override("use_akima_spline_interpolation", true);
-    optimizer_options.append_parameter_override("use_eb_smoother", false);
-    optimizer_options.append_parameter_override("use_qp_smoother", true);
-    optimizer_options.append_parameter_override("use_trajectory_point_fixer", true);
-    optimizer_options.append_parameter_override("use_velocity_optimizer", true);
-    optimizer_options.append_parameter_override("use_trajectory_extender", false);
-    optimizer_options.append_parameter_override("use_kinematic_feasibility_enforcer", true);
-    optimizer_options.append_parameter_override("use_mpt_optimizer", false);
-    optimizer_options.append_parameter_override("use_temporal_mpt_optimizer", false);
-
-    const std::vector<std::string> modifier_plugins = {
-      "autoware::trajectory_modifier::plugin::ObstacleStop",
-      "autoware::trajectory_modifier::plugin::StopPointFixer"};
-    modifier_options.append_parameter_override("plugin_names", modifier_plugins);
-
-    const std::vector<std::string> optimizer_plugins = {
-      "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer",
-      "autoware::trajectory_optimizer::plugin::TrajectoryKinematicFeasibilityEnforcer",
-      "autoware::trajectory_optimizer::plugin::TrajectoryQPSmoother",
-      "autoware::trajectory_optimizer::plugin::TrajectorySplineSmoother",
-      "autoware::trajectory_optimizer::plugin::TrajectoryVelocityOptimizer"};
-    optimizer_options.append_parameter_override("plugin_names", optimizer_plugins);
-
-    // Set mandatory vehicle info parameters that VehicleInfoUtils expects at the root
-    for (auto & opt : {&modifier_options, &optimizer_options}) {
-      opt->append_parameter_override("wheel_radius", 0.383);
-      opt->append_parameter_override("wheel_width", 0.235);
-      opt->append_parameter_override("wheel_base", 2.79);
-      opt->append_parameter_override("wheel_tread", 1.64);
-      opt->append_parameter_override("front_overhang", 1.0);
-      opt->append_parameter_override("rear_overhang", 1.1);
-      opt->append_parameter_override("left_overhang", 0.128);
-      opt->append_parameter_override("right_overhang", 0.128);
-      opt->append_parameter_override("vehicle_height", 2.5);
-      opt->append_parameter_override("max_steer_angle", 0.70);
-    }
-    optimizer_options.append_parameter_override("max_vel", 20.0);
-    optimizer_options.append_parameter_override("limit.max_acc", 2.0);
-    optimizer_options.append_parameter_override("limit.min_acc", -3.0);
-    optimizer_options.append_parameter_override("limit.max_jerk", 1.5);
-    optimizer_options.append_parameter_override("limit.min_jerk", -1.5);
-
-    // Optimizer plugin parameters
-    optimizer_options.append_parameter_override("trajectory_point_fixer.remove_close_points", true);
-    optimizer_options.append_parameter_override(
-      "trajectory_point_fixer.resample_close_points", true);
-    optimizer_options.append_parameter_override(
-      "trajectory_point_fixer.min_dist_to_remove_m", 0.01);
-    optimizer_options.append_parameter_override(
-      "trajectory_point_fixer.min_dist_to_resample_m", 0.05);
-    optimizer_options.append_parameter_override(
-      "trajectory_point_fixer.stop_detection_velocity_threshold_mps", 0.3);
-
-    optimizer_options.append_parameter_override(
-      "trajectory_kinematic_feasibility.max_yaw_rate_rad_s", 0.7);
-    optimizer_options.append_parameter_override(
-      "trajectory_kinematic_feasibility.time_step_s", 0.1);
-
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.weight_smoothness", 10.0);
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.weight_fidelity", 1.0);
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.time_step_s", 0.1);
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.osqp_eps_abs", 1e-4);
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.osqp_eps_rel", 1e-4);
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.osqp_max_iter", 4000);
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.osqp_verbose", false);
-    optimizer_options.append_parameter_override(
-      "trajectory_qp_smoother.preserve_input_trajectory_orientation", true);
-    optimizer_options.append_parameter_override(
-      "trajectory_qp_smoother.max_distance_for_orientation_m", 5.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_qp_smoother.use_velocity_based_fidelity", false);
-    optimizer_options.append_parameter_override(
-      "trajectory_qp_smoother.velocity_threshold_mps", 0.2);
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.sigmoid_sharpness", 40.0);
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.min_fidelity_weight", 0.1);
-    optimizer_options.append_parameter_override("trajectory_qp_smoother.max_fidelity_weight", 1.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_qp_smoother.num_constrained_points_start", 3);
-    optimizer_options.append_parameter_override(
-      "trajectory_qp_smoother.num_constrained_points_end", 3);
-
-    optimizer_options.append_parameter_override(
-      "trajectory_spline_smoother.interpolation_resolution_m", 0.5);
-    optimizer_options.append_parameter_override(
-      "trajectory_spline_smoother.max_distance_discrepancy_m", 5.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_spline_smoother.preserve_input_trajectory_orientation", true);
-
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.nearest_dist_threshold_m", 1.5);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.nearest_yaw_threshold_deg", 60.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.target_pull_out_speed_mps", 1.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.target_pull_out_acc_mps2", 1.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.max_lateral_accel_mps2", 1.5);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.min_limited_speed_mps", 3.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.set_engage_speed", false);
-    optimizer_options.append_parameter_override("trajectory_velocity_optimizer.limit_speed", true);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.limit_lateral_acceleration", false);
     optimizer_options.append_parameter_override(
       "trajectory_velocity_optimizer.smooth_velocities", true);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight", 30.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.continuous_jerk_smoother.over_v_weight", 3000.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.continuous_jerk_smoother.over_a_weight", 30.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.continuous_jerk_smoother.over_j_weight", 10.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.continuous_jerk_smoother.velocity_tracking_weight", 1.0);
-    optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.continuous_jerk_smoother.accel_tracking_weight", 300.0);
 
-    // Load default parameters from yaml files
-    autoware::test_utils::updateNodeOptions(
-      modifier_options, {modifier_dir + "/config/trajectory_modifier.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options, {optimizer_dir + "/config/trajectory_optimizer.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_qp_smoother.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_point_fixer.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options,
-      {optimizer_dir + "/config/plugins/trajectory_velocity_optimizer.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_extender.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_spline_smoother.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options,
-      {optimizer_dir + "/config/plugins/trajectory_kinematic_feasibility_enforcer.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options, {optimizer_dir + "/config/plugins/trajectory_mpt_optimizer.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options,
-      {optimizer_dir + "/config/plugins/trajectory_temporal_mpt_optimizer.param.yaml"});
-
-    // Add vehicle info
-    autoware::test_utils::updateNodeOptions(
-      modifier_options, {test_utils_dir + "/config/test_vehicle_info.param.yaml"});
-    autoware::test_utils::updateNodeOptions(
-      optimizer_options, {test_utils_dir + "/config/test_vehicle_info.param.yaml"});
-
-    // Remap modifier output to optimizer input
+    // Remap modifier output to optimizer input and load param files
     modifier_options.arguments(
-      {"--ros-args", "-r", "~/output/candidate_trajectories:=/combined/trajectories", "-r",
+      {"--ros-args", "--params-file", modifier_dir + "/config/trajectory_modifier.param.yaml",
+       "--params-file", test_utils_dir + "/config/test_vehicle_info.param.yaml", "-r",
+       "~/output/candidate_trajectories:=/combined/trajectories", "-r",
        "~/input/odometry:=/localization/kinematic_state", "-r",
        "~/input/acceleration:=/localization/acceleration", "-r",
        "~/input/objects:=/perception/object_recognition/objects", "-r",
        "~/input/pointcloud:=/perception/obstacle_segmentation/pointcloud"});
     optimizer_options.arguments(
-      {"--ros-args", "-r", "~/input/trajectories:=/combined/trajectories", "-r",
-       "~/input/odometry:=/localization/kinematic_state", "-r",
+      {"--ros-args",
+       "--params-file",
+       optimizer_dir + "/config/trajectory_optimizer.param.yaml",
+       "--params-file",
+       optimizer_dir + "/config/plugins/trajectory_qp_smoother.param.yaml",
+       "--params-file",
+       optimizer_dir + "/config/plugins/trajectory_point_fixer.param.yaml",
+       "--params-file",
+       optimizer_dir + "/config/plugins/trajectory_velocity_optimizer.param.yaml",
+       "--params-file",
+       optimizer_dir + "/config/plugins/trajectory_extender.param.yaml",
+       "--params-file",
+       optimizer_dir + "/config/plugins/trajectory_spline_smoother.param.yaml",
+       "--params-file",
+       optimizer_dir + "/config/plugins/trajectory_kinematic_feasibility_enforcer.param.yaml",
+       "--params-file",
+       optimizer_dir + "/config/plugins/trajectory_mpt_optimizer.param.yaml",
+       "--params-file",
+       optimizer_dir + "/config/plugins/trajectory_temporal_mpt_optimizer.param.yaml",
+       "--params-file",
+       test_utils_dir + "/config/test_vehicle_info.param.yaml",
+       "-r",
+       "~/input/trajectories:=/combined/trajectories",
+       "-r",
+       "~/input/odometry:=/localization/kinematic_state",
+       "-r",
        "~/input/acceleration:=/localization/acceleration"});
 
     modifier_node_ =
