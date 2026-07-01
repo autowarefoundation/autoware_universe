@@ -2,6 +2,53 @@
 Changelog for package autoware_carla_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* fix(autoware_carla_interface): decouple sensor publishing from the synchronous tick loop (`#12748 <https://github.com/autowarefoundation/autoware_universe/issues/12748>`_)
+  The bridge converts and publishes sensor data inline in the same thread
+  that paces world.tick(). Publishing a large message can block on DDS
+  flow control (a 1600x900 BGRA image with reliable QoS is ~5.8 MB,
+  far above typical writer watermarks), so transport conditions stall
+  the simulation clock itself. Measured on a 28-vCPU cloud VM with one
+  subscribed camera: 7 ms loop iterations inflate to ~200 ms and the
+  simulation drops from 20 fps to ~7 fps, which trips Autoware's
+  data-freshness gates.
+  Changes:
+  - Add SensorPublishWorker: one daemon thread per heavy sensor with a
+  bounded latest-wins queue. Camera and lidar conversion/publishing run
+  on these workers, so the tick thread never blocks on serialization or
+  DDS flow control. Stale frames are dropped instead of stalling the
+  simulation (sensor data is perishable). With this change the same
+  one-camera scenario keeps loop iterations at 12-28 ms.
+  - Skip conversion and publishing entirely for sensors with no
+  subscribers (checked per frame, so late subscribers still start
+  receiving). Spawned-but-unconsumed sensors now cost nothing on the
+  ROS side.
+  - Gate the always-on CAM_FRONT traffic-light relays and republish node
+  behind use_light_weight_sensor_mapping, consistent with the other
+  camera republish nodes, so camera consumers are opt-out in
+  performance-sensitive setups.
+  Frequency gating and registry bookkeeping stay on the tick thread, so
+  the sensor registry is never accessed concurrently; messages are
+  stamped with the timestamp captured when their frame was enqueued.
+  Note: with cameras spawned, CARLA's own per-tick render/stream cost on
+  server-class GPUs remains the next bottleneck; that layer is outside
+  this interface.
+* fix(autoware_carla_interface): skip redundant world reload (`#12616 <https://github.com/autowarefoundation/autoware_universe/issues/12616>`_)
+* feat(autoware_carla_interface): add spectator follow script (`#12526 <https://github.com/autowarefoundation/autoware_universe/issues/12526>`_)
+* feat(autoware_carla_interface): add light weight sensor config (`#12525 <https://github.com/autowarefoundation/autoware_universe/issues/12525>`_)
+  * feat(autoware_carla_interface): add light weight sensor config
+  * update README
+  * update comment
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci-lite[bot] <117423508+pre-commit-ci-lite[bot]@users.noreply.github.com>
+* feat(autoware_carla_interface): add maintainer (`#12549 <https://github.com/autowarefoundation/autoware_universe/issues/12549>`_)
+  Add masaya.kataoka@tier4.jp as a maintainer of autoware_carla_interface.
+  Co-authored-by: Claude Opus 4.6 <noreply@anthropic.com>
+* Contributors: Masaya Kataoka, Ryohsuke Mitsudome, github-actions, oguzkaganozt
+
 0.51.0 (2026-05-01)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

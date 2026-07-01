@@ -88,6 +88,10 @@ target_link_libraries(cuda_ground_segmentation
   cuda_ground_segmentation_lib
 )
 
+# TODO(mojomex): remove after migrating to the stream-ordered cuda_blackboard API,
+# see autowarefoundation/cuda_blackboard#22 (cf. example migrations #12797, #12798, #12799)
+target_compile_options(cuda_ground_segmentation PRIVATE -Wno-error=deprecated-declarations)
+
 #=========== ScanGround Segmentation filter ========
 rclcpp_components_register_node(cuda_ground_segmentation
   PLUGIN "autoware::cuda_ground_segmentation::CudaScanGroundSegmentationFilterNode"

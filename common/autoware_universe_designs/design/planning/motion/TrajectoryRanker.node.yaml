@@ -1,0 +1,35 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: TrajectoryRanker.node
+package:
+  name: autoware_trajectory_ranker
+  provider: autoware
+launch:
+  plugin: autoware::trajectory_ranker::TrajectoryRanker
+  executable: autoware_trajectory_ranker_node
+# interfaces
+subscribers:
+  - name: vector_map
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: candidate_trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+publishers:
+  - name: scored_trajectories
+    message_type: autoware_internal_planning_msgs/msg/ScoredCandidateTrajectories
+  - name: processing_time_detail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeTree
+    remap_target: ~/debug/processing_time_detail_ms/trajectory_ranker
+# parameters
+param_files:
+  - name: evaluation_param
+    default: config/evaluation.param.yaml
+param_values: []
+# processes
+processes:
+  - name: rank_trajectories
+    trigger_conditions:
+      - on_input: candidate_trajectories
+    outcomes:
+      - to_output: scored_trajectories

@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_ptv3</name>
-  <version>0.51.0</version>
+  <version>0.52.0</version>
   <description>The autoware_ptv3 package</description>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
@@ -31,8 +31,6 @@
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_cmake_ros</test_depend>
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>autoware_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

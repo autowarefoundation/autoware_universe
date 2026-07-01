@@ -53,6 +53,7 @@ struct NodeParam
   bool include_left_lanes{};
   bool include_opposite_lanes{};
   bool include_conflicting_lanes{};
+  bool allow_area{};
   std::vector<std::string> boundary_types_to_detect;
 };
 
