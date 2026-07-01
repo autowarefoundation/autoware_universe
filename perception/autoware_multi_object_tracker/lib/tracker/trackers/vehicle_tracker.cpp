@@ -17,7 +17,7 @@
 #include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
 
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_transform.hpp"
 
 #include <autoware_utils_math/normalization.hpp>
 #include <autoware_utils_math/unit_conversion.hpp>
@@ -204,19 +204,21 @@ bool VehicleTracker::updateKinematics(
 }
 
 bool VehicleTracker::updateWheelKinematics(
-  const UpdateStrategy & strategy, const types::DynamicObject & measurement)
+  const UpdateStrategy & strategy, const types::DynamicObject & measurement,
+  const types::DynamicObject & prediction)
 {
+  // When polygon and tracked widths disagree, the observed edge center is a biased lateral
+  // measurement that the wheel-base lever amplifies into yaw. correctWheelAnchor() nudges the
+  // anchor and folds the extra lateral variance into pose_cov.
   std::array<double, 36> pose_cov = measurement.pose_covariance;
-  bool is_updated = false;
-  if (strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE) {
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::FRONT;
-    is_updated = motion_model_.updateStatePoseFront(
-      strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
-  } else {
-    shape_update_anchor_ = BicycleMotionModel::LengthUpdateAnchor::REAR;
-    is_updated =
-      motion_model_.updateStatePoseRear(strategy.anchor_point.x, strategy.anchor_point.y, pose_cov);
-  }
+  const geometry_msgs::msg::Point anchor_point =
+    correctWheelAnchor(prediction, measurement.shape.dimensions.y, strategy.anchor_point, pose_cov);
+
+  const bool measure_front = strategy.type == UpdateStrategyType::FRONT_WHEEL_UPDATE;
+  shape_update_anchor_ = measure_front ? BicycleMotionModel::LengthUpdateAnchor::FRONT
+                                       : BicycleMotionModel::LengthUpdateAnchor::REAR;
+  const bool is_updated =
+    motion_model_.updateStatePoseWheel(anchor_point.x, anchor_point.y, pose_cov, measure_front);
   // Wheel-anchor EKF only updates x/y; z position and height are applied here.
   constexpr double z_gain = 0.4;
   motion_model_.updateZ(measurement.pose.position.z, z_gain);
@@ -281,22 +283,17 @@ bool VehicleTracker::getTrackedObject(
 
   if (to_publish) {
     using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    auto & twist = object.twist;
     constexpr double vel_cov_buffer = 0.7;
-    constexpr double vel_too_low_ignore = 0.25;
-    const double vel_long = std::abs(twist.linear.x);
-    if (vel_long > vel_too_low_ignore) {
-      const double vel_limit =
-        std::max(std::sqrt(object.twist_covariance[XYZRPY_COV_IDX::X_X]) - vel_cov_buffer, 0.0);
-
-      if (vel_long < vel_limit) {
-        twist.linear.x = twist.linear.x > 0 ? vel_too_low_ignore : -vel_too_low_ignore;
-      } else {
-        double vel_suppressed = vel_long - vel_limit;
-        vel_suppressed = std::max(vel_suppressed, vel_too_low_ignore);
-        twist.linear.x = twist.linear.x > 0 ? vel_suppressed : -vel_suppressed;
-      }
+    const double vel_limit =
+      std::sqrt(std::max(0.0, object.twist_covariance[XYZRPY_COV_IDX::X_X])) - vel_cov_buffer;
+    if (vel_limit > 0.0) {
+      // Continuous gain in [0, 1]: 0 when |v| <= vel_limit (too uncertain -> zero), ramps
+      // linearly, and reaches 1 when |v| >= 2 * vel_limit (large enough -> export as is).
+      auto & twist = object.twist;
+      const double gain = std::clamp((std::abs(twist.linear.x) - vel_limit) / vel_limit, 0.0, 1.0);
+      twist.linear.x *= gain;
     }
+    // vel_limit <= 0: uncertainty within the buffer -> velocity is trustworthy, export as is.
   }
 
   return true;
@@ -304,8 +301,7 @@ bool VehicleTracker::getTrackedObject(
 
 bool VehicleTracker::conditionedUpdate(
   const types::DynamicObject & measurement, const types::DynamicObject & prediction,
-  const autoware_perception_msgs::msg::Shape & tracker_shape, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const rclcpp::Time & measurement_time, const types::InputChannel & channel_info)
 {
   const auto aligned = shapes::alignClusterToOrientation(measurement, motion_model_.getYawState());
   const types::DynamicObject & meas = aligned ? *aligned : measurement;
@@ -313,8 +309,8 @@ bool VehicleTracker::conditionedUpdate(
   UpdateStrategy strategy = determineUpdateStrategy(meas, prediction);
 
   if (strategy.type == UpdateStrategyType::WEAK_UPDATE) {
-    types::DynamicObject pseudo_measurement = prediction;
-    createPseudoMeasurement(measurement, pseudo_measurement, tracker_shape, true);
+    const types::DynamicObject pseudo_measurement =
+      createPseudoMeasurement(measurement, prediction, true);
 
     const types::DynamicObject pseudo_corrected =
       normalizeYaw(pseudo_measurement, motion_model_.getYawState());
@@ -337,7 +333,9 @@ bool VehicleTracker::conditionedUpdate(
     return true;
   }
 
-  const bool is_updated = updateWheelKinematics(strategy, measurement);
+  // Use the aligned measurement so the polygon width/anchor are expressed in the tracker frame
+  // (raw cluster dimensions.y is in the cluster's own local frame).
+  const bool is_updated = updateWheelKinematics(strategy, meas, prediction);
 
   geometry_msgs::msg::Pose tracker_pose;
   std::array<double, 36> dummy_cov{};

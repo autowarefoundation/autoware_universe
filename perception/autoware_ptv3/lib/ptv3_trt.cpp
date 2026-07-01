@@ -18,6 +18,7 @@
 #include "autoware/ptv3/preprocess/preprocess_kernel.hpp"
 #include "autoware/ptv3/ptv3_config.hpp"
 
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware/point_types/memory.hpp>
 #include <autoware/point_types/types.hpp>
@@ -53,6 +54,7 @@ std::int64_t poolingDepth(const std::int64_t stride)
 PTv3TRT::PTv3TRT(
   const tensorrt_common::TrtCommonConfig & backbone_trt_config,
   const std::optional<tensorrt_common::TrtCommonConfig> & seg3d_head_trt_config,
+  const std::optional<tensorrt_common::TrtCommonConfig> & det3d_head_trt_config,
   const PTv3Config & config)
 : config_(config)
 {
@@ -69,6 +71,12 @@ PTv3TRT::PTv3TRT(
       throw std::runtime_error("seg3d_head_trt_config is required when segmentation3d.use_head.");
     }
     initSeg3dHeadTrt(*seg3d_head_trt_config);
+  }
+  if (config_.use_det3d_head_) {
+    if (!det3d_head_trt_config.has_value()) {
+      throw std::runtime_error("det3d_head_trt_config is required when detection3d.use_head.");
+    }
+    initDetection3DHeadTrt(*det3d_head_trt_config);
   }
 }
 
@@ -90,8 +98,12 @@ void PTv3TRT::setPublishFilteredPointcloud(
   publish_filtered_pointcloud_ = std::move(func);
 }
 
-void PTv3TRT::allocateMessages()
+void PTv3TRT::allocateSegOutputMessages()
 {
+  if (!config_.use_seg3d_head_) {
+    return;
+  }
+
   const auto output_capacity = config_.source_reconstruction_ != SourceReconstruction::NONE
                                  ? config_.cloud_capacity_
                                  : config_.max_num_voxels_;
@@ -149,36 +161,62 @@ void PTv3TRT::initPtr()
   serialized_code_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_ * 2);
 
-  // Backbone outputs shared with the segmentation head.
+  // Backbone outputs shared with the all the heads
   bb_point_feat_d_ = autoware::cuda_utils::make_unique<float[]>(
     config_.max_num_voxels_ * config_.backbone_feat_dim_);
   bb_point_grid_coord_d_ =
     autoware::cuda_utils::make_unique<std::int32_t[]>(config_.max_num_voxels_ * 3);
   bb_point_offset_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(1);
 
-  pred_labels_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
-  pred_probs_d_ = autoware::cuda_utils::make_unique<float[]>(
-    config_.max_num_voxels_ * config_.class_names_.size());
   compact_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
     config_.max_num_voxels_ * sizeof(CloudPointTypeXYZIRCAEDT));
-  if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
-    cropped_source_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
-      config_.cloud_capacity_ * sizeof(CloudPointTypeXYZIRCAEDT));
+
+  if (config_.use_seg3d_head_) {
+    pred_labels_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.max_num_voxels_);
+    pred_probs_d_ = autoware::cuda_utils::make_unique<float[]>(
+      config_.max_num_voxels_ * config_.segmentation_class_names_.size());
+    if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
+      cropped_source_points_d_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(
+        config_.cloud_capacity_ * sizeof(CloudPointTypeXYZIRCAEDT));
+    }
+    if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
+      reconstructed_features_d_ = autoware::cuda_utils::make_unique<float[]>(
+        config_.cloud_capacity_ * config_.num_point_feature_size_);
+      inverse_map_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
+      reconstructed_labels_d_ =
+        autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
+      reconstructed_probs_d_ = autoware::cuda_utils::make_unique<float[]>(
+        config_.cloud_capacity_ * config_.segmentation_class_names_.size());
+    }
   }
-  if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
-    reconstructed_features_d_ = autoware::cuda_utils::make_unique<float[]>(
-      config_.cloud_capacity_ * config_.num_point_feature_size_);
-    inverse_map_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
-    reconstructed_labels_d_ =
-      autoware::cuda_utils::make_unique<std::int64_t[]>(config_.cloud_capacity_);
-    reconstructed_probs_d_ = autoware::cuda_utils::make_unique<float[]>(
-      config_.cloud_capacity_ * config_.class_names_.size());
+
+  // Detection head output buffers.
+  if (config_.use_det3d_head_) {
+    const auto det_grid_size = config_.det_grid_x_size_ * config_.det_grid_y_size_;
+    const auto det_class_size = config_.detection_class_names_.size();
+
+    dense_heatmap_d_ = autoware::cuda_utils::make_unique<float[]>(det_grid_size * det_class_size);
+    query_heatmap_score_d_ =
+      autoware::cuda_utils::make_unique<float[]>(det_class_size * config_.num_proposals_);
+    query_labels_d_ = autoware::cuda_utils::make_unique<std::int64_t[]>(config_.num_proposals_);
+    heatmap_d_ =
+      autoware::cuda_utils::make_unique<float[]>(det_class_size * config_.num_proposals_);
+    center_d_ = autoware::cuda_utils::make_unique<float[]>(2 * config_.num_proposals_);
+    height_d_ = autoware::cuda_utils::make_unique<float[]>(config_.num_proposals_);
+    dim_d_ = autoware::cuda_utils::make_unique<float[]>(3 * config_.num_proposals_);
+    rot_d_ = autoware::cuda_utils::make_unique<float[]>(2 * config_.num_proposals_);
+    if (config_.has_twist_) {
+      vel_d_ = autoware::cuda_utils::make_unique<float[]>(2 * config_.num_proposals_);
+    }
+    detection3d_post_ptr_ = std::make_unique<Detection3DPostprocess>(config_, stream_);
   }
 
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
-  post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
+  if (config_.use_seg3d_head_) {
+    post_ptr_ = std::make_unique<PostprocessCuda>(config_, stream_);
+  }
 
-  allocateMessages();
+  allocateSegOutputMessages();
   allocateSerializedPoolingBuffers();
 }
 
@@ -207,7 +245,9 @@ void PTv3TRT::allocateSerializedPoolingBuffers()
 
   serialized_pooling_num_voxels_d_ =
     autoware::cuda_utils::make_unique<std::int64_t[]>(config_.pooling_strides_.size() + 1);
-  serialized_pooling_num_voxels_.assign(config_.pooling_strides_.size() + 1, 0);
+  serialized_pooling_num_voxels_ = autoware::cuda_utils::make_unique_host<std::int64_t[]>(
+    config_.pooling_strides_.size() + 1, cudaHostAllocDefault);
+  std::fill_n(serialized_pooling_num_voxels_.get(), config_.pooling_strides_.size() + 1, 0);
   serialized_pooling_depths_.resize(config_.pooling_strides_.size());
   for (std::size_t stage_index = 0; stage_index < config_.pooling_strides_.size(); ++stage_index) {
     serialized_pooling_depths_[stage_index] = poolingDepth(config_.pooling_strides_[stage_index]);
@@ -358,7 +398,8 @@ void PTv3TRT::initSeg3dHeadTrt(const tensorrt_common::TrtCommonConfig & trt_conf
     "point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}}, nvinfer1::DataType::kFLOAT);
   network_io.emplace_back("pred_labels", nvinfer1::Dims{1, {-1}}, nvinfer1::DataType::kINT64);
   network_io.emplace_back(
-    "pred_probs", nvinfer1::Dims{2, {-1, static_cast<std::int64_t>(config_.class_names_.size())}},
+    "pred_probs",
+    nvinfer1::Dims{2, {-1, static_cast<std::int64_t>(config_.segmentation_class_names_.size())}},
     nvinfer1::DataType::kFLOAT);
 
   std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
@@ -424,8 +465,8 @@ void PTv3TRT::precomputeSerializedPoolingMetadata()
     grid_coord_d_.get(), serialized_code_d_.get(), num_voxels_, stage_views,
     serialized_pooling_num_voxels_d_.get());
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    serialized_pooling_num_voxels_.data(), serialized_pooling_num_voxels_d_.get(),
-    serialized_pooling_num_voxels_.size() * sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_));
+    serialized_pooling_num_voxels_.get(), serialized_pooling_num_voxels_d_.get(),
+    (config_.pooling_strides_.size() + 1) * sizeof(std::int64_t), cudaMemcpyDeviceToHost, stream_));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 }
 
@@ -460,6 +501,70 @@ bool PTv3TRT::setSerializedPoolingInputShapes()
   return success;
 }
 
+void PTv3TRT::initDetection3DHeadTrt(const tensorrt_common::TrtCommonConfig & trt_config)
+{
+  std::vector<autoware::tensorrt_common::NetworkIO> network_io;
+
+  // Inputs (point_offset is folded out of the detection head ONNX by the exporter).
+  network_io.emplace_back(
+    "point_feat", nvinfer1::Dims{2, {-1, config_.backbone_feat_dim_}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back(
+    "point_grid_coord", nvinfer1::Dims{2, {-1, 3}}, nvinfer1::DataType::kINT32);
+
+  std::vector<autoware::tensorrt_common::ProfileDims> profile_dims;
+  profile_dims.emplace_back(
+    "point_feat", nvinfer1::Dims{2, {config_.voxels_num_[0], config_.backbone_feat_dim_}},
+    nvinfer1::Dims{2, {config_.voxels_num_[1], config_.backbone_feat_dim_}},
+    nvinfer1::Dims{2, {config_.voxels_num_[2], config_.backbone_feat_dim_}});
+  profile_dims.emplace_back(
+    "point_grid_coord", nvinfer1::Dims{2, {config_.voxels_num_[0], 3}},
+    nvinfer1::Dims{2, {config_.voxels_num_[1], 3}}, nvinfer1::Dims{2, {config_.voxels_num_[2], 3}});
+
+  const auto det_cls = static_cast<std::int64_t>(config_.detection_class_names_.size());
+  const auto gx = static_cast<std::int64_t>(config_.det_grid_x_size_);
+  const auto gy = static_cast<std::int64_t>(config_.det_grid_y_size_);
+  const auto np = static_cast<std::int64_t>(config_.num_proposals_);
+
+  network_io.emplace_back(
+    "dense_heatmap", nvinfer1::Dims{4, {1, det_cls, gy, gx}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back(
+    "query_heatmap_score", nvinfer1::Dims{3, {1, det_cls, np}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back("query_labels", nvinfer1::Dims{2, {1, np}}, nvinfer1::DataType::kINT64);
+  network_io.emplace_back(
+    "heatmap", nvinfer1::Dims{3, {1, det_cls, np}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back("center", nvinfer1::Dims{3, {1, 2, np}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back("height", nvinfer1::Dims{3, {1, 1, np}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back("dim", nvinfer1::Dims{3, {1, 3, np}}, nvinfer1::DataType::kFLOAT);
+  network_io.emplace_back("rot", nvinfer1::Dims{3, {1, 2, np}}, nvinfer1::DataType::kFLOAT);
+  if (config_.has_twist_) {
+    network_io.emplace_back("vel", nvinfer1::Dims{3, {1, 2, np}}, nvinfer1::DataType::kFLOAT);
+  }
+
+  detection3d_head_trt_ptr_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
+    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(),
+    std::vector<std::string>{config_.plugins_path_});
+
+  if (!detection3d_head_trt_ptr_->setup(
+        std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>(profile_dims),
+        std::make_unique<std::vector<autoware::tensorrt_common::NetworkIO>>(network_io))) {
+    throw std::runtime_error("Failed to setup Detection3D head TRT engine.");
+  }
+
+  detection3d_head_trt_ptr_->setTensorAddress("point_feat", bb_point_feat_d_.get());
+  detection3d_head_trt_ptr_->setTensorAddress("point_grid_coord", bb_point_grid_coord_d_.get());
+  detection3d_head_trt_ptr_->setTensorAddress("dense_heatmap", dense_heatmap_d_.get());
+  detection3d_head_trt_ptr_->setTensorAddress("query_heatmap_score", query_heatmap_score_d_.get());
+  detection3d_head_trt_ptr_->setTensorAddress("query_labels", query_labels_d_.get());
+  detection3d_head_trt_ptr_->setTensorAddress("heatmap", heatmap_d_.get());
+  detection3d_head_trt_ptr_->setTensorAddress("center", center_d_.get());
+  detection3d_head_trt_ptr_->setTensorAddress("height", height_d_.get());
+  detection3d_head_trt_ptr_->setTensorAddress("dim", dim_d_.get());
+  detection3d_head_trt_ptr_->setTensorAddress("rot", rot_d_.get());
+  if (config_.has_twist_) {
+    detection3d_head_trt_ptr_->setTensorAddress("vel", vel_d_.get());
+  }
+}
+
 CloudFormat PTv3TRT::detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & cloud) const
 {
   const auto & fields = cloud.fields;
@@ -481,41 +586,85 @@ CloudFormat PTv3TRT::detectCloudFormat(const cuda_blackboard::CudaPointCloud2 & 
   return CloudFormat::UNKNOWN;
 }
 
-bool PTv3TRT::segment(
+bool PTv3TRT::infer(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
   bool should_publish_segmented_pointcloud, bool should_publish_visualization_pointcloud,
-  bool should_publish_filtered_pointcloud, std::unordered_map<std::string, double> & proc_timing)
+  bool should_publish_filtered_pointcloud, bool should_detect_objects,
+  std::optional<std::vector<Box3D>> & det_boxes3d,
+  std::unordered_map<std::string, double> & proc_timing)
 {
+  det_boxes3d.reset();
+
+  const bool should_run_seg3d =
+    config_.use_seg3d_head_ &&
+    (should_publish_segmented_pointcloud || should_publish_visualization_pointcloud ||
+     should_publish_filtered_pointcloud);
+  const bool should_run_det3d = config_.use_det3d_head_ && should_detect_objects;
+
   stop_watch_ptr_->toc("processing/inner", true);
-  if (!preProcess(msg_ptr)) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Pre-process failed. Skipping detection.");
+  if (!preProcess(msg_ptr, should_run_seg3d)) {
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Pre-process failed. Skipping inference.");
     return false;
   }
-
   proc_timing.emplace(
     "debug/processing_time/preprocess_ms", stop_watch_ptr_->toc("processing/inner", true));
 
-  if (!inference()) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Inference failed. Skipping detection.");
+  if (!inferenceBackbone()) {
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Backbone inference failed.");
     return false;
   }
 
+  bool seg_ok = !should_run_seg3d;
+  bool det_ok = !should_run_det3d;
+  bool seg_post_ok = !should_run_seg3d;
+  bool det_post_ok = !should_run_det3d;
+
+  if (should_run_seg3d) {
+    seg_ok = inferenceSeg3dHead();
+    if (!seg_ok) {
+      RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Seg head inference failed.");
+    }
+  }
+  if (should_run_det3d) {
+    det_ok = inferenceDetection3DHead();
+    if (!det_ok) {
+      RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Det head inference failed.");
+    }
+  }
+
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   proc_timing.emplace(
     "debug/processing_time/inference_ms", stop_watch_ptr_->toc("processing/inner", true));
 
-  if (!postProcess(
-        msg_ptr->header, should_publish_segmented_pointcloud,
-        should_publish_visualization_pointcloud, should_publish_filtered_pointcloud)) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Post-process failed. Skipping detection");
-    return false;
+  if (seg_ok && should_run_seg3d) {
+    if (postProcess(
+          msg_ptr->header, should_publish_segmented_pointcloud,
+          should_publish_visualization_pointcloud, should_publish_filtered_pointcloud)) {
+      seg_post_ok = true;
+    } else {
+      RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Seg post-process failed.");
+    }
   }
+
+  if (det_ok && should_run_det3d) {
+    std::vector<Box3D> detected_boxes;
+    if (postProcessDetection3D(detected_boxes)) {
+      det_boxes3d = std::move(detected_boxes);
+      det_post_ok = true;
+    } else {
+      RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Det post-process failed.");
+    }
+  }
+
   proc_timing.emplace(
     "debug/processing_time/postprocess_ms", stop_watch_ptr_->toc("processing/inner", true));
 
-  return true;
+  return (should_run_seg3d && seg_ok && seg_post_ok) || (should_run_det3d && det_ok && det_post_ok);
 }
 
-bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr)
+bool PTv3TRT::preProcess(
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+  const bool should_run_seg3d)
 {
   using autoware::cuda_utils::clear_async;
 
@@ -595,16 +744,16 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
       get_num_fields(input_format_), get_point_step(input_format_),
       to_string(filtered_output_format_));
   });
-  allocateMessages();
+  allocateSegOutputMessages();
 
   const auto num_points = msg_ptr->height * msg_ptr->width;
-  if (config_.source_reconstruction_ == SourceReconstruction::FULL) {
+  if (should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::FULL) {
     num_source_points_ = static_cast<std::int64_t>(num_points);
     current_input_data_ = msg_ptr->data.get();
   }
 
   if (num_points == 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping segmentation.");
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Empty pointcloud. Skipping inference.");
     return false;
   }
 
@@ -612,42 +761,49 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
   clear_async(grid_coord_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 3, stream_);
   clear_async(
     serialized_code_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_) * 2, stream_);
-  clear_async(pred_labels_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
-  clear_async(
-    pred_probs_d_.get(),
-    static_cast<std::size_t>(config_.max_num_voxels_) * config_.class_names_.size(), stream_);
   clear_async(
     compact_points_d_.get(),
     static_cast<std::size_t>(config_.max_num_voxels_) * sizeof(CloudPointTypeXYZIRCAEDT), stream_);
-  if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
+  if (should_run_seg3d) {
+    clear_async(pred_labels_d_.get(), static_cast<std::size_t>(config_.max_num_voxels_), stream_);
     clear_async(
-      cropped_source_points_d_.get(),
-      static_cast<std::size_t>(config_.cloud_capacity_) * sizeof(CloudPointTypeXYZIRCAEDT),
+      pred_probs_d_.get(),
+      static_cast<std::size_t>(config_.max_num_voxels_) * config_.segmentation_class_names_.size(),
       stream_);
-  }
-  if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
-    clear_async(
-      reconstructed_features_d_.get(),
-      static_cast<std::size_t>(config_.cloud_capacity_) * config_.num_point_feature_size_, stream_);
-    clear_async(inverse_map_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
-    clear_async(
-      reconstructed_labels_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
-    clear_async(
-      reconstructed_probs_d_.get(),
-      static_cast<std::size_t>(config_.cloud_capacity_) * config_.class_names_.size(), stream_);
+    if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
+      clear_async(
+        cropped_source_points_d_.get(),
+        static_cast<std::size_t>(config_.cloud_capacity_) * sizeof(CloudPointTypeXYZIRCAEDT),
+        stream_);
+    }
+    if (config_.source_reconstruction_ != SourceReconstruction::NONE) {
+      clear_async(
+        reconstructed_features_d_.get(),
+        static_cast<std::size_t>(config_.cloud_capacity_) * config_.num_point_feature_size_,
+        stream_);
+      clear_async(inverse_map_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
+      clear_async(
+        reconstructed_labels_d_.get(), static_cast<std::size_t>(config_.cloud_capacity_), stream_);
+      clear_async(
+        reconstructed_probs_d_.get(),
+        static_cast<std::size_t>(config_.cloud_capacity_) *
+          config_.segmentation_class_names_.size(),
+        stream_);
+    }
   }
 
   std::size_t num_cropped_points = 0;
+  const bool should_reconstruct_source =
+    should_run_seg3d && config_.source_reconstruction_ != SourceReconstruction::NONE;
   num_voxels_ = pre_ptr_->generateFeatures(
     msg_ptr->data.get(), input_format_, num_points, feat_d_.get(), grid_coord_d_.get(),
     serialized_code_d_.get(), compact_points_d_.get(),
-    config_.source_reconstruction_ != SourceReconstruction::NONE ? reconstructed_features_d_.get()
-                                                                 : nullptr,
-    config_.source_reconstruction_ == SourceReconstruction::PARTIAL ? cropped_source_points_d_.get()
-                                                                    : nullptr,
-    config_.source_reconstruction_ != SourceReconstruction::NONE ? inverse_map_d_.get() : nullptr,
-    &num_cropped_points);
-  if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
+    should_reconstruct_source ? reconstructed_features_d_.get() : nullptr,
+    should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::PARTIAL
+      ? cropped_source_points_d_.get()
+      : nullptr,
+    should_reconstruct_source ? inverse_map_d_.get() : nullptr, &num_cropped_points);
+  if (should_run_seg3d && config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
     num_cropped_points_ = static_cast<std::int64_t>(num_cropped_points);
   }
 
@@ -681,22 +837,35 @@ bool PTv3TRT::preProcess(const std::shared_ptr<const cuda_blackboard::CudaPointC
   return true;
 }
 
-bool PTv3TRT::inference()
+bool PTv3TRT::inferenceBackbone()
 {
   if (!backbone_trt_ptr_->enqueueV3(stream_)) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue backbone and skip to detect.");
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue backbone.");
     return false;
   }
+  return true;
+}
 
-  if (seg3d_head_trt_ptr_) {
-    seg3d_head_trt_ptr_->setInputShape(
-      "point_feat", nvinfer1::Dims{2, {num_voxels_, config_.backbone_feat_dim_}});
-    if (!seg3d_head_trt_ptr_->enqueueV3(stream_)) {
-      RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue seg3d head and skip to detect.");
-      return false;
-    }
+bool PTv3TRT::inferenceSeg3dHead()
+{
+  seg3d_head_trt_ptr_->setInputShape(
+    "point_feat", nvinfer1::Dims{2, {num_voxels_, config_.backbone_feat_dim_}});
+  if (!seg3d_head_trt_ptr_->enqueueV3(stream_)) {
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue seg3d head.");
+    return false;
   }
+  return true;
+}
 
+bool PTv3TRT::inferenceDetection3DHead()
+{
+  detection3d_head_trt_ptr_->setInputShape(
+    "point_feat", nvinfer1::Dims{2, {num_voxels_, config_.backbone_feat_dim_}});
+  detection3d_head_trt_ptr_->setInputShape("point_grid_coord", nvinfer1::Dims{2, {num_voxels_, 3}});
+  if (!detection3d_head_trt_ptr_->enqueueV3(stream_)) {
+    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "Fail to enqueue Detection3D head.");
+    return false;
+  }
   return true;
 }
 
@@ -708,14 +877,14 @@ bool PTv3TRT::postProcess(
   if (config_.source_reconstruction_ == SourceReconstruction::PARTIAL) {
     post_ptr_->reconstructPartial(
       inverse_map_d_.get(), pred_labels_d_.get(), pred_probs_d_.get(),
-      reconstructed_labels_d_.get(), reconstructed_probs_d_.get(), config_.class_names_.size(),
-      num_cropped_points_, num_voxels_);
+      reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
+      config_.segmentation_class_names_.size(), num_cropped_points_, num_voxels_);
   }
   if (config_.source_reconstruction_ == SourceReconstruction::FULL) {
     post_ptr_->reconstructFull(
       pre_ptr_->cropMask(), pre_ptr_->cropIndices(), inverse_map_d_.get(), pred_labels_d_.get(),
       pred_probs_d_.get(), reconstructed_labels_d_.get(), reconstructed_probs_d_.get(),
-      config_.class_names_.size(), num_source_points_, num_voxels_);
+      config_.segmentation_class_names_.size(), num_source_points_, num_voxels_);
   }
 
   const auto source_features = config_.source_reconstruction_ != SourceReconstruction::NONE
@@ -740,7 +909,7 @@ bool PTv3TRT::postProcess(
   if (should_publish_segmented_pointcloud) {
     post_ptr_->createSegmentationPointcloud(
       source_features, source_labels, source_probs, segmented_points_msg_ptr_->data.get(),
-      config_.class_names_.size(), num_source_output_points);
+      config_.segmentation_class_names_.size(), num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
     segmented_points_msg_ptr_->header = header;
@@ -754,7 +923,7 @@ bool PTv3TRT::postProcess(
     post_ptr_->createVisualizationPointcloud(
       source_features, source_labels,
       reinterpret_cast<float *>(visualization_points_msg_ptr_->data.get()),
-      config_.class_names_.size(), num_source_output_points);
+      config_.segmentation_class_names_.size(), num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
     visualization_points_msg_ptr_->header = header;
     visualization_points_msg_ptr_->width = static_cast<std::uint32_t>(num_source_output_points);
@@ -765,7 +934,8 @@ bool PTv3TRT::postProcess(
   if (should_publish_filtered_pointcloud) {
     const auto num_filtered_points = post_ptr_->createFilteredPointcloud(
       source_points, input_format_, filtered_output_format_, source_probs,
-      filtered_points_msg_ptr_->data.get(), config_.class_names_.size(), num_source_output_points);
+      filtered_points_msg_ptr_->data.get(), config_.segmentation_class_names_.size(),
+      num_source_output_points);
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
     filtered_points_msg_ptr_->header = header;
@@ -774,7 +944,28 @@ bool PTv3TRT::postProcess(
     filtered_points_msg_ptr_ = nullptr;
   }
 
-  allocateMessages();
+  allocateSegOutputMessages();
+  return true;
+}
+
+bool PTv3TRT::postProcessDetection3D(std::vector<Box3D> & detection_boxes)
+{
+  CHECK_CUDA_ERROR(detection3d_post_ptr_->process(
+    query_heatmap_score_d_.get(), query_labels_d_.get(), heatmap_d_.get(), center_d_.get(),
+    height_d_.get(), dim_d_.get(), rot_d_.get(), config_.has_twist_ ? vel_d_.get() : nullptr,
+    stream_));
+
+  const Box3D * device_boxes = detection3d_post_ptr_->deviceBoxes();
+  const std::size_t num_boxes = detection3d_post_ptr_->numBoxes();
+
+  detection_boxes.resize(num_boxes);
+  if (num_boxes == 0) {
+    return true;
+  }
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    detection_boxes.data(), device_boxes, num_boxes * sizeof(Box3D), cudaMemcpyDeviceToHost,
+    stream_));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   return true;
 }
 

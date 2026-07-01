@@ -23,7 +23,6 @@
 
 #include <sensor_msgs/msg/image.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
-#include <tier4_perception_msgs/msg/semantic.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -31,34 +30,10 @@
 #include <string>
 #include <vector>
 
-// cspell: ignore Semseg semseg
+// cspell: ignore semseg
 
 namespace autoware::tensorrt_yolox
 {
-using Label = tier4_perception_msgs::msg::Semantic;
-
-struct RoiOverlaySemsegLabel
-{
-  bool UNKNOWN;
-  bool CAR;
-  bool TRUCK;
-  bool BUS;
-  bool MOTORCYCLE;
-  bool BICYCLE;
-  bool PEDESTRIAN;
-  bool ANIMAL;
-  bool HAZARD;
-
-  bool isOverlay(const uint8_t label) const
-  {
-    return (label == Label::UNKNOWN && UNKNOWN) || (label == Label::CAR && CAR) ||
-           (label == Label::TRUCK && TRUCK) || (label == Label::BUS && BUS) ||
-           (label == Label::ANIMAL && ANIMAL) || (label == Label::MOTORBIKE && MOTORCYCLE) ||
-           (label == Label::BICYCLE && BICYCLE) || (label == Label::PEDESTRIAN && PEDESTRIAN) ||
-           (label == Label::HAZARD && HAZARD);
-  };
-};  // struct RoiOverlaySemsegLabel
-
 /**
  * @struct TrtYoloXDetectorConfig
  * @brief Configuration that does not change frame-by-frame. The detector is reconstructed when any
@@ -77,21 +52,18 @@ struct TrtYoloXDetectorConfig
   bool quantize_last_layer;
   bool profile_per_layer;
   double clip_value;
-  bool preprocess_on_gpu;
   std::string calibration_image_list_path;
   uint8_t gpu_id;
 
-  // label / remap files
-  std::string label_path;
-  std::string semseg_color_map_path;
-  std::string roi_remap_path;
-  std::string roi_to_semseg_remap_path;
+  // ROI label entries indexed by model output class ID (loaded from files outside this class)
+  std::vector<RoiLabel> roi_labels;
+  // semantic segmentation color map indexed by semseg label ID; empty when not specified
+  std::vector<Colormap> semseg_color_map;
 
   // behavior
   bool is_roi_overlap_semseg;
   bool is_publish_color_mask;
   float overlap_roi_score_threshold;
-  RoiOverlaySemsegLabel roi_overlay_semseg_labels;
 };
 
 /**
@@ -119,11 +91,6 @@ public:
   explicit TrtYoloXDetector(const TrtYoloXDetectorConfig & config);
 
   /**
-   * @brief whether the underlying GPU has been initialized successfully
-   */
-  bool isGPUInitialized() const;
-
-  /**
    * @brief run inference and post-process for a single image message
    * @param[in] image_msg input image message (BGR8 expected); its header is propagated to all
    * output messages
@@ -134,23 +101,12 @@ public:
     const sensor_msgs::msg::Image & image_msg);
 
 private:
-  void setupLabel(
-    const std::string & roi_label_path, const std::string & semseg_color_map_path,
-    const std::string & roi_label_remap_path, const std::string & roi_to_semseg_remap_path);
-  int mapRoiLabel2SegLabel(const int32_t roi_label_index);
   void overlapSegmentByRoi(
     const tensorrt_yolox::Object & object, cv::Mat & mask, const int width, const int height);
   void getColorizedMask(const cv::Mat & mask, cv::Mat & cmask);
 
   std::unique_ptr<tensorrt_yolox::TrtYoloX> trt_yolox_;
   TrtYoloXDetectorConfig config_;
-
-  // using -1 to represent labels that be ignored
-  static constexpr int unmapped_class_id_ = -1;
-  std::vector<std::string> roi_class_name_list_;
-  std::vector<int> roi_id_to_class_id_map_;
-  std::vector<int> roi_id_to_semseg_id_map_;
-  std::vector<autoware::tensorrt_yolox::Colormap> semseg_color_map_;
 };
 
 }  // namespace autoware::tensorrt_yolox

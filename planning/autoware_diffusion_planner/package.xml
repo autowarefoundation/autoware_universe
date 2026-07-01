@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_diffusion_planner</name>
-  <version>0.51.0</version>
+  <version>0.52.0</version>
   <description>The autoware_diffusion_planner package</description>
 
   <maintainer email="daniel.sanchez@tier4.jp">Daniel Sanchez</maintainer>
@@ -15,6 +15,7 @@
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_cuda_dependency_meta</depend>
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_internal_debug_msgs</depend>
@@ -35,15 +36,18 @@
   <depend>autoware_utils_geometry</depend>
   <depend>autoware_utils_uuid</depend>
   <depend>autoware_vehicle_info_utils</depend>
+  <depend>boost</depend>
   <depend>geometry_msgs</depend>
   <depend>lanelet2_core</depend>
   <depend>lanelet2_routing</depend>
   <depend>lanelet2_traffic_rules</depend>
+  <depend>libexpected-dev</depend>
   <depend>nav_msgs</depend>
   <depend>nlohmann-json-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>visualization_msgs</depend>
 
   <exec_depend>autoware_tensorrt_plugins</exec_depend>

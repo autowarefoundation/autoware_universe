@@ -115,7 +115,6 @@ void append_common_overrides(rclcpp::NodeOptions & options)
   options.append_parameter_override("quantize_last_layer", false);
   options.append_parameter_override("profile_per_layer", false);
   options.append_parameter_override("clip_value", 6.0);
-  options.append_parameter_override("preprocess_on_gpu", true);
   options.append_parameter_override("calibration_image_list_path", std::string(""));
   options.append_parameter_override("gpu_id", 0);
 }
@@ -136,15 +135,6 @@ rclcpp::NodeOptions make_traffic_light_detector_options(
   options.append_parameter_override("is_roi_overlap_segmentation", false);
   options.append_parameter_override("is_publish_color_mask", false);
   options.append_parameter_override("overlap_roi_score_threshold", 0.3);
-  options.append_parameter_override("roi_overlay_segmentation_label.UNKNOWN", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.CAR", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.TRUCK", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.BUS", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.MOTORCYCLE", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.BICYCLE", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.PEDESTRIAN", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.ANIMAL", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.HAZARD", false);
   append_common_overrides(options);
   return options;
 }
@@ -170,15 +160,6 @@ rclcpp::NodeOptions make_segmentation_options(
   options.append_parameter_override("is_roi_overlap_segmentation", true);
   options.append_parameter_override("is_publish_color_mask", true);
   options.append_parameter_override("overlap_roi_score_threshold", 0.3);
-  options.append_parameter_override("roi_overlay_segmentation_label.UNKNOWN", true);
-  options.append_parameter_override("roi_overlay_segmentation_label.CAR", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.TRUCK", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.BUS", false);
-  options.append_parameter_override("roi_overlay_segmentation_label.MOTORCYCLE", true);
-  options.append_parameter_override("roi_overlay_segmentation_label.BICYCLE", true);
-  options.append_parameter_override("roi_overlay_segmentation_label.PEDESTRIAN", true);
-  options.append_parameter_override("roi_overlay_segmentation_label.ANIMAL", true);
-  options.append_parameter_override("roi_overlay_segmentation_label.HAZARD", true);
   append_common_overrides(options);
   return options;
 }

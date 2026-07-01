@@ -14,7 +14,7 @@
 
 #include "autoware/multi_object_tracker/tracker/shape_model/static_shape_model.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_transform.hpp"
 
 namespace autoware::multi_object_tracker
 {
@@ -46,7 +46,9 @@ void StaticShapeModel::exportTo(types::DynamicObject & output, bool to_publish) 
   output.shape = assembleShapeMsg();
   output.area = area_;
 
-  if (to_publish && shape_type_ == autoware_perception_msgs::msg::Shape::POLYGON) {
+  if (
+    to_publish && convert_polygon_to_bbox_ &&
+    shape_type_ == autoware_perception_msgs::msg::Shape::POLYGON) {
     types::DynamicObject converted;
     if (shapes::convertConvexHullToBoundingBox(output, converted, ego_pos_)) {
       output.pose = converted.pose;

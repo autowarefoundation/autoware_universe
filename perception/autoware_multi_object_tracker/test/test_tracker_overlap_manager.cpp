@@ -15,7 +15,7 @@
 #include "autoware/multi_object_tracker/association/scoring/redundancy_check.hpp"
 #include "autoware/multi_object_tracker/association/tracker_overlap_manager.hpp"
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_iou.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/polygon_tracker.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/vehicle_tracker.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
@@ -144,7 +144,10 @@ std::shared_ptr<mot::Tracker> makePolygonTracker(
   const mot::types::DynamicObject & obj, const rclcpp::Time & time, const int n_updates,
   const mot::types::InputChannel & channel)
 {
-  auto tracker = std::make_shared<mot::PolygonTracker>(time, obj, false, false);
+  mot::PolygonTrackerConfig polygon_config;
+  polygon_config.enable_velocity_estimation = false;
+  // enable_motion_output left empty => motion output disabled for all labels
+  auto tracker = std::make_shared<mot::PolygonTracker>(time, obj, polygon_config);
   tracker->initializeExistenceProbabilities(channel.index, obj.existence_probability);
   spinUp(tracker, obj, time, n_updates, channel);
   return tracker;

@@ -14,7 +14,6 @@
 #ifndef TEST_BENCH_HPP_
 #define TEST_BENCH_HPP_
 #include "../src/multi_object_tracker_node.hpp"
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/tracker/trackers/tracker_base.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
@@ -133,6 +132,7 @@ struct ScenarioParams
 };
 
 // Configuration creation functions
+autoware::multi_object_tracker::TrackerConfigs createTrackerConfigs();
 autoware::multi_object_tracker::TrackerCreationConfig createTrackerCreationConfig();
 autoware::multi_object_tracker::TrackerAssociationConfig createTrackerAssociationConfig();
 autoware::multi_object_tracker::TrackerOverlapManagerConfig createTrackerOverlapManagerConfig();

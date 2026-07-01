@@ -1,0 +1,31 @@
+autoware_system_design_format: 0.3.0
+# node information
+name: SimpleTrajectoryRanker.node
+package:
+  name: autoware_trajectory_ranker
+  provider: autoware
+launch:
+  plugin: autoware::trajectory_ranker::SimpleTrajectoryRanker
+  executable: simple_trajectory_ranker
+# interfaces
+subscribers:
+  - name: candidate_trajectories
+    message_type: autoware_internal_planning_msgs/msg/CandidateTrajectories
+publishers:
+  - name: scored_trajectories
+    message_type: autoware_internal_planning_msgs/msg/ScoredCandidateTrajectories
+  - name: processing_time_detail
+    message_type: autoware_internal_debug_msgs/msg/ProcessingTimeTree
+    remap_target: ~/debug/processing_time_detail_ms/trajectory_ranker
+# parameters
+param_files:
+  - name: simple_trajectory_ranker_param
+    default: config/simple_trajectory_ranker.param.yaml
+param_values: []
+# processes
+processes:
+  - name: rank_trajectories
+    trigger_conditions:
+      - on_input: candidate_trajectories
+    outcomes:
+      - to_output: scored_trajectories
