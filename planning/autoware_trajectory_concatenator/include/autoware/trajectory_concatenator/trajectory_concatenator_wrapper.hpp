@@ -78,6 +78,7 @@ public:
     const auto time_now = node_ptr_->get_clock()->now();
 
     std::lock_guard<std::mutex> lock(concatenator_mutex_);
+    RCLCPP_DEBUG(logger_, "get_concatenated()");
     return concatenator_ptr_->get_concatenated(time_now);
   };
 

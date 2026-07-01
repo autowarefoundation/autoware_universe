@@ -407,12 +407,12 @@ void MpcLateralController::setTrajectory(
   m_current_trajectory = msg;
 
   if (msg.points.size() < 3) {
-    RCLCPP_DEBUG(logger_, "received path size is < 3, not enough.");
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 5000, "received path size is < 3, not enough.");
     return;
   }
 
   if (!isValidTrajectory(msg)) {
-    RCLCPP_ERROR(logger_, "Trajectory is invalid!! stop computing.");
+    RCLCPP_ERROR_THROTTLE(logger_, *clock_, 5000, "Trajectory is invalid!! stop computing.");
     return;
   }
 

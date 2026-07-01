@@ -52,29 +52,19 @@ std::vector<MetricReport> CollisionCheckFilter::generate_metric_reports(
 {
   std::vector<MetricReport> reports;
 
-  const auto convert_metrics_level = [](const RiskLevel risk_level) {
-    switch (risk_level) {
-      case RiskLevel::SAFE:
-        return MetricReport::OK;
-      case RiskLevel::WARN:
-        return MetricReport::WARN;
-      case RiskLevel::ERROR:
-        return MetricReport::ERROR;
-      default:
-        throw std::runtime_error("invalid argument");
-    }
+  const auto add_report = [&](
+                            const std::string_view metric_name, double metric_value,
+                            RiskLevel::_level_type risk_level) {
+    RiskLevel risk;
+    risk.level = risk_level;
+    reports.push_back(
+      autoware_trajectory_validator::build<MetricReport>()
+        .validator_name(get_name())
+        .validator_category(category())
+        .metric_name(std::string(metric_name))
+        .metric_value(metric_value)
+        .risk(risk));
   };
-
-  const auto add_report =
-    [&](const std::string_view metric_name, double metric_value, RiskLevel risk) {
-      reports.push_back(
-        autoware_trajectory_validator::build<MetricReport>()
-          .validator_name(get_name())
-          .validator_category(category())
-          .metric_name(std::string(metric_name))
-          .metric_value(metric_value)
-          .level(convert_metrics_level(risk)));
-    };
 
   static constexpr std::array<const char *, 3> kCanonicalTrajectoryTypes = {
     "map_based_predicted_path",
@@ -94,14 +84,14 @@ std::vector<MetricReport> CollisionCheckFilter::generate_metric_reports(
     const double drac_val = has_finding && drac_artifact.required_acceleration.has_value()
                               ? drac_artifact.required_acceleration.value()
                               : std::numeric_limits<double>::quiet_NaN();
-    const RiskLevel drac_risk = has_finding ? drac_artifact.risk : RiskLevel::SAFE;
+    const RiskLevel::_level_type drac_risk = has_finding ? drac_artifact.risk : RiskLevel::SAFE;
     add_report(fmt::format("DRAC_{}", type), drac_val, drac_risk);
   }
 
   // PET
   for (const auto * type : kCanonicalTrajectoryTypes) {
     double pet_val = std::numeric_limits<double>::quiet_NaN();
-    RiskLevel pet_risk = RiskLevel::SAFE;
+    RiskLevel::_level_type pet_risk = RiskLevel::SAFE;
     for (const auto & evaluation : pet_artifact.object_evaluations) {
       if (evaluation.detail.object_identification.trajectory_type.find(type) == std::string::npos) {
         continue;
@@ -159,7 +149,8 @@ CollisionCheckFilter::result_t CollisionCheckFilter::is_feasible(
     rss_artifact, rss_continuous_times_, debug_markers_, global_params_.time_resolution);
 
   return ValidationResult{
-    calc_worst_risk({pet_artifact.risk, drac_artifact.risk, rss_artifact.risk}) != RiskLevel::ERROR,
+    calc_worst_risk({pet_artifact.risk, drac_artifact.risk, rss_artifact.risk}) !=
+      RiskLevel::DANGER,
     generate_metric_reports(drac_artifact, pet_artifact, rss_artifact),
     std::move(planning_factors)};
 }

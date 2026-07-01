@@ -40,6 +40,7 @@ using VehicleInfo = autoware::vehicle_info_utils::VehicleInfo;
 using autoware_internal_planning_msgs::msg::CandidateTrajectory;
 using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 using autoware_trajectory_validator::msg::MetricReport;
+using autoware_trajectory_validator::msg::RiskLevel;
 
 /** @brief Result of a single plugin's feasibility check. */
 struct ValidationResult

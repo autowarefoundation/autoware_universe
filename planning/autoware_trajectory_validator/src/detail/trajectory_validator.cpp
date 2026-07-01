@@ -25,6 +25,9 @@
 
 namespace autoware::trajectory_validator
 {
+using autoware_trajectory_validator::msg::RiskLevel;
+using autoware_trajectory_validator::msg::ValidationReport;
+
 TrajectoryValidatorReport TrajectoryValidator::process(
   const autoware_internal_planning_msgs::msg::CandidateTrajectories & input_trajectories,
   const ValidatorContext & context) const
@@ -71,15 +74,15 @@ TrajectoryValidatorReport TrajectoryValidator::process(
           std::back_inserter(report.planning_factors.factors));
       }
 
+      RiskLevel risk_level;
+      risk_level.level = evaluation.is_feasible ? RiskLevel::SAFE : RiskLevel::DANGER;
       combined_metrics.push_back(
         autoware_trajectory_validator::build<autoware_trajectory_validator::msg::MetricReport>()
           .validator_name(plugin->get_name())
           .validator_category(plugin->category())
           .metric_name("trajectory_feasibility")
           .metric_value(evaluation.is_feasible ? 1.0 : 0.0)
-          .level(
-            evaluation.is_feasible ? autoware_trajectory_validator::msg::MetricReport::OK
-                                   : autoware_trajectory_validator::msg::MetricReport::ERROR));
+          .risk(risk_level));
       report.processing_time_ms[evaluation.plugin_name] += stop_watch.toc(evaluation.plugin_name);
 
       table.plugin_evaluations.push_back(evaluation);
@@ -96,14 +99,14 @@ TrajectoryValidatorReport TrajectoryValidator::process(
       report.num_feasible_trajectories++;
     }
 
+    RiskLevel risk_level;
+    risk_level.level = all_feasible ? RiskLevel::SAFE : RiskLevel::DANGER;
     report.validation_reports.push_back(
-      autoware_trajectory_validator::build<autoware_trajectory_validator::msg::ValidationReport>()
+      autoware_trajectory_validator::build<ValidationReport>()
         .trajectory_stamp(candidate_trajectory.header.stamp)
         .generator_id(candidate_trajectory.generator_id)
         .generator_name(uuid_to_name.at(hex_generator_id))
-        .level(
-          all_feasible ? autoware_trajectory_validator::msg::ValidationReport::OK
-                       : autoware_trajectory_validator::msg::ValidationReport::ERROR)
+        .risk(risk_level)
         .metrics(std::move(combined_metrics)));
   }
 
