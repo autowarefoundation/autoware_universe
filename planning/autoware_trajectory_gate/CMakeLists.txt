@@ -20,6 +20,17 @@ rclcpp_components_register_node(${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_lint_auto REQUIRED)
+  ament_auto_find_test_dependencies()
+
+  ament_add_gtest(test_core_logic
+    test/test_core_logic.cpp
+  )
+  target_include_directories(test_core_logic PRIVATE "src")
+  target_link_libraries(test_core_logic
+    ${PROJECT_NAME}
+  )
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE config launch)
