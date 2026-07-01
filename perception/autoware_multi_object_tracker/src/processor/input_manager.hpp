@@ -19,6 +19,8 @@
 #include "autoware/multi_object_tracker/types.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
+
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 
 #include <deque>
@@ -43,7 +45,7 @@ public:
   }
 
   std::optional<types::DynamicObjectList> processMessage(
-    const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
   void push(const types::DynamicObjectList & objects, const types::AssociationResult & association);
   void updateTimingStatus(const rclcpp::Time & now, const rclcpp::Time & objects_time);
 
@@ -97,7 +99,7 @@ public:
   size_t getTargetChannelIdx() const { return target_stream_idx_; }
   std::optional<types::DynamicObjectList> processMessage(
     const size_t channel_index,
-    const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg);
+    AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::DetectedObjects) msg);
   void push(
     const size_t channel_index, const types::DynamicObjectList & objects,
     const types::AssociationResult & association);

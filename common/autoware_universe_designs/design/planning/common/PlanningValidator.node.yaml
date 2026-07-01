@@ -1,0 +1,69 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: PlanningValidator.node
+
+package:
+  name: autoware_planning_validator
+  provider: autoware
+
+launch:
+  plugin: autoware::planning_validator::PlanningValidatorNode
+  executable: autoware_planning_validator_node
+
+# interfaces
+subscribers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: route
+    message_type: autoware_planning_msgs/msg/LaneletRoute
+  - name: lanelet_map_bin
+    message_type: autoware_map_msgs/msg/LaneletMapBin
+  - name: pointcloud
+    message_type: sensor_msgs/msg/PointCloud2
+  - name: kinematics
+    message_type: nav_msgs/msg/Odometry
+  - name: acceleration
+    message_type: geometry_msgs/msg/AccelWithCovarianceStamped
+  - name: operational_mode_state
+    message_type: autoware_adapi_v1_msgs/msg/OperationModeState
+  - name: traffic_signals
+    message_type: autoware_perception_msgs/msg/TrafficLightGroupArray
+
+publishers:
+  - name: trajectory
+    message_type: autoware_planning_msgs/msg/Trajectory
+  - name: validation_status
+    message_type: autoware_planning_validator/msg/PlanningValidatorStatus
+
+# parameters
+param_files:
+  - name: planning_validator_param
+    default: config/planning_validator.param.yaml
+  - name: latency_checker_param
+    default: config/planning_validator_latency_checker.param.yaml
+  - name: trajectory_checker_param
+    default: config/planning_validator_trajectory_checker.param.yaml
+  - name: intersection_collision_checker_param
+    default: config/planning_validator_intersection_collision_checker.param.yaml
+  - name: rear_collision_checker_param
+    default: config/planning_validator_rear_collision_checker.param.yaml
+
+param_values:
+  - name: launch_modules
+    default:
+      - autoware::planning_validator::LatencyChecker
+      - autoware::planning_validator::TrajectoryChecker
+      - autoware::planning_validator::IntersectionCollisionChecker
+      - autoware::planning_validator::RearCollisionChecker
+  - name: use_intra_process_comms
+    type: bool
+    default: false
+
+# processes
+processes:
+  - name: validate_trajectory
+    trigger_conditions:
+      - on_input: trajectory
+    outcomes:
+      - to_output: trajectory
