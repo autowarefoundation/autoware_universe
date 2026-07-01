@@ -21,42 +21,56 @@
 
 namespace autoware::traffic_light
 {
-ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr) : node_ptr_(node_ptr)
+// ============================ ColorClassifierCore ============================
+// Node-free HSV classification core.
+
+ColorClassifierCore::ColorClassifierCore(const HSVConfig & config)
 {
-  using std::placeholders::_1;
-  image_pub_ = image_transport::create_publisher(
-    node_ptr_, "~/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
-
-  hsv_config_.green_min_h = node_ptr_->declare_parameter("green_min_h", 50);
-  hsv_config_.green_min_s = node_ptr_->declare_parameter("green_min_s", 100);
-  hsv_config_.green_min_v = node_ptr_->declare_parameter("green_min_v", 150);
-  hsv_config_.green_max_h = node_ptr_->declare_parameter("green_max_h", 120);
-  hsv_config_.green_max_s = node_ptr_->declare_parameter("green_max_s", 200);
-  hsv_config_.green_max_v = node_ptr_->declare_parameter("green_max_v", 255);
-  hsv_config_.yellow_min_h = node_ptr_->declare_parameter("yellow_min_h", 0);
-  hsv_config_.yellow_min_s = node_ptr_->declare_parameter("yellow_min_s", 80);
-  hsv_config_.yellow_min_v = node_ptr_->declare_parameter("yellow_min_v", 150);
-  hsv_config_.yellow_max_h = node_ptr_->declare_parameter("yellow_max_h", 50);
-  hsv_config_.yellow_max_s = node_ptr_->declare_parameter("yellow_max_s", 200);
-  hsv_config_.yellow_max_v = node_ptr_->declare_parameter("yellow_max_v", 255);
-  hsv_config_.red_min_h = node_ptr_->declare_parameter("red_min_h", 160);
-  hsv_config_.red_min_s = node_ptr_->declare_parameter("red_min_s", 100);
-  hsv_config_.red_min_v = node_ptr_->declare_parameter("red_min_v", 150);
-  hsv_config_.red_max_h = node_ptr_->declare_parameter("red_max_h", 180);
-  hsv_config_.red_max_s = node_ptr_->declare_parameter("red_max_s", 255);
-  hsv_config_.red_max_v = node_ptr_->declare_parameter("red_max_v", 255);
-
-  // set parameter callback
-  set_param_res_ = node_ptr_->add_on_set_parameters_callback(
-    std::bind(&ColorClassifier::parametersCallback, this, _1));
+  set_config(config);
 }
 
-bool ColorClassifier::getTrafficSignals(
+void ColorClassifierCore::set_config(const HSVConfig & config)
+{
+  hsv_config_ = config;
+  update_thresholds();
+}
+
+void ColorClassifierCore::update_thresholds()
+{
+  min_hsv_green_ =
+    cv::Scalar(hsv_config_.green_min_h, hsv_config_.green_min_s, hsv_config_.green_min_v);
+  max_hsv_green_ =
+    cv::Scalar(hsv_config_.green_max_h, hsv_config_.green_max_s, hsv_config_.green_max_v);
+  min_hsv_yellow_ =
+    cv::Scalar(hsv_config_.yellow_min_h, hsv_config_.yellow_min_s, hsv_config_.yellow_min_v);
+  max_hsv_yellow_ =
+    cv::Scalar(hsv_config_.yellow_max_h, hsv_config_.yellow_max_s, hsv_config_.yellow_max_v);
+  min_hsv_red_ = cv::Scalar(hsv_config_.red_min_h, hsv_config_.red_min_s, hsv_config_.red_min_v);
+  max_hsv_red_ = cv::Scalar(hsv_config_.red_max_h, hsv_config_.red_max_s, hsv_config_.red_max_v);
+}
+
+bool ColorClassifierCore::filter_hsv(
+  const cv::Mat & input_image, cv::Mat & green_image, cv::Mat & yellow_image,
+  cv::Mat & red_image) const
+{
+  cv::Mat hsv_image;
+  cv::cvtColor(input_image, hsv_image, cv::COLOR_BGR2HSV);
+  try {
+    cv::inRange(hsv_image, min_hsv_green_, max_hsv_green_, green_image);
+    cv::inRange(hsv_image, min_hsv_yellow_, max_hsv_yellow_, yellow_image);
+    cv::inRange(hsv_image, min_hsv_red_, max_hsv_red_, red_image);
+  } catch (cv::Exception & e) {
+    return false;
+  }
+  return true;
+}
+
+bool ColorClassifierCore::get_traffic_signals(
   const std::vector<cv::Mat> & images,
-  tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
+  tier4_perception_msgs::msg::TrafficLightArray & traffic_signals,
+  std::vector<cv::Mat> * debug_images) const
 {
   if (images.size() != traffic_signals.signals.size()) {
-    RCLCPP_WARN(node_ptr_->get_logger(), "image number should be equal to traffic signal number!");
     return false;
   }
   for (size_t image_i = 0; image_i < images.size(); image_i++) {
@@ -65,7 +79,7 @@ bool ColorClassifier::getTrafficSignals(
     cv::Mat green_image;
     cv::Mat yellow_image;
     cv::Mat red_image;
-    filterHSV(input_image, green_image, yellow_image, red_image);
+    filter_hsv(input_image, green_image, yellow_image, red_image);
     // binarize
     cv::Mat green_bin_image;
     cv::Mat yellow_bin_image;
@@ -88,8 +102,7 @@ bool ColorClassifier::getTrafficSignals(
     cv::dilate(red_filtered_bin_image, red_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
 
     /* debug */
-#if 1
-    if (0 < image_pub_.getNumSubscribers()) {
+    if (debug_images != nullptr) {
       cv::Mat debug_raw_image;
       cv::Mat debug_green_image;
       cv::Mat debug_yellow_image;
@@ -145,11 +158,8 @@ bool ColorClassifier::getTrafficSignals(
       cv::putText(
         debug_image, "red", cv::Point(0, height * 3.5), cv::FONT_HERSHEY_SIMPLEX, 1.0,
         cv::Scalar(255, 255, 255), 1, CV_AA);
-      const auto debug_image_msg =
-        cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", debug_image).toImageMsg();
-      image_pub_.publish(debug_image_msg);
+      debug_images->push_back(debug_image);
     }
-#endif
     /* --- */
 
     const int green_pixel_num = cv::countNonZero(green_filtered_bin_image);
@@ -190,21 +200,62 @@ bool ColorClassifier::getTrafficSignals(
   return true;
 }
 
-bool ColorClassifier::filterHSV(
-  const cv::Mat & input_image, cv::Mat & green_image, cv::Mat & yellow_image, cv::Mat & red_image)
+// ============================== ColorClassifier ==============================
+// ROS adapter: declares parameters, wires dynamic reconfigure and debug-image
+// publishing, and delegates classification to the Node-free core.
+
+ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr) : node_ptr_(node_ptr)
 {
-  cv::Mat hsv_image;
-  cv::cvtColor(input_image, hsv_image, cv::COLOR_BGR2HSV);
-  try {
-    cv::inRange(hsv_image, min_hsv_green_, max_hsv_green_, green_image);
-    cv::inRange(hsv_image, min_hsv_yellow_, max_hsv_yellow_, yellow_image);
-    cv::inRange(hsv_image, min_hsv_red_, max_hsv_red_, red_image);
-  } catch (cv::Exception & e) {
-    RCLCPP_ERROR(node_ptr_->get_logger(), "failed to filter image by hsv value : %s", e.what());
+  using std::placeholders::_1;
+  image_pub_ = image_transport::create_publisher(
+    node_ptr_, "~/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
+
+  hsv_config_.green_min_h = node_ptr_->declare_parameter("green_min_h", hsv_config_.green_min_h);
+  hsv_config_.green_min_s = node_ptr_->declare_parameter("green_min_s", hsv_config_.green_min_s);
+  hsv_config_.green_min_v = node_ptr_->declare_parameter("green_min_v", hsv_config_.green_min_v);
+  hsv_config_.green_max_h = node_ptr_->declare_parameter("green_max_h", hsv_config_.green_max_h);
+  hsv_config_.green_max_s = node_ptr_->declare_parameter("green_max_s", hsv_config_.green_max_s);
+  hsv_config_.green_max_v = node_ptr_->declare_parameter("green_max_v", hsv_config_.green_max_v);
+  hsv_config_.yellow_min_h = node_ptr_->declare_parameter("yellow_min_h", hsv_config_.yellow_min_h);
+  hsv_config_.yellow_min_s = node_ptr_->declare_parameter("yellow_min_s", hsv_config_.yellow_min_s);
+  hsv_config_.yellow_min_v = node_ptr_->declare_parameter("yellow_min_v", hsv_config_.yellow_min_v);
+  hsv_config_.yellow_max_h = node_ptr_->declare_parameter("yellow_max_h", hsv_config_.yellow_max_h);
+  hsv_config_.yellow_max_s = node_ptr_->declare_parameter("yellow_max_s", hsv_config_.yellow_max_s);
+  hsv_config_.yellow_max_v = node_ptr_->declare_parameter("yellow_max_v", hsv_config_.yellow_max_v);
+  hsv_config_.red_min_h = node_ptr_->declare_parameter("red_min_h", hsv_config_.red_min_h);
+  hsv_config_.red_min_s = node_ptr_->declare_parameter("red_min_s", hsv_config_.red_min_s);
+  hsv_config_.red_min_v = node_ptr_->declare_parameter("red_min_v", hsv_config_.red_min_v);
+  hsv_config_.red_max_h = node_ptr_->declare_parameter("red_max_h", hsv_config_.red_max_h);
+  hsv_config_.red_max_s = node_ptr_->declare_parameter("red_max_s", hsv_config_.red_max_s);
+  hsv_config_.red_max_v = node_ptr_->declare_parameter("red_max_v", hsv_config_.red_max_v);
+
+  core_.set_config(hsv_config_);
+
+  // set parameter callback
+  set_param_res_ = node_ptr_->add_on_set_parameters_callback(
+    std::bind(&ColorClassifier::parametersCallback, this, _1));
+}
+
+bool ColorClassifier::getTrafficSignals(
+  const std::vector<cv::Mat> & images,
+  tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
+{
+  std::vector<cv::Mat> debug_images;
+  const bool want_debug = 0 < image_pub_.getNumSubscribers();
+  const bool ok =
+    core_.get_traffic_signals(images, traffic_signals, want_debug ? &debug_images : nullptr);
+  if (!ok) {
+    RCLCPP_WARN(node_ptr_->get_logger(), "image number should be equal to traffic signal number!");
     return false;
+  }
+  for (const auto & debug_image : debug_images) {
+    const auto debug_image_msg =
+      cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", debug_image).toImageMsg();
+    image_pub_.publish(debug_image_msg);
   }
   return true;
 }
+
 rcl_interfaces::msg::SetParametersResult ColorClassifier::parametersCallback(
   const std::vector<rclcpp::Parameter> & parameters)
 {
@@ -238,16 +289,7 @@ rcl_interfaces::msg::SetParametersResult ColorClassifier::parametersCallback(
   update_param("red_max_s", hsv_config_.red_max_s);
   update_param("red_max_v", hsv_config_.red_max_v);
 
-  min_hsv_green_ =
-    cv::Scalar(hsv_config_.green_min_h, hsv_config_.green_min_s, hsv_config_.green_min_v);
-  max_hsv_green_ =
-    cv::Scalar(hsv_config_.green_max_h, hsv_config_.green_max_s, hsv_config_.green_max_v);
-  min_hsv_yellow_ =
-    cv::Scalar(hsv_config_.yellow_min_h, hsv_config_.yellow_min_s, hsv_config_.yellow_min_v);
-  max_hsv_yellow_ =
-    cv::Scalar(hsv_config_.yellow_max_h, hsv_config_.yellow_max_s, hsv_config_.yellow_max_v);
-  min_hsv_red_ = cv::Scalar(hsv_config_.red_min_h, hsv_config_.red_min_s, hsv_config_.red_min_v);
-  max_hsv_red_ = cv::Scalar(hsv_config_.red_max_h, hsv_config_.red_max_s, hsv_config_.red_max_v);
+  core_.set_config(hsv_config_);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

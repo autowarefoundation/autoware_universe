@@ -34,28 +34,69 @@
 
 namespace autoware::traffic_light
 {
+// HSV thresholds for the green / yellow / red bands. Defaults are the single
+// source of truth for the classifier's out-of-the-box behavior; the ROS adapter
+// exposes them as node parameters.
 struct HSVConfig
 {
-  int green_min_h;
-  int green_min_s;
-  int green_min_v;
-  int green_max_h;
-  int green_max_s;
-  int green_max_v;
-  int yellow_min_h;
-  int yellow_min_s;
-  int yellow_min_v;
-  int yellow_max_h;
-  int yellow_max_s;
-  int yellow_max_v;
-  int red_min_h;
-  int red_min_s;
-  int red_min_v;
-  int red_max_h;
-  int red_max_s;
-  int red_max_v;
+  int green_min_h = 50;
+  int green_min_s = 100;
+  int green_min_v = 150;
+  int green_max_h = 120;
+  int green_max_s = 200;
+  int green_max_v = 255;
+  int yellow_min_h = 0;
+  int yellow_min_s = 80;
+  int yellow_min_v = 150;
+  int yellow_max_h = 50;
+  int yellow_max_s = 200;
+  int yellow_max_v = 255;
+  int red_min_h = 160;
+  int red_min_s = 100;
+  int red_min_v = 150;
+  int red_max_h = 180;
+  int red_max_s = 255;
+  int red_max_v = 255;
 };
 
+// Node-free core of the HSV color classifier. Depends only on OpenCV and the
+// perception message types -- no rclcpp, image_transport, or logging -- so it can
+// be constructed and unit-tested without a running node.
+class ColorClassifierCore
+{
+public:
+  explicit ColorClassifierCore(const HSVConfig & config = HSVConfig{});
+
+  // Classify each image into a TrafficLightElement by HSV color band. Returns
+  // false only if the image and signal counts differ. When debug_images is
+  // non-null, one debug mosaic per input image is appended to it.
+  bool get_traffic_signals(
+    const std::vector<cv::Mat> & images,
+    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals,
+    std::vector<cv::Mat> * debug_images = nullptr) const;
+
+  // Replace the HSV thresholds and rebuild the color bands (dynamic reconfigure).
+  void set_config(const HSVConfig & config);
+
+private:
+  bool filter_hsv(
+    const cv::Mat & input_image, cv::Mat & green_image, cv::Mat & yellow_image,
+    cv::Mat & red_image) const;
+  // Rebuild the cv::Scalar bands from hsv_config_.
+  void update_thresholds();
+
+  HSVConfig hsv_config_;
+  cv::Scalar min_hsv_green_;
+  cv::Scalar max_hsv_green_;
+  cv::Scalar min_hsv_yellow_;
+  cv::Scalar max_hsv_yellow_;
+  cv::Scalar min_hsv_red_;
+  cv::Scalar max_hsv_red_;
+};
+
+// Thin ROS adapter around ColorClassifierCore. Owns the node-facing concerns
+// (parameter declaration, dynamic reconfigure, debug-image publishing, logging)
+// and delegates classification to the core. Public API is unchanged.
 class ColorClassifier : public ClassifierInterface
 {
 public:
@@ -67,9 +108,6 @@ public:
     tier4_perception_msgs::msg::TrafficLightArray & traffic_signals) override;
 
 private:
-  bool filterHSV(
-    const cv::Mat & input_image, cv::Mat & green_image, cv::Mat & yellow_image,
-    cv::Mat & red_image);
   rcl_interfaces::msg::SetParametersResult parametersCallback(
     const std::vector<rclcpp::Parameter> & parameters);
 
@@ -85,12 +123,7 @@ private:
   rclcpp::Node * node_ptr_;
 
   HSVConfig hsv_config_;
-  cv::Scalar min_hsv_green_;
-  cv::Scalar max_hsv_green_;
-  cv::Scalar min_hsv_yellow_;
-  cv::Scalar max_hsv_yellow_;
-  cv::Scalar min_hsv_red_;
-  cv::Scalar max_hsv_red_;
+  ColorClassifierCore core_;
 };
 
 }  // namespace autoware::traffic_light
