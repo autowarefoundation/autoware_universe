@@ -1,8 +1,8 @@
-from, to
+from, to # The label remapped to -1 will not overlay the segmentation mask.
 UNKNOWN,3
-CAR,7
-TRUCK,7
-BUS,7
+CAR,-1
+TRUCK,-1
+BUS,-1
 BICYCLE,8
 MOTORBIKE,8
 PEDESTRIAN,6

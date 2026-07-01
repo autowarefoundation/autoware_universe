@@ -235,7 +235,8 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   cloud_sub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",
-      std::bind(&BEVFusionNode::cloudCallback, this, std::placeholders::_1));
+      std::bind(&BEVFusionNode::cloudCallback, this, std::placeholders::_1),
+      detector_ptr_->stream());
 
   objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS(1));
