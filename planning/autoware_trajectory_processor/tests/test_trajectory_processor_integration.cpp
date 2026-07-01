@@ -241,7 +241,7 @@ protected:
     optimizer_options.append_parameter_override(
       "trajectory_velocity_optimizer.limit_lateral_acceleration", false);
     optimizer_options.append_parameter_override(
-      "trajectory_velocity_optimizer.smooth_velocities", false);
+      "trajectory_velocity_optimizer.smooth_velocities", true);
     optimizer_options.append_parameter_override(
       "trajectory_velocity_optimizer.continuous_jerk_smoother.jerk_weight", 30.0);
     optimizer_options.append_parameter_override(
@@ -645,4 +645,129 @@ TEST_F(TrajectoryProcessorIntegrationTest, SmoothObstacleStopInteractionTest)
   // We expect a smooth deceleration curve where no single step drop between points is drastic.
   EXPECT_LT(max_deceleration_step, 2.0)
     << "Deceleration profile is too abrupt, optimizer failed to smooth the modifier's stop!";
+}
+
+TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopAndSmoothDecelerationTest)
+{
+  // 1. Create a straight trajectory at 10.0 m/s
+  auto traj = create_straight_trajectories(50.0, 10.0, sim_time_);
+
+  Odometry odom;
+  odom.header.frame_id = "map";
+  odom.pose.pose.position.x = 0.0;
+  odom.pose.pose.orientation.w = 1.0;
+  odom.twist.twist.linear.x = 10.0;
+
+  AccelWithCovarianceStamped acc;
+  acc.header.frame_id = "map";
+
+  // 2. Place an obstacle at x=30.0.
+  // The Modifier will insert a sudden stop point.
+  PredictedObjects objects;
+  objects.header.frame_id = "map";
+  autoware_perception_msgs::msg::PredictedObject object;
+  object.kinematics.initial_pose_with_covariance.pose.position.x = 30.0;
+  object.kinematics.initial_pose_with_covariance.pose.orientation.w = 1.0;
+  object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  object.shape.dimensions.x = 2.0;
+  object.shape.dimensions.y = 2.0;
+  object.shape.dimensions.z = 2.0;
+
+  autoware_perception_msgs::msg::ObjectClassification classification;
+  classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
+  classification.probability = 1.0;
+  object.classification.push_back(classification);
+  objects.objects.push_back(object);
+
+  for (int i = 0; i < 20; ++i) {
+    objects.header.stamp = sim_time_;
+    odom.header.stamp = sim_time_;
+    acc.header.stamp = sim_time_;
+    pub_obj_->publish(objects);
+    publish_mandatory_inputs(traj, odom, acc);
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
+  }
+  wait_for_output_sim();
+
+  ASSERT_TRUE(output_received_);
+  ASSERT_GT(latest_output_.points.size(), 1U);
+
+  // 3. Verify interaction:
+  // a) The obstacle stop was preserved (velocity reaches ~0 before x=30.0)
+  // b) The deceleration was smoothed (no massive single-step drops in velocity)
+
+  bool vehicle_stops = false;
+  float max_velocity_drop = 0.0;
+  float prev_vel = latest_output_.points.front().longitudinal_velocity_mps;
+
+  for (size_t i = 1; i < latest_output_.points.size(); ++i) {
+    const auto & p = latest_output_.points[i];
+    float current_vel = p.longitudinal_velocity_mps;
+
+    // Calculate the drop between consecutive points
+    float drop = prev_vel - current_vel;
+    if (drop > max_velocity_drop) {
+      max_velocity_drop = drop;
+    }
+
+    // Check if the vehicle stopped before the obstacle
+    if (current_vel < 0.1 && p.pose.position.x < 30.0) {
+      vehicle_stops = true;
+    }
+
+    prev_vel = current_vel;
+  }
+
+  EXPECT_TRUE(vehicle_stops) << "The Modifier's Obstacle Stop was lost or ignored!";
+  EXPECT_LT(max_velocity_drop, 1.5)
+    << "The Optimizer failed to smooth the Modifier's sudden stop. Deceleration is too abrupt!";
+}
+
+TEST_F(TrajectoryProcessorIntegrationTest, StopPointFixerAndOptimizerResamplingTest)
+{
+  // 1. Create a very short trajectory with near-zero velocities.
+  // This triggers the Modifier's Stop Point Fixer.
+  CandidateTrajectories msg;
+  CandidateTrajectory candidate;
+  candidate.header.frame_id = "map";
+  candidate.header.stamp = sim_time_;
+  candidate.points.push_back(create_trajectory_point(0.0, 0.0, 0.05));
+  candidate.points.push_back(create_trajectory_point(0.2, 0.0, 0.0));
+  candidate.points.push_back(create_trajectory_point(0.4, 0.0, 0.0));
+  msg.candidate_trajectories.push_back(candidate);
+
+  Odometry odom;
+  odom.header.frame_id = "map";
+  odom.pose.pose.position.x = 0.0;
+  odom.pose.pose.orientation.w = 1.0;
+  odom.twist.twist.linear.x = 0.0;
+
+  AccelWithCovarianceStamped acc;
+  acc.header.frame_id = "map";
+
+  for (int i = 0; i < 20 && !output_received_; ++i) {
+    odom.header.stamp = sim_time_;
+    acc.header.stamp = sim_time_;
+    publish_mandatory_inputs(msg, odom, acc);
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
+  }
+  wait_for_output_sim();
+
+  // 2. Verify interaction:
+  // The Optimizer must successfully process the Modifier's collapsed, zero-velocity trajectory
+  // without crashing, generating NaNs, or completely stripping all points via the point fixer.
+
+  ASSERT_TRUE(output_received_) << "Optimizer failed to output a trajectory!";
+  ASSERT_GT(latest_output_.points.size(), 0U)
+    << "Optimizer stripped all points from the stopped trajectory!";
+
+  for (const auto & p : latest_output_.points) {
+    // Ensure no NaNs were generated by smoothers attempting to process zero-distance points
+    EXPECT_FALSE(std::isnan(p.pose.position.x));
+    EXPECT_FALSE(std::isnan(p.pose.position.y));
+    EXPECT_FALSE(std::isnan(p.longitudinal_velocity_mps));
+
+    // Ensure the velocity remains bounded at 0
+    EXPECT_NEAR(p.longitudinal_velocity_mps, 0.0, 0.01);
+  }
 }
