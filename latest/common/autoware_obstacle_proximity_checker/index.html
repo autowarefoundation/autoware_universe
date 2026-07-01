@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/common/autoware_grid_map_utils/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/latest/common/autoware_obstacle_proximity_checker/">
       
       
-        <link rel="prev" href="../autoware_goal_distance_calculator/Readme/">
+        <link rel="prev" href="../autoware_grid_map_utils/">
       
       
-        <link rel="next" href="../autoware_obstacle_proximity_checker/">
+        <link rel="next" href="../autoware_path_distance_calculator/Readme/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Grid Map Utils - Autoware Universe Documentation</title>
+        <title>Obstacle Proximity Checker - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#grid-map-utils" class="md-skip">
+        <a href="#obstacle-proximity-checker" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Grid Map Utils
+              Obstacle Proximity Checker
             
           </span>
         </div>
@@ -1118,7 +1118,7 @@
   
   
     <li class="md-nav__item">
-      <a href="." class="md-nav__link">
+      <a href="../autoware_grid_map_utils" class="md-nav__link">
         
   
   
@@ -22774,10 +22774,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#purpose" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Purpose
       
     </span>
   </a>
@@ -22785,13 +22785,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#algorithm" class="md-nav__link">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Algorithm
+        Inner-workings / Algorithms
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Inner-workings / Algorithms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-distance-to-nearest-obstacle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get distance to nearest obstacle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#obstacle-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Obstacle detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -22804,46 +22832,52 @@
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#assumptions" class="md-nav__link">
+    <nav class="md-nav" aria-label="API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input-inputs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Assumptions
+        Input (Inputs)
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#performances" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#output-checkresult" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Performances
+        Output (CheckResult)
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#future-improvements" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#parameters-parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Future improvements
+        Parameters (Parameters)
       
     </span>
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
+  <a href="#assumptions-known-limits" class="md-nav__link">
     <span class="md-ellipsis">
       
-        References
+        Assumptions / Known limits
       
     </span>
   </a>
@@ -22870,41 +22904,187 @@
   
 
 
-<div><h1 id="grid-map-utils">Grid Map Utils<a class="headerlink" href="#grid-map-utils" title="Permanent link">#</a></h1>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
-<p>This packages contains a re-implementation of the <code>grid_map::PolygonIterator</code> used to iterate over
-all cells of a grid map contained inside some polygon.</p>
-<h2 id="algorithm">Algorithm<a class="headerlink" href="#algorithm" title="Permanent link">#</a></h2>
-<p>This implementation uses the <a href="https://en.wikipedia.org/wiki/Scanline_rendering">scan line algorithm</a>,
-a common algorithm used to draw polygons on a rasterized image.
-The main idea of the algorithm adapted to a grid map is as follow:</p>
+<div><h1 id="obstacle-proximity-checker">Obstacle Proximity Checker<a class="headerlink" href="#obstacle-proximity-checker" title="Permanent link">#</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
+<p>This package provides a reusable library for detecting obstacles in close proximity to the ego vehicle.
+It computes the minimum distance between an expanded ego footprint and nearby point cloud points or dynamic object polygons, and reports whether any obstacle is within a caller-defined distance threshold.</p>
+<p>The core logic was extracted from <a href="../../planning/autoware_surround_obstacle_checker/">autoware_surround_obstacle_checker</a> so it can be shared across planning modules.
+Current consumers include:</p>
+<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<h3 id="get-distance-to-nearest-obstacle">Get distance to nearest obstacle<a class="headerlink" href="#get-distance-to-nearest-obstacle" title="Permanent link">#</a></h3>
+<p>Calculate the distance between the ego vehicle and the nearest obstacle.
+The minimum distance is computed between ego vehicle footprint and:</p>
 <ul>
-<li>calculate intersections between rows of the grid map and the edges of the polygon edges;</li>
-<li>calculate for each row the column between each pair of intersections;</li>
-<li>the resulting <code>(row, column)</code> indexes are inside of the polygon.</li>
+<li>all points in the input point cloud</li>
+<li>the polygons of enabled dynamic objects</li>
 </ul>
-<p>More details on the scan line algorithm can be found in the References.</p>
-<h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">#</a></h2>
-<p>The <code>autoware::grid_map_utils::PolygonIterator</code> follows the same API as the original <a href="https://docs.ros.org/en/kinetic/api/grid_map_core/html/classgrid__map_1_1PolygonIterator.html"><code>grid_map::PolygonIterator</code></a>.</p>
-<h2 id="assumptions">Assumptions<a class="headerlink" href="#assumptions" title="Permanent link">#</a></h2>
-<p>The behavior of the <code>autoware::grid_map_utils::PolygonIterator</code> is only guaranteed to match the <code>grid_map::PolygonIterator</code> if edges of the polygon do not <em>exactly</em> cross any cell center.
-In such a case, whether the crossed cell is considered inside or outside of the polygon can vary due to floating precision error.</p>
-<h2 id="performances">Performances<a class="headerlink" href="#performances" title="Permanent link">#</a></h2>
-<p>Benchmarking code is implemented in <code>test/benchmarking.cpp</code> and is also used to validate that the <code>autoware::grid_map_utils::PolygonIterator</code> behaves exactly like the <code>grid_map::PolygonIterator</code>.</p>
-<p>The following figure shows a comparison of the runtime between the implementation of this package (<code>autoware_grid_map_utils</code>) and the original implementation (<code>grid_map</code>).
-The time measured includes the construction of the iterator and the iteration over all indexes and is shown using a logarithmic scale.
-Results were obtained varying the side size of a square grid map with <code>100 &lt;= n &lt;= 1000</code> (size=<code>n</code> means a grid of <code>n x n</code> cells),
-random polygons with a number of vertices <code>3 &lt;= m &lt;= 100</code> and with each parameter <code>(n,m)</code> repeated 10 times.</p>
-<p><img alt="Runtime comparison" src="media/runtime_comparison.png"></p>
-<h2 id="future-improvements">Future improvements<a class="headerlink" href="#future-improvements" title="Permanent link">#</a></h2>
-<p>There exists variations of the scan line algorithm for multiple polygons.
-These can be implemented if we want to iterate over the cells contained in at least one of multiple polygons.</p>
-<p>The current implementation imitate the behavior of the original <code>grid_map::PolygonIterator</code> where a cell is selected if its center position is inside the polygon.
-This behavior could be changed for example to only return all cells overlapped by the polygon.</p>
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">#</a></h2>
+<p>The ego footprint is created based on vehicle info and user defined margins per obstacle type. For each given obstacle type (e.g car, pedestrian, pointcloud, etc) the following margins are defined:</p>
 <ul>
-<li><a href="https://en.wikipedia.org/wiki/Scanline_rendering">https://en.wikipedia.org/wiki/Scanline_rendering</a></li>
-<li><a href="https://web.cs.ucdavis.edu/~ma/ECS175_S00/Notes/0411_b.pdf">https://web.cs.ucdavis.edu/~ma/ECS175_S00/Notes/0411_b.pdf</a></li>
+<li><code>surround_check_front_distance</code></li>
+<li><code>surround_check_side_distance</code></li>
+<li><code>surround_check_back_distance</code></li>
+</ul>
+<h3 id="obstacle-detection">Obstacle detection<a class="headerlink" href="#obstacle-detection" title="Permanent link">#</a></h3>
+<p>An obstacle is considered nearby when:</p>
+<p><code>text
+nearest_distance &lt; contact_distance_threshold</code></p>
+<p><code>contact_distance_threshold</code> is provided by the caller on each <code>check()</code> call.
+This allows callers to implement distance hysteresis (for example, a tight threshold when entering stop and a wider threshold when clearing stop).</p>
+<p>The library does <strong>not</strong> manage:</p>
+<ul>
+<li>ego stopped checks</li>
+<li>state machines (<code>PASS</code> / <code>STOP</code>)</li>
+<li>time-based hysteresis</li>
+<li>ROS subscriptions, publishers, or TF transforms</li>
+</ul>
+<p>Those responsibilities remain in the calling node or plugin.</p>
+<h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">#</a></h2>
+<h3 id="input-inputs">Input (<code>Inputs</code>)<a class="headerlink" href="#input-inputs" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ego_pose</code></td>
+<td><code>geometry_msgs::msg::Pose</code></td>
+<td>Ego pose used for dynamic object checks</td>
+</tr>
+<tr>
+<td><code>pointcloud_in_base_link</code></td>
+<td><code>pcl::PointCloud&lt;pcl::PointXYZ&gt;::ConstPtr</code></td>
+<td>Obstacle point cloud in <code>base_link</code></td>
+</tr>
+<tr>
+<td><code>objects</code></td>
+<td><code>autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr</code></td>
+<td>Dynamic objects</td>
+</tr>
+</tbody>
+</table>
+<p>Callers must transform the point cloud to <code>base_link</code> before passing it to the library.</p>
+<h3 id="output-checkresult">Output (<code>CheckResult</code>)<a class="headerlink" href="#output-checkresult" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>is_obstacle_found</code></td>
+<td><code>bool</code></td>
+<td><code>true</code> if the nearest obstacle is within <code>contact_distance_threshold</code></td>
+</tr>
+<tr>
+<td><code>nearest_obstacle</code></td>
+<td><code>std::optional&lt;ProximityObstacle&gt;</code></td>
+<td>Nearest obstacle and its distance, if any</td>
+</tr>
+</tbody>
+</table>
+<p><code>ProximityObstacle</code> contains:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>is_point_cloud</code></td>
+<td><code>bool</code></td>
+<td><code>true</code> if the nearest obstacle came from a point cloud</td>
+</tr>
+<tr>
+<td><code>nearest_distance</code></td>
+<td><code>double</code></td>
+<td>Minimum distance to the ego footprint [m]</td>
+</tr>
+<tr>
+<td><code>nearest_point</code></td>
+<td><code>geometry_msgs::msg::Point</code></td>
+<td>Nearest point in map coordinates</td>
+</tr>
+<tr>
+<td><code>uuid</code></td>
+<td><code>unique_identifier_msgs::msg::UUID</code></td>
+<td>Object UUID, or empty for point clouds</td>
+</tr>
+</tbody>
+</table>
+<h3 id="parameters-parameters">Parameters (<code>Parameters</code>)<a class="headerlink" href="#parameters-parameters" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pointcloud_enable_check</code></td>
+<td><code>bool</code></td>
+<td>Enable point cloud proximity checks</td>
+</tr>
+<tr>
+<td><code>object_type_enable_check</code></td>
+<td><code>unordered_map&lt;string, bool&gt;</code></td>
+<td>Enable checks per object label (<code>car</code>, <code>truck</code>, etc.)</td>
+</tr>
+<tr>
+<td><code>obstacle_types_map</code></td>
+<td><code>unordered_map&lt;string, ObstacleTypeParameters&gt;</code></td>
+<td>Per-type footprint margins</td>
+</tr>
+</tbody>
+</table>
+<p><code>ObstacleTypeParameters</code> fields:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Typical value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>surround_check_front_distance</code></td>
+<td><code>double</code></td>
+<td>Front margin added to the ego footprint [m]</td>
+<td>0.5</td>
+</tr>
+<tr>
+<td><code>surround_check_side_distance</code></td>
+<td><code>double</code></td>
+<td>Side margin added to the ego footprint [m]</td>
+<td>0.0–1.0</td>
+</tr>
+<tr>
+<td><code>surround_check_back_distance</code></td>
+<td><code>double</code></td>
+<td>Rear margin added to the ego footprint [m]</td>
+<td>0.0–0.5</td>
+</tr>
+</tbody>
+</table>
+<p>Supported object labels:</p>
+<p><code>unknown</code>, <code>car</code>, <code>truck</code>, <code>bus</code>, <code>trailer</code>, <code>motorcycle</code>, <code>bicycle</code>, <code>pedestrian</code>, <code>pointcloud</code></p>
+<h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
+<ul>
+<li>Point clouds must already be transformed to <code>base_link</code>.</li>
+<li>The library performs geometric proximity checks only. Stop/release decisions, velocity limits, and trajectory modification are handled by callers.</li>
 </ul></div>
 
 
@@ -22941,7 +23121,7 @@ This behavior could be changed for example to only return all cells overlapped b
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_goal_distance_calculator/Readme/" class="md-footer__link md-footer__link--prev" aria-label="Previous: autoware_goal_distance_calculator">
+          <a href="../autoware_grid_map_utils/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Grid Map Utils">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -22951,20 +23131,20 @@ This behavior could be changed for example to only return all cells overlapped b
                 Previous
               </span>
               <div class="md-ellipsis">
-                autoware_goal_distance_calculator
+                Grid Map Utils
               </div>
             </div>
           </a>
         
         
           
-          <a href="../autoware_obstacle_proximity_checker/" class="md-footer__link md-footer__link--next" aria-label="Next: Obstacle Proximity Checker">
+          <a href="../autoware_path_distance_calculator/Readme/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_path_distance_calculator">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Obstacle Proximity Checker
+                autoware_path_distance_calculator
               </div>
             </div>
             <div class="md-footer__button md-icon">
