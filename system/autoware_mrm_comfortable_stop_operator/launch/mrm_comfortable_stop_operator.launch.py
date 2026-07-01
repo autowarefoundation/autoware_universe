@@ -29,10 +29,6 @@ def launch_setup(context, *args, **kwargs):
     with open(config_file_path, "r") as f:
         params = yaml.safe_load(f)["/**"]["ros__parameters"]
 
-    # An agnocast_wrapper::Node registered with an AgnocastOnly* executor must run as its own
-    # standalone executable: the agnocast runtime (signal handler / shutdown eventfd) is set up
-    # only by the generated node_main, so loading it as a composable node into a container
-    # SIGSEGVs on construction. LD_PRELOAD supplies the heaphook, required by AgnocastOnly.
     node = Node(
         package="autoware_mrm_comfortable_stop_operator",
         executable="autoware_mrm_comfortable_stop_operator_node",
@@ -57,8 +53,6 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    # Resolves the LD_PRELOAD value (agnocast heaphook) based on the ENABLE_AGNOCAST environment
-    # variable. Stays backward compatible when Agnocast is disabled.
     agnocast_env = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution(
