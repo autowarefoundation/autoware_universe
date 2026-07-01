@@ -20,9 +20,9 @@
 #include "autoware/map_based_prediction/predictor_vehicle/maneuver_prediction.hpp"
 #include "autoware/map_based_prediction/predictor_vehicle/object_processing.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/lru_cache.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <autoware/agnocast_wrapper/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>

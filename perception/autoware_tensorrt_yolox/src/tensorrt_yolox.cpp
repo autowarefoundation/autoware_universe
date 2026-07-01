@@ -81,7 +81,7 @@ TrtYoloX::TrtYoloX(
 
     std::vector<std::string> calibration_images;
     if (calibration_image_list_path != "") {
-      calibration_images = load_image_list(calibration_image_list_path, "");
+      calibration_images = load_image_list(calibration_image_list_path);
     }
     tensorrt_yolox::ImageStream stream(batch_size_, network_input_dims, calibration_images);
     fs::path calibration_table{trt_config.onnx_path};

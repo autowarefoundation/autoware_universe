@@ -2,6 +2,16 @@
 Changelog for package autoware_processing_time_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.52.0 (2026-06-30)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
+* feat(processing_time_cheker): add neural_network_based_planner node `processing_time_ms` (`#12529 <https://github.com/autowarefoundation/autoware_universe/issues/12529>`_)
+  * feat(diffusion_planner, trajectory_optimizer): add processing_time_ms topic
+  * feat: processing_time_checker
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* Contributors: Kazunori-Nakajima, github-actions
+
 0.51.0 (2026-05-01)
 -------------------
 

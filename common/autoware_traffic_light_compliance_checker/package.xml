@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_traffic_light_compliance_checker</name>
-  <version>0.50.0</version>
+  <version>0.52.0</version>
   <description>Library for checking trajectory compliance with traffic lights</description>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
   <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
