@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_trajectory_concatenator/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_trajectory_gate/">
       
       
-        <link rel="prev" href="../autoware_trajectory_adapter/">
+        <link rel="prev" href="../autoware_trajectory_concatenator/">
       
       
-        <link rel="next" href="../autoware_trajectory_gate/">
+        <link rel="next" href="../autoware_trajectory_modifier/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Trajectory Concatenator - Autoware Universe Documentation</title>
+        <title>autoware_trajectory_gate - Autoware Universe Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#trajectory-concatenator" class="md-skip">
+        <a href="#autoware_trajectory_gate" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Trajectory Concatenator
+              autoware_trajectory_gate
             
           </span>
         </div>
@@ -22771,10 +22771,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#purposerole" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Purpose/Role
+        Overview
       
     </span>
   </a>
@@ -22782,40 +22782,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#algorithm-overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Algorithm Overview
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interface" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Interface
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Interface">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#topics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Topics
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -22825,9 +22791,15 @@
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#interfaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interfaces
+      
+    </span>
+  </a>
   
 </li>
       
@@ -22851,62 +22823,77 @@
   
 
 
-<div><h1 id="trajectory-concatenator">Trajectory Concatenator<a class="headerlink" href="#trajectory-concatenator" title="Permanent link">#</a></h1>
-<h2 id="purposerole">Purpose/Role<a class="headerlink" href="#purposerole" title="Permanent link">#</a></h2>
-<p>This node aggregates trajectory candidates from multiple trajectory generators into a single <code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code> message. It is intended to be placed between trajectory generators and the selector/ranker.</p>
-<h2 id="algorithm-overview">Algorithm Overview<a class="headerlink" href="#algorithm-overview" title="Permanent link">#</a></h2>
-<p>When a <code>CandidateTrajectories</code> message is received (from either <code>~/input/trajectories_generative</code> or <code>~/input/trajectories_backup</code>), the library splits it by <code>generator_id</code> and updates an in-memory buffer so that only the most recent trajectory set for each generator is retained.</p>
-<p>A 100 ms timer then scans this buffer and drops any entry whose header stamp is older than the configured duration_time. Immediately after pruning, the timer concatenates all remaining trajectories and their accompanying <code>generator_info</code> arrays, publishes the aggregated message.</p>
-<h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
-<h3 id="topics">Topics<a class="headerlink" href="#topics" title="Permanent link">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>Direction</th>
-<th>Topic name</th>
-<th>Message Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Subscriber</td>
-<td><code>~/input/trajectories_generative</code></td>
-<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
-<td>Trajectory sets from generative planners</td>
-</tr>
-<tr>
-<td>Subscriber</td>
-<td><code>~/input/trajectories_backup</code></td>
-<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
-<td>Trajectory sets from backup planners</td>
-</tr>
-<tr>
-<td>Publisher</td>
-<td><code>~/output/trajectories</code></td>
-<td><code>autoware_internal_planning_msgs/msg/CandidateTrajectories</code></td>
-<td>Concatenated list of all buffered trajectories</td>
-</tr>
-</tbody>
-</table>
-<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
+<div><h1 id="autoware_trajectory_gate">autoware_trajectory_gate<a class="headerlink" href="#autoware_trajectory_gate" title="Permanent link">#</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">#</a></h2>
+<p>This package subscribes to multiple trajectories, selects one, and publishes it.
+The selector node monitors the interval of each trajectory topic and publishes diagnostics.</p>
+<p><img alt="overview" src="doc/overview.drawio.svg"></p>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
 <table>
 <thead>
 <tr>
 <th>Name</th>
 <th>Type</th>
 <th>Description</th>
-<th>Default</th>
-<th>Range</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>duration_time</td>
-<td>float</td>
-<td>Duration time to keep the trajectory (it will be deleted once exceeding this value)</td>
-<td>0.2</td>
-<td>≥0.0</td>
+<td>trajectory_warn_duration</td>
+<td>double</td>
+<td>Warning threshold of trajectory interval.</td>
+</tr>
+<tr>
+<td>trajectory_error_duration</td>
+<td>double</td>
+<td>Error threshold of trajectory interval.</td>
+</tr>
+<tr>
+<td>source_ids</td>
+<td>list[int]</td>
+<td>List of trajectory source IDs.</td>
+</tr>
+<tr>
+<td>source.&lt;id&gt;.name</td>
+<td>string</td>
+<td>Name of the corresponding trajectory source.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Interface</th>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Subscription</td>
+<td>~/inputs/&lt;name&gt;/trajectory</td>
+<td>autoware_planning_msgs/msg/Trajectory</td>
+<td>Input trajectory.</td>
+</tr>
+<tr>
+<td>Publisher</td>
+<td>~/output/trajectory</td>
+<td>autoware_planning_msgs/msg/Trajectory</td>
+<td>Output trajectory.</td>
+</tr>
+<tr>
+<td>Publisher</td>
+<td>~/source/status</td>
+<td>tier4_system_msgs/msg/TrajectorySourceStatus</td>
+<td>Current trajectory source.</td>
+</tr>
+<tr>
+<td>Service</td>
+<td>~/source/change</td>
+<td>tier4_system_msgs/srv/ChangeTrajectorySource</td>
+<td>Change trajectory source.</td>
 </tr>
 </tbody>
 </table></div>
@@ -22945,7 +22932,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../autoware_trajectory_adapter/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Trajectory Adapter">
+          <a href="../autoware_trajectory_concatenator/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Trajectory Concatenator">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -22955,20 +22942,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Trajectory Adapter
+                Trajectory Concatenator
               </div>
             </div>
           </a>
         
         
           
-          <a href="../autoware_trajectory_gate/" class="md-footer__link md-footer__link--next" aria-label="Next: autoware_trajectory_gate">
+          <a href="../autoware_trajectory_modifier/" class="md-footer__link md-footer__link--next" aria-label="Next: Macro Rendering Error">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                autoware_trajectory_gate
+                Macro Rendering Error
               </div>
             </div>
             <div class="md-footer__button md-icon">
