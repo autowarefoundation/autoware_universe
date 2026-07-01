@@ -1,4 +1,4 @@
-//  Copyright 2025 The Autoware Contributors
+//  Copyright 2026 The Autoware Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,8 +50,8 @@ void RedundancySwitcherAdapter::initialize(
 
   RCLCPP_INFO(
     node_->get_logger(),
-    "RedundancySwitcherAdapter UDS config: send_path=%s, recv_path=%s, send_interval_ms=%.3f, "
-    "status_timeout_ms=%.3f, is_main_ecu=%s",
+    "RedundancySwitcherAdapter UDS config: send_path=%s, recv_path=%s, "
+    "send_interval_ms=%.3f, status_timeout_ms=%.3f, is_main_ecu=%s",
     sender_path.c_str(), receiver_path.c_str(), election_request_send_interval_milli,
     election_status_timeout_milli_, is_main_ecu_ ? "true" : "false");
 
@@ -63,7 +63,7 @@ void RedundancySwitcherAdapter::initialize(
   const auto interval_ms =
     std::chrono::duration<double, std::milli>(election_request_send_interval_milli);
   timer_ = node_->create_wall_timer(interval_ms, [this]() {
-    send_election_request(ElectionRequest{/*.self_fault_request=*/false, /*.reset=*/false});
+    send_election_request(ElectionRequest{false, false, priority_});
     check_election_status_timeout();
   });
 
@@ -71,10 +71,18 @@ void RedundancySwitcherAdapter::initialize(
   const std::string hardware_id =
     is_main_ecu_ ? "main_ecu_redundancy_switcher" : "sub_ecu_redundancy_switcher";
   updater_->setHardwareID(hardware_id);
-  updater_->add("main_ecu_fault", this, &RedundancySwitcherAdapter::update_main_ecu_fault_diag);
-  updater_->add("sub_ecu_fault", this, &RedundancySwitcherAdapter::update_sub_ecu_fault_diag);
-  updater_->add("main_vcu_fault", this, &RedundancySwitcherAdapter::update_main_vcu_fault_diag);
-  updater_->add("sub_vcu_fault", this, &RedundancySwitcherAdapter::update_sub_vcu_fault_diag);
+  updater_->add(
+    "main_ecu_fault", this,
+    &RedundancySwitcherAdapter::update_main_ecu_fault_diag);
+  updater_->add(
+    "sub_ecu_fault", this,
+    &RedundancySwitcherAdapter::update_sub_ecu_fault_diag);
+  updater_->add(
+    "main_vcu_fault", this,
+    &RedundancySwitcherAdapter::update_main_vcu_fault_diag);
+  updater_->add(
+    "sub_vcu_fault", this,
+    &RedundancySwitcherAdapter::update_sub_vcu_fault_diag);
   updater_->add(
     "main_ecu_to_sub_ecu_link_fault", this,
     &RedundancySwitcherAdapter::update_main_ecu_to_sub_ecu_link_fault_diag);
@@ -94,9 +102,9 @@ void RedundancySwitcherAdapter::initialize(
     "main_vcu_to_sub_vcu_link_fault", this,
     &RedundancySwitcherAdapter::update_main_vcu_to_sub_vcu_link_fault_diag);
 
-  // Start UDS receiver thread
   is_uds_receiver_running_.store(true, std::memory_order_release);
-  uds_receiver_thread_ = std::thread(&RedundancySwitcherAdapter::uds_receive_loop, this);
+  uds_receiver_thread_ =
+    std::thread(&RedundancySwitcherAdapter::uds_receive_loop, this);
   RCLCPP_INFO(node_->get_logger(), "UDS receiver thread started");
 }
 
@@ -130,18 +138,18 @@ void RedundancySwitcherAdapter::execute(const OutputCommand & command)
   std::visit(
     overloaded{
       [this](const SelfInterruptionCommand &) {
-        send_election_request(ElectionRequest{/*.self_fault_request=*/true, /*.reset=*/false});
+        send_election_request(ElectionRequest{true, false, priority_});
       },
       [this](const ResetCommand &) {
-        send_election_request(ElectionRequest{/*.self_fault_request=*/false, /*.reset=*/true});
+        send_election_request(ElectionRequest{false, true, priority_});
       },
       [this](const UpdateAutowareReadyCommand & cmd) {
         std::lock_guard<std::mutex> lock(policy_mutex_);
         autoware_ready_ = cmd.value;
       },
-      [this](const UpdateAnotherEcuAvailabilityTimeoutCommand & cmd) {
-        std::lock_guard<std::mutex> lock(policy_mutex_);
-        another_ecu_availability_timeout_ = cmd.timed_out;
+      [this](const UpdatePriorityCommand & cmd) {
+        priority_ = cmd.priority;
+        send_election_request(ElectionRequest{false, false, priority_});
       },
       [](const auto &) {}},
     command);
@@ -174,13 +182,6 @@ void RedundancySwitcherAdapter::on_switcher_status(const ElectionStatus & status
     InputEvent{SetActiveControlUnitEvent{
       Annotated<ActiveControlUnit>{active_control_unit, path_info_annotation}}});
 }
-
-// ---------------------------------------------------------------------------
-// check_election_status_timeout — Detects timeout on each periodic timer tick.
-//
-// on_switcher_status is called only when data arrives, so a timeout cannot be
-// detected if the Switcher stops sending. This timer handles that monitoring instead.
-// ---------------------------------------------------------------------------
 
 void RedundancySwitcherAdapter::check_election_status_timeout()
 {
@@ -225,16 +226,6 @@ std::string RedundancySwitcherAdapter::node_state_to_string(uint8_t node_state)
   }
 }
 
-// ---------------------------------------------------------------------------
-// to_switcher_signals — Maps ElectionStatus.node_state to SwitcherSignals.
-//
-// Each node_state maps to exactly one of the three signals (mutually exclusive):
-//   is_stable:           ELECTABLE(1) / ELECTION_COMPLETED(4)
-//   is_self_interrupted: SELF_INTERRUPTION(7)
-//   is_faulted:          ELECTION_UNCLOSED(5) / PATH_NOT_FOUND(6)
-//   all false:           INITIALIZING(0) / WAIT_FOR_AUTOWARE(2) / IN_ELECTION(3) / unknown
-// ---------------------------------------------------------------------------
-
 SwitcherSignals RedundancySwitcherAdapter::to_switcher_signals(uint8_t node_state)
 {
   switch (node_state) {
@@ -246,14 +237,13 @@ SwitcherSignals RedundancySwitcherAdapter::to_switcher_signals(uint8_t node_stat
     case 5:  // ELECTION_UNCLOSED
     case 6:  // PATH_NOT_FOUND
       return {false, false, true};
-    default:  // INITIALIZING / WAIT_FOR_AUTOWARE / IN_ELECTION / unknown
+    default:
       return {false, false, false};
   }
 }
 
 std::string RedundancySwitcherAdapter::path_info_to_string(uint8_t path_info)
 {
-  // Bit-field: bit0=main_ecu, bit1=sub_ecu, bit2=main_vcu, bit3=sub_vcu connectivity.
   switch (path_info) {
     case 0:
       return "unknown";
@@ -273,7 +263,7 @@ std::string RedundancySwitcherAdapter::path_info_to_string(uint8_t path_info)
 ActiveControlUnit RedundancySwitcherAdapter::to_active_control_unit(uint8_t path_info)
 {
   ActiveControlUnit acu;
-  for (int i = 0; i < 4; ++i) {  // check bits for all four units
+  for (int i = 0; i < 4; ++i) {
     if (path_info & (1 << i)) {
       acu.unit_ids.push_back(i);
     }
@@ -318,8 +308,6 @@ void RedundancySwitcherAdapter::check_switcher_connection()
   std::unordered_set<std::string> node_faults;
   std::unordered_set<std::string> link_faults;
 
-  // Initialize all connections in 'judge' as trusted, then invalidate reports from nodes
-  // unreachable from this ECU.
   ElectionStatus judge = s;
   judge.main_ecu_to_main_ecu_connected = judge.main_ecu_to_sub_ecu_connected =
     judge.main_ecu_to_main_vcu_connected = judge.main_ecu_to_sub_vcu_connected =
@@ -330,8 +318,6 @@ void RedundancySwitcherAdapter::check_switcher_connection()
               judge.sub_vcu_to_main_ecu_connected = judge.sub_vcu_to_sub_ecu_connected =
                 judge.sub_vcu_to_main_vcu_connected = judge.sub_vcu_to_sub_vcu_connected = true;
 
-  // Trust propagation: if the connection from this ECU to a remote node is severed,
-  // distrust all reports originating from that node.
   auto distrust = [](bool connected, bool & a, bool & b, bool & c, bool & d) {
     if (!connected) a = b = c = d = false;
   };
@@ -382,8 +368,6 @@ void RedundancySwitcherAdapter::check_switcher_connection()
       judge.sub_vcu_to_sub_vcu_connected);
   }
 
-  // Node fault detection: if all incoming directions are either untrusted or actually disconnected
-  // → fault
   auto unreachable = [](bool jf, bool af) { return !jf || !af; };
 
   if (
@@ -410,7 +394,6 @@ void RedundancySwitcherAdapter::check_switcher_connection()
     unreachable(judge.main_vcu_to_sub_vcu_connected, s.main_vcu_to_sub_vcu_connected))
     node_faults.insert("sub_vcu");
 
-  // Link fault detection: judge=true with both endpoints healthy but actual=false → link fault
   const bool mef = node_faults.count("main_ecu");
   const bool sef = node_faults.count("sub_ecu");
   const bool mvf = node_faults.count("main_vcu");
@@ -465,37 +448,23 @@ void RedundancySwitcherAdapter::update_main_ecu_fault_diag(
     s_opt = last_election_status_;
   }
   if (no_data(s_opt, stat)) return;
-
-  const auto & s = *s_opt;
-  if (is_transitional_state(s.node_state)) {
+  if (is_transitional_state(s_opt->node_state)) {
     stat.summary(DiagStatus::OK, "Check skipped: INITIALIZING or IN_ELECTION");
     return;
   }
+  if (s_opt->node_state == 7 /* SELF_INTERRUPTION */) {
+    stat.summary(DiagStatus::OK, "Main ECU is healthy");
+    return;
+  }
+
   bool fault;
-  bool another_timeout;
   {
     std::lock_guard<std::mutex> lock(fault_mutex_);
     fault = node_fault_points_.count("main_ecu");
   }
-  {
-    std::lock_guard<std::mutex> lock(policy_mutex_);
-    another_timeout = another_ecu_availability_timeout_;
-  }
-  if (s.node_state == 7 /* SELF_INTERRUPTION */) {
-    stat.summary(DiagStatus::OK, "Main ECU is healthy");
-    return;
-  }
-  // main ecu
-  if (is_main_ecu_ && fault) {
-    stat.summary(DiagStatus::ERROR, "Main ECU fault detected");
-    return;
-  }
-  // sub ecu
-  if (!is_main_ecu_ && another_timeout && fault) {
-    stat.summary(DiagStatus::ERROR, "Main ECU fault detected");
-    return;
-  }
-  stat.summary(DiagStatus::OK, "Main ECU is healthy");
+  stat.summary(
+    fault ? DiagStatus::ERROR : DiagStatus::OK,
+    fault ? "Main ECU fault detected" : "Main ECU is healthy");
 }
 
 void RedundancySwitcherAdapter::update_sub_ecu_fault_diag(

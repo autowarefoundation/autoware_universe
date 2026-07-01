@@ -1,20 +1,20 @@
 <library path="autoware_redundancy_switcher_interface_plugins">
   <class
-    name="autoware::redundancy_switcher::SimpleSwitcherAdapter"
-    type="autoware::redundancy_switcher::SimpleSwitcherAdapter"
-    base_class_type="autoware::redundancy_switcher::IAdapterPlugin">
-    <description>Simple topic-based switcher adapter plugin.</description>
-  </class>
-  <class
     name="autoware::redundancy_switcher::RedundancySwitcherAdapter"
     type="autoware::redundancy_switcher::RedundancySwitcherAdapter"
     base_class_type="autoware::redundancy_switcher::IAdapterPlugin">
-    <description>UDS-based switcher adapter for redundancy_switcher (https://github.com/tier4/redundancy_switcher). Communicates with the switcher process via Unix Domain Sockets using CBOR-serialized ElectionRequest/ElectionStatus messages. Implements election-based fault detection for Main ECU / Sub ECU / Main VCU / Sub VCU topology.</description>
+    <description>UDS-based switcher adapter for redundancy_switcher (https://github.com/tier4/redundancy_switcher). Communicates with the switcher process via Unix Domain Sockets using CBOR-serialized ElectionRequest/ElectionStatus messages. Supports priority-based switching via UpdatePriorityCommand in addition to self_fault_request.</description>
   </class>
   <class
     name="autoware::redundancy_switcher::NonRedundantSwitcherAdapter"
     type="autoware::redundancy_switcher::NonRedundantSwitcherAdapter"
     base_class_type="autoware::redundancy_switcher::IAdapterPlugin">
     <description>Adapter for non-redundant (single-ECU) systems. Sets switcher signals to permanently stable and publishes active_control_unit [0, 2] at startup. All fault-related commands are ignored.</description>
+  </class>
+  <class
+    name="autoware::redundancy_switcher::SimpleSwitcherAdapter"
+    type="autoware::redundancy_switcher::SimpleSwitcherAdapter"
+    base_class_type="autoware::redundancy_switcher::IAdapterPlugin">
+    <description>Topic-based switcher adapter that works with SimpleSwitcherNode for simulation and testing. Supports both self_interruption and priority-based switching.</description>
   </class>
 </library>

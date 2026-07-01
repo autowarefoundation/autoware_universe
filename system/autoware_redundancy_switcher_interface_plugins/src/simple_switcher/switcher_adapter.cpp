@@ -29,6 +29,8 @@ namespace
 constexpr char kResetTopic[] = "/system/simple_switcher/request/reset";
 constexpr char kSelfMainTopic[] = "/system/simple_switcher/request/self_interruption/main_ecu";
 constexpr char kSelfSubTopic[] = "/system/simple_switcher/request/self_interruption/sub_ecu";
+constexpr char kPriorityMainTopic[] = "/system/simple_switcher/request/priority/main_ecu";
+constexpr char kPrioritySubTopic[] = "/system/simple_switcher/request/priority/sub_ecu";
 constexpr char kActiveTopic[] = "/system/simple_switcher/status/active_control_unit";
 constexpr char kSignalsMainTopic[] = "/system/simple_switcher/status/switcher_signals/main_ecu";
 constexpr char kSignalsSubTopic[] = "/system/simple_switcher/status/switcher_signals/sub_ecu";
@@ -52,10 +54,12 @@ void SimpleSwitcherAdapter::initialize(rclcpp::Node * node, std::shared_ptr<Even
   const auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable();
   const auto signals_topic = is_main_ecu_ ? kSignalsMainTopic : kSignalsSubTopic;
   const auto annotation_topic = is_main_ecu_ ? kAnnotationMainTopic : kAnnotationSubTopic;
+  const auto priority_topic = is_main_ecu_ ? kPriorityMainTopic : kPrioritySubTopic;
 
   pub_reset_ = node_->create_publisher<EmptyMsg>(kResetTopic, qos);
   pub_self_main_ = node_->create_publisher<EmptyMsg>(kSelfMainTopic, qos);
   pub_self_sub_ = node_->create_publisher<EmptyMsg>(kSelfSubTopic, qos);
+  pub_priority_ = node_->create_publisher<UInt16Msg>(priority_topic, qos);
 
   sub_active_control_unit_ = node_->create_subscription<ActiveControlUnitMsg>(
     kActiveTopic, qos,
@@ -71,9 +75,9 @@ void SimpleSwitcherAdapter::initialize(rclcpp::Node * node, std::shared_ptr<Even
   RCLCPP_INFO(
     node_->get_logger(),
     "SimpleSwitcherAdapter initialized: is_main_ecu=%s, reset=%s, self_main=%s, self_sub=%s, "
-    "signals=%s, annotation=%s",
-    is_main_ecu_ ? "true" : "false", kResetTopic, kSelfMainTopic, kSelfSubTopic, signals_topic,
-    annotation_topic);
+    "priority=%s, signals=%s, annotation=%s",
+    is_main_ecu_ ? "true" : "false", kResetTopic, kSelfMainTopic, kSelfSubTopic, priority_topic,
+    signals_topic, annotation_topic);
 }
 
 void SimpleSwitcherAdapter::execute(const OutputCommand & command)
@@ -87,6 +91,11 @@ void SimpleSwitcherAdapter::execute(const OutputCommand & command)
         } else {
           pub_self_sub_->publish(EmptyMsg{});
         }
+      },
+      [this](const UpdatePriorityCommand & cmd) {
+        UInt16Msg msg;
+        msg.data = cmd.priority;
+        pub_priority_->publish(msg);
       },
       [](const auto &) {}},
     command);

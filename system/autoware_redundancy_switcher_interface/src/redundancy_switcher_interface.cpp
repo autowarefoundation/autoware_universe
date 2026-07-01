@@ -13,6 +13,9 @@
 // limitations under the License.
 #include "redundancy_switcher_interface.hpp"
 
+#include "command_mode_subsystem_adapter.hpp"
+#include "driving_mode_subsystem_adapter.hpp"
+
 #include "rclcpp_components/register_node_macro.hpp"
 
 #include <memory>
@@ -24,11 +27,9 @@ namespace autoware::redundancy_switcher
 
 RedundancySwitcherInterface::RedundancySwitcherInterface(const rclcpp::NodeOptions & options)
 : Node("redundancy_switcher_interface", options),
-  switcher_plugin_loader_(
+  plugin_loader_(
     "autoware_redundancy_switcher_interface", "autoware::redundancy_switcher::IAdapterPlugin")
 {
-  const bool is_redundant = this->declare_parameter<bool>("is_redundant", true);
-
   processor_ = std::make_shared<Processor>();
   command_bus_ = std::make_shared<CommandBus>();
   gateway_ = std::make_shared<EventGateway>(processor_, command_bus_);
@@ -41,31 +42,30 @@ RedundancySwitcherInterface::RedundancySwitcherInterface(const rclcpp::NodeOptio
   command_bus_->add_handler(diag_adapter_);
   diag_adapter_->initialize(this, gateway_);
 
-  subsystem_adapter_ = std::make_shared<SubSystemAdapter>();
+  const bool use_driving_mode = this->declare_parameter<bool>("use_driving_mode", false);
+  if (use_driving_mode) {
+    subsystem_adapter_ = std::make_shared<DrivingModeSubSystemAdapter>();
+  } else {
+    subsystem_adapter_ = std::make_shared<CommandModeSubSystemAdapter>();
+  }
   command_bus_->add_handler(subsystem_adapter_);
   subsystem_adapter_->initialize(this, gateway_);
 
-  if (is_redundant) {
-    this->declare_parameter("switcher_plugin", rclcpp::ParameterType::PARAMETER_STRING);
-    const auto switcher_plugin_name = this->get_parameter("switcher_plugin").as_string();
-    if (switcher_plugin_name.empty()) {
-      throw std::runtime_error(
-        "switcher_plugin is empty but is_redundant=true. Set switcher_plugin to a valid "
-        "IAdapterPlugin class name, or set is_redundant=false for a non-redundant system.");
-    }
-    try {
-      switcher_plugin_ = switcher_plugin_loader_.createSharedInstance(switcher_plugin_name);
-    } catch (const pluginlib::PluginlibException & e) {
-      throw std::runtime_error(
-        "Failed to load switcher_plugin '" + switcher_plugin_name + "': " + e.what());
-    }
-    command_bus_->add_handler(switcher_plugin_);
-    switcher_plugin_->initialize(this, gateway_);
-  } else {
-    gateway_->submit(
-      InputEvent{SetSwitcherSignalsEvent{
-        Annotated<SwitcherSignals>{{true, false, false}, "non-redundant system"}}});
+  this->declare_parameter("switcher_plugin", rclcpp::ParameterType::PARAMETER_STRING);
+  const auto switcher_plugin_name = this->get_parameter("switcher_plugin").as_string();
+  if (switcher_plugin_name.empty()) {
+    throw std::runtime_error(
+      "switcher_plugin is not set. Specify a valid IAdapterPlugin class name "
+      "(e.g., autoware::redundancy_switcher::NonRedundantSwitcherAdapter).");
   }
+  try {
+    switcher_plugin_ = plugin_loader_.createSharedInstance(switcher_plugin_name);
+  } catch (const pluginlib::PluginlibException & e) {
+    throw std::runtime_error(
+      "Failed to load switcher_plugin '" + switcher_plugin_name + "': " + e.what());
+  }
+  command_bus_->add_handler(switcher_plugin_);
+  switcher_plugin_->initialize(this, gateway_);
 }
 
 RedundancySwitcherInterface::~RedundancySwitcherInterface() = default;

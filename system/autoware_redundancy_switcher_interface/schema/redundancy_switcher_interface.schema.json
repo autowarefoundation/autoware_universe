@@ -19,21 +19,21 @@
     "base_params": {
       "type": "object",
       "properties": {
-        "is_redundant": {
+        "use_driving_mode": {
           "type": "boolean",
-          "description": "Set to false for non-redundant (single-ECU) systems. When false, switcher_plugin is not loaded and the system is treated as permanently stable.",
-          "default": true
+          "description": "Set to true to receive DrivingMode commands from the subsystem; false to receive CommandMode commands.",
+          "default": false
         },
-        "switcher_plugin": {
-          "type": "string",
-          "description": "pluginlib class name for the switcher-side adapter (required when is_redundant=true). Provided by the plugin package.",
-          "default": ""
+        "availability_timeout_milli": {
+          "type": "number",
+          "description": "Elapsed time [ms] without CommandModeAvailability from the peer ECU before the peer is considered unavailable. Only used when use_driving_mode=false.",
+          "exclusiveMinimum": 0
         },
         "diag": {
           "$ref": "#/definitions/diag"
         }
       },
-      "required": ["diag"],
+      "required": ["use_driving_mode", "diag"],
       "additionalProperties": true
     }
   },

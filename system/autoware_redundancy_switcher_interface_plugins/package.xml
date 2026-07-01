@@ -14,7 +14,7 @@
   <depend>autoware_redundancy_switcher_interface</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
-  <depend>nlohmann-json3-dev</depend>
+  <depend>nlohmann-json-dev</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

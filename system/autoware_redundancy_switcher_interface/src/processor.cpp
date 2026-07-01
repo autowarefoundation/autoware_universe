@@ -37,7 +37,8 @@ std::vector<OutputCommand> Processor::handle(const InputEvent & event)
       [this](const SetActiveControlUnitEvent & e) { return set_active_control_unit(e); },
       [this](const SetAnotherEcuAvailabilityTimeoutEvent & e) {
         return set_another_ecu_availability_timeout(e);
-      }},
+      },
+      [this](const SetPriorityEvent & e) { return set_priority(e); }},
     event);
 }
 
@@ -218,6 +219,20 @@ std::vector<OutputCommand> Processor::set_another_ecu_availability_timeout(
   return {
     UpdateAnotherEcuAvailabilityTimeoutCommand{e.timed_out.value},
     LogCommand{e.timed_out.value ? LogLevel::Warn : LogLevel::Info, msg}};
+}
+
+std::vector<OutputCommand> Processor::set_priority(const SetPriorityEvent & e)
+{
+  const bool changed = !state_.priority.has_value() || *state_.priority != e.value.value;
+  state_.priority = e.value.value;
+  if (!changed) {
+    return {};
+  }
+  return {
+    UpdatePriorityCommand{e.value.value},
+    LogCommand{
+      LogLevel::Info, "Priority updated: " + std::to_string(e.value.value) +
+                        (e.value.annotation.empty() ? "" : " (" + e.value.annotation + ")")}};
 }
 
 }  // namespace autoware::redundancy_switcher

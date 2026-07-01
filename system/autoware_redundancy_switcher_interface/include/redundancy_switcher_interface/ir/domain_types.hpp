@@ -64,6 +64,7 @@ struct DomainSnapshot
   std::optional<Annotated<SwitcherSignals>> switcher;
   // nullopt = not yet evaluated (immediately after startup)
   std::optional<bool> another_ecu_availability_timeout;
+  std::optional<uint16_t> priority;
 };
 
 }  // namespace autoware::redundancy_switcher

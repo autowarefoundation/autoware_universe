@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "subsystem_adapter.hpp"
+#include "command_mode_subsystem_adapter.hpp"
 
 #include <autoware_command_mode_types/modes.hpp>
 #include <redundancy_switcher_interface/detail/overloaded.hpp>
@@ -27,13 +27,14 @@
 namespace autoware::redundancy_switcher
 {
 
-void SubSystemAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
+void CommandModeSubSystemAdapter::initialize(
+  rclcpp::Node * node, std::shared_ptr<EventGateway> gateway)
 {
   if (!node) {
-    throw std::invalid_argument("SubSystemAdapter: node is null");
+    throw std::invalid_argument("CommandModeSubSystemAdapter: node is null");
   }
   if (!gateway) {
-    throw std::invalid_argument("SubSystemAdapter: gateway is null");
+    throw std::invalid_argument("CommandModeSubSystemAdapter: gateway is null");
   }
 
   node_ = node;
@@ -48,41 +49,48 @@ void SubSystemAdapter::initialize(rclcpp::Node * node, std::shared_ptr<EventGate
 
   sub_velocity_report_ = node_->create_subscription<VelocityReport>(
     "~/input/velocity", qos,
-    std::bind(&SubSystemAdapter::on_velocity_report, this, std::placeholders::_1));
+    std::bind(
+      &CommandModeSubSystemAdapter::on_velocity_report, this, std::placeholders::_1));
 
   sub_control_mode_ = node_->create_subscription<ControlModeReport>(
     "~/input/control_mode", qos,
-    std::bind(&SubSystemAdapter::on_control_mode_report, this, std::placeholders::_1));
+    std::bind(
+      &CommandModeSubSystemAdapter::on_control_mode_report, this, std::placeholders::_1));
 
   sub_command_mode_request_ = node_->create_subscription<CommandModeRequest>(
     "~/input/command_mode_request", qos,
-    std::bind(&SubSystemAdapter::on_command_mode_request, this, std::placeholders::_1));
+    std::bind(
+      &CommandModeSubSystemAdapter::on_command_mode_request, this, std::placeholders::_1));
 
   sub_command_mode_availability_ = node_->create_subscription<CommandModeAvailability>(
     "~/input/command_mode_availability", qos,
-    std::bind(&SubSystemAdapter::on_command_mode_availability, this, std::placeholders::_1));
+    std::bind(
+      &CommandModeSubSystemAdapter::on_command_mode_availability, this, std::placeholders::_1));
 
   srv_set_initializing_ = node_->create_service<SetBool>(
     "~/set_initializing",
     std::bind(
-      &SubSystemAdapter::on_set_initializing, this, std::placeholders::_1, std::placeholders::_2));
+      &CommandModeSubSystemAdapter::on_set_initializing, this, std::placeholders::_1,
+      std::placeholders::_2));
 
   srv_reset_ = node_->create_service<ResetRedundancySwitcher>(
     "~/service/reset",
     std::bind(
-      &SubSystemAdapter::on_reset_request, this, std::placeholders::_1, std::placeholders::_2));
+      &CommandModeSubSystemAdapter::on_reset_request, this, std::placeholders::_1,
+      std::placeholders::_2));
 
   // Publishers
   pub_active_control_unit_ = node_->create_publisher<ActiveControlUnitMsg>(
     "~/output/active_control_unit", rclcpp::QoS(1).transient_local());
 }
 
-void SubSystemAdapter::submit_event(const InputEvent & event)
+void CommandModeSubSystemAdapter::submit_event(const InputEvent & event)
 {
   gateway_->submit(event);
 }
 
-void SubSystemAdapter::on_command_mode_request(const CommandModeRequest::ConstSharedPtr msg)
+void CommandModeSubSystemAdapter::on_command_mode_request(
+  const CommandModeRequest::ConstSharedPtr msg)
 {
   namespace modes = autoware::command_mode_types::modes;
 
@@ -103,14 +111,15 @@ void SubSystemAdapter::on_command_mode_request(const CommandModeRequest::ConstSh
   }
 }
 
-void SubSystemAdapter::on_command_mode_availability(
+void CommandModeSubSystemAdapter::on_command_mode_availability(
   const CommandModeAvailability::ConstSharedPtr msg)
 {
   check_sub_ecu_error(msg);
   check_availability_timeout(msg);
 }
 
-void SubSystemAdapter::check_sub_ecu_error(const CommandModeAvailability::ConstSharedPtr msg)
+void CommandModeSubSystemAdapter::check_sub_ecu_error(
+  const CommandModeAvailability::ConstSharedPtr msg)
 {
   namespace modes = autoware::command_mode_types::modes;
 
@@ -127,7 +136,8 @@ void SubSystemAdapter::check_sub_ecu_error(const CommandModeAvailability::ConstS
   }
 }
 
-void SubSystemAdapter::check_availability_timeout(const CommandModeAvailability::ConstSharedPtr msg)
+void CommandModeSubSystemAdapter::check_availability_timeout(
+  const CommandModeAvailability::ConstSharedPtr msg)
 {
   namespace modes = autoware::command_mode_types::modes;
   const auto now = node_->now();
@@ -169,7 +179,7 @@ void SubSystemAdapter::check_availability_timeout(const CommandModeAvailability:
   }
 }
 
-void SubSystemAdapter::on_set_initializing(
+void CommandModeSubSystemAdapter::on_set_initializing(
   const SetBool::Request::SharedPtr request, SetBool::Response::SharedPtr response)
 {
   const auto ready = request->data ? AutowareReady::False : AutowareReady::True;
@@ -181,7 +191,7 @@ void SubSystemAdapter::on_set_initializing(
   RCLCPP_INFO(node_->get_logger(), "%s", response->message.c_str());
 }
 
-void SubSystemAdapter::on_reset_request(
+void CommandModeSubSystemAdapter::on_reset_request(
   const ResetRedundancySwitcher::Request::SharedPtr request [[maybe_unused]],
   ResetRedundancySwitcher::Response::SharedPtr response)
 {
@@ -219,7 +229,7 @@ void SubSystemAdapter::on_reset_request(
   response->status.message = "Internal error: no result from processor.";
 }
 
-void SubSystemAdapter::on_velocity_report(const VelocityReport::ConstSharedPtr msg)
+void CommandModeSubSystemAdapter::on_velocity_report(const VelocityReport::ConstSharedPtr msg)
 {
   constexpr auto th_stopped_velocity = 0.001;
   const bool is_stopped = std::abs(msg->longitudinal_velocity) < th_stopped_velocity;
@@ -228,7 +238,8 @@ void SubSystemAdapter::on_velocity_report(const VelocityReport::ConstSharedPtr m
       is_stopped ? VelocityStatus::Stopped : VelocityStatus::Moving, "velocity report"}}});
 }
 
-void SubSystemAdapter::on_control_mode_report(const ControlModeReport::ConstSharedPtr msg)
+void CommandModeSubSystemAdapter::on_control_mode_report(
+  const ControlModeReport::ConstSharedPtr msg)
 {
   const auto mode =
     (msg->mode == ControlModeReport::AUTONOMOUS) ? ControlMode::Auto : ControlMode::Manual;
@@ -236,7 +247,7 @@ void SubSystemAdapter::on_control_mode_report(const ControlModeReport::ConstShar
     InputEvent{SetControlModeEvent{Annotated<ControlMode>{mode, "control mode report"}}});
 }
 
-void SubSystemAdapter::execute(const OutputCommand & command)
+void CommandModeSubSystemAdapter::execute(const OutputCommand & command)
 {
   std::visit(
     overloaded{
@@ -245,7 +256,8 @@ void SubSystemAdapter::execute(const OutputCommand & command)
     command);
 }
 
-void SubSystemAdapter::send_active_control_unit(const UpdateActiveControlUnitCommand & command)
+void CommandModeSubSystemAdapter::send_active_control_unit(
+  const UpdateActiveControlUnitCommand & command)
 {
   {
     std::lock_guard<std::mutex> lock(state_mutex_);

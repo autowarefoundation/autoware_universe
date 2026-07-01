@@ -66,10 +66,15 @@ struct SetActiveControlUnitEvent
   Annotated<ActiveControlUnit> value;
 };
 
+struct SetPriorityEvent
+{
+  Annotated<uint16_t> value;
+};
+
 using InputEvent = std::variant<
   SelfInterruptionEvent, ResetEvent, SetAutowareReadyEvent, SetVelocityStatusEvent,
   SetControlModeEvent, SetSwitcherSignalsEvent, SetActiveControlUnitEvent,
-  SetAnotherEcuAvailabilityTimeoutEvent>;
+  SetAnotherEcuAvailabilityTimeoutEvent, SetPriorityEvent>;
 
 }  // namespace autoware::redundancy_switcher
 #endif  // REDUNDANCY_SWITCHER_INTERFACE__IR__INPUT_EVENTS_HPP_

@@ -21,6 +21,7 @@
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int8.hpp>
+#include <std_msgs/msg/u_int16.hpp>
 #include <tier4_system_msgs/msg/active_control_unit.hpp>
 
 #include <memory>
@@ -43,9 +44,13 @@ private:
   using EmptyMsg = std_msgs::msg::Empty;
   using StringMsg = std_msgs::msg::String;
   using UInt8Msg = std_msgs::msg::UInt8;
+  using UInt16Msg = std_msgs::msg::UInt16;
   using ActiveControlUnitMsg = tier4_system_msgs::msg::ActiveControlUnit;
 
+public:
   static SwitcherSignals decode_signals(uint8_t encoded);
+
+private:
 
   void on_active_control_unit(const ActiveControlUnitMsg & msg);
   void on_switcher_signals(const UInt8Msg & msg);
@@ -58,6 +63,7 @@ private:
   rclcpp::Publisher<EmptyMsg>::SharedPtr pub_reset_;
   rclcpp::Publisher<EmptyMsg>::SharedPtr pub_self_main_;
   rclcpp::Publisher<EmptyMsg>::SharedPtr pub_self_sub_;
+  rclcpp::Publisher<UInt16Msg>::SharedPtr pub_priority_;
 
   rclcpp::Subscription<ActiveControlUnitMsg>::SharedPtr sub_active_control_unit_;
   rclcpp::Subscription<UInt8Msg>::SharedPtr sub_switcher_signals_;

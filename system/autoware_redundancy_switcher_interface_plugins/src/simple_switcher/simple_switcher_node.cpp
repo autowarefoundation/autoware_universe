@@ -29,6 +29,8 @@ constexpr char kSelfInterruptionMainTopic[] =
   "/system/simple_switcher/request/self_interruption/main_ecu";
 constexpr char kSelfInterruptionSubTopic[] =
   "/system/simple_switcher/request/self_interruption/sub_ecu";
+constexpr char kPriorityMainTopic[] = "/system/simple_switcher/request/priority/main_ecu";
+constexpr char kPrioritySubTopic[] = "/system/simple_switcher/request/priority/sub_ecu";
 constexpr char kActiveStatusTopic[] = "/system/simple_switcher/status/active_control_unit";
 constexpr char kSignalsStatusMainTopic[] =
   "/system/simple_switcher/status/switcher_signals/main_ecu";
@@ -67,6 +69,12 @@ SimpleSwitcherNode::SimpleSwitcherNode(const rclcpp::NodeOptions & options)
   sub_self_sub_ = create_subscription<std_msgs::msg::Empty>(
     kSelfInterruptionSubTopic, qos,
     [this](const std_msgs::msg::Empty::ConstSharedPtr) { on_self_sub(); });
+  sub_priority_main_ = create_subscription<std_msgs::msg::UInt16>(
+    kPriorityMainTopic, qos,
+    [this](const std_msgs::msg::UInt16::ConstSharedPtr msg) { on_priority_main(msg->data); });
+  sub_priority_sub_ = create_subscription<std_msgs::msg::UInt16>(
+    kPrioritySubTopic, qos,
+    [this](const std_msgs::msg::UInt16::ConstSharedPtr msg) { on_priority_sub(msg->data); });
 
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -162,6 +170,42 @@ void SimpleSwitcherNode::on_reset()
     annotation_ = "stable active=main (reset)";
   }
   publish_status();
+}
+
+void SimpleSwitcherNode::on_priority_main(uint16_t priority)
+{
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    main_priority_ = priority;
+    apply_priority_based_switching();
+  }
+  publish_status();
+}
+
+void SimpleSwitcherNode::on_priority_sub(uint16_t priority)
+{
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    sub_priority_ = priority;
+    apply_priority_based_switching();
+  }
+  publish_status();
+}
+
+void SimpleSwitcherNode::apply_priority_based_switching()
+{
+  // Lower value = higher priority. Equal priorities keep the current active ECU.
+  if (main_priority_ < sub_priority_) {
+    main_interrupted_ = false;
+    sub_interrupted_ = false;
+    active_ids_ = {static_cast<uint8_t>(main_ecu_id_)};
+    annotation_ = "priority active=main priority=" + std::to_string(main_priority_);
+  } else if (sub_priority_ < main_priority_) {
+    main_interrupted_ = false;
+    sub_interrupted_ = false;
+    active_ids_ = {static_cast<uint8_t>(sub_ecu_id_)};
+    annotation_ = "priority active=sub priority=" + std::to_string(sub_priority_);
+  }
 }
 
 void SimpleSwitcherNode::publish_status()
