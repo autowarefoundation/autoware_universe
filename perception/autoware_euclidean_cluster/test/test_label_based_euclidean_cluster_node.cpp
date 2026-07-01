@@ -14,6 +14,7 @@
 
 #include "../src/label_based_euclidean_cluster_node.hpp"
 
+#include <autoware/ptv3/experimental/semantic_label.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -33,6 +34,8 @@
 
 namespace autoware::euclidean_cluster
 {
+using autoware::ptv3::experimental::SemanticLabel;
+
 class LabelClusterConfigBehavior : public ::testing::Test
 {
 protected:
@@ -134,14 +137,10 @@ protected:
   }
 };
 
-TEST_F(LabelClusterConfigBehavior, AcceptsLowercaseConfiguredLabels)
+TEST_F(LabelClusterConfigBehavior, AcceptsLowercaseConfiguredLabelOverrides)
 {
   // Arrange
   const auto options = make_node_options({
-    rclcpp::Parameter("class_names.car", std::string("car")),
-    rclcpp::Parameter("class_names.truck", std::string("truck")),
-    rclcpp::Parameter("class_names.tractor_unit", std::string("trailer")),
-    rclcpp::Parameter("class_names.pedestrian", std::string("pedestrian")),
     rclcpp::Parameter("label_cluster_params.pedestrian.tolerance_m", 0.3),
     rclcpp::Parameter(
       "confusable_label_groups.truck_trailer.labels", std::vector<std::string>{"truck", "trailer"}),
@@ -153,10 +152,6 @@ TEST_F(LabelClusterConfigBehavior, AcceptsLowercaseConfiguredLabels)
   auto node = std::make_unique<LabelBasedEuclideanClusterNode>(options);
 
   // Assert: constructor accepts lowercase labels and dynamic nested overrides are declared.
-  EXPECT_TRUE(node->has_parameter("class_names.car"));
-  EXPECT_TRUE(node->has_parameter("class_names.truck"));
-  EXPECT_TRUE(node->has_parameter("class_names.tractor_unit"));
-  EXPECT_TRUE(node->has_parameter("class_names.pedestrian"));
   EXPECT_TRUE(node->has_parameter("label_cluster_params.pedestrian.tolerance_m"));
   EXPECT_TRUE(node->has_parameter("confusable_label_groups.truck_trailer.labels"));
   EXPECT_TRUE(node->has_parameter("confusable_label_groups.truck_trailer.cross_label_tolerance_m"));
@@ -167,8 +162,6 @@ TEST_F(LabelClusterConfigBehavior, CreatesExecuterForDynamicOverrideLabel)
 {
   // Arrange
   const auto options = make_node_options({
-    rclcpp::Parameter("class_names.car", std::string("car")),
-    rclcpp::Parameter("class_names.tractor_unit", std::string("trailer")),
     rclcpp::Parameter("label_cluster_params.trailer.tolerance_m", 0.4),
     rclcpp::Parameter(
       "label_cluster_params.trailer.min_points_per_cluster", static_cast<int64_t>(7)),
@@ -182,26 +175,20 @@ TEST_F(LabelClusterConfigBehavior, CreatesExecuterForDynamicOverrideLabel)
   EXPECT_TRUE(node->has_parameter("label_cluster_params.trailer.min_points_per_cluster"));
 }
 
-TEST_F(LabelClusterConfigBehavior, ThrowsWhenNoSupportedClassConfigured)
+TEST_F(LabelClusterConfigBehavior, AcceptsOptionsWithoutClassNames)
 {
-  const auto options = make_node_options({
-    rclcpp::Parameter("class_names.drivable_surface", std::string("ignore")),
-    rclcpp::Parameter("class_names.vegetation", std::string("ignore")),
-  });
+  const auto options = make_node_options({});
 
-  EXPECT_THROW(
-    {
-      auto node = std::make_unique<LabelBasedEuclideanClusterNode>(options);
-      static_cast<void>(node);
-    },
-    std::runtime_error);
+  EXPECT_NO_THROW({
+    auto node = std::make_unique<LabelBasedEuclideanClusterNode>(options);
+    static_cast<void>(node);
+  });
 }
 
 TEST_F(LabelClusterConfigBehavior, ThrowsWhenShapePolicyIsInvalid)
 {
   const auto options = make_node_options({
     rclcpp::Parameter("shape_policy", static_cast<int64_t>(2)),
-    rclcpp::Parameter("class_names.car", std::string("car")),
   });
 
   EXPECT_THROW(
@@ -215,8 +202,6 @@ TEST_F(LabelClusterConfigBehavior, ThrowsWhenShapePolicyIsInvalid)
 TEST_F(LabelClusterConfigBehavior, ThrowsWhenConfusableGroupMissingCrossLabelTolerance)
 {
   const auto options = make_node_options({
-    rclcpp::Parameter("class_names.truck", std::string("truck")),
-    rclcpp::Parameter("class_names.semi_trailer", std::string("trailer")),
     rclcpp::Parameter(
       "confusable_label_groups.truck_trailer.labels", std::vector<std::string>{"truck", "trailer"}),
     rclcpp::Parameter("confusable_label_groups.truck_trailer.max_merged_size_m", 25.0),
@@ -233,8 +218,6 @@ TEST_F(LabelClusterConfigBehavior, ThrowsWhenConfusableGroupMissingCrossLabelTol
 TEST_F(LabelClusterConfigBehavior, ThrowsWhenConfusableGroupMissingMaxMergedSize)
 {
   const auto options = make_node_options({
-    rclcpp::Parameter("class_names.truck", std::string("truck")),
-    rclcpp::Parameter("class_names.semi_trailer", std::string("trailer")),
     rclcpp::Parameter(
       "confusable_label_groups.truck_trailer.labels", std::vector<std::string>{"truck", "trailer"}),
     rclcpp::Parameter("confusable_label_groups.truck_trailer.cross_label_tolerance_m", 0.5),
@@ -250,9 +233,7 @@ TEST_F(LabelClusterConfigBehavior, ThrowsWhenConfusableGroupMissingMaxMergedSize
 
 TEST_F(LabelClusterConfigBehavior, PublishesDetectedObjectsForSemanticInput)
 {
-  const auto options = make_node_options({
-    rclcpp::Parameter("class_names.car", std::string("car")),
-  });
+  const auto options = make_node_options({});
 
   auto cluster_node = std::make_shared<LabelBasedEuclideanClusterNode>(options);
   auto helper_node = std::make_shared<rclcpp::Node>("label_cluster_integration_helper");
@@ -303,6 +284,59 @@ TEST_F(LabelClusterConfigBehavior, PublishesDetectedObjectsForSemanticInput)
   ASSERT_NE(output_msg, nullptr);
   EXPECT_EQ(output_msg->header.frame_id, "map");
   EXPECT_FALSE(output_msg->objects.empty());
+}
+
+TEST_F(LabelClusterConfigBehavior, PublishesSemanticNonObjectsAsSegments)
+{
+  const auto options = make_node_options({});
+
+  auto cluster_node = std::make_shared<LabelBasedEuclideanClusterNode>(options);
+  auto helper_node = std::make_shared<rclcpp::Node>("label_cluster_segments_helper");
+
+  std::mutex mutex;
+  std::condition_variable cv;
+  bool received = false;
+  sensor_msgs::msg::PointCloud2::SharedPtr output_msg;
+
+  auto output_sub = helper_node->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "/output_segments", rclcpp::QoS{1}, [&](sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+      std::lock_guard<std::mutex> lock(mutex);
+      output_msg = std::move(msg);
+      received = true;
+      cv.notify_one();
+    });
+
+  auto input_pub =
+    helper_node->create_publisher<sensor_msgs::msg::PointCloud2>("/input", rclcpp::SensorDataQoS());
+
+  rclcpp::executors::SingleThreadedExecutor executor;
+  executor.add_node(cluster_node);
+  executor.add_node(helper_node);
+
+  std::thread spin_thread([&executor]() { executor.spin(); });
+
+  const auto wait_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+  while ((input_pub->get_subscription_count() == 0 || output_sub->get_publisher_count() == 0) &&
+         std::chrono::steady_clock::now() < wait_deadline) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  auto input_msg =
+    make_semantic_pointcloud(4, static_cast<std::uint8_t>(SemanticLabel::FLAT_SURFACE), 0.95F);
+  input_pub->publish(input_msg);
+
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    cv.wait_for(lock, std::chrono::seconds(2), [&]() { return received; });
+  }
+
+  executor.cancel();
+  spin_thread.join();
+
+  ASSERT_TRUE(received);
+  ASSERT_NE(output_msg, nullptr);
+  EXPECT_EQ(output_msg->header.frame_id, "map");
+  EXPECT_EQ(output_msg->width, 4U);
 }
 
 }  // namespace autoware::euclidean_cluster

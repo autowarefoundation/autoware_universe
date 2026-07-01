@@ -40,8 +40,9 @@ def launch_setup(context, *args, **kwargs):
         plugin="autoware::euclidean_cluster::LabelBasedEuclideanClusterNode",
         name="label_based_euclidean_cluster",
         remappings=[
-            ("input", LaunchConfiguration("input_pointcloud")),
-            ("output", LaunchConfiguration("output_objects")),
+            ("input/pointcloud", LaunchConfiguration("input/pointcloud")),
+            ("output/objects", LaunchConfiguration("output/objects")),
+            ("output/pointcloud", LaunchConfiguration("output/pointcloud")),
         ],
         parameters=[
             load_composable_node_param("param_path"),
@@ -96,8 +97,9 @@ def generate_launch_description():
     return launch.LaunchDescription(
         [
             agnocast_env,
-            add_launch_arg("input_pointcloud", "/perception/ptv3/segmented/pointcloud"),
-            add_launch_arg("output_objects", "objects"),
+            add_launch_arg("input/pointcloud", "~/input/segmented/pointcloud"),
+            add_launch_arg("output/objects", "~/output/objects"),
+            add_launch_arg("output/pointcloud", "~/output/pointcloud"),
             add_launch_arg("use_pointcloud_container", "false"),
             add_launch_arg("pointcloud_container_name", "pointcloud_container"),
             add_launch_arg("shape_policy", "0"),
