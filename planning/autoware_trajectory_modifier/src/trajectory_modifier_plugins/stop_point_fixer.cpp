@@ -83,7 +83,8 @@ bool StopPointFixer::modify_trajectory(TrajectoryPoints & traj_points, const Inp
 {
   if (!is_trajectory_modification_required(traj_points, input)) return false;
 
-  utils::replace_trajectory_with_stop_point(traj_points, input.current_odometry->pose.pose);
+  utils::replace_trajectory_with_stop_point(
+    traj_points, input.current_odometry->pose.pose, trajectory_time_step_);
   auto clock_ptr = get_node_ptr()->get_clock();
   RCLCPP_DEBUG_THROTTLE(
     get_node_ptr()->get_logger(), *clock_ptr, 5000,
