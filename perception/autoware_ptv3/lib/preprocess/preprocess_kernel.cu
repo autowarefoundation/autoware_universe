@@ -882,9 +882,9 @@ std::size_t PreprocessCuda::generateFeatures(
 
   // The extract kernels above dropped any voxels beyond max_num_voxels, so only the first
   // max_num_voxels entries of voxel_features/voxel_coords/voxel_hashes are valid. Cap the count fed
-  // to the grid-coord kernel to that same limit; writing more would overrun those buffers (which are
-  // sized max_num_voxels) exactly as the unguarded extract did. The true count is still returned so
-  // the caller logs the "over the limit" warning and clips consistently.
+  // to the grid-coord kernel to that same limit; writing more would overrun those buffers (which
+  // are sized max_num_voxels) exactly as the unguarded extract did. The true count is still
+  // returned so the caller logs the "over the limit" warning and clips consistently.
   const auto max_num_voxels_u = static_cast<std::uint64_t>(config_.max_num_voxels_);
   const auto num_voxels_capped =
     num_unique_points < max_num_voxels_u ? num_unique_points : max_num_voxels_u;
