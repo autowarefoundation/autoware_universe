@@ -1,0 +1,48 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: RadarStaticPointcloudFilter.node
+
+package:
+  name: autoware_radar_static_pointcloud_filter
+  provider: autoware
+
+launch:
+  plugin: autoware::radar_static_pointcloud_filter::RadarStaticPointcloudFilterNode
+  executable: radar_static_pointcloud_filter_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: radar
+    message_type: radar_msgs/msg/RadarScan
+    remap_target: ~/input/radar
+  - name: odometry
+    message_type: nav_msgs/msg/Odometry
+    remap_target: ~/input/odometry
+
+publishers:
+  - name: static_radar_scan
+    message_type: radar_msgs/msg/RadarScan
+    remap_target: ~/output/static_radar_scan
+  - name: dynamic_radar_scan
+    message_type: radar_msgs/msg/RadarScan
+    remap_target: ~/output/dynamic_radar_scan
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/radar_static_pointcloud_filter.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - and:
+          - on_input: radar
+          - on_input: odometry
+    outcomes:
+      - to_output: static_radar_scan
+      - to_output: dynamic_radar_scan
