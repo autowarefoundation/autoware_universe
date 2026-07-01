@@ -65,21 +65,33 @@ bool ColorClassifierCore::filter_hsv(
   return true;
 }
 
-bool ColorClassifierCore::get_traffic_signals(
-  const std::vector<cv::Mat> & images,
-  tier4_perception_msgs::msg::TrafficLightArray & traffic_signals,
-  std::vector<cv::Mat> * debug_images) const
+ColorClassifierCore::Result ColorClassifierCore::get_traffic_signals(
+  const std::vector<cv::Mat> & images) const
 {
-  if (images.size() != traffic_signals.signals.size()) {
-    return false;
-  }
+  return classify_impl(images, nullptr);
+}
+
+ColorClassifierCore::Result ColorClassifierCore::get_traffic_signals(
+  const std::vector<cv::Mat> & images, std::vector<cv::Mat> & debug_images) const
+{
+  return classify_impl(images, &debug_images);
+}
+
+ColorClassifierCore::Result ColorClassifierCore::classify_impl(
+  const std::vector<cv::Mat> & images, std::vector<cv::Mat> * debug_images) const
+{
+  Result result;
+  result.success = true;
+  result.signals.signals.resize(images.size());
   for (size_t image_i = 0; image_i < images.size(); image_i++) {
     const auto & input_image = images[image_i];
-    auto & traffic_signal = traffic_signals.signals[image_i];
+    auto & traffic_signal = result.signals.signals[image_i];
     cv::Mat green_image;
     cv::Mat yellow_image;
     cv::Mat red_image;
-    filter_hsv(input_image, green_image, yellow_image, red_image);
+    if (!filter_hsv(input_image, green_image, yellow_image, red_image)) {
+      result.success = false;
+    }
     // binarize
     cv::Mat green_bin_image;
     cv::Mat yellow_bin_image;
@@ -197,7 +209,7 @@ bool ColorClassifierCore::get_traffic_signals(
       traffic_signal.elements.push_back(element);
     }
   }
-  return true;
+  return result;
 }
 
 // ============================== ColorClassifier ==============================
@@ -240,20 +252,36 @@ bool ColorClassifier::getTrafficSignals(
   const std::vector<cv::Mat> & images,
   tier4_perception_msgs::msg::TrafficLightArray & traffic_signals)
 {
-  std::vector<cv::Mat> debug_images;
-  const bool want_debug = 0 < image_pub_.getNumSubscribers();
-  const bool ok =
-    core_.get_traffic_signals(images, traffic_signals, want_debug ? &debug_images : nullptr);
-  if (!ok) {
+  if (images.size() != traffic_signals.signals.size()) {
     RCLCPP_WARN(node_ptr_->get_logger(), "image number should be equal to traffic signal number!");
     return false;
   }
-  for (const auto & debug_image : debug_images) {
-    const auto debug_image_msg =
-      cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", debug_image).toImageMsg();
-    image_pub_.publish(debug_image_msg);
+
+  ColorClassifierCore::Result result;
+  if (0 < image_pub_.getNumSubscribers()) {
+    std::vector<cv::Mat> debug_images;
+    result = core_.get_traffic_signals(images, debug_images);
+    for (const auto & debug_image : debug_images) {
+      const auto debug_image_msg =
+        cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", debug_image).toImageMsg();
+      image_pub_.publish(debug_image_msg);
+    }
+  } else {
+    result = core_.get_traffic_signals(images);
   }
-  return true;
+
+  // Attach the core's per-image color elements to the caller's pre-populated
+  // signals, preserving the traffic_light_id / traffic_light_type set upstream.
+  for (size_t i = 0; i < traffic_signals.signals.size(); i++) {
+    auto & elements = traffic_signals.signals[i].elements;
+    const auto & classified = result.signals.signals[i].elements;
+    elements.insert(elements.end(), classified.begin(), classified.end());
+  }
+
+  if (!result.success) {
+    RCLCPP_ERROR(node_ptr_->get_logger(), "failed to filter image by hsv value");
+  }
+  return result.success;
 }
 
 rcl_interfaces::msg::SetParametersResult ColorClassifier::parametersCallback(

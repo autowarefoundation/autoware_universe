@@ -65,20 +65,30 @@ struct HSVConfig
 class ColorClassifierCore
 {
 public:
+  // Per-batch result: one signal (with a single color element) per input image,
+  // plus whether the HSV pipeline ran without error. traffic_light_id / type on
+  // the signals are left unset -- associating them is the caller's job.
+  struct Result
+  {
+    tier4_perception_msgs::msg::TrafficLightArray signals;
+    bool success = false;
+  };
+
   explicit ColorClassifierCore(const HSVConfig & config = HSVConfig{});
 
-  // Classify each image into a TrafficLightElement by HSV color band. Returns
-  // false only if the image and signal counts differ. When debug_images is
-  // non-null, one debug mosaic per input image is appended to it.
-  bool get_traffic_signals(
-    const std::vector<cv::Mat> & images,
-    tier4_perception_msgs::msg::TrafficLightArray & traffic_signals,
-    std::vector<cv::Mat> * debug_images = nullptr) const;
+  // Classify each image into a TrafficLightElement by HSV color band.
+  Result get_traffic_signals(const std::vector<cv::Mat> & images) const;
+  // Overload that also appends one debug mosaic per input image to debug_images.
+  Result get_traffic_signals(
+    const std::vector<cv::Mat> & images, std::vector<cv::Mat> & debug_images) const;
 
   // Replace the HSV thresholds and rebuild the color bands (dynamic reconfigure).
   void set_config(const HSVConfig & config);
 
 private:
+  // Shared classification pipeline; builds debug mosaics only when debug_images != nullptr.
+  Result classify_impl(
+    const std::vector<cv::Mat> & images, std::vector<cv::Mat> * debug_images) const;
   bool filter_hsv(
     const cv::Mat & input_image, cv::Mat & green_image, cv::Mat & yellow_image,
     cv::Mat & red_image) const;
