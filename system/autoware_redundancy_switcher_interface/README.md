@@ -57,11 +57,11 @@ Launch (non-redundant / single-ECU mode):
 The base configuration (`config/default.param.yaml`) covers the built-in adapters.
 Plugin-specific parameters are provided by the plugin package config.
 
-| Parameter                     | Type   | Default | Description                                                                                    |
-| ----------------------------- | ------ | ------- | ---------------------------------------------------------------------------------------------- |
-| `use_driving_mode`            | bool   | `false` | `true`: use `DrivingModeSubSystemAdapter` (receives DrivingMode msgs). `false`: use `CommandModeSubSystemAdapter` (receives CommandMode msgs). |
-| `availability_timeout_milli`  | double | —       | Elapsed time [ms] without `CommandModeAvailability` before peer ECU is considered unavailable. Used only when `use_driving_mode=false`. |
-| `diag.transitional_timeout_milli` | double | — | A transitional switcher state persisting longer than this [ms] is reported as `DiagStatus::ERROR`. |
+| Parameter                         | Type   | Default | Description                                                                                                                                    |
+| --------------------------------- | ------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `use_driving_mode`                | bool   | `false` | `true`: use `DrivingModeSubSystemAdapter` (receives DrivingMode msgs). `false`: use `CommandModeSubSystemAdapter` (receives CommandMode msgs). |
+| `availability_timeout_milli`      | double | —       | Elapsed time [ms] without `CommandModeAvailability` before peer ECU is considered unavailable. Used only when `use_driving_mode=false`.        |
+| `diag.transitional_timeout_milli` | double | —       | A transitional switcher state persisting longer than this [ms] is reported as `DiagStatus::ERROR`.                                             |
 
 ## Key Concepts
 

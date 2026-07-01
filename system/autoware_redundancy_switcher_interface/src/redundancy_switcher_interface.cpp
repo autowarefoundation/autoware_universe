@@ -15,7 +15,6 @@
 
 #include "command_mode_subsystem_adapter.hpp"
 #include "driving_mode_subsystem_adapter.hpp"
-
 #include "rclcpp_components/register_node_macro.hpp"
 
 #include <memory>

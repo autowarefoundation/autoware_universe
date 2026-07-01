@@ -366,8 +366,8 @@ TEST_F(ProcessorTest, SetActiveControlUnit_ForcedEmptyWhenFaulted)
 
 TEST_F(ProcessorTest, SetPriority_EmitsUpdatePriorityCommandOnFirstSet)
 {
-  const auto commands = processor_.handle(
-    InputEvent{SetPriorityEvent{Annotated<uint16_t>{100, "test"}}});
+  const auto commands =
+    processor_.handle(InputEvent{SetPriorityEvent{Annotated<uint16_t>{100, "test"}}});
   const auto * cmd = find_effect<UpdatePriorityCommand>(commands);
   ASSERT_NE(cmd, nullptr);
   EXPECT_EQ(cmd->priority, 100u);
@@ -375,16 +375,16 @@ TEST_F(ProcessorTest, SetPriority_EmitsUpdatePriorityCommandOnFirstSet)
 
 TEST_F(ProcessorTest, SetPriority_EmitsLogCommand)
 {
-  const auto commands = processor_.handle(
-    InputEvent{SetPriorityEvent{Annotated<uint16_t>{50, "test"}}});
+  const auto commands =
+    processor_.handle(InputEvent{SetPriorityEvent{Annotated<uint16_t>{50, "test"}}});
   EXPECT_TRUE(has_effect<LogCommand>(commands));
 }
 
 TEST_F(ProcessorTest, SetPriority_NoCommandIfValueUnchanged)
 {
   processor_.handle(InputEvent{SetPriorityEvent{Annotated<uint16_t>{100, "first"}}});
-  const auto commands = processor_.handle(
-    InputEvent{SetPriorityEvent{Annotated<uint16_t>{100, "second"}}});
+  const auto commands =
+    processor_.handle(InputEvent{SetPriorityEvent{Annotated<uint16_t>{100, "second"}}});
   EXPECT_FALSE(has_effect<UpdatePriorityCommand>(commands));
   EXPECT_FALSE(has_effect<LogCommand>(commands));
 }
@@ -392,8 +392,8 @@ TEST_F(ProcessorTest, SetPriority_NoCommandIfValueUnchanged)
 TEST_F(ProcessorTest, SetPriority_EmitsCommandWhenValueChanges)
 {
   processor_.handle(InputEvent{SetPriorityEvent{Annotated<uint16_t>{10, "first"}}});
-  const auto commands = processor_.handle(
-    InputEvent{SetPriorityEvent{Annotated<uint16_t>{20, "second"}}});
+  const auto commands =
+    processor_.handle(InputEvent{SetPriorityEvent{Annotated<uint16_t>{20, "second"}}});
   const auto * cmd = find_effect<UpdatePriorityCommand>(commands);
   ASSERT_NE(cmd, nullptr);
   EXPECT_EQ(cmd->priority, 20u);
@@ -410,8 +410,8 @@ TEST_F(ProcessorTest, SetPriority_UpdatesSnapshot)
 TEST_F(ProcessorTest, SetPriority_ZeroValue_EmitsCommand)
 {
   // Explicitly test that priority=0 (default) is still treated as a valid value change.
-  const auto commands = processor_.handle(
-    InputEvent{SetPriorityEvent{Annotated<uint16_t>{0, "test"}}});
+  const auto commands =
+    processor_.handle(InputEvent{SetPriorityEvent{Annotated<uint16_t>{0, "test"}}});
   EXPECT_TRUE(has_effect<UpdatePriorityCommand>(commands));
 }
 

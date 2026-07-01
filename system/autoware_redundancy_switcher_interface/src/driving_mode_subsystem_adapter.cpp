@@ -46,20 +46,17 @@ void DrivingModeSubSystemAdapter::initialize(
 
   sub_driving_mode_request_ = node_->create_subscription<DrivingModeRequest>(
     "~/input/driving_mode_request", qos,
-    std::bind(
-      &DrivingModeSubSystemAdapter::on_driving_mode_request, this, std::placeholders::_1));
+    std::bind(&DrivingModeSubSystemAdapter::on_driving_mode_request, this, std::placeholders::_1));
 
   srv_set_initializing_ = node_->create_service<SetBool>(
-    "~/set_initializing",
-    std::bind(
-      &DrivingModeSubSystemAdapter::on_set_initializing, this, std::placeholders::_1,
-      std::placeholders::_2));
+    "~/set_initializing", std::bind(
+                            &DrivingModeSubSystemAdapter::on_set_initializing, this,
+                            std::placeholders::_1, std::placeholders::_2));
 
   srv_reset_ = node_->create_service<ResetRedundancySwitcher>(
-    "~/service/reset",
-    std::bind(
-      &DrivingModeSubSystemAdapter::on_reset_request, this, std::placeholders::_1,
-      std::placeholders::_2));
+    "~/service/reset", std::bind(
+                         &DrivingModeSubSystemAdapter::on_reset_request, this,
+                         std::placeholders::_1, std::placeholders::_2));
 
   pub_active_control_unit_ = node_->create_publisher<ActiveControlUnitMsg>(
     "~/output/active_control_unit", rclcpp::QoS(1).transient_local());
@@ -73,8 +70,9 @@ void DrivingModeSubSystemAdapter::submit_event(const InputEvent & event)
 void DrivingModeSubSystemAdapter::on_driving_mode_request(
   const DrivingModeRequest::ConstSharedPtr msg)
 {
-  submit_event(InputEvent{SetPriorityEvent{Annotated<uint16_t>{
-    static_cast<uint16_t>(msg->priority), "driving_mode_request"}}});
+  submit_event(
+    InputEvent{SetPriorityEvent{
+      Annotated<uint16_t>{static_cast<uint16_t>(msg->priority), "driving_mode_request"}}});
 }
 
 void DrivingModeSubSystemAdapter::on_set_initializing(
@@ -129,15 +127,18 @@ void DrivingModeSubSystemAdapter::on_velocity_report(const VelocityReport::Const
 {
   constexpr auto th_stopped_velocity = 0.001;
   const bool is_stopped = std::abs(msg->longitudinal_velocity) < th_stopped_velocity;
-  submit_event(InputEvent{SetVelocityStatusEvent{Annotated<VelocityStatus>{
-    is_stopped ? VelocityStatus::Stopped : VelocityStatus::Moving, "velocity report"}}});
+  submit_event(
+    InputEvent{SetVelocityStatusEvent{Annotated<VelocityStatus>{
+      is_stopped ? VelocityStatus::Stopped : VelocityStatus::Moving, "velocity report"}}});
 }
 
-void DrivingModeSubSystemAdapter::on_control_mode_report(const ControlModeReport::ConstSharedPtr msg)
+void DrivingModeSubSystemAdapter::on_control_mode_report(
+  const ControlModeReport::ConstSharedPtr msg)
 {
   const auto mode =
     (msg->mode == ControlModeReport::AUTONOMOUS) ? ControlMode::Auto : ControlMode::Manual;
-  submit_event(InputEvent{SetControlModeEvent{Annotated<ControlMode>{mode, "control mode report"}}});
+  submit_event(
+    InputEvent{SetControlModeEvent{Annotated<ControlMode>{mode, "control mode report"}}});
 }
 
 void DrivingModeSubSystemAdapter::execute(const OutputCommand & command)

@@ -71,18 +71,10 @@ void RedundancySwitcherAdapter::initialize(
   const std::string hardware_id =
     is_main_ecu_ ? "main_ecu_redundancy_switcher" : "sub_ecu_redundancy_switcher";
   updater_->setHardwareID(hardware_id);
-  updater_->add(
-    "main_ecu_fault", this,
-    &RedundancySwitcherAdapter::update_main_ecu_fault_diag);
-  updater_->add(
-    "sub_ecu_fault", this,
-    &RedundancySwitcherAdapter::update_sub_ecu_fault_diag);
-  updater_->add(
-    "main_vcu_fault", this,
-    &RedundancySwitcherAdapter::update_main_vcu_fault_diag);
-  updater_->add(
-    "sub_vcu_fault", this,
-    &RedundancySwitcherAdapter::update_sub_vcu_fault_diag);
+  updater_->add("main_ecu_fault", this, &RedundancySwitcherAdapter::update_main_ecu_fault_diag);
+  updater_->add("sub_ecu_fault", this, &RedundancySwitcherAdapter::update_sub_ecu_fault_diag);
+  updater_->add("main_vcu_fault", this, &RedundancySwitcherAdapter::update_main_vcu_fault_diag);
+  updater_->add("sub_vcu_fault", this, &RedundancySwitcherAdapter::update_sub_vcu_fault_diag);
   updater_->add(
     "main_ecu_to_sub_ecu_link_fault", this,
     &RedundancySwitcherAdapter::update_main_ecu_to_sub_ecu_link_fault_diag);
@@ -103,8 +95,7 @@ void RedundancySwitcherAdapter::initialize(
     &RedundancySwitcherAdapter::update_main_vcu_to_sub_vcu_link_fault_diag);
 
   is_uds_receiver_running_.store(true, std::memory_order_release);
-  uds_receiver_thread_ =
-    std::thread(&RedundancySwitcherAdapter::uds_receive_loop, this);
+  uds_receiver_thread_ = std::thread(&RedundancySwitcherAdapter::uds_receive_loop, this);
   RCLCPP_INFO(node_->get_logger(), "UDS receiver thread started");
 }
 

@@ -19,8 +19,8 @@
 
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <std_msgs/msg/u_int8.hpp>
 #include <std_msgs/msg/u_int16.hpp>
+#include <std_msgs/msg/u_int8.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 #include <tier4_system_msgs/msg/active_control_unit.hpp>
 
