@@ -102,3 +102,26 @@ A platform mode change while an autoware mode change is in progress will be reje
 In that case, the autoware mode change task will be reserved.
 
 ![transition-logic](./doc/transition-logic.drawio.svg)
+
+## Decision Logic Plugin
+
+The driving mode decision logic is implemented as a plugin interface.
+By inheriting the `Plugin` class in `include/autoware_driving_mode_manager/plugin.hpp`,
+you can support custom MRM behavior and implement custom mode decision logic.
+See the default implementation under `src/plugin` for reference.
+
+First, implement the autoware mode settings using the `setup` function.
+This function is called during initialization.
+Using the `define` functions of the config class provided as an argument,
+register the autoware modes, trajectory sources, and command sources supported by the system.
+The priority argument of the `define` function is for multi-ECU systems and is not required for single-ECU systems.
+The mode priority is determined by the `decide` function.
+Then, using the `bind` functions of the config class,
+map the trajectory source and command source to each autoware mode.
+
+Next, implement the `decide` function. This function is called periodically.
+Determine and return the target mode based on the requested operation mode and the set of available modes.
+Typically, prioritize the requested operation mode, and fall back to MRM if it is unavailable.
+When multiple MRM options are available, prioritize the behavior with the lowest risk.
+Since the current mode is available in the arguments,
+you can implement custom mode transitions, such as entering a specific mode and preventing returns to the original mode.
