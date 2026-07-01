@@ -163,7 +163,7 @@ std::pair<bool, MPCTrajectory> resampleMPCTrajectoryByDistance(
     output.relative_time = lerp_arc_length(input.relative_time);  // must be linear
   } catch (const std::exception & e) {
     const auto logger = rclcpp::get_logger("mpc_util");
-    const rclcpp::Clock clock{RCL_ROS_TIME};
+    static rclcpp::Clock clock{RCL_ROS_TIME};
     RCLCPP_ERROR_THROTTLE(
       logger, clock, 5000,
       "[resampleMPCTrajectoryByDistance] interpolation failed: %s (input_points=%zu, "
