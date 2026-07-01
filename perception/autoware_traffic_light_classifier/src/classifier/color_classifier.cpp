@@ -65,156 +65,174 @@ bool ColorClassifierCore::filter_hsv(
   return true;
 }
 
-ColorClassifierCore::Result ColorClassifierCore::get_traffic_signals(
+ColorClassifierCore::ClassifierResult ColorClassifierCore::get_traffic_signals(
   const std::vector<cv::Mat> & images) const
 {
-  return classify_impl(images, nullptr);
-}
-
-ColorClassifierCore::Result ColorClassifierCore::get_traffic_signals(
-  const std::vector<cv::Mat> & images, std::vector<cv::Mat> & debug_images) const
-{
-  return classify_impl(images, &debug_images);
-}
-
-ColorClassifierCore::Result ColorClassifierCore::classify_impl(
-  const std::vector<cv::Mat> & images, std::vector<cv::Mat> * debug_images) const
-{
-  Result result;
+  ClassifierResult result;
   result.success = true;
   result.signals.signals.resize(images.size());
-  for (size_t image_i = 0; image_i < images.size(); image_i++) {
-    const auto & input_image = images[image_i];
-    auto & traffic_signal = result.signals.signals[image_i];
-    cv::Mat green_image;
-    cv::Mat yellow_image;
-    cv::Mat red_image;
-    if (!filter_hsv(input_image, green_image, yellow_image, red_image)) {
+  for (size_t roi_i = 0; roi_i < images.size(); roi_i++) {
+    const PipelineResult pipeline = run_pipeline(images[roi_i]);
+    result.signals.signals[roi_i].elements.push_back(classify_stages(pipeline.stages));
+    if (!pipeline.filter_ok) {
       result.success = false;
-    }
-    // binarize
-    cv::Mat green_bin_image;
-    cv::Mat yellow_bin_image;
-    cv::Mat red_bin_image;
-    const int bin_threshold = 127;
-    cv::threshold(green_image, green_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
-    cv::threshold(yellow_image, yellow_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
-    cv::threshold(red_image, red_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
-    // filter noise
-    cv::Mat green_filtered_bin_image;
-    cv::Mat yellow_filtered_bin_image;
-    cv::Mat red_filtered_bin_image;
-    cv::Mat element4 = (cv::Mat_<uchar>(3, 3) << 0, 1, 0, 1, 1, 1, 0, 1, 0);
-    cv::erode(green_bin_image, green_filtered_bin_image, element4, cv::Point(-1, -1), 1);
-    cv::erode(yellow_bin_image, yellow_filtered_bin_image, element4, cv::Point(-1, -1), 1);
-    cv::erode(red_bin_image, red_filtered_bin_image, element4, cv::Point(-1, -1), 1);
-    cv::dilate(green_filtered_bin_image, green_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
-    cv::dilate(
-      yellow_filtered_bin_image, yellow_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
-    cv::dilate(red_filtered_bin_image, red_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
-
-    /* debug */
-    if (debug_images != nullptr) {
-      cv::Mat debug_raw_image;
-      cv::Mat debug_green_image;
-      cv::Mat debug_yellow_image;
-      cv::Mat debug_red_image;
-      cv::hconcat(input_image, input_image, debug_raw_image);
-      cv::hconcat(debug_raw_image, input_image, debug_raw_image);
-      cv::hconcat(green_image, green_bin_image, debug_green_image);
-      cv::hconcat(debug_green_image, green_filtered_bin_image, debug_green_image);
-      cv::hconcat(yellow_image, yellow_bin_image, debug_yellow_image);
-      cv::hconcat(debug_yellow_image, yellow_filtered_bin_image, debug_yellow_image);
-      cv::hconcat(red_image, red_bin_image, debug_red_image);
-      cv::hconcat(debug_red_image, red_filtered_bin_image, debug_red_image);
-
-      cv::Mat debug_image;
-      cv::vconcat(debug_green_image, debug_yellow_image, debug_image);
-      cv::vconcat(debug_image, debug_red_image, debug_image);
-      cv::cvtColor(debug_image, debug_image, cv::COLOR_GRAY2RGB);
-      cv::vconcat(debug_raw_image, debug_image, debug_image);
-      const int width = input_image.cols;
-      const int height = input_image.rows;
-      cv::line(
-        debug_image, cv::Point(0, 0), cv::Point(debug_image.cols, 0), cv::Scalar(255, 255, 255), 1,
-        CV_AA, 0);
-      cv::line(
-        debug_image, cv::Point(0, height), cv::Point(debug_image.cols, height),
-        cv::Scalar(255, 255, 255), 1, CV_AA, 0);
-      cv::line(
-        debug_image, cv::Point(0, height * 2), cv::Point(debug_image.cols, height * 2),
-        cv::Scalar(255, 255, 255), 1, CV_AA, 0);
-      cv::line(
-        debug_image, cv::Point(0, height * 3), cv::Point(debug_image.cols, height * 3),
-        cv::Scalar(255, 255, 255), 1, CV_AA, 0);
-
-      cv::line(
-        debug_image, cv::Point(0, 0), cv::Point(0, debug_image.rows), cv::Scalar(255, 255, 255), 1,
-        CV_AA, 0);
-      cv::line(
-        debug_image, cv::Point(width, 0), cv::Point(width, debug_image.rows),
-        cv::Scalar(255, 255, 255), 1, CV_AA, 0);
-      cv::line(
-        debug_image, cv::Point(width * 2, 0), cv::Point(width * 2, debug_image.rows),
-        cv::Scalar(255, 255, 255), 1, CV_AA, 0);
-      cv::line(
-        debug_image, cv::Point(width * 3, 0), cv::Point(width * 3, debug_image.rows),
-        cv::Scalar(255, 255, 255), 1, CV_AA, 0);
-
-      cv::putText(
-        debug_image, "green", cv::Point(0, height * 1.5), cv::FONT_HERSHEY_SIMPLEX, 1.0,
-        cv::Scalar(255, 255, 255), 1, CV_AA);
-      cv::putText(
-        debug_image, "yellow", cv::Point(0, height * 2.5), cv::FONT_HERSHEY_SIMPLEX, 1.0,
-        cv::Scalar(255, 255, 255), 1, CV_AA);
-      cv::putText(
-        debug_image, "red", cv::Point(0, height * 3.5), cv::FONT_HERSHEY_SIMPLEX, 1.0,
-        cv::Scalar(255, 255, 255), 1, CV_AA);
-      debug_images->push_back(debug_image);
-    }
-    /* --- */
-
-    const int green_pixel_num = cv::countNonZero(green_filtered_bin_image);
-    const int yellow_pixel_num = cv::countNonZero(yellow_filtered_bin_image);
-    const int red_pixel_num = cv::countNonZero(red_filtered_bin_image);
-    const double green_ratio =
-      static_cast<double>(green_pixel_num) /
-      static_cast<double>(green_filtered_bin_image.rows * green_filtered_bin_image.cols);
-    const double yellow_ratio =
-      static_cast<double>(yellow_pixel_num) /
-      static_cast<double>(yellow_filtered_bin_image.rows * yellow_filtered_bin_image.cols);
-    const double red_ratio =
-      static_cast<double>(red_pixel_num) /
-      static_cast<double>(red_filtered_bin_image.rows * red_filtered_bin_image.cols);
-
-    if (yellow_ratio < green_ratio && red_ratio < green_ratio) {
-      tier4_perception_msgs::msg::TrafficLightElement element;
-      element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
-      element.confidence = std::min(1.0, static_cast<double>(green_pixel_num) / (20.0 * 20.0));
-      traffic_signal.elements.push_back(element);
-    } else if (green_ratio < yellow_ratio && red_ratio < yellow_ratio) {
-      tier4_perception_msgs::msg::TrafficLightElement element;
-      element.color = tier4_perception_msgs::msg::TrafficLightElement::AMBER;
-      element.confidence = std::min(1.0, static_cast<double>(yellow_pixel_num) / (20.0 * 20.0));
-      traffic_signal.elements.push_back(element);
-    } else if (green_ratio < red_ratio && yellow_ratio < red_ratio) {
-      tier4_perception_msgs::msg::TrafficLightElement element;
-      element.color = ::tier4_perception_msgs::msg::TrafficLightElement::RED;
-      element.confidence = std::min(1.0, static_cast<double>(red_pixel_num) / (20.0 * 20.0));
-      traffic_signal.elements.push_back(element);
-    } else {
-      tier4_perception_msgs::msg::TrafficLightElement element;
-      element.color = ::tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-      element.confidence = 0.0;
-      traffic_signal.elements.push_back(element);
     }
   }
   return result;
 }
 
+ColorClassifierCore::PipelineResult ColorClassifierCore::run_pipeline(
+  const cv::Mat & roi_image) const
+{
+  PipelineResult result;
+  cv::Mat green_image;
+  cv::Mat yellow_image;
+  cv::Mat red_image;
+  result.filter_ok = filter_hsv(roi_image, green_image, yellow_image, red_image);
+  // binarize
+  cv::Mat green_bin_image;
+  cv::Mat yellow_bin_image;
+  cv::Mat red_bin_image;
+  const int bin_threshold = 127;
+  cv::threshold(green_image, green_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
+  cv::threshold(yellow_image, yellow_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
+  cv::threshold(red_image, red_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
+  // filter noise
+  cv::Mat green_filtered_bin_image;
+  cv::Mat yellow_filtered_bin_image;
+  cv::Mat red_filtered_bin_image;
+  cv::Mat element4 = (cv::Mat_<uchar>(3, 3) << 0, 1, 0, 1, 1, 1, 0, 1, 0);
+  cv::erode(green_bin_image, green_filtered_bin_image, element4, cv::Point(-1, -1), 1);
+  cv::erode(yellow_bin_image, yellow_filtered_bin_image, element4, cv::Point(-1, -1), 1);
+  cv::erode(red_bin_image, red_filtered_bin_image, element4, cv::Point(-1, -1), 1);
+  cv::dilate(green_filtered_bin_image, green_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
+  cv::dilate(yellow_filtered_bin_image, yellow_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
+  cv::dilate(red_filtered_bin_image, red_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
+
+  result.stages.green = {green_image, green_bin_image, green_filtered_bin_image};
+  result.stages.yellow = {yellow_image, yellow_bin_image, yellow_filtered_bin_image};
+  result.stages.red = {red_image, red_bin_image, red_filtered_bin_image};
+  return result;
+}
+
+tier4_perception_msgs::msg::TrafficLightElement ColorClassifierCore::classify_stages(
+  const PipelineStages & stages) const
+{
+  const cv::Mat & green_filtered_bin_image = stages.green.denoised;
+  const cv::Mat & yellow_filtered_bin_image = stages.yellow.denoised;
+  const cv::Mat & red_filtered_bin_image = stages.red.denoised;
+
+  const int green_pixel_num = cv::countNonZero(green_filtered_bin_image);
+  const int yellow_pixel_num = cv::countNonZero(yellow_filtered_bin_image);
+  const int red_pixel_num = cv::countNonZero(red_filtered_bin_image);
+  const double green_ratio =
+    static_cast<double>(green_pixel_num) /
+    static_cast<double>(green_filtered_bin_image.rows * green_filtered_bin_image.cols);
+  const double yellow_ratio =
+    static_cast<double>(yellow_pixel_num) /
+    static_cast<double>(yellow_filtered_bin_image.rows * yellow_filtered_bin_image.cols);
+  const double red_ratio =
+    static_cast<double>(red_pixel_num) /
+    static_cast<double>(red_filtered_bin_image.rows * red_filtered_bin_image.cols);
+
+  tier4_perception_msgs::msg::TrafficLightElement element;
+  if (yellow_ratio < green_ratio && red_ratio < green_ratio) {
+    element.color = tier4_perception_msgs::msg::TrafficLightElement::GREEN;
+    element.confidence = std::min(1.0, static_cast<double>(green_pixel_num) / (20.0 * 20.0));
+  } else if (green_ratio < yellow_ratio && red_ratio < yellow_ratio) {
+    element.color = tier4_perception_msgs::msg::TrafficLightElement::AMBER;
+    element.confidence = std::min(1.0, static_cast<double>(yellow_pixel_num) / (20.0 * 20.0));
+  } else if (green_ratio < red_ratio && yellow_ratio < red_ratio) {
+    element.color = ::tier4_perception_msgs::msg::TrafficLightElement::RED;
+    element.confidence = std::min(1.0, static_cast<double>(red_pixel_num) / (20.0 * 20.0));
+  } else {
+    element.color = ::tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
+    element.confidence = 0.0;
+  }
+  return element;
+}
+
+cv::Mat ColorClassifierCore::make_debug_image(const cv::Mat & roi_image) const
+{
+  const PipelineStages stages = run_pipeline(roi_image).stages;
+
+  cv::Mat debug_raw_image;
+  cv::Mat debug_green_image;
+  cv::Mat debug_yellow_image;
+  cv::Mat debug_red_image;
+  cv::hconcat(roi_image, roi_image, debug_raw_image);
+  cv::hconcat(debug_raw_image, roi_image, debug_raw_image);
+  cv::hconcat(stages.green.filtered, stages.green.binarized, debug_green_image);
+  cv::hconcat(debug_green_image, stages.green.denoised, debug_green_image);
+  cv::hconcat(stages.yellow.filtered, stages.yellow.binarized, debug_yellow_image);
+  cv::hconcat(debug_yellow_image, stages.yellow.denoised, debug_yellow_image);
+  cv::hconcat(stages.red.filtered, stages.red.binarized, debug_red_image);
+  cv::hconcat(debug_red_image, stages.red.denoised, debug_red_image);
+
+  cv::Mat debug_image;
+  cv::vconcat(debug_green_image, debug_yellow_image, debug_image);
+  cv::vconcat(debug_image, debug_red_image, debug_image);
+  cv::cvtColor(debug_image, debug_image, cv::COLOR_GRAY2RGB);
+  cv::vconcat(debug_raw_image, debug_image, debug_image);
+  const int width = roi_image.cols;
+  const int height = roi_image.rows;
+  cv::line(
+    debug_image, cv::Point(0, 0), cv::Point(debug_image.cols, 0), cv::Scalar(255, 255, 255), 1,
+    CV_AA, 0);
+  cv::line(
+    debug_image, cv::Point(0, height), cv::Point(debug_image.cols, height),
+    cv::Scalar(255, 255, 255), 1, CV_AA, 0);
+  cv::line(
+    debug_image, cv::Point(0, height * 2), cv::Point(debug_image.cols, height * 2),
+    cv::Scalar(255, 255, 255), 1, CV_AA, 0);
+  cv::line(
+    debug_image, cv::Point(0, height * 3), cv::Point(debug_image.cols, height * 3),
+    cv::Scalar(255, 255, 255), 1, CV_AA, 0);
+
+  cv::line(
+    debug_image, cv::Point(0, 0), cv::Point(0, debug_image.rows), cv::Scalar(255, 255, 255), 1,
+    CV_AA, 0);
+  cv::line(
+    debug_image, cv::Point(width, 0), cv::Point(width, debug_image.rows), cv::Scalar(255, 255, 255),
+    1, CV_AA, 0);
+  cv::line(
+    debug_image, cv::Point(width * 2, 0), cv::Point(width * 2, debug_image.rows),
+    cv::Scalar(255, 255, 255), 1, CV_AA, 0);
+  cv::line(
+    debug_image, cv::Point(width * 3, 0), cv::Point(width * 3, debug_image.rows),
+    cv::Scalar(255, 255, 255), 1, CV_AA, 0);
+
+  cv::putText(
+    debug_image, "green", cv::Point(0, height * 1.5), cv::FONT_HERSHEY_SIMPLEX, 1.0,
+    cv::Scalar(255, 255, 255), 1, CV_AA);
+  cv::putText(
+    debug_image, "yellow", cv::Point(0, height * 2.5), cv::FONT_HERSHEY_SIMPLEX, 1.0,
+    cv::Scalar(255, 255, 255), 1, CV_AA);
+  cv::putText(
+    debug_image, "red", cv::Point(0, height * 3.5), cv::FONT_HERSHEY_SIMPLEX, 1.0,
+    cv::Scalar(255, 255, 255), 1, CV_AA);
+  return debug_image;
+}
+
 // ============================== ColorClassifier ==============================
 // ROS adapter: declares parameters, wires dynamic reconfigure and debug-image
 // publishing, and delegates classification to the Node-free core.
+
+namespace
+{
+// Set `value` from the parameter named `name` if present; return whether it was found.
+bool update_param(
+  const std::vector<rclcpp::Parameter> & parameters, const std::string & name, int & value)
+{
+  for (const auto & parameter : parameters) {
+    if (parameter.get_name() == name) {
+      value = parameter.as_int();
+      return true;
+    }
+  }
+  return false;
+}
+}  // namespace
 
 ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr) : node_ptr_(node_ptr)
 {
@@ -257,17 +275,17 @@ bool ColorClassifier::getTrafficSignals(
     return false;
   }
 
-  ColorClassifierCore::Result result;
+  const ColorClassifierCore::ClassifierResult result = core_.get_traffic_signals(images);
+
+  // Publish one debug mosaic per ROI image only when a debug consumer is attached;
+  // make_debug_image re-runs the HSV pipeline, so it stays off the hot path.
   if (0 < image_pub_.getNumSubscribers()) {
-    std::vector<cv::Mat> debug_images;
-    result = core_.get_traffic_signals(images, debug_images);
-    for (const auto & debug_image : debug_images) {
+    for (const auto & image : images) {
       const auto debug_image_msg =
-        cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", debug_image).toImageMsg();
+        cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", core_.make_debug_image(image))
+          .toImageMsg();
       image_pub_.publish(debug_image_msg);
     }
-  } else {
-    result = core_.get_traffic_signals(images);
   }
 
   // Attach the core's per-image color elements to the caller's pre-populated
@@ -287,35 +305,24 @@ bool ColorClassifier::getTrafficSignals(
 rcl_interfaces::msg::SetParametersResult ColorClassifier::parametersCallback(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  auto update_param = [&](const std::string & name, int & v) {
-    auto it = std::find_if(
-      parameters.cbegin(), parameters.cend(),
-      [&name](const rclcpp::Parameter & parameter) { return parameter.get_name() == name; });
-    if (it != parameters.cend()) {
-      v = it->as_int();
-      return true;
-    }
-    return false;
-  };
-
-  update_param("green_min_h", hsv_config_.green_min_h);
-  update_param("green_min_s", hsv_config_.green_min_s);
-  update_param("green_min_v", hsv_config_.green_min_v);
-  update_param("green_max_h", hsv_config_.green_max_h);
-  update_param("green_max_s", hsv_config_.green_max_s);
-  update_param("green_max_v", hsv_config_.green_max_v);
-  update_param("yellow_min_h", hsv_config_.yellow_min_h);
-  update_param("yellow_min_s", hsv_config_.yellow_min_s);
-  update_param("yellow_min_v", hsv_config_.yellow_min_v);
-  update_param("yellow_max_h", hsv_config_.yellow_max_h);
-  update_param("yellow_max_s", hsv_config_.yellow_max_s);
-  update_param("yellow_max_v", hsv_config_.yellow_max_v);
-  update_param("red_min_h", hsv_config_.red_min_h);
-  update_param("red_min_s", hsv_config_.red_min_s);
-  update_param("red_min_v", hsv_config_.red_min_v);
-  update_param("red_max_h", hsv_config_.red_max_h);
-  update_param("red_max_s", hsv_config_.red_max_s);
-  update_param("red_max_v", hsv_config_.red_max_v);
+  update_param(parameters, "green_min_h", hsv_config_.green_min_h);
+  update_param(parameters, "green_min_s", hsv_config_.green_min_s);
+  update_param(parameters, "green_min_v", hsv_config_.green_min_v);
+  update_param(parameters, "green_max_h", hsv_config_.green_max_h);
+  update_param(parameters, "green_max_s", hsv_config_.green_max_s);
+  update_param(parameters, "green_max_v", hsv_config_.green_max_v);
+  update_param(parameters, "yellow_min_h", hsv_config_.yellow_min_h);
+  update_param(parameters, "yellow_min_s", hsv_config_.yellow_min_s);
+  update_param(parameters, "yellow_min_v", hsv_config_.yellow_min_v);
+  update_param(parameters, "yellow_max_h", hsv_config_.yellow_max_h);
+  update_param(parameters, "yellow_max_s", hsv_config_.yellow_max_s);
+  update_param(parameters, "yellow_max_v", hsv_config_.yellow_max_v);
+  update_param(parameters, "red_min_h", hsv_config_.red_min_h);
+  update_param(parameters, "red_min_s", hsv_config_.red_min_s);
+  update_param(parameters, "red_min_v", hsv_config_.red_min_v);
+  update_param(parameters, "red_max_h", hsv_config_.red_max_h);
+  update_param(parameters, "red_max_s", hsv_config_.red_max_s);
+  update_param(parameters, "red_max_v", hsv_config_.red_max_v);
 
   core_.set_config(hsv_config_);
 
