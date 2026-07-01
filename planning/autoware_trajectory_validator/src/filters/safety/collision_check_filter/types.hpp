@@ -17,6 +17,7 @@
 
 #include "parameter.hpp"
 
+#include <autoware_trajectory_validator/msg/risk_level.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 #include <autoware_utils_uuid/uuid_helper.hpp>
 #include <builtin_interfaces/msg/time.hpp>
@@ -34,6 +35,7 @@
 
 namespace autoware::trajectory_validator::plugin::safety
 {
+using autoware_trajectory_validator::msg::RiskLevel;
 using autoware_utils_geometry::Box2d;
 using autoware_utils_geometry::MultiPoint2d;
 using autoware_utils_geometry::Point2d;
@@ -74,8 +76,6 @@ struct TrajectoryIdentification
   }
 };
 
-enum class RiskLevel { SAFE, WARN, ERROR };
-
 struct CollisionTiming
 {
   double ttc;
@@ -95,7 +95,7 @@ struct CollisionDetail
 
 struct CollisionEvaluation
 {
-  RiskLevel risk;
+  RiskLevel::_level_type risk;
   CollisionDetail detail;
 };
 struct RssDetail
@@ -106,54 +106,54 @@ struct RssDetail
 
 struct RssEvaluation
 {
-  RiskLevel risk;
+  RiskLevel::_level_type risk;
   RssDetail detail;
 };
 
 struct DracArtifact
 {
-  RiskLevel risk{RiskLevel::SAFE};
+  RiskLevel::_level_type risk{RiskLevel::SAFE};
   std::optional<double> required_acceleration;
   std::vector<CollisionEvaluation> object_evaluations;
 };
 
 struct PetArtifact
 {
-  RiskLevel risk{RiskLevel::SAFE};
+  RiskLevel::_level_type risk{RiskLevel::SAFE};
   std::vector<CollisionEvaluation> object_evaluations;
 };
 
 struct RssArtifact
 {
-  RiskLevel risk{RiskLevel::SAFE};
+  RiskLevel::_level_type risk{RiskLevel::SAFE};
   std::vector<RssEvaluation> object_evaluations;
 };
 
 template <typename Container>
-RiskLevel calc_worst_risk(const Container & evaluations)
+RiskLevel::_level_type calc_worst_risk(const Container & evaluations)
 {
-  RiskLevel worst = RiskLevel::SAFE;
+  RiskLevel::_level_type worst = RiskLevel::SAFE;
 
   for (const auto & eval : evaluations) {
     if (eval.risk > worst) {
       worst = eval.risk;
     }
-    if (worst == RiskLevel::ERROR) {
+    if (worst == RiskLevel::DANGER) {
       break;
     }
   }
   return worst;
 }
 
-inline RiskLevel calc_worst_risk(std::initializer_list<RiskLevel> risks)
+inline RiskLevel::_level_type calc_worst_risk(std::initializer_list<RiskLevel::_level_type> risks)
 {
-  RiskLevel worst = RiskLevel::SAFE;
+  RiskLevel::_level_type worst = RiskLevel::SAFE;
 
   for (const auto & risk : risks) {
     if (risk > worst) {
       worst = risk;
     }
-    if (worst == RiskLevel::ERROR) {
+    if (worst == RiskLevel::DANGER) {
       break;
     }
   }

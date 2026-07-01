@@ -31,6 +31,7 @@
 
 namespace planning_diagnostics
 {
+using autoware_trajectory_validator::msg::RiskLevel;
 using autoware_trajectory_validator::msg::ValidationReportArray;
 using autoware_utils::Accumulator;
 using MetricMsg = tier4_metric_msgs::msg::Metric;
@@ -42,7 +43,7 @@ using json = nlohmann::json;
  * @brief Accumulates trajectory validation error statistics from ValidationReportArray.
  *
  * Two scopes (published under metric_to_str(Metric::trajectory_validation) + "/" + <scope> + "/…"):
- * 1) Whole trajectory (per candidate / generator), from ValidationReport.level —
+ * 1) Whole trajectory (per candidate / generator), from ValidationReport.risk.level —
  *    <scope> = <generator_name>
  * 2) Each MetricReport row —
  *    <scope> = <generator_name>/<validator_name>/<metric_name>

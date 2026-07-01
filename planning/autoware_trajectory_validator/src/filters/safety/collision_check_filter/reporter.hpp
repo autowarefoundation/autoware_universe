@@ -82,7 +82,7 @@ void add_error_text_marker(
 
 void append_text_marker_message(std::string & text, const std::string & message);
 
-void log_collision_messages(const uint8_t level, const std::string & messages);
+void log_collision_messages(const RiskLevel::_level_type level, const std::string & messages);
 
 autoware_internal_planning_msgs::msg::PlanningFactorArray process_collision_artifacts(
   const nav_msgs::msg::Odometry & odometry, const PetArtifact & pet_artifact,

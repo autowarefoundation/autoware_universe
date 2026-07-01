@@ -229,8 +229,8 @@ TEST_F(CollisionCheckFilterTest, PetCollisionWarnDoesNotRejectTrajectory)
 
   ASSERT_TRUE(result.has_value());
   EXPECT_TRUE(result.value().is_feasible);
-  EXPECT_TRUE(has_pet_metric_with_level(result.value().metrics, MetricReport::WARN));
-  EXPECT_FALSE(has_pet_metric_with_level(result.value().metrics, MetricReport::ERROR));
+  EXPECT_TRUE(has_pet_metric_with_level(result.value().metrics, RiskLevel::HIGH_CAUTION));
+  EXPECT_FALSE(has_pet_metric_with_level(result.value().metrics, RiskLevel::DANGER));
   EXPECT_TRUE(result.value().planning_factors.factors.empty());
 
   const auto markers = filter_->take_debug_markers();
@@ -252,7 +252,7 @@ TEST_F(CollisionCheckFilterTest, PetCollisionErrorRejectsTrajectory)
 
   ASSERT_TRUE(result.has_value());
   EXPECT_FALSE(result.value().is_feasible);
-  EXPECT_TRUE(has_pet_metric_with_level(result.value().metrics, MetricReport::ERROR));
+  EXPECT_TRUE(has_pet_metric_with_level(result.value().metrics, RiskLevel::DANGER));
   EXPECT_FALSE(result.value().planning_factors.factors.empty());
 
   const auto markers = filter_->take_debug_markers();
@@ -274,8 +274,8 @@ TEST_F(CollisionCheckFilterTest, DracWarnDoesNotRejectTrajectory)
 
   ASSERT_TRUE(result.has_value());
   EXPECT_TRUE(result.value().is_feasible);
-  EXPECT_TRUE(has_drac_metric_with_level(result.value().metrics, MetricReport::WARN));
-  EXPECT_FALSE(has_drac_metric_with_level(result.value().metrics, MetricReport::ERROR));
+  EXPECT_TRUE(has_drac_metric_with_level(result.value().metrics, RiskLevel::HIGH_CAUTION));
+  EXPECT_FALSE(has_drac_metric_with_level(result.value().metrics, RiskLevel::DANGER));
   EXPECT_TRUE(result.value().planning_factors.factors.empty());
 }
 
@@ -289,7 +289,7 @@ TEST_F(CollisionCheckFilterTest, DracErrorRejectsTrajectory)
 
   ASSERT_TRUE(result.has_value());
   EXPECT_FALSE(result.value().is_feasible);
-  EXPECT_TRUE(has_drac_metric_with_level(result.value().metrics, MetricReport::ERROR));
+  EXPECT_TRUE(has_drac_metric_with_level(result.value().metrics, RiskLevel::DANGER));
   EXPECT_FALSE(result.value().planning_factors.factors.empty());
 }
 
