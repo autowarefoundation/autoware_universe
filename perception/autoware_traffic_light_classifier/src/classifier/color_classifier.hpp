@@ -118,9 +118,10 @@ private:
   // classification (get_traffic_signals) and debug rendering (make_debug_image).
   PipelineResult run_pipeline(const cv::Mat & roi_image) const;
   // Pick one TrafficLightElement from the denoised per-color masks: the dominant
-  // color band wins, with confidence scaled by its matching pixel count.
-  tier4_perception_msgs::msg::TrafficLightElement classify_stages(
-    const PipelineStages & stages) const;
+  // color band wins, with confidence scaled by its matching pixel count. Static: it
+  // derives the element purely from the stage masks, using no member state.
+  static tier4_perception_msgs::msg::TrafficLightElement classify_stages(
+    const PipelineStages & stages);
   bool filter_hsv(
     const cv::Mat & input_image, cv::Mat & green_image, cv::Mat & yellow_image,
     cv::Mat & red_image) const;

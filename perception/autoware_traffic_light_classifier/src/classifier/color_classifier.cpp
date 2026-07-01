@@ -59,7 +59,7 @@ bool ColorClassifierCore::filter_hsv(
     cv::inRange(hsv_image, min_hsv_green_, max_hsv_green_, green_image);
     cv::inRange(hsv_image, min_hsv_yellow_, max_hsv_yellow_, yellow_image);
     cv::inRange(hsv_image, min_hsv_red_, max_hsv_red_, red_image);
-  } catch (cv::Exception & e) {
+  } catch (const cv::Exception &) {
     return false;
   }
   return true;
@@ -116,7 +116,7 @@ ColorClassifierCore::PipelineResult ColorClassifierCore::run_pipeline(
 }
 
 tier4_perception_msgs::msg::TrafficLightElement ColorClassifierCore::classify_stages(
-  const PipelineStages & stages) const
+  const PipelineStages & stages)
 {
   const cv::Mat & green_filtered_bin_image = stages.green.denoised;
   const cv::Mat & yellow_filtered_bin_image = stages.yellow.denoised;
