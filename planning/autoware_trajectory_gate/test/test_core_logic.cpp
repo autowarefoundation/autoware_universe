@@ -40,7 +40,7 @@ public:
 class TestSender : public TrajectorySender
 {
 public:
-  void emit(const Trajectory & msg) {send(msg);}
+  void emit(const Trajectory & msg) { send(msg); }
 };
 
 TEST(TrajectorySenderTest, send_without_output_is_no_operation)
