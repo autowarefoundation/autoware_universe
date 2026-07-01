@@ -168,6 +168,15 @@ The per-class `wheel_pos_ratio_rear` values mirror `autoware_multi_object_tracke
 `object_model.hpp` (`0.25` for car/bus/truck/trailer, `0.30` for motorcycle) and are kept in sync
 manually so this package keeps no build dependency on the tracker.
 
+#### Footprint-aware box expansion (for all objects)
+
+A tracked object carries a body bounding box (`shape.dimensions`) plus an object-local footprint
+polygon (`shape.footprint`) that can protrude beyond the box (e.g. open doors, overhanging cargo).
+As a shared final pass over every predicted object, bounding-box shapes whose footprint protrudes
+are expanded to the axis-aligned union of the body box and footprint, and their predicted paths are
+re-centered on the expanded box so the path keeps tracing the box center. Objects without a
+protruding footprint are unaffected.
+
 ## Using Vehicle Acceleration for Path Prediction (for Vehicle Obstacles)
 
 By default, the `map_based_prediction` module uses the current obstacle's velocity to compute its predicted path length. However, it is possible to use the obstacle's current acceleration to calculate its predicted path's length.
