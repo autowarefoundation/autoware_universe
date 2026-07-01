@@ -249,7 +249,7 @@ bool SurroundObstacleStop::modify_trajectory(
   }
 
   const auto & ego_pose = input.current_odometry->pose.pose;
-  utils::replace_trajectory_with_stop_point(traj_points, ego_pose);
+  utils::replace_trajectory_with_stop_point(traj_points, ego_pose, trajectory_time_step_);
 
   planning_factor_interface_->add(
     traj_points, ego_pose, ego_pose, PlanningFactor::STOP,

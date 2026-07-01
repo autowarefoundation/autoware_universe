@@ -32,7 +32,8 @@ double calculate_distance_to_last_point(
   const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose);
 
 void replace_trajectory_with_stop_point(
-  TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose);
+  TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose,
+  const double time_step);
 
 bool is_ego_vehicle_moving(
   const geometry_msgs::msg::Twist & twist, const double velocity_threshold);

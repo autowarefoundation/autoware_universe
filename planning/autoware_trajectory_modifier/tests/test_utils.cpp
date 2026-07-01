@@ -284,7 +284,8 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointEmptyTrajectory)
   TrajectoryPoints trajectory;
   auto ego_pose = create_pose(5.0, 10.0);
 
-  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(trajectory, ego_pose);
+  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
+    trajectory, ego_pose, 0.1);
 
   EXPECT_EQ(trajectory.size(), 2);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.x, 5.0);
@@ -309,7 +310,8 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointNonEmptyTrajectory)
 
   auto ego_pose = create_pose(7.0, 8.0);
 
-  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(trajectory, ego_pose);
+  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
+    trajectory, ego_pose, 0.1);
 
   EXPECT_EQ(trajectory.size(), 2);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.x, 7.0);
@@ -336,7 +338,8 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointPoseOrientation)
   ego_pose.orientation.z = 0.3;
   ego_pose.orientation.w = 0.9;
 
-  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(trajectory, ego_pose);
+  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
+    trajectory, ego_pose, 0.1);
 
   EXPECT_EQ(trajectory.size(), 2);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.x, 2.0);
@@ -360,7 +363,8 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointNegativeCoordinates)
 
   auto ego_pose = create_pose(-5.0, -7.5);
 
-  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(trajectory, ego_pose);
+  autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
+    trajectory, ego_pose, 0.1);
 
   EXPECT_EQ(trajectory.size(), 2);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.x, -5.0);
