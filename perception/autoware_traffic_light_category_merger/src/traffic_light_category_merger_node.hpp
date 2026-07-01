@@ -15,6 +15,8 @@
 #ifndef TRAFFIC_LIGHT_CATEGORY_MERGER_NODE_HPP_
 #define TRAFFIC_LIGHT_CATEGORY_MERGER_NODE_HPP_
 
+#include "traffic_light_category_merger.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
@@ -23,10 +25,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
 
-#include <chrono>
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -46,7 +45,7 @@ private:
     SyncPolicy;
   message_filters::Synchronizer<SyncPolicy> sync_;
 
-  void signalsCallback(
+  void signals_callback(
     const TrafficLightArray::ConstSharedPtr & car_signals_msg,
     const TrafficLightArray::ConstSharedPtr & pedestrian_signals_msg);
 

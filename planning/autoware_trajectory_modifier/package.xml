@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_trajectory_modifier</name>
-  <version>0.51.0</version>
+  <version>0.52.0</version>
   <description>The autoware_trajectory_modifier package</description>
 
   <maintainer email="daniel.sanchez@tier4.jp">Daniel Sanchez</maintainer>
@@ -9,6 +9,7 @@
   <maintainer email="go.sakayori@tier4.jp">Go Sakayori</maintainer>
   <maintainer email="shintaro.sakoda@tier4.jp">Shintaro Sakoda</maintainer>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
+  <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
 
   <license>Apache License 2.0</license>
 
@@ -19,6 +20,7 @@
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_motion_utils</depend>
+  <depend>autoware_obstacle_proximity_checker</depend>
   <depend>autoware_path_optimizer</depend>
   <depend>autoware_path_smoother</depend>
   <depend>autoware_planning_factor_interface</depend>
@@ -36,6 +38,8 @@
   <depend>range-v3</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_ros</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>

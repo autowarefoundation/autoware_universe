@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <map>
 #include <memory>
-#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -36,11 +35,39 @@ namespace
 using autoware_perception_msgs::msg::PredictedTrafficLightState;
 using autoware_perception_msgs::msg::TrafficLightElement;
 using autoware_perception_msgs::msg::TrafficLightGroup;
+using autoware_perception_msgs::msg::TrafficLightGroupArray;
 
 // One element paired with whether it came from the prioritized source.
 // Accumulated per regulatory-element id while routing signals, then reduced to
 // one element per shape by get_highest_confidence_elements().
 using ElementAndPriority = std::pair<TrafficLightElement, bool>;
+
+// Snapshot of the stored external signals plus the freshest stamp among them.
+// The perception-staleness check and latest_input_time both derive from
+// max_stamp/has_any, so they read from one source of truth.
+struct ExternalSnapshot
+{
+  TrafficLightGroupArray signals;
+  rclcpp::Time max_stamp{0, 0, RCL_ROS_TIME};
+  bool has_any = false;
+};
+
+// Builds the external-signal array and tracks the freshest stamp in one pass
+// over the per-id external cache.
+ExternalSnapshot collect_external_snapshot(
+  const std::unordered_map<lanelet::Id, std::pair<rclcpp::Time, TrafficLightGroup>> &
+    external_traffic_lights)
+{
+  ExternalSnapshot snapshot;
+  for (const auto & [id, info] : external_traffic_lights) {
+    snapshot.signals.traffic_light_groups.emplace_back(info.second);
+    if (!snapshot.has_any || info.first > snapshot.max_stamp) {
+      snapshot.max_stamp = info.first;
+      snapshot.has_any = true;
+    }
+  }
+  return snapshot;
+}
 
 // Appends each group's predictions into predictions_map keyed by
 // regulatory-element id. Predictions accumulate across sources in call order.
@@ -72,6 +99,18 @@ void route_signal(
   auto & elements_and_priority = signals_map[id];
   for (const auto & element : signal.elements) {
     elements_and_priority.emplace_back(element, priority);
+  }
+}
+
+// Routes every signal in `signals` into `signals_map` via route_signal().
+void route_signals(
+  const std::vector<TrafficLightGroup> & signals, bool priority,
+  const std::unordered_set<lanelet::Id> & map_regulatory_elements,
+  std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> & signals_map,
+  std::vector<lanelet::Id> & off_map_signal_ids)
+{
+  for (const auto & signal : signals) {
+    route_signal(signal, priority, map_regulatory_elements, signals_map, off_map_signal_ids);
   }
 }
 
@@ -170,45 +209,39 @@ bool TrafficLightArbiterCore::is_external_outdated(
   return std::abs((current_time - msg_stamp).seconds()) > external_delay_tolerance_;
 }
 
-std::vector<TrafficLightArbiterCore::ExpiredExternalSignal>
-TrafficLightArbiterCore::sweep_expired_external_signals(
+void TrafficLightArbiterCore::sweep_expired_external_signals(
   const rclcpp::Time & reference_time, double tolerance)
 {
-  std::vector<ExpiredExternalSignal> expired;
   auto it = external_traffic_lights_.begin();
   while (it != external_traffic_lights_.end()) {
     const auto & msg_stamp = it->second.first;
-    const auto age = (reference_time - msg_stamp).seconds();
-    if (std::abs(age) > tolerance) {
-      expired.push_back({it->first, age});
+    if (std::abs((reference_time - msg_stamp).seconds()) > tolerance) {
       it = external_traffic_lights_.erase(it);
     } else {
       ++it;
     }
   }
-  return expired;
 }
 
-std::vector<TrafficLightArbiterCore::ExpiredExternalSignal>
-TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
+void TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
 {
   latest_perception_msg_ = msg;
-  return sweep_expired_external_signals(rclcpp::Time(msg.stamp), external_time_tolerance_);
+  sweep_expired_external_signals(rclcpp::Time(msg.stamp), external_time_tolerance_);
 }
 
 // Admission control then cache maintenance:
-//   1. Reject (return {false, {}}) when |current_time - msg.stamp| exceeds
+//   1. Reject (return false) when |current_time - msg.stamp| exceeds
 //      external_delay_tolerance_ — the arrival is too far off to trust.
-//   2. Otherwise refresh each group's cache entry with msg.stamp, sweep the
-//      cache against current_time (external_delay_tolerance_), and return the
-//      evicted entries. Perception state is untouched here; its staleness is
-//      handled non-destructively inside arbitrate().
-TrafficLightArbiterCore::ExternalIngestResult TrafficLightArbiterCore::ingest_external(
+//   2. Otherwise refresh each group's cache entry with msg.stamp and sweep the
+//      cache against current_time (external_delay_tolerance_). Perception state
+//      is untouched here; its staleness is handled non-destructively inside
+//      arbitrate().
+bool TrafficLightArbiterCore::ingest_external(
   const TrafficSignalArray & msg, const rclcpp::Time & current_time)
 {
   const auto msg_time = rclcpp::Time(msg.stamp);
   if (is_external_outdated(current_time, msg_time)) {
-    return {false, {}};
+    return false;
   }
 
   // Update external traffic lights map with new information
@@ -216,7 +249,8 @@ TrafficLightArbiterCore::ExternalIngestResult TrafficLightArbiterCore::ingest_ex
     external_traffic_lights_[signal.traffic_light_group_id] = std::make_pair(msg_time, signal);
   }
 
-  return {true, sweep_expired_external_signals(current_time, external_delay_tolerance_)};
+  sweep_expired_external_signals(current_time, external_delay_tolerance_);
+  return true;
 }
 
 TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() const
@@ -225,25 +259,15 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
 
   std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> regulatory_element_signals_map;
 
-  // Create external signals array from stored valid signals, tracking the
-  // freshest external stamp for the perception-staleness check below.
-  TrafficSignalArray valid_external_signals;
-  rclcpp::Time max_external_stamp{0, 0, RCL_ROS_TIME};
-  bool has_externals = false;
-  for (const auto & [id, info] : external_traffic_lights_) {
-    valid_external_signals.traffic_light_groups.emplace_back(info.second);
-    if (!has_externals || info.first > max_external_stamp) {
-      max_external_stamp = info.first;
-      has_externals = true;
-    }
-  }
+  const auto external = collect_external_snapshot(external_traffic_lights_);
 
   // Ignore perception for this cycle when it lags the freshest external by
   // more than perception_time_tolerance_. Done as a non-destructive view so
   // ingest_perception() remains the sole writer of latest_perception_msg_.
   const auto perception_stamp = rclcpp::Time(latest_perception_msg_.stamp);
   const bool perception_is_stale =
-    has_externals && (max_external_stamp - perception_stamp).seconds() > perception_time_tolerance_;
+    external.has_any &&
+    (external.max_stamp - perception_stamp).seconds() > perception_time_tolerance_;
   TrafficSignalArray empty_perception;
   empty_perception.stamp = latest_perception_msg_.stamp;
   const auto & effective_perception =
@@ -252,7 +276,7 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
   std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predictions_map;
   // add in order from perception msg
   append_predictions(predictions_map, effective_perception.traffic_light_groups);
-  append_predictions(predictions_map, valid_external_signals.traffic_light_groups);
+  append_predictions(predictions_map, external.signals.traffic_light_groups);
 
   if (map_regulatory_elements_set_ == nullptr) {
     return result;
@@ -269,24 +293,17 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
   const auto & map_regulatory_elements = *map_regulatory_elements_set_;
   if (enable_signal_matching_) {
     const auto validated_signals =
-      signal_match_validator_->validate_signals(effective_perception, valid_external_signals);
-    for (const auto & signal : validated_signals.traffic_light_groups) {
-      route_signal(
-        signal, false, map_regulatory_elements, regulatory_element_signals_map,
-        result.off_map_signal_ids);
-    }
+      signal_match_validator_->validate_signals(effective_perception, external.signals);
+    route_signals(
+      validated_signals.traffic_light_groups, false, map_regulatory_elements,
+      regulatory_element_signals_map, result.off_map_signal_ids);
   } else {
-    for (const auto & signal : effective_perception.traffic_light_groups) {
-      route_signal(
-        signal, source_priority_ == SourcePriority::PERCEPTION, map_regulatory_elements,
-        regulatory_element_signals_map, result.off_map_signal_ids);
-    }
-
-    for (const auto & signal : valid_external_signals.traffic_light_groups) {
-      route_signal(
-        signal, source_priority_ == SourcePriority::EXTERNAL, map_regulatory_elements,
-        regulatory_element_signals_map, result.off_map_signal_ids);
-    }
+    route_signals(
+      effective_perception.traffic_light_groups, source_priority_ == SourcePriority::PERCEPTION,
+      map_regulatory_elements, regulatory_element_signals_map, result.off_map_signal_ids);
+    route_signals(
+      external.signals.traffic_light_groups, source_priority_ == SourcePriority::EXTERNAL,
+      map_regulatory_elements, regulatory_element_signals_map, result.off_map_signal_ids);
   }
 
   output_signals_msg.traffic_light_groups.reserve(regulatory_element_signals_map.size());
@@ -302,8 +319,8 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
   // Latest input stamp across stored sources. The Node compares this against
   // its trigger stamp to decide whether the published output is behind some
   // input that has arrived but hasn't yet driven a publish cycle.
-  result.latest_input_time = (has_externals && max_external_stamp > perception_stamp)
-                               ? max_external_stamp
+  result.latest_input_time = (external.has_any && external.max_stamp > perception_stamp)
+                               ? external.max_stamp
                                : perception_stamp;
 
   result.output = std::move(output_signals_msg);

@@ -1,0 +1,43 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: RadarTrackCrossingNoiseFilter.node
+
+package:
+  name: autoware_radar_tracks_noise_filter
+  provider: autoware
+
+launch:
+  plugin: autoware::radar_tracks_noise_filter::RadarTrackCrossingNoiseFilterNode
+  executable: radar_tracks_noise_filter_node
+  node_output: screen
+
+# interfaces
+subscribers:
+  - name: tracks
+    message_type: radar_msgs/msg/RadarTracks
+    remap_target: ~/input/tracks
+
+publishers:
+  - name: noise_tracks
+    message_type: radar_msgs/msg/RadarTracks
+    remap_target: ~/output/noise_tracks
+  - name: filtered_tracks
+    message_type: radar_msgs/msg/RadarTracks
+    remap_target: ~/output/filtered_tracks
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/radar_tracks_noise_filter.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: filter
+    trigger_conditions:
+      - on_input: tracks
+    outcomes:
+      - to_output: noise_tracks
+      - to_output: filtered_tracks
