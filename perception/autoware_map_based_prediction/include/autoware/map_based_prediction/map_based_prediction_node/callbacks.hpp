@@ -78,7 +78,6 @@ private:
     autoware::agnocast_wrapper::Node, autoware::agnocast_wrapper::Buffer,
     autoware::agnocast_wrapper::TransformListener>;
 
-  autoware::agnocast_wrapper::Node * node_;
   NodeState & state_;
 
   AUTOWARE_POLLING_SUBSCRIBER_PTR(TrafficLightGroupArray) sub_traffic_signals_;

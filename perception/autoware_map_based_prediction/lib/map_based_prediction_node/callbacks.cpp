@@ -70,7 +70,7 @@ void MapCallback::mapCallback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMap
 // ---------------------------------------------------------------------------
 
 ObjectsCallback::ObjectsCallback(autoware::agnocast_wrapper::Node * node, NodeState & state)
-: node_(node), state_(state), transform_listener_(node)
+: state_(state), transform_listener_(node)
 {
   sub_traffic_signals_ =
     node->create_polling_subscriber<TrafficLightGroupArray>("/traffic_signals", rclcpp::QoS{1});

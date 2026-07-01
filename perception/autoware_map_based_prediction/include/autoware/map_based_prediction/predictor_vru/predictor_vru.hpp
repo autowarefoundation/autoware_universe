@@ -56,7 +56,7 @@ public:
   };
 
   explicit PredictorVru(autoware::agnocast_wrapper::Node & node)
-  : node_(node), traffic_signal_module_(node), history_manager_(node)
+  : traffic_signal_module_(node), history_manager_(node)
   {
   }
   ~PredictorVru() = default;
@@ -95,7 +95,6 @@ public:
   PredictedObjects retrieveUndetectedObjects();
 
 private:
-  autoware::agnocast_wrapper::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   // Map data

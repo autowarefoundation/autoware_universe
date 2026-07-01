@@ -70,7 +70,6 @@ public:
     double objects_detected_time, visualization_msgs::msg::MarkerArray * debug_markers);
 
 private:
-  autoware::agnocast_wrapper::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   Params params_;
