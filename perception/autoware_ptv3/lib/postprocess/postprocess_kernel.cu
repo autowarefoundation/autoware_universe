@@ -24,7 +24,8 @@
 
 namespace autoware::ptv3
 {
-
+namespace
+{
 struct OutputSegmentationPointType
 {
   float x;
@@ -128,6 +129,7 @@ std::vector<std::uint8_t> makeClassIdToSemanticLabelLut(
   }
   return lut;
 }
+}  // namespace
 
 __global__ void createVisualizationPointcloudKernel(
   const float4 * input_features, const float * colors, const std::int64_t * labels,
