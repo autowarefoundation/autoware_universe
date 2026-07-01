@@ -1,4 +1,4 @@
-//  Copyright 2025 The Autoware Contributors
+//  Copyright 2026 The Autoware Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,6 +34,10 @@
 namespace autoware::redundancy_switcher
 {
 
+// Variant of RedundancySwitcherAdapter for the driving_mode architecture.
+// Differences from the command_mode variant:
+//   - Does not handle UpdateAnotherEcuAvailabilityTimeoutCommand (no availability topic).
+//   - Sub-ECU main_ecu_fault detection does not require another_ecu_availability_timeout.
 class RedundancySwitcherAdapter : public IAdapterPlugin
 {
 public:
@@ -54,8 +58,6 @@ private:
     diagnostic_updater::DiagnosticStatusWrapper & stat) const;
 
 public:
-  // Returns true for INITIALIZING(0) or IN_ELECTION(3): connection flags are unstable
-  // in these states and fault_mutex_ may still hold data from a prior state.
   static bool is_transitional_state(uint8_t node_state);
   static SwitcherSignals to_switcher_signals(uint8_t node_state);
   static ActiveControlUnit to_active_control_unit(uint8_t path_info);
@@ -84,36 +86,28 @@ private:
   rclcpp::Node * node_{nullptr};
   std::shared_ptr<EventGateway> gateway_;
 
-  // UDS: Interface → Switcher (command send)
   std::unique_ptr<UdsSender<ElectionRequest>> uds_sender_;
-  // UDS: Switcher → Interface (status receive)
   std::unique_ptr<UdsReceiver<ElectionStatus>> uds_receiver_;
 
-  // Parameters
   double election_status_timeout_milli_{1000.0};
   bool is_main_ecu_{true};
 
-  // State
   std::optional<ElectionStatus> last_election_status_;
   std::optional<rclcpp::Time> stamp_election_status_;
-  std::optional<AutowareReady> autoware_ready_;  // cached via UpdateAutowareReadyCommand
-  bool another_ecu_availability_timeout_{
-    false};  // cached via UpdateAnotherEcuAvailabilityTimeoutCommand
+  std::optional<AutowareReady> autoware_ready_;
+  uint16_t priority_{0};
   std::unordered_set<std::string> node_fault_points_;
   std::unordered_set<std::string> link_fault_points_;
-  bool uds_connection_established_{false};  // true once the UDS connection is established
+  bool uds_connection_established_{false};
 
-  // Thread management
   std::thread uds_receiver_thread_;
   std::atomic<bool> is_uds_receiver_running_{false};
-  mutable std::mutex status_mutex_;  // last_election_status_, stamp, uds connection state
-  mutable std::mutex policy_mutex_;  // cached state updated from execute()
-  mutable std::mutex fault_mutex_;   // cached diagnostic computation results
+  mutable std::mutex status_mutex_;
+  mutable std::mutex policy_mutex_;
+  mutable std::mutex fault_mutex_;
 
-  // Timers
   rclcpp::TimerBase::SharedPtr timer_;
 
-  // Diagnostics
   std::unique_ptr<diagnostic_updater::Updater> updater_;
 };
 

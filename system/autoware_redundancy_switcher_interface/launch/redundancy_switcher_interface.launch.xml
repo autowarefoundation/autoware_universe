@@ -1,6 +1,5 @@
 <launch>
   <arg name="is_main_ecu" default="true"/>
-  <arg name="is_redundant" default="true"/>
   <arg name="base_config" default="$(find-pkg-share autoware_redundancy_switcher_interface)/config/default.param.yaml"/>
   <arg name="plugin_config" default="$(find-pkg-share autoware_redundancy_switcher_interface_plugins)/config/default.param.yaml"/>
 
@@ -22,7 +21,6 @@
   <let name="node_name_prefix" value="sub_ecu" unless="$(var is_main_ecu)"/>
 
   <node pkg="autoware_redundancy_switcher_interface" exec="redundancy_switcher_interface_node" name="$(var node_name_prefix)_redundancy_switcher_interface" output="screen">
-    <param name="is_redundant" value="$(var is_redundant)"/>
     <param name="is_main_ecu" value="$(var is_main_ecu)"/>
     <param from="$(var base_config)"/>
     <param from="$(var plugin_config)"/>

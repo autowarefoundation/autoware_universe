@@ -12,7 +12,8 @@ ament_auto_add_library(${PROJECT_NAME}_core SHARED
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/diag_adapter.cpp
   src/log_adapter.cpp
-  src/subsystem_adapter.cpp
+  src/command_mode_subsystem_adapter.cpp
+  src/driving_mode_subsystem_adapter.cpp
   src/redundancy_switcher_interface.cpp
 )
 
@@ -41,6 +42,9 @@ if(BUILD_TESTING)
   ament_add_gtest(test_diag_logic test/test_diag_logic.cpp)
   target_link_libraries(test_diag_logic ${PROJECT_NAME}_core)
   target_include_directories(test_diag_logic PRIVATE src)
+  ament_add_gtest(test_command_mode_subsystem_adapter test/test_command_mode_subsystem_adapter.cpp)
+  target_link_libraries(test_command_mode_subsystem_adapter ${PROJECT_NAME})
+  target_include_directories(test_command_mode_subsystem_adapter PRIVATE src)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE launch config schema)

@@ -1,8 +1,4 @@
-# Configuration for autoware_redundancy_switcher_interface — non-redundant system.
-# Load this file together with the base default.param.yaml.
+# Non-redundant (single-ECU) configuration.
 /**:
   ros__parameters:
-    # Use the non-redundant switcher adapter (no hardware switcher).
-    # active_control_unit [0, 2] is published once at startup via transient_local.
-    # SelfInterruption and Reset commands are ignored (no hardware to act on).
     switcher_plugin: "autoware::redundancy_switcher::NonRedundantSwitcherAdapter"

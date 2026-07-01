@@ -20,6 +20,7 @@
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/u_int8.hpp>
+#include <std_msgs/msg/u_int16.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 #include <tier4_system_msgs/msg/active_control_unit.hpp>
 
@@ -36,13 +37,18 @@ class SimpleSwitcherNode : public rclcpp::Node
 public:
   explicit SimpleSwitcherNode(const rclcpp::NodeOptions & options);
 
-private:
+public:
   static uint8_t encode_signals(bool stable, bool self_interrupted, bool faulted);
+
+private:
   void on_manual_active(
     const std_srvs::srv::SetBool::Request & request, std_srvs::srv::SetBool::Response & response);
   void on_self_main();
   void on_self_sub();
   void on_reset();
+  void on_priority_main(uint16_t priority);
+  void on_priority_sub(uint16_t priority);
+  void apply_priority_based_switching();
   void publish_status();
 
   int64_t main_ecu_id_{0};
@@ -50,6 +56,8 @@ private:
 
   bool main_interrupted_{false};
   bool sub_interrupted_{false};
+  uint16_t main_priority_{0};
+  uint16_t sub_priority_{0};
   std::vector<uint8_t> active_ids_;
   std::string annotation_;
   std::mutex mutex_;
@@ -64,6 +72,8 @@ private:
   rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr sub_reset_;
   rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr sub_self_main_;
   rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr sub_self_sub_;
+  rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr sub_priority_main_;
+  rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr sub_priority_sub_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 };

@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef SUBSYSTEM_ADAPTER_HPP_
-#define SUBSYSTEM_ADAPTER_HPP_
+#ifndef COMMAND_MODE_SUBSYSTEM_ADAPTER_HPP_
+#define COMMAND_MODE_SUBSYSTEM_ADAPTER_HPP_
 
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -53,11 +53,11 @@ using ControlModeReport = autoware_vehicle_msgs::msg::ControlModeReport;
  *   - Diagnostics are handled by DiagAdapter (aggregated status) and SwitcherAdapter
  * (switcher-specific diag).
  */
-class SubSystemAdapter : public IAdapterPlugin
+class CommandModeSubSystemAdapter : public IAdapterPlugin
 {
 public:
-  SubSystemAdapter() = default;
-  ~SubSystemAdapter() override = default;
+  CommandModeSubSystemAdapter() = default;
+  ~CommandModeSubSystemAdapter() override = default;
 
   void initialize(rclcpp::Node * node, std::shared_ptr<EventGateway> gateway) override;
   void execute(const OutputCommand & command) override;
@@ -110,4 +110,4 @@ private:
 };
 
 }  // namespace autoware::redundancy_switcher
-#endif  // SUBSYSTEM_ADAPTER_HPP_
+#endif  // COMMAND_MODE_SUBSYSTEM_ADAPTER_HPP_

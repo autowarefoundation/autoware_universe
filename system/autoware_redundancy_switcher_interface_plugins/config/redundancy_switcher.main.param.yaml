@@ -1,22 +1,10 @@
-# Configuration for autoware_redundancy_switcher_interface — Main ECU (RedundancySwitcherAdapter plugin).
-# Load this file together with the base default.param.yaml.
+# Main ECU with hardware redundancy switcher (UDS).
 /**:
   ros__parameters:
-    # Use the UDS-based RedundancySwitcherAdapter plugin.
     switcher_plugin: "autoware::redundancy_switcher::RedundancySwitcherAdapter"
 
     uds:
-      # Unix domain socket path for sending reset/self-interruption commands to the switcher.
       switcher_command_path: "/tmp/autoware_state_main_ecu"
-
-      # Unix domain socket path for receiving ElectionStatus from the switcher.
       switcher_status_path: "/tmp/election_status_main_ecu"
-
-      # Elapsed time [ms] without a new ElectionStatus after which the switcher
-      # is considered disconnected (signals set to timed-out / not-stable).
-      # Equivalent to 'election_status_timeout' in the original implementation.
       election_status_timeout_milli: 500.0
-
-      # Elapsed time [ms] between sending election_request messages to the switcher.
-      # Equivalent to 'election_request_send_interval' in the original implementation.
       election_request_send_interval_milli: 100.0

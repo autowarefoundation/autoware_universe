@@ -41,6 +41,7 @@ private:
   std::vector<OutputCommand> set_active_control_unit(const SetActiveControlUnitEvent & e);
   std::vector<OutputCommand> set_another_ecu_availability_timeout(
     const SetAnotherEcuAvailabilityTimeoutEvent & e);
+  std::vector<OutputCommand> set_priority(const SetPriorityEvent & e);
 };
 
 }  // namespace autoware::redundancy_switcher

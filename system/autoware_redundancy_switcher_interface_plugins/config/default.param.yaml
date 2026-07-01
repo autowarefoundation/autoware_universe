@@ -1,4 +1,4 @@
-# Default config for topic-based switcher adapter plugin.
+# Development/testing configuration using SimpleSwitcherNode (topic-based, no hardware).
 /**:
   ros__parameters:
     switcher_plugin: "autoware::redundancy_switcher::SimpleSwitcherAdapter"

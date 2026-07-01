@@ -71,10 +71,15 @@ struct UpdateAnotherEcuAvailabilityTimeoutCommand
   bool timed_out;
 };
 
+struct UpdatePriorityCommand
+{
+  uint16_t priority;
+};
+
 using OutputCommand = std::variant<
   LogCommand, ResetCommand, SelfInterruptionCommand, UpdateStatusDiagCommand,
   UpdateActiveControlUnitCommand, UpdateAutowareReadyCommand, ResetResultCommand,
-  UpdateAnotherEcuAvailabilityTimeoutCommand>;
+  UpdateAnotherEcuAvailabilityTimeoutCommand, UpdatePriorityCommand>;
 
 }  // namespace autoware::redundancy_switcher
 #endif  // REDUNDANCY_SWITCHER_INTERFACE__IR__OUTPUT_COMMANDS_HPP_

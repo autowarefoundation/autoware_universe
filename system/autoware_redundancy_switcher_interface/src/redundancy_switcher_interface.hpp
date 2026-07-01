@@ -23,7 +23,6 @@
 #include "redundancy_switcher_interface/plugin/command_bus.hpp"
 #include "redundancy_switcher_interface/plugin/event_gateway.hpp"
 #include "redundancy_switcher_interface/plugin/i_adapter_plugin.hpp"
-#include "subsystem_adapter.hpp"
 
 #include <memory>
 #include <vector>
@@ -45,9 +44,11 @@ private:
   // Built-in adapters that are always active (no pluginlib required).
   std::shared_ptr<LogAdapter> log_adapter_;
   std::shared_ptr<DiagAdapter> diag_adapter_;
-  std::shared_ptr<SubSystemAdapter> subsystem_adapter_;
 
-  pluginlib::ClassLoader<IAdapterPlugin> switcher_plugin_loader_;
+  // Subsystem adapter: CommandModeSubSystemAdapter or DrivingModeSubSystemAdapter, selected by use_driving_mode.
+  std::shared_ptr<IAdapterPlugin> subsystem_adapter_;
+
+  pluginlib::ClassLoader<IAdapterPlugin> plugin_loader_;
 
   std::shared_ptr<IAdapterPlugin> switcher_plugin_;
 };

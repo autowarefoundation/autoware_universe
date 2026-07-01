@@ -9,12 +9,12 @@ This package provides:
 - A pure C++ `Processor` that evaluates switching conditions and produces effects
 - An `EventGateway` for thread-safe event submission
 - A `CommandBus` for broadcasting effects to all registered adapters
-- Three built-in adapters: `LogAdapter`, `DiagAdapter`, `SubSystemAdapter`
+- Three built-in adapters: `LogAdapter`, `DiagAdapter`, and one of `CommandModeSubSystemAdapter` / `DrivingModeSubSystemAdapter` (selected at launch via `use_driving_mode`)
 - An `IAdapterPlugin` interface for Switcher-side plugins loaded via pluginlib
 
 The Switcher-side adapter (hardware-specific UDS or topic-based) is loaded at runtime as a pluginlib plugin. See sibling packages:
 
-- `autoware_redundancy_switcher_interface_plugins` — default topic-based plugin
+- `autoware_redundancy_switcher_interface_plugins` — built-in plugin implementations
 - Other project-specific plugins can be implemented separately following [docs/PLUGIN_DEVELOPMENT_GUIDE.md](docs/PLUGIN_DEVELOPMENT_GUIDE.md)
 
 ## Documentation
@@ -30,27 +30,38 @@ The Switcher-side adapter (hardware-specific UDS or topic-based) is loaded at ru
 ## Quick Start
 
 ```bash
-colcon build --packages-select autoware_redundancy_switcher_interface
+colcon build --packages-select autoware_redundancy_switcher_interface autoware_redundancy_switcher_interface_plugins
 ```
 
-Launch (redundant mode with simple switcher):
+Launch (redundant mode with simple switcher for development/testing):
 
 ```xml
 <include file="$(find-pkg-share autoware_redundancy_switcher_interface)/launch/redundancy_switcher_interface.launch.xml">
   <arg name="is_main_ecu" value="true"/>
-  <arg name="is_redundant" value="true"/>
   <arg name="plugin_config"
     value="$(find-pkg-share autoware_redundancy_switcher_interface_plugins)/config/default.param.yaml"/>
 </include>
 ```
 
-Launch (non-redundant mode):
+Launch (non-redundant / single-ECU mode):
 
 ```xml
 <include file="$(find-pkg-share autoware_redundancy_switcher_interface)/launch/redundancy_switcher_interface.launch.xml">
-  <arg name="is_redundant" value="false"/>
+  <arg name="plugin_config"
+    value="$(find-pkg-share autoware_redundancy_switcher_interface_plugins)/config/non_redundant.param.yaml"/>
 </include>
 ```
+
+## Parameters
+
+The base configuration (`config/default.param.yaml`) covers the built-in adapters.
+Plugin-specific parameters are provided by the plugin package config.
+
+| Parameter                     | Type   | Default | Description                                                                                    |
+| ----------------------------- | ------ | ------- | ---------------------------------------------------------------------------------------------- |
+| `use_driving_mode`            | bool   | `false` | `true`: use `DrivingModeSubSystemAdapter` (receives DrivingMode msgs). `false`: use `CommandModeSubSystemAdapter` (receives CommandMode msgs). |
+| `availability_timeout_milli`  | double | —       | Elapsed time [ms] without `CommandModeAvailability` before peer ECU is considered unavailable. Used only when `use_driving_mode=false`. |
+| `diag.transitional_timeout_milli` | double | — | A transitional switcher state persisting longer than this [ms] is reported as `DiagStatus::ERROR`. |
 
 ## Key Concepts
 
