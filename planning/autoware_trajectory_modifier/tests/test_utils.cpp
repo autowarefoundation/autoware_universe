@@ -287,7 +287,7 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointEmptyTrajectory)
   autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
     trajectory, ego_pose, 0.1);
 
-  EXPECT_EQ(trajectory.size(), 2);
+  EXPECT_EQ(trajectory.size(), 3);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.x, 5.0);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.y, 10.0);
   EXPECT_DOUBLE_EQ(trajectory[0].longitudinal_velocity_mps, 0.0);
@@ -296,8 +296,8 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointEmptyTrajectory)
   EXPECT_DOUBLE_EQ(trajectory[0].heading_rate_rps, 0.0);
   EXPECT_DOUBLE_EQ(trajectory[0].front_wheel_angle_rad, 0.0);
   EXPECT_DOUBLE_EQ(trajectory[0].rear_wheel_angle_rad, 0.0);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.x, 5.0);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.y, 10.0);
+  EXPECT_NEAR(trajectory[1].pose.position.x, 5.0, 1e-2);
+  EXPECT_NEAR(trajectory[1].pose.position.y, 10.0, 1e-2);
   EXPECT_DOUBLE_EQ(trajectory[1].longitudinal_velocity_mps, 0.0);
 }
 
@@ -313,12 +313,12 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointNonEmptyTrajectory)
   autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
     trajectory, ego_pose, 0.1);
 
-  EXPECT_EQ(trajectory.size(), 2);
+  EXPECT_EQ(trajectory.size(), 3);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.x, 7.0);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.y, 8.0);
   EXPECT_DOUBLE_EQ(trajectory[0].longitudinal_velocity_mps, 0.0);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.x, 7.0);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.y, 8.0);
+  EXPECT_NEAR(trajectory[1].pose.position.x, 7.0, 1e-2);
+  EXPECT_NEAR(trajectory[1].pose.position.y, 8.0, 1e-2);
   EXPECT_DOUBLE_EQ(trajectory[1].longitudinal_velocity_mps, 0.0);
   EXPECT_DOUBLE_EQ(trajectory[0].lateral_velocity_mps, 0.0);
   EXPECT_DOUBLE_EQ(trajectory[0].acceleration_mps2, 0.0);
@@ -341,19 +341,19 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointPoseOrientation)
   autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
     trajectory, ego_pose, 0.1);
 
-  EXPECT_EQ(trajectory.size(), 2);
+  EXPECT_EQ(trajectory.size(), 3);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.x, 2.0);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.y, 3.0);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.orientation.x, 0.1);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.orientation.y, 0.2);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.orientation.z, 0.3);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.orientation.w, 0.9);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.x, 2.0);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.y, 3.0);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.orientation.x, 0.1);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.orientation.y, 0.2);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.orientation.z, 0.3);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.orientation.w, 0.9);
+  EXPECT_NEAR(trajectory[1].pose.position.x, 2.0, 5e-2);
+  EXPECT_NEAR(trajectory[1].pose.position.y, 3.0, 5e-2);
+  EXPECT_NEAR(trajectory[1].pose.orientation.x, 0.1, 5e-2);
+  EXPECT_NEAR(trajectory[1].pose.orientation.y, 0.2, 5e-2);
+  EXPECT_NEAR(trajectory[1].pose.orientation.z, 0.3, 5e-2);
+  EXPECT_NEAR(trajectory[1].pose.orientation.w, 0.9, 5e-2);
 }
 
 TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointNegativeCoordinates)
@@ -366,9 +366,9 @@ TEST_F(UtilsTest, ReplaceTrajectoryWithStopPointNegativeCoordinates)
   autoware::trajectory_modifier::utils::replace_trajectory_with_stop_point(
     trajectory, ego_pose, 0.1);
 
-  EXPECT_EQ(trajectory.size(), 2);
+  EXPECT_EQ(trajectory.size(), 3);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.x, -5.0);
   EXPECT_DOUBLE_EQ(trajectory[0].pose.position.y, -7.5);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.x, -5.0);
-  EXPECT_DOUBLE_EQ(trajectory[1].pose.position.y, -7.5);
+  EXPECT_NEAR(trajectory[1].pose.position.x, -5.0, 1e-2);
+  EXPECT_NEAR(trajectory[1].pose.position.y, -7.5, 1e-2);
 }

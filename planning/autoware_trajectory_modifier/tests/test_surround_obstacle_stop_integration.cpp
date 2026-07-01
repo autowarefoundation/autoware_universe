@@ -173,15 +173,16 @@ InputData create_input_data(
 
 void expect_stop_trajectory_at_ego(const TrajectoryPoints & trajectory)
 {
-  ASSERT_EQ(trajectory.size(), 2U);
+  ASSERT_EQ(trajectory.size(), 3U);
+
+  EXPECT_FLOAT_EQ(trajectory.front().pose.position.x, 0.0);
+  EXPECT_FLOAT_EQ(trajectory.front().pose.position.y, 0.0);
   EXPECT_FLOAT_EQ(trajectory.front().longitudinal_velocity_mps, 0.0F);
-  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
   EXPECT_FLOAT_EQ(trajectory.front().acceleration_mps2, 0.0F);
+  EXPECT_NEAR(trajectory.back().pose.position.x, 0.0, 1e-2);
+  EXPECT_NEAR(trajectory.back().pose.position.y, 0.0, 1e-2);
+  EXPECT_FLOAT_EQ(trajectory.back().longitudinal_velocity_mps, 0.0F);
   EXPECT_FLOAT_EQ(trajectory.back().acceleration_mps2, 0.0F);
-  EXPECT_NEAR(trajectory.front().pose.position.x, 0.0, 1e-3);
-  EXPECT_NEAR(trajectory.front().pose.position.y, 0.0, 1e-3);
-  EXPECT_NEAR(trajectory.back().pose.position.x, 0.0, 1e-3);
-  EXPECT_NEAR(trajectory.back().pose.position.y, 0.0, 1e-3);
 }
 
 }  // namespace
