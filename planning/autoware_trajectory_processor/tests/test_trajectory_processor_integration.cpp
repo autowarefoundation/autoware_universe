@@ -361,7 +361,10 @@ protected:
   void wait_for_output_sim(int timeout_s = 5)
   {
     const rclcpp::Time deadline = sim_time_ + rclcpp::Duration(std::chrono::seconds(timeout_s));
-    while (!output_received_ && sim_time_ < deadline && rclcpp::ok()) {
+    const auto wait_condition = [&]() {
+      return !output_received_ && sim_time_ < deadline && rclcpp::ok();
+    };
+    while (wait_condition()) {
       advance_sim_time_and_spin(std::chrono::milliseconds(100));
     }
   }
