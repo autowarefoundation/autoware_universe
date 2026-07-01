@@ -29,6 +29,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -66,6 +67,36 @@ CandidateTrajectories create_straight_trajectories(
   for (double x = 0.0; x <= length; x += 1.0) {
     candidate.points.push_back(create_trajectory_point(x, 0.0, velocity));
   }
+  msg.candidate_trajectories.push_back(candidate);
+  return msg;
+}
+
+CandidateTrajectories create_sharp_turn_trajectories(
+  double segment_length, double velocity, rclcpp::Time stamp)
+{
+  CandidateTrajectories msg;
+  CandidateTrajectory candidate;
+  candidate.header.frame_id = "map";
+  candidate.header.stamp = stamp;
+
+  // Straight segment along X axis
+  for (double x = 0.0; x <= segment_length; x += 1.0) {
+    auto p = create_trajectory_point(x, 0.0, velocity);
+    // Heading is 0 (straight)
+    p.pose.orientation.w = 1.0;
+    p.pose.orientation.z = 0.0;
+    candidate.points.push_back(p);
+  }
+
+  // Sharp 90-degree turn along Y axis
+  for (double y = 1.0; y <= segment_length; y += 1.0) {
+    auto p = create_trajectory_point(segment_length, y, velocity);
+    // Heading is 90 degrees (yaw = pi/2)
+    p.pose.orientation.w = 0.707;
+    p.pose.orientation.z = 0.707;
+    candidate.points.push_back(p);
+  }
+
   msg.candidate_trajectories.push_back(candidate);
   return msg;
 }
@@ -466,8 +497,152 @@ TEST_F(TrajectoryProcessorIntegrationTest, StopPointFixerIntegrationTest)
   EXPECT_NEAR(latest_output_.points.front().longitudinal_velocity_mps, 0.0, 0.01);
 }
 
-int main(int argc, char ** argv)
+TEST_F(TrajectoryProcessorIntegrationTest, KinematicFeasibilityTest)
 {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  // Create a sharp L-shape turn with 10m segments
+  auto traj = create_sharp_turn_trajectories(10.0, 5.0, sim_time_);
+
+  Odometry odom;
+  odom.header.frame_id = "map";
+  odom.pose.pose.position.x = 0.0;
+  odom.pose.pose.orientation.w = 1.0;
+  odom.twist.twist.linear.x = 5.0;
+
+  AccelWithCovarianceStamped acc;
+  acc.header.frame_id = "map";
+
+  for (int i = 0; i < 20 && !output_received_; ++i) {
+    odom.header.stamp = sim_time_;
+    acc.header.stamp = sim_time_;
+    publish_mandatory_inputs(traj, odom, acc);
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
+  }
+  wait_for_output_sim();
+
+  ASSERT_TRUE(output_received_);
+
+  double max_yaw_change = 0.0;
+
+  // Verify that the impossible instantaneous 90-degree jump has been smoothed
+  for (size_t i = 1; i < latest_output_.points.size(); ++i) {
+    const auto & p1 = latest_output_.points[i - 1];
+    const auto & p2 = latest_output_.points[i];
+
+    // Extract yaw from quaternions
+    double yaw1 = 2.0 * std::atan2(p1.pose.orientation.z, p1.pose.orientation.w);
+    double yaw2 = 2.0 * std::atan2(p2.pose.orientation.z, p2.pose.orientation.w);
+
+    // Normalize angle difference to [-pi, pi]
+    double yaw_diff = yaw2 - yaw1;
+    while (yaw_diff > M_PI) yaw_diff -= 2.0 * M_PI;
+    while (yaw_diff < -M_PI) yaw_diff += 2.0 * M_PI;
+
+    max_yaw_change = std::max(max_yaw_change, std::abs(yaw_diff));
+  }
+
+  // The input trajectory had a sudden jump of ~1.57 radians (90 degrees).
+  // The optimizer should smooth this. We expect no single step to have a massive yaw jump.
+  // 0.3 radians per step is a safe upper bound for a smoothed kinematic trajectory at 0.1s dt.
+  EXPECT_LT(max_yaw_change, 0.3) << "Trajectory still contains an impossible kinematic yaw jump!";
+}
+
+TEST_F(TrajectoryProcessorIntegrationTest, VelocityOptimizationTest)
+{
+  // Input: 15.0 m/s is too fast for a sharp turn (violates max_lateral_accel_mps2 = 1.5)
+  auto traj = create_sharp_turn_trajectories(20.0, 15.0, sim_time_);
+
+  Odometry odom;
+  odom.header.frame_id = "map";
+  odom.pose.pose.position.x = 0.0;
+  odom.pose.pose.orientation.w = 1.0;
+  odom.twist.twist.linear.x = 15.0;
+
+  AccelWithCovarianceStamped acc;
+  acc.header.frame_id = "map";
+
+  for (int i = 0; i < 20 && !output_received_; ++i) {
+    odom.header.stamp = sim_time_;
+    acc.header.stamp = sim_time_;
+    publish_mandatory_inputs(traj, odom, acc);
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
+  }
+  wait_for_output_sim();
+
+  ASSERT_TRUE(output_received_);
+
+  // Verify that the velocity drops significantly near the curve (around index where x approaches
+  // 20)
+  bool velocity_reduced = false;
+  for (const auto & p : latest_output_.points) {
+    // If we are in the middle of the turn
+    if (p.pose.position.x > 15.0 && p.pose.position.y < 5.0) {
+      if (p.longitudinal_velocity_mps < 10.0) {  // Velocity must drop well below the 15.0 m/s input
+        velocity_reduced = true;
+        break;
+      }
+    }
+  }
+  EXPECT_TRUE(velocity_reduced) << "Velocity was not adequately reduced for the curve!";
+}
+
+TEST_F(TrajectoryProcessorIntegrationTest, SmoothObstacleStopInteractionTest)
+{
+  // Straight trajectory, moving at 10 m/s
+  auto traj = create_straight_trajectories(40.0, 10.0, sim_time_);
+
+  Odometry odom;
+  odom.header.frame_id = "map";
+  odom.pose.pose.position.x = 0.0;
+  odom.twist.twist.linear.x = 10.0;
+
+  AccelWithCovarianceStamped acc;
+  acc.header.frame_id = "map";
+
+  // Obstacle right in front of the vehicle at x = 30.0
+  PredictedObjects objects;
+  objects.header.frame_id = "map";
+  autoware_perception_msgs::msg::PredictedObject object;
+  object.kinematics.initial_pose_with_covariance.pose.position.x = 30.0;
+  object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  object.shape.dimensions.x = 2.0;
+  object.shape.dimensions.y = 2.0;
+  object.shape.dimensions.z = 2.0;
+
+  autoware_perception_msgs::msg::ObjectClassification classification;
+  classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
+  classification.probability = 1.0;
+  object.classification.push_back(classification);
+  objects.objects.push_back(object);
+
+  for (int i = 0; i < 20 && !output_received_; ++i) {
+    objects.header.stamp = sim_time_;
+    odom.header.stamp = sim_time_;
+    acc.header.stamp = sim_time_;
+    pub_obj_->publish(objects);
+    publish_mandatory_inputs(traj, odom, acc);
+    advance_sim_time_and_spin(std::chrono::milliseconds(100));
+  }
+  wait_for_output_sim();
+
+  ASSERT_TRUE(output_received_);
+
+  // Check deceleration profile (jerk limitation) leading up to the stop point
+  float previous_velocity = latest_output_.points.front().longitudinal_velocity_mps;
+  float max_deceleration_step = 0.0;
+
+  for (size_t i = 1; i < latest_output_.points.size(); ++i) {
+    float current_velocity = latest_output_.points[i].longitudinal_velocity_mps;
+    float velocity_drop = previous_velocity - current_velocity;
+
+    if (velocity_drop > max_deceleration_step) {
+      max_deceleration_step = velocity_drop;
+    }
+    previous_velocity = current_velocity;
+  }
+
+  // The modifier blindly inserts a 0 m/s point.
+  // The optimizer must smooth this. If it didn't smooth it, the step would be 10.0 m/s.
+  // We expect a smooth deceleration curve where no single step drop between points is drastic.
+  EXPECT_LT(max_deceleration_step, 2.0)
+    << "Deceleration profile is too abrupt, optimizer failed to smooth the modifier's stop!";
 }
