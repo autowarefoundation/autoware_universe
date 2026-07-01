@@ -87,6 +87,12 @@ private:
   // Target vehicle speed threshold to enter the stop state.
   double m_stop_state_entry_target_speed;
 
+  // Raw parameter lists used to (re)build the steering rate limit maps on dynamic update.
+  std::vector<double> m_steer_rate_lim_dps_list_by_velocity;
+  std::vector<double> m_velocity_list_for_steer_rate_lim;
+  std::vector<double> m_steer_rate_lim_dps_list_by_curvature;
+  std::vector<double> m_curvature_list_for_steer_rate_lim;
+
   // Convergence threshold for steering control.
   double m_converged_steer_rad;
 
@@ -279,6 +285,23 @@ private:
    * @param node Reference to the node.
    */
   void declareMPCparameters(rclcpp::Node & node);
+
+  /**
+   * @brief (Re)build the velocity-based steering rate limit map from the raw parameter lists.
+   * @param steer_rate_lim_dps_list Steering rate limits [deg/s].
+   * @param velocity_list Velocities [m/s] corresponding to each rate limit.
+   */
+  void updateSteerRateLimitByVelocityMap(
+    const std::vector<double> & steer_rate_lim_dps_list, const std::vector<double> & velocity_list);
+
+  /**
+   * @brief (Re)build the curvature-based steering rate limit map from the raw parameter lists.
+   * @param steer_rate_lim_dps_list Steering rate limits [deg/s].
+   * @param curvature_list Curvatures [1/m] corresponding to each rate limit.
+   */
+  void updateSteerRateLimitByCurvatureMap(
+    const std::vector<double> & steer_rate_lim_dps_list,
+    const std::vector<double> & curvature_list);
 
   /**
    * @brief Callback function called when parameters are changed outside of the node.
