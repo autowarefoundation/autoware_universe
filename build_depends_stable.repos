@@ -2,6 +2,11 @@
 # Core packages are provided pre-built by the CI Docker image, and their versions
 # are defined by the image tag. Adding them here would cause redundant rebuilds.
 repositories:
+  # core
+  core/autoware_core:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_core.git
+    version: 1.9.0
   # universe
   universe/external/tier4_autoware_msgs:
     type: git
