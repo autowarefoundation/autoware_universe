@@ -34,8 +34,8 @@ The node subscribes to lanelet2 map metadata and ego odometry, selects map cells
 
 ### Output
 
-| Name                     | Type                                    | Description                                     |
-| ------------------------ | --------------------------------------- | ----------------------------------------------- |
+| Name                        | Type                                    | Description                                        |
+| --------------------------- | --------------------------------------- | -------------------------------------------------- |
 | `output/lanelet2_map_local` | `autoware_map_msgs::msg::LaneletMapBin` | Dynamic lanelet2 local map around the ego vehicle. |
 
 ## Parameters
@@ -48,13 +48,13 @@ The node subscribes to lanelet2 map metadata and ego odometry, selects map cells
 
 The launch file `launch/lanelet2_map_provider.launch.xml` supports the following arguments:
 
-| Name                                | Default                                                                                           | Description                                           |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Name                                | Default                                                                                            | Description                                           |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `param_path`                        | `$(find-pkg-share autoware_dynamic_lanelet2_map_provider)/config/lanelet2_map_provider.param.yaml` | Parameter file path.                                  |
-| `input_odometry`                    | `/localization/kinematic_state`                                                                   | Remap target for `input/odometry`.                    |
-| `input_lanelet2_map_metadata`       | `/map/output/lanelet2_map_metadata`                                                               | Remap target for `input/lanelet2_map_metadata`.       |
-| `output_lanelet2_map_local`         | `output/lanelet2_map_local`                                                                       | Remap target for `output/lanelet2_map_local`.         |
-| `service_get_selected_lanelet2_map` | `/map/service/get_selected_lanelet2_map`                                                          | Remap target for `service/get_selected_lanelet2_map`. |
+| `input_odometry`                    | `/localization/kinematic_state`                                                                    | Remap target for `input/odometry`.                    |
+| `input_lanelet2_map_metadata`       | `/map/output/lanelet2_map_metadata`                                                                | Remap target for `input/lanelet2_map_metadata`.       |
+| `output_lanelet2_map_local`         | `output/lanelet2_map_local`                                                                        | Remap target for `output/lanelet2_map_local`.         |
+| `service_get_selected_lanelet2_map` | `/map/service/get_selected_lanelet2_map`                                                           | Remap target for `service/get_selected_lanelet2_map`. |
 
 ## Assumptions / Known limits
 
