@@ -138,4 +138,5 @@ std::vector<std::string> DynamicLanelet2MapProviderNode::select_cells(
 }  // namespace autoware::dynamic_lanelet2_map_provider
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::dynamic_lanelet2_map_provider::DynamicLanelet2MapProviderNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(
+  autoware::dynamic_lanelet2_map_provider::DynamicLanelet2MapProviderNode)
