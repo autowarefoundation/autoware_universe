@@ -17,6 +17,7 @@
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_point_types</depend>
+  <depend>autoware_ptv3</depend>
   <depend>autoware_shape_estimation</depend>
   <depend>autoware_utils</depend>
   <depend>geometry_msgs</depend>
