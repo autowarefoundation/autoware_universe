@@ -26,7 +26,7 @@
 namespace autoware::diagnostic_graph_aggregator
 {
 
-CommandModeMapping::CommandModeMapping(rclcpp::Node & node, const Graph & graph)
+CommandModeMapping::CommandModeMapping(autoware::agnocast_wrapper::Node & node, const Graph & graph)
 {
   std::unordered_map<std::string, BaseUnit *> path_to_unit;
   for (const auto & unit : graph.nodes()) {
@@ -51,15 +51,15 @@ CommandModeMapping::CommandModeMapping(rclcpp::Node & node, const Graph & graph)
 
 void CommandModeMapping::update(const rclcpp::Time & stamp) const
 {
-  Availability message;
-  message.stamp = stamp;
+  auto message = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_);
+  message->stamp = stamp;
   for (const auto & [mode, unit] : mode_to_unit_) {
     AvailabilityItem item;
     item.mode = mode;
     item.available = unit->level() == DiagnosticStatus::OK;
-    message.items.push_back(item);
+    message->items.push_back(item);
   }
-  pub_->publish(message);
+  pub_->publish(std::move(message));
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator

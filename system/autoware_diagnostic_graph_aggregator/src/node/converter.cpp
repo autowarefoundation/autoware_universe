@@ -37,10 +37,11 @@ ConverterNode::ConverterNode(const rclcpp::NodeOptions & options) : Node("conver
     create_publisher<OperationModeAvailability>("~/operation_mode/availability", rclcpp::QoS(1));
 }
 
-void ConverterNode::on_availability(const CommandModeAvailability & in)
+void ConverterNode::on_availability(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CommandModeAvailability) & in)
 {
   std::unordered_map<uint16_t, bool> availability;
-  for (const auto & item : in.items) {
+  for (const auto & item : in->items) {
     availability[item.mode] = item.available;
   }
 
@@ -49,7 +50,7 @@ void ConverterNode::on_availability(const CommandModeAvailability & in)
     return iter != availability.end() ? iter->second : current;
   };
 
-  out_.stamp = in.stamp;
+  out_.stamp = in->stamp;
   out_.stop = is_available(stop_, out_.stop);
   out_.autonomous = is_available(autonomous_, out_.autonomous);
   out_.local = is_available(local_, out_.local);
@@ -57,7 +58,10 @@ void ConverterNode::on_availability(const CommandModeAvailability & in)
   out_.emergency_stop = is_available(emergency_stop_, out_.emergency_stop);
   out_.comfortable_stop = is_available(comfortable_stop_, out_.comfortable_stop);
   out_.pull_over = is_available(pull_over_, out_.pull_over);
-  pub_operation_mode_->publish(out_);
+
+  auto msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_operation_mode_);
+  *msg = out_;
+  pub_operation_mode_->publish(std::move(msg));
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator
