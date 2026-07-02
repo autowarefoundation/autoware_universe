@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/behavior_velocity_intersection_module/util.hpp"
+#include "autoware/behavior_velocity_intersection_module/experimental/util.hpp"
 #include "scene_intersection.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/lanelet2_utils/geometry.hpp>
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/object_recognition_utils/predicted_path_utils.hpp>
+#include <autoware/trajectory/utils/crop.hpp>
+#include <autoware/trajectory/utils/find_if.hpp>
+#include <autoware/trajectory/utils/find_nearest.hpp>
+#include <autoware/trajectory/utils/pretty_build.hpp>
+#include <autoware/trajectory/utils/velocity.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
-#include <autoware_utils/geometry/geometry.hpp>
 #include <magic_enum.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
@@ -32,10 +35,8 @@
 
 #include <fmt/format.h>
 #include <lanelet2_core/geometry/Lanelet.h>
-#include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
-#include <limits>
 #include <list>
 #include <memory>
 #include <string>
@@ -459,8 +460,8 @@ void IntersectionModule::cutPredictPathWithinDuration(
 }
 
 std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisionStatus(
-  const size_t closest_idx, const size_t collision_stopline_idx,
-  const IntersectionStopLines & intersection_stoplines) const
+  const double closest_s, const double collision_stopline_s,
+  const double occlusion_stopline_s) const
 {
   // ==========================================================================================
   // if there are any vehicles on the attention area when ego entered the intersection on green
@@ -481,9 +482,8 @@ std::optional<NonOccludedCollisionStop> IntersectionModule::isGreenPseudoCollisi
           planner_param_.collision_detection.yield_on_green_traffic_light.object_dist_to_stopline);
       });
     if (exist_close_vehicles) {
-      const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
       return NonOccludedCollisionStop{
-        closest_idx, collision_stopline_idx, occlusion_stopline_idx, std::string("")};
+        closest_s, collision_stopline_s, occlusion_stopline_s, std::string("")};
     }
   }
   return std::nullopt;
@@ -566,7 +566,7 @@ std::string IntersectionModule::generateDetectionBlameDiagnosis(
 }
 
 std::string IntersectionModule::generateEgoRiskEvasiveDiagnosis(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+  const Trajectory & path, const double closest_s,
   const IntersectionModule::TimeDistanceArray & ego_time_distance_array,
   const std::vector<std::shared_ptr<ObjectInfo>> & too_late_detect_objects,
   [[maybe_unused]] const std::vector<std::shared_ptr<ObjectInfo>> & misjudge_objects,
@@ -599,8 +599,9 @@ std::string IntersectionModule::generateEgoRiskEvasiveDiagnosis(
     const auto object_eta_to_margin_point =
       object_dist_to_margin_point / std::max(min_vel, object_info->observed_velocity());
     // ego side
-    const double ego_dist_to_collision_pos =
-      autoware::motion_utils::calcSignedArcLength(path.points, closest_idx, collision_pos);
+    const auto collision_s =
+      autoware::experimental::trajectory::find_nearest_index(path, collision_pos);
+    const auto ego_dist_to_collision_pos = collision_s - closest_s;
     const auto ego_eta_to_collision_pos_it = std::lower_bound(
       ego_time_distance_array.begin(), ego_time_distance_array.end(), ego_dist_to_collision_pos,
       [](const auto & a, const double b) { return a.second < b; });
@@ -731,7 +732,7 @@ std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
 }
 
 IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassingTime(
-  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const bool is_prioritized,
+  const Trajectory & path, const Interval & lane_id_interval, const bool is_prioritized,
   const IntersectionStopLines & intersection_stoplines,
   autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array,
   const PlannerData & planner_data) const
@@ -772,49 +773,28 @@ IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassin
   // max(occlusion_stopline_idx, first_attention_stopline_idx) is used because
   // occlusion_stopline_idx varies depending on the peeking offset parameter
   // ==========================================================================================
-  const auto occlusion_stopline_idx = intersection_stoplines.occlusion_peeking_stopline.value();
-  const auto first_attention_stopline_idx = intersection_stoplines.first_attention_stopline;
-  const auto closest_idx = intersection_stoplines.closest_idx;
-  const auto last_intersection_stopline_candidate_idx =
-    std::max(occlusion_stopline_idx, first_attention_stopline_idx);
+  const auto & occlusion_stopline_s = intersection_stoplines.occlusion_peeking_stopline.value();
+  const auto & first_attention_stopline_s = intersection_stoplines.first_attention_stopline;
+  const auto & closest_s = intersection_stoplines.closest_s;
+  const auto & last_intersection_stopline_candidate_s =
+    std::max(occlusion_stopline_s, first_attention_stopline_s);
 
-  bool assigned_lane_found = false;
   // crop intersection part of the path, and set the reference velocity to intersection_velocity
   // for ego's ttc
-  PathWithLaneId reference_path;
-  std::optional<size_t> upstream_stopline{std::nullopt};
-  for (size_t i = 0; i + 1 < path.points.size(); ++i) {
-    auto reference_point = path.points.at(i);
-    // assume backward velocity is current ego velocity
-    if (i < closest_idx) {
-      reference_point.point.longitudinal_velocity_mps = current_velocity;
-    }
-    if (
-      i > last_intersection_stopline_candidate_idx &&
-      std::fabs(reference_point.point.longitudinal_velocity_mps) <
-        std::numeric_limits<double>::epsilon() &&
-      !upstream_stopline) {
-      upstream_stopline = i;
-    }
-    if (!use_upstream_velocity) {
-      reference_point.point.longitudinal_velocity_mps = intersection_velocity;
-    }
-    reference_path.points.push_back(reference_point);
-    bool has_objective_lane_id = util::hasLaneIds(path.points.at(i), associative_ids_);
-    if (assigned_lane_found && !has_objective_lane_id) {
-      break;
-    }
-    assigned_lane_found = has_objective_lane_id;
-  }
-  if (!assigned_lane_found) {
-    return {{0.0, 0.0}};  // has already passed the intersection.
+  auto reference_path = autoware::experimental::trajectory::crop(path, 0.0, lane_id_interval.end);
+  if (use_upstream_velocity) {
+    reference_path.longitudinal_velocity_mps().range(0.0, closest_s).set(current_velocity);
+  } else {
+    reference_path.longitudinal_velocity_mps() = intersection_velocity;
   }
 
+  const auto upstream_stopline_s =
+    autoware::experimental::trajectory::search_zero_velocity_position(
+      path, last_intersection_stopline_candidate_s, lane_id_interval.end);
+
   // apply smoother to reference velocity
-  PathWithLaneId smoothed_reference_path = reference_path;
-  if (!smoothPath(reference_path, smoothed_reference_path, planner_data)) {
-    smoothed_reference_path = reference_path;
-  }
+  const auto smoothed_reference_path =
+    smoothPath(reference_path, planner_data).value_or(reference_path);
 
   // calculate when ego is going to reach each (interpolated) points on the path
   TimeDistanceArray time_distance_array{};
@@ -824,26 +804,38 @@ IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassin
 
   // NOTE: `reference_path` is resampled in `reference_smoothed_path`, so
   // `last_intersection_stopline_candidate_idx` makes no sense
-  const auto smoothed_path_closest_idx =
-    autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-      smoothed_reference_path.points, path.points.at(closest_idx).point.pose,
-      planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
+  const auto smoothed_closest_s =
+    autoware::experimental::trajectory::find_first_nearest_index(
+      smoothed_reference_path, planner_data.current_odometry->pose,
+      planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold)
+      .value_or(
+        autoware::experimental::trajectory::find_nearest_index(
+          smoothed_reference_path, planner_data.current_odometry->pose.position));
 
-  const std::optional<size_t> upstream_stopline_idx_opt = [&]() -> std::optional<size_t> {
-    if (upstream_stopline) {
-      const auto upstream_stopline_point =
-        reference_path.points.at(upstream_stopline.value()).point.pose;
-      return autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-        smoothed_reference_path.points, upstream_stopline_point,
-        planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold);
-    } else {
+  const auto smoothed_upstream_stopline_s = [&]() -> std::optional<double> {
+    if (!upstream_stopline_s.has_value()) {
       return std::nullopt;
     }
+    const auto upstream_stopline_point =
+      reference_path.compute(upstream_stopline_s.value()).point.pose;
+    return autoware::experimental::trajectory::find_first_nearest_index(
+             smoothed_reference_path, upstream_stopline_point,
+             planner_data.ego_nearest_dist_threshold, planner_data.ego_nearest_yaw_threshold)
+      .value_or(
+        autoware::experimental::trajectory::find_nearest_index(
+          smoothed_reference_path, upstream_stopline_point.position));
   }();
 
-  for (size_t i = smoothed_path_closest_idx; i + 1 < smoothed_reference_path.points.size(); ++i) {
-    const auto & p1 = smoothed_reference_path.points.at(i);
-    const auto & p2 = smoothed_reference_path.points.at(i + 1);
+  auto smoothed_bases = smoothed_reference_path.get_underlying_bases();
+  smoothed_bases.erase(
+    std::find_if(
+      smoothed_bases.begin(), smoothed_bases.end(),
+      [&](const double & s) { return s >= smoothed_closest_s; }),
+    smoothed_bases.end());
+
+  for (auto it = smoothed_bases.begin(); it != std::prev(smoothed_bases.end()); ++it) {
+    const auto & p1 = smoothed_reference_path.compute(*it);
+    const auto & p2 = smoothed_reference_path.compute(*std::next(it));
 
     const double dist = autoware_utils::calc_distance2d(p1, p2);
     dist_sum += dist;
@@ -853,7 +845,7 @@ IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassin
       (p1.point.longitudinal_velocity_mps + p2.point.longitudinal_velocity_mps) / 2.0;
     const double passing_velocity = [=]() {
       if (use_upstream_velocity) {
-        if (upstream_stopline_idx_opt && i > upstream_stopline_idx_opt.value()) {
+        if (smoothed_upstream_stopline_s && *it > smoothed_upstream_stopline_s.value()) {
           return minimum_upstream_velocity;
         }
         return std::max<double>(average_velocity, minimum_ego_velocity);
@@ -882,12 +874,12 @@ IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassin
   for (const auto & [t, d] : time_distance_array) {
     ego_ttc_array->data.push_back(d);
   }
-  for (size_t i = smoothed_path_closest_idx; i < smoothed_reference_path.points.size(); ++i) {
-    const auto & p = smoothed_reference_path.points.at(i).point.pose.position;
+  for (const auto & s : smoothed_bases) {
+    const auto & p = smoothed_reference_path.compute(s).point.pose.position;
     ego_ttc_array->data.push_back(p.x);
   }
-  for (size_t i = smoothed_path_closest_idx; i < smoothed_reference_path.points.size(); ++i) {
-    const auto & p = smoothed_reference_path.points.at(i).point.pose.position;
+  for (const auto & s : smoothed_bases) {
+    const auto & p = smoothed_reference_path.compute(s).point.pose.position;
     ego_ttc_array->data.push_back(p.y);
   }
   return time_distance_array;
