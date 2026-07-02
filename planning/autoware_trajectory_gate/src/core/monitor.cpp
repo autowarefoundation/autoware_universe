@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 The Autoware Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TYPES_HPP_
-#define TYPES_HPP_
+#include "monitor.hpp"
 
-#include <autoware/obstacle_proximity_checker/structs.hpp>
+#include <memory>
+#include <utility>
 
-namespace autoware::surround_obstacle_checker
+namespace autoware::trajectory_gate
 {
 
-using StopObstacle = autoware::obstacle_proximity_checker::ProximityObstacle;
+TrajectoryMonitor::TrajectoryMonitor(std::unique_ptr<TimeoutDiag> && timeout)
+{
+  timeout_ = std::move(timeout);
+}
 
-}  // namespace autoware::surround_obstacle_checker
+void TrajectoryMonitor::receive(const Trajectory & msg)
+{
+  timeout_->update();
+  TrajectorySender::send(msg);
+}
 
-#endif  // TYPES_HPP_
+}  // namespace autoware::trajectory_gate

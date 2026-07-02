@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 The Autoware Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TYPES_HPP_
-#define TYPES_HPP_
+#include "publisher.hpp"
 
-#include <autoware/obstacle_proximity_checker/structs.hpp>
-
-namespace autoware::surround_obstacle_checker
+namespace autoware::trajectory_gate
 {
 
-using StopObstacle = autoware::obstacle_proximity_checker::ProximityObstacle;
+TrajectoryPublisher::TrajectoryPublisher(rclcpp::Node & node)
+{
+  pub_trajectory_ = node.create_publisher<Trajectory>("~/output/trajectory", rclcpp::QoS(1));
+}
 
-}  // namespace autoware::surround_obstacle_checker
+void TrajectoryPublisher::receive(const Trajectory & msg)
+{
+  pub_trajectory_->publish(msg);
+}
 
-#endif  // TYPES_HPP_
+}  // namespace autoware::trajectory_gate

@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2026 The Autoware Contributors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TYPES_HPP_
-#define TYPES_HPP_
+#ifndef CORE__SUBSCRIPTION_HPP_
+#define CORE__SUBSCRIPTION_HPP_
 
-#include <autoware/obstacle_proximity_checker/structs.hpp>
+#include "interface.hpp"
 
-namespace autoware::surround_obstacle_checker
+#include <rclcpp/rclcpp.hpp>
+
+#include <string>
+
+namespace autoware::trajectory_gate
 {
 
-using StopObstacle = autoware::obstacle_proximity_checker::ProximityObstacle;
+class TrajectorySubscription : public TrajectorySender
+{
+public:
+  TrajectorySubscription(const std::string & name, rclcpp::Node & node);
 
-}  // namespace autoware::surround_obstacle_checker
+private:
+  void on_msg(const Trajectory & msg);
+  rclcpp::Subscription<Trajectory>::SharedPtr sub_trajectory_;
+};
 
-#endif  // TYPES_HPP_
+}  // namespace autoware::trajectory_gate
+
+#endif  // CORE__SUBSCRIPTION_HPP_

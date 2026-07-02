@@ -242,17 +242,8 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputDat
   if (
     target_stop_point_arc_length < params_.arrived_distance_threshold ||
     !apply_stopping(traj_points, target_stop_point_arc_length)) {
-    traj_points = std::invoke([&]() {
-      TrajectoryPoints stop_points;
-      auto p = traj_points.front();
-      p.longitudinal_velocity_mps = 0.0;
-      p.acceleration_mps2 = 0.0;
-      p.time_from_start = rclcpp::Duration::from_seconds(0.0);
-      stop_points.push_back(p);
-      p.time_from_start = rclcpp::Duration::from_seconds(trajectory_time_step_);
-      stop_points.push_back(p);
-      return stop_points;
-    });
+    utils::replace_trajectory_with_stop_point(
+      traj_points, input.current_odometry->pose.pose, trajectory_time_step_);
   }
 
   const auto & stop_pose = traj_points.back().pose;
