@@ -149,7 +149,7 @@ void RRTStar::extend()
   Pose x_rand;
   if (isSolutionFound() && is_informed_) {
     x_rand = cspace_.ellipticInformedSampling(
-      *node_goal_->cost_from_start, node_start_->pose, node_goal_->pose);
+      node_goal_->getCostFromStart(), node_start_->pose, node_goal_->pose);
   } else {
     x_rand = cspace_.uniformSampling();
   }
@@ -188,7 +188,7 @@ void RRTStar::extend()
     double cost_min = inf;
     NodeSharedPtr reached_node_best_parent;
     for (const auto & node : reached_nodes_) {
-      const double cost = *(node->cost_from_start) + *(node->cost_to_goal);
+      const double cost = node->getCostFromStart() + node->getCostToGoal();
       if (cost < cost_min) {
         cost_min = cost;
         reached_node_best_parent = node;
@@ -196,7 +196,7 @@ void RRTStar::extend()
     }
     node_goal_->cost_from_start = cost_min;
     node_goal_->parent = reached_node_best_parent;
-    node_goal_->cost_to_parent = reached_node_best_parent->cost_to_goal;
+    node_goal_->cost_to_parent = reached_node_best_parent->getCostToGoal();
   }
 }
 
@@ -213,7 +213,7 @@ void RRTStar::deleteNodeUsingBranchAndBound()
     node_index_map[nodes_.at(i)] = i;
   }
 
-  const auto optimal_cost_ubound = node_goal_->cost_from_start;
+  const auto optimal_cost_ubound = node_goal_->getCostFromStart();
   std::unordered_set<size_t> delete_indices;
 
   const auto is_deleted = [&](const auto & node) -> bool {
@@ -228,7 +228,7 @@ void RRTStar::deleteNodeUsingBranchAndBound()
     // This cost_to_goal (cost_to_go in the paper) is originally defined by Euclidean distance.
     // But we use cspace_.distance (reeds-sheep by default)
     const auto here_cost_to_goal_lbound = cspace_.distance(node->pose, node_goal_->pose);
-    const auto here_optimal_cost_lbound = here_cost_to_goal_lbound + *node->cost_from_start;
+    const auto here_optimal_cost_lbound = here_cost_to_goal_lbound + node->getCostFromStart();
 
     if (here_optimal_cost_lbound > optimal_cost_ubound) {
       delete_indices.insert(node_index_map[node]);
@@ -376,7 +376,7 @@ std::vector<NodeConstSharedPtr> RRTStar::findNeighborNodes(const Pose & x_new) c
 NodeSharedPtr RRTStar::addNewNode(const Pose & pose, NodeSharedPtr node_parent)
 {
   const double cost_to_parent = cspace_.distance(pose, node_parent->pose);
-  const double cost_from_start = *(node_parent->cost_from_start) + cost_to_parent;
+  const double cost_from_start = node_parent->getCostFromStart() + cost_to_parent;
   auto node_new =
     std::make_shared<Node>(Node{pose, cost_from_start, std::nullopt, cost_to_parent, node_parent});
   nodes_.push_back(node_new);
@@ -393,8 +393,8 @@ NodeConstSharedPtr RRTStar::getReconnectTargeNode(
     if (cspace_.isValidPath_child2parent(
           node_neighbor->pose, node_new->pose, collision_check_resolution_)) {
       const double cost_from_start_rewired =
-        *node_new->cost_from_start + cspace_.distance(node_new->pose, node_neighbor->pose);
-      if (cost_from_start_rewired < *node_neighbor->cost_from_start) {
+        node_new->getCostFromStart() + cspace_.distance(node_new->pose, node_neighbor->pose);
+      if (cost_from_start_rewired < node_neighbor->getCostFromStart()) {
         node_reconnect = node_neighbor;
       }
     }
@@ -409,10 +409,10 @@ NodeConstSharedPtr RRTStar::getBestParentNode(
 {
   NodeConstSharedPtr node_best = node_nearest;
   double cost_min =
-    *(node_nearest->cost_from_start) + cspace_.distance(node_nearest->pose, pose_new);
+    node_nearest->getCostFromStart() + cspace_.distance(node_nearest->pose, pose_new);
   for (const auto & node : neighbor_nodes) {
     const double cost_start_to_new =
-      *(node->cost_from_start) + cspace_.distance(node->pose, pose_new);
+      node->getCostFromStart() + cspace_.distance(node->pose, pose_new);
     if (cost_start_to_new < cost_min) {
       if (cspace_.isValidPath_child2parent(pose_new, node->pose, collision_check_resolution_)) {
         node_best = node;
@@ -444,7 +444,7 @@ void RRTStar::reconnect(const NodeSharedPtr & node_new, const NodeSharedPtr & no
   node_new->childs.push_back(node_reconnect);
   node_reconnect->parent = node_new;
   node_reconnect->cost_to_parent = cost_a2b;
-  node_reconnect->cost_from_start = *node_new->cost_from_start + cost_a2b;
+  node_reconnect->cost_from_start = node_new->getCostFromStart() + cost_a2b;
   // Current state:
   // node_new_parent -> node_new -> node_reconnect -> #nil;
   // node_reconnect_parent -> #nil;
@@ -456,7 +456,7 @@ void RRTStar::reconnect(const NodeSharedPtr & node_new, const NodeSharedPtr & no
     const auto node = bf_queue.front();
     bf_queue.pop();
     for (const auto & child : node->childs) {
-      child->cost_from_start = *node->cost_from_start + *child->cost_to_parent;
+      child->cost_from_start = node->getCostFromStart() + child->getCostToParent();
       bf_queue.push(child);
     }
   }
