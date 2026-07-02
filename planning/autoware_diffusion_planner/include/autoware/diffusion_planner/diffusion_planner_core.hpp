@@ -329,7 +329,13 @@ private:
   bool centerline_guidance_enabled_{false};
 
   // Postprocessing
-  postprocess::TurnIndicatorManager turn_indicator_manager_;
+  std::vector<postprocess::TurnIndicatorManager> turn_indicator_managers_;
+
+  /**
+   * @brief Resize the per-trajectory turn indicator managers to the current batch size and
+   *        apply the latest hold duration / keep offset parameters to each of them.
+   */
+  void sync_turn_indicator_managers();
 
   // History data
   std::deque<nav_msgs::msg::Odometry> ego_history_;
