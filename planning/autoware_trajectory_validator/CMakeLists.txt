@@ -16,6 +16,9 @@ ament_auto_add_library(${trajectory_validator_lib_target} SHARED
   src/trajectory_validator_wrapper.cpp
   src/detail/trajectory_validator.cpp
 )
+# trajectory_validator_wrapper.cpp uses the agnocast wrapper Node + its templated debug/diagnostics
+# helpers, so this library needs USE_AGNOCAST_ENABLED defined under ENABLE_AGNOCAST=1.
+autoware_agnocast_wrapper_setup(${trajectory_validator_lib_target})
 
 target_link_libraries(${trajectory_validator_lib_target}
   ${PROJECT_NAME}_param

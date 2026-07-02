@@ -41,6 +41,14 @@ TrajectorySelectorNode::TrajectorySelectorNode(const rclcpp::NodeOptions & node_
 
 void TrajectorySelectorNode::subscribers()
 {
+  sub_odometry_ = this->create_polling_subscriber<Odometry>("~/input/odometry", 1);
+  sub_objects_ = this->create_polling_subscriber<PredictedObjects>("~/input/objects", 1);
+  sub_acceleration_ =
+    this->create_polling_subscriber<AccelWithCovarianceStamped>("~/input/acceleration", 1);
+  sub_traffic_lights_ =
+    this->create_polling_subscriber<autoware_perception_msgs::msg::TrafficLightGroupArray>(
+      "~/input/traffic_signals", 1);
+
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/lanelet2_map", rclcpp::QoS{1}.transient_local(),
     std::bind(&TrajectorySelectorNode::map_callback, this, std::placeholders::_1));
@@ -63,7 +71,8 @@ void TrajectorySelectorNode::publishers()
   time_keeper_ = std::make_shared<autoware_utils_debug::TimeKeeper>(pub_processing_time_detail_);
 }
 
-void TrajectorySelectorNode::map_callback(const LaneletMapBin::ConstSharedPtr msg)
+void TrajectorySelectorNode::map_callback(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -71,13 +80,15 @@ void TrajectorySelectorNode::map_callback(const LaneletMapBin::ConstSharedPtr ms
     autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
 }
 
-void TrajectorySelectorNode::on_anchor_trajectories(const CandidateTrajectories::ConstSharedPtr msg)
+void TrajectorySelectorNode::on_anchor_trajectories(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg)
 {
   concatenator_ptr_->add_candidate(*msg);
   concatenate_and_validate();
   timer_->reset();
 }
-void TrajectorySelectorNode::on_trajectories(const CandidateTrajectories::ConstSharedPtr msg)
+void TrajectorySelectorNode::on_trajectories(
+  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg)
 {
   concatenator_ptr_->add_candidate(*msg);
 }
@@ -87,22 +98,22 @@ TrajectorySelectorNode::take_validator_data()
 {
   trajectory_validator::FilterContext context;
 
-  context.odometry = sub_odometry_.take_data();
+  context.odometry = sub_odometry_->take_data();
   if (!context.odometry) {
     return tl::make_unexpected("Failed to take odometry data");
   }
 
-  context.predicted_objects = sub_objects_.take_data();
+  context.predicted_objects = sub_objects_->take_data();
   if (!context.predicted_objects) {
     return tl::make_unexpected("Failed to take predicted objects data");
   }
 
-  context.acceleration = sub_acceleration_.take_data();
+  context.acceleration = sub_acceleration_->take_data();
   if (!context.acceleration) {
     return tl::make_unexpected("Failed to take acceleration data");
   }
 
-  context.traffic_light_signals = sub_traffic_lights_.take_data();
+  context.traffic_light_signals = sub_traffic_lights_->take_data();
 
   context.lanelet_map = lanelet_map_ptr_;
   if (!context.lanelet_map) {
@@ -137,7 +148,9 @@ void TrajectorySelectorNode::concatenate_and_validate()
   auto validated_trajectories =
     validator_ptr_->validate_trajectories(concatenated_trajectories, context_opt.value());
 
-  pub_trajectories_->publish(validated_trajectories);
+  auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_trajectories_);
+  *output = std::move(validated_trajectories);
+  pub_trajectories_->publish(std::move(output));
 }
 
 void TrajectorySelectorNode::update_parameters()
@@ -160,7 +173,7 @@ void TrajectorySelectorNode::update_fallback_timer()
   RCLCPP_INFO(
     get_logger(), "New concatenate_and_validate timer callback created with period %ld.",
     selector_params_.fallback_period_ms);
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), std::chrono::milliseconds(selector_params_.fallback_period_ms),
     std::bind(&TrajectorySelectorNode::concatenate_and_validate, this));
 }

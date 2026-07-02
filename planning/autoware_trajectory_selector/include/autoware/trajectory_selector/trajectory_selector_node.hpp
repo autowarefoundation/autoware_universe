@@ -19,10 +19,10 @@
 #include "autoware/trajectory_validator/trajectory_validator_wrapper.hpp"
 #include "autoware_trajectory_selector/autoware_trajectory_selector_param.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/trajectory_concatenator/trajectory_concatenator_wrapper.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
-#include <autoware_utils_rclcpp/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tl_expected/expected.hpp>
 
@@ -48,7 +48,7 @@ using nav_msgs::msg::Odometry;
  * @brief Concatenates candidate trajectories from multiple planners, validates them, and
  * publishes the surviving set.
  */
-class TrajectorySelectorNode : public rclcpp::Node
+class TrajectorySelectorNode : public autoware::agnocast_wrapper::Node
 {
 public:
   /**
@@ -68,7 +68,7 @@ private:
    * @brief Converts and stores the received lanelet map.
    * @param msg Binary lanelet map message.
    */
-  void map_callback(const LaneletMapBin::ConstSharedPtr msg);
+  void map_callback(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(LaneletMapBin) & msg);
 
   /**
    * @brief Forwards incoming candidate trajectories to the concatenator and trigger the
@@ -77,12 +77,12 @@ private:
    * @warning must be in the same callback group as the timer callback as they both call
    * on_anchor_trajectories
    */
-  void on_anchor_trajectories(const CandidateTrajectories::ConstSharedPtr msg);
+  void on_anchor_trajectories(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg);
   /**
    * @brief Forwards incoming candidate trajectories to the concatenator.
    * @param msg Incoming candidate trajectories message.
    */
-  void on_trajectories(const CandidateTrajectories::ConstSharedPtr msg);
+  void on_trajectories(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg);
 
   /**
    * @brief Concatenates buffered trajectories, validates them, and publishes the result.
@@ -101,29 +101,24 @@ private:
 
   std::unique_ptr<trajectory_concatenator::TrajectoryConcatenatorWrapper> concatenator_ptr_;
   std::unique_ptr<trajectory_validator::TrajectoryValidatorWrapper> validator_ptr_;
-  rclcpp::TimerBase::SharedPtr timer_;
+  AUTOWARE_TIMER_PTR timer_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 
   // Polling Subscribers
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<Odometry> sub_odometry_{
-    this, "~/input/odometry"};
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<PredictedObjects> sub_objects_{
-    this, "~/input/objects"};
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<AccelWithCovarianceStamped>
-    sub_acceleration_{this, "~/input/acceleration"};
-  autoware_utils_rclcpp::InterProcessPollingSubscriber<
-    autoware_perception_msgs::msg::TrafficLightGroupArray>
-    sub_traffic_lights_{this, "~/input/traffic_signals"};
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry) sub_odometry_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects) sub_objects_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped) sub_acceleration_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_perception_msgs::msg::TrafficLightGroupArray)
+  sub_traffic_lights_;
 
   // Normal Subscribers
-  rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
-  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_generative_;
-  rclcpp::Subscription<CandidateTrajectories>::SharedPtr sub_trajectories_backup_;
+  AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) sub_map_;
+  AUTOWARE_SUBSCRIPTION_PTR(CandidateTrajectories) sub_trajectories_generative_;
+  AUTOWARE_SUBSCRIPTION_PTR(CandidateTrajectories) sub_trajectories_backup_;
 
   // Publishers
-  rclcpp::Publisher<CandidateTrajectories>::SharedPtr pub_trajectories_;
-  rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
-    pub_processing_time_detail_;
+  AUTOWARE_PUBLISHER_PTR(CandidateTrajectories) pub_trajectories_;
+  AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail) pub_processing_time_detail_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 
   // Parameter interfaces
