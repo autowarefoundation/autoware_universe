@@ -73,12 +73,29 @@ std::string onnxruntime_execution_provider_from_backend(const std::string & back
 
 DiffusionPlannerCore::DiffusionPlannerCore(
   const DiffusionPlannerParams & params, const VehicleInfo & vehicle_info)
-: params_(params),
-  vehicle_spec_(vehicle_info),
-  turn_indicator_manager_(
-    rclcpp::Duration::from_seconds(params.turn_indicator_hold_duration),
-    params.turn_indicator_keep_offset)
+: params_(params), vehicle_spec_(vehicle_info)
 {
+  sync_turn_indicator_managers();
+}
+
+void DiffusionPlannerCore::sync_turn_indicator_managers()
+{
+  const auto hold_duration = rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration);
+  const float keep_offset = params_.turn_indicator_keep_offset;
+  const size_t desired = static_cast<size_t>(std::max<int>(params_.batch_size, 1));
+
+  if (turn_indicator_managers_.size() > desired) {
+    turn_indicator_managers_.erase(
+      turn_indicator_managers_.begin() + static_cast<std::ptrdiff_t>(desired),
+      turn_indicator_managers_.end());
+  }
+  while (turn_indicator_managers_.size() < desired) {
+    turn_indicator_managers_.emplace_back(hold_duration, keep_offset);
+  }
+  for (auto & manager : turn_indicator_managers_) {
+    manager.set_hold_duration(hold_duration);
+    manager.set_keep_offset(keep_offset);
+  }
 }
 
 void DiffusionPlannerCore::load_model()
@@ -158,9 +175,7 @@ void DiffusionPlannerCore::load_model()
 void DiffusionPlannerCore::update_params(const DiffusionPlannerParams & params)
 {
   params_ = params;
-  turn_indicator_manager_.set_hold_duration(
-    rclcpp::Duration::from_seconds(params_.turn_indicator_hold_duration));
-  turn_indicator_manager_.set_keep_offset(params_.turn_indicator_keep_offset);
+  sync_turn_indicator_managers();
   if (start_guidance_) {
     StartGuidanceConfig start_guidance_config;
     start_guidance_config.reference_distance_m =
@@ -516,6 +531,10 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
   output.denoising_steps = postprocess::create_denoising_steps_message(
     denormalized_denoising_predictions, inference_output.denoising_timesteps);
 
+  const int64_t prev_report = turn_indicators_history_.empty()
+                                ? TurnIndicatorsReport::DISABLE
+                                : turn_indicators_history_.back().report;
+
   // Trajectory and CandidateTrajectories
   for (int i = 0; i < params_.batch_size; i++) {
     auto trajectory = postprocess::create_ego_trajectory(
@@ -533,10 +552,23 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
       output.trajectory = trajectory;
     }
 
+    // TurnIndicatorsCommand
+    const std::vector<float> single_turn_indicator_logit(
+      turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * i,
+      turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * (i + 1));
+    const TurnIndicatorsCommand turn_indicator_command =
+      turn_indicator_managers_.at(i).evaluate(single_turn_indicator_logit, timestamp, prev_report);
+
+    if (i == 0) {
+      // Publish the first trajectory's command on the standalone turn indicator topic.
+      output.turn_indicator_command = turn_indicator_command;
+    }
+
     autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
     candidate_trajectory.header = trajectory.header;
     candidate_trajectory.generator_id = generator_uuid;
     candidate_trajectory.points = trajectory.points;
+    candidate_trajectory.turn_indicator = turn_indicator_command;
 
     std_msgs::msg::String generator_name_msg;
     generator_name_msg.data = std::string("DiffusionPlanner_batch_") + std::to_string(i);
@@ -554,18 +586,6 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
   constexpr int64_t batch_idx = 0;
   output.predicted_objects = postprocess::create_predicted_objects(
     agent_poses, frame_context.ego_centric_neighbor_histories, timestamp, batch_idx);
-
-  // TurnIndicatorsCommand
-  // Use the first batch's logit as the main turn indicator command.
-  constexpr int64_t turn_indicator_batch_idx = 0;
-  const std::vector<float> first_turn_indicator_logit(
-    turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * turn_indicator_batch_idx,
-    turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * (turn_indicator_batch_idx + 1));
-  const int64_t prev_report = turn_indicators_history_.empty()
-                                ? TurnIndicatorsReport::DISABLE
-                                : turn_indicators_history_.back().report;
-  output.turn_indicator_command =
-    turn_indicator_manager_.evaluate(first_turn_indicator_logit, timestamp, prev_report);
 
   output.guidance_triggered = inference_output.guidance_triggered;
 
