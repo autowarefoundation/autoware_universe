@@ -1,0 +1,226 @@
+// Copyright 2025 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "speed_scale_estimator.hpp"
+
+#include <autoware_vehicle_msgs/msg/velocity_report.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+
+#include <gtest/gtest.h>
+
+#include <memory>
+#include <vector>
+
+namespace autoware::speed_scale_corrector
+{
+
+class SpeedScaleEstimatorTest : public ::testing::Test
+{
+protected:
+  void SetUp() override
+  {
+    parameters_.update_interval = 0.1;
+    parameters_.max_pose_lag = 0.5;
+    parameters_.max_stamp_lag = 0.2;
+    parameters_.sensor_buffer_duration = 1.0;
+    parameters_.initial_speed_scale_factor = 1.0;
+    parameters_.initial_speed_scale_factor_covariance = 1000.0;
+    parameters_.process_noise_covariance = 0.01;
+    parameters_.measurement_noise_covariance = 0.01;
+    parameters_.max_angular_velocity = 0.0105;  // ~0.6 deg/s
+    parameters_.max_speed = 17.0;
+    parameters_.min_speed = 6.0;
+
+    estimator_ = std::make_unique<SpeedScaleEstimator>(parameters_);
+  }
+
+  static PoseStamped create_pose_msg(double sec, double x, double y)
+  {
+    PoseStamped pose;
+    pose.header.stamp.sec = static_cast<int32_t>(sec);
+    pose.header.stamp.nanosec = static_cast<uint32_t>((sec - pose.header.stamp.sec) * 1e9);
+    pose.pose.position.x = x;
+    pose.pose.position.y = y;
+    pose.pose.position.z = 0.0;
+    return pose;
+  }
+
+  static VelocityReport create_velocity_msg(double sec, double velocity)
+  {
+    VelocityReport msg;
+    msg.header.stamp.sec = static_cast<int32_t>(sec);
+    msg.header.stamp.nanosec = static_cast<uint32_t>((sec - msg.header.stamp.sec) * 1e9);
+    msg.longitudinal_velocity = static_cast<float>(velocity);
+    return msg;
+  }
+
+  static Imu create_imu_msg(double sec, double angular_velocity_z)
+  {
+    Imu msg;
+    msg.header.stamp.sec = static_cast<int32_t>(sec);
+    msg.header.stamp.nanosec = static_cast<uint32_t>((sec - msg.header.stamp.sec) * 1e9);
+    msg.angular_velocity.x = 0.0;
+    msg.angular_velocity.y = 0.0;
+    msg.angular_velocity.z = angular_velocity_z;
+    return msg;
+  }
+
+  SpeedScaleEstimatorParameters parameters_;
+  std::unique_ptr<SpeedScaleEstimator> estimator_;
+};
+
+TEST_F(SpeedScaleEstimatorTest, EstimationBehaviorTest)
+{
+  int successful_estimations = 0;
+  double estimated_speed_scale_factor = 0.0;
+
+  for (double t = 0.0; t <= 30.0; t += 0.1) {
+    std::vector<PoseStamped> poses = {create_pose_msg(t, 10.0 * t, 0.0)};
+    std::vector<VelocityReport> velocity_reports = {create_velocity_msg(t, 5.0)};
+    std::vector<Imu> imus = {create_imu_msg(t, 0.005)};
+    auto result = estimator_->update(poses, imus, velocity_reports);
+
+    if (result) {
+      successful_estimations++;
+      estimated_speed_scale_factor = result.value().estimated_speed_scale_factor;
+    }
+  }
+
+  EXPECT_GT(successful_estimations, 0);
+  EXPECT_NEAR(estimated_speed_scale_factor, 2.0, 0.5);
+}
+
+TEST_F(SpeedScaleEstimatorTest, InsufficientPoses)
+{
+  std::vector<PoseStamped> poses = {create_pose_msg(1.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(1.0, 5.0)};
+  std::vector<Imu> imus = {create_imu_msg(1.0, 0.1)};
+
+  auto result = estimator_->update(poses, imus, velocity_reports);
+  EXPECT_FALSE(result);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::WaitingForNextPose);
+}
+
+TEST_F(SpeedScaleEstimatorTest, AngularVelocityConstraintViolation)
+{
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
+  (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
+
+  std::vector<PoseStamped> poses = {create_pose_msg(0.1, 0.5, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.1, 5.0)};
+  std::vector<Imu> imus = {create_imu_msg(0.1, 0.05)};
+
+  const auto result = estimator_->update(poses, imus, velocity_reports);
+
+  ASSERT_FALSE(result);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::AngularVelocityTooHigh);
+}
+
+TEST_F(SpeedScaleEstimatorTest, SpeedConstraintViolation)
+{
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
+  (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
+
+  std::vector<PoseStamped> poses = {create_pose_msg(0.1, 0.1, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.1, 1.0)};
+  std::vector<Imu> imus = {create_imu_msg(0.1, 0.005)};
+
+  const auto result = estimator_->update(poses, imus, velocity_reports);
+
+  ASSERT_FALSE(result);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::VelocityTooLow);
+}
+
+TEST_F(SpeedScaleEstimatorTest, VelocityReportTimestampMismatch)
+{
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(2.0, 5.0)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
+  (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
+
+  std::vector<PoseStamped> poses = {create_pose_msg(0.2, 2.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(2.0, 5.0)};
+  std::vector<Imu> imus = {create_imu_msg(0.2, 0.0)};
+
+  const auto result = estimator_->update(poses, imus, velocity_reports);
+
+  ASSERT_FALSE(result);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::VelocityReportTimestampMismatch);
+}
+
+TEST_F(SpeedScaleEstimatorTest, VelocityReportTimestampOffsetWithinTolerance)
+{
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
+  (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
+
+  std::vector<PoseStamped> poses = {create_pose_msg(0.2, 2.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.344, 5.0)};
+  std::vector<Imu> imus = {create_imu_msg(0.344, 0.005)};
+
+  const auto result = estimator_->update(poses, imus, velocity_reports);
+
+  ASSERT_TRUE(result);
+}
+
+TEST_F(SpeedScaleEstimatorTest, PoseLagWithinTolerance)
+{
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
+  (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
+
+  std::vector<PoseStamped> poses = {create_pose_msg(0.2, 2.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports = {create_velocity_msg(0.2, 5.0)};
+  std::vector<Imu> imus = {create_imu_msg(0.2, 0.005)};
+
+  const auto result = estimator_->update(poses, imus, velocity_reports);
+
+  ASSERT_TRUE(result);
+}
+
+TEST_F(SpeedScaleEstimatorTest, SensorBufferRetentionAcrossUpdates)
+{
+  std::vector<PoseStamped> poses_t0 = {create_pose_msg(0.0, 0.0, 0.0)};
+  std::vector<VelocityReport> velocity_reports_t0 = {create_velocity_msg(0.0, 5.0)};
+  std::vector<Imu> imus_t0 = {create_imu_msg(0.0, 0.0)};
+  (void)estimator_->update(poses_t0, imus_t0, velocity_reports_t0);
+
+  std::vector<PoseStamped> poses = {create_pose_msg(0.2, 2.0, 0.0)};
+  const std::vector<VelocityReport> empty_velocity;
+  const std::vector<Imu> empty_imu;
+
+  const auto result = estimator_->update(poses, empty_imu, empty_velocity);
+
+  ASSERT_TRUE(result);
+}
+
+TEST_F(SpeedScaleEstimatorTest, EmptyDataHandling)
+{
+  std::vector<PoseStamped> poses = {create_pose_msg(1.0, 0.0, 0.0)};
+  std::vector<VelocityReport> empty_velocity;
+  std::vector<Imu> empty_imu;
+
+  auto result = estimator_->update(poses, empty_imu, empty_velocity);
+  EXPECT_FALSE(result);
+  EXPECT_EQ(result.error().reason, UpdateFailureReason::ImuEmpty);
+}
+
+}  // namespace autoware::speed_scale_corrector
