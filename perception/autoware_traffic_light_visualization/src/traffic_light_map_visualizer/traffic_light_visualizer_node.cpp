@@ -21,6 +21,8 @@
 
 #include <lanelet2_core/LaneletMap.h>
 
+#include <utility>
+
 namespace autoware::traffic_light
 {
 TrafficLightMapVisualizerNode::TrafficLightMapVisualizerNode(
