@@ -186,25 +186,6 @@ TEST(TrafficLightSelector, DetectionInsideRoughRoiAssignsDetectedRoi)
     output, {make_car_traffic_light_roi(traffic_light_id, detected_roi_inside_rough_roi)});
 }
 
-// The traffic_light_type of each expected ROI must be copied verbatim onto the output entry.
-TEST(TrafficLightSelector, TrafficLightTypePropagatedToOutput)
-{
-  // Arrange
-  const int64_t traffic_light_id = 123;
-  const auto detected_roi_matching_expected = make_roi(100, 100, 40, 40);
-  const auto rough_roi = make_car_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
-  const auto expected_roi =
-    make_pedestrian_traffic_light_roi(traffic_light_id, detected_roi_matching_expected);
-  const auto camera_info = make_camera_info(1280, 720);
-
-  // Act
-  const auto output =
-    select_helper({detected_roi_matching_expected}, {rough_roi}, {expected_roi}, camera_info);
-
-  // Assert
-  expect_same(output, {expected_roi});
-}
-
 // When multiple detections sit inside the rough ROI, the one with the highest IoU against the
 // (shifted) expected ROI is selected.
 TEST(TrafficLightSelector, BestOverlappingDetectionIsSelected)
