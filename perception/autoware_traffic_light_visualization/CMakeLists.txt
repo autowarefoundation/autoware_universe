@@ -69,24 +69,26 @@ if(BUILD_TESTING)
     autoware_perception_msgs
   )
 
-  ament_add_gtest(test_traffic_light_map_visualizer_node
-    test/traffic_light_map_visualizer/test_traffic_light_map_visualizer_node.cpp
-  )
-  target_include_directories(test_traffic_light_map_visualizer_node PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-  )
-  target_link_libraries(test_traffic_light_map_visualizer_node
-    traffic_light_map_visualizer
-  )
-  ament_target_dependencies(test_traffic_light_map_visualizer_node
-    autoware_agnocast_wrapper
-    autoware_lanelet2_extension
-    autoware_lanelet2_utils
-    autoware_map_msgs
-    autoware_perception_msgs
-    rclcpp
-    visualization_msgs
-  )
+  if(NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
+    ament_add_gtest(test_traffic_light_map_visualizer_node
+      test/traffic_light_map_visualizer/test_traffic_light_map_visualizer_node.cpp
+    )
+    target_include_directories(test_traffic_light_map_visualizer_node PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_traffic_light_map_visualizer_node
+      traffic_light_map_visualizer
+    )
+    ament_target_dependencies(test_traffic_light_map_visualizer_node
+      autoware_agnocast_wrapper
+      autoware_lanelet2_extension
+      autoware_lanelet2_utils
+      autoware_map_msgs
+      autoware_perception_msgs
+      rclcpp
+      visualization_msgs
+    )
+  endif()
 endif()
 
 # Copy the assets directory to the installation directory
