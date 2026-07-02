@@ -80,18 +80,6 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
       velocity_params_.min_limited_speed_mps, data.current_odometry, max_speed_update_in_place);
   }
 
-  auto initial_motion_speed =
-    (current_speed > target_pull_out_speed_mps) ? current_speed : target_pull_out_speed_mps;
-  auto initial_motion_acc = (current_speed > target_pull_out_speed_mps)
-                              ? current_linear_acceleration
-                              : target_pull_out_acc_mps2;
-
-  if (velocity_params_.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
-    trajectory_velocity_optimizer_utils::clamp_velocities(
-      traj_points, static_cast<float>(initial_motion_speed),
-      static_cast<float>(initial_motion_acc));
-  }
-
   // Apply global speed limit to trajectory and max velocity array
   if (velocity_params_.limit_speed) {
     const auto external_velocity_limit = sub_planning_velocity_->take_data();
@@ -122,6 +110,18 @@ void TrajectoryVelocityOptimizer::optimize_trajectory(
       traj_points, velocity_params_.nearest_dist_threshold_m,
       autoware_utils_math::deg2rad(velocity_params_.nearest_yaw_threshold_deg),
       continuous_jerk_smoother_, current_odometry, max_velocity_per_point);
+  }
+
+  auto initial_motion_speed =
+    (current_speed > target_pull_out_speed_mps) ? current_speed : target_pull_out_speed_mps;
+  auto initial_motion_acc = (current_speed > target_pull_out_speed_mps)
+                              ? current_linear_acceleration
+                              : target_pull_out_acc_mps2;
+
+  if (velocity_params_.set_engage_speed && (current_speed < target_pull_out_speed_mps)) {
+    trajectory_velocity_optimizer_utils::clamp_velocities(
+      traj_points, static_cast<float>(initial_motion_speed),
+      static_cast<float>(initial_motion_acc));
   }
 }
 
