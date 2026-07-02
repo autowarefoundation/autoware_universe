@@ -69,6 +69,28 @@ ExternalSnapshot collect_external_snapshot(
   return snapshot;
 }
 
+// Applies the perception staleness gate. Returns the stored perception snapshot
+// to use this cycle, or an empty stand-in carrying the same stamp when
+// perception lags the freshest external by more than perception_time_tolerance.
+// Non-destructive: the stored perception is never modified, so
+// ingest_perception() stays its sole writer.
+TrafficLightGroupArray select_effective_perception(
+  const TrafficLightGroupArray & perception, const ExternalSnapshot & external,
+  double perception_time_tolerance)
+{
+  const auto perception_stamp = rclcpp::Time(perception.stamp);
+  const bool perception_is_stale =
+    external.has_any &&
+    (external.max_stamp - perception_stamp).seconds() > perception_time_tolerance;
+  if (!perception_is_stale) {
+    return perception;
+  }
+
+  TrafficLightGroupArray empty_perception;
+  empty_perception.stamp = perception.stamp;
+  return empty_perception;
+}
+
 // Appends each group's predictions into predictions_map keyed by
 // regulatory-element id. Predictions accumulate across sources in call order.
 void append_predictions(
@@ -183,12 +205,11 @@ TrafficLightArbiterCore::TrafficLightArbiterCore(
   SourcePriority source_priority, bool enable_signal_matching, double external_delay_tolerance,
   double external_time_tolerance, double perception_time_tolerance)
 : source_priority_(source_priority),
-  enable_signal_matching_(enable_signal_matching),
   external_delay_tolerance_(external_delay_tolerance),
   external_time_tolerance_(external_time_tolerance),
   perception_time_tolerance_(perception_time_tolerance)
 {
-  if (enable_signal_matching_) {
+  if (enable_signal_matching) {
     signal_match_validator_ = std::make_unique<SignalMatchValidator>(source_priority_);
   }
 }
@@ -197,7 +218,7 @@ void TrafficLightArbiterCore::set_map(const lanelet::LaneletMapConstPtr & map)
 {
   map_regulatory_elements_set_ =
     std::make_unique<std::unordered_set<lanelet::Id>>(extract_traffic_light_ids(map));
-  if (enable_signal_matching_) {
+  if (is_signal_matching_enabled()) {
     signal_match_validator_->set_pedestrian_traffic_light_ids(
       extract_pedestrian_traffic_light_ids(map));
   }
@@ -225,7 +246,7 @@ void TrafficLightArbiterCore::sweep_expired_external_signals(
 
 void TrafficLightArbiterCore::ingest_perception(const TrafficSignalArray & msg)
 {
-  latest_perception_msg_ = msg;
+  perception_traffic_light_ = msg;
   sweep_expired_external_signals(rclcpp::Time(msg.stamp), external_time_tolerance_);
 }
 
@@ -261,17 +282,8 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
 
   const auto external = collect_external_snapshot(external_traffic_lights_);
 
-  // Ignore perception for this cycle when it lags the freshest external by
-  // more than perception_time_tolerance_. Done as a non-destructive view so
-  // ingest_perception() remains the sole writer of latest_perception_msg_.
-  const auto perception_stamp = rclcpp::Time(latest_perception_msg_.stamp);
-  const bool perception_is_stale =
-    external.has_any &&
-    (external.max_stamp - perception_stamp).seconds() > perception_time_tolerance_;
-  TrafficSignalArray empty_perception;
-  empty_perception.stamp = latest_perception_msg_.stamp;
-  const auto & effective_perception =
-    perception_is_stale ? empty_perception : latest_perception_msg_;
+  const auto effective_perception =
+    select_effective_perception(perception_traffic_light_, external, perception_time_tolerance_);
 
   std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predictions_map;
   // add in order from perception msg
@@ -291,7 +303,7 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
   }
 
   const auto & map_regulatory_elements = *map_regulatory_elements_set_;
-  if (enable_signal_matching_) {
+  if (is_signal_matching_enabled()) {
     const auto validated_signals =
       signal_match_validator_->validate_signals(effective_perception, external.signals);
     route_signals(
@@ -316,9 +328,9 @@ TrafficLightArbiterCore::ArbitrationResult TrafficLightArbiterCore::arbitrate() 
     output_signals_msg.traffic_light_groups.emplace_back(signal_msg);
   }
 
-  // Latest input stamp across stored sources. The Node compares this against
-  // its trigger stamp to decide whether the published output is behind some
-  // input that has arrived but hasn't yet driven a publish cycle.
+  // Latest input stamp across stored sources, for the Node's behind-input check.
+  // perception_stamp stays valid even when perception was gated out (stand-in keeps it).
+  const auto perception_stamp = rclcpp::Time(effective_perception.stamp);
   result.latest_input_time = (external.has_any && external.max_stamp > perception_stamp)
                                ? external.max_stamp
                                : perception_stamp;
