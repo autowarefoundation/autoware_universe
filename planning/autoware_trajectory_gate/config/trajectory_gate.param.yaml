@@ -1,0 +1,10 @@
+/**:
+  ros__parameters:
+    trajectory_warn_duration: 0.3
+    trajectory_error_duration: 0.5
+
+    source_ids: [100, 200, 300]
+    source:
+      100: { name: main }
+      200: { name: mrm1 }
+      300: { name: mrm2 }

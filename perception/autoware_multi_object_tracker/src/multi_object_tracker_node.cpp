@@ -16,7 +16,6 @@
 
 #include "multi_object_tracker_node.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
 
@@ -59,8 +58,13 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   params_.publish_rate = declare_parameter<double>("publish_rate");  // [hz]
   params_.world_frame_id = declare_parameter<std::string>("world_frame_id");
   params_.ego_frame_id = declare_parameter<std::string>("ego_frame_id");
-  params_.enable_delay_compensation = declare_parameter<bool>("enable_delay_compensation");
   params_.enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
+  params_.ego_source = toEgoSource(declare_parameter<std::string>("ego_source"));
+  // publish-trigger side: false publishes on measurement, true publishes from the periodic timer
+  params_.publish_on_timer = declare_parameter<bool>("publish_on_timer");
+  // object-export side: which timestamp the published tracks are predicted to
+  params_.delay_compensation =
+    toDelayReference(declare_parameter<std::string>("delay_compensation"));
   params_.publish_processing_time_detail =
     declare_parameter<bool>("publish_processing_time_detail");
   params_.publish_merged_objects = declare_parameter<bool>("publish_merged_objects");
@@ -278,6 +282,15 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         sub_options);
   }
 
+  // odometry subscription (ego pose source when ego_source == "odometry")
+  if (params_.ego_source == EgoSource::ODOMETRY) {
+    sub_odometry_ = create_subscription<nav_msgs::msg::Odometry>(
+      "~/input/odometry", rclcpp::QoS{10},
+      [this](AUTOWARE_MESSAGE_CONST_SHARED_PTR(nav_msgs::msg::Odometry) msg) {
+        state_.odometry->updateOdometryBuffer(*msg);
+      });
+  }
+
   // publishers
   tracked_objects_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
     "~/output/objects", rclcpp::QoS{1});
@@ -288,7 +301,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   }
 
   ////// callback timer
-  if (params_.enable_delay_compensation) {
+  // The publish timer is an independent trigger: when disabled, tracks are published on
+  // measurement; when enabled, the timer drives publishing. The export reference
+  // (delay_compensation) is orthogonal.
+  if (params_.publish_on_timer) {
     constexpr double timer_multiplier = 10.0;  // 10 times frequent for publish timing check
     const auto timer_period = rclcpp::Rate(params_.publish_rate * timer_multiplier).period();
     publish_timer_ = autoware::agnocast_wrapper::create_timer(

@@ -22,6 +22,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::processing_time_checker
@@ -85,10 +86,10 @@ ProcessingTimeChecker::ProcessingTimeChecker(const rclcpp::NodeOptions & node_op
     processing_time_subscribers_.push_back(
       create_subscription<Float64Stamped>(
         processing_time_topic_name, 1,
-        [this, &module_name]([[maybe_unused]] const Float64Stamped & msg) {
-          processing_time_map_.insert_or_assign(module_name, msg.data);
-          processing_time_accumulator_map_.at(module_name).add(msg.data);
-          processing_time_tdigest_map_.at(module_name).insert(msg.data);
+        [this, module_name](const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Float64Stamped) & msg) {
+          processing_time_map_.insert_or_assign(module_name, msg->data);
+          processing_time_accumulator_map_.at(module_name).add(msg->data);
+          processing_time_tdigest_map_.at(module_name).insert(msg->data);
         }));
     // clang-format on
   }
@@ -96,7 +97,7 @@ ProcessingTimeChecker::ProcessingTimeChecker(const rclcpp::NodeOptions & node_op
   metrics_pub_ = create_publisher<MetricArrayMsg>("~/metrics", 1);
 
   const auto period_ns = rclcpp::Rate(update_rate).period();
-  timer_ = rclcpp::create_timer(
+  timer_ = autoware::agnocast_wrapper::create_timer(
     this, get_clock(), period_ns, std::bind(&ProcessingTimeChecker::on_timer, this));
 }
 
@@ -161,7 +162,7 @@ ProcessingTimeChecker::~ProcessingTimeChecker()
 void ProcessingTimeChecker::on_timer()
 {
   // create MetricArrayMsg
-  MetricArrayMsg metrics_msg;
+  auto metrics_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(metrics_pub_);
   for (const auto & processing_time_iterator : processing_time_map_) {
     const auto processing_time_topic_name = processing_time_iterator.first;
     const double processing_time = processing_time_iterator.second;
@@ -171,12 +172,12 @@ void ProcessingTimeChecker::on_timer()
     metric.name = "processing_time/" + processing_time_topic_name;
     metric.value = std::to_string(processing_time);
     metric.unit = "millisecond";
-    metrics_msg.metric_array.push_back(metric);
+    metrics_msg->metric_array.push_back(metric);
   }
 
   // publish
-  metrics_msg.stamp = now();
-  metrics_pub_->publish(metrics_msg);
+  metrics_msg->stamp = now();
+  metrics_pub_->publish(std::move(metrics_msg));
 }
 }  // namespace autoware::processing_time_checker
 
