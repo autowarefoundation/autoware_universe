@@ -28,18 +28,18 @@ bool validate_trajectory(const TrajectoryPoints & trajectory)
 }
 
 double calculate_distance_to_last_point(
-  const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose)
+  const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & src_pose)
 {
   if (traj_points.empty()) {
     return 0.0;
   }
 
   return autoware::motion_utils::calcSignedArcLength(
-    traj_points, ego_pose.position, traj_points.back().pose.position);
+    traj_points, src_pose.position, traj_points.size() - 1);
 }
 
 void replace_trajectory_with_stop_point(
-  TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose)
+  TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose, const double time_step)
 {
   TrajectoryPoint stop_point;
 
@@ -50,11 +50,17 @@ void replace_trajectory_with_stop_point(
   stop_point.heading_rate_rps = 0.0;
   stop_point.front_wheel_angle_rad = 0.0;
   stop_point.rear_wheel_angle_rad = 0.0;
+  stop_point.time_from_start = rclcpp::Duration::from_seconds(0.0);
 
   traj_points.clear();
 
-  // Two points are added since that is the minimum handled by Control.
+  // Three points are added since that is the minimum handled by Control.
   traj_points.push_back(stop_point);
+  stop_point.time_from_start = rclcpp::Duration::from_seconds(time_step);
+  stop_point.pose = autoware_utils_geometry::calc_offset_pose(stop_point.pose, 1e-3, 0.0, 0.0);
+  traj_points.push_back(stop_point);
+  stop_point.time_from_start = rclcpp::Duration::from_seconds(2.0 * time_step);
+  stop_point.pose = autoware_utils_geometry::calc_offset_pose(stop_point.pose, 1e-3, 0.0, 0.0);
   traj_points.push_back(stop_point);
 }
 
@@ -131,6 +137,19 @@ bool insert_stop_point(
   trajectory.back().acceleration_mps2 = 0.0;
 
   return true;
+}
+
+bool is_stop_trajectory(const TrajectoryPoints & traj_points, const double stopped_vel_th)
+{
+  if (traj_points.empty()) return false;
+
+  if (calculate_distance_to_last_point(traj_points, traj_points.front().pose) > 1.0) {
+    return false;
+  }
+
+  return std::find_if(traj_points.begin(), traj_points.end(), [&](const TrajectoryPoint & point) {
+           return point.longitudinal_velocity_mps > stopped_vel_th;
+         }) == traj_points.end();
 }
 
 }  // namespace autoware::trajectory_modifier::utils

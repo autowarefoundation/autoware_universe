@@ -29,6 +29,11 @@ trajectory_modifier_params:
     default_value: false
     description: Enable the use of traffic light stop
     read_only: false
+  use_surround_obstacle_stop:
+    type: bool
+    default_value: true
+    description: Enable the use of surround obstacle stop
+    read_only: false
   trajectory_time_step:
     type: double
     default_value: 0.1
@@ -433,6 +438,209 @@ trajectory_modifier_params:
       type: double
       default_value: 2.75
       description: Crossing time limit [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+
+  surround_obstacle_stop:
+    use_objects:
+      type: bool
+      default_value: true
+      description: Enable the use of objects for surround obstacle stop
+      read_only: false
+    use_pointcloud:
+      type: bool
+      default_value: true
+      description: Enable the use of pointcloud for surround obstacle stop
+      read_only: false
+    object_types:
+      type: string_array
+      default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
+      description: Types of objects to consider for surround obstacle stop
+      read_only: false
+    front_distance_th:
+      car:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      truck:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bus:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      trailer:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      motorcycle:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bicycle:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pedestrian:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      unknown:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pointcloud:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+    side_distance_th:
+      car:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      truck:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bus:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      trailer:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      motorcycle:
+        type: double
+        default_value: 1.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bicycle:
+        type: double
+        default_value: 1.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pedestrian:
+        type: double
+        default_value: 1.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      unknown:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pointcloud:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+    back_distance_th:
+      car:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      truck:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bus:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      trailer:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      motorcycle:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bicycle:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pedestrian:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      unknown:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pointcloud:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+    hysteresis_distance:
+      type: double
+      default_value: 0.1
+      description: Distance hysteresis threshold for clearing stop [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    hysteresis_time:
+      type: double
+      default_value: 0.2
+      description: Time hysteresis threshold for clearing stop [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    ego_stopped_vel_th:
+      type: double
+      default_value: 0.1
+      description: Velocity threshold below which ego vehicle is considered stopped [m/s]
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false

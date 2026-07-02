@@ -34,6 +34,11 @@
           "description": "Enable the traffic light stop modifier plugin",
           "default": true
         },
+        "use_surround_obstacle_stop": {
+          "type": "boolean",
+          "description": "Enable the surround obstacle stop modifier plugin",
+          "default": true
+        },
         "use_velocity_modifier": {
           "type": "boolean",
           "description": "Enable the velocity modifier plugin",
@@ -470,6 +475,97 @@
               "type": "number",
               "description": "Crossing time limit [s]",
               "default": 2.75,
+              "minimum": 0.0
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "surround_obstacle_stop": {
+          "type": "object",
+          "properties": {
+            "use_objects": {
+              "type": "boolean",
+              "description": "Enable the use of objects for surround obstacle stop",
+              "default": true
+            },
+            "use_pointcloud": {
+              "type": "boolean",
+              "description": "Enable the use of pointcloud for surround obstacle stop",
+              "default": true
+            },
+            "object_types": {
+              "type": "array",
+              "description": "Types of objects to consider for surround obstacle stop",
+              "default": ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "front_distance_th": {
+              "type": "object",
+              "properties": {
+                "car": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "truck": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "bus": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "trailer": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "motorcycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "bicycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pedestrian": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "unknown": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pointcloud": { "type": "number", "default": 0.5, "minimum": 0.0 }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "side_distance_th": {
+              "type": "object",
+              "properties": {
+                "car": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "truck": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "bus": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "trailer": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "motorcycle": { "type": "number", "default": 1.0, "minimum": 0.0 },
+                "bicycle": { "type": "number", "default": 1.0, "minimum": 0.0 },
+                "pedestrian": { "type": "number", "default": 1.0, "minimum": 0.0 },
+                "unknown": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pointcloud": { "type": "number", "default": 0.5, "minimum": 0.0 }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "back_distance_th": {
+              "type": "object",
+              "properties": {
+                "car": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "truck": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "bus": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "trailer": { "type": "number", "default": 0.0, "minimum": 0.0 },
+                "motorcycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "bicycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pedestrian": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "unknown": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "pointcloud": { "type": "number", "default": 0.5, "minimum": 0.0 }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "hysteresis_distance": {
+              "type": "number",
+              "description": "Distance hysteresis threshold for clearing stop [m]",
+              "default": 0.1,
+              "minimum": 0.0
+            },
+            "hysteresis_time": {
+              "type": "number",
+              "description": "Time hysteresis threshold for clearing stop [s]",
+              "default": 0.2,
+              "minimum": 0.0
+            },
+            "ego_stopped_vel_th": {
+              "type": "number",
+              "description": "Velocity threshold below which ego vehicle is considered stopped [m/s]",
+              "default": 0.1,
               "minimum": 0.0
             }
           },
