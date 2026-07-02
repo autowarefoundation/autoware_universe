@@ -123,8 +123,8 @@ private:
   static tier4_perception_msgs::msg::TrafficLightElement classify_element(
     const PipelineStages & stages);
   bool filter_hsv(
-    const cv::Mat & input_image, cv::Mat & green_image, cv::Mat & yellow_image,
-    cv::Mat & red_image) const;
+    const cv::Mat & roi_image, cv::Mat & green_filtered_image, cv::Mat & yellow_filtered_image,
+    cv::Mat & red_filtered_image) const;
   // Rebuild the cv::Scalar bands from hsv_config_.
   void update_thresholds();
 

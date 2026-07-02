@@ -50,15 +50,15 @@ void ColorClassifierCore::update_thresholds()
 }
 
 bool ColorClassifierCore::filter_hsv(
-  const cv::Mat & input_image, cv::Mat & green_image, cv::Mat & yellow_image,
-  cv::Mat & red_image) const
+  const cv::Mat & roi_image, cv::Mat & green_filtered_image, cv::Mat & yellow_filtered_image,
+  cv::Mat & red_filtered_image) const
 {
   cv::Mat hsv_image;
-  cv::cvtColor(input_image, hsv_image, cv::COLOR_BGR2HSV);
+  cv::cvtColor(roi_image, hsv_image, cv::COLOR_BGR2HSV);
   try {
-    cv::inRange(hsv_image, min_hsv_green_, max_hsv_green_, green_image);
-    cv::inRange(hsv_image, min_hsv_yellow_, max_hsv_yellow_, yellow_image);
-    cv::inRange(hsv_image, min_hsv_red_, max_hsv_red_, red_image);
+    cv::inRange(hsv_image, min_hsv_green_, max_hsv_green_, green_filtered_image);
+    cv::inRange(hsv_image, min_hsv_yellow_, max_hsv_yellow_, yellow_filtered_image);
+    cv::inRange(hsv_image, min_hsv_red_, max_hsv_red_, red_filtered_image);
   } catch (const cv::Exception &) {
     return false;
   }
@@ -85,33 +85,35 @@ ColorClassifierCore::PipelineResult ColorClassifierCore::run_pipeline(
   const cv::Mat & roi_image) const
 {
   PipelineResult result;
-  cv::Mat green_image;
-  cv::Mat yellow_image;
-  cv::Mat red_image;
-  result.filter_ok = filter_hsv(roi_image, green_image, yellow_image, red_image);
+  cv::Mat green_filtered_image;
+  cv::Mat yellow_filtered_image;
+  cv::Mat red_filtered_image;
+  result.filter_ok =
+    filter_hsv(roi_image, green_filtered_image, yellow_filtered_image, red_filtered_image);
   // binarize
-  cv::Mat green_bin_image;
-  cv::Mat yellow_bin_image;
-  cv::Mat red_bin_image;
+  cv::Mat green_binarized_image;
+  cv::Mat yellow_binarized_image;
+  cv::Mat red_binarized_image;
   const int bin_threshold = 127;
-  cv::threshold(green_image, green_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
-  cv::threshold(yellow_image, yellow_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
-  cv::threshold(red_image, red_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
+  cv::threshold(green_filtered_image, green_binarized_image, bin_threshold, 255, cv::THRESH_BINARY);
+  cv::threshold(
+    yellow_filtered_image, yellow_binarized_image, bin_threshold, 255, cv::THRESH_BINARY);
+  cv::threshold(red_filtered_image, red_binarized_image, bin_threshold, 255, cv::THRESH_BINARY);
   // denoise (erode + dilate)
   cv::Mat green_denoised_image;
   cv::Mat yellow_denoised_image;
   cv::Mat red_denoised_image;
   cv::Mat element4 = (cv::Mat_<uchar>(3, 3) << 0, 1, 0, 1, 1, 1, 0, 1, 0);
-  cv::erode(green_bin_image, green_denoised_image, element4, cv::Point(-1, -1), 1);
-  cv::erode(yellow_bin_image, yellow_denoised_image, element4, cv::Point(-1, -1), 1);
-  cv::erode(red_bin_image, red_denoised_image, element4, cv::Point(-1, -1), 1);
+  cv::erode(green_binarized_image, green_denoised_image, element4, cv::Point(-1, -1), 1);
+  cv::erode(yellow_binarized_image, yellow_denoised_image, element4, cv::Point(-1, -1), 1);
+  cv::erode(red_binarized_image, red_denoised_image, element4, cv::Point(-1, -1), 1);
   cv::dilate(green_denoised_image, green_denoised_image, cv::Mat(), cv::Point(-1, -1), 1);
   cv::dilate(yellow_denoised_image, yellow_denoised_image, cv::Mat(), cv::Point(-1, -1), 1);
   cv::dilate(red_denoised_image, red_denoised_image, cv::Mat(), cv::Point(-1, -1), 1);
 
-  result.stages.green = {green_image, green_bin_image, green_denoised_image};
-  result.stages.yellow = {yellow_image, yellow_bin_image, yellow_denoised_image};
-  result.stages.red = {red_image, red_bin_image, red_denoised_image};
+  result.stages.green = {green_filtered_image, green_binarized_image, green_denoised_image};
+  result.stages.yellow = {yellow_filtered_image, yellow_binarized_image, yellow_denoised_image};
+  result.stages.red = {red_filtered_image, red_binarized_image, red_denoised_image};
   return result;
 }
 
