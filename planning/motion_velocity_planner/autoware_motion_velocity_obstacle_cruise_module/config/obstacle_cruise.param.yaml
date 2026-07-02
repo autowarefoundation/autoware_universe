@@ -129,3 +129,8 @@
         # hysteresis for cruise and stop
         obstacle_velocity_threshold_from_cruise : 3.0 # stop planning is executed to the obstacle whose velocity is less than this value [m/s]
         obstacle_velocity_threshold_to_cruise : 3.5 # stop planning is executed to the obstacle whose velocity is less than this value [m/s]
+
+        # Parameters for the calculation of the time-varying obstacle filter range
+        obstacle_filter_ego_jerk: 0.15 # safe acceleration and deceleration jerk of ego [m/ss]
+        obstacle_filter_dist_max_range: 120.0 # obstacle distance beyond this value will be omitted [m]
+        obstacle_filter_dist_min_range: 65.0 # for the sake of safety, obstacle filter distance smaller than this value will be fixed to this value [m]
