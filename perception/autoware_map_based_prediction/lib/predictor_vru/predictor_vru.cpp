@@ -14,6 +14,7 @@
 
 #include "autoware/map_based_prediction/predictor_vru/predictor_vru.hpp"
 
+#include "autoware/map_based_prediction/predictor_vru/path_cut_debug.hpp"
 #include "autoware/map_based_prediction/utils.hpp"
 
 #include <autoware/lanelet2_utils/nn_search.hpp>
@@ -149,6 +150,7 @@ void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_ma
   crosswalks_.insert(crosswalks_.end(), walkways.begin(), walkways.end());
 
   fence_module_.buildFromMap(lanelet_map_ptr_);
+  vegetation_module_.build_from_map(lanelet_map_ptr_);
 }
 
 void PredictorVru::loadCurrentCrosswalkUsers(const TrackedObjects & objects)
@@ -167,7 +169,8 @@ void PredictorVru::removeOldKnownMatches(const double current_time, const double
 }
 
 PredictedObject PredictorVru::predict(
-  const std_msgs::msg::Header & header, const TrackedObject & object)
+  const std_msgs::msg::Header & header, const TrackedObject & object,
+  visualization_msgs::msg::MarkerArray * debug_markers)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -176,23 +179,26 @@ PredictedObject PredictorVru::predict(
   object_id = history_manager_.tryMatchToDisappeared(object_id);
   history_manager_.predictedIds().insert(object_id);
   history_manager_.updateHistory(header, object, object_id);
-  return getPredictedObjectAsCrosswalkUser(object);
+  return getPredictedObjectAsCrosswalkUser(object, rclcpp::Time(header.stamp), debug_markers);
 }
 
-PredictedObjects PredictorVru::retrieveUndetectedObjects()
+PredictedObjects PredictorVru::retrieveUndetectedObjects(
+  const rclcpp::Time & stamp, visualization_msgs::msg::MarkerArray * debug_markers)
 {
   PredictedObjects output;
   for (const auto & [id, crosswalk_user] : history_manager_.history()) {
     if (history_manager_.predictedIds().count(id) == 0) {
-      const auto predicted_object =
-        getPredictedObjectAsCrosswalkUser(crosswalk_user.back().tracked_object);
+      const auto predicted_object = getPredictedObjectAsCrosswalkUser(
+        crosswalk_user.back().tracked_object, stamp, debug_markers);
       output.objects.push_back(predicted_object);
     }
   }
   return output;
 }
 
-PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObject & object)
+PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(
+  const TrackedObject & object, const rclcpp::Time & stamp,
+  visualization_msgs::msg::MarkerArray * debug_markers)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -242,8 +248,10 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       mutable_object, params_.prediction_time_horizon);
     predicted_path.confidence = 1.0;
 
-    predicted_object.kinematics.predicted_paths.push_back(
-      fence_module_.cutPathBeforeFences(predicted_path));
+    const PredictedPath cut_path = fence_module_.cutPathBeforeFences(predicted_path);
+    debug::append_path_cut_event_markers(
+      debug_markers, predicted_path, cut_path, predicted_object, PathCutSource::Fence, stamp);
+    predicted_object.kinematics.predicted_paths.push_back(cut_path);
   }
 
   boost::optional<lanelet::ConstLanelet> crossing_crosswalk{boost::none};
@@ -387,6 +395,14 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
     predicted_object.kinematics.predicted_paths.push_back(predicted_path);
   }
 
+  const std::vector<PredictedPath> paths_cut_with_vegetation =
+    vegetation_module_.cut_paths_crossing_vegetation(predicted_object);
+
+  debug::append_path_cut_event_markers(
+    debug_markers, predicted_object.kinematics.predicted_paths, paths_cut_with_vegetation,
+    predicted_object, PathCutSource::Vegetation, stamp);
+
+  predicted_object.kinematics.predicted_paths = paths_cut_with_vegetation;
   const auto n_path = predicted_object.kinematics.predicted_paths.size();
   for (auto & predicted_path : predicted_object.kinematics.predicted_paths) {
     predicted_path.confidence = 1.0 / n_path;
