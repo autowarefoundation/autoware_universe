@@ -18,11 +18,8 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
 )
 
 if(BUILD_TESTING AND NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
-  ament_auto_add_gtest(${PROJECT_NAME}_test
-    test/test_node.cpp
-  )
-  ament_auto_add_gtest(${PROJECT_NAME}_characteristic_test
-    test/test_traffic_arbiter_characteristic.cpp
+  ament_auto_add_gtest(${PROJECT_NAME}_integration_test
+    test/test_traffic_light_arbiter_integration.cpp
   )
   ament_auto_add_gtest(${PROJECT_NAME}_core_test
     test/test_traffic_light_arbiter_core.cpp
