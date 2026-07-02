@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "grid_utils.hpp"
+#include "../../src/grid_utils.hpp"
 #include "utils.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
@@ -22,7 +22,6 @@
 
 #include <cmath>
 #include <iostream>
-#include <unordered_set>
 #include <vector>
 
 struct indexHash

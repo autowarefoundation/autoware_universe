@@ -12,54 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef OCCLUSION_SPOT_UTILS_HPP_
-#define OCCLUSION_SPOT_UTILS_HPP_
+#ifndef UTILS_HPP_
+#define UTILS_HPP_
 
 #include "grid_utils.hpp"
 
-#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware_lanelet2_extension/visualization/visualization.hpp>
-#include <tf2/utils.hpp>
+#include <autoware/trajectory/path_point_with_lane_id.hpp>
 
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-#include <autoware_perception_msgs/msg/object_classification.hpp>
-#include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <autoware_planning_msgs/msg/path.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <visualization_msgs/msg/marker.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/geometry/LaneletMap.h>
-
-#include <algorithm>
-#include <chrono>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
 using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
-using autoware_perception_msgs::msg::PredictedObjects;
-using autoware_planning_msgs::msg::Path;
 using autoware_planning_msgs::msg::PathPoint;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
-using lanelet::BasicLineString2d;
-using lanelet::BasicPoint2d;
-using lanelet::BasicPolygon2d;
-using lanelet::LaneletMapPtr;
-using DetectionAreaIdx = std::optional<std::pair<double, double>>;
-using BasicPolygons2d = std::vector<lanelet::BasicPolygon2d>;
+using Trajectory = autoware::experimental::trajectory::Trajectory<PathPointWithLaneId>;
 
-namespace occlusion_spot_utils
+namespace utils
 {
-enum ROAD_TYPE { PRIVATE, PUBLIC, HIGHWAY, UNKNOWN };
 enum DETECTION_METHOD { OCCUPANCY_GRID, PREDICTED_OBJECT };
 enum PASS_JUDGE { SMOOTH_VELOCITY, CURRENT_VELOCITY };
 
@@ -84,12 +57,6 @@ struct Velocity
   double v_ego;                 // [m/s]   current ego velocity
   double delay_time;            // [s] safety time buffer for delay response
   double safe_margin;           // [m] maximum safety distance for any error
-};
-
-struct LatLon
-{
-  double lateral_distance;       // [m] lateral distance
-  double longitudinal_distance;  // [m] longitudinal distance
 };
 
 struct PlannerParam
@@ -134,7 +101,7 @@ struct SafeMotion
 struct ObstacleInfo
 {
   SafeMotion safe_motion;  // safe motion of velocity and stop point
-  geometry_msgs::msg::Point position;
+  Point position;
   double max_velocity;  // [m/s] Maximum velocity of the possible obstacle
   double ttv;           // [s] time to vehicle for pedestrian
 };
@@ -183,10 +150,10 @@ struct DebugData
   std::string detection_type = "";
   Polygons2d detection_area_polygons;
   std::vector<lanelet::BasicPolygon2d> close_partition;
-  std::vector<geometry_msgs::msg::Point> parked_vehicle_point;
+  std::vector<Point> parked_vehicle_point;
   std::vector<PossibleCollisionInfo> possible_collisions;
-  std::vector<geometry_msgs::msg::Point> occlusion_points;
-  std::vector<geometry_msgs::msg::Pose> debug_poses;
+  std::vector<Point> occlusion_points;
+  std::vector<Pose> debug_poses;
   void resetData()
   {
     debug_poses.clear();
@@ -197,55 +164,54 @@ struct DebugData
     occlusion_points.clear();
   }
 };
-// apply current velocity to path
-PathWithLaneId applyVelocityToPath(const PathWithLaneId & path, const double v0);
-//!< @brief wrapper for detection area polygon generation
-bool buildDetectionAreaPolygon(
-  Polygons2d & slices, const PathWithLaneId & path, const geometry_msgs::msg::Pose & target_pose,
-  const size_t target_seg_idx, const PlannerParam & param);
-lanelet::ConstLanelet toPathLanelet(const PathWithLaneId & path);
-// Note : consider offset_from_start_to_ego and safety margin for collision here
-void handleCollisionOffset(std::vector<PossibleCollisionInfo> & possible_collisions, double offset);
-void clipPathByLength(
-  const PathWithLaneId & path, PathWithLaneId & clipped, const double max_length = 100.0);
-//!< @brief extract target vehicles
+
+/**
+ * @param: v: ego velocity config
+ * @param: ttv: time to vehicle
+ * @return safe motion
+ **/
+SafeMotion calculateSafeMotion(const Velocity & v, const double ttv);
+/**
+ * @brief apply current velocity to path
+ */
+void applyVelocityToPath(Trajectory & path, const double velocity);
+/**
+ * @brief wrapper for detection area polygon generation
+ */
+bool buildDetectionAreaPolygons(
+  Polygons2d & polygons, const Trajectory & path, const double s_ego, const PlannerParam & param);
+void applySafeVelocityConsideringPossibleCollision(
+  Trajectory & path, std::vector<PossibleCollisionInfo> & possible_collisions,
+  std::vector<geometry_msgs::msg::Pose> & debug_poses, const PlannerParam & param);
+void handleCollisionOffset(
+  std::vector<PossibleCollisionInfo> & possible_collisions, const double offset);
 bool isStuckVehicle(const PredictedObject & obj, const double min_vel);
 bool isMovingVehicle(const PredictedObject & obj, const double min_vel);
 std::vector<PredictedObject> extractVehicles(
-  const PredictedObjects::ConstSharedPtr objects_ptr, const Point ego_position,
+  const PredictedObjects::ConstSharedPtr objects_ptr, const Point & ego_position,
   const double distance);
 std::vector<PredictedObject> filterVehiclesByDetectionArea(
   const std::vector<PredictedObject> & objs, const Polygons2d & polys);
-bool isVehicle(const ObjectClassification & obj_class);
+bool isVehicle(const PredictedObject & obj);
 void categorizeVehicles(
   const std::vector<PredictedObject> & vehicles, Polygons2d & stuck_vehicle_foot_prints,
   Polygons2d & moving_vehicle_foot_prints, const double stuck_vehicle_vel);
 bool generatePossibleCollisionsFromObjects(
-  std::vector<PossibleCollisionInfo> & possible_collisions, const PathWithLaneId & path,
+  std::vector<PossibleCollisionInfo> & possible_collisions, const Trajectory & path,
   const PlannerParam & param, const double offset_from_start_to_ego,
   const std::vector<PredictedObject> & dyn_objects);
-//!< @brief calculate intersection and collision point from occlusion spot
-void calculateCollisionPathPointFromOcclusionSpot(
-  PossibleCollisionInfo & pc, const lanelet::BasicPoint2d & obstacle_point,
-  const double offset_from_ego_to_target, const lanelet::ConstLanelet & path_lanelet,
-  const PlannerParam & param);
-//!< @brief set velocity and orientation to collision point based on previous Path with laneId
 void calcSlowDownPointsForPossibleCollision(
-  const int closest_idx, const PathWithLaneId & path, const double offset,
+  const Trajectory & path, const double offset,
   std::vector<PossibleCollisionInfo> & possible_collisions);
-//!< @brief convert a set of occlusion spots found on detection_area slice
-std::optional<PossibleCollisionInfo> generateOneNotableCollisionFromOcclusionSpot(
-  const grid_map::GridMap & grid, const std::vector<grid_map::Position> & occlusion_spot_positions,
-  const double offset_from_start_to_ego, const Point2d base_point,
-  const lanelet::ConstLanelet & path_lanelet, const PlannerParam & param,
-  const DebugData & debug_data);
-//!< @brief generate possible collisions coming from occlusion spots on the side of the path
+/**
+ * @brief generate possible collisions coming from occlusion spots on the side of the path
+ */
 bool generatePossibleCollisionsFromGridMap(
   std::vector<PossibleCollisionInfo> & possible_collisions, const grid_map::GridMap & grid,
-  const PathWithLaneId & path, const double offset_from_start_to_ego, const PlannerParam & param,
+  const Trajectory & path, const double offset_from_start_to_ego, const PlannerParam & param,
   DebugData & debug_data);
 
-}  // namespace occlusion_spot_utils
+}  // namespace utils
 }  // namespace autoware::behavior_velocity_planner
 
-#endif  // OCCLUSION_SPOT_UTILS_HPP_
+#endif  // UTILS_HPP_

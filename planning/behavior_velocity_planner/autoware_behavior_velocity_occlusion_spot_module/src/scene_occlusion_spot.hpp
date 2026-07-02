@@ -15,24 +15,11 @@
 #ifndef SCENE_OCCLUSION_SPOT_HPP_
 #define SCENE_OCCLUSION_SPOT_HPP_
 
-#include "occlusion_spot_utils.hpp"
+#include "utils.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
-#include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
+#include <autoware/behavior_velocity_planner_common/experimental/scene_module_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-#include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <geometry_msgs/msg/point.hpp>
-#include <nav_msgs/msg/occupancy_grid.hpp>
-
-#include <boost/optional.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_routing/RoutingGraph.h>
 
 #include <memory>
 #include <string>
@@ -40,14 +27,14 @@
 
 namespace autoware::behavior_velocity_planner
 {
-class OcclusionSpotModule : public SceneModuleInterface
+class OcclusionSpotModule : public experimental::SceneModuleInterface
 {
-  using PlannerParam = occlusion_spot_utils::PlannerParam;
-  using DebugData = occlusion_spot_utils::DebugData;
-
 public:
+  using DebugData = utils::DebugData;
+  using PlannerParam = utils::PlannerParam;
+
   OcclusionSpotModule(
-    const int64_t module_id, const std::shared_ptr<const PlannerData> & planner_data,
+    const lanelet::Id module_id, const PlannerData & planner_data,
     const PlannerParam & planner_param, const rclcpp::Logger & logger,
     const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
@@ -57,7 +44,9 @@ public:
   /**
    * @brief plan occlusion spot velocity at unknown area in occupancy grid
    */
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modifyPathVelocity(
+    Trajectory & path, const std::vector<Point> & left_bound,
+    const std::vector<Point> & right_bound, const PlannerData & planner_data) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -69,7 +58,7 @@ private:
   std::vector<lanelet::BasicPolygon2d> partition_lanelets_;
 
 protected:
-  int64_t module_id_{};
+  lanelet::Id module_id_{};
 
   // Debug
   mutable DebugData debug_data_;
