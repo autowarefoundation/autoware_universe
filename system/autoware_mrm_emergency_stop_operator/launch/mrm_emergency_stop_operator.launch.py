@@ -14,8 +14,11 @@
 
 import launch
 from launch.actions import DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription
 from launch.actions import OpaqueFunction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 from launch_ros.substitutions import FindPackageShare
@@ -48,11 +51,12 @@ def launch_setup(context, *args, **kwargs):
     container = ComposableNodeContainer(
         name="mrm_emergency_stop_operator_container",
         namespace="mrm_emergency_stop_operator",
-        package="rclcpp_components",
-        executable="component_container",
+        package=LaunchConfiguration("container_package"),
+        executable=LaunchConfiguration("container_executable"),
         composable_node_descriptions=[
             component,
         ],
+        additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
         output="screen",
     )
 
@@ -60,6 +64,18 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
+    agnocast_env = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution(
+                [
+                    FindPackageShare("autoware_agnocast_wrapper"),
+                    "launch",
+                    "agnocast_env.launch.py",
+                ]
+            )
+        ),
+    )
+
     launch_arguments = [
         DeclareLaunchArgument(
             "config_file",
@@ -71,4 +87,6 @@ def generate_launch_description():
         )
     ]
 
-    return launch.LaunchDescription(launch_arguments + [OpaqueFunction(function=launch_setup)])
+    return launch.LaunchDescription(
+        launch_arguments + [agnocast_env, OpaqueFunction(function=launch_setup)]
+    )
