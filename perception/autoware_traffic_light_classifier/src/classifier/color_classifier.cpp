@@ -65,7 +65,7 @@ bool ColorClassifierCore::filter_hsv(
   return true;
 }
 
-ColorClassifierCore::ClassifierResult ColorClassifierCore::get_traffic_signals(
+ColorClassifierCore::ClassifierResult ColorClassifierCore::classify(
   const std::vector<cv::Mat> & images) const
 {
   ClassifierResult result;
@@ -73,7 +73,7 @@ ColorClassifierCore::ClassifierResult ColorClassifierCore::get_traffic_signals(
   result.signals.signals.resize(images.size());
   for (size_t roi_i = 0; roi_i < images.size(); roi_i++) {
     const PipelineResult pipeline = run_pipeline(images[roi_i]);
-    result.signals.signals[roi_i].elements.push_back(classify_stages(pipeline.stages));
+    result.signals.signals[roi_i].elements.push_back(classify_element(pipeline.stages));
     if (!pipeline.filter_ok) {
       result.success = false;
     }
@@ -97,43 +97,42 @@ ColorClassifierCore::PipelineResult ColorClassifierCore::run_pipeline(
   cv::threshold(green_image, green_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
   cv::threshold(yellow_image, yellow_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
   cv::threshold(red_image, red_bin_image, bin_threshold, 255, cv::THRESH_BINARY);
-  // filter noise
-  cv::Mat green_filtered_bin_image;
-  cv::Mat yellow_filtered_bin_image;
-  cv::Mat red_filtered_bin_image;
+  // denoise (erode + dilate)
+  cv::Mat green_denoised_image;
+  cv::Mat yellow_denoised_image;
+  cv::Mat red_denoised_image;
   cv::Mat element4 = (cv::Mat_<uchar>(3, 3) << 0, 1, 0, 1, 1, 1, 0, 1, 0);
-  cv::erode(green_bin_image, green_filtered_bin_image, element4, cv::Point(-1, -1), 1);
-  cv::erode(yellow_bin_image, yellow_filtered_bin_image, element4, cv::Point(-1, -1), 1);
-  cv::erode(red_bin_image, red_filtered_bin_image, element4, cv::Point(-1, -1), 1);
-  cv::dilate(green_filtered_bin_image, green_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
-  cv::dilate(yellow_filtered_bin_image, yellow_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
-  cv::dilate(red_filtered_bin_image, red_filtered_bin_image, cv::Mat(), cv::Point(-1, -1), 1);
+  cv::erode(green_bin_image, green_denoised_image, element4, cv::Point(-1, -1), 1);
+  cv::erode(yellow_bin_image, yellow_denoised_image, element4, cv::Point(-1, -1), 1);
+  cv::erode(red_bin_image, red_denoised_image, element4, cv::Point(-1, -1), 1);
+  cv::dilate(green_denoised_image, green_denoised_image, cv::Mat(), cv::Point(-1, -1), 1);
+  cv::dilate(yellow_denoised_image, yellow_denoised_image, cv::Mat(), cv::Point(-1, -1), 1);
+  cv::dilate(red_denoised_image, red_denoised_image, cv::Mat(), cv::Point(-1, -1), 1);
 
-  result.stages.green = {green_image, green_bin_image, green_filtered_bin_image};
-  result.stages.yellow = {yellow_image, yellow_bin_image, yellow_filtered_bin_image};
-  result.stages.red = {red_image, red_bin_image, red_filtered_bin_image};
+  result.stages.green = {green_image, green_bin_image, green_denoised_image};
+  result.stages.yellow = {yellow_image, yellow_bin_image, yellow_denoised_image};
+  result.stages.red = {red_image, red_bin_image, red_denoised_image};
   return result;
 }
 
-tier4_perception_msgs::msg::TrafficLightElement ColorClassifierCore::classify_stages(
+tier4_perception_msgs::msg::TrafficLightElement ColorClassifierCore::classify_element(
   const PipelineStages & stages)
 {
-  const cv::Mat & green_filtered_bin_image = stages.green.denoised;
-  const cv::Mat & yellow_filtered_bin_image = stages.yellow.denoised;
-  const cv::Mat & red_filtered_bin_image = stages.red.denoised;
+  const cv::Mat & green_denoised_image = stages.green.denoised;
+  const cv::Mat & yellow_denoised_image = stages.yellow.denoised;
+  const cv::Mat & red_denoised_image = stages.red.denoised;
 
-  const int green_pixel_num = cv::countNonZero(green_filtered_bin_image);
-  const int yellow_pixel_num = cv::countNonZero(yellow_filtered_bin_image);
-  const int red_pixel_num = cv::countNonZero(red_filtered_bin_image);
+  const int green_pixel_num = cv::countNonZero(green_denoised_image);
+  const int yellow_pixel_num = cv::countNonZero(yellow_denoised_image);
+  const int red_pixel_num = cv::countNonZero(red_denoised_image);
   const double green_ratio =
     static_cast<double>(green_pixel_num) /
-    static_cast<double>(green_filtered_bin_image.rows * green_filtered_bin_image.cols);
+    static_cast<double>(green_denoised_image.rows * green_denoised_image.cols);
   const double yellow_ratio =
     static_cast<double>(yellow_pixel_num) /
-    static_cast<double>(yellow_filtered_bin_image.rows * yellow_filtered_bin_image.cols);
-  const double red_ratio =
-    static_cast<double>(red_pixel_num) /
-    static_cast<double>(red_filtered_bin_image.rows * red_filtered_bin_image.cols);
+    static_cast<double>(yellow_denoised_image.rows * yellow_denoised_image.cols);
+  const double red_ratio = static_cast<double>(red_pixel_num) /
+                           static_cast<double>(red_denoised_image.rows * red_denoised_image.cols);
 
   tier4_perception_msgs::msg::TrafficLightElement element;
   if (yellow_ratio < green_ratio && red_ratio < green_ratio) {
@@ -275,7 +274,7 @@ bool ColorClassifier::getTrafficSignals(
     return false;
   }
 
-  const ColorClassifierCore::ClassifierResult result = core_.get_traffic_signals(images);
+  const ColorClassifierCore::ClassifierResult result = core_.classify(images);
 
   // Publish one debug mosaic per ROI image only when a debug consumer is attached;
   // make_debug_image re-runs the HSV pipeline, so it stays off the hot path.

@@ -79,10 +79,10 @@ public:
 
   // Classify each ROI image (a cropped traffic-light region) into a
   // TrafficLightElement by HSV color band.
-  ClassifierResult get_traffic_signals(const std::vector<cv::Mat> & images) const;
+  ClassifierResult classify(const std::vector<cv::Mat> & images) const;
 
   // Render one debug mosaic for a single ROI image. Independent of
-  // get_traffic_signals: it re-runs the HSV pipeline internally, so the caller
+  // classify: it re-runs the HSV pipeline internally, so the caller
   // invokes it only when a debug consumer is attached (a cold path).
   cv::Mat make_debug_image(const cv::Mat & roi_image) const;
 
@@ -91,7 +91,7 @@ public:
 
 private:
   // The three pipeline stages of one color channel: filtered = cv::inRange output,
-  // binarized = post-threshold, denoised = post-erode/dilate. classify_stages reads
+  // binarized = post-threshold, denoised = post-erode/dilate. classify_element reads
   // the denoised mask; make_debug_image renders all three.
   struct ColorStageImages
   {
@@ -115,12 +115,12 @@ private:
   };
 
   // Run the HSV filter -> binarize -> denoise pipeline for one ROI image. Shared by
-  // classification (get_traffic_signals) and debug rendering (make_debug_image).
+  // classification (classify) and debug rendering (make_debug_image).
   PipelineResult run_pipeline(const cv::Mat & roi_image) const;
   // Pick one TrafficLightElement from the denoised per-color masks: the dominant
   // color band wins, with confidence scaled by its matching pixel count. Static: it
   // derives the element purely from the stage masks, using no member state.
-  static tier4_perception_msgs::msg::TrafficLightElement classify_stages(
+  static tier4_perception_msgs::msg::TrafficLightElement classify_element(
     const PipelineStages & stages);
   bool filter_hsv(
     const cv::Mat & input_image, cv::Mat & green_image, cv::Mat & yellow_image,
