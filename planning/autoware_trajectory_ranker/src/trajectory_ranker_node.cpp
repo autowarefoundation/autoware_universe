@@ -82,8 +82,7 @@ TrajectoryRanker::TrajectoryRanker(const rclcpp::NodeOptions & options)
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 }
 
-void TrajectoryRanker::process(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg)
+void TrajectoryRanker::process(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_trajectories_);
