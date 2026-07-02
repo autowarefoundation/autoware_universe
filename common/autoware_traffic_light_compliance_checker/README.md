@@ -24,7 +24,7 @@ The execution flow follows a sequential logical from signal processing & filteri
 1. **Filter signals and update status tracker:** Feeds raw perception data into the status tracker to clean up transient noise and tracking dropouts.
 2. **Generate Geometric Trajectory Linestring:** Removes path points situated behind the ego vehicle, clamps the forward path length at the maximum required stop distance, and extends trajectory end to account for ego front offset.
 3. **Extract and group map stop lines:** Sorts overlapping intersection lines into separate evaluation queues for red and amber constraints.
-4. **Evaluate Stop Line Violations:** Checks the trajectory linesting against active stop lines, records detected violations and generate compliance result.
+4. **Evaluate Stop Line Violations:** Checks the trajectory linestring against active stop lines, records detected violations and generate compliance result.
 
 ```plantuml
 @startuml
