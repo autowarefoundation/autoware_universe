@@ -1,0 +1,26 @@
+<launch>
+  <arg name="config" default="$(find-pkg-share autoware_driving_mode_manager)/config/driving_mode_manager.param.yaml"/>
+
+  <node pkg="autoware_driving_mode_manager" exec="driving_mode_manager_node">
+    <param from="$(var config)"/>
+    <remap from="~/system/change_operation_mode" to="/system/operation_mode/change_operation_mode"/>
+    <remap from="~/system/change_autoware_control" to="/system/operation_mode/change_autoware_control"/>
+    <remap from="~/system/operation_mode_state" to="/system/operation_mode/state"/>
+    <remap from="~/system/mrm_state" to="/system/fail_safe/mrm_state"/>
+    <remap from="~/system/driving_mode/request" to="/system/driving_mode/request"/>
+    <remap from="~/system/driving_mode/info" to="/system/driving_mode/info"/>
+    <remap from="~/system/driving_mode/available" to="/system/driving_mode/available"/>
+    <remap from="~/system/driving_mode/active" to="/system/driving_mode/active"/>
+    <remap from="~/system/driving_mode/stable" to="/system/driving_mode/stable"/>
+    <remap from="~/system/driving_mode/continuable" to="/system/driving_mode/continuable"/>
+    <remap from="~/system/driving_mode/mrm_state" to="/system/driving_mode/mrm_state"/>
+    <remap from="~/trajectory/source/status" to="/planning/trajectory_gate/source/status"/>
+    <remap from="~/trajectory/source/change" to="/planning/trajectory_gate/source/change"/>
+    <remap from="~/command/source/status" to="/control/control_command_gate/source/status"/>
+    <remap from="~/command/source/change" to="/control/control_command_gate/source/change"/>
+    <remap from="~/command/filter/status" to="/control/control_command_gate/filter/status"/>
+    <remap from="~/command/filter/change" to="/control/control_command_gate/filter/change"/>
+    <remap from="~/vehicle/control_mode/report" to="/vehicle/status/control_mode"/>
+    <remap from="~/vehicle/control_mode/command" to="/control/control_mode_request"/>
+  </node>
+</launch>
