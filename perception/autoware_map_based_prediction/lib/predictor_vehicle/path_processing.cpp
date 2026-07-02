@@ -21,6 +21,7 @@
 #include <autoware/lanelet2_utils/geometry.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_utils/autoware_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/normalization.hpp>
@@ -139,6 +140,34 @@ void replaceObjectYawWithLaneletsYaw(
   tf2::Quaternion filtered_quaternion;
   filtered_quaternion.setRPY(roll, pitch, mean_yaw_angle);
   pose_with_cov.pose.orientation = tf2::toMsg(filtered_quaternion);
+}
+
+// Ratio of the body length (dimensions.x) between the rear axle and the body-box center.
+// Mirrored from autoware_multi_object_tracker object_model.hpp (BicycleModelState
+// wheel_pos_ratio_rear). Kept in sync manually so this package does not depend on the tracker:
+//   CAR / BUS / TRUCK / TRAILER (normal_vehicle, big_vehicle): 0.25
+//   MOTORCYCLE / BICYCLE        (bicycle):                      0.30
+double rearAxleRatioForLabel(const uint8_t label)
+{
+  switch (label) {
+    case ObjectClassification::MOTORCYCLE:
+    case ObjectClassification::BICYCLE:
+      return 0.30;
+    case ObjectClassification::CAR:
+    case ObjectClassification::BUS:
+    case ObjectClassification::TRUCK:
+    case ObjectClassification::TRAILER:
+    default:
+      return 0.25;
+  }
+}
+
+double rearAxleOffset(const TrackedObject & object)
+{
+  if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) return 0.0;
+  const uint8_t label =
+    autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+  return object.shape.dimensions.x * rearAxleRatioForLabel(label);
 }
 }  // namespace
 
@@ -265,6 +294,9 @@ std::optional<PredictedObject> PathProcessor::predict(
     replaceObjectYawWithLaneletsYaw(current_lanelets, yaw_fixed_object);
   }
 
+  // Rear axle offset for bicycle motion model
+  const double rear_lever_arm = rearAxleOffset(yaw_fixed_object);
+
   std::vector<PredictedPath> predicted_paths;
   double min_avg_curvature = std::numeric_limits<double>::max();
   std::optional<PredictedPath> path_with_smallest_avg_curvature;
@@ -272,7 +304,7 @@ std::optional<PredictedObject> PathProcessor::predict(
   for (const auto & ref_path : ref_paths) {
     PredictedPath predicted_path = path_generator_->generatePathForOnLaneVehicle(
       yaw_fixed_object, ref_path.path, params_.prediction_time_horizon,
-      params_.lateral_control_time_horizon, ref_path.width, ref_path.speed_limit);
+      params_.lateral_control_time_horizon, ref_path.width, ref_path.speed_limit, rear_lever_arm);
     if (predicted_path.path.empty()) continue;
 
     if (!params_.check_lateral_acceleration_constraints) {

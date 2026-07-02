@@ -21,8 +21,10 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <tf2/utils.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -30,6 +32,24 @@
 namespace autoware::map_based_prediction
 {
 using autoware_utils::ScopedTimeTrack;
+
+void shiftPoseReference(geometry_msgs::msg::Pose & pose, const Eigen::Vector2d & local_offset)
+{
+  const double yaw = tf2::getYaw(pose.orientation);
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
+  pose.position.x += local_offset.x() * cos_yaw - local_offset.y() * sin_yaw;
+  pose.position.y += local_offset.x() * sin_yaw + local_offset.y() * cos_yaw;
+}
+
+void shiftPathReference(PredictedPath & path, const Eigen::Vector2d & local_offset)
+{
+  if (local_offset.x() == 0.0 && local_offset.y() == 0.0) return;
+
+  for (auto & pose : path.path) {
+    shiftPoseReference(pose, local_offset);
+  }
+}
 
 PathGenerator::PathGenerator(const double sampling_time_interval)
 : sampling_time_interval_(sampling_time_interval)
@@ -188,7 +208,8 @@ PredictedPath PathGenerator::generatePathForOffLaneVehicle(
 
 PredictedPath PathGenerator::generatePathForOnLaneVehicle(
   const TrackedObject & object, const PosePath & ref_path, const double duration,
-  const double lateral_duration, const double path_width, const double speed_limit) const
+  const double lateral_duration, const double path_width, const double speed_limit,
+  const double rear_lever_arm) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -217,7 +238,8 @@ PredictedPath PathGenerator::generatePathForOnLaneVehicle(
   backlash_width = std::max(backlash_width, 0.0);  // minimum is 0.0
 
   return generatePolynomialPath(
-    object, ref_path, duration, lateral_duration, path_width, backlash_width, speed_limit);
+    object, ref_path, duration, lateral_duration, path_width, backlash_width, speed_limit,
+    rear_lever_arm);
 }
 
 PredictedPath PathGenerator::generateStraightPath(
@@ -243,7 +265,7 @@ PredictedPath PathGenerator::generateStraightPath(
 PredictedPath PathGenerator::generatePolynomialPath(
   const TrackedObject & object, const PosePath & ref_path, const double duration,
   const double lateral_duration, const double path_width, const double backlash_width,
-  const double speed_limit) const
+  const double speed_limit, const double rear_lever_arm) const
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -252,7 +274,7 @@ PredictedPath PathGenerator::generatePolynomialPath(
   const double ref_path_len = autoware::motion_utils::calcArcLength(ref_path);
   const auto current_point = getFrenetPoint(
     object, ref_path.at(0), duration, speed_limit, use_vehicle_acceleration_,
-    acceleration_exponential_half_life_);
+    acceleration_exponential_half_life_, rear_lever_arm);
 
   // Step 1. Set Target Frenet Point
   // Note that we do not set position s,
@@ -317,7 +339,7 @@ PredictedPath PathGenerator::generatePolynomialPath(
 
   // Step 4. Convert predicted trajectory from Frenet to Cartesian coordinate
   return convertToPredictedPath(
-    object, frenet_predicted_path, interpolated_ref_path, sampling_time_interval_);
+    object, frenet_predicted_path, interpolated_ref_path, sampling_time_interval_, rear_lever_arm);
 }
 
 }  // namespace autoware::map_based_prediction
