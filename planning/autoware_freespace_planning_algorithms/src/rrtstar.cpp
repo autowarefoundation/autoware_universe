@@ -27,15 +27,16 @@ rrtstar_core::Pose poseMsgToPose(const geometry_msgs::msg::Pose & pose_msg)
 }
 
 RRTStar::RRTStar(
-  const PlannerCommonParam & planner_common_param, const VehicleShape & original_vehicle_shape,
-  const RRTStarParam & rrtstar_param, const rclcpp::Clock::SharedPtr & clock)
+  const PlannerCommonParam & planner_common_param,
+  const vehicle_info_utils::VehicleInfo & original_vehicle_info, const RRTStarParam & rrtstar_param,
+  const rclcpp::Clock::SharedPtr & clock)
 : AbstractPlanningAlgorithm(
     planner_common_param, clock,
-    VehicleShape(
-      original_vehicle_shape.length + 2 * rrtstar_param.margin,
-      original_vehicle_shape.width + 2 * rrtstar_param.margin, original_vehicle_shape.base_length,
-      original_vehicle_shape.max_steering,
-      original_vehicle_shape.base2back + rrtstar_param.margin)),
+    vehicle_info_utils::VehicleInfo::createVehicleInfoForVehicleShape(
+      original_vehicle_info.vehicle_length_m + 2 * rrtstar_param.margin,
+      original_vehicle_info.vehicle_width_m + 2 * rrtstar_param.margin,
+      original_vehicle_info.wheel_base_m, original_vehicle_info.max_steer_angle_rad,
+      original_vehicle_info.rear_overhang_m + rrtstar_param.margin)),
   rrtstar_param_(rrtstar_param)
 {
   if (rrtstar_param_.margin <= 0) {
@@ -70,7 +71,7 @@ bool RRTStar::makePlan(
     costmap_.info.resolution * costmap_.info.width, costmap_.info.resolution * costmap_.info.height,
     M_PI};
   const double radius = kinematic_bicycle_model::getTurningRadius(
-    collision_vehicle_shape_.base_length, collision_vehicle_shape_.max_steering);
+    collision_vehicle_info_.wheel_base_m, collision_vehicle_info_.max_steer_angle_rad);
   const auto cspace = rrtstar_core::CSpace(lo, hi, radius, is_obstacle_free);
   const auto x_start = poseMsgToPose(start_pose_);
   const auto x_goal = poseMsgToPose(goal_pose_);
