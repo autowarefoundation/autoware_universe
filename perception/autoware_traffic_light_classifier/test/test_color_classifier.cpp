@@ -13,13 +13,17 @@
 // limitations under the License.
 
 //
-// Unit tests for ColorClassifier.
+// Unit tests for the ROS-free ColorClassifierCore.
 //
-// ColorClassifier currently takes an rclcpp::Node * and reads its HSV thresholds
-// from parameters, so these tests host a node and prime the thresholds via
-// set_parameter() (which synchronously fires the on-set-parameter callback that
-// populates the thresholds). A later refactor removes that ROS coupling; only
-// the Arrange (construction/priming) changes then, the assertions stay the same.
+// The core is constructed directly from an HSVConfig and its classify() /
+// make_debug_image() are exercised over in-memory cv::Mat inputs -- no rclcpp,
+// no node, no parameters. (Earlier revisions drove this through the ROS
+// ColorClassifier adapter and a hosted node; the Act now talks to the core
+// directly, but the classification assertions are unchanged.)
+//
+// The adapter-only concerns (the images/signals size guard, logging, debug-image
+// publishing) live at other layers -- see test_color_classifier_adapter and
+// test_traffic_light_classifier_integration.
 //
 // Tests follow Arrange-Act-Assert.
 //
@@ -27,14 +31,12 @@
 #include "../src/classifier/color_classifier.hpp"
 
 #include <opencv2/imgproc.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
 
 #include <gtest/gtest.h>
 
 #include <cstddef>
-#include <memory>
 #include <vector>
 
 namespace
@@ -50,7 +52,7 @@ using tier4_perception_msgs::msg::TrafficLightElement;
 // yields N*N matching pixels (erode/dilate preserve a solid region), so side <
 // confidence_saturation_side keeps confidence in (0, 1) and side >= it clamps to
 // exactly 1.0. They must be kept in sync with the 20*20 divisor in
-// ColorClassifier::getTrafficSignals.
+// ColorClassifierCore::classify_element.
 // TODO(follow-up): once production exposes the saturation threshold as a named
 // constant, derive the sizes from it and drop this manual sync.
 constexpr int confidence_saturation_side = 20;
@@ -61,7 +63,7 @@ static_assert(
   "sizes must straddle the confidence saturation threshold");
 
 // Solid image whose every pixel maps to the given OpenCV HSV triple, built in
-// HSV then converted to BGR (ColorClassifier::filterHSV does BGR2HSV).
+// HSV then converted to BGR (ColorClassifierCore::filter_hsv does BGR2HSV).
 cv::Mat make_solid_hsv_image(int h, int s, int v, int size = unsaturated_side)
 {
   cv::Mat hsv(size, size, CV_8UC3, cv::Scalar(h, s, v));
@@ -89,87 +91,68 @@ const TrafficLightElement & element_at(const TrafficLightArray & signals, std::s
   return signals.signals.at(slot).elements.at(0);
 }
 
-// Hosts a node and a ColorClassifier with its HSV thresholds primed to the
-// declared defaults. Setting any HSV parameter fires the on-set-parameter
-// callback that populates all thresholds.
-class ColorClassifierTest : public ::testing::Test
+// A default-configured core. The constructor builds the HSV bands from the
+// default HSVConfig, so no priming is needed.
+class ColorClassifierCoreTest : public ::testing::Test
 {
 protected:
-  void SetUp() override
-  {
-    node_ = std::make_shared<rclcpp::Node>("color_classifier_test");
-    classifier_ = std::make_unique<tl::ColorClassifier>(node_.get());
-    // Prime all HSV thresholds: the ctor leaves min_/max_hsv_* unset, and only
-    // the on-set-parameter callback builds them (rebuilding ALL bands from
-    // hsv_config_ on any change), so setting one param to its default suffices.
-    // TODO(follow-up): drop this once the ctor initializes the thresholds.
-    node_->set_parameter(rclcpp::Parameter("green_min_h", 50));
-  }
-
-  std::shared_ptr<rclcpp::Node> node_;
-  std::unique_ptr<tl::ColorClassifier> classifier_;
+  tl::ColorClassifierCore core_;
 };
 
 // One batched call classifies each in-band solid into its HSV band.
-TEST_F(ColorClassifierTest, ClassifiesByHsvBand)
+TEST_F(ColorClassifierCoreTest, ClassifiesByHsvBand)
 {
   // Arrange
   const std::vector<cv::Mat> images{green_image, amber_image, red_image};
-  TrafficLightArray signals;
-  signals.signals.resize(images.size());
 
   // Act
-  const bool ok = classifier_->getTrafficSignals(images, signals);
+  const auto result = core_.classify(images);
 
   // Assert
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(signals.signals.size(), 3u);
+  ASSERT_TRUE(result.success);
+  ASSERT_EQ(result.signals.signals.size(), 3u);
   // Each classified image yields exactly one element; element_at() reads .at(0),
   // so pin the count here rather than discover a regression via a thrown .at().
-  for (const auto & signal : signals.signals) {
+  for (const auto & signal : result.signals.signals) {
     ASSERT_EQ(signal.elements.size(), 1u);
   }
-  EXPECT_EQ(element_at(signals, 0).color, TrafficLightElement::GREEN);
-  EXPECT_EQ(element_at(signals, 1).color, TrafficLightElement::AMBER);
-  EXPECT_EQ(element_at(signals, 2).color, TrafficLightElement::RED);
+  EXPECT_EQ(element_at(result.signals, 0).color, TrafficLightElement::GREEN);
+  EXPECT_EQ(element_at(result.signals, 1).color, TrafficLightElement::AMBER);
+  EXPECT_EQ(element_at(result.signals, 2).color, TrafficLightElement::RED);
 }
 
 // An image outside every color band yields UNKNOWN with zero confidence.
-TEST_F(ColorClassifierTest, OutOfBandImageIsUnknown)
+TEST_F(ColorClassifierCoreTest, OutOfBandImageIsUnknown)
 {
   // Arrange
   const std::vector<cv::Mat> images{black_image};
-  TrafficLightArray signals;
-  signals.signals.resize(1);
 
   // Act
-  const bool ok = classifier_->getTrafficSignals(images, signals);
+  const auto result = core_.classify(images);
 
   // Assert
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(signals.signals.size(), 1u);
-  EXPECT_EQ(element_at(signals, 0).color, TrafficLightElement::UNKNOWN);
-  EXPECT_EQ(element_at(signals, 0).confidence, 0.0f);
+  ASSERT_TRUE(result.success);
+  ASSERT_EQ(result.signals.signals.size(), 1u);
+  EXPECT_EQ(element_at(result.signals, 0).color, TrafficLightElement::UNKNOWN);
+  EXPECT_EQ(element_at(result.signals, 0).confidence, 0.0f);
 }
 
 // A matched color below the saturation pixel count reports confidence strictly
 // inside (0, 1) -- enough to confirm a match scores positive without yet hitting
 // the clamp (the clamp itself is covered by SaturatedConfidenceClampsToOne).
-TEST_F(ColorClassifierTest, MatchedConfidenceIsPositiveAndBounded)
+TEST_F(ColorClassifierCoreTest, MatchedConfidenceIsPositiveAndBounded)
 {
   // Arrange
   const std::vector<cv::Mat> images{green_image};  // unsaturated_side -> below clamp
-  TrafficLightArray signals;
-  signals.signals.resize(1);
 
   // Act
-  const bool ok = classifier_->getTrafficSignals(images, signals);
+  const auto result = core_.classify(images);
 
   // Assert
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(signals.signals.size(), 1u);
-  EXPECT_GT(element_at(signals, 0).confidence, 0.0f);
-  EXPECT_LT(element_at(signals, 0).confidence, 1.0f);
+  ASSERT_TRUE(result.success);
+  ASSERT_EQ(result.signals.signals.size(), 1u);
+  EXPECT_GT(element_at(result.signals, 0).confidence, 0.0f);
+  EXPECT_LT(element_at(result.signals, 0).confidence, 1.0f);
 }
 
 // CHARACTERIZATION (remove on promotion to a contract test): a match with enough
@@ -177,70 +160,92 @@ TEST_F(ColorClassifierTest, MatchedConfidenceIsPositiveAndBounded)
 // std::min(1.0, ...) upper bound. This pins the current pixel-count formula; a
 // contract test would instead assert "a strong-enough match reaches 1.0" without
 // depending on the 20*20 threshold.
-TEST_F(ColorClassifierTest, SaturatedConfidenceClampsToOne)
+TEST_F(ColorClassifierCoreTest, SaturatedConfidenceClampsToOne)
 {
   // Arrange
   const std::vector<cv::Mat> images{green_image_saturated};  // saturated_side -> at/over clamp
-  TrafficLightArray signals;
-  signals.signals.resize(1);
 
   // Act
-  const bool ok = classifier_->getTrafficSignals(images, signals);
+  const auto result = core_.classify(images);
 
   // Assert
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(signals.signals.size(), 1u);
-  EXPECT_EQ(element_at(signals, 0).color, TrafficLightElement::GREEN);
-  EXPECT_EQ(element_at(signals, 0).confidence, 1.0f);
+  ASSERT_TRUE(result.success);
+  ASSERT_EQ(result.signals.signals.size(), 1u);
+  EXPECT_EQ(element_at(result.signals, 0).color, TrafficLightElement::GREEN);
+  EXPECT_EQ(element_at(result.signals, 0).confidence, 1.0f);
 }
 
 // The thresholds actually drive classification: narrowing the green band to
-// exclude the green image's hue turns its result from GREEN into UNKNOWN.
-TEST_F(ColorClassifierTest, ConfigDrivesClassification)
+// exclude the green image's hue turns its result from GREEN into UNKNOWN. Also
+// exercises set_config() rebuilding the bands.
+TEST_F(ColorClassifierCoreTest, ConfigDrivesClassification)
 {
   // Arrange
-  node_->set_parameter(rclcpp::Parameter("green_max_h", 60));  // green hue 85 now out of band
+  tl::HSVConfig config;     // defaults
+  config.green_max_h = 60;  // green hue 85 now out of band
+  core_.set_config(config);
   const std::vector<cv::Mat> images{green_image};
-  TrafficLightArray signals;
-  signals.signals.resize(1);
 
   // Act
-  const bool ok = classifier_->getTrafficSignals(images, signals);
+  const auto result = core_.classify(images);
 
   // Assert
-  ASSERT_TRUE(ok);
-  ASSERT_EQ(signals.signals.size(), 1u);
-  EXPECT_EQ(element_at(signals, 0).color, TrafficLightElement::UNKNOWN);
-}
-
-// A mismatched images/signals count is rejected.
-TEST_F(ColorClassifierTest, MismatchedSizesReturnFalse)
-{
-  // Arrange
-  const std::vector<cv::Mat> images{green_image};
-  TrafficLightArray signals;
-  signals.signals.resize(2);
-
-  // Act
-  const bool ok = classifier_->getTrafficSignals(images, signals);
-
-  // Assert
-  EXPECT_FALSE(ok);
+  ASSERT_TRUE(result.success);
+  ASSERT_EQ(result.signals.signals.size(), 1u);
+  EXPECT_EQ(element_at(result.signals, 0).color, TrafficLightElement::UNKNOWN);
 }
 
 // An empty batch is a successful no-op.
-TEST_F(ColorClassifierTest, EmptyBatchReturnsTrue)
+TEST_F(ColorClassifierCoreTest, EmptyBatchSucceeds)
 {
   // Arrange
   const std::vector<cv::Mat> images;
-  TrafficLightArray signals;
 
   // Act
-  const bool ok = classifier_->getTrafficSignals(images, signals);
+  const auto result = core_.classify(images);
 
   // Assert
-  EXPECT_TRUE(ok);
-  EXPECT_TRUE(signals.signals.empty());
+  EXPECT_TRUE(result.success);
+  EXPECT_TRUE(result.signals.signals.empty());
+}
+
+// CHARACTERIZATION (pins the current debug-mosaic layout, a visualization format
+// rather than a stable contract): make_debug_image lays out a 3-column x 4-row
+// mosaic of the ROI -- a raw row on top, then the green / yellow / red rows, each
+// showing filtered | binarized | denoised -- rendered in color. A non-square ROI
+// makes an accidental rows/cols swap detectable.
+TEST_F(ColorClassifierCoreTest, DebugImageMosaicGeometry)
+{
+  // Arrange -- distinct width and height so the 3x vs 4x factors can't be confused.
+  const int roi_width = 12;
+  const int roi_height = 8;
+  cv::Mat roi;
+  cv::cvtColor(
+    cv::Mat(roi_height, roi_width, CV_8UC3, cv::Scalar(85, 150, 200)), roi, cv::COLOR_HSV2BGR);
+
+  // Act
+  const cv::Mat debug_image = core_.make_debug_image(roi);
+
+  // Assert
+  EXPECT_EQ(debug_image.cols, roi_width * 3);
+  EXPECT_EQ(debug_image.rows, roi_height * 4);
+  EXPECT_EQ(debug_image.type(), CV_8UC3);
+}
+
+// The mosaic is input-dependent: two same-sized ROIs of different colors produce
+// different mosaics (their raw strips and lit color panels both differ). Robust
+// against the exact layout -- it only pins that make_debug_image renders the
+// input rather than a constant/blank image.
+TEST_F(ColorClassifierCoreTest, DebugImageReflectsInput)
+{
+  // Act
+  const cv::Mat green_debug = core_.make_debug_image(green_image);
+  const cv::Mat red_debug = core_.make_debug_image(red_image);
+
+  // Assert
+  ASSERT_EQ(green_debug.size(), red_debug.size());
+  ASSERT_EQ(green_debug.type(), red_debug.type());
+  EXPECT_GT(cv::norm(green_debug, red_debug, cv::NORM_INF), 0.0);
 }
 
 }  // namespace
@@ -248,8 +253,5 @@ TEST_F(ColorClassifierTest, EmptyBatchReturnsTrue)
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);
-  rclcpp::init(argc, argv);
-  const int ret = RUN_ALL_TESTS();
-  rclcpp::shutdown();
-  return ret;
+  return RUN_ALL_TESTS();
 }
