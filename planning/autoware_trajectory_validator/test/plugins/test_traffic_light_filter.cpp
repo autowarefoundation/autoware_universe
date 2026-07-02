@@ -41,7 +41,8 @@ namespace
 {
 // Wraps a std::shared_ptr in the agnocast message_ptr type used by ValidatorContext fields.
 template <typename T>
-AUTOWARE_MESSAGE_CONST_SHARED_PTR(T) to_context_ptr(const std::shared_ptr<T> & ptr)
+AUTOWARE_MESSAGE_CONST_SHARED_PTR(T)
+to_context_ptr(const std::shared_ptr<T> & ptr)
 {
   return AUTOWARE_MESSAGE_CONST_SHARED_PTR(T)(std::shared_ptr<const T>(ptr));
 }

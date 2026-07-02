@@ -20,10 +20,10 @@
 #include "autoware/trajectory_validator/detail/validator_context.hpp"
 #include "autoware/trajectory_validator/validator_interface.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_trajectory_validator/msg/metric_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report.hpp>
 #include <autoware_trajectory_validator/msg/validation_report_array.hpp>
-#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
@@ -168,8 +168,8 @@ private:
     pub_debug_;
 
   // Internal state
-  std::unique_ptr<autoware_utils_diagnostics::BasicDiagnosticsInterface<
-    autoware::agnocast_wrapper::Node>>
+  std::unique_ptr<
+    autoware_utils_diagnostics::BasicDiagnosticsInterface<autoware::agnocast_wrapper::Node>>
     diagnostics_interface_ptr_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };

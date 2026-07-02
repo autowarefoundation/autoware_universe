@@ -109,7 +109,7 @@ private:
   AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects) sub_objects_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped) sub_acceleration_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(autoware_perception_msgs::msg::TrafficLightGroupArray)
-    sub_traffic_lights_;
+  sub_traffic_lights_;
 
   // Normal Subscribers
   AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) sub_map_;

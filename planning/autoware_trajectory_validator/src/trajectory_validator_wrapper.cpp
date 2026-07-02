@@ -128,9 +128,9 @@ void TrajectoryValidatorWrapper::update_parameters()
 
 void TrajectoryValidatorWrapper::publishers()
 {
-  pub_debug_ = std::make_shared<
-    autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
-    node_ptr_, "~/debug");
+  pub_debug_ =
+    std::make_shared<autoware_utils_debug::BasicDebugPublisher<autoware::agnocast_wrapper::Node>>(
+      node_ptr_, "~/debug");
 }
 
 CandidateTrajectories TrajectoryValidatorWrapper::validate_trajectories(
