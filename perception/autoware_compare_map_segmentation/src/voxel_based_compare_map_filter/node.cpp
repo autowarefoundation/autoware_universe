@@ -17,9 +17,6 @@
 #include "autoware_utils/ros/debug_publisher.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
-
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/segment_differences.h>
@@ -34,10 +31,7 @@ namespace autoware::compare_map_segmentation
 
 VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
   const rclcpp::NodeOptions & options)
-: Filter("VoxelBasedCompareMapFilter", options),
-  tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_),
-  diagnostic_updater_(this)
+: Filter("VoxelBasedCompareMapFilter", options), diagnostic_updater_(this)
 {
   // initialize debug tool
   {
@@ -92,120 +86,6 @@ void VoxelBasedCompareMapFilterComponent::checkStatus(
 
   // final status = map loader status
   stat.summary(map_loader_status.level, map_loader_status.message);
-}
-
-// TODO(badai-nguyen): Temporary Implementation of input_indices_callback and  convert_output_costly
-// functions; Delete this override function when autoware_utils refactor
-// (https://github.com/autowarefoundation/autoware_utils/pull/50) or new ManagedTransformBuffer lib
-// is deployed for autoware
-void VoxelBasedCompareMapFilterComponent::input_indices_callback(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud, const PointIndicesConstPtr indices)
-{
-  if (!is_valid(cloud, this->get_logger(), *this->get_clock())) {
-    RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
-    return;
-  }
-
-  // Check whether the user has given a different input TF frame
-  tf_input_orig_frame_ = cloud->header.frame_id;
-  PointCloud2ConstPtr cloud_tf;
-  if (cloud->header.frame_id != tf_input_frame_) {
-    RCLCPP_DEBUG(
-      this->get_logger(), "[input_indices_callback] Transforming input dataset from %s to %s.",
-      cloud->header.frame_id.c_str(), tf_input_frame_.c_str());
-    // Save the original frame ID
-    // Convert the cloud into the different frame
-    PointCloud2 cloud_transformed;
-
-    try {
-      // Lookup the transform from input frame to "map"
-      geometry_msgs::msg::TransformStamped transform_stamped = tf_buffer_.lookupTransform(
-        tf_input_frame_, tf_input_orig_frame_, rclcpp::Time(cloud->header.stamp),
-        rclcpp::Duration::from_seconds(0.0));
-
-      // Transform the point cloud
-      tf2::doTransform(*cloud, cloud_transformed, transform_stamped);
-      cloud_tf = std::make_shared<PointCloud2>(cloud_transformed);
-    } catch (tf2::TransformException & ex) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 5000, "Could not transform pointcloud: %s",
-        ex.what());
-      cloud_tf = cloud;  // Fallback to original data
-    }
-  } else {
-    cloud_tf = cloud;
-  }
-  // Need setInputCloud () here because we have to extract x/y/z
-  IndicesPtr vindices;
-  if (indices) {
-    if (!is_valid_indices(indices, cloud->width * cloud->height, this->get_logger())) {
-      RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
-      return;
-    }
-    vindices.reset(new std::vector<int>(indices->indices));
-  }
-
-  compute_publish(cloud_tf, vindices);
-}
-
-bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
-  std::unique_ptr<PointCloud2> & output)
-{
-  if (!output || output->fields.empty()) {
-    RCLCPP_ERROR(this->get_logger(), "Invalid output point cloud!");
-    return false;
-  }
-  if (output->data.empty()) {
-    // empty point cloud, could happen under certain conditions
-    // e.g. when the input point cloud is empty or all points are filtered out
-    if (!tf_output_frame_.empty()) {
-      output->header.frame_id = tf_output_frame_;
-    } else {
-      output->header.frame_id = tf_input_orig_frame_;
-    }
-    return true;
-  }
-  if (
-    pcl::getFieldIndex(*output, "x") == -1 || pcl::getFieldIndex(*output, "y") == -1 ||
-    pcl::getFieldIndex(*output, "z") == -1) {
-    RCLCPP_ERROR(this->get_logger(), "Input pointcloud does not have xyz fields");
-    return false;
-  }
-  // A. the output frame is set, transform the point cloud to the output frame
-  if (!tf_output_frame_.empty() && output->header.frame_id != tf_output_frame_) {
-    auto cloud_transformed = std::make_unique<PointCloud2>();
-    try {
-      geometry_msgs::msg::TransformStamped transform_stamped = tf_buffer_.lookupTransform(
-        tf_output_frame_, output->header.frame_id, rclcpp::Time(output->header.stamp),
-        rclcpp::Duration::from_seconds(0.0));
-      tf2::doTransform(*output, *cloud_transformed, transform_stamped);
-      cloud_transformed->header.frame_id = tf_output_frame_;
-      output = std::move(cloud_transformed);
-    } catch (tf2::TransformException & e) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 5000, "Could not transform pointcloud: %s",
-        e.what());
-      return false;
-    }
-  }
-  // B. the output frame is not set, the output frame is the same as the input frame
-  if (tf_output_frame_.empty() && output->header.frame_id != tf_input_orig_frame_) {
-    auto cloud_transformed = std::make_unique<PointCloud2>();
-    try {
-      geometry_msgs::msg::TransformStamped transform_stamped = tf_buffer_.lookupTransform(
-        tf_input_orig_frame_, output->header.frame_id, rclcpp::Time(output->header.stamp),
-        rclcpp::Duration::from_seconds(0.0));
-      tf2::doTransform(*output, *cloud_transformed, transform_stamped);
-      cloud_transformed->header.frame_id = tf_input_orig_frame_;
-      output = std::move(cloud_transformed);
-    } catch (tf2::TransformException & e) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 5000, "Could not transform pointcloud: %s",
-        e.what());
-      return false;
-    }
-  }
-  return true;
 }
 
 void VoxelBasedCompareMapFilterComponent::filter(
