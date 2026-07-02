@@ -17,6 +17,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 
+#include <Eigen/Dense>  // for Matrix4f::inverse() (declaration in Core needs the LU definition)
 #include <autoware/pointcloud_preprocessor/concatenate_data/concatenation_info_manager.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
@@ -54,13 +55,13 @@ CHECK_OFFSET(
 namespace autoware::pointcloud_preprocessor
 {
 
-CombineCloudHandler<CudaPointCloud2Traits>::CombineCloudHandler(
-  rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
+CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::CombineCloudHandler(
+  const std::vector<std::string> & input_topics, std::string output_frame,
   bool is_motion_compensated, bool publish_synchronized_pointcloud,
-  bool keep_input_frame_in_synchronized_pointcloud)
+  bool keep_input_frame_in_synchronized_pointcloud, const std::string & matching_strategy_name)
 : CombineCloudHandlerBase(
-    node, input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
-    keep_input_frame_in_synchronized_pointcloud)
+    input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
+    keep_input_frame_in_synchronized_pointcloud, matching_strategy_name)
 {
   for (const auto & topic : input_topics_) {
     CudaConcatStruct cuda_concat_struct;
@@ -69,7 +70,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::CombineCloudHandler(
   }
 }
 
-void CombineCloudHandler<CudaPointCloud2Traits>::allocate_pointclouds()
+void CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::allocate_pointclouds()
 {
   std::lock_guard<std::mutex> lock(mutex_);
 
@@ -85,14 +86,14 @@ void CombineCloudHandler<CudaPointCloud2Traits>::allocate_pointclouds()
     max_concat_pointcloud_size_ * input_topics_.size());
 }
 
-ConcatenatedCloudResult<CudaPointCloud2Traits>
-CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
+ConcatenatedCloudResult<cuda_blackboard::CudaPointCloud2>
+CombineCloudHandler<cuda_blackboard::CudaPointCloud2>::combine_pointclouds(
   std::unordered_map<
     std::string, typename CudaPointCloud2Traits::PointCloudMessage::ConstSharedPtr> &
     topic_to_cloud_map,
   const std::shared_ptr<CollectorInfoBase> & collector_info)
 {
-  ConcatenatedCloudResult<CudaPointCloud2Traits> concatenate_cloud_result;
+  ConcatenatedCloudResult<cuda_blackboard::CudaPointCloud2> concatenate_cloud_result;
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (topic_to_cloud_map.empty()) return concatenate_cloud_result;
@@ -144,23 +145,25 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   for (const auto & [topic, cloud] : topic_to_cloud_map) {
     const std::size_t num_points = cloud->height * cloud->width;
 
-    // Compute motion compensation transform
-    Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
-
-    // Transform if needed
-    auto transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
-      output_frame_, cloud->header.frame_id, node_.now(), rclcpp::Duration::from_seconds(1.0),
-      node_.get_logger());
-
-    if (transform_opt) {
-      transform = *transform_opt;
+    const auto transform_opt = get_transform_to_output_frame(cloud->header.frame_id);
+    if (!transform_opt.has_value()) {
+      concatenate_cloud_result.dropped_frames_missing_transform.push_back(cloud->header.frame_id);
+      concatenation_info_manager_.update_source_from_point_cloud(
+        *cloud, topic, autoware_sensing_msgs::msg::SourcePointCloudInfo::STATUS_INVALID,
+        *concatenate_cloud_result.concatenation_info_ptr);
+      continue;
     }
+
+    // Compute motion compensation transform
+    Eigen::Matrix4f transform = *transform_opt;
 
     rclcpp::Time current_cloud_stamp = rclcpp::Time(cloud->header.stamp);
 
     if (is_motion_compensated_) {
-      transform = compute_transform_to_adjust_for_old_timestamp(oldest_stamp, current_cloud_stamp) *
-                  transform;
+      transform =
+        compute_transform_to_adjust_for_old_timestamp(
+          oldest_stamp, current_cloud_stamp, &concatenate_cloud_result.motion_compensation_status) *
+        transform;
     }
 
     TransformStruct transform_struct;
@@ -208,6 +211,13 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
     concatenated_start_index = 0;
 
     for (const auto & [topic, cloud] : topic_to_cloud_map) {
+      // Skip the sources excluded from the concatenated buffer in the first pass (no injected
+      // extrinsic), so the read offset into output_points stays aligned with that buffer. Both
+      // passes iterate the same unmodified map in the same order, so the skips match.
+      if (!get_transform_to_output_frame(cloud->header.frame_id).has_value()) {
+        continue;
+      }
+
       const std::size_t num_points = cloud->height * cloud->width;
       const std::size_t data_size = cloud->height * cloud->row_step;
 
@@ -228,13 +238,13 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
       auto & stream = cuda_concat_struct_map_[topic].stream;
 
       if (keep_input_frame_in_synchronized_pointcloud_ && need_transform_to_sensor_frame) {
-        Eigen::Matrix4f transform;
-        auto transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
-          cloud->header.frame_id, output_frame_, node_.now(), rclcpp::Duration::from_seconds(1.0),
-          node_.get_logger());
+        // Map the (output-frame) cloud back into the sensor frame: inverse of the injected
+        // sensor->output extrinsic.
+        Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+        auto transform_opt = get_transform_to_output_frame(cloud->header.frame_id);
 
         if (transform_opt.has_value()) {
-          transform = *transform_opt;
+          transform = transform_opt->inverse();
         }
 
         TransformStruct transform_struct;
@@ -313,4 +323,4 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 }  // namespace autoware::pointcloud_preprocessor
 
 template class autoware::pointcloud_preprocessor::CombineCloudHandler<
-  autoware::pointcloud_preprocessor::CudaPointCloud2Traits>;
+  cuda_blackboard::CudaPointCloud2>;

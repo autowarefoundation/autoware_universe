@@ -70,7 +70,8 @@ add_library(concatenate_data SHARED
   src/concatenate_data/combine_cloud_handler_base.cpp
   src/concatenate_data/combine_cloud_handler.cpp
   src/concatenate_data/cloud_collector.cpp
-  src/concatenate_data/collector_matching_strategy.cpp
+  src/concatenate_data/collector_matcher.cpp
+  src/concatenate_data/matching_policy.cpp
   src/concatenate_data/concatenate_pointclouds.cpp
 )
 
@@ -305,6 +306,120 @@ install(
 
 ament_export_targets(export_${PROJECT_NAME})
 
+# ========== Python bindings (distortion corrector) ==========
+# The distortion corrector core is built as a standalone shared library that the pybind module
+# links. It is ROS-runtime-free: it links only ROS message types and math libraries (no rclcpp, no
+# tf). It uses tf2's header-only LinearMath types, which are included but never linked. Dependencies
+# are linked via target_link_libraries with the dependencies' exported CMake targets (modern targets
+# propagate their transitive include dirs) instead of ament_target_dependencies, which would
+# over-declare the full package closure and clashes with pybind11's keyword target_link_libraries
+# usage. Only the pybind module (the binding layer, not the core) links rclcpp, for message
+# (de)serialization.
+find_package(ament_cmake_python REQUIRED)
+find_package(python_cmake_module REQUIRED)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11_vendor REQUIRED)
+find_package(pybind11 REQUIRED)
+find_package(autoware_utils_math REQUIRED)
+
+add_library(distortion_corrector_core SHARED
+  src/distortion_corrector/distortion_corrector.cpp
+  src/utility/memory.cpp
+)
+target_include_directories(distortion_corrector_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+# Header-only includes (tf2 is used for its LinearMath types only; the autoware_utils meta include
+# provides the autoware_utils/math/* headers). Message includes propagate via the linked targets.
+target_include_directories(distortion_corrector_core SYSTEM PUBLIC
+  ${autoware_utils_INCLUDE_DIRS}
+  ${autoware_point_types_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+)
+target_link_libraries(distortion_corrector_core PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${autoware_utils_math_LIBRARIES}
+)
+
+pybind11_add_module(_distortion_corrector_pybind
+  src/distortion_corrector/distortion_corrector_pybind.cpp
+)
+target_include_directories(_distortion_corrector_pybind PRIVATE ${rclcpp_INCLUDE_DIRS})
+target_link_libraries(_distortion_corrector_pybind PRIVATE
+  distortion_corrector_core
+  ${rclcpp_LIBRARIES}
+)
+
+install(TARGETS distortion_corrector_core
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+# Install the extension next to the Python package. Use ament_get_python_install_dir() rather than
+# the raw PYTHON_INSTALL_DIR variable: the latter is only populated later (by
+# ament_python_install_package / ament_package), so on a clean configure it is empty and the
+# DESTINATION would resolve to an absolute "/<project>" path.
+ament_get_python_install_dir(python_install_dir)
+install(TARGETS _distortion_corrector_pybind
+  DESTINATION "${python_install_dir}/${PROJECT_NAME}")
+
+# ---- Concatenation core (ROS-runtime-free) + Python bindings ----
+# Same approach as the distortion corrector core: the combine + matching logic is built as a
+# standalone shared library that links only ROS message types and header-only math (no rclcpp, no
+# tf, no pcl_ros). It is parameterized by the point cloud *message* type (not the node-level traits),
+# so its headers never pull in the trait's rclcpp publisher/subscriber types. It is built separately
+# from the full `concatenate_data` so the binding does not drag in the node / legacy-node sources
+# (and their utils::is_data_layout_* dependency). Only the pybind module links rclcpp, for message
+# (de)serialization. Dependencies are linked via target_link_libraries with the exported message
+# targets (not ament_target_dependencies, which would over-declare the package closure and re-pull
+# rclcpp).
+add_library(concatenate_core SHARED
+  src/concatenate_data/combine_cloud_handler.cpp
+  src/concatenate_data/combine_cloud_handler_base.cpp
+  src/concatenate_data/matching_policy.cpp
+)
+target_include_directories(concatenate_core PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+)
+# Header-only includes (point_cloud_msg_wrapper / autoware_point_types provide the cloud helpers;
+# tf2 is used for its LinearMath types only). Message includes propagate via the linked targets.
+target_include_directories(concatenate_core SYSTEM PUBLIC
+  ${autoware_utils_INCLUDE_DIRS}
+  ${autoware_point_types_INCLUDE_DIRS}
+  ${point_cloud_msg_wrapper_INCLUDE_DIRS}
+  ${tf2_INCLUDE_DIRS}
+)
+target_link_libraries(concatenate_core PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  ${autoware_sensing_msgs_TARGETS}
+  ${builtin_interfaces_TARGETS}
+)
+
+pybind11_add_module(_concatenate_pointclouds_pybind
+  src/concatenate_data/concatenate_pointclouds_pybind.cpp
+)
+target_include_directories(_concatenate_pointclouds_pybind PRIVATE ${rclcpp_INCLUDE_DIRS})
+target_link_libraries(_concatenate_pointclouds_pybind PRIVATE
+  concatenate_core
+  ${rclcpp_LIBRARIES}
+)
+
+install(TARGETS concatenate_core
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+install(TARGETS _concatenate_pointclouds_pybind
+  DESTINATION "${python_install_dir}/${PROJECT_NAME}")
+
+ament_python_install_package(${PROJECT_NAME}
+  PACKAGE_DIR python/${PROJECT_NAME})
+
 ament_auto_package(INSTALL_TO_SHARE
   launch
   config
@@ -318,6 +433,15 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_utilities
     test/test_utilities.cpp
+  )
+
+  ament_add_gtest(test_conversion
+    test/test_conversion.cpp
+  )
+  ament_target_dependencies(test_conversion
+    builtin_interfaces
+    geometry_msgs
+    tf2
   )
 
   ament_add_gtest(test_distortion_corrector_node
@@ -334,6 +458,10 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_concatenation_info
     test/test_concatenation_info.cpp
+  )
+
+  ament_add_gtest(test_matching_policy
+    test/test_matching_policy.cpp
   )
 
   ament_add_gtest(test_polar_voxel_outlier_filter_node
@@ -373,6 +501,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
+  target_link_libraries(test_matching_policy concatenate_core)
   target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_polar_voxel_noise_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_blockage_diag pointcloud_preprocessor_filter)
@@ -385,6 +514,14 @@ if(BUILD_TESTING)
   add_ros_test(
     test/test_concatenate_node_component.py
     TIMEOUT "50"
+  )
+
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_distortion_corrector_py
+    test/test_distortion_corrector_py.py
+  )
+  ament_add_pytest_test(test_concatenate_pointclouds_py
+    test/test_concatenate_pointclouds_py.py
   )
 
 endif()

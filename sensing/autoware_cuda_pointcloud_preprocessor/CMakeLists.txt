@@ -82,7 +82,7 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_concatenate_data/cuda_combine_cloud_handler.cpp
   src/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.cu
   src/cuda_concatenate_data/cuda_cloud_collector.cpp
-  src/cuda_concatenate_data/cuda_collector_matching_strategy.cpp
+  src/cuda_concatenate_data/cuda_collector_matcher.cpp
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor.cu
   src/cuda_pointcloud_preprocessor/common_kernels.cu
   src/cuda_pointcloud_preprocessor/organize_kernels.cu
@@ -167,6 +167,41 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPolarVoxelNoiseFilterNode"
   EXECUTABLE cuda_polar_voxel_noise_filter_node
 )
+
+################################################################################
+# Tests (registered here, after the library target exists)
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_cuda_combine_cloud_handler
+    test/cuda_concatenate_data/test_cuda_combine_cloud_handler.cpp)
+  ament_target_dependencies(test_cuda_combine_cloud_handler
+    autoware_pointcloud_preprocessor
+    autoware_point_types
+    autoware_sensing_msgs
+    autoware_utils
+    builtin_interfaces
+    cuda_blackboard
+    geometry_msgs
+    nav_msgs
+    rclcpp
+    sensor_msgs
+    tf2
+  )
+  # cuda_pointcloud_preprocessor_lib NEEDs libconcatenate_data.so, which has *dangling* undefined
+  # references to utils::is_data_layout_compatible_* (those live in pointcloud_preprocessor_filter_base
+  # and concatenate_data is designed to be co-linked with it). The production cuda node resolves them
+  # because the node .so uses the Filter base class directly, so filter_base is NEEDED; this test only
+  # uses the combine handler, so --as-needed would drop filter_base and leave the symbols unresolved.
+  # Force-keep filter_base with --no-as-needed so its definitions satisfy concatenate_data.
+  target_link_libraries(test_cuda_combine_cloud_handler
+    cuda_pointcloud_preprocessor_lib
+    -Wl,--no-as-needed
+    autoware_pointcloud_preprocessor::pointcloud_preprocessor_filter_base
+    -Wl,--as-needed
+    ${CUDA_LIBRARIES}
+  )
+  target_include_directories(test_cuda_combine_cloud_handler SYSTEM PRIVATE ${CUDA_INCLUDE_DIRS})
+endif()
 
 ################################################################################
 # Install
