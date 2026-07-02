@@ -23,6 +23,7 @@
 #include "autoware/scatter_ops/segment_csr.h"
 #include "autoware/scatter_ops/utils.cuh"
 
+#include <algorithm>
 #include <numeric>
 #include <string>
 #include <tuple>
@@ -47,6 +48,19 @@
   SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, ReductionType::DIV)  \
   SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, ReductionType::MIN)  \
   SEGMENT_CSR_LAUNCH_INSTANTIATION_TR(T, ReductionType::MAX)
+
+namespace
+{
+size_t get_output_numel(
+  const std::vector<int32_t> & src_size, const std::vector<int32_t> & indptr_size, size_t dim)
+{
+  size_t out_numel = static_cast<size_t>(std::max<int32_t>(indptr_size[dim] - 1, 0));
+  for (size_t i = 0; i < src_size.size(); ++i) {
+    if (i != dim) out_numel *= static_cast<size_t>(src_size[i]);
+  }
+  return out_numel;
+}
+}  // namespace
 
 template <typename scalar_t, ReductionType REDUCE, int TB>
 __global__ void segment_csr_kernel(
@@ -128,7 +142,7 @@ int32_t segment_csr_launch(
   const std::vector<int32_t> & indptr_size, const scalar_t * base,
   std::tuple<scalar_t *, int64_t *> out, cudaStream_t stream)
 {
-  if (src_size.size() < indptr_size.size()) return -1;
+  if (indptr_size.empty() || src_size.size() < indptr_size.size()) return -1;
 
   if (!std::equal(indptr_size.begin(), indptr_size.end() - 1, src_size.begin())) return -1;
 
@@ -137,7 +151,9 @@ int32_t segment_csr_launch(
   auto _mul = [](int a, int b) { return a * b; };
   auto src_numel = std::accumulate(src_size.begin(), src_size.end(), 1, _mul);
   auto indptr_numel = std::accumulate(indptr_size.begin(), indptr_size.end(), 1, _mul);
-  auto out_numel = src_numel / src_size[dim] * std::max<int32_t>(indptr_size[dim] - 1, 0);
+  auto out_numel = get_output_numel(src_size, indptr_size, dim);
+
+  if (out_numel == 0) return 0;
 
   cudaMemcpyAsync(
     std::get<0>(out), base, sizeof(scalar_t) * out_numel, cudaMemcpyDeviceToDevice, stream);
@@ -175,10 +191,13 @@ int32_t segment_csr_launch(
   const std::vector<int32_t> & indptr_size, std::tuple<scalar_t *, int64_t *> out,
   cudaStream_t stream)
 {
+  if (indptr_size.empty() || src_size.size() < indptr_size.size()) return -1;
+
+  if (!std::equal(indptr_size.begin(), indptr_size.end() - 1, src_size.begin())) return -1;
+
   auto dim = indptr_size.size() - 1;
-  auto src_numel =
-    std::accumulate(src_size.begin(), src_size.end(), 1, [](int a, int b) { return a * b; });
-  auto out_numel = src_numel / src_size[dim] * std::max<int32_t>(indptr_size[dim] - 1, 0);
+  auto out_numel = get_output_numel(src_size, indptr_size, dim);
+  if (out_numel == 0) return 0;
 
   scalar_t * base;
   cudaMallocAsync(&base, sizeof(scalar_t) * out_numel, stream);
