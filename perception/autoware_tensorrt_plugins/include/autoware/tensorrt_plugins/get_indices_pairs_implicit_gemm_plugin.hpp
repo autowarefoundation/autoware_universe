@@ -125,6 +125,10 @@ private:
   // upper bound of number of output indices. needed to bound memory usage.
   static constexpr int out_indices_num_limit_{256000};
 
+  // Pre-allocated workspace size for thrust temporary buffer used by spconv sort operations.
+  // 8 MiB is generous enough for CUB radix sort of up to out_indices_num_limit_ elements.
+  static constexpr std::size_t kThrustTempBytes{8U * 1024U * 1024U};
+
   std::string layer_name_;
   GetIndicesPairsImplicitGemmParameters params_;
   std::vector<nvinfer1::PluginField> data_to_serialize_;
