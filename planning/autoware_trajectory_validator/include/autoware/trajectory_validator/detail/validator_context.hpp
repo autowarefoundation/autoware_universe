@@ -37,10 +37,10 @@ struct ValidatorContext
   AUTOWARE_MESSAGE_CONST_SHARED_PTR(geometry_msgs::msg::AccelWithCovarianceStamped) acceleration;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map;
   AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::PredictedObjects)
-    predicted_objects;
+  predicted_objects;
   AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_planning_msgs::msg::LaneletRoute) route;
   AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_perception_msgs::msg::TrafficLightGroupArray)
-    traffic_light_signals;
+  traffic_light_signals;
 };
 
 using FilterContext = ValidatorContext;
