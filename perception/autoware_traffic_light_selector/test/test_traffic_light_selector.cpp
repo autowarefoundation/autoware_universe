@@ -39,10 +39,19 @@ RegionOfInterest make_roi(uint32_t x_offset, uint32_t y_offset, uint32_t width, 
   return roi;
 }
 
-bool is_same(const RegionOfInterest & lhs, const RegionOfInterest & rhs)
+void expect_same(const TrafficLightRoiArray & output, const TrafficLightRoiArray & expected_output)
 {
-  return lhs.x_offset == rhs.x_offset && lhs.y_offset == rhs.y_offset && lhs.width == rhs.width &&
-         lhs.height == rhs.height;
+  ASSERT_EQ(output.rois.size(), expected_output.rois.size());
+  for (size_t roi_index = 0; roi_index < output.rois.size(); ++roi_index) {
+    const auto & output_roi = output.rois.at(roi_index);
+    const auto & expected_roi = expected_output.rois.at(roi_index);
+    EXPECT_EQ(output_roi.traffic_light_id, expected_roi.traffic_light_id);
+    EXPECT_EQ(output_roi.traffic_light_type, expected_roi.traffic_light_type);
+    EXPECT_EQ(output_roi.roi.x_offset, expected_roi.roi.x_offset);
+    EXPECT_EQ(output_roi.roi.y_offset, expected_roi.roi.y_offset);
+    EXPECT_EQ(output_roi.roi.width, expected_roi.roi.width);
+    EXPECT_EQ(output_roi.roi.height, expected_roi.roi.height);
+  }
 }
 
 CameraInfo make_camera_info(uint32_t width, uint32_t height)
@@ -97,7 +106,7 @@ TEST(TrafficLightSelector, EmptyInputsProduceEmptyOutput)
   const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
-  EXPECT_TRUE(output.rois.empty());
+  expect_same(output, make_traffic_light_roi_array({}));
 }
 
 // Every expected ROI yields exactly one output entry. With no detections it cannot be matched, so
@@ -116,9 +125,9 @@ TEST(TrafficLightSelector, ExpectedRoiWithoutDetectionsOutputsDefaultRoi)
   const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
-  ASSERT_EQ(output.rois.size(), 1u);
-  EXPECT_EQ(output.rois.front().traffic_light_id, traffic_light_id);
-  EXPECT_TRUE(is_same(output.rois.front().roi, RegionOfInterest{}));
+  expect_same(
+    output,
+    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, RegionOfInterest{})}));
 }
 
 // The detected ROI center lies outside the rough ROI, so it is never considered as a match and the
@@ -143,9 +152,9 @@ TEST(TrafficLightSelector, DetectionCenterOutsideRoughRoiOutputsDefaultRoi)
   const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
-  ASSERT_EQ(output.rois.size(), 1u);
-  EXPECT_EQ(output.rois.front().traffic_light_id, traffic_light_id);
-  EXPECT_TRUE(is_same(output.rois.front().roi, RegionOfInterest{}));
+  expect_same(
+    output,
+    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, RegionOfInterest{})}));
 }
 
 // The detected ROI center is inside the rough ROI and overlaps the expected ROI. The expected ROI
@@ -170,9 +179,8 @@ TEST(TrafficLightSelector, DetectionInsideRoughRoiAssignsDetectedRoi)
   const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
-  ASSERT_EQ(output.rois.size(), 1u);
-  EXPECT_EQ(output.rois.front().traffic_light_id, traffic_light_id);
-  EXPECT_TRUE(is_same(output.rois.front().roi, detected_roi));
+  expect_same(
+    output, make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, detected_roi)}));
 }
 
 // The traffic_light_type of each expected ROI must be copied verbatim onto the output entry.
@@ -193,8 +201,9 @@ TEST(TrafficLightSelector, TrafficLightTypePropagatedToOutput)
   const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
-  ASSERT_EQ(output.rois.size(), 1u);
-  EXPECT_EQ(output.rois.front().traffic_light_type, TrafficLightRoi::PEDESTRIAN_TRAFFIC_LIGHT);
+  expect_same(
+    output, make_traffic_light_roi_array({make_traffic_light_roi(
+              traffic_light_id, roi, TrafficLightRoi::PEDESTRIAN_TRAFFIC_LIGHT)}));
 }
 
 // When multiple detections sit inside the rough ROI, the one with the highest IoU against the
@@ -220,8 +229,9 @@ TEST(TrafficLightSelector, BestOverlappingDetectionIsSelected)
   const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
-  ASSERT_EQ(output.rois.size(), 1u);
-  EXPECT_TRUE(is_same(output.rois.front().roi, detected_roi_perfect));
+  expect_same(
+    output,
+    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, detected_roi_perfect)}));
 }
 
 // Shifting the expected ROI onto the detection pushes it outside the (small) image, so
@@ -246,8 +256,9 @@ TEST(TrafficLightSelector, ShiftedRoiOutOfImageBoundsOutputsDefaultRoi)
   const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
-  ASSERT_EQ(output.rois.size(), 1u);
-  EXPECT_TRUE(is_same(output.rois.front().roi, RegionOfInterest{}));
+  expect_same(
+    output,
+    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, RegionOfInterest{})}));
 }
 
 // Several expected traffic lights are matched independently; each gets its own detection assigned.
@@ -273,11 +284,10 @@ TEST(TrafficLightSelector, MultipleExpectedRoisEachAssigned)
   const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
-  ASSERT_EQ(output.rois.size(), 2u);
-  EXPECT_EQ(output.rois.at(0).traffic_light_id, first_traffic_light_id);
-  EXPECT_TRUE(is_same(output.rois.at(0).roi, first_roi));
-  EXPECT_EQ(output.rois.at(1).traffic_light_id, second_traffic_light_id);
-  EXPECT_TRUE(is_same(output.rois.at(1).roi, second_roi));
+  expect_same(
+    output, make_traffic_light_roi_array(
+              {make_traffic_light_roi(first_traffic_light_id, first_roi),
+               make_traffic_light_roi(second_traffic_light_id, second_roi)}));
 }
 
 int main(int argc, char ** argv)
