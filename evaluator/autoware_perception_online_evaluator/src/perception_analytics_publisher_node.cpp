@@ -15,6 +15,7 @@
 #include "autoware/perception_online_evaluator/perception_analytics_publisher_node.hpp"
 
 #include "autoware/object_recognition_utils/object_classification.hpp"
+#include "autoware_utils/ros/parameter.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
 #include <fstream>
@@ -154,16 +155,10 @@ void PerceptionAnalyticsPublisherNode::initParameter()
 {
   auto & p = parameters_;
 
-  // autoware_utils::get_or_declare_parameter hard-takes rclcpp::Node &, which does not bind to the
-  // agnocast_wrapper::Node under ENABLE_AGNOCAST=1. Use the node's own parameter members instead
-  // (available in both modes).
-  const auto get_or_declare = [this](const std::string & name) {
-    return this->has_parameter(name) ? this->get_parameter(name).as_string()
-                                     : this->declare_parameter<std::string>(name);
-  };
-
-  p->meas_to_tracked_latency_topic_name = get_or_declare("meas_to_tracked_latency_topic_name");
-  p->prediction_latency_topic_name = get_or_declare("prediction_latency_topic_name");
+  p->meas_to_tracked_latency_topic_name = autoware_utils::get_or_declare_parameter<std::string>(
+    *this, "meas_to_tracked_latency_topic_name");
+  p->prediction_latency_topic_name =
+    autoware_utils::get_or_declare_parameter<std::string>(*this, "prediction_latency_topic_name");
 }
 }  // namespace autoware::perception_diagnostics
 
