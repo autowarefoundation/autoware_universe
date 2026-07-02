@@ -57,7 +57,7 @@ TrajectoryPoint create_trajectory_point(double x, double y, double velocity)
 }
 
 CandidateTrajectories create_straight_trajectories(
-  double length, double velocity, rclcpp::Time stamp)
+  double length, double velocity, const rclcpp::Time & stamp)
 {
   CandidateTrajectories msg;
   CandidateTrajectory candidate;
@@ -71,7 +71,7 @@ CandidateTrajectories create_straight_trajectories(
 }
 
 CandidateTrajectories create_sharp_turn_trajectories(
-  double segment_length, double velocity, rclcpp::Time stamp)
+  double segment_length, double velocity, const rclcpp::Time & stamp)
 {
   CandidateTrajectories msg;
   CandidateTrajectory candidate;
@@ -98,6 +98,16 @@ CandidateTrajectories create_sharp_turn_trajectories(
 
   msg.candidate_trajectories.push_back(candidate);
   return msg;
+}
+
+Odometry create_odometry(const double velocity)
+{
+  Odometry odom;
+  odom.header.frame_id = "map";
+  odom.pose.pose.position.x = 0.0;
+  odom.pose.pose.orientation.w = 1.0;
+  odom.twist.twist.linear.x = velocity;
+  return odom;
 }
 }  // namespace
 
@@ -219,10 +229,12 @@ protected:
     executor_->spin_some();
   }
 
-  void publish_mandatory_inputs(
-    const CandidateTrajectories & traj, const Odometry & odom,
-    const AccelWithCovarianceStamped & acc)
+  void publish_mandatory_inputs(const CandidateTrajectories & traj, Odometry odom)
   {
+    odom.header.stamp = sim_time_;
+    AccelWithCovarianceStamped acc;
+    acc.header.stamp = sim_time_;
+    acc.header.frame_id = "map";
     pub_tra_->publish(traj);
     pub_odo_->publish(odom);
     pub_acc_->publish(acc);
@@ -264,20 +276,11 @@ TEST_F(TrajectoryProcessorIntegrationTest, BasicPipelineTest)
 {
   auto traj = create_straight_trajectories(30.0, 5.0, sim_time_);
 
-  Odometry odom;
-  odom.header.frame_id = "map";
-  odom.pose.pose.position.x = 0.0;
-  odom.pose.pose.orientation.w = 1.0;
-  odom.twist.twist.linear.x = 5.0;
-
-  AccelWithCovarianceStamped acc;
-  acc.header.frame_id = "map";
+  const auto odom = create_odometry(5.0);
 
   // Publish in a loop to ensure the nodes receive it after discovery
   for (int i = 0; i < 20 && !output_received_; ++i) {
-    odom.header.stamp = sim_time_;
-    acc.header.stamp = sim_time_;
-    publish_mandatory_inputs(traj, odom, acc);
+    publish_mandatory_inputs(traj, odom);
     advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
   wait_for_output_sim();
@@ -288,16 +291,8 @@ TEST_F(TrajectoryProcessorIntegrationTest, BasicPipelineTest)
 
 TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopIntegrationTest)
 {
-  auto traj = create_straight_trajectories(30.0, 8.0, sim_time_);
-
-  Odometry odom;
-  odom.header.frame_id = "map";
-  odom.pose.pose.position.x = 0.0;
-  odom.pose.pose.orientation.w = 1.0;
-  odom.twist.twist.linear.x = 8.0;
-
-  AccelWithCovarianceStamped acc;
-  acc.header.frame_id = "map";
+  const auto traj = create_straight_trajectories(30.0, 8.0, sim_time_);
+  const auto odom = create_odometry(8.0);
 
   // Create a blocking car at x=20.0
   PredictedObjects objects;
@@ -318,10 +313,8 @@ TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopIntegrationTest)
   // Obstacle stop needs continuous detection (on_time_buffer=0.5s).
   for (int i = 0; i < 20; ++i) {
     objects.header.stamp = sim_time_;
-    odom.header.stamp = sim_time_;
-    acc.header.stamp = sim_time_;
     pub_obj_->publish(objects);
-    publish_mandatory_inputs(traj, odom, acc);
+    publish_mandatory_inputs(traj, odom);
     advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
   wait_for_output_sim();
@@ -350,19 +343,10 @@ TEST_F(TrajectoryProcessorIntegrationTest, StopPointFixerIntegrationTest)
   candidate.points.push_back(create_trajectory_point(0.5, 0.0, 0.0));
   msg.candidate_trajectories.push_back(candidate);
 
-  Odometry odom;
-  odom.header.frame_id = "map";
-  odom.pose.pose.position.x = 0.0;
-  odom.pose.pose.orientation.w = 1.0;
-  odom.twist.twist.linear.x = 0.05;  // Stationary
-
-  AccelWithCovarianceStamped acc;
-  acc.header.frame_id = "map";
+  const auto odom = create_odometry(0.05);
 
   for (int i = 0; i < 20 && !output_received_; ++i) {
-    odom.header.stamp = sim_time_;
-    acc.header.stamp = sim_time_;
-    publish_mandatory_inputs(msg, odom, acc);
+    publish_mandatory_inputs(msg, odom);
     advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
   wait_for_output_sim();
@@ -376,21 +360,11 @@ TEST_F(TrajectoryProcessorIntegrationTest, StopPointFixerIntegrationTest)
 TEST_F(TrajectoryProcessorIntegrationTest, KinematicFeasibilityTest)
 {
   // Create a sharp L-shape turn with 10m segments
-  auto traj = create_sharp_turn_trajectories(10.0, 5.0, sim_time_);
-
-  Odometry odom;
-  odom.header.frame_id = "map";
-  odom.pose.pose.position.x = 0.0;
-  odom.pose.pose.orientation.w = 1.0;
-  odom.twist.twist.linear.x = 5.0;
-
-  AccelWithCovarianceStamped acc;
-  acc.header.frame_id = "map";
+  const auto traj = create_sharp_turn_trajectories(10.0, 5.0, sim_time_);
+  const auto odom = create_odometry(5.0);
 
   for (int i = 0; i < 20 && !output_received_; ++i) {
-    odom.header.stamp = sim_time_;
-    acc.header.stamp = sim_time_;
-    publish_mandatory_inputs(traj, odom, acc);
+    publish_mandatory_inputs(traj, odom);
     advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
   wait_for_output_sim();
@@ -427,19 +401,9 @@ TEST_F(TrajectoryProcessorIntegrationTest, VelocityOptimizationTest)
   // Input: 15.0 m/s is too fast for a sharp turn (violates max_lateral_accel_mps2 = 1.5)
   auto traj = create_sharp_turn_trajectories(20.0, 15.0, sim_time_);
 
-  Odometry odom;
-  odom.header.frame_id = "map";
-  odom.pose.pose.position.x = 0.0;
-  odom.pose.pose.orientation.w = 1.0;
-  odom.twist.twist.linear.x = 15.0;
-
-  AccelWithCovarianceStamped acc;
-  acc.header.frame_id = "map";
-
+  const auto odom = create_odometry(15.0);
   for (int i = 0; i < 20 && !output_received_; ++i) {
-    odom.header.stamp = sim_time_;
-    acc.header.stamp = sim_time_;
-    publish_mandatory_inputs(traj, odom, acc);
+    publish_mandatory_inputs(traj, odom);
     advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
   wait_for_output_sim();
@@ -464,15 +428,8 @@ TEST_F(TrajectoryProcessorIntegrationTest, VelocityOptimizationTest)
 TEST_F(TrajectoryProcessorIntegrationTest, SmoothObstacleStopInteractionTest)
 {
   // Straight trajectory, moving at 10 m/s
-  auto traj = create_straight_trajectories(40.0, 10.0, sim_time_);
-
-  Odometry odom;
-  odom.header.frame_id = "map";
-  odom.pose.pose.position.x = 0.0;
-  odom.twist.twist.linear.x = 10.0;
-
-  AccelWithCovarianceStamped acc;
-  acc.header.frame_id = "map";
+  const auto traj = create_straight_trajectories(40.0, 10.0, sim_time_);
+  const auto odom = create_odometry(10.0);
 
   // Obstacle right in front of the vehicle at x = 30.0
   PredictedObjects objects;
@@ -492,10 +449,8 @@ TEST_F(TrajectoryProcessorIntegrationTest, SmoothObstacleStopInteractionTest)
 
   for (int i = 0; i < 20 && !output_received_; ++i) {
     objects.header.stamp = sim_time_;
-    odom.header.stamp = sim_time_;
-    acc.header.stamp = sim_time_;
     pub_obj_->publish(objects);
-    publish_mandatory_inputs(traj, odom, acc);
+    publish_mandatory_inputs(traj, odom);
     advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
   wait_for_output_sim();
@@ -526,16 +481,8 @@ TEST_F(TrajectoryProcessorIntegrationTest, SmoothObstacleStopInteractionTest)
 TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopAndSmoothDecelerationTest)
 {
   // 1. Create a straight trajectory at 10.0 m/s
-  auto traj = create_straight_trajectories(50.0, 10.0, sim_time_);
-
-  Odometry odom;
-  odom.header.frame_id = "map";
-  odom.pose.pose.position.x = 0.0;
-  odom.pose.pose.orientation.w = 1.0;
-  odom.twist.twist.linear.x = 10.0;
-
-  AccelWithCovarianceStamped acc;
-  acc.header.frame_id = "map";
+  const auto traj = create_straight_trajectories(50.0, 10.0, sim_time_);
+  const auto odom = create_odometry(10.0);
 
   // 2. Place an obstacle at x=30.0.
   // The Modifier will insert a sudden stop point.
@@ -557,10 +504,8 @@ TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopAndSmoothDecelerationTest
 
   for (int i = 0; i < 20; ++i) {
     objects.header.stamp = sim_time_;
-    odom.header.stamp = sim_time_;
-    acc.header.stamp = sim_time_;
     pub_obj_->publish(objects);
-    publish_mandatory_inputs(traj, odom, acc);
+    publish_mandatory_inputs(traj, odom);
     advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
   wait_for_output_sim();
@@ -612,19 +557,10 @@ TEST_F(TrajectoryProcessorIntegrationTest, StopPointFixerAndOptimizerResamplingT
   candidate.points.push_back(create_trajectory_point(0.4, 0.0, 0.0));
   msg.candidate_trajectories.push_back(candidate);
 
-  Odometry odom;
-  odom.header.frame_id = "map";
-  odom.pose.pose.position.x = 0.0;
-  odom.pose.pose.orientation.w = 1.0;
-  odom.twist.twist.linear.x = 0.0;
-
-  AccelWithCovarianceStamped acc;
-  acc.header.frame_id = "map";
+  const auto odom = create_odometry(0.0);
 
   for (int i = 0; i < 20 && !output_received_; ++i) {
-    odom.header.stamp = sim_time_;
-    acc.header.stamp = sim_time_;
-    publish_mandatory_inputs(msg, odom, acc);
+    publish_mandatory_inputs(msg, odom);
     advance_sim_time_and_spin(std::chrono::milliseconds(100));
   }
   wait_for_output_sim();
