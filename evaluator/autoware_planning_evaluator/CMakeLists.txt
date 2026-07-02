@@ -23,12 +23,14 @@ rclcpp_components_register_node(planning_evaluator_node
 )
 
 if(BUILD_TESTING)
-  ament_add_ros_isolated_gtest(test_planning_evaluator
-    test/test_planning_evaluator_node.cpp
-  )
-  target_link_libraries(test_planning_evaluator
-    planning_evaluator_node
-  )
+  if(NOT (DEFINED ENV{ENABLE_AGNOCAST} AND "$ENV{ENABLE_AGNOCAST}" STREQUAL "1"))
+    ament_add_ros_isolated_gtest(test_planning_evaluator
+      test/test_planning_evaluator_node.cpp
+    )
+    target_link_libraries(test_planning_evaluator
+      planning_evaluator_node
+    )
+  endif()
 endif()
 
 ament_auto_package(

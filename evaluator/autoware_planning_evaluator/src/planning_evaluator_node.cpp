@@ -377,7 +377,7 @@ void PlanningEvaluatorNode::onTimer()
   }
   // Publish metrics
   auto metrics_out = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(metrics_pub_);
-  *metrics_out = std::move(metrics_msg_);
+  *metrics_out = metrics_msg_;
   metrics_out->stamp = now();
   metrics_pub_->publish(std::move(metrics_out));
   metrics_msg_ = MetricArrayMsg{};

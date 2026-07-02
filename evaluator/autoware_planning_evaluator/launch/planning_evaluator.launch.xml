@@ -16,6 +16,7 @@
   <!-- planning evaluator -->
   <group>
     <node name="planning_evaluator" exec="planning_evaluator" pkg="autoware_planning_evaluator">
+      <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
       <param from="$(var common_param_path)"/>
       <param from="$(find-pkg-share autoware_planning_evaluator)/config/planning_evaluator.param.yaml"/>
       <param name="output_metrics" value="$(var output_metrics)"/>
