@@ -27,7 +27,7 @@
 #include <optional>
 #include <vector>
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 
 using autoware_vehicle_msgs::msg::VelocityReport;
@@ -60,6 +60,6 @@ private:
   double covariance_ = 1.0;
 };
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator
 
 #endif  // SPEED_SCALE_ESTIMATOR_HPP_

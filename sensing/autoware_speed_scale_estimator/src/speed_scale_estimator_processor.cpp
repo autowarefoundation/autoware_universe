@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "speed_scale_corrector_processor.hpp"
+#include "speed_scale_estimator_processor.hpp"
 
 #include <fmt/format.h>
 
@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 namespace
 {
@@ -102,31 +102,31 @@ std::string failure_reason_to_string(
 
 }  // namespace
 
-SpeedScaleCorrectorProcessor::SpeedScaleCorrectorProcessor(
+SpeedScaleEstimatorProcessor::SpeedScaleEstimatorProcessor(
   const SpeedScaleEstimatorParameters & parameters)
 : speed_scale_estimator_(parameters)
 {
 }
 
-double SpeedScaleCorrectorProcessor::get_update_interval_sec() const
+double SpeedScaleEstimatorProcessor::get_update_interval_sec() const
 {
   return speed_scale_estimator_.get_update_interval_sec();
 }
 
-SpeedScaleCorrectorProcessResult SpeedScaleCorrectorProcessor::process(
+SpeedScaleEstimatorProcessResult SpeedScaleEstimatorProcessor::process(
   const std::vector<PoseStamped::ConstSharedPtr> & pose_ptrs,
   const std::vector<Imu::ConstSharedPtr> & imu_ptrs,
   const std::vector<VelocityReport::ConstSharedPtr> & velocity_report_ptrs)
 {
-  SpeedScaleCorrectorProcessResult result;
+  SpeedScaleEstimatorProcessResult result;
   result.estimation_result = speed_scale_estimator_.update(
     to_messages(pose_ptrs), to_messages(imu_ptrs), to_messages(velocity_report_ptrs));
   result.updated = result.estimation_result.has_value();
   return result;
 }
 
-StringStamped SpeedScaleCorrectorProcessor::make_debug_info(
-  const SpeedScaleCorrectorProcessResult & result, const rclcpp::Time & stamp)
+StringStamped SpeedScaleEstimatorProcessor::make_debug_info(
+  const SpeedScaleEstimatorProcessResult & result, const rclcpp::Time & stamp)
 {
   StringStamped debug_info;
   debug_info.stamp = stamp;
@@ -149,7 +149,7 @@ StringStamped SpeedScaleCorrectorProcessor::make_debug_info(
   return debug_info;
 }
 
-Float32Stamped SpeedScaleCorrectorProcessor::make_scale_factor_msg(
+Float32Stamped SpeedScaleEstimatorProcessor::make_scale_factor_msg(
   const SpeedScaleEstimatorUpdated & updated, const rclcpp::Time & stamp)
 {
   Float32Stamped msg;
@@ -158,4 +158,4 @@ Float32Stamped SpeedScaleCorrectorProcessor::make_scale_factor_msg(
   return msg;
 }
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator

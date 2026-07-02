@@ -23,7 +23,7 @@
 
 #include <vector>
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 
 class UtilsTest : public ::testing::Test
@@ -109,4 +109,4 @@ TEST_F(UtilsTest, CalcPoseVelocityFromPoseDifference)
   EXPECT_NEAR(calc_pose_velocity(pose_a, pose_b), 10.0, 1e-9);
 }
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator

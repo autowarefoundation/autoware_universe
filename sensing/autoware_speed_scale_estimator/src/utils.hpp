@@ -24,7 +24,7 @@
 #include <optional>
 #include <vector>
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 
 using autoware_vehicle_msgs::msg::VelocityReport;
@@ -53,6 +53,6 @@ struct NearestVelocityReportSample
 [[nodiscard]] std::optional<NearestVelocityReportSample> find_nearest_velocity_report(
   const std::vector<VelocityReport> & velocity_reports, const rclcpp::Time & target_time);
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator
 
 #endif  // UTILS_HPP_

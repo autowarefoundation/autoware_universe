@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "speed_scale_corrector_processor.hpp"
+#include "speed_scale_estimator_processor.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -26,10 +26,10 @@
 #include <string>
 #include <vector>
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 
-class SpeedScaleCorrectorProcessorTest : public ::testing::Test
+class SpeedScaleEstimatorProcessorTest : public ::testing::Test
 {
 protected:
   void SetUp() override
@@ -46,7 +46,7 @@ protected:
     parameters_.max_speed = 17.0;
     parameters_.min_speed = 6.0;
 
-    processor_ = std::make_unique<SpeedScaleCorrectorProcessor>(parameters_);
+    processor_ = std::make_unique<SpeedScaleEstimatorProcessor>(parameters_);
   }
 
   static PoseStamped::SharedPtr create_pose_msg(double sec, double x, double y)
@@ -79,10 +79,10 @@ protected:
   }
 
   SpeedScaleEstimatorParameters parameters_;
-  std::unique_ptr<SpeedScaleCorrectorProcessor> processor_;
+  std::unique_ptr<SpeedScaleEstimatorProcessor> processor_;
 };
 
-TEST_F(SpeedScaleCorrectorProcessorTest, ProcessReturnsWaitingForNextPoseOnFirstUpdate)
+TEST_F(SpeedScaleEstimatorProcessorTest, ProcessReturnsWaitingForNextPoseOnFirstUpdate)
 {
   const std::vector<PoseStamped::ConstSharedPtr> poses = {create_pose_msg(0.0, 0.0, 0.0)};
   const std::vector<Imu::ConstSharedPtr> imus = {create_imu_msg(0.0, 0.0)};
@@ -96,29 +96,29 @@ TEST_F(SpeedScaleCorrectorProcessorTest, ProcessReturnsWaitingForNextPoseOnFirst
   EXPECT_EQ(result.estimation_result.error().reason, UpdateFailureReason::WaitingForNextPose);
 }
 
-TEST_F(SpeedScaleCorrectorProcessorTest, MakeDebugInfoContainsFailureReason)
+TEST_F(SpeedScaleEstimatorProcessorTest, MakeDebugInfoContainsFailureReason)
 {
-  SpeedScaleCorrectorProcessResult result;
+  SpeedScaleEstimatorProcessResult result;
   result.updated = false;
   result.estimation_result =
     tl::make_unexpected(SpeedScaleEstimatorNotUpdated{UpdateFailureReason::PoseEmpty, {}, 1.0});
 
-  const auto debug_info = SpeedScaleCorrectorProcessor::make_debug_info(result, rclcpp::Time(1, 0));
+  const auto debug_info = SpeedScaleEstimatorProcessor::make_debug_info(result, rclcpp::Time(1, 0));
 
   EXPECT_EQ(debug_info.stamp.sec, 1);
   EXPECT_NE(debug_info.data.find("Pose is empty"), std::string::npos);
   EXPECT_NE(debug_info.data.find("1"), std::string::npos);
 }
 
-TEST_F(SpeedScaleCorrectorProcessorTest, MakeScaleFactorMsgUsesUpdatedValue)
+TEST_F(SpeedScaleEstimatorProcessorTest, MakeScaleFactorMsgUsesUpdatedValue)
 {
   SpeedScaleEstimatorUpdated updated;
   updated.estimated_speed_scale_factor = 1.25;
 
-  const auto msg = SpeedScaleCorrectorProcessor::make_scale_factor_msg(updated, rclcpp::Time(2, 0));
+  const auto msg = SpeedScaleEstimatorProcessor::make_scale_factor_msg(updated, rclcpp::Time(2, 0));
 
   EXPECT_EQ(msg.stamp.sec, 2);
   EXPECT_FLOAT_EQ(msg.data, 1.25f);
 }
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator

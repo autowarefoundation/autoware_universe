@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for Speed Scale Corrector Module",
+  "title": "Parameters for Speed Scale Estimator Module",
   "type": "object",
   "definitions": {
-    "speed_scale_corrector": {
+    "speed_scale_estimator": {
       "type": "object",
       "properties": {
         "update_interval": {
@@ -94,7 +94,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/speed_scale_corrector"
+          "$ref": "#/definitions/speed_scale_estimator"
         }
       },
       "required": ["ros__parameters"]

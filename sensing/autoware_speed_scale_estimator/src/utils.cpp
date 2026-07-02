@@ -18,7 +18,7 @@
 #include <limits>
 #include <vector>
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 
 double calc_time_diff(const PoseStamped & pose_a, const PoseStamped & pose_b)
@@ -91,4 +91,4 @@ std::optional<NearestVelocityReportSample> find_nearest_velocity_report(
   return sample;
 }
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator

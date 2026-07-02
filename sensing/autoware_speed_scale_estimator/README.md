@@ -1,4 +1,4 @@
-# autoware_speed_scale_corrector
+# autoware_speed_scale_estimator
 
 ## Overview
 
@@ -12,8 +12,8 @@ The package is split into a core library (separated from ROS node I/O) and a ROS
 
 | Layer | Library                              | Responsibility                                                                                           |
 | ----- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Core  | `autoware_speed_scale_corrector`     | Utils, Kalman filter estimation (`SpeedScaleEstimator`)                                                  |
-| ROS   | `autoware_speed_scale_corrector_ros` | Message handling, debug formatting, node I/O (`SpeedScaleCorrectorProcessor`, `SpeedScaleCorrectorNode`) |
+| Core  | `autoware_speed_scale_estimator`     | Utils, Kalman filter estimation (`SpeedScaleEstimator`)                                                  |
+| ROS   | `autoware_speed_scale_estimator_ros` | Message handling, debug formatting, node I/O (`SpeedScaleEstimatorProcessor`, `SpeedScaleEstimatorNode`) |
 
 Core algorithms can be unit-tested without spinning up a ROS graph.
 
@@ -123,7 +123,7 @@ $$
 
 ## Parameters
 
-{{ json_to_markdown("localization/autoware_speed_scale_corrector/schema/speed_scale_corrector.schema.json") }}
+{{ json_to_markdown("localization/autoware_speed_scale_estimator/schema/speed_scale_estimator.schema.json") }}
 
 ### Tuning
 

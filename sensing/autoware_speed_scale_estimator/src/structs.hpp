@@ -15,7 +15,7 @@
 #ifndef STRUCTS_HPP_
 #define STRUCTS_HPP_
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 
 struct SpeedScaleEstimatorParameters
@@ -76,6 +76,6 @@ struct SpeedScaleEstimatorNotUpdated
   double last_estimated_speed_scale_factor{};
 };
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator
 
 #endif  // STRUCTS_HPP_

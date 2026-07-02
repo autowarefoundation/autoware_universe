@@ -16,7 +16,7 @@
 
 #include <functional>
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 namespace
 {
@@ -43,8 +43,8 @@ SpeedScaleEstimatorParameters load_parameters(rclcpp::Node * node)
 
 }  // namespace
 
-SpeedScaleCorrectorNode::SpeedScaleCorrectorNode(const rclcpp::NodeOptions & node_options)
-: Node("speed_scale_corrector", node_options), processor_(load_parameters(this))
+SpeedScaleEstimatorNode::SpeedScaleEstimatorNode(const rclcpp::NodeOptions & node_options)
+: Node("speed_scale_estimator", node_options), processor_(load_parameters(this))
 {
   pub_estimated_speed_scale_factor_ = create_publisher<Float32Stamped>("~/output/scale_factor", 1);
   pub_debug_info_ = create_publisher<StringStamped>("~/output/debug_info", 1);
@@ -57,10 +57,10 @@ SpeedScaleCorrectorNode::SpeedScaleCorrectorNode(const rclcpp::NodeOptions & nod
 
   timer_ = rclcpp::create_timer(
     this, get_clock(), std::chrono::duration<double>(processor_.get_update_interval_sec()),
-    std::bind(&SpeedScaleCorrectorNode::on_timer, this));
+    std::bind(&SpeedScaleEstimatorNode::on_timer, this));
 }
 
-void SpeedScaleCorrectorNode::on_timer()
+void SpeedScaleEstimatorNode::on_timer()
 {
   const auto result = processor_.process(
     sub_pose_->take_data(), sub_imu_->take_data(), sub_velocity_report_->take_data());
@@ -74,7 +74,7 @@ void SpeedScaleCorrectorNode::on_timer()
   }
 }
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::speed_scale_corrector::SpeedScaleCorrectorNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::speed_scale_estimator::SpeedScaleEstimatorNode)

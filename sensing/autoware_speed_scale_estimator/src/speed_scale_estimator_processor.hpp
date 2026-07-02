@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPEED_SCALE_CORRECTOR_PROCESSOR_HPP_
-#define SPEED_SCALE_CORRECTOR_PROCESSOR_HPP_
+#ifndef SPEED_SCALE_ESTIMATOR_PROCESSOR_HPP_
+#define SPEED_SCALE_ESTIMATOR_PROCESSOR_HPP_
 
 #include "speed_scale_estimator.hpp"
 
@@ -27,7 +27,7 @@
 
 #include <vector>
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 
 using autoware_internal_debug_msgs::msg::Float32Stamped;
@@ -36,26 +36,26 @@ using autoware_vehicle_msgs::msg::VelocityReport;
 using geometry_msgs::msg::PoseStamped;
 using sensor_msgs::msg::Imu;
 
-struct SpeedScaleCorrectorProcessResult
+struct SpeedScaleEstimatorProcessResult
 {
   bool updated = false;
   tl::expected<SpeedScaleEstimatorUpdated, SpeedScaleEstimatorNotUpdated> estimation_result;
 };
 
-class SpeedScaleCorrectorProcessor
+class SpeedScaleEstimatorProcessor
 {
 public:
-  explicit SpeedScaleCorrectorProcessor(const SpeedScaleEstimatorParameters & parameters);
+  explicit SpeedScaleEstimatorProcessor(const SpeedScaleEstimatorParameters & parameters);
 
   [[nodiscard]] double get_update_interval_sec() const;
 
-  [[nodiscard]] SpeedScaleCorrectorProcessResult process(
+  [[nodiscard]] SpeedScaleEstimatorProcessResult process(
     const std::vector<PoseStamped::ConstSharedPtr> & pose_ptrs,
     const std::vector<Imu::ConstSharedPtr> & imu_ptrs,
     const std::vector<VelocityReport::ConstSharedPtr> & velocity_report_ptrs);
 
   [[nodiscard]] static StringStamped make_debug_info(
-    const SpeedScaleCorrectorProcessResult & result, const rclcpp::Time & stamp);
+    const SpeedScaleEstimatorProcessResult & result, const rclcpp::Time & stamp);
 
   [[nodiscard]] static Float32Stamped make_scale_factor_msg(
     const SpeedScaleEstimatorUpdated & updated, const rclcpp::Time & stamp);
@@ -64,6 +64,6 @@ private:
   SpeedScaleEstimator speed_scale_estimator_;
 };
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator
 
-#endif  // SPEED_SCALE_CORRECTOR_PROCESSOR_HPP_
+#endif  // SPEED_SCALE_ESTIMATOR_PROCESSOR_HPP_

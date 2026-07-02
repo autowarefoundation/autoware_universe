@@ -4,7 +4,7 @@
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="title" value="Node Architecture: speed_scale_corrector_node" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+                <mxCell id="title" value="Node Architecture: speed_scale_estimator_node" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="320" y="10" width="520" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="in_pose" value="Pose&#10;~/input/pose&#10;geometry_msgs/PoseStamped" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
@@ -16,13 +16,13 @@
                 <mxCell id="in_imu" value="IMU&#10;~/input/imu&#10;sensor_msgs/Imu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
                     <mxGeometry x="40" y="250" width="200" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="node_box" value="speed_scale_corrector_node" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" parent="1" vertex="1">
+                <mxCell id="node_box" value="speed_scale_estimator_node" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="300" y="60" width="560" height="280" as="geometry"/>
                 </mxCell>
                 <mxCell id="subs" value="Polling subscribers&#10;pose / velocity_report / imu" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="node_box" vertex="1">
                     <mxGeometry x="30" y="50" width="160" height="70" as="geometry"/>
                 </mxCell>
-                <mxCell id="estimator_ref" value="SpeedScaleCorrectorProcessor&#10;+ SpeedScaleEstimator&#10;(see algorithm diagram)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="node_box" vertex="1">
+                <mxCell id="estimator_ref" value="SpeedScaleEstimatorProcessor&#10;+ SpeedScaleEstimator&#10;(see algorithm diagram)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="node_box" vertex="1">
                     <mxGeometry x="240" y="45" width="280" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="publish" value="Publishers&#10;scale_factor: on successful update&#10;debug_info: always" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="node_box" vertex="1">

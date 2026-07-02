@@ -23,7 +23,7 @@
 #include <memory>
 #include <vector>
 
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 
 class SpeedScaleEstimatorTest : public ::testing::Test
@@ -223,4 +223,4 @@ TEST_F(SpeedScaleEstimatorTest, EmptyDataHandling)
   EXPECT_EQ(result.error().reason, UpdateFailureReason::ImuEmpty);
 }
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator

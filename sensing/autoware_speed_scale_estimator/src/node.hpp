@@ -16,7 +16,7 @@
 #define NODE_HPP_
 
 #include "autoware_utils_rclcpp/polling_subscriber.hpp"
-#include "speed_scale_corrector_processor.hpp"
+#include "speed_scale_estimator_processor.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
@@ -28,9 +28,9 @@
 #include <sensor_msgs/msg/imu.hpp>
 
 /**
- * @brief Speed scale corrector namespace
+ * @brief Speed scale estimator namespace
  */
-namespace autoware::speed_scale_corrector
+namespace autoware::speed_scale_estimator
 {
 using autoware_internal_debug_msgs::msg::Float32Stamped;
 using autoware_internal_debug_msgs::msg::StringStamped;
@@ -44,15 +44,15 @@ template <typename T, template <typename> class PollingPolicy>
 using PollingSubscriber = InterProcessPollingSubscriber<T, PollingPolicy>;
 
 /**
- * @brief ROS 2 node for speed scale correction
+ * @brief ROS 2 node for speed scale estimation
  */
-class SpeedScaleCorrectorNode : public rclcpp::Node
+class SpeedScaleEstimatorNode : public rclcpp::Node
 {
 public:
-  explicit SpeedScaleCorrectorNode(const rclcpp::NodeOptions & node_options);
+  explicit SpeedScaleEstimatorNode(const rclcpp::NodeOptions & node_options);
 
 private:
-  SpeedScaleCorrectorProcessor processor_;
+  SpeedScaleEstimatorProcessor processor_;
 
   rclcpp::Publisher<Float32Stamped>::SharedPtr pub_estimated_speed_scale_factor_;
   rclcpp::Publisher<StringStamped>::SharedPtr pub_debug_info_;
@@ -66,6 +66,6 @@ private:
   void on_timer();
 };
 
-}  // namespace autoware::speed_scale_corrector
+}  // namespace autoware::speed_scale_estimator
 
 #endif  // NODE_HPP_
