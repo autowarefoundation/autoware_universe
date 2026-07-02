@@ -263,6 +263,23 @@ TEST(TrafficLightSelector, MultipleExpectedRoisEachAssigned)
              make_car_traffic_light_roi(second_traffic_light_id, second_detected)});
 }
 
+// The traffic_light_type carried by the expected ROI (pedestrian, in this case) is propagated to
+// the output entry unchanged, regardless of whether a detection is matched.
+TEST(TrafficLightSelector, PedestrianTrafficLightTypeIsPreserved)
+{
+  // Arrange
+  const int64_t traffic_light_id = 123;
+  const auto expected_roi =
+    make_pedestrian_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40));
+  const auto camera_info = make_camera_info(1280, 720);
+
+  // Act
+  const auto output = select_helper({}, {}, {expected_roi}, camera_info);
+
+  // Assert
+  expect_same(output, {make_pedestrian_traffic_light_roi(traffic_light_id, RegionOfInterest{})});
+}
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);
