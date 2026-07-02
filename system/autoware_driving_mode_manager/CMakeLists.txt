@@ -45,6 +45,39 @@ rclcpp_components_register_node(${PROJECT_NAME}_common
 )
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_lint_auto REQUIRED)
+  ament_auto_find_test_dependencies()
+
+  ament_add_gtest(test_core_config
+    test/test_core_config.cpp
+  )
+  target_include_directories(test_core_config PRIVATE
+    "src"
+  )
+  target_link_libraries(test_core_config
+    ${PROJECT_NAME}_common
+  )
+
+  ament_add_gtest(test_core_status
+    test/test_core_status.cpp
+  )
+  target_include_directories(test_core_status PRIVATE
+    "src"
+  )
+  target_link_libraries(test_core_status
+    ${PROJECT_NAME}_common
+  )
+
+  ament_add_gtest(test_core_task
+    test/test_core_task.cpp
+  )
+  target_include_directories(test_core_task PRIVATE
+    "src"
+  )
+  target_link_libraries(test_core_task
+    ${PROJECT_NAME}_common
+  )
 endif()
 
 pluginlib_export_plugin_description_file(autoware_driving_mode_manager plugins.xml)
