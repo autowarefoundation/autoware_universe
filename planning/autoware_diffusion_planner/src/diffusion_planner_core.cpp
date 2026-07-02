@@ -278,7 +278,7 @@ std::optional<FrameContext> DiffusionPlannerCore::create_frame_context(
   }
 
   // Update neighbor agent data
-  agent_data_.update_histories(*effective_objects, params_.ignore_unknown_neighbors);
+  agent_data_.update_histories(*effective_objects);
   const auto processed_neighbor_histories =
     agent_data_.transformed_and_trimmed_histories(map_to_ego_transform, NEIGHBOR_SHAPE[1]);
 
