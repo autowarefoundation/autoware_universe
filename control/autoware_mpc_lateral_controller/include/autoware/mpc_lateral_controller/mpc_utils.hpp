@@ -74,7 +74,7 @@ double calcLateralError(const Pose & ego_pose, const Pose & ref_pose);
  * @return resulting MPCTrajectory
  */
 MPCTrajectory convertToMPCTrajectory(
-  const Trajectory & input, const bool use_temporal_trajectory = true);
+  const Trajectory & input, const bool use_temporal_trajectory = false);
 
 /**
  * @brief convert the given MPCTrajectory to a Trajectory msg
@@ -139,7 +139,7 @@ bool calcMPCTrajectoryTime(MPCTrajectory & traj);
  */
 void dynamicSmoothingVelocity(
   const size_t start_seg_idx, const double start_vel, const double acc_lim, const double tau,
-  MPCTrajectory & traj, const bool use_temporal_trajectory = true);
+  MPCTrajectory & traj, const bool use_temporal_trajectory = false);
 
 /**
  * @brief calculate yaw angle in MPCTrajectory from xy vector
@@ -159,6 +159,8 @@ void calcTrajectoryYawFromXY(
  * @param [in] curvature_smoothing_num_ref_steer index distance for 3 points for smoothed curvature
  * calculation
  * @param [inout] traj object trajectory
+ * @param [in] use_short_segment_protection if true, use velocity/time-aware detection of short
+ * segments (for temporal trajectories); if false, use a fixed distance threshold
  */
 void calcTrajectoryCurvature(
   const int curvature_smoothing_num_traj, const int curvature_smoothing_num_ref_steer,
@@ -197,6 +199,9 @@ void calcTrajectoryCurvatureBySpatialResample(
  * @param [out] nearest_pose nearest pose on path
  * @param [out] nearest_index path index of nearest pose
  * @param [out] nearest_time time of nearest pose on trajectory
+ * @param [in] use_time_window if true, restrict the search to points within the given time window
+ * @param [in] min_time_window_sec lower bound of the time window [s]
+ * @param [in] max_time_window_sec upper bound of the time window [s]
  * @return false when nearest pose couldn't find for some reasons
  */
 bool calcNearestPoseInterp(

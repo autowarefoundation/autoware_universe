@@ -85,7 +85,7 @@ bool interpolateReferenceStateAtTime(
   pose->position.x = interpolated.x.front();
   pose->position.y = interpolated.y.front();
   pose->position.z = interpolated.z.front();
-  pose->orientation = autoware_utils::create_quaternion_from_yaw(interpolated.yaw.front());
+  pose->orientation = autoware_utils_geometry::create_quaternion_from_yaw(interpolated.yaw.front());
   *nearest_time = interpolated.relative_time.front();
 
   const auto upper =
@@ -982,7 +982,6 @@ double MPC::getPredictionDeltaTime(
 {
   if (m_use_temporal_trajectory) {
     // Temporal mode: use fixed prediction_dt from parameters
-    // Calculate the end time of the prediction horizon
     const double horizon_end_time =
       start_time + m_param.prediction_dt * static_cast<double>(m_param.prediction_horizon - 1);
 

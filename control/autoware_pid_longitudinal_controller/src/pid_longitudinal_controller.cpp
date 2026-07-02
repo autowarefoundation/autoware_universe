@@ -496,6 +496,11 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   control_data.current_motion.vel = m_current_kinematic_state.twist.twist.linear.x;
   control_data.current_motion.acc = m_current_accel.accel.accel.linear.x;
   control_data.interpolated_traj = m_trajectory;
+  if (control_data.interpolated_traj.points.size() < 2) {
+    RCLCPP_ERROR_THROTTLE(
+      logger_, *clock_, 3000, "Trajectory size is less than 2. Cannot calculate control data.");
+    return control_data;
+  }
   const double traj_start_time =
     rclcpp::Duration(control_data.interpolated_traj.points.front().time_from_start).seconds();
   const double traj_end_time =
