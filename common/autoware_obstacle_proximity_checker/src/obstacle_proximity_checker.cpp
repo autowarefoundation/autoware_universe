@@ -45,7 +45,8 @@ const std::unordered_map<int, std::string> kLabelMap = {
   {ObjectClassification::UNKNOWN, "unknown"}, {ObjectClassification::CAR, "car"},
   {ObjectClassification::TRUCK, "truck"},     {ObjectClassification::BUS, "bus"},
   {ObjectClassification::TRAILER, "trailer"}, {ObjectClassification::MOTORCYCLE, "motorcycle"},
-  {ObjectClassification::BICYCLE, "bicycle"}, {ObjectClassification::PEDESTRIAN, "pedestrian"}};
+  {ObjectClassification::BICYCLE, "bicycle"}, {ObjectClassification::PEDESTRIAN, "pedestrian"},
+  {ObjectClassification::HAZARD, "hazard"},   {ObjectClassification::ANIMAL, "animal"}};
 
 geometry_msgs::msg::Pose createBaseLinkOrigin()
 {

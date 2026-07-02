@@ -66,6 +66,8 @@ Parameters to_proximity_checker_parameters(
   set_object_enable("motorcycle");
   set_object_enable("bicycle");
   set_object_enable("pedestrian");
+  set_object_enable("hazard");
+  set_object_enable("animal");
 
   const auto & front = params.front_distance_th;
   const auto & side = params.side_distance_th;
@@ -87,7 +89,10 @@ Parameters to_proximity_checker_parameters(
     to_obstacle_type_parameters(front.bicycle, side.bicycle, back.bicycle);
   parameters.obstacle_types_map["pedestrian"] =
     to_obstacle_type_parameters(front.pedestrian, side.pedestrian, back.pedestrian);
-
+  parameters.obstacle_types_map["hazard"] =
+    to_obstacle_type_parameters(front.hazard, side.hazard, back.hazard);
+  parameters.obstacle_types_map["animal"] =
+    to_obstacle_type_parameters(front.animal, side.animal, back.animal);
   return parameters;
 }
 }  // namespace
