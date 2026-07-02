@@ -71,8 +71,8 @@ class TrajectoryConcatenatorWrapperTest : public ::testing::Test
 protected:
   void SetUp() override
   {
-    node_ =
-      std::make_shared<autoware::agnocast_wrapper::Node>("test_wrapper_node", rclcpp::NodeOptions{});
+    node_ = std::make_shared<autoware::agnocast_wrapper::Node>(
+      "test_wrapper_node", rclcpp::NodeOptions{});
     wrapper_ = std::make_unique<TrajectoryConcatenatorWrapper>(
       *node_, node_->get_node_parameters_interface());
   }
