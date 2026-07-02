@@ -242,11 +242,17 @@ template <typename scalar_t, typename mask_t>
 __global__ void extractIndicesKernel(
   const scalar_t * __restrict__ input_data, mask_t * __restrict__ masks,
   mask_t * __restrict__ indices1, mask_t * __restrict__ indices2,
-  scalar_t * __restrict__ output_data, int num_points)
+  scalar_t * __restrict__ output_data, int num_points, int max_num_voxels)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < num_points && masks[idx] == 1) {
-    output_data[indices1[idx] - 1] = input_data[indices2[idx]];
+    // indices1 is a 1-based unique-voxel prefix-sum id. Scattered clouds can produce more unique
+    // voxels than max_num_voxels; drop the overflow here (mirrors the host-side clip in
+    // PTv3TRT::preProcess) instead of writing past the max_num_voxels-sized output buffer.
+    const auto out_index = static_cast<std::int64_t>(indices1[idx]) - 1;
+    if (out_index < max_num_voxels) {
+      output_data[out_index] = input_data[indices2[idx]];
+    }
   }
 }
 
@@ -746,7 +752,8 @@ std::size_t PreprocessCuda::generateFeatures(
     extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
       reinterpret_cast<float4 *>(cropped_points_d_.get()), unique_mask64_d_.get(),
       unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-      reinterpret_cast<float4 *>(voxel_features), *num_cropped_points_);
+      reinterpret_cast<float4 *>(voxel_features), *num_cropped_points_,
+      static_cast<int>(config_.max_num_voxels_));
     if (inverse_map != nullptr) {
       scatterInverseMapKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
         unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(), inverse_map,
@@ -758,25 +765,29 @@ std::size_t PreprocessCuda::generateFeatures(
         extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
           reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()),
           unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), *num_cropped_points_);
+          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), *num_cropped_points_,
+          static_cast<int>(config_.max_num_voxels_));
         break;
       case CloudFormat::XYZIRADRT:
         extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
           reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()),
           unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), *num_cropped_points_);
+          reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), *num_cropped_points_,
+          static_cast<int>(config_.max_num_voxels_));
         break;
       case CloudFormat::XYZIRC:
         extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
           reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()),
           unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), *num_cropped_points_);
+          reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), *num_cropped_points_,
+          static_cast<int>(config_.max_num_voxels_));
         break;
       case CloudFormat::XYZI:
         extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
           reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()),
           unique_mask64_d_.get(), unique_indices64_d_.get(), sorted_hash_indexes64_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZI *>(compact_points), *num_cropped_points_);
+          reinterpret_cast<CloudPointTypeXYZI *>(compact_points), *num_cropped_points_,
+          static_cast<int>(config_.max_num_voxels_));
         break;
       default:
         throw std::runtime_error("Unsupported input point cloud format.");
@@ -824,7 +835,8 @@ std::size_t PreprocessCuda::generateFeatures(
     extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
       reinterpret_cast<float4 *>(cropped_points_d_.get()), unique_mask32_d_.get(),
       unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-      reinterpret_cast<float4 *>(voxel_features), *num_cropped_points_);
+      reinterpret_cast<float4 *>(voxel_features), *num_cropped_points_,
+      static_cast<int>(config_.max_num_voxels_));
     if (inverse_map != nullptr) {
       scatterInverseMapKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
         unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(), inverse_map,
@@ -836,25 +848,29 @@ std::size_t PreprocessCuda::generateFeatures(
         extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
           reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(cropped_input_points_d_.get()),
           unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), *num_cropped_points_);
+          reinterpret_cast<CloudPointTypeXYZIRCAEDT *>(compact_points), *num_cropped_points_,
+          static_cast<int>(config_.max_num_voxels_));
         break;
       case CloudFormat::XYZIRADRT:
         extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
           reinterpret_cast<CloudPointTypeXYZIRADRT *>(cropped_input_points_d_.get()),
           unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), *num_cropped_points_);
+          reinterpret_cast<CloudPointTypeXYZIRADRT *>(compact_points), *num_cropped_points_,
+          static_cast<int>(config_.max_num_voxels_));
         break;
       case CloudFormat::XYZIRC:
         extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
           reinterpret_cast<CloudPointTypeXYZIRC *>(cropped_input_points_d_.get()),
           unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), *num_cropped_points_);
+          reinterpret_cast<CloudPointTypeXYZIRC *>(compact_points), *num_cropped_points_,
+          static_cast<int>(config_.max_num_voxels_));
         break;
       case CloudFormat::XYZI:
         extractIndicesKernel<<<num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
           reinterpret_cast<CloudPointTypeXYZI *>(cropped_input_points_d_.get()),
           unique_mask32_d_.get(), unique_indices32_d_.get(), sorted_hash_indexes32_d_.get(),
-          reinterpret_cast<CloudPointTypeXYZI *>(compact_points), *num_cropped_points_);
+          reinterpret_cast<CloudPointTypeXYZI *>(compact_points), *num_cropped_points_,
+          static_cast<int>(config_.max_num_voxels_));
         break;
       default:
         throw std::runtime_error("Unsupported input point cloud format.");
@@ -864,10 +880,19 @@ std::size_t PreprocessCuda::generateFeatures(
     num_unique_points = static_cast<std::uint64_t>(*num_unique_points32_);
   }
 
+  // The extract kernels above dropped any voxels beyond max_num_voxels, so only the first
+  // max_num_voxels entries of voxel_features/voxel_coords/voxel_hashes are valid. Cap the count fed
+  // to the grid-coord kernel to that same limit; writing more would overrun those buffers (which
+  // are sized max_num_voxels) exactly as the unguarded extract did. The true count is still
+  // returned so the caller logs the "over the limit" warning and clips consistently.
+  const auto max_num_voxels_u = static_cast<std::uint64_t>(config_.max_num_voxels_);
+  const auto num_voxels_capped =
+    num_unique_points < max_num_voxels_u ? num_unique_points : max_num_voxels_u;
+
   computeGridCoordsAndSerializationKernel<<<
     num_cropped_blocks, config_.threads_per_block_, 0, stream_>>>(
     reinterpret_cast<float4 *>(voxel_features), reinterpret_cast<int3 *>(voxel_coords),
-    voxel_hashes, num_unique_points, config_.voxel_x_size_, config_.voxel_y_size_,
+    voxel_hashes, static_cast<int>(num_voxels_capped), config_.voxel_x_size_, config_.voxel_y_size_,
     config_.voxel_z_size_, coord_min_x, coord_min_y, coord_min_z, config_.serialization_depth_);
 
   return num_unique_points;
