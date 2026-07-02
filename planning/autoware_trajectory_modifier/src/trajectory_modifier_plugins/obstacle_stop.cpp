@@ -207,41 +207,26 @@ bool ObstacleStop::modify_trajectory(TrajectoryPoints & traj_points, const Input
 bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputData & input)
 {
   autoware_utils_debug::ScopedTimeTrack st("ObstacleStop::set_stop_point", *get_time_keeper());
-  const auto target_stop_point_arc_length = std::invoke([&]() -> double {
-    const auto stop_margin = params_.stop_margin + context_->vehicle_info.max_longitudinal_offset_m;
-    auto min_stopping_distance = motion_utils::calculate_stop_distance(
-      input.current_odometry->twist.twist.linear.x,
-      input.current_acceleration->accel.accel.linear.x, stopping_params_.maximum_deceleration,
-      stopping_params_.jerk_limit, 0.0);
-    if (!min_stopping_distance) min_stopping_distance = 0.0;
-    return std::clamp(
-      nearest_collision_point_->arc_length - stop_margin, min_stopping_distance.value(),
-      debug_data_.trajectory_shape.trajectory_length);
-  });
 
-  auto skip = [&](const std::string & msg) {
+  const auto stop_margin = params_.stop_margin + context_->vehicle_info.max_longitudinal_offset_m;
+  const auto target_stop_point_arc_length = utils::clamp_stop_point_arc_length(
+    nearest_collision_point_->arc_length - stop_margin,
+    debug_data_.trajectory_shape.trajectory_length, input.current_odometry->twist.twist.linear.x,
+    input.current_acceleration->accel.accel.linear.x, stopping_params_.maximum_deceleration,
+    stopping_params_.jerk_limit);
+
+  if (utils::stop_point_exists(
+        traj_points, target_stop_point_arc_length, params_.duplicate_check_threshold)) {
     RCLCPP_WARN_THROTTLE(
       get_node_ptr()->get_logger(), *get_clock(), 1000,
-      "[TM ObstacleStop] %s, skip inserting stop point", msg.c_str());
+      "[TM ObstacleStop] Preceding (or duplicate) stop point exists, skip inserting stop point");
     return false;
-  };
-
-  constexpr double stop_velocity_threshold = 0.01;
-  auto checked_distance = 0.0;
-  for (size_t i = 1; i < traj_points.size(); ++i) {
-    const auto & curr = traj_points.at(i);
-    const auto & prev = traj_points.at(i - 1);
-    checked_distance +=
-      autoware_utils_geometry::calc_distance2d(curr.pose.position, prev.pose.position);
-    if (checked_distance > target_stop_point_arc_length + params_.duplicate_check_threshold) break;
-    if (curr.longitudinal_velocity_mps < stop_velocity_threshold) {
-      return skip("Preceding (or duplicate) stop point exists");
-    }
   }
 
   if (
-    target_stop_point_arc_length < params_.arrived_distance_threshold ||
-    !apply_stopping(traj_points, target_stop_point_arc_length)) {
+    target_stop_point_arc_length < stopping_params_.arrived_distance_threshold ||
+    !utils::insert_stop_point(
+      traj_points, target_stop_point_arc_length, debug_data_.trajectory_shape.trajectory_length)) {
     utils::replace_trajectory_with_stop_point(
       traj_points, input.current_odometry->pose.pose, trajectory_time_step_);
   }
@@ -256,49 +241,6 @@ bool ObstacleStop::set_stop_point(TrajectoryPoints & traj_points, const InputDat
   RCLCPP_WARN_THROTTLE(
     get_node_ptr()->get_logger(), *get_clock(), 1000,
     "[TM ObstacleStop] Inserted stop point at arc length %f m", target_stop_point_arc_length);
-  return true;
-}
-
-size_t insert_stop_point(
-  TrajectoryPoints & trajectory, const double target_stop_point_arc_length,
-  const double traj_length)
-{
-  const auto index = motion_utils::insertStopPoint(target_stop_point_arc_length, trajectory);
-  if (index) return index.value();
-
-  // TODO(Quda): this is a temporary fix, need to check why insertStopPoint fails when target
-  // distance is equal to trajectory length
-  if (target_stop_point_arc_length < traj_length) {
-    auto dist = 0.0;
-    auto it = std::adjacent_find(
-      trajectory.begin(), trajectory.end(), [&](const auto & p, const auto & next) {
-        dist += autoware_utils_geometry::calc_distance2d(p.pose.position, next.pose.position);
-        return dist >= target_stop_point_arc_length - 1e-3;
-      });
-    if (it != trajectory.end()) {
-      it->longitudinal_velocity_mps = 0.0;
-      it->acceleration_mps2 = 0.0;
-      return std::distance(trajectory.begin(), it);
-    }
-  }
-
-  trajectory.back().longitudinal_velocity_mps = 0.0;
-  trajectory.back().acceleration_mps2 = 0.0;
-  return trajectory.size() - 1;
-}
-
-bool ObstacleStop::apply_stopping(
-  TrajectoryPoints & traj_points, const double target_stop_point_arc_length) const
-{
-  if (target_stop_point_arc_length < 1e-3) return false;
-
-  const auto stop_index = insert_stop_point(
-    traj_points, target_stop_point_arc_length, debug_data_.trajectory_shape.trajectory_length);
-
-  traj_points.erase(traj_points.begin() + stop_index + 1, traj_points.end());
-  traj_points.back().longitudinal_velocity_mps = 0.0;
-  traj_points.back().acceleration_mps2 = 0.0;
-
   return true;
 }
 

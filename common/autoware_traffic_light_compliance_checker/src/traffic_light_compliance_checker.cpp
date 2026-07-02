@@ -17,6 +17,7 @@
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/duration.hpp>
 
 #include <boost/geometry.hpp>
@@ -114,7 +115,7 @@ void TrafficLightComplianceChecker::update_parameters(const Parameters & paramet
 }
 
 tl::expected<ComplianceResult, std::string> TrafficLightComplianceChecker::check(
-  const Inputs & input)
+  const Inputs & input, const bool check_red_lights, const bool check_amber_lights)
 {
   const bool is_ego_stopped =
     std::abs(input.current_velocity) < params_.ego_stopped_velocity_threshold;
@@ -124,7 +125,8 @@ tl::expected<ComplianceResult, std::string> TrafficLightComplianceChecker::check
   const auto force_reject_amber_ids =
     get_force_reject_amber_ids(input.current_time, is_ego_stopped);
 
-  auto result = check_with_filtered_signals(input, filtered_signals, force_reject_amber_ids);
+  auto result = check_with_filtered_signals(
+    input, filtered_signals, force_reject_amber_ids, check_red_lights, check_amber_lights);
   if (!result) {
     return result;
   }
@@ -179,39 +181,136 @@ void TrafficLightComplianceChecker::cleanup_amber_rejection_history(
   }
 }
 
+std::vector<Violation> TrafficLightComplianceChecker::get_red_light_violations(
+  const std::vector<StopLineInfo> & red_stop_lines,
+  const lanelet::BasicLineString2d & trajectory_ls,
+  const std::optional<lanelet::BasicPoint2d> & stop_point, const double distance_offset) const
+{
+  std::vector<Violation> violations;
+  for (const auto & red_stop_line : red_stop_lines) {
+    auto distance_to_stop_line = 0.0;
+    lanelet::BasicPoints2d intersection_points;
+    for (size_t i = 0; i + 1 < trajectory_ls.size(); ++i) {
+      const lanelet::BasicLineString2d segment{trajectory_ls[i], trajectory_ls[i + 1]};
+      boost::geometry::intersection(segment, red_stop_line.line, intersection_points);
+      if (!intersection_points.empty()) {
+        distance_to_stop_line += static_cast<double>(
+          boost::geometry::distance(segment.front(), intersection_points.front()));
+        break;
+      }
+      distance_to_stop_line += static_cast<double>(boost::geometry::length(segment));
+    }
+    if (
+      intersection_points.empty() ||
+      is_stop_point_within_margin_from_stop_line(stop_point, red_stop_line.line))
+      continue;
+    violations.emplace_back(
+      ViolationType::RED_LIGHT, red_stop_line.line, red_stop_line.traffic_light_id,
+      intersection_points.front(), distance_to_stop_line + distance_offset);
+  }
+  return violations;
+}
+
+std::vector<Violation> TrafficLightComplianceChecker::get_amber_light_violations(
+  const std::vector<StopLineInfo> & amber_stop_lines,
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
+  const lanelet::BasicLineString2d & trajectory_ls,
+  const std::optional<lanelet::BasicPoint2d> & stop_point,
+  const std::vector<int64_t> & force_reject_amber_ids, const double distance_offset) const
+{
+  std::vector<Violation> violations;
+  for (const auto & amber_stop_line : amber_stop_lines) {
+    auto distance_to_stop_line = 0.0;
+    std::optional<double> amber_stop_line_crossing_time;
+    lanelet::BasicPoint2d intersection_point;
+    for (size_t i = 0; i + 1 < trajectory.size(); ++i) {
+      lanelet::BasicPoints2d intersection_points;
+      const lanelet::BasicLineString2d segment{trajectory_ls[i], trajectory_ls[i + 1]};
+      const auto segment_length = static_cast<double>(boost::geometry::length(segment));
+      boost::geometry::intersection(segment, amber_stop_line.line, intersection_points);
+      if (intersection_points.empty()) {
+        distance_to_stop_line += segment_length;
+        continue;
+      }
+      const auto distance_to_intersection =
+        boost::geometry::distance(segment.front(), intersection_points.front());
+      distance_to_stop_line += distance_to_intersection;
+      const auto ratio = distance_to_intersection / segment_length;
+      amber_stop_line_crossing_time = autoware::interpolation::lerp(
+        rclcpp::Duration(trajectory[i].time_from_start).seconds(),
+        rclcpp::Duration(trajectory[i + 1].time_from_start).seconds(), ratio);
+      intersection_point = intersection_points.front();
+      break;
+    }
+
+    if (
+      !amber_stop_line_crossing_time ||
+      is_stop_point_within_margin_from_stop_line(stop_point, amber_stop_line.line))
+      continue;
+
+    const auto current_velocity = trajectory.front().longitudinal_velocity_mps;
+    const auto current_acceleration = trajectory.front().acceleration_mps2;
+
+    bool is_force_reject = std::find(
+                             force_reject_amber_ids.begin(), force_reject_amber_ids.end(),
+                             amber_stop_line.traffic_light_id) != force_reject_amber_ids.end();
+
+    if (
+      is_force_reject || !can_pass_amber_light(
+                           distance_to_stop_line, current_velocity, current_acceleration,
+                           *amber_stop_line_crossing_time)) {
+      violations.emplace_back(
+        ViolationType::AMBER_LIGHT, amber_stop_line.line, amber_stop_line.traffic_light_id,
+        intersection_point, distance_to_stop_line + distance_offset);
+    }
+  }
+  return violations;
+}
+
 tl::expected<ComplianceResult, std::string>
 TrafficLightComplianceChecker::check_with_filtered_signals(
   const Inputs & input,
   const autoware_perception_msgs::msg::TrafficLightGroupArray & filtered_signals,
-  const std::vector<int64_t> & force_reject_amber_ids) const
+  const std::vector<int64_t> & force_reject_amber_ids, const bool check_red_lights,
+  const bool check_amber_lights) const
 {
+  if (input.trajectory.empty() || (!check_red_lights && !check_amber_lights)) {
+    return ComplianceResult{};
+  }
+
   std::vector<autoware_planning_msgs::msg::TrajectoryPoint> trajectory;
   lanelet::BasicLineString2d trajectory_ls;
-  const auto distance_for_ego_to_stop = autoware::motion_utils::calculate_stop_distance(
+  const auto ego_stopping_distance = autoware::motion_utils::calculate_stop_distance(
     input.current_velocity, input.current_acceleration,
     params_.checked_trajectory_length.deceleration_limit,
     params_.checked_trajectory_length.jerk_limit, params_.delay_response_time);
-  const auto max_trajectory_length = distance_for_ego_to_stop.value_or(0.0);
+  const auto max_trajectory_length = ego_stopping_distance.value_or(0.0);
   auto length = 0.0;
-  bool is_stopping_trajectory = false;
+  auto backward_length = 0.0;
+  std::optional<lanelet::BasicPoint2d> stop_point;
+  auto last_p = input.trajectory.front();
   for (const auto & p : input.trajectory) {
     // skip points behind ego
     if (rclcpp::Duration(p.time_from_start).seconds() < 0.0) {
+      backward_length += autoware_utils_geometry::calc_distance2d(last_p.pose, p.pose);
+      last_p = p;
       continue;
     }
+
     const lanelet::BasicPoint2d lanelet_p(p.pose.position.x, p.pose.position.y);
-    if (!trajectory_ls.empty()) {
+    if (!trajectory_ls.empty())
       length += lanelet::geometry::distance2d(trajectory_ls.back(), lanelet_p);
-    }
 
     trajectory.push_back(p);
     trajectory_ls.emplace_back(lanelet_p);
 
     // skip points beyond the first stop, or skip once we reach the maximum length
-    is_stopping_trajectory = p.longitudinal_velocity_mps <= 0.0;
-    if (is_stopping_trajectory || length > max_trajectory_length) {
+    if (p.longitudinal_velocity_mps <= 1e-6) {
+      stop_point = trajectory_ls.back();
       break;
     }
+
+    if (length > max_trajectory_length) break;
   }
 
   if (trajectory_ls.size() < 2) {
@@ -221,82 +320,30 @@ TrafficLightComplianceChecker::check_with_filtered_signals(
 
   if (vehicle_info_.max_longitudinal_offset_m > 0.0) {
     // extend the trajectory linestring by the vehicle's longitudinal offset
-    const lanelet::BasicSegment2d last_segment(
-      trajectory_ls[trajectory_ls.size() - 2], trajectory_ls.back());
-    const auto last_vector = last_segment.second - last_segment.first;
-    const auto last_length = boost::geometry::length(last_segment);
-    if (last_length > 0.0) {
-      const auto ratio = (last_length + vehicle_info_.max_longitudinal_offset_m) / last_length;
-      lanelet::BasicPoint2d front_vehicle_point = last_segment.first + last_vector * ratio;
-      trajectory_ls.emplace_back(front_vehicle_point);
-    }
-  }
-  std::optional<lanelet::BasicPoint2d> stop_point;
-  if (is_stopping_trajectory) {
-    stop_point = trajectory_ls.back();
+    const auto offset_pose = autoware_utils_geometry::calc_offset_pose(
+      trajectory.back().pose, vehicle_info_.max_longitudinal_offset_m, 0.0, 0.0);
+    const lanelet::BasicPoint2d offset_point(offset_pose.position.x, offset_pose.position.y);
+    trajectory_ls.emplace_back(offset_point);
+    if (stop_point.has_value()) stop_point.value() = offset_point;
   }
 
   const auto [red_stop_lines, amber_stop_lines] =
     get_stop_lines(*input.map, input.route, filtered_signals);
 
   ComplianceResult result;
-
-  // Check for red light crossings
-  for (const auto & red_stop_line : red_stop_lines) {
-    if (boost::geometry::intersects(trajectory_ls, red_stop_line.line)) {
-      if (is_stop_point_within_margin_from_stop_line(stop_point, red_stop_line.line)) {
-        continue;
-      }
-      result.violations.push_back(
-        {ViolationType::RED_LIGHT, red_stop_line.line, red_stop_line.traffic_light_id});
-    }
+  if (check_red_lights) {
+    result.violations =
+      get_red_light_violations(red_stop_lines, trajectory_ls, stop_point, backward_length);
   }
-
-  // Check for amber light crossings
-  for (const auto & amber_stop_line : amber_stop_lines) {
-    auto distance_to_stop_line = 0.0;
-    std::optional<double> amber_stop_line_crossing_time;
-    for (size_t i = 0; i + 1 < trajectory.size(); ++i) {
-      lanelet::BasicPoints2d intersection_points;
-      const lanelet::BasicLineString2d segment{trajectory_ls[i], trajectory_ls[i + 1]};
-      const auto segment_length = static_cast<double>(boost::geometry::length(segment));
-      boost::geometry::intersection(segment, amber_stop_line.line, intersection_points);
-      if (!intersection_points.empty()) {
-        const auto distance_to_intersection =
-          boost::geometry::distance(segment.front(), intersection_points.front());
-        distance_to_stop_line += distance_to_intersection;
-        const auto ratio = distance_to_intersection / segment_length;
-        amber_stop_line_crossing_time = autoware::interpolation::lerp(
-          rclcpp::Duration(trajectory[i].time_from_start).seconds(),
-          rclcpp::Duration(trajectory[i + 1].time_from_start).seconds(), ratio);
-        break;
-      }
-      distance_to_stop_line += segment_length;
-    }
-
-    const auto current_velocity = trajectory.front().longitudinal_velocity_mps;
-    const auto current_acceleration = trajectory.front().acceleration_mps2;
-    if (amber_stop_line_crossing_time) {
-      if (is_stop_point_within_margin_from_stop_line(stop_point, amber_stop_line.line)) {
-        continue;
-      }
-
-      bool is_force_reject = false;
-      if (
-        std::find(
-          force_reject_amber_ids.begin(), force_reject_amber_ids.end(),
-          amber_stop_line.traffic_light_id) != force_reject_amber_ids.end()) {
-        is_force_reject = true;
-      }
-
-      if (
-        is_force_reject || !can_pass_amber_light(
-                             distance_to_stop_line, current_velocity, current_acceleration,
-                             *amber_stop_line_crossing_time)) {
-        result.violations.push_back(
-          {ViolationType::AMBER_LIGHT, amber_stop_line.line, amber_stop_line.traffic_light_id});
-      }
-    }
+  if (check_amber_lights) {
+    const auto amber_light_violations =
+      params_.treat_amber_light_as_red_light
+        ? get_red_light_violations(amber_stop_lines, trajectory_ls, stop_point, backward_length)
+        : get_amber_light_violations(
+            amber_stop_lines, trajectory, trajectory_ls, stop_point, force_reject_amber_ids,
+            backward_length);
+    result.violations.insert(
+      result.violations.end(), amber_light_violations.begin(), amber_light_violations.end());
   }
 
   return result;

@@ -57,7 +57,8 @@ public:
    * @param input input data for compliance check (raw signals are filtered internally)
    * @return result of compliance check, or error message if check fails
    */
-  [[nodiscard]] tl::expected<ComplianceResult, std::string> check(const Inputs & input);
+  [[nodiscard]] tl::expected<ComplianceResult, std::string> check(
+    const Inputs & input, const bool check_red_lights = true, const bool check_amber_lights = true);
 
   /**
    * @brief update parameters
@@ -78,7 +79,20 @@ private:
   [[nodiscard]] tl::expected<ComplianceResult, std::string> check_with_filtered_signals(
     const Inputs & input,
     const autoware_perception_msgs::msg::TrafficLightGroupArray & filtered_signals,
-    const std::vector<int64_t> & force_reject_amber_ids) const;
+    const std::vector<int64_t> & force_reject_amber_ids, const bool check_red_lights,
+    const bool check_amber_lights) const;
+
+  std::vector<Violation> get_red_light_violations(
+    const std::vector<StopLineInfo> & red_stop_lines,
+    const lanelet::BasicLineString2d & trajectory_ls,
+    const std::optional<lanelet::BasicPoint2d> & stop_point,
+    const double distance_offset = 0.0) const;
+  std::vector<Violation> get_amber_light_violations(
+    const std::vector<StopLineInfo> & amber_stop_lines,
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
+    const lanelet::BasicLineString2d & trajectory_ls,
+    const std::optional<lanelet::BasicPoint2d> & stop_point,
+    const std::vector<int64_t> & force_reject_amber_ids, const double distance_offset = 0.0) const;
 
   /// @brief return the red and amber stop lines related to the given traffic light groups
   [[nodiscard]] std::pair<std::vector<StopLineInfo>, std::vector<StopLineInfo>> get_stop_lines(

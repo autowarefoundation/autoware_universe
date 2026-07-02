@@ -94,9 +94,6 @@ private:
 
   bool set_stop_point(TrajectoryPoints & traj_points, const InputData & input);
 
-  bool apply_stopping(
-    TrajectoryPoints & traj_points, const double target_stop_point_arc_length) const;
-
   void publish_debug_string(bool is_safe) const;
 };
 

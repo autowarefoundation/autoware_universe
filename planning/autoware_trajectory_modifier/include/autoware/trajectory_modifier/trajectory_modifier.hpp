@@ -28,7 +28,10 @@
 #include <rclcpp/subscription.hpp>
 
 #include <autoware_internal_planning_msgs/msg/candidate_trajectories.hpp>
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+#include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -58,9 +61,10 @@ public:
 
 private:
   void on_traj(const CandidateTrajectories::ConstSharedPtr msg);
+  void on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg);
   void load_plugin(const std::string & name);
   void unload_plugin(const std::string & name);
-  plugin::InputData make_input_data();
+  tl::expected<plugin::InputData, std::string> make_input_data();
   bool initialized_modifiers_{false};
 
   std::unique_ptr<trajectory_modifier_params::ParamListener> param_listener_;
@@ -80,6 +84,14 @@ private:
   autoware_utils_rclcpp::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
     this, "~/input/pointcloud", autoware_utils_rclcpp::single_depth_sensor_qos()};
 
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<
+    autoware_perception_msgs::msg::TrafficLightGroupArray>
+    sub_traffic_lights_{this, "~/input/traffic_signals"};
+  rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr sub_map_;
+  autoware_utils_rclcpp::InterProcessPollingSubscriber<
+    autoware_planning_msgs::msg::LaneletRoute, autoware_utils_rclcpp::polling_policy::Latest>
+    sub_route_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
+
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
   std::shared_ptr<autoware_utils_debug::DebugPublisher> pub_processing_time_;
@@ -89,6 +101,7 @@ private:
   std::vector<std::shared_ptr<plugin::TrajectoryModifierPluginBase>> plugins_;
 
   std::shared_ptr<TrajectoryModifierContext> context_;
+  std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
 };
 
 }  // namespace autoware::trajectory_modifier
