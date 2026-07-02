@@ -320,16 +320,10 @@ TEST_F(TrajectoryProcessorIntegrationTest, ObstacleStopIntegrationTest)
   wait_for_output_sim();
 
   ASSERT_TRUE(output_received_);
+  ASSERT_FALSE(latest_output_.points.empty());
   // The trajectory should have a stop point (velocity close to 0) before the object at x=20.0
-  bool found_stop = false;
-  for (const auto & p : latest_output_.points) {
-    if (p.longitudinal_velocity_mps < 0.1) {
-      EXPECT_LT(p.pose.position.x, 20.0);
-      found_stop = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(found_stop);
+  EXPECT_LT(latest_output_.points.back().longitudinal_velocity_mps, 0.1);
+  EXPECT_LT(latest_output_.points.back().pose.position.x, 20.0);
 }
 
 TEST_F(TrajectoryProcessorIntegrationTest, StopPointFixerIntegrationTest)
