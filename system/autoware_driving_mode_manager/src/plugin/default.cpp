@@ -26,7 +26,7 @@ constexpr auto LocalMode = AutowareMode{1003};
 constexpr auto RemoteMode = AutowareMode{1004};
 constexpr auto EmergencyStop = AutowareMode{2001};
 constexpr auto ComfortableStop = AutowareMode{2002};
-constexpr auto MainTrajectory = TrajectorySource{100};
+constexpr auto MainTrajectory = TrajectorySource{101};
 constexpr auto StopCommand = CommandSource{11};
 constexpr auto MainCommand = CommandSource{12};
 constexpr auto LocalCommand = CommandSource{13};
@@ -91,7 +91,7 @@ void DefaultPlugin::setup(DrivingModeConfigInterface & config) const
   config.bind_name(EmergencyStop, "emergency_stop");
   config.bind_name(ComfortableStop, "comfortable_stop");
 
-  config.bind_gates(StopMode, {std::nullopt, StopCommand});
+  config.bind_gates(StopMode, {MainTrajectory, StopCommand});
   config.bind_gates(AutonomousMode, {MainTrajectory, MainCommand});
   config.bind_gates(LocalMode, {std::nullopt, LocalCommand});
   config.bind_gates(RemoteMode, {std::nullopt, RemoteCommand});
