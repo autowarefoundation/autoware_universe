@@ -14,8 +14,8 @@
     <remap from="~/system/driving_mode/stable" to="/system/driving_mode/stable"/>
     <remap from="~/system/driving_mode/continuable" to="/system/driving_mode/continuable"/>
     <remap from="~/system/driving_mode/mrm_state" to="/system/driving_mode/mrm_state"/>
-    <remap from="~/trajectory/source/status" to="/planning/trajectory_gate/source/status"/>
-    <remap from="~/trajectory/source/change" to="/planning/trajectory_gate/source/change"/>
+    <remap from="~/trajectory/source/status" to="/control/trajectory_gate/source/status"/>
+    <remap from="~/trajectory/source/change" to="/control/trajectory_gate/source/change"/>
     <remap from="~/command/source/status" to="/control/control_command_gate/source/status"/>
     <remap from="~/command/source/change" to="/control/control_command_gate/source/change"/>
     <remap from="~/command/filter/status" to="/control/control_command_gate/filter/status"/>
