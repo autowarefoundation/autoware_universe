@@ -230,29 +230,37 @@ TEST(TrafficLightSelector, ShiftedRoiOutOfImageBoundsOutputsDefaultRoi)
 }
 
 // Several expected traffic lights are matched independently; each gets its own detection assigned.
+// Detected ROIs are deliberately offset from the expected ones so the assertion can confirm the
+// output carries the matched detection, not the expected ROI passed through unchanged.
 TEST(TrafficLightSelector, MultipleExpectedRoisEachAssigned)
 {
   // Arrange
   const int64_t first_traffic_light_id = 1;
   const int64_t second_traffic_light_id = 2;
-  const auto first_roi = make_roi(100, 100, 40, 40);
-  const auto second_roi = make_roi(300, 100, 40, 40);
+  const auto first_expected = make_roi(100, 100, 40, 40);
+  const auto second_expected = make_roi(300, 100, 40, 40);
+  const auto first_detected = make_roi(105, 105, 40, 40);
+  const auto second_detected = make_roi(305, 105, 40, 40);
   const auto common_rough_roi_area = make_roi(0, 0, 500, 500);
   const auto first_rough_roi =
     make_car_traffic_light_roi(first_traffic_light_id, common_rough_roi_area);
   const auto second_rough_roi =
     make_car_traffic_light_roi(second_traffic_light_id, common_rough_roi_area);
-  const auto first_expected_roi = make_car_traffic_light_roi(first_traffic_light_id, first_roi);
-  const auto second_expected_roi = make_car_traffic_light_roi(second_traffic_light_id, second_roi);
+  const auto first_expected_roi =
+    make_car_traffic_light_roi(first_traffic_light_id, first_expected);
+  const auto second_expected_roi =
+    make_car_traffic_light_roi(second_traffic_light_id, second_expected);
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
   const auto output = select_helper(
-    {first_roi, second_roi}, {first_rough_roi, second_rough_roi},
+    {first_detected, second_detected}, {first_rough_roi, second_rough_roi},
     {first_expected_roi, second_expected_roi}, camera_info);
 
   // Assert
-  expect_same(output, {first_expected_roi, second_expected_roi});
+  expect_same(
+    output, {make_car_traffic_light_roi(first_traffic_light_id, first_detected),
+             make_car_traffic_light_roi(second_traffic_light_id, second_detected)});
 }
 
 int main(int argc, char ** argv)
