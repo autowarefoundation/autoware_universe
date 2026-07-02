@@ -15,6 +15,7 @@ find_package(Boost REQUIRED)
 find_package(PCL REQUIRED)
 find_package(CGAL REQUIRED COMPONENTS Core)
 find_package(tf2_sensor_msgs REQUIRED)
+find_package(fmt REQUIRED)
 
 include_directories(
   include
@@ -328,6 +329,10 @@ if(BUILD_TESTING)
     test/test_concatenate_node_unit.cpp
   )
 
+  ament_add_gtest(test_motion_correction_synthetic
+    test/test_motion_correction_synthetic.cpp
+  )
+
   ament_add_gtest(test_pickup_based_voxel_grid_downsample_filter_node
     test/test_pickup_based_voxel_grid_downsample_filter_node.cpp
   )
@@ -371,6 +376,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
+  target_link_libraries(test_motion_correction_synthetic pointcloud_preprocessor_filter fmt)
   target_link_libraries(test_pickup_based_voxel_grid_downsample_filter_node pointcloud_preprocessor_filter)
   target_link_libraries(test_concatenation_info concatenate_data)
   target_link_libraries(test_polar_voxel_outlier_filter_node pointcloud_preprocessor_filter)
