@@ -14,12 +14,12 @@
         "use_z_filter": {
           "type": "boolean",
           "description": "use z value for filtering",
-          "default": "false"
+          "default": false
         },
         "z_threshold": {
           "type": "number",
           "description": "z threshold for filtering",
-          "default": "0.0"
+          "default": 0.0
         }
       },
       "required": ["polygon_type", "use_z_filter", "z_threshold"],
