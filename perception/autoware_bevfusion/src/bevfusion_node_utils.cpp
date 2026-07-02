@@ -21,6 +21,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // Contains implementations of functions other than constructor,destructor, topic callbacks for
@@ -149,15 +150,15 @@ void BEVFusionNode::computeCameraMasks(double lidar_stamp)
 }
 
 void BEVFusionNode::publishDetectionResults(
-  const autoware_perception_msgs::msg::DetectedObjects & output_msg,
+  AUTOWARE_MESSAGE_UNIQUE_PTR(autoware_perception_msgs::msg::DetectedObjects) output_msg,
   const std_msgs::msg::Header & header)
 {
   const auto objects_sub_count =
     objects_pub_->get_subscription_count() + objects_pub_->get_intra_process_subscription_count();
 
   if (objects_sub_count > 0) {
-    objects_pub_->publish(output_msg);
-    published_time_pub_->publish_if_subscribed(objects_pub_, output_msg.header.stamp);
+    published_time_pub_->publish_if_subscribed(objects_pub_, output_msg->header.stamp);
+    objects_pub_->publish(std::move(output_msg));
   }
 
   diagnostics_detector_trt_->publish(header.stamp);
