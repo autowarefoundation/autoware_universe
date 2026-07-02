@@ -86,7 +86,7 @@
     surround_obstacle_stop:
       use_objects: true
       use_pointcloud: false
-      object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "unknown"]
+      object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "animal", "unknown"]
       front_distance_th:
         car: 0.5
         truck: 0.5
@@ -95,6 +95,8 @@
         motorcycle: 0.5
         bicycle: 0.5
         pedestrian: 0.5
+        hazard: 0.5
+        animal: 0.5
         unknown: 0.5
         pointcloud: 0.5
       side_distance_th:
@@ -105,6 +107,8 @@
         motorcycle: 0.0
         bicycle: 0.5
         pedestrian: 0.5
+        hazard: 0.5
+        animal: 0.5
         unknown: 0.5
         pointcloud: 0.5
       back_distance_th:
@@ -115,6 +119,8 @@
         motorcycle: 0.5
         bicycle: 0.5
         pedestrian: 0.5
+        hazard: 0.5
+        animal: 0.5
         unknown: 0.5
         pointcloud: 0.5
       hysteresis_distance: 0.1
