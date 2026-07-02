@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import fcntl
+
 from acados_template import AcadosModel
 from acados_template import AcadosOcp
 from acados_template import AcadosOcpSolver
@@ -110,7 +112,13 @@ class PathTrackingMPCTemporal:
         ocp.solver_options.tol = 1e-4
 
         if not build:
-            AcadosOcpSolver.generate(ocp, json_file="acados_ocp.json")
+            lock_path = "/tmp/acados_codegen_temporal.lock"
+            with open(lock_path, "w") as lock_file:
+                fcntl.flock(lock_file, fcntl.LOCK_EX)
+                try:
+                    AcadosOcpSolver.generate(ocp, json_file="acados_ocp.json")
+                finally:
+                    fcntl.flock(lock_file, fcntl.LOCK_UN)
             return constraint, model, None
 
         acados_solver = AcadosOcpSolver(
