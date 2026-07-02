@@ -60,8 +60,10 @@ private:
 
   std::shared_ptr<EvaluatorParameters> parameters() const;
 
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects) sub_objects_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry) sub_odometry_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects) sub_objects_{
+    create_polling_subscriber<PredictedObjects>("~/input/objects", 1)};
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry) sub_odometry_{
+    create_polling_subscriber<Odometry>("~/input/odometry", 1)};
 
   AUTOWARE_SUBSCRIPTION_PTR(LaneletMapBin) sub_map_;
   AUTOWARE_SUBSCRIPTION_PTR(LaneletRoute) sub_route_;

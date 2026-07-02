@@ -50,10 +50,6 @@ TrajectoryRanker::TrajectoryRanker(const rclcpp::NodeOptions & options)
     evaluator_->load_metric(metrics.name.at(i), i, listener_->get_params().resolution);
   }
 
-  // Setup polling subscribers
-  sub_objects_ = this->create_polling_subscriber<PredictedObjects>("~/input/objects", 1);
-  sub_odometry_ = this->create_polling_subscriber<Odometry>("~/input/odometry", 1);
-
   // Setup subscriptions
   sub_map_ = create_subscription<LaneletMapBin>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
@@ -82,8 +78,7 @@ TrajectoryRanker::TrajectoryRanker(const rclcpp::NodeOptions & options)
     std::make_shared<autoware_utils_debug::TimeKeeper>(debug_processing_time_detail_pub_);
 }
 
-void TrajectoryRanker::process(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg)
+void TrajectoryRanker::process(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CandidateTrajectories) & msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
   auto output = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(pub_trajectories_);
