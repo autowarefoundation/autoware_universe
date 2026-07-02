@@ -15,7 +15,6 @@
 #include "autoware/multi_object_tracker/object_model/shapes_transform.hpp"
 
 #include <autoware_utils_geometry/boost_geometry.hpp>
-#include <autoware_utils_geometry/boost_polygon_utils.hpp>
 #include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/shape.hpp>
@@ -26,7 +25,6 @@
 #include <cmath>
 #include <limits>
 #include <optional>
-#include <vector>
 
 namespace
 {
@@ -252,23 +250,18 @@ geometry_msgs::msg::Polygon unionFootprints(
   const auto poly_a = to_boost(a);
   const auto poly_b = to_boost(b);
 
-  std::vector<autoware_utils_geometry::Polygon2d> union_result;
-  boost::geometry::union_(poly_a, poly_b, union_result);
-  if (union_result.empty()) return a;
-
-  // Single connected result — extract directly.
-  if (union_result.size() == 1u) {
-    return to_msg(union_result[0]);
-  }
-
-  // Disjoint components: compute convex hull of all component vertices so that both
-  // footprints are covered without discarding the smaller one.
+  // Merge by taking the convex hull of both footprints' vertices. The convex hull of the union of
+  // two polygons equals the convex hull of all their vertices combined, so this covers both
+  // footprints (whether overlapping or disjoint) with a single convex polygon.
   autoware_utils_geometry::Polygon2d all_points;
-  for (const auto & comp : union_result) {
-    for (const auto & pt : comp.outer()) {
-      all_points.outer().push_back(pt);
-    }
+  for (const auto & pt : poly_a.outer()) {
+    all_points.outer().push_back(pt);
   }
+  for (const auto & pt : poly_b.outer()) {
+    all_points.outer().push_back(pt);
+  }
+  if (all_points.outer().empty()) return a;
+
   autoware_utils_geometry::Polygon2d hull;
   boost::geometry::convex_hull(all_points, hull);
   return to_msg(hull);
