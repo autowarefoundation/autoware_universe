@@ -15,6 +15,7 @@ if(BUILD_TESTING)
   set(TEST_LON_SOURCES
     test/test_pid.cpp
     test/test_smooth_stop.cpp
+    test/test_pid_longitudinal_controller.cpp
     test/test_longitudinal_controller_utils.cpp
   )
   set(TEST_LONGITUDINAL_CONTROLLER_EXE test_longitudinal_controller)
@@ -25,4 +26,5 @@ endif()
 ament_auto_package(
   INSTALL_TO_SHARE
   config
+  USE_SCOPED_HEADER_INSTALL_DIR
 )

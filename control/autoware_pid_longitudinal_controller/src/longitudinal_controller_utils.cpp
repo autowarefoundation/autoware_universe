@@ -14,15 +14,17 @@
 
 #include "autoware/pid_longitudinal_controller/longitudinal_controller_utils.hpp"
 
+#include "autoware/trajectory/utils/find_nearest.hpp"
+#include "autoware/trajectory/utils/velocity.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
-#include <experimental/optional>  // NOLINT
 #include <tf2/LinearMath/Matrix3x3.hpp>
 #include <tf2/LinearMath/Quaternion.hpp>
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <utility>
 
@@ -31,40 +33,89 @@ namespace autoware::motion::control::pid_longitudinal_controller
 namespace longitudinal_utils
 {
 
-bool isValidTrajectory(const Trajectory & traj)
+double calcStopDistance(
+  const Pose & current_pose, const TrajectoryExperimental & traj, const double max_dist,
+  const double max_yaw)
 {
-  for (const auto & p : traj.points) {
-    if (
-      !isfinite(p.pose.position.x) || !isfinite(p.pose.position.y) ||
-      !isfinite(p.pose.position.z) || !isfinite(p.pose.orientation.w) ||
-      !isfinite(p.pose.orientation.x) || !isfinite(p.pose.orientation.y) ||
-      !isfinite(p.pose.orientation.z) || !isfinite(p.longitudinal_velocity_mps) ||
-      !isfinite(p.lateral_velocity_mps) || !isfinite(p.acceleration_mps2) ||
-      !isfinite(p.heading_rate_rps)) {
-      return false;
+  const auto bases = traj.get_underlying_bases();
+  if (bases.size() <= 1) {
+    return 0.0;
+  }
+
+  const auto ego_s_opt = autoware::experimental::trajectory::find_first_nearest_index(
+    traj, current_pose, max_dist, max_yaw);
+  double ego_s_raw;
+  if (ego_s_opt.has_value()) {
+    ego_s_raw = ego_s_opt.value();
+  } else {
+    // fallback: position-only search (matching old soft-constraints behavior)
+    ego_s_raw = autoware::experimental::trajectory::find_nearest_index(traj, current_pose.position);
+  }
+
+  const double traj_length = traj.length();
+  double ego_s = ego_s_raw;
+  constexpr double endpoint_overrun_tolerance = 0.01;
+
+  // Endpoint overrun fix: extend ego_s beyond the trajectory start/end instead of pinning it to
+  // the nearest endpoint, so stop_dist keeps the correct sign and magnitude outside the trajectory.
+  if (ego_s_raw >= traj_length - endpoint_overrun_tolerance && bases.size() >= 2) {
+    const double last_base = bases.back();
+    const double prev_base = bases[bases.size() - 2];
+
+    const auto end_point = traj.compute(last_base);
+    const auto prev_point = traj.compute(prev_base);
+
+    const double dx = end_point.pose.position.x - prev_point.pose.position.x;
+    const double dy = end_point.pose.position.y - prev_point.pose.position.y;
+    const double dz = end_point.pose.position.z - prev_point.pose.position.z;
+    const double seg_len = last_base - prev_base;
+
+    if (seg_len > 1e-9) {
+      const double tx = dx / seg_len;
+      const double ty = dy / seg_len;
+      const double tz = dz / seg_len;
+
+      const double ex = current_pose.position.x - end_point.pose.position.x;
+      const double ey = current_pose.position.y - end_point.pose.position.y;
+      const double ez = current_pose.position.z - end_point.pose.position.z;
+
+      const double projection = ex * tx + ey * ty + ez * tz;
+      if (projection > 0.0) {
+        ego_s = traj_length + projection;
+      }
+    }
+  } else if (ego_s_raw <= endpoint_overrun_tolerance && bases.size() >= 2) {
+    const double first_base = bases[0];
+    const double second_base = bases[1];
+
+    const auto first_point = traj.compute(first_base);
+    const auto second_point = traj.compute(second_base);
+
+    const double dx = second_point.pose.position.x - first_point.pose.position.x;
+    const double dy = second_point.pose.position.y - first_point.pose.position.y;
+    const double dz = second_point.pose.position.z - first_point.pose.position.z;
+    const double seg_len = second_base - first_base;
+
+    if (seg_len > 1e-9) {
+      const double tx = dx / seg_len;
+      const double ty = dy / seg_len;
+      const double tz = dz / seg_len;
+
+      const double ex = current_pose.position.x - first_point.pose.position.x;
+      const double ey = current_pose.position.y - first_point.pose.position.y;
+      const double ez = current_pose.position.z - first_point.pose.position.z;
+
+      const double projection = ex * tx + ey * ty + ez * tz;
+      if (projection < 0.0) {
+        ego_s = projection;
+      }
     }
   }
 
-  // when trajectory is empty
-  if (traj.points.empty()) {
-    return false;
-  }
+  const double stop_s =
+    autoware::experimental::trajectory::search_zero_velocity_position(traj).value_or(traj_length);
 
-  return true;
-}
-
-double calcStopDistance(
-  const Pose & current_pose, const Trajectory & traj, const double max_dist, const double max_yaw)
-{
-  const auto stop_idx_opt = autoware::motion_utils::searchZeroVelocityIndex(traj.points);
-
-  const size_t end_idx = stop_idx_opt ? *stop_idx_opt : traj.points.size() - 1;
-  const size_t seg_idx = autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
-    traj.points, current_pose, max_dist, max_yaw);
-  const double signed_length_on_traj = autoware::motion_utils::calcSignedArcLength(
-    traj.points, current_pose.position, seg_idx, traj.points.at(end_idx).pose.position,
-    std::min(end_idx, traj.points.size() - 2));
-
+  const double signed_length_on_traj = stop_s - ego_s;
   if (std::isnan(signed_length_on_traj)) {
     return 0.0;
   }
@@ -82,29 +133,23 @@ double getPitchByPose(const Quaternion & quaternion_msg)
 }
 
 double getPitchByTraj(
-  const Trajectory & trajectory, const size_t start_idx, const double wheel_base)
+  const TrajectoryExperimental & trajectory, const double start_base, const double wheel_base)
 {
-  // cannot calculate pitch
-  if (trajectory.points.size() <= 1) {
+  const auto bases = trajectory.get_underlying_bases();
+  if (bases.size() <= 2) {
     return 0.0;
   }
 
-  const auto [prev_idx, next_idx] = [&]() {
-    for (size_t i = start_idx + 1; i < trajectory.points.size(); ++i) {
-      const double dist =
-        autoware_utils::calc_distance3d(trajectory.points.at(start_idx), trajectory.points.at(i));
-      if (dist > wheel_base) {
-        // calculate pitch from trajectory between rear wheel (nearest) and front center (i)
-        return std::make_pair(start_idx, i);
-      }
-    }
-    // NOTE: The ego pose is close to the goal.
-    return std::make_pair(
-      std::min(start_idx, trajectory.points.size() - 2), trajectory.points.size() - 1);
-  }();
-
-  return autoware_utils::calc_elevation_angle(
-    trajectory.points.at(prev_idx).pose.position, trajectory.points.at(next_idx).pose.position);
+  const double clamped_start_base = std::clamp(start_base, 0.0, trajectory.length());
+  const auto [pitch_start_base, end_base] =
+    clamped_start_base + wheel_base <= trajectory.length()
+      ? std::make_pair(clamped_start_base, clamped_start_base + wheel_base)
+      : std::make_pair(
+          std::min(clamped_start_base, bases.at(bases.size() - 2)),
+          std::min(clamped_start_base + wheel_base, bases.at(bases.size() - 1)));
+  const auto start_point = trajectory.compute(pitch_start_base);
+  const auto end_point = trajectory.compute(end_base);
+  return autoware_utils::calc_elevation_angle(start_point.pose.position, end_point.pose.position);
 }
 
 Pose calcPoseAfterTimeDelay(
@@ -134,11 +179,6 @@ Pose calcPoseAfterTimeDelay(
   return pred_pose;
 }
 
-double lerp(const double v_from, const double v_to, const double ratio)
-{
-  return v_from + (v_to - v_from) * ratio;
-}
-
 double applyDiffLimitFilter(
   const double input_val, const double prev_val, const double dt, const double max_val,
   const double min_val)
@@ -157,33 +197,5 @@ double applyDiffLimitFilter(
   return applyDiffLimitFilter(input_val, prev_val, dt, max_val, min_val);
 }
 
-geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
-  const size_t src_idx, const double distance,
-  const autoware_planning_msgs::msg::Trajectory & trajectory)
-{
-  double remain_dist = distance;
-  geometry_msgs::msg::Pose p = trajectory.points.back().pose;
-  for (size_t i = src_idx; i < trajectory.points.size() - 1; ++i) {
-    const double dist = autoware_utils::calc_distance3d(
-      trajectory.points.at(i).pose, trajectory.points.at(i + 1).pose);
-    if (remain_dist < dist) {
-      if (remain_dist <= 0.0) {
-        return trajectory.points.at(i).pose;
-      }
-      double ratio = remain_dist / dist;
-      const auto p0 = trajectory.points.at(i).pose;
-      const auto p1 = trajectory.points.at(i + 1).pose;
-      p = trajectory.points.at(i).pose;
-      p.position.x = autoware::interpolation::lerp(p0.position.x, p1.position.x, ratio);
-      p.position.y = autoware::interpolation::lerp(p0.position.y, p1.position.y, ratio);
-      p.position.z = autoware::interpolation::lerp(p0.position.z, p1.position.z, ratio);
-      p.orientation =
-        autoware::interpolation::lerpOrientation(p0.orientation, p1.orientation, ratio);
-      break;
-    }
-    remain_dist -= dist;
-  }
-  return p;
-}
 }  // namespace longitudinal_utils
 }  // namespace autoware::motion::control::pid_longitudinal_controller
