@@ -1,0 +1,45 @@
+autoware_system_design_format: 0.3.0
+
+# node information
+name: RadarObjectFusionToDetectedObject.node
+
+package:
+  name: autoware_radar_fusion_to_detected_object
+  provider: autoware
+
+launch:
+  plugin: autoware::radar_fusion_to_detected_object::RadarObjectFusionToDetectedObjectNode
+  executable: radar_fusion_to_detected_object_node
+  node_output: screen
+
+# interfaces
+# objects + radars are message_filters-synced; debug low_confidence_objects omitted.
+subscribers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/input/objects
+  - name: radars
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/input/radars
+
+publishers:
+  - name: objects
+    message_type: autoware_perception_msgs/msg/DetectedObjects
+    remap_target: ~/output/objects
+
+# parameters
+param_files:
+  - name: param_file
+    default: config/radar_object_fusion_to_detected_object.param.yaml
+
+param_values: []
+
+# processes
+processes:
+  - name: fuse
+    trigger_conditions:
+      - and:
+          - on_input: objects
+          - on_input: radars
+    outcomes:
+      - to_output: objects
