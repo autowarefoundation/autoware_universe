@@ -74,7 +74,8 @@ TEST(DrivingModeConfigTest, duplicate_mode_definition_throws)
 
   config.define_autoware_mode(mode, OperationMode::kStop, 1);
 
-  EXPECT_THROW(config.define_autoware_mode(mode, OperationMode::kAutonomous, 1), std::invalid_argument);
+  EXPECT_THROW(
+    config.define_autoware_mode(mode, OperationMode::kAutonomous, 1), std::invalid_argument);
 }
 
 TEST(DrivingModeConfigTest, bind_gates_rejects_unknown_sources)
