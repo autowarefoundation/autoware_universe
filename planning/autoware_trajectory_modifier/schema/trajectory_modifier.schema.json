@@ -208,7 +208,7 @@
                     "motorcycle",
                     "bicycle",
                     "pedestrian",
-                    "unknown"
+                    "hazard"
                   ],
                   "items": {
                     "type": "string"
@@ -375,6 +375,12 @@
                       "description": "Deceleration for pedestrian type objects [m/s^2]",
                       "default": 5.0,
                       "minimum": 0.0
+                    },
+                    "animal": {
+                      "type": "number",
+                      "description": "Deceleration for animal type objects [m/s^2]",
+                      "default": 5.0,
+                      "minimum": 0.0
                     }
                   },
                   "required": [],
@@ -443,6 +449,8 @@
                 "motorcycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "bicycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "pedestrian": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "hazard": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "animal": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "unknown": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "pointcloud": { "type": "number", "default": 0.5, "minimum": 0.0 }
               },
@@ -459,6 +467,8 @@
                 "motorcycle": { "type": "number", "default": 1.0, "minimum": 0.0 },
                 "bicycle": { "type": "number", "default": 1.0, "minimum": 0.0 },
                 "pedestrian": { "type": "number", "default": 1.0, "minimum": 0.0 },
+                "hazard": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "animal": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "unknown": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "pointcloud": { "type": "number", "default": 0.5, "minimum": 0.0 }
               },
@@ -475,6 +485,8 @@
                 "motorcycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "bicycle": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "pedestrian": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "hazard": { "type": "number", "default": 0.5, "minimum": 0.0 },
+                "animal": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "unknown": { "type": "number", "default": 0.5, "minimum": 0.0 },
                 "pointcloud": { "type": "number", "default": 0.5, "minimum": 0.0 }
               },
