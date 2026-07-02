@@ -80,7 +80,7 @@ private:
   size_t max_history_size_{10};
 
   AUTOWARE_PUBLISHER_PTR(autoware_utils_debug::ProcessingTimeDetail)
-    debug_processing_time_detail_pub_;
+  debug_processing_time_detail_pub_;
   mutable std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
 };
 
