@@ -78,8 +78,12 @@ private:
   // from `reference_time` beyond `tolerance`.
   void sweep_expired_external_signals(const rclcpp::Time & reference_time, double tolerance);
 
+  // Signal matching is on iff the validator exists: it is created in the
+  // constructor exactly when matching is enabled and never replaced afterward,
+  // so the pointer is the single source of truth for the mode.
+  bool is_signal_matching_enabled() const { return signal_match_validator_ != nullptr; }
+
   SourcePriority source_priority_;
-  bool enable_signal_matching_;
   double external_delay_tolerance_;
   double external_time_tolerance_;
   double perception_time_tolerance_;
@@ -87,7 +91,7 @@ private:
   std::unique_ptr<std::unordered_set<lanelet::Id>> map_regulatory_elements_set_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 
-  TrafficSignalArray latest_perception_msg_;
+  TrafficSignalArray perception_traffic_light_;
   std::unordered_map<lanelet::Id, std::pair<rclcpp::Time, TrafficSignal>> external_traffic_lights_;
 };
 
