@@ -18,9 +18,13 @@ autoware_agnocast_wrapper_register_node(${PROJECT_NAME}
 )
 
 if(BUILD_TESTING AND NOT "$ENV{ENABLE_AGNOCAST}" STREQUAL "1")
-  ament_auto_add_gtest(${PROJECT_NAME}_integration_test
+  find_package(ament_cmake_ros REQUIRED)
+  ament_add_ros_isolated_gtest(${PROJECT_NAME}_integration_test
     test/test_traffic_light_arbiter_integration.cpp
   )
+  target_link_libraries(${PROJECT_NAME}_integration_test ${PROJECT_NAME})
+
+  # The core test is ROS-free (no node, no DDS), so it needs no isolation.
   ament_auto_add_gtest(${PROJECT_NAME}_core_test
     test/test_traffic_light_arbiter_core.cpp
   )
