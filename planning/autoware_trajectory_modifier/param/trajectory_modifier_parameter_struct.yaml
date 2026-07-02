@@ -22,6 +22,16 @@ trajectory_modifier_params:
     default_value: true
     description: Enable the use of velocity modifier
     read_only: false
+  use_surround_obstacle_stop:
+    type: bool
+    default_value: false
+    description: Enable the use of surround obstacle stop
+    read_only: false
+  use_traffic_light_stop:
+    type: bool
+    default_value: false
+    description: Enable the use of traffic light stop
+    read_only: false
   trajectory_time_step:
     type: double
     default_value: 0.1
@@ -85,6 +95,13 @@ trajectory_modifier_params:
       read_only: false
       validation:
         bounds<>: [0.0, 10.0]
+    arrived_distance_threshold:
+      type: double
+      default_value: 0.5
+      description: Threshold to check if the ego vehicle has arrived at the stop point [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
 
   obstacle_stop:
     use_objects:
@@ -125,13 +142,6 @@ trajectory_modifier_params:
       type: double
       default_value: 0.5
       description: Threshold to check if the stop point is already in the trajectory [m]
-      validation:
-        bounds<>: [0.0, 10.0]
-      read_only: false
-    arrived_distance_threshold:
-      type: double
-      default_value: 0.5
-      description: Threshold to check if the ego vehicle has arrived at the stop point [m]
       validation:
         bounds<>: [0.0, 10.0]
       read_only: false
@@ -365,3 +375,269 @@ trajectory_modifier_params:
         validation:
           bounds<>: [0.0, 10.0]
         read_only: false
+
+  surround_obstacle_stop:
+    use_objects:
+      type: bool
+      default_value: true
+      description: Enable the use of objects for surround obstacle stop
+      read_only: false
+    use_pointcloud:
+      type: bool
+      default_value: true
+      description: Enable the use of pointcloud for surround obstacle stop
+      read_only: false
+    object_types:
+      type: string_array
+      default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
+      description: Types of objects to consider for surround obstacle stop
+      read_only: false
+    front_distance_th:
+      car:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      truck:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bus:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      trailer:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      motorcycle:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bicycle:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pedestrian:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      unknown:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pointcloud:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+    side_distance_th:
+      car:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      truck:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bus:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      trailer:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      motorcycle:
+        type: double
+        default_value: 1.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bicycle:
+        type: double
+        default_value: 1.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pedestrian:
+        type: double
+        default_value: 1.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      unknown:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pointcloud:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+    back_distance_th:
+      car:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      truck:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bus:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      trailer:
+        type: double
+        default_value: 0.0
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      motorcycle:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      bicycle:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pedestrian:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      unknown:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+      pointcloud:
+        type: double
+        default_value: 0.5
+        validation:
+          bounds<>: [0.0, 10.0]
+        read_only: false
+    hysteresis_distance:
+      type: double
+      default_value: 0.1
+      description: Distance hysteresis threshold for clearing stop [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    hysteresis_time:
+      type: double
+      default_value: 0.2
+      description: Time hysteresis threshold for clearing stop [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    ego_stopped_vel_th:
+      type: double
+      default_value: 0.1
+      description: Velocity threshold below which ego vehicle is considered stopped [m/s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+  traffic_light_stop:
+    stop_margin:
+      type: double
+      default_value: 0.75
+      description: Distance to maintain from a traffic light when stopped [m]
+      validation:
+        bounds<>: [0.0, 100.0]
+      read_only: false
+    stop_for_red_light:
+      type: bool
+      default_value: true
+      description: Enable stopping behavior when red light is detected
+      read_only: false
+    stop_for_amber_light:
+      type: bool
+      default_value: false
+      description: Enable stopping behavior when amber light is detected
+      read_only: false
+    treat_amber_light_as_red:
+      type: bool
+      default_value: false
+      description: Treat amber light as red light
+      read_only: false
+    treat_unknown_light_as_red:
+      type: bool
+      default_value: false
+      description: Treat unknown light as red light
+      read_only: false
+    overshoot_tolerance:
+      type: double
+      default_value: 0.5
+      description: Tolerance for overshoot [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    th_stable_duration_red:
+      type: double
+      default_value: 0.2
+      description: Threshold for stable duration of red light [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    th_stable_duration_amber:
+      type: double
+      default_value: 0.2
+      description: Threshold for stable duration of amber light [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    th_amber_rejection_hysteresis:
+      type: double
+      default_value: 0.5
+      description: Threshold for amber rejection hysteresis [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    crossing_time_limit:
+      type: double
+      default_value: 2.75
+      description: Crossing time limit [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
