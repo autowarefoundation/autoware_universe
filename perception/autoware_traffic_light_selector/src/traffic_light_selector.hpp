@@ -21,9 +21,6 @@
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
-#include <map>
-#include <vector>
-
 namespace autoware::traffic_light
 {
 using sensor_msgs::msg::RegionOfInterest;
