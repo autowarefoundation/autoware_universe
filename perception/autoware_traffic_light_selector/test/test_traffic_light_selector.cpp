@@ -39,12 +39,13 @@ RegionOfInterest make_roi(uint32_t x_offset, uint32_t y_offset, uint32_t width, 
   return roi;
 }
 
-void expect_same(const TrafficLightRoiArray & output, const TrafficLightRoiArray & expected_output)
+void expect_same(
+  const std::vector<TrafficLightRoi> & output, const std::vector<TrafficLightRoi> & expected_output)
 {
-  ASSERT_EQ(output.rois.size(), expected_output.rois.size());
-  for (size_t roi_index = 0; roi_index < output.rois.size(); ++roi_index) {
-    const auto & output_roi = output.rois.at(roi_index);
-    const auto & expected_roi = expected_output.rois.at(roi_index);
+  ASSERT_EQ(output.size(), expected_output.size());
+  for (size_t roi_index = 0; roi_index < output.size(); ++roi_index) {
+    const auto & output_roi = output.at(roi_index);
+    const auto & expected_roi = expected_output.at(roi_index);
     EXPECT_EQ(output_roi.traffic_light_id, expected_roi.traffic_light_id);
     EXPECT_EQ(output_roi.traffic_light_type, expected_roi.traffic_light_type);
     EXPECT_EQ(output_roi.roi.x_offset, expected_roi.roi.x_offset);
@@ -91,14 +92,15 @@ TrafficLightRoiArray make_traffic_light_roi_array(const std::vector<TrafficLight
   return traffic_light_roi_array;
 }
 
-TrafficLightRoiArray select_helper(
+std::vector<TrafficLightRoi> select_helper(
   const std::vector<RegionOfInterest> & detected_rois,
   const std::vector<TrafficLightRoi> & rough_rois,
   const std::vector<TrafficLightRoi> & expected_rois, const CameraInfo & camera_info)
 {
   return select(
-    make_detected_rois(detected_rois), make_traffic_light_roi_array(rough_rois),
-    make_traffic_light_roi_array(expected_rois), camera_info);
+           make_detected_rois(detected_rois), make_traffic_light_roi_array(rough_rois),
+           make_traffic_light_roi_array(expected_rois), camera_info)
+    .rois;
 }
 
 }  // namespace
@@ -113,7 +115,7 @@ TEST(TrafficLightSelector, EmptyInputsProduceEmptyOutput)
   const auto output = select_helper({}, {}, {}, camera_info);
 
   // Assert
-  expect_same(output, make_traffic_light_roi_array({}));
+  expect_same(output, {});
 }
 
 // Every expected ROI yields exactly one output entry. With no detections it cannot be matched, so
@@ -129,9 +131,7 @@ TEST(TrafficLightSelector, ExpectedRoiWithoutDetectionsOutputsDefaultRoi)
   const auto output = select_helper({}, {}, {expected_roi}, camera_info);
 
   // Assert
-  expect_same(
-    output,
-    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, RegionOfInterest{})}));
+  expect_same(output, {make_traffic_light_roi(traffic_light_id, RegionOfInterest{})});
 }
 
 // The detected ROI center lies outside the rough ROI, so it is never considered as a match and the
@@ -150,9 +150,7 @@ TEST(TrafficLightSelector, DetectionCenterOutsideRoughRoiOutputsDefaultRoi)
   const auto output = select_helper({detected_roi}, {rough_roi}, {expected_roi}, camera_info);
 
   // Assert
-  expect_same(
-    output,
-    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, RegionOfInterest{})}));
+  expect_same(output, {make_traffic_light_roi(traffic_light_id, RegionOfInterest{})});
 }
 
 // The detected ROI center is inside the rough ROI and overlaps the expected ROI. The expected ROI
@@ -171,8 +169,7 @@ TEST(TrafficLightSelector, DetectionInsideRoughRoiAssignsDetectedRoi)
   const auto output = select_helper({detected_roi}, {rough_roi}, {expected_roi}, camera_info);
 
   // Assert
-  expect_same(
-    output, make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, detected_roi)}));
+  expect_same(output, {make_traffic_light_roi(traffic_light_id, detected_roi)});
 }
 
 // The traffic_light_type of each expected ROI must be copied verbatim onto the output entry.
@@ -190,7 +187,7 @@ TEST(TrafficLightSelector, TrafficLightTypePropagatedToOutput)
   const auto output = select_helper({roi}, {rough_roi}, {expected_roi}, camera_info);
 
   // Assert
-  expect_same(output, make_traffic_light_roi_array({expected_roi}));
+  expect_same(output, {expected_roi});
 }
 
 // When multiple detections sit inside the rough ROI, the one with the highest IoU against the
@@ -211,9 +208,7 @@ TEST(TrafficLightSelector, BestOverlappingDetectionIsSelected)
     {detected_roi_perfect, detected_roi_partial}, {rough_roi}, {expected_roi}, camera_info);
 
   // Assert
-  expect_same(
-    output,
-    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, detected_roi_perfect)}));
+  expect_same(output, {make_traffic_light_roi(traffic_light_id, detected_roi_perfect)});
 }
 
 // Shifting the expected ROI onto the detection pushes it outside the (small) image, so
@@ -233,9 +228,7 @@ TEST(TrafficLightSelector, ShiftedRoiOutOfImageBoundsOutputsDefaultRoi)
   const auto output = select_helper({roi}, {rough_roi}, {expected_roi}, camera_info);
 
   // Assert
-  expect_same(
-    output,
-    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, RegionOfInterest{})}));
+  expect_same(output, {make_traffic_light_roi(traffic_light_id, RegionOfInterest{})});
 }
 
 // Several expected traffic lights are matched independently; each gets its own detection assigned.
@@ -259,7 +252,7 @@ TEST(TrafficLightSelector, MultipleExpectedRoisEachAssigned)
     {first_expected_roi, second_expected_roi}, camera_info);
 
   // Assert
-  expect_same(output, make_traffic_light_roi_array({first_expected_roi, second_expected_roi}));
+  expect_same(output, {first_expected_roi, second_expected_roi});
 }
 
 int main(int argc, char ** argv)
