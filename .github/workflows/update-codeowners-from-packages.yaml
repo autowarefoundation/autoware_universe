@@ -22,7 +22,7 @@ jobs:
   update-codeowners-from-packages:
     needs: check-secret
     if: ${{ needs.check-secret.outputs.set == 'true' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Generate token
         id: generate-token
