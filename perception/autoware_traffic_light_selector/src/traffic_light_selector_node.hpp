@@ -67,8 +67,6 @@ private:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 
-  TrafficLightSelector selector_;
-
   void objectsCallback(
     const DetectedObjectsWithFeature::ConstSharedPtr & detected_rois_msg,
     const TrafficLightRoiArray::ConstSharedPtr & rough_rois_msg,

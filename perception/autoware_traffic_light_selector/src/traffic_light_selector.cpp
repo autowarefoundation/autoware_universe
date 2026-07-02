@@ -48,10 +48,10 @@ void evaluateWholeRois(
 
 }  // namespace
 
-TrafficLightRoiArray TrafficLightSelector::select(
+TrafficLightRoiArray select(
   const DetectedObjectsWithFeature & detected_traffic_light_msg,
   const TrafficLightRoiArray & rough_rois_msg, const TrafficLightRoiArray & expected_rois_msg,
-  const sensor_msgs::msg::CameraInfo & camera_info_msg) const
+  const sensor_msgs::msg::CameraInfo & camera_info_msg)
 {
   const auto image_width = camera_info_msg.width;
   const auto image_height = camera_info_msg.height;

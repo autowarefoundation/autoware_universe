@@ -18,7 +18,7 @@
 
 #include <vector>
 
-using autoware::traffic_light::TrafficLightSelector;
+using autoware::traffic_light::select;
 using sensor_msgs::msg::CameraInfo;
 using sensor_msgs::msg::RegionOfInterest;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
@@ -88,14 +88,13 @@ TrafficLightRoiArray make_traffic_light_roi_array(const std::vector<TrafficLight
 TEST(TrafficLightSelector, EmptyInputsProduceEmptyOutput)
 {
   // Arrange
-  const TrafficLightSelector selector;
   const auto detected_rois = make_detected_rois({});
   const auto rough_rois = make_traffic_light_roi_array({});
   const auto expected_rois = make_traffic_light_roi_array({});
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = selector.select(detected_rois, rough_rois, expected_rois, camera_info);
+  const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
   EXPECT_TRUE(output.rois.empty());
@@ -106,16 +105,15 @@ TEST(TrafficLightSelector, EmptyInputsProduceEmptyOutput)
 TEST(TrafficLightSelector, ExpectedRoiWithoutDetectionsOutputsDefaultRoi)
 {
   // Arrange
-  const TrafficLightSelector selector;
   const int64_t traffic_light_id = 123;
   const auto detected_rois = make_detected_rois({});
   const auto rough_rois = make_traffic_light_roi_array({});
-  const auto expected_rois =
-    make_traffic_light_roi_array({make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40))});
+  const auto expected_rois = make_traffic_light_roi_array(
+    {make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40))});
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = selector.select(detected_rois, rough_rois, expected_rois, camera_info);
+  const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
   ASSERT_EQ(output.rois.size(), 1u);
@@ -128,7 +126,6 @@ TEST(TrafficLightSelector, ExpectedRoiWithoutDetectionsOutputsDefaultRoi)
 TEST(TrafficLightSelector, DetectionCenterOutsideRoughRoiOutputsDefaultRoi)
 {
   // Arrange
-  const TrafficLightSelector selector;
   const int64_t traffic_light_id = 123;
   const auto expected_roi = make_roi(100, 100, 40, 40);
   const auto rough_roi = make_roi(50, 50, 200, 200);
@@ -143,7 +140,7 @@ TEST(TrafficLightSelector, DetectionCenterOutsideRoughRoiOutputsDefaultRoi)
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = selector.select(detected_rois, rough_rois, expected_rois, camera_info);
+  const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
   ASSERT_EQ(output.rois.size(), 1u);
@@ -156,7 +153,6 @@ TEST(TrafficLightSelector, DetectionCenterOutsideRoughRoiOutputsDefaultRoi)
 TEST(TrafficLightSelector, DetectionInsideRoughRoiAssignsDetectedRoi)
 {
   // Arrange
-  const TrafficLightSelector selector;
   const int64_t traffic_light_id = 123;
   const auto expected_roi = make_roi(100, 100, 40, 40);
   const auto rough_roi = make_roi(50, 50, 200, 200);
@@ -171,7 +167,7 @@ TEST(TrafficLightSelector, DetectionInsideRoughRoiAssignsDetectedRoi)
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = selector.select(detected_rois, rough_rois, expected_rois, camera_info);
+  const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
   ASSERT_EQ(output.rois.size(), 1u);
@@ -183,7 +179,6 @@ TEST(TrafficLightSelector, DetectionInsideRoughRoiAssignsDetectedRoi)
 TEST(TrafficLightSelector, TrafficLightTypePropagatedToOutput)
 {
   // Arrange
-  const TrafficLightSelector selector;
   const int64_t traffic_light_id = 123;
   const auto roi = make_roi(100, 100, 40, 40);
 
@@ -195,7 +190,7 @@ TEST(TrafficLightSelector, TrafficLightTypePropagatedToOutput)
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = selector.select(detected_rois, rough_rois, expected_rois, camera_info);
+  const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
   ASSERT_EQ(output.rois.size(), 1u);
@@ -207,7 +202,6 @@ TEST(TrafficLightSelector, TrafficLightTypePropagatedToOutput)
 TEST(TrafficLightSelector, BestOverlappingDetectionIsSelected)
 {
   // Arrange
-  const TrafficLightSelector selector;
   const int64_t traffic_light_id = 123;
   const auto expected_roi = make_roi(100, 100, 40, 40);
   const auto rough_roi = make_roi(50, 50, 200, 200);
@@ -223,19 +217,19 @@ TEST(TrafficLightSelector, BestOverlappingDetectionIsSelected)
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = selector.select(detected_rois, rough_rois, expected_rois, camera_info);
+  const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
   ASSERT_EQ(output.rois.size(), 1u);
   EXPECT_TRUE(is_same(output.rois.front().roi, detected_roi_perfect));
 }
 
-// Shifting the expected ROI onto the detection pushes it outside the (small) image, so getShiftedRoi
-// clamps it to an empty ROI, no positive IoU accumulates, and the output falls back to a default ROI.
+// Shifting the expected ROI onto the detection pushes it outside the (small) image, so
+// getShiftedRoi clamps it to an empty ROI, no positive IoU accumulates, and the output falls back
+// to a default ROI.
 TEST(TrafficLightSelector, ShiftedRoiOutOfImageBoundsOutputsDefaultRoi)
 {
   // Arrange
-  const TrafficLightSelector selector;
   const int64_t traffic_light_id = 123;
   const auto roi = make_roi(100, 100, 40, 40);
   const auto rough_roi = make_roi(0, 0, 200, 200);
@@ -249,7 +243,7 @@ TEST(TrafficLightSelector, ShiftedRoiOutOfImageBoundsOutputsDefaultRoi)
   const auto camera_info = make_camera_info(50, 50);
 
   // Act
-  const auto output = selector.select(detected_rois, rough_rois, expected_rois, camera_info);
+  const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
   ASSERT_EQ(output.rois.size(), 1u);
@@ -260,7 +254,6 @@ TEST(TrafficLightSelector, ShiftedRoiOutOfImageBoundsOutputsDefaultRoi)
 TEST(TrafficLightSelector, MultipleExpectedRoisEachAssigned)
 {
   // Arrange
-  const TrafficLightSelector selector;
   const int64_t first_traffic_light_id = 1;
   const int64_t second_traffic_light_id = 2;
   const auto first_roi = make_roi(100, 100, 40, 40);
@@ -277,7 +270,7 @@ TEST(TrafficLightSelector, MultipleExpectedRoisEachAssigned)
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = selector.select(detected_rois, rough_rois, expected_rois, camera_info);
+  const auto output = select(detected_rois, rough_rois, expected_rois, camera_info);
 
   // Assert
   ASSERT_EQ(output.rois.size(), 2u);

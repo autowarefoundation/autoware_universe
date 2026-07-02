@@ -30,16 +30,24 @@ using sensor_msgs::msg::RegionOfInterest;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
 using tier4_perception_msgs::msg::TrafficLightRoiArray;
 
-class TrafficLightSelector
-{
-public:
-  TrafficLightSelector() = default;
-
-  TrafficLightRoiArray select(
-    const DetectedObjectsWithFeature & detected_traffic_light_msg,
-    const TrafficLightRoiArray & rough_rois_msg, const TrafficLightRoiArray & expected_rois_msg,
-    const sensor_msgs::msg::CameraInfo & camera_info_msg) const;
-};
+/**
+ * @brief For each expected traffic light ROI, select the detected ROI that best matches it.
+ *
+ * The expected ROIs are shifted onto each candidate detection (restricted to detections whose
+ * center falls inside the corresponding rough ROI), and the shift that maximizes the total IoU
+ * across all expected ROIs is chosen. Expected ROIs left unmatched fall back to a default
+ * (empty) ROI in the output.
+ *
+ * @param detected_traffic_light_msg traffic light detections from the detector
+ * @param rough_rois_msg rough ROIs used to gate candidate detections per traffic light
+ * @param expected_rois_msg expected ROIs projected from the map, one per traffic light
+ * @param camera_info_msg camera info used to clamp shifted ROIs to the image bounds
+ * @return selected ROI (or a default one when unmatched) for each expected traffic light
+ */
+TrafficLightRoiArray select(
+  const DetectedObjectsWithFeature & detected_traffic_light_msg,
+  const TrafficLightRoiArray & rough_rois_msg, const TrafficLightRoiArray & expected_rois_msg,
+  const sensor_msgs::msg::CameraInfo & camera_info_msg);
 
 }  // namespace autoware::traffic_light
 
