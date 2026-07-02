@@ -143,11 +143,12 @@ TEST(TrafficLightSelector, DetectionCenterOutsideRoughRoiOutputsDefaultRoi)
   const auto expected_roi = make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40));
   const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
   // Detected ROI center (820, 620) is far outside the rough ROI span (50..250).
-  const auto detected_roi = make_roi(800, 600, 40, 40);
+  const auto detected_roi_outside_rough_roi = make_roi(800, 600, 40, 40);
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = select_helper({detected_roi}, {rough_roi}, {expected_roi}, camera_info);
+  const auto output =
+    select_helper({detected_roi_outside_rough_roi}, {rough_roi}, {expected_roi}, camera_info);
 
   // Assert
   expect_same(output, {make_traffic_light_roi(traffic_light_id, RegionOfInterest{})});
@@ -162,14 +163,15 @@ TEST(TrafficLightSelector, DetectionInsideRoughRoiAssignsDetectedRoi)
   const auto expected_roi = make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40));
   const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
   // Detected ROI center (130, 125) is inside the rough ROI but offset from the expected ROI.
-  const auto detected_roi = make_roi(110, 105, 40, 40);
+  const auto detected_roi_inside_rough_roi = make_roi(110, 105, 40, 40);
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = select_helper({detected_roi}, {rough_roi}, {expected_roi}, camera_info);
+  const auto output =
+    select_helper({detected_roi_inside_rough_roi}, {rough_roi}, {expected_roi}, camera_info);
 
   // Assert
-  expect_same(output, {make_traffic_light_roi(traffic_light_id, detected_roi)});
+  expect_same(output, {make_traffic_light_roi(traffic_light_id, detected_roi_inside_rough_roi)});
 }
 
 // The traffic_light_type of each expected ROI must be copied verbatim onto the output entry.
@@ -177,14 +179,15 @@ TEST(TrafficLightSelector, TrafficLightTypePropagatedToOutput)
 {
   // Arrange
   const int64_t traffic_light_id = 123;
-  const auto roi = make_roi(100, 100, 40, 40);
+  const auto detected_roi_matching_expected = make_roi(100, 100, 40, 40);
   const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
-  const auto expected_roi =
-    make_traffic_light_roi(traffic_light_id, roi, TrafficLightRoi::PEDESTRIAN_TRAFFIC_LIGHT);
+  const auto expected_roi = make_traffic_light_roi(
+    traffic_light_id, detected_roi_matching_expected, TrafficLightRoi::PEDESTRIAN_TRAFFIC_LIGHT);
   const auto camera_info = make_camera_info(1280, 720);
 
   // Act
-  const auto output = select_helper({roi}, {rough_roi}, {expected_roi}, camera_info);
+  const auto output =
+    select_helper({detected_roi_matching_expected}, {rough_roi}, {expected_roi}, camera_info);
 
   // Assert
   expect_same(output, {expected_roi});
@@ -218,14 +221,15 @@ TEST(TrafficLightSelector, ShiftedRoiOutOfImageBoundsOutputsDefaultRoi)
 {
   // Arrange
   const int64_t traffic_light_id = 123;
-  const auto roi = make_roi(100, 100, 40, 40);
+  const auto roi_outside_image_bounds = make_roi(100, 100, 40, 40);
   const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(0, 0, 200, 200));
-  const auto expected_roi = make_traffic_light_roi(traffic_light_id, roi);
+  const auto expected_roi = make_traffic_light_roi(traffic_light_id, roi_outside_image_bounds);
   // The ROI at (100, 100, 40, 40) does not fit inside a 50x50 image.
   const auto camera_info = make_camera_info(50, 50);
 
   // Act
-  const auto output = select_helper({roi}, {rough_roi}, {expected_roi}, camera_info);
+  const auto output =
+    select_helper({roi_outside_image_bounds}, {rough_roi}, {expected_roi}, camera_info);
 
   // Assert
   expect_same(output, {make_traffic_light_roi(traffic_light_id, RegionOfInterest{})});
@@ -239,9 +243,11 @@ TEST(TrafficLightSelector, MultipleExpectedRoisEachAssigned)
   const int64_t second_traffic_light_id = 2;
   const auto first_roi = make_roi(100, 100, 40, 40);
   const auto second_roi = make_roi(300, 100, 40, 40);
-  const auto rough_roi = make_roi(0, 0, 500, 500);
-  const auto first_rough_roi = make_traffic_light_roi(first_traffic_light_id, rough_roi);
-  const auto second_rough_roi = make_traffic_light_roi(second_traffic_light_id, rough_roi);
+  const auto common_rough_roi_area = make_roi(0, 0, 500, 500);
+  const auto first_rough_roi =
+    make_traffic_light_roi(first_traffic_light_id, common_rough_roi_area);
+  const auto second_rough_roi =
+    make_traffic_light_roi(second_traffic_light_id, common_rough_roi_area);
   const auto first_expected_roi = make_traffic_light_roi(first_traffic_light_id, first_roi);
   const auto second_expected_roi = make_traffic_light_roi(second_traffic_light_id, second_roi);
   const auto camera_info = make_camera_info(1280, 720);
