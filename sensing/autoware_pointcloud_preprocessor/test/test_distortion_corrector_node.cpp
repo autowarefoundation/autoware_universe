@@ -38,7 +38,6 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <gtest/gtest.h>
-#include <tf2_ros/static_transform_broadcaster.h>
 
 #include <cassert>
 #include <memory>
@@ -54,21 +53,9 @@ protected:
   {
     node_ = std::make_shared<rclcpp::Node>("test_node");
     distortion_corrector_2d_ =
-      std::make_shared<autoware::pointcloud_preprocessor::DistortionCorrector2D>(*node_);
+      std::make_shared<autoware::pointcloud_preprocessor::DistortionCorrector2D>();
     distortion_corrector_3d_ =
-      std::make_shared<autoware::pointcloud_preprocessor::DistortionCorrector3D>(*node_);
-
-    // Setup TF
-    tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node_);
-    tf_broadcaster_->sendTransform(generate_static_transform_msgs());
-
-    // Spin the node for a while to ensure transforms are published
-    auto start = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(100);
-    while (std::chrono::steady_clock::now() - start < timeout) {
-      rclcpp::spin_some(node_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+      std::make_shared<autoware::pointcloud_preprocessor::DistortionCorrector3D>();
   }
 
   void TearDown() override {}
@@ -108,12 +95,23 @@ protected:
     return tf_msg;
   }
 
-  static std::vector<geometry_msgs::msg::TransformStamped> generate_static_transform_msgs()
+  // Transforms previously looked up from TF and now injected directly into the corrector.
+  // The rotations are unit quaternions (as TF provides); the corrector assumes normalized input.
+  static geometry_msgs::msg::TransformStamped get_lidar_to_base_link_transform()
   {
-    // generate defined transformations
-    return {
-      generate_transform_msg("base_link", "lidar_top", 5.0, 5.0, 5.0, 0.683, 0.5, 0.183, 0.499),
-      generate_transform_msg("base_link", "imu_link", 1.0, 1.0, 3.0, 0.278, 0.717, 0.441, 0.453)};
+    return generate_transform_msg(
+      "base_link", "lidar_top", 5.0, 5.0, 5.0, 0.68334894, 0.50025545, 0.18309349, 0.49925493);
+  }
+
+  static geometry_msgs::msg::TransformStamped get_imu_to_base_link_transform()
+  {
+    return generate_transform_msg(
+      "base_link", "imu_link", 1.0, 1.0, 3.0, 0.27925063, 0.72022555, 0.44298392, 0.4550379);
+  }
+
+  static geometry_msgs::msg::TransformStamped get_base_link_transform()
+  {
+    return generate_transform_msg("base_link", "base_link", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
   }
 
   static std::shared_ptr<geometry_msgs::msg::TwistWithCovarianceStamped> generate_twist_msg(
@@ -309,8 +307,9 @@ protected:
     const std::shared_ptr<T> & distortion_corrector, const rclcpp::Time & timestamp)
   {
     auto imu_msgs = generate_imu_msgs(timestamp);
+    distortion_corrector->set_imu_transform(get_imu_to_base_link_transform());
     for (const auto & imu_msg : imu_msgs) {
-      distortion_corrector->process_imu_message("base_link", imu_msg);
+      distortion_corrector->process_imu_message(imu_msg);
     }
   }
 
@@ -319,7 +318,6 @@ protected:
     distortion_corrector_2d_;
   std::shared_ptr<autoware::pointcloud_preprocessor::DistortionCorrector3D>
     distortion_corrector_3d_;
-  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 
   static constexpr float standard_tolerance{1e-4};
   static constexpr float coarse_tolerance{5e-3};
@@ -364,7 +362,8 @@ TEST_F(DistortionCorrectorTest, TestProcessImuMessage)
 {
   rclcpp::Time timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
   auto imu_msg = generate_imu_msg(imu_angular_x, imu_angular_y, imu_angular_z, timestamp);
-  distortion_corrector_2d_->process_imu_message("base_link", imu_msg);
+  distortion_corrector_2d_->set_imu_transform(get_imu_to_base_link_transform());
+  distortion_corrector_2d_->process_imu_message(imu_msg);
 
   ASSERT_FALSE(distortion_corrector_2d_->get_angular_velocity_queue().empty());
   EXPECT_NEAR(
@@ -372,41 +371,34 @@ TEST_F(DistortionCorrectorTest, TestProcessImuMessage)
     standard_tolerance);
 }
 
-TEST_F(DistortionCorrectorTest, TestIsPointcloudValid)
+TEST_F(DistortionCorrectorTest, TestCheckPointcloudValidity)
 {
   rclcpp::Time timestamp(timestamp_seconds, timestamp_nanoseconds, RCL_ROS_TIME);
 
   auto [default_points, default_azimuths] =
     generate_default_pointcloud(AngleCoordinateSystem::CARTESIAN);
   auto pointcloud = generate_pointcloud_msg(false, timestamp, default_points, default_azimuths);
-  auto result = distortion_corrector_2d_->is_pointcloud_valid(pointcloud);
-  EXPECT_TRUE(result);
+  auto result = distortion_corrector_2d_->check_pointcloud_validity(pointcloud);
+  EXPECT_EQ(result, autoware::pointcloud_preprocessor::PointcloudValidity::kValid);
 
   // input empty pointcloud
   auto empty_pointcloud = generate_empty_pointcloud_msg(timestamp);
-  result = distortion_corrector_2d_->is_pointcloud_valid(empty_pointcloud);
-  EXPECT_FALSE(result);
+  result = distortion_corrector_2d_->check_pointcloud_validity(empty_pointcloud);
+  EXPECT_EQ(result, autoware::pointcloud_preprocessor::PointcloudValidity::kEmpty);
 }
 
 TEST_F(DistortionCorrectorTest, TestSetPointcloudTransformWithBaseLink)
 {
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_2d_->set_pointcloud_transform(get_base_link_transform());
   EXPECT_TRUE(distortion_corrector_2d_->pointcloud_transform_exists());
   EXPECT_FALSE(distortion_corrector_2d_->pointcloud_transform_needed());
 }
 
 TEST_F(DistortionCorrectorTest, TestSetPointcloudTransformWithLidarFrame)
 {
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "lidar_top");
+  distortion_corrector_2d_->set_pointcloud_transform(get_lidar_to_base_link_transform());
   EXPECT_TRUE(distortion_corrector_2d_->pointcloud_transform_exists());
   EXPECT_TRUE(distortion_corrector_2d_->pointcloud_transform_needed());
-}
-
-TEST_F(DistortionCorrectorTest, TestSetPointcloudTransformWithMissingFrame)
-{
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "missing_lidar_frame");
-  EXPECT_FALSE(distortion_corrector_2d_->pointcloud_transform_exists());
-  EXPECT_FALSE(distortion_corrector_2d_->pointcloud_transform_needed());
 }
 
 TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithEmptyTwist)
@@ -480,7 +472,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud2dWithoutImuInBaseLink)
 
   // Test using only twist
   distortion_corrector_2d_->initialize();
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_2d_->set_pointcloud_transform(get_base_link_transform());
   distortion_corrector_2d_->undistort_pointcloud(false, std::nullopt, pointcloud);
 
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x");
@@ -528,7 +520,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud2dWithImuInBaseLink)
   generate_and_process_imu_msgs(distortion_corrector_2d_, timestamp);
 
   distortion_corrector_2d_->initialize();
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_2d_->set_pointcloud_transform(get_base_link_transform());
   distortion_corrector_2d_->undistort_pointcloud(true, std::nullopt, pointcloud);
 
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x");
@@ -576,7 +568,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud2dWithImuInLidarFrame)
   generate_and_process_imu_msgs(distortion_corrector_2d_, timestamp);
 
   distortion_corrector_2d_->initialize();
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "lidar_top");
+  distortion_corrector_2d_->set_pointcloud_transform(get_lidar_to_base_link_transform());
   distortion_corrector_2d_->undistort_pointcloud(true, std::nullopt, pointcloud);
 
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x");
@@ -625,7 +617,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud3dWithoutImuInBaseLink)
 
   // Test using only twist
   distortion_corrector_3d_->initialize();
-  distortion_corrector_3d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_3d_->set_pointcloud_transform(get_base_link_transform());
   distortion_corrector_3d_->undistort_pointcloud(false, std::nullopt, pointcloud);
 
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x");
@@ -673,7 +665,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud3dWithImuInBaseLink)
   generate_and_process_imu_msgs(distortion_corrector_3d_, timestamp);
 
   distortion_corrector_3d_->initialize();
-  distortion_corrector_3d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_3d_->set_pointcloud_transform(get_base_link_transform());
   distortion_corrector_3d_->undistort_pointcloud(true, std::nullopt, pointcloud);
 
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x");
@@ -724,7 +716,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloud3dWithImuInLidarFrame)
   generate_and_process_imu_msgs(distortion_corrector_3d_, timestamp);
 
   distortion_corrector_3d_->initialize();
-  distortion_corrector_3d_->set_pointcloud_transform("base_link", "lidar_top");
+  distortion_corrector_3d_->set_pointcloud_transform(get_lidar_to_base_link_transform());
   distortion_corrector_3d_->undistort_pointcloud(true, std::nullopt, pointcloud);
 
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x");
@@ -774,12 +766,12 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithPureLinearMotion)
 
   distortion_corrector_2d_->process_twist_message(twist_msg);
   distortion_corrector_2d_->initialize();
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_2d_->set_pointcloud_transform(get_base_link_transform());
   distortion_corrector_2d_->undistort_pointcloud(false, std::nullopt, test2d_pointcloud);
 
   distortion_corrector_3d_->process_twist_message(twist_msg);
   distortion_corrector_3d_->initialize();
-  distortion_corrector_3d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_3d_->set_pointcloud_transform(get_base_link_transform());
   distortion_corrector_3d_->undistort_pointcloud(false, std::nullopt, test3d_pointcloud);
 
   // Generate expected point cloud for testing
@@ -867,12 +859,12 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudWithPureRotationalMotion)
 
   distortion_corrector_2d_->process_twist_message(twist_msg);
   distortion_corrector_2d_->initialize();
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_2d_->set_pointcloud_transform(get_base_link_transform());
   distortion_corrector_2d_->undistort_pointcloud(false, std::nullopt, test2d_pointcloud);
 
   distortion_corrector_3d_->process_twist_message(twist_msg);
   distortion_corrector_3d_->initialize();
-  distortion_corrector_3d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_3d_->set_pointcloud_transform(get_base_link_transform());
   distortion_corrector_3d_->undistort_pointcloud(false, std::nullopt, test3d_pointcloud);
 
   // Generate expected point cloud for testing
@@ -975,7 +967,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudNotUpdatingAzimuthAndDist
   generate_and_process_imu_msgs(distortion_corrector_2d_, timestamp);
 
   distortion_corrector_2d_->initialize();
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "base_link");
+  distortion_corrector_2d_->set_pointcloud_transform(get_base_link_transform());
   auto angle_conversion_opt =
     distortion_corrector_2d_->try_compute_angle_conversion(pointcloud_base_link);
 
@@ -1002,7 +994,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudNotUpdatingAzimuthAndDist
   generate_and_process_imu_msgs(distortion_corrector_2d_, timestamp);
 
   distortion_corrector_2d_->initialize();
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "lidar_top");
+  distortion_corrector_2d_->set_pointcloud_transform(get_lidar_to_base_link_transform());
 
   angle_conversion_opt = std::nullopt;
   distortion_corrector_2d_->undistort_pointcloud(true, angle_conversion_opt, pointcloud_lidar_top);
@@ -1057,7 +1049,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudUpdateAzimuthAndDistanceI
   generate_and_process_imu_msgs(distortion_corrector_2d_, timestamp);
 
   distortion_corrector_2d_->initialize();
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "lidar_top");
+  distortion_corrector_2d_->set_pointcloud_transform(get_lidar_to_base_link_transform());
 
   auto angle_conversion_opt = distortion_corrector_2d_->try_compute_angle_conversion(pointcloud);
   distortion_corrector_2d_->undistort_pointcloud(true, angle_conversion_opt, pointcloud);
@@ -1118,7 +1110,7 @@ TEST_F(DistortionCorrectorTest, TestUndistortPointcloudUpdateAzimuthAndDistanceI
   generate_and_process_imu_msgs(distortion_corrector_2d_, timestamp);
 
   distortion_corrector_2d_->initialize();
-  distortion_corrector_2d_->set_pointcloud_transform("base_link", "lidar_top");
+  distortion_corrector_2d_->set_pointcloud_transform(get_lidar_to_base_link_transform());
 
   auto angle_conversion_opt = distortion_corrector_2d_->try_compute_angle_conversion(pointcloud);
   distortion_corrector_2d_->undistort_pointcloud(true, angle_conversion_opt, pointcloud);
