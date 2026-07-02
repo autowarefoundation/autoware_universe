@@ -15,52 +15,11 @@
 import launch
 from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
-from launch.actions import OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
-from launch_ros.actions import ComposableNodeContainer
-from launch_ros.descriptions import ComposableNode
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-import yaml
-
-
-def launch_setup(context, *args, **kwargs):
-    config_file_path = LaunchConfiguration("config_file").perform(context)
-    with open(config_file_path, "r") as f:
-        params = yaml.safe_load(f)["/**"]["ros__parameters"]
-
-    component = ComposableNode(
-        package="autoware_mrm_emergency_stop_operator",
-        plugin="autoware::mrm_emergency_stop_operator::MrmEmergencyStopOperator",
-        name="mrm_emergency_stop_operator",
-        parameters=[
-            params,
-        ],
-        remappings=[
-            ("~/input/mrm/emergency_stop/operate", "/system/mrm/emergency_stop/operate"),
-            ("~/input/control/control_cmd", "/control/command/control_cmd"),
-            ("~/input/driving_mode_request", "/system/driving_mode/request"),
-            ("~/input/driving_mode_info", "/system/driving_mode/info"),
-            ("~/output/mrm_state", "/system/driving_mode/mrm_state"),
-            ("~/output/mrm/emergency_stop/status", "/system/mrm/emergency_stop/status"),
-            ("~/output/mrm/emergency_stop/control_cmd", "/system/emergency/control_cmd"),
-        ],
-    )
-
-    container = ComposableNodeContainer(
-        name="mrm_emergency_stop_operator_container",
-        namespace="mrm_emergency_stop_operator",
-        package=LaunchConfiguration("container_package"),
-        executable=LaunchConfiguration("container_executable"),
-        composable_node_descriptions=[
-            component,
-        ],
-        additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
-        output="screen",
-    )
-
-    return [container]
 
 
 def generate_launch_description():
@@ -87,6 +46,24 @@ def generate_launch_description():
         )
     ]
 
-    return launch.LaunchDescription(
-        launch_arguments + [agnocast_env, OpaqueFunction(function=launch_setup)]
+    node = Node(
+        package="autoware_mrm_emergency_stop_operator",
+        executable="autoware_mrm_emergency_stop_operator_node",
+        name="mrm_emergency_stop_operator",
+        parameters=[
+            LaunchConfiguration("config_file"),
+        ],
+        remappings=[
+            ("~/input/mrm/emergency_stop/operate", "/system/mrm/emergency_stop/operate"),
+            ("~/input/control/control_cmd", "/control/command/control_cmd"),
+            ("~/input/driving_mode_request", "/system/driving_mode/request"),
+            ("~/input/driving_mode_info", "/system/driving_mode/info"),
+            ("~/output/mrm_state", "/system/driving_mode/mrm_state"),
+            ("~/output/mrm/emergency_stop/status", "/system/mrm/emergency_stop/status"),
+            ("~/output/mrm/emergency_stop/control_cmd", "/system/emergency/control_cmd"),
+        ],
+        additional_env={"LD_PRELOAD": LaunchConfiguration("ld_preload_value")},
+        output="screen",
     )
+
+    return launch.LaunchDescription(launch_arguments + [agnocast_env, node])
