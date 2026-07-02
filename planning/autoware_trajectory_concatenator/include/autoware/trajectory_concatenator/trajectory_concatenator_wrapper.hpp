@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_WRAPPER_HPP_
 #define AUTOWARE__TRAJECTORY_CONCATENATOR__TRAJECTORY_CONCATENATOR_WRAPPER_HPP_
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware/trajectory_concatenator/detail/trajectory_concatenator.hpp>
 #include <autoware_trajectory_concatenator/autoware_trajectory_concatenator_param.hpp>
 #include <builtin_interfaces/msg/time.hpp>
@@ -38,11 +39,8 @@ public:
    * @param node Node used for parameter declaration and logging.
    * @param node_parameters_interface Parameter interface for declaring and reading parameters.
    */
-  // Templated on the node type so that it accepts both rclcpp::Node and
-  // autoware::agnocast_wrapper::Node (only get_clock()/get_logger() are used from the node).
-  template <typename NodeT>
   TrajectoryConcatenatorWrapper(
-    NodeT & node,
+    autoware::agnocast_wrapper::Node & node,
     rclcpp::node_interfaces::NodeParametersInterface::SharedPtr node_parameters_interface)
   : clock_(node.get_clock()),
     logger_(node.get_logger().get_child(interface_name_)),
