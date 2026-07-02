@@ -1,5 +1,8 @@
 /**:
   ros__parameters:
+    input_frame: ""
+    output_frame: ""
+
     # Core filtering parameters
     radial_resolution_m: 0.5                     # Resolution in radial direction (meters)
     azimuth_resolution_rad: 0.0175               # Resolution in azimuth direction (radians)
