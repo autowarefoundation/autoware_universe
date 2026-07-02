@@ -77,7 +77,8 @@ public:
    * @return A validated TrafficSignalArray.
    */
   TrafficSignalArray validate_signals(
-    const TrafficSignalArray & perception_signals, const TrafficSignalArray & external_signals);
+    const TrafficSignalArray & perception_signals,
+    const TrafficSignalArray & external_signals) const;
 
   /**
    * @brief Sets the pedestrian signal IDs to be considered during validation.
@@ -104,7 +105,7 @@ private:
    * @param signal_id The ID of the signal to check.
    * @return True if the signal is a pedestrian signal, false otherwise.
    */
-  bool is_pedestrian_traffic_light(const lanelet::Id & signal_id);
+  bool is_pedestrian_traffic_light(const lanelet::Id & signal_id) const;
 };
 
 }  // namespace autoware::traffic_light

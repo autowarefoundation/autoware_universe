@@ -956,7 +956,7 @@ TEST_F(ArbiterCharacteristic, externalTimeToleranceCleanupOnPerception)
   EXPECT_EQ(observed_color(map_ids::vehicle_signal_a), TrafficLightElement::GREEN);
 }
 
-// on_external_msg compares its own stamp to latest_perception_msg_.stamp; if
+// on_external_msg compares its own stamp to perception_traffic_light_.stamp; if
 // the gap exceeds perception_time_tolerance it clears the stored perception
 // groups so the upcoming publish reflects only external.
 TEST_F(ArbiterCharacteristic, perceptionTimeToleranceClearsLatestPerception)
