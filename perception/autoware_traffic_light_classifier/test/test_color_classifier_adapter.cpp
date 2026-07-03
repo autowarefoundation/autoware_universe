@@ -49,7 +49,7 @@ TEST(ColorClassifierAdapterTest, MismatchedSizesReturnFalse)
   tl::ColorClassifier classifier(node.get());
   const std::vector<cv::Mat> images{cv::Mat(4, 4, CV_8UC3, cv::Scalar(0, 0, 0))};
   TrafficLightArray signals;
-  signals.signals.resize(2);  // deliberately != images.size()
+  signals.signals.resize(2);  // two signals but one image -- the deliberate count mismatch
 
   // Act
   const bool ok = classifier.getTrafficSignals(images, signals);
