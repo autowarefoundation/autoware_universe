@@ -174,22 +174,36 @@ void EnvironmentAdaptor::on_map(const autoware_map_msgs::msg::LaneletMapBin::Con
   RCLCPP_INFO(this->get_logger(), "Lanelet map loaded for environment classification");
 }
 
+EnvironmentClassifier::AreaClassification EnvironmentAdaptor::classify_at_latest_pose(
+  ClassificationWarn * warn_out)
+{
+  if (warn_out != nullptr) {
+    if (!pose_received_) {
+      *warn_out = ClassificationWarn::PoseNotReceived;
+    } else if (!classifier_.is_map_ready()) {
+      *warn_out = ClassificationWarn::MapNotReady;
+    } else {
+      *warn_out = ClassificationWarn::None;
+    }
+  }
+  return classifier_.classify(latest_pose_position_);
+}
+
 void EnvironmentAdaptor::on_pose(
   const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg)
 {
   EnvironmentClassifier::AreaClassification classification;
+  ClassificationWarn warn = ClassificationWarn::None;
   {
     std::lock_guard<std::mutex> lock(mutex_);
     latest_pose_position_ = msg->pose.pose.position;
     pose_received_ = true;
+    classification = classify_at_latest_pose(&warn);
+  }
 
-    if (!classifier_.is_map_ready()) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
-      classification.environment_id = classifier_.classify(latest_pose_position_).environment_id;
-    } else {
-      classification = classifier_.classify(latest_pose_position_);
-    }
+  if (warn == ClassificationWarn::MapNotReady) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
   }
 
   auto out = *msg;
@@ -212,21 +226,19 @@ void EnvironmentAdaptor::on_twist(
   const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr msg)
 {
   EnvironmentClassifier::AreaClassification classification;
-
+  ClassificationWarn warn = ClassificationWarn::None;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (!pose_received_) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 5000,
-        "Pose not received yet; using default longitudinal_scale_factor");
-      classification = classifier_.classify(latest_pose_position_);
-    } else if (!classifier_.is_map_ready()) {
-      RCLCPP_WARN_THROTTLE(
-        this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
-      classification = classifier_.classify(latest_pose_position_);
-    } else {
-      classification = classifier_.classify(latest_pose_position_);
-    }
+    classification = classify_at_latest_pose(&warn);
+  }
+
+  if (warn == ClassificationWarn::PoseNotReceived) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000,
+      "Pose not received yet; using default longitudinal_scale_factor");
+  } else if (warn == ClassificationWarn::MapNotReady) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
   }
 
   auto out = *msg;

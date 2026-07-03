@@ -34,6 +34,8 @@
 namespace autoware::environment_adaptor
 {
 
+enum class ClassificationWarn { None, MapNotReady, PoseNotReceived };
+
 class EnvironmentAdaptor : public rclcpp::Node
 {
 public:
@@ -43,6 +45,9 @@ private:
   void on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg);
   void on_pose(const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg);
   void on_twist(const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr msg);
+
+  EnvironmentClassifier::AreaClassification classify_at_latest_pose(
+    ClassificationWarn * warn_out = nullptr);
 
   void load_classifier_params();
   void load_covariance_params();
