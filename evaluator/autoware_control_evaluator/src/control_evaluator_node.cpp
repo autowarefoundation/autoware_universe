@@ -41,6 +41,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace control_diagnostics
@@ -87,15 +88,17 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   accel_sub_ = this->create_polling_subscriber<AccelWithCovarianceStamped>(
     "~/input/acceleration", rclcpp::QoS{1});
   traj_sub_ = this->create_polling_subscriber<Trajectory>("~/input/trajectory", rclcpp::QoS{1});
-  route_subscriber_ = this->create_polling_subscriber<LaneletRoute>(
+  namespace polling_policy = autoware::agnocast_wrapper::polling_policy;
+  route_subscriber_ = this->create_polling_subscriber<LaneletRoute, polling_policy::Newest>(
     "~/input/route", rclcpp::QoS{1}.transient_local());
-  vector_map_subscriber_ = this->create_polling_subscriber<LaneletMapBin>(
+  vector_map_subscriber_ = this->create_polling_subscriber<LaneletMapBin, polling_policy::Newest>(
     "~/input/vector_map", rclcpp::QoS{1}.transient_local());
   behavior_path_subscriber_ =
     this->create_polling_subscriber<PathWithLaneId>("~/input/behavior_path", rclcpp::QoS{1});
   steering_sub_ =
     this->create_polling_subscriber<SteeringReport>("~/input/steering_status", rclcpp::QoS{1});
-  objects_sub_ = this->create_polling_subscriber<PredictedObjects>("~/input/objects", rclcpp::QoS{1});
+  objects_sub_ =
+    this->create_polling_subscriber<PredictedObjects>("~/input/objects", rclcpp::QoS{1});
 
   // planning_factor subscribers
   std::vector<std::string> stop_deviation_modules_list =
@@ -247,14 +250,11 @@ void ControlEvaluatorNode::getRouteData()
   // route
   {
     const auto msg = route_subscriber_->take_data();
-    // Apply only when a newer message arrives (the wrapper's polling subscriber re-returns the
-    // cached latched message every call; guard on the stamp to preserve apply-once semantics).
-    if (msg && last_applied_route_stamp_ != rclcpp::Time(msg->header.stamp)) {
+    if (msg) {
       if (msg->segments.empty()) {
         RCLCPP_ERROR(get_logger(), "input route is empty. ignored");
       } else {
         route_handler_.setRoute(*msg);
-        last_applied_route_stamp_ = rclcpp::Time(msg->header.stamp);
       }
     }
   }
@@ -262,9 +262,8 @@ void ControlEvaluatorNode::getRouteData()
   // map
   {
     const auto msg = vector_map_subscriber_->take_data();
-    if (msg && last_applied_map_stamp_ != rclcpp::Time(msg->header.stamp)) {
+    if (msg) {
       route_handler_.setMap(*msg);
-      last_applied_map_stamp_ = rclcpp::Time(msg->header.stamp);
     }
   }
 }
@@ -563,8 +562,7 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 
 void ControlEvaluatorNode::AddStopDeviationMetricMsg()
 {
-  const auto get_min_distance_signed =
-    [](const auto & planning_factors) -> std::optional<double> {
+  const auto get_min_distance_signed = [](const auto & planning_factors) -> std::optional<double> {
     std::optional<double> min_distance = std::nullopt;
     for (const auto & factor : planning_factors->factors) {
       if (factor.behavior == PlanningFactor::STOP) {

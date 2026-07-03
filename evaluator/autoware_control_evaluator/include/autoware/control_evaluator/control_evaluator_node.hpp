@@ -101,8 +101,10 @@ private:
   AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry) odometry_sub_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(AccelWithCovarianceStamped) accel_sub_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory) traj_sub_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletRoute) route_subscriber_;
-  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletMapBin) vector_map_subscriber_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletRoute, autoware::agnocast_wrapper::polling_policy::Newest)
+  route_subscriber_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(LaneletMapBin, autoware::agnocast_wrapper::polling_policy::Newest)
+  vector_map_subscriber_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(PathWithLaneId) behavior_path_subscriber_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(SteeringReport) steering_sub_;
   AUTOWARE_POLLING_SUBSCRIBER_PTR(PredictedObjects) objects_sub_;
@@ -117,12 +119,6 @@ private:
 
   // update Route Handler
   void getRouteData();
-  // Last applied stamps for the latched route/map polling subscribers. The agnocast wrapper's
-  // polling subscriber only offers the "Latest" policy (re-returns the cached message every call),
-  // whereas the original code used the "Newest" policy (apply once per new message). Guarding on
-  // these stamps reproduces the apply-once behavior and avoids re-processing the same map/route.
-  std::optional<rclcpp::Time> last_applied_route_stamp_{std::nullopt};
-  std::optional<rclcpp::Time> last_applied_map_stamp_{std::nullopt};
 
   // Parameters
   bool output_metrics_;
