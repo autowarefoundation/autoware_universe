@@ -13,6 +13,7 @@
     <remap from="~/system/driving_mode/active" to="/system/driving_mode/active"/>
     <remap from="~/system/driving_mode/stable" to="/system/driving_mode/stable"/>
     <remap from="~/system/driving_mode/continuable" to="/system/driving_mode/continuable"/>
+    <remap from="~/system/driving_mode/sync" to="/system/driving_mode/sync"/>
     <remap from="~/system/driving_mode/mrm_state" to="/system/driving_mode/mrm_state"/>
     <remap from="~/trajectory/source/status" to="/control/trajectory_gate/source/status"/>
     <remap from="~/trajectory/source/change" to="/control/trajectory_gate/source/change"/>

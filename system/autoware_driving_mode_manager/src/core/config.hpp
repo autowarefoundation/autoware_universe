@@ -36,6 +36,7 @@ public:
     uint16_t priority) override;
   void define_trajectory_source(const TrajectorySource & source) override;
   void define_command_source(const CommandSource & source) override;
+  void set_ignore_flags(const AutowareMode & autoware_mode, const Flags & flags) override;
   void bind_name(const AutowareMode & autoware_mode, const std::string & name) override;
   void bind_gates(const AutowareMode & autoware_mode, const Gates & gates) override;
 
@@ -45,6 +46,7 @@ public:
   std::string name(const AutowareMode & autoware_mode) const;
   bool exists(const AutowareMode & autoware_mode) const;
   Gates gates(const AutowareMode & autoware_mode) const;
+  Flags ignore_flags(const AutowareMode & autoware_mode) const;
   AutowareMode to_autoware_mode(const OperationMode & operation_mode) const;
   std::optional<AutowareMode> to_autoware_mode(const MrmBehavior & mrm_behavior) const;
   OperationMode to_operation_mode(const AutowareMode & autoware_mode) const;
@@ -59,6 +61,7 @@ private:
     std::optional<OperationMode> operation_mode;
     std::optional<MrmBehavior> mrm_behavior;
     Gates gates;
+    Flags ignore_flags = {false, false, false, false};
   };
   std::unordered_map<AutowareMode, AutowareModeConfig> autoware_modes_;
   std::unordered_set<TrajectorySource> trajectory_sources_;

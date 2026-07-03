@@ -33,23 +33,24 @@ public:
   virtual void init(MainLogic * logic) = 0;
 
   virtual bool get_enable_debug_topics() const = 0;
-
   virtual rclcpp::Time now() const = 0;
+
   virtual void change_trajectory_source(const TrajectorySource & source) = 0;
   virtual void change_command_source(const CommandSource & source) = 0;
   virtual void change_command_filter(const CommandFilter & filter) = 0;
   virtual void change_platform_mode(const PlatformMode & mode) = 0;
-  virtual void publish_operation_mode(const OperationModeState & state) const = 0;
-  virtual void publish_mrm_state(const MrmState & state) const = 0;
-  virtual void publish_driving_mode_request(const ModeRequest & request) const = 0;
-  virtual void publish_driving_mode_info(const ModeInfo & info) const = 0;
-  virtual void publish_debug_flags(const DebugFlags & flags) const = 0;
-  virtual void publish_debug_request(const RequestModes & request) const = 0;
+  virtual void publish_operation_mode(const OperationModeState & state) = 0;
+  virtual void publish_mrm_state(const MrmState & state) = 0;
+  virtual void publish_driving_mode_request(const ModeRequest & request) = 0;
+  virtual void publish_driving_mode_sync(const AutowareModeSet & modes) = 0;
+  virtual void publish_driving_mode_info(const ModeInfo & info) = 0;
+  virtual void publish_debug_flags(const DebugFlags & flags) = 0;
+  virtual void publish_debug_request(const RequestModes & request) = 0;
 
-  virtual void log_info(const std::string & message) const = 0;
-  virtual void log_warn(const std::string & message) const = 0;
-  virtual void log_error(const std::string & message) const = 0;
-  virtual void log_debug(const std::string & message) const = 0;
+  virtual void log_info(const std::string & message) = 0;
+  virtual void log_warn(const std::string & message) = 0;
+  virtual void log_error(const std::string & message) = 0;
+  virtual void log_debug(const std::string & message) = 0;
 };
 
 class MainLogic
@@ -66,6 +67,7 @@ public:
   virtual void on_active_flag(const AutowareMode & mode, bool flag) = 0;
   virtual void on_stable_flag(const AutowareMode & mode, bool flag) = 0;
   virtual void on_continuable_flag(const AutowareMode & mode, bool flag) = 0;
+  virtual void on_driving_mode_sync(const AutowareMode & mode, bool flag) = 0;
   virtual void on_mrm_state(const AutowareMode & mode, const MrmState::State & state) = 0;
   virtual ServiceResponse change_operation_mode(const OperationMode & operation_mode) = 0;
   virtual ServiceResponse change_autoware_control(const AutowareControl & autoware_control) = 0;

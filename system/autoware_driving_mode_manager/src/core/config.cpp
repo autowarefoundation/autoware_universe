@@ -59,6 +59,14 @@ void DrivingModeConfig::define_command_source(const CommandSource & source)
   command_sources_.insert(source);
 }
 
+void DrivingModeConfig::set_ignore_flags(const AutowareMode & autoware_mode, const Flags & flags)
+{
+  if (autoware_modes_.count(autoware_mode) == 0) {
+    throw invalid_argument_with_id("unknown autoware mode", autoware_mode);
+  }
+  autoware_modes_.at(autoware_mode).ignore_flags = flags;
+}
+
 void DrivingModeConfig::bind_name(const AutowareMode & autoware_mode, const std::string & name)
 {
   if (autoware_modes_.count(autoware_mode) == 0) {
@@ -107,6 +115,11 @@ std::string DrivingModeConfig::name(const AutowareMode & autoware_mode) const
 DrivingModeConfig::Gates DrivingModeConfig::gates(const AutowareMode & autoware_mode) const
 {
   return autoware_modes_.at(autoware_mode).gates;
+}
+
+DrivingModeConfig::Flags DrivingModeConfig::ignore_flags(const AutowareMode & autoware_mode) const
+{
+  return autoware_modes_.at(autoware_mode).ignore_flags;
 }
 
 AutowareMode DrivingModeConfig::to_autoware_mode(const OperationMode & operation_mode) const

@@ -88,6 +88,14 @@ void DefaultPlugin::setup(DrivingModeConfigInterface & config) const
   config.define_command_source(RemoteCommand);
   config.define_command_source(EmergencyStopCommand);
 
+  config.set_ignore_flags(StopMode, {false, true, true, false});
+  config.set_ignore_flags(AutonomousMode, {false, true, false, false});
+  config.set_ignore_flags(LocalMode, {false, true, true, false});
+  config.set_ignore_flags(RemoteMode, {false, true, true, false});
+  config.set_ignore_flags(EmergencyStop, {false, false, true, false});
+  config.set_ignore_flags(ComfortableStop, {false, false, true, false});
+
+  config.bind_name(AutonomousMode, "autonomous");
   config.bind_name(EmergencyStop, "emergency_stop");
   config.bind_name(ComfortableStop, "comfortable_stop");
 

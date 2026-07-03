@@ -56,17 +56,18 @@ public:
   void change_command_source(const CommandSource & source) override;
   void change_command_filter(const CommandFilter & filter) override;
   void change_platform_mode(const PlatformMode & mode) override;
-  void publish_operation_mode(const OperationModeState & state) const override;
-  void publish_mrm_state(const MrmState & state) const override;
-  void publish_driving_mode_request(const ModeRequest & request) const override;
-  void publish_driving_mode_info(const ModeInfo & info) const override;
-  void publish_debug_flags(const DebugFlags & flags) const override;
-  void publish_debug_request(const RequestModes & request) const override;
+  void publish_operation_mode(const OperationModeState & state) override;
+  void publish_mrm_state(const MrmState & state) override;
+  void publish_driving_mode_request(const ModeRequest & request) override;
+  void publish_driving_mode_sync(const AutowareModeSet & modes) override;
+  void publish_driving_mode_info(const ModeInfo & info) override;
+  void publish_debug_flags(const DebugFlags & flags) override;
+  void publish_debug_request(const RequestModes & request) override;
 
-  void log_info(const std::string & message) const override;
-  void log_warn(const std::string & message) const override;
-  void log_error(const std::string & message) const override;
-  void log_debug(const std::string & message) const override;
+  void log_info(const std::string & message) override;
+  void log_warn(const std::string & message) override;
+  void log_error(const std::string & message) override;
+  void log_debug(const std::string & message) override;
 
 private:
   using TrajectorySourceSrv = tier4_system_msgs::srv::ChangeTrajectorySource;
@@ -106,6 +107,7 @@ private:
   rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_active_;
   rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_stable_;
   rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_continuable_;
+  rclcpp::Subscription<DrivingModeFlagMsg>::SharedPtr sub_driving_mode_sync_;
   rclcpp::Subscription<DrivingModeMrmStateMsg>::SharedPtr sub_driving_mode_mrm_state_;
   rclcpp::Subscription<TrajectorySourceMsg>::SharedPtr sub_trajectory_source_;
   rclcpp::Subscription<CommandSourceMsg>::SharedPtr sub_command_source_;
@@ -115,6 +117,7 @@ private:
   rclcpp::Service<ChangeAutowareControlSrv>::SharedPtr srv_autoware_control_;
   rclcpp::Service<ChangeMrmRequestSrv>::SharedPtr srv_mrm_request_;
   rclcpp::Publisher<DrivingModeRequestMsg>::SharedPtr pub_driving_mode_request_;
+  rclcpp::Publisher<DrivingModeFlagMsg>::SharedPtr pub_driving_mode_sync_;
   rclcpp::Publisher<DrivingModeInfoMsg>::SharedPtr pub_driving_mode_info_;
   rclcpp::Publisher<DebugModeFlagsMsg>::SharedPtr pub_debug_mode_flag_;
   rclcpp::Publisher<DebugModeRequestMsg>::SharedPtr pub_debug_mode_request_;
@@ -123,6 +126,7 @@ private:
   void on_driving_mode_active(const DrivingModeFlagMsg & msg);
   void on_driving_mode_stable(const DrivingModeFlagMsg & msg);
   void on_driving_mode_continuable(const DrivingModeFlagMsg & msg);
+  void on_driving_mode_sync(const DrivingModeFlagMsg & msg);
   void on_driving_mode_mrm_state(const DrivingModeMrmStateMsg & msg);
   void on_trajectory_source(const TrajectorySourceMsg & msg);
   void on_command_source(const CommandSourceMsg & msg);

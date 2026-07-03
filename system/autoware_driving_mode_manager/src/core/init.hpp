@@ -44,6 +44,7 @@ public:
   void on_active_flag(const AutowareMode & mode, bool flag) override;
   void on_stable_flag(const AutowareMode & mode, bool flag) override;
   void on_continuable_flag(const AutowareMode & mode, bool flag) override;
+  void on_driving_mode_sync(const AutowareMode & mode, bool flag) override;
   void on_mrm_state(const AutowareMode & mode, const MrmState::State & state) override;
   ServiceResponse change_operation_mode(const OperationMode & operation_mode) override;
   ServiceResponse change_autoware_control(const AutowareControl & autoware_control) override;
