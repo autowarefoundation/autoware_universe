@@ -131,6 +131,30 @@ TEST(ColorClassifierCoreTest, OutOfBandImageIsUnknown)
   EXPECT_EQ(element_at(result.signals, 0).confidence, 0.0f);
 }
 
+// Ambiguous evidence -- strong but split between two colors -- yields UNKNOWN
+// rather than an arbitrary pick. This pins the "strict dominance" design: a color
+// wins only when its ratio strictly beats BOTH others, so a tie falls through to
+// UNKNOWN. Distinct from OutOfBandImageIsUnknown, where there is no evidence at
+// all; here each half is individually a confident match (see ClassifiesByHsvBand).
+TEST(ColorClassifierCoreTest, AmbiguousEvidenceIsUnknown)
+{
+  // Arrange -- half green / half red. Equal-sized blocks keep the green and red
+  // pixel counts symmetric through the mirror-symmetric erode/dilate, so
+  // green_ratio == red_ratio exactly and neither strictly dominates.
+  tl::ColorClassifierCore core;
+  cv::Mat ambiguous_image;
+  cv::hconcat(green_image, red_image, ambiguous_image);
+  const std::vector<cv::Mat> images{ambiguous_image};
+
+  // Act
+  const auto result = core.classify(images);
+
+  // Assert
+  ASSERT_TRUE(result.success);
+  ASSERT_EQ(result.signals.signals.size(), 1u);
+  EXPECT_EQ(element_at(result.signals, 0).color, TrafficLightElement::UNKNOWN);
+}
+
 // A matched color below the saturation pixel count reports confidence strictly
 // inside (0, 1) -- enough to confirm a match scores positive without yet hitting
 // the clamp (the clamp itself is covered by SaturatedConfidenceClampsToOne).
