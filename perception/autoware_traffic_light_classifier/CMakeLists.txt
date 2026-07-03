@@ -142,11 +142,20 @@ if(BUILD_TESTING)
     ${OpenCV_LIBRARIES}
   )
 
-  # ColorClassifier unit tests (ROS-isolated: the classifier currently needs a node).
-  ament_add_ros_isolated_gtest(test_color_classifier
+  # ROS-free unit tests for the color classification core (ColorClassifierCore).
+  ament_auto_add_gtest(test_color_classifier
     test/test_color_classifier.cpp
   )
   target_link_libraries(test_color_classifier
+    ${PROJECT_NAME}
+    ${OpenCV_LIBRARIES}
+  )
+
+  # ColorClassifier ROS adapter tests (the size guard needs the node's logger).
+  ament_add_ros_isolated_gtest(test_color_classifier_adapter
+    test/test_color_classifier_adapter.cpp
+  )
+  target_link_libraries(test_color_classifier_adapter
     ${PROJECT_NAME}
     ${OpenCV_LIBRARIES}
   )
