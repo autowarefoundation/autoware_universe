@@ -20,13 +20,6 @@
           "type": "string",
           "default": "longitudinal_scale_factor",
           "description": "Lanelet2 polygon attribute name for per-area longitudinal scale factor override"
-        },
-        "default_output_pose_covariance": {
-          "type": "array",
-          "items": { "type": "number" },
-          "minItems": 36,
-          "maxItems": 36,
-          "description": "Default 6x6 pose covariance (row-major, 36 elements) in body frame, used when no environment-specific covariance is defined"
         }
       },
       "patternProperties": {

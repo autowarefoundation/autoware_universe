@@ -105,15 +105,6 @@ void EnvironmentAdaptor::load_classifier_params()
 
 void EnvironmentAdaptor::load_covariance_params()
 {
-  if (try_read_covariance_param(
-        "default_output_pose_covariance", covariance_param_.default_covariance)) {
-    RCLCPP_INFO(this->get_logger(), "Loaded default_output_pose_covariance");
-  } else {
-    RCLCPP_WARN(
-      this->get_logger(),
-      "default_output_pose_covariance is not available or invalid (expected 36-element array)");
-  }
-
   const auto param_names = this->list_parameters({}, 0);
   const std::string prefix = "environment_";
   const std::string suffix = "_output_pose_covariance";
@@ -173,17 +164,17 @@ void EnvironmentAdaptor::ensure_covariance_params_loaded()
   }
 
   load_covariance_params();
-  covariance_params_ready_ = !is_covariance_all_zero(covariance_param_.default_covariance) ||
-                             !covariance_param_.environment_covariance_map.empty();
+  covariance_params_ready_ = true;
 }
 
-std::array<double, 36> EnvironmentAdaptor::get_body_covariance_for_env_id(int32_t env_id) const
+std::optional<std::array<double, 36>> EnvironmentAdaptor::get_body_covariance_for_env_id(
+  int32_t env_id) const
 {
   const auto it = covariance_param_.environment_covariance_map.find(env_id);
   if (it != covariance_param_.environment_covariance_map.end()) {
     return it->second;
   }
-  return covariance_param_.default_covariance;
+  return std::nullopt;
 }
 
 void EnvironmentAdaptor::on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
@@ -213,22 +204,14 @@ void EnvironmentAdaptor::on_pose(
     }
   }
 
-  auto body_cov = get_body_covariance_for_env_id(classification.environment_id);
-  if (is_covariance_all_zero(body_cov)) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000,
-      "Configured pose covariance is unavailable; passing through input covariance");
-    for (size_t i = 0; i < 36; ++i) {
-      body_cov[i] = msg->pose.covariance[i];
-    }
-  }
-
-  const auto & q_msg = msg->pose.pose.orientation;
-  const Eigen::Quaterniond q(q_msg.w, q_msg.x, q_msg.y, q_msg.z);
-  const auto map_cov = rotate_covariance(body_cov, q.normalized().toRotationMatrix());
-
   auto out = *msg;
-  for (size_t i = 0; i < 36; ++i) out.pose.covariance[i] = map_cov[i];
+  const auto body_cov = get_body_covariance_for_env_id(classification.environment_id);
+  if (body_cov) {
+    const auto & q_msg = msg->pose.pose.orientation;
+    const Eigen::Quaterniond q(q_msg.w, q_msg.x, q_msg.y, q_msg.z);
+    const auto map_cov = rotate_covariance(body_cov.value(), q.normalized().toRotationMatrix());
+    for (size_t i = 0; i < 36; ++i) out.pose.covariance[i] = map_cov[i];
+  }
   pub_pose_->publish(out);
 
   autoware_internal_debug_msgs::msg::Int32Stamped env_msg;

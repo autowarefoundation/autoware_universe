@@ -61,7 +61,7 @@ The polygon `subtype` attribute is mapped to an `environment_id` via `area_subty
 Configured covariance matrices are 6×6 row-major arrays (36 elements) for `(x, y, z, roll, pitch, yaw)`.
 They are stored in the body frame and rotated to the map frame before publishing.
 
-If no valid covariance is configured (all zeros), the input pose covariance is passed through unchanged.
+If no `environment_<id>_output_pose_covariance` is configured for the classified environment ID, the input pose covariance is passed through unchanged.
 
 ### Flowcharts
 
@@ -180,7 +180,7 @@ If the Lanelet2 map has not been received yet, classification falls back to `def
 
 ### What happens if covariance parameters are missing?
 
-If both the environment-specific and default covariance arrays are all zeros, the node passes through the input pose covariance unchanged and logs a throttled warning.
+If no `environment_<id>_output_pose_covariance` is configured for the classified environment ID, the node passes through the input pose covariance unchanged.
 
 ### Can this package be used with `autoware_pose_covariance_modifier`?
 

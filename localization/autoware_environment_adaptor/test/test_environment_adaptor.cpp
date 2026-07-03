@@ -71,7 +71,6 @@ static rclcpp::NodeOptions base_options()
     .append_parameter_override("default_environment_id", 0)
     .append_parameter_override("default_longitudinal_scale_factor", 1.0)
     .append_parameter_override("area_subtype_uniform_road.environment_id", 1)
-    .append_parameter_override("default_output_pose_covariance", diag_cov(1.0))
     .append_parameter_override("environment_1_output_pose_covariance", diag_cov(2.0));
 }
 
@@ -216,19 +215,33 @@ TEST_F(EnvironmentAdaptorTest, test_pose_passthrough_uses_input_covariance_when_
 TEST_F(EnvironmentAdaptorTest, test_pose_map_not_ready)
 {
   create_node(base_options());
-  helper_->publish_pose(0.0, 0.0);
+
+  std::array<double, 36> input_cov{};
+  input_cov[0] = 0.5;
+  input_cov[7] = 0.5;
+  input_cov[14] = 0.5;
+
+  helper_->publish_pose(0.0, 0.0, input_cov);
   ASSERT_TRUE(spin_until_covariance());
-  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 1.0);
+  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 0.5);
+  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[7], 0.5);
 }
 
 TEST_F(EnvironmentAdaptorTest, test_pose_point_outside_polygon)
 {
   create_node(base_options());
+
+  std::array<double, 36> input_cov{};
+  input_cov[0] = 0.5;
+  input_cov[7] = 0.5;
+  input_cov[14] = 0.5;
+
   helper_->publish_map(make_map_bin("uniform_road"));
   std::this_thread::sleep_for(100ms);
-  helper_->publish_pose(10.0, 10.0);
+  helper_->publish_pose(10.0, 10.0, input_cov);
   ASSERT_TRUE(spin_until_covariance());
-  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 1.0);
+  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 0.5);
+  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[7], 0.5);
 }
 
 TEST_F(EnvironmentAdaptorTest, test_pose_point_outside_polygon_env_in_map)
@@ -257,21 +270,28 @@ TEST_F(EnvironmentAdaptorTest, test_pose_point_inside_polygon_known_subtype)
 TEST_F(EnvironmentAdaptorTest, test_pose_point_inside_polygon_unknown_subtype)
 {
   create_node(base_options());
+
+  std::array<double, 36> input_cov{};
+  input_cov[0] = 0.5;
+  input_cov[7] = 0.5;
+  input_cov[14] = 0.5;
+
   helper_->publish_map(make_map_bin("unknown_subtype"));
   std::this_thread::sleep_for(100ms);
-  helper_->publish_pose(0.0, 0.0);
+  helper_->publish_pose(0.0, 0.0, input_cov);
   ASSERT_TRUE(spin_until_covariance());
-  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 1.0);
+  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 0.5);
+  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[7], 0.5);
 }
 
-TEST_F(EnvironmentAdaptorTest, test_pose_invalid_default_covariance_size_passthrough)
+TEST_F(EnvironmentAdaptorTest, test_pose_invalid_env_covariance_size_fallback_to_input)
 {
-  auto opts =
-    rclcpp::NodeOptions()
-      .automatically_declare_parameters_from_overrides(true)
-      .allow_undeclared_parameters(true)
-      .append_parameter_override("default_environment_id", 0)
-      .append_parameter_override("default_output_pose_covariance", std::vector<double>{1.0, 2.0});
+  auto opts = rclcpp::NodeOptions()
+                .automatically_declare_parameters_from_overrides(true)
+                .append_parameter_override("default_environment_id", 0)
+                .append_parameter_override("area_subtype_uniform_road.environment_id", 1)
+                .append_parameter_override(
+                  "environment_1_output_pose_covariance", std::vector<double>{9.9, 9.9});
   create_node(opts);
 
   std::array<double, 36> input_cov{};
@@ -279,28 +299,12 @@ TEST_F(EnvironmentAdaptorTest, test_pose_invalid_default_covariance_size_passthr
   input_cov[7] = 0.5;
   input_cov[14] = 0.5;
 
+  helper_->publish_map(make_map_bin("uniform_road"));
+  std::this_thread::sleep_for(100ms);
   helper_->publish_pose(0.0, 0.0, input_cov);
   ASSERT_TRUE(spin_until_covariance());
   EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 0.5);
   EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[7], 0.5);
-}
-
-TEST_F(EnvironmentAdaptorTest, test_pose_invalid_env_covariance_size_fallback_to_default)
-{
-  auto opts = rclcpp::NodeOptions()
-                .automatically_declare_parameters_from_overrides(true)
-                .append_parameter_override("default_environment_id", 0)
-                .append_parameter_override("area_subtype_uniform_road.environment_id", 1)
-                .append_parameter_override("default_output_pose_covariance", diag_cov(1.0))
-                .append_parameter_override(
-                  "environment_1_output_pose_covariance", std::vector<double>{9.9, 9.9});
-  create_node(opts);
-
-  helper_->publish_map(make_map_bin("uniform_road"));
-  std::this_thread::sleep_for(100ms);
-  helper_->publish_pose(0.0, 0.0);
-  ASSERT_TRUE(spin_until_covariance());
-  EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 1.0);
 }
 
 // --- Twist velocity scale tests (from velocity_scale_selector) ---
@@ -364,8 +368,7 @@ TEST_F(EnvironmentAdaptorTest, test_twist_map_attribute_without_param_fallback)
                 .automatically_declare_parameters_from_overrides(true)
                 .append_parameter_override("default_environment_id", 0)
                 .append_parameter_override("default_longitudinal_scale_factor", 1.0)
-                .append_parameter_override("area_subtype_uniform_road.environment_id", 1)
-                .append_parameter_override("default_output_pose_covariance", diag_cov(1.0));
+                .append_parameter_override("area_subtype_uniform_road.environment_id", 1);
   create_node(opts);
 
   helper_->publish_map(make_map_bin("uniform_road", 1.05));

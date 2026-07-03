@@ -15,14 +15,8 @@
       environment_id: 2
 
     # --- pose covariance ---
-    # Covariance matrix (6x6 row-major, 36 elements) applied when no environment match is found.
-    default_output_pose_covariance:
-      [0.0225, 0.0,   0.0,   0.0,      0.0,      0.0,
-       0.0,   0.0225, 0.0,   0.0,      0.0,      0.0,
-       0.0,   0.0,   0.0225, 0.0,      0.0,      0.0,
-       0.0,   0.0,   0.0,   0.000625, 0.0,      0.0,
-       0.0,   0.0,   0.0,   0.0,      0.000625, 0.0,
-       0.0,   0.0,   0.0,   0.0,      0.0,      0.000625]
+    # When no environment_<id>_output_pose_covariance is defined for the classified
+    # environment_id, the input pose covariance is passed through unchanged.
 
     # Covariance for environment_id=1 (uniform road / tunnel)
     environment_1_output_pose_covariance:

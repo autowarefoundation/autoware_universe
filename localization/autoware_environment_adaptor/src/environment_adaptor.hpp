@@ -28,6 +28,7 @@
 #include <array>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 
 namespace autoware::environment_adaptor
@@ -47,12 +48,11 @@ private:
   void load_covariance_params();
   void ensure_covariance_params_loaded();
   bool try_read_covariance_param(const std::string & name, std::array<double, 36> & dest);
-  std::array<double, 36> get_body_covariance_for_env_id(int32_t env_id) const;
+  std::optional<std::array<double, 36>> get_body_covariance_for_env_id(int32_t env_id) const;
 
   struct CovarianceParam
   {
     std::unordered_map<int32_t, std::array<double, 36>> environment_covariance_map;
-    std::array<double, 36> default_covariance{};
   } covariance_param_;
   bool covariance_params_ready_{false};
 

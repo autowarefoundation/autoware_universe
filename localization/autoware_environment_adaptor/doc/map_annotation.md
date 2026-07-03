@@ -68,8 +68,9 @@ The `<subtype_name>` must match the `subtype` attribute on the Lanelet2 polygon.
 
 ```yaml
 environment_<id>_output_pose_covariance: [36 elements, 6x6 row-major]
-default_output_pose_covariance: [36 elements, 6x6 row-major]
 ```
+
+When no `environment_<id>_output_pose_covariance` is defined for the classified environment ID, the input pose covariance is passed through unchanged.
 
 Covariance is defined in the **body frame** (x: forward, y: left, z: up).
 The node rotates the position block (top-left 3×3) into the map frame using the pose orientation.
