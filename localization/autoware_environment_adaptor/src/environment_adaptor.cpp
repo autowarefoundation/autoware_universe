@@ -200,8 +200,7 @@ void EnvironmentAdaptor::on_pose(
   }
 
   if (warn == ClassificationWarn::MapNotReady) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
   }
 
   auto out = *msg;
@@ -231,8 +230,7 @@ void EnvironmentAdaptor::on_twist(
       this->get_logger(), *this->get_clock(), 5000,
       "Pose not received yet; using default longitudinal_scale_factor");
   } else if (warn == ClassificationWarn::MapNotReady) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, "Lanelet map not ready yet");
   }
 
   auto out = *msg;
