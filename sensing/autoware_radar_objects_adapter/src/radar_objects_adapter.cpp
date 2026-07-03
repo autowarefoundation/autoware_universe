@@ -202,7 +202,7 @@ void RadarObjectsAdapter::radar_cov_to_detection_acceleration_cov(
 }
 
 void RadarObjectsAdapter::objects_callback(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::RadarObjects) & objects_msg)
+  const autoware_sensing_msgs::msg::RadarObjects & objects_msg)
 {
   if (!valid_radar_info_) {
     RCLCPP_WARN_THROTTLE(
@@ -212,8 +212,8 @@ void RadarObjectsAdapter::objects_callback(
   }
 
   // publish both detections and tracks
-  this->parse_as_detections(*objects_msg);
-  this->parse_as_tracks(*objects_msg);
+  this->parse_as_detections(objects_msg);
+  this->parse_as_tracks(objects_msg);
 }
 
 template <typename ObjectType>
@@ -368,9 +368,9 @@ void RadarObjectsAdapter::parse_as_tracks(
 }
 
 void RadarObjectsAdapter::radar_info_callback(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(autoware_sensing_msgs::msg::RadarInfo) & radar_info_msg)
+  const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg)
 {
-  for (const auto & field_info : radar_info_msg->object_fields_info) {
+  for (const auto & field_info : radar_info_msg.object_fields_info) {
     field_info_map_[field_info.field_name.data] = field_info;
   }
 
