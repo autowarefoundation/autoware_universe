@@ -13,17 +13,14 @@
 // limitations under the License.
 
 #include "environment_adaptor.hpp"
+#include "test_utils.hpp"
 
-#include <autoware/lanelet2_utils/conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 
 #include <gtest/gtest.h>
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/primitives/Polygon.h>
 
 #include <array>
 #include <chrono>
@@ -34,35 +31,8 @@
 #include <vector>
 
 using namespace std::chrono_literals;
-
-static autoware_map_msgs::msg::LaneletMapBin make_map_bin(
-  const std::string & subtype,
-  const std::optional<double> map_longitudinal_scale_factor = std::nullopt)
-{
-  auto map = std::make_shared<lanelet::LaneletMap>();
-  lanelet::Polygon3d poly(
-    lanelet::utils::getId(), {
-                               lanelet::Point3d(lanelet::utils::getId(), -1.0, -1.0, 0.0),
-                               lanelet::Point3d(lanelet::utils::getId(), 1.0, -1.0, 0.0),
-                               lanelet::Point3d(lanelet::utils::getId(), 1.0, 1.0, 0.0),
-                               lanelet::Point3d(lanelet::utils::getId(), -1.0, 1.0, 0.0),
-                             });
-  poly.setAttribute(lanelet::AttributeName::Type, "degenerate_area");
-  poly.setAttribute(lanelet::AttributeName::Subtype, subtype);
-  if (map_longitudinal_scale_factor.has_value()) {
-    poly.setAttribute(
-      "longitudinal_scale_factor", std::to_string(map_longitudinal_scale_factor.value()));
-  }
-  map->add(poly);
-  return autoware::experimental::lanelet2_utils::to_autoware_map_msgs(map);
-}
-
-static std::vector<double> diag_cov(double v)
-{
-  std::vector<double> c(36, 0.0);
-  for (int i = 0; i < 6; ++i) c[i * 6 + i] = v;
-  return c;
-}
+using autoware::environment_adaptor::test_utils::diag_cov;
+using autoware::environment_adaptor::test_utils::make_map_bin;
 
 static rclcpp::NodeOptions base_options()
 {

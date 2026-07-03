@@ -13,41 +13,16 @@
 // limitations under the License.
 
 #include "environment_classifier.hpp"
-
-#include <autoware/lanelet2_utils/conversion.hpp>
+#include "test_utils.hpp"
 
 #include <gtest/gtest.h>
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/primitives/Polygon.h>
 
-#include <memory>
-#include <optional>
 #include <string>
 
 namespace autoware::environment_adaptor
 {
 
-static autoware_map_msgs::msg::LaneletMapBin make_map_bin(
-  const std::string & subtype,
-  const std::optional<double> map_longitudinal_scale_factor = std::nullopt)
-{
-  auto map = std::make_shared<lanelet::LaneletMap>();
-  lanelet::Polygon3d poly(
-    lanelet::utils::getId(), {
-                               lanelet::Point3d(lanelet::utils::getId(), -1.0, -1.0, 0.0),
-                               lanelet::Point3d(lanelet::utils::getId(), 1.0, -1.0, 0.0),
-                               lanelet::Point3d(lanelet::utils::getId(), 1.0, 1.0, 0.0),
-                               lanelet::Point3d(lanelet::utils::getId(), -1.0, 1.0, 0.0),
-                             });
-  poly.setAttribute(lanelet::AttributeName::Type, "degenerate_area");
-  poly.setAttribute(lanelet::AttributeName::Subtype, subtype);
-  if (map_longitudinal_scale_factor.has_value()) {
-    poly.setAttribute(
-      "longitudinal_scale_factor", std::to_string(map_longitudinal_scale_factor.value()));
-  }
-  map->add(poly);
-  return autoware::experimental::lanelet2_utils::to_autoware_map_msgs(map);
-}
+using test_utils::make_map_bin;
 
 static EnvironmentClassifier::Param base_param()
 {

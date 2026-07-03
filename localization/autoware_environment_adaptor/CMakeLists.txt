@@ -35,6 +35,7 @@ if(BUILD_TESTING)
   )
   target_include_directories(test_environment_classifier PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/test
   )
   target_link_libraries(test_environment_classifier ${LIBRARY_NAME})
   ament_target_dependencies(test_environment_classifier
@@ -48,6 +49,7 @@ if(BUILD_TESTING)
   )
   target_include_directories(test_environment_adaptor PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/test
   )
   target_link_libraries(test_environment_adaptor ${LIBRARY_NAME})
   ament_target_dependencies(test_environment_adaptor
