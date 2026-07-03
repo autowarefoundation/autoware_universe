@@ -1,8 +1,10 @@
-# Autoware Trajectory Optimizer
+# Autoware Trajectory Processor
+
+## Autoware Trajectory Optimizer
 
 The `autoware_trajectory_optimizer` package generates smooth and feasible trajectories for autonomous vehicles using a plugin-based optimization pipeline. It takes candidate trajectories as input and applies a sequence of optimization plugins to produce smooth, drivable trajectories with proper velocity and acceleration profiles.
 
-## Features
+### Features
 
 - **Plugin-based architecture** - Modular optimization pipeline where each step is a separate plugin
 - **Multiple smoothing methods**:
@@ -58,13 +60,13 @@ Each plugin can be enabled/disabled at runtime via activation flags (e.g., `use_
 
 - **Temporal MPT vs spatial MPT**: `TrajectoryTemporalMPTOptimizer` is independent of `TrajectoryMPTOptimizer` (different solver, no corridor bounds). It can replace the entire post-`TrajectoryPointFixer` plugin chain (kinematic enforcer, QP/EB/spline smoothers, velocity optimizer, spatial MPT) with a single MPC step; see [docs/temporal_mpt_optimizer.md](docs/temporal_mpt_optimizer.md). It overwrites at most the first 81 points (8.0 s at 0.1 s spacing).
 
-## Design Specification
+### Design Specification
 
 For a detailed description of the optimizer's core assumptions, the constant-dt contract,
 how velocity and acceleration are derived from positions, plugin pipeline specification, and
 known limitations, see [docs/trajectory_optimizer_specification.md](docs/trajectory_optimizer_specification.md).
 
-## QP Smoother
+### QP Smoother
 
 The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory paths with advanced features:
 
@@ -82,7 +84,7 @@ The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory 
 - Usage examples
 - Performance characteristics
 
-## Dependencies
+### Dependencies
 
 - [acados](https://github.com/acados/acados) - Required to build the temporal MPT solver (`acados_interface_temporal`)
 - `autoware_motion_utils` - Trajectory manipulation utilities
@@ -92,19 +94,19 @@ The QP smoother uses quadratic programming (OSQP solver) to optimize trajectory 
 - `autoware_utils` - Common utilities (geometry, ROS helpers)
 - `autoware_vehicle_info_utils` - Vehicle information
 
-## Parameters
+### Parameters
 
-{{ json_to_markdown("planning/autoware_trajectory_optimizer/schema/trajectory_optimizer.schema.json") }}
+{{ json_to_markdown("planning/autoware_trajectory_processor/schema/trajectory_optimizer.schema.json") }}
 
 Parameters can be set via YAML configuration files in the `config/` directory.
 
-### Parameter Types
+#### Parameter Types
 
 1. **Plugin Loading** (`plugin_names`) - Array of plugin class names determining load order and execution sequence
 2. **Activation Flags** - Boolean flags for runtime enable/disable (e.g., `use_qp_smoother`, `use_temporal_mpt_optimizer`)
 3. **Plugin-Specific Parameters** - Namespaced parameters for each plugin (e.g., `trajectory_qp_smoother.weight_smoothness`)
 
-### Configuring Plugin Order
+#### Configuring Plugin Order
 
 To change plugin execution order, modify the `plugin_names` array in `config/trajectory_optimizer.param.yaml`:
 
@@ -117,7 +119,7 @@ plugin_names:
   - "autoware::trajectory_optimizer::plugin::TrajectoryPointFixer"
 ```
 
-#### CRITICAL: QP Smoother Ordering Constraint
+##### CRITICAL: QP Smoother Ordering Constraint
 
 The `TrajectoryQPSmoother` plugin **MUST run before** any plugins that resample or modify trajectory structure:
 
@@ -129,22 +131,23 @@ The `TrajectoryQPSmoother` plugin **MUST run before** any plugins that resample 
 The QP solver requires constant time intervals (Δt = 0.1s) between points. These plugins modify the time domain structure or add points, breaking the QP solver assumptions. If you need QP smoothing, it must appear first in the pipeline after `TrajectoryPointFixer`.
 
 Note: Plugin order changes require node restart. Runtime enable/disable is controlled by activation flags.
-# Autoware Trajectory Modifier
+
+## Autoware Trajectory Modifier
 
 The `autoware_trajectory_modifier` package provides a plugin-based architecture for post-processing trajectory points to improve trajectory quality and ensure vehicle safety. It takes candidate trajectories and applies various modification algorithms to enhance their feasibility and safety characteristics.
 
-## Features
+### Features
 
 - Plugin-based architecture for extensible trajectory modifications
 - Stop point fixing to prevent trajectory issues near stationary conditions
 - Obstacle detection and stopping to prevent collision
 - Configurable parameters to adjust modification behavior
 
-## Architecture
+### Architecture
 
 The trajectory modifier uses a plugin-based system where different modification algorithms can be implemented as plugins. Each plugin inherits from the `TrajectoryModifierPluginBase` class and implements the required interface.
 
-### Plugin Interface
+#### Plugin Interface
 
 All modifier plugins must inherit from `TrajectoryModifierPluginBase` and implement:
 
@@ -153,9 +156,9 @@ All modifier plugins must inherit from `TrajectoryModifierPluginBase` and implem
 - `update_params()` - Handle parameter updates
 - `is_trajectory_modification_required()` - Determine if modification is needed
 
-### Current Plugins
+#### Current Plugins
 
-#### Stop Point Fixer
+##### Stop Point Fixer
 
 The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is stationary or moving at very low speeds. It prevents problematic trajectory points that could cause planning issues by replacing the trajectory with a single stop point when either of two independently configurable conditions is met:
 
@@ -164,18 +167,18 @@ The Stop Point Fixer plugin addresses trajectory issues when the ego vehicle is 
 
 Both conditions are individually enabled or disabled via parameters, allowing fine-grained control over when the override is applied.
 
-#### Obstacle Stop
+##### Obstacle Stop
 
 The Obstacle Stop plugin serves as a deterministic safety shield operating independently of the generative model to:
 
 - **Enforce Longitudinal Safety**: Monitors the gap to dynamic and static obstacles to ensure a safe distance is maintained under all kinematic conditions.
 - **Ensure Definitive Stopping For Obstacles**: Guarantees zero-velocity set-points for stationary objects (e.g., traffic lights, stopped vehicles) to prevent "creeping" or oscillating behavior near obstacles.
 
-#### Velocity Modifier
+##### Velocity Modifier
 
 The Velocity Modifier plugins is responsible for ensuring the velocity profile is smooth and feasible, and adjusts the velocity profile if an anomaly is detected while respecting deceleration and jerk constraints.
 
-## Dependencies
+### Dependencies
 
 This package depends on the following packages:
 
@@ -185,18 +188,18 @@ This package depends on the following packages:
 - `autoware_trajectory`: Trajectory data structures and utilities
 - `autoware_utils`: Common utility functions
 
-## Input/Output
+### Input/Output
 
 - **Input**: `autoware_internal_planning_msgs::msg::CandidateTrajectories`
 - **Output**: Modified `autoware_internal_planning_msgs::msg::CandidateTrajectories` and selected `autoware_planning_msgs::msg::Trajectory`
 
-## Parameters
+### Parameters
 
-{{ json_to_markdown("planning/autoware_trajectory_modifier/schema/trajectory_modifier.schema.json") }}
+{{ json_to_markdown("planning/autoware_trajectory_processor/schema/trajectory_modifier.schema.json") }}
 
 Parameters can be set via YAML configuration files in the `config/` directory.
 
-## Adding New Modifier Plugins
+### Adding New Modifier Plugins
 
 To add a new modifier plugin:
 

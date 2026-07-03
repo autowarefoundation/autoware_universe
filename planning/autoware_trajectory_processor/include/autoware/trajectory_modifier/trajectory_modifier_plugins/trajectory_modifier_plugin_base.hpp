@@ -20,7 +20,7 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/input_data.hpp"
 
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
-#include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
+#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 

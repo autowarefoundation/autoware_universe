@@ -17,7 +17,7 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
-#include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
+#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>

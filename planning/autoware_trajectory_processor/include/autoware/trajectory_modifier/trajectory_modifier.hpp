@@ -19,7 +19,7 @@
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/input_data.hpp"
 #include "autoware/trajectory_modifier/trajectory_modifier_plugins/trajectory_modifier_plugin_base.hpp"
 
-#include <autoware_trajectory_modifier/trajectory_modifier_param.hpp>
+#include <autoware_trajectory_processor/trajectory_modifier_param.hpp>
 #include <autoware_utils_debug/debug_publisher.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <autoware_utils_rclcpp/polling_subscriber.hpp>

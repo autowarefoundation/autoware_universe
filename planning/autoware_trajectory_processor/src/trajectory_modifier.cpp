@@ -34,7 +34,7 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   param_listener_{
     std::make_unique<trajectory_modifier_params::ParamListener>(get_node_parameters_interface())},
   plugin_loader_(
-    "autoware_trajectory_modifier",
+    "autoware_trajectory_processor",
     "autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase"),
   context_{std::make_shared<TrajectoryModifierContext>(this)}
 {

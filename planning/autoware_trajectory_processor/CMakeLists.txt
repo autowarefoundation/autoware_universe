@@ -48,7 +48,7 @@ target_compile_options(autoware_trajectory_modifier PUBLIC
 )
 
 autoware_agnocast_wrapper_register_node(autoware_trajectory_modifier
-  PLUGIN "autoware::trajectory_::TrajectoryModifier"
+  PLUGIN "autoware::trajectory_modifier::TrajectoryModifier"
   EXECUTABLE autoware_trajectory_modifier_node
 )
 

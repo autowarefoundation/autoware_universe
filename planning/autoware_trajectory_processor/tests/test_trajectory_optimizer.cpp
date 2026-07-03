@@ -42,9 +42,3 @@ TEST_F(TrajectoryOptimizerUtilsTest, ValidatePoint)
   invalid_point.pose.position.x = std::nan("");
   ASSERT_FALSE(autoware::trajectory_optimizer::utils::validate_point(invalid_point));
 }
-
-int main(int argc, char ** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

@@ -184,7 +184,7 @@ def main():
     if not os.path.exists(args.dir):
         print(f"Error: Directory {args.dir} does not exist")
         print("Run the tests first to generate the CSV files:")
-        print("  colcon test --packages-select autoware_trajectory_optimizer")
+        print("  colcon test --packages-select autoware_trajectory_processor")
         return
 
     print(f"Loading trajectories from: {args.dir}")

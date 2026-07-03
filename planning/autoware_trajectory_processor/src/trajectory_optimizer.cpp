@@ -40,7 +40,7 @@ TrajectoryOptimizer::TrajectoryOptimizer(const rclcpp::NodeOptions & options)
 : Node("trajectory_optimizer", options),
   plugin_loader_(
     std::make_unique<pluginlib::ClassLoader<plugin::TrajectoryOptimizerPluginBase>>(
-      "autoware_trajectory_optimizer",
+      "autoware_trajectory_processor",
       "autoware::trajectory_optimizer::plugin::TrajectoryOptimizerPluginBase"))
 {
   debug_processing_time_detail_pub_ = create_publisher<autoware_utils_debug::ProcessingTimeDetail>(
