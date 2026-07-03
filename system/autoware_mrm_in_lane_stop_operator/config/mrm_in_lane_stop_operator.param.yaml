@@ -1,0 +1,14 @@
+/**:
+  ros__parameters:
+    # Names of the driving modes managed by this node.
+    # Each name must match the mode name registered in driving_mode_manager.
+    mode_names:
+      - in_lane_moderate_stop
+
+    # Timeout [ms] when calling relay control services.
+    service_timeout_ms: 100
+
+    # Per-mode parameters (one block per entry in mode_names).
+    in_lane_moderate_stop:
+      target_acceleration: -2.5  # [m/s^2]
+      target_jerk: -1.5          # [m/s^3]

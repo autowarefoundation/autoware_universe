@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_mrm_in_lane_stop_operator</name>
+  <version>0.1.0</version>
+  <description>MRM in-lane stop operator driven by driving_mode_manager request/info topics</description>
+  <maintainer email="tetsuhiro.kawaguchi@tier4.jp">Tetsuhiro Kawaguchi</maintainer>
+  <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>autoware_utils_rclcpp</depend>
+  <depend>nav_msgs</depend>
+  <depend>tier4_control_msgs</depend>
+  <depend>tier4_system_msgs</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
