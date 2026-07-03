@@ -13,17 +13,10 @@
 // limitations under the License.
 
 //
-// Unit tests for the ROS-free ColorClassifierCore.
+// Unit tests for ColorClassifierCore.
 //
-// The core is constructed directly from an HSVConfig and its classify() /
-// make_debug_image() are exercised over in-memory cv::Mat inputs -- no rclcpp,
-// no node, no parameters. (Earlier revisions drove this through the ROS
-// ColorClassifier adapter and a hosted node; the Act now talks to the core
-// directly, but the classification assertions are unchanged.)
-//
-// The adapter-only concerns (the images/signals size guard, logging, debug-image
-// publishing) live at other layers -- see test_color_classifier_adapter and
-// test_traffic_light_classifier_integration.
+// The core is constructed from an HSVConfig and its classify() and
+// make_debug_image() are exercised over in-memory cv::Mat inputs.
 //
 // Tests follow Arrange-Act-Assert.
 //
