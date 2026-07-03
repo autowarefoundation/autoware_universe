@@ -23,8 +23,33 @@ ament_auto_add_library(autoware_trajectory_optimizer_component SHARED
 autoware_agnocast_wrapper_register_node(autoware_trajectory_optimizer_component
   PLUGIN "autoware::trajectory_optimizer::TrajectoryOptimizer"
   EXECUTABLE autoware_trajectory_optimizer_node
-  ROS2_EXECUTOR SingleThreadedExecutor
-  AGNOCAST_EXECUTOR CallbackIsolatedAgnocastExecutor
+)
+
+generate_parameter_library(trajectory_modifier_param
+  param/trajectory_modifier_parameter_struct.yaml
+)
+
+ament_auto_add_library(autoware_trajectory_modifier_utils SHARED
+  src/trajectory_modifier_utils/utils.cpp
+  src/trajectory_modifier_utils/obstacle_stop_utils.cpp
+)
+
+ament_auto_add_library(autoware_trajectory_modifier SHARED
+  src/trajectory_modifier.cpp
+)
+
+target_link_libraries(autoware_trajectory_modifier
+  trajectory_modifier_param
+  autoware_trajectory_modifier_utils
+)
+
+target_compile_options(autoware_trajectory_modifier PUBLIC
+  -Wno-error=deprecated-declarations
+)
+
+autoware_agnocast_wrapper_register_node(autoware_trajectory_modifier
+  PLUGIN "autoware::trajectory_::TrajectoryModifier"
+  EXECUTABLE autoware_trajectory_modifier_node
 )
 
 ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
@@ -51,6 +76,20 @@ target_link_libraries(
   tf2_geometry_msgs::tf2_geometry_msgs
 )
 
+ament_auto_add_library(autoware_trajectory_modifier_plugins SHARED
+  src/trajectory_modifier_plugins/stop_point_fixer.cpp
+  src/trajectory_modifier_plugins/obstacle_stop.cpp
+  src/trajectory_modifier_plugins/velocity_modifier.cpp
+  src/trajectory_modifier_plugins/surround_obstacle_stop.cpp
+  src/trajectory_modifier_plugins/traffic_light_stop.cpp
+)
+
+target_link_libraries(autoware_trajectory_modifier_plugins
+  autoware_trajectory_modifier
+  autoware_trajectory_modifier_utils
+  trajectory_modifier_param
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
@@ -62,6 +101,9 @@ if(BUILD_TESTING)
   target_link_libraries(test_autoware_trajectory_optimizer
     autoware_trajectory_optimizer_component
     autoware_trajectory_optimizer_plugins
+    autoware_trajectory_modifier
+    autoware_trajectory_modifier_plugins
+    autoware_trajectory_modifier_utils
   )
 endif()
 
