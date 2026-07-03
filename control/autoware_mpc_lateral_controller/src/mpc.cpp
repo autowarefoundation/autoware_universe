@@ -288,11 +288,8 @@ void MPC::setReferenceTrajectory(
   const Trajectory & trajectory_msg, const TrajectoryFilteringParam & param,
   const Odometry & current_kinematics)
 {
-  bool trajectory_stamp_changed = false;
   if (m_use_temporal_trajectory) {
     const rclcpp::Time current_stamp(trajectory_msg.header.stamp);
-    trajectory_stamp_changed =
-      m_prev_trajectory_stamp.has_value() && current_stamp != *m_prev_trajectory_stamp;
     m_prev_trajectory_stamp = current_stamp;
   } else {
     m_prev_trajectory_stamp.reset();
@@ -314,21 +311,6 @@ void MPC::setReferenceTrajectory(
   MPCTrajectory mpc_traj_resampled;
   if (m_use_temporal_trajectory) {
     mpc_traj_resampled = mpc_traj_raw;
-    if (trajectory_stamp_changed && mpc_traj_resampled.size() >= 2) {
-      Pose spatial_nearest_pose;
-      size_t spatial_nearest_idx = 0;
-      double spatial_nearest_time = 0.0;
-      if (MPCUtils::calcNearestPoseInterp(
-            mpc_traj_resampled, current_kinematics.pose.pose, &spatial_nearest_pose,
-            &spatial_nearest_idx, &spatial_nearest_time, ego_nearest_dist_threshold,
-            ego_nearest_yaw_threshold)) {
-        // Planner trajectories restart time_from_start near t=0 on each update. Reuse the previous
-        // phase time and getData()'s narrow temporal window cannot observe ego near t~0.
-        m_prev_nearest_time = spatial_nearest_time;
-      } else {
-        m_prev_nearest_time.reset();
-      }
-    }
   } else {
     const auto [success_resample, resampled] = MPCUtils::resampleMPCTrajectoryByDistance(
       mpc_traj_raw, param.traj_resample_dist, nearest_seg_idx, ego_offset_to_segment);
@@ -447,6 +429,7 @@ std::pair<ResultWithReason, MPCData> MPC::getData(
       traj, current_pose, &observed_pose, &observed_index, &observed_time,
       ego_nearest_dist_threshold, ego_nearest_yaw_threshold, true, predicted_time - backward_window,
       predicted_time + forward_window);
+
     double fused_time = predicted_time;
     if (observed) {
       data.temporal_observed_time = observed_time;
@@ -606,7 +589,6 @@ std::pair<ResultWithReason, MPCTrajectory> MPC::resampleMPCTrajectoryByTime(
   for (double i = 0; i < static_cast<double>(m_param.prediction_horizon); ++i) {
     mpc_time_v.push_back(ts + i * prediction_dt);
   }
-
   if (!MPCUtils::linearInterpMPCTrajectory(input.relative_time, input, mpc_time_v, output)) {
     return {ResultWithReason{false, "mpc resample error"}, {}};
   }

@@ -290,11 +290,8 @@ private:
   /**
    * @brief set reference trajectory with received message
    * @param [in] msg trajectory message
-   * @param [in] current_kinematics current ego odometry used to reset temporal phase on replan
    */
-  void setTrajectory(
-    const autoware_planning_msgs::msg::Trajectory & msg,
-    const nav_msgs::msg::Odometry & current_kinematics);
+  void setTrajectory(const autoware_planning_msgs::msg::Trajectory & msg);
 
   bool isReady(const trajectory_follower::InputData & input_data) override;
 

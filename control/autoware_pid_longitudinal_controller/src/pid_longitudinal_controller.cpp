@@ -260,9 +260,7 @@ void PidLongitudinalController::setCurrentOperationMode(const OperationModeState
   m_current_operation_mode = msg;
 }
 
-void PidLongitudinalController::setTrajectory(
-  const autoware_planning_msgs::msg::Trajectory & msg,
-  const nav_msgs::msg::Odometry & current_kinematics)
+void PidLongitudinalController::setTrajectory(const autoware_planning_msgs::msg::Trajectory & msg)
 {
   if (!longitudinal_utils::isValidTrajectory(msg, m_use_temporal_trajectory)) {
     RCLCPP_ERROR_THROTTLE(logger_, *clock_, 3000, "received invalid trajectory. ignore.");
@@ -274,30 +272,14 @@ void PidLongitudinalController::setTrajectory(
     return;
   }
 
-  bool trajectory_stamp_changed = false;
   if (m_use_temporal_trajectory) {
     const rclcpp::Time current_stamp(msg.header.stamp);
-    trajectory_stamp_changed =
-      m_prev_trajectory_stamp.has_value() && current_stamp != *m_prev_trajectory_stamp;
     m_prev_trajectory_stamp = current_stamp;
   } else {
     m_prev_trajectory_stamp.reset();
   }
 
   m_trajectory = msg;
-
-  if (m_use_temporal_trajectory && trajectory_stamp_changed && msg.points.size() >= 2) {
-    const auto spatial_nearest_time = longitudinal_utils::estimateTrajectoryTimeFromPose(
-      msg.points, current_kinematics.pose.pose, m_ego_nearest_dist_threshold,
-      m_ego_nearest_yaw_threshold);
-    if (spatial_nearest_time.has_value()) {
-      // Planner trajectories restart time_from_start near t=0 on each update. Reuse the previous
-      // phase time and getControlData()'s narrow temporal window cannot observe ego near t~0.
-      m_prev_nearest_time = *spatial_nearest_time;
-    } else {
-      m_prev_nearest_time.reset();
-    }
-  }
 }
 
 rcl_interfaces::msg::SetParametersResult PidLongitudinalController::paramCallback(
@@ -453,7 +435,7 @@ trajectory_follower::LongitudinalOutput PidLongitudinalController::run(
   trajectory_follower::InputData const & input_data)
 {
   // set input data
-  setTrajectory(input_data.current_trajectory, input_data.current_odometry);
+  setTrajectory(input_data.current_trajectory);
   setKinematicState(input_data.current_odometry);
   setCurrentAcceleration(input_data.current_accel);
   setCurrentOperationMode(input_data.current_operation_mode);

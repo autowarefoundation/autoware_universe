@@ -261,49 +261,43 @@ std::optional<double> estimateTrajectoryTimeFromPose(
 
   const double min_time_sec = std::min(min_time_window_sec, max_time_window_sec);
   const double max_time_sec = std::max(min_time_window_sec, max_time_window_sec);
-  const bool use_bounded_time_window = min_time_sec > -std::numeric_limits<double>::infinity() ||
-                                       max_time_sec < std::numeric_limits<double>::infinity();
-
-  size_t nearest_index = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    points, pose, max_dist, max_yaw);
-
-  if (use_bounded_time_window) {
-    std::vector<size_t> candidates;
-    candidates.reserve(points.size());
-    for (size_t i = 0; i < points.size(); ++i) {
-      const double t = rclcpp::Duration(points.at(i).time_from_start).seconds();
-      if (min_time_sec <= t && t <= max_time_sec) {
-        candidates.push_back(i);
-      }
-    }
-    if (!candidates.empty()) {
-      const double self_yaw = tf2::getYaw(pose.orientation);
-      size_t best_relaxed_idx = candidates.front();
-      double best_relaxed_dist2 = std::numeric_limits<double>::max();
-      size_t best_strict_idx = candidates.front();
-      double best_strict_dist2 = std::numeric_limits<double>::max();
-      bool has_strict_candidate = false;
-      for (const auto idx : candidates) {
-        const double dx = points.at(idx).pose.position.x - pose.position.x;
-        const double dy = points.at(idx).pose.position.y - pose.position.y;
-        const double dist2 = dx * dx + dy * dy;
-        if (dist2 < best_relaxed_dist2) {
-          best_relaxed_dist2 = dist2;
-          best_relaxed_idx = idx;
-        }
-
-        const double yaw_error = std::fabs(
-          autoware_utils::normalize_radian(
-            self_yaw - tf2::getYaw(points.at(idx).pose.orientation)));
-        if (std::sqrt(dist2) <= max_dist && yaw_error <= max_yaw && dist2 < best_strict_dist2) {
-          best_strict_dist2 = dist2;
-          best_strict_idx = idx;
-          has_strict_candidate = true;
-        }
-      }
-      nearest_index = has_strict_candidate ? best_strict_idx : best_relaxed_idx;
+  std::vector<size_t> candidates;
+  candidates.reserve(points.size());
+  for (size_t i = 0; i < points.size(); ++i) {
+    const double t = rclcpp::Duration(points.at(i).time_from_start).seconds();
+    if (min_time_sec <= t && t <= max_time_sec) {
+      candidates.push_back(i);
     }
   }
+  if (candidates.empty()) {
+    return std::nullopt;
+  }
+
+  const double self_yaw = tf2::getYaw(pose.orientation);
+  size_t best_relaxed_idx = candidates.front();
+  double best_relaxed_dist2 = std::numeric_limits<double>::max();
+  size_t best_strict_idx = candidates.front();
+  double best_strict_dist2 = std::numeric_limits<double>::max();
+  bool has_strict_candidate = false;
+  for (const auto idx : candidates) {
+    const double dx = points.at(idx).pose.position.x - pose.position.x;
+    const double dy = points.at(idx).pose.position.y - pose.position.y;
+    const double dist2 = dx * dx + dy * dy;
+    if (dist2 < best_relaxed_dist2) {
+      best_relaxed_dist2 = dist2;
+      best_relaxed_idx = idx;
+    }
+
+    const double yaw_error = std::fabs(
+      autoware_utils::normalize_radian(self_yaw - tf2::getYaw(points.at(idx).pose.orientation)));
+    if (std::sqrt(dist2) <= max_dist && yaw_error <= max_yaw && dist2 < best_strict_dist2) {
+      best_strict_dist2 = dist2;
+      best_strict_idx = idx;
+      has_strict_candidate = true;
+    }
+  }
+
+  const size_t nearest_index = has_strict_candidate ? best_strict_idx : best_relaxed_idx;
   if (points.size() == 1) {
     return rclcpp::Duration(points.front().time_from_start).seconds();
   }
