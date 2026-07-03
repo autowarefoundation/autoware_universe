@@ -71,7 +71,7 @@ inline void check_weight_version(const std::string & json_path)
   }
 
   const int major_version = j["major_version"].get<int>();
-  if (major_version != autoware::diffusion_planner::constants::WEIGHT_MAJOR_VERSION) {
+  if (major_version < autoware::diffusion_planner::constants::WEIGHT_MINIMUM_VERSION) {
     throw std::runtime_error(
       "Unsupported major_version: " + std::to_string(major_version) + ". " + error_msg);
   }
