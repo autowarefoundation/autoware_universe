@@ -157,7 +157,6 @@ private:
   rcl_interfaces::msg::SetParametersResult parametersCallback(
     const std::vector<rclcpp::Parameter> & parameters);
 
-private:
   image_transport::Publisher image_pub_;
 
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
