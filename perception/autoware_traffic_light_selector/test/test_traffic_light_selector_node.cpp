@@ -17,10 +17,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
-#include <sensor_msgs/msg/region_of_interest.hpp>
-#include <tier4_perception_msgs/msg/detected_object_with_feature.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
-#include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
 #include <gtest/gtest.h>
@@ -28,14 +25,10 @@
 #include <chrono>
 #include <memory>
 #include <thread>
-#include <vector>
 
 using autoware::traffic_light::TrafficLightSelectorNode;
 using sensor_msgs::msg::CameraInfo;
-using sensor_msgs::msg::RegionOfInterest;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
-using tier4_perception_msgs::msg::DetectedObjectWithFeature;
-using tier4_perception_msgs::msg::TrafficLightRoi;
 using tier4_perception_msgs::msg::TrafficLightRoiArray;
 
 namespace
@@ -43,76 +36,6 @@ namespace
 // A single timestamp shared by every input so the ApproximateTime synchronizer fires.
 const rclcpp::Time input_stamp(1, 0, RCL_ROS_TIME);
 }  // namespace
-
-RegionOfInterest make_roi(uint32_t x_offset, uint32_t y_offset, uint32_t width, uint32_t height)
-{
-  RegionOfInterest roi;
-  roi.x_offset = x_offset;
-  roi.y_offset = y_offset;
-  roi.width = width;
-  roi.height = height;
-  return roi;
-}
-
-bool is_same(const RegionOfInterest & lhs, const RegionOfInterest & rhs)
-{
-  return lhs.x_offset == rhs.x_offset && lhs.y_offset == rhs.y_offset && lhs.width == rhs.width &&
-         lhs.height == rhs.height;
-}
-
-CameraInfo make_camera_info(uint32_t width, uint32_t height)
-{
-  CameraInfo camera_info;
-  camera_info.header.stamp = input_stamp;
-  camera_info.header.frame_id = "camera";
-  camera_info.width = width;
-  camera_info.height = height;
-  return camera_info;
-}
-
-DetectedObjectsWithFeature make_detected_rois(const std::vector<RegionOfInterest> & rois)
-{
-  DetectedObjectsWithFeature detected_rois;
-  detected_rois.header.stamp = input_stamp;
-  detected_rois.header.frame_id = "camera";
-  for (const auto & roi : rois) {
-    DetectedObjectWithFeature feature_object;
-    feature_object.feature.roi = roi;
-    detected_rois.feature_objects.push_back(feature_object);
-  }
-  return detected_rois;
-}
-
-TrafficLightRoi make_traffic_light_roi(int64_t traffic_light_id, const RegionOfInterest & roi)
-{
-  TrafficLightRoi traffic_light_roi;
-  traffic_light_roi.traffic_light_id = traffic_light_id;
-  traffic_light_roi.traffic_light_type = TrafficLightRoi::CAR_TRAFFIC_LIGHT;
-  traffic_light_roi.roi = roi;
-  return traffic_light_roi;
-}
-
-TrafficLightRoiArray make_traffic_light_roi_array(const std::vector<TrafficLightRoi> & rois)
-{
-  TrafficLightRoiArray traffic_light_roi_array;
-  traffic_light_roi_array.header.stamp = input_stamp;
-  traffic_light_roi_array.header.frame_id = "camera";
-  traffic_light_roi_array.rois = rois;
-  return traffic_light_roi_array;
-}
-
-// Asserts the output holds exactly one ROI matching the expected traffic light id, type and
-// geometry.
-void expect_single_output_roi(
-  const TrafficLightRoiArray::SharedPtr & result, const TrafficLightRoi & expected_roi)
-{
-  ASSERT_NE(result, nullptr);
-  ASSERT_EQ(result->rois.size(), 1u);
-  const auto & actual_roi = result->rois.front();
-  EXPECT_EQ(actual_roi.traffic_light_id, expected_roi.traffic_light_id);
-  EXPECT_EQ(actual_roi.traffic_light_type, expected_roi.traffic_light_type);
-  EXPECT_TRUE(is_same(actual_roi.roi, expected_roi.roi));
-}
 
 class TrafficLightSelectorIntegrationTest : public ::testing::Test
 {
@@ -171,18 +94,6 @@ protected:
     rclcpp::shutdown();
   }
 
-  // Publishes all four synchronized inputs and waits for the node to emit the output.
-  void publish_inputs(
-    const std::vector<RegionOfInterest> & detected_rois,
-    const std::vector<TrafficLightRoi> & rough_rois,
-    const std::vector<TrafficLightRoi> & expected_rois, const CameraInfo & camera_info)
-  {
-    detected_rois_publisher_->publish(make_detected_rois(detected_rois));
-    rough_rois_publisher_->publish(make_traffic_light_roi_array(rough_rois));
-    expected_rois_publisher_->publish(make_traffic_light_roi_array(expected_rois));
-    camera_info_publisher_->publish(camera_info);
-  }
-
   TrafficLightRoiArray::SharedPtr receive_published_message(
     std::chrono::milliseconds timeout = std::chrono::milliseconds(3000))
   {
@@ -198,6 +109,24 @@ protected:
     return received_message_;
   }
 
+  // Publishes empty, synchronized inputs on all four input topics.
+  void publish_empty_synchronized_inputs()
+  {
+    DetectedObjectsWithFeature detected_rois;
+    detected_rois.header.stamp = input_stamp;
+    TrafficLightRoiArray rough_rois;
+    rough_rois.header.stamp = input_stamp;
+    TrafficLightRoiArray expected_rois;
+    expected_rois.header.stamp = input_stamp;
+    CameraInfo camera_info;
+    camera_info.header.stamp = input_stamp;
+
+    detected_rois_publisher_->publish(detected_rois);
+    rough_rois_publisher_->publish(rough_rois);
+    expected_rois_publisher_->publish(expected_rois);
+    camera_info_publisher_->publish(camera_info);
+  }
+
   std::shared_ptr<TrafficLightSelectorNode> node_;
   std::shared_ptr<rclcpp::Node> test_node_;
   std::shared_ptr<rclcpp::executors::SingleThreadedExecutor> executor_;
@@ -211,83 +140,18 @@ protected:
   TrafficLightRoiArray::SharedPtr received_message_;
 };
 
-// With no expected ROIs the output loop produces nothing, so the node emits an empty array.
-TEST_F(TrafficLightSelectorIntegrationTest, EmptyExpectedRoisOutputsEmptyArray)
+// Publishing empty, synchronized inputs makes the node emit an empty output array, verifying
+// that the node's subscribers, synchronizer and publisher are wired correctly. The selection
+// logic itself is covered by the TrafficLightSelector unit tests.
+TEST_F(TrafficLightSelectorIntegrationTest, EmptyInputsProduceEmptyOutput)
 {
   // Act
-  publish_inputs({}, {}, {}, make_camera_info(1280, 720));
+  publish_empty_synchronized_inputs();
   const auto result = receive_published_message();
 
   // Assert
   ASSERT_NE(result, nullptr);
   EXPECT_TRUE(result->rois.empty());
-}
-
-// The detected ROI center lies outside the rough ROI, so no detection is matched. The node still
-// emits one entry for the expected traffic light, but with a default (empty) ROI.
-TEST_F(TrafficLightSelectorIntegrationTest, DetectionOutsideRoughRoiOutputsDefaultRoi)
-{
-  // Arrange
-  const auto traffic_light_id = 123;
-  const auto camera_info = make_camera_info(1280, 720);
-  const auto expected_roi = make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40));
-  const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
-  // Detected ROI center (820, 620) is far outside the rough ROI span (50..250).
-  const auto detected_roi = make_roi(800, 600, 40, 40);
-  const auto expected_output_roi = make_traffic_light_roi(traffic_light_id, RegionOfInterest{});
-
-  // Act
-  publish_inputs({detected_roi}, {rough_roi}, {expected_roi}, camera_info);
-  const auto result = receive_published_message();
-
-  // Assert
-  expect_single_output_roi(result, expected_output_roi);
-}
-
-// The detected ROI center is inside the rough ROI and overlaps the expected ROI, so
-// the selector matches it, accumulates a positive IoU, and assigns the detected ROI to the output.
-TEST_F(TrafficLightSelectorIntegrationTest, DetectionInsideRoughRoiIsAssignedToOutput)
-{
-  // Arrange
-  const auto traffic_light_id = 123;
-  const auto camera_info = make_camera_info(1280, 720);
-  const auto expected_roi = make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40));
-  const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
-  // Detected ROI center (120, 120) is inside the rough ROI and coincides with the expected ROI.
-  const auto detected_roi = make_roi(100, 100, 40, 40);
-  const auto expected_output_roi = make_traffic_light_roi(traffic_light_id, detected_roi);
-
-  // Act
-  publish_inputs({detected_roi}, {rough_roi}, {expected_roi}, camera_info);
-  const auto result = receive_published_message();
-
-  // Assert
-  expect_single_output_roi(result, expected_output_roi);
-}
-
-// Multiple detected ROIs have their center inside the rough ROI, so they all become selection
-// candidates. The selector must pick the one with the highest IoU against the expected ROI. The
-// poorly-overlapping candidate is published first to prove the choice is IoU-driven, not
-// order-driven.
-TEST_F(TrafficLightSelectorIntegrationTest, HighestIouCandidateIsSelectedAmongMultipleRois)
-{
-  // Arrange
-  const auto traffic_light_id = 123;
-  const auto camera_info = make_camera_info(1280, 720);
-  const auto expected_roi = make_traffic_light_roi(traffic_light_id, make_roi(100, 100, 40, 40));
-  const auto rough_roi = make_traffic_light_roi(traffic_light_id, make_roi(50, 50, 200, 200));
-  // Both detected ROI centers (180, 180) and (120, 120) lie inside the rough ROI span (50..250).
-  const auto low_iou_detected_roi = make_roi(140, 140, 80, 80);
-  const auto high_iou_detected_roi = make_roi(100, 100, 40, 40);  // coincides with the expected ROI
-  const auto expected_output_roi = make_traffic_light_roi(traffic_light_id, high_iou_detected_roi);
-
-  // Act
-  publish_inputs(
-    {low_iou_detected_roi, high_iou_detected_roi}, {rough_roi}, {expected_roi}, camera_info);
-  const auto result = receive_published_message();
-
-  // Assert
-  expect_single_output_roi(result, expected_output_roi);
 }
 
 int main(int argc, char ** argv)
