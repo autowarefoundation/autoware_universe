@@ -92,7 +92,8 @@ public:
   }
 
   /**
-   * @brief Sets whether this plugin runs in shadow mode (results logged but not enforced).
+   * @brief Sets whether this plugin runs in shadow mode (results logged but do not affect
+   * trajectory selection).
    * @param is_shadow_mode True to enable shadow mode.
    */
   void set_shadow_mode(const bool is_shadow_mode) { is_shadow_mode_ = is_shadow_mode; }

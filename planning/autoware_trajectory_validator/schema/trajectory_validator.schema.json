@@ -331,6 +331,26 @@
           },
           "required": [],
           "additionalProperties": false
+        },
+        "trajectory_validator_diagnostic": {
+          "type": "object",
+          "properties": {
+            "configured_actions": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of configured_actions. Each entry encodes one configured_action as filter_name:action:diagnostic_name.",
+              "default": [
+                "uncrossable_boundary_departure_filter:moderate:trajectory_validator_uncrossable_boundary_departure_danger"
+              ]
+            },
+            "no_candidates_diag_status_name": {
+              "type": "string",
+              "description": "Diagnostic status name published at ERROR when no candidate trajectory is available. Set to an empty string to disable this status.",
+              "default": "trajectory_validator_no_candidate_trajectory"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
         }
       },
       "required": [],

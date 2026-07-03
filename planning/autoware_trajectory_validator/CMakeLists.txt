@@ -9,6 +9,10 @@ generate_parameter_library(${PROJECT_NAME}_param
   param/parameter_struct.yaml
 )
 
+generate_parameter_library(${PROJECT_NAME}_diagnostic_param
+  param/diagnostic_parameter_struct.yaml
+)
+
 set(trajectory_validator_lib_target ${PROJECT_NAME}_lib)
 
 
@@ -16,10 +20,12 @@ ament_auto_add_library(${trajectory_validator_lib_target} SHARED
   src/pseudo_emergency_stop_handler.cpp
   src/trajectory_validator_wrapper.cpp
   src/detail/trajectory_validator.cpp
+  src/detail/diagnostic.cpp
 )
 
 target_link_libraries(${trajectory_validator_lib_target}
   ${PROJECT_NAME}_param
+  ${PROJECT_NAME}_diagnostic_param
 )
 
 target_compile_options(${trajectory_validator_lib_target} PUBLIC
@@ -68,6 +74,7 @@ endif()
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_cmake_ros REQUIRED)
   find_package(ament_lint_auto REQUIRED)
   ament_auto_find_test_dependencies()
 
@@ -130,6 +137,21 @@ if(BUILD_TESTING)
     autoware_trajectory_validator_plugins
   )
 
+  ament_add_ros_isolated_gtest(test_diagnostic_core_behavior
+    test/diagnostic/diagnostic_core_behavior.cpp
+  )
+  target_link_libraries(test_diagnostic_core_behavior
+    ${trajectory_validator_lib_target}
+    rclcpp::rclcpp
+  )
+
+  ament_add_ros_isolated_gtest(test_diagnostic_shadow_mode
+    test/diagnostic/diagnostic_shadow_mode.cpp
+  )
+  target_link_libraries(test_diagnostic_shadow_mode
+    ${trajectory_validator_lib_target}
+    rclcpp::rclcpp
+  )
 
 endif()
 
