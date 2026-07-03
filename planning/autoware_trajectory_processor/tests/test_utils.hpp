@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef PLANNING__AUTOWARE_TRAJECTORY_OPTIMIZER__TESTS__TEST_UTILS_HPP_
-#define PLANNING__AUTOWARE_TRAJECTORY_OPTIMIZER__TESTS__TEST_UTILS_HPP_
+#ifndef PLANNING__AUTOWARE_TRAJECTORY_PROCESSOR__TESTS__TEST_UTILS_HPP_
+#define PLANNING__AUTOWARE_TRAJECTORY_PROCESSOR__TESTS__TEST_UTILS_HPP_
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -145,4 +145,4 @@ inline Odometry create_odometry(double x, double y, double yaw, double velocity)
 
 }  // namespace trajectory_optimizer_test_utils
 
-#endif  // PLANNING__AUTOWARE_TRAJECTORY_OPTIMIZER__TESTS__TEST_UTILS_HPP_
+#endif  // PLANNING__AUTOWARE_TRAJECTORY_PROCESSOR__TESTS__TEST_UTILS_HPP_

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "test_utils.hpp"
+
 #include "autoware/trajectory_modifier/trajectory_modifier_utils/utils.hpp"
 
 #include <gtest/gtest.h>
