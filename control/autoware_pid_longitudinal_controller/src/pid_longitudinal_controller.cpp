@@ -272,13 +272,6 @@ void PidLongitudinalController::setTrajectory(const autoware_planning_msgs::msg:
     return;
   }
 
-  if (m_use_temporal_trajectory) {
-    const rclcpp::Time current_stamp(msg.header.stamp);
-    m_prev_trajectory_stamp = current_stamp;
-  } else {
-    m_prev_trajectory_stamp.reset();
-  }
-
   m_trajectory = msg;
 }
 
@@ -492,9 +485,8 @@ PidLongitudinalController::ControlData PidLongitudinalController::getControlData
   autoware_planning_msgs::msg::TrajectoryPoint target_point;
 
   if (m_use_temporal_trajectory) {
-    const double elapsed_time = m_prev_trajectory_stamp.has_value()
-                                  ? (clock_->now() - *m_prev_trajectory_stamp).seconds()
-                                  : traj_start_time;
+    const rclcpp::Time traj_stamp(m_trajectory.header.stamp);
+    const double elapsed_time = (clock_->now() - traj_stamp).seconds();
     const double nearest_time = std::clamp(elapsed_time, traj_start_time, traj_end_time);
     control_data.temporal_predicted_time = nearest_time;
     control_data.temporal_fused_time = nearest_time;

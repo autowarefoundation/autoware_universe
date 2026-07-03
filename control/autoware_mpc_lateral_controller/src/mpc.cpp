@@ -267,13 +267,6 @@ void MPC::setReferenceTrajectory(
   const Trajectory & trajectory_msg, const TrajectoryFilteringParam & param,
   const Odometry & current_kinematics)
 {
-  if (m_use_temporal_trajectory) {
-    const rclcpp::Time current_stamp(trajectory_msg.header.stamp);
-    m_prev_trajectory_stamp = current_stamp;
-  } else {
-    m_prev_trajectory_stamp.reset();
-  }
-
   const size_t nearest_seg_idx =
     autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(
       trajectory_msg.points, current_kinematics.pose.pose, ego_nearest_dist_threshold,
@@ -365,6 +358,8 @@ void MPC::setReferenceTrajectory(
     return;
   }
 
+  mpc_traj_smoothed.stamp = trajectory_msg.header.stamp;
+
   m_reference_trajectory = mpc_traj_smoothed;
 }
 
@@ -388,9 +383,8 @@ std::pair<ResultWithReason, MPCData> MPC::getData(
     const double traj_start_time = traj.relative_time.front();
     const double traj_end_time = traj.relative_time.back();
 
-    const double elapsed_time = m_prev_trajectory_stamp.has_value()
-                                  ? (m_clock->now() - *m_prev_trajectory_stamp).seconds()
-                                  : traj_start_time;
+    const rclcpp::Time traj_stamp(traj.stamp);
+    const double elapsed_time = (m_clock->now() - traj_stamp).seconds();
     const double fused_time = std::clamp(elapsed_time, traj_start_time, traj_end_time);
     data.temporal_predicted_time = fused_time;
     data.temporal_fused_time = fused_time;

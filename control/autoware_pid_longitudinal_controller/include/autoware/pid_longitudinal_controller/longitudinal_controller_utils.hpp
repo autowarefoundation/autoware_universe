@@ -138,31 +138,6 @@ std::pair<TrajectoryPoint, size_t> lerpTrajectoryPointByTime(
   const std::vector<TrajectoryPoint> & points, const double target_time);
 
 /**
- * @brief estimate the trajectory time corresponding to the current pose within a bounded time
- * window
- * @param [in] points trajectory points (time_from_start must be strictly increasing)
- * @param [in] pose current pose
- * @param [in] max_dist nearest-search distance threshold
- * @param [in] max_yaw nearest-search yaw threshold
- * @param [in] min_time_window_sec lower bound of search window [s]
- * @param [in] max_time_window_sec upper bound of search window [s]
- * @return estimated trajectory time if a candidate exists in the window
- */
-std::optional<double> estimateTrajectoryTimeFromPose(
-  const std::vector<TrajectoryPoint> & points, const Pose & pose, const double max_dist,
-  const double max_yaw, const double min_time_window_sec = -std::numeric_limits<double>::infinity(),
-  const double max_time_window_sec = std::numeric_limits<double>::infinity());
-
-/**
- * @brief estimate a local time step around the target trajectory time
- * @param [in] points trajectory points
- * @param [in] target_time target trajectory time [s]
- * @return local time step [s]
- */
-double estimateLocalTrajectoryTimeStep(
-  const std::vector<TrajectoryPoint> & points, const double target_time);
-
-/**
  * @brief limit variable whose differential is within a certain value
  * @param [in] input_val current value
  * @param [in] prev_val previous value

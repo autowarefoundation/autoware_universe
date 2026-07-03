@@ -238,8 +238,7 @@ private:
   double m_yaw_error_prev = 0.0;       // Previous heading error for derivative calculation.
 
   bool m_is_forward_shift = true;  // Flag indicating if the shift is in the forward direction.
-  std::optional<double> m_prev_nearest_time{};            // Stabilized nearest trajectory time.
-  std::optional<rclcpp::Time> m_prev_trajectory_stamp{};  // Last received trajectory stamp.
+  std::optional<double> m_prev_nearest_time{};  // Stabilized nearest trajectory time.
 
   rclcpp::Publisher<Trajectory>::SharedPtr m_debug_frenet_predicted_trajectory_pub;
   rclcpp::Publisher<Trajectory>::SharedPtr m_debug_resampled_reference_trajectory_pub;

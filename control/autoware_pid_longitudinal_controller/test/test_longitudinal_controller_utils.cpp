@@ -529,49 +529,6 @@ TEST(TestLongitudinalControllerUtils, lerpTrajectoryPointByTimeRestartIsSmooth)
     early_restart.first.longitudinal_velocity_mps, late_restart.first.longitudinal_velocity_mps);
 }
 
-TEST(TestLongitudinalControllerUtils, estimateTrajectoryTimeFromPoseWithinWindow)
-{
-  using autoware_planning_msgs::msg::TrajectoryPoint;
-  std::vector<TrajectoryPoint> points;
-
-  for (size_t i = 0; i < 4; ++i) {
-    TrajectoryPoint p;
-    p.pose.position.x = static_cast<double>(i);
-    p.pose.orientation.w = 1.0;
-    p.time_from_start = rclcpp::Duration::from_seconds(static_cast<double>(i));
-    points.push_back(p);
-  }
-
-  geometry_msgs::msg::Pose pose;
-  pose.position.x = 2.1;
-  pose.orientation.w = 1.0;
-
-  const auto estimated_time =
-    longitudinal_utils::estimateTrajectoryTimeFromPose(points, pose, 10.0, M_PI, 1.8, 2.2);
-  ASSERT_TRUE(estimated_time.has_value());
-  EXPECT_GE(*estimated_time, 1.8);
-  EXPECT_LE(*estimated_time, 2.2);
-}
-
-TEST(TestLongitudinalControllerUtils, estimateLocalTrajectoryTimeStep)
-{
-  using autoware_planning_msgs::msg::TrajectoryPoint;
-  std::vector<TrajectoryPoint> points;
-
-  TrajectoryPoint p;
-  p.time_from_start = rclcpp::Duration::from_seconds(0.1);
-  points.push_back(p);
-  p.time_from_start = rclcpp::Duration::from_seconds(0.3);
-  points.push_back(p);
-  p.time_from_start = rclcpp::Duration::from_seconds(0.8);
-  points.push_back(p);
-
-  EXPECT_DOUBLE_EQ(longitudinal_utils::estimateLocalTrajectoryTimeStep(points, 0.0), 0.2);
-  EXPECT_DOUBLE_EQ(longitudinal_utils::estimateLocalTrajectoryTimeStep(points, 0.2), 0.2);
-  EXPECT_DOUBLE_EQ(longitudinal_utils::estimateLocalTrajectoryTimeStep(points, 0.5), 0.5);
-  EXPECT_DOUBLE_EQ(longitudinal_utils::estimateLocalTrajectoryTimeStep(points, 1.0), 0.5);
-}
-
 TEST(TestLongitudinalControllerUtils, applyDiffLimitFilter)
 {
   double dt = 1.0;
