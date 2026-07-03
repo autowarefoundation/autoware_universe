@@ -93,8 +93,8 @@ private:
   AUTOWARE_SUBSCRIPTION_PTR(DrivingModeRequest) sub_driving_mode_request_;
   AUTOWARE_SUBSCRIPTION_PTR(DrivingModeInfo) sub_driving_mode_info_;
   AUTOWARE_PUBLISHER_PTR(DrivingModeMrmState) pub_mrm_state_;
-  void onDrivingModeRequest(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DrivingModeRequest) & msg);
-  void onDrivingModeInfo(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DrivingModeInfo) & msg);
+  void onDrivingModeRequest(const DrivingModeRequest & msg);
+  void onDrivingModeInfo(const DrivingModeInfo & msg);
   void publishMrmState() const;
   std::optional<uint32_t> driving_mode_id_;  // Refer to the driving_mode_manager for this ID.
 };

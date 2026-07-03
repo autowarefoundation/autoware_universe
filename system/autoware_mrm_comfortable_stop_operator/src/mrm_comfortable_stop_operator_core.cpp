@@ -82,10 +82,9 @@ void MrmComfortableStopOperator::operateComfortableStop(
   }
 }
 
-void MrmComfortableStopOperator::onDrivingModeRequest(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DrivingModeRequest) & msg)
+void MrmComfortableStopOperator::onDrivingModeRequest(const DrivingModeRequest & msg)
 {
-  if (msg->mode == driving_mode_id_) {
+  if (msg.mode == driving_mode_id_) {
     publishVelocityLimit();
     status_.state = MrmBehaviorStatus::OPERATING;
   } else {
@@ -94,10 +93,9 @@ void MrmComfortableStopOperator::onDrivingModeRequest(
   }
 }
 
-void MrmComfortableStopOperator::onDrivingModeInfo(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DrivingModeInfo) & msg)
+void MrmComfortableStopOperator::onDrivingModeInfo(const DrivingModeInfo & msg)
 {
-  for (const auto & item : msg->items) {
+  for (const auto & item : msg.items) {
     if (item.name == "comfortable_stop") {
       driving_mode_id_ = item.mode;
       break;
