@@ -142,7 +142,7 @@ void replaceObjectYawWithLaneletsYaw(
 }
 }  // namespace
 
-PathProcessor::PathProcessor(rclcpp::Node & node) : node_(node)
+PathProcessor::PathProcessor(autoware::agnocast_wrapper::Node & node) : node_(node)
 {
 }
 
