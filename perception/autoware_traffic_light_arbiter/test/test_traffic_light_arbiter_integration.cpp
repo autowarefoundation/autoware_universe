@@ -38,7 +38,6 @@
 
 #include <chrono>
 #include <memory>
-#include <optional>
 #include <string>
 #include <thread>
 
@@ -88,7 +87,6 @@ protected:
     if (!rclcpp::ok()) {
       rclcpp::init(0, nullptr);
     }
-    map_bin_ = build_minimal_map_bin();
   }
   static void TearDownTestSuite()
   {
@@ -169,15 +167,12 @@ protected:
     return msg;
   }
 
-  void publish_map() { publish_map(*map_bin_); }
-
-  // The map is applied, not republished, so there's nothing to wait on. Settle
-  // the map before any signal: with no map the arbiter emits nothing
-  // (arbitrate() returns nullopt), so a signal sent first would drive no publish
-  // and the wait below would time out.
-  void publish_map(const LaneletMapBin & bin)
+  // Publish the minimal map and settle it before any signal: with no map the
+  // arbiter emits nothing (arbitrate() returns nullopt), so a signal sent first
+  // would drive no publish and the wait below would time out.
+  void publish_map()
   {
-    map_pub_->publish(bin);
+    map_pub_->publish(build_minimal_map_bin());
     spin_for();
   }
 
@@ -239,10 +234,6 @@ protected:
   {
     return latest_arbitrated_traffic_signal_.traffic_light_groups.size();
   }
-
-  // std::optional because LaneletMapBin has no constructor usable at static
-  // init; filled in SetUpTestSuite().
-  inline static std::optional<LaneletMapBin> map_bin_;
 
   rclcpp::Node::SharedPtr test_node_;
   std::shared_ptr<TrafficLightArbiter> arbiter_;
