@@ -70,6 +70,9 @@ TrajectoryValidatorWrapper::TrajectoryValidatorWrapper(
   });
   publishers();
 
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "trajectory_validator");
   validator_ptr_ = std::make_unique<TrajectoryValidator>(plugins_);
   diagnostics_interface_ptr_ = std::make_unique<DiagnosticsInterface>(node_ptr_, interface_name_);
 }
@@ -158,8 +161,8 @@ CandidateTrajectories TrajectoryValidatorWrapper::validate_trajectories(
   update_diagnostic(input_trajectories, report.num_feasible_trajectories);
 
   publish_validation_reports(report.validation_reports);
+  publish_planning_factor(report.planning_factors);
 
-  // Wire up the debug publishers using the opaque report data
   publish_debug(report.evaluation_tables, report.processing_time_ms, context.odometry->pose.pose);
 
   return report.valid_trajectories;

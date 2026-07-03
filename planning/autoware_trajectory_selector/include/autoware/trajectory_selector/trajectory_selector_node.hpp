@@ -17,6 +17,7 @@
 
 #include "autoware/trajectory_validator/detail/validator_context.hpp"
 #include "autoware/trajectory_validator/trajectory_validator_wrapper.hpp"
+#include "autoware_trajectory_selector/autoware_trajectory_selector_param.hpp"
 
 #include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware/trajectory_concatenator/trajectory_concatenator_wrapper.hpp>
@@ -70,17 +71,33 @@ private:
   void map_callback(const LaneletMapBin::ConstSharedPtr msg);
 
   /**
+   * @brief Forwards incoming candidate trajectories to the concatenator and trigger the
+   * concatenation.
+   * @param msg Incoming candidate trajectories message.
+   * @warning must be in the same callback group as the timer callback as they both call
+   * on_anchor_trajectories
+   */
+  void on_anchor_trajectories(const CandidateTrajectories::ConstSharedPtr msg);
+  /**
    * @brief Forwards incoming candidate trajectories to the concatenator.
    * @param msg Incoming candidate trajectories message.
    */
   void on_trajectories(const CandidateTrajectories::ConstSharedPtr msg);
 
-  /** @brief Concatenates buffered trajectories, validates them, and publishes the result. */
-  void on_timer();
+  /**
+   * @brief Concatenates buffered trajectories, validates them, and publishes the result.
+   */
+  void concatenate_and_validate();
 
   /** @brief Collects the latest sensor data needed for validation; returns an error string if any
    * mandatory input is unavailable. */
   tl::expected<trajectory_validator::FilterContext, std::string> take_validator_data();
+
+  /** @brief Update parameters */
+  void update_parameters();
+
+  /** @brief Update the fallback timer */
+  void update_fallback_timer();
 
   std::unique_ptr<trajectory_concatenator::TrajectoryConcatenatorWrapper> concatenator_ptr_;
   std::unique_ptr<trajectory_validator::TrajectoryValidatorWrapper> validator_ptr_;
@@ -111,6 +128,10 @@ private:
   rclcpp::Publisher<autoware_utils_debug::ProcessingTimeDetail>::SharedPtr
     pub_processing_time_detail_;
   std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_{nullptr};
+
+  // Parameter interfaces
+  selector::ParamListener selector_params_listener_{get_node_parameters_interface()};
+  selector::Params selector_params_;
 };
 
 }  // namespace autoware::trajectory_selector

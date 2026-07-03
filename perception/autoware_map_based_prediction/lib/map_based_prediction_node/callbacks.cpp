@@ -189,8 +189,8 @@ void ObjectsCallback::objectsCallback(const TrackedObjects::ConstSharedPtr in_ob
     switch (label) {
       case ObjectClassification::PEDESTRIAN:
       case ObjectClassification::BICYCLE: {
-        output.objects.emplace_back(
-          state_.predictor_vru->predict(output.header, transformed_object));
+        output.objects.emplace_back(state_.predictor_vru->predict(
+          output.header, transformed_object, pub_debug_markers_ ? &debug_markers : nullptr));
         break;
       }
       case ObjectClassification::CAR:
@@ -228,7 +228,8 @@ void ObjectsCallback::objectsCallback(const TrackedObjects::ConstSharedPtr in_ob
   }
 
   if (state_.params.remember_lost_crosswalk_users) {
-    PredictedObjects retrieved_objects = state_.predictor_vru->retrieveUndetectedObjects();
+    PredictedObjects retrieved_objects = state_.predictor_vru->retrieveUndetectedObjects(
+      rclcpp::Time(in_objects->header.stamp), pub_debug_markers_ ? &debug_markers : nullptr);
     output.objects.insert(
       output.objects.end(), retrieved_objects.objects.begin(), retrieved_objects.objects.end());
   }

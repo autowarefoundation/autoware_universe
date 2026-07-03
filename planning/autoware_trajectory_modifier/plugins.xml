@@ -24,4 +24,10 @@
       Modifies the trajectory to stop at traffic lights
     </description>
   </class>
+  <class type="autoware::trajectory_modifier::plugin::SurroundObstacleStop"
+         base_class_type="autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase">
+    <description>
+      Replaces the trajectory with zero velocity when obstacles surround a stopped ego vehicle
+    </description>
+  </class>
 </library>

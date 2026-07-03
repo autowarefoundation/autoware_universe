@@ -33,12 +33,12 @@ namespace autoware::trajectory_validator::plugin::safety::collision_timing_asses
 {
 std::vector<TrajectoryData> generate_object_trajectories(
   const FilterContext & context, double required_time_horizon, double object_assumed_acceleration,
-  double time_resolution, const DracParamMap & drac_param_map, const PetParamMap & pet_param_map);
+  double time_resolution, const DracParamMap & drac_param_map);
 
-std::pair<PetArtifact, DracArtifact> assess(
+DracArtifact assess(
   const TrajectoryPoints & traj_points, const FilterContext & context,
-  const PetParamMap & pet_param_map, const DracParamMap & drac_param_map,
-  const GlobalParams & global_params, const VehicleInfo & vehicle_info);
+  const DracParamMap & drac_param_map, const GlobalParams & global_params,
+  const VehicleInfo & vehicle_info);
 }  // namespace autoware::trajectory_validator::plugin::safety::collision_timing_assessment
 
 namespace autoware::trajectory_validator::plugin::safety::rss_deceleration

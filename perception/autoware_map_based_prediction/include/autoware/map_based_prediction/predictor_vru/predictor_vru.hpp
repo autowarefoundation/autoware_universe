@@ -20,12 +20,14 @@
 #include "autoware/map_based_prediction/predictor_vru/fence.hpp"
 #include "autoware/map_based_prediction/predictor_vru/history.hpp"
 #include "autoware/map_based_prediction/predictor_vru/traffic_signal.hpp"
+#include "autoware/map_based_prediction/predictor_vru/vegetation.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 
@@ -89,8 +91,11 @@ public:
   void loadCurrentCrosswalkUsers(const TrackedObjects & objects);
   void removeOldKnownMatches(const double current_time, const double buffer_time);
 
-  PredictedObject predict(const std_msgs::msg::Header & header, const TrackedObject & object);
-  PredictedObjects retrieveUndetectedObjects();
+  PredictedObject predict(
+    const std_msgs::msg::Header & header, const TrackedObject & object,
+    visualization_msgs::msg::MarkerArray * debug_markers);
+  PredictedObjects retrieveUndetectedObjects(
+    const rclcpp::Time & stamp, visualization_msgs::msg::MarkerArray * debug_markers);
 
 private:
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
@@ -102,12 +107,15 @@ private:
 
   // Sub-modules
   FenceModule fence_module_;
+  VegetationModule vegetation_module_;
   TrafficSignalModule traffic_signal_module_;
   CrosswalkUserHistoryManager history_manager_;
 
   Params params_{};
 
-  PredictedObject getPredictedObjectAsCrosswalkUser(const TrackedObject & object);
+  PredictedObject getPredictedObjectAsCrosswalkUser(
+    const TrackedObject & object, const rclcpp::Time & stamp,
+    visualization_msgs::msg::MarkerArray * debug_markers);
 };
 
 }  // namespace autoware::map_based_prediction

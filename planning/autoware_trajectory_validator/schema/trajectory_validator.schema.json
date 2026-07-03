@@ -34,11 +34,6 @@
           "type": "boolean",
           "default": true,
           "description": "Use constant-curvature predicted trajectories."
-        },
-        "diffusion_based": {
-          "type": "boolean",
-          "default": true,
-          "description": "Use diffusion-model predicted trajectories."
         }
       },
       "required": [],
@@ -129,66 +124,6 @@
                       "type": "number",
                       "description": "Ego acceleration threshold for DRAC error (negative, m/s²).",
                       "default": -5.0
-                    }
-                  },
-                  "required": [],
-                  "additionalProperties": false
-                }
-              },
-              "required": [],
-              "additionalProperties": false
-            },
-            "pet_collision": {
-              "type": "object",
-              "description": "Post-Encroachment Time (PET) collision assessment settings.",
-              "properties": {
-                "enable_assessment": { "$ref": "#/definitions/enable_assessment_per_class" },
-                "assessment_trajectories": { "$ref": "#/definitions/assessment_trajectories" },
-                "ego_total_braking_delay": {
-                  "type": "number",
-                  "description": "Total ego braking delay for PET assessment [s].",
-                  "default": 0.4,
-                  "minimum": 0.0
-                },
-                "ego_footprint_margin": { "$ref": "#/definitions/ego_footprint_margin" },
-                "ego_assumed_acceleration": {
-                  "type": "number",
-                  "description": "Assumed ego acceleration for PET assessment (negative, m/s²).",
-                  "default": -5.0
-                },
-                "warn_threshold": {
-                  "type": "object",
-                  "properties": {
-                    "ego_first_passing_time_gap": {
-                      "type": "number",
-                      "description": "Allowed time gap when ego passes the conflict point first [s].",
-                      "default": 1.0,
-                      "minimum": 0.0
-                    },
-                    "object_first_passing_time_gap": {
-                      "type": "number",
-                      "description": "Allowed time gap when the object passes the conflict point first [s].",
-                      "default": 1.0,
-                      "minimum": 0.0
-                    }
-                  },
-                  "required": [],
-                  "additionalProperties": false
-                },
-                "error_threshold": {
-                  "type": "object",
-                  "properties": {
-                    "ego_first_passing_time_gap": {
-                      "type": "number",
-                      "description": "Minimum time gap for error when ego passes first [s].",
-                      "default": 0.3,
-                      "minimum": 0.0
-                    },
-                    "object_first_passing_time_gap": {
-                      "type": "number",
-                      "description": "Minimum time gap for error when object passes first [s].",
-                      "default": 0.6,
-                      "minimum": 0.0
                     }
                   },
                   "required": [],
