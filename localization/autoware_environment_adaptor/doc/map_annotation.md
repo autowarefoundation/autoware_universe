@@ -10,11 +10,11 @@ Each polygon's `subtype` is mapped to an `environment_id` via ROS parameters.
 
 ## Polygon requirements
 
-| Attribute | Required | Description |
-| --------- | -------- | ----------- |
-| `type` | Yes | Must be `degenerate_area` (degenerate localization area) |
-| `subtype` | Yes | Identifier mapped to `environment_id` in the parameter file (e.g. `uniform_road`, `feature_poor_road`) |
-| `longitudinal_scale_factor` | No | Per-polygon override for twist velocity scaling. Attribute name is configurable via `map_longitudinal_scale_factor_attribute`. |
+| Attribute                   | Required | Description                                                                                                                    |
+| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `type`                      | Yes      | Must be `degenerate_area` (degenerate localization area)                                                                       |
+| `subtype`                   | Yes      | Identifier mapped to `environment_id` in the parameter file (e.g. `uniform_road`, `feature_poor_road`)                         |
+| `longitudinal_scale_factor` | No       | Per-polygon override for twist velocity scaling. Attribute name is configurable via `map_longitudinal_scale_factor_attribute`. |
 
 Polygons outside the map or with incorrect `type` are ignored.
 

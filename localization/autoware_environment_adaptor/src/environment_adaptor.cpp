@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "covariance_utils.hpp"
 #include "environment_adaptor.hpp"
+
+#include "covariance_utils.hpp"
 
 #include <Eigen/Geometry>
 
@@ -25,10 +26,9 @@ namespace autoware::environment_adaptor
 
 EnvironmentAdaptor::EnvironmentAdaptor(const rclcpp::NodeOptions & options)
 : Node(
-    "environment_adaptor",
-    rclcpp::NodeOptions(options)
-      .allow_undeclared_parameters(true)
-      .automatically_declare_parameters_from_overrides(true))
+    "environment_adaptor", rclcpp::NodeOptions(options)
+                             .allow_undeclared_parameters(true)
+                             .automatically_declare_parameters_from_overrides(true))
 {
   load_classifier_params();
   ensure_covariance_params_loaded();
@@ -88,8 +88,9 @@ void EnvironmentAdaptor::load_classifier_params()
     if (name.find("area_subtype_") == 0) {
       const std::string rest = name.substr(std::string("area_subtype_").length());
       const size_t dot = rest.find('.');
-      if (dot != std::string::npos &&
-          this->get_parameter(name).get_type() == rclcpp::ParameterType::PARAMETER_INTEGER) {
+      if (
+        dot != std::string::npos &&
+        this->get_parameter(name).get_type() == rclcpp::ParameterType::PARAMETER_INTEGER) {
         const std::string subtype = rest.substr(0, dot);
         const int32_t env_id = this->get_parameter(name).as_int();
         param.area_subtype_to_environment_id[subtype] = env_id;
@@ -146,7 +147,8 @@ bool EnvironmentAdaptor::try_read_covariance_param(
   const auto param = this->get_parameter(name);
   if (param.get_type() != rclcpp::ParameterType::PARAMETER_DOUBLE_ARRAY) {
     RCLCPP_WARN(
-      this->get_logger(), "Parameter '%s' has unexpected type; expected double array", name.c_str());
+      this->get_logger(), "Parameter '%s' has unexpected type; expected double array",
+      name.c_str());
     return false;
   }
 
@@ -171,9 +173,8 @@ void EnvironmentAdaptor::ensure_covariance_params_loaded()
   }
 
   load_covariance_params();
-  covariance_params_ready_ =
-    !is_covariance_all_zero(covariance_param_.default_covariance) ||
-    !covariance_param_.environment_covariance_map.empty();
+  covariance_params_ready_ = !is_covariance_all_zero(covariance_param_.default_covariance) ||
+                             !covariance_param_.environment_covariance_map.empty();
 }
 
 std::array<double, 36> EnvironmentAdaptor::get_body_covariance_for_env_id(int32_t env_id) const
@@ -185,8 +186,7 @@ std::array<double, 36> EnvironmentAdaptor::get_body_covariance_for_env_id(int32_
   return covariance_param_.default_covariance;
 }
 
-void EnvironmentAdaptor::on_map(
-  const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
+void EnvironmentAdaptor::on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   classifier_.load_map(*msg);

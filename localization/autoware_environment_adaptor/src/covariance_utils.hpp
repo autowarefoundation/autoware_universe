@@ -27,16 +27,14 @@ inline std::array<double, 36> rotate_covariance(
 {
   // Rotate only the 3x3 position block (top-left) of the 6x6 covariance matrix.
   Eigen::Matrix3d src_cov;
-  src_cov << src[0], src[1], src[2],
-             src[6], src[7], src[8],
-             src[12], src[13], src[14];
+  src_cov << src[0], src[1], src[2], src[6], src[7], src[8], src[12], src[13], src[14];
 
   const Eigen::Matrix3d rotated = R * src_cov * R.transpose();
 
   std::array<double, 36> ret = src;
   for (Eigen::Index i = 0; i < 3; ++i) {
-    ret[i]      = rotated(0, i);
-    ret[i + 6]  = rotated(1, i);
+    ret[i] = rotated(0, i);
+    ret[i + 6] = rotated(1, i);
     ret[i + 12] = rotated(2, i);
   }
   return ret;

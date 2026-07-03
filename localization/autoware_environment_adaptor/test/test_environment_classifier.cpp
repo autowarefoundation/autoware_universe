@@ -28,17 +28,17 @@ namespace autoware::environment_adaptor
 {
 
 static autoware_map_msgs::msg::LaneletMapBin make_map_bin(
-  const std::string & subtype, const std::optional<double> map_longitudinal_scale_factor = std::nullopt)
+  const std::string & subtype,
+  const std::optional<double> map_longitudinal_scale_factor = std::nullopt)
 {
   auto map = std::make_shared<lanelet::LaneletMap>();
   lanelet::Polygon3d poly(
-    lanelet::utils::getId(),
-    {
-      lanelet::Point3d(lanelet::utils::getId(), -1.0, -1.0, 0.0),
-      lanelet::Point3d(lanelet::utils::getId(), 1.0, -1.0, 0.0),
-      lanelet::Point3d(lanelet::utils::getId(), 1.0, 1.0, 0.0),
-      lanelet::Point3d(lanelet::utils::getId(), -1.0, 1.0, 0.0),
-    });
+    lanelet::utils::getId(), {
+                               lanelet::Point3d(lanelet::utils::getId(), -1.0, -1.0, 0.0),
+                               lanelet::Point3d(lanelet::utils::getId(), 1.0, -1.0, 0.0),
+                               lanelet::Point3d(lanelet::utils::getId(), 1.0, 1.0, 0.0),
+                               lanelet::Point3d(lanelet::utils::getId(), -1.0, 1.0, 0.0),
+                             });
   poly.setAttribute(lanelet::AttributeName::Type, "degenerate_area");
   poly.setAttribute(lanelet::AttributeName::Subtype, subtype);
   if (map_longitudinal_scale_factor.has_value()) {

@@ -36,17 +36,17 @@
 using namespace std::chrono_literals;
 
 static autoware_map_msgs::msg::LaneletMapBin make_map_bin(
-  const std::string & subtype, const std::optional<double> map_longitudinal_scale_factor = std::nullopt)
+  const std::string & subtype,
+  const std::optional<double> map_longitudinal_scale_factor = std::nullopt)
 {
   auto map = std::make_shared<lanelet::LaneletMap>();
   lanelet::Polygon3d poly(
-    lanelet::utils::getId(),
-    {
-      lanelet::Point3d(lanelet::utils::getId(), -1.0, -1.0, 0.0),
-      lanelet::Point3d(lanelet::utils::getId(), 1.0, -1.0, 0.0),
-      lanelet::Point3d(lanelet::utils::getId(), 1.0, 1.0, 0.0),
-      lanelet::Point3d(lanelet::utils::getId(), -1.0, 1.0, 0.0),
-    });
+    lanelet::utils::getId(), {
+                               lanelet::Point3d(lanelet::utils::getId(), -1.0, -1.0, 0.0),
+                               lanelet::Point3d(lanelet::utils::getId(), 1.0, -1.0, 0.0),
+                               lanelet::Point3d(lanelet::utils::getId(), 1.0, 1.0, 0.0),
+                               lanelet::Point3d(lanelet::utils::getId(), -1.0, 1.0, 0.0),
+                             });
   poly.setAttribute(lanelet::AttributeName::Type, "degenerate_area");
   poly.setAttribute(lanelet::AttributeName::Subtype, subtype);
   if (map_longitudinal_scale_factor.has_value()) {
@@ -78,12 +78,10 @@ static rclcpp::NodeOptions base_options()
 class TestHelper : public rclcpp::Node
 {
 public:
-  TestHelper()
-  : Node("test_helper")
+  TestHelper() : Node("test_helper")
   {
     map_pub_ = create_publisher<autoware_map_msgs::msg::LaneletMapBin>(
-      "/environment_adaptor/input/lanelet2_map",
-      rclcpp::QoS(1).transient_local());
+      "/environment_adaptor/input/lanelet2_map", rclcpp::QoS(1).transient_local());
 
     pose_pub_ = create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
       "/environment_adaptor/input/pose_with_covariance", 10);
@@ -268,12 +266,12 @@ TEST_F(EnvironmentAdaptorTest, test_pose_point_inside_polygon_unknown_subtype)
 
 TEST_F(EnvironmentAdaptorTest, test_pose_invalid_default_covariance_size_passthrough)
 {
-  auto opts = rclcpp::NodeOptions()
-                .automatically_declare_parameters_from_overrides(true)
-                .allow_undeclared_parameters(true)
-                .append_parameter_override("default_environment_id", 0)
-                .append_parameter_override(
-                  "default_output_pose_covariance", std::vector<double>{1.0, 2.0});
+  auto opts =
+    rclcpp::NodeOptions()
+      .automatically_declare_parameters_from_overrides(true)
+      .allow_undeclared_parameters(true)
+      .append_parameter_override("default_environment_id", 0)
+      .append_parameter_override("default_output_pose_covariance", std::vector<double>{1.0, 2.0});
   create_node(opts);
 
   std::array<double, 36> input_cov{};

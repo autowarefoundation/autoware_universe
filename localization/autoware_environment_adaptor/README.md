@@ -14,10 +14,10 @@ This is useful in environments where localization accuracy or wheel-speed reliab
 
 The node performs two independent adaptations on each callback:
 
-| Input | Adaptation | Output |
-| ----- | ---------- | ------ |
-| `PoseWithCovarianceStamped` | Replace covariance based on classified `environment_id` | `PoseWithCovarianceStamped` |
-| `TwistWithCovarianceStamped` | Multiply `linear.x` by `longitudinal_scale_factor` | `TwistWithCovarianceStamped` |
+| Input                        | Adaptation                                              | Output                       |
+| ---------------------------- | ------------------------------------------------------- | ---------------------------- |
+| `PoseWithCovarianceStamped`  | Replace covariance based on classified `environment_id` | `PoseWithCovarianceStamped`  |
+| `TwistWithCovarianceStamped` | Multiply `linear.x` by `longitudinal_scale_factor`      | `TwistWithCovarianceStamped` |
 
 > - This package does **not** modify pose position or orientation.
 > - This package does **not** modify twist covariance or angular velocity.
@@ -132,20 +132,20 @@ Remap arguments are available in [launch/environment_adaptor.launch.xml](launch/
 
 ### Subscribed topics
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `~/input/lanelet2_map` | `autoware_map_msgs::msg::LaneletMapBin` | Lanelet2 vector map (Transient Local QoS). |
-| `~/input/pose_with_covariance` | `geometry_msgs::msg::PoseWithCovarianceStamped` | Input pose from NDT scan matcher. |
+| Name                            | Type                                             | Description                                  |
+| ------------------------------- | ------------------------------------------------ | -------------------------------------------- |
+| `~/input/lanelet2_map`          | `autoware_map_msgs::msg::LaneletMapBin`          | Lanelet2 vector map (Transient Local QoS).   |
+| `~/input/pose_with_covariance`  | `geometry_msgs::msg::PoseWithCovarianceStamped`  | Input pose from NDT scan matcher.            |
 | `~/input/twist_with_covariance` | `geometry_msgs::msg::TwistWithCovarianceStamped` | Input twist from vehicle velocity converter. |
 
 ### Published topics
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| `~/output/pose_with_covariance` | `geometry_msgs::msg::PoseWithCovarianceStamped` | Pose with environment-adapted covariance for EKF. |
-| `~/output/twist_with_covariance` | `geometry_msgs::msg::TwistWithCovarianceStamped` | Twist with scaled longitudinal velocity for gyro odometer. |
-| `~/debug/environment_id` | `autoware_internal_debug_msgs::msg::Int32Stamped` | Classified environment ID. |
-| `~/debug/longitudinal_scale_factor` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Applied longitudinal scale factor. |
+| Name                                | Type                                                | Description                                                |
+| ----------------------------------- | --------------------------------------------------- | ---------------------------------------------------------- |
+| `~/output/pose_with_covariance`     | `geometry_msgs::msg::PoseWithCovarianceStamped`     | Pose with environment-adapted covariance for EKF.          |
+| `~/output/twist_with_covariance`    | `geometry_msgs::msg::TwistWithCovarianceStamped`    | Twist with scaled longitudinal velocity for gyro odometer. |
+| `~/debug/environment_id`            | `autoware_internal_debug_msgs::msg::Int32Stamped`   | Classified environment ID.                                 |
+| `~/debug/longitudinal_scale_factor` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Applied longitudinal scale factor.                         |
 
 ### Parameters
 
@@ -160,11 +160,11 @@ See also [Map annotation guide](doc/map_annotation.md) for Lanelet2 polygon setu
 
 The default parameter file defines the following environment IDs:
 
-| ID | Name | Typical use case |
-| -- | ---- | -------------- |
-| 0 | Normal environment | Default when outside any `degenerate_area` polygon |
-| 1 | Uniform road | Straight tunnel sections, uniform road surface |
-| 2 | Feature-poor road | Areas with few LiDAR features for NDT matching |
+| ID  | Name               | Typical use case                                   |
+| --- | ------------------ | -------------------------------------------------- |
+| 0   | Normal environment | Default when outside any `degenerate_area` polygon |
+| 1   | Uniform road       | Straight tunnel sections, uniform road surface     |
+| 2   | Feature-poor road  | Areas with few LiDAR features for NDT matching     |
 
 Add new environments by:
 
