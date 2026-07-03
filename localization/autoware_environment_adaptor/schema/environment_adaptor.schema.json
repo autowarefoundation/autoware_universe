@@ -9,7 +9,7 @@
         "default_environment_id": {
           "type": "integer",
           "default": 0,
-          "description": "Environment ID used when the pose is outside all feature_environment_specify polygons, or when map is not ready"
+          "description": "Environment ID used when the pose is outside all degenerate_area polygons, or when map is not ready"
         },
         "default_longitudinal_scale_factor": {
           "type": "number",

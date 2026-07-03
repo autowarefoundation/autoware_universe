@@ -32,7 +32,7 @@ void EnvironmentClassifier::load_map(const autoware_map_msgs::msg::LaneletMapBin
   is_map_ready_ = true;
 
   areas_.clear();
-  constexpr auto kAreaType = "feature_environment_specify";
+  constexpr auto kAreaType = "degenerate_area";
   for (const auto & polygon : lanelet_map_ptr->polygonLayer) {
     if (std::string{polygon.attributeOr(lanelet::AttributeName::Type, "none")} != kAreaType) {
       continue;

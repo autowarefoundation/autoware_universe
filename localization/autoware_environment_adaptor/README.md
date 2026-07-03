@@ -25,7 +25,7 @@ The node performs two independent adaptations on each callback:
 
 ## Assumptions
 
-- The Lanelet2 vector map contains `feature_environment_specify` polygons that mark environment-specific areas.
+- The Lanelet2 vector map contains `degenerate_area` polygons that mark degenerate localization areas.
 - NDT scan matcher is used as the pose estimator (`pose_source` includes `ndt`).
 - Gyro odometer is used as the twist estimator (`twist_source` is `gyro_odom`).
 - The NDT matcher outputs a pose with a fixed covariance that does not reflect the actual localization uncertainty in every environment.
@@ -45,7 +45,8 @@ This node allows per-environment tuning of both pose covariance and longitudinal
 
 ### Environment classification
 
-`EnvironmentClassifier` loads Lanelet2 polygons whose `type` attribute is `feature_environment_specify`.
+`EnvironmentClassifier` loads Lanelet2 polygons whose `type` attribute is `degenerate_area`.
+These areas are where geometric features are insufficient to constrain at least one translational or rotational degree of freedom in scan matching or lane line matching.
 For each incoming pose, the node checks whether the vehicle position is inside any such polygon.
 
 Classification priority for `longitudinal_scale_factor`:
@@ -162,7 +163,7 @@ The default parameter file defines the following environment IDs:
 
 | ID | Name | Typical use case |
 | -- | ---- | -------------- |
-| 0 | Normal environment | Default when outside any `feature_environment_specify` polygon |
+| 0 | Normal environment | Default when outside any `degenerate_area` polygon |
 | 1 | Uniform road | Straight tunnel sections, uniform road surface |
 | 2 | Feature-poor road | Areas with few LiDAR features for NDT matching |
 

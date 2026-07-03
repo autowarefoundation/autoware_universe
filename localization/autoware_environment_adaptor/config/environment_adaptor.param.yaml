@@ -4,7 +4,7 @@
     default_environment_id: 0
 
     # Area subtype to environment ID mapping
-    # The lanelet2 polygon type must be "feature_environment_specify"
+    # The lanelet2 polygon type must be "degenerate_area"
     # Environment ID definitions:
     #   0: Normal environment
     #   1: Uniform road (e.g., tunnel straight sections)

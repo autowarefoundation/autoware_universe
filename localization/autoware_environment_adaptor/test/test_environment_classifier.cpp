@@ -39,7 +39,7 @@ static autoware_map_msgs::msg::LaneletMapBin make_map_bin(
       lanelet::Point3d(lanelet::utils::getId(), 1.0, 1.0, 0.0),
       lanelet::Point3d(lanelet::utils::getId(), -1.0, 1.0, 0.0),
     });
-  poly.setAttribute(lanelet::AttributeName::Type, "feature_environment_specify");
+  poly.setAttribute(lanelet::AttributeName::Type, "degenerate_area");
   poly.setAttribute(lanelet::AttributeName::Subtype, subtype);
   if (map_longitudinal_scale_factor.has_value()) {
     poly.setAttribute(

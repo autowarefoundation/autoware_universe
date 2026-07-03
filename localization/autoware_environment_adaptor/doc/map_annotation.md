@@ -4,14 +4,15 @@ This document describes how to annotate a Lanelet2 map for `autoware_environment
 
 ## Overview
 
-The node classifies the driving environment by checking whether the vehicle position is inside Lanelet2 polygons tagged as `feature_environment_specify`.
+The node classifies the driving environment by checking whether the vehicle position is inside Lanelet2 polygons tagged as `degenerate_area`.
+These polygons mark areas where geometric features are insufficient to constrain at least one translational or rotational degree of freedom in NDT scan matching or lane line matching (i.e., degenerate/underconstrained regions).
 Each polygon's `subtype` is mapped to an `environment_id` via ROS parameters.
 
 ## Polygon requirements
 
 | Attribute | Required | Description |
 | --------- | -------- | ----------- |
-| `type` | Yes | Must be `feature_environment_specify` |
+| `type` | Yes | Must be `degenerate_area` (degenerate localization area) |
 | `subtype` | Yes | Identifier mapped to `environment_id` in the parameter file (e.g. `uniform_road`, `feature_poor_road`) |
 | `longitudinal_scale_factor` | No | Per-polygon override for twist velocity scaling. Attribute name is configurable via `map_longitudinal_scale_factor_attribute`. |
 
@@ -23,7 +24,7 @@ The following example defines a uniform-road area with a per-polygon longitudina
 
 ```xml
 <relation id='-10001' action='modify'>
-  <tag k='type' v='feature_environment_specify'/>
+  <tag k='type' v='degenerate_area'/>
   <tag k='subtype' v='uniform_road'/>
   <tag k='longitudinal_scale_factor' v='1.0075'/>
   <member type='way' ref='-10002' role='outer'/>
@@ -101,8 +102,8 @@ Applied as: `v_out = v_in * longitudinal_scale_factor` on `twist.twist.linear.x`
 
 ## Workflow
 
-1. Identify road sections that need different localization tuning (tunnels, feature-poor areas, etc.).
-2. Draw `feature_environment_specify` polygons in your map editor (e.g. JOSM with Lanelet2 plugin).
+1. Identify road sections where localization is degenerate (tunnels, feature-poor areas, etc.).
+2. Draw `degenerate_area` polygons in your map editor (e.g. JOSM with Lanelet2 plugin).
 3. Set `subtype` on each polygon.
 4. Optionally set `longitudinal_scale_factor` on individual polygons.
 5. Add matching `area_subtype_*` and `environment_*` entries in the parameter file.
