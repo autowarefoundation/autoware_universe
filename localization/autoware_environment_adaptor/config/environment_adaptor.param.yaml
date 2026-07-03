@@ -43,7 +43,8 @@
        0.0,   0.0,   0.0,   0.0,      0.0,      0.000625]
 
     # --- twist velocity scale ---
+    # The scale factor is read from the "longitudinal_scale_factor" attribute on each
+    # degenerate_area polygon. When a polygon has no such attribute,
+    # default_longitudinal_scale_factor is applied instead.
     default_longitudinal_scale_factor: 1.0
     map_longitudinal_scale_factor_attribute: longitudinal_scale_factor
-    environment_1_longitudinal_scale_factor: 1.0
-    environment_2_longitudinal_scale_factor: 1.0

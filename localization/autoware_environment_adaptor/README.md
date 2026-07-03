@@ -52,8 +52,7 @@ For each incoming pose, the node checks whether the vehicle position is inside a
 Classification priority for `longitudinal_scale_factor`:
 
 1. Polygon attribute specified by `map_longitudinal_scale_factor_attribute` (default: `longitudinal_scale_factor`)
-2. Parameter `environment_<id>_longitudinal_scale_factor`
-3. `default_longitudinal_scale_factor`
+2. `default_longitudinal_scale_factor` (when the polygon has no such attribute)
 
 The polygon `subtype` attribute is mapped to an `environment_id` via `area_subtype_<subtype>.environment_id` parameters.
 
@@ -170,8 +169,8 @@ The default parameter file defines the following environment IDs:
 Add new environments by:
 
 1. Defining a new `area_subtype_<name>.environment_id` mapping.
-2. Adding `environment_<id>_output_pose_covariance` and `environment_<id>_longitudinal_scale_factor`.
-3. Annotating map polygons with the corresponding `subtype`.
+2. Adding `environment_<id>_output_pose_covariance`.
+3. Annotating map polygons with the corresponding `subtype` (and `longitudinal_scale_factor` attribute if velocity scaling is needed).
 
 ## FAQ
 

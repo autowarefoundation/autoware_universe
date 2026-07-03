@@ -55,7 +55,6 @@ static EnvironmentClassifier::Param base_param()
   param.default_environment_id = 0;
   param.default_longitudinal_scale_factor = 1.0;
   param.area_subtype_to_environment_id["uniform_road"] = 1;
-  param.environment_longitudinal_scale_factor_map[1] = 1.0075;
   return param;
 }
 
@@ -88,15 +87,16 @@ TEST(EnvironmentClassifierTest, test_point_outside_polygon)
   EXPECT_DOUBLE_EQ(result.longitudinal_scale_factor, 1.0);
 }
 
-TEST(EnvironmentClassifierTest, test_point_inside_polygon_param_fallback)
+TEST(EnvironmentClassifierTest, test_point_inside_polygon_default_fallback)
 {
   EnvironmentClassifier classifier;
   classifier.set_param(base_param());
   classifier.load_map(make_map_bin("uniform_road"));
 
+  // Polygon has no longitudinal_scale_factor attribute, so default is applied.
   const auto result = classifier.classify(make_point(0.0, 0.0));
   EXPECT_EQ(result.environment_id, 1);
-  EXPECT_DOUBLE_EQ(result.longitudinal_scale_factor, 1.0075);
+  EXPECT_DOUBLE_EQ(result.longitudinal_scale_factor, 1.0);
 }
 
 TEST(EnvironmentClassifierTest, test_point_inside_polygon_map_attribute)
@@ -119,22 +119,6 @@ TEST(EnvironmentClassifierTest, test_point_inside_polygon_unknown_subtype)
   const auto result = classifier.classify(make_point(0.0, 0.0));
   EXPECT_EQ(result.environment_id, 0);
   EXPECT_DOUBLE_EQ(result.longitudinal_scale_factor, 1.0);
-}
-
-TEST(EnvironmentClassifierTest, test_map_attribute_without_param_fallback)
-{
-  EnvironmentClassifier::Param param;
-  param.default_environment_id = 0;
-  param.default_longitudinal_scale_factor = 1.0;
-  param.area_subtype_to_environment_id["uniform_road"] = 1;
-
-  EnvironmentClassifier classifier;
-  classifier.set_param(param);
-  classifier.load_map(make_map_bin("uniform_road", 1.05));
-
-  const auto result = classifier.classify(make_point(0.0, 0.0));
-  EXPECT_EQ(result.environment_id, 1);
-  EXPECT_DOUBLE_EQ(result.longitudinal_scale_factor, 1.05);
 }
 
 }  // namespace autoware::environment_adaptor

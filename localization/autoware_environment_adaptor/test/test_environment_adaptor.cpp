@@ -71,7 +71,6 @@ static rclcpp::NodeOptions base_options()
     .append_parameter_override("default_environment_id", 0)
     .append_parameter_override("default_longitudinal_scale_factor", 1.0)
     .append_parameter_override("area_subtype_uniform_road.environment_id", 1)
-    .append_parameter_override("environment_1_longitudinal_scale_factor", 1.0075)
     .append_parameter_override("default_output_pose_covariance", diag_cov(1.0))
     .append_parameter_override("environment_1_output_pose_covariance", diag_cov(2.0));
 }
@@ -327,7 +326,7 @@ TEST_F(EnvironmentAdaptorTest, test_twist_point_outside_polygon)
   EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0);
 }
 
-TEST_F(EnvironmentAdaptorTest, test_twist_point_inside_polygon_param_fallback)
+TEST_F(EnvironmentAdaptorTest, test_twist_point_inside_polygon_default_fallback)
 {
   create_node(base_options());
   helper_->publish_map(make_map_bin("uniform_road"));
@@ -335,7 +334,8 @@ TEST_F(EnvironmentAdaptorTest, test_twist_point_inside_polygon_param_fallback)
   helper_->publish_pose(0.0, 0.0);
   helper_->publish_twist(10.0);
   ASSERT_TRUE(spin_until_twist());
-  EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0 * 1.0075);
+  // Polygon has no longitudinal_scale_factor attribute, so default (1.0) is applied.
+  EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0);
 }
 
 TEST_F(EnvironmentAdaptorTest, test_twist_point_inside_polygon_map_attribute)

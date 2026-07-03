@@ -36,14 +36,13 @@ Corresponding parameter mapping in `environment_adaptor.param.yaml`:
 ```yaml
 area_subtype_uniform_road:
   environment_id: 1
-environment_1_longitudinal_scale_factor: 1.0
 environment_1_output_pose_covariance: [...]
 ```
 
 When the vehicle is inside this polygon:
 
 - `environment_id` becomes `1` (from `subtype` → parameter mapping).
-- `longitudinal_scale_factor` becomes `1.0075` (from the map attribute; overrides the parameter fallback).
+- `linear.x` is multiplied by `1.0075` (`v_out = v_in × longitudinal_scale_factor`). The scale factor comes from the map attribute. If the polygon has no such attribute, `default_longitudinal_scale_factor` is applied instead.
 
 ## Parameter naming convention
 
@@ -90,13 +89,15 @@ Matrix layout (row-major, indices 0–35):
  Rows/cols 3–5: orientation (roll, pitch, yaw)
 ```
 
-### Per-environment longitudinal scale factor
+### Longitudinal scale factor
 
 ```yaml
-environment_<id>_longitudinal_scale_factor: <double>
 default_longitudinal_scale_factor: <double>
 map_longitudinal_scale_factor_attribute: longitudinal_scale_factor
 ```
+
+The scale factor is defined per polygon via the `longitudinal_scale_factor` map attribute.
+When a polygon has no such attribute, `default_longitudinal_scale_factor` is applied.
 
 Applied as: `v_out = v_in * longitudinal_scale_factor` on `twist.twist.linear.x`.
 

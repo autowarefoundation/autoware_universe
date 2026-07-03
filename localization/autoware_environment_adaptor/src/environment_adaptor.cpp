@@ -99,27 +99,6 @@ void EnvironmentAdaptor::load_classifier_params()
     }
   }
 
-  const std::string env_prefix = "environment_";
-  const std::string env_suffix = "_longitudinal_scale_factor";
-  for (const auto & name : param_names.names) {
-    if (name.find(env_prefix) == 0 && name.size() > env_prefix.size() + env_suffix.size()) {
-      const std::string middle =
-        name.substr(env_prefix.size(), name.size() - env_prefix.size() - env_suffix.size());
-      if (name.substr(name.size() - env_suffix.size()) == env_suffix) {
-        try {
-          const int32_t env_id = std::stoi(middle);
-          const double factor = this->get_parameter(name).as_double();
-          param.environment_longitudinal_scale_factor_map[env_id] = factor;
-          RCLCPP_INFO(
-            this->get_logger(), "Loaded longitudinal_scale_factor for environment_id %d: %f",
-            env_id, factor);
-        } catch (const std::exception &) {
-          // not an integer id in the name, skip
-        }
-      }
-    }
-  }
-
   classifier_.set_param(param);
 }
 

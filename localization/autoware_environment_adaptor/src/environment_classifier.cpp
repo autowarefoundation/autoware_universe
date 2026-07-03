@@ -84,8 +84,7 @@ EnvironmentClassifier::AreaClassification EnvironmentClassifier::classify(
     if (area.map_longitudinal_scale_factor.has_value()) {
       result.longitudinal_scale_factor = area.map_longitudinal_scale_factor.value();
     } else {
-      result.longitudinal_scale_factor =
-        get_longitudinal_scale_factor_for_env_id(result.environment_id);
+      result.longitudinal_scale_factor = param_.default_longitudinal_scale_factor;
     }
     return result;
   }
@@ -103,15 +102,6 @@ int32_t EnvironmentClassifier::get_environment_id_for_subtype(const std::string 
     return it->second;
   }
   return param_.default_environment_id;
-}
-
-double EnvironmentClassifier::get_longitudinal_scale_factor_for_env_id(int32_t env_id) const
-{
-  const auto it = param_.environment_longitudinal_scale_factor_map.find(env_id);
-  if (it != param_.environment_longitudinal_scale_factor_map.end()) {
-    return it->second;
-  }
-  return param_.default_longitudinal_scale_factor;
 }
 
 }  // namespace autoware::environment_adaptor

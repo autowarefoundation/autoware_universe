@@ -47,10 +47,6 @@
           "minItems": 36,
           "maxItems": 36,
           "description": "6x6 pose covariance (row-major, 36 elements) in body frame for the specified environment ID"
-        },
-        "^environment_[0-9]+_longitudinal_scale_factor$": {
-          "type": "number",
-          "description": "Longitudinal velocity scale factor for the specified environment ID, used when the map polygon has no override attribute"
         }
       },
       "required": [

@@ -54,7 +54,6 @@ public:
     int32_t default_environment_id{0};
     double default_longitudinal_scale_factor{1.0};
     std::string map_longitudinal_scale_factor_attribute{"longitudinal_scale_factor"};
-    std::unordered_map<int32_t, double> environment_longitudinal_scale_factor_map;
   };
 
   void set_param(const Param & param) { param_ = param; }
@@ -67,7 +66,6 @@ public:
 
 private:
   int32_t get_environment_id_for_subtype(const std::string & subtype) const;
-  double get_longitudinal_scale_factor_for_env_id(int32_t env_id) const;
 
   Param param_;
   bool is_map_ready_{false};
