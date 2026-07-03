@@ -19,12 +19,15 @@
 
   <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_lanelet2_utils</depend>
   <depend>autoware_motion_utils</depend>
+  <depend>autoware_obstacle_proximity_checker</depend>
   <depend>autoware_path_optimizer</depend>
   <depend>autoware_path_smoother</depend>
   <depend>autoware_planning_factor_interface</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_signal_processing</depend>
+  <depend>autoware_traffic_light_compliance_checker</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
   <depend>autoware_utils_debug</depend>
@@ -37,6 +40,8 @@
   <depend>range-v3</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_ros</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>

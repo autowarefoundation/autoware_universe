@@ -18,4 +18,16 @@
       Modifies the velocity of a trajectory to smooth the motion
     </description>
   </class>
+  <class type="autoware::trajectory_modifier::plugin::SurroundObstacleStop"
+         base_class_type="autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase">
+    <description>
+      Replaces the trajectory with zero velocity when obstacles surround a stopped ego vehicle
+    </description>
+  </class>
+  <class type="autoware::trajectory_modifier::plugin::TrafficLightStop"
+         base_class_type="autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase">
+    <description>
+      Modifies the trajectory to stop at traffic lights
+    </description>
+  </class>
 </library>

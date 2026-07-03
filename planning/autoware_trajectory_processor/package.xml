@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>autoware_trajectory_processor</name>
+  <version>0.0.0</version>
+  <description>The autoware_trajectory_processor package for combined trajectory modification and optimization</description>
+
+  <maintainer email="maxime.clement@tier4.jp">Maxime CLEMENT</maintainer>
+  <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <author email="maxime.clement@tier4.jp">Maxime CLEMENT</author>
+
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_internal_planning_msgs</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+  <test_depend>autoware_planning_msgs</test_depend>
+  <test_depend>autoware_test_utils</test_depend>
+  <test_depend>autoware_trajectory_modifier</test_depend>
+  <test_depend>autoware_trajectory_optimizer</test_depend>
+  <test_depend>rclcpp</test_depend>
+  <test_depend>rclcpp_components</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
