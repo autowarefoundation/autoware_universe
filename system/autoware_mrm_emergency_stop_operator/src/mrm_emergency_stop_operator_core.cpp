@@ -81,11 +81,10 @@ rcl_interfaces::msg::SetParametersResult MrmEmergencyStopOperator::onParameter(
   return result;
 }
 
-void MrmEmergencyStopOperator::onControlCommand(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(Control) & msg)
+void MrmEmergencyStopOperator::onControlCommand(const Control & msg)
 {
   if (status_.state != MrmBehaviorStatus::OPERATING) {
-    prev_control_cmd_ = *msg;
+    prev_control_cmd_ = msg;
     is_prev_control_cmd_subscribed_ = true;
   }
 }
@@ -103,20 +102,18 @@ void MrmEmergencyStopOperator::operateEmergencyStop(
   }
 }
 
-void MrmEmergencyStopOperator::onDrivingModeRequest(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DrivingModeRequest) & msg)
+void MrmEmergencyStopOperator::onDrivingModeRequest(const DrivingModeRequest & msg)
 {
-  if (msg->mode == driving_mode_id_) {
+  if (msg.mode == driving_mode_id_) {
     status_.state = MrmBehaviorStatus::OPERATING;
   } else {
     status_.state = MrmBehaviorStatus::AVAILABLE;
   }
 }
 
-void MrmEmergencyStopOperator::onDrivingModeInfo(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DrivingModeInfo) & msg)
+void MrmEmergencyStopOperator::onDrivingModeInfo(const DrivingModeInfo & msg)
 {
-  for (const auto & item : msg->items) {
+  for (const auto & item : msg.items) {
     if (item.name == "emergency_stop") {
       driving_mode_id_ = item.mode;
       break;
