@@ -106,8 +106,8 @@ bool convertConvexHullToBoundingBox(
   };
 
   // Ego-facing pass: outward normal of CCW edge (ex,ey) is (ey,-ex).
-  // Edge faces ego when (ey,-ex)·(ego_local_x,ego_local_y) > 0, i.e. ey*ego_local_x -
-  // ex*ego_local_y > 0.
+  // Edge faces ego when (ey,-ex)·(ego_local_x,ego_local_y) > 0,
+  // i.e. ey*ego_local_x - ex*ego_local_y > 0.
   if (use_ego) {
     for (size_t i = 0; i < n; ++i) {
       const auto & p0 = points[i];
@@ -250,9 +250,7 @@ geometry_msgs::msg::Polygon unionFootprints(
   const auto poly_a = to_boost(a);
   const auto poly_b = to_boost(b);
 
-  // Merge by taking the convex hull of both footprints' vertices. The convex hull of the union of
-  // two polygons equals the convex hull of all their vertices combined, so this covers both
-  // footprints (whether overlapping or disjoint) with a single convex polygon.
+  // Merge by taking the convex hull of both footprints' vertices.
   autoware_utils_geometry::Polygon2d all_points;
   for (const auto & pt : poly_a.outer()) {
     all_points.outer().push_back(pt);
