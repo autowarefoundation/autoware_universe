@@ -122,9 +122,9 @@ void AggregatorNode::on_timer()
   if (driving_modes_) driving_modes_->update(stamp);
 }
 
-void AggregatorNode::on_diag(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DiagnosticArray) & msg)
+void AggregatorNode::on_diag(const DiagnosticArray & msg)
 {
-  graph_->update(now(), *msg);
+  graph_->update(now(), msg);
 }
 
 void AggregatorNode::on_reset(

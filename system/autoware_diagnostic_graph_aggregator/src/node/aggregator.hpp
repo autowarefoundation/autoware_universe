@@ -58,7 +58,7 @@ private:
   AUTOWARE_SERVICE_PTR(SetOverride) srv_set_override_;
 
   void on_timer();
-  void on_diag(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DiagnosticArray) & msg);
+  void on_diag(const DiagnosticArray & msg);
   void on_reset(
     AUTOWARE_SERVER_REQUEST_PTR(ResetDiagGraph) request,
     AUTOWARE_SERVER_RESPONSE_PTR(ResetDiagGraph) response);

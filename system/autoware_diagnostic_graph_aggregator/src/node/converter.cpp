@@ -37,11 +37,10 @@ ConverterNode::ConverterNode(const rclcpp::NodeOptions & options) : Node("conver
     create_publisher<OperationModeAvailability>("~/operation_mode/availability", rclcpp::QoS(1));
 }
 
-void ConverterNode::on_availability(
-  const AUTOWARE_MESSAGE_CONST_SHARED_PTR(CommandModeAvailability) & in)
+void ConverterNode::on_availability(const CommandModeAvailability & in)
 {
   std::unordered_map<uint16_t, bool> availability;
-  for (const auto & item : in->items) {
+  for (const auto & item : in.items) {
     availability[item.mode] = item.available;
   }
 
@@ -50,7 +49,7 @@ void ConverterNode::on_availability(
     return iter != availability.end() ? iter->second : current;
   };
 
-  out_.stamp = in->stamp;
+  out_.stamp = in.stamp;
   out_.stop = is_available(stop_, out_.stop);
   out_.autonomous = is_available(autonomous_, out_.autonomous);
   out_.local = is_available(local_, out_.local);
