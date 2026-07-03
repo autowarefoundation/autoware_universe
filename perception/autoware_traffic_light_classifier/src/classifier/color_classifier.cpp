@@ -233,34 +233,41 @@ bool update_param(
   }
   return false;
 }
+
+// Declare the 18 HSV threshold parameters on `node`, seeding each from the HSVConfig
+// defaults, and return the resulting config. Lets the constructor build the core's
+// thresholds in a single pass instead of default-constructing then reconfiguring.
+HSVConfig declare_hsv_config(rclcpp::Node * node)
+{
+  HSVConfig config;
+  config.green_min_h = node->declare_parameter("green_min_h", config.green_min_h);
+  config.green_min_s = node->declare_parameter("green_min_s", config.green_min_s);
+  config.green_min_v = node->declare_parameter("green_min_v", config.green_min_v);
+  config.green_max_h = node->declare_parameter("green_max_h", config.green_max_h);
+  config.green_max_s = node->declare_parameter("green_max_s", config.green_max_s);
+  config.green_max_v = node->declare_parameter("green_max_v", config.green_max_v);
+  config.yellow_min_h = node->declare_parameter("yellow_min_h", config.yellow_min_h);
+  config.yellow_min_s = node->declare_parameter("yellow_min_s", config.yellow_min_s);
+  config.yellow_min_v = node->declare_parameter("yellow_min_v", config.yellow_min_v);
+  config.yellow_max_h = node->declare_parameter("yellow_max_h", config.yellow_max_h);
+  config.yellow_max_s = node->declare_parameter("yellow_max_s", config.yellow_max_s);
+  config.yellow_max_v = node->declare_parameter("yellow_max_v", config.yellow_max_v);
+  config.red_min_h = node->declare_parameter("red_min_h", config.red_min_h);
+  config.red_min_s = node->declare_parameter("red_min_s", config.red_min_s);
+  config.red_min_v = node->declare_parameter("red_min_v", config.red_min_v);
+  config.red_max_h = node->declare_parameter("red_max_h", config.red_max_h);
+  config.red_max_s = node->declare_parameter("red_max_s", config.red_max_s);
+  config.red_max_v = node->declare_parameter("red_max_v", config.red_max_v);
+  return config;
+}
 }  // namespace
 
-ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr) : node_ptr_(node_ptr)
+ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr)
+: node_ptr_(node_ptr), hsv_config_(declare_hsv_config(node_ptr)), core_(hsv_config_)
 {
   using std::placeholders::_1;
   image_pub_ = image_transport::create_publisher(
     node_ptr_, "~/debug/image", rclcpp::QoS{1}.get_rmw_qos_profile());
-
-  hsv_config_.green_min_h = node_ptr_->declare_parameter("green_min_h", hsv_config_.green_min_h);
-  hsv_config_.green_min_s = node_ptr_->declare_parameter("green_min_s", hsv_config_.green_min_s);
-  hsv_config_.green_min_v = node_ptr_->declare_parameter("green_min_v", hsv_config_.green_min_v);
-  hsv_config_.green_max_h = node_ptr_->declare_parameter("green_max_h", hsv_config_.green_max_h);
-  hsv_config_.green_max_s = node_ptr_->declare_parameter("green_max_s", hsv_config_.green_max_s);
-  hsv_config_.green_max_v = node_ptr_->declare_parameter("green_max_v", hsv_config_.green_max_v);
-  hsv_config_.yellow_min_h = node_ptr_->declare_parameter("yellow_min_h", hsv_config_.yellow_min_h);
-  hsv_config_.yellow_min_s = node_ptr_->declare_parameter("yellow_min_s", hsv_config_.yellow_min_s);
-  hsv_config_.yellow_min_v = node_ptr_->declare_parameter("yellow_min_v", hsv_config_.yellow_min_v);
-  hsv_config_.yellow_max_h = node_ptr_->declare_parameter("yellow_max_h", hsv_config_.yellow_max_h);
-  hsv_config_.yellow_max_s = node_ptr_->declare_parameter("yellow_max_s", hsv_config_.yellow_max_s);
-  hsv_config_.yellow_max_v = node_ptr_->declare_parameter("yellow_max_v", hsv_config_.yellow_max_v);
-  hsv_config_.red_min_h = node_ptr_->declare_parameter("red_min_h", hsv_config_.red_min_h);
-  hsv_config_.red_min_s = node_ptr_->declare_parameter("red_min_s", hsv_config_.red_min_s);
-  hsv_config_.red_min_v = node_ptr_->declare_parameter("red_min_v", hsv_config_.red_min_v);
-  hsv_config_.red_max_h = node_ptr_->declare_parameter("red_max_h", hsv_config_.red_max_h);
-  hsv_config_.red_max_s = node_ptr_->declare_parameter("red_max_s", hsv_config_.red_max_s);
-  hsv_config_.red_max_v = node_ptr_->declare_parameter("red_max_v", hsv_config_.red_max_v);
-
-  core_.set_config(hsv_config_);
 
   // set parameter callback
   set_param_res_ = node_ptr_->add_on_set_parameters_callback(
