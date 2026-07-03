@@ -14,9 +14,13 @@
 
 #include "autoware/trajectory_modifier/trajectory_modifier.hpp"
 
+#include <autoware/lanelet2_utils/conversion.hpp>
 #include <autoware_utils_system/stop_watch.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
+
+#include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/geometry/LaneletMap.h>
 
 #include <memory>
 #include <string>
@@ -34,6 +38,10 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
     "autoware::trajectory_modifier::plugin::TrajectoryModifierPluginBase"),
   context_{std::make_shared<TrajectoryModifierContext>(this)}
 {
+  sub_map_ = create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
+    "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
+    std::bind(&TrajectoryModifier::on_map, this, std::placeholders::_1));
+
   trajectories_sub_ = create_subscription<CandidateTrajectories>(
     "~/input/candidate_trajectories", 1,
     std::bind(&TrajectoryModifier::on_traj, this, std::placeholders::_1));
@@ -58,6 +66,14 @@ TrajectoryModifier::TrajectoryModifier(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(get_logger(), "TrajectoryModifier initialized");
 }
 
+void TrajectoryModifier::on_map(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr msg)
+{
+  autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  lanelet_map_ptr_ = autoware::experimental::lanelet2_utils::remove_const(
+    autoware::experimental::lanelet2_utils::from_autoware_map_msgs(*msg));
+}
+
 void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg)
 {
   autoware_utils_debug::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -70,20 +86,11 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
   }
 
   const auto input = make_input_data();
-  if (!input.current_odometry) {
-    RCLCPP_ERROR(get_logger(), "Data is not ready: current_odometry is not set");
+  if (!input) {
+    RCLCPP_ERROR(get_logger(), "%s", input.error().c_str());
     return;
   }
-  if (!input.current_acceleration) {
-    RCLCPP_ERROR(get_logger(), "Data is not ready: current_acceleration is not set");
-    return;
-  }
-  if (!input.predicted_objects) {
-    RCLCPP_WARN(get_logger(), "Missing data: predicted_objects is not set");
-  }
-  if (!input.obstacle_pointcloud) {
-    RCLCPP_WARN(get_logger(), "Missing data: obstacle_pointcloud is not set");
-  }
+  const auto & input_data = input.value();
 
   CandidateTrajectories output_trajectories = *msg;
 
@@ -95,7 +102,7 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
   std::string modified_plugins_str;
   for (auto & trajectory : output_trajectories.candidate_trajectories) {
     for (auto & modifier : plugins_) {
-      if (!modifier->modify_trajectory(trajectory.points, input)) continue;
+      if (!modifier->modify_trajectory(trajectory.points, input_data)) continue;
       modifier->publish_planning_factor();
       const auto ns = "trajectory_" + std::to_string(trajectory_count);
       modifier->publish_debug_data(ns);
@@ -117,13 +124,41 @@ void TrajectoryModifier::on_traj(const CandidateTrajectories::ConstSharedPtr msg
     "processing_time_ms", processing_time_ms);
 }
 
-plugin::InputData TrajectoryModifier::make_input_data()
+tl::expected<plugin::InputData, std::string> TrajectoryModifier::make_input_data()
 {
   plugin::InputData input;
   input.current_odometry = sub_current_odometry_.take_data();
   input.current_acceleration = sub_current_acceleration_.take_data();
   input.predicted_objects = sub_objects_.take_data();
   input.obstacle_pointcloud = sub_pointcloud_.take_data();
+  input.route = sub_route_.take_data();
+  input.traffic_light_signals = sub_traffic_lights_.take_data();
+  input.lanelet_map = lanelet_map_ptr_;
+
+  if (!input.current_odometry) {
+    return tl::make_unexpected("Data is not ready: current_odometry is not set");
+  }
+  if (!input.current_acceleration) {
+    return tl::make_unexpected("Data is not ready: current_acceleration is not set");
+  }
+  if (!input.predicted_objects) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 1000, "Missing data: predicted_objects is not set");
+  }
+  if (!input.obstacle_pointcloud) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 1000, "Missing data: obstacle_pointcloud is not set");
+  }
+  if (!input.route) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "Missing data: route is not set");
+  }
+  if (!input.traffic_light_signals) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 1000, "Missing data: traffic_light_signals is not set");
+  }
+  if (!input.lanelet_map) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000, "Missing data: lanelet_map is not set");
+  }
   return input;
 }
 

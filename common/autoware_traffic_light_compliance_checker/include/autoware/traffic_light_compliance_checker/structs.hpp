@@ -58,6 +58,24 @@ struct Violation
   ViolationType type;
   lanelet::BasicLineString2d stop_line;
   int64_t traffic_light_id;
+  lanelet::BasicPoint2d cross_point;
+  double arc_length_to_cross_point;
+
+  Violation(
+    ViolationType type, lanelet::BasicLineString2d stop_line, int64_t traffic_light_id,
+    lanelet::BasicPoint2d cross_point, double arc_length_to_cross_point)
+  : type(type),
+    stop_line(stop_line),
+    traffic_light_id(traffic_light_id),
+    cross_point(cross_point),
+    arc_length_to_cross_point(arc_length_to_cross_point)
+  {
+  }
+
+  bool operator<(const Violation & other) const
+  {
+    return arc_length_to_cross_point < other.arc_length_to_cross_point;
+  }
 };
 
 /// @brief result of compliance check

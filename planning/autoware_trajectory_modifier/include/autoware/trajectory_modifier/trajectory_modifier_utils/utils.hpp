@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_UTILS__UTILS_HPP_
 #define AUTOWARE__TRAJECTORY_MODIFIER__TRAJECTORY_MODIFIER_UTILS__UTILS_HPP_
 
+#include <tl_expected/expected.hpp>
+
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -32,10 +34,24 @@ double calculate_distance_to_last_point(
   const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose);
 
 void replace_trajectory_with_stop_point(
-  TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose);
+  TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & ego_pose,
+  const double time_step);
 
 bool is_ego_vehicle_moving(
   const geometry_msgs::msg::Twist & twist, const double velocity_threshold);
+
+bool is_stop_trajectory(const TrajectoryPoints & trajectory, const double stopped_vel_th = 1e-3);
+
+double clamp_stop_point_arc_length(
+  const double stop_point_arc_length, const double max_length, const double ego_vel,
+  const double ego_accel, const double decel_limit, const double jerk_limit);
+
+bool stop_point_exists(
+  const TrajectoryPoints & traj_points, const double stop_point_arc_length,
+  const double duplicate_check_threshold = 0.0);
+
+bool insert_stop_point(
+  TrajectoryPoints & trajectory, const double stop_point_arc_length, const double traj_length);
 
 }  // namespace autoware::trajectory_modifier::utils
 
