@@ -35,6 +35,11 @@ void ColorClassifierCore::set_config(const HSVConfig & config)
   update_thresholds();
 }
 
+const HSVConfig & ColorClassifierCore::get_config() const
+{
+  return hsv_config_;
+}
+
 void ColorClassifierCore::update_thresholds()
 {
   min_hsv_green_ =
@@ -263,7 +268,7 @@ HSVConfig declare_hsv_config(rclcpp::Node * node)
 }  // namespace
 
 ColorClassifier::ColorClassifier(rclcpp::Node * node_ptr)
-: node_ptr_(node_ptr), hsv_config_(declare_hsv_config(node_ptr)), core_(hsv_config_)
+: node_ptr_(node_ptr), core_(declare_hsv_config(node_ptr))
 {
   using std::placeholders::_1;
   image_pub_ = image_transport::create_publisher(
@@ -313,26 +318,27 @@ bool ColorClassifier::getTrafficSignals(
 rcl_interfaces::msg::SetParametersResult ColorClassifier::parametersCallback(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  update_param(parameters, "green_min_h", hsv_config_.green_min_h);
-  update_param(parameters, "green_min_s", hsv_config_.green_min_s);
-  update_param(parameters, "green_min_v", hsv_config_.green_min_v);
-  update_param(parameters, "green_max_h", hsv_config_.green_max_h);
-  update_param(parameters, "green_max_s", hsv_config_.green_max_s);
-  update_param(parameters, "green_max_v", hsv_config_.green_max_v);
-  update_param(parameters, "yellow_min_h", hsv_config_.yellow_min_h);
-  update_param(parameters, "yellow_min_s", hsv_config_.yellow_min_s);
-  update_param(parameters, "yellow_min_v", hsv_config_.yellow_min_v);
-  update_param(parameters, "yellow_max_h", hsv_config_.yellow_max_h);
-  update_param(parameters, "yellow_max_s", hsv_config_.yellow_max_s);
-  update_param(parameters, "yellow_max_v", hsv_config_.yellow_max_v);
-  update_param(parameters, "red_min_h", hsv_config_.red_min_h);
-  update_param(parameters, "red_min_s", hsv_config_.red_min_s);
-  update_param(parameters, "red_min_v", hsv_config_.red_min_v);
-  update_param(parameters, "red_max_h", hsv_config_.red_max_h);
-  update_param(parameters, "red_max_s", hsv_config_.red_max_s);
-  update_param(parameters, "red_max_v", hsv_config_.red_max_v);
+  HSVConfig config = core_.get_config();
+  update_param(parameters, "green_min_h", config.green_min_h);
+  update_param(parameters, "green_min_s", config.green_min_s);
+  update_param(parameters, "green_min_v", config.green_min_v);
+  update_param(parameters, "green_max_h", config.green_max_h);
+  update_param(parameters, "green_max_s", config.green_max_s);
+  update_param(parameters, "green_max_v", config.green_max_v);
+  update_param(parameters, "yellow_min_h", config.yellow_min_h);
+  update_param(parameters, "yellow_min_s", config.yellow_min_s);
+  update_param(parameters, "yellow_min_v", config.yellow_min_v);
+  update_param(parameters, "yellow_max_h", config.yellow_max_h);
+  update_param(parameters, "yellow_max_s", config.yellow_max_s);
+  update_param(parameters, "yellow_max_v", config.yellow_max_v);
+  update_param(parameters, "red_min_h", config.red_min_h);
+  update_param(parameters, "red_min_s", config.red_min_s);
+  update_param(parameters, "red_min_v", config.red_min_v);
+  update_param(parameters, "red_max_h", config.red_max_h);
+  update_param(parameters, "red_max_s", config.red_max_s);
+  update_param(parameters, "red_max_v", config.red_max_v);
 
-  core_.set_config(hsv_config_);
+  core_.set_config(config);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

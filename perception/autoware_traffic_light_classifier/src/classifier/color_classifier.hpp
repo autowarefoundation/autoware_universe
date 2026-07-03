@@ -88,6 +88,10 @@ public:
   // Replace the HSV thresholds and rebuild the color bands (dynamic reconfigure).
   void set_config(const HSVConfig & config);
 
+  // Current HSV thresholds. The ROS adapter reads these to apply incremental
+  // parameter updates (read-modify-write) without keeping its own copy.
+  const HSVConfig & get_config() const;
+
 private:
   // The three pipeline stages of one color channel: filtered = cv::inRange output,
   // binarized = post-threshold, denoised = post-erode/dilate. classify_element reads
@@ -159,7 +163,6 @@ private:
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
   rclcpp::Node * node_ptr_;
 
-  HSVConfig hsv_config_;
   ColorClassifierCore core_;
 };
 
