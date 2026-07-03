@@ -196,8 +196,8 @@ protected:
     return arbiter_publish_count_ >= target;
   }
 
-  // Fixed-duration spin, used only to settle the map or where the assertion is
-  // about the *absence* of a publish — which cannot be waited on.
+  // Fixed-duration spin for what can't be waited on a publish: settling after
+  // setup or map, or asserting the *absence* of a publish.
   void spin_for(std::chrono::milliseconds duration = std::chrono::milliseconds(150))
   {
     const auto deadline = std::chrono::steady_clock::now() + duration;
