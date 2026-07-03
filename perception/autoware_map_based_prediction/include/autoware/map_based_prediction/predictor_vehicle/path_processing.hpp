@@ -20,6 +20,7 @@
 #include "autoware/map_based_prediction/predictor_vehicle/maneuver_prediction.hpp"
 #include "autoware/map_based_prediction/predictor_vehicle/object_processing.hpp"
 
+#include <autoware/agnocast_wrapper/node.hpp>
 #include <autoware_utils/system/lru_cache.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -80,7 +81,7 @@ public:
     bool consider_only_routable_neighbours{false};
   };
 
-  explicit PathProcessor(rclcpp::Node & node);
+  explicit PathProcessor(autoware::agnocast_wrapper::Node & node);
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
   void setLaneletMap(
@@ -113,7 +114,7 @@ private:
   bool isLateralAccelerationConstraintSatisfied(
     const TrajectoryPoints & trajectory, double delta_time);
 
-  rclcpp::Node & node_;
+  autoware::agnocast_wrapper::Node & node_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;
   std::shared_ptr<lanelet::routing::RoutingGraph> routing_graph_ptr_;
