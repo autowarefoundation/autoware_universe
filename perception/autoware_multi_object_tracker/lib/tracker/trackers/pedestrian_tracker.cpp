@@ -154,7 +154,7 @@ bool PedestrianTracker::getTrackedObject(
     updateCache(object, time);
   }
 
-  // Export shape from extend manager (type selection: CYLINDER vs BOUNDING_BOX)
+  // Export shape from extend manager
   assembleShapeTo(object, to_publish);
 
   if (to_publish) {

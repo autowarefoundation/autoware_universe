@@ -24,16 +24,16 @@
 namespace autoware::multi_object_tracker
 {
 
-// Manages shape extension (length, width, height, output type) for PedestrianTracker.
+// Manages shape extension (length, width, height) for PedestrianTracker.
 // All input shape types (BOUNDING_BOX, CYLINDER, POLYGON) are accepted.
 // Internally always stores BOUNDING_BOX {length, width, height} in tracker heading frame.
-// Output type (BOUNDING_BOX or CYLINDER) is decided at export time based on shape symmetry.
+// Output type is always BOUNDING_BOX with explicit length and width.
 //
 // Data flow:
 //   init()    — force all input types to internal BOUNDING_BOX; apply model-derived sanity bounds
 //   update()  — 3-branch update by input type (BBOX / CYLINDER / POLYGON);
 //               gains differ by type and trust_extension
-//   exportTo() — assemble output with correct shape type
+//   exportTo() — assemble output as a BOUNDING_BOX filling length and width
 class PedestrianShapeModel : public ShapeModelBase
 {
 public:
@@ -43,14 +43,9 @@ public:
   void init(const types::DynamicObject & object);
 
   // Update shape from new measurement.
-  // trust_extension: whether the channel provides reliable size measurements.
-  // tracker_yaw: current tracker heading; required for POLYGON branch.
-  // Returns false if update was rejected (implausible dimensions).
   bool update(const types::DynamicObject & object, bool trust_extension, double tracker_yaw);
 
   // Write shape into output object.
-  // Output type is CYLINDER when shape is nearly symmetric and not inflated; otherwise
-  // BOUNDING_BOX.
   void exportTo(types::DynamicObject & output) const;
 
 private:
