@@ -63,14 +63,16 @@ PerceptionAnalyticsPublisherNode::PerceptionAnalyticsPublisherNode(
       latencies_[LATENCY_TOPIC_ID_PREDICTION] = msg->data;
     });
 
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-  transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  tf_buffer_ = std::make_unique<autoware::agnocast_wrapper::Buffer>(this->get_clock());
+  transform_listener_ =
+    std::make_shared<autoware::agnocast_wrapper::TransformListener>(*tf_buffer_, *this);
 }
 
 void PerceptionAnalyticsPublisherNode::publishPerceptionAnalytics()
 {
   auto metrics = perception_analytics_calculator_.calculate(*tf_buffer_);
 
+  // DiagnosticArray metrics_msg;
   auto metrics_msg = ALLOCATE_OUTPUT_MESSAGE_UNIQUE(perception_analytics_pub_);
 
   // all object count
@@ -126,7 +128,6 @@ void PerceptionAnalyticsPublisherNode::publishPerceptionAnalytics()
 void PerceptionAnalyticsPublisherNode::onObjects(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(PredictedObjects) & objects_msg)
 {
-  // Copy out of the (possibly loaned) message so the calculator can retain it as a ConstSharedPtr.
   perception_analytics_calculator_.setPredictedObjects(
     std::make_shared<PredictedObjects>(*objects_msg));
   perception_analytics_calculator_.setLatencies(latencies_);
@@ -153,12 +154,13 @@ rcl_interfaces::msg::SetParametersResult PerceptionAnalyticsPublisherNode::onPar
 
 void PerceptionAnalyticsPublisherNode::initParameter()
 {
+  using autoware_utils::get_or_declare_parameter;
   auto & p = parameters_;
 
-  p->meas_to_tracked_latency_topic_name = autoware_utils::get_or_declare_parameter<std::string>(
-    *this, "meas_to_tracked_latency_topic_name");
+  p->meas_to_tracked_latency_topic_name =
+    get_or_declare_parameter<std::string>(*this, "meas_to_tracked_latency_topic_name");
   p->prediction_latency_topic_name =
-    autoware_utils::get_or_declare_parameter<std::string>(*this, "prediction_latency_topic_name");
+    get_or_declare_parameter<std::string>(*this, "prediction_latency_topic_name");
 }
 }  // namespace autoware::perception_diagnostics
 

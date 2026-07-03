@@ -18,10 +18,9 @@
 #include "autoware/perception_online_evaluator/parameters.hpp"
 #include "autoware/perception_online_evaluator/perception_analytics_calculator.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/buffer.h"
-#include "tf2_ros/transform_listener.h"
 
 #include <autoware/agnocast_wrapper/node.hpp>
+#include <autoware/agnocast_wrapper/tf2.hpp>
 
 #include "autoware_perception_msgs/msg/object_classification.hpp"
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
@@ -79,8 +78,8 @@ private:
   std::array<double, autoware::perception_diagnostics::LATENCY_TOPIC_NUM> latencies_;
 
   // TF
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
+  std::unique_ptr<autoware::agnocast_wrapper::Buffer> tf_buffer_;
+  std::shared_ptr<autoware::agnocast_wrapper::TransformListener> transform_listener_{nullptr};
 
   // Parameters
   std::shared_ptr<AnalyticsParameters> parameters_;
