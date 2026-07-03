@@ -43,14 +43,9 @@ public:
   void init(const types::DynamicObject & object);
 
   // Update shape from new measurement.
-  // trust_extension: whether the channel provides reliable size measurements.
-  // tracker_yaw: current tracker heading; required for POLYGON branch.
-  // Returns false if update was rejected (implausible dimensions).
   bool update(const types::DynamicObject & object, bool trust_extension, double tracker_yaw);
 
   // Write shape into output object.
-  // Output type is CYLINDER when shape is nearly symmetric and not inflated; otherwise
-  // BOUNDING_BOX.
   void exportTo(types::DynamicObject & output) const;
 
 private:
