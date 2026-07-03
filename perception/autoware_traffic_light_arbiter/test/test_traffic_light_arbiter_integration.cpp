@@ -177,7 +177,7 @@ protected:
   }
 
   // Signal publishers only emit; callers then advance the executor with
-  // spin_until_publish_count() (positive path) or spin_for() (to prove a publish
+  // spin_until_arbiter_publish_count() (positive path) or spin_for() (to prove a publish
   // absent). Separating emit from wait lets tests block on the real publish.
   void publish_perception(const TrafficLightGroupArray & msg) { perception_pub_->publish(msg); }
   void publish_external(const TrafficLightGroupArray & msg) { external_pub_->publish(msg); }
@@ -185,7 +185,7 @@ protected:
   // Spin until the arbiter has published at least `target` messages (or timeout),
   // returning whether it reached the target so callers ASSERT before reading the
   // latest output. Each accepted signal drives one publish; the map never does.
-  bool spin_until_publish_count(
+  bool spin_until_arbiter_publish_count(
     std::size_t target, std::chrono::milliseconds timeout = std::chrono::milliseconds(2000))
   {
     const auto deadline = std::chrono::steady_clock::now() + timeout;
@@ -272,9 +272,9 @@ TEST_F(ArbiterIntegration, bothSourcesCollapseIntoOneGroup)
 
   // Drive one source at a time so both are cached when the second arbitrates.
   publish_external(make_signal(TrafficLightElement::GREEN));
-  ASSERT_TRUE(spin_until_publish_count(1));
+  ASSERT_TRUE(spin_until_arbiter_publish_count(1));
   publish_perception(make_signal(TrafficLightElement::RED));
-  ASSERT_TRUE(spin_until_publish_count(2));
+  ASSERT_TRUE(spin_until_arbiter_publish_count(2));
 
   EXPECT_EQ(observed_group_count(), 1u);
 }
@@ -286,7 +286,7 @@ TEST_F(ArbiterIntegration, perceptionOnlyIsRepublished)
   publish_map();
 
   publish_perception(make_signal(TrafficLightElement::GREEN));
-  ASSERT_TRUE(spin_until_publish_count(1));
+  ASSERT_TRUE(spin_until_arbiter_publish_count(1));
 
   EXPECT_EQ(observed_color(vehicle_signal), TrafficLightElement::GREEN);
 }
@@ -298,7 +298,7 @@ TEST_F(ArbiterIntegration, externalOnlyIsRepublished)
   publish_map();
 
   publish_external(make_signal(TrafficLightElement::RED));
-  ASSERT_TRUE(spin_until_publish_count(1));
+  ASSERT_TRUE(spin_until_arbiter_publish_count(1));
 
   EXPECT_EQ(observed_color(vehicle_signal), TrafficLightElement::RED);
 }
@@ -326,7 +326,7 @@ TEST_F(ArbiterIntegration, emptyInputMessageProducesEmptyOutput)
   TrafficLightGroupArray empty_msg;
   empty_msg.stamp = t0_;
   publish_perception(empty_msg);
-  ASSERT_TRUE(spin_until_publish_count(1));
+  ASSERT_TRUE(spin_until_arbiter_publish_count(1));
 
   EXPECT_EQ(observed_group_count(), 0u);
 }
@@ -340,9 +340,9 @@ TEST_F(ArbiterIntegration, enableSignalMatchingRoutesToValidator)
   publish_map();
 
   publish_external(make_signal(TrafficLightElement::GREEN));
-  ASSERT_TRUE(spin_until_publish_count(1));
+  ASSERT_TRUE(spin_until_arbiter_publish_count(1));
   publish_perception(make_signal(TrafficLightElement::RED));
-  ASSERT_TRUE(spin_until_publish_count(2));
+  ASSERT_TRUE(spin_until_arbiter_publish_count(2));
 
   // The mismatched element stays present with its CIRCLE shape; only the color
   // collapses to UNKNOWN.
@@ -359,9 +359,9 @@ TEST_F(ArbiterIntegration, sourcePriorityRoutesIntoArbitration)
   publish_map();
 
   publish_external(make_signal(TrafficLightElement::RED, 0.99f));
-  ASSERT_TRUE(spin_until_publish_count(1));
+  ASSERT_TRUE(spin_until_arbiter_publish_count(1));
   publish_perception(make_signal(TrafficLightElement::GREEN, 0.10f));
-  ASSERT_TRUE(spin_until_publish_count(2));
+  ASSERT_TRUE(spin_until_arbiter_publish_count(2));
 
   EXPECT_EQ(observed_color(vehicle_signal), TrafficLightElement::GREEN);
 }
