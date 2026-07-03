@@ -1,11 +1,11 @@
-# Map annotation guide
+# Degenerate area setup guide
 
-This document describes how to annotate a Lanelet2 map for `autoware_environment_adaptor`.
+This document describes how to define `degenerate_area` polygons in a Lanelet2 map and configure the corresponding parameters for `autoware_environment_adaptor`.
 
 ## Overview
 
 The node classifies the driving environment by checking whether the vehicle position is inside Lanelet2 polygons tagged as `degenerate_area`.
-These polygons mark areas where geometric features are insufficient to constrain at least one translational or rotational degree of freedom in NDT scan matching or lane line matching (i.e., degenerate/underconstrained regions).
+These polygons mark areas where geometric features are insufficient to constrain at least one translational or rotational degree of freedom in NDT scan matching or lane line matching (i.e., degenerate regions).
 Each polygon's `subtype` is mapped to an `environment_id` via ROS parameters.
 
 ## Polygon requirements

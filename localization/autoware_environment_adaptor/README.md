@@ -32,7 +32,7 @@ The node performs two independent adaptations on each callback:
 
 ## Requirements
 
-- A geo-referenced Lanelet2 map with environment polygons (see [Map annotation guide](doc/map_annotation.md)).
+- A geo-referenced Lanelet2 map with environment polygons (see [Degenerate area setup guide](doc/degenerate_area_setup.md)).
 - Parameter files that define environment IDs, pose covariances, and longitudinal scale factors for each environment.
 
 ## Description
@@ -154,7 +154,7 @@ Parameters are defined in [config/environment_adaptor.param.yaml](config/environ
 {{ json_to_markdown(
   "localization/autoware_environment_adaptor/schema/environment_adaptor.schema.json") }}
 
-See also [Map annotation guide](doc/map_annotation.md) for Lanelet2 polygon setup.
+See also [Degenerate area setup guide](doc/degenerate_area_setup.md) for Lanelet2 polygon setup.
 
 ## Environment ID reference
 
