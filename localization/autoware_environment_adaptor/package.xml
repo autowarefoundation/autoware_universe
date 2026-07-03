@@ -4,9 +4,10 @@
   <name>autoware_environment_adaptor</name>
   <version>0.1.0</version>
   <description>ROS node that adapts localization pose covariance and twist velocity scale based on environment classification derived from a lanelet2 map</description>
-  <maintainer email="masahiro.sakamoto@tier4.jp">Motsu-san</maintainer>
+  <maintainer email="masahiro.sakamoto@tier4.jp">Masahiro Sakamoto</maintainer>
+  <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
   <license>Apache License 2.0</license>
-  <author email="masahiro.sakamoto@tier4.jp">Motsu-san</author>
+  <author email="masahiro.sakamoto@tier4.jp">Masahiro Sakamoto</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>ament_cmake_ros</buildtool_depend>
