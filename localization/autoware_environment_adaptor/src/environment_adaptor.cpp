@@ -31,7 +31,7 @@ EnvironmentAdaptor::EnvironmentAdaptor(const rclcpp::NodeOptions & options)
                              .automatically_declare_parameters_from_overrides(true))
 {
   load_classifier_params();
-  ensure_covariance_params_loaded();
+  load_covariance_params();
 
   sub_map_ = this->create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "~/input/lanelet2_map", rclcpp::QoS(10).durability(rclcpp::DurabilityPolicy::TransientLocal),
@@ -157,16 +157,6 @@ bool EnvironmentAdaptor::try_read_covariance_param(
   return true;
 }
 
-void EnvironmentAdaptor::ensure_covariance_params_loaded()
-{
-  if (covariance_params_ready_) {
-    return;
-  }
-
-  load_covariance_params();
-  covariance_params_ready_ = true;
-}
-
 std::optional<std::array<double, 36>> EnvironmentAdaptor::get_body_covariance_for_env_id(
   int32_t env_id) const
 {
@@ -187,8 +177,6 @@ void EnvironmentAdaptor::on_map(const autoware_map_msgs::msg::LaneletMapBin::Con
 void EnvironmentAdaptor::on_pose(
   const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg)
 {
-  ensure_covariance_params_loaded();
-
   EnvironmentClassifier::AreaClassification classification;
   {
     std::lock_guard<std::mutex> lock(mutex_);

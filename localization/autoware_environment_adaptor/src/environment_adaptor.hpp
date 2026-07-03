@@ -46,7 +46,6 @@ private:
 
   void load_classifier_params();
   void load_covariance_params();
-  void ensure_covariance_params_loaded();
   bool try_read_covariance_param(const std::string & name, std::array<double, 36> & dest);
   std::optional<std::array<double, 36>> get_body_covariance_for_env_id(int32_t env_id) const;
 
@@ -54,7 +53,6 @@ private:
   {
     std::unordered_map<int32_t, std::array<double, 36>> environment_covariance_map;
   } covariance_param_;
-  bool covariance_params_ready_{false};
 
   EnvironmentClassifier classifier_;
   std::mutex mutex_;
