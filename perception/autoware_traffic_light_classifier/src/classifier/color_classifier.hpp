@@ -19,7 +19,6 @@
 
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
@@ -155,11 +154,6 @@ private:
     const std::vector<rclcpp::Parameter> & parameters);
 
 private:
-  enum HSV {
-    Hue = 0,
-    Sat = 1,
-    Val = 2,
-  };
   image_transport::Publisher image_pub_;
 
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
