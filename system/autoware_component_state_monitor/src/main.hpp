@@ -71,7 +71,7 @@ private:
 
   void update_state(const StateType & type, const Module & module, bool state);
   void on_timer();
-  void on_diag(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DiagnosticArray) & msg);
+  void on_diag(const DiagnosticArray & msg);
 };
 
 }  // namespace autoware::component_state_monitor

@@ -120,9 +120,9 @@ void StateMonitor::on_timer()
   }
 }
 
-void StateMonitor::on_diag(const AUTOWARE_MESSAGE_CONST_SHARED_PTR(DiagnosticArray) & msg)
+void StateMonitor::on_diag(const DiagnosticArray & msg)
 {
-  for (const auto & status : msg->status) {
+  for (const auto & status : msg.status) {
     if (status.hardware_id == "topic_state_monitor") {
       if (levels_.count(status.name)) {
         levels_[status.name] = status.level;
