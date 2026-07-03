@@ -27,15 +27,10 @@ namespace autoware::multi_object_tracker
 {
 
 // Manages shape extension (length, width, height) for PedestrianTracker.
-// All input shape types (BOUNDING_BOX, CYLINDER, POLYGON) are accepted.
-// Internally always stores BOUNDING_BOX {length, width, height} in tracker heading frame.
-// Output type is always BOUNDING_BOX with explicit length and width.
+// Output type is always BOUNDING_BOX.
 //
 // The measurement footprint keeps its measured orientation: it is stored anchored at the object
-// position but aligned to the global axes (never rotated to the tracker heading), which also keeps
-// the float32 footprint coordinates small. At export it is re-expressed in the output object's
-// frame (message position and orientation), so it is shifted to the exported pose while its global
-// orientation is preserved.
+// position but aligned to the global axes (never rotated to the tracker heading).
 //
 // Data flow:
 //   init()    — force all input types to internal BOUNDING_BOX; apply model-derived sanity bounds
@@ -52,19 +47,11 @@ public:
   void init(const types::DynamicObject & object);
 
   // Update shape from new measurement.
-  // trust_extension: whether the channel provides reliable size measurements.
-  // tracker_yaw: current tracker heading; required for POLYGON branch.
-  // time: measurement time; stamps the stored footprint so it can expire at export.
-  // A non-empty measurement footprint is stored in the global frame (measured orientation kept).
-  // Returns false if update was rejected (implausible dimensions).
   bool update(
     const types::DynamicObject & object, bool trust_extension, double tracker_yaw,
     const rclcpp::Time & time);
 
   // Write shape into output object.
-  // Output type is always BOUNDING_BOX {length, width, height}. A stored footprint is re-expressed
-  // in the output object's local frame and emitted only while it is still fresh (see
-  // FOOTPRINT_TIMEOUT_S); otherwise it is cleared.
   void exportTo(types::DynamicObject & output) const;
 
 private:
