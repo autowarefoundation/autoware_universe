@@ -6,6 +6,8 @@
   <arg name="traffic_signals_topic" default="/perception/traffic_light_recognition/traffic_signals"/>
   <arg name="output_topic" default="objects"/>
   <arg name="input_topic" default="/perception/object_recognition/tracking/objects"/>
+  <arg name="ego_trajectory_topic" default="/planning/scenario_planning/trajectory"/>
+  <arg name="ego_odometry_topic" default="/localization/kinematic_state"/>
 
   <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
 
@@ -15,6 +17,8 @@
     <remap from="/traffic_signals" to="$(var traffic_signals_topic)"/>
     <remap from="~/output/objects" to="$(var output_topic)"/>
     <remap from="~/input/objects" to="$(var input_topic)"/>
+    <remap from="~/input/ego_trajectory" to="$(var ego_trajectory_topic)"/>
+    <remap from="~/input/ego_odometry" to="$(var ego_odometry_topic)"/>
     <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
   </node>
 </launch>

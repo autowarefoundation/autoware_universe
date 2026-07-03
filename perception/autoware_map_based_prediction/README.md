@@ -223,11 +223,13 @@ In the case where the target object is inside the road, the additional path(s) t
 
 ### Input
 
-| Name                                                     | Type                                                    | Description                                                |
-| -------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------- |
-| `~/perception/object_recognition/tracking/objects`       | `autoware_perception_msgs::msg::TrackedObjects`         | tracking objects without predicted path.                   |
-| `~/vector_map`                                           | `autoware_map_msgs::msg::LaneletMapBin`                 | binary data of Lanelet2 Map.                               |
-| `~/perception/traffic_light_recognition/traffic_signals` | `autoware_perception_msgs::msg::TrafficLightGroupArray` | rearranged information on the corresponding traffic lights |
+| Name                                                     | Type                                                    | Description                                                                 |
+| -------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `~/perception/object_recognition/tracking/objects`       | `autoware_perception_msgs::msg::TrackedObjects`         | tracking objects without predicted path.                                    |
+| `~/vector_map`                                           | `autoware_map_msgs::msg::LaneletMapBin`                 | binary data of Lanelet2 Map.                                                |
+| `~/perception/traffic_light_recognition/traffic_signals` | `autoware_perception_msgs::msg::TrafficLightGroupArray` | rearranged information on the corresponding traffic lights                  |
+| `~/input/ego_trajectory`                                 | `autoware_planning_msgs::msg::Trajectory`               | ego planned trajectory, used only by `planning_aware_prediction` (optional) |
+| `~/input/ego_odometry`                                   | `nav_msgs::msg::Odometry`                               | ego kinematic state, used only by `planning_aware_prediction` (optional)    |
 
 ### Output
 
@@ -257,6 +259,44 @@ In the case where the target object is inside the road, the additional path(s) t
 | `object_buffer_time_length`                                      | [s]   | double | Time span of object history to store the information                                                                                  |
 | `history_time_length`                                            | [s]   | double | Time span of object information used for prediction                                                                                   |
 | `prediction_time_horizon_rate_for_validate_shoulder_lane_length` | [-]   | double | prediction path will disabled when the estimated path length exceeds lanelet length. This parameter control the estimated path length |
+
+### Planning-aware prediction (optional)
+
+Inspired by the "perception in plan" design of end-to-end driving research (e.g. VeteranAD, AAAI 2026),
+this optional feature feeds the planning intent back to prediction so that computational resources are
+concentrated on the traffic participants that matter for the plan, instead of processing every object
+uniformly.
+
+When `planning_aware_prediction.enable` is `true`, each vehicle-class object is classified by its
+relevance to the ego planned trajectory (the previous planning cycle's output):
+
+- **HIGH relevance** — the object is near the ego vehicle, inside a corridor around the planned
+  trajectory (the corridor widens with the arc length to reflect the growing uncertainty of the plan
+  further ahead), or approaching the corridor within `time_to_corridor_threshold`. It receives the
+  full lanelet-based multi-mode prediction (unchanged behavior).
+- **LOW relevance** — everything else. It receives a lightweight constant-velocity prediction with the
+  shorter `low_fidelity_time_horizon`. Nothing is dropped from the output.
+
+Safety design:
+
+- Fail-safe: if the ego trajectory is missing or older than `ego_trajectory_timeout`, every object is
+  treated as HIGH relevance, which is identical to disabling the feature.
+- Hysteresis: promotion to HIGH is immediate; demotion to LOW requires `demote_frame_count`
+  consecutive LOW classifications.
+- Pedestrians, bicycles, and unknown-class objects always receive their regular prediction.
+
+See `design/planning-aware-prediction.md` for details.
+
+| Parameter                                              | Unit     | Type   | Description                                                                    |
+| ------------------------------------------------------ | -------- | ------ | ------------------------------------------------------------------------------ |
+| `planning_aware_prediction.enable`                     | [-]      | bool   | enable planning-aware prediction fidelity allocation (default: `false`)        |
+| `planning_aware_prediction.ego_trajectory_timeout`     | [s]      | double | ego trajectory freshness limit; a stale trajectory disables the classification |
+| `planning_aware_prediction.always_relevant_radius`     | [m]      | double | objects within this distance of the ego vehicle are always HIGH relevance      |
+| `planning_aware_prediction.lateral_margin_base`        | [m]      | double | corridor half width around the planned trajectory at the ego position          |
+| `planning_aware_prediction.lateral_margin_rate`        | [m/m]    | double | corridor half width growth per meter of arc length                             |
+| `planning_aware_prediction.time_to_corridor_threshold` | [s]      | double | objects approaching the corridor within this time are HIGH relevance           |
+| `planning_aware_prediction.demote_frame_count`         | [frames] | int    | consecutive LOW classifications required before demotion                       |
+| `planning_aware_prediction.low_fidelity_time_horizon`  | [s]      | double | prediction horizon of the lightweight prediction for LOW relevance vehicles    |
 
 ## Assumptions / Known limits
 

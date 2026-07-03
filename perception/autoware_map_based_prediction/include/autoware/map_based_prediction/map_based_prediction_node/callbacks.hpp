@@ -20,6 +20,7 @@
 #include "autoware/map_based_prediction/path_generator/path_generator.hpp"
 #include "autoware/map_based_prediction/predictor_vehicle/predictor_vehicle.hpp"
 #include "autoware/map_based_prediction/predictor_vru/predictor_vru.hpp"
+#include "autoware/map_based_prediction/relevance_classifier.hpp"
 
 #include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/agnocast_wrapper/node.hpp>
@@ -29,6 +30,8 @@
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <chrono>
@@ -36,6 +39,9 @@
 
 namespace autoware::map_based_prediction
 {
+
+using autoware_planning_msgs::msg::Trajectory;
+using nav_msgs::msg::Odometry;
 
 class Diagnostics;
 
@@ -46,6 +52,7 @@ struct NodeState
   std::shared_ptr<PredictorVehicle> predictor_vehicle;
   std::shared_ptr<PredictorVru> predictor_vru;
   std::shared_ptr<PathGenerator> path_generator;
+  std::shared_ptr<RelevanceClassifier> relevance_classifier;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper;
 };
 
@@ -81,6 +88,8 @@ private:
   NodeState & state_;
 
   AUTOWARE_POLLING_SUBSCRIBER_PTR(TrafficLightGroupArray) sub_traffic_signals_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(Trajectory) sub_ego_trajectory_;
+  AUTOWARE_POLLING_SUBSCRIBER_PTR(Odometry) sub_ego_odometry_;
   TfListener transform_listener_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
 
@@ -91,6 +100,8 @@ private:
 
   void trafficSignalsCallback(
     const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrafficLightGroupArray) & msg);
+  void updateRelevanceClassifier(const double objects_detected_time);
+  PredictedObject predictLowFidelityVehicle(const TrackedObject & object) const;
   void publish(
     AUTOWARE_MESSAGE_UNIQUE_PTR(PredictedObjects) output,
     const visualization_msgs::msg::MarkerArray & debug_markers) const;

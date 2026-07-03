@@ -29,10 +29,43 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::map_based_prediction
 {
 using autoware_utils::ScopedTimeTrack;
+
+namespace
+{
+
+void appendRelevanceMarker(
+  const TrackedObject & object, const Relevance relevance, const std_msgs::msg::Header & header,
+  visualization_msgs::msg::MarkerArray & debug_markers)
+{
+  visualization_msgs::msg::Marker marker;
+  marker.header = header;
+  marker.ns = "relevance";
+  marker.id = static_cast<int32_t>(debug_markers.markers.size());
+  marker.type = visualization_msgs::msg::Marker::SPHERE;
+  marker.action = visualization_msgs::msg::Marker::ADD;
+  marker.pose = object.kinematics.pose_with_covariance.pose;
+  marker.pose.position.z += 2.0;
+  marker.scale.x = 1.0;
+  marker.scale.y = 1.0;
+  marker.scale.z = 1.0;
+  marker.color.a = 0.8;
+  if (relevance == Relevance::HIGH) {
+    marker.color.g = 1.0;
+  } else {
+    marker.color.r = 0.5;
+    marker.color.g = 0.5;
+    marker.color.b = 0.5;
+  }
+  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+  debug_markers.markers.push_back(marker);
+}
+
+}  // namespace
 
 // ---------------------------------------------------------------------------
 // MapCallback
@@ -74,6 +107,10 @@ ObjectsCallback::ObjectsCallback(autoware::agnocast_wrapper::Node * node, NodeSt
 {
   sub_traffic_signals_ =
     node->create_polling_subscriber<TrafficLightGroupArray>("/traffic_signals", rclcpp::QoS{1});
+  sub_ego_trajectory_ =
+    node->create_polling_subscriber<Trajectory>("~/input/ego_trajectory", rclcpp::QoS{1});
+  sub_ego_odometry_ =
+    node->create_polling_subscriber<Odometry>("~/input/ego_odometry", rclcpp::QoS{1});
   stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
@@ -101,6 +138,38 @@ void ObjectsCallback::trafficSignalsCallback(
   state_.predictor_vru->setTrafficSignal(*msg);
 }
 
+void ObjectsCallback::updateRelevanceClassifier(const double objects_detected_time)
+{
+  if (!state_.relevance_classifier || !state_.relevance_classifier->getParams().enable) {
+    return;
+  }
+
+  const auto trajectory_msg = sub_ego_trajectory_->take_data();
+  const auto odometry_msg = sub_ego_odometry_->take_data();
+  if (trajectory_msg && odometry_msg) {
+    std::vector<geometry_msgs::msg::Point> trajectory_points;
+    trajectory_points.reserve(trajectory_msg->points.size());
+    for (const auto & point : trajectory_msg->points) {
+      trajectory_points.push_back(point.pose.position);
+    }
+    state_.relevance_classifier->setEgoData(
+      trajectory_points, odometry_msg->pose.pose.position,
+      rclcpp::Time(trajectory_msg->header.stamp).seconds());
+  }
+  state_.relevance_classifier->removeOldHistory(
+    objects_detected_time, state_.params.object_buffer_time_length);
+}
+
+PredictedObject ObjectsCallback::predictLowFidelityVehicle(const TrackedObject & object) const
+{
+  auto predicted_object = utils::convertToPredictedObject(object);
+  PredictedPath predicted_path = state_.path_generator->generatePathForNonVehicleObject(
+    object, state_.relevance_classifier->getParams().low_fidelity_time_horizon);
+  predicted_path.confidence = 1.0;
+  predicted_object.kinematics.predicted_paths.push_back(predicted_path);
+  return predicted_object;
+}
+
 void ObjectsCallback::objectsCallback(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & in_objects)
 {
@@ -126,6 +195,8 @@ void ObjectsCallback::objectsCallback(
   }
 
   const double objects_detected_time = rclcpp::Time(in_objects->header.stamp).seconds();
+
+  updateRelevanceClassifier(objects_detected_time);
 
   state_.predictor_vehicle->removeOldHistory(
     objects_detected_time, state_.params.object_buffer_time_length);
@@ -168,6 +239,23 @@ void ObjectsCallback::objectsCallback(
       case ObjectClassification::TRAILER:
       case ObjectClassification::MOTORCYCLE:
       case ObjectClassification::TRUCK: {
+        // Planning-aware fidelity allocation: vehicles with low relevance to the ego
+        // planned trajectory receive a lightweight constant-velocity prediction instead
+        // of the full lanelet-based multi-mode prediction. VRU classes are always
+        // predicted with full fidelity.
+        const auto relevance =
+          state_.relevance_classifier
+            ? state_.relevance_classifier->classify(transformed_object, objects_detected_time)
+            : Relevance::HIGH;
+        if (
+          pub_debug_markers_ && state_.relevance_classifier &&
+          state_.relevance_classifier->getParams().enable) {
+          appendRelevanceMarker(transformed_object, relevance, output.header, debug_markers);
+        }
+        if (relevance == Relevance::LOW) {
+          output.objects.push_back(predictLowFidelityVehicle(transformed_object));
+          break;
+        }
         const auto predicted_object_opt = state_.predictor_vehicle->predict(
           output.header, transformed_object, objects_detected_time,
           pub_debug_markers_ ? &debug_markers : nullptr);

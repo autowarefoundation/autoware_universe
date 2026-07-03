@@ -15,6 +15,7 @@
 #include "map_based_prediction_node.hpp"
 
 #include "autoware/map_based_prediction/params.hpp"
+#include "autoware/map_based_prediction/relevance_classifier.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
 
@@ -129,6 +130,27 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   // --- Path generator for unknown-class objects ---
   state_.path_generator = std::make_shared<PathGenerator>(prediction_sampling_dt);
 
+  // --- Planning-aware relevance classifier ---
+  {
+    RelevanceParams relevance_params;
+    relevance_params.enable = declare_parameter<bool>("planning_aware_prediction.enable");
+    relevance_params.ego_trajectory_timeout =
+      declare_parameter<double>("planning_aware_prediction.ego_trajectory_timeout");
+    relevance_params.always_relevant_radius =
+      declare_parameter<double>("planning_aware_prediction.always_relevant_radius");
+    relevance_params.lateral_margin_base =
+      declare_parameter<double>("planning_aware_prediction.lateral_margin_base");
+    relevance_params.lateral_margin_rate =
+      declare_parameter<double>("planning_aware_prediction.lateral_margin_rate");
+    relevance_params.time_to_corridor_threshold =
+      declare_parameter<double>("planning_aware_prediction.time_to_corridor_threshold");
+    relevance_params.demote_frame_count =
+      static_cast<int>(declare_parameter<int64_t>("planning_aware_prediction.demote_frame_count"));
+    relevance_params.low_fidelity_time_horizon =
+      declare_parameter<double>("planning_aware_prediction.low_fidelity_time_horizon");
+    state_.relevance_classifier = std::make_shared<RelevanceClassifier>(relevance_params);
+  }
+
   // --- Node params ---
   state_.params.object_buffer_time_length = declare_parameter<double>("object_buffer_time_length");
   state_.params.remember_lost_crosswalk_users =
@@ -221,6 +243,22 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   update_param(
     parameters, "acceleration_exponential_half_life", pp.acceleration_exponential_half_life);
   state_.predictor_vehicle->setParams(vehicle_params);
+
+  auto relevance_params = state_.relevance_classifier->getParams();
+  update_param(parameters, "planning_aware_prediction.enable", relevance_params.enable);
+  update_param(
+    parameters, "planning_aware_prediction.always_relevant_radius",
+    relevance_params.always_relevant_radius);
+  update_param(
+    parameters, "planning_aware_prediction.lateral_margin_base",
+    relevance_params.lateral_margin_base);
+  update_param(
+    parameters, "planning_aware_prediction.lateral_margin_rate",
+    relevance_params.lateral_margin_rate);
+  update_param(
+    parameters, "planning_aware_prediction.time_to_corridor_threshold",
+    relevance_params.time_to_corridor_threshold);
+  state_.relevance_classifier->setParams(relevance_params);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;
