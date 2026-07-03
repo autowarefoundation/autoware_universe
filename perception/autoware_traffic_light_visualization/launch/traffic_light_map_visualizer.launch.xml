@@ -3,9 +3,12 @@
   <arg name="input/vector_map" default="/map/vector_map"/>
   <arg name="output/traffic_light" default="traffic_signals/markers"/>
 
+  <include file="$(find-pkg-share autoware_agnocast_wrapper)/launch/agnocast_env.launch.xml"/>
+
   <node pkg="autoware_traffic_light_visualization" exec="traffic_light_map_visualizer_node" name="traffic_light_map_visualizer">
     <remap from="~/input/tl_state" to="$(var input/tl_state)"/>
     <remap from="~/input/vector_map" to="$(var input/vector_map)"/>
     <remap from="~/output/traffic_light" to="$(var output/traffic_light)"/>
+    <env name="LD_PRELOAD" value="$(var ld_preload_value)"/>
   </node>
 </launch>
