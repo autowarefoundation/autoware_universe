@@ -130,7 +130,7 @@ void PedestrianShapeModel::exportTo(types::DynamicObject & output) const
   output.shape.dimensions.x = length_;
   output.shape.dimensions.y = width_;
   output.shape.dimensions.z = height_;
-  output.shape.footprint.points.clear();
+  output.shape.footprint = footprint_;
   output.area = types::getArea(output.shape);
 }
 
