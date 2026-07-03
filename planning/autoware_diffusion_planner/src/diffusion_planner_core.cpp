@@ -556,12 +556,12 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
     const std::vector<float> single_turn_indicator_logit(
       turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * i,
       turn_indicator_logit.begin() + TURN_INDICATOR_OUTPUT_DIM * (i + 1));
-    const TurnIndicatorsCommand turn_indicator_command =
+    const TurnIndicatorsCommand turn_indicators_command =
       turn_indicator_managers_.at(i).evaluate(single_turn_indicator_logit, timestamp, prev_report);
 
     if (i == 0) {
       // Publish the first trajectory's command on the standalone turn indicator topic.
-      output.turn_indicator_command = turn_indicator_command;
+      output.turn_indicators_command = turn_indicators_command;
     }
 
     autoware_internal_planning_msgs::msg::CandidateTrajectory candidate_trajectory;
@@ -569,6 +569,7 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
     candidate_trajectory.generator_id = generator_uuid;
     candidate_trajectory.points = trajectory.points;
     candidate_trajectory.turn_indicator = turn_indicator_command;
+    candidate_trajectory.turn_indicators_command = turn_indicators_command;
 
     std_msgs::msg::String generator_name_msg;
     generator_name_msg.data = std::string("DiffusionPlanner_batch_") + std::to_string(i);

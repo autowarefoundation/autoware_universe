@@ -68,7 +68,7 @@ struct CoreData
     const std::shared_ptr<lanelet::ConstLanelets> & preferred_lanes, const Header & header,
     const UUID & generator_id,
     const std::shared_ptr<std::deque<Trajectory>> & trajectory_history = nullptr,
-    const TurnIndicatorsCommand & turn_indicator = TurnIndicatorsCommand{})
+    const TurnIndicatorsCommand & turn_indicators_command = TurnIndicatorsCommand{})
   : original{original},
     points{points},
     previous_points{previous_points},
@@ -78,7 +78,7 @@ struct CoreData
     header{header},
     generator_id{generator_id},
     trajectory_history{trajectory_history},
-    turn_indicator{turn_indicator}
+    turn_indicators_command{turn_indicators_command}
   {
   }
 
@@ -92,7 +92,7 @@ struct CoreData
   Header header;
   UUID generator_id;
   std::shared_ptr<std::deque<Trajectory>> trajectory_history;
-  TurnIndicatorsCommand turn_indicator;
+  TurnIndicatorsCommand turn_indicators_command;
 };
 
 struct EvaluatorParameters
@@ -125,7 +125,7 @@ struct EvaluationResult
   UUID uuid() const { return data->generator_id; }
   std::shared_ptr<TrajectoryPoints> original() const { return data->original; }
   std::shared_ptr<TrajectoryPoints> points() const { return data->points; }
-  TurnIndicatorsCommand turn_indicator() const { return data->turn_indicator; }
+  TurnIndicatorsCommand turn_indicators_command() const { return data->turn_indicators_command; }
   float total() const { return total_score; }
 };
 

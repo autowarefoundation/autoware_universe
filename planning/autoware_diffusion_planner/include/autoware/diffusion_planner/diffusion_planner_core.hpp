@@ -94,7 +94,7 @@ struct PlannerOutput
   Trajectory trajectory;
   CandidateTrajectories candidate_trajectories;
   PredictedObjects predicted_objects;
-  TurnIndicatorsCommand turn_indicator_command;
+  TurnIndicatorsCommand turn_indicators_command;
   Float32MultiArray denoising_steps;
   std::unordered_map<std::string, std::vector<bool>> guidance_triggered;
 };
