@@ -98,7 +98,8 @@ void ObstacleStop::on_initialize(const TrajectoryModifierParams & params)
       {utils::obstacle_stop::ObjectType::TRAILER, p.object_decel.trailer},
       {utils::obstacle_stop::ObjectType::MOTORCYCLE, p.object_decel.motorcycle},
       {utils::obstacle_stop::ObjectType::BICYCLE, p.object_decel.bicycle},
-      {utils::obstacle_stop::ObjectType::PEDESTRIAN, p.object_decel.pedestrian}};
+      {utils::obstacle_stop::ObjectType::PEDESTRIAN, p.object_decel.pedestrian},
+      {utils::obstacle_stop::ObjectType::ANIMAL, p.object_decel.animal}};
   }
 }
 
@@ -146,7 +147,8 @@ void ObstacleStop::update_params(const TrajectoryModifierParams & params)
       {utils::obstacle_stop::ObjectType::TRAILER, p.object_decel.trailer},
       {utils::obstacle_stop::ObjectType::MOTORCYCLE, p.object_decel.motorcycle},
       {utils::obstacle_stop::ObjectType::BICYCLE, p.object_decel.bicycle},
-      {utils::obstacle_stop::ObjectType::PEDESTRIAN, p.object_decel.pedestrian}};
+      {utils::obstacle_stop::ObjectType::PEDESTRIAN, p.object_decel.pedestrian},
+      {utils::obstacle_stop::ObjectType::ANIMAL, p.object_decel.animal}};
   }
 }
 
