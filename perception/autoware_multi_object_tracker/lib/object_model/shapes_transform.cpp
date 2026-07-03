@@ -258,7 +258,6 @@ geometry_msgs::msg::Polygon unionFootprints(
   for (const auto & pt : poly_b.outer()) {
     all_points.outer().push_back(pt);
   }
-  if (all_points.outer().empty()) return a;
 
   autoware_utils_geometry::Polygon2d hull;
   boost::geometry::convex_hull(all_points, hull);

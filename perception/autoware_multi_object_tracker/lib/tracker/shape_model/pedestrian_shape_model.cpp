@@ -16,6 +16,8 @@
 
 #include "autoware/multi_object_tracker/object_model/shapes_transform.hpp"
 
+#include <geometry_msgs/msg/pose.hpp>
+
 #include <algorithm>
 #include <cmath>
 
@@ -24,8 +26,23 @@ namespace autoware::multi_object_tracker
 
 using Shape = autoware_perception_msgs::msg::Shape;
 
+namespace
+{
+// A frame co-located with `position` but aligned to the global axes (zero yaw). Used with
+// transformFootprint() to keep the footprint's measured (global) orientation while anchoring its
+// coordinates at the tracker/object position — this avoids the float32 precision loss that storing
+// large absolute map coordinates in the footprint points would incur.
+geometry_msgs::msg::Pose globalFrameAt(const geometry_msgs::msg::Point & position)
+{
+  geometry_msgs::msg::Pose pose;
+  pose.position = position;
+  pose.orientation.w = 1.0;
+  return pose;
+}
+}  // namespace
+
 PedestrianShapeModel::PedestrianShapeModel(const object_model::ObjectModel & object_model)
-: object_model_(object_model)
+: object_model_(object_model), last_footprint_update_time_(rclcpp::Time(0, 0, RCL_ROS_TIME))
 {
 }
 
@@ -63,7 +80,8 @@ void PedestrianShapeModel::init(const types::DynamicObject & object)
 }
 
 bool PedestrianShapeModel::update(
-  const types::DynamicObject & object, bool trust_extension, double tracker_yaw)
+  const types::DynamicObject & object, bool trust_extension, double tracker_yaw,
+  const rclcpp::Time & time)
 {
   // Model-derived sanity bounds (permissive: 0.5× min … 1.5× max)
   const double len_max = object_model_.size_limit.length_max * 1.5;
@@ -118,6 +136,17 @@ bool PedestrianShapeModel::update(
     }
   }
 
+  // Store the footprint anchored at the object position but aligned to the global axes: its
+  // measured orientation is preserved (not rotated to the tracker heading), and coordinates stay
+  // small so the float32 footprint points keep their precision. Only measurements that carry a
+  // footprint update it.
+  if (!object.shape.footprint.points.empty()) {
+    footprint_ = shapes::transformFootprint(
+      object.shape.footprint, object.pose, globalFrameAt(object.pose.position));
+    footprint_valid_ = true;
+    last_footprint_update_time_ = time;
+  }
+
   clampToLimits();
   area_ = length_ * width_;
   return true;
@@ -130,7 +159,20 @@ void PedestrianShapeModel::exportTo(types::DynamicObject & output) const
   output.shape.dimensions.x = length_;
   output.shape.dimensions.y = width_;
   output.shape.dimensions.z = height_;
-  output.shape.footprint = footprint_;
+
+  // Emit the stored footprint only while it is still fresh; otherwise drop the stale geometry.
+  // The footprint is kept in a global-orientation frame, so re-express it in the output object's
+  // frame (message position and orientation): it is shifted to the exported pose while its measured
+  // (global) orientation is preserved, matching the DynamicObject footprint convention.
+  const bool footprint_fresh =
+    footprint_valid_ && (output.time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
+  if (footprint_fresh) {
+    output.shape.footprint =
+      shapes::transformFootprint(footprint_, globalFrameAt(output.pose.position), output.pose);
+  } else {
+    output.shape.footprint.points.clear();
+  }
+
   output.area = types::getArea(output.shape);
 }
 
