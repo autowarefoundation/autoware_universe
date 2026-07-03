@@ -16,8 +16,6 @@
 
 #include "covariance_utils.hpp"
 
-#include <Eigen/Geometry>
-
 #include <memory>
 #include <string>
 
@@ -207,12 +205,8 @@ void EnvironmentAdaptor::on_pose(
   }
 
   auto out = *msg;
-  const auto body_cov = get_body_covariance_for_env_id(classification.environment_id);
-  if (body_cov) {
-    const auto & q_msg = msg->pose.pose.orientation;
-    const Eigen::Quaterniond q(q_msg.w, q_msg.x, q_msg.y, q_msg.z);
-    const auto map_cov = rotate_covariance(body_cov.value(), q.normalized().toRotationMatrix());
-    for (size_t i = 0; i < 36; ++i) out.pose.covariance[i] = map_cov[i];
+  if (const auto body_cov = get_body_covariance_for_env_id(classification.environment_id)) {
+    apply_body_covariance_to_pose(out.pose, body_cov.value());
   }
   pub_pose_->publish(out);
 

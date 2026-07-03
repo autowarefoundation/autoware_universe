@@ -16,6 +16,9 @@
 #define COVARIANCE_UTILS_HPP_
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
+
+#include <geometry_msgs/msg/pose_with_covariance.hpp>
 
 #include <array>
 
@@ -40,14 +43,15 @@ inline std::array<double, 36> rotate_covariance(
   return ret;
 }
 
-inline bool is_covariance_all_zero(const std::array<double, 36> & cov)
+inline void apply_body_covariance_to_pose(
+  geometry_msgs::msg::PoseWithCovariance & pose_cov, const std::array<double, 36> & body_cov)
 {
-  for (const double v : cov) {
-    if (v != 0.0) {
-      return false;
-    }
+  const auto & q_msg = pose_cov.pose.orientation;
+  const Eigen::Quaterniond q(q_msg.w, q_msg.x, q_msg.y, q_msg.z);
+  const auto map_cov = rotate_covariance(body_cov, q.normalized().toRotationMatrix());
+  for (size_t i = 0; i < 36; ++i) {
+    pose_cov.covariance[i] = map_cov[i];
   }
-  return true;
 }
 
 }  // namespace autoware::environment_adaptor
