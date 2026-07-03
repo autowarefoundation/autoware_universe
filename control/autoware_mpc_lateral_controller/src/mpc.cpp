@@ -39,27 +39,6 @@ using autoware_utils::rad2deg;
 
 namespace
 {
-double estimateLocalTimeStep(const MPCTrajectory & traj, const double target_time)
-{
-  if (traj.size() < 2) {
-    return 0.0;
-  }
-
-  if (target_time <= traj.relative_time.front()) {
-    return traj.relative_time.at(1) - traj.relative_time.front();
-  }
-  if (target_time >= traj.relative_time.back()) {
-    return traj.relative_time.back() - traj.relative_time.at(traj.size() - 2);
-  }
-
-  for (size_t i = 0; i < traj.size() - 1; ++i) {
-    if (target_time <= traj.relative_time.at(i + 1)) {
-      return traj.relative_time.at(i + 1) - traj.relative_time.at(i);
-    }
-  }
-
-  return traj.relative_time.back() - traj.relative_time.at(traj.size() - 2);
-}
 
 bool interpolateReferenceStateAtTime(
   const MPCTrajectory & traj, const double target_time, Pose * pose, double * nearest_time,
@@ -408,39 +387,12 @@ std::pair<ResultWithReason, MPCData> MPC::getData(
   if (m_use_temporal_trajectory) {
     const double traj_start_time = traj.relative_time.front();
     const double traj_end_time = traj.relative_time.back();
-    const double prev_nearest_time =
-      m_prev_nearest_time.has_value()
-        ? std::clamp(*m_prev_nearest_time, traj_start_time, traj_end_time)
-        : traj_start_time;
-    const double predicted_time =
-      std::clamp(prev_nearest_time + m_ctrl_period, traj_start_time, traj_end_time);
-    const double local_dt =
-      std::max(estimateLocalTimeStep(traj, predicted_time), std::max(m_ctrl_period, 1.0e-3));
-    const double backward_window = std::max(local_dt, m_ctrl_period);
-    const double forward_window = std::max(3.0 * local_dt, m_ctrl_period);
-    data.temporal_predicted_time = predicted_time;
-    data.temporal_window_min = predicted_time - backward_window;
-    data.temporal_window_max = predicted_time + forward_window;
 
-    Pose observed_pose{};
-    size_t observed_index = 0;
-    double observed_time = predicted_time;
-    const bool observed = MPCUtils::calcNearestPoseInterp(
-      traj, current_pose, &observed_pose, &observed_index, &observed_time,
-      ego_nearest_dist_threshold, ego_nearest_yaw_threshold, true, predicted_time - backward_window,
-      predicted_time + forward_window);
-
-    double fused_time = predicted_time;
-    if (observed) {
-      data.temporal_observed_time = observed_time;
-      data.temporal_observation_used = true;
-      const double max_phase_correction = std::max(2.0 * local_dt, m_ctrl_period);
-      const double bounded_correction =
-        std::clamp(observed_time - predicted_time, -max_phase_correction, max_phase_correction);
-      constexpr double observation_gain = 0.5;
-      fused_time = std::clamp(
-        predicted_time + observation_gain * bounded_correction, traj_start_time, traj_end_time);
-    }
+    const double elapsed_time = m_prev_trajectory_stamp.has_value()
+                                  ? (m_clock->now() - *m_prev_trajectory_stamp).seconds()
+                                  : traj_start_time;
+    const double fused_time = std::clamp(elapsed_time, traj_start_time, traj_end_time);
+    data.temporal_predicted_time = fused_time;
     data.temporal_fused_time = fused_time;
 
     if (!interpolateReferenceStateAtTime(
