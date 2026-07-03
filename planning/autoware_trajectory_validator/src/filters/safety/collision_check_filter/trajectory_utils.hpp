@@ -353,12 +353,6 @@ double project_current_pose_on_trajectory(
   const TrajectoryPoints & traj_points, const geometry_msgs::msg::Pose & current_pose);
 
 TravelDistanceTrajectory compute_cumulative_distances(const PoseTrajectory & pose_trajectory);
-
-TimeTrajectory compute_sample_times(double start_time, double end_time, double time_resolution);
-
-geometry_msgs::msg::Pose interpolate_predicted_path_pose(
-  const autoware_perception_msgs::msg::PredictedPath & predicted_path, double query_time,
-  double path_start_time);
 }  // namespace detail
 
 TrajectoryData generate_ego_trajectory(
@@ -374,11 +368,6 @@ TrajectoryData generate_predicted_path_trajectory(
   const autoware_perception_msgs::msg::PredictedObject & predicted_object, double braking_lag,
   double assumed_acceleration, rclcpp::Duration start_time, double max_time,
   const builtin_interfaces::msg::Time & stamp, double time_resolution);
-
-TrajectoryData generate_diffusion_based_trajectory(
-  const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  rclcpp::Duration start_time, double max_time, const builtin_interfaces::msg::Time & stamp,
-  double time_resolution);
 
 TrajectoryData generate_constant_curvature_trajectory(
   const autoware_perception_msgs::msg::PredictedObject & predicted_object, double braking_lag,

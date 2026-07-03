@@ -56,9 +56,6 @@ int next_marker_id(const visualization_msgs::msg::MarkerArray & debug_markers)
 
 Color resolve_trajectory_color(const std::string & trajectory_id)
 {
-  if (trajectory_id.find("_diffusion_based_trajectory") != std::string::npos) {
-    return Color{1.0F, 0.55F, 0.0F};
-  }
   if (trajectory_id.find("_constant_curvature_path") != std::string::npos) {
     return Color{0.0F, 0.75F, 1.0F};
   }
@@ -115,58 +112,6 @@ void add_collision_planning_factor(
       .detail(collision_type)
       .safety_factors(safety_factors);
   planning_factors.factors.push_back(std::move(factor));
-}
-
-void process_pet_artifacts(
-  const nav_msgs::msg::Odometry & odometry,
-  reporter::ContinuousDetectionTimes & pet_continuous_times, const rclcpp::Time & current_time,
-  const PetArtifact & pet_artifact, VisualizationData & artifacts,
-  visualization_msgs::msg::MarkerArray & debug_markers, double time_resolution)
-{
-  pet_continuous_times.update(
-    current_time, pet_artifact.object_evaluations, [](const auto & evaluation) {
-      return evaluation.detail.object_identification.trajectory_id_string();
-    });
-
-  if (pet_artifact.risk == RiskLevel::SAFE || pet_artifact.object_evaluations.empty()) {
-    return;
-  }
-
-  std::string log_messages{};
-  std::string marker_messages{};
-  RiskLevel::_level_type log_level = RiskLevel::HIGH_CAUTION;
-  for (const auto & evaluation : pet_artifact.object_evaluations) {
-    if (evaluation.risk == RiskLevel::SAFE) {
-      continue;
-    }
-
-    const auto & detail = evaluation.detail;
-    const auto & obj_id = detail.object_identification;
-    const bool is_error = evaluation.risk == RiskLevel::DANGER;
-    if (is_error) {
-      log_level = RiskLevel::DANGER;
-    }
-
-    const auto finding_msg = fmt::format(
-      "PET collision, classification: {}, ID: {}, PET: {}, TTC: {}, duration: {}, stamp: {}.{};",
-      obj_id.classification, obj_id.trajectory_id_string(), detail.worst_pet_timing.pet,
-      detail.first_collision_timing.ttc,
-      pet_continuous_times.get_time(obj_id.trajectory_id_string()), obj_id.stamp.sec,
-      obj_id.stamp.nanosec);
-    log_messages += finding_msg;
-    reporter::append_text_marker_message(marker_messages, finding_msg);
-    reporter::add_debug_markers(
-      debug_markers, current_time, "planned_speed_collision", obj_id.trajectory_id_string(),
-      detail.ego_trajectory, detail.object_trajectory, detail.ego_hull, detail.object_hull);
-    if (is_error) {
-      add_collision_planning_factor(
-        time_resolution, odometry.header.stamp, odometry.pose.pose, detail, "PET",
-        artifacts.planning_factors);
-    }
-  }
-
-  artifacts.error_msg += marker_messages;
-  reporter::log_collision_messages(log_level, log_messages);
 }
 
 void process_drac_artifacts(
@@ -402,8 +347,7 @@ void log_collision_messages(const RiskLevel::_level_type level, const std::strin
 }
 
 autoware_internal_planning_msgs::msg::PlanningFactorArray process_collision_artifacts(
-  const nav_msgs::msg::Odometry & odometry, const PetArtifact & pet_artifact,
-  ContinuousDetectionTimes & pet_continuous_times, const DracArtifact & drac_artifact,
+  const nav_msgs::msg::Odometry & odometry, const DracArtifact & drac_artifact,
   ContinuousDetectionTimes & drac_continuous_times, const RssArtifact & rss_artifact,
   ContinuousDetectionTimes & rss_continuous_times,
   visualization_msgs::msg::MarkerArray & debug_markers, double time_resolution)
@@ -411,9 +355,6 @@ autoware_internal_planning_msgs::msg::PlanningFactorArray process_collision_arti
   VisualizationData visualization_data{};
   const auto current_time = rclcpp::Time{odometry.header.stamp};
 
-  process_pet_artifacts(
-    odometry, pet_continuous_times, current_time, pet_artifact, visualization_data, debug_markers,
-    time_resolution);
   process_drac_artifacts(
     odometry, drac_continuous_times, current_time, drac_artifact, visualization_data, debug_markers,
     time_resolution);

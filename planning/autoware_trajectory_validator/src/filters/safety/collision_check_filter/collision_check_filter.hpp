@@ -37,18 +37,15 @@ public:
 private:
   GlobalParams global_params_;
   DracParamMap drac_param_map_;
-  PetParamMap pet_param_map_;
   RssParamMap rss_param_map_;
 
-  reporter::ContinuousDetectionTimes pet_continuous_times_;
   reporter::ContinuousDetectionTimes rss_continuous_times_;
   reporter::ContinuousDetectionTimes drac_continuous_times_;
 
   void clear_detection_times();
 
   std::vector<MetricReport> generate_metric_reports(
-    const DracArtifact & drac_artifact, const PetArtifact & pet_artifact,
-    const RssArtifact & rss_artifact) const;
+    const DracArtifact & drac_artifact, const RssArtifact & rss_artifact) const;
 };
 
 }  // namespace autoware::trajectory_validator::plugin::safety

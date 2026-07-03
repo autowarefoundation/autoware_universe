@@ -35,20 +35,17 @@ void CollisionCheckFilter::update_parameters(const validator::Params & node_para
   global_params_ = GlobalParams(node_params.collision_check.global_setting);
 
   drac_param_map_ = create_param_map_per_object<DracParams>(node_params);
-  pet_param_map_ = create_param_map_per_object<PetParams>(node_params);
   rss_param_map_ = create_param_map_per_object<RssParams>(node_params);
 }
 
 void CollisionCheckFilter::clear_detection_times()
 {
-  pet_continuous_times_.clear();
   rss_continuous_times_.clear();
   drac_continuous_times_.clear();
 }
 
 std::vector<MetricReport> CollisionCheckFilter::generate_metric_reports(
-  const DracArtifact & drac_artifact, const PetArtifact & pet_artifact,
-  const RssArtifact & rss_artifact) const
+  const DracArtifact & drac_artifact, const RssArtifact & rss_artifact) const
 {
   std::vector<MetricReport> reports;
 
@@ -66,10 +63,9 @@ std::vector<MetricReport> CollisionCheckFilter::generate_metric_reports(
         .risk(risk));
   };
 
-  static constexpr std::array<const char *, 3> kCanonicalTrajectoryTypes = {
+  static constexpr std::array<const char *, 2> kCanonicalTrajectoryTypes = {
     "map_based_predicted_path",
     "constant_curvature_path",
-    "diffusion_based_trajectory",
   };
 
   // DRAC
@@ -86,24 +82,6 @@ std::vector<MetricReport> CollisionCheckFilter::generate_metric_reports(
                               : std::numeric_limits<double>::quiet_NaN();
     const RiskLevel::_level_type drac_risk = has_finding ? drac_artifact.risk : RiskLevel::SAFE;
     add_report(fmt::format("DRAC_{}", type), drac_val, drac_risk);
-  }
-
-  // PET
-  for (const auto * type : kCanonicalTrajectoryTypes) {
-    double pet_val = std::numeric_limits<double>::quiet_NaN();
-    RiskLevel::_level_type pet_risk = RiskLevel::SAFE;
-    for (const auto & evaluation : pet_artifact.object_evaluations) {
-      if (evaluation.detail.object_identification.trajectory_type.find(type) == std::string::npos) {
-        continue;
-      }
-      if (
-        std::isnan(pet_val) ||
-        std::abs(evaluation.detail.worst_pet_timing.pet) < std::abs(pet_val)) {
-        pet_val = evaluation.detail.worst_pet_timing.pet;
-        pet_risk = evaluation.risk;
-      }
-    }
-    add_report(fmt::format("PET_{}", type), pet_val, pet_risk);
   }
 
   // RSS
@@ -126,10 +104,7 @@ CollisionCheckFilter::result_t CollisionCheckFilter::is_feasible(
   const CandidateTrajectory & candidate_trajectory, const FilterContext & context)
 {
   const auto & traj_points = candidate_trajectory.points;
-  if (
-    (!context.predicted_objects || context.predicted_objects->objects.empty()) &&
-    (!context.neural_network_predicted_objects ||
-     context.neural_network_predicted_objects->objects.empty())) {
+  if (!context.predicted_objects || context.predicted_objects->objects.empty()) {
     clear_detection_times();
     return {};  // No objects to check collision with
   }
@@ -139,20 +114,18 @@ CollisionCheckFilter::result_t CollisionCheckFilter::is_feasible(
     return {};  // No trajectory to check
   }
 
-  const auto [pet_artifact, drac_artifact] = collision_timing_assessment::assess(
-    traj_points, context, pet_param_map_, drac_param_map_, global_params_, *vehicle_info_ptr_);
+  const auto drac_artifact = collision_timing_assessment::assess(
+    traj_points, context, drac_param_map_, global_params_, *vehicle_info_ptr_);
   const auto rss_artifact = rss_deceleration::assess(
     traj_points, context, rss_param_map_, global_params_, *vehicle_info_ptr_);
 
   auto planning_factors = reporter::process_collision_artifacts(
-    *context.odometry, pet_artifact, pet_continuous_times_, drac_artifact, drac_continuous_times_,
-    rss_artifact, rss_continuous_times_, debug_markers_, global_params_.time_resolution);
+    *context.odometry, drac_artifact, drac_continuous_times_, rss_artifact, rss_continuous_times_,
+    debug_markers_, global_params_.time_resolution);
 
   return ValidationResult{
-    calc_worst_risk({pet_artifact.risk, drac_artifact.risk, rss_artifact.risk}) !=
-      RiskLevel::DANGER,
-    generate_metric_reports(drac_artifact, pet_artifact, rss_artifact),
-    std::move(planning_factors)};
+    calc_worst_risk({drac_artifact.risk, rss_artifact.risk}) != RiskLevel::DANGER,
+    generate_metric_reports(drac_artifact, rss_artifact), std::move(planning_factors)};
 }
 
 }  // namespace autoware::trajectory_validator::plugin::safety

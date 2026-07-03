@@ -117,12 +117,6 @@ struct DracArtifact
   std::vector<CollisionEvaluation> object_evaluations;
 };
 
-struct PetArtifact
-{
-  RiskLevel::_level_type risk{RiskLevel::SAFE};
-  std::vector<CollisionEvaluation> object_evaluations;
-};
-
 struct RssArtifact
 {
   RiskLevel::_level_type risk{RiskLevel::SAFE};
