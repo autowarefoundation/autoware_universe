@@ -194,9 +194,18 @@ The adapter bridges the interface framework and `simple_switcher_node`.
 | `status/switcher_signals/{main,sub}_ecu` + cached annotation | `SetSwitcherSignalsEvent`                                     |
 | `status/switcher_annotation/{main,sub}_ecu`                  | cached in `latest_annotation_` (used on next signals message) |
 
+
 The adapter subscribes to the per-ECU topics determined by `is_main_ecu`.
 
-### 6.2 Outbound (CommandBus → request topics)
+### 6.2 Autoware Ready State
+
+In `SimpleSwitcherAdapter`, the `autoware_ready` state is **not used**. Unlike
+`RedundancySwitcherAdapter` (which embeds `autoware_ready` in periodic `ElectionRequest`
+heartbeats), the mock switcher's simplified state machine does not need this information.
+`UpdateAutowareReadyCommand` from the interface is ignored, and no `autoware_ready` status
+topic is published by `simple_switcher_node`.
+
+### 6.3 Outbound (CommandBus → request topics)
 
 | Received command                              | Published topic                                              |
 | --------------------------------------------- | ------------------------------------------------------------ |
@@ -205,7 +214,7 @@ The adapter subscribes to the per-ECU topics determined by `is_main_ecu`.
 | `SelfInterruptionCommand` (is_main_ecu=false) | `/system/simple_switcher/request/self_interruption/sub_ecu`  |
 | All other commands                            | ignored                                                      |
 
-### 6.3 Annotation Handling
+### 6.4 Annotation Handling
 
 The annotation string and the signals value arrive on separate topics. The adapter caches
 the latest annotation under `annotation_mutex_` and attaches it to the next

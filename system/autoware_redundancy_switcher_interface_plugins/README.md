@@ -26,6 +26,11 @@ Assumes a **Main ECU / Sub ECU / Main VCU / Sub VCU** topology with an election-
 fault-detection algorithm. Supports priority-based switching via `UpdatePriorityCommand`:
 the priority value is embedded in the `ElectionRequest` heartbeat sent to the switcher process.
 
+Tracks **Autoware ready state** via `UpdateAutowareReadyCommand`: when Autoware is not yet ready
+(during initialization), the `autoware_ready` field in `ElectionRequest` is set to false, which
+gates the switcher from performing fault detection. Once Autoware is ready, `autoware_ready` is
+set to true, enabling full fault detection and redundancy management.
+
 ```xml
 <!-- Main ECU -->
 <include file="$(find-pkg-share autoware_redundancy_switcher_interface)/launch/redundancy_switcher_interface.launch.xml">
@@ -50,6 +55,11 @@ the priority value is embedded in the `ElectionRequest` heartbeat sent to the sw
 | `uds.switcher_status_path`                 | string | Unix domain socket path for receiving `ElectionStatus`     |
 | `uds.election_status_timeout_milli`        | double | Timeout [ms] for reading `ElectionStatus` from the socket  |
 | `uds.election_request_send_interval_milli` | double | Interval [ms] for the periodic `ElectionRequest` heartbeat |
+
+**Note on `autoware_ready`:** The `autoware_ready` flag is sent in every `ElectionRequest` heartbeat.
+It is updated via the `UpdateAutowareReadyCommand` emitted by the interface when `SetAutowareReadyEvent`
+is received from the driving mode subsystem. When false, it prevents the switcher from performing
+fault detection, allowing Autoware to complete its initialization before entering active mode.
 
 ---
 

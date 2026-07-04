@@ -171,7 +171,11 @@ void RedundancySwitcherAdapter::on_switcher_status(const ElectionStatus & status
 
   const auto signals = to_switcher_signals(status.node_state);
   const auto node_state_annotation =
-    node_state_to_string(status.node_state) + " leader=" + std::to_string(status.leader_id);
+    node_state_to_string(status.node_state) + " leader=" + std::to_string(status.leader_id) +
+    " main_ecu_priority=" + std::to_string(status.main_ecu_priority) +
+    " sub_ecu_priority=" + std::to_string(status.sub_ecu_priority) +
+    " main_vcu_priority=" + std::to_string(status.main_vcu_priority) +
+    " sub_vcu_priority=" + std::to_string(status.sub_vcu_priority);
   const auto active_control_unit = to_active_control_unit(status.path_info);
   const auto path_info_annotation = path_info_to_string(status.path_info);
   gateway_->submit(
