@@ -63,7 +63,7 @@ void RedundancySwitcherAdapter::initialize(
   const auto interval_ms =
     std::chrono::duration<double, std::milli>(election_request_send_interval_milli);
   timer_ = node_->create_wall_timer(interval_ms, [this]() {
-    send_election_request(ElectionRequest{false, false, priority_});
+    send_election_request(ElectionRequest{false, false, false, priority_});
     check_election_status_timeout();
   });
 
@@ -129,18 +129,26 @@ void RedundancySwitcherAdapter::execute(const OutputCommand & command)
   std::visit(
     overloaded{
       [this](const SelfInterruptionCommand &) {
-        send_election_request(ElectionRequest{true, false, priority_});
+        const bool autoware_ready =
+          autoware_ready_.has_value() && *autoware_ready_ == AutowareReady::True;
+        send_election_request(ElectionRequest{autoware_ready, true, false, priority_});
       },
       [this](const ResetCommand &) {
-        send_election_request(ElectionRequest{false, true, priority_});
+        const bool autoware_ready =
+          autoware_ready_.has_value() && *autoware_ready_ == AutowareReady::True;
+        send_election_request(ElectionRequest{autoware_ready, false, true, priority_});
       },
       [this](const UpdateAutowareReadyCommand & cmd) {
         std::lock_guard<std::mutex> lock(policy_mutex_);
         autoware_ready_ = cmd.value;
+        send_election_request(
+          ElectionRequest{cmd.value == AutowareReady::True, false, false, priority_});
       },
       [this](const UpdatePriorityCommand & cmd) {
         priority_ = cmd.priority;
-        send_election_request(ElectionRequest{false, false, priority_});
+        const bool autoware_ready =
+          autoware_ready_.has_value() && *autoware_ready_ == AutowareReady::True;
+        send_election_request(ElectionRequest{autoware_ready, false, false, priority_});
       },
       [](const auto &) {}},
     command);

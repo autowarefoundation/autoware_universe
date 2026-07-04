@@ -25,11 +25,12 @@ namespace autoware::redundancy_switcher
 // Interface → Switcher
 struct ElectionRequest
 {
+  bool autoware_ready{false};
   bool self_fault_request{false};
   bool reset_request{false};
   uint16_t priority{0};
 };
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ElectionRequest, self_fault_request, reset_request, priority)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ElectionRequest, autoware_ready, self_fault_request, reset_request, priority)
 
 // Switcher → Interface
 //
@@ -50,6 +51,10 @@ struct ElectionStatus
   uint8_t node_id{0};
   uint8_t leader_id{0};
   uint8_t path_info{0};
+  uint16_t main_ecu_priority{0};
+  uint16_t sub_ecu_priority{0};
+  uint16_t main_vcu_priority{0};
+  uint16_t sub_vcu_priority{0};
   bool main_ecu_to_main_ecu_connected{false};
   bool main_ecu_to_sub_ecu_connected{false};
   bool main_ecu_to_main_vcu_connected{false};
@@ -68,7 +73,8 @@ struct ElectionStatus
   bool sub_vcu_to_sub_vcu_connected{false};
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
-  ElectionStatus, node_state, node_id, leader_id, path_info, main_ecu_to_main_ecu_connected,
+  ElectionStatus, node_state, node_id, leader_id, path_info, main_ecu_priority, sub_ecu_priority,
+  main_vcu_priority, sub_vcu_priority, main_ecu_to_main_ecu_connected,
   main_ecu_to_sub_ecu_connected, main_ecu_to_main_vcu_connected, main_ecu_to_sub_vcu_connected,
   sub_ecu_to_main_ecu_connected, sub_ecu_to_sub_ecu_connected, sub_ecu_to_main_vcu_connected,
   sub_ecu_to_sub_vcu_connected, main_vcu_to_main_ecu_connected, main_vcu_to_sub_ecu_connected,
