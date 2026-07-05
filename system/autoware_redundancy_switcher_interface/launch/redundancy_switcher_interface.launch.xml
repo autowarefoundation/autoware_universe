@@ -1,13 +1,15 @@
 <launch>
-  <arg name="is_main_ecu" default="true"/>
   <arg name="base_config" default="$(find-pkg-share autoware_redundancy_switcher_interface)/config/default.param.yaml"/>
   <arg name="plugin_config" default="$(find-pkg-share autoware_redundancy_switcher_interface_plugins)/config/default.param.yaml"/>
 
-  <!-- Input topics -->
+  <!-- Input common topics -->
   <arg name="input_velocity" default="/vehicle/status/velocity_status"/>
   <arg name="input_control_mode" default="/vehicle/status/control_mode"/>
+  <!-- Input topics for command mode -->
   <arg name="input_command_mode_request" default="/system/command_mode/request"/>
   <arg name="input_command_mode_availability" default="/system/command_mode/availability"/>
+  <!-- Input topics for driving mode -->
+  <arg name="input_driving_mode_request" default="/system/driving_mode/request"/>
 
   <!-- Output topics -->
   <arg name="output_active_control_unit" default="/system/redundancy/active_control_unit"/>
@@ -29,6 +31,7 @@
     <remap from="~/input/control_mode" to="$(var input_control_mode)"/>
     <remap from="~/input/command_mode_request" to="$(var input_command_mode_request)"/>
     <remap from="~/input/command_mode_availability" to="$(var input_command_mode_availability)"/>
+    <remap from="~/input/driving_mode_request" to="$(var input_driving_mode_request)"/>
 
     <remap from="~/output/active_control_unit" to="$(var output_active_control_unit)"/>
 

@@ -60,11 +60,11 @@ private:
 public:
   static bool is_transitional_state(uint8_t node_state);
   static SwitcherSignals to_switcher_signals(uint8_t node_state);
-  static ActiveControlUnit to_active_control_unit(uint8_t path_info);
+  static ActiveControlUnit to_active_control_unit(uint8_t active_nodes);
 
 private:
   static std::string node_state_to_string(uint8_t node_state);
-  static std::string path_info_to_string(uint8_t path_info);
+  static std::string active_nodes_to_string(uint8_t active_nodes);
 
   void update_main_ecu_fault_diag(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void update_sub_ecu_fault_diag(diagnostic_updater::DiagnosticStatusWrapper & stat);
