@@ -154,7 +154,7 @@ TEST(ToActiveControlUnit, ZeroPathInfo_EmptyIds)
 
 TEST(ToActiveControlUnit, MainEcuToMainVcu_Ids0And2)
 {
-  // path_info = 5 = 0b0101 → bit0 (main_ecu=0) + bit2 (main_vcu=2)
+  // active_nodes = 5 = 0b0101 → bit0 (main_ecu=0) + bit2 (main_vcu=2)
   const auto acu = RedundancySwitcherAdapter::to_active_control_unit(5);
   ASSERT_EQ(acu.unit_ids.size(), 2u);
   EXPECT_EQ(acu.unit_ids[0], 0u);
@@ -163,7 +163,7 @@ TEST(ToActiveControlUnit, MainEcuToMainVcu_Ids0And2)
 
 TEST(ToActiveControlUnit, SubEcuToMainVcu_Ids1And2)
 {
-  // path_info = 6 = 0b0110 → bit1 (sub_ecu=1) + bit2 (main_vcu=2)
+  // active_nodes = 6 = 0b0110 → bit1 (sub_ecu=1) + bit2 (main_vcu=2)
   const auto acu = RedundancySwitcherAdapter::to_active_control_unit(6);
   ASSERT_EQ(acu.unit_ids.size(), 2u);
   EXPECT_EQ(acu.unit_ids[0], 1u);
@@ -172,7 +172,7 @@ TEST(ToActiveControlUnit, SubEcuToMainVcu_Ids1And2)
 
 TEST(ToActiveControlUnit, MainEcuToSubVcu_Ids0And3)
 {
-  // path_info = 9 = 0b1001 → bit0 (main_ecu=0) + bit3 (sub_vcu=3)
+  // active_nodes = 9 = 0b1001 → bit0 (main_ecu=0) + bit3 (sub_vcu=3)
   const auto acu = RedundancySwitcherAdapter::to_active_control_unit(9);
   ASSERT_EQ(acu.unit_ids.size(), 2u);
   EXPECT_EQ(acu.unit_ids[0], 0u);
@@ -181,7 +181,7 @@ TEST(ToActiveControlUnit, MainEcuToSubVcu_Ids0And3)
 
 TEST(ToActiveControlUnit, SubEcuToSubVcu_Ids1And3)
 {
-  // path_info = 10 = 0b1010 → bit1 (sub_ecu=1) + bit3 (sub_vcu=3)
+  // active_nodes = 10 = 0b1010 → bit1 (sub_ecu=1) + bit3 (sub_vcu=3)
   const auto acu = RedundancySwitcherAdapter::to_active_control_unit(10);
   ASSERT_EQ(acu.unit_ids.size(), 2u);
   EXPECT_EQ(acu.unit_ids[0], 1u);

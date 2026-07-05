@@ -176,14 +176,14 @@ void RedundancySwitcherAdapter::on_switcher_status(const ElectionStatus & status
     " sub_ecu_priority=" + std::to_string(status.sub_ecu_priority) +
     " main_vcu_priority=" + std::to_string(status.main_vcu_priority) +
     " sub_vcu_priority=" + std::to_string(status.sub_vcu_priority);
-  const auto active_control_unit = to_active_control_unit(status.path_info);
-  const auto path_info_annotation = path_info_to_string(status.path_info);
+  const auto active_control_unit = to_active_control_unit(status.active_nodes);
+  const auto active_nodes_annotation = active_nodes_to_string(status.active_nodes);
   gateway_->submit(
     InputEvent{
       SetSwitcherSignalsEvent{Annotated<SwitcherSignals>{signals, node_state_annotation}}});
   gateway_->submit(
     InputEvent{SetActiveControlUnitEvent{
-      Annotated<ActiveControlUnit>{active_control_unit, path_info_annotation}}});
+      Annotated<ActiveControlUnit>{active_control_unit, active_nodes_annotation}}});
 }
 
 void RedundancySwitcherAdapter::check_election_status_timeout()
@@ -245,9 +245,9 @@ SwitcherSignals RedundancySwitcherAdapter::to_switcher_signals(uint8_t node_stat
   }
 }
 
-std::string RedundancySwitcherAdapter::path_info_to_string(uint8_t path_info)
+std::string RedundancySwitcherAdapter::active_nodes_to_string(uint8_t active_nodes)
 {
-  switch (path_info) {
+  switch (active_nodes) {
     case 0:
       return "unknown";
     case 5:
@@ -259,15 +259,15 @@ std::string RedundancySwitcherAdapter::path_info_to_string(uint8_t path_info)
     case 10:
       return "sub_ecu_to_sub_vcu";
     default:
-      return "unknown(" + std::to_string(path_info) + ")";
+      return "unknown(" + std::to_string(active_nodes) + ")";
   }
 }
 
-ActiveControlUnit RedundancySwitcherAdapter::to_active_control_unit(uint8_t path_info)
+ActiveControlUnit RedundancySwitcherAdapter::to_active_control_unit(uint8_t active_nodes)
 {
   ActiveControlUnit acu;
   for (int i = 0; i < 4; ++i) {
-    if (path_info & (1 << i)) {
+    if (active_nodes & (1 << i)) {
       acu.unit_ids.push_back(i);
     }
   }
