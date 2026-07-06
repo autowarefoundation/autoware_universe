@@ -115,7 +115,8 @@ public:
    *        here.
    * @param active_filter_names Filter names (from plugin->get_name()) of active (non-shadow)
    *        filters. Only metrics from these filters contribute to action aggregation.
-   *        An empty set means all filters are considered active.
+   *        An empty set means no active filters exist (all are shadow-mode): no metric
+   *        contributes and every status stays OK.
    * @param diag_by_name Pre-built DiagnosticsInterface map (use build_diagnostic_interface_map).
    */
   TrajectoryValidatorDiagnostic(

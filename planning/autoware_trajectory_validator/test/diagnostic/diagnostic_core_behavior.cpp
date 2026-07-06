@@ -38,7 +38,7 @@ protected:
 TEST_F(TrajectoryValidatorDiagnosticTest, ValidatorPassesOnOneCandidateStatusOk)
 {
   DiagHarness h("t3_node");
-  auto diag = make_diag(*h.node, single_map("filter_1", "status_1"), "");
+  auto diag = make_diag(*h.node, single_map("filter_1", "status_1"), "", {"filter_1"});
 
   auto candidate1 = make_report({make_metric("filter_1", RiskLevel::SAFE)});
   auto candidate2 = make_report({make_metric("filter_1", RiskLevel::HIGH_CAUTION)});
@@ -55,7 +55,7 @@ TEST_F(TrajectoryValidatorDiagnosticTest, ValidatorPassesOnOneCandidateStatusOk)
 TEST_F(TrajectoryValidatorDiagnosticTest, BestHasBindingValidatorAtError)
 {
   DiagHarness h("t4_node");
-  auto diag = make_diag(*h.node, single_map("filter_1", "status_1"), "");
+  auto diag = make_diag(*h.node, single_map("filter_1", "status_1"), "", {"filter_1"});
 
   auto candidate1 = make_report({make_metric("filter_1", RiskLevel::DANGER)});
   std::vector<ValidationReport> reports = {candidate1};
@@ -75,7 +75,7 @@ TEST_F(TrajectoryValidatorDiagnosticTest, TwoValidatorsBindingBothFire)
   filter_map["filter_1"][Action::MODERATE] = "status_1";
   filter_map["filter_2"][Action::MODERATE] = "status_2";
 
-  auto diag = make_diag(*h.node, filter_map, "");
+  auto diag = make_diag(*h.node, filter_map, "", {"filter_1", "filter_2"});
 
   auto candidate1 = make_report(
     {make_metric("filter_1", RiskLevel::DANGER), make_metric("filter_2", RiskLevel::DANGER)});
@@ -95,7 +95,7 @@ TEST_F(TrajectoryValidatorDiagnosticTest, TwoValidatorsBindingBothFire)
 TEST_F(TrajectoryValidatorDiagnosticTest, ValidatorFailsOnAllCandidatesFires)
 {
   DiagHarness h("t6b_node");
-  auto diag = make_diag(*h.node, single_map("filter_1", "status_1"), "");
+  auto diag = make_diag(*h.node, single_map("filter_1", "status_1"), "", {"filter_1"});
 
   auto candidate1 = make_report({make_metric("filter_1", RiskLevel::DANGER)});
   auto candidate2 = make_report({make_metric("filter_1", RiskLevel::DANGER)});
@@ -115,7 +115,7 @@ TEST_F(TrajectoryValidatorDiagnosticTest, EachValidatorFailsOnDifferentCandidate
   FilterConfiguredActionsMap filter_map;
   filter_map["filter_1"][Action::MODERATE] = "status_1";
   filter_map["filter_2"][Action::MODERATE] = "status_2";
-  auto diag = make_diag(*h.node, filter_map, "");
+  auto diag = make_diag(*h.node, filter_map, "", {"filter_1", "filter_2"});
 
   auto candidate1 = make_report(
     {make_metric("filter_1", RiskLevel::DANGER),  // filter_1 fails here
@@ -142,7 +142,7 @@ TEST_F(TrajectoryValidatorDiagnosticTest, OneAlwaysFailsOtherHasSafeCandidateOnl
   FilterConfiguredActionsMap filter_map;
   filter_map["filter_1"][Action::MODERATE] = "status_1";
   filter_map["filter_2"][Action::MODERATE] = "status_2";
-  auto diag = make_diag(*h.node, filter_map, "");
+  auto diag = make_diag(*h.node, filter_map, "", {"filter_1", "filter_2"});
 
   auto candidate1 = make_report(
     {make_metric("filter_1", RiskLevel::DANGER),    // filter_1 fails
@@ -166,7 +166,7 @@ TEST_F(TrajectoryValidatorDiagnosticTest, OneAlwaysFailsOtherHasSafeCandidateOnl
 TEST_F(TrajectoryValidatorDiagnosticTest, Renew)
 {
   DiagHarness h("t7_node");
-  auto diag = make_diag(*h.node, single_map("filter_1", "status_1"), "");
+  auto diag = make_diag(*h.node, single_map("filter_1", "status_1"), "", {"filter_1"});
 
   auto error_candidate = make_report({make_metric("filter_1", RiskLevel::DANGER)});
   h.run(diag, {error_candidate});
@@ -192,7 +192,7 @@ TEST_F(TrajectoryValidatorDiagnosticTest, EmptyNameNoStatusFired)
   FilterConfiguredActionsMap filter_map;
   filter_map["filter_1"][Action::MODERATE] = "";  // empty name — no interface created
 
-  auto diag = make_diag(*h.node, filter_map, "");
+  auto diag = make_diag(*h.node, filter_map, "", {"filter_1"});
 
   auto candidate1 = make_report({make_metric("filter_1", RiskLevel::DANGER)});
 
@@ -240,7 +240,7 @@ TEST_F(TrajectoryValidatorDiagnosticTest, TwoValidatorsDistinctNamesPublishedEac
   FilterConfiguredActionsMap filter_map;
   filter_map["filter_1"][Action::MODERATE] = "status_1";
   filter_map["filter_2"][Action::MODERATE] = "status_2";
-  auto diag = make_diag(*h.node, filter_map, "");
+  auto diag = make_diag(*h.node, filter_map, "", {"filter_1", "filter_2"});
 
   auto candidate1 = make_report(
     {make_metric("filter_1", RiskLevel::SAFE), make_metric("filter_2", RiskLevel::SAFE)});
@@ -264,7 +264,7 @@ TEST_F(TrajectoryValidatorDiagnosticTest, MultiBindingSameValidatorThresholdExac
   FilterConfiguredActionsMap filter_map;
   filter_map["filter_1"][Action::MODERATE] = "status_moderate";
   filter_map["filter_1"][Action::EMERGENCY] = "status_emergency";
-  auto diag = make_diag(*h.node, filter_map, "");
+  auto diag = make_diag(*h.node, filter_map, "", {"filter_1"});
 
   // DANGER -> MODERATE action: only status_moderate fires
   auto candidate_danger = make_report({make_metric("filter_1", RiskLevel::DANGER)});

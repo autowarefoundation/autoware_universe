@@ -95,9 +95,10 @@ void TrajectoryValidatorDiagnostic::update_and_publish(
   const auto compute_candidate_traj_action = [&](const auto & report) {
     std::unordered_map<std::string, Action> candidate_traj_action;
     for (const auto & metric : report.metrics) {
-      // Skip metrics from shadow-mode filters (those not in
-      // active_filter_names_).
-      if (!active_filter_names_.empty() && !active_filter_names_.count(metric.validator_name)) {
+      // Skip metrics from shadow-mode filters (those not in active_filter_names_). An empty
+      // active_filter_names_ means no active filters exist (all are shadow-mode), so every metric
+      // is skipped and all statuses stay OK.
+      if (active_filter_names_.empty() || !active_filter_names_.count(metric.validator_name)) {
         continue;
       }
       const Action metric_action = convert_risk_level_to_action(metric.risk.level);
