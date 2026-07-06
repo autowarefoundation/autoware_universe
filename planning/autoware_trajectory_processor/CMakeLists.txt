@@ -23,6 +23,8 @@ ament_auto_add_library(autoware_trajectory_optimizer_component SHARED
 autoware_agnocast_wrapper_register_node(autoware_trajectory_optimizer_component
   PLUGIN "autoware::trajectory_optimizer::TrajectoryOptimizer"
   EXECUTABLE autoware_trajectory_optimizer_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 generate_parameter_library(trajectory_modifier_param
@@ -50,6 +52,8 @@ target_compile_options(autoware_trajectory_modifier PUBLIC
 autoware_agnocast_wrapper_register_node(autoware_trajectory_modifier
   PLUGIN "autoware::trajectory_modifier::TrajectoryModifier"
   EXECUTABLE autoware_trajectory_modifier_node
+  ROS2_EXECUTOR SingleThreadedExecutor
+  AGNOCAST_EXECUTOR AgnocastOnlyCallbackIsolatedExecutor
 )
 
 ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
