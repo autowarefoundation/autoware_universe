@@ -50,7 +50,7 @@ class ObstacleStop : public PluginInterface
 public:
   ObstacleStop() = default;
 
-  void run(TrajectoryPoints & traj_points) override;
+  void run(TrajectoryPoints & traj_points, const ModifierData & data) override;
 
   void update_params(const MinimumRuleBasedPlannerParams & params) override
   {
@@ -118,10 +118,12 @@ private:
       {ObjectType::PEDESTRIAN, p.object_decel.pedestrian}};
   }
 
-  bool is_obstacle_detected(const TrajectoryPoints & traj_points);
+  bool is_obstacle_detected(const TrajectoryPoints & traj_points, const ModifierData & data);
 
-  std::optional<CollisionPoint> check_predicted_objects(const TrajectoryPoints & traj_points);
-  std::optional<CollisionPoint> check_pointcloud(const TrajectoryPoints & traj_points);
+  std::optional<CollisionPoint> check_predicted_objects(
+    const TrajectoryPoints & traj_points, const ModifierData & data);
+  std::optional<CollisionPoint> check_pointcloud(
+    const TrajectoryPoints & traj_points, const ModifierData & data);
 
   void update_collision_points_buffer(
     std::vector<CollisionPoint> & collision_points_buffer, const TrajectoryPoints & traj_points,
@@ -130,10 +132,10 @@ private:
   std::optional<CollisionPoint> get_nearest_collision_point(
     const std::vector<CollisionPoint> & collision_points_buffer) const;
 
-  void set_stop_point(TrajectoryPoints & traj_points);
+  void set_stop_point(TrajectoryPoints & traj_points, const ModifierData & data);
 
   void publish_debug_string(bool is_safe) const;
-  void publish_debug_data(const std::string & ns) const;
+  void publish_debug_data(const std::string & ns, const ModifierData & data) const;
 };
 
 }  // namespace autoware::minimum_rule_based_planner::plugin

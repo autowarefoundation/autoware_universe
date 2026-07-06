@@ -68,6 +68,18 @@ private:
   bool is_data_ready(const InputData & input_data);
   void update_params();
 
+  std::optional<PathWithLaneId> plan_path(const InputData & input_data);
+  Trajectory shift_trajectory_to_ego(
+    const Trajectory & trajectory, const InputData & input_data) const;
+  Trajectory smooth_trajectory(const Trajectory & trajectory, const InputData & input_data) const;
+  void apply_modifiers(Trajectory & trajectory, const InputData & input_data) const;
+  Trajectory optimize_velocity(const Trajectory & trajectory, const InputData & input_data) const;
+
+  void publish_candidate_trajectories(const Trajectory & trajectory) const;
+
+  void publish_debug_trajectory(
+    const std::string & plugin_name, const TrajectoryPoints & traj_points) const;
+
   rclcpp::TimerBase::SharedPtr timer_;
   std::shared_ptr<::minimum_rule_based_planner::ParamListener> param_listener_;
   const UUID generator_uuid_;
@@ -119,15 +131,13 @@ private:
   void load_plugin(const std::string & name);
   void unload_plugin(const std::string & name);
 
-  void set_modifier_data(const MinimumRuleBasedPlannerNode::InputData & input_data);
-
   bool initialized_modifiers_{false};
   ModifierPluginLoader modifier_plugin_loader_;
   std::vector<std::shared_ptr<plugin::PluginInterface>> modifier_plugins_;
   std::map<std::string, rclcpp::Publisher<Trajectory>::SharedPtr>
     pub_debug_modifier_module_trajectories_;
 
-  std::shared_ptr<plugin::ModifierData> modifier_data_;
+  std::shared_ptr<plugin::ModifierContext> modifier_context_;
   /** @} */
 
 private:

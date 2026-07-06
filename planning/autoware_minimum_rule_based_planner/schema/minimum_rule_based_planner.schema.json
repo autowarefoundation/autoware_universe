@@ -12,6 +12,17 @@
           "default": 10.0,
           "minimum": 0.0
         },
+        "plugin_names": {
+          "type": "array",
+          "description": "List of plugins to load",
+          "default": [
+            "autoware::minimum_rule_based_planner::plugin::ObstacleStop",
+            "autoware::minimum_rule_based_planner::plugin::SurroundObstacleStop"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
         "path_planning": {
           "type": "object",
           "properties": {
@@ -239,7 +250,8 @@
                     "trailer",
                     "motorcycle",
                     "bicycle",
-                    "pedestrian"
+                    "pedestrian",
+                    "hazard"
                   ],
                   "items": {
                     "type": "string"
@@ -446,6 +458,320 @@
               },
               "required": [],
               "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "surround_obstacle_stop": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "description": "Enable surround obstacle stop",
+              "default": true
+            },
+            "use_objects": {
+              "type": "boolean",
+              "description": "Enable the use of objects for surround obstacle stop",
+              "default": true
+            },
+            "use_pointcloud": {
+              "type": "boolean",
+              "description": "Enable the use of pointcloud for surround obstacle stop",
+              "default": false
+            },
+            "object_types": {
+              "type": "array",
+              "description": "Types of objects to consider for surround obstacle stop",
+              "default": [
+                "car",
+                "truck",
+                "bus",
+                "trailer",
+                "motorcycle",
+                "bicycle",
+                "pedestrian",
+                "hazard",
+                "animal",
+                "unknown"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "front_distance_th": {
+              "type": "object",
+              "properties": {
+                "car": {
+                  "type": "number",
+                  "description": "Front surround check distance for car [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "truck": {
+                  "type": "number",
+                  "description": "Front surround check distance for truck [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "bus": {
+                  "type": "number",
+                  "description": "Front surround check distance for bus [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "trailer": {
+                  "type": "number",
+                  "description": "Front surround check distance for trailer [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "motorcycle": {
+                  "type": "number",
+                  "description": "Front surround check distance for motorcycle [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "bicycle": {
+                  "type": "number",
+                  "description": "Front surround check distance for bicycle [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "pedestrian": {
+                  "type": "number",
+                  "description": "Front surround check distance for pedestrian [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "hazard": {
+                  "type": "number",
+                  "description": "Front surround check distance for hazard [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "animal": {
+                  "type": "number",
+                  "description": "Front surround check distance for animal [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "unknown": {
+                  "type": "number",
+                  "description": "Front surround check distance for unknown [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "pointcloud": {
+                  "type": "number",
+                  "description": "Front surround check distance for pointcloud [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "side_distance_th": {
+              "type": "object",
+              "properties": {
+                "car": {
+                  "type": "number",
+                  "description": "Side surround check distance for car [m]",
+                  "default": 0.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "truck": {
+                  "type": "number",
+                  "description": "Side surround check distance for truck [m]",
+                  "default": 0.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "bus": {
+                  "type": "number",
+                  "description": "Side surround check distance for bus [m]",
+                  "default": 0.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "trailer": {
+                  "type": "number",
+                  "description": "Side surround check distance for trailer [m]",
+                  "default": 0.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "motorcycle": {
+                  "type": "number",
+                  "description": "Side surround check distance for motorcycle [m]",
+                  "default": 1.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "bicycle": {
+                  "type": "number",
+                  "description": "Side surround check distance for bicycle [m]",
+                  "default": 1.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "pedestrian": {
+                  "type": "number",
+                  "description": "Side surround check distance for pedestrian [m]",
+                  "default": 1.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "hazard": {
+                  "type": "number",
+                  "description": "Side surround check distance for hazard [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "animal": {
+                  "type": "number",
+                  "description": "Side surround check distance for animal [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "unknown": {
+                  "type": "number",
+                  "description": "Side surround check distance for unknown [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "pointcloud": {
+                  "type": "number",
+                  "description": "Side surround check distance for pointcloud [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "back_distance_th": {
+              "type": "object",
+              "properties": {
+                "car": {
+                  "type": "number",
+                  "description": "Back surround check distance for car [m]",
+                  "default": 0.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "truck": {
+                  "type": "number",
+                  "description": "Back surround check distance for truck [m]",
+                  "default": 0.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "bus": {
+                  "type": "number",
+                  "description": "Back surround check distance for bus [m]",
+                  "default": 0.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "trailer": {
+                  "type": "number",
+                  "description": "Back surround check distance for trailer [m]",
+                  "default": 0.0,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "motorcycle": {
+                  "type": "number",
+                  "description": "Back surround check distance for motorcycle [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "bicycle": {
+                  "type": "number",
+                  "description": "Back surround check distance for bicycle [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "pedestrian": {
+                  "type": "number",
+                  "description": "Back surround check distance for pedestrian [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "hazard": {
+                  "type": "number",
+                  "description": "Back surround check distance for hazard [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "animal": {
+                  "type": "number",
+                  "description": "Back surround check distance for animal [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "unknown": {
+                  "type": "number",
+                  "description": "Back surround check distance for unknown [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                },
+                "pointcloud": {
+                  "type": "number",
+                  "description": "Back surround check distance for pointcloud [m]",
+                  "default": 0.5,
+                  "minimum": 0.0,
+                  "maximum": 10.0
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "hysteresis_distance": {
+              "type": "number",
+              "description": "Distance hysteresis threshold for clearing surround stop [m]",
+              "default": 0.1,
+              "minimum": 0.0,
+              "maximum": 10.0
+            },
+            "hysteresis_time": {
+              "type": "number",
+              "description": "Time hysteresis threshold for clearing surround stop [s]",
+              "default": 0.2,
+              "minimum": 0.0,
+              "maximum": 10.0
+            },
+            "ego_stopped_vel_th": {
+              "type": "number",
+              "description": "Velocity threshold below which ego vehicle is considered stopped [m/s]",
+              "default": 0.1,
+              "minimum": 0.0,
+              "maximum": 10.0
             }
           },
           "required": [],

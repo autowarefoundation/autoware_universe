@@ -19,6 +19,7 @@
 
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware/vehicle_info_utils/vehicle_info.hpp>
+#include <autoware/vehicle_info_utils/vehicle_info_utils.hpp>
 #include <autoware_minimum_rule_based_planner/minimum_rule_based_planner_parameters.hpp>
 #include <autoware_utils_debug/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -53,14 +54,22 @@ using MinimumRuleBasedPlannerParams = ::minimum_rule_based_planner::Params;
 
 struct ModifierData
 {
-  explicit ModifierData(rclcpp::Node * node) : tf_buffer{node->get_clock()}, tf_listener{tf_buffer}
-  {
-  }
-
   Odometry::ConstSharedPtr odometry_ptr;
   AccelWithCovarianceStamped::ConstSharedPtr acceleration_ptr;
   PointCloud2::ConstSharedPtr obstacle_pointcloud_ptr;
   PredictedObjects::ConstSharedPtr predicted_objects_ptr;
+};
+
+struct ModifierContext
+{
+  explicit ModifierContext(rclcpp::Node * node)
+  : vehicle_info(autoware::vehicle_info_utils::VehicleInfoUtils(*node).getVehicleInfo()),
+    tf_buffer{node->get_clock()},
+    tf_listener{tf_buffer}
+  {
+  }
+
+  VehicleInfo vehicle_info;
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
 };
@@ -73,20 +82,18 @@ public:
   void initialize(
     std::string name, rclcpp::Node * node_ptr,
     const std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper,
-    const std::shared_ptr<ModifierData> & modifier_data, const VehicleInfo & vehicle_info,
-    [[maybe_unused]] const MinimumRuleBasedPlannerParams & params)
+    const std::shared_ptr<ModifierContext> & context, const MinimumRuleBasedPlannerParams & params)
   {
     name_ = std::move(name);
     node_ptr_ = node_ptr;
     time_keeper_ = time_keeper;
-    data_ = modifier_data;
-    vehicle_info_ = vehicle_info;
+    context_ = context;
     RCLCPP_DEBUG(node_ptr_->get_logger(), "instantiated PluginInterface: %s", name_.c_str());
     on_initialize(params);
   }
 
   virtual ~PluginInterface() = default;
-  virtual void run(TrajectoryPoints & traj_points) = 0;
+  virtual void run(TrajectoryPoints & traj_points, const ModifierData & modifier_data) = 0;
   std::string get_name() const { return name_; }
   rclcpp::Node * get_node_ptr() const { return node_ptr_; }
   std::shared_ptr<autoware_utils_debug::TimeKeeper> get_time_keeper() const { return time_keeper_; }
@@ -110,8 +117,7 @@ protected:
   virtual void on_initialize(const MinimumRuleBasedPlannerParams & params) = 0;
   std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface_;
-  VehicleInfo vehicle_info_;
-  std::shared_ptr<ModifierData> data_;
+  std::shared_ptr<ModifierContext> context_;
 
   rclcpp::Clock::SharedPtr get_clock() const { return node_ptr_->get_clock(); }
 

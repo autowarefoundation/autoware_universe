@@ -4,6 +4,15 @@ minimum_rule_based_planner:
     default_value: 10.0
     validation:
       gt<>: [0.0]
+  plugin_names:
+    type: string_array
+    default_value:
+      [
+        autoware::minimum_rule_based_planner::plugin::ObstacleStop,
+        autoware::minimum_rule_based_planner::plugin::SurroundObstacleStop,
+      ]
+    description: List of plugin names to load
+    read_only: false
 
   path_planning:
     waypoint_group:
@@ -155,7 +164,7 @@ minimum_rule_based_planner:
     objects:
       object_types:
         type: string_array
-        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian]
+        default_value: [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard]
         description: object types to consider for obstacle stop
       max_velocity_th:
         type: double
@@ -312,6 +321,74 @@ minimum_rule_based_planner:
         description: lookahead horizon used in RSS calculation [s]
         validation:
           bounds<>: [0.0, 10.0]
+
+  surround_obstacle_stop:
+    enable:
+      type: bool
+      default_value: true
+      description: enable surround obstacle stop
+      read_only: false
+    use_objects:
+      type: bool
+      default_value: true
+      description: enable the use of objects for surround obstacle stop
+      read_only: false
+    use_pointcloud:
+      type: bool
+      default_value: false
+      description: enable the use of pointcloud for surround obstacle stop
+      read_only: false
+    object_types:
+      type: string_array
+      default_value:
+        [car, truck, bus, trailer, motorcycle, bicycle, pedestrian, hazard, animal, unknown]
+      description: types of objects to consider for surround obstacle stop
+      read_only: false
+    base_distance_th:
+      &distance_th_template {
+        type: double,
+        default_value: 0.5,
+        validation: { bounds<>: [0.0, 10.0] },
+        read_only: false,
+      }
+    base:
+      &base_template {
+        car: *distance_th_template,
+        truck: *distance_th_template,
+        bus: *distance_th_template,
+        trailer: *distance_th_template,
+        motorcycle: *distance_th_template,
+        bicycle: *distance_th_template,
+        pedestrian: *distance_th_template,
+        hazard: *distance_th_template,
+        animal: *distance_th_template,
+        unknown: *distance_th_template,
+        pointcloud: *distance_th_template,
+      }
+    front_distance_th: *base_template
+    side_distance_th: *base_template
+    back_distance_th: *base_template
+    hysteresis_distance:
+      type: double
+      default_value: 0.1
+      description: distance hysteresis threshold for clearing surround stop [m]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    hysteresis_time:
+      type: double
+      default_value: 0.2
+      description: time hysteresis threshold for clearing surround stop [s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
+    ego_stopped_vel_th:
+      type: double
+      default_value: 0.1
+      description: velocity threshold below which ego vehicle is considered stopped [m/s]
+      validation:
+        bounds<>: [0.0, 10.0]
+      read_only: false
 
   debug:
     enable_path:

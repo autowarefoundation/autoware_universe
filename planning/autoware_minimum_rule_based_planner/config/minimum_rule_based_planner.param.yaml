@@ -2,6 +2,9 @@
   ros__parameters:
     # generate_parameter_library parameters
     planning_frequency_hz: 10.0
+    plugin_names:
+      - "autoware::minimum_rule_based_planner::plugin::ObstacleStop"
+      - "autoware::minimum_rule_based_planner::plugin::SurroundObstacleStop"
 
     path_planning:
       path_length:
@@ -47,7 +50,7 @@
       arrived_distance_threshold: 0.5 # threshold to check if the ego vehicle has arrived at the stop point [m]
 
       objects:
-        object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "unknown"] # object types to consider for obstacle stop
+        object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard"] # object types to consider for obstacle stop
         max_velocity_th: 3.0     # maximum velocity threshold for target object [m/s]
         stopped_velocity_th: 0.3 # velocity threshold for target object to be considered as stopped [m/s]
         max_lateral_velocity_th: 1.0 # maximum lateral velocity threshold for target object [m/s]
@@ -81,6 +84,51 @@
         reaction_time: 0.2       # [s]
         safety_margin: 2.0       # [m]
         lookahead_horizon: 1.5   # [s]
+
+    surround_obstacle_stop:
+      enable: true
+      use_objects: true
+      use_pointcloud: false
+      object_types: ["car", "truck", "bus", "trailer", "motorcycle", "bicycle", "pedestrian", "hazard", "animal", "unknown"] # object types to consider for surround obstacle stop
+      front_distance_th:
+        car: 0.5
+        truck: 0.5
+        bus: 0.5
+        trailer: 0.5
+        motorcycle: 0.5
+        bicycle: 0.5
+        pedestrian: 0.5
+        hazard: 0.5
+        animal: 0.5
+        unknown: 0.5
+        pointcloud: 0.5
+      side_distance_th:
+        car: 0.0
+        truck: 0.0
+        bus: 0.0
+        trailer: 0.0
+        motorcycle: 1.0
+        bicycle: 1.0
+        pedestrian: 1.0
+        hazard: 0.5
+        animal: 0.5
+        unknown: 0.5
+        pointcloud: 0.5
+      back_distance_th:
+        car: 0.0
+        truck: 0.0
+        bus: 0.0
+        trailer: 0.0
+        motorcycle: 0.5
+        bicycle: 0.5
+        pedestrian: 0.5
+        hazard: 0.5
+        animal: 0.5
+        unknown: 0.5
+        pointcloud: 0.5
+      hysteresis_distance: 0.1 # [m]
+      hysteresis_time: 0.2     # [s]
+      ego_stopped_vel_th: 0.1  # [m/s]
 
     velocity_smoother:
       nearest_dist_threshold_m: 1.5

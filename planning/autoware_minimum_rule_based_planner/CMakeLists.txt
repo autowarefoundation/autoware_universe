@@ -44,6 +44,7 @@ pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 
 ament_auto_add_library(${PROJECT_NAME}_plugins SHARED
   plugins/obstacle_stop.cpp
+  plugins/surround_obstacle_stop.cpp
 )
 
 target_include_directories(${PROJECT_NAME}_plugins PRIVATE
