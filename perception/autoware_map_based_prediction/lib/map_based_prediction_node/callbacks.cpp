@@ -192,12 +192,16 @@ void ObjectsCallback::objectsCallback(
       output.objects.end(), retrieved_objects.objects.begin(), retrieved_objects.objects.end());
   }
 
+  // Capture the stamp before moving output_msg into publish(): after the move, `output` (a
+  // reference to *output_msg) dangles once publish() hands the message to the publisher, which
+  // frees/recycles it. Reading output.header.stamp afterwards is a use-after-free.
+  const auto output_stamp = output.header.stamp;
   publish(std::move(output_msg), debug_markers);
 
   const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
   const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
 
-  if (diagnostics_) diagnostics_->update(output.header.stamp, processing_time_ms, cyclic_time_ms);
+  if (diagnostics_) diagnostics_->update(output_stamp, processing_time_ms, cyclic_time_ms);
 }
 
 void ObjectsCallback::publish(
