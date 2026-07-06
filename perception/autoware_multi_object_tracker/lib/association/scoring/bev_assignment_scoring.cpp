@@ -14,7 +14,7 @@
 
 #include "autoware/multi_object_tracker/association/scoring/bev_assignment_scoring.hpp"
 
-#include "autoware/multi_object_tracker/object_model/shapes.hpp"
+#include "autoware/multi_object_tracker/object_model/shapes_iou.hpp"
 
 #include <algorithm>
 #include <cmath>
