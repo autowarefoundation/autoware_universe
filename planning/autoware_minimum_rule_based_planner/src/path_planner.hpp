@@ -50,18 +50,18 @@ struct RouteContext
   std::optional<lanelet::ConstLanelet> closest_preferred_lanelet;
 };
 
+struct Interval
+{
+  double start;
+  double end;
+};
+
 struct WaypointGroup
 {
   struct Waypoint
   {
     lanelet::ConstPoint3d point;
     lanelet::Id lane_id;
-  };
-
-  struct Interval
-  {
-    double start;
-    double end;
   };
 
   std::vector<Waypoint> waypoints;
@@ -150,6 +150,22 @@ namespace utils
 {
 
 /**
+ * @brief get lanelets that are in desired_distance (or min_distance at least) backward from target
+ * lanelet
+ */
+lanelet::ConstLanelets get_lanelets_up_to(
+  const lanelet::ConstLanelet & lanelet, const RouteContext & planner_data,
+  const double desired_distance, const double min_distance);
+
+/**
+ * @brief get lanelets that are in specified distance forward (or min_distance at least) from target
+ * lanelet
+ */
+lanelet::ConstLanelets get_lanelets_after(
+  const lanelet::ConstLanelet & lanelet, const RouteContext & planner_data,
+  const double desired_distance, const double min_distance);
+
+/**
  * @brief get lanelets within route that are in specified distance backward from target lanelet
  */
 std::optional<lanelet::ConstLanelets> get_lanelets_within_route_up_to(
@@ -172,6 +188,13 @@ std::optional<lanelet::ConstLanelet> get_previous_lanelet_within_route(
  */
 std::optional<lanelet::ConstLanelet> get_next_lanelet_within_route(
   const lanelet::ConstLanelet & lanelet, const RouteContext & planner_data);
+
+/**
+ * @brief refine path range considering goal pose and intersection
+ */
+Interval refine_path_range(
+  const Interval & range, const lanelet::LaneletSequence & lanelet_sequence,
+  const RouteContext & planner_data, const VehicleInfo & vehicle_info, const double stop_margin);
 
 /**
  * @brief get waypoints in lanelet sequence and group them
