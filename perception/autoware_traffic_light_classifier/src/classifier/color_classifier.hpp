@@ -19,7 +19,6 @@
 
 #include <image_transport/image_transport.hpp>
 #include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
@@ -89,6 +88,10 @@ public:
   // Replace the HSV thresholds and rebuild the color bands (dynamic reconfigure).
   void set_config(const HSVConfig & config);
 
+  // Current HSV thresholds. The ROS adapter reads these to apply incremental
+  // parameter updates (read-modify-write) without keeping its own copy.
+  const HSVConfig & get_config() const;
+
 private:
   // The three pipeline stages of one color channel: filtered = cv::inRange output,
   // binarized = post-threshold, denoised = post-erode/dilate. classify_element reads
@@ -154,18 +157,11 @@ private:
   rcl_interfaces::msg::SetParametersResult parametersCallback(
     const std::vector<rclcpp::Parameter> & parameters);
 
-private:
-  enum HSV {
-    Hue = 0,
-    Sat = 1,
-    Val = 2,
-  };
   image_transport::Publisher image_pub_;
 
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_res_;
   rclcpp::Node * node_ptr_;
 
-  HSVConfig hsv_config_;
   ColorClassifierCore core_;
 };
 
