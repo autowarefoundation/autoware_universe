@@ -134,6 +134,27 @@ protected:
     executor_->add_node(node_);
   }
 
+  void spin_for(std::chrono::milliseconds duration)
+  {
+    const auto start = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - start < duration) {
+      executor_->spin_some(10ms);
+      std::this_thread::sleep_for(5ms);
+    }
+  }
+
+  void publish_map_and_wait(const autoware_map_msgs::msg::LaneletMapBin & bin)
+  {
+    helper_->publish_map(bin);
+    spin_for(100ms);
+  }
+
+  void publish_pose_and_wait(double x, double y, const std::array<double, 36> & covariance = {})
+  {
+    helper_->publish_pose(x, y, covariance);
+    spin_for(50ms);
+  }
+
   bool spin_until_covariance(std::chrono::milliseconds timeout = 3000ms)
   {
     const auto start = std::chrono::steady_clock::now();
@@ -206,8 +227,7 @@ TEST_F(EnvironmentAdaptorTest, test_pose_point_outside_polygon)
   input_cov[7] = 0.5;
   input_cov[14] = 0.5;
 
-  helper_->publish_map(make_map_bin("uniform_road"));
-  std::this_thread::sleep_for(100ms);
+  publish_map_and_wait(make_map_bin("uniform_road"));
   helper_->publish_pose(10.0, 10.0, input_cov);
   ASSERT_TRUE(spin_until_covariance());
   EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 0.5);
@@ -220,8 +240,7 @@ TEST_F(EnvironmentAdaptorTest, test_pose_point_outside_polygon_env_in_map)
   opts.append_parameter_override("environment_0_output_pose_covariance", diag_cov(3.0));
   create_node(opts);
 
-  helper_->publish_map(make_map_bin("uniform_road"));
-  std::this_thread::sleep_for(100ms);
+  publish_map_and_wait(make_map_bin("uniform_road"));
   helper_->publish_pose(10.0, 10.0);
   ASSERT_TRUE(spin_until_covariance());
   EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 3.0);
@@ -230,8 +249,7 @@ TEST_F(EnvironmentAdaptorTest, test_pose_point_outside_polygon_env_in_map)
 TEST_F(EnvironmentAdaptorTest, test_pose_point_inside_polygon_known_subtype)
 {
   create_node(base_options());
-  helper_->publish_map(make_map_bin("uniform_road"));
-  std::this_thread::sleep_for(100ms);
+  publish_map_and_wait(make_map_bin("uniform_road"));
   helper_->publish_pose(0.0, 0.0);
   ASSERT_TRUE(spin_until_covariance());
   EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 2.0);
@@ -246,8 +264,7 @@ TEST_F(EnvironmentAdaptorTest, test_pose_point_inside_polygon_unknown_subtype)
   input_cov[7] = 0.5;
   input_cov[14] = 0.5;
 
-  helper_->publish_map(make_map_bin("unknown_subtype"));
-  std::this_thread::sleep_for(100ms);
+  publish_map_and_wait(make_map_bin("unknown_subtype"));
   helper_->publish_pose(0.0, 0.0, input_cov);
   ASSERT_TRUE(spin_until_covariance());
   EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 0.5);
@@ -269,8 +286,7 @@ TEST_F(EnvironmentAdaptorTest, test_pose_invalid_env_covariance_size_fallback_to
   input_cov[7] = 0.5;
   input_cov[14] = 0.5;
 
-  helper_->publish_map(make_map_bin("uniform_road"));
-  std::this_thread::sleep_for(100ms);
+  publish_map_and_wait(make_map_bin("uniform_road"));
   helper_->publish_pose(0.0, 0.0, input_cov);
   ASSERT_TRUE(spin_until_covariance());
   EXPECT_DOUBLE_EQ(helper_->last_covariance.value()[0], 0.5);
@@ -290,9 +306,8 @@ TEST_F(EnvironmentAdaptorTest, test_twist_map_not_ready)
 TEST_F(EnvironmentAdaptorTest, test_twist_point_outside_polygon)
 {
   create_node(base_options());
-  helper_->publish_map(make_map_bin("uniform_road"));
-  std::this_thread::sleep_for(100ms);
-  helper_->publish_pose(10.0, 10.0);
+  publish_map_and_wait(make_map_bin("uniform_road"));
+  publish_pose_and_wait(10.0, 10.0);
   helper_->publish_twist(10.0);
   ASSERT_TRUE(spin_until_twist());
   EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0);
@@ -301,9 +316,8 @@ TEST_F(EnvironmentAdaptorTest, test_twist_point_outside_polygon)
 TEST_F(EnvironmentAdaptorTest, test_twist_point_inside_polygon_default_fallback)
 {
   create_node(base_options());
-  helper_->publish_map(make_map_bin("uniform_road"));
-  std::this_thread::sleep_for(100ms);
-  helper_->publish_pose(0.0, 0.0);
+  publish_map_and_wait(make_map_bin("uniform_road"));
+  publish_pose_and_wait(0.0, 0.0);
   helper_->publish_twist(10.0);
   ASSERT_TRUE(spin_until_twist());
   // Polygon has no longitudinal_scale_factor attribute, so default (1.0) is applied.
@@ -313,9 +327,8 @@ TEST_F(EnvironmentAdaptorTest, test_twist_point_inside_polygon_default_fallback)
 TEST_F(EnvironmentAdaptorTest, test_twist_point_inside_polygon_map_attribute)
 {
   create_node(base_options());
-  helper_->publish_map(make_map_bin("uniform_road", 1.02));
-  std::this_thread::sleep_for(100ms);
-  helper_->publish_pose(0.0, 0.0);
+  publish_map_and_wait(make_map_bin("uniform_road", 1.02));
+  publish_pose_and_wait(0.0, 0.0);
   helper_->publish_twist(10.0);
   ASSERT_TRUE(spin_until_twist());
   EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0 * 1.02);
@@ -324,9 +337,8 @@ TEST_F(EnvironmentAdaptorTest, test_twist_point_inside_polygon_map_attribute)
 TEST_F(EnvironmentAdaptorTest, test_twist_point_inside_polygon_unknown_subtype)
 {
   create_node(base_options());
-  helper_->publish_map(make_map_bin("unknown_subtype"));
-  std::this_thread::sleep_for(100ms);
-  helper_->publish_pose(0.0, 0.0);
+  publish_map_and_wait(make_map_bin("unknown_subtype"));
+  publish_pose_and_wait(0.0, 0.0);
   helper_->publish_twist(10.0);
   ASSERT_TRUE(spin_until_twist());
   EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0);
@@ -341,9 +353,8 @@ TEST_F(EnvironmentAdaptorTest, test_twist_map_attribute_without_param_fallback)
                 .append_parameter_override("area_subtype_uniform_road.environment_id", 1);
   create_node(opts);
 
-  helper_->publish_map(make_map_bin("uniform_road", 1.05));
-  std::this_thread::sleep_for(100ms);
-  helper_->publish_pose(0.0, 0.0);
+  publish_map_and_wait(make_map_bin("uniform_road", 1.05));
+  publish_pose_and_wait(0.0, 0.0);
   helper_->publish_twist(10.0);
   ASSERT_TRUE(spin_until_twist());
   EXPECT_DOUBLE_EQ(helper_->last_linear_x.value(), 10.0 * 1.05);
