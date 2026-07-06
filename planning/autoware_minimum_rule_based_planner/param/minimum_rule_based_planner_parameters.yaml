@@ -61,6 +61,12 @@ minimum_rule_based_planner:
         validation:
           gt<>: [0.0]
 
+    lane_change_failure_stop_margin:
+      type: double
+      default_value: 0.0
+      validation:
+        gt_eq<>: [0.0]
+
     # Path Shift to Ego Parameters
     path_shift:
       enable:

@@ -34,6 +34,12 @@
               "required": [],
               "additionalProperties": false
             },
+            "lane_change_failure_stop_margin": {
+              "type": "number",
+              "description": "Stop margin from the end of the final lane when lane change fails. [m]",
+              "default": 0.0,
+              "minimum": 0.0
+            },
             "smooth_goal_connection": {
               "type": "object",
               "properties": {

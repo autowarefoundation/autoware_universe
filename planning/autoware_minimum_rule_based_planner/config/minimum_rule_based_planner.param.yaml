@@ -8,6 +8,8 @@
         backward: 5.0
         forward: 300.0
 
+      lane_change_failure_stop_margin: 0.0
+
       smooth_goal_connection:
         search_radius_range: 7.5
         pre_goal_offset: 1.0
