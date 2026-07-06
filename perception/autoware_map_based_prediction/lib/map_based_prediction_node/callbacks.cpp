@@ -104,6 +104,17 @@ void ObjectsCallback::trafficSignalsCallback(
 void ObjectsCallback::objectsCallback(
   const AUTOWARE_MESSAGE_CONST_SHARED_PTR(TrackedObjects) & in_objects)
 {
+  // Drop corrupt messages: a negative sec makes every rclcpp::Time(stamp) on the path throw.
+  const auto & input_stamp = in_objects->header.stamp;
+  if (input_stamp.sec < 0 || input_stamp.nanosec >= 1000000000u) {
+    static rclcpp::Clock throttle_clock(RCL_STEADY_TIME);
+    RCLCPP_WARN_THROTTLE(
+      rclcpp::get_logger("map_based_prediction"), throttle_clock, 1000,
+      "Dropped TrackedObjects with invalid header stamp (sec=%d nanosec=%u).", input_stamp.sec,
+      input_stamp.nanosec);
+    return;
+  }
+
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (state_.time_keeper) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *state_.time_keeper);
 
@@ -192,12 +203,16 @@ void ObjectsCallback::objectsCallback(
       output.objects.end(), retrieved_objects.objects.begin(), retrieved_objects.objects.end());
   }
 
+  // Capture before publish() moves output_msg; reading output.header.stamp afterwards is a
+  // use-after-move that can feed a garbage (possibly negative) time into diagnostics_->update().
+  const auto output_stamp = output.header.stamp;
+
   publish(std::move(output_msg), debug_markers);
 
   const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
   const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
 
-  if (diagnostics_) diagnostics_->update(output.header.stamp, processing_time_ms, cyclic_time_ms);
+  if (diagnostics_) diagnostics_->update(output_stamp, processing_time_ms, cyclic_time_ms);
 }
 
 void ObjectsCallback::publish(
