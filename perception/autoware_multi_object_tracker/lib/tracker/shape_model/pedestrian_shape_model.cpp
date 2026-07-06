@@ -156,8 +156,10 @@ void PedestrianShapeModel::exportTo(types::DynamicObject & output) const
 
   // The footprint is kept in a global-orientation frame, so re-express it in the output object's
   // frame (message position and orientation)
+  const rclcpp::Time output_time(
+    output.time.nanoseconds(), last_footprint_update_time_.get_clock_type());
   const bool footprint_fresh =
-    footprint_valid_ && (output.time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
+    footprint_valid_ && (output_time - last_footprint_update_time_).seconds() < FOOTPRINT_TIMEOUT_S;
   if (footprint_fresh) {
     output.shape.footprint =
       shapes::transformFootprint(footprint_, globalFrameAt(output.pose.position), output.pose);
