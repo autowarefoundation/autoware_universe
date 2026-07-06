@@ -159,7 +159,6 @@ ScoredCandidateTrajectories::ConstSharedPtr TrajectoryRanker::score(
     candidate.header = result->header();
     candidate.generator_id = result->uuid();
     candidate.points = *result->original();
-    candidate.turn_indicator = result->turn_indicator();
     candidate.turn_indicators_command = result->turn_indicators_command();
     autoware_internal_planning_msgs::msg::ScoredCandidateTrajectory scored_trajectory;
     scored_trajectory.candidate_trajectory = candidate;

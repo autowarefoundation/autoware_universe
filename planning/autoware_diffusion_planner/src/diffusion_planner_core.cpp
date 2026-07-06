@@ -568,7 +568,6 @@ PlannerOutput DiffusionPlannerCore::create_planner_output(
     candidate_trajectory.header = trajectory.header;
     candidate_trajectory.generator_id = generator_uuid;
     candidate_trajectory.points = trajectory.points;
-    candidate_trajectory.turn_indicator = turn_indicator_command;
     candidate_trajectory.turn_indicators_command = turn_indicators_command;
 
     std_msgs::msg::String generator_name_msg;
